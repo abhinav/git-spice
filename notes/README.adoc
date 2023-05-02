@@ -1,0 +1,62 @@
+= Architecture Decision Records
+
+This is an experiment in documenting design decision for the project
+from day one.
+All features and functionality will be detailed in documents inside this
+directory.
+
+== Template
+
+All documents will use the following as the starting template:
+
+[,asciidoc]
+----
+= {title}
+{YYYY-MM-DD}
+:status: {status}
+
+// Status should be one of: published, draft, superseded.
+
+== Context
+
+Background and context for the decision.
+
+== Decision
+
+The decision that was made.
+
+== Consequences
+
+The consequences of the decision.
+----
+
+Where `{title}` and `{YYYY-MM-DD}` are replaced
+with the title and date of the document,
+and `{status}` is one of the following:
+
+`published`::
+  The document has been published and is the current decision.
+`draft`::
+  The document is in draft state.
+  Typically, documents committed to main will be in `published` state,
+  but sometimes partial documents may be committed to main in `draft` state.
+`superseded`::
+  The document has been superseded by another document.
+  In this case, another `superseded-by` attribute will be added
+  with the name of the document that supersedes this one.
+
+== Naming
+
+Documents are named using the following convention:
+
+    {n}-{title}.adoc
+
+Where `{n}` is the next number in the sequence of documents.
+
+== Immutability
+
+Typically, documents will be immutable in their core content once published,
+except for minor corrections and an optional append-only FAQ section.
+
+If a decision is revised materially or reconsidered,
+a new document will supersede the old one.
