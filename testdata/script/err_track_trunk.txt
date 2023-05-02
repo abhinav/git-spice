@@ -1,0 +1,14 @@
+# cannot track the trunk branch
+
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init --trunk main
+
+! gs branch track
+stderr 'cannot track trunk branch'
+
+git checkout -b feature
+git commit --allow-empty -m 'feature 1'
+gs branch track --parent main
+# TODO: auto-discover parent
+stderr 'feature: tracking with parent main'

@@ -1,0 +1,127 @@
+# Moving in a linear stack with gs branch up/down/top/bottom.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# main with initial commit
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init --trunk main
+
+# feature1
+git checkout -b feature1
+git commit --allow-empty -m 'Add feature1'
+# TODO(abg): Automatically determine parent
+gs branch track --parent main
+
+# feature2
+git checkout -b feature2
+git commit --allow-empty -m 'Add feature2'
+# TODO(abg): Automatically determine parent
+gs btr --parent feature1  # shorthand
+
+# feature3
+git checkout -b feature3
+git commit --allow-empty -m 'Add feature3'
+# TODO(abg): Automatically determine parent
+gs btr --parent feature2  # shorthand
+
+# feature4
+git checkout -b feature4
+git commit --allow-empty -m 'Add feature4'
+# TODO(abg): Automatically determine parent
+gs btr --parent feature3  # shorthand
+
+# feature5
+git checkout -b feature5
+git commit --allow-empty -m 'Add feature5'
+# TODO(abg): Automatically determine parent
+gs btr --parent feature4  # shorthand
+
+# sanity check
+git branch
+cmp stdout $WORK/golden/git_branch_feature5.output
+
+gs branch up
+git branch
+cmp stdout $WORK/golden/git_branch_feature4.output
+
+# feature1 is top of stack
+gs branch top
+git branch
+cmp stdout $WORK/golden/git_branch_feature1.output
+
+gs bu  # shorthand
+stderr 'exiting stack: moving to trunk'
+git branch
+cmp stdout $WORK/golden/git_branch_main.output
+
+gs branch down
+git branch
+cmp stdout $WORK/golden/git_branch_feature1.output
+
+gs bd  # shorthand
+git branch
+cmp stdout $WORK/golden/git_branch_feature2.output
+
+# feature5 is bottom of stack
+gs branch bottom
+git branch
+cmp stdout $WORK/golden/git_branch_feature5.output
+
+gs bco feature3  # shorthand
+git branch
+cmp stdout $WORK/golden/git_branch_feature3.output
+
+# top and bottom shorthands
+gs bt
+git branch
+cmp stdout $WORK/golden/git_branch_feature1.output
+gs bb
+git branch
+cmp stdout $WORK/golden/git_branch_feature5.output
+
+-- golden/git_branch_main.output --
+  feature1
+  feature2
+  feature3
+  feature4
+  feature5
+* main
+-- golden/git_branch_feature1.output --
+* feature1
+  feature2
+  feature3
+  feature4
+  feature5
+  main
+-- golden/git_branch_feature2.output --
+  feature1
+* feature2
+  feature3
+  feature4
+  feature5
+  main
+-- golden/git_branch_feature3.output --
+  feature1
+  feature2
+* feature3
+  feature4
+  feature5
+  main
+-- golden/git_branch_feature4.output --
+  feature1
+  feature2
+  feature3
+* feature4
+  feature5
+  main
+-- golden/git_branch_feature5.output --
+  feature1
+  feature2
+  feature3
+  feature4
+* feature5
+  main

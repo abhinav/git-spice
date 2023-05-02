@@ -1,0 +1,8 @@
+# gs bd on a branch without children fails
+
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init --trunk main
+
+! gs bd
+stderr 'branch "main" has no children'
