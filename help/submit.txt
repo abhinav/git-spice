@@ -1,9 +1,0 @@
-USAGE
-  git stack submit [options]
-
-Submits all commits between the current branch and its upstream.
-If the branch has no upstream, the default HEAD of origin is used.
-
-OPTIONS
-  --dry-run
-	reports operations without performing them

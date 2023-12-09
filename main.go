@@ -3,100 +3,78 @@ package main
 
 import (
 	"context"
-	"errors"
-	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
+	"strings"
+	"unicode/utf8"
 
+	"github.com/alecthomas/kong"
 	"github.com/google/go-github/v57/github"
-	"github.com/peterbourgon/ff/v3/ffcli"
 	"golang.org/x/oauth2"
 )
 
 func main() {
-	cmd := &mainCmd{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	os.Exit(cmd.Run(os.Args[1:]))
-}
+	log := log.New(io.Discard, "", 0)
 
-type mainParams struct {
-	Dir string
-}
+	var cmd mainCmd
+	ctx := kong.Parse(
+		&cmd,
+		kong.Writers(os.Stdout, os.Stderr),
+		kong.Name("git stack"),
+		kong.Description("git-stack is a command line tool to manage stacks of GitHub pull requests."),
+		kong.UsageOnError(),
+		kong.Bind(log),
+		kong.AutoGroup(func(parent kong.Visitable, flag *kong.Flag) *kong.Group {
+			if node, ok := parent.(*kong.Node); ok {
+				first, sz := utf8.DecodeRuneInString(node.Name)
+				if sz == 0 {
+					return nil
+				}
 
-func (cfg *mainParams) RegisterFlags(flag *flag.FlagSet) {
-	flag.StringVar(&cfg.Dir, "C", "", "")
+				titleName := strings.ToUpper(string(first)) + node.Name[sz:]
+				return &kong.Group{
+					Key:   node.Name,
+					Title: titleName + " flags:",
+				}
+			}
+			return nil
+		}),
+	)
+
+	ctx.FatalIfErrorf(ctx.Run())
 }
 
 type mainCmd struct {
-	mainParams
+	// Flags with side effects
+	// that are never used directly.
+	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to directory before doing anything"`
+	Version versionFlag        `help:"Print version information and quit"`
 
-	Stdin  io.Writer
-	Stdout io.Writer
-	Stderr io.Writer
+	Token   string      `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token"`
+	Verbose verboseFlag `short:"v" help:"Enable verbose output"`
 
-	version    bool // -version flag is not part of mainConfig
-	versionCmd *ffcli.Command
+	// Commands
+	SubmitCmd  submitCmd  `name:"submit" cmd:"" help:"Submit a stack of pull requests"`
+	VersionCmd versionCmd `name:"version" cmd:"" help:"Print version information"`
 }
 
-func (cmd *mainCmd) Run(_ []string) (exitCode int) {
+func (cmd *mainCmd) AfterApply() error {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")}, // TODO
+		&oauth2.Token{AccessToken: cmd.Token},
 	)
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
-	_ = client // TODO: parse, build client, run
 
-	cli := cmd.Command()
-	if err := cli.ParseAndRun(ctx, os.Args[1:]); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return 0
-		}
-
-		fmt.Fprintln(os.Stderr, err)
-		return 1
-	}
-
-	return 0
+	// TODO: inject dependencies based on command being run.
+	cmd.SubmitCmd.gh = client
+	return nil
 }
 
-func (cmd *mainCmd) Command() *ffcli.Command {
-	flag := flag.NewFlagSet("git stack", flag.ContinueOnError)
-	flag.SetOutput(cmd.Stderr)
-	cmd.RegisterFlags(flag)
-	flag.BoolVar(&cmd.version, "version", false, "")
+type verboseFlag bool
 
-	cli := &ffcli.Command{
-		Name:      "git stack",
-		FlagSet:   flag,
-		Exec:      cmd.Exec,
-		UsageFunc: usageText(_mainUsage),
-	}
-
-	cmd.versionCmd = (&versionCmd{
-		Stdout: cmd.Stdout,
-	}).Command()
-
-	cli.Subcommands = []*ffcli.Command{
-		(&submitCmd{
-			Stdin:  cmd.Stdin,
-			Stdout: cmd.Stdout,
-			Stderr: cmd.Stderr,
-			Main:   &cmd.mainParams,
-		}).Command(),
-		cmd.versionCmd,
-	}
-	return cli
-}
-
-func (cmd *mainCmd) Exec(ctx context.Context, args []string) error {
-	if cmd.version {
-		return cmd.versionCmd.Exec(ctx, args)
-	}
-
-	return flag.ErrHelp
+func (verboseFlag) BeforeApply(app *kong.Kong, log *log.Logger) error {
+	log.SetOutput(app.Stderr)
+	return nil
 }
