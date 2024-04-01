@@ -146,10 +146,13 @@ type mainCmd struct {
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
 	Version versionFlag        `help:"Print version information and quit"`
 
-	Repo    repoCmd    `cmd:"" aliases:"r" group:"Repository"`
-	Upstack upstackCmd `cmd:"" aliases:"us" group:"Stack"`
-	Branch  branchCmd  `cmd:"" aliases:"b" group:"Branch"`
-	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
+	Repo      repoCmd      `cmd:"" aliases:"r" group:"Repository"`
+	Log       logCmd       `cmd:"" aliases:"l" group:"Log"`
+	Stack     stackCmd     `cmd:"" aliases:"s" group:"Stack"`
+	Upstack   upstackCmd   `cmd:"" aliases:"us" group:"Stack"`
+	Downstack downstackCmd `cmd:"" aliases:"ds" group:"Stack"`
+	Branch    branchCmd    `cmd:"" aliases:"b" group:"Branch"`
+	Commit    commitCmd    `cmd:"" aliases:"c" group:"Commit"`
 
 	// Navigation
 	Up       upCmd       `cmd:"" aliases:"bu" group:"Navigation" help:"Move up the stack"`
