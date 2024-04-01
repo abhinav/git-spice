@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -88,4 +89,47 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 	}
 
 	return Hash(out), nil
+}
+
+type CommitRequest struct {
+	// Message is the commit message.
+	//
+	// If empty, $EDITOR is opened to edit the message.
+	Message string
+
+	// All stages all changes before committing.
+	All bool
+
+	// Amend amends the last commit.
+	Amend bool
+
+	// NoEdit skips editing the commit message.
+	NoEdit bool
+}
+
+// Commit runs the 'git commit' command.
+func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
+	args := []string{"commit"}
+	if req.All {
+		args = append(args, "-a")
+	}
+	if req.Message != "" {
+		args = append(args, "-m", req.Message)
+	}
+	if req.Amend {
+		args = append(args, "--amend")
+	}
+	if req.NoEdit {
+		args = append(args, "--no-edit")
+	}
+
+	err := r.gitCmd(ctx, args...).
+		Stdin(os.Stdin).
+		Stdout(os.Stdout).
+		Stderr(os.Stderr).
+		Run(r.exec)
+	if err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+	return nil
 }

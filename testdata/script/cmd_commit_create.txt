@@ -1,0 +1,70 @@
+# Basic commit create usage.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+gs repo init --trunk main
+git commit --allow-empty -m 'Initial commit'
+
+git checkout -b feature
+gs branch track --parent main
+
+# create a couple commits
+git add foo.txt
+gs cc -m 'Add foo'
+mv $WORK/extra/new_foo.txt foo.txt
+gs cc -a -m 'Update foo'
+
+# verify the output
+git log
+cmp stdout $WORK/golden/log.1.txt
+
+gs ca -m 'Change feature'
+git log
+cmp stdout $WORK/golden/log.2.txt
+
+-- repo/foo.txt --
+Contents of foo.
+
+-- extra/new_foo.txt --
+New contents of foo.txt
+
+-- golden/log.1.txt --
+commit 6a76b55e833fd78474394134a53c058c7d87c80c
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Update foo
+
+commit 91582344149997d5a513acf7b4d56a03452e23cd
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Add foo
+
+commit 9bad92b764fe1d56cb99b394f373a71cdefd8e86
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Initial commit
+-- golden/log.2.txt --
+commit efcc0448c28d70c7b8d9d04b3a6539577d2895df
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Change feature
+
+commit 91582344149997d5a513acf7b4d56a03452e23cd
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Add foo
+
+commit 9bad92b764fe1d56cb99b394f373a71cdefd8e86
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Initial commit

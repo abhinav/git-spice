@@ -21,6 +21,7 @@ type rootCmd struct {
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
+	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
 	Version    versionFlag `help:"Print version information and quit"`
 	VersionCmd versionCmd  `cmd:"version" name:"version" help:"Print version information"`

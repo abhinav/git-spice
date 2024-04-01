@@ -73,6 +73,12 @@ func (c *gitCmd) Stdout(w io.Writer) *gitCmd {
 	return c
 }
 
+func (c *gitCmd) Stderr(w io.Writer) *gitCmd {
+	c.cmd.Stderr = w
+	c.wrap = func(err error) error { return err }
+	return c
+}
+
 // Stdin supplies the command's stdin from the given reader.
 func (c *gitCmd) Stdin(r io.Reader) *gitCmd {
 	c.cmd.Stdin = r
