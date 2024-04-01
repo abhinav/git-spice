@@ -325,8 +325,8 @@ func (s *Store) ForgetBranch(ctx context.Context, name string) error {
 	return nil
 }
 
-// ListBranchChildren lists the immediate children of a branch.
-func (s *Store) ListBranchChildren(ctx context.Context, parent string) ([]string, error) {
+// UpstackDirect lists branches that are immediately upstack from the given branch.
+func (s *Store) UpstackDirect(ctx context.Context, parent string) ([]string, error) {
 	treeHash, err := s.repo.TreeAt(ctx, _dataRef, _branchesDir)
 	if err != nil {
 		if errors.Is(err, ErrNotExist) {

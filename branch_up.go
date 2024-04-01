@@ -32,19 +32,21 @@ func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	branchRes, err := store.GetBranch(ctx, currentBranch)
+	children, err := store.UpstackDirect(ctx, currentBranch)
 	if err != nil {
-		log.Printf("get branch %q: %v", currentBranch, err)
-		return fmt.Errorf("branch %q is not being tracked", currentBranch)
+		return fmt.Errorf("list children of %q: %w", currentBranch, err)
 	}
 
-	if branchRes.Base == store.Trunk() {
-		log.Printf("exiting stack: moving to trunk: %v", store.Trunk())
-	}
-
-	// TODO: warn about top of stack when moving to upstream branch.
-	if err := repo.Checkout(ctx, branchRes.Base); err != nil {
-		return fmt.Errorf("checkout %q: %w", branchRes.Base, err)
+	switch len(children) {
+	case 0:
+		return fmt.Errorf("%v: no branches found upstack", currentBranch)
+	case 1:
+		if err := repo.Checkout(ctx, children[0]); err != nil {
+			return fmt.Errorf("checkout %q: %w", children[0], err)
+		}
+	default:
+		// TODO: prompt user for which child to checkout
+		return fmt.Errorf("not implemented: multiple children")
 	}
 
 	return nil

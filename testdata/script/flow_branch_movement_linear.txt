@@ -44,30 +44,30 @@ gs btr --parent feature4  # shorthand
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 
-gs branch up
+gs branch down
 git branch
 cmp stdout $WORK/golden/git_branch_feature4.output
 
-# feature1 is top of stack
-gs branch top
-git branch
-cmp stdout $WORK/golden/git_branch_feature1.output
-
-gs bu  # shorthand
-stderr 'exiting stack: moving to trunk'
-git branch
-cmp stdout $WORK/golden/git_branch_main.output
-
-gs branch down
+# feature1 is bottom of stack
+gs branch bottom
 git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
 
 gs bd  # shorthand
+stderr 'exiting stack: moving to trunk'
+git branch
+cmp stdout $WORK/golden/git_branch_main.output
+
+gs branch up
+git branch
+cmp stdout $WORK/golden/git_branch_feature1.output
+
+gs bu  # shorthand
 git branch
 cmp stdout $WORK/golden/git_branch_feature2.output
 
-# feature5 is bottom of stack
-gs branch bottom
+# feature5 is top of stack
+gs branch top
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 
@@ -76,10 +76,10 @@ git branch
 cmp stdout $WORK/golden/git_branch_feature3.output
 
 # top and bottom shorthands
-gs bt
+gs bb
 git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
-gs bb
+gs bt
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 
@@ -33,27 +32,28 @@ func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	if currentBranch == store.Trunk() {
-		return errors.New("already on trunk")
-	}
-
-	var root string
+	var top string
+loop:
 	for {
-		b, err := store.GetBranch(ctx, currentBranch)
+		children, err := store.UpstackDirect(ctx, currentBranch)
 		if err != nil {
-			return fmt.Errorf("get branch %q: %w", currentBranch, err)
+			return fmt.Errorf("list children of %q: %w", currentBranch, err)
 		}
 
-		if b.Base == store.Trunk() {
-			root = currentBranch
-			break
+		switch len(children) {
+		case 0:
+			top = currentBranch
+			break loop
+		case 1:
+			currentBranch = children[0]
+		default:
+			// TODO: prompt user for which child to follow
+			return fmt.Errorf("branch %q has multiple children", currentBranch)
 		}
-
-		currentBranch = b.Base
 	}
 
-	if err := repo.Checkout(ctx, root); err != nil {
-		return fmt.Errorf("checkout %q: %w", root, err)
+	if err := repo.Checkout(ctx, top); err != nil {
+		return fmt.Errorf("checkout %q: %w", top, err)
 	}
 
 	return nil
