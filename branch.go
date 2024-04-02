@@ -8,6 +8,7 @@ type branchCmd struct {
 	Delete branchDeleteCmd `cmd:"" aliases:"de" help:"Delete the current branch"`
 
 	// Mutation
+	Edit   branchEditCmd   `cmd:"" aliases:"e" help:"Edit the current branch"`
 	Rename branchRenameCmd `cmd:"" aliases:"r" help:"Rename the current branch"`
 
 	// Relative movements
