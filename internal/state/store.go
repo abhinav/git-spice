@@ -226,6 +226,25 @@ type SetBranchRequest struct {
 	PR int
 }
 
+func (s *Store) SetBranchBase(ctx context.Context, branch, base string, baseHash git.Hash) error {
+	b, err := s.GetBranch(ctx, branch)
+	if err != nil {
+		return fmt.Errorf("get branch: %w", err)
+	}
+
+	if b.BaseHash == baseHash {
+		return nil
+	}
+
+	// TODO: supply a message for the commit
+	return s.SetBranch(ctx, SetBranchRequest{
+		Name:     b.Base,
+		Base:     base,
+		BaseHash: baseHash,
+		PR:       b.PR,
+	})
+}
+
 type stateBranchBase struct {
 	Name string `json:"base"`
 	Hash string `json:"hash"`
