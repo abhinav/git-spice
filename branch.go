@@ -5,6 +5,7 @@ type branchCmd struct {
 	Untrack branchUntrackCmd `cmd:"" aliases:"utr" help:"Stop tracking a branch with gs"`
 
 	// Creation and destruction
+	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
 	Delete branchDeleteCmd `cmd:"" aliases:"de" help:"Delete the current branch"`
 
 	// Mutation

@@ -105,6 +105,8 @@ type CommitRequest struct {
 
 	// NoEdit skips editing the commit message.
 	NoEdit bool
+
+	AllowEmpty bool
 }
 
 // Commit runs the 'git commit' command.
@@ -121,6 +123,9 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.NoEdit {
 		args = append(args, "--no-edit")
+	}
+	if req.AllowEmpty {
+		args = append(args, "--allow-empty")
 	}
 
 	err := r.gitCmd(ctx, args...).

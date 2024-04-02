@@ -243,9 +243,16 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	// Write the updated index to a new tree.
-	treeCmd := r.gitCmd(ctx, "write-tree").
-		AppendEnv("GIT_INDEX_FILE=" + indexFile)
-	treeHash, err := treeCmd.OutputString(r.exec)
+	return r.WriteIndexToTree(ctx, indexFile)
+}
+
+func (r *Repository) WriteIndexToTree(ctx context.Context, index string) (_ Hash, err error) {
+	cmd := r.gitCmd(ctx, "write-tree")
+	if index != "" {
+		cmd = cmd.AppendEnv("GIT_INDEX_FILE=" + index)
+	}
+
+	treeHash, err := cmd.OutputString(r.exec)
 	if err != nil {
 		return ZeroHash, fmt.Errorf("write-tree: %w", err)
 	}
