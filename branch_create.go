@@ -12,6 +12,8 @@ import (
 
 type branchCreateCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the new branch"`
+
+	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
 
 func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error) {
@@ -61,6 +63,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 
 	if err := repo.Commit(ctx, git.CommitRequest{
 		AllowEmpty: len(diff) == 0,
+		Message:    cmd.Message,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

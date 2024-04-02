@@ -10,35 +10,11 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init --trunk main
 
-# feature1
-git checkout -b feature1
-git commit --allow-empty -m 'Add feature1'
-# TODO(abg): Automatically determine parent
-gs branch track --parent main
-
-# feature2
-git checkout -b feature2
-git commit --allow-empty -m 'Add feature2'
-# TODO(abg): Automatically determine parent
-gs btr --parent feature1  # shorthand
-
-# feature3
-git checkout -b feature3
-git commit --allow-empty -m 'Add feature3'
-# TODO(abg): Automatically determine parent
-gs btr --parent feature2  # shorthand
-
-# feature4
-git checkout -b feature4
-git commit --allow-empty -m 'Add feature4'
-# TODO(abg): Automatically determine parent
-gs btr --parent feature3  # shorthand
-
-# feature5
-git checkout -b feature5
-git commit --allow-empty -m 'Add feature5'
-# TODO(abg): Automatically determine parent
-gs btr --parent feature4  # shorthand
+gs branch create feature1 -m 'Add feature1'
+gs bc feature2 -m 'Add feature2'
+gs bc feature3 -m 'Add feature3'
+gs bc feature4 -m 'Add feature4'
+gs bc feature5 -m 'Add feature5'
 
 # sanity check
 git branch
