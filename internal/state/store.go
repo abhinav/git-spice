@@ -238,7 +238,7 @@ func (s *Store) SetBranchBase(ctx context.Context, branch, base string, baseHash
 
 	// TODO: supply a message for the commit
 	return s.SetBranch(ctx, SetBranchRequest{
-		Name:     b.Base,
+		Name:     branch,
 		Base:     base,
 		BaseHash: baseHash,
 		PR:       b.PR,
