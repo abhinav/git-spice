@@ -16,7 +16,8 @@ type rootCmd struct {
 	globalOptions
 
 	// Flags with side effects that are never used directly.
-	Verbose bool `short:"v" help:"Enable verbose output"`
+	Verbose bool               `short:"v" help:"Enable verbose output"`
+	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 
