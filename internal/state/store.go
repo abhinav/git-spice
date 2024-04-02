@@ -171,8 +171,9 @@ func (s *Store) branchJSON(name string) string {
 }
 
 type GetBranchResponse struct {
-	Base string
-	PR   int
+	Base     string
+	BaseHash git.Hash
+	PR       int
 }
 
 // GetBranch returns information about a branch tracked by gs.
@@ -198,7 +199,11 @@ func (s *Store) GetBranch(ctx context.Context, name string) (GetBranchResponse, 
 		return GetBranchResponse{}, fmt.Errorf("unmarshal state: %w", err)
 	}
 
-	return GetBranchResponse(state), nil
+	return GetBranchResponse{
+		Base:     state.Base.Name,
+		BaseHash: git.Hash(state.Base.Hash),
+		PR:       state.PR,
+	}, nil
 }
 
 // SetBranchRequest is a request to update information about a branch
@@ -212,21 +217,33 @@ type SetBranchRequest struct {
 	// and is the branch into which a PR would be merged.
 	Base string
 
+	// BaseHash is the last known hash of the base branch.
+	// This is used to detect if the base branch has been updated.
+	BaseHash git.Hash
+
 	// PR is the number of the pull request associated with the branch.
 	// Zero if the branch is not associated with a PR yet.
 	PR int
 }
 
+type stateBranchBase struct {
+	Name string `json:"base"`
+	Hash string `json:"hash"`
+}
+
 type stateBranch struct {
-	Base string `json:"base"`
-	PR   int    `json:"pr,omitempty"`
+	Base stateBranchBase `json:"base"`
+	PR   int             `json:"pr,omitempty"`
 }
 
 // SetBranch updates information about a branch tracked by gs.
 func (s *Store) SetBranch(ctx context.Context, req SetBranchRequest) error {
 	data, err := json.MarshalIndent(stateBranch{
-		Base: req.Base,
-		PR:   req.PR,
+		Base: stateBranchBase{
+			Name: req.Base,
+			Hash: req.BaseHash.String(),
+		},
+		PR: req.PR,
 	}, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state: %w", err)
@@ -362,7 +379,7 @@ func (s *Store) UpstackDirect(ctx context.Context, parent string) ([]string, err
 		}
 
 		branchName := strings.TrimSuffix(ent.Name, ".json")
-		if branch.Base == parent {
+		if branch.Base.Name == parent {
 			children = append(children, branchName)
 		}
 	}

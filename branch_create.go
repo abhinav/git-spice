@@ -40,12 +40,12 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	currentTree, err := repo.PeelToTree(ctx, currentBranch)
+	currentHash, err := repo.PeelToCommit(ctx, "HEAD")
 	if err != nil {
 		return fmt.Errorf("peel to tree: %w", err)
 	}
 
-	diff, err := repo.DiffIndex(ctx, currentTree)
+	diff, err := repo.DiffIndex(ctx, currentHash.String())
 	if err != nil {
 		return fmt.Errorf("diff index: %w", err)
 	}
@@ -80,8 +80,9 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	}
 
 	if err := store.SetBranch(ctx, state.SetBranchRequest{
-		Name: cmd.Name,
-		Base: currentBranch,
+		Name:     cmd.Name,
+		Base:     currentBranch,
+		BaseHash: currentHash,
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}

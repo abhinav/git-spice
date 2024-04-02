@@ -37,9 +37,10 @@ func TestIntegrationStore(t *testing.T) {
 	})
 
 	err = store.SetBranch(ctx, state.SetBranchRequest{
-		Name: "foo",
-		Base: "main",
-		PR:   42,
+		Name:     "foo",
+		Base:     "main",
+		BaseHash: "123456",
+		PR:       42,
 	})
 	require.NoError(t, err)
 
@@ -47,36 +48,47 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.GetBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, "main", res.Base)
-		assert.Equal(t, 42, res.PR)
+		assert.Equal(t, state.GetBranchResponse{
+			Base:     "main",
+			BaseHash: "123456",
+			PR:       42,
+		}, res)
 	})
 
 	t.Run("overwrite", func(t *testing.T) {
 		err := store.SetBranch(ctx, state.SetBranchRequest{
-			Name: "foo",
-			Base: "bar",
-			PR:   43,
+			Name:     "foo",
+			Base:     "bar",
+			BaseHash: "54321",
+			PR:       43,
 		})
 		require.NoError(t, err)
 
 		res, err := store.GetBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, "bar", res.Base)
-		assert.Equal(t, 43, res.PR)
+		assert.Equal(t, state.GetBranchResponse{
+			Base:     "bar",
+			BaseHash: "54321",
+			PR:       43,
+		}, res)
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
 		err := store.SetBranch(ctx, state.SetBranchRequest{
-			Name: "bar/baz",
-			Base: "main",
-			PR:   44,
+			Name:     "bar/baz",
+			Base:     "main",
+			PR:       44,
+			BaseHash: "abcdef",
 		})
 		require.NoError(t, err)
 
 		res, err := store.GetBranch(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, "main", res.Base)
-		assert.Equal(t, 44, res.PR)
+		assert.Equal(t, state.GetBranchResponse{
+			Base:     "main",
+			BaseHash: "abcdef",
+			PR:       44,
+		}, res)
 	})
 }

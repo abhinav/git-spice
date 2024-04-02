@@ -46,9 +46,15 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("missing required flag -p")
 	}
 
+	parentHash, err := repo.PeelToCommit(ctx, cmd.Parent)
+	if err != nil {
+		return fmt.Errorf("peel to commit: %w", err)
+	}
+
 	if err := store.SetBranch(ctx, state.SetBranchRequest{
-		Name: cmd.Name,
-		Base: cmd.Parent,
+		Name:     cmd.Name,
+		Base:     cmd.Parent,
+		BaseHash: parentHash,
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}

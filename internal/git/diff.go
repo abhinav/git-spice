@@ -30,8 +30,8 @@ type FileStatus struct {
 
 // DiffIndex compares the index with the given tree
 // and returns the list of files that are different.
-func (r *Repository) DiffIndex(ctx context.Context, tree Hash) ([]FileStatus, error) {
-	cmd := r.gitCmd(ctx, "diff-index", "--cached", "--name-status", tree.String())
+func (r *Repository) DiffIndex(ctx context.Context, treeish string) ([]FileStatus, error) {
+	cmd := r.gitCmd(ctx, "diff-index", "--cached", "--name-status", treeish)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("pipe: %w", err)
