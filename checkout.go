@@ -9,11 +9,11 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
-type branchCheckoutCmd struct {
+type checkoutCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to delete"`
 }
 
-func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *checkoutCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

@@ -41,11 +41,11 @@ type rootCmd struct {
 		Amend  commitAmendCmd  `cmd:"" aliases:"a" help:"Amend the current commit"`
 	} `cmd:"" aliases:"c" group:"Commit"`
 
-	Up       upCmd             `cmd:"" group:"Movement" help:"Move up the stack"`
-	Down     downCmd           `cmd:"" group:"Movement" help:"Move down the stack"`
-	Top      topCmd            `cmd:"" group:"Movement" help:"Move to the top of the stack"`
-	Bottom   bottomCmd         `cmd:"" group:"Movement" help:"Move to the bottom of the stack"`
-	Checkout branchCheckoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
+	Up       upCmd       `cmd:"" group:"Movement" help:"Move up the stack"`
+	Down     downCmd     `cmd:"" group:"Movement" help:"Move down the stack"`
+	Top      topCmd      `cmd:"" group:"Movement" help:"Move to the top of the stack"`
+	Bottom   bottomCmd   `cmd:"" group:"Movement" help:"Move to the bottom of the stack"`
+	Checkout checkoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
 func (cmd *rootCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
