@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -10,9 +9,9 @@ import (
 	"go.abhg.dev/gs/internal/state"
 )
 
-type branchBottomCmd struct{}
+type downCmd struct{}
 
-func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -33,27 +32,19 @@ func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	if currentBranch == store.Trunk() {
-		return errors.New("already on trunk")
+	branchRes, err := store.GetBranch(ctx, currentBranch)
+	if err != nil {
+		log.Errorf("get branch %q: %v", currentBranch, err)
+		return fmt.Errorf("branch %q is not being tracked", currentBranch)
 	}
 
-	var root string
-	for {
-		b, err := store.GetBranch(ctx, currentBranch)
-		if err != nil {
-			return fmt.Errorf("get branch %q: %w", currentBranch, err)
-		}
-
-		if b.Base == store.Trunk() {
-			root = currentBranch
-			break
-		}
-
-		currentBranch = b.Base
+	if branchRes.Base == store.Trunk() {
+		log.Infof("exiting stack: moving to trunk: %v", store.Trunk())
 	}
 
-	if err := repo.Checkout(ctx, root); err != nil {
-		return fmt.Errorf("checkout %q: %w", root, err)
+	// TODO: warn about top of stack when moving to upstream branch.
+	if err := repo.Checkout(ctx, branchRes.Base); err != nil {
+		return fmt.Errorf("checkout %q: %w", branchRes.Base, err)
 	}
 
 	return nil

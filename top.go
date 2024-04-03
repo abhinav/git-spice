@@ -9,9 +9,9 @@ import (
 	"go.abhg.dev/gs/internal/state"
 )
 
-type branchTopCmd struct{}
+type topCmd struct{}
 
-func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*topCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
