@@ -52,38 +52,19 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 			return fmt.Errorf("get branch %q: %w", children[0], err)
 		}
 
-		if child.BaseHash == currentHash {
-			// Base hasn't changed, just checkout the child.
-			if err := repo.Checkout(ctx, children[0]); err != nil {
-				return fmt.Errorf("checkout %q: %w", children[0], err)
-			}
-			return nil
+		if child.BaseHash != currentHash {
+			log.Warnf("branch needs to be restacked: %v", childName)
+			log.Warnf("run 'gs branch restack' to fix.")
 		}
 
-		// Base has changed. Rebase onto the new base.
-		req := git.RebaseRequest{
-			Onto:     currentBranch,
-			Upstream: child.BaseHash.String(),
-			Branch:   childName,
+		// Base hasn't changed, just checkout the child.
+		if err := repo.Checkout(ctx, children[0]); err != nil {
+			return fmt.Errorf("checkout %q: %w", children[0], err)
 		}
-		if err := repo.Rebase(ctx, req); err != nil {
-			return fmt.Errorf("rebase onto %q: %w", child.BaseHash, err)
-		}
-
-		// If the operation was successful, update information in the store.
-		if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:     childName,
-			Base:     currentBranch,
-			BaseHash: currentHash,
-			Message:  fmt.Sprintf("restack onto %v", currentBranch),
-		}); err != nil {
-			return fmt.Errorf("update branch %q: %w", childName, err)
-		}
+		return nil
 
 	default:
 		// TODO: prompt user for which child to checkout
 		return fmt.Errorf("not implemented: multiple children")
 	}
-
-	return nil
 }
