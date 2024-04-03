@@ -131,19 +131,19 @@ func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptio
 			//	<mode> SP <type> SP <hash> TAB <name> NL
 			modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
 			if !ok {
-				r.log.Printf("ls-tree: skipping invalid line: %q", line)
+				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
 				continue
 			}
 
 			toks := bytes.SplitN(modeTypeHash, []byte{' '}, 3)
 			if len(toks) != 3 {
-				r.log.Printf("ls-tree: skipping invalid line: %q", line)
+				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
 				continue
 			}
 
 			mode, err := ParseMode(string(toks[0]))
 			if err != nil {
-				r.log.Printf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
+				r.log.Warnf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
 				continue
 			}
 

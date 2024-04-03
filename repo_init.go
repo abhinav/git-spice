@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -45,5 +45,6 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open storage: %w", err)
 	}
 
+	log.Infof("Initialized with trunk: %s", cmd.Trunk)
 	return nil
 }

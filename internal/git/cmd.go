@@ -10,11 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/ioutil"
 )
 
@@ -176,12 +176,11 @@ func (w *cmdStdinWriter) Close() error {
 // Returns an io.Writer that will record sterr for later use,
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
-func stderrWriter(cmd string, log *log.Logger) (w io.Writer, wrap func(error) error) {
-	isDiscard := log == nil || log.Writer() == io.Discard
-	if !isDiscard {
+func stderrWriter(cmd string, logger *log.Logger) (w io.Writer, wrap func(error) error) {
+	if logger.GetLevel() < log.InfoLevel {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		w, flush := ioutil.LogWriter(log, cmd+": ")
+		w, flush := ioutil.LogWriter(logger.WithPrefix(cmd), log.DebugLevel)
 		return w, func(err error) error {
 			flush()
 			return err

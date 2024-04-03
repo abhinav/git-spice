@@ -78,6 +78,11 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		return nil, errors.New("trunk branch name is required")
 	}
 
+	oldHash, err := repo.PeelToCommit(ctx, _dataRef)
+	if err != nil {
+		oldHash = git.ZeroHash
+	}
+
 	data, err := json.MarshalIndent(repoState{
 		Trunk: req.Trunk,
 	}, "", "  ")
@@ -114,7 +119,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	setReq := git.SetRefRequest{
 		Ref:     _dataRef,
 		Hash:    commitHash,
-		OldHash: git.ZeroHash,
+		OldHash: oldHash,
 	}
 	if err := repo.SetRef(ctx, setReq); err != nil {
 		// TODO: if ref set failed, another process may have initialized the store.

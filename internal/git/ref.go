@@ -44,6 +44,6 @@ func (r *Repository) DefaultBranch(ctx context.Context, remote string) (string, 
 		return "", fmt.Errorf("symbolic-ref: %w", err)
 	}
 
-	ref = strings.TrimPrefix(ref, "refs/heads/"+remote+"/")
+	ref = strings.TrimPrefix(ref, remote+"/")
 	return ref, nil
 }

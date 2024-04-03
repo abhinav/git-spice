@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -34,12 +34,12 @@ func (*branchDownCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	branchRes, err := store.GetBranch(ctx, currentBranch)
 	if err != nil {
-		log.Printf("get branch %q: %v", currentBranch, err)
+		log.Errorf("get branch %q: %v", currentBranch, err)
 		return fmt.Errorf("branch %q is not being tracked", currentBranch)
 	}
 
 	if branchRes.Base == store.Trunk() {
-		log.Printf("exiting stack: moving to trunk: %v", store.Trunk())
+		log.Infof("exiting stack: moving to trunk: %v", store.Trunk())
 	}
 
 	// TODO: warn about top of stack when moving to upstream branch.

@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/alecthomas/kong"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/gh"
 	"golang.org/x/oauth2"
 )
@@ -49,11 +48,10 @@ type rootCmd struct {
 	Checkout branchCheckoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
-func (cmd *rootCmd) AfterApply(kctx *kong.Context, log *log.Logger) error {
-	// TODO: Debug versus info logging
-	// if !cmd.Verbose {
-	// 	log.SetOutput(io.Discard)
-	// }
+func (cmd *rootCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
+	if cmd.Verbose {
+		logger.SetLevel(log.DebugLevel)
+	}
 
 	var tokenSource oauth2.TokenSource = &gh.CLITokenSource{}
 	if token := cmd.Token; token != "" {

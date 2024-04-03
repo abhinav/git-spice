@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
 

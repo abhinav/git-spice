@@ -4,9 +4,10 @@ package ioutil
 import (
 	"bytes"
 	"io"
-	"log"
 	"sync"
 	"testing"
+
+	"github.com/charmbracelet/log"
 )
 
 // LogWriter builds and returns an io.Writer that
@@ -18,12 +19,27 @@ import (
 // It will flush any buffered text to the logger.
 //
 // The returned writer is not thread-safe.
-func LogWriter(log *log.Logger, prefix string) (w io.Writer, done func()) {
-	if log == nil {
+func LogWriter(logger *log.Logger, lvl log.Level) (w io.Writer, done func()) {
+	if logger == nil {
 		return io.Discard, func() {}
 	}
 
-	return newPrintfWriter(log.Printf, prefix)
+	var printf func(string, ...any)
+	switch lvl {
+	case log.DebugLevel:
+		printf = logger.Debugf
+	case log.InfoLevel:
+		printf = logger.Infof
+	case log.WarnLevel:
+		printf = logger.Warnf
+	case log.ErrorLevel:
+		printf = logger.Errorf
+	default:
+		panic("unsupported log level")
+	}
+
+	w, flush := newPrintfWriter(printf, "")
+	return w, flush
 }
 
 // TestLogWriter builds and returns an io.Writer that

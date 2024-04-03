@@ -4,19 +4,19 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/charmbracelet/log"
 )
 
 var _version = "dev"
 
 func main() {
-	log := log.New(os.Stderr, "", 0)
+	log := log.New(os.Stderr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -26,7 +26,7 @@ func main() {
 	go func() {
 		select {
 		case <-sigc:
-			log.Println("Cleaning up. Press Ctrl-C again to exit immediately.")
+			log.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
 			cancel()
 		case <-ctx.Done():
 		}

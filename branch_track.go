@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -60,6 +60,6 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("set branch: %w", err)
 	}
 
-	log.Printf("%v: tracking with parent %v", cmd.Name, cmd.Parent)
+	log.Infof("%v: tracking with parent %v", cmd.Name, cmd.Parent)
 	return nil
 }

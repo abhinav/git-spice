@@ -3,8 +3,9 @@ package git
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 // InitOptions configures the behavior of Init.
