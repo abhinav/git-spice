@@ -8,7 +8,7 @@ mkdir repo
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
-gs repo init --trunk main
+gs repo init
 
 gs branch create feature1 -m 'Add feature1'
 gs bc feature2 -m 'Add feature2'

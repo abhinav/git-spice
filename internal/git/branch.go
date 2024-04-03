@@ -6,7 +6,7 @@ import (
 )
 
 func (r *Repository) CurrentBranch(ctx context.Context) (string, error) {
-	name, err := r.gitCmd(ctx, "rev-parse", "--abbrev-ref", "HEAD").
+	name, err := r.gitCmd(ctx, "branch", "--show-current").
 		OutputString(r.exec)
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse: %w", err)

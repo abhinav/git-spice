@@ -1,6 +1,10 @@
 package git
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"strings"
+)
 
 // SetRefRequest is a request to set a ref to a new hash.
 type SetRefRequest struct {
@@ -30,4 +34,16 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	}
 
 	return r.gitCmd(ctx, args...).Run(r.exec)
+}
+
+func (r *Repository) DefaultBranch(ctx context.Context, remote string) (string, error) {
+	ref, err := r.gitCmd(
+		ctx, "symbolic-ref", "--short", "refs/remotes/"+remote+"/HEAD").
+		OutputString(r.exec)
+	if err != nil {
+		return "", fmt.Errorf("symbolic-ref: %w", err)
+	}
+
+	ref = strings.TrimPrefix(ref, "refs/heads/"+remote+"/")
+	return ref, nil
 }

@@ -22,7 +22,19 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	if cmd.Trunk == "" {
-		cmd.Trunk = "main" // TODO: prompt for trunk
+		// TODO: check if there's a remote first?
+		if b, err := repo.DefaultBranch(ctx, "origin"); err == nil {
+			cmd.Trunk = b
+		}
+	}
+
+	if cmd.Trunk == "" {
+		// Use the current branch as the trunk.
+		b, err := repo.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Trunk = b
 	}
 
 	_, err = state.InitStore(ctx, state.InitStoreRequest{

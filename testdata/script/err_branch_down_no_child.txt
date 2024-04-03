@@ -2,7 +2,7 @@
 
 git init
 git commit --allow-empty -m 'Initial commit'
-gs repo init --trunk main
+gs repo init
 
 ! gs up
 stderr 'main: no branches found upstack'

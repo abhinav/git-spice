@@ -78,10 +78,6 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		return nil, errors.New("trunk branch name is required")
 	}
 
-	if _, err := repo.PeelToCommit(ctx, _dataRef); err == nil {
-		return nil, errors.New("store already initialized")
-	}
-
 	data, err := json.MarshalIndent(repoState{
 		Trunk: req.Trunk,
 	}, "", "  ")

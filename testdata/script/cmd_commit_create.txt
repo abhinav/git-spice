@@ -6,7 +6,7 @@ at '2024-03-30T14:59:32Z'
 # setup
 cd repo
 git init
-gs repo init --trunk main
+gs repo init
 git commit --allow-empty -m 'Initial commit'
 
 git checkout -b feature
