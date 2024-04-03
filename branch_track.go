@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -14,7 +14,7 @@ type branchTrackCmd struct {
 	Name   string `arg:"" optional:"" help:"Name of the branch to track"`
 }
 
-func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchTrackCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -60,6 +60,6 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("set branch: %w", err)
 	}
 
-	log.Infof("%v: tracking with parent %v", cmd.Name, cmd.Parent)
+	log.Info().Msgf("%v: tracking with parent %v", cmd.Name, cmd.Parent)
 	return nil
 }

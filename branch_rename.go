@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -14,7 +14,7 @@ type branchRenameCmd struct {
 	Name string `arg:"" optional:"" help:"New name of the branch"`
 }
 
-func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchRenameCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

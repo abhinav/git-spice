@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -13,7 +13,7 @@ type repoInitCmd struct {
 	Trunk string `help:"The name of the trunk branch"`
 }
 
-func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *repoInitCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -45,6 +45,6 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open storage: %w", err)
 	}
 
-	log.Infof("Initialized with trunk: %s", cmd.Trunk)
+	log.Info().Str("trunk", cmd.Trunk).Msg("Initialized repository")
 	return nil
 }

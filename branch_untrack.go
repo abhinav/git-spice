@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -13,7 +13,7 @@ type branchUntrackCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to untrack"`
 }
 
-func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchUntrackCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

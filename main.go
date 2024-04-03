@@ -10,13 +10,18 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/log"
+	"github.com/mattn/go-isatty"
+	"github.com/rs/zerolog"
 )
 
 var _version = "dev"
 
 func main() {
-	log := log.New(os.Stderr)
+	log := zerolog.New(&zerolog.ConsoleWriter{
+		Out:          os.Stderr,
+		NoColor:      !isatty.IsTerminal(os.Stderr.Fd()),
+		PartsExclude: []string{"time"},
+	}).Level(zerolog.InfoLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -26,7 +31,7 @@ func main() {
 	go func() {
 		select {
 		case <-sigc:
-			log.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
+			log.Info().Msg("Cleaning up. Press Ctrl-C again to exit immediately.")
 			cancel()
 		case <-ctx.Done():
 		}
@@ -36,7 +41,7 @@ func main() {
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
 		kong.Description("gs is a command line tool to manage stacks of GitHub pull requests."),
-		kong.Bind(log, &cmd.globalOptions),
+		kong.Bind(&log, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.UsageOnError(),
 	)

@@ -50,7 +50,7 @@ func (r *Repository) DiffIndex(ctx context.Context, treeish string) ([]FileStatu
 
 		status, name, ok := bytes.Cut(bs, []byte{'\t'})
 		if !ok {
-			r.log.Warnf("invalid diff-index output: %s", bs)
+			r.log.Warn().Msgf("invalid diff-index output: %s", bs)
 			continue
 		}
 		files = append(files, FileStatus{

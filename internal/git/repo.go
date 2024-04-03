@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 )
 
 // InitOptions configures the behavior of Init.
 type InitOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *log.Logger
+	Log *zerolog.Logger
 
 	// Branch is the name of the initial branch to create.
 	// Defaults to "main".
@@ -47,7 +47,7 @@ func Init(ctx context.Context, dir string, opts InitOptions) (*Repository, error
 // OpenOptions configures the behavior of Open.
 type OpenOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *log.Logger
+	Log *zerolog.Logger
 
 	exec execer
 }
@@ -87,7 +87,7 @@ type Repository struct {
 	root   string
 	gitDir string
 
-	log  *log.Logger
+	log  *zerolog.Logger
 	exec execer
 }
 

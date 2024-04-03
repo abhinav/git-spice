@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -16,7 +16,7 @@ type branchCreateCmd struct {
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
 
-func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error) {
+func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

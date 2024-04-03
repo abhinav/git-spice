@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -14,7 +14,7 @@ type branchDeleteCmd struct {
 	Force bool   `short:"f" help:"Force deletion of the branch"`
 }
 
-func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchDeleteCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

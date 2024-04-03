@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
 
 type upCmd struct{}
 
-func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*upCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -53,8 +53,8 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 
 		if child.BaseHash != currentHash {
-			log.Warnf("branch needs to be restacked: %v", childName)
-			log.Warnf("run 'gs branch restack' to fix.")
+			log.Warn().Str("branch", childName).Msg("Branch needs to be restacked")
+			log.Warn().Msg("Run 'gs branch restack' to fix")
 		}
 
 		// Base hasn't changed, just checkout the child.

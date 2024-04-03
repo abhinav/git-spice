@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/ioutil"
 )
 
@@ -45,7 +45,7 @@ type gitCmd struct {
 	wrap func(error) error
 }
 
-func newGitCmd(ctx context.Context, log *log.Logger, args ...string) *gitCmd {
+func newGitCmd(ctx context.Context, log *zerolog.Logger, args ...string) *gitCmd {
 	name := "git"
 	if len(args) > 0 {
 		name += " " + args[0]
@@ -176,11 +176,12 @@ func (w *cmdStdinWriter) Close() error {
 // Returns an io.Writer that will record sterr for later use,
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
-func stderrWriter(cmd string, logger *log.Logger) (w io.Writer, wrap func(error) error) {
-	if logger.GetLevel() < log.InfoLevel {
+func stderrWriter(cmd string, logger *zerolog.Logger) (w io.Writer, wrap func(error) error) {
+	if logger.Debug().Enabled() {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		w, flush := ioutil.LogWriter(logger.WithPrefix(cmd), log.DebugLevel)
+		cmdLog := logger.With().Str("cmd", cmd).Logger()
+		w, flush := ioutil.LogWriter(&cmdLog, zerolog.DebugLevel)
 		return w, func(err error) error {
 			flush()
 			return err

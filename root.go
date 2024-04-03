@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/gh"
 	"golang.org/x/oauth2"
 )
@@ -48,9 +48,9 @@ type rootCmd struct {
 	Checkout checkoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
-func (cmd *rootCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
+func (cmd *rootCmd) AfterApply(kctx *kong.Context, logger *zerolog.Logger) error {
 	if cmd.Verbose {
-		logger.SetLevel(log.DebugLevel)
+		*logger = logger.Level(zerolog.DebugLevel)
 	}
 
 	var tokenSource oauth2.TokenSource = &gh.CLITokenSource{}

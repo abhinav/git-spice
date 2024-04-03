@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
 
 type branchEditCmd struct{}
 
-func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchEditCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
