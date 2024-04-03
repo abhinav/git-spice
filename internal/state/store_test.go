@@ -36,11 +36,11 @@ func TestIntegrationStore(t *testing.T) {
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
-	err = store.SetBranch(ctx, state.SetBranchRequest{
+	err = store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     "foo",
 		Base:     "main",
 		BaseHash: "123456",
-		PR:       42,
+		PR:       state.PR(42),
 	})
 	require.NoError(t, err)
 
@@ -56,11 +56,11 @@ func TestIntegrationStore(t *testing.T) {
 	})
 
 	t.Run("overwrite", func(t *testing.T) {
-		err := store.SetBranch(ctx, state.SetBranchRequest{
+		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 			Name:     "foo",
 			Base:     "bar",
 			BaseHash: "54321",
-			PR:       43,
+			PR:       state.PR(43),
 		})
 		require.NoError(t, err)
 
@@ -75,10 +75,10 @@ func TestIntegrationStore(t *testing.T) {
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
-		err := store.SetBranch(ctx, state.SetBranchRequest{
+		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 			Name:     "bar/baz",
 			Base:     "main",
-			PR:       44,
+			PR:       state.PR(44),
 			BaseHash: "abcdef",
 		})
 		require.NoError(t, err)

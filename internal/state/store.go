@@ -108,7 +108,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 
 	commitHash, err := repo.CommitTree(ctx, git.CommitTreeRequest{
 		Tree:    treeHash,
-		Message: "gs: initialize store",
+		Message: "initialize store",
 		Author:  &git.Signature{Name: _authorName, Email: _authorEmail},
 	})
 	if err != nil {
@@ -206,43 +206,33 @@ func (s *Store) GetBranch(ctx context.Context, name string) (GetBranchResponse, 
 	}, nil
 }
 
-// SetBranchRequest is a request to update information about a branch
-// tracked by gs.
-type SetBranchRequest struct {
+type UpsertBranchRequest struct {
 	// Name is the name of the branch.
 	Name string
 
-	// Base is the parent branch of the branch.
-	// This is immediately upstack from the branch,
-	// and is the branch into which a PR would be merged.
+	// Base branch to update to.
+	//
+	// Leave empty to keep the current base.
 	Base string
 
 	// BaseHash is the last known hash of the base branch.
 	// This is used to detect if the base branch has been updated.
+	//
+	// Leave empty to keep the current base hash.
 	BaseHash git.Hash
 
 	// PR is the number of the pull request associated with the branch.
 	// Zero if the branch is not associated with a PR yet.
-	PR int
+	// Leave nil to keep the current PR.
+	PR *int
+
+	// Message is the message to use for the update.
+	// If empty, a message will be generated.
+	Message string
 }
 
-func (s *Store) SetBranchBase(ctx context.Context, branch, base string, baseHash git.Hash) error {
-	b, err := s.GetBranch(ctx, branch)
-	if err != nil {
-		return fmt.Errorf("get branch: %w", err)
-	}
-
-	if b.BaseHash == baseHash {
-		return nil
-	}
-
-	// TODO: supply a message for the commit
-	return s.SetBranch(ctx, SetBranchRequest{
-		Name:     branch,
-		Base:     base,
-		BaseHash: baseHash,
-		PR:       b.PR,
-	})
+func PR(n int) *int {
+	return &n
 }
 
 type stateBranchBase struct {
@@ -255,15 +245,47 @@ type stateBranch struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
-// SetBranch updates information about a branch tracked by gs.
-func (s *Store) SetBranch(ctx context.Context, req SetBranchRequest) error {
-	data, err := json.MarshalIndent(stateBranch{
-		Base: stateBranchBase{
-			Name: req.Base,
-			Hash: req.BaseHash.String(),
-		},
-		PR: req.PR,
-	}, "", "  ")
+func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest) error {
+	if req.Name == "" {
+		return errors.New("branch name is required")
+	}
+	if req.Name == s.trunk {
+		return errors.New("trunk branch is not managed by gs")
+	}
+
+	var b stateBranch
+	if prev, err := s.GetBranch(ctx, req.Name); err != nil {
+		if !errors.Is(err, ErrNotExist) {
+			return fmt.Errorf("get branch: %w", err)
+		}
+		// Branch does not exist yet.
+		// Everything is already set to the zero value.
+	} else {
+		b.PR = prev.PR
+		b.Base = stateBranchBase{
+			Name: prev.Base,
+			Hash: prev.BaseHash.String(),
+		}
+	}
+
+	if req.Base != "" {
+		b.Base.Name = req.Base
+	}
+	if req.BaseHash != "" {
+		b.Base.Hash = req.BaseHash.String()
+	}
+	if req.PR != nil {
+		b.PR = *req.PR
+	}
+	if req.Message == "" {
+		req.Message = fmt.Sprintf("update branch %q", req.Name)
+	}
+
+	if b.Base.Name == "" {
+		return fmt.Errorf("branch %q would have no base", req.Name)
+	}
+
+	data, err := json.MarshalIndent(b, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state: %w", err)
 	}
@@ -298,7 +320,7 @@ func (s *Store) SetBranch(ctx context.Context, req SetBranchRequest) error {
 
 	newCommitHash, err := s.repo.CommitTree(ctx, git.CommitTreeRequest{
 		Tree:    newTreeHash,
-		Message: fmt.Sprintf("gs: update branch %q", req.Name),
+		Message: req.Message,
 		Parents: []git.Hash{commitHash},
 		Author:  &git.Signature{Name: _authorName, Email: _authorEmail},
 	})
@@ -306,12 +328,12 @@ func (s *Store) SetBranch(ctx context.Context, req SetBranchRequest) error {
 		return fmt.Errorf("commit tree: %w", err)
 	}
 
+	// TODO: handle ref moved becauase another branch was updated concurrently
 	setReq := git.SetRefRequest{
 		Ref:     _dataRef,
 		Hash:    newCommitHash,
 		OldHash: commitHash,
 	}
-	// TODO: handle ref moved becauase another branch was updated concurrently
 	if err := s.repo.SetRef(ctx, setReq); err != nil {
 		return fmt.Errorf("set branches ref: %w", err)
 	}
@@ -342,7 +364,7 @@ func (s *Store) ForgetBranch(ctx context.Context, name string) error {
 
 	newCommitHash, err := s.repo.CommitTree(ctx, git.CommitTreeRequest{
 		Tree:    newTreeHash,
-		Message: fmt.Sprintf("gs: forget branch %q", name),
+		Message: fmt.Sprintf("forget branch %q", name),
 		Parents: []git.Hash{commitHash},
 	})
 	if err != nil {

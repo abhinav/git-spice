@@ -51,10 +51,11 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
-	if err := store.SetBranch(ctx, state.SetBranchRequest{
+	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     cmd.Name,
 		Base:     cmd.Parent,
 		BaseHash: parentHash,
+		Message:  fmt.Sprintf("track %v with parent %v", cmd.Name, cmd.Parent),
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}

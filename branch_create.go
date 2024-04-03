@@ -79,10 +79,11 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
-	if err := store.SetBranch(ctx, state.SetBranchRequest{
+	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     cmd.Name,
 		Base:     currentBranch,
 		BaseHash: currentHash,
+		Message:  fmt.Sprintf("create branch %s on %s", cmd.Name, currentBranch),
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}

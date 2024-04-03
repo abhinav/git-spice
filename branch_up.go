@@ -71,7 +71,12 @@ func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 
 		// If the operation was successful, update information in the store.
-		if err := store.SetBranchBase(ctx, childName, currentBranch, currentHash); err != nil {
+		if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+			Name:     childName,
+			Base:     currentBranch,
+			BaseHash: currentHash,
+			Message:  fmt.Sprintf("restack onto %v", currentBranch),
+		}); err != nil {
 			return fmt.Errorf("update branch %q: %w", childName, err)
 		}
 
