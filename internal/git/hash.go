@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"os"
 )
 
@@ -54,6 +55,22 @@ func (r *Repository) TreeAt(ctx context.Context, commitish, path string) (Hash, 
 
 func (r *Repository) BlobAt(ctx context.Context, treeish, path string) (Hash, error) {
 	return r.revParse(ctx, treeish+":"+path)
+}
+
+func (r *Repository) ForkPoint(ctx context.Context, a, b string) (Hash, error) {
+	s, err := r.gitCmd(ctx, "merge-base", "--fork-point", a, b).OutputString(r.exec)
+	if err != nil {
+		return "", fmt.Errorf("merge-base: %w", err)
+	}
+	return Hash(s), nil
+}
+
+func (r *Repository) MergeBase(ctx context.Context, a, b string) (Hash, error) {
+	s, err := r.gitCmd(ctx, "merge-base", a, b).OutputString(r.exec)
+	if err != nil {
+		return "", fmt.Errorf("merge-base: %w", err)
+	}
+	return Hash(s), nil
 }
 
 func (r *Repository) revParse(ctx context.Context, ref string) (Hash, error) {
