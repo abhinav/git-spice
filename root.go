@@ -15,17 +15,38 @@ type globalOptions struct {
 type rootCmd struct {
 	globalOptions
 
-	// Flags with side effects that are never used directly.
+	// Flags with side effects whose values are never accesssed directly.
 	Verbose bool               `short:"v" help:"Enable verbose output"`
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
+	Version versionFlag        `help:"Print version information and quit"`
 
-	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
+	Repo struct {
+		Init repoInitCmd `cmd:"" aliases:"i" help:"Initialize a repository for stacking"`
+	} `cmd:"" aliases:"r" group:"Repository"`
 
-	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
-	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
+	Branch struct {
+		Track   branchTrackCmd   `cmd:"" aliases:"tr" help:"Begin tracking a branch with gs"`
+		Untrack branchUntrackCmd `cmd:"" aliases:"utr" help:"Stop tracking a branch with gs"`
 
-	Version    versionFlag `help:"Print version information and quit"`
-	VersionCmd versionCmd  `cmd:"version" name:"version" help:"Print version information"`
+		// Creation and destruction
+		Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
+		Delete branchDeleteCmd `cmd:"" aliases:"de" help:"Delete the current branch"`
+
+		// Mutation
+		Edit   branchEditCmd   `cmd:"" aliases:"e" help:"Edit the current branch"`
+		Rename branchRenameCmd `cmd:"" aliases:"r" help:"Rename the current branch"`
+	} `cmd:"" aliases:"b" group:"Branch"`
+
+	Commit struct {
+		Create commitCreateCmd `cmd:"" aliases:"c" help:"Create a new commit"`
+		Amend  commitAmendCmd  `cmd:"" aliases:"a" help:"Amend the current commit"`
+	} `cmd:"" aliases:"c" group:"Commit"`
+
+	Up       branchUpCmd       `cmd:"" group:"Movement" help:"Move up the stack"`
+	Down     branchDownCmd     `cmd:"" group:"Movement" help:"Move down the stack"`
+	Top      branchTopCmd      `cmd:"" group:"Movement" help:"Move to the top of the stack"`
+	Bottom   branchBottomCmd   `cmd:"" group:"Movement" help:"Move to the bottom of the stack"`
+	Checkout branchCheckoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
 func (cmd *rootCmd) AfterApply(kctx *kong.Context, log *log.Logger) error {

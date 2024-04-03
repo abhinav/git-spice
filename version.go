@@ -6,9 +6,9 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-type versionCmd struct{}
+type versionFlag bool
 
-func (cmd *versionCmd) Run(app *kong.Kong) error {
+func (v versionFlag) BeforeReset(app *kong.Kong) error {
 	fmt.Fprintln(app.Stdout, "gs", _version)
 	fmt.Fprintln(app.Stdout, "Copyright (C) 2024 Abhinav Gupta")
 	fmt.Fprintln(app.Stdout, "  <https://github.com/abhinav/gs>")
@@ -17,10 +17,4 @@ func (cmd *versionCmd) Run(app *kong.Kong) error {
 	fmt.Fprintln(app.Stdout, "under certain conditions; see source for details.")
 	app.Exit(0)
 	return nil
-}
-
-type versionFlag bool
-
-func (v versionFlag) BeforeReset(app *kong.Kong) error {
-	return (*versionCmd)(nil).Run(app)
 }
