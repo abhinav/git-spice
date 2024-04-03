@@ -1,0 +1,54 @@
+# Restacking a branch after parent diverged in history.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create two stacked branches
+cp $WORK/extra/feature1.txt feature1.txt
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+cp $WORK/extra/feature2.txt feature2.txt
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# go back and modify feature1
+gs down
+cp $WORK/extra/feature1.v2.txt feature1.txt
+git add feature1.txt
+gs cc -m 'Modify feature 1'
+
+# At this point, the stack looks like this:
+#  o--A'--o  feature1
+#   \
+#    A---o  feature2
+#
+# Where A is the original feature1 commit,
+# A' is the modified feature1 commit.
+
+gs up
+stderr 'needs to be restacked'
+
+# feature2 has the old feature1.txt.
+cmp feature1.txt $WORK/extra/feature1.txt
+
+gs branch restack
+stderr 'feature2 restacked on feature1'
+
+# feature2 now has the new feature1.txt.
+cmp feature1.txt $WORK/extra/feature1.v2.txt
+
+-- extra/feature1.txt --
+contents of feature 1
+
+-- extra/feature2.txt --
+contents of feature 2
+
+-- extra/feature1.v2.txt --
+contents of feature 1, version 2
