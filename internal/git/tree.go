@@ -194,9 +194,14 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 		err = errors.Join(err, os.Remove(indexFile))
 	}()
 
-	err = r.gitCmd(ctx, "read-tree", "--index-output", indexFile, req.Tree.String()).
-		Run(r.exec)
-	if err != nil {
+	readTreeArgs := []string{"read-tree", "--index-output", indexFile}
+	if req.Tree == ZeroHash || req.Tree == "" {
+		readTreeArgs = append(readTreeArgs, "--empty")
+	} else {
+		readTreeArgs = append(readTreeArgs, req.Tree.String())
+	}
+
+	if err := r.gitCmd(ctx, readTreeArgs...).Run(r.exec); err != nil {
 		return ZeroHash, fmt.Errorf("read-tree: %w", err)
 	}
 

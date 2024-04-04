@@ -20,7 +20,7 @@ func (*downCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	}
 
 	// TODO: prompt for init if not initialized
-	store, err := state.OpenStore(ctx, repo)
+	store, err := state.OpenStore(ctx, repo, log)
 	if err != nil {
 		return fmt.Errorf("open storage: %w", err)
 	}

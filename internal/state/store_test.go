@@ -28,7 +28,7 @@ func TestIntegrationStore(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	store, err := state.OpenStore(ctx, repo)
+	store, err := state.OpenStore(ctx, repo, logtest.New(t))
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
