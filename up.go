@@ -37,7 +37,7 @@ func (*upCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("peel to commit of %q: %w", currentBranch, err)
 	}
 
-	children, err := store.UpstackDirect(ctx, currentBranch)
+	children, err := store.ListAbove(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("list children of %q: %w", currentBranch, err)
 	}
@@ -53,12 +53,12 @@ func (*upCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("not implemented: multiple children")
 	}
 
-	targetBranch, err := store.GetBranch(ctx, targetName)
+	targetBranch, err := store.LookupBranch(ctx, targetName)
 	if err != nil {
 		return fmt.Errorf("get branch %q: %w", children[0], err)
 	}
 
-	if targetBranch.BaseHash != currentHash {
+	if targetBranch.Base.Hash != currentHash {
 		log.Warn().Str("branch", targetName).Msg("Branch needs to be restacked")
 		log.Warn().Msg("Run 'gs branch restack' to fix")
 	}

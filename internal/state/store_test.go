@@ -32,7 +32,7 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
-		_, err := store.GetBranch(ctx, "main")
+		_, err := store.LookupBranch(ctx, "main")
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
@@ -45,13 +45,13 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
-		res, err := store.GetBranch(ctx, "foo")
+		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, state.GetBranchResponse{
-			Base:     "main",
-			BaseHash: "123456",
-			PR:       42,
+		assert.Equal(t, state.Branch{
+			Name: "foo",
+			Base: state.BranchBase{Name: "main", Hash: "123456"},
+			PR:   42,
 		}, res)
 	})
 
@@ -64,13 +64,13 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.GetBranch(ctx, "foo")
+		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, state.GetBranchResponse{
-			Base:     "bar",
-			BaseHash: "54321",
-			PR:       43,
+		assert.Equal(t, state.Branch{
+			Name: "foo",
+			Base: state.BranchBase{Name: "bar", Hash: "54321"},
+			PR:   43,
 		}, res)
 	})
 
@@ -83,12 +83,12 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.GetBranch(ctx, "bar/baz")
+		res, err := store.LookupBranch(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, state.GetBranchResponse{
-			Base:     "main",
-			BaseHash: "abcdef",
-			PR:       44,
+		assert.Equal(t, state.Branch{
+			Name: "bar/baz",
+			Base: state.BranchBase{Name: "main", Hash: "abcdef"},
+			PR:   44,
 		}, res)
 	})
 }

@@ -24,6 +24,7 @@ var ErrNotExist = os.ErrNotExist
 type Store struct {
 	b     storageBackend
 	trunk string
+	log   *zerolog.Logger
 }
 
 func (s *Store) Trunk() string {
@@ -65,6 +66,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	return &Store{
 		b:     b,
 		trunk: req.Trunk,
+		log:   log,
 	}, nil
 }
 
@@ -90,6 +92,7 @@ func OpenStore(ctx context.Context, repo GitRepository, log *zerolog.Logger) (*S
 	return &Store{
 		b:     b,
 		trunk: info.Trunk,
+		log:   log,
 	}, nil
 }
 
@@ -107,24 +110,36 @@ type branchState struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
-type GetBranchResponse struct {
-	Base     string
-	BaseHash git.Hash
-	PR       int
+type BranchBase struct {
+	Name string
+	Hash git.Hash
 }
 
-// GetBranch returns information about a branch tracked by gs.
+func (b BranchBase) String() string {
+	return fmt.Sprintf("%s@%s", b.Name, b.Hash)
+}
+
+type Branch struct {
+	Name string
+	Base BranchBase
+	PR   int
+}
+
+// LookupBranch returns information about a branch tracked by gs.
 // If the branch is not found, [ErrNotExist] will be returned.
-func (s *Store) GetBranch(ctx context.Context, name string) (GetBranchResponse, error) {
+func (s *Store) LookupBranch(ctx context.Context, name string) (Branch, error) {
 	var state branchState
 	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
-		return GetBranchResponse{}, fmt.Errorf("get branch state: %w", err)
+		return Branch{}, fmt.Errorf("get branch state: %w", err)
 	}
 
-	return GetBranchResponse{
-		Base:     state.Base.Name,
-		BaseHash: git.Hash(state.Base.Hash),
-		PR:       state.PR,
+	return Branch{
+		Name: name,
+		Base: BranchBase{
+			Name: state.Base.Name,
+			Hash: git.Hash(state.Base.Hash),
+		},
+		PR: state.PR,
 	}, nil
 }
 
@@ -166,7 +181,7 @@ func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest) error
 	}
 
 	var b branchState
-	if prev, err := s.GetBranch(ctx, req.Name); err != nil {
+	if prev, err := s.LookupBranch(ctx, req.Name); err != nil {
 		if !errors.Is(err, ErrNotExist) {
 			return fmt.Errorf("get branch: %w", err)
 		}
@@ -175,8 +190,8 @@ func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest) error
 	} else {
 		b.PR = prev.PR
 		b.Base = branchStateBase{
-			Name: prev.Base,
-			Hash: prev.BaseHash.String(),
+			Name: prev.Base.Name,
+			Hash: prev.Base.Hash.String(),
 		}
 	}
 
@@ -212,8 +227,8 @@ func (s *Store) ForgetBranch(ctx context.Context, name string) error {
 	return nil
 }
 
-// UpstackDirect lists branches that are immediately upstack from the given branch.
-func (s *Store) UpstackDirect(ctx context.Context, parent string) ([]string, error) {
+// ListAbove lists branches that are immediately upstack from the given branch.
+func (s *Store) ListAbove(ctx context.Context, base string) ([]string, error) {
 	branchFiles, err := s.b.Keys(ctx, _branchesDir)
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
@@ -232,7 +247,7 @@ func (s *Store) UpstackDirect(ctx context.Context, parent string) ([]string, err
 			return nil, fmt.Errorf("get branch state: %w", err)
 		}
 
-		if branch.Base.Name == parent {
+		if branch.Base.Name == base {
 			children = append(children, branchName)
 		}
 	}

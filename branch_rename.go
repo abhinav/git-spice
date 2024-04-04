@@ -38,7 +38,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 		return fmt.Errorf("open storage: %w", err)
 	}
 
-	if _, err := store.GetBranch(ctx, currentBranch); err != nil {
+	if _, err := store.LookupBranch(ctx, currentBranch); err != nil {
 		// branch not tracked; just rename using vanilla git
 		panic("TODO")
 	}

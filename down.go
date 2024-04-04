@@ -32,18 +32,18 @@ func (*downCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	branchRes, err := store.GetBranch(ctx, currentBranch)
+	branchRes, err := store.LookupBranch(ctx, currentBranch)
 	if err != nil {
 		log.Err(err).Msgf("get branch %q", currentBranch)
 		return fmt.Errorf("branch %q is not being tracked", currentBranch)
 	}
 
-	if branchRes.Base == store.Trunk() {
+	if branchRes.Base.Name == store.Trunk() {
 		log.Info().Msgf("exiting stack: moving to trunk: %v", store.Trunk())
 	}
 
 	// TODO: warn about top of stack when moving to upstream branch.
-	if err := repo.Checkout(ctx, branchRes.Base); err != nil {
+	if err := repo.Checkout(ctx, branchRes.Base.Name); err != nil {
 		return fmt.Errorf("checkout %q: %w", branchRes.Base, err)
 	}
 

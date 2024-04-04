@@ -35,7 +35,7 @@ func (*topCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	var top string
 loop:
 	for {
-		children, err := store.UpstackDirect(ctx, currentBranch)
+		children, err := store.ListAbove(ctx, currentBranch)
 		if err != nil {
 			return fmt.Errorf("list children of %q: %w", currentBranch, err)
 		}

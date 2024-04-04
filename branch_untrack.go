@@ -34,7 +34,7 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 		return fmt.Errorf("open storage: %w", err)
 	}
 
-	if _, err := store.GetBranch(ctx, cmd.Name); err != nil {
+	if _, err := store.LookupBranch(ctx, cmd.Name); err != nil {
 		return fmt.Errorf("branch already not tracked: %w", err)
 	}
 

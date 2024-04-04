@@ -39,17 +39,17 @@ func (*bottomCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 
 	var root string
 	for {
-		b, err := store.GetBranch(ctx, currentBranch)
+		b, err := store.LookupBranch(ctx, currentBranch)
 		if err != nil {
 			return fmt.Errorf("get branch %q: %w", currentBranch, err)
 		}
 
-		if b.Base == store.Trunk() {
+		if b.Base.Name == store.Trunk() {
 			root = currentBranch
 			break
 		}
 
-		currentBranch = b.Base
+		currentBranch = b.Base.Name
 	}
 
 	if err := repo.Checkout(ctx, root); err != nil {

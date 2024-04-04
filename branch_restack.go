@@ -37,24 +37,24 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	}
 
 	head := cmd.Name
-	b, err := store.GetBranch(ctx, head)
+	b, err := store.LookupBranch(ctx, head)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	actualBaseHash, err := repo.PeelToCommit(ctx, b.Base)
+	actualBaseHash, err := repo.PeelToCommit(ctx, b.Base.Name)
 	if err != nil {
 		// TODO:
 		// Base branch has been deleted.
 		// Find the parent of the base branch
 		// and use that as the new base.
 		if errors.Is(err, git.ErrNotExist) {
-			return fmt.Errorf("base branch %v does not exist", b.Base)
+			return fmt.Errorf("base branch %v does not exist", b.Base.Name)
 		}
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
-	if actualBaseHash == b.BaseHash {
+	if actualBaseHash == b.Base.Hash {
 		log.Info().Msgf("Branch %v does not need to be restacked.", head)
 		return nil
 	}
@@ -62,21 +62,21 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	// Case:
 	// The user has already fixed the branch.
 	// Our information is stale, and we just need to update that.
-	mergeBase, err := repo.MergeBase(ctx, b.Base, head)
+	mergeBase, err := repo.MergeBase(ctx, b.Base.Name, head)
 	if err == nil && mergeBase == actualBaseHash {
 		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 			Name:     head,
 			BaseHash: mergeBase,
-			Message:  fmt.Sprintf("%s: rebased externally on %s", head, b.Base),
+			Message:  fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name),
 		})
 		if err != nil {
 			return fmt.Errorf("update branch information: %w", err)
 		}
-		log.Info().Msgf("Branch %v was already restacked on %v", head, b.Base)
+		log.Info().Msgf("Branch %v was already restacked on %v", head, b.Base.Name)
 		return nil
 	}
 
-	rebaseFrom := b.BaseHash
+	rebaseFrom := b.Base.Hash
 	// Case:
 	// Current branch has diverged from what the target branch
 	// was forked from. That is:
@@ -93,7 +93,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	//
 	// In this case, merge-base --fork-point will give us A,
 	// and that should be the base of the target branch.
-	forkPoint, err := repo.ForkPoint(ctx, b.Base, head)
+	forkPoint, err := repo.ForkPoint(ctx, b.Base.Name, head)
 	if err == nil {
 		rebaseFrom = forkPoint
 		log.Debug().Msgf("Using fork point %v as rebase base", rebaseFrom)
@@ -112,11 +112,11 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     head,
 		BaseHash: actualBaseHash,
-		Message:  fmt.Sprintf("%s: restacked on %s", head, b.Base),
+		Message:  fmt.Sprintf("%s: restacked on %s", head, b.Base.Name),
 	}); err != nil {
 		return fmt.Errorf("update branch information: %w", err)
 	}
 
-	log.Info().Msgf("Branch %v restacked on %v", head, b.Base)
+	log.Info().Msgf("Branch %v restacked on %v", head, b.Base.Name)
 	return nil
 }

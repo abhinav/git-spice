@@ -31,7 +31,7 @@ func (*branchEditCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	b, err := store.GetBranch(ctx, currentBranch)
+	b, err := store.LookupBranch(ctx, currentBranch)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return fmt.Errorf("branch not tracked: %s", currentBranch)
@@ -42,7 +42,7 @@ func (*branchEditCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	if err := repo.Rebase(ctx, git.RebaseRequest{
 		Interactive: true,
 		Branch:      currentBranch,
-		Upstream:    b.Base,
+		Upstream:    b.Base.Name,
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
 	}
