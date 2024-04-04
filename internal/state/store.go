@@ -2,12 +2,13 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
@@ -110,6 +111,17 @@ type branchState struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
+func (s *branchState) toBranch(name string) *Branch {
+	return &Branch{
+		Name: name,
+		Base: &BranchBase{
+			Name: s.Base.Name,
+			Hash: git.Hash(s.Base.Hash),
+		},
+		PR: s.PR,
+	}
+}
+
 type BranchBase struct {
 	Name string
 	Hash git.Hash
@@ -121,26 +133,31 @@ func (b BranchBase) String() string {
 
 type Branch struct {
 	Name string
-	Base BranchBase
+	Base *BranchBase
 	PR   int
+}
+
+func (b *Branch) String() string {
+	var s strings.Builder
+	s.WriteString(b.Name)
+	if b.PR != 0 {
+		fmt.Fprintf(&s, " (#%d)", b.PR)
+	}
+	if b.Base != nil {
+		fmt.Fprintf(&s, " (base: %v)", b.Base)
+	}
+	return s.String()
 }
 
 // LookupBranch returns information about a branch tracked by gs.
 // If the branch is not found, [ErrNotExist] will be returned.
-func (s *Store) LookupBranch(ctx context.Context, name string) (Branch, error) {
+func (s *Store) LookupBranch(ctx context.Context, name string) (*Branch, error) {
 	var state branchState
 	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
-		return Branch{}, fmt.Errorf("get branch state: %w", err)
+		return nil, fmt.Errorf("get branch state: %w", err)
 	}
 
-	return Branch{
-		Name: name,
-		Base: BranchBase{
-			Name: state.Base.Name,
-			Hash: git.Hash(state.Base.Hash),
-		},
-		PR: state.PR,
-	}, nil
+	return state.toBranch(name), nil
 }
 
 type UpsertBranchRequest struct {
@@ -227,30 +244,69 @@ func (s *Store) ForgetBranch(ctx context.Context, name string) error {
 	return nil
 }
 
+func (s *Store) allBranches(ctx context.Context) iter.Seq2[*Branch, error] {
+	return func(yield func(*Branch, error) bool) {
+		branchNames, err := s.b.Keys(ctx, _branchesDir)
+		if err != nil {
+			yield(nil, fmt.Errorf("list branches: %w", err))
+			return
+		}
+
+		for branchName := range branchNames {
+			var branch branchState
+			if err := s.b.Get(ctx, path.Join(_branchesDir, branchName), &branch); err != nil {
+				yield(nil, fmt.Errorf("get branch state: %w", err))
+				break
+			}
+
+			if !yield(branch.toBranch(branchName), nil) {
+				break
+			}
+		}
+	}
+}
+
 // ListAbove lists branches that are immediately upstack from the given branch.
 func (s *Store) ListAbove(ctx context.Context, base string) ([]string, error) {
-	branchFiles, err := s.b.Keys(ctx, _branchesDir)
-	if err != nil {
-		return nil, fmt.Errorf("list branches: %w", err)
-	}
-
-	var (
-		children []string
-		buff     bytes.Buffer
-	)
-	for branchName := range branchFiles {
-		buff.Reset()
-		key := path.Join(_branchesDir, branchName)
-
-		var branch branchState
-		if err := s.b.Get(ctx, key, &branch); err != nil {
-			return nil, fmt.Errorf("get branch state: %w", err)
+	var children []string
+	for branch, err := range s.allBranches(ctx) {
+		if err != nil {
+			return nil, err
 		}
 
 		if branch.Base.Name == base {
-			children = append(children, branchName)
+			children = append(children, branch.Name)
 		}
 	}
 
 	return children, nil
+}
+
+// ListUpstack will list all branches that are upstack from the given branch,
+// with the given branch as the starting point.
+//
+// The returned slice is ordered by branch position in the upstack.
+// Earlier elements are closer to the trunk.
+func (s *Store) ListUpstack(ctx context.Context, start string) ([]string, error) {
+	branchesByBase := make(map[string][]string) // base name -> branches on base
+	for branch, err := range s.allBranches(ctx) {
+		if err != nil {
+			return nil, err
+		}
+
+		branchesByBase[branch.Base.Name] = append(
+			branchesByBase[branch.Base.Name], branch.Name,
+		)
+	}
+
+	var upstacks []string
+	remaining := []string{start}
+	for len(remaining) > 0 {
+		current := remaining[0]
+		remaining = remaining[1:]
+		upstacks = append(upstacks, current)
+		remaining = append(remaining, branchesByBase[current]...)
+	}
+
+	return upstacks, nil
 }

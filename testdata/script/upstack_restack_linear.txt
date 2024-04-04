@@ -1,0 +1,68 @@
+# Restack a branch with a few upstacks.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a stack of 4 branches
+# on top of each other.
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+
+git add feature3.txt
+gs bc feature3 -m 'Add feature3'
+
+git add feature4.txt
+gs bc feature4 -m 'Add feature4'
+
+# go to main, make an edit, and restack
+gs co main
+cp $WORK/extra/feature0.txt .
+git add feature0.txt
+gs cc -m 'Add feature0'
+
+gs upstack restack
+stderr 'Branch feature1 restacked on main'
+stderr 'Branch feature2 restacked on feature1'
+stderr 'Branch feature3 restacked on feature2'
+stderr 'Branch feature4 restacked on feature3'
+
+# should still be on main
+git branch
+cmp stdout $WORK/golden/main-branch.txt
+
+git log --decorate --oneline feature4
+cmp stdout $WORK/golden/feature4-log.txt
+
+-- repo/feature1.txt --
+foo
+-- repo/feature2.txt --
+bar
+-- repo/feature3.txt --
+baz
+-- repo/feature4.txt --
+qux
+-- extra/feature0.txt --
+quux
+
+-- golden/main-branch.txt --
+  feature1
+  feature2
+  feature3
+  feature4
+* main
+-- golden/feature4-log.txt --
+379fe91 (feature4) Add feature4
+c6e0662 (feature3) Add feature3
+07b28ac (feature2) Add feature2
+86abde0 (feature1) Add feature1
+f8f027f (HEAD -> main) Add feature0
+9bad92b Initial commit

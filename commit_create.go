@@ -6,7 +6,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/state"
 )
 
 type commitCreateCmd struct {
@@ -22,17 +21,6 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	// TODO: prompt for init if not initialized
-	store, err := state.OpenStore(ctx, repo, log)
-	if err != nil {
-		return fmt.Errorf("open storage: %w", err)
-	}
-
-	currentBranch, err := repo.CurrentBranch(ctx)
-	if err != nil {
-		currentBranch = "" // not a tracked branch
-	}
-
 	if err := repo.Commit(ctx, git.CommitRequest{
 		Message: cmd.Message,
 		All:     cmd.All,
@@ -40,9 +28,5 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	// Restack upstack branches if tracked.
-	_ = store
-	_ = currentBranch
-
-	return nil
+	return (&upstackRestackCmd{}).Run(ctx, log)
 }

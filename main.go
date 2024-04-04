@@ -140,6 +140,10 @@ type mainCmd struct {
 		Amend  commitAmendCmd  `cmd:"" aliases:"a" help:"Amend the current commit"`
 	} `cmd:"" aliases:"c" group:"Commit"`
 
+	Upstack struct {
+		Restack upstackRestackCmd `cmd:"" aliases:"rs" help:"Restack upstack branches"`
+	} `cmd:"" aliases:"us" group:"Stack"`
+
 	Up       upCmd       `cmd:"" group:"Movement" help:"Move up the stack"`
 	Down     downCmd     `cmd:"" group:"Movement" help:"Move down the stack"`
 	Top      topCmd      `cmd:"" group:"Movement" help:"Move to the top of the stack"`

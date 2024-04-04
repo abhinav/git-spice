@@ -58,6 +58,10 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 	if opts.exec == nil {
 		opts.exec = _realExec
 	}
+	if opts.Log == nil {
+		nop := zerolog.Nop()
+		opts.Log = &nop
+	}
 
 	out, err := newGitCmd(ctx, opts.Log,
 		"rev-parse",

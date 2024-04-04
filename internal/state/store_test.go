@@ -48,9 +48,9 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, state.Branch{
+		assert.Equal(t, &state.Branch{
 			Name: "foo",
-			Base: state.BranchBase{Name: "main", Hash: "123456"},
+			Base: &state.BranchBase{Name: "main", Hash: "123456"},
 			PR:   42,
 		}, res)
 	})
@@ -67,9 +67,9 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, state.Branch{
+		assert.Equal(t, &state.Branch{
 			Name: "foo",
-			Base: state.BranchBase{Name: "bar", Hash: "54321"},
+			Base: &state.BranchBase{Name: "bar", Hash: "54321"},
 			PR:   43,
 		}, res)
 	})
@@ -85,9 +85,9 @@ func TestIntegrationStore(t *testing.T) {
 
 		res, err := store.LookupBranch(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, state.Branch{
+		assert.Equal(t, &state.Branch{
 			Name: "bar/baz",
-			Base: state.BranchBase{Name: "main", Hash: "abcdef"},
+			Base: &state.BranchBase{Name: "main", Hash: "abcdef"},
 			PR:   44,
 		}, res)
 	})
