@@ -22,7 +22,7 @@ gs bc feature2 -m 'Add feature 2'
 gs down
 cp $WORK/extra/feature1.v2.txt feature1.txt
 git add feature1.txt
-gs cc -m 'Modify feature 1'
+git commit -m 'Modify feature 1'
 
 # At this point, the stack looks like this:
 #  o--A'--o  feature1

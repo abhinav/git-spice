@@ -27,7 +27,7 @@ gs bc feature4 -m 'Add feature4'
 gs co main
 cp $WORK/extra/feature0.txt .
 git add feature0.txt
-gs cc -m 'Add feature0'
+git commit -m 'Add feature0'
 
 gs upstack restack
 stderr 'Branch feature1 restacked on main'
