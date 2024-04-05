@@ -103,6 +103,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 		Onto:     actualBaseHash.String(),
 		Upstream: rebaseFrom.String(),
 		Branch:   head,
+		Quiet:    true,
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
 		// TODO: detect conflicts in rebase,

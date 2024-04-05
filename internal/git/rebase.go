@@ -11,6 +11,7 @@ type RebaseRequest struct {
 	Onto        string
 	Upstream    string
 	Branch      string
+	Quiet       bool
 }
 
 func (r *Repository) Rebase(ctx context.Context, opts RebaseRequest) error {
@@ -20,6 +21,9 @@ func (r *Repository) Rebase(ctx context.Context, opts RebaseRequest) error {
 	}
 	if opts.Onto != "" {
 		args = append(args, "--onto", opts.Onto)
+	}
+	if opts.Quiet {
+		args = append(args, "--quiet")
 	}
 	if opts.Upstream != "" {
 		args = append(args, opts.Upstream)

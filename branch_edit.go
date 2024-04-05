@@ -51,6 +51,5 @@ func (*branchEditCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	// print a message informing the user that they should run
 	// `gs continue` after they've finished the rebase operation.
 
-	// TODO: after the rebase operation, restack upstack branches.
-	return nil
+	return (&upstackRestackCmd{}).Run(ctx, log)
 }
