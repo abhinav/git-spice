@@ -26,7 +26,6 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("open storage: %w", err)
 	}
 
-	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
