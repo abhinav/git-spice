@@ -110,33 +110,10 @@ type mainCmd struct {
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
 	Version versionFlag        `help:"Print version information and quit"`
 
-	Repo struct {
-		Init repoInitCmd `cmd:"" aliases:"i" help:"Initialize a repository for stacking"`
-	} `cmd:"" aliases:"r" group:"Repository"`
-
-	Branch struct {
-		Track   branchTrackCmd   `cmd:"" aliases:"tr" help:"Begin tracking a branch with gs"`
-		Untrack branchUntrackCmd `cmd:"" aliases:"utr" help:"Stop tracking a branch with gs"`
-
-		// Creation and destruction
-		Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
-		Delete branchDeleteCmd `cmd:"" aliases:"de" help:"Delete the current branch"`
-		Fold   branchFoldCmd   `cmd:"" aliases:"f" help:"Fold a branch into its base"`
-
-		// Mutation
-		Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the current branch"`
-		Rename  branchRenameCmd  `cmd:"" aliases:"r" help:"Rename the current branch"`
-		Restack branchRestackCmd `cmd:"" aliases:"rs" help:"Restack just one branch"`
-	} `cmd:"" aliases:"b" group:"Branch"`
-
-	Commit struct {
-		Create commitCreateCmd `cmd:"" aliases:"c" help:"Create a new commit"`
-		Amend  commitAmendCmd  `cmd:"" aliases:"a" help:"Amend the current commit"`
-	} `cmd:"" aliases:"c" group:"Commit"`
-
-	Upstack struct {
-		Restack upstackRestackCmd `cmd:"" aliases:"rs" help:"Restack upstack branches"`
-	} `cmd:"" aliases:"us" group:"Stack"`
+	Repo    repoCmd    `cmd:"" aliases:"r" group:"Repository"`
+	Upstack upstackCmd `cmd:"" aliases:"us" group:"Stack"`
+	Branch  branchCmd  `cmd:"" aliases:"b" group:"Branch"`
+	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
 
 	Up       upCmd       `cmd:"" group:"Movement" help:"Move up the stack"`
 	Down     downCmd     `cmd:"" group:"Movement" help:"Move down the stack"`
