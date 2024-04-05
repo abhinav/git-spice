@@ -44,5 +44,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 		log.Warn().Err(err).Msg("error deleting branch")
 	}
 
-	panic("TODO: restack the upstack")
+	// TODO: if there are any branches with this as base,
+	// update them to its base.
+	return nil
 }
