@@ -34,14 +34,15 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 	}
 
 	if err := store.ForgetBranch(ctx, cmd.Name); err != nil {
-		return fmt.Errorf("forget branch: %w", err)
+		log.Warn().Err(err).Msg("Could not delete branch from store.")
 	}
 
 	if err := repo.DeleteBranch(ctx, cmd.Name, git.BranchDeleteOptions{
 		Force: cmd.Force,
 	}); err != nil {
 		// may have already been deleted
-		log.Warn().Err(err).Msg("error deleting branch")
+		log.Warn().Err(err).
+			Msg("Error deleting branch from Git. It may already be deleted.")
 	}
 
 	// TODO: if there are any branches with this as base,

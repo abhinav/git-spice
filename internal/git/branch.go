@@ -50,11 +50,9 @@ type BranchDeleteOptions struct {
 }
 
 func (r *Repository) DeleteBranch(ctx context.Context, branch string, opts BranchDeleteOptions) error {
-	args := []string{"branch"}
+	args := []string{"branch", "--delete"}
 	if opts.Force {
-		args = append(args, "-D")
-	} else {
-		args = append(args, "-d")
+		args = append(args, "--force")
 	}
 	args = append(args, branch)
 
