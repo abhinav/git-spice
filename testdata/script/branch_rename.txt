@@ -1,0 +1,61 @@
+# Renaming a branch in the middle of a stack
+# updates the upstack's reference to the branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Setup a branch "oldname" with "above" stacked on top.
+git add foo.txt
+gs branch create oldname -m 'Do things'
+git add bar.txt
+gs branch create above -m 'Branch above oldname'
+
+# Verify prior state.
+git branch
+cmp stdout $WORK/golden/branch-above-before.txt
+gs down
+git branch
+cmp stdout $WORK/golden/branch-oldname.txt
+
+# Rename.
+gs branch rename newname
+
+# Verify new state.
+git branch
+cmp stdout $WORK/golden/branch-newname.txt
+gs up
+git branch
+cmp stdout $WORK/golden/branch-above-after.txt
+
+# We should be able to go down to newname from above.
+gs down
+git branch
+cmp stdout $WORK/golden/branch-newname.txt
+
+-- repo/foo.txt --
+whatever
+
+-- repo/bar.txt --
+something else
+
+-- golden/branch-above-before.txt --
+* above
+  main
+  oldname
+-- golden/branch-above-after.txt --
+* above
+  main
+  newname
+-- golden/branch-oldname.txt --
+  above
+  main
+* oldname
+-- golden/branch-newname.txt --
+  above
+  main
+* newname

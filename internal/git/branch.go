@@ -61,3 +61,22 @@ func (r *Repository) DeleteBranch(ctx context.Context, branch string, opts Branc
 	}
 	return nil
 }
+
+type RenameBranchRequest struct {
+	OldName string
+	NewName string
+	Force   bool
+}
+
+func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) error {
+	args := []string{"branch", "--move"}
+	if req.Force {
+		args = append(args, "--force")
+	}
+	args = append(args, req.OldName, req.NewName)
+
+	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+		return fmt.Errorf("git branch: %w", err)
+	}
+	return nil
+}
