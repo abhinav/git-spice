@@ -51,13 +51,16 @@ func main() {
 		panic(err)
 	}
 
+	shorthands := map[string][]string{
+		"can": {"commit", "amend", "--no-edit"},
+	}
+
 	// For each leaf subcommand, define a combined shorthand alias.
 	// For example, if the command was "branch (b) create (c)",
 	// the shorthand would be "bc".
 	// For commands with multiple aliases, only the first is used.
-	shorthands := make(map[string]*kong.Node)
 	for _, n := range parser.Model.Leaves(false) {
-		if n.Type != kong.CommandNode || len(n.Aliases) < 1 {
+		if n.Type != kong.CommandNode || len(n.Aliases) == 0 {
 			continue
 		}
 
@@ -67,7 +70,6 @@ func main() {
 				panic(fmt.Sprintf("expected an alias for %q (%v)", c.Name, c.Path()))
 			}
 			fragments = append(fragments, c.Aliases[0])
-			// TODO: handle parent without an alias
 		}
 		if len(fragments) < 2 {
 			// If the command is already a single word, don't add an alias.
@@ -76,30 +78,21 @@ func main() {
 
 		slices.Reverse(fragments)
 		shorthand := strings.Join(fragments, "")
-
 		if other, ok := shorthands[shorthand]; ok {
-			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", shorthand, n.Path(), other.Path()))
+			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", shorthand, n.Path(), other))
 		}
-		shorthands[shorthand] = n
 
-		// TODO: new node that calls the original node
-		parser.Model.Children = append(parser.Model.Children, &kong.Node{
-			Type:        kong.CommandNode,
-			Parent:      parser.Model.Node,
-			Name:        shorthand,
-			Help:        n.Help,
-			Detail:      n.Detail,
-			Flags:       n.Flags,
-			Positional:  n.Positional,
-			Target:      n.Target,
-			Tag:         n.Tag,
-			Passthrough: n.Passthrough,
-			Active:      n.Active,
-			Hidden:      true,
-		})
+		shorthands[shorthand] = fragments
 	}
 
-	kctx, err := parser.Parse(os.Args[1:])
+	args := os.Args[1:]
+	if len(args) > 0 {
+		if path, ok := shorthands[args[0]]; ok {
+			args = slices.Replace(args, 0, 1, path...)
+		}
+	}
+
+	kctx, err := parser.Parse(args)
 	parser.FatalIfErrorf(err)
 
 	kctx.FatalIfErrorf(kctx.Run())
