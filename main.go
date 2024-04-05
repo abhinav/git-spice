@@ -128,6 +128,7 @@ type mainCmd struct {
 		// Creation and destruction
 		Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
 		Delete branchDeleteCmd `cmd:"" aliases:"de" help:"Delete the current branch"`
+		Fold   branchFoldCmd   `cmd:"" aliases:"f" help:"Fold a branch into its base"`
 
 		// Mutation
 		Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the current branch"`
