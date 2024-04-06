@@ -1,0 +1,57 @@
+# Restacking a branch automatically stashes uncommited changes.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch with the same files
+mv $WORK/extra/init.2.txt init.txt
+git add init.txt
+gs bc feature -m 'modify init'
+
+# diverge main from feature.
+gs down
+mv $WORK/extra/other.txt other.txt
+git add other.txt
+git commit -m 'Diverge'
+
+gs up
+stderr 'needs to be restacked'
+
+# dirty worktree
+cp $WORK/extra/init.3.txt init.txt
+gs branch restack
+
+# Dirty file is still present.
+cmp init.txt $WORK/extra/init.3.txt
+git status --porcelain
+cmp stdout $WORK/golden/git-status.txt
+
+git log --decorate --oneline
+cmp stdout $WORK/golden/git-log.txt
+
+-- repo/init.txt --
+initial contents
+
+-- extra/init.2.txt --
+initial contents 2
+
+-- extra/init.3.txt --
+initial contents 3
+
+-- extra/other.txt --
+another file
+
+-- golden/git-status.txt --
+ M init.txt
+-- golden/git-log.txt --
+973ebad (HEAD -> feature) modify init
+31b0f28 (main) Diverge
+9315e88 Initial commit

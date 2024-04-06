@@ -12,6 +12,7 @@ type RebaseRequest struct {
 	Upstream    string
 	Branch      string
 	Quiet       bool
+	Autostash   bool
 }
 
 func (r *Repository) Rebase(ctx context.Context, opts RebaseRequest) error {
@@ -21,6 +22,9 @@ func (r *Repository) Rebase(ctx context.Context, opts RebaseRequest) error {
 	}
 	if opts.Onto != "" {
 		args = append(args, "--onto", opts.Onto)
+	}
+	if opts.Autostash {
+		args = append(args, "--autostash")
 	}
 	if opts.Quiet {
 		args = append(args, "--quiet")

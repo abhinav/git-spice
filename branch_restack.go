@@ -104,10 +104,11 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	}
 
 	if err := repo.Rebase(ctx, git.RebaseRequest{
-		Onto:     actualBaseHash.String(),
-		Upstream: rebaseFrom.String(),
-		Branch:   head,
-		Quiet:    true,
+		Onto:      actualBaseHash.String(),
+		Upstream:  rebaseFrom.String(),
+		Branch:    head,
+		Autostash: true,
+		Quiet:     true,
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
 		// TODO: detect conflicts in rebase,
