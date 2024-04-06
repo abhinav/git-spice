@@ -13,6 +13,7 @@ import (
 type branchCreateCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the new branch"`
 
+	Below   bool   `help:"Place the branch below the current branch."`
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
 
@@ -29,6 +30,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err e
 	if err != nil {
 		return fmt.Errorf("open storage: %w", err)
 	}
+	trunk := store.Trunk()
 
 	// TODO: guess branch name from commit name
 	if cmd.Name == "" {
@@ -50,7 +52,28 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err e
 		return fmt.Errorf("diff index: %w", err)
 	}
 
-	if err := repo.DetachHead(ctx); err != nil {
+	base := &state.BranchBase{
+		Name: currentBranch,
+		Hash: currentHash,
+	}
+	// If trying to insert below current branch,
+	// detach to base instead.
+
+	if cmd.Below {
+		if currentBranch == trunk {
+			log.Error().Msg("--below: cannot create a branch below trunk")
+			return fmt.Errorf("--below cannot be used from  %v", trunk)
+		}
+
+		b, err := store.LookupBranch(ctx, currentBranch)
+		if err != nil {
+			return fmt.Errorf("branch not tracked: %v", currentBranch)
+		}
+
+		base = b.Base
+	}
+
+	if err := repo.DetachHead(ctx, base.Name); err != nil {
 		return fmt.Errorf("detach head: %w", err)
 	}
 	// From this point on, if there's an error,
@@ -81,12 +104,26 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err e
 
 	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     cmd.Name,
-		Base:     currentBranch,
-		BaseHash: currentHash,
-		Message:  fmt.Sprintf("create branch %s on %s", cmd.Name, currentBranch),
+		Base:     base.Name,
+		BaseHash: base.Hash,
+		Message:  fmt.Sprintf("create branch %s on %s", cmd.Name, base.Name),
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}
 
-	return nil
+	if !cmd.Below {
+		return nil
+	}
+
+	// Update the base for current branch and restack it.
+	// TODO: should be atomic with the other update
+	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+		Name:    currentBranch,
+		Base:    cmd.Name,
+		Message: fmt.Sprintf("create branch %s below %s", cmd.Name, currentBranch),
+	}); err != nil {
+		return fmt.Errorf("set branch: %w", err)
+	}
+
+	return (&upstackRestackCmd{}).Run(ctx, log)
 }

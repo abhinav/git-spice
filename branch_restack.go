@@ -54,6 +54,10 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
+	// TODO: This isn't quite right.
+	// Just base hash equality isn't enough.
+	// We also need to verify that base hash is reachable from current
+	// commit.
 	if actualBaseHash == b.Base.Hash {
 		log.Info().Msgf("Branch %v does not need to be restacked.", head)
 		return nil

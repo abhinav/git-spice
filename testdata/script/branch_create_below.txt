@@ -1,0 +1,31 @@
+# branch create --below inserts the branch below the current branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Cannot insert below trunk.
+! gs branch create --below foo -m 'this will not work'
+stderr 'cannot create a branch below trunk'
+
+git add foo.txt
+gs bc foo -m 'Add foo'
+
+git add bar.txt
+gs bc --below bar -m 'add bar.txt'
+
+git log --decorate --oneline foo
+cmp stdout $WORK/golden/git-log.txt
+
+-- repo/foo.txt --
+whatever
+-- repo/bar.txt --
+whatever
+-- golden/git-log.txt --
+44e7079 (foo) Add foo
+ea11e5f (HEAD -> bar) add bar.txt
+9bad92b (main) Initial commit

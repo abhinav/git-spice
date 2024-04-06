@@ -31,8 +31,12 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 }
 
 // TODO: combine with Checkout
-func (r *Repository) DetachHead(ctx context.Context) error {
-	if err := r.gitCmd(ctx, "checkout", "--detach").Run(r.exec); err != nil {
+func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
+	args := []string{"checkout", "--detach"}
+	if len(commitish) > 0 {
+		args = append(args, commitish)
+	}
+	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil
