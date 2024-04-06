@@ -1,0 +1,35 @@
+# branch create --insert inserts the branch above the current branch
+# but restacks the upstacks on top of it.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add foo.txt
+gs bc foo -m 'add foo'
+git log --decorate --oneline foo
+cmp stdout $WORK/golden/git-log-before.txt
+
+gs down
+git add bar.txt
+gs bc --insert bar -m 'add bar'
+git log --decorate --oneline foo
+cmp stdout $WORK/golden/git-log-after.txt
+
+-- repo/foo.txt --
+whatever
+
+-- repo/bar.txt --
+something else
+
+-- golden/git-log-before.txt --
+4f4085d (HEAD -> foo) add foo
+9bad92b (main) Initial commit
+-- golden/git-log-after.txt --
+e14e80f (foo) add foo
+0b259c0 (HEAD -> bar) add bar
+9bad92b (main) Initial commit
