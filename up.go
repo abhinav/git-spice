@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/charmbracelet/huh"
 	"github.com/rs/zerolog"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
@@ -49,8 +50,22 @@ func (*upCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	case 1:
 		targetName = children[0]
 	default:
-		// TODO: prompt user for which child to checkout
-		return fmt.Errorf("not implemented: multiple children")
+		opts := make([]huh.Option[string], len(children))
+		for i, child := range children {
+			opts[i] = huh.NewOption(child, child)
+		}
+
+		// TODO:
+		// Custom branch selection widget
+		// with fuzzy search.
+		prompt := huh.NewSelect[string]().
+			Title("Pick a branch").
+			Options(opts...).
+			Value(&targetName)
+
+		if err := prompt.Run(); err != nil {
+			return fmt.Errorf("a branch is required: %w", err)
+		}
 	}
 
 	targetBranch, err := store.LookupBranch(ctx, targetName)

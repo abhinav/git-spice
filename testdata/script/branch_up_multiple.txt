@@ -1,0 +1,33 @@
+# 'gs branch up' prompts to pick between multiple branches.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# main with initial commit
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc head1 -m 'head1'
+gs down
+gs bc head2 -m 'head2'
+gs down
+gs bc head3 -m 'head3'
+gs down
+
+git log --graph --oneline head1 head2 head3
+cmp stdout $WORK/golden/git-log.txt
+
+# TODO: how to test
+
+-- input.txt --
+
+-- golden/git-log.txt --
+* 524a964 head1
+| * 81559b1 head2
+|/  
+| * 155e1d0 head3
+|/  
+* 9bad92b Initial commit
