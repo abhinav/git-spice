@@ -5,10 +5,12 @@ go 1.22.1
 require (
 	github.com/alecthomas/kong v0.8.1
 	github.com/charmbracelet/huh v0.3.0
+	github.com/creack/pty/v2 v2.0.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/rs/zerolog v1.32.0
 	github.com/stretchr/testify v1.9.0
+	github.com/vito/midterm v0.1.5-0.20240307214207-d0271a7ca452
 	golang.org/x/oauth2 v0.15.0
 )
 

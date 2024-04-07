@@ -79,7 +79,7 @@ func (*upCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 	}
 
 	// Base hasn't changed, just checkout the child.
-	if err := repo.Checkout(ctx, children[0]); err != nil {
+	if err := repo.Checkout(ctx, targetName); err != nil {
 		return fmt.Errorf("checkout %q: %w", children[0], err)
 	}
 	return nil

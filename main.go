@@ -106,7 +106,7 @@ type mainCmd struct {
 	globalOptions
 
 	// Flags with side effects whose values are never accesssed directly.
-	Verbose bool               `short:"v" help:"Enable verbose output"`
+	Verbose bool               `short:"v" help:"Enable verbose output" env:"GS_VERBOSE"`
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
 	Version versionFlag        `help:"Print version information and quit"`
 
