@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -19,7 +19,7 @@ type branchCreateCmd struct {
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
 
-func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err error) {
+func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -63,7 +63,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *zerolog.Logger) (err e
 	var restackOntoNew []string
 	if cmd.Below {
 		if currentBranch == trunk {
-			log.Error().Msg("--below: cannot create a branch below trunk")
+			log.Error("--below: cannot create a branch below trunk")
 			return fmt.Errorf("--below cannot be used from  %v", trunk)
 		}
 

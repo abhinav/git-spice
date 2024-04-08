@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 )
 
 // LogWriter builds and returns an io.Writer that
@@ -19,13 +19,13 @@ import (
 // It will flush any buffered text to the logger.
 //
 // The returned writer is not thread-safe.
-func LogWriter(log *zerolog.Logger, lvl zerolog.Level) (w io.Writer, done func()) {
+func LogWriter(log *log.Logger, lvl log.Level) (w io.Writer, done func()) {
 	if log == nil {
 		return io.Discard, func() {}
 	}
 
 	w, flush := newPrintfWriter(func(msg string, args ...any) {
-		log.WithLevel(lvl).Msgf(msg, args...)
+		log.Logf(lvl, msg, args...)
 	}, "")
 	return w, flush
 }

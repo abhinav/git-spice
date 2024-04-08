@@ -4,16 +4,12 @@ package logtest
 import (
 	"testing"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/ioutil"
 )
 
 // New builds a logger that writes messages
 // to the given testing.TB.
-func New(t testing.TB) *zerolog.Logger {
-	log := zerolog.New(
-		zerolog.NewConsoleWriter(
-			zerolog.ConsoleTestWriter(t),
-		),
-	).Level(zerolog.DebugLevel)
-	return &log
+func New(t testing.TB) *log.Logger {
+	return log.New(ioutil.TestLogWriter(t, ""))
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -13,7 +13,7 @@ type commitCreateCmd struct {
 	Message string `short:"m" help:"Use the given message as the commit message."`
 }
 
-func (cmd *commitCreateCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

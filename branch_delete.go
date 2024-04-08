@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -15,7 +15,7 @@ type branchDeleteCmd struct {
 	Force bool   `short:"f" help:"Force deletion of the branch"`
 }
 
-func (cmd *branchDeleteCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -34,15 +34,14 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *zerolog.Logger) error 
 	}
 
 	if err := store.ForgetBranch(ctx, cmd.Name); err != nil {
-		log.Warn().Err(err).Msg("Could not delete branch from store.")
+		log.Warn("Could not delete branch from store.", "err", err)
 	}
 
 	if err := repo.DeleteBranch(ctx, cmd.Name, git.BranchDeleteOptions{
 		Force: cmd.Force,
 	}); err != nil {
 		// may have already been deleted
-		log.Warn().Err(err).
-			Msg("Error deleting branch from Git. It may already be deleted.")
+		log.Warn("Error deleting branch from Git. It may already be deleted.", "err", err)
 	}
 
 	// TODO: if there are any branches with this as base,

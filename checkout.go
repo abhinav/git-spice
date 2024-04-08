@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -13,7 +13,7 @@ type checkoutCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to delete"`
 }
 
-func (cmd *checkoutCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (cmd *checkoutCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

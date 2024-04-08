@@ -5,12 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"iter"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -25,7 +26,7 @@ var ErrNotExist = os.ErrNotExist
 type Store struct {
 	b     storageBackend
 	trunk string
-	log   *zerolog.Logger
+	log   *log.Logger
 }
 
 func (s *Store) Trunk() string {
@@ -40,7 +41,7 @@ type InitStoreRequest struct {
 	// e.g. "main" or "master".
 	Trunk string
 
-	Log *zerolog.Logger
+	Log *log.Logger
 }
 
 type repoInfo struct {
@@ -48,17 +49,16 @@ type repoInfo struct {
 }
 
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
-	log := req.Log
-	if log == nil {
-		nop := zerolog.Nop()
-		log = &nop
+	logger := req.Log
+	if logger == nil {
+		logger = log.New(io.Discard)
 	}
 
 	if req.Trunk == "" {
 		return nil, errors.New("trunk branch name is required")
 	}
 
-	b := newGitStorageBackend(req.Repository, log)
+	b := newGitStorageBackend(req.Repository, logger)
 	info := repoInfo{Trunk: req.Trunk}
 	if err := b.Put(ctx, _repoJSON, info, "initialize store"); err != nil {
 		return nil, fmt.Errorf("put repo state: %w", err)
@@ -67,7 +67,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	return &Store{
 		b:     b,
 		trunk: req.Trunk,
-		log:   log,
+		log:   logger,
 	}, nil
 }
 
@@ -75,12 +75,11 @@ var ErrUninitialized = errors.New("store not initialized")
 
 // OpenStore opens the Store for the given Git repository.
 // The store will be created if it does not exist.
-func OpenStore(ctx context.Context, repo GitRepository, log *zerolog.Logger) (*Store, error) {
-	if log == nil {
-		nop := zerolog.Nop()
-		log = &nop
+func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*Store, error) {
+	if logger == nil {
+		logger = log.New(io.Discard)
 	}
-	b := newGitStorageBackend(repo, log)
+	b := newGitStorageBackend(repo, logger)
 
 	var info repoInfo
 	if err := b.Get(ctx, _repoJSON, &info); err != nil {
@@ -93,7 +92,7 @@ func OpenStore(ctx context.Context, repo GitRepository, log *zerolog.Logger) (*S
 	return &Store{
 		b:     b,
 		trunk: info.Trunk,
-		log:   log,
+		log:   logger,
 	}, nil
 }
 

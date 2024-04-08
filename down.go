@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
 
 type downCmd struct{}
 
-func (*downCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -34,12 +34,11 @@ func (*downCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 
 	branchRes, err := store.LookupBranch(ctx, currentBranch)
 	if err != nil {
-		log.Err(err).Msgf("get branch %q", currentBranch)
-		return fmt.Errorf("branch %q is not being tracked", currentBranch)
+		return fmt.Errorf("branch %q is not being tracked: %w", currentBranch, err)
 	}
 
 	if branchRes.Base.Name == store.Trunk() {
-		log.Info().Msgf("exiting stack: moving to trunk: %v", store.Trunk())
+		log.Infof("exiting stack: moving to trunk: %v", store.Trunk())
 	}
 
 	// TODO: warn about top of stack when moving to upstream branch.

@@ -9,7 +9,7 @@ import (
 	"io"
 	"iter"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -49,12 +49,12 @@ type gitStorageBackend struct {
 	repo GitRepository
 	ref  string
 	sig  git.Signature
-	log  *zerolog.Logger
+	log  *log.Logger
 }
 
 var _ storageBackend = (*gitStorageBackend)(nil)
 
-func newGitStorageBackend(repo GitRepository, log *zerolog.Logger) *gitStorageBackend {
+func newGitStorageBackend(repo GitRepository, log *log.Logger) *gitStorageBackend {
 	return &gitStorageBackend{
 		repo: repo,
 		ref:  _dataRef,
@@ -92,11 +92,10 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) (iter.Seq[stri
 	return func(yield func(string) bool) {
 		for ent, err := range entries {
 			if err != nil {
-				g.log.Warn().
-					Err(err).
-					Str("dir", dir).
-					Stringer("tree", treeHash).
-					Msg("error encountered while reading tree entries")
+				g.log.Warn("error encountered while reading tree entries",
+					"err", err,
+					"dir", dir,
+					"tree", treeHash)
 				break
 			}
 
@@ -189,10 +188,7 @@ func (g *gitStorageBackend) Put(ctx context.Context, key string, v interface{}, 
 			OldHash: prevCommit,
 		}); err != nil {
 			updateErr = err
-			g.log.Warn().
-				Err(err).
-				Str("key", key).
-				Msg("could not update ref: retrying")
+			g.log.Warn("could not update ref: retrying", "err", err, "key", key)
 			continue
 		}
 

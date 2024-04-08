@@ -3,15 +3,16 @@ package git
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 )
 
 // InitOptions configures the behavior of Init.
 type InitOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *zerolog.Logger
+	Log *log.Logger
 
 	// Branch is the name of the initial branch to create.
 	// Defaults to "main".
@@ -47,7 +48,7 @@ func Init(ctx context.Context, dir string, opts InitOptions) (*Repository, error
 // OpenOptions configures the behavior of Open.
 type OpenOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *zerolog.Logger
+	Log *log.Logger
 
 	exec execer
 }
@@ -59,8 +60,7 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.exec = _realExec
 	}
 	if opts.Log == nil {
-		nop := zerolog.Nop()
-		opts.Log = &nop
+		opts.Log = log.New(io.Discard)
 	}
 
 	out, err := newGitCmd(ctx, opts.Log,
@@ -91,7 +91,7 @@ type Repository struct {
 	root   string
 	gitDir string
 
-	log  *zerolog.Logger
+	log  *log.Logger
 	exec execer
 }
 

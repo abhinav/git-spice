@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -13,7 +13,7 @@ type branchFoldCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch"`
 }
 
-func (cmd *branchFoldCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -85,6 +85,6 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *zerolog.Logger) error {
 		return fmt.Errorf("delete branch %q: %w", cmd.Name, err)
 	}
 
-	log.Info().Msgf("Branch %v has been folded into %v", cmd.Name, b.Base.Name)
+	log.Infof("Branch %v has been folded into %v", cmd.Name, b.Base.Name)
 	return nil
 }

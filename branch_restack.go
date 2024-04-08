@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -14,7 +14,7 @@ type branchRestackCmd struct {
 	Name string `arg:"" optional:"" help:"Branch to restack. Defaults to the current branch."`
 }
 
-func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error {
+func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -59,7 +59,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	// We also need to verify that base hash is reachable from current
 	// commit.
 	if actualBaseHash == b.Base.Hash {
-		log.Info().Msgf("Branch %v does not need to be restacked.", head)
+		log.Infof("Branch %v does not need to be restacked.", head)
 		return nil
 	}
 
@@ -76,7 +76,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 		if err != nil {
 			return fmt.Errorf("update branch information: %w", err)
 		}
-		log.Info().Msgf("Branch %v was already restacked on %v", head, b.Base.Name)
+		log.Infof("Branch %v was already restacked on %v", head, b.Base.Name)
 		return nil
 	}
 
@@ -100,7 +100,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 	forkPoint, err := repo.ForkPoint(ctx, b.Base.Name, head)
 	if err == nil {
 		rebaseFrom = forkPoint
-		log.Debug().Msgf("Using fork point %v as rebase base", rebaseFrom)
+		log.Debugf("Using fork point %v as rebase base", rebaseFrom)
 	}
 
 	if err := repo.Rebase(ctx, git.RebaseRequest{
@@ -123,6 +123,6 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *zerolog.Logger) error
 		return fmt.Errorf("update branch information: %w", err)
 	}
 
-	log.Info().Msgf("Branch %v restacked on %v", head, b.Base.Name)
+	log.Infof("Branch %v restacked on %v", head, b.Base.Name)
 	return nil
 }

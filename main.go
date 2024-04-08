@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/mattn/go-isatty"
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/gh"
 	"golang.org/x/oauth2"
 )
@@ -19,11 +19,17 @@ import (
 var _version = "dev"
 
 func main() {
-	log := zerolog.New(&zerolog.ConsoleWriter{
-		Out:          os.Stderr,
-		NoColor:      !isatty.IsTerminal(os.Stderr.Fd()),
-		PartsExclude: []string{"time"},
-	}).Level(zerolog.InfoLevel)
+	logger := log.NewWithOptions(os.Stderr, log.Options{
+		Level: log.InfoLevel,
+	})
+
+	styles := log.DefaultStyles()
+	styles.Levels[log.DebugLevel] = lipgloss.NewStyle().SetString("DBG").Bold(true)
+	styles.Levels[log.InfoLevel] = lipgloss.NewStyle().SetString("INF").Foreground(lipgloss.Color("10")).Bold(true) // green
+	styles.Levels[log.WarnLevel] = lipgloss.NewStyle().SetString("WRN").Foreground(lipgloss.Color("11")).Bold(true) // yellow
+	styles.Levels[log.ErrorLevel] = lipgloss.NewStyle().SetString("ERR").Foreground(lipgloss.Color("9")).Bold(true) // red
+	styles.Levels[log.FatalLevel] = lipgloss.NewStyle().SetString("FTL").Foreground(lipgloss.Color("9")).Bold(true) // red
+	logger.SetStyles(styles)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -33,7 +39,7 @@ func main() {
 	go func() {
 		select {
 		case <-sigc:
-			log.Info().Msg("Cleaning up. Press Ctrl-C again to exit immediately.")
+			log.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
 			cancel()
 		case <-ctx.Done():
 		}
@@ -43,7 +49,7 @@ func main() {
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
 		kong.Description("gs is a command line tool to manage stacks of GitHub pull requests."),
-		kong.Bind(&log, &cmd.globalOptions),
+		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.UsageOnError(),
 	)
@@ -93,9 +99,13 @@ func main() {
 	}
 
 	kctx, err := parser.Parse(args)
-	parser.FatalIfErrorf(err)
+	if err != nil {
+		logger.Fatalf("gs: %v", err)
+	}
 
-	kctx.FatalIfErrorf(kctx.Run())
+	if err := kctx.Run(); err != nil {
+		logger.Fatalf("gs: %v", err)
+	}
 }
 
 type globalOptions struct {
@@ -122,9 +132,9 @@ type mainCmd struct {
 	Checkout checkoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
-func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *zerolog.Logger) error {
+func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 	if cmd.Verbose {
-		*logger = logger.Level(zerolog.DebugLevel)
+		logger.SetLevel(log.DebugLevel)
 	}
 
 	var tokenSource oauth2.TokenSource = &gh.CLITokenSource{}
