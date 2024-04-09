@@ -12,6 +12,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/vito/midterm v0.1.5-0.20240307214207-d0271a7ca452
 	golang.org/x/oauth2 v0.15.0
+	pgregory.net/rapid v1.1.0
 )
 
 require (

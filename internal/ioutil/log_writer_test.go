@@ -1,10 +1,13 @@
 package ioutil
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"pgregory.net/rapid"
 )
 
 func TestPrintfWriter(t *testing.T) {
@@ -92,4 +95,35 @@ func TestPrintfWriter(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestPrintfWriterRapid(t *testing.T) {
+	rapid.Check(t, testPrintfWriterRapid)
+}
+
+func FuzzPrintfWriterRapid(f *testing.F) {
+	f.Fuzz(rapid.MakeFuzz(testPrintfWriterRapid))
+}
+
+func testPrintfWriterRapid(t *rapid.T) {
+	var gotBuff bytes.Buffer
+	w, flush := newPrintfWriter(func(format string, args ...any) {
+		_, err := fmt.Fprintf(&gotBuff, format+"\n", args...)
+		assert.NoError(t, err)
+	}, "")
+
+	var wantBuff bytes.Buffer
+	chunks := rapid.SliceOf(rapid.SliceOf(rapid.Byte())).Draw(t, "chunks")
+	for _, chunk := range chunks {
+		wantBuff.Write(chunk)
+		_, err := w.Write(chunk)
+		assert.NoError(t, err)
+	}
+
+	flush()
+
+	got := strings.TrimSuffix(gotBuff.String(), "\n")
+	want := strings.TrimSuffix(wantBuff.String(), "\n")
+
+	assert.Equal(t, want, got)
 }
