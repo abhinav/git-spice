@@ -32,6 +32,7 @@ type GitRepository interface {
 	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) (iter.Seq2[git.TreeEntry, error], error)
 	CommitTree(ctx context.Context, req git.CommitTreeRequest) (git.Hash, error)
 	UpdateTree(ctx context.Context, req git.UpdateTreeRequest) (git.Hash, error)
+	MakeTree(ctx context.Context, ents iter.Seq[git.TreeEntry]) (git.Hash, error)
 
 	SetRef(ctx context.Context, req git.SetRefRequest) error
 }
@@ -42,6 +43,7 @@ type storageBackend interface {
 	Put(ctx context.Context, key string, v interface{}, msg string) error
 	Get(ctx context.Context, key string, v interface{}) error
 	Del(ctx context.Context, key string, msg string) error
+	Clear(ctx context.Context, msg string) error
 	Keys(ctx context.Context, dir string) (iter.Seq[string], error)
 }
 
@@ -123,6 +125,43 @@ func (g *gitStorageBackend) Get(ctx context.Context, key string, v interface{}) 
 
 	if err := json.NewDecoder(&buf).Decode(v); err != nil {
 		return fmt.Errorf("decode JSON: %w", err)
+	}
+
+	return nil
+}
+
+func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
+	prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
+	if err != nil {
+		prevCommit = "" // not initialized
+	}
+
+	tree, err := g.repo.MakeTree(ctx, func(yield func(git.TreeEntry) bool) {
+		// empty
+	})
+	if err != nil {
+		return fmt.Errorf("make tree: %w", err)
+	}
+
+	commitReq := git.CommitTreeRequest{
+		Tree:    tree,
+		Message: msg,
+		Author:  &g.sig,
+	}
+	if prevCommit != "" {
+		commitReq.Parents = []git.Hash{prevCommit}
+	}
+	newCommit, err := g.repo.CommitTree(ctx, commitReq)
+	if err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	if err := g.repo.SetRef(ctx, git.SetRefRequest{
+		Ref:     g.ref,
+		Hash:    newCommit,
+		OldHash: prevCommit,
+	}); err != nil {
+		return fmt.Errorf("update ref: %w", err)
 	}
 
 	return nil

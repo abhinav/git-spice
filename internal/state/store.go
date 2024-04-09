@@ -42,11 +42,17 @@ type InitStoreRequest struct {
 	Trunk string
 
 	Log *log.Logger
+
+	// Force will clear the store if it's already initialized.
+	// Without this, InitStore will fail with ErrAlreadyInitialized.
+	Force bool
 }
 
 type repoInfo struct {
 	Trunk string `json:"trunk"`
 }
+
+var ErrAlreadyInitialized = errors.New("store already initialized")
 
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	logger := req.Log
@@ -59,6 +65,15 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}
 
 	b := newGitStorageBackend(req.Repository, logger)
+	if err := b.Get(ctx, _repoJSON, new(repoInfo)); err == nil {
+		if !req.Force {
+			return nil, ErrAlreadyInitialized
+		}
+		if err := b.Clear(ctx, "re-initializing store"); err != nil {
+			return nil, fmt.Errorf("clear store: %w", err)
+		}
+	}
+
 	info := repoInfo{Trunk: req.Trunk}
 	if err := b.Put(ctx, _repoJSON, info, "initialize store"); err != nil {
 		return nil, fmt.Errorf("put repo state: %w", err)

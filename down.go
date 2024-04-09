@@ -32,6 +32,11 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
+	if currentBranch == store.Trunk() {
+		log.Error("there are no more branches downstack")
+		return fmt.Errorf("already on trunk: %v", currentBranch)
+	}
+
 	branchRes, err := store.LookupBranch(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("branch %q is not being tracked: %w", currentBranch, err)
@@ -41,7 +46,6 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 		log.Infof("exiting stack: moving to trunk: %v", store.Trunk())
 	}
 
-	// TODO: warn about top of stack when moving to upstream branch.
 	if err := repo.Checkout(ctx, branchRes.Base.Name); err != nil {
 		return fmt.Errorf("checkout %q: %w", branchRes.Base, err)
 	}

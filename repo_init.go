@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -14,6 +15,7 @@ import (
 
 type repoInitCmd struct {
 	Trunk string `help:"The name of the trunk branch"`
+	Force bool   `help:"Overwrite storage for an initialized repository"`
 }
 
 func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
@@ -72,9 +74,14 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	_, err = state.InitStore(ctx, state.InitStoreRequest{
 		Repository: repo,
 		Trunk:      cmd.Trunk,
+		Force:      cmd.Force,
 	})
 	if err != nil {
-		return fmt.Errorf("open storage: %w", err)
+		if errors.Is(err, state.ErrAlreadyInitialized) {
+			log.Error("use --force to overwrite existing storage.")
+			return errors.New("repository is already initialized")
+		}
+		return fmt.Errorf("initialize storage: %w", err)
 	}
 
 	log.Info("Initialized repository", "trunk", cmd.Trunk)

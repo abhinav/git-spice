@@ -1,0 +1,39 @@
+# 'gs repo init' force forgets prior state.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a linear stack
+gs bc feature1 -m 'feature1'
+gs bc feature2 -m 'feature2'
+gs bc feature3 -m 'feature3'
+gs down
+
+# attempt to re-init without --force fails
+! gs repo init --trunk feature2
+stderr 'repository is already initialized'
+stderr 'use --force to overwrite'
+
+# init with feature2 as trunk,
+# and make feature2 parent of feature1
+# (which is the opposite of before).
+gs repo init --force --trunk feature2
+
+! gs up
+stderr 'no branches found upstack'
+
+! gs down
+stderr 'there are no more branches downstack'
+stderr 'already on trunk'
+
+-- golden/git-branch.txt --
+  feature1
+* feature2
+  feature3
+  main
