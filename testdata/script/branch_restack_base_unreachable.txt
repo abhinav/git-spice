@@ -1,0 +1,42 @@
+# A branch with a base not reachable from it
+# must show as needing restacking.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add foo.txt
+gs bc foo -m 'Add foo'
+gs down
+
+git add bar.txt
+git checkout -b bar
+git commit -m 'Add bar'
+
+# sanity check
+! exists foo.txt
+
+# track bar with foo as parent.
+gs branch track --parent foo
+# TODO: stderr: bar needs to be restacked
+
+gs branch restack
+stderr 'bar restacked on foo'
+
+git log bar --decorate --oneline
+cmp stdout $WORK/golden/git-log.txt
+
+-- repo/foo.txt --
+foo
+
+-- repo/bar.txt --
+bar
+
+-- golden/git-log.txt --
+20836f3 (HEAD -> bar) Add bar
+c105eec (foo) Add foo
+9bad92b (main) Initial commit

@@ -26,7 +26,7 @@ git rebase --onto main HEAD~ feature
 git checkout feature
 
 gs branch restack
-stderr 'already restacked on main'
+stderr 'does not need to be restacked'
 
 -- repo/init.txt --
 initial contents

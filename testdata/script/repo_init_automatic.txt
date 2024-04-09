@@ -10,6 +10,6 @@ git commit --allow-empty -m 'Initial commit'
 
 # create a branch
 gs bc feature -m 'Add feature'
-stderr 'Repository not initialized. Initializing.'
+stderr 'Repository not initialized'
 stderr 'Initialized'
 stderr 'trunk=main'

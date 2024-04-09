@@ -45,21 +45,12 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err != nil {
 		// TODO:
 		// Base branch has been deleted.
-		// Find the parent of the base branch
-		// and use that as the new base.
+		// Suggest a means of repairing this:
+		// possibly by prompting to select a different base branch.
 		if errors.Is(err, git.ErrNotExist) {
 			return fmt.Errorf("base branch %v does not exist", b.Base.Name)
 		}
 		return fmt.Errorf("peel to commit: %w", err)
-	}
-
-	// TODO: This isn't quite right.
-	// Just base hash equality isn't enough.
-	// We also need to verify that base hash is reachable from current
-	// commit.
-	if actualBaseHash == b.Base.Hash {
-		log.Infof("Branch %v does not need to be restacked.", head)
-		return nil
 	}
 
 	// Case:
@@ -67,15 +58,17 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	// Our information is stale, and we just need to update that.
 	mergeBase, err := repo.MergeBase(ctx, b.Base.Name, head)
 	if err == nil && mergeBase == actualBaseHash {
-		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:     head,
-			BaseHash: mergeBase,
-			Message:  fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name),
-		})
-		if err != nil {
-			return fmt.Errorf("update branch information: %w", err)
+		if mergeBase != b.Base.Hash {
+			err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+				Name:     head,
+				BaseHash: mergeBase,
+				Message:  fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name),
+			})
+			if err != nil {
+				return fmt.Errorf("update branch information: %w", err)
+			}
 		}
-		log.Infof("Branch %v was already restacked on %v", head, b.Base.Name)
+		log.Infof("Branch %v does not need to be restacked.", head)
 		return nil
 	}
 
