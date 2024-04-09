@@ -1,0 +1,5 @@
+# 'gs repo init' without arguments on a new repository
+# without any commits, still succeeds.
+
+git init -b my-branch
+gs repo init

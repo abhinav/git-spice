@@ -78,16 +78,17 @@ func TestMain(m *testing.M) {
 			cmd.Env = append(os.Environ(), "TERM=screen")
 			cmd.Stderr = os.Stderr
 
-			f, err := pty.StartWithSize(cmd, &pty.Winsize{
-				Rows: 10,
-				Cols: 20,
-			})
+			size := &pty.Winsize{
+				Rows: 40,
+				Cols: 70,
+			}
+			f, err := pty.StartWithSize(cmd, size)
 			if err != nil {
 				log.Printf("cannot open pty: %v", err)
 				return 1
 			}
 
-			emu := newVT100Emulator(f, cmd, 10, 20, log.Printf)
+			emu := newVT100Emulator(f, cmd, int(size.Rows), int(size.Cols), log.Printf)
 			defer func() {
 				if err := emu.Close(); err != nil {
 					log.Printf("%v: %v", cmd, err)

@@ -1,9 +1,57 @@
 package git
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 )
+
+// LocalBranches lists local branches in the repository.
+func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
+	cmd := r.gitCmd(ctx, "branch")
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("git branch: %w", err)
+	}
+
+	if err := cmd.Start(r.exec); err != nil {
+		return nil, fmt.Errorf("start git branch: %w", err)
+	}
+
+	var branches []string
+	scan := bufio.NewScanner(out)
+	for scan.Scan() {
+		line := bytes.TrimSpace(scan.Bytes())
+		if len(line) == 0 {
+			continue
+		}
+
+		switch line[0] {
+		case '(':
+			continue // (HEAD detached at ...)
+		case '*', '+':
+			// Current or checked out in another worktree.
+			b := bytes.TrimSpace(line[1:])
+			// TODO: instead of returning string,
+			// return a list of LocalBranch objects
+			// that also specify whether the branch is checked out.
+			branches = append(branches, string(b))
+		default:
+			branches = append(branches, string(line))
+		}
+	}
+
+	if err := scan.Err(); err != nil {
+		return nil, fmt.Errorf("read output: %w", err)
+	}
+
+	if err := cmd.Wait(r.exec); err != nil {
+		return nil, fmt.Errorf("git branch: %w", err)
+	}
+
+	return branches, nil
+}
 
 func (r *Repository) CurrentBranch(ctx context.Context) (string, error) {
 	name, err := r.gitCmd(ctx, "branch", "--show-current").

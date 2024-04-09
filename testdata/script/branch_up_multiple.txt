@@ -34,7 +34,7 @@ feed \x1b[B
 await
 
 snapshot select
-feed \r\n
+feed \r
 
 -- golden/interact.txt --
 ### dialog ###

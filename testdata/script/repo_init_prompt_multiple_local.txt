@@ -1,0 +1,27 @@
+# 'gs repo init' with multiple local branches
+# prompts for a selection.
+
+# setup
+mkdir repo
+cd repo
+git init -b main
+git commit --allow-empty -m 'Initial commit'
+git branch foo
+git branch bar
+
+# current branch is the default
+git checkout foo
+with-term $WORK/input.txt -- gs repo init
+cmp stdout $WORK/golden/dialog.txt
+
+-- input.txt --
+await Pick a trunk
+snapshot dialog
+feed \r
+
+-- golden/dialog.txt --
+### dialog ###
+┃ Pick a trunk branch
+┃   bar
+┃ > foo
+┃   main

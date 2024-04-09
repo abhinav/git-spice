@@ -6,8 +6,8 @@ at '2024-03-30T14:59:32Z'
 # setup
 cd repo
 git init
-gs repo init
 git commit --allow-empty -m 'Initial commit'
+gs repo init
 
 git checkout -b feature
 gs branch track --parent main

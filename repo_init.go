@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
 )
 
@@ -22,20 +25,49 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	if cmd.Trunk == "" {
-		// TODO: check if there's a remote first?
-		if b, err := repo.DefaultBranch(ctx, "origin"); err == nil {
-			cmd.Trunk = b
-		}
-	}
-
-	if cmd.Trunk == "" {
-		// Use the current branch as the trunk.
-		b, err := repo.CurrentBranch(ctx)
+		defaultTrunk, err := repo.CurrentBranch(ctx)
 		if err != nil {
-			return fmt.Errorf("get current branch: %w", err)
+			return fmt.Errorf("determine current branch: %w", err)
 		}
-		cmd.Trunk = b
+		if upstream, err := repo.DefaultBranch(ctx, "origin"); err == nil {
+			defaultTrunk = upstream
+		}
+
+		localBranches, err := repo.LocalBranches(ctx)
+		if err != nil {
+			return fmt.Errorf("list local branches: %w", err)
+		}
+		sort.Strings(localBranches)
+
+		switch len(localBranches) {
+		case 0:
+			// There are no branches with any commits,
+			// but HEAD still points to a branch.
+			// This will be true for new repositories
+			// without any commits only.
+			cmd.Trunk = defaultTrunk
+		case 1:
+			cmd.Trunk = localBranches[0]
+		default:
+			opts := make([]huh.Option[string], len(localBranches))
+			for i, branch := range localBranches {
+				opt := huh.NewOption(branch, branch)
+				if branch == defaultTrunk {
+					opt = opt.Selected(true)
+				}
+				opts[i] = opt
+			}
+
+			prompt := huh.NewSelect[string]().
+				Title("Pick a trunk branch").
+				Options(opts...).
+				Value(&cmd.Trunk)
+			if err := prompt.Run(); err != nil {
+				return fmt.Errorf("prompt for branch: %w", err)
+			}
+		}
 	}
+	must.NotBeBlankf(cmd.Trunk, "trunk branch must have been set")
 
 	_, err = state.InitStore(ctx, state.InitStoreRequest{
 		Repository: repo,

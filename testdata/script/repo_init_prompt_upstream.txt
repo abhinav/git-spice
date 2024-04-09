@@ -1,0 +1,32 @@
+# 'gs repo init' prefers upstream default branch.
+
+# set up an upstream
+mkdir upstream
+cd upstream
+git init -b main
+git commit --allow-empty -m 'Initial commit'
+
+# local repository with a couple branches,
+# and the non-default branch checked out.
+cd $WORK
+git clone upstream repo
+cd repo
+git branch foo
+git branch bar
+
+# upstream branch is default
+git checkout foo
+with-term $WORK/input.txt -- gs repo init
+cmp stdout $WORK/golden/dialog.txt
+
+-- input.txt --
+await Pick a trunk
+snapshot dialog
+feed \r
+
+-- golden/dialog.txt --
+### dialog ###
+┃ Pick a trunk branch
+┃   bar
+┃   foo
+┃ > main
