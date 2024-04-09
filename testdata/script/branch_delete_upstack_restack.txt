@@ -1,0 +1,3 @@
+# TODO
+# deleting a branch rebases its upstack on top of the deleted branch's base
+# *without* the deleted commit.

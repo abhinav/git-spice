@@ -1,0 +1,17 @@
+# gs can delete branches it doesn't track.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git branch foo
+gs branch delete foo
+stderr 'not tracked by gs'
+stderr 'deleting anyway'
+
+! git rev-parse --verify foo

@@ -185,14 +185,25 @@ func TestScript(t *testing.T) {
 			}
 			e.Setenv("GIT_CONFIG_COUNT", strconv.Itoa(numCfg))
 
+			// Add a default author to all commits.
+			// Tests can override with 'as' and 'at'.
+			e.Setenv("GIT_AUTHOR_NAME", "Test")
+			e.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+			e.Setenv("GIT_COMMITTER_NAME", "Test")
+			e.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+
 			return nil
 		},
 		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
 			"git": func(ts *testscript.TestScript, neg bool, args []string) {
+				err := ts.Exec("git", args...)
 				if neg {
-					ts.Fatalf("usage: git <args>")
+					if err == nil {
+						ts.Fatalf("unexpected success, expected failure")
+					}
+				} else {
+					ts.Check(err)
 				}
-				ts.Check(ts.Exec("git", args...))
 			},
 			"as": func(ts *testscript.TestScript, neg bool, args []string) {
 				if neg || len(args) != 1 {

@@ -1,0 +1,31 @@
+# --force is needed to delete an unmerged branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git checkout -b foo
+git add foo.txt
+git commit -m 'add foo.txt'
+
+git checkout main
+
+! gs branch delete foo
+stderr 'git refused to delete'
+stderr 'not fully merged'
+stderr 'try re-running with --force'
+
+# branch still exists
+git rev-parse --verify foo
+stdout 'd844dc8b311d27c74fee35f8501171610124ee7a'
+
+gs branch delete --force foo
+! git rev-parse --verify foo
+
+-- repo/foo.txt --
+whatever
