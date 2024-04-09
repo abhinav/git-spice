@@ -87,3 +87,27 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	log.Info("Initialized repository", "trunk", cmd.Trunk)
 	return nil
 }
+
+// ensureStore will open the gs data store in the provided Git repository,
+// initializing it with `gs repo init` if it hasn't already been initialized.
+//
+// This allows nearly any other command to work without initialization
+// by auto-initializing the repository at that time.
+func ensureStore(ctx context.Context, repo state.GitRepository, log *log.Logger) (*state.Store, error) {
+	store, err := state.OpenStore(ctx, repo, log)
+	if err == nil {
+		return store, nil
+	}
+
+	if errors.Is(err, state.ErrUninitialized) {
+		log.Info("Repository not initialized for use with gs. Initializing.")
+		if err := (&repoInitCmd{}).Run(ctx, log); err != nil {
+			return nil, fmt.Errorf("auto-initialize: %w", err)
+		}
+
+		// Assume initialization was a success.
+		return state.OpenStore(ctx, repo, log)
+	}
+
+	return nil, fmt.Errorf("open store: %w", err)
+}

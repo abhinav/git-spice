@@ -1,0 +1,15 @@
+# Repository is automatically initialized if necessary.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# create a branch
+gs bc feature -m 'Add feature'
+stderr 'Repository not initialized. Initializing.'
+stderr 'Initialized'
+stderr 'trunk=main'

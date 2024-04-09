@@ -32,10 +32,9 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	// TODO: prompt for init if not initialized
-	store, err := state.OpenStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log)
 	if err != nil {
-		return fmt.Errorf("open storage: %w", err)
+		return err
 	}
 
 	if err := repo.RenameBranch(ctx, git.RenameBranchRequest{

@@ -6,7 +6,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/state"
 )
 
 type branchUntrackCmd struct {
@@ -28,10 +27,9 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 	}
 
-	// TODO: prompt for init if not initialized
-	store, err := state.OpenStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log)
 	if err != nil {
-		return fmt.Errorf("open storage: %w", err)
+		return err
 	}
 
 	if _, err := store.LookupBranch(ctx, cmd.Name); err != nil {
