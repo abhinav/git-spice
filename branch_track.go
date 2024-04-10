@@ -60,5 +60,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	log.Infof("%v: tracking with parent %v", cmd.Name, cmd.Parent)
+
+	checkNeedsRestack(ctx, repo, store, log, cmd.Name)
 	return nil
 }

@@ -21,8 +21,8 @@ git commit -m 'Add bar'
 ! exists foo.txt
 
 # track bar with foo as parent.
-gs branch track --parent foo
-# TODO: stderr: bar needs to be restacked
+gs branch track --parent foo --verbose
+stderr 'bar: needs to be restacked'
 
 gs branch restack
 stderr 'bar restacked on foo'

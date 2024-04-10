@@ -131,3 +131,32 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	log.Infof("Branch %v restacked on %v", head, b.Base.Name)
 	return nil
 }
+
+func checkNeedsRestack(ctx context.Context, repo *git.Repository, store *state.Store, log *log.Logger, name string) {
+	// A branch needs to be restacked if
+	// a) it's tracked by gs; and
+	// b) its merge base with its base branch
+	//    is not its base branch's head
+	b, err := store.LookupBranch(ctx, name)
+	if err != nil {
+		return // probably not tracked
+	}
+	mergeBase, err := repo.MergeBase(ctx, name, b.Base.Name)
+	if err != nil {
+		log.Warn("Could not look up merge base for branch with its base",
+			"branch", name,
+			"base", b.Base.Name,
+			"err", err)
+		return
+	}
+
+	baseHash, err := repo.PeelToCommit(ctx, b.Base.Name)
+	if err != nil {
+		log.Warnf("%v: base branch %v may not exist: %v", name, b.Base.Name, err)
+		return
+	}
+
+	if baseHash != mergeBase {
+		log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", name, name)
+	}
+}
