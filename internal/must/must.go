@@ -15,6 +15,12 @@ func NotBeBlankf(s string, format string, args ...any) {
 	}
 }
 
+func NotBeEmptyf[T any](es []T, format string, args ...any) {
+	if len(es) == 0 {
+		panicErrorf(format, args...)
+	}
+}
+
 func panicErrorf(format string, args ...any) {
 	panic(fmt.Errorf(format, args...))
 }

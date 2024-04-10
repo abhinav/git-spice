@@ -77,7 +77,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := repo.Checkout(ctx, b.Base.Name); err != nil {
+	if err := (&checkoutCmd{Name: b.Base.Name}).Run(ctx, log); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 

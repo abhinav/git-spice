@@ -1,0 +1,90 @@
+# 'gs top' prompts for selection
+# if there are multiple top-level branches.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# main with initial commit
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a stack where:
+# - main has two branches on top: f1, f2
+# - f1 has two branches on top: f1-s1, f1-s2
+# - f1-s2 has one branch on tpo: f1-s2-s
+git add f1.txt
+gs bc f1 -m 'Add feature 1'
+
+git checkout main
+git add f2.txt
+gs bc f2 -m 'Add feature 2'
+
+git checkout f1
+git add f1-s1.txt
+gs bc f1-s1 -m 'Add feature 1 sub-feature 1'
+
+git checkout f1
+git add f1-s2.txt
+gs bc f1-s2 -m 'Add feature 1 sub-feature 2'
+
+git add f1-s2-s.txt
+gs bc f1-s2-s -m 'Add feature 1 sub-feature 2 sub-feature'
+
+git checkout main
+git log --decorate --graph --branches --oneline
+cmp stdout $WORK/golden/git-log.txt
+
+# from main, we should be prompted to pick between
+# f2, f1-s1, and f1-s2-s
+with-term $WORK/input/main-prompt.txt -- gs top
+stderr 'There are multiple top-level branches'
+cmp stdout $WORK/golden/main-prompt.txt
+
+# from f1, we should wee f1-s1 and f1-s2-s
+git checkout f1
+with-term $WORK/input/f1-prompt.txt -- gs top
+cmp stdout $WORK/golden/f1-prompt.txt
+
+# from f2 we should see a message and a no-op.
+git checkout f2
+gs top
+stderr 'Already on the top-most branch in this stack'
+
+-- repo/f1.txt --
+feature 1
+-- repo/f2.txt --
+feature 2
+-- repo/f1-s1.txt --
+feature 1 sub feature 1
+-- repo/f1-s2.txt --
+feature 1 sub feature 2
+-- repo/f1-s2-s.txt --
+feature 1 sub feature 2 sub feature
+-- golden/git-log.txt --
+* 644bcb4 (f1-s1) Add feature 1 sub-feature 1
+| * 62d9dce (f1-s2-s) Add feature 1 sub-feature 2 sub-feature
+| * c228a72 (f1-s2) Add feature 1 sub-feature 2
+|/  
+* 12f44dd (f1) Add feature 1
+| * 41aa5de (f2) Add feature 2
+|/  
+* 9bad92b (HEAD -> main) Initial commit
+-- input/main-prompt.txt --
+await 'Pick a branch'
+snapshot
+feed \r
+-- golden/main-prompt.txt --
+┃ Pick a branch
+┃ > f2
+┃   f1-s1
+┃   f1-s2-s
+-- input/f1-prompt.txt --
+await 'Pick a branch'
+snapshot
+feed \r
+-- golden/f1-prompt.txt --
+┃ Pick a branch
+┃ > f1-s1
+┃   f1-s2-s

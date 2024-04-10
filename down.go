@@ -25,28 +25,26 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// TODO: ensure no uncommitted changes
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
+		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	if currentBranch == store.Trunk() {
-		log.Error("there are no more branches downstack")
-		return fmt.Errorf("already on trunk: %v", currentBranch)
+	trunk := store.Trunk()
+	if current == trunk {
+		return fmt.Errorf("%v: no branches found downstack", current)
 	}
 
-	branchRes, err := store.LookupBranch(ctx, currentBranch)
+	b, err := store.LookupBranch(ctx, current)
 	if err != nil {
-		return fmt.Errorf("branch %q is not being tracked: %w", currentBranch, err)
+		return fmt.Errorf("look up branch %v: %w", current, err)
 	}
 
-	if branchRes.Base.Name == store.Trunk() {
-		log.Infof("exiting stack: moving to trunk: %v", store.Trunk())
+	below := b.Base.Name
+	if below == trunk {
+		log.Infof("exiting stack: moving to trunk: %v", trunk)
 	}
 
-	if err := repo.Checkout(ctx, branchRes.Base.Name); err != nil {
-		return fmt.Errorf("checkout %q: %w", branchRes.Base, err)
-	}
-
-	return nil
+	return (&checkoutCmd{Name: below}).Run(ctx, log)
 }

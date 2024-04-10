@@ -26,31 +26,29 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// TODO: ensure no uncommitted changes
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
+		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	currentHash, err := repo.PeelToCommit(ctx, currentBranch)
+	aboves, err := store.ListAbove(ctx, current)
 	if err != nil {
-		return fmt.Errorf("peel to commit of %q: %w", currentBranch, err)
+		return fmt.Errorf("list branches above %v: %w", current, err)
 	}
 
-	children, err := store.ListAbove(ctx, currentBranch)
-	if err != nil {
-		return fmt.Errorf("list children of %q: %w", currentBranch, err)
-	}
-
-	var targetName string
-	switch len(children) {
+	var branch string
+	switch len(aboves) {
 	case 0:
-		return fmt.Errorf("%v: no branches found upstack", currentBranch)
+		return fmt.Errorf("%v: no branches found upstack", current)
 	case 1:
-		targetName = children[0]
+		branch = aboves[0]
 	default:
-		opts := make([]huh.Option[string], len(children))
-		for i, child := range children {
-			opts[i] = huh.NewOption(child, child)
+		log.Info("There are multiple branches above this one.")
+
+		opts := make([]huh.Option[string], len(aboves))
+		for i, branch := range aboves {
+			opts[i] = huh.NewOption(branch, branch)
 		}
 
 		// TODO:
@@ -59,26 +57,12 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 		prompt := huh.NewSelect[string]().
 			Title("Pick a branch").
 			Options(opts...).
-			Value(&targetName)
+			Value(&branch)
 
 		if err := prompt.Run(); err != nil {
 			return fmt.Errorf("a branch is required: %w", err)
 		}
 	}
 
-	targetBranch, err := store.LookupBranch(ctx, targetName)
-	if err != nil {
-		return fmt.Errorf("get branch %q: %w", children[0], err)
-	}
-
-	if targetBranch.Base.Hash != currentHash {
-		log.Warn("Branch needs to be restacked", "branch", targetName)
-		log.Warn("Run 'gs branch restack' to fix")
-	}
-
-	// Base hasn't changed, just checkout the child.
-	if err := repo.Checkout(ctx, targetName); err != nil {
-		return fmt.Errorf("checkout %q: %w", children[0], err)
-	}
-	return nil
+	return (&checkoutCmd{Name: branch}).Run(ctx, log)
 }

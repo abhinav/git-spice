@@ -26,33 +26,31 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// TODO: ensure no uncommitted changes
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
+		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	if currentBranch == store.Trunk() {
-		return errors.New("already on trunk")
+	if current == store.Trunk() {
+		return errors.New("no branches below current: already on trunk")
 	}
 
-	var root string
+	// TODO: store: add ListDownstack() operation.
+	var bottom string
 	for {
-		b, err := store.LookupBranch(ctx, currentBranch)
+		b, err := store.LookupBranch(ctx, current)
 		if err != nil {
-			return fmt.Errorf("get branch %q: %w", currentBranch, err)
+			return fmt.Errorf("lookup %v: %w", current, err)
 		}
 
 		if b.Base.Name == store.Trunk() {
-			root = currentBranch
+			bottom = current
 			break
 		}
 
-		currentBranch = b.Base.Name
+		current = b.Base.Name
 	}
 
-	if err := repo.Checkout(ctx, root); err != nil {
-		return fmt.Errorf("checkout %q: %w", root, err)
-	}
-
-	return nil
+	return (&checkoutCmd{Name: bottom}).Run(ctx, log)
 }

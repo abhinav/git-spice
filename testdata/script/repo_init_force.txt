@@ -26,11 +26,10 @@ stderr 'use --force to overwrite'
 gs repo init --force --trunk feature2
 
 ! gs up
-stderr 'no branches found upstack'
+stderr 'feature2: no branches found upstack'
 
 ! gs down
-stderr 'there are no more branches downstack'
-stderr 'already on trunk'
+stderr 'feature2: no branches found downstack'
 
 -- golden/git-branch.txt --
   feature1
