@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+func BeEqualf[T comparable](want, got T, format string, args ...any) {
+	if want != got {
+		panicErrorf("%v\nwant = %v\n got = %v",
+			fmt.Errorf(format, args...),
+			want,
+			got,
+		)
+	}
+}
+
 func NotBeBlankf(s string, format string, args ...any) {
 	s = strings.TrimSpace(s)
 	if len(s) == 0 {

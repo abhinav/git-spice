@@ -39,7 +39,10 @@ func (*upstackRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 			continue
 		}
 
-		err := (&branchRestackCmd{Name: upstack}).Run(ctx, log)
+		err := (&branchRestackCmd{
+			Name:          upstack,
+			noLogUpToDate: currentBranch,
+		}).Run(ctx, log)
 		if err != nil {
 			return fmt.Errorf("restack upstack %v: %w", upstack, err)
 		}

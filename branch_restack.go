@@ -12,6 +12,17 @@ import (
 
 type branchRestackCmd struct {
 	Name string `arg:"" optional:"" help:"Branch to restack. Defaults to the current branch."`
+
+	// Hack:
+	// When invoked from another operation (e.g. commit create)
+	// we don't want to report that the base of that operation
+	// does not need to be restacked
+	// because that will always be true.
+	// To avoid that annoying message, we'll use this private field
+	// to inject that branch name.
+	noLogUpToDate string
+	// TODO: when internal state is shared with another abstraction
+	// this should not be necessary
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
@@ -68,7 +79,9 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 				return fmt.Errorf("update branch information: %w", err)
 			}
 		}
-		log.Infof("Branch %v does not need to be restacked.", head)
+		if head != cmd.noLogUpToDate {
+			log.Infof("Branch %v does not need to be restacked.", head)
+		}
 		return nil
 	}
 

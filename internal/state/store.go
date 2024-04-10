@@ -13,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 )
 
 const (
@@ -297,7 +298,7 @@ func (s *Store) ListAbove(ctx context.Context, base string) ([]string, error) {
 }
 
 // ListUpstack will list all branches that are upstack from the given branch,
-// with the given branch as the starting point.
+// with the given branch as the first element.
 //
 // The returned slice is ordered by branch position in the upstack.
 // Earlier elements are closer to the trunk.
@@ -321,6 +322,8 @@ func (s *Store) ListUpstack(ctx context.Context, start string) ([]string, error)
 		upstacks = append(upstacks, current)
 		remaining = append(remaining, branchesByBase[current]...)
 	}
+	must.NotBeEmptyf(upstacks, "there must be at least one branch")
+	must.BeEqualf(start, upstacks[0], "starting branch must be first upstack")
 
 	return upstacks, nil
 }
