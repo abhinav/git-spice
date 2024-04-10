@@ -10,7 +10,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 git checkout -b feature
-gs branch track --parent main
+gs branch track --base main
 
 # create a couple commits
 git add foo.txt

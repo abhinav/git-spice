@@ -1,4 +1,4 @@
-# Restacking a branch after parent diverged in history.
+# Restacking a branch after base diverged in history.
 
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'

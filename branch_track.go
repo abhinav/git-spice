@@ -10,8 +10,8 @@ import (
 )
 
 type branchTrackCmd struct {
-	Parent string `short:"p" help:"Parent branch of this branch"`
-	Name   string `arg:"" optional:"" help:"Name of the branch to track"`
+	Base string `short:"b" help:"Base branch this merges into"`
+	Name string `arg:"" optional:"" help:"Name of the branch to track"`
 }
 
 func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
@@ -39,27 +39,27 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	// TODO: handle already tracking
-	// TODO: auto-detect parent branch with revision matching
+	// TODO: auto-detect base branch with revision matching
 
-	if cmd.Parent == "" {
+	if cmd.Base == "" {
 		return fmt.Errorf("missing required flag -p")
 	}
 
-	parentHash, err := repo.PeelToCommit(ctx, cmd.Parent)
+	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)
 	if err != nil {
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
 	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     cmd.Name,
-		Base:     cmd.Parent,
-		BaseHash: parentHash,
-		Message:  fmt.Sprintf("track %v with parent %v", cmd.Name, cmd.Parent),
+		Base:     cmd.Base,
+		BaseHash: baseHash,
+		Message:  fmt.Sprintf("track %v with base %v", cmd.Name, cmd.Base),
 	}); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}
 
-	log.Infof("%v: tracking with parent %v", cmd.Name, cmd.Parent)
+	log.Infof("%v: tracking with base %v", cmd.Name, cmd.Base)
 
 	checkNeedsRestack(ctx, repo, store, log, cmd.Name)
 	return nil

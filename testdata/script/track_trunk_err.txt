@@ -9,6 +9,6 @@ stderr 'cannot track trunk branch'
 
 git checkout -b feature
 git commit --allow-empty -m 'feature 1'
-gs branch track --parent main
-# TODO: auto-discover parent
-stderr 'feature: tracking with parent main'
+gs branch track --base main
+# TODO: auto-discover base
+stderr 'feature: tracking with base main'

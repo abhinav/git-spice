@@ -20,8 +20,8 @@ git commit -m 'Add bar'
 # sanity check
 ! exists foo.txt
 
-# track bar with foo as parent.
-gs branch track --parent foo --verbose
+# track bar with foo as base.
+gs branch track --base foo --verbose
 stderr 'bar: needs to be restacked'
 
 gs branch restack

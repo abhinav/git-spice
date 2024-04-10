@@ -21,7 +21,7 @@ stderr 'repository is already initialized'
 stderr 'use --force to overwrite'
 
 # init with feature2 as trunk,
-# and make feature2 parent of feature1
+# and make feature2 base of feature1
 # (which is the opposite of before).
 gs repo init --force --trunk feature2
 
