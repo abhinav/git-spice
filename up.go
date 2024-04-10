@@ -24,8 +24,6 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
-	// TODO: ensure no uncommitted changes
-
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
