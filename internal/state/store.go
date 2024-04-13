@@ -250,9 +250,14 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 		})
 	}
 
+	deletes := make([]string, len(req.Deletes))
+	for i, name := range req.Deletes {
+		deletes[i] = s.branchJSON(name)
+	}
+
 	err := s.b.Update(ctx, updateRequest{
 		Sets: sets,
-		Dels: req.Deletes,
+		Dels: deletes,
 		Msg:  req.Message,
 	})
 	if err != nil {

@@ -1,0 +1,57 @@
+# branch fold folds a branch into its parent.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# setup
+git add foo.txt
+gs bc foo -m 'Add foo.txt'
+git add bar.txt
+gs bc bar -m 'Add bar.txt'
+
+# verify before state
+git log --oneline --decorate --graph --branches
+cmp stdout $WORK/golden/git-log-before.txt
+
+# fold the branch
+gs branch fold
+
+# verify after state
+git log --oneline --decorate --graph --branches
+cmp stdout $WORK/golden/git-log-after.txt
+
+# verify the full stack
+gs down
+git branch --show-current
+stdout main
+
+gs up
+git branch --show-current
+stdout foo
+
+! gs up
+
+# TODO(abg):
+# Instead of traversing,
+# once we have a command to list all tracked branches,
+# we should just use that.
+
+-- repo/foo.txt --
+foo
+
+-- repo/bar.txt --
+bar
+
+-- golden/git-log-before.txt --
+* 7cc01c7 (HEAD -> bar) Add bar.txt
+* 588349e (foo) Add foo.txt
+* 9bad92b (main) Initial commit
+-- golden/git-log-after.txt --
+* 7cc01c7 (HEAD -> foo) Add bar.txt
+* 588349e Add foo.txt
+* 9bad92b (main) Initial commit
