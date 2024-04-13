@@ -78,6 +78,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	err = store.Update(ctx, &state.UpdateRequest{
 		Upserts: upserts,
+		Deletes: []string{cmd.Name},
 		Message: fmt.Sprintf("folding %v into %v", cmd.Name, b.Base),
 	})
 	if err != nil {
@@ -89,8 +90,10 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 
-	if err := (&branchDeleteCmd{Name: cmd.Name, Force: true}).Run(ctx, log); err != nil {
-		return fmt.Errorf("delete branch %q: %w", cmd.Name, err)
+	if err := repo.DeleteBranch(ctx, cmd.Name, git.BranchDeleteOptions{
+		Force: true, // we know it's merged
+	}); err != nil {
+		return fmt.Errorf("delete branch: %w", err)
 	}
 
 	log.Infof("Branch %v has been folded into %v", cmd.Name, b.Base)
