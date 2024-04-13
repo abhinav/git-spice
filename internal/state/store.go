@@ -9,6 +9,7 @@ import (
 	"iter"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -139,22 +140,22 @@ type branchState struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
-type LookupBranchResponse struct {
+type LookupResponse struct {
 	Name     string
 	Base     string
 	BaseHash git.Hash
 	PR       int
 }
 
-// LookupBranch returns information about a branch tracked by gs.
+// Lookup returns information about a branch tracked by gs.
 // If the branch is not found, [ErrNotExist] will be returned.
-func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
+func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error) {
 	var state branchState
 	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
 		return nil, fmt.Errorf("get branch state: %w", err)
 	}
 
-	return &LookupBranchResponse{
+	return &LookupResponse{
 		Name:     name,
 		Base:     state.Base.Name,
 		BaseHash: git.Hash(state.Base.Hash),
@@ -162,7 +163,21 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupBranchRes
 	}, nil
 }
 
-type UpsertBranchRequest struct {
+func (s *Store) List(ctx context.Context) ([]string, error) {
+	branches, err := s.b.Keys(ctx, _branchesDir)
+	if err != nil {
+		return nil, fmt.Errorf("list branches: %w", err)
+	}
+
+	var names []string
+	for name := range branches {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+type UpsertRequest struct {
 	// Name is the name of the branch.
 	Name string
 
@@ -188,7 +203,7 @@ func PR(n int) *int {
 }
 
 type UpdateRequest struct {
-	Upserts []UpsertBranchRequest
+	Upserts []UpsertRequest
 	Deletes []string
 	Message string
 }
@@ -208,7 +223,7 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 		}
 
 		var b branchState
-		if prev, err := s.LookupBranch(ctx, req.Name); err != nil {
+		if prev, err := s.Lookup(ctx, req.Name); err != nil {
 			if !errors.Is(err, ErrNotExist) {
 				return fmt.Errorf("get branch: %w", err)
 			}

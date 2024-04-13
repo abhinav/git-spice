@@ -37,7 +37,7 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger) error {
 	// TODO: store: add ListDownstack() operation.
 	var bottom string
 	for {
-		b, err := store.LookupBranch(ctx, current)
+		b, err := store.Lookup(ctx, current)
 		if err != nil {
 			return fmt.Errorf("lookup %v: %w", current, err)
 		}

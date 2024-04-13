@@ -33,7 +33,7 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
-	if _, err := store.LookupBranch(ctx, cmd.Name); err != nil {
+	if _, err := store.Lookup(ctx, cmd.Name); err != nil {
 		return fmt.Errorf("branch already not tracked: %w", err)
 	}
 

@@ -51,7 +51,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	err = store.Update(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertBranchRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:     cmd.Name,
 				Base:     cmd.Base,

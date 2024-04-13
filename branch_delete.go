@@ -39,7 +39,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 		base    string
 		tracked bool
 	)
-	if b, err := store.LookupBranch(ctx, cmd.Name); err == nil {
+	if b, err := store.Lookup(ctx, cmd.Name); err == nil {
 		tracked = true
 		// If we know this branch, we'll want to update the upstacks
 		// after deletion.
@@ -83,7 +83,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 		must.NotBeBlankf(base, "base must be set if branches were found above")
 	}
 	for _, above := range aboves {
-		update.Upserts = append(update.Upserts, state.UpsertBranchRequest{
+		update.Upserts = append(update.Upserts, state.UpsertRequest{
 			Name: above,
 			Base: base,
 		})

@@ -35,7 +35,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	// TODO: check that the branch does not need restacking
-	b, err := store.LookupBranch(ctx, cmd.Name)
+	b, err := store.Lookup(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
 	}
@@ -64,9 +64,9 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// Change the base of all branches above us
 	// to the base of the branch we are folding.
-	upserts := make([]state.UpsertBranchRequest, len(aboves))
+	upserts := make([]state.UpsertRequest, len(aboves))
 	for i, above := range aboves {
-		upserts[i] = state.UpsertBranchRequest{
+		upserts[i] = state.UpsertRequest{
 			Name:     above,
 			Base:     b.Base,
 			BaseHash: newBaseHash,

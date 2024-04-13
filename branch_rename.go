@@ -47,8 +47,8 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 	update := state.UpdateRequest{
 		Message: fmt.Sprintf("rename %q to %q", oldName, cmd.Name),
 	}
-	if b, err := store.LookupBranch(ctx, oldName); err == nil {
-		req := state.UpsertBranchRequest{
+	if b, err := store.Lookup(ctx, oldName); err == nil {
+		req := state.UpsertRequest{
 			Name:     cmd.Name,
 			Base:     b.Base,
 			BaseHash: b.BaseHash,
@@ -67,7 +67,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 	}
 
 	for _, above := range aboves {
-		update.Upserts = append(update.Upserts, state.UpsertBranchRequest{
+		update.Upserts = append(update.Upserts, state.UpsertRequest{
 			Name: above,
 			Base: cmd.Name,
 		})

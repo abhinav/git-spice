@@ -32,12 +32,12 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
-		_, err := store.LookupBranch(ctx, "main")
+		_, err := store.Lookup(ctx, "main")
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
 	err = store.Update(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertBranchRequest{{
+		Upserts: []state.UpsertRequest{{
 			Name:     "foo",
 			Base:     "main",
 			BaseHash: "123456",
@@ -47,10 +47,10 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
-		res, err := store.LookupBranch(ctx, "foo")
+		res, err := store.Lookup(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.LookupBranchResponse{
+		assert.Equal(t, &state.LookupResponse{
 			Name:     "foo",
 			Base:     "main",
 			BaseHash: "123456",
@@ -60,7 +60,7 @@ func TestIntegrationStore(t *testing.T) {
 
 	t.Run("overwrite", func(t *testing.T) {
 		err := store.Update(ctx, &state.UpdateRequest{
-			Upserts: []state.UpsertBranchRequest{{
+			Upserts: []state.UpsertRequest{{
 				Name:     "foo",
 				Base:     "bar",
 				BaseHash: "54321",
@@ -69,10 +69,10 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.LookupBranch(ctx, "foo")
+		res, err := store.Lookup(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.LookupBranchResponse{
+		assert.Equal(t, &state.LookupResponse{
 			Name:     "foo",
 			Base:     "bar",
 			BaseHash: "54321",
@@ -82,7 +82,7 @@ func TestIntegrationStore(t *testing.T) {
 
 	t.Run("name with slash", func(t *testing.T) {
 		err := store.Update(ctx, &state.UpdateRequest{
-			Upserts: []state.UpsertBranchRequest{{
+			Upserts: []state.UpsertRequest{{
 				Name:     "bar/baz",
 				Base:     "main",
 				PR:       state.PR(44),
@@ -91,9 +91,9 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.LookupBranch(ctx, "bar/baz")
+		res, err := store.Lookup(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, &state.LookupBranchResponse{
+		assert.Equal(t, &state.LookupResponse{
 			Name:     "bar/baz",
 			Base:     "main",
 			BaseHash: "abcdef",

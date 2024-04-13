@@ -30,7 +30,7 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	b, err := store.LookupBranch(ctx, currentBranch)
+	b, err := store.Lookup(ctx, currentBranch)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return fmt.Errorf("branch not tracked: %s", currentBranch)

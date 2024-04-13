@@ -47,7 +47,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	head := cmd.Name
-	b, err := store.LookupBranch(ctx, head)
+	b, err := store.Lookup(ctx, head)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
 	}
@@ -71,7 +71,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err == nil && mergeBase == actualBaseHash {
 		if mergeBase != b.BaseHash {
 			err := store.Update(ctx, &state.UpdateRequest{
-				Upserts: []state.UpsertBranchRequest{
+				Upserts: []state.UpsertRequest{
 					{
 						Name:     head,
 						BaseHash: mergeBase,
@@ -125,7 +125,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	err = store.Update(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertBranchRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:     head,
 				BaseHash: actualBaseHash,
@@ -146,7 +146,7 @@ func checkNeedsRestack(ctx context.Context, repo *git.Repository, store *state.S
 	// a) it's tracked by gs; and
 	// b) its merge base with its base branch
 	//    is not its base branch's head
-	b, err := store.LookupBranch(ctx, name)
+	b, err := store.Lookup(ctx, name)
 	if err != nil {
 		return // probably not tracked
 	}

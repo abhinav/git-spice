@@ -34,7 +34,7 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("%v: no branches found downstack", current)
 	}
 
-	b, err := store.LookupBranch(ctx, current)
+	b, err := store.Lookup(ctx, current)
 	if err != nil {
 		return fmt.Errorf("look up branch %v: %w", current, err)
 	}

@@ -64,7 +64,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 			return fmt.Errorf("--below cannot be used from  %v", trunk)
 		}
 
-		b, err := store.LookupBranch(ctx, currentBranch)
+		b, err := store.Lookup(ctx, currentBranch)
 		if err != nil {
 			return fmt.Errorf("branch not tracked: %v", currentBranch)
 		}
@@ -115,8 +115,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
-	var upserts []state.UpsertBranchRequest
-	upserts = append(upserts, state.UpsertBranchRequest{
+	var upserts []state.UpsertRequest
+	upserts = append(upserts, state.UpsertRequest{
 		Name:     cmd.Name,
 		Base:     baseName,
 		BaseHash: baseHash,
@@ -125,7 +125,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	for _, branch := range restackOntoNew {
 		// For --insert and --below, set the base branch of all affected
 		// branches to the newly created branch and run a restack.
-		upserts = append(upserts, state.UpsertBranchRequest{
+		upserts = append(upserts, state.UpsertRequest{
 			Name: branch,
 			Base: cmd.Name,
 		})
