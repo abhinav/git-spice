@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 )
 
 type checkoutCmd struct {
@@ -26,12 +27,26 @@ func (cmd *checkoutCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
 		return errors.New("branch name is required")
 	}
 
-	checkNeedsRestack(ctx, repo, store, log, cmd.Name)
+	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+		switch {
+		case errors.Is(err, gs.ErrNeedsRestack):
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
+		case errors.Is(err, gs.ErrNotExist):
+			if store.Trunk() != cmd.Name {
+				log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
+			}
+		default:
+			log.Warnf("error checking branch: %v", err)
+		}
+	}
+
 	if err := repo.Checkout(ctx, cmd.Name); err != nil {
 		return fmt.Errorf("checkout %q: %w", cmd.Name, err)
 	}

@@ -14,7 +14,12 @@ import (
 // GitRepository provides read/write access to the conents of a git repository.
 // It is a subset of the functionality provied by the git.Repository type.
 type GitRepository interface {
-	// TODO
+	// MergeBase reports the merge base of the two given commits.
+	// This is a commit that is an ancestor of both commits.
+	MergeBase(ctx context.Context, a, b string) (git.Hash, error)
+
+	// PeelToCommit returns the commit hash for the given commit-ish.
+	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 }
 
 var _ GitRepository = (*git.Repository)(nil)

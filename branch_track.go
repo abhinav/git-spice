@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 )
 
@@ -33,6 +35,8 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err != nil {
 		return err
 	}
+
+	svc := gs.NewService(repo, store, log)
 
 	if cmd.Name == store.Trunk() {
 		return fmt.Errorf("cannot track trunk branch")
@@ -66,6 +70,12 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	log.Infof("%v: tracking with base %v", cmd.Name, cmd.Base)
 
-	checkNeedsRestack(ctx, repo, store, log, cmd.Name)
+	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+		if errors.Is(err, gs.ErrNeedsRestack) {
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
+		}
+		log.Warnf("error checking branch: %v", err)
+	}
+
 	return nil
 }
