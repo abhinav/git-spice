@@ -24,6 +24,7 @@ type SetRefRequest struct {
 }
 
 // SetRef changes the value of a ref to a new hash.
+//
 // It optionally allows verifying the current value of the ref
 // before updating it.
 func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
@@ -36,6 +37,8 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	return r.gitCmd(ctx, args...).Run(r.exec)
 }
 
+// DefaultBranch reports the default branch of a remote.
+// The remote must be known to the repository.
 func (r *Repository) DefaultBranch(ctx context.Context, remote string) (string, error) {
 	ref, err := r.gitCmd(
 		ctx, "symbolic-ref", "--short", "refs/remotes/"+remote+"/HEAD").

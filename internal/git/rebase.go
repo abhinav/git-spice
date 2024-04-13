@@ -6,34 +6,55 @@ import (
 	"os"
 )
 
+// RebaseRequest is a request to rebase a branch.
 type RebaseRequest struct {
+	// Branch is the branch to rebase.
+	Branch string
+
+	// Upstream is the upstream commitish
+	// from which the current branch started.
+	//
+	// Commits between Upstream and Branch will be rebased.
+	Upstream string
+
+	// Onto is the new base commit to rebase onto.
+	// If unspecified, defaults to Upstream.
+	Onto string
+
+	// Autostash is true if the rebase should automatically stash
+	// dirty changes before starting the rebase operation,
+	// and re-apply them after the rebase is complete.
+	Autostash bool
+
+	// Quiet reduces the output of the rebase operation.
+	Quiet bool
+
+	// Interactive is true if the rebase should present the user
+	// with a list of rebase instructions to edit
+	// before starting the rebase operation.
 	Interactive bool
-	Onto        string
-	Upstream    string
-	Branch      string
-	Quiet       bool
-	Autostash   bool
 }
 
-func (r *Repository) Rebase(ctx context.Context, opts RebaseRequest) error {
+// Rebase runs a git rebase operation with the specified parameters.
+func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 	args := []string{"rebase"}
-	if opts.Interactive {
+	if req.Interactive {
 		args = append(args, "--interactive")
 	}
-	if opts.Onto != "" {
-		args = append(args, "--onto", opts.Onto)
+	if req.Onto != "" {
+		args = append(args, "--onto", req.Onto)
 	}
-	if opts.Autostash {
+	if req.Autostash {
 		args = append(args, "--autostash")
 	}
-	if opts.Quiet {
+	if req.Quiet {
 		args = append(args, "--quiet")
 	}
-	if opts.Upstream != "" {
-		args = append(args, opts.Upstream)
+	if req.Upstream != "" {
+		args = append(args, req.Upstream)
 	}
-	if opts.Branch != "" {
-		args = append(args, opts.Branch)
+	if req.Branch != "" {
+		args = append(args, req.Branch)
 	}
 
 	err := r.gitCmd(ctx, args...).

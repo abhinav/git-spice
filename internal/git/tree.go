@@ -9,8 +9,6 @@ import (
 	"io"
 	"iter"
 	"os"
-	"path"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -20,12 +18,22 @@ import (
 // Mode is the octal file mode of a Git tree entry.
 type Mode int
 
+// List of modes that gs cares about.
+// Git recognizes a few more, but we don't use them.
 const (
 	ZeroMode    Mode = 0o000000
 	RegularMode Mode = 0o100644
 	DirMode     Mode = 0o40000
 )
 
+// ParseMode parses a Git tree entry mode from a string.
+// These strings are octal numbers, e.g.
+//
+//	100644
+//	040000
+//
+// Git only recognizes a handful of values for this,
+// but we don't enforce that here.
 func ParseMode(s string) (Mode, error) {
 	i, err := strconv.ParseInt(s, 8, 32)
 	return Mode(i), err
@@ -35,13 +43,30 @@ func (m Mode) String() string {
 	return fmt.Sprintf("%06o", m)
 }
 
+// TreeEntry is a single entry in a Git tree.
 type TreeEntry struct {
+	// Mode is the file mode of the entry.
+	//
+	// For regular files, this is RegularMode.
+	// For directories, this is DirMode.
 	Mode Mode
+
+	// Type is the type of the entry.
+	//
+	// This is either BlobType or TreeType.
 	Type Type
+
+	// Hash is the hash of the entry.
 	Hash Hash
+
+	// Name is the name of the entry.
 	Name string
 }
 
+// MakeTree creates a new Git tree from the given entries.
+// The tree will contain *only* the given entries and nothing else.
+// Entries must not contain slashes in their names;
+// this operation does not create subtrees.
 func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq[TreeEntry]) (_ Hash, err error) {
 	var stdout bytes.Buffer
 	cmd := r.gitCmd(ctx, "mktree").Stdout(&stdout)
@@ -86,10 +111,20 @@ func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq[TreeEntry]) (_ 
 	return Hash(bytes.TrimSpace(stdout.Bytes())), nil
 }
 
+// ListTreeOptions specifies options for the ListTree operation.
 type ListTreeOptions struct {
+	// Recurse specifies whether subtrees should be expanded.
 	Recurse bool
 }
 
+// ListTree lists the entries in the given tree.
+//
+// By default, the returned entries will only include the immediate children of the tree.
+// Subdirectories will be listed as tree objects, and have to be expanded manually.
+//
+// If opts.Recurse is true, this operation will expand all subtrees.
+// The returned entries will only include blobs,
+// and their path will be the full path relative to the root of the tree.
 func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptions) (iter.Seq2[TreeEntry, error], error) {
 	args := []string{
 		"ls-tree",
@@ -175,11 +210,34 @@ func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptio
 }
 
 // UpdateTreeRequest is a request to update an existing Git tree.
+//
 // Unlike MakeTree, it's able to operate on paths with slashes.
 type UpdateTreeRequest struct {
-	Tree    Hash
-	Writes  iter.Seq[BlobInfo]
+	// Tree is the starting tree hash.
+	//
+	// This may be empty or [ZeroHash] to start with an empty tree.
+	Tree Hash
+
+	// Writes is a sequence of blobs to write to the tree.
+	Writes iter.Seq[BlobInfo]
+
+	// Deletes is a set of paths to delete from the tree.
 	Deletes iter.Seq[string]
+}
+
+// BlobInfo is a single blob in a tree.
+type BlobInfo struct {
+	// Mode is the file mode of the blob.
+	//
+	// Defaults to [RegularMode] if unset.
+	Mode Mode
+
+	// Hash is the hash of the blob.
+	Hash Hash
+
+	// Path is the path to the blob relative to the tree root.
+	// If it contains slashes, intermediate directories will be created.
+	Path string
 }
 
 // UpdateTree updates the given tree with the given writes and deletes,
@@ -248,10 +306,11 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	// Write the updated index to a new tree.
-	return r.WriteIndexToTree(ctx, indexFile)
+	return r.writeIndexToTree(ctx, indexFile)
 }
 
-func (r *Repository) WriteIndexToTree(ctx context.Context, index string) (_ Hash, err error) {
+// writeIndexToTree writes the given Git index file into a new tree object.
+func (r *Repository) writeIndexToTree(ctx context.Context, index string) (_ Hash, err error) {
 	cmd := r.gitCmd(ctx, "write-tree")
 	if index != "" {
 		cmd = cmd.AppendEnv("GIT_INDEX_FILE=" + index)
@@ -263,121 +322,4 @@ func (r *Repository) WriteIndexToTree(ctx context.Context, index string) (_ Hash
 	}
 
 	return Hash(treeHash), nil
-}
-
-type TreeMaker interface {
-	MakeTree(ctx context.Context, ents iter.Seq[TreeEntry]) (Hash, error)
-}
-
-type BlobInfo struct {
-	Mode Mode
-	Hash Hash
-	Path string
-}
-
-// MakeTreeRecursive is a variant of MakeTree that supports creating subtrees.
-func MakeTreeRecursive(ctx context.Context, tm TreeMaker, blobs iter.Seq[BlobInfo]) (Hash, error) {
-	var root treeTreeNode
-	for blob := range blobs {
-		dir, name := path.Split(blob.Path)
-		parent, err := root.getSubtree(dir)
-		if err != nil {
-			return ZeroHash, fmt.Errorf("subtree %q: %w", dir, err)
-		}
-
-		parent.putBlob(name, blob.Mode, blob.Hash)
-	}
-
-	return root.make(ctx, tm)
-}
-
-type treeNode interface {
-	name() string
-	typ() Type
-}
-
-type treeBlobNode struct {
-	Name string
-	Mode Mode
-	Hash Hash
-}
-
-func (b *treeBlobNode) name() string { return b.Name }
-func (b *treeBlobNode) typ() Type    { return BlobType }
-
-type treeTreeNode struct {
-	Name  string
-	Items []treeNode // sorted by name
-}
-
-func (t *treeTreeNode) name() string { return t.Name }
-func (t *treeTreeNode) typ() Type    { return TreeType }
-
-func (t *treeTreeNode) make(ctx context.Context, tm TreeMaker) (_ Hash, retErr error) {
-	return tm.MakeTree(ctx, func(yield func(TreeEntry) bool) {
-		for _, item := range t.Items {
-			ent := TreeEntry{
-				Name: item.name(),
-				Type: item.typ(),
-			}
-
-			switch item := item.(type) {
-			case *treeBlobNode:
-				ent.Mode = item.Mode
-				ent.Hash = item.Hash
-
-			case *treeTreeNode:
-				hash, err := item.make(ctx, tm)
-				if err != nil {
-					retErr = errors.Join(retErr, fmt.Errorf("subtree %q: %w", item.Name, err))
-					return
-				}
-
-				ent.Mode = DirMode
-				ent.Hash = hash
-			}
-
-			if !yield(ent) {
-				return
-			}
-		}
-	})
-}
-
-// getSubtree gets the subtree at the given path.
-func (t *treeTreeNode) getSubtree(p string) (*treeTreeNode, error) {
-	if p == "" {
-		return t, nil
-	}
-
-	name, rest, _ := strings.Cut(p, "/")
-	idx, ok := slices.BinarySearchFunc(t.Items, name, func(n treeNode, name string) int {
-		return strings.Compare(n.name(), name)
-	})
-	var sub *treeTreeNode
-	if ok {
-		sub, ok = t.Items[idx].(*treeTreeNode)
-		if !ok {
-			return nil, fmt.Errorf("expected tree, got %T", t.Items[idx])
-		}
-	} else {
-		// Not found. Create a new subtree.
-		sub = &treeTreeNode{Name: name}
-		t.Items = slices.Insert(t.Items, idx, treeNode(sub))
-	}
-
-	return sub.getSubtree(rest)
-}
-
-func (t *treeTreeNode) putBlob(name string, mode Mode, hash Hash) {
-	node := &treeBlobNode{Name: name, Mode: mode, Hash: hash}
-
-	idx, ok := slices.BinarySearchFunc(t.Items, name, func(n treeNode, name string) int {
-		return strings.Compare(n.name(), name)
-	})
-	if ok {
-		t.Items[idx] = node
-	} else {
-		t.Items = slices.Insert(t.Items, idx, treeNode(node))
-	}
 }

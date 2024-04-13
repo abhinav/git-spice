@@ -39,6 +39,8 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
+// storageBackend abstracts away the JSON value storage for the state store.
+// There's only one implementation in practice (gitStorageBackend).
 type storageBackend interface {
 	Get(ctx context.Context, key string, v interface{}) error
 	Clear(ctx context.Context, msg string) error

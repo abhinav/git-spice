@@ -40,6 +40,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 
 	svc := gs.NewService(repo, store, log)
 
+	// TODO: Check if cmd.Name already exists.
 	if err := repo.RenameBranch(ctx, git.RenameBranchRequest{
 		OldName: oldName,
 		NewName: cmd.Name,

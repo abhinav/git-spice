@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 // LocalBranches lists local branches in the repository.
@@ -53,20 +55,39 @@ func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
 	return branches, nil
 }
 
+// ErrDetachedHead indicates that the repository is
+// unexpectedly in detached HEAD state.
+var ErrDetachedHead = errors.New("in detached HEAD state")
+
+// CurrentBranch reports the current branch name.
+// It returns [ErrDetachedHead] if the repository is in detached HEAD state.
 func (r *Repository) CurrentBranch(ctx context.Context) (string, error) {
 	name, err := r.gitCmd(ctx, "branch", "--show-current").
 		OutputString(r.exec)
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse: %w", err)
 	}
+	name = strings.TrimSpace(name)
+	if len(name) == 0 {
+		// Per man git-rev-parse, --show-current returns an empty string
+		// if the repository is in detached HEAD state.
+		return "", ErrDetachedHead
+	}
 	return name, nil
 }
 
+// CreateBranchRequest specifies the parameters for creating a new branch.
 type CreateBranchRequest struct {
+	// Name of the branch.
 	Name string
-	Head string // optional
+
+	// Head is the commitish to start the branch from.
+	// Defaults to the current HEAD.
+	Head string
 }
 
+// CreateBranch creates a new branch in the repository.
+// This operation fails if a branch with the same name already exists.
 func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) error {
 	args := []string{"branch", req.Name}
 	if req.Head != "" {
@@ -78,7 +99,8 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 	return nil
 }
 
-// TODO: combine with Checkout
+// DetachHead detaches the HEAD from the current branch
+// while staying at the same commit.
 func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
 	args := []string{"checkout", "--detach"}
 	if len(commitish) > 0 {
@@ -90,6 +112,8 @@ func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
 	return nil
 }
 
+// Checkout switches to the specified branch.
+// If the branch does not exist, it returns an error.
 func (r *Repository) Checkout(ctx context.Context, branch string) error {
 	if err := r.gitCmd(ctx, "checkout", branch).Run(r.exec); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
@@ -97,10 +121,16 @@ func (r *Repository) Checkout(ctx context.Context, branch string) error {
 	return nil
 }
 
+// BranchDeleteOptions specifies options for deleting a branch.
 type BranchDeleteOptions struct {
+	// Force specifies that a branch should be deleted
+	// even if it has unmerged changes.
 	Force bool
 }
 
+// DeleteBranch deletes a branch from the repository.
+// It returns an error if the branch does not exist,
+// or if it has unmerged changes and the Force option is not set.
 func (r *Repository) DeleteBranch(ctx context.Context, branch string, opts BranchDeleteOptions) error {
 	args := []string{"branch", "--delete"}
 	if opts.Force {
@@ -114,19 +144,18 @@ func (r *Repository) DeleteBranch(ctx context.Context, branch string, opts Branc
 	return nil
 }
 
+// RenameBranchRequest specifies the parameters for renaming a branch.
 type RenameBranchRequest struct {
+	// OldName is the current name of the branch.
 	OldName string
+
+	// NewName is the new name for the branch.
 	NewName string
-	Force   bool
 }
 
+// RenameBranch renames a branch in the repository.
 func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) error {
-	args := []string{"branch", "--move"}
-	if req.Force {
-		args = append(args, "--force")
-	}
-	args = append(args, req.OldName, req.NewName)
-
+	args := []string{"branch", "--move", req.OldName, req.NewName}
 	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}

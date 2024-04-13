@@ -49,14 +49,18 @@ func (r *Repository) PeelToTree(ctx context.Context, ref string) (Hash, error) {
 	return r.revParse(ctx, ref+"^{tree}")
 }
 
+// TreeAt reports the hash of the tree object at the provided commit-ish and path.
 func (r *Repository) TreeAt(ctx context.Context, commitish, path string) (Hash, error) {
 	return r.revParse(ctx, commitish+":"+path)
 }
 
+// BlobAt reports the hash of the blob object at the provided tree-ish and path.
 func (r *Repository) BlobAt(ctx context.Context, treeish, path string) (Hash, error) {
 	return r.revParse(ctx, treeish+":"+path)
 }
 
+// ForkPoint reports the point at which b diverged from a.
+// See man git-merge-base for more information.
 func (r *Repository) ForkPoint(ctx context.Context, a, b string) (Hash, error) {
 	s, err := r.gitCmd(ctx, "merge-base", "--fork-point", a, b).OutputString(r.exec)
 	if err != nil {
@@ -65,6 +69,7 @@ func (r *Repository) ForkPoint(ctx context.Context, a, b string) (Hash, error) {
 	return Hash(s), nil
 }
 
+// MergeBase reports the common ancestor of a and b.
 func (r *Repository) MergeBase(ctx context.Context, a, b string) (Hash, error) {
 	s, err := r.gitCmd(ctx, "merge-base", a, b).OutputString(r.exec)
 	if err != nil {

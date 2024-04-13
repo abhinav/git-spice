@@ -51,7 +51,6 @@ func TestIntegrationStore(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, &state.LookupResponse{
-			Name:     "foo",
 			Base:     "main",
 			BaseHash: "123456",
 			PR:       42,
@@ -73,7 +72,6 @@ func TestIntegrationStore(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, &state.LookupResponse{
-			Name:     "foo",
 			Base:     "bar",
 			BaseHash: "54321",
 			PR:       43,
@@ -94,7 +92,6 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.Lookup(ctx, "bar/baz")
 		require.NoError(t, err)
 		assert.Equal(t, &state.LookupResponse{
-			Name:     "bar/baz",
 			Base:     "main",
 			BaseHash: "abcdef",
 			PR:       44,

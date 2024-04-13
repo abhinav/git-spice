@@ -59,7 +59,9 @@ type CommitTreeRequest struct {
 	Author, Committer *Signature
 }
 
-// CommitTree creates a new commit.
+// CommitTree creates a new commit with a given tree hash
+// as the state of the repository.
+//
 // It returns the hash of the new commit.
 func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Hash, error) {
 	if req.Message == "" {
@@ -91,6 +93,8 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 	return Hash(out), nil
 }
 
+// CommitRequest is a request to commit changes.
+// It relies on the 'git commit' command.
 type CommitRequest struct {
 	// Message is the commit message.
 	//
@@ -106,10 +110,12 @@ type CommitRequest struct {
 	// NoEdit skips editing the commit message.
 	NoEdit bool
 
+	// AllowEmpty allows a commit with no changes.
 	AllowEmpty bool
 }
 
-// Commit runs the 'git commit' command.
+// Commit runs the 'git commit' command,
+// allowing the user to commit changes.
 func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	args := []string{"commit"}
 	if req.All {

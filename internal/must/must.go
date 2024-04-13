@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// BeEqualf panics if a != b.
 func BeEqualf[T comparable](a, b T, format string, args ...any) {
 	if a != b {
 		panicErrorf("%v\nwant a == b\na = %v\nb = %v",
@@ -16,6 +17,7 @@ func BeEqualf[T comparable](a, b T, format string, args ...any) {
 	}
 }
 
+// NotBeEqualf panics if a == b.
 func NotBeEqualf[T comparable](a, b T, format string, args ...any) {
 	if a == b {
 		panicErrorf("%v\nwant a != b\na = %v\nb = %v",
@@ -23,6 +25,7 @@ func NotBeEqualf[T comparable](a, b T, format string, args ...any) {
 	}
 }
 
+// NotBeBlankf panics if s is empty or contains only whitespace.
 func NotBeBlankf(s string, format string, args ...any) {
 	s = strings.TrimSpace(s)
 	if len(s) == 0 {
@@ -30,6 +33,7 @@ func NotBeBlankf(s string, format string, args ...any) {
 	}
 }
 
+// NotBeEmptyf panics if es is an empty slice.
 func NotBeEmptyf[T any](es []T, format string, args ...any) {
 	if len(es) == 0 {
 		panicErrorf(format, args...)

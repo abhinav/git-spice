@@ -18,6 +18,8 @@ import (
 	"go.abhg.dev/gs/internal/ioutil"
 )
 
+// execer controls actual execution of Git commands.
+// It provides a single place to hook into for testing.
 type execer interface {
 	Run(*exec.Cmd) error
 	Output(*exec.Cmd) ([]byte, error)
@@ -37,7 +39,7 @@ func (realExecer) Wait(cmd *exec.Cmd) error             { return cmd.Wait() }
 func (realExecer) Kill(cmd *exec.Cmd) error             { return cmd.Process.Kill() }
 
 // gitCmd provides a fluent API around exec.Cmd,
-// unconditionally capturing stderr into errors.
+// capable of capturing stderr into error objects if it's not being logged.
 type gitCmd struct {
 	cmd *exec.Cmd
 
@@ -45,6 +47,22 @@ type gitCmd struct {
 	wrap func(error) error
 }
 
+// newGitCmd builds a new Git command with the given arguments.
+// The first argument is the Git subcommand to run.
+//
+// If the logger is at Debug level or lower,
+// stderr of the command will be written to the logger.
+// Otherwise, it will be captured and surfaced in the error
+// if the command fails.
+//
+// This allows for a nicer, less noisy UX for expected errors:
+//
+//   - if a Git command was expected to fail, and the error is never logged,
+//     its stderr output will not be shown to the user.
+//   - if the error is logged, the stderr output will be shown to the user.
+//   - if the program is running in verbose mode,
+//     the stderr output will always be shown to the user,
+//     but it won't be duplicated in the error message.
 func newGitCmd(ctx context.Context, log *log.Logger, args ...string) *gitCmd {
 	name := "git"
 	if len(args) > 0 {
@@ -73,6 +91,10 @@ func (c *gitCmd) Stdout(w io.Writer) *gitCmd {
 	return c
 }
 
+// Stderr sets the writer for the command's stderr.
+//
+// By default, stderr is either logged to the logger
+// or captured to be surfaced in the error.
 func (c *gitCmd) Stderr(w io.Writer) *gitCmd {
 	c.cmd.Stderr = w
 	c.wrap = func(err error) error { return err }
@@ -92,6 +114,8 @@ func (c *gitCmd) StdinString(s string) *gitCmd {
 
 // AppendEnv appends environment variables to the command.
 func (c *gitCmd) AppendEnv(env ...string) *gitCmd {
+	// TODO: this is an error prone API.
+	// It should be Setenv(key, value string) instead.
 	if len(env) == 0 {
 		return c
 	}
@@ -114,12 +138,14 @@ func (c *gitCmd) StdinPipe() (io.WriteCloser, error) {
 }
 
 // Run runs the command, blocking until it completes.
+//
 // It returns an error if the command fails with a non-zero exit code.
 func (c *gitCmd) Run(exec execer) error {
 	return c.wrap(exec.Run(c.cmd))
 }
 
 // Start starts the command, returning immediately.
+// It returns an error if the command fails to start.
 func (c *gitCmd) Start(exec execer) error {
 	return c.wrap(exec.Start(c.cmd))
 }
@@ -149,28 +175,6 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 	out, err := c.Output(exec)
 	out, _ = bytes.CutSuffix(out, []byte{'\n'})
 	return string(out), err
-}
-
-// cmdStdinWriter is an io.WriteCloser that writes to a command's stdin,
-// and upon closure, closes the stdin stream and waits for the command to exit.
-type cmdStdinWriter struct {
-	cmd   *gitCmd
-	exec  execer
-	stdin io.WriteCloser
-}
-
-var _ io.WriteCloser = (*cmdStdinWriter)(nil)
-
-func (w *cmdStdinWriter) Write(p []byte) (n int, err error) {
-	return w.stdin.Write(p)
-}
-
-func (w *cmdStdinWriter) Close() error {
-	err := w.stdin.Close()
-	if err != nil {
-		return errors.Join(err, w.cmd.Kill(w.exec))
-	}
-	return w.cmd.Wait(w.exec)
 }
 
 // Returns an io.Writer that will record sterr for later use,

@@ -20,6 +20,7 @@ const (
 	_branchesDir = "branches"
 )
 
+// ErrNotExist indicates that a key that was expected to exist does not exist.
 var ErrNotExist = os.ErrNotExist
 
 // Store implements storage for gs state inside a Git repository.
@@ -29,31 +30,41 @@ type Store struct {
 	log   *log.Logger
 }
 
+// Trunk reports the trunk branch configured for the repository.
 func (s *Store) Trunk() string {
 	return s.trunk
 }
 
+// InitStoreRequest is a request to initialize the store
+// in a Git repository.
 type InitStoreRequest struct {
-	// Repository is the Git repository in which to store the state.
+	// Repository is the Git repository being initialized.
+	// State will be stored in a ref in this repository.
 	Repository GitRepository
 
 	// Trunk is the name of the trunk branch,
 	// e.g. "main" or "master".
 	Trunk string
 
-	Log *log.Logger
-
 	// Force will clear the store if it's already initialized.
 	// Without this, InitStore will fail with ErrAlreadyInitialized.
 	Force bool
+
+	// Log is the logger to use for logging.
+	Log *log.Logger
 }
 
 type repoInfo struct {
 	Trunk string `json:"trunk"`
 }
 
+// ErrAlreadyInitialized indicates that the store is already initialized.
 var ErrAlreadyInitialized = errors.New("store already initialized")
 
+// InitStore initializes the store in the given Git repository.
+//
+// It returns [ErrAlreadyInitialized] if the repository is already initialized
+// and Force is not set.
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	logger := req.Log
 	if logger == nil {
@@ -94,10 +105,12 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}, nil
 }
 
+// ErrUninitialized indicates that the store is not initialized.
 var ErrUninitialized = errors.New("store not initialized")
 
 // OpenStore opens the Store for the given Git repository.
-// The store will be created if it does not exist.
+//
+// It returns [ErrUninitialized] if the repository is not initialized.
 func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*Store, error) {
 	if logger == nil {
 		logger = log.New(io.Discard)
@@ -133,11 +146,19 @@ type branchState struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
+// LookupResponse is the response to a Lookup request.
 type LookupResponse struct {
-	Name     string
-	Base     string
+	// Base is the base branch configured
+	// for the requested branch.
+	Base string
+
+	// BaseHash is the last known hash of the base branch.
+	// This may not match the current hash of the base branch.
 	BaseHash git.Hash
-	PR       int
+
+	// PR is the number of the pull request associated with the branch,
+	// or zero if the branch is not associated with a PR.
+	PR int
 }
 
 // Lookup returns information about a branch tracked by gs.
@@ -149,13 +170,14 @@ func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error
 	}
 
 	return &LookupResponse{
-		Name:     name,
 		Base:     state.Base.Name,
 		BaseHash: git.Hash(state.Base.Hash),
 		PR:       state.PR,
 	}, nil
 }
 
+// List reports the names of all tracked branches.
+// The list is sorted in lexicographic order.
 func (s *Store) List(ctx context.Context) ([]string, error) {
 	branches, err := s.b.Keys(ctx, _branchesDir)
 	if err != nil {
@@ -170,6 +192,7 @@ func (s *Store) List(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
+// UpsertRequest is a request to add or update information about a branch.
 type UpsertRequest struct {
 	// Name is the name of the branch.
 	Name string
@@ -187,20 +210,31 @@ type UpsertRequest struct {
 
 	// PR is the number of the pull request associated with the branch.
 	// Zero if the branch is not associated with a PR yet.
+	//
 	// Leave nil to keep the current PR.
 	PR *int
 }
 
+// PR is a helper to create a pointer to an integer
+// for the UpsertRequest PR field.
 func PR(n int) *int {
 	return &n
 }
 
+// UpdateRequest is a request to add, update, or delete information about branches.
 type UpdateRequest struct {
+	// Upserts are requests to add or update information about branches.
 	Upserts []UpsertRequest
+
+	// Deletes are requests to delete information about branches.
 	Deletes []string
+
+	// Message is a message specifying the reason for the update.
+	// This will be persisted in the Git commit message.
 	Message string
 }
 
+// Update upates the store with the parameters in the request.
 func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 	if req.Message == "" {
 		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
