@@ -68,7 +68,12 @@ func TestMain(m *testing.M) {
 				log.Printf("cannot open instructions: %v", err)
 				return 1
 			}
-			defer instructionFile.Close()
+			defer func() {
+				if err := instructionFile.Close(); err != nil {
+					log.Printf("cannot close instructions: %v", err)
+					exitCode = 1
+				}
+			}()
 
 			if args[0] == "--" {
 				args = args[1:]
@@ -111,19 +116,20 @@ func TestMain(m *testing.M) {
 					start := time.Now()
 
 					var match func([]byte) bool
-					if len(rest) > 0 {
+					switch {
+					case len(rest) > 0:
 						want := []byte(rest)
 						match = func(snap []byte) bool {
 							return bytes.Contains(snap, want)
 						}
-					} else if len(lastSnapshot) > 0 {
+					case len(lastSnapshot) > 0:
 						want := lastSnapshot
 						lastSnapshot = nil
 						match = func(snap []byte) bool {
 							return !bytes.Equal(snap, want)
 						}
 
-					} else {
+					default:
 						log.Printf("await: argument is required if no snapshots were captured")
 						continue
 					}
@@ -247,7 +253,12 @@ type terminalEmulator struct {
 	term *midterm.Terminal
 }
 
-func newVT100Emulator(f *os.File, cmd *exec.Cmd, rows, cols int, logf func(string, ...any)) *terminalEmulator {
+func newVT100Emulator(
+	f *os.File,
+	cmd *exec.Cmd,
+	rows, cols int,
+	logf func(string, ...any),
+) *terminalEmulator {
 	if logf == nil {
 		logf = log.Printf
 	}
@@ -285,10 +296,12 @@ loop:
 }
 
 func (m *terminalEmulator) Close() error {
-	m.pty.Write([]byte{4}) // EOT
-	err := m.cmd.Wait()
-	_ = m.pty.Close()
-	return err
+	_, err := m.pty.Write([]byte{4}) // EOT
+	return errors.Join(
+		err,
+		m.cmd.Wait(),
+		m.pty.Close(),
+	)
 }
 
 func (m *terminalEmulator) FeedKeys(s string) error {

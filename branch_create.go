@@ -135,11 +135,12 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	}
 
 	var msg string
-	if cmd.Below {
+	switch {
+	case cmd.Below:
 		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, baseName)
-	} else if cmd.Insert {
+	case cmd.Insert:
 		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, baseName)
-	} else {
+	default:
 		msg = fmt.Sprintf("create branch %s", cmd.Name)
 	}
 

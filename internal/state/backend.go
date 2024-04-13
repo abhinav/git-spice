@@ -187,7 +187,7 @@ func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error
 	}
 
 	var updateErr error
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		var prevTree git.Hash
 		prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
 		if err != nil {

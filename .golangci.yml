@@ -4,10 +4,32 @@ output:
   print-issued-lines: false
 
 linters:
+  disable-all: true
   enable:
+    # golangci-lint defaults:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Non-default linters:
+    - errorlint
+    - gocritic
     - gofumpt
     - nolintlint
     - revive
+
+    # With Go 1.22 for loop semantics,
+    # no need to copy loop variables.
+    - copyloopvar
+
+    # Prefer "range N" over "x := 0; x < N; x++".
+    - intrange
+
+    # Require field tags for serialized structs.
+    - musttag
 
 linters-settings:
   govet:

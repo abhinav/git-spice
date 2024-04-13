@@ -93,7 +93,11 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 //
 // This allows nearly any other command to work without initialization
 // by auto-initializing the repository at that time.
-func ensureStore(ctx context.Context, repo state.GitRepository, log *log.Logger) (*state.Store, error) {
+func ensureStore(
+	ctx context.Context,
+	repo state.GitRepository,
+	log *log.Logger,
+) (*state.Store, error) {
 	store, err := state.OpenStore(ctx, repo, log)
 	if err == nil {
 		return store, nil

@@ -124,7 +124,11 @@ type ListTreeOptions struct {
 // If opts.Recurse is true, this operation will expand all subtrees.
 // The returned entries will only include blobs,
 // and their path will be the full path relative to the root of the tree.
-func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptions) (_ []TreeEntry, err error) {
+func (r *Repository) ListTree(
+	ctx context.Context,
+	tree Hash,
+	opts ListTreeOptions,
+) (_ []TreeEntry, err error) {
 	args := []string{
 		"ls-tree",
 		"--full-tree", // don't limit listing to the current working directory

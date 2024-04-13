@@ -141,7 +141,13 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	return nil
 }
 
-func checkNeedsRestack(ctx context.Context, repo *git.Repository, store *state.Store, log *log.Logger, name string) {
+func checkNeedsRestack(
+	ctx context.Context,
+	repo *git.Repository,
+	store *state.Store,
+	log *log.Logger,
+	name string,
+) {
 	// A branch needs to be restacked if
 	// a) it's tracked by gs; and
 	// b) its merge base with its base branch

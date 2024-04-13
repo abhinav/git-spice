@@ -35,6 +35,9 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	tops, err := svc.FindTop(ctx, current)
+	if err != nil {
+		return fmt.Errorf("find top-most branches: %w", err)
+	}
 	must.NotBeEmptyf(tops, "FindTopmost always returns at least one branch")
 
 	branch := tops[0]

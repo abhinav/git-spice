@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 )
 
@@ -77,7 +78,6 @@ func TestPrintfWriter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.desc, func(t *testing.T) {
 			var got []string
 			w, flush := newPrintfWriter(
@@ -117,7 +117,7 @@ func testPrintfWriterRapid(t *rapid.T) {
 	for _, chunk := range chunks {
 		wantBuff.Write(chunk)
 		_, err := w.Write(chunk)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	flush()

@@ -183,13 +183,8 @@ func (s *Store) List(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
-
-	var names []string
-	for _, name := range branches {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names, nil
+	sort.Strings(branches)
+	return branches, nil
 }
 
 // UpsertRequest is a request to add or update information about a branch.

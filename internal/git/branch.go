@@ -131,7 +131,11 @@ type BranchDeleteOptions struct {
 // DeleteBranch deletes a branch from the repository.
 // It returns an error if the branch does not exist,
 // or if it has unmerged changes and the Force option is not set.
-func (r *Repository) DeleteBranch(ctx context.Context, branch string, opts BranchDeleteOptions) error {
+func (r *Repository) DeleteBranch(
+	ctx context.Context,
+	branch string,
+	opts BranchDeleteOptions,
+) error {
 	args := []string{"branch", "--delete"}
 	if opts.Force {
 		args = append(args, "--force")
