@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"io"
 	"sync"
-	"testing"
 
 	"github.com/charmbracelet/log"
 )
@@ -30,10 +29,16 @@ func LogWriter(log *log.Logger, lvl log.Level) (w io.Writer, done func()) {
 	return w, flush
 }
 
-// TestLogWriter builds and returns an io.Writer that
+// TestOutput allows writing to the test log.
+type TestOutput interface {
+	Logf(format string, args ...any)
+	Cleanup(f func())
+}
+
+// TestOutputWriter builds and returns an io.Writer that
 // writes messages to the given testing.TB.
 // The returned writer is not thread-safe.
-func TestLogWriter(t testing.TB, prefix string) (w io.Writer) {
+func TestOutputWriter(t TestOutput, prefix string) (w io.Writer) {
 	w, flush := newPrintfWriter(t.Logf, prefix)
 	t.Cleanup(flush)
 	return w

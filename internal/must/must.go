@@ -40,6 +40,13 @@ func NotBeEmptyf[T any](es []T, format string, args ...any) {
 	}
 }
 
+// NotBeNilf panics if v is nil.
+func NotBeNilf(v any, format string, args ...any) {
+	if v == nil {
+		panicErrorf(format, args...)
+	}
+}
+
 func panicErrorf(format string, args ...any) {
 	panic(fmt.Errorf(format, args...))
 }

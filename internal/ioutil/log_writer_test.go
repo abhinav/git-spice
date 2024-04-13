@@ -6,10 +6,60 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
 )
+
+func TestLogWriter(t *testing.T) {
+	var buf bytes.Buffer
+	logger := log.New(&buf)
+	writer, done := LogWriter(logger, log.InfoLevel)
+
+	_, err := fmt.Fprint(writer, "hello world")
+	require.NoError(t, err)
+	done()
+
+	assert.Equal(t, "INFO hello world\n", buf.String())
+}
+
+func TestLogWriter_nil(t *testing.T) {
+	writer, done := LogWriter(nil, log.InfoLevel)
+
+	_, err := fmt.Fprint(writer, "hello world")
+	require.NoError(t, err)
+	done()
+}
+
+func TestTestOutputWriter(t *testing.T) {
+	var out testOutputStub
+	writer := TestOutputWriter(&out, "prefix: ")
+
+	fmt.Fprint(writer, "hello world")
+	out.cleanup()
+
+	assert.Equal(t, []string{"prefix: hello world"}, out.logs)
+}
+
+type testOutputStub struct {
+	logs    []string
+	cleanup func()
+}
+
+func (t *testOutputStub) Logf(format string, args ...any) {
+	t.logs = append(t.logs, fmt.Sprintf(format, args...))
+}
+
+func (t *testOutputStub) Cleanup(f func()) {
+	old := t.cleanup
+	t.cleanup = func() {
+		f()
+		if old != nil {
+			old()
+		}
+	}
+}
 
 func TestPrintfWriter(t *testing.T) {
 	tests := []struct {
