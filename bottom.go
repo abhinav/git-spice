@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 )
 
 type bottomCmd struct{}
@@ -24,6 +25,8 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
@@ -34,20 +37,9 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger) error {
 		return errors.New("no branches below current: already on trunk")
 	}
 
-	// TODO: store: add ListDownstack() operation.
-	var bottom string
-	for {
-		b, err := store.Lookup(ctx, current)
-		if err != nil {
-			return fmt.Errorf("lookup %v: %w", current, err)
-		}
-
-		if b.Base == store.Trunk() {
-			bottom = current
-			break
-		}
-
-		current = b.Base
+	bottom, err := svc.FindBottom(ctx, current)
+	if err != nil {
+		return fmt.Errorf("find bottom: %w", err)
 	}
 
 	return (&checkoutCmd{Name: bottom}).Run(ctx, log)

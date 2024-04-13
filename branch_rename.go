@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 )
 
@@ -37,6 +38,8 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	if err := repo.RenameBranch(ctx, git.RenameBranchRequest{
 		OldName: oldName,
 		NewName: cmd.Name,
@@ -61,7 +64,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 		update.Deletes = append(update.Deletes, oldName)
 	}
 
-	aboves, err := store.ListAbove(ctx, oldName)
+	aboves, err := svc.ListAbove(ctx, oldName)
 	if err != nil {
 		return fmt.Errorf("list branches above: %w", err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 )
 
 type upstackRestackCmd struct{}
@@ -28,7 +29,9 @@ func (*upstackRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	upstacks, err := store.ListUpstack(ctx, currentBranch)
+	svc := gs.NewService(repo, store, log)
+
+	upstacks, err := svc.ListUpstack(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("get upstack branches: %w", err)
 	}

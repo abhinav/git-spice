@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 	"os"
 	"path"
 	"sort"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/must"
 )
 
 const (
@@ -23,11 +21,6 @@ const (
 )
 
 var ErrNotExist = os.ErrNotExist
-
-// TODO: Cleanear abstraction separation.
-// If this is a dumb key-value store for Branch information,
-// it should not implement logic for interpreting domain-specific information
-// like "upstack" or "downstack" branches.
 
 // Store implements storage for gs state inside a Git repository.
 type Store struct {
@@ -267,88 +260,4 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 	}
 
 	return nil
-}
-
-type branchInfo struct {
-	Name     string
-	Base     string
-	BaseHash git.Hash
-	PR       int
-}
-
-func (s *Store) allBranches(ctx context.Context) iter.Seq2[*branchInfo, error] {
-	return func(yield func(*branchInfo, error) bool) {
-		branchNames, err := s.b.Keys(ctx, _branchesDir)
-		if err != nil {
-			yield(nil, fmt.Errorf("list branches: %w", err))
-			return
-		}
-
-		for branchName := range branchNames {
-			var bstate branchState
-			if err := s.b.Get(ctx, path.Join(_branchesDir, branchName), &bstate); err != nil {
-				yield(nil, fmt.Errorf("get branch state: %w", err))
-				break
-			}
-
-			// TODO: delete branchInfo, just use branchState
-			info := branchInfo{
-				Name:     branchName,
-				Base:     bstate.Base.Name,
-				BaseHash: git.Hash(bstate.Base.Hash),
-				PR:       bstate.PR,
-			}
-
-			if !yield(&info, nil) {
-				break
-			}
-		}
-	}
-}
-
-// ListAbove lists branches that are immediately upstack from the given branch.
-func (s *Store) ListAbove(ctx context.Context, base string) ([]string, error) {
-	var children []string
-	for branch, err := range s.allBranches(ctx) {
-		if err != nil {
-			return nil, err
-		}
-
-		if branch.Base == base {
-			children = append(children, branch.Name)
-		}
-	}
-
-	return children, nil
-}
-
-// ListUpstack will list all branches that are upstack from the given branch,
-// with the given branch as the first element.
-//
-// The returned slice is ordered by branch position in the upstack.
-// Earlier elements are closer to the trunk.
-func (s *Store) ListUpstack(ctx context.Context, start string) ([]string, error) {
-	branchesByBase := make(map[string][]string) // base name -> branches on base
-	for branch, err := range s.allBranches(ctx) {
-		if err != nil {
-			return nil, err
-		}
-
-		branchesByBase[branch.Base] = append(
-			branchesByBase[branch.Base], branch.Name,
-		)
-	}
-
-	var upstacks []string
-	remaining := []string{start}
-	for len(remaining) > 0 {
-		current := remaining[0]
-		remaining = remaining[1:]
-		upstacks = append(upstacks, current)
-		remaining = append(remaining, branchesByBase[current]...)
-	}
-	must.NotBeEmptyf(upstacks, "there must be at least one branch")
-	must.BeEqualf(start, upstacks[0], "starting branch must be first upstack")
-
-	return upstacks, nil
 }

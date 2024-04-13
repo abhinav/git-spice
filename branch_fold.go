@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 )
 
@@ -26,6 +27,8 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	if cmd.Name == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -40,7 +43,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	aboves, err := store.ListAbove(ctx, cmd.Name)
+	aboves, err := svc.ListAbove(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("list above: %w", err)
 	}

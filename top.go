@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -25,32 +26,16 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	remaining := []string{current}
-	var tops []string
-	for len(remaining) > 0 {
-		var b string
-		b, remaining = remaining[0], remaining[1:]
-
-		aboves, err := store.ListAbove(ctx, b)
-		if err != nil {
-			return fmt.Errorf("list branches above %v: %w", b, err)
-		}
-
-		if len(aboves) == 0 {
-			// There's nothing above this branch
-			// so it's a top-most branch.
-			tops = append(tops, b)
-		} else {
-			remaining = append(remaining, aboves...)
-		}
-	}
-	must.NotBeEmptyf(tops, "at least current branch (%v) must be in tops", current)
+	tops, err := svc.FindTop(ctx, current)
+	must.NotBeEmptyf(tops, "FindTopmost always returns at least one branch")
 
 	branch := tops[0]
 	if len(tops) > 1 {

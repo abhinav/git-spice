@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 )
 
@@ -32,6 +33,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return err
 	}
 	trunk := store.Trunk()
+
+	svc := gs.NewService(repo, store, log)
 
 	// TODO: guess branch name from commit subject
 	if cmd.Name == "" {
@@ -78,7 +81,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	} else if cmd.Insert {
 		// If inserting, restacking all the upstacks of current branch
 		// onto the new branch.
-		aboves, err := store.ListAbove(ctx, currentBranch)
+		aboves, err := svc.ListAbove(ctx, currentBranch)
 		if err != nil {
 			return fmt.Errorf("list branches above %s: %w", currentBranch, err)
 		}

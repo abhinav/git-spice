@@ -8,13 +8,18 @@ import (
 	"strings"
 )
 
-func BeEqualf[T comparable](want, got T, format string, args ...any) {
-	if want != got {
-		panicErrorf("%v\nwant = %v\n got = %v",
-			fmt.Errorf(format, args...),
-			want,
-			got,
+func BeEqualf[T comparable](a, b T, format string, args ...any) {
+	if a != b {
+		panicErrorf("%v\nwant a == b\na = %v\nb = %v",
+			fmt.Errorf(format, args...), a, b,
 		)
+	}
+}
+
+func NotBeEqualf[T comparable](a, b T, format string, args ...any) {
+	if a == b {
+		panicErrorf("%v\nwant a != b\na = %v\nb = %v",
+			fmt.Errorf(format, args...), a, b)
 	}
 }
 

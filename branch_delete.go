@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -29,6 +30,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
 		return errors.New("branch name is required")
@@ -45,7 +48,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 		// after deletion.
 		base = b.Base
 
-		aboves, err = store.ListAbove(ctx, cmd.Name)
+		aboves, err = svc.ListAbove(ctx, cmd.Name)
 		if err != nil {
 			log.Warn("failed to list branches above", "branch", cmd.Name, "err", err)
 			aboves = nil
