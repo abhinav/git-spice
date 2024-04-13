@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -29,10 +28,10 @@ type GitRepository interface {
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
 
-	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) (iter.Seq2[git.TreeEntry, error], error)
+	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) ([]git.TreeEntry, error)
 	CommitTree(ctx context.Context, req git.CommitTreeRequest) (git.Hash, error)
 	UpdateTree(ctx context.Context, req git.UpdateTreeRequest) (git.Hash, error)
-	MakeTree(ctx context.Context, ents iter.Seq[git.TreeEntry]) (git.Hash, error)
+	MakeTree(ctx context.Context, ents []git.TreeEntry) (git.Hash, error)
 
 	SetRef(ctx context.Context, req git.SetRefRequest) error
 }
@@ -45,7 +44,7 @@ type storageBackend interface {
 	Get(ctx context.Context, key string, v interface{}) error
 	Clear(ctx context.Context, msg string) error
 	Update(ctx context.Context, req updateRequest) error
-	Keys(ctx context.Context, dir string) (iter.Seq[string], error)
+	Keys(ctx context.Context, dir string) ([]string, error)
 }
 
 type gitStorageBackend struct {
@@ -69,7 +68,7 @@ func newGitStorageBackend(repo GitRepository, log *log.Logger) *gitStorageBacken
 	}
 }
 
-func (g *gitStorageBackend) Keys(ctx context.Context, dir string) (iter.Seq[string], error) {
+func (g *gitStorageBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 	var (
 		treeHash git.Hash
 		err      error
@@ -81,7 +80,7 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) (iter.Seq[stri
 	}
 	if err != nil {
 		if errors.Is(err, git.ErrNotExist) {
-			return func(func(string) bool) {}, nil
+			return nil, nil // no keys
 		}
 		return nil, fmt.Errorf("get tree hash: %w", err)
 	}
@@ -92,25 +91,17 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) (iter.Seq[stri
 	if err != nil {
 		return nil, fmt.Errorf("list tree: %w", err)
 	}
-	return func(yield func(string) bool) {
-		for ent, err := range entries {
-			if err != nil {
-				g.log.Warn("error encountered while reading tree entries",
-					"err", err,
-					"dir", dir,
-					"tree", treeHash)
-				break
-			}
 
-			if ent.Type != git.BlobType {
-				continue
-			}
-
-			if !yield(ent.Name) {
-				break
-			}
+	var keys []string
+	for _, ent := range entries {
+		if ent.Type != git.BlobType {
+			continue
 		}
-	}, nil
+
+		keys = append(keys, ent.Name)
+	}
+
+	return keys, nil
 }
 
 func (g *gitStorageBackend) Get(ctx context.Context, key string, v interface{}) error {
@@ -137,9 +128,7 @@ func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
 		prevCommit = "" // not initialized
 	}
 
-	tree, err := g.repo.MakeTree(ctx, func(yield func(git.TreeEntry) bool) {
-		// empty
-	})
+	tree, err := g.repo.MakeTree(ctx, nil /* empty tree */)
 	if err != nil {
 		return fmt.Errorf("make tree: %w", err)
 	}
@@ -211,26 +200,19 @@ func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error
 			}
 		}
 
+		writes := make([]git.BlobInfo, len(req.Sets))
+		for i, req := range req.Sets {
+			writes[i] = git.BlobInfo{
+				Mode: git.RegularMode,
+				Path: req.Key,
+				Hash: setBlobs[i],
+			}
+		}
+
 		newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
-			Tree: prevTree,
-			Writes: func(yield func(git.BlobInfo) bool) {
-				for i, req := range req.Sets {
-					if !yield(git.BlobInfo{
-						Mode: git.RegularMode,
-						Path: req.Key,
-						Hash: setBlobs[i],
-					}) {
-						break
-					}
-				}
-			},
-			Deletes: func(yield func(string) bool) {
-				for _, key := range req.Dels {
-					if !yield(key) {
-						break
-					}
-				}
-			},
+			Tree:    prevTree,
+			Writes:  writes,
+			Deletes: req.Dels,
 		})
 		if err != nil {
 			return fmt.Errorf("update tree: %w", err)

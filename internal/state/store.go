@@ -185,7 +185,7 @@ func (s *Store) List(ctx context.Context) ([]string, error) {
 	}
 
 	var names []string
-	for name := range branches {
+	for _, name := range branches {
 		names = append(names, name)
 	}
 	sort.Strings(names)

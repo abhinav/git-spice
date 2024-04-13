@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 	"os"
 	"strconv"
 	"strings"
@@ -67,7 +66,7 @@ type TreeEntry struct {
 // The tree will contain *only* the given entries and nothing else.
 // Entries must not contain slashes in their names;
 // this operation does not create subtrees.
-func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq[TreeEntry]) (_ Hash, err error) {
+func (r *Repository) MakeTree(ctx context.Context, ents []TreeEntry) (_ Hash, err error) {
 	var stdout bytes.Buffer
 	cmd := r.gitCmd(ctx, "mktree").Stdout(&stdout)
 	stdin, err := cmd.StdinPipe()
@@ -84,7 +83,7 @@ func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq[TreeEntry]) (_ 
 		}
 	}()
 
-	for ent := range ents {
+	for _, ent := range ents {
 		if ent.Type == "" {
 			return ZeroHash, fmt.Errorf("type not set for %q", ent.Name)
 		}
@@ -125,7 +124,7 @@ type ListTreeOptions struct {
 // If opts.Recurse is true, this operation will expand all subtrees.
 // The returned entries will only include blobs,
 // and their path will be the full path relative to the root of the tree.
-func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptions) (iter.Seq2[TreeEntry, error], error) {
+func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptions) (_ []TreeEntry, err error) {
 	args := []string{
 		"ls-tree",
 		"--full-tree", // don't limit listing to the current working directory
@@ -144,69 +143,54 @@ func (r *Repository) ListTree(ctx context.Context, tree Hash, opts ListTreeOptio
 	if err := cmd.Start(r.exec); err != nil {
 		return nil, fmt.Errorf("start: %w", err)
 	}
-
-	scanner := bufio.NewScanner(stdout)
-
-	return func(yield func(ent TreeEntry, err error) bool) {
-		var finished bool // whether we ran to completion
-		defer func() {
-			if finished {
-				return
-			}
-
-			// If we stopped early, kill the command and consume
-			// its output.
+	defer func() {
+		if err != nil {
 			_ = cmd.Kill(r.exec)
 			_, _ = io.Copy(io.Discard, stdout)
-		}()
+		}
+	}()
 
-		for scanner.Scan() {
-			line := scanner.Bytes()
-			// ls-tree output is in the form:
-			//	<mode> SP <type> SP <hash> TAB <name> NL
-			modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
-			if !ok {
-				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
-				continue
-			}
-
-			toks := bytes.SplitN(modeTypeHash, []byte{' '}, 3)
-			if len(toks) != 3 {
-				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
-				continue
-			}
-
-			mode, err := ParseMode(string(toks[0]))
-			if err != nil {
-				r.log.Warnf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
-				continue
-			}
-
-			ok = yield(TreeEntry{
-				Mode: mode,
-				Type: Type(toks[1]),
-				Hash: Hash(toks[2]),
-				Name: string(name),
-			}, nil)
-			if !ok {
-				return
-			}
+	scanner := bufio.NewScanner(stdout)
+	var ents []TreeEntry
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		// ls-tree output is in the form:
+		//	<mode> SP <type> SP <hash> TAB <name> NL
+		modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
+		if !ok {
+			r.log.Warnf("ls-tree: skipping invalid line: %q", line)
+			continue
 		}
 
-		if err := scanner.Err(); err != nil {
-			if !yield(TreeEntry{}, fmt.Errorf("scan: %w", err)) {
-				return
-			}
+		toks := bytes.SplitN(modeTypeHash, []byte{' '}, 3)
+		if len(toks) != 3 {
+			r.log.Warnf("ls-tree: skipping invalid line: %q", line)
+			continue
 		}
 
-		if err := cmd.Wait(r.exec); err != nil {
-			if !yield(TreeEntry{}, fmt.Errorf("wait: %w", err)) {
-				return
-			}
+		mode, err := ParseMode(string(toks[0]))
+		if err != nil {
+			r.log.Warnf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
+			continue
 		}
 
-		finished = true
-	}, nil
+		ents = append(ents, TreeEntry{
+			Mode: mode,
+			Type: Type(toks[1]),
+			Hash: Hash(toks[2]),
+			Name: string(name),
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan: %w", err)
+	}
+
+	if err := cmd.Wait(r.exec); err != nil {
+		return nil, fmt.Errorf("git ls-tree: %w", err)
+	}
+
+	return ents, nil
 }
 
 // UpdateTreeRequest is a request to update an existing Git tree.
@@ -219,10 +203,10 @@ type UpdateTreeRequest struct {
 	Tree Hash
 
 	// Writes is a sequence of blobs to write to the tree.
-	Writes iter.Seq[BlobInfo]
+	Writes []BlobInfo
 
 	// Deletes is a set of paths to delete from the tree.
-	Deletes iter.Seq[string]
+	Deletes []string
 }
 
 // BlobInfo is a single blob in a tree.
@@ -274,7 +258,7 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	if req.Writes != nil {
-		for blob := range req.Writes {
+		for _, blob := range req.Writes {
 			// update-index accepts input in the form:
 			//   <mode> SP <sha1> TAB <path> NL
 			if blob.Mode == ZeroMode {
@@ -288,7 +272,7 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	if req.Deletes != nil {
-		for path := range req.Deletes {
+		for _, path := range req.Deletes {
 			// For deletes, we need to use 000000 as the mode,
 			// and hash does not matter.
 			if _, err := fmt.Fprintf(stdin, "000000 %s\t%s\n", ZeroHash, path); err != nil {

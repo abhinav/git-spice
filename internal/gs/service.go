@@ -4,7 +4,6 @@ package gs
 import (
 	"context"
 	"fmt"
-	"iter"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -63,40 +62,35 @@ type branchInfo struct {
 	Name string
 }
 
-func (s *Service) allBranches(ctx context.Context) iter.Seq2[branchInfo, error] {
+func (s *Service) allBranches(ctx context.Context) ([]branchInfo, error) {
 	names, err := s.store.List(ctx)
 	if err != nil {
-		return func(yield func(branchInfo, error) bool) {
-			yield(branchInfo{}, fmt.Errorf("list branches: %w", err))
+		return nil, fmt.Errorf("list branches: %w", err)
+	}
+
+	infos := make([]branchInfo, len(names))
+	for i, name := range names {
+		resp, err := s.store.Lookup(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("get branch %v: %w", name, err)
+		}
+
+		infos[i] = branchInfo{
+			Name:           name,
+			LookupResponse: resp,
 		}
 	}
 
-	return func(yield func(branchInfo, error) bool) {
-		for _, name := range names {
-			resp, err := s.store.Lookup(ctx, name)
-			if err != nil {
-				yield(branchInfo{}, fmt.Errorf("get branch %v: %w", name, err))
-				break
-			}
-
-			info := branchInfo{
-				Name:           name,
-				LookupResponse: resp,
-			}
-			if !yield(info, nil) {
-				break
-			}
-		}
-	}
+	return infos, nil
 }
 
 func (s *Service) branchesByBase(ctx context.Context) (map[string][]string, error) {
 	branchesByBase := make(map[string][]string)
-	for branch, err := range s.allBranches(ctx) {
-		if err != nil {
-			return nil, err
-		}
-
+	branches, err := s.allBranches(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, branch := range branches {
 		branchesByBase[branch.Base] = append(
 			branchesByBase[branch.Base], branch.Name,
 		)
@@ -109,11 +103,11 @@ func (s *Service) branchesByBase(ctx context.Context) (map[string][]string, erro
 // The slice is empty if there are no branches above the given branch.
 func (s *Service) ListAbove(ctx context.Context, base string) ([]string, error) {
 	var children []string
-	for branch, err := range s.allBranches(ctx) {
-		if err != nil {
-			return nil, err
-		}
-
+	branches, err := s.allBranches(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, branch := range branches {
 		if branch.Base == base {
 			children = append(children, branch.Name)
 		}
