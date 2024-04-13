@@ -116,32 +116,38 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
-	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+	var upserts []state.UpsertBranchRequest
+	upserts = append(upserts, state.UpsertBranchRequest{
 		Name:     cmd.Name,
 		Base:     base.Name,
 		BaseHash: base.Hash,
-		Message:  fmt.Sprintf("create branch %s on %s", cmd.Name, base.Name),
-	}); err != nil {
-		return fmt.Errorf("set branch: %w", err)
-	}
+	})
 
-	if len(restackOntoNew) == 0 {
-		return nil
-	}
-
-	// For --insert and --below, set the base branch of all affected
-	// branches to the newly created branch and run a restack.
-
-	// TODO: should be atomic with the other update
 	for _, branch := range restackOntoNew {
-		if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:    branch,
-			Base:    cmd.Name,
-			Message: fmt.Sprintf("insert branch %s below %s", cmd.Name, branch),
-		}); err != nil {
-			return fmt.Errorf("set branch: %w", err)
-		}
+		// For --insert and --below, set the base branch of all affected
+		// branches to the newly created branch and run a restack.
+		upserts = append(upserts, state.UpsertBranchRequest{
+			Name: branch,
+			Base: cmd.Name,
+		})
 	}
 
-	return (&upstackRestackCmd{}).Run(ctx, log)
+	var msg string
+	if cmd.Below {
+		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, base.Name)
+	} else if cmd.Insert {
+		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, base.Name)
+	} else {
+		msg = fmt.Sprintf("create branch %s", cmd.Name)
+	}
+
+	if err := store.UpsertBranches(ctx, upserts, msg); err != nil {
+		return fmt.Errorf("update state: %w", err)
+	}
+
+	if cmd.Below || cmd.Insert {
+		return (&upstackRestackCmd{}).Run(ctx, log)
+	}
+
+	return nil
 }

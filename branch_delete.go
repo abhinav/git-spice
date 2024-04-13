@@ -77,13 +77,16 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	must.NotBeBlankf(base, "base must be set if branches were found above")
-	for _, above := range aboves {
-		if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+	upserts := make([]state.UpsertBranchRequest, len(aboves))
+	for i, above := range aboves {
+		upserts[i] = state.UpsertBranchRequest{
 			Name: above,
 			Base: base,
-		}); err != nil {
-			return fmt.Errorf("update upstack: %w", err)
 		}
+	}
+	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("restack upstack of %v", cmd.Name)); err != nil {
+		// TODO: atomically with branch deletion update
+		return fmt.Errorf("update upstack: %w", err)
 	}
 
 	// TODO: auto-restack with opt-out flag

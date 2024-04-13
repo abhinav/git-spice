@@ -194,58 +194,75 @@ type UpsertBranchRequest struct {
 	// Zero if the branch is not associated with a PR yet.
 	// Leave nil to keep the current PR.
 	PR *int
-
-	// Message is the message to use for the update.
-	// If empty, a message will be generated.
-	Message string
 }
 
 func PR(n int) *int {
 	return &n
 }
 
-func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest) error {
-	if req.Name == "" {
-		return errors.New("branch name is required")
-	}
-	if req.Name == s.trunk {
-		return errors.New("trunk branch is not managed by gs")
-	}
+func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest, msg string) error {
+	return s.UpsertBranches(ctx, []UpsertBranchRequest{req}, msg)
+}
 
-	var b branchState
-	if prev, err := s.LookupBranch(ctx, req.Name); err != nil {
-		if !errors.Is(err, ErrNotExist) {
-			return fmt.Errorf("get branch: %w", err)
+func (s *Store) UpsertBranches(ctx context.Context, reqs []UpsertBranchRequest, msg string) error {
+	putReqs := make([]PutRequest, len(reqs))
+	for i, req := range reqs {
+		if req.Name == "" {
+			return fmt.Errorf("request [%d]: branch name is required", i)
 		}
-		// Branch does not exist yet.
-		// Everything is already set to the zero value.
-	} else {
-		b.PR = prev.PR
-		b.Base = branchStateBase{
-			Name: prev.Base.Name,
-			Hash: prev.Base.Hash.String(),
+		if req.Name == s.trunk {
+			return fmt.Errorf("request [%d]: trunk branch is not managed by gs", i)
+		}
+
+		var b branchState
+		if prev, err := s.LookupBranch(ctx, req.Name); err != nil {
+			if !errors.Is(err, ErrNotExist) {
+				return fmt.Errorf("get branch: %w", err)
+			}
+			// Branch does not exist yet.
+			// Everything is already set to the zero value.
+		} else {
+			b.PR = prev.PR
+			b.Base = branchStateBase{
+				Name: prev.Base.Name,
+				Hash: prev.Base.Hash.String(),
+			}
+		}
+
+		if req.Base != "" {
+			b.Base.Name = req.Base
+		}
+		if req.BaseHash != "" {
+			b.Base.Hash = req.BaseHash.String()
+		}
+		if req.PR != nil {
+			b.PR = *req.PR
+		}
+
+		if b.Base.Name == "" {
+			return fmt.Errorf("branch %q (%d) would have no base", req.Name, i)
+		}
+
+		putReqs[i] = PutRequest{
+			Key:   s.branchJSON(req.Name),
+			Value: b,
 		}
 	}
 
-	if req.Base != "" {
-		b.Base.Name = req.Base
-	}
-	if req.BaseHash != "" {
-		b.Base.Hash = req.BaseHash.String()
-	}
-	if req.PR != nil {
-		b.PR = *req.PR
-	}
-	if req.Message == "" {
-		req.Message = fmt.Sprintf("update branch %q", req.Name)
-	}
-
-	if b.Base.Name == "" {
-		return fmt.Errorf("branch %q would have no base", req.Name)
+	if msg == "" {
+		var sb strings.Builder
+		sb.WriteString("update branch state: ")
+		for i, req := range reqs {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(req.Name)
+		}
+		msg = sb.String()
 	}
 
-	if err := s.b.Put(ctx, s.branchJSON(req.Name), b, req.Message); err != nil {
-		return fmt.Errorf("put branch state: %w", err)
+	if err := s.b.BulkPut(ctx, putReqs, msg); err != nil {
+		return fmt.Errorf("bulk put branch state: %w", err)
 	}
 
 	return nil

@@ -14,7 +14,7 @@ type branchRenameCmd struct {
 	Name string `arg:"" optional:"" help:"New name of the branch"`
 }
 
-func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -44,26 +44,29 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("rename branch: %w", err)
 	}
 
-	// TODO: find a way to do all this atomically?
+	var upserts []state.UpsertBranchRequest
 	if b, err := store.LookupBranch(ctx, oldName); err == nil {
-		// TODO: perhaps we need a rename method on the store
 		req := state.UpsertBranchRequest{
 			Name:     cmd.Name,
 			Base:     b.Base.Name,
 			BaseHash: b.Base.Hash,
-			Message:  fmt.Sprintf("rename %q to %q", oldName, cmd.Name),
 		}
 		if b.PR != 0 {
 			req.PR = state.PR(b.PR)
 		}
 
-		if err := store.UpsertBranch(ctx, req); err != nil {
-			return fmt.Errorf("upsert new state: %w", err)
-		}
+		upserts = append(upserts, req)
+		defer func() {
+			if err != nil {
+				return
+			}
+			// Delete state only if the rest of the operation is successful.
 
-		if err := store.ForgetBranch(ctx, oldName); err != nil {
-			return fmt.Errorf("forget old state: %w", err)
-		}
+			err = store.ForgetBranch(ctx, oldName)
+			if err != nil {
+				err = fmt.Errorf("forget old state: %w", err)
+			}
+		}()
 	}
 
 	aboves, err := store.ListAbove(ctx, oldName)
@@ -72,13 +75,14 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	for _, above := range aboves {
-		if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:    above,
-			Base:    cmd.Name,
-			Message: fmt.Sprintf("rebase %q onto %q", above, cmd.Name),
-		}); err != nil {
-			return fmt.Errorf("update branch %q: %w", above, err)
-		}
+		upserts = append(upserts, state.UpsertBranchRequest{
+			Name: above,
+			Base: cmd.Name,
+		})
+	}
+
+	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("rename %q to %q", oldName, cmd.Name)); err != nil {
+		return fmt.Errorf("update branches: %w", err)
 	}
 
 	return nil

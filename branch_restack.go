@@ -73,8 +73,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 			err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 				Name:     head,
 				BaseHash: mergeBase,
-				Message:  fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name),
-			})
+			}, fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name))
 			if err != nil {
 				return fmt.Errorf("update branch information: %w", err)
 			}
@@ -123,8 +122,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
 		Name:     head,
 		BaseHash: actualBaseHash,
-		Message:  fmt.Sprintf("%s: restacked on %s", head, b.Base.Name),
-	}); err != nil {
+	}, fmt.Sprintf("%s: restacked on %s", head, b.Base.Name)); err != nil {
 		return fmt.Errorf("update branch information: %w", err)
 	}
 

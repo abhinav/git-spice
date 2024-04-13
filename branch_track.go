@@ -54,8 +54,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		Name:     cmd.Name,
 		Base:     cmd.Base,
 		BaseHash: baseHash,
-		Message:  fmt.Sprintf("track %v with base %v", cmd.Name, cmd.Base),
-	}); err != nil {
+	}, fmt.Sprintf("track %v with base %v", cmd.Name, cmd.Base)); err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}
 

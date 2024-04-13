@@ -39,8 +39,15 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
+type PutRequest struct {
+	Key   string
+	Value interface{}
+}
+
 type storageBackend interface {
 	Put(ctx context.Context, key string, v interface{}, msg string) error
+	BulkPut(ctx context.Context, reqs []PutRequest, msg string) error
+
 	Get(ctx context.Context, key string, v interface{}) error
 	Del(ctx context.Context, key string, msg string) error
 	Clear(ctx context.Context, msg string) error
@@ -168,16 +175,25 @@ func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
 }
 
 func (g *gitStorageBackend) Put(ctx context.Context, key string, v interface{}, msg string) error {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		return fmt.Errorf("encode JSON: %w", err)
-	}
+	return g.BulkPut(ctx, []PutRequest{{Key: key, Value: v}}, msg)
+}
 
-	blobHash, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
-	if err != nil {
-		return fmt.Errorf("write object: %w", err)
+func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg string) error {
+	blobs := make([]git.Hash, len(reqs))
+	for i, req := range reqs {
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(req.Value); err != nil {
+			return fmt.Errorf("encode [%d] JSON: %w", i, err)
+		}
+
+		blobHash, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
+		if err != nil {
+			return fmt.Errorf("write object: %w", err)
+		}
+
+		blobs[i] = blobHash
 	}
 
 	var updateErr error
@@ -197,11 +213,15 @@ func (g *gitStorageBackend) Put(ctx context.Context, key string, v interface{}, 
 		newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree: prevTree,
 			Writes: func(yield func(git.BlobInfo) bool) {
-				yield(git.BlobInfo{
-					Mode: git.RegularMode,
-					Path: key,
-					Hash: blobHash,
-				})
+				for i, req := range reqs {
+					if !yield(git.BlobInfo{
+						Mode: git.RegularMode,
+						Path: req.Key,
+						Hash: blobs[i],
+					}) {
+						break
+					}
+				}
 			},
 		})
 		if err != nil {
@@ -227,7 +247,7 @@ func (g *gitStorageBackend) Put(ctx context.Context, key string, v interface{}, 
 			OldHash: prevCommit,
 		}); err != nil {
 			updateErr = err
-			g.log.Warn("could not update ref: retrying", "err", err, "key", key)
+			g.log.Warn("could not update ref: retrying", "err", err)
 			continue
 		}
 

@@ -41,7 +41,7 @@ func TestIntegrationStore(t *testing.T) {
 		Base:     "main",
 		BaseHash: "123456",
 		PR:       state.PR(42),
-	})
+	}, "")
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestIntegrationStore(t *testing.T) {
 			Base:     "bar",
 			BaseHash: "54321",
 			PR:       state.PR(43),
-		})
+		}, "")
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "foo")
@@ -80,7 +80,7 @@ func TestIntegrationStore(t *testing.T) {
 			Base:     "main",
 			PR:       state.PR(44),
 			BaseHash: "abcdef",
-		})
+		}, "")
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "bar/baz")

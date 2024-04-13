@@ -64,16 +64,17 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// Change the base of all branches above us
 	// to the base of the branch we are folding.
-	for _, above := range aboves {
-		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
+	upserts := make([]state.UpsertBranchRequest, len(aboves))
+	for i, above := range aboves {
+		upserts[i] = state.UpsertBranchRequest{
 			Name:     above,
 			Base:     b.Base.Name,
 			BaseHash: newBaseHash,
-			Message:  fmt.Sprintf("%v: folding %v into %v", above, cmd.Name, b.Base.Name),
-		})
-		if err != nil {
-			return fmt.Errorf("upsert branch %v: %w", above, err)
 		}
+	}
+
+	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("folding %v into %v", cmd.Name, b.Base.Name)); err != nil {
+		return fmt.Errorf("upsert branches: %w", err)
 	}
 
 	// Check out base and delete the branch we are folding.
