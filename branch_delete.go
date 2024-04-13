@@ -35,13 +35,15 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	var (
-		aboves []string
-		base   string
+		aboves  []string
+		base    string
+		tracked bool
 	)
 	if b, err := store.LookupBranch(ctx, cmd.Name); err == nil {
+		tracked = true
 		// If we know this branch, we'll want to update the upstacks
 		// after deletion.
-		base = b.Base.Name
+		base = b.Base
 
 		aboves, err = store.ListAbove(ctx, cmd.Name)
 		if err != nil {
@@ -68,25 +70,27 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger) error {
 		log.Warn("branch may already have been deleted", "err", err)
 	}
 
-	if err := store.ForgetBranch(ctx, cmd.Name); err != nil {
-		log.Warn("Could not delete branch from store.", "err", err)
-	}
-
-	if len(aboves) == 0 {
+	if !tracked {
 		return nil
 	}
 
-	must.NotBeBlankf(base, "base must be set if branches were found above")
-	upserts := make([]state.UpsertBranchRequest, len(aboves))
-	for i, above := range aboves {
-		upserts[i] = state.UpsertBranchRequest{
+	update := state.UpdateRequest{
+		Message: fmt.Sprintf("delete branch %v", cmd.Name),
+		Deletes: []string{cmd.Name},
+	}
+
+	if len(aboves) > 0 {
+		must.NotBeBlankf(base, "base must be set if branches were found above")
+	}
+	for _, above := range aboves {
+		update.Upserts = append(update.Upserts, state.UpsertBranchRequest{
 			Name: above,
 			Base: base,
-		}
+		})
 	}
-	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("restack upstack of %v", cmd.Name)); err != nil {
-		// TODO: atomically with branch deletion update
-		return fmt.Errorf("update upstack: %w", err)
+
+	if err := store.Update(ctx, &update); err != nil {
+		return fmt.Errorf("update branches: %w", err)
 	}
 
 	// TODO: auto-restack with opt-out flag

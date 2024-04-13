@@ -44,29 +44,21 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("rename branch: %w", err)
 	}
 
-	var upserts []state.UpsertBranchRequest
+	update := state.UpdateRequest{
+		Message: fmt.Sprintf("rename %q to %q", oldName, cmd.Name),
+	}
 	if b, err := store.LookupBranch(ctx, oldName); err == nil {
 		req := state.UpsertBranchRequest{
 			Name:     cmd.Name,
-			Base:     b.Base.Name,
-			BaseHash: b.Base.Hash,
+			Base:     b.Base,
+			BaseHash: b.BaseHash,
 		}
 		if b.PR != 0 {
 			req.PR = state.PR(b.PR)
 		}
 
-		upserts = append(upserts, req)
-		defer func() {
-			if err != nil {
-				return
-			}
-			// Delete state only if the rest of the operation is successful.
-
-			err = store.ForgetBranch(ctx, oldName)
-			if err != nil {
-				err = fmt.Errorf("forget old state: %w", err)
-			}
-		}()
+		update.Upserts = append(update.Upserts, req)
+		update.Deletes = append(update.Deletes, oldName)
 	}
 
 	aboves, err := store.ListAbove(ctx, oldName)
@@ -75,13 +67,13 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger) (err error
 	}
 
 	for _, above := range aboves {
-		upserts = append(upserts, state.UpsertBranchRequest{
+		update.Upserts = append(update.Upserts, state.UpsertBranchRequest{
 			Name: above,
 			Base: cmd.Name,
 		})
 	}
 
-	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("rename %q to %q", oldName, cmd.Name)); err != nil {
+	if err := store.Update(ctx, &update); err != nil {
 		return fmt.Errorf("update branches: %w", err)
 	}
 

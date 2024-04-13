@@ -9,7 +9,7 @@ import (
 	"iter"
 	"os"
 	"path"
-	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -22,6 +22,11 @@ const (
 )
 
 var ErrNotExist = os.ErrNotExist
+
+// TODO: Cleanear abstraction separation.
+// If this is a dumb key-value store for Branch information,
+// it should not implement logic for interpreting domain-specific information
+// like "upstack" or "downstack" branches.
 
 // Store implements storage for gs state inside a Git repository.
 type Store struct {
@@ -75,8 +80,16 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		}
 	}
 
-	info := repoInfo{Trunk: req.Trunk}
-	if err := b.Put(ctx, _repoJSON, info, "initialize store"); err != nil {
+	err := b.Update(ctx, updateRequest{
+		Sets: []setRequest{
+			{
+				Key: _repoJSON,
+				Val: repoInfo{Trunk: req.Trunk},
+			},
+		},
+		Msg: "initialize store",
+	})
+	if err != nil {
 		return nil, fmt.Errorf("put repo state: %w", err)
 	}
 
@@ -126,53 +139,27 @@ type branchState struct {
 	PR   int             `json:"pr,omitempty"`
 }
 
-func (s *branchState) toBranch(name string) *Branch {
-	return &Branch{
-		Name: name,
-		Base: &BranchBase{
-			Name: s.Base.Name,
-			Hash: git.Hash(s.Base.Hash),
-		},
-		PR: s.PR,
-	}
-}
-
-type BranchBase struct {
-	Name string
-	Hash git.Hash
-}
-
-func (b BranchBase) String() string {
-	return fmt.Sprintf("%s@%s", b.Name, b.Hash)
-}
-
-type Branch struct {
-	Name string
-	Base *BranchBase
-	PR   int
-}
-
-func (b *Branch) String() string {
-	var s strings.Builder
-	s.WriteString(b.Name)
-	if b.PR != 0 {
-		fmt.Fprintf(&s, " (#%d)", b.PR)
-	}
-	if b.Base != nil {
-		fmt.Fprintf(&s, " (base: %v)", b.Base)
-	}
-	return s.String()
+type LookupBranchResponse struct {
+	Name     string
+	Base     string
+	BaseHash git.Hash
+	PR       int
 }
 
 // LookupBranch returns information about a branch tracked by gs.
 // If the branch is not found, [ErrNotExist] will be returned.
-func (s *Store) LookupBranch(ctx context.Context, name string) (*Branch, error) {
+func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
 	var state branchState
 	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
 		return nil, fmt.Errorf("get branch state: %w", err)
 	}
 
-	return state.toBranch(name), nil
+	return &LookupBranchResponse{
+		Name:     name,
+		Base:     state.Base.Name,
+		BaseHash: git.Hash(state.Base.Hash),
+		PR:       state.PR,
+	}, nil
 }
 
 type UpsertBranchRequest struct {
@@ -200,18 +187,24 @@ func PR(n int) *int {
 	return &n
 }
 
-func (s *Store) UpsertBranch(ctx context.Context, req UpsertBranchRequest, msg string) error {
-	return s.UpsertBranches(ctx, []UpsertBranchRequest{req}, msg)
+type UpdateRequest struct {
+	Upserts []UpsertBranchRequest
+	Deletes []string
+	Message string
 }
 
-func (s *Store) UpsertBranches(ctx context.Context, reqs []UpsertBranchRequest, msg string) error {
-	putReqs := make([]PutRequest, len(reqs))
-	for i, req := range reqs {
+func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
+	if req.Message == "" {
+		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
+	}
+
+	sets := make([]setRequest, len(req.Upserts))
+	for i, req := range req.Upserts {
 		if req.Name == "" {
-			return fmt.Errorf("request [%d]: branch name is required", i)
+			return fmt.Errorf("upsert [%d]: branch name is required", i)
 		}
 		if req.Name == s.trunk {
-			return fmt.Errorf("request [%d]: trunk branch is not managed by gs", i)
+			return fmt.Errorf("upsert [%d]: trunk branch is not managed by gs", i)
 		}
 
 		var b branchState
@@ -224,8 +217,8 @@ func (s *Store) UpsertBranches(ctx context.Context, reqs []UpsertBranchRequest, 
 		} else {
 			b.PR = prev.PR
 			b.Base = branchStateBase{
-				Name: prev.Base.Name,
-				Hash: prev.Base.Hash.String(),
+				Name: prev.Base,
+				Hash: prev.BaseHash.String(),
 			}
 		}
 
@@ -243,41 +236,33 @@ func (s *Store) UpsertBranches(ctx context.Context, reqs []UpsertBranchRequest, 
 			return fmt.Errorf("branch %q (%d) would have no base", req.Name, i)
 		}
 
-		putReqs[i] = PutRequest{
-			Key:   s.branchJSON(req.Name),
-			Value: b,
-		}
+		sets = append(sets, setRequest{
+			Key: s.branchJSON(req.Name),
+			Val: b,
+		})
 	}
 
-	if msg == "" {
-		var sb strings.Builder
-		sb.WriteString("update branch state: ")
-		for i, req := range reqs {
-			if i > 0 {
-				sb.WriteString(", ")
-			}
-			sb.WriteString(req.Name)
-		}
-		msg = sb.String()
-	}
-
-	if err := s.b.BulkPut(ctx, putReqs, msg); err != nil {
-		return fmt.Errorf("bulk put branch state: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Store) ForgetBranch(ctx context.Context, name string) error {
-	err := s.b.Del(ctx, s.branchJSON(name), fmt.Sprintf("forget branch %q", name))
+	err := s.b.Update(ctx, updateRequest{
+		Sets: sets,
+		Dels: req.Deletes,
+		Msg:  req.Message,
+	})
 	if err != nil {
-		return fmt.Errorf("delete branch: %w", err)
+		return fmt.Errorf("update: %w", err)
 	}
+
 	return nil
 }
 
-func (s *Store) allBranches(ctx context.Context) iter.Seq2[*Branch, error] {
-	return func(yield func(*Branch, error) bool) {
+type branchInfo struct {
+	Name     string
+	Base     string
+	BaseHash git.Hash
+	PR       int
+}
+
+func (s *Store) allBranches(ctx context.Context) iter.Seq2[*branchInfo, error] {
+	return func(yield func(*branchInfo, error) bool) {
 		branchNames, err := s.b.Keys(ctx, _branchesDir)
 		if err != nil {
 			yield(nil, fmt.Errorf("list branches: %w", err))
@@ -285,13 +270,21 @@ func (s *Store) allBranches(ctx context.Context) iter.Seq2[*Branch, error] {
 		}
 
 		for branchName := range branchNames {
-			var branch branchState
-			if err := s.b.Get(ctx, path.Join(_branchesDir, branchName), &branch); err != nil {
+			var bstate branchState
+			if err := s.b.Get(ctx, path.Join(_branchesDir, branchName), &bstate); err != nil {
 				yield(nil, fmt.Errorf("get branch state: %w", err))
 				break
 			}
 
-			if !yield(branch.toBranch(branchName), nil) {
+			// TODO: delete branchInfo, just use branchState
+			info := branchInfo{
+				Name:     branchName,
+				Base:     bstate.Base.Name,
+				BaseHash: git.Hash(bstate.Base.Hash),
+				PR:       bstate.PR,
+			}
+
+			if !yield(&info, nil) {
 				break
 			}
 		}
@@ -306,7 +299,7 @@ func (s *Store) ListAbove(ctx context.Context, base string) ([]string, error) {
 			return nil, err
 		}
 
-		if branch.Base.Name == base {
+		if branch.Base == base {
 			children = append(children, branch.Name)
 		}
 	}
@@ -326,8 +319,8 @@ func (s *Store) ListUpstack(ctx context.Context, start string) ([]string, error)
 			return nil, err
 		}
 
-		branchesByBase[branch.Base.Name] = append(
-			branchesByBase[branch.Base.Name], branch.Name,
+		branchesByBase[branch.Base] = append(
+			branchesByBase[branch.Base], branch.Name,
 		)
 	}
 

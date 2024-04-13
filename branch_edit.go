@@ -41,7 +41,7 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err := repo.Rebase(ctx, git.RebaseRequest{
 		Interactive: true,
 		Branch:      currentBranch,
-		Upstream:    b.Base.Name,
+		Upstream:    b.Base,
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
 	}

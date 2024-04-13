@@ -42,12 +42,12 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger) error {
 			return fmt.Errorf("lookup %v: %w", current, err)
 		}
 
-		if b.Base.Name == store.Trunk() {
+		if b.Base == store.Trunk() {
 			bottom = current
 			break
 		}
 
-		current = b.Base.Name
+		current = b.Base
 	}
 
 	return (&checkoutCmd{Name: bottom}).Run(ctx, log)

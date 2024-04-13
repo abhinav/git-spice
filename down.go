@@ -39,7 +39,7 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("look up branch %v: %w", current, err)
 	}
 
-	below := b.Base.Name
+	below := b.Base
 	if below == trunk {
 		log.Infof("exiting stack: moving to trunk: %v", trunk)
 	}

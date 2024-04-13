@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/state"
 )
 
 type branchUntrackCmd struct {
@@ -37,7 +38,11 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	// TODO: prompt for confirmation
-	if err := store.ForgetBranch(ctx, cmd.Name); err != nil {
+	err = store.Update(ctx, &state.UpdateRequest{
+		Deletes: []string{cmd.Name},
+		Message: fmt.Sprintf("untrack branch %q", cmd.Name),
+	})
+	if err != nil {
 		return fmt.Errorf("forget branch: %w", err)
 	}
 

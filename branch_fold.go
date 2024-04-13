@@ -51,13 +51,13 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	if err := repo.Fetch(ctx, git.FetchOptions{
 		Remote: ".", // local repository
 		Refspecs: []string{
-			cmd.Name + ":" + b.Base.Name,
+			cmd.Name + ":" + b.Base,
 		},
 	}); err != nil {
 		return fmt.Errorf("update base branch: %w", err)
 	}
 
-	newBaseHash, err := repo.PeelToCommit(ctx, b.Base.Name)
+	newBaseHash, err := repo.PeelToCommit(ctx, b.Base)
 	if err != nil {
 		return fmt.Errorf("peel to commit: %w", err)
 	}
@@ -68,17 +68,21 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	for i, above := range aboves {
 		upserts[i] = state.UpsertBranchRequest{
 			Name:     above,
-			Base:     b.Base.Name,
+			Base:     b.Base,
 			BaseHash: newBaseHash,
 		}
 	}
 
-	if err := store.UpsertBranches(ctx, upserts, fmt.Sprintf("folding %v into %v", cmd.Name, b.Base.Name)); err != nil {
+	err = store.Update(ctx, &state.UpdateRequest{
+		Upserts: upserts,
+		Message: fmt.Sprintf("folding %v into %v", cmd.Name, b.Base),
+	})
+	if err != nil {
 		return fmt.Errorf("upsert branches: %w", err)
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&checkoutCmd{Name: b.Base.Name}).Run(ctx, log); err != nil {
+	if err := (&checkoutCmd{Name: b.Base}).Run(ctx, log); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 
@@ -86,6 +90,6 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("delete branch %q: %w", cmd.Name, err)
 	}
 
-	log.Infof("Branch %v has been folded into %v", cmd.Name, b.Base.Name)
+	log.Infof("Branch %v has been folded into %v", cmd.Name, b.Base)
 	return nil
 }

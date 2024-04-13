@@ -36,59 +36,68 @@ func TestIntegrationStore(t *testing.T) {
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
-	err = store.UpsertBranch(ctx, state.UpsertBranchRequest{
-		Name:     "foo",
-		Base:     "main",
-		BaseHash: "123456",
-		PR:       state.PR(42),
-	}, "")
+	err = store.Update(ctx, &state.UpdateRequest{
+		Upserts: []state.UpsertBranchRequest{{
+			Name:     "foo",
+			Base:     "main",
+			BaseHash: "123456",
+			PR:       state.PR(42),
+		}},
+	})
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.Branch{
-			Name: "foo",
-			Base: &state.BranchBase{Name: "main", Hash: "123456"},
-			PR:   42,
+		assert.Equal(t, &state.LookupBranchResponse{
+			Name:     "foo",
+			Base:     "main",
+			BaseHash: "123456",
+			PR:       42,
 		}, res)
 	})
 
 	t.Run("overwrite", func(t *testing.T) {
-		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:     "foo",
-			Base:     "bar",
-			BaseHash: "54321",
-			PR:       state.PR(43),
-		}, "")
+		err := store.Update(ctx, &state.UpdateRequest{
+			Upserts: []state.UpsertBranchRequest{{
+				Name:     "foo",
+				Base:     "bar",
+				BaseHash: "54321",
+				PR:       state.PR(43),
+			}},
+		})
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.Branch{
-			Name: "foo",
-			Base: &state.BranchBase{Name: "bar", Hash: "54321"},
-			PR:   43,
+		assert.Equal(t, &state.LookupBranchResponse{
+			Name:     "foo",
+			Base:     "bar",
+			BaseHash: "54321",
+			PR:       43,
 		}, res)
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
-		err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-			Name:     "bar/baz",
-			Base:     "main",
-			PR:       state.PR(44),
-			BaseHash: "abcdef",
-		}, "")
+		err := store.Update(ctx, &state.UpdateRequest{
+			Upserts: []state.UpsertBranchRequest{{
+				Name:     "bar/baz",
+				Base:     "main",
+				PR:       state.PR(44),
+				BaseHash: "abcdef",
+			}},
+		})
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, &state.Branch{
-			Name: "bar/baz",
-			Base: &state.BranchBase{Name: "main", Hash: "abcdef"},
-			PR:   44,
+		assert.Equal(t, &state.LookupBranchResponse{
+			Name:     "bar/baz",
+			Base:     "main",
+			BaseHash: "abcdef",
+			PR:       44,
 		}, res)
 	})
 }

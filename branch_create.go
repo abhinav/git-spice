@@ -53,10 +53,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("diff index: %w", err)
 	}
 
-	base := &state.BranchBase{
-		Name: currentBranch,
-		Hash: currentHash,
-	}
+	baseName := currentBranch
+	baseHash := currentHash
 
 	// Branches to restack on top of new branch.
 	var restackOntoNew []string
@@ -74,7 +72,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		// If trying to insert below current branch,
 		// detach to base instead,
 		// and restack current branch on top.
-		base = b.Base
+		baseName = b.Base
+		baseHash = b.BaseHash
 		restackOntoNew = append(restackOntoNew, currentBranch)
 	} else if cmd.Insert {
 		// If inserting, restacking all the upstacks of current branch
@@ -87,7 +86,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		restackOntoNew = append(restackOntoNew, aboves...)
 	}
 
-	if err := repo.DetachHead(ctx, base.Name); err != nil {
+	if err := repo.DetachHead(ctx, baseName); err != nil {
 		return fmt.Errorf("detach head: %w", err)
 	}
 	// From this point on, if there's an error,
@@ -119,8 +118,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	var upserts []state.UpsertBranchRequest
 	upserts = append(upserts, state.UpsertBranchRequest{
 		Name:     cmd.Name,
-		Base:     base.Name,
-		BaseHash: base.Hash,
+		Base:     baseName,
+		BaseHash: baseHash,
 	})
 
 	for _, branch := range restackOntoNew {
@@ -134,14 +133,17 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 
 	var msg string
 	if cmd.Below {
-		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, base.Name)
+		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, baseName)
 	} else if cmd.Insert {
-		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, base.Name)
+		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, baseName)
 	} else {
 		msg = fmt.Sprintf("create branch %s", cmd.Name)
 	}
 
-	if err := store.UpsertBranches(ctx, upserts, msg); err != nil {
+	if err := store.Update(ctx, &state.UpdateRequest{
+		Upserts: upserts,
+		Message: msg,
+	}); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
 

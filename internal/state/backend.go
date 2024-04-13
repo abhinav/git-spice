@@ -39,18 +39,10 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
-type PutRequest struct {
-	Key   string
-	Value interface{}
-}
-
 type storageBackend interface {
-	Put(ctx context.Context, key string, v interface{}, msg string) error
-	BulkPut(ctx context.Context, reqs []PutRequest, msg string) error
-
 	Get(ctx context.Context, key string, v interface{}) error
-	Del(ctx context.Context, key string, msg string) error
 	Clear(ctx context.Context, msg string) error
+	Update(ctx context.Context, req updateRequest) error
 	Keys(ctx context.Context, dir string) (iter.Seq[string], error)
 }
 
@@ -174,18 +166,25 @@ func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
 	return nil
 }
 
-func (g *gitStorageBackend) Put(ctx context.Context, key string, v interface{}, msg string) error {
-	return g.BulkPut(ctx, []PutRequest{{Key: key, Value: v}}, msg)
+type setRequest struct {
+	Key string
+	Val interface{}
 }
 
-func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg string) error {
-	blobs := make([]git.Hash, len(reqs))
-	for i, req := range reqs {
+type updateRequest struct {
+	Sets []setRequest // TODO: iterators?
+	Dels []string
+	Msg  string
+}
+
+func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error {
+	setBlobs := make([]git.Hash, len(req.Sets))
+	for i, set := range req.Sets {
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(req.Value); err != nil {
-			return fmt.Errorf("encode [%d] JSON: %w", i, err)
+		if err := enc.Encode(set.Val); err != nil {
+			return fmt.Errorf("encode JSON: %w", err)
 		}
 
 		blobHash, err := g.repo.WriteObject(ctx, git.BlobType, &buf)
@@ -193,7 +192,7 @@ func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg 
 			return fmt.Errorf("write object: %w", err)
 		}
 
-		blobs[i] = blobHash
+		setBlobs[i] = blobHash
 	}
 
 	var updateErr error
@@ -213,12 +212,19 @@ func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg 
 		newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree: prevTree,
 			Writes: func(yield func(git.BlobInfo) bool) {
-				for i, req := range reqs {
+				for i, req := range req.Sets {
 					if !yield(git.BlobInfo{
 						Mode: git.RegularMode,
 						Path: req.Key,
-						Hash: blobs[i],
+						Hash: setBlobs[i],
 					}) {
+						break
+					}
+				}
+			},
+			Deletes: func(yield func(string) bool) {
+				for _, key := range req.Dels {
+					if !yield(key) {
 						break
 					}
 				}
@@ -230,7 +236,7 @@ func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg 
 
 		commitReq := git.CommitTreeRequest{
 			Tree:    newTree,
-			Message: msg,
+			Message: req.Msg,
 			Author:  &g.sig,
 		}
 		if prevCommit != "" {
@@ -255,49 +261,4 @@ func (g *gitStorageBackend) BulkPut(ctx context.Context, reqs []PutRequest, msg 
 	}
 
 	return fmt.Errorf("set ref: %w", updateErr)
-}
-
-func (g *gitStorageBackend) Del(ctx context.Context, key string, msg string) error {
-	prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
-	if err != nil {
-		if errors.Is(err, git.ErrNotExist) {
-			return nil // nothing to delete
-		}
-		return fmt.Errorf("get commit: %w", err)
-	}
-
-	prevTree, err := g.repo.PeelToTree(ctx, prevCommit.String())
-	if err != nil {
-		return fmt.Errorf("get tree: %w", err)
-	}
-
-	newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
-		Tree: prevTree,
-		Deletes: func(yield func(string) bool) {
-			yield(key)
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("update tree: %w", err)
-	}
-
-	newCommit, err := g.repo.CommitTree(ctx, git.CommitTreeRequest{
-		Tree:    newTree,
-		Parents: []git.Hash{prevCommit},
-		Message: msg,
-		Author:  &g.sig,
-	})
-	if err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-
-	if err := g.repo.SetRef(ctx, git.SetRefRequest{
-		Ref:     g.ref,
-		Hash:    newCommit,
-		OldHash: prevCommit,
-	}); err != nil {
-		return fmt.Errorf("set ref: %w", err)
-	}
-
-	return nil
 }

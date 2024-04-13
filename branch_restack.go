@@ -52,14 +52,14 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	actualBaseHash, err := repo.PeelToCommit(ctx, b.Base.Name)
+	actualBaseHash, err := repo.PeelToCommit(ctx, b.Base)
 	if err != nil {
 		// TODO:
 		// Base branch has been deleted.
 		// Suggest a means of repairing this:
 		// possibly by prompting to select a different base branch.
 		if errors.Is(err, git.ErrNotExist) {
-			return fmt.Errorf("base branch %v does not exist", b.Base.Name)
+			return fmt.Errorf("base branch %v does not exist", b.Base)
 		}
 		return fmt.Errorf("peel to commit: %w", err)
 	}
@@ -67,13 +67,18 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	// Case:
 	// The user has already fixed the branch.
 	// Our information is stale, and we just need to update that.
-	mergeBase, err := repo.MergeBase(ctx, b.Base.Name, head)
+	mergeBase, err := repo.MergeBase(ctx, b.Base, head)
 	if err == nil && mergeBase == actualBaseHash {
-		if mergeBase != b.Base.Hash {
-			err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-				Name:     head,
-				BaseHash: mergeBase,
-			}, fmt.Sprintf("%s: rebased externally on %s", head, b.Base.Name))
+		if mergeBase != b.BaseHash {
+			err := store.Update(ctx, &state.UpdateRequest{
+				Upserts: []state.UpsertBranchRequest{
+					{
+						Name:     head,
+						BaseHash: mergeBase,
+					},
+				},
+				Message: fmt.Sprintf("%s: rebased externally on %s", head, b.Base),
+			})
 			if err != nil {
 				return fmt.Errorf("update branch information: %w", err)
 			}
@@ -84,7 +89,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return nil
 	}
 
-	rebaseFrom := b.Base.Hash
+	rebaseFrom := b.BaseHash
 	// Case:
 	// Current branch has diverged from what the target branch
 	// was forked from. That is:
@@ -101,7 +106,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 	//
 	// In this case, merge-base --fork-point will give us A,
 	// and that should be the base of the target branch.
-	forkPoint, err := repo.ForkPoint(ctx, b.Base.Name, head)
+	forkPoint, err := repo.ForkPoint(ctx, b.Base, head)
 	if err == nil {
 		rebaseFrom = forkPoint
 		log.Debugf("Using fork point %v as rebase base", rebaseFrom)
@@ -119,14 +124,20 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 		// print message about "gs continue"
 	}
 
-	if err := store.UpsertBranch(ctx, state.UpsertBranchRequest{
-		Name:     head,
-		BaseHash: actualBaseHash,
-	}, fmt.Sprintf("%s: restacked on %s", head, b.Base.Name)); err != nil {
+	err = store.Update(ctx, &state.UpdateRequest{
+		Upserts: []state.UpsertBranchRequest{
+			{
+				Name:     head,
+				BaseHash: actualBaseHash,
+			},
+		},
+		Message: fmt.Sprintf("%s: restacked on %s", head, b.Base),
+	})
+	if err != nil {
 		return fmt.Errorf("update branch information: %w", err)
 	}
 
-	log.Infof("Branch %v restacked on %v", head, b.Base.Name)
+	log.Infof("Branch %v restacked on %v", head, b.Base)
 	return nil
 }
 
@@ -139,18 +150,18 @@ func checkNeedsRestack(ctx context.Context, repo *git.Repository, store *state.S
 	if err != nil {
 		return // probably not tracked
 	}
-	mergeBase, err := repo.MergeBase(ctx, name, b.Base.Name)
+	mergeBase, err := repo.MergeBase(ctx, name, b.Base)
 	if err != nil {
 		log.Warn("Could not look up merge base for branch with its base",
 			"branch", name,
-			"base", b.Base.Name,
+			"base", b.Base,
 			"err", err)
 		return
 	}
 
-	baseHash, err := repo.PeelToCommit(ctx, b.Base.Name)
+	baseHash, err := repo.PeelToCommit(ctx, b.Base)
 	if err != nil {
-		log.Warnf("%v: base branch %v may not exist: %v", name, b.Base.Name, err)
+		log.Warnf("%v: base branch %v may not exist: %v", name, b.Base, err)
 		return
 	}
 
