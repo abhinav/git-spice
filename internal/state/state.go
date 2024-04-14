@@ -8,7 +8,13 @@ const (
 )
 
 type repoInfo struct {
-	Trunk string `json:"trunk"`
+	Trunk  string      `json:"trunk"`
+	GitHub *gitHubInfo `json:"github"`
+}
+
+type gitHubInfo struct {
+	Owner string `json:"owner"`
+	Name  string `json:"name"`
 }
 
 type branchStateBase struct {

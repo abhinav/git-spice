@@ -14,6 +14,11 @@ func (s *Store) Trunk() string {
 	return s.trunk
 }
 
+// GitHubRepo reports the GitHub repository associated with the store.
+func (s *Store) GitHubRepo() GitHubRepo {
+	return s.ghrepo
+}
+
 // ErrNotExist indicates that a key that was expected to exist does not exist.
 var ErrNotExist = os.ErrNotExist
 

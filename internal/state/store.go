@@ -12,9 +12,11 @@ import (
 
 // Store implements storage for gs state inside a Git repository.
 type Store struct {
-	b     storageBackend
-	trunk string
-	log   *log.Logger
+	b   storageBackend
+	log *log.Logger
+
+	trunk  string
+	ghrepo GitHubRepo
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -28,12 +30,21 @@ type InitStoreRequest struct {
 	// e.g. "main" or "master".
 	Trunk string
 
+	// GitHub is the GitHub repository associated with the Git repository.
+	GitHub GitHubRepo
+
 	// Force will clear the store if it's already initialized.
 	// Without this, InitStore will fail with ErrAlreadyInitialized.
 	Force bool
 
 	// Log is the logger to use for logging.
 	Log *log.Logger
+}
+
+// GitHubRepo contains information about a GitHub repository.
+type GitHubRepo struct {
+	Owner string
+	Name  string
 }
 
 // ErrAlreadyInitialized indicates that the store is already initialized.
@@ -67,7 +78,13 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		Sets: []setRequest{
 			{
 				Key: _repoJSON,
-				Val: repoInfo{Trunk: req.Trunk},
+				Val: repoInfo{
+					Trunk: req.Trunk,
+					GitHub: &gitHubInfo{
+						Owner: req.GitHub.Owner,
+						Name:  req.GitHub.Name,
+					},
+				},
 			},
 		},
 		Msg: "initialize store",
@@ -77,9 +94,10 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}
 
 	return &Store{
-		b:     b,
-		trunk: req.Trunk,
-		log:   logger,
+		b:      b,
+		log:    logger,
+		trunk:  req.Trunk,
+		ghrepo: req.GitHub,
 	}, nil
 }
 
@@ -103,9 +121,21 @@ func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*St
 		return nil, fmt.Errorf("get repo state: %w", err)
 	}
 
+	switch {
+	case info.Trunk == "":
+		return nil, fmt.Errorf("corrupt state: trunk branch name is empty")
+	case info.GitHub == nil:
+		return nil, fmt.Errorf("corrupt state: GitHub information not present")
+	case info.GitHub.Owner == "":
+		return nil, fmt.Errorf("corrupt state: GitHub owner is empty")
+	case info.GitHub.Name == "":
+		return nil, fmt.Errorf("corrupt state: GitHub repository name is empty")
+	}
+
 	return &Store{
-		b:     b,
-		trunk: info.Trunk,
-		log:   logger,
+		b:      b,
+		log:    logger,
+		trunk:  info.Trunk,
+		ghrepo: GitHubRepo{info.GitHub.Owner, info.GitHub.Name},
 	}, nil
 }
