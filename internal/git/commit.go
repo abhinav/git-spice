@@ -1,9 +1,12 @@
 package git
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -153,4 +156,86 @@ func (r *Repository) CommitSubject(ctx context.Context, commitish string) (strin
 		return "", fmt.Errorf("git log: %w", err)
 	}
 	return out, nil
+}
+
+// CommitMessage is the subject and body of a commit.
+type CommitMessage struct {
+	// Subject for the commit.
+	// Contains no leading or trailing whitespace.
+	Subject string
+
+	// Body of the commit.
+	// Contains no leading or trailing whitespace.
+	Body string
+}
+
+func (m CommitMessage) String() string {
+	if m.Body != "" {
+		return m.Subject + "\n\n" + m.Body
+	}
+	return m.Subject
+}
+
+// CommitMessageRange returns the commit messages in the range (start, ^stop).
+// That is, all commits reachable from start but not from stop.
+func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string) ([]CommitMessage, error) {
+	// TODO: read subjects and bodies as separate fields.
+	cmd := r.gitCmd(ctx, "rev-list",
+		"--no-commit-header",
+		"--format=%B%x00", // null-byte separated
+		start, "--not", stop)
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("pipe: %w", err)
+	}
+
+	if err := cmd.Start(r.exec); err != nil {
+		return nil, fmt.Errorf("start rev-list: %w", err)
+	}
+
+	scanner := bufio.NewScanner(out)
+	scanner.Split(splitNullByte)
+
+	var bodies []CommitMessage
+	for scanner.Scan() {
+		raw := strings.TrimSpace(scanner.Text())
+		if len(raw) == 0 {
+			continue
+		}
+		subject, body, _ := strings.Cut(raw, "\n")
+		bodies = append(bodies, CommitMessage{
+			Subject: strings.TrimSpace(subject),
+			Body:    strings.TrimSpace(body),
+		})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan: %w", err)
+	}
+
+	if err := cmd.Wait(r.exec); err != nil {
+		return nil, fmt.Errorf("rev-list: %w", err)
+	}
+
+	return bodies, nil
+}
+
+func splitNullByte(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	if i := bytes.IndexByte(data, 0); i >= 0 {
+		// Have a null-byte separated section.
+		return i + 1, data[:i], nil
+	}
+
+	// No null-byte found, but end of input,
+	// so consume the rest as one section.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data.
+	return 0, nil, nil
 }

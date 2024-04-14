@@ -23,7 +23,7 @@ func LogWriter(log *log.Logger, lvl log.Level) (w io.Writer, done func()) {
 		return io.Discard, func() {}
 	}
 
-	w, flush := newPrintfWriter(func(msg string, args ...any) {
+	w, flush := LogfWriter(func(msg string, args ...any) {
 		log.Logf(lvl, msg, args...)
 	}, "")
 	return w, flush
@@ -39,7 +39,7 @@ type TestOutput interface {
 // writes messages to the given testing.TB.
 // The returned writer is not thread-safe.
 func TestOutputWriter(t TestOutput, prefix string) (w io.Writer) {
-	w, flush := newPrintfWriter(t.Logf, prefix)
+	w, flush := LogfWriter(t.Logf, prefix)
 	t.Cleanup(flush)
 	return w
 }
@@ -55,7 +55,11 @@ type printfWriter struct {
 
 var _ io.Writer = (*printfWriter)(nil)
 
-func newPrintfWriter(printf func(string, ...any), prefix string) (io.Writer, func()) {
+// LogfWriter builds an io.Writer that writes messages
+// to the given logf-style function.
+//
+// The function is expected to always add a newline to the end of messages.
+func LogfWriter(printf func(string, ...any), prefix string) (io.Writer, func()) {
 	w := &printfWriter{
 		printf: printf,
 		prefix: prefix,

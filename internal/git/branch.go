@@ -165,3 +165,36 @@ func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) 
 	}
 	return nil
 }
+
+// BranchUpstream reports the upstream branch of a local branch.
+// Returns [ErrNotExist] if the branch has no upstream configured.
+func (r *Repository) BranchUpstream(ctx context.Context, branch string) (string, error) {
+	upstream, err := r.gitCmd(ctx,
+		"rev-parse",
+		"--abbrev-ref",
+		"--verify",
+		"--quiet",
+		"--end-of-options",
+		branch+"@{upstream}",
+	).OutputString(r.exec)
+	if err != nil {
+		return "", ErrNotExist
+	}
+	return upstream, nil
+}
+
+// SetBranchUpstream sets the upstream ref for a local branch.
+// The upstream must be in the form "remote/branch".
+func (r *Repository) SetBranchUpstream(
+	ctx context.Context,
+	branch, upstream string,
+) error {
+	if err := r.gitCmd(ctx,
+		"branch",
+		"--set-upstream-to="+upstream,
+		branch,
+	).Run(r.exec); err != nil {
+		return fmt.Errorf("git branch: %w", err)
+	}
+	return nil
+}

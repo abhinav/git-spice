@@ -130,7 +130,7 @@ func TestPrintfWriter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			var got []string
-			w, flush := newPrintfWriter(
+			w, flush := LogfWriter(
 				func(format string, args ...any) {
 					got = append(got, fmt.Sprintf(format, args...))
 				},
@@ -157,7 +157,7 @@ func FuzzPrintfWriterRapid(f *testing.F) {
 
 func testPrintfWriterRapid(t *rapid.T) {
 	var gotBuff bytes.Buffer
-	w, flush := newPrintfWriter(func(format string, args ...any) {
+	w, flush := LogfWriter(func(format string, args ...any) {
 		_, err := fmt.Fprintf(&gotBuff, format+"\n", args...)
 		assert.NoError(t, err)
 	}, "")

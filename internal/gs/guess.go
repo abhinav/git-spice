@@ -63,7 +63,7 @@ func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote str
 	// If there's a remote, and it has a default branch,
 	// use that as the default trunk branch in the prompt.
 	if remote != "" {
-		if upstream, err := repo.DefaultBranch(ctx, remote); err == nil {
+		if upstream, err := repo.RemoteDefaultBranch(ctx, remote); err == nil {
 			defaultTrunk = upstream
 		}
 	}

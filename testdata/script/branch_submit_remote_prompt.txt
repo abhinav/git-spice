@@ -1,0 +1,60 @@
+# 'branch submit' after initializing without a remote
+# will ask for a remote to push to.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gh-init
+gh-add-remote upstream alice/example.git
+gh-add-remote origin bob/example-fork.git
+git push upstream main
+git push origin main
+
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+with-term $WORK/input.txt -- gs branch submit --fill
+cmp stdout $WORK/golden/prompt.txt
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- input.txt --
+await Please select the remote
+snapshot dialog
+feed \r
+
+-- golden/prompt.txt --
+### dialog ###
+┃ Please select the remote to which you'd like to push your changes
+┃ > origin
+┃   upstream
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature1",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/bob/example-fork/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "25596d0f65bb595aa658f9fa7fe164949cd2ea0b"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  }
+]
+

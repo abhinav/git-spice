@@ -122,6 +122,10 @@ func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*St
 		return nil, fmt.Errorf("get repo state: %w", err)
 	}
 
+	if err := info.Validate(); err != nil {
+		return nil, fmt.Errorf("corrupt state: %w", err)
+	}
+
 	return &Store{
 		b:      b,
 		trunk:  info.Trunk,
