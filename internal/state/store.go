@@ -122,6 +122,10 @@ func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*St
 		return nil, fmt.Errorf("get repo state: %w", err)
 	}
 
+	if info.Trunk == "" {
+		return nil, fmt.Errorf("corrupt state: trunk branch name is empty")
+	}
+
 	return &Store{
 		b:      b,
 		trunk:  info.Trunk,

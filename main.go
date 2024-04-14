@@ -133,7 +133,7 @@ func main() {
 }
 
 type globalOptions struct {
-	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token; defaults to $GITHUB_TOKEN"`
+	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token"`
 
 	NonInteractive bool `name:"non-interactive" short:"I" default:"${nonInteractive}" help:"Disable interactive prompts"`
 }
