@@ -30,10 +30,10 @@ git add feature0.txt
 git commit -m 'Add feature0'
 
 gs upstack restack
-stderr 'Branch feature1 restacked on main'
-stderr 'Branch feature2 restacked on feature1'
-stderr 'Branch feature3 restacked on feature2'
-stderr 'Branch feature4 restacked on feature3'
+stderr 'feature1: restacked on main'
+stderr 'feature2: restacked on feature1'
+stderr 'feature3: restacked on feature2'
+stderr 'feature4: restacked on feature3'
 
 # should still be on main
 git branch

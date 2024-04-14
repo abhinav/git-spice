@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -36,19 +37,29 @@ func (*upstackRestackCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("get upstack branches: %w", err)
 	}
 
+loop:
 	for _, upstack := range upstacks {
 		// Trunk never needs to be restacked.
 		if upstack == store.Trunk() {
-			continue
+			continue loop
 		}
 
-		err := (&branchRestackCmd{
-			Name:          upstack,
-			noLogUpToDate: currentBranch,
-		}).Run(ctx, log)
+		res, err := svc.Restack(ctx, upstack)
 		if err != nil {
-			return fmt.Errorf("restack upstack %v: %w", upstack, err)
+			switch {
+			case errors.Is(err, gs.ErrAlreadyRestacked):
+				// Log the "does not need to be restacked" message
+				// only for branches that are not the current branch.
+				if upstack != currentBranch {
+					log.Infof("%v: branch does not need to be restacked.", upstack)
+				}
+				continue loop
+			default:
+				return fmt.Errorf("restack branch: %w", err)
+			}
 		}
+
+		log.Infof("%v: restacked on %v", upstack, res.Base)
 	}
 
 	// On success, check out the original branch.

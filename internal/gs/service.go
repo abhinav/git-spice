@@ -18,8 +18,14 @@ type GitRepository interface {
 	// This is a commit that is an ancestor of both commits.
 	MergeBase(ctx context.Context, a, b string) (git.Hash, error)
 
+	// ForkPoint reports the git hash at which branch b
+	// forked from branch a.
+	ForkPoint(ctx context.Context, a, b string) (git.Hash, error)
+
 	// PeelToCommit returns the commit hash for the given commit-ish.
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
+
+	Rebase(ctx context.Context, req git.RebaseRequest) error
 }
 
 var _ GitRepository = (*git.Repository)(nil)

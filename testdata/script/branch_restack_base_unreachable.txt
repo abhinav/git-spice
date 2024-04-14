@@ -25,7 +25,7 @@ gs branch track --base foo --verbose
 stderr 'bar: needs to be restacked'
 
 gs branch restack
-stderr 'bar restacked on foo'
+stderr 'bar: restacked on foo'
 
 git log bar --decorate --oneline
 cmp stdout $WORK/golden/git-log.txt

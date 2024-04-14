@@ -39,7 +39,7 @@ stderr 'needs to be restacked'
 cmp feature1.txt $WORK/extra/feature1.txt
 
 gs branch restack
-stderr 'feature2 restacked on feature1'
+stderr 'feature2: restacked on feature1'
 
 # feature2 now has the new feature1.txt.
 cmp feature1.txt $WORK/extra/feature1.v2.txt
