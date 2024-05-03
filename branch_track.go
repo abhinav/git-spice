@@ -46,7 +46,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 	// TODO: auto-detect base branch with revision matching
 
 	if cmd.Base == "" {
-		return fmt.Errorf("missing required flag -p")
+		return fmt.Errorf("missing required flag --base")
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)
