@@ -40,6 +40,27 @@ func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Ha
 	return revs, nil
 }
 
+// CountCommits reports the number of commits matched by the given range.
+func (r *Repository) CountCommits(ctx context.Context, commits CommitRange) (int, error) {
+	args := make([]string, 0, len(commits)+1)
+	args = append(args, "rev-list")
+	args = append(args, []string(commits)...)
+	args = append(args, "--count")
+
+	cmd := r.gitCmd(ctx, args...)
+	out, err := cmd.OutputString(r.exec)
+	if err != nil {
+		return 0, fmt.Errorf("rev-list: %w", err)
+	}
+
+	count, err := strconv.Atoi(out)
+	if err != nil {
+		return 0, fmt.Errorf("rev-list --count: bad output %q: %w", out, err)
+	}
+
+	return count, nil
+}
+
 // CommitRange builds up arguments for a ListCommits command.
 type CommitRange []string
 

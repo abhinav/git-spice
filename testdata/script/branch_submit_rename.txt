@@ -50,7 +50,6 @@ New contents of feature1
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
     "head": {
       "ref": "feature1",
@@ -70,7 +69,6 @@ New contents of feature1
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
     "head": {
       "ref": "feature1",

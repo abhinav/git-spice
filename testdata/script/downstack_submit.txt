@@ -46,7 +46,6 @@ INF Created #3: $GITHUB_GIT_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 1",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
     "head": {
       "ref": "feature1",
@@ -62,7 +61,6 @@ INF Created #3: $GITHUB_GIT_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 2",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/alice/example/pull/2",
     "head": {
       "ref": "feature2",
@@ -78,7 +76,6 @@ INF Created #3: $GITHUB_GIT_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 3",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/alice/example/pull/3",
     "head": {
       "ref": "feature3",

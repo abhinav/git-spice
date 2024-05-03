@@ -45,7 +45,6 @@ feed \r
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "draft": false,
     "html_url": "$GITHUB_GIT_URL/bob/example-fork/pull/1",
     "head": {
       "ref": "feature1",

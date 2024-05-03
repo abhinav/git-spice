@@ -78,6 +78,13 @@ func (r *Repository) MergeBase(ctx context.Context, a, b string) (Hash, error) {
 	return Hash(s), nil
 }
 
+// IsAncestor reports whether a is an ancestor of b.
+func (r *Repository) IsAncestor(ctx context.Context, a, b Hash) bool {
+	return r.gitCmd(ctx,
+		"merge-base", "--is-ancestor", string(a), string(b),
+	).Run(r.exec) == nil
+}
+
 func (r *Repository) revParse(ctx context.Context, ref string) (Hash, error) {
 	s, err := r.gitCmd(ctx, "rev-parse",
 		"--verify",         // fail if the object does not exist
