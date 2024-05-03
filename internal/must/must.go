@@ -47,6 +47,11 @@ func NotBeNilf(v any, format string, args ...any) {
 	}
 }
 
+// Failf unconditionally panics with the given message.
+func Failf(format string, args ...any) {
+	panicErrorf(format, args...)
+}
+
 func panicErrorf(format string, args ...any) {
 	panic(fmt.Errorf(format, args...))
 }

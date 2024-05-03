@@ -23,6 +23,18 @@ type GitRepository interface {
 	// PeelToCommit returns the commit hash for the given commit-ish.
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 
+	// CurrentBranch returns the name of the current branch.
+	CurrentBranch(ctx context.Context) (string, error)
+
+	// LocalBranches returns a list of all local branches.
+	LocalBranches(ctx context.Context) ([]string, error)
+
+	// DefaultBranch reports the default branch of the given remote.
+	DefaultBranch(ctx context.Context, remote string) (string, error)
+
+	// ListRemotes returns the names of all known remotes.
+	ListRemotes(ctx context.Context) ([]string, error)
+
 	Rebase(ctx context.Context, req git.RebaseRequest) error
 }
 
