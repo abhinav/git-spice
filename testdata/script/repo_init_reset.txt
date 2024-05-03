@@ -1,4 +1,4 @@
-# 'gs repo init' force forgets prior state.
+# 'gs repo init --reset' forgets prior state.
 
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
@@ -15,24 +15,18 @@ gs bc feature2 -m 'feature2'
 gs bc feature3 -m 'feature3'
 gs down
 
-# attempt to re-init without --force fails
+# attempt to re-init without --reset fails
 ! gs repo init --trunk feature2
-stderr 'repository is already initialized'
-stderr 'use --force to overwrite'
+stderr 'trunk branch "feature2" is tracked'
+stderr 'use --reset to clear'
 
 # init with feature2 as trunk,
 # and make feature2 base of feature1
 # (which is the opposite of before).
-gs repo init --force --trunk feature2
+gs repo init --reset --trunk feature2
 
 ! gs up
 stderr 'feature2: no branches found upstack'
 
 ! gs down
 stderr 'feature2: no branches found downstack'
-
--- golden/git-branch.txt --
-  feature1
-* feature2
-  feature3
-  main

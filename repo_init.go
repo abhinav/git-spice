@@ -16,7 +16,8 @@ import (
 type repoInitCmd struct {
 	Trunk  string `help:"The name of the trunk branch"`
 	Remote string `help:"The name of the remote to use for the trunk branch"`
-	Force  bool   `help:"Overwrite storage for an initialized repository"`
+
+	Reset bool `help:"Reset the store if it's already initialized"`
 }
 
 func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
@@ -110,13 +111,9 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 		Repository: repo,
 		Trunk:      cmd.Trunk,
 		Remote:     cmd.Remote,
-		Force:      cmd.Force,
+		Reset:      cmd.Reset,
 	})
 	if err != nil {
-		if errors.Is(err, state.ErrAlreadyInitialized) {
-			log.Error("use --force to overwrite existing storage.")
-			return errors.New("repository is already initialized")
-		}
 		return fmt.Errorf("initialize storage: %w", err)
 	}
 

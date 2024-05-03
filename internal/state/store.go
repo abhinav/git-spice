@@ -37,21 +37,18 @@ type InitStoreRequest struct {
 	// operations will not be available.
 	Remote string
 
-	// Force will clear the store if it's already initialized.
-	// Without this, InitStore will fail with ErrAlreadyInitialized.
-	Force bool
+	// Reset indicates that the store's state should be nuked
+	// if it's already initialized.
+	Reset bool
 
 	// Log is the logger to use for logging.
 	Log *log.Logger
 }
 
-// ErrAlreadyInitialized indicates that the store is already initialized.
-var ErrAlreadyInitialized = errors.New("store already initialized")
-
 // InitStore initializes the store in the given Git repository.
-//
-// It returns [ErrAlreadyInitialized] if the repository is already initialized
-// and Force is not set.
+// If the repository is already initialized, it will be re-initialized,
+// while retaining existing tracked branches.
+// If Reset is true, existing tracked branches will be cleared.
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	logger := req.Log
 	if logger == nil {
@@ -63,23 +60,37 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}
 
 	b := newGitStorageBackend(req.Repository, logger)
+	store := &Store{
+		b:      b,
+		trunk:  req.Trunk,
+		remote: req.Remote,
+		log:    logger,
+	}
 	if err := b.Get(ctx, _repoJSON, new(repoInfo)); err == nil {
-		if !req.Force {
-			return nil, ErrAlreadyInitialized
-		}
-		if err := b.Clear(ctx, "re-initializing store"); err != nil {
-			return nil, fmt.Errorf("clear store: %w", err)
+		if req.Reset {
+			if err := b.Clear(ctx, "reset store"); err != nil {
+				return nil, fmt.Errorf("clear store: %w", err)
+			}
+		} else {
+			// If we're not resetting,
+			// ensure that the trunk branch is not tracked.
+			_, err := store.Lookup(ctx, req.Trunk)
+			if err == nil {
+				// TODO: this should all be in 'repo init' implementation.
+				return nil, fmt.Errorf("trunk branch %q is tracked by gs; use --reset to clear", req.Trunk)
+			}
 		}
 	}
 
+	info := repoInfo{
+		Trunk:  req.Trunk,
+		Remote: req.Remote,
+	}
 	err := b.Update(ctx, updateRequest{
 		Sets: []setRequest{
 			{
 				Key: _repoJSON,
-				Val: repoInfo{
-					Trunk:  req.Trunk,
-					Remote: req.Remote,
-				},
+				Val: info,
 			},
 		},
 		Msg: "initialize store",
@@ -88,12 +99,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		return nil, fmt.Errorf("put repo state: %w", err)
 	}
 
-	return &Store{
-		b:      b,
-		trunk:  req.Trunk,
-		remote: req.Remote,
-		log:    logger,
-	}, nil
+	return store, nil
 }
 
 // ErrUninitialized indicates that the store is not initialized.
