@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ '*' ]
+
+env:
+  GO_VERSION: 1.22.x
+
+jobs:
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      name: Check out repository
+    - uses: actions/setup-go@v5
+      name: Set up Go
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - uses: golangci/golangci-lint-action@v5
+      name: Install golangci-lint
+      with:
+        version: latest
+        args: --help
+    - run: make lint
+      name: Lint
+
+  test:
+    runs-on: ${{ matrix.os }}
+    name: Test (${{ matrix.os}})
+    strategy:
+      matrix:
+        os: ["ubuntu-latest"] # TODO: ["windows-latest"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Test
+      run: make cover
+      shell: bash
+
+    # TODO:
+    # - name: Upload coverage
+    #   uses: codecov/codecov-action@v4
+    #   with:
+    #     files: ./cover.out
