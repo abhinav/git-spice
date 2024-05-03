@@ -1,0 +1,31 @@
+# 'repo init' after an existing init allows changing the trunk.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc feature1 -m 'feature1'
+gs bc feature2 -m 'feature2'
+gs bc feature3 -m 'feature3'
+git checkout main
+
+git branch trunk
+gs repo init --trunk trunk
+
+# should be on feature3
+gs top
+
+git branch
+cmp stdout $WORK/golden/git-branch.txt
+
+-- golden/git-branch.txt --
+  feature1
+  feature2
+* feature3
+  main
+  trunk
