@@ -12,9 +12,11 @@ import (
 
 // Store implements storage for gs state inside a Git repository.
 type Store struct {
-	b     storageBackend
-	trunk string
-	log   *log.Logger
+	b   storageBackend
+	log *log.Logger
+
+	trunk  string
+	remote string
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -27,6 +29,13 @@ type InitStoreRequest struct {
 	// Trunk is the name of the trunk branch,
 	// e.g. "main" or "master".
 	Trunk string
+
+	// Remote is the name of the remote to use for pushing and pulling.
+	// e.g. "origin" or "upstream".
+	//
+	// If empty, a remote will not be configured and push/pull
+	// operations will not be available.
+	Remote string
 
 	// Force will clear the store if it's already initialized.
 	// Without this, InitStore will fail with ErrAlreadyInitialized.
@@ -67,7 +76,10 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		Sets: []setRequest{
 			{
 				Key: _repoJSON,
-				Val: repoInfo{Trunk: req.Trunk},
+				Val: repoInfo{
+					Trunk:  req.Trunk,
+					Remote: req.Remote,
+				},
 			},
 		},
 		Msg: "initialize store",
@@ -77,9 +89,10 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}
 
 	return &Store{
-		b:     b,
-		trunk: req.Trunk,
-		log:   logger,
+		b:      b,
+		trunk:  req.Trunk,
+		remote: req.Remote,
+		log:    logger,
 	}, nil
 }
 
@@ -104,8 +117,9 @@ func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*St
 	}
 
 	return &Store{
-		b:     b,
-		trunk: info.Trunk,
-		log:   logger,
+		b:      b,
+		trunk:  info.Trunk,
+		remote: info.Remote,
+		log:    logger,
 	}, nil
 }

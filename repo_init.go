@@ -14,8 +14,9 @@ import (
 )
 
 type repoInitCmd struct {
-	Trunk string `help:"The name of the trunk branch"`
-	Force bool   `help:"Overwrite storage for an initialized repository"`
+	Trunk  string `help:"The name of the trunk branch"`
+	Remote string `help:"The name of the remote to use for the trunk branch"`
+	Force  bool   `help:"Overwrite storage for an initialized repository"`
 }
 
 func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
@@ -26,13 +27,47 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
+	if cmd.Remote == "" {
+		remotes, err := repo.ListRemotes(ctx)
+		if err != nil {
+			return fmt.Errorf("list remotes: %w", err)
+		}
+
+		switch len(remotes) {
+		case 0:
+			// No remotes, we'll leave it empty.
+			log.Warn("No remotes found. Commands that require a remote will fail.")
+		case 1:
+			log.Infof("Using remote: %s", remotes[0])
+			cmd.Remote = remotes[0]
+		default:
+			opts := make([]huh.Option[string], len(remotes))
+			for i, remote := range remotes {
+				opts[i] = huh.NewOption(remote, remote)
+			}
+
+			prompt := huh.NewSelect[string]().
+				Title("Pick a remote").
+				Options(opts...).
+				Value(&cmd.Remote)
+			if err := prompt.Run(); err != nil {
+				return fmt.Errorf("prompt for remote: %w", err)
+			}
+		}
+	}
+
 	if cmd.Trunk == "" {
 		defaultTrunk, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("determine current branch: %w", err)
 		}
-		if upstream, err := repo.DefaultBranch(ctx, "origin"); err == nil {
-			defaultTrunk = upstream
+
+		// If there's a remote, and it has a default branch,
+		// use that as the default trunk branch in the prompt.
+		if cmd.Remote != "" {
+			if upstream, err := repo.DefaultBranch(ctx, cmd.Remote); err == nil {
+				defaultTrunk = upstream
+			}
 		}
 
 		localBranches, err := repo.LocalBranches(ctx)
@@ -74,6 +109,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	_, err = state.InitStore(ctx, state.InitStoreRequest{
 		Repository: repo,
 		Trunk:      cmd.Trunk,
+		Remote:     cmd.Remote,
 		Force:      cmd.Force,
 	})
 	if err != nil {

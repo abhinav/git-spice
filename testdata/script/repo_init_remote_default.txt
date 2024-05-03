@@ -1,0 +1,14 @@
+# 'gs repo init' uses the default remote
+# if there's only one remote.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git remote add origin https://example.com/foo.git
+
+gs repo init
+stderr 'Using remote: origin'
