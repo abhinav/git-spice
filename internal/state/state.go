@@ -8,7 +8,8 @@ const (
 )
 
 type repoInfo struct {
-	Trunk string `json:"trunk"`
+	Trunk  string `json:"trunk"`
+	Remote string `json:"remote"`
 }
 
 type branchStateBase struct {

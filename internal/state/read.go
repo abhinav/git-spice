@@ -14,6 +14,16 @@ func (s *Store) Trunk() string {
 	return s.trunk
 }
 
+// Remote returns the remote configured for the repository.
+// Returns [ErrNotExist] if no remote is configured.
+func (s *Store) Remote() (string, error) {
+	if s.remote == "" {
+		return "", ErrNotExist
+	}
+
+	return s.remote, nil
+}
+
 // ErrNotExist indicates that a key that was expected to exist does not exist.
 var ErrNotExist = os.ErrNotExist
 

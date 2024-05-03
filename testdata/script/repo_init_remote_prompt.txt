@@ -1,0 +1,27 @@
+# 'gs repo init' prompts for a remote
+# if there are multiple remotes.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+git remote add origin https://example.com/foo-fork.git
+git remote add upstream https://example.com/foo.git
+
+with-term $WORK/input.txt -- gs repo init
+cmp stdout $WORK/golden/dialog.txt
+
+-- input.txt --
+await Pick a remote
+snapshot dialog
+feed \r
+
+-- golden/dialog.txt --
+### dialog ###
+┃ Pick a remote
+┃ > origin
+┃   upstream
