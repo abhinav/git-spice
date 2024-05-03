@@ -195,8 +195,18 @@ func stderrWriter(cmd string, logger *log.Logger) (w io.Writer, wrap func(error)
 	// Otherwise, buffer it all in-memory to put into the error.
 	var buf bytes.Buffer
 	return &buf, func(err error) error {
+		if err == nil {
+			return err
+		}
+
+		// We can't check buf.Bytes if err == nil
+		// because it may be called while the command is still running
+		// (e.g. in Start).
+		//
+		// err != nil guarantees that the operation has finished
+		// because the command has exited with an error.
 		stderr := bytes.TrimSpace(buf.Bytes())
-		if err == nil || len(stderr) == 0 {
+		if len(stderr) == 0 {
 			return err
 		}
 
