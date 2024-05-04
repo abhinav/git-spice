@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -37,7 +38,17 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		cmd.Name = currentBranch
 	}
 
-	// TODO: check that the branch does not need restacking
+	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+		switch {
+		case errors.Is(err, gs.ErrNotExist):
+			return fmt.Errorf("branch %v not tracked", cmd.Name)
+		case errors.Is(err, gs.ErrNeedsRestack):
+			return fmt.Errorf("branch %v needs to be restacked before it can be folded", cmd.Name)
+		default:
+			return fmt.Errorf("verify restacked: %w", err)
+		}
+	}
+
 	b, err := store.Lookup(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
