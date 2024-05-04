@@ -11,9 +11,9 @@ import (
 	"go.abhg.dev/gs/internal/must"
 )
 
-type topCmd struct{}
+type branchTopCmd struct{}
 
-func (*topCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -65,5 +65,5 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger) error {
 		return nil
 	}
 
-	return (&checkoutCmd{Name: branch}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log)
 }

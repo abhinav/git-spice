@@ -4,5 +4,5 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
-! gs up
+! gs bu
 stderr 'main: no branches found upstack'

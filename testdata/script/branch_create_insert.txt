@@ -14,7 +14,7 @@ gs bc foo -m 'add foo'
 git log --decorate --oneline foo
 cmp stdout $WORK/golden/git-log-before.txt
 
-gs down
+gs bd
 git add bar.txt
 gs bc --insert bar -m 'add bar'
 git log --decorate --oneline foo

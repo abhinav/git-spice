@@ -24,7 +24,7 @@ git add feature4.txt
 gs bc feature4 -m 'Add feature4'
 
 # go to main, make an edit, and restack
-gs co main
+gs bco main
 cp $WORK/extra/feature0.txt .
 git add feature0.txt
 git commit -m 'Add feature0'

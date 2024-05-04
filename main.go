@@ -52,6 +52,21 @@ func main() {
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
+		kong.Help(func(options kong.HelpOptions, ctx *kong.Context) error {
+			if err := kong.DefaultHelpPrinter(options, ctx); err != nil {
+				return err
+			}
+
+			_, err := fmt.Fprint(ctx.Stdout,
+				"\n",
+				"Aliases can be combined to form shorthands for commands. For example:\n",
+				"  gs bc => gs branch create\n",
+				"  gs bu => gs branch up\n",
+				"  gs cc => gs commit create\n",
+			)
+			return err
+		}),
 	)
 	if err != nil {
 		panic(err)
@@ -59,6 +74,13 @@ func main() {
 
 	shorthands := map[string][]string{
 		"can": {"commit", "amend", "--no-edit"},
+		// TODO: Decide whether we want to keep the top-level
+		// shorthands for branch navigation.
+		"up":       {"branch", "up"},
+		"down":     {"branch", "down"},
+		"top":      {"branch", "top"},
+		"bottom":   {"branch", "bottom"},
+		"checkout": {"branch", "checkout"},
 	}
 
 	// For each leaf subcommand, define a combined shorthand alias.
@@ -124,12 +146,6 @@ type mainCmd struct {
 	Upstack upstackCmd `cmd:"" aliases:"us" group:"Stack"`
 	Branch  branchCmd  `cmd:"" aliases:"b" group:"Branch"`
 	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
-
-	Up       upCmd       `cmd:"" group:"Movement" help:"Move up the stack"`
-	Down     downCmd     `cmd:"" group:"Movement" help:"Move down the stack"`
-	Top      topCmd      `cmd:"" group:"Movement" help:"Move to the top of the stack"`
-	Bottom   bottomCmd   `cmd:"" group:"Movement" help:"Move to the bottom of the stack"`
-	Checkout checkoutCmd `cmd:"" aliases:"co" group:"Movement" help:"Checkout a specific pull request"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {

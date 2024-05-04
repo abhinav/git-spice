@@ -11,16 +11,16 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 gs bc head1 -m 'head1'
-gs down
+gs bd
 gs bc head2 -m 'head2'
-gs down
+gs bd
 gs bc head3 -m 'head3'
-gs down
+gs bd
 
 git log --graph --oneline head1 head2 head3
 cmp stdout $WORK/golden/state-git-log.txt
 
-with-term $WORK/input.txt -- gs up
+with-term $WORK/input.txt -- gs bu
 cmp stdout $WORK/golden/interact.txt
 
 git branch

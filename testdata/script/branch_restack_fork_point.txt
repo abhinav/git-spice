@@ -19,7 +19,7 @@ git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
 
 # go back and modify feature1
-gs down
+gs bd
 cp $WORK/extra/feature1.v2.txt feature1.txt
 git add feature1.txt
 git commit -m 'Modify feature 1'
@@ -32,7 +32,7 @@ git commit -m 'Modify feature 1'
 # Where A is the original feature1 commit,
 # A' is the modified feature1 commit.
 
-gs up
+gs bu
 stderr 'needs to be restacked'
 
 # feature2 has the old feature1.txt.

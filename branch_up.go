@@ -10,9 +10,9 @@ import (
 	"go.abhg.dev/gs/internal/gs"
 )
 
-type upCmd struct{}
+type branchUpCmd struct{}
 
-func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -65,5 +65,5 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 	}
 
-	return (&checkoutCmd{Name: branch}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log)
 }

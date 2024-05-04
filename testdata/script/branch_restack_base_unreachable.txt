@@ -11,7 +11,7 @@ gs repo init
 
 git add foo.txt
 gs bc foo -m 'Add foo'
-gs down
+gs bd
 
 git add bar.txt
 git checkout -b bar
