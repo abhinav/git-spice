@@ -1,0 +1,28 @@
+# branch create generates branch names.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc -m 'add feature1'
+gs bc -m 'add feature2'
+gs down
+gs bc -m 'modify feature1'
+gs bco add-feature2
+gs bc -m 'add feature3'
+
+git log --decorate --graph --oneline --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- golden/graph.txt --
+* 0c3cbc9 (HEAD -> add-feature3) add feature3
+* 150a2c9 (add-feature2) add feature2
+| * ac5c033 (modify-feature1) modify feature1
+|/  
+* d9cde2c (add-feature1) add feature1
+* 9bad92b (main) Initial commit

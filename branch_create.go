@@ -36,11 +36,6 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 	svc := gs.NewService(repo, store, log)
 
-	// TODO: guess branch name from commit subject
-	if cmd.Name == "" {
-		return errors.New("branch name is required")
-	}
-
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
@@ -105,6 +100,17 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		Message:    cmd.Message,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
+	}
+
+	// Branch name was not specified.
+	// Generate one from the commit message.
+	if cmd.Name == "" {
+		subject, err := repo.CommitSubject(ctx, "HEAD")
+		if err != nil {
+			return fmt.Errorf("get commit subject: %w", err)
+		}
+
+		cmd.Name = gs.GenerateBranchName(subject)
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
