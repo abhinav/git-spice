@@ -7,16 +7,20 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/gh"
 	"golang.org/x/oauth2"
 )
 
 var _version = "dev"
+
+var errNonInteractive = fmt.Errorf("cannot proceed in non-interactive mode")
 
 func main() {
 	logger := log.NewWithOptions(os.Stderr, log.Options{
@@ -45,12 +49,18 @@ func main() {
 		}
 	}()
 
+	isTerminal := isatty.IsTerminal(os.Stdin.Fd())
+
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
 		kong.Description("gs is a command line tool to manage stacks of GitHub pull requests."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
+		kong.Vars{
+			// Default to non-interactive mode if we're not in a terminal.
+			"nonInteractive": strconv.FormatBool(!isTerminal),
+		},
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
 		kong.Help(func(options kong.HelpOptions, ctx *kong.Context) error {
@@ -132,6 +142,8 @@ func main() {
 
 type globalOptions struct {
 	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token; defaults to $GITHUB_TOKEN"`
+
+	NonInteractive bool `name:"non-interactive" short:"I" default:"${nonInteractive}" help:"Disable interactive prompts"`
 }
 
 type mainCmd struct {

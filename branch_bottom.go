@@ -12,7 +12,7 @@ import (
 
 type branchBottomCmd struct{}
 
-func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -20,7 +20,7 @@ func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -42,5 +42,5 @@ func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("find bottom: %w", err)
 	}
 
-	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log, opts)
 }

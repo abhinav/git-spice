@@ -1,0 +1,24 @@
+# 'repo init' fails in non-interacive mode
+# when information is missing.
+
+# setup
+mkdir repo
+cd repo
+git init -b main
+git commit --allow-empty -m 'Initial commit'
+
+# multiple local branches
+git branch foo
+git branch bar
+
+# multiple remotes
+git remote add origin https://example.com/foo-fork.git
+git remote add upstream https://example.com/foo.git
+
+! gs repo init
+stderr 'prompt for remote: cannot proceed in non-interactive mode'
+
+! gs repo init --remote origin
+stderr 'prompt for trunk branch: cannot proceed in non-interactive mode'
+
+gs repo init --remote origin --trunk main

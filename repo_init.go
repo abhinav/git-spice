@@ -20,7 +20,7 @@ type repoInitCmd struct {
 	Reset bool `help:"Reset the store if it's already initialized"`
 }
 
-func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -29,8 +29,11 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	guesser := gs.Guesser{
-		// TODO: fail unconditinoally in non-interactive mode
 		Select: func(op gs.GuessOp, opts []string, selected string) (string, error) {
+			if globalOpts.NonInteractive {
+				return "", errNonInteractive
+			}
+
 			var msg, desc string
 			switch op {
 			case gs.GuessRemote:
@@ -103,6 +106,7 @@ func ensureStore(
 	ctx context.Context,
 	repo state.GitRepository,
 	log *log.Logger,
+	opts *globalOptions,
 ) (*state.Store, error) {
 	store, err := state.OpenStore(ctx, repo, log)
 	if err == nil {
@@ -111,7 +115,7 @@ func ensureStore(
 
 	if errors.Is(err, state.ErrUninitialized) {
 		log.Info("Repository not initialized for use with gs. Initializing.")
-		if err := (&repoInitCmd{}).Run(ctx, log); err != nil {
+		if err := (&repoInitCmd{}).Run(ctx, log, opts); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}
 

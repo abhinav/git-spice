@@ -16,7 +16,7 @@ type branchTrackCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to track"`
 }
 
-func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -31,7 +31,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger) error {
 
 	// TODO: handle already tracking
 	// TODO: auto-detect base branch with revision matching
-
+	// TODO: prompt for base branch if not provided
 	if cmd.Base == "" {
 		return fmt.Errorf("missing required flag --base")
 	}

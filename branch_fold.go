@@ -14,7 +14,7 @@ type branchFoldCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch"`
 }
 
-func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -22,7 +22,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger) error {
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Name: b.Base}).Run(ctx, log); err != nil {
+	if err := (&branchCheckoutCmd{Name: b.Base}).Run(ctx, log, opts); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 

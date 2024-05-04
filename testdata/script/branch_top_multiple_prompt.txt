@@ -36,6 +36,12 @@ git checkout main
 git log --decorate --graph --branches --oneline
 cmp stdout $WORK/golden/git-log.txt
 
+# from main, 'bt' should fail in non-interactive mode
+# because we don't have a branch to pick.
+! gs bt
+stderr 'multiple top-level branches reachable from the current branch'
+stderr 'cannot proceed in non-interactive mode'
+
 # from main, we should be prompted to pick between
 # f2, f1-s1, and f1-s2-s
 with-term $WORK/input/main-prompt.txt -- gs bt

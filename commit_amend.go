@@ -13,7 +13,7 @@ type commitAmendCmd struct {
 	NoEdit  bool   `short:"n" help:"Don't edit the commit message"`
 }
 
-func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -29,5 +29,5 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	return (&upstackRestackCmd{}).Run(ctx, log)
+	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

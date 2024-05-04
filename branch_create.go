@@ -20,7 +20,7 @@ type branchCreateCmd struct {
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
 
-func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error) {
+func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -28,7 +28,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger) (err error
 	}
 
 	if cmd.Below || cmd.Insert {
-		return (&upstackRestackCmd{}).Run(ctx, log)
+		return (&upstackRestackCmd{}).Run(ctx, log, opts)
 	}
 
 	return nil

@@ -10,7 +10,7 @@ import (
 
 type branchDownCmd struct{}
 
-func (*branchDownCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchDownCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -18,7 +18,7 @@ func (*branchDownCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -44,5 +44,5 @@ func (*branchDownCmd) Run(ctx context.Context, log *log.Logger) error {
 		log.Infof("exiting stack: moving to trunk: %v", trunk)
 	}
 
-	return (&branchCheckoutCmd{Name: below}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
 }

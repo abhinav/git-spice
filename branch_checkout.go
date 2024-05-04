@@ -14,7 +14,7 @@ type branchCheckoutCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to delete"`
 }
 
-func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -22,7 +22,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}

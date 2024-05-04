@@ -12,7 +12,7 @@ import (
 
 type branchEditCmd struct{}
 
-func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -20,7 +20,7 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -50,5 +50,5 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger) error {
 	// print a message informing the user that they should run
 	// `gs continue` after they've finished the rebase operation.
 
-	return (&upstackRestackCmd{}).Run(ctx, log)
+	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

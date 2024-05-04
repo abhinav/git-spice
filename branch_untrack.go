@@ -13,7 +13,7 @@ type branchUntrackCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch to untrack"`
 }
 
-func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
+func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -28,7 +28,7 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}

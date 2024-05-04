@@ -20,6 +20,11 @@ gs bd
 git log --graph --oneline head1 head2 head3
 cmp stdout $WORK/golden/state-git-log.txt
 
+# cannot go up if there are multiple above
+# and we're in non-interactive mode
+! gs bu
+stderr 'cannot proceed in non-interactive mode'
+
 with-term $WORK/input.txt -- gs bu
 cmp stdout $WORK/golden/interact.txt
 

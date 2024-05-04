@@ -13,7 +13,7 @@ import (
 
 type branchTopCmd struct{}
 
-func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchTopCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -21,7 +21,7 @@ func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -43,6 +43,9 @@ func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
 	branch := tops[0]
 	if len(tops) > 1 {
 		log.Info("There are multiple top-level branches reachable from the current branch.")
+		if opts.NonInteractive {
+			return errNonInteractive
+		}
 
 		// If there are multiple top-most branches,
 		// prompt the user to pick one.
@@ -65,5 +68,5 @@ func (*branchTopCmd) Run(ctx context.Context, log *log.Logger) error {
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
 }

@@ -12,7 +12,7 @@ import (
 
 type branchUpCmd struct{}
 
-func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
+func (*branchUpCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -20,7 +20,7 @@ func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log)
+	store, err := ensureStore(ctx, repo, log, opts)
 	if err != nil {
 		return err
 	}
@@ -46,6 +46,9 @@ func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 		branch = aboves[0]
 	default:
 		log.Info("There are multiple branches above this one.")
+		if opts.NonInteractive {
+			return errNonInteractive
+		}
 
 		opts := make([]huh.Option[string], len(aboves))
 		for i, branch := range aboves {
@@ -65,5 +68,5 @@ func (*branchUpCmd) Run(ctx context.Context, log *log.Logger) error {
 		}
 	}
 
-	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
 }
