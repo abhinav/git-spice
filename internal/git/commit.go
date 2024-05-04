@@ -145,6 +145,7 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	return nil
 }
 
+// CommitSubject returns the subject of a commit.
 func (r *Repository) CommitSubject(ctx context.Context, commitish string) (string, error) {
 	out, err := r.gitCmd(ctx, "log", "-1", "--pretty=format:%s", commitish).
 		OutputString(r.exec)
