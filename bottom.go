@@ -10,9 +10,9 @@ import (
 	"go.abhg.dev/gs/internal/gs"
 )
 
-type branchBottomCmd struct{}
+type bottomCmd struct{}
 
-func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (*bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -42,5 +42,5 @@ func (*branchBottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 		return fmt.Errorf("find bottom: %w", err)
 	}
 
-	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log, opts)
+	return (&checkoutCmd{Name: bottom}).Run(ctx, log, opts)
 }

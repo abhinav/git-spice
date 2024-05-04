@@ -86,7 +86,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Name: b.Base}).Run(ctx, log, opts); err != nil {
+	if err := (&checkoutCmd{Name: b.Base}).Run(ctx, log, opts); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 

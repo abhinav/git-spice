@@ -72,7 +72,6 @@ func main() {
 				"\n",
 				"Aliases can be combined to form shorthands for commands. For example:\n",
 				"  gs bc => gs branch create\n",
-				"  gs bu => gs branch up\n",
 				"  gs cc => gs commit create\n",
 			)
 			return err
@@ -84,13 +83,6 @@ func main() {
 
 	shorthands := map[string][]string{
 		"can": {"commit", "amend", "--no-edit"},
-		// TODO: Decide whether we want to keep the top-level
-		// shorthands for branch navigation.
-		"up":       {"branch", "up"},
-		"down":     {"branch", "down"},
-		"top":      {"branch", "top"},
-		"bottom":   {"branch", "bottom"},
-		"checkout": {"branch", "checkout"},
 	}
 
 	// For each leaf subcommand, define a combined shorthand alias.
@@ -158,6 +150,13 @@ type mainCmd struct {
 	Upstack upstackCmd `cmd:"" aliases:"us" group:"Stack"`
 	Branch  branchCmd  `cmd:"" aliases:"b" group:"Branch"`
 	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
+
+	// Navigation
+	Up       upCmd       `cmd:"" aliases:"bu" group:"Navigation" help:"Move up the stack"`
+	Down     downCmd     `cmd:"" aliases:"bd" group:"Navigation" help:"Move down the stack"`
+	Top      topCmd      `cmd:"" aliases:"bt" group:"Navigation" help:"Move to the top of the stack"`
+	Bottom   bottomCmd   `cmd:"" aliases:"bb" group:"Navigation" help:"Move to the bottom of the stack"`
+	Checkout checkoutCmd `cmd:"" aliases:"bco" group:"Navigation" help:"Checkout a specific branch"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {

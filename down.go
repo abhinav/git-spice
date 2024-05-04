@@ -8,9 +8,9 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
-type branchDownCmd struct{}
+type downCmd struct{}
 
-func (*branchDownCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -44,5 +44,5 @@ func (*branchDownCmd) Run(ctx context.Context, log *log.Logger, opts *globalOpti
 		log.Infof("exiting stack: moving to trunk: %v", trunk)
 	}
 
-	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
+	return (&checkoutCmd{Name: below}).Run(ctx, log, opts)
 }
