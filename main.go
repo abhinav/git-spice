@@ -132,7 +132,7 @@ func main() {
 }
 
 type globalOptions struct {
-	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token"`
+	GitHubToken string `name:"github-token" placeholder:"TOKEN" env:"GITHUB_TOKEN" help:"GitHub API token"`
 
 	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 }
@@ -163,7 +163,7 @@ func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 	}
 
 	var tokenSource oauth2.TokenSource = &gh.CLITokenSource{}
-	if token := cmd.Token; token != "" {
+	if token := cmd.GitHubToken; token != "" {
 		tokenSource = oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
