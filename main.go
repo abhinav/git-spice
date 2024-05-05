@@ -109,6 +109,7 @@ func main() {
 		if other, ok := shorthands[shorthand]; ok {
 			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", shorthand, n.Path(), other))
 		}
+		// TODO: check if shorthand conflicts with any other aliases.
 
 		shorthands[shorthand] = fragments
 	}
@@ -131,18 +132,18 @@ func main() {
 }
 
 type globalOptions struct {
-	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token; defaults to $GITHUB_TOKEN"`
+	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token"`
 
 	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 }
 
 type mainCmd struct {
-	globalOptions
-
 	// Flags with side effects whose values are never accesssed directly.
+	Version versionFlag        `help:"Print version information and quit"`
 	Verbose bool               `short:"v" help:"Enable verbose output" env:"GS_VERBOSE"`
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
-	Version versionFlag        `help:"Print version information and quit"`
+
+	globalOptions
 
 	Repo    repoCmd    `cmd:"" aliases:"r" group:"Repository"`
 	Upstack upstackCmd `cmd:"" aliases:"us" group:"Stack"`
