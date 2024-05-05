@@ -42,5 +42,5 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions)
 		return fmt.Errorf("find bottom: %w", err)
 	}
 
-	return (&checkoutCmd{Name: bottom}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log, opts)
 }

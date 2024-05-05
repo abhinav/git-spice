@@ -68,5 +68,5 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) er
 		return nil
 	}
 
-	return (&checkoutCmd{Name: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
 }

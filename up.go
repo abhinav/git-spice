@@ -68,5 +68,5 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) err
 		}
 	}
 
-	return (&checkoutCmd{Name: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
 }

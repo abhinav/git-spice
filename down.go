@@ -44,5 +44,5 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) e
 		log.Infof("exiting stack: moving to trunk: %v", trunk)
 	}
 
-	return (&checkoutCmd{Name: below}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
 }
