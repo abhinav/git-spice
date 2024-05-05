@@ -40,7 +40,7 @@ cmp stdout $WORK/golden/git-log.txt
 # because we don't have a branch to pick.
 ! gs bt
 stderr 'multiple top-level branches reachable from the current branch'
-stderr 'cannot proceed in non-interactive mode'
+stderr 'not allowed to prompt for input'
 
 # from main, we should be prompted to pick between
 # f2, f1-s1, and f1-s2-s

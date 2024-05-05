@@ -46,8 +46,8 @@ func (*upCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) err
 		branch = aboves[0]
 	default:
 		log.Info("There are multiple branches above this one.")
-		if opts.NonInteractive {
-			return errNonInteractive
+		if !opts.Prompt {
+			return errNoPrompt
 		}
 
 		opts := make([]huh.Option[string], len(aboves))

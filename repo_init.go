@@ -30,8 +30,8 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 
 	guesser := gs.Guesser{
 		Select: func(op gs.GuessOp, opts []string, selected string) (string, error) {
-			if globalOpts.NonInteractive {
-				return "", errNonInteractive
+			if !globalOpts.Prompt {
+				return "", errNoPrompt
 			}
 
 			var msg, desc string

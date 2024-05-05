@@ -16,9 +16,9 @@ git remote add origin https://example.com/foo-fork.git
 git remote add upstream https://example.com/foo.git
 
 ! gs repo init
-stderr 'prompt for remote: cannot proceed in non-interactive mode'
+stderr 'prompt for remote: not allowed to prompt for input'
 
 ! gs repo init --remote origin
-stderr 'prompt for trunk branch: cannot proceed in non-interactive mode'
+stderr 'prompt for trunk branch: not allowed to prompt for input'
 
 gs repo init --remote origin --trunk main

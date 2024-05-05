@@ -20,7 +20,7 @@ import (
 
 var _version = "dev"
 
-var errNonInteractive = fmt.Errorf("cannot proceed in non-interactive mode")
+var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 
 func main() {
 	logger := log.NewWithOptions(os.Stderr, log.Options{
@@ -49,8 +49,6 @@ func main() {
 		}
 	}()
 
-	isTerminal := isatty.IsTerminal(os.Stdin.Fd())
-
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
@@ -58,8 +56,8 @@ func main() {
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.Vars{
-			// Default to non-interactive mode if we're not in a terminal.
-			"nonInteractive": strconv.FormatBool(!isTerminal),
+			// Default to prompting only when the terminal is interactive.
+			"defaultPrompt": strconv.FormatBool(isatty.IsTerminal(os.Stdin.Fd())),
 		},
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
@@ -135,7 +133,7 @@ func main() {
 type globalOptions struct {
 	Token string `name:"token" env:"GITHUB_TOKEN" help:"GitHub API token; defaults to $GITHUB_TOKEN"`
 
-	NonInteractive bool `name:"non-interactive" short:"I" default:"${nonInteractive}" help:"Disable interactive prompts"`
+	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 }
 
 type mainCmd struct {

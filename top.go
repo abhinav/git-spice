@@ -43,8 +43,8 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) er
 	branch := tops[0]
 	if len(tops) > 1 {
 		log.Info("There are multiple top-level branches reachable from the current branch.")
-		if opts.NonInteractive {
-			return errNonInteractive
+		if !opts.Prompt {
+			return errNoPrompt
 		}
 
 		// If there are multiple top-most branches,
