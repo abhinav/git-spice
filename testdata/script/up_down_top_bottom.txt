@@ -1,4 +1,4 @@
-# Moving in a linear stack with gs bu/bd/bt/bb.
+# Moving in a linear stack with gs up/bd/bt/bb.
 
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
@@ -20,30 +20,30 @@ gs bc feature5 -m 'Add feature5'
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 
-gs bd
+gs down
 git branch
 cmp stdout $WORK/golden/git_branch_feature4.output
 
 # feature1 is bottom of stack
-gs bb
+gs bottom
 git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
 
-gs bd
+gs down
 stderr 'exiting stack: moving to trunk'
 git branch
 cmp stdout $WORK/golden/git_branch_main.output
 
-gs bu
+gs up
 git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
 
-gs bu
+gs up
 git branch
 cmp stdout $WORK/golden/git_branch_feature2.output
 
 # feature5 is top of stack
-gs bt
+gs top
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 
@@ -52,10 +52,10 @@ git branch
 cmp stdout $WORK/golden/git_branch_feature3.output
 
 # top and bottom shorthands
-gs bb
+gs bottom
 git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
-gs bt
+gs top
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 

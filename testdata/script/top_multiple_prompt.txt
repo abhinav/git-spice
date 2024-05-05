@@ -1,4 +1,4 @@
-# 'gs bt' prompts for selection
+# 'gs top' prompts for selection
 # if there are multiple top-level branches.
 
 as 'Test <test@example.com>'
@@ -38,24 +38,24 @@ cmp stdout $WORK/golden/git-log.txt
 
 # from main, 'bt' should fail in non-interactive mode
 # because we don't have a branch to pick.
-! gs bt
+! gs top
 stderr 'multiple top-level branches reachable from the current branch'
 stderr 'not allowed to prompt for input'
 
 # from main, we should be prompted to pick between
 # f2, f1-s1, and f1-s2-s
-with-term $WORK/input/main-prompt.txt -- gs bt
+with-term $WORK/input/main-prompt.txt -- gs top
 stderr 'There are multiple top-level branches'
 cmp stdout $WORK/golden/main-prompt.txt
 
 # from f1, we should wee f1-s1 and f1-s2-s
 git checkout f1
-with-term $WORK/input/f1-prompt.txt -- gs bt
+with-term $WORK/input/f1-prompt.txt -- gs top
 cmp stdout $WORK/golden/f1-prompt.txt
 
 # from f2 we should see a message and a no-op.
 git checkout f2
-gs bt
+gs top
 stderr 'Already on the top-most branch in this stack'
 
 -- repo/f1.txt --

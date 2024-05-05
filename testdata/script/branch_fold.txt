@@ -26,15 +26,15 @@ git log --oneline --decorate --graph --branches
 cmp stdout $WORK/golden/git-log-after.txt
 
 # verify the full stack
-gs bd
+gs down
 git branch --show-current
 stdout main
 
-gs bu
+gs up
 git branch --show-current
 stdout foo
 
-! gs bu
+! gs up
 
 # TODO(abg):
 # Instead of traversing,

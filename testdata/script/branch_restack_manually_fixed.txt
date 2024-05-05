@@ -16,7 +16,7 @@ git add feature.txt
 gs bc feature -m 'Add feature'
 
 # go back and modify main
-gs bd
+gs down
 cp $WORK/extra/init.2.txt init.txt
 git add init.txt
 git commit -m 'Update init.txt.'

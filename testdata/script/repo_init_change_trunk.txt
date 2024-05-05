@@ -18,7 +18,7 @@ git branch trunk
 gs repo init --trunk trunk
 
 # should be on feature3
-gs bt
+gs top
 
 git branch
 cmp stdout $WORK/golden/git-branch.txt

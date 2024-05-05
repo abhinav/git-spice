@@ -18,7 +18,7 @@ gs branch create above -m 'Branch above oldname'
 # Verify prior state.
 git branch
 cmp stdout $WORK/golden/branch-above-before.txt
-gs bd
+gs down
 git branch
 cmp stdout $WORK/golden/branch-oldname.txt
 
@@ -28,12 +28,12 @@ gs branch rename newname
 # Verify new state.
 git branch
 cmp stdout $WORK/golden/branch-newname.txt
-gs bu
+gs up
 git branch
 cmp stdout $WORK/golden/branch-above-after.txt
 
 # We should be able to go down to newname from above.
-gs bd
+gs down
 git branch
 cmp stdout $WORK/golden/branch-newname.txt
 

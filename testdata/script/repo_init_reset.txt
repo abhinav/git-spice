@@ -13,7 +13,7 @@ gs repo init
 gs bc feature1 -m 'feature1'
 gs bc feature2 -m 'feature2'
 gs bc feature3 -m 'feature3'
-gs bd
+gs down
 
 # attempt to re-init without --reset fails
 ! gs repo init --trunk feature2
@@ -25,8 +25,8 @@ stderr 'use --reset to clear'
 # (which is the opposite of before).
 gs repo init --reset --trunk feature2
 
-! gs bu
+! gs up
 stderr 'feature2: no branches found upstack'
 
-! gs bd
+! gs down
 stderr 'feature2: no branches found downstack'

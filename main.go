@@ -151,11 +151,10 @@ type mainCmd struct {
 	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
 
 	// Navigation
-	Up       upCmd       `cmd:"" aliases:"bu" group:"Navigation" help:"Move up the stack"`
-	Down     downCmd     `cmd:"" aliases:"bd" group:"Navigation" help:"Move down the stack"`
-	Top      topCmd      `cmd:"" aliases:"bt" group:"Navigation" help:"Move to the top of the stack"`
-	Bottom   bottomCmd   `cmd:"" aliases:"bb" group:"Navigation" help:"Move to the bottom of the stack"`
-	Checkout checkoutCmd `cmd:"" aliases:"bco" group:"Navigation" help:"Checkout a specific branch"`
+	Up     upCmd     `cmd:"" aliases:"bu" group:"Navigation" help:"Move up the stack"`
+	Down   downCmd   `cmd:"" aliases:"bd" group:"Navigation" help:"Move down the stack"`
+	Top    topCmd    `cmd:"" aliases:"bt" group:"Navigation" help:"Move to the top of the stack"`
+	Bottom bottomCmd `cmd:"" aliases:"bb" group:"Navigation" help:"Move to the bottom of the stack"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
