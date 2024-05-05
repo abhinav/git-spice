@@ -1,0 +1,81 @@
+# branch track automaticall detects base branches by matching commit hashes
+# against tracked branches.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Manually create a linear stack of branches:
+#
+# main -> feature1 -> feature2 -> feature3
+
+git checkout -b feature1
+git add foo.txt
+git commit -m 'Add foo.txt'
+
+git checkout -b feature2
+git add bar.txt
+git commit -m 'Add bar.txt'
+
+git checkout -b feature3
+git add baz.txt
+git commit -m 'Add baz.txt'
+
+# Track these in-order.
+gs branch track feature1
+stderr 'base main'
+gs branch track feature2
+stderr 'base feature1'
+gs branch track feature3
+stderr 'base feature2'
+
+# Verify navigation.
+# TODO: replace with 'gs ls' command output in the future.
+
+git branch
+cmp stdout $WORK/golden/feature3-branch-out.txt
+
+gs down
+git branch
+cmp stdout $WORK/golden/feature2-branch-out.txt
+
+gs down
+git branch
+cmp stdout $WORK/golden/feature1-branch-out.txt
+
+gs down
+git branch
+cmp stdout $WORK/golden/main-branch-out.txt
+
+-- repo/foo.txt --
+Content of foo.txt
+-- repo/bar.txt --
+Content of bar.txt
+-- repo/baz.txt --
+Content of baz.txt
+
+-- golden/feature3-branch-out.txt --
+  feature1
+  feature2
+* feature3
+  main
+-- golden/feature2-branch-out.txt --
+  feature1
+* feature2
+  feature3
+  main
+-- golden/feature1-branch-out.txt --
+* feature1
+  feature2
+  feature3
+  main
+-- golden/main-branch-out.txt --
+  feature1
+  feature2
+  feature3
+* main

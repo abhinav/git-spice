@@ -42,11 +42,60 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("cannot track trunk branch")
 	}
 
-	// TODO: handle already tracking
-	// TODO: auto-detect base branch with revision matching
-	// TODO: prompt for base branch if not provided
 	if cmd.Base == "" {
-		return fmt.Errorf("missing required flag --base")
+		// Find all revisions between the current branch and the trunk branch
+		// and check if we know any branches at those revisions.
+		// If not, we'll use the trunk branch as the base.
+		revs, err := repo.ListCommits(ctx, cmd.Name, store.Trunk())
+		if err != nil {
+			return fmt.Errorf("list commits: %w", err)
+		}
+
+		trackedBranches, err := store.List(ctx)
+		if err != nil {
+			return fmt.Errorf("list tracked branches: %w", err)
+		}
+
+		// Branch hashes will be filled in as needed.
+		// A branch hash of ZeroHash means the branch doesn't exist.
+		branchHashes := make([]git.Hash, len(trackedBranches))
+		hashFor := func(branchIdx int) (git.Hash, error) {
+			if hash := branchHashes[branchIdx]; hash != "" {
+				return hash, nil
+			}
+
+			name := trackedBranches[branchIdx]
+			hash, err := repo.PeelToCommit(ctx, name)
+			if err != nil {
+				if !errors.Is(err, git.ErrNotExist) {
+					return "", fmt.Errorf("resolve branch %q: %w", name, err)
+				}
+				hash = git.ZeroHash
+			}
+			branchHashes[branchIdx] = hash
+			return hash, nil
+		}
+
+	revLoop:
+		for _, rev := range revs {
+			for branchIdx, branchName := range trackedBranches {
+				hash, err := hashFor(branchIdx)
+				if err != nil {
+					return err
+				}
+
+				if hash == rev {
+					cmd.Base = branchName
+					break revLoop
+				}
+			}
+		}
+
+		if cmd.Base == "" {
+			cmd.Base = store.Trunk()
+		}
+
+		log.Debugf("Detected base branch: %v", cmd.Base)
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)
