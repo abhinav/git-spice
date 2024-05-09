@@ -9,6 +9,36 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
+// SetRemote changes teh remote name configured for the repository.
+func (s *Store) SetRemote(ctx context.Context, remote string) error {
+	var info repoInfo
+	if err := s.b.Get(ctx, _repoJSON, &info); err != nil {
+		return fmt.Errorf("get repo info: %w", err)
+	}
+	info.Remote = remote
+
+	if err := info.Validate(); err != nil {
+		// Technically impossible if state was already validated
+		// but worth checking to be sure.
+		return fmt.Errorf("would corrupt state: %w", err)
+	}
+
+	err := s.b.Update(ctx, updateRequest{
+		Sets: []setRequest{
+			{
+				Key: _repoJSON,
+				Val: info,
+			},
+		},
+		Msg: fmt.Sprintf("set remote: %v", remote),
+	})
+	if err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateRequest is a request to add, update, or delete information about branches.
 type UpdateRequest struct {
 	// Upserts are requests to add or update information about branches.

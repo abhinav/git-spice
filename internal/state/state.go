@@ -1,6 +1,9 @@
 package state
 
-import "path"
+import (
+	"errors"
+	"path"
+)
 
 const (
 	_repoJSON    = "repo"
@@ -10,6 +13,13 @@ const (
 type repoInfo struct {
 	Trunk  string `json:"trunk"`
 	Remote string `json:"remote"`
+}
+
+func (i *repoInfo) Validate() error {
+	if i.Trunk == "" {
+		return errors.New("trunk branch name is empty")
+	}
+	return nil
 }
 
 type branchStateBase struct {

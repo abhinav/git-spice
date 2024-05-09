@@ -132,7 +132,8 @@ func main() {
 }
 
 type globalOptions struct {
-	GitHubToken string `name:"github-token" placeholder:"TOKEN" env:"GITHUB_TOKEN" help:"GitHub API token"`
+	GitHubToken  string `name:"github-token" placeholder:"TOKEN" env:"GITHUB_TOKEN" help:"GitHub API token"`
+	GithubAPIURL string `name:"github-api-url" placeholder:"URL" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
 
 	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 }

@@ -29,8 +29,8 @@ type GitRepository interface {
 	// LocalBranches returns a list of all local branches.
 	LocalBranches(ctx context.Context) ([]string, error)
 
-	// DefaultBranch reports the default branch of the given remote.
-	DefaultBranch(ctx context.Context, remote string) (string, error)
+	// RemoteDefaultBranch reports the default branch of the given remote.
+	RemoteDefaultBranch(ctx context.Context, remote string) (string, error)
 
 	// ListRemotes returns the names of all known remotes.
 	ListRemotes(ctx context.Context) ([]string, error)
