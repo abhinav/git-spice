@@ -66,13 +66,18 @@ func main() {
 				return err
 			}
 
-			_, err := fmt.Fprint(ctx.Stdout,
-				"\n",
-				"Aliases can be combined to form shorthands for commands. For example:\n",
-				"  gs bc => gs branch create\n",
-				"  gs cc => gs commit create\n",
-			)
-			return err
+			// For the help of the top-level command,
+			// print a note about shorthand aliases.
+			if len(ctx.Command()) == 0 {
+				_, _ = fmt.Fprint(ctx.Stdout,
+					"\n",
+					"Aliases can be combined to form shorthands for commands. For example:\n",
+					"  gs bc => gs branch create\n",
+					"  gs cc => gs commit create\n",
+				)
+			}
+
+			return nil
 		}),
 	)
 	if err != nil {
@@ -152,11 +157,11 @@ type mainCmd struct {
 	Commit  commitCmd  `cmd:"" aliases:"c" group:"Commit"`
 
 	// Navigation
-	Up     upCmd     `cmd:"" aliases:"bu" group:"Navigation" help:"Move up the stack"`
-	Down   downCmd   `cmd:"" aliases:"bd" group:"Navigation" help:"Move down the stack"`
-	Top    topCmd    `cmd:"" aliases:"bt" group:"Navigation" help:"Move to the top of the stack"`
-	Bottom bottomCmd `cmd:"" aliases:"bb" group:"Navigation" help:"Move to the bottom of the stack"`
-	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk of the stack"`
+	Up     upCmd     `cmd:"" aliases:"gu" group:"Navigation" help:"Move up one branch"`
+	Down   downCmd   `cmd:"" aliases:"gd" group:"Navigation" help:"Move down one branch"`
+	Top    topCmd    `cmd:"" aliases:"gt" group:"Navigation" help:"Move to the top of the stack"`
+	Bottom bottomCmd `cmd:"" aliases:"gb" group:"Navigation" help:"Move to the bottom of the stack"`
+	Trunk  trunkCmd  `cmd:"" aliases:"gg" group:"Navigation" help:"Move to the trunk branch"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
