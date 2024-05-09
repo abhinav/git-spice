@@ -156,6 +156,7 @@ type mainCmd struct {
 	Down   downCmd   `cmd:"" aliases:"bd" group:"Navigation" help:"Move down the stack"`
 	Top    topCmd    `cmd:"" aliases:"bt" group:"Navigation" help:"Move to the top of the stack"`
 	Bottom bottomCmd `cmd:"" aliases:"bb" group:"Navigation" help:"Move to the bottom of the stack"`
+	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk of the stack"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {

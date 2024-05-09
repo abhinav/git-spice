@@ -251,7 +251,7 @@ func (cmd *branchSubmitCmd) Run(
 			return fmt.Errorf("create pull request: %w", err)
 		}
 
-		log.Infof("Created pull request #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
+		log.Infof("Created #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
 
 	case 1:
 		// Check base and HEAD are up-to-date.
@@ -306,7 +306,7 @@ func (cmd *branchSubmitCmd) Run(
 			}
 		}
 
-		log.Infof("Updated pull request #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
+		log.Infof("Updated #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
 
 	default:
 		// TODO: add a --pr flag to allow picking a PR?

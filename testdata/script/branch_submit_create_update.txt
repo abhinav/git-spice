@@ -18,7 +18,7 @@ git push origin main
 git add feature1.txt
 gs bc -m 'Add feature1' feature1
 gs branch submit --fill
-stderr 'Created pull request'
+stderr 'Created #'
 
 gh-dump-pull
 cmpenvJSON stdout $WORK/golden/create.json
@@ -29,7 +29,7 @@ git add feature1.txt
 git commit -m 'update feature1'
 
 gs bs
-stderr 'Updated pull request'
+stderr 'Updated #'
 gh-dump-pull
 cmpenvJSON stdout $WORK/golden/update.json
 

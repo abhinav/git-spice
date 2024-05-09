@@ -59,6 +59,11 @@ gs top
 git branch
 cmp stdout $WORK/golden/git_branch_feature5.output
 
+# trunk
+gs trunk
+git branch
+cmp stdout $WORK/golden/git_branch_main.output
+
 -- golden/git_branch_main.output --
   feature1
   feature2
