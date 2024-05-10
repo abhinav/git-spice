@@ -1,0 +1,92 @@
+# submit a stack of PRs with 'downstack submit'.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+# submit the stack
+gs downstack submit --fill
+cmpenv stderr $WORK/golden/submit-log.txt
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+
+-- golden/submit-log.txt --
+INF Created #1: $GITHUB_GIT_URL/alice/example/pull/1
+INF Created #2: $GITHUB_GIT_URL/alice/example/pull/2
+INF Created #3: $GITHUB_GIT_URL/alice/example/pull/3
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    },
+    "base": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "7122de7820daae3550784fd205f9064bcd046cce"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    }
+  }
+]

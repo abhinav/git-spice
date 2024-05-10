@@ -220,6 +220,7 @@ func (cmd *branchSubmitCmd) Run(
 			fields = append(fields, body)
 		}
 
+		// TODO: should we assume --fill if --no-prompt?
 		if len(fields) > 0 && !cmd.Fill {
 			if !opts.Prompt {
 				return fmt.Errorf("prompt for commit information: %w", errNoPrompt)
