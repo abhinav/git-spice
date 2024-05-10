@@ -19,10 +19,8 @@ git add feature3.txt
 gs branch create feature3 -m 'Add feature 3'
 
 # Now we have:
-#   master -> feature1 -> feature2 -> feature3
-exists feature1.txt
-exists feature2.txt
-exists feature3.txt
+#   main -> feature1 -> feature2 -> feature3
+exists feature1.txt feature2.txt feature3.txt
 
 # Move feature3 to be based on feature1
 gs branch onto feature1

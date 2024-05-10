@@ -160,6 +160,32 @@ func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
 	return tops, nil
 }
 
+// ListDownstack lists all branches below the given branch
+// in the downstack chain, not including trunk.
+//
+// The given branch is the first element in the returned slice.
+func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, error) {
+	if start == s.store.Trunk() {
+		return nil, nil // nothing downstack from trunk
+	}
+
+	downstacks := []string{start}
+	current := start
+	for {
+		b, err := s.store.Lookup(ctx, current)
+		if err != nil {
+			return nil, fmt.Errorf("lookup %v: %w", current, err)
+		}
+
+		if b.Base == s.store.Trunk() {
+			return downstacks, nil
+		}
+
+		current = b.Base
+		downstacks = append(downstacks, current)
+	}
+}
+
 // FindBottom returns the bottom-most branch in the downstack chain
 // starting at the given branch just before trunk.
 func (s *Service) FindBottom(ctx context.Context, start string) (string, error) {

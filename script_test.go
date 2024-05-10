@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"log"
 	"net/mail"
 	"os"
 	"path/filepath"
@@ -28,6 +29,53 @@ func TestMain(m *testing.M) {
 			main()
 			return 0
 		},
+
+		// mockedit <input>:
+		//
+		// An EDITOR that writes the contents of MOCKEDIT_GIVE
+		// into <input>.
+		// If MOCKEDIT_GIVE is not set, returns an error.
+		//
+		// If MOCKEDIT_RECORD is set, it will also copy the contents
+		// of <input> into that file.
+		"mockedit": func() int {
+			log.SetFlags(0)
+			flag.Parse()
+
+			if flag.NArg() != 1 {
+				log.Fatal("usage: mockedit file")
+			}
+
+			input := flag.Arg(0)
+
+			data, err := os.ReadFile(input)
+			if err != nil {
+				log.Fatalf("read %s: %s", input, err)
+			}
+
+			if record := os.Getenv("MOCKEDIT_RECORD"); record != "" {
+				if err := os.WriteFile(record, data, 0o644); err != nil {
+					log.Fatalf("write %s: %s", record, err)
+				}
+			}
+
+			give := os.Getenv("MOCKEDIT_GIVE")
+			if give == "" {
+				log.Fatalf("unexpected edit, got:\n%s", string(data))
+			}
+
+			bs, err := os.ReadFile(give)
+			if err != nil {
+				log.Fatalf("read %s: %s", give, err)
+			}
+
+			if err := os.WriteFile(input, bs, 0o644); err != nil {
+				log.Fatalf("write %s: %s", input, err)
+			}
+
+			return 0
+		},
+
 		// with-term file -- cmd [args ...]
 		//
 		// Runs the given command inside a terminal emulator,
@@ -51,6 +99,8 @@ func TestScript(t *testing.T) {
 	}
 
 	defaultEnv := make(map[string]string)
+	defaultEnv["EDITOR"] = "mockedit"
+
 	// We can set Git configuration values by setting
 	// GIT_CONFIG_KEY_<n>, GIT_CONFIG_VALUE_<n> and GIT_CONFIG_COUNT.
 	var numCfg int

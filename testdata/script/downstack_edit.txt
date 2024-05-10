@@ -1,0 +1,74 @@
+# Editing the order of a stack with 'downstack edit'.
+
+as 'Test <test@example.com>'
+at '2024-05-11T11:02:34Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+# Now we have:
+#   main -> feature1 -> feature2 -> feature3
+exists feature1.txt feature2.txt feature3.txt
+
+# cannot edit downstack from main
+git checkout main
+! gs downstack edit
+stderr 'cannot edit below trunk'
+
+env MOCKEDIT_GIVE=$WORK/edit/give.txt MOCKEDIT_RECORD=$WORK/edit/got.txt
+git checkout feature3
+gs downstack edit
+cmp $WORK/edit/got.txt $WORK/edit/want.txt
+
+git log --oneline --graph --decorate --branches
+cmp stdout $WORK/golden/log.txt
+
+# edit at bottom branch is meaningless
+git checkout feature3
+env MOCKEDIT_GIVE=
+gs downstack edit
+stderr 'nothing to edit'
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+
+-- edit/want.txt --
+feature3
+feature2
+feature1
+
+# Edit the order of branches by modifying the list above.
+# The branch at the bottom of the list will be merged into trunk first.
+# Branches above that will be stacked on top of it in the order they appear.
+# Branches deleted from the list will not be modified.
+#
+# Save and quit the editor to apply the changes.
+# Delete all lines in the editor to abort the operation.
+-- edit/give.txt --
+# Invert the order completely.
+
+feature1
+feature2
+feature3
+
+-- golden/log.txt --
+* ed4680e (HEAD -> feature1) Add feature 1
+* c5b835f (feature2) Add feature 2
+* 8039b1d (feature3) Add feature 3
+* b91c6c5 (main) Initial commit
