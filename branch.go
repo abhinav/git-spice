@@ -4,6 +4,7 @@ type branchCmd struct {
 	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Begin tracking a branch with gs"`
 	Untrack  branchUntrackCmd  `cmd:"" aliases:"untr" help:"Stop tracking a branch with gs"`
 	Checkout branchCheckoutCmd `cmd:"" aliases:"co" help:"Checkout a specific branch"`
+	Onto     branchOntoCmd     `cmd:"" aliases:"on" help:"Move the current branch onto another branch"`
 
 	// Creation and destruction
 	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
