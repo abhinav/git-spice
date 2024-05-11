@@ -184,6 +184,9 @@ type mainCmd struct {
 	Top    topCmd    `cmd:"" aliases:"gt" group:"Navigation" help:"Move to the top of the stack"`
 	Bottom bottomCmd `cmd:"" aliases:"gb" group:"Navigation" help:"Move to the bottom of the stack"`
 	Trunk  trunkCmd  `cmd:"" aliases:"gg" group:"Navigation" help:"Move to the trunk branch"`
+
+	// Hidden commands:
+	DumpMD dumpMarkdownCmd `name:"dump-md" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {

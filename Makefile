@@ -26,7 +26,7 @@ all: build lint test
 build: $(GS)
 
 .PHONY: lint
-lint: golangci-lint tidy-lint
+lint: golangci-lint tidy-lint generate-lint
 
 .PHONY: test
 test:
@@ -51,6 +51,17 @@ tidy-lint:
 	@go mod tidy && \
 		git diff --exit-code -- go.mod go.sum || \
 		(echo "'go mod tidy' changed files" && false)
+
+.PHONY: generate
+generate:
+	go generate -x ./...
+
+.PHONY: generate-lint
+generate-lint:
+	@echo "[lint] go generate"
+	@go generate ./... && \
+		git diff --exit-code || \
+		(echo "'go generate' changed files" && false)
 
 $(GS): $(GO_SRC_FILES)
 	go install go.abhg.dev/gs

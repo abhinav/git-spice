@@ -1,0 +1,424 @@
+# gs command reference
+
+```
+gs <command> [flags]
+```
+
+gs is a command line tool to manage stacks of GitHub pull requests.
+
+**Global flags**
+
+* `-h`, `--help`: Show help for the command
+* `--version`: Print version information and quit
+* `-v`, `--verbose`: Enable verbose output
+* `-C`, `--dir=DIR`: Change to DIR before doing anything
+* `--[no-]prompt`: Whether to prompt for missing information
+
+## gs repo init
+
+```
+gs repo (r) init (i) [flags]
+```
+
+Initialize a repository
+
+Sets up a repository for use with gs.
+This isn't strictly necessary to run as most commands will
+auto-initialize the repository as needed.
+
+Use the --trunk flag to specify the trunk branch.
+This is typically 'main' or 'master',
+and picking one is required for gs to function.
+
+Use the --remote flag to specify the remote to push changes to.
+If a remote is not specified,
+gs can still be used to stack branches locally.
+However, any commands that require a remote will fail.
+
+**Flags**
+
+* `--trunk=BRANCH`: Name of the trunk branch
+* `--remote=NAME`: Name of the remote to push changes to
+* `--reset`: Reset the store if it's already initialized
+
+## gs upstack restack
+
+```
+gs upstack (us) restack (rs)
+```
+
+Restack this branch those above it
+
+Restacks the current branch and all branches above it
+on top of their respective bases.
+If multiple branches use another branch as their base,
+they will all be restacked on top of the updated base.
+
+Run this command from the trunk branch
+to restack all managed branches.
+
+## gs downstack submit
+
+```
+gs downstack (ds) submit (s) [<name>] [flags]
+```
+
+Submit the current branch and those below it
+
+Submits Pull Requests for the current branch,
+and for all branches below, down to the trunk branch.
+Branches that already have open Pull Requests will be updated.
+
+A prompt will allow filling metadata about new Pull Requests.
+Use the --fill flag to use the commit messages as-is
+and submit without a prompt.
+
+**Arguments**
+
+* `name`: Branch to start at
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `--fill`: Fill in the pull request title and body from the commit messages
+
+## gs downstack edit
+
+```
+gs downstack (ds) edit (e) [<name>] [flags]
+```
+
+Edit the order of branches below the current branch
+
+Opens an editor to allow changing the order of branches
+from trunk to the current branch.
+The branch at the top of the list will be checked out
+as the topmost branch in the downstack.
+Branches upstack of the current branch will not be modified.
+Branches deleted from the list will also not be modified.
+
+**Arguments**
+
+* `name`: Name of the branch to start editing from.
+
+**Flags**
+
+* `--editor=STRING`: Editor to use for editing the downstack.
+
+## gs branch track
+
+```
+gs branch (b) track (tr) [<name>] [flags]
+```
+
+Track a branch with gs
+
+Starts tracking an existing branch with gs.
+Use this to teach gs about branches created outside of gs,
+for example, with 'git checkout -b'.
+
+gs will attempt to detect the base branch automatically.
+You can override this with the --base flag.
+
+**Arguments**
+
+* `name`: Name of the branch to track
+
+**Flags**
+
+* `-b`, `--base=STRING`: Base branch this merges into
+
+## gs branch untrack
+
+```
+gs branch (b) untrack (untr) [<name>]
+```
+
+Forget a branch tracked with gs
+
+Removes information about a tracked branch from gs.
+Use this to forget about branches that were deleted outside gs,
+or those that are no longer relevant.
+
+**Arguments**
+
+* `name`: Name of the branch to untrack
+
+## gs branch checkout
+
+```
+gs branch (b) checkout (co) [<name>]
+```
+
+Switch to a branch
+
+**Arguments**
+
+* `name`: Name of the branch to delete
+
+## gs branch onto
+
+```
+gs branch (b) onto (on) [<onto>] [flags]
+```
+
+Move a branch onto another branch
+
+Transplants the commits of a branch on top of another branch
+without picking up any changes from the old base.
+The base for the branch will be updated to the new branch.
+
+**Arguments**
+
+* `onto`: Destination branch
+
+**Flags**
+
+* `--branch=NAME`: Branch to move
+
+## gs branch create
+
+```
+gs branch (b) create (c) [<name>] [flags]
+```
+
+Create a new branch
+
+Creates a new branch containing the staged changes
+on top of the current branch.
+If there are no staged changes, creates an empty commit.
+
+By default, the new branch is created on top of the current branch,
+but it does not affect the rest of the stack.
+Use the --insert flag to restack all existing upstack branches
+on top of the new branch.
+For example,
+
+	# trunk -> A -> B -> C
+	git checkout A
+	gs branch create --insert X
+	# trunk -> A -> X -> B -> C
+
+Instead of --insert,
+you can use --below to place the new branch
+below the current branch.
+This is equivalent to checking out the base branch
+and creating a new branch with --insert there.
+
+	# trunk -> A -> B -> C
+	git checkout A
+	gs branch create --below X
+	# trunk -> X -> A -> B -> C
+
+**Arguments**
+
+* `name`: Name of the new branch
+
+**Flags**
+
+* `--insert`: Restack the upstack of the current branch on top of the new branch
+* `--below`: Place the branch below the current branch. Implies --insert.
+* `-m`, `--message=STRING`: Commit message
+
+## gs branch delete
+
+```
+gs branch (b) delete (rm) [<name>] [flags]
+```
+
+Delete a branch
+
+Deletes the specified branch and updates upstack branches to
+point to the next branch down.
+
+**Arguments**
+
+* `name`: Name of the branch to delete
+
+**Flags**
+
+* `-f`, `--force`: Force deletion of the branch
+
+## gs branch fold
+
+```
+gs branch (b) fold (fo) [<name>]
+```
+
+Merge a branch into its base
+
+Merges the changes of a branch into its base branch
+and deletes it.
+Branches above the folded branch will be restacked
+on top of the base branch.
+
+**Arguments**
+
+* `name`: Name of the branch
+
+## gs branch edit
+
+```
+gs branch (b) edit (e)
+```
+
+Edit the commits in a branch
+
+Allows editing the commits in the current branch
+with an interactive rebase.
+
+## gs branch rename
+
+```
+gs branch (b) rename (mv) [<name>]
+```
+
+Rename a branch
+
+Renames a branch tracked by gs,
+updating internal references to the branch.
+
+If you renamed a branch without using this command,
+track the new branch name with 'gs branch track',
+and untrack the old name with 'gs branch untrack'.
+
+**Arguments**
+
+* `name`: New name of the branch
+
+## gs branch restack
+
+```
+gs branch (b) restack (rs) [<name>]
+```
+
+Restack a branch
+
+Updates a branch after its base branch has been changed,
+rebasing its commits on top of the base.
+
+**Arguments**
+
+* `name`: Branch to restack
+
+## gs branch submit
+
+```
+gs branch (b) submit (s) [<name>] [flags]
+```
+
+Submit a branch
+
+Creates or updates a Pull Request for the specified branch,
+or the current branch if none is specified.
+The Pull Request will use the tracked base branch
+as the merge base.
+
+For new Pull Requests, a prompt will allow filling metadata.
+Use the --title and --body flags to set the title and body,
+or the --fill flag to use the commit message to fill them in.
+
+**Arguments**
+
+* `name`: Branch to submit
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `--title=STRING`: Title of the pull request (if creating one)
+* `--body=STRING`: Body of the pull request (if creating one)
+* `--draft`: Mark the pull request as a draft
+* `--fill`: Fill in the pull request title and body from the commit messages
+
+## gs commit create
+
+```
+gs commit (c) create (c) [flags]
+```
+
+Create a new commit
+
+Commits the staged changes to the current branch,
+restacking upstack branches if necessary.
+Use this to keep upstack branches in sync
+as you update a branch in the middle of the stack.
+
+**Flags**
+
+* `-a`, `--all`: Stage all changes before committing.
+* `-m`, `--message=STRING`: Use the given message as the commit message.
+
+## gs commit amend
+
+```
+gs commit (c) amend (a) [flags]
+```
+
+Amend the current commit
+
+Amends the last commit with the staged changes,
+restacking upstack branches if necessary.
+Use this to keep upstack branches in sync
+as you update a branch in the middle of the stack.
+
+**Flags**
+
+* `-m`, `--message=STRING`: Use the given message as the commit message.
+* `-n`, `--no-edit`: Don't edit the commit message
+
+## gs up
+
+```
+gs up (gu) [flags]
+```
+
+Move up one branch
+
+Moves up the stack to the branch on top of the current one.
+If there are multiple branches with the current branch as base,
+you will be prompted to pick one.
+
+## gs down
+
+```
+gs down (gd) [flags]
+```
+
+Move down one branch
+
+Moves down the stack to the branch below the current branch.
+As a convenience,
+if the current branch is at the bottom of the stack,
+this command will move to the trunk branch.
+
+## gs top
+
+```
+gs top (gt) [flags]
+```
+
+Move to the top of the stack
+
+Jumps to the top-most branch in the current branch's stack.
+If there are multiple top-most branches,
+you will be prompted to pick one.
+
+## gs bottom
+
+```
+gs bottom (gb) [flags]
+```
+
+Move to the bottom of the stack
+
+Jumps to the bottom-most branch below the current branch.
+This is the branch just above the trunk.
+
+## gs trunk
+
+```
+gs trunk (gg) [flags]
+```
+
+Move to the trunk branch
+
