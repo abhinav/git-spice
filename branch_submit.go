@@ -31,6 +31,8 @@ type branchSubmitCmd struct {
 	// - labels
 	// - milestone
 	// - reviewers
+
+	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to submit"`
 }
 
 func (cmd *branchSubmitCmd) Run(
@@ -53,26 +55,29 @@ func (cmd *branchSubmitCmd) Run(
 
 	svc := gs.NewService(repo, store, log)
 
-	currentBranch, err := repo.CurrentBranch(ctx)
-	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
+	if cmd.Name == "" {
+		currentBranch, err := repo.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		cmd.Name = currentBranch
 	}
 
-	branch, err := store.Lookup(ctx, currentBranch)
+	branch, err := store.Lookup(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("lookup branch: %w", err)
 	}
 
 	// Refuse to submit if the branch is not restacked.
-	if err := svc.VerifyRestacked(ctx, currentBranch); err != nil {
-		log.Errorf("Branch %s needs to be restacked.", currentBranch)
+	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+		log.Errorf("Branch %s needs to be restacked.", cmd.Name)
 		log.Errorf("Run the following command to fix this:")
-		log.Errorf("  gs branch restack %s", currentBranch)
+		log.Errorf("  gs branch restack %s", cmd.Name)
 		return errors.New("refusing to submit outdated branch")
 		// TODO: this can be made optional with a --force or a prompt.
 	}
 
-	commitHash, err := repo.PeelToCommit(ctx, currentBranch)
+	commitHash, err := repo.PeelToCommit(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("peel to commit: %w", err)
 	}
@@ -136,7 +141,7 @@ func (cmd *branchSubmitCmd) Run(
 	}
 	pulls, _, err := gh.PullRequests.List(ctx, ghrepo.Owner, ghrepo.Name, &github.PullRequestListOptions{
 		State: "open",
-		Head:  ghrepo.Owner + ":" + currentBranch,
+		Head:  ghrepo.Owner + ":" + cmd.Name,
 		// Don't filter by base -- we may need to update it.
 	})
 	if err != nil {
@@ -146,11 +151,11 @@ func (cmd *branchSubmitCmd) Run(
 	switch len(pulls) {
 	case 0:
 		if cmd.DryRun {
-			log.Infof("WOULD create a pull request for %s", currentBranch)
+			log.Infof("WOULD create a pull request for %s", cmd.Name)
 			return nil
 		}
 
-		msgs, err := repo.CommitMessageRange(ctx, currentBranch, branch.Base)
+		msgs, err := repo.CommitMessageRange(ctx, cmd.Name, branch.Base)
 		if err != nil {
 			return fmt.Errorf("list commits: %w", err)
 		}
@@ -229,21 +234,21 @@ func (cmd *branchSubmitCmd) Run(
 
 		err = repo.Push(ctx, git.PushOptions{
 			Remote:  remote,
-			Refspec: commitHash.String() + ":refs/heads/" + currentBranch,
+			Refspec: commitHash.String() + ":refs/heads/" + cmd.Name,
 		})
 		if err != nil {
 			return fmt.Errorf("push branch: %w", err)
 		}
 
-		upstream := remote + "/" + currentBranch
-		if err := repo.SetBranchUpstream(ctx, currentBranch, upstream); err != nil {
-			log.Warn("Could not set upstream", "branch", currentBranch, "remote", remote, "error", err)
+		upstream := remote + "/" + cmd.Name
+		if err := repo.SetBranchUpstream(ctx, cmd.Name, upstream); err != nil {
+			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
 		}
 
 		pull, _, err := gh.PullRequests.Create(ctx, ghrepo.Owner, ghrepo.Name, &github.NewPullRequest{
 			Title: &cmd.Title,
 			Body:  &cmd.Body,
-			Head:  &currentBranch,
+			Head:  &cmd.Name,
 			Base:  &branch.Base,
 			Draft: &cmd.Draft,
 		})
@@ -283,10 +288,10 @@ func (cmd *branchSubmitCmd) Run(
 		if pull.Head.GetSHA() != commitHash.String() {
 			err := repo.Push(ctx, git.PushOptions{
 				Remote:  remote,
-				Refspec: commitHash.String() + ":refs/heads/" + currentBranch,
+				Refspec: commitHash.String() + ":refs/heads/" + cmd.Name,
 				// Force push, but only if the ref is exactly
 				// where we think it is.
-				ForceWithLease: currentBranch + ":" + pull.Head.GetSHA(),
+				ForceWithLease: cmd.Name + ":" + pull.Head.GetSHA(),
 			})
 			if err != nil {
 				log.Error("Branch may have been updated by someone else.")
@@ -310,7 +315,7 @@ func (cmd *branchSubmitCmd) Run(
 
 	default:
 		// TODO: add a --pr flag to allow picking a PR?
-		return fmt.Errorf("multiple open pull requests for %s", currentBranch)
+		return fmt.Errorf("multiple open pull requests for %s", cmd.Name)
 	}
 
 	return nil
