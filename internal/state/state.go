@@ -29,7 +29,6 @@ type branchStateBase struct {
 
 type branchState struct {
 	Base branchStateBase `json:"base"`
-	PR   int             `json:"pr,omitempty"`
 }
 
 // branchJSON returns the path to the JSON file for the given branch

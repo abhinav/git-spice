@@ -36,10 +36,6 @@ type LookupResponse struct {
 	// BaseHash is the last known hash of the base branch.
 	// This may not match the current hash of the base branch.
 	BaseHash git.Hash
-
-	// PR is the number of the pull request associated with the branch,
-	// or zero if the branch is not associated with a PR.
-	PR int
 }
 
 // Lookup returns information about a branch tracked by gs.
@@ -53,7 +49,6 @@ func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error
 	return &LookupResponse{
 		Base:     state.Base.Name,
 		BaseHash: git.Hash(state.Base.Hash),
-		PR:       state.PR,
 	}, nil
 }
 

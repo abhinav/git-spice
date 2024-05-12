@@ -41,7 +41,6 @@ func TestIntegrationStore(t *testing.T) {
 			Name:     "foo",
 			Base:     "main",
 			BaseHash: "123456",
-			PR:       state.PR(42),
 		}},
 	})
 	require.NoError(t, err)
@@ -53,7 +52,6 @@ func TestIntegrationStore(t *testing.T) {
 		assert.Equal(t, &state.LookupResponse{
 			Base:     "main",
 			BaseHash: "123456",
-			PR:       42,
 		}, res)
 	})
 
@@ -63,7 +61,6 @@ func TestIntegrationStore(t *testing.T) {
 				Name:     "foo",
 				Base:     "bar",
 				BaseHash: "54321",
-				PR:       state.PR(43),
 			}},
 		})
 		require.NoError(t, err)
@@ -74,7 +71,6 @@ func TestIntegrationStore(t *testing.T) {
 		assert.Equal(t, &state.LookupResponse{
 			Base:     "bar",
 			BaseHash: "54321",
-			PR:       43,
 		}, res)
 	})
 
@@ -83,7 +79,6 @@ func TestIntegrationStore(t *testing.T) {
 			Upserts: []state.UpsertRequest{{
 				Name:     "bar/baz",
 				Base:     "main",
-				PR:       state.PR(44),
 				BaseHash: "abcdef",
 			}},
 		})
@@ -94,7 +89,6 @@ func TestIntegrationStore(t *testing.T) {
 		assert.Equal(t, &state.LookupResponse{
 			Base:     "main",
 			BaseHash: "abcdef",
-			PR:       44,
 		}, res)
 	})
 }

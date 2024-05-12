@@ -67,12 +67,6 @@ type UpsertRequest struct {
 	//
 	// Leave empty to keep the current base hash.
 	BaseHash git.Hash
-
-	// PR is the number of the pull request associated with the branch.
-	// Zero if the branch is not associated with a PR yet.
-	//
-	// Leave nil to keep the current PR.
-	PR *int
 }
 
 // Update upates the store with the parameters in the request.
@@ -98,7 +92,6 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 			// Branch does not exist yet.
 			// Everything is already set to the zero value.
 		} else {
-			b.PR = prev.PR
 			b.Base = branchStateBase{
 				Name: prev.Base,
 				Hash: prev.BaseHash.String(),
@@ -110,9 +103,6 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 		}
 		if req.BaseHash != "" {
 			b.Base.Hash = req.BaseHash.String()
-		}
-		if req.PR != nil {
-			b.PR = *req.PR
 		}
 
 		if b.Base.Name == "" {
@@ -140,10 +130,4 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 	}
 
 	return nil
-}
-
-// PR is a helper to create a pointer to an integer
-// for the UpsertRequest PR field.
-func PR(n int) *int {
-	return &n
 }
