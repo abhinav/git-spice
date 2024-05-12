@@ -6,11 +6,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
+// LocalBranch represents a local branch in a repository.
+type LocalBranch struct {
+	// Name is the name of the branch.
+	Name string
+
+	// CheckedOut indicates whether the branch is currently checked out
+	// in a worktree.
+	CheckedOut bool
+}
+
 // LocalBranches lists local branches in the repository.
-func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
+func (r *Repository) LocalBranches(ctx context.Context) ([]LocalBranch, error) {
 	cmd := r.gitCmd(ctx, "branch")
 	out, err := cmd.StdoutPipe()
 	if err != nil {
@@ -21,7 +32,7 @@ func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("start git branch: %w", err)
 	}
 
-	var branches []string
+	var branches []LocalBranch
 	scan := bufio.NewScanner(out)
 	for scan.Scan() {
 		line := bytes.TrimSpace(scan.Bytes())
@@ -35,12 +46,14 @@ func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
 		case '*', '+':
 			// Current or checked out in another worktree.
 			b := bytes.TrimSpace(line[1:])
-			// TODO: instead of returning string,
-			// return a list of LocalBranch objects
-			// that also specify whether the branch is checked out.
-			branches = append(branches, string(b))
+			branches = append(branches, LocalBranch{
+				Name:       string(b),
+				CheckedOut: true,
+			})
 		default:
-			branches = append(branches, string(line))
+			branches = append(branches, LocalBranch{
+				Name: string(line),
+			})
 		}
 	}
 
@@ -51,6 +64,10 @@ func (r *Repository) LocalBranches(ctx context.Context) ([]string, error) {
 	if err := cmd.Wait(r.exec); err != nil {
 		return nil, fmt.Errorf("git branch: %w", err)
 	}
+
+	slices.SortFunc(branches, func(a, b LocalBranch) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	return branches, nil
 }

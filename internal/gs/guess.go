@@ -3,7 +3,10 @@ package gs
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
+	"strings"
+
+	"go.abhg.dev/gs/internal/git"
 )
 
 // GuessOp specifies the kind of guess operation
@@ -72,7 +75,9 @@ func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote str
 	if err != nil {
 		return "", fmt.Errorf("list local branches: %w", err)
 	}
-	sort.Strings(localBranches)
+	slices.SortFunc(localBranches, func(a, b git.LocalBranch) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	switch len(localBranches) {
 	case 0:
@@ -82,9 +87,14 @@ func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote str
 		// without any commits only.
 		return defaultTrunk, nil
 	case 1:
-		return localBranches[0], nil
+		return localBranches[0].Name, nil
 	default:
-		branch, err := g.Select(GuessTrunk, localBranches, defaultTrunk)
+		branchNames := make([]string, len(localBranches))
+		for i, b := range localBranches {
+			branchNames[i] = b.Name
+		}
+
+		branch, err := g.Select(GuessTrunk, branchNames, defaultTrunk)
 		if err != nil {
 			return "", fmt.Errorf("prompt for trunk branch: %w", err)
 		}
