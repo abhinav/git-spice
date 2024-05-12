@@ -9,9 +9,18 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type topCmd struct{}
+
+func (*topCmd) Help() string {
+	return text.Dedent(`
+		Jumps to the top-most branch in the current branch's stack.
+		If there are multiple top-most branches,
+		you will be prompted to pick one.
+	`)
+}
 
 func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

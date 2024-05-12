@@ -6,9 +6,21 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/text"
 )
 
-type downCmd struct{}
+type downCmd struct {
+	// TODO: arg for number of branches to move down
+}
+
+func (*downCmd) Help() string {
+	return text.Dedent(`
+		Moves down the stack to the branch below the current branch.
+		As a convenience,
+		if the current branch is at the bottom of the stack,
+		this command will move to the trunk branch.
+	`)
+}
 
 func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

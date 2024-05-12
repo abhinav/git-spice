@@ -8,11 +8,20 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchOntoCmd struct {
 	Branch string `help:"Branch to move" placeholder:"NAME"`
 	Onto   string `arg:"" optional:"" help:"Destination branch"`
+}
+
+func (*branchOntoCmd) Help() string {
+	return text.Dedent(`
+		Transplants the commits of a branch on top of another branch
+		without picking up any changes from the old base.
+		The base for the branch will be updated to the new branch.
+	`)
 }
 
 func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

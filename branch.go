@@ -1,21 +1,21 @@
 package main
 
 type branchCmd struct {
-	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Begin tracking a branch with gs"`
-	Untrack  branchUntrackCmd  `cmd:"" aliases:"untr" help:"Stop tracking a branch with gs"`
-	Checkout branchCheckoutCmd `cmd:"" aliases:"co" help:"Checkout a specific branch"`
-	Onto     branchOntoCmd     `cmd:"" aliases:"on" help:"Move the current branch onto another branch"`
+	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Track a branch with gs"`
+	Untrack  branchUntrackCmd  `cmd:"" aliases:"untr" help:"Forget a branch tracked with gs"`
+	Checkout branchCheckoutCmd `cmd:"" aliases:"co" help:"Switch to a branch"`
+	Onto     branchOntoCmd     `cmd:"" aliases:"on" help:"Move a branch onto another branch"`
 
 	// Creation and destruction
 	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
-	Delete branchDeleteCmd `cmd:"" aliases:"rm" help:"Delete the current branch"`
-	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Fold a branch into its base"`
+	Delete branchDeleteCmd `cmd:"" aliases:"rm" help:"Delete a branch"`
+	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
 
 	// Mutation
-	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the current branch"`
-	Rename  branchRenameCmd  `cmd:"" aliases:"mv" help:"Rename the current branch"`
-	Restack branchRestackCmd `cmd:"" aliases:"rs" help:"Restack just one branch"`
+	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the commits in a branch"`
+	Rename  branchRenameCmd  `cmd:"" aliases:"mv" help:"Rename a branch"`
+	Restack branchRestackCmd `cmd:"" aliases:"rs" help:"Restack a branch"`
 
 	// Pull request management
-	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit the current branch"`
+	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
 }

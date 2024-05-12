@@ -10,11 +10,19 @@ import (
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchDeleteCmd struct {
 	Name  string `arg:"" optional:"" help:"Name of the branch to delete"`
 	Force bool   `short:"f" help:"Force deletion of the branch"`
+}
+
+func (*branchDeleteCmd) Help() string {
+	return text.Dedent(`
+		Deletes the specified branch and updates upstack branches to
+		point to the next branch down.
+	`)
 }
 
 func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

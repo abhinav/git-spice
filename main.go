@@ -80,6 +80,19 @@ func main() {
 			return nil
 		}),
 	)
+
+	// The default help flag text has a period at the end,
+	// which doesn't match the rest of our help text.
+	// Remove the period and place it in the same group
+	// as the other global flags.
+	if help := parser.Model.HelpFlag; help != nil {
+		help.Help = "Show help for the command"
+		help.Group = &kong.Group{
+			Key:   "globals",
+			Title: "Global Flags:",
+		}
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -137,19 +150,25 @@ func main() {
 }
 
 type globalOptions struct {
-	GitHubToken  string `name:"github-token" placeholder:"TOKEN" env:"GITHUB_TOKEN" help:"GitHub API token"`
-	GithubAPIURL string `name:"github-api-url" placeholder:"URL" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
+	// Flags that are not accessed directly by command implementations:
 
-	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
-}
-
-type mainCmd struct {
-	// Flags with side effects whose values are never accesssed directly.
 	Version versionFlag        `help:"Print version information and quit"`
 	Verbose bool               `short:"v" help:"Enable verbose output" env:"GS_VERBOSE"`
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
 
-	globalOptions
+	// Flags that are accessed directly:
+
+	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+
+	// TODO:
+	// GitHubToken will get replaced once we do Device Flow authentication.
+	// GithubAPIURL will remain hidden.
+	GitHubToken  string `name:"github-token" placeholder:"TOKEN" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
+	GithubAPIURL string `name:"github-api-url" placeholder:"URL" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
+}
+
+type mainCmd struct {
+	globalOptions `group:"globals"`
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 

@@ -9,10 +9,20 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchFoldCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the branch"`
+}
+
+func (*branchFoldCmd) Help() string {
+	return text.Dedent(`
+		Merges the changes of a branch into its base branch
+		and deletes it.
+		Branches above the folded branch will be restacked
+		on top of the base branch.
+	`)
 }
 
 func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

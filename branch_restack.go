@@ -8,10 +8,18 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchRestackCmd struct {
-	Name string `arg:"" optional:"" help:"Branch to restack. Defaults to the current branch."`
+	Name string `arg:"" optional:"" help:"Branch to restack"`
+}
+
+func (*branchRestackCmd) Help() string {
+	return text.Dedent(`
+		Updates a branch after its base branch has been changed,
+		rebasing its commits on top of the base.
+	`)
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

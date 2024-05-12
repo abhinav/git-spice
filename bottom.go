@@ -8,9 +8,17 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type bottomCmd struct{}
+
+func (*bottomCmd) Help() string {
+	return text.Dedent(`
+		Jumps to the bottom-most branch below the current branch.
+		This is the branch just above the trunk.
+	`)
+}
 
 func (*bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

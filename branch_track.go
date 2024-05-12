@@ -9,11 +9,23 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchTrackCmd struct {
 	Base string `short:"b" help:"Base branch this merges into"`
 	Name string `arg:"" optional:"" help:"Name of the branch to track"`
+}
+
+func (*branchTrackCmd) Help() string {
+	return text.Dedent(`
+		Starts tracking an existing branch with gs.
+		Use this to teach gs about branches created outside of gs,
+		for example, with 'git checkout -b'.
+
+		gs will attempt to detect the base branch automatically.
+		You can override this with the --base flag.
+	`)
 }
 
 func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

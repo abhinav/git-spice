@@ -8,9 +8,17 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchEditCmd struct{}
+
+func (*branchEditCmd) Help() string {
+	return text.Dedent(`
+		Allows editing the commits in the current branch
+		with an interactive rebase.
+	`)
+}
 
 func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

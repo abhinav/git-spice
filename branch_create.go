@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchCreateCmd struct {
@@ -18,6 +19,36 @@ type branchCreateCmd struct {
 	Below  bool `help:"Place the branch below the current branch. Implies --insert."`
 
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
+}
+
+func (*branchCreateCmd) Help() string {
+	return text.Dedent(`
+		Creates a new branch containing the staged changes
+		on top of the current branch.
+		If there are no staged changes, creates an empty commit.
+
+		By default, the new branch is created on top of the current branch,
+		but it does not affect the rest of the stack.
+		Use the --insert flag to restack all existing upstack branches
+		on top of the new branch.
+		For example,
+
+			# trunk -> A -> B -> C
+			git checkout A
+			gs branch create --insert X
+			# trunk -> A -> X -> B -> C
+
+		Instead of --insert,
+		you can use --below to place the new branch
+		below the current branch.
+		This is equivalent to checking out the base branch
+		and creating a new branch with --insert there.
+
+			# trunk -> A -> B -> C
+			git checkout A
+			gs branch create --below X
+			# trunk -> X -> A -> B -> C
+	`)
 }
 
 func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {

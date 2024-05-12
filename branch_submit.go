@@ -14,6 +14,7 @@ import (
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 	"golang.org/x/oauth2"
 )
 
@@ -33,6 +34,19 @@ type branchSubmitCmd struct {
 	// - reviewers
 
 	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to submit"`
+}
+
+func (*branchSubmitCmd) Help() string {
+	return text.Dedent(`
+		Creates or updates a Pull Request for the specified branch,
+		or the current branch if none is specified.
+		The Pull Request will use the tracked base branch
+		as the merge base.
+
+		For new Pull Requests, a prompt will allow filling metadata.
+		Use the --title and --body flags to set the title and body,
+		or the --fill flag to use the commit message to fill them in.
+	`)
 }
 
 func (cmd *branchSubmitCmd) Run(

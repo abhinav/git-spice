@@ -15,12 +15,24 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type downstackEditCmd struct {
 	Editor string `env:"EDITOR" help:"Editor to use for editing the downstack."`
 
 	Name string `arg:"" optional:"" help:"Name of the branch to start editing from."`
+}
+
+func (*downstackEditCmd) Help() string {
+	return text.Dedent(`
+		Opens an editor to allow changing the order of branches
+		from trunk to the current branch.
+		The branch at the top of the list will be checked out
+		as the topmost branch in the downstack.
+		Branches upstack of the current branch will not be modified.
+		Branches deleted from the list will also not be modified.
+	`)
 }
 
 func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

@@ -8,9 +8,20 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/text"
 )
 
-type upCmd struct{}
+type upCmd struct {
+	// TODO: arg for number of branches to move up
+}
+
+func (*upCmd) Help() string {
+	return text.Dedent(`
+		Moves up the stack to the branch on top of the current one.
+		If there are multiple branches with the current branch as base,
+		you will be prompted to pick one.
+	`)
+}
 
 func (*upCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

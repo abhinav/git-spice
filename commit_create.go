@@ -6,11 +6,21 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type commitCreateCmd struct {
 	All     bool   `short:"a" help:"Stage all changes before committing."`
 	Message string `short:"m" help:"Use the given message as the commit message."`
+}
+
+func (*commitCreateCmd) Help() string {
+	return text.Dedent(`
+		Commits the staged changes to the current branch,
+		restacking upstack branches if necessary.
+		Use this to keep upstack branches in sync
+		as you update a branch in the middle of the stack.
+	`)
 }
 
 func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

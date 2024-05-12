@@ -8,9 +8,22 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type upstackRestackCmd struct{}
+
+func (*upstackRestackCmd) Help() string {
+	return text.Dedent(`
+		Restacks the current branch and all branches above it
+		on top of their respective bases.
+		If multiple branches use another branch as their base,
+		they will all be restacked on top of the updated base.
+
+		Run this command from the trunk branch
+		to restack all managed branches.
+	`)
+}
 
 func (*upstackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{

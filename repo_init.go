@@ -11,13 +11,31 @@ import (
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type repoInitCmd struct {
-	Trunk  string `placeholder:"BRANCH" help:"The name of the trunk branch"`
-	Remote string `help:"The name of the remote to use for the trunk branch"`
+	Trunk  string `placeholder:"BRANCH" help:"Name of the trunk branch"`
+	Remote string `placeholder:"NAME" help:"Name of the remote to push changes to"`
 
 	Reset bool `help:"Reset the store if it's already initialized"`
+}
+
+func (*repoInitCmd) Help() string {
+	return text.Dedent(`
+		Sets up a repository for use with gs.
+		This isn't strictly necessary to run as most commands will
+		auto-initialize the repository as needed.
+
+		Use the --trunk flag to specify the trunk branch.
+		This is typically 'main' or 'master',
+		and picking one is required for gs to function.
+
+		Use the --remote flag to specify the remote to push changes to.
+		If a remote is not specified,
+		gs can still be used to stack branches locally.
+		However, any commands that require a remote will fail.
+	`)
 }
 
 func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *globalOptions) error {

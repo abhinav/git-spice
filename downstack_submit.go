@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/text"
 	"golang.org/x/oauth2"
 )
 
@@ -18,6 +19,18 @@ type downstackSubmitCmd struct {
 	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
 
 	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to start at"`
+}
+
+func (*downstackSubmitCmd) Help() string {
+	return text.Dedent(`
+		Submits Pull Requests for the current branch,
+		and for all branches below, down to the trunk branch.
+		Branches that already have open Pull Requests will be updated.
+
+		A prompt will allow filling metadata about new Pull Requests.
+		Use the --fill flag to use the commit messages as-is
+		and submit without a prompt.
+	`)
 }
 
 func (cmd *downstackSubmitCmd) Run(

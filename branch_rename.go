@@ -9,10 +9,24 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchRenameCmd struct {
+	// TODO: optional old name
+
 	Name string `arg:"" optional:"" help:"New name of the branch"`
+}
+
+func (*branchRenameCmd) Help() string {
+	return text.Dedent(`
+		Renames a branch tracked by gs,
+		updating internal references to the branch.
+
+		If you renamed a branch without using this command,
+		track the new branch name with 'gs branch track',
+		and untrack the old name with 'gs branch untrack'.
+	`)
 }
 
 func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
