@@ -22,7 +22,7 @@ type PushOptions struct {
 
 	// Refspec is the refspec to push.
 	// If empty, the current branch is pushed to the remote.
-	Refspec string // TODO: Refspec type?
+	Refspec Refspec
 }
 
 // Push pushes objects and refs to a remote repository.
@@ -39,7 +39,7 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 		args = append(args, opts.Remote)
 	}
 	if opts.Refspec != "" {
-		args = append(args, opts.Refspec)
+		args = append(args, opts.Refspec.String())
 	}
 
 	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {

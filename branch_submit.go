@@ -234,8 +234,10 @@ func (cmd *branchSubmitCmd) Run(
 		must.NotBeBlankf(cmd.Title, "PR title must have been set")
 
 		err = repo.Push(ctx, git.PushOptions{
-			Remote:  remote,
-			Refspec: commitHash.String() + ":refs/heads/" + cmd.Name,
+			Remote: remote,
+			Refspec: git.Refspec(
+				commitHash.String() + ":refs/heads/" + cmd.Name,
+			),
 		})
 		if err != nil {
 			return fmt.Errorf("push branch: %w", err)
@@ -288,8 +290,10 @@ func (cmd *branchSubmitCmd) Run(
 
 		if pull.Head.GetSHA() != commitHash.String() {
 			err := repo.Push(ctx, git.PushOptions{
-				Remote:  remote,
-				Refspec: commitHash.String() + ":refs/heads/" + cmd.Name,
+				Remote: remote,
+				Refspec: git.Refspec(
+					commitHash.String() + ":refs/heads/" + cmd.Name,
+				),
 				// Force push, but only if the ref is exactly
 				// where we think it is.
 				ForceWithLease: cmd.Name + ":" + pull.Head.GetSHA(),

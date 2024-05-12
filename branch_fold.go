@@ -64,8 +64,8 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	// and fetch the feature branch "into" the base branch.
 	if err := repo.Fetch(ctx, git.FetchOptions{
 		Remote: ".", // local repository
-		Refspecs: []string{
-			cmd.Name + ":" + b.Base,
+		Refspecs: []git.Refspec{
+			git.Refspec(cmd.Name + ":" + b.Base),
 		},
 	}); err != nil {
 		return fmt.Errorf("update base branch: %w", err)

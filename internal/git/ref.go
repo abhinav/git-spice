@@ -4,6 +4,14 @@ import (
 	"context"
 )
 
+// Refspec specifies which refs to fetch/submit for fetch/push operations.
+// See git-fetch(1) and git-push(1) for more information.
+type Refspec string
+
+func (r Refspec) String() string {
+	return string(r)
+}
+
 // SetRefRequest is a request to set a ref to a new hash.
 type SetRefRequest struct {
 	// Ref is the name of the ref to set.

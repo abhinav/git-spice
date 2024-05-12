@@ -17,7 +17,7 @@ type FetchOptions struct {
 
 	// Refspecs are the refspecs to fetch.
 	// If non-empty, the Remote must be specified as well.
-	Refspecs []string // TODO: Refspec type?
+	Refspecs []Refspec
 }
 
 // Fetch fetches objects and refs from a remote repository.
@@ -30,7 +30,9 @@ func (r *Repository) Fetch(ctx context.Context, opts FetchOptions) error {
 	if opts.Remote != "" {
 		args = append(args, opts.Remote)
 	}
-	args = append(args, opts.Refspecs...)
+	for _, refspec := range opts.Refspecs {
+		args = append(args, refspec.String())
+	}
 
 	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
 		return fmt.Errorf("fetch: %w", err)

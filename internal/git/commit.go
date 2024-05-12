@@ -179,7 +179,6 @@ func (m CommitMessage) String() string {
 // CommitMessageRange returns the commit messages in the range (start, ^stop).
 // That is, all commits reachable from start but not from stop.
 func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string) ([]CommitMessage, error) {
-	// TODO: read subjects and bodies as separate fields.
 	cmd := r.gitCmd(ctx, "rev-list",
 		"--no-commit-header",
 		"--format=%B%x00", // null-byte separated
