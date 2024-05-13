@@ -21,7 +21,7 @@ jobs:
       name: Set up Go
       with:
         go-version: ${{ env.GO_VERSION }}
-    - uses: golangci/golangci-lint-action@v5
+    - uses: golangci/golangci-lint-action@v6
       name: Install golangci-lint
       with:
         version: latest
