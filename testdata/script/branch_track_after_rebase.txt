@@ -1,0 +1,38 @@
+# Creates two branches off main,
+# rebases one of them on top of the other,
+# and re-tracks it.
+#
+# Reproduces a bug report.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+
+git checkout main
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+
+git rebase feature1
+gs branch track
+stderr 'feature2: tracking with base feature1'
+
+git log --graph --oneline --decorate --branches
+cmp stdout $WORK/golden/log.txt
+
+-- repo/feature1.txt --
+Feature 1
+
+-- repo/feature2.txt --
+Feature 2
+
+-- golden/log.txt --
+* 6b07f21 (HEAD -> feature2) Add feature2
+* 32a777d (feature1) Add feature1
+* 9bad92b (main) Initial commit

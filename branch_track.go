@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -91,6 +93,10 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	revLoop:
 		for _, rev := range revs {
 			for branchIdx, branchName := range trackedBranches {
+				if branchName == cmd.Name {
+					continue
+				}
+
 				hash, err := hashFor(branchIdx)
 				if err != nil {
 					return err
@@ -108,6 +114,29 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 
 		log.Debugf("Detected base branch: %v", cmd.Base)
+	}
+
+	// Check if adding this connection would create a cycle.
+	path := []string{cmd.Name}
+	for branch := cmd.Base; branch != store.Trunk(); {
+		// TODO: Perform this check in Store.Update,
+		// ensuring that 'branch onto' also checks for cycles.
+		if slices.Contains(path, branch) {
+			path = append(path, branch)
+			slices.Reverse(path)
+
+			log.Errorf("%v: base %v would create a cycle:", cmd.Name, cmd.Base)
+			log.Errorf("  %v", strings.Join(path, " -> "))
+			return errors.New("cycle detected")
+		}
+
+		path = append(path, branch)
+
+		b, err := store.Lookup(ctx, branch)
+		if err != nil {
+			return fmt.Errorf("lookup branch: %w", err)
+		}
+		branch = b.Base
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)
