@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type upCmd struct {
@@ -65,29 +64,17 @@ outer:
 		case 1:
 			branch = aboves[0]
 		default:
-			log.Info("There are multiple branches above this one.")
+			desc := "There are multiple branches above the current branch."
 			if !opts.Prompt {
+				log.Error(desc)
 				return errNoPrompt
 			}
 
-			opts := make([]huh.Option[string], len(aboves))
-			for i, branch := range aboves {
-				opts[i] = huh.NewOption(branch, branch)
-			}
+			prompt := ui.NewSelect(&branch, aboves...).
+				WithTitle("Pick a branch").
+				WithDescription(desc)
 
-			// TODO:
-			// Custom branch selection widget
-			// with fuzzy search.
-			prompt := huh.NewSelect[string]().
-				Title("Pick a branch").
-				Options(opts...).
-				Value(&branch)
-
-			err := huh.NewForm(huh.NewGroup(prompt)).
-				WithOutput(os.Stdout).
-				WithShowHelp(false).
-				Run()
-			if err != nil {
+			if err := ui.Run(prompt); err != nil {
 				return fmt.Errorf("a branch is required: %w", err)
 			}
 		}

@@ -82,15 +82,21 @@ await 'Pick a branch'
 snapshot
 feed \r
 -- golden/main-prompt.txt --
-┃ Pick a branch
-┃ > f2
-┃   f1-s1
-┃   f1-s2-s
+Pick a branch:
+
+▶ f2
+  f1-s1
+  f1-s2-s
+
+There are multiple top-level branches reachable from the current branc
 -- input/f1-prompt.txt --
 await 'Pick a branch'
 snapshot
 feed \r
 -- golden/f1-prompt.txt --
-┃ Pick a branch
-┃ > f1-s1
-┃   f1-s2-s
+Pick a branch:
+
+▶ f1-s1
+  f1-s2-s
+
+There are multiple top-level branches reachable from the current branc

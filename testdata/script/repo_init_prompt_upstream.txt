@@ -26,9 +26,10 @@ feed \r
 
 -- golden/dialog.txt --
 ### dialog ###
-┃ Please select the trunk branch
-┃ Changes will be merged into this branch
-┃   bar
-┃   foo
-┃ > main
-┃
+Please select the trunk branch:
+
+  bar
+  foo
+▶ main
+
+Changes will be merged into this branch

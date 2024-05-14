@@ -35,9 +35,12 @@ feed \r
 
 -- golden/prompt.txt --
 ### dialog ###
-┃ Please select the remote to which you'd like to push your changes
-┃ > origin
-┃   upstream
+Please select a remote:
+
+▶ origin
+  upstream
+
+Changes will be pushed to this remote
 -- golden/pulls.json --
 [
   {
