@@ -18,7 +18,7 @@ type downstackSubmitCmd struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
 
-	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to start at"`
+	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to start at" predictor:"trackedBranches"`
 }
 
 func (*downstackSubmitCmd) Help() string {

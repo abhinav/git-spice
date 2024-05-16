@@ -15,8 +15,8 @@ import (
 )
 
 type branchTrackCmd struct {
-	Base string `short:"b" help:"Base branch this merges into"`
-	Name string `arg:"" optional:"" help:"Name of the branch to track"`
+	Base string `short:"b" help:"Base branch this merges into" predictor:"branches"`
+	Name string `arg:"" optional:"" help:"Name of the branch to track" predictor:"branches"`
 
 	// TODO:
 	// PR   int    `help:"Pull request number to associate with this branch"`

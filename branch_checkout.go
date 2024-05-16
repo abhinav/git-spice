@@ -11,7 +11,7 @@ import (
 )
 
 type branchCheckoutCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch to delete"`
+	Name string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
 }
 
 func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {

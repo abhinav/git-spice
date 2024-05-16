@@ -32,7 +32,7 @@ type branchSubmitCmd struct {
 	// - milestone
 	// - reviewers
 
-	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to submit"`
+	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to submit" predictor:"trackedBranches"`
 }
 
 func (*branchSubmitCmd) Help() string {

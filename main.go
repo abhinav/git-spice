@@ -14,7 +14,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
+	"github.com/posener/complete"
 	"go.abhg.dev/gs/internal/gh"
+	"go.abhg.dev/gs/internal/komplete"
 	"golang.org/x/oauth2"
 )
 
@@ -80,6 +82,9 @@ func main() {
 			return nil
 		}),
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	// The default help flag text has a period at the end,
 	// which doesn't match the rest of our help text.
@@ -91,10 +96,6 @@ func main() {
 			Key:   "globals",
 			Title: "Global Flags:",
 		}
-	}
-
-	if err != nil {
-		panic(err)
 	}
 
 	shorthands := map[string][]string{
@@ -139,6 +140,21 @@ func main() {
 		}
 	}
 
+	komplete.Run(parser,
+		komplete.WithTransformCompleted(func(args []string) []string {
+			if len(args) > 0 {
+				if path, ok := shorthands[args[0]]; ok {
+					args = slices.Replace(args, 0, 1, path...)
+				}
+			}
+			return args
+		}),
+		komplete.WithPredictor("branches", complete.PredictFunc(predictBranches)),
+		komplete.WithPredictor("trackedBranches", complete.PredictFunc(predictTrackedBranches)),
+		komplete.WithPredictor("remotes", complete.PredictFunc(predictRemotes)),
+		komplete.WithPredictor("dirs", complete.PredictDirs("")),
+	)
+
 	kctx, err := parser.Parse(args)
 	if err != nil {
 		logger.Fatalf("gs: %v", err)
@@ -154,7 +170,7 @@ type globalOptions struct {
 
 	Version versionFlag        `help:"Print version information and quit"`
 	Verbose bool               `short:"v" help:"Enable verbose output" env:"GS_VERBOSE"`
-	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything"`
+	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
 
 	// Flags that are accessed directly:
 
@@ -185,6 +201,9 @@ type mainCmd struct {
 	Top    topCmd    `cmd:"" aliases:"gt" group:"Navigation" help:"Move to the top of the stack"`
 	Bottom bottomCmd `cmd:"" aliases:"gb" group:"Navigation" help:"Move to the bottom of the stack"`
 	Trunk  trunkCmd  `cmd:"" aliases:"gg" group:"Navigation" help:"Move to the trunk branch"`
+
+	// Other
+	Complete completeCmd `name:"complete" cmd:"" group:"System" help:"Generate shell completion script"`
 
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dump-md" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`

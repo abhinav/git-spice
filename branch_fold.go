@@ -13,7 +13,7 @@ import (
 )
 
 type branchFoldCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch"`
+	Name string `arg:"" optional:"" help:"Name of the branch" predictor:"trackedBranches"`
 }
 
 func (*branchFoldCmd) Help() string {

@@ -10,6 +10,7 @@ require (
 	github.com/creack/pty/v2 v2.0.1
 	github.com/google/go-github/v61 v61.0.0
 	github.com/mattn/go-isatty v0.0.20
+	github.com/posener/complete v1.2.3
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vito/midterm v0.1.5-0.20240307214207-d0271a7ca452
@@ -28,6 +29,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
