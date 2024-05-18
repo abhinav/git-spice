@@ -1,0 +1,84 @@
+# create a PR with 'branch submit',
+# rename the branch with 'branch rename',
+# and update the original PR with 'branch submit'.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:57:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a new branch and submit it
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/create.json
+
+# rename the branch
+gs branch rename feature1-new-name
+
+# update the file, commit, and update the PR
+cp $WORK/extra/feature1-update.txt feature1.txt
+git add feature1.txt
+git commit -m 'update feature1'
+
+gs bs
+stderr 'Updated #'
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/update.json
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-update.txt --
+New contents of feature1
+
+-- golden/create.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature1",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "854f3268c794eb5ec30439658dfb43ac494d9074"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
+    }
+  }
+]
+
+-- golden/update.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature1",
+    "body": "",
+    "draft": false,
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
+    }
+  }
+]
