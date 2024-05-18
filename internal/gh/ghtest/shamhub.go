@@ -143,7 +143,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 	defer flush()
 
-	initCmd := exec.Command(sh.gitExe, "init", "--bare")
+	initCmd := exec.Command(sh.gitExe, "init", "--bare", "--initial-branch=main")
 	initCmd.Dir = repoDir
 	initCmd.Stdout = logw
 	initCmd.Stderr = logw
