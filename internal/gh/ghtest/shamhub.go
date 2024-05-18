@@ -4,6 +4,7 @@ package ghtest
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/cgi"
 	"net/http/httptest"
@@ -13,7 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
 	"go.abhg.dev/gs/internal/ioutil"
 )
@@ -27,7 +30,7 @@ import (
 // For the Git HTTP remote functionality, it relies on the
 // 'git http-backend' command included with Git.
 type ShamHub struct {
-	logf func(format string, args ...interface{})
+	log *log.Logger
 
 	gitRoot string // destination for Git repos
 	gitExe  string // path to git binary
@@ -45,16 +48,14 @@ type ShamHubConfig struct {
 	// If not set, we'll look for it in the PATH.
 	Git string
 
-	// Logf is a function to log messages.
-	// If unset, logs will be discarded.
-	Logf func(format string, args ...interface{})
+	Log *log.Logger
 }
 
 // NewShamHub creates a new ShamHub server.
 // The server should be closed with the Close method when done.
 func NewShamHub(cfg ShamHubConfig) (*ShamHub, error) {
-	if cfg.Logf == nil {
-		cfg.Logf = func(format string, args ...interface{}) {}
+	if cfg.Log == nil {
+		cfg.Log = log.New(io.Discard)
 	}
 
 	if cfg.Git == "" {
@@ -72,7 +73,7 @@ func NewShamHub(cfg ShamHubConfig) (*ShamHub, error) {
 	}
 
 	sh := ShamHub{
-		logf:    cfg.Logf,
+		log:     cfg.Log.With("module", "shamhub"),
 		gitRoot: gitRoot,
 		gitExe:  cfg.Git,
 	}
@@ -120,6 +121,12 @@ func (sh *ShamHub) GitURL() string {
 	return sh.gitServer.URL
 }
 
+// RepoURL returns the URL for the Git repository with the given owner and repo name.
+func (sh *ShamHub) RepoURL(owner, repo string) string {
+	repo = strings.TrimSuffix(repo, ".git")
+	return sh.gitServer.URL + "/" + owner + "/" + repo + ".git"
+}
+
 // NewRepository creates a new Git repository
 // with the given owner and repo name
 // and returns the URL to the repository.
@@ -133,7 +140,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 		return "", fmt.Errorf("create repository: %w", err)
 	}
 
-	logw, flush := ioutil.LogfWriter(sh.logf, "shamhub: ")
+	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 	defer flush()
 
 	initCmd := exec.Command(sh.gitExe, "init", "--bare")
@@ -174,11 +181,140 @@ func (sh *ShamHub) ListPulls() ([]*github.PullRequest, error) {
 	return ghPRs, nil
 }
 
+// MergePullRequest is a request to merge a PR.
+type MergePullRequest struct {
+	Owner, Repo string
+	Number      int
+
+	// Optional fields:
+	Time                          time.Time
+	CommitterName, CommitterEmail string
+	// TODO: Use git.Signature here instead?
+
+	// TODO: option to use squash commit
+}
+
+// MergePull merges the pull request with the given owner, repo, and number.
+func (sh *ShamHub) MergePull(req MergePullRequest) error {
+	if req.Owner == "" || req.Repo == "" || req.Number == 0 {
+		return fmt.Errorf("owner, repo, and number are required")
+	}
+
+	if req.CommitterName == "" {
+		req.CommitterName = "ShamHub"
+	}
+	if req.CommitterEmail == "" {
+		req.CommitterEmail = "shamhub@example.com"
+	}
+
+	commitEnv := []string{
+		"GIT_COMMITTER_NAME=" + req.CommitterName,
+		"GIT_COMMITTER_EMAIL=" + req.CommitterEmail,
+		"GIT_AUTHOR_NAME=" + req.CommitterName,
+		"GIT_AUTHOR_EMAIL=" + req.CommitterEmail,
+	}
+	if !req.Time.IsZero() {
+		commitEnv = append(commitEnv,
+			"GIT_COMMITTER_DATE="+req.Time.Format(time.RFC3339),
+			"GIT_AUTHOR_DATE="+req.Time.Format(time.RFC3339),
+		)
+	}
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	var prIdx int
+	for idx, pr := range sh.pulls {
+		if pr.Owner == req.Owner && pr.Repo == req.Repo && pr.Number == req.Number {
+			prIdx = idx
+			break
+		}
+	}
+
+	if sh.pulls[prIdx].State != shamPROpen {
+		return fmt.Errorf("pull request %d is not open", req.Number)
+	}
+
+	// To do this without a worktree, we need to:
+	//
+	//	TREE=$(git merge-tree --write-tree base head)
+	//
+	// If the above fails, there's a conflict, so reject the merge.
+	// Otherwise, create a commit with the TREE and the commit message
+	// using git commit-tree, and update the ref to point to the new commit.
+	tree, err := func() (string, error) {
+		logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+		defer flush()
+
+		cmd := exec.Command(sh.gitExe, "merge-tree", "--write-tree", sh.pulls[prIdx].Base, sh.pulls[prIdx].Head)
+		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+		cmd.Stderr = logw
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("merge-tree: %w", err)
+		}
+
+		return strings.TrimSpace(string(out)), nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	commit, err := func() (string, error) {
+		logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+		defer flush()
+
+		msg := fmt.Sprintf("Merge pull request #%d", req.Number)
+		cmd := exec.Command(sh.gitExe,
+			"commit-tree",
+			"-p", sh.pulls[prIdx].Base,
+			"-p", sh.pulls[prIdx].Head,
+			"-m", msg,
+			tree,
+		)
+		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+		cmd.Stderr = logw
+		cmd.Env = append(os.Environ(), commitEnv...)
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("commit-tree: %w", err)
+		}
+
+		return strings.TrimSpace(string(out)), nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	// Update the ref to point to the new commit.
+	err = func() error {
+		logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+		defer flush()
+
+		ref := fmt.Sprintf("refs/heads/%s", sh.pulls[prIdx].Base)
+		cmd := exec.Command(sh.gitExe, "update-ref", ref, commit)
+		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+		cmd.Stderr = logw
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("update-ref: %w", err)
+		}
+
+		return nil
+	}()
+	if err != nil {
+		return err
+	}
+
+	sh.pulls[prIdx].State = shamPRMerged
+	return nil
+}
+
 func (sh *ShamHub) apiHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{repo}/pulls", sh.listPullRequests)
 	mux.HandleFunc("POST /repos/{owner}/{repo}/pulls", sh.createPullRequest)
 	mux.HandleFunc("PATCH /repos/{owner}/{repo}/pulls/{number}", sh.updatePullRequest)
+	mux.HandleFunc("GET /repos/{owner}/{repo}/pulls/{number}/merge", sh.prIsMerged)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		apiPath, ok := strings.CutPrefix(r.URL.Path, "/api/v3")
@@ -188,9 +324,41 @@ func (sh *ShamHub) apiHandler() http.Handler {
 		}
 		r.URL.Path = apiPath
 
-		sh.logf("ShamHub: %s %s", r.Method, r.URL)
+		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL)
 		mux.ServeHTTP(w, r)
 	})
+}
+
+func (sh *ShamHub) prIsMerged(w http.ResponseWriter, r *http.Request) {
+	owner, repo, numStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("number")
+	if owner == "" || repo == "" || numStr == "" {
+		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
+		return
+	}
+
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	sh.mu.RLock()
+	var merged bool
+	for _, pr := range sh.pulls {
+		if pr.Owner == owner && pr.Repo == repo && pr.Number == num {
+			merged = pr.State == shamPRMerged
+			break
+		}
+	}
+	sh.mu.RUnlock()
+
+	// If the PR has been merged, response is 204.
+	// Otherwise, response is 404.
+	if merged {
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		http.Error(w, "pull request not merged or not found", http.StatusNotFound)
+	}
 }
 
 func (sh *ShamHub) listPullRequests(w http.ResponseWriter, r *http.Request) {
@@ -213,9 +381,15 @@ func (sh *ShamHub) listPullRequests(w http.ResponseWriter, r *http.Request) {
 			func(pr *shamPR) bool { return pr.Head == head })
 	}
 
-	if state := r.FormValue("state"); state != "" && state != "open" {
-		http.Error(w, "only open PRs are supported", http.StatusBadRequest)
-		return
+	switch state := r.FormValue("state"); state {
+	case "open":
+		matchers = append(matchers, func(pr *shamPR) bool {
+			return pr.State == shamPROpen
+		})
+	case "closed":
+		matchers = append(matchers, func(pr *shamPR) bool {
+			return pr.State != shamPROpen
+		})
 	}
 
 	got := make([]shamPR, 0, len(sh.pulls))
@@ -315,6 +489,7 @@ func (sh *ShamHub) updatePullRequest(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		Base  *string `json:"base"`
 		Draft *bool   `json:"draft"`
+		State *string `json:"state"`
 	}
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -344,6 +519,14 @@ func (sh *ShamHub) updatePullRequest(w http.ResponseWriter, r *http.Request) {
 	if d := data.Draft; d != nil {
 		sh.pulls[prIdx].Draft = *d
 	}
+	if s := data.State; s != nil {
+		switch *s {
+		case "open":
+			sh.pulls[prIdx].State = shamPROpen
+		case "closed":
+			sh.pulls[prIdx].State = shamPRClosed
+		}
+	}
 
 	ghpr, err := sh.toGitHubPR(&sh.pulls[prIdx])
 	if err != nil {
@@ -359,7 +542,27 @@ func (sh *ShamHub) updatePullRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sh *ShamHub) repoDir(owner, repo string) string {
+	repo = strings.TrimSuffix(repo, ".git")
 	return filepath.Join(sh.gitRoot, owner, repo+".git")
+}
+
+type shamPRState int
+
+const (
+	shamPROpen shamPRState = iota
+	shamPRClosed
+	shamPRMerged
+)
+
+func (s shamPRState) toGitHubState() string {
+	switch s {
+	case shamPROpen:
+		return "open"
+	case shamPRClosed, shamPRMerged:
+		return "closed"
+	default:
+		return ""
+	}
 }
 
 type shamPR struct {
@@ -368,6 +571,7 @@ type shamPR struct {
 
 	Number int
 	Draft  bool
+	State  shamPRState
 
 	Title string
 	Body  string
@@ -389,20 +593,28 @@ func (sh *ShamHub) toGitHubPR(pr *shamPR) (*github.PullRequest, error) {
 		return nil, fmt.Errorf("convert head branch: %w", err)
 	}
 
-	return &github.PullRequest{
+	ghpr := &github.PullRequest{
 		Number:  &pr.Number,
-		State:   github.String("open"), // we only have open PRs
-		Draft:   &pr.Draft,
+		State:   github.String(pr.State.toGitHubState()),
 		Title:   &pr.Title,
 		Body:    &pr.Body,
 		Base:    base,
 		Head:    head,
 		HTMLURL: &url,
-	}, nil
+	}
+	// Don't set optional fields if they're empty
+	// to reduce noise in JSON output.
+	if pr.Draft {
+		ghpr.Draft = github.Bool(true)
+	}
+	if pr.State == shamPRMerged {
+		ghpr.Merged = github.Bool(true)
+	}
+	return ghpr, nil
 }
 
 func (sh *ShamHub) toGitHubPRBranch(owner, repo, ref string) (*github.PullRequestBranch, error) {
-	logw, flush := ioutil.LogfWriter(sh.logf, "shamhub: ")
+	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 	defer flush()
 
 	headCmd := exec.Command(sh.gitExe, "rev-parse", ref)

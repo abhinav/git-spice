@@ -1,0 +1,62 @@
+# 'repo sync' from trunk, PR merged server-side with a merge commit.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a new branch and submit it
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# merge the PR server side and sync.
+gh-merge alice/example 1
+gs repo sync
+stderr 'feature1: #1 was merged'
+
+# we should now be on main
+# and feature1 branch should be gone.
+exists feature1.txt
+git log --branches --oneline --decorate --graph
+cmp stdout $WORK/golden/merged-log.txt
+
+gh-dump-pull 1
+cmpenvJSON stdout $WORK/golden/pull.json
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- golden/pull.json --
+{
+  "number": 1,
+  "state": "closed",
+  "title": "Add feature1",
+  "body": "",
+  "merged": true,
+  "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+  "head": {
+    "ref": "feature1",
+    "sha": "9f1c9af063d2363d6a1381581bfab2a25d12be4c"
+  },
+  "base": {
+    "ref": "main",
+    "sha": "7bfac22ffbcf563e3434adf877eb3cda0fef3d48"
+  }
+}
+
+-- golden/merged-log.txt --
+*   7bfac22 (HEAD -> main, origin/main) Merge pull request #1
+|\  
+| * 9f1c9af (origin/feature1) Add feature1
+|/  
+* d90607e Initial commit

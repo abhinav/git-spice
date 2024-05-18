@@ -18,6 +18,7 @@ import (
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
 	"go.abhg.dev/gs/internal/gh/ghtest"
+	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/termtest"
 )
 
@@ -142,7 +143,7 @@ func TestScript(t *testing.T) {
 			"gh-init": func(ts *testscript.TestScript, neg bool, args []string) {
 				t := ts.Value(testingTBKey{}).(testing.TB)
 				shamHub, err := ghtest.NewShamHub(ghtest.ShamHubConfig{
-					Logf: t.Logf,
+					Log: logtest.New(t),
 				})
 				if err != nil {
 					ts.Fatalf("create ShamHub: %s", err)
@@ -166,6 +167,73 @@ func TestScript(t *testing.T) {
 				ts.Setenv("GITHUB_API_URL", shamHub.APIURL())
 				ts.Setenv("GITHUB_GIT_URL", shamHub.GitURL())
 				ts.Setenv("GITHUB_TOKEN", "test-token")
+			},
+
+			// Clones a repository from the fake GitHub server.
+			"gh-clone": func(ts *testscript.TestScript, neg bool, args []string) {
+				if neg || len(args) != 2 {
+					ts.Fatalf("usage: gh-clone <owner/repo> <dir>")
+				}
+
+				shamHub := ts.Value(shamHubKey{}).(*shamHubValue).v
+				if shamHub == nil {
+					ts.Fatalf("gh-add-remote: ShamHub not initialized")
+				}
+
+				ownerRepo, dir := args[0], args[1]
+				owner, repo, ok := strings.Cut(ownerRepo, "/")
+				if !ok {
+					ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+				}
+
+				err := ts.Exec("git", "clone", shamHub.RepoURL(owner, repo), dir)
+				if err != nil {
+					ts.Fatalf("git clone: %s", err)
+				}
+			},
+
+			// gh-merge <owner/repo> <pr>
+			"gh-merge": func(ts *testscript.TestScript, neg bool, args []string) {
+				if neg || len(args) != 2 {
+					ts.Fatalf("usage: gh-merge <owner/repo> <pr>")
+				}
+
+				shamHub := ts.Value(shamHubKey{}).(*shamHubValue).v
+				if shamHub == nil {
+					ts.Fatalf("gh-merge: ShamHub not initialized")
+				}
+
+				ownerRepo, prStr := args[0], args[1]
+				owner, repo, ok := strings.Cut(ownerRepo, "/")
+				if !ok {
+					ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+				}
+				pr, err := strconv.Atoi(prStr)
+				if err != nil {
+					ts.Fatalf("invalid PR number: %s", err)
+				}
+
+				req := ghtest.MergePullRequest{
+					Owner:  owner,
+					Repo:   repo,
+					Number: pr,
+				}
+				if at := ts.Getenv("GIT_COMMITTER_DATE"); at != "" {
+					t, err := time.Parse(time.RFC3339, at)
+					if err != nil {
+						ts.Fatalf("invalid time: %s", err)
+					}
+					req.Time = t
+				}
+
+				if name := ts.Getenv("GIT_COMMITTER_NAME"); name != "" {
+					req.CommitterName = name
+				}
+				if email := ts.Getenv("GIT_COMMITTER_EMAIL"); email != "" {
+					req.CommitterEmail = email
+				}
+
+				ts.Check(shamHub.MergePull(req))
 			},
 
 			"gh-add-remote": func(ts *testscript.TestScript, neg bool, args []string) {

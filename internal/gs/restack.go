@@ -25,6 +25,8 @@ type RestackResponse struct {
 	Base string
 }
 
+// TODO: Should we be using --is-ancestor to check if a branch is on top of another?
+
 // Restack restacks the given branch on top of its base branch,
 // handling movement of the base branch if necessary.
 //

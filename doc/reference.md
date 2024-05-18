@@ -41,6 +41,18 @@ However, any commands that require a remote will fail.
 * `--remote=NAME`: Name of the remote to push changes to
 * `--reset`: Reset the store if it's already initialized
 
+## gs repo sync
+
+```
+gs repo (r) sync (s)
+```
+
+Pull latest changes from the remote
+
+Pulls the latest changes from the remote repository.
+Deletes branches that have were merged into trunk,
+and updates the base branches of branches upstack from those.
+
 ## gs upstack restack
 
 ```
