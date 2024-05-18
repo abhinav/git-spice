@@ -45,6 +45,11 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return errors.New("branch name is required")
 	}
 
+	currentBranch, err := repo.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("get current branch: %w", err)
+	}
+
 	var (
 		aboves  []string
 		base    string
@@ -63,6 +68,19 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	} else {
 		log.Warn("branch is not tracked by gs; deleting anyway", "branch", cmd.Name)
+	}
+
+	// Move to the base of the branch
+	// if we're on the branch we're deleting.
+	if cmd.Name == currentBranch {
+		next := base
+		if next == "" {
+			next = store.Trunk()
+		}
+
+		if err := repo.Checkout(ctx, next); err != nil {
+			return fmt.Errorf("checkout %v: %w", next, err)
+		}
 	}
 
 	if err := repo.DeleteBranch(ctx, cmd.Name, git.BranchDeleteOptions{
