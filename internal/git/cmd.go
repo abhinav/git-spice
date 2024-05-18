@@ -28,6 +28,8 @@ type execer interface {
 	Kill(*exec.Cmd) error
 }
 
+//go:generate mockgen -source=cmd.go -destination=mock_cmd_test.go -package=git -mock_names=execer=MockExecer -write_package_comment=false -typed
+
 type realExecer struct{}
 
 var _realExec execer = realExecer{}

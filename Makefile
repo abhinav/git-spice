@@ -11,8 +11,11 @@ export GOBIN = $(PROJECT_ROOT)/bin
 export PATH := $(GOBIN):$(PATH)
 export GOEXPERIMENT = rangefunc
 
-GS = bin/gs
 TEST_FLAGS ?= -race
+
+GS = bin/gs
+MOCKGEN = bin/mockgen
+TOOLS = $(MOCKGEN) $(GS)
 
 # Non-test Go files.
 GO_SRC_FILES = $(shell find . \
@@ -27,6 +30,10 @@ build: $(GS)
 
 .PHONY: lint
 lint: golangci-lint tidy-lint generate-lint
+
+.PHONY: generate
+generate: $(TOOLS)
+	go generate -x ./...
 
 .PHONY: test
 test:
@@ -52,12 +59,8 @@ tidy-lint:
 		git diff --exit-code -- go.mod go.sum || \
 		(echo "'go mod tidy' changed files" && false)
 
-.PHONY: generate
-generate:
-	go generate -x ./...
-
 .PHONY: generate-lint
-generate-lint:
+generate-lint: $(TOOLS)
 	@echo "[lint] go generate"
 	@go generate ./... && \
 		git diff --exit-code || \
@@ -65,3 +68,6 @@ generate-lint:
 
 $(GS): $(GO_SRC_FILES)
 	go install go.abhg.dev/gs
+
+$(MOCKGEN): go.mod
+	go install go.uber.org/mock/mockgen

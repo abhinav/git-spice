@@ -13,6 +13,7 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/stretchr/testify v1.9.0
 	github.com/vito/midterm v0.1.5-0.20240307214207-d0271a7ca452
+	go.uber.org/mock v0.4.0
 	golang.org/x/oauth2 v0.20.0
 	pgregory.net/rapid v1.1.0
 )
@@ -37,6 +38,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
