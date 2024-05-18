@@ -4,11 +4,16 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"strconv"
 )
 
-// ListCommits returns a list of commits in the range [start, stop).
-func (r *Repository) ListCommits(ctx context.Context, start, stop string) ([]Hash, error) {
-	cmd := r.gitCmd(ctx, "rev-list", start, "--not", stop)
+// ListCommits returns a list of commits matched by the given range.
+func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Hash, error) {
+	args := make([]string, 0, len(commits)+1)
+	args = append(args, "rev-list")
+	args = append(args, []string(commits)...)
+
+	cmd := r.gitCmd(ctx, args...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -33,4 +38,24 @@ func (r *Repository) ListCommits(ctx context.Context, start, stop string) ([]Has
 	}
 
 	return revs, nil
+}
+
+// CommitRange builds up arguments for a ListCommits command.
+type CommitRange []string
+
+// CommitRangeFrom builds a commit range that reports the given commit
+// and all its parents until the root commit.
+func CommitRangeFrom(from Hash) CommitRange {
+	return CommitRange{string(from)}
+}
+
+// ExcludeFrom indicates that the listing should exclude
+// commits reachable from the given hash.
+func (r CommitRange) ExcludeFrom(hash Hash) CommitRange {
+	return append(r, "--not", string(hash))
+}
+
+// Limit sets the maximum number of commits to list.
+func (r CommitRange) Limit(n int) CommitRange {
+	return append(r, "-n", strconv.Itoa(n))
 }
