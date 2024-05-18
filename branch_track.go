@@ -60,10 +60,21 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	if cmd.Base == "" {
+		branchHash, err := repo.PeelToCommit(ctx, cmd.Name)
+		if err != nil {
+			return fmt.Errorf("peel to commit: %w", err)
+		}
+
+		trunkHash, err := repo.PeelToCommit(ctx, store.Trunk())
+		if err != nil {
+			return fmt.Errorf("peel to commit: %w", err)
+		}
+
 		// Find all revisions between the current branch and the trunk branch
 		// and check if we know any branches at those revisions.
 		// If not, we'll use the trunk branch as the base.
-		revs, err := repo.ListCommits(ctx, cmd.Name, store.Trunk())
+		revs, err := repo.ListCommits(ctx,
+			git.CommitRangeFrom(branchHash).ExcludeFrom(trunkHash))
 		if err != nil {
 			return fmt.Errorf("list commits: %w", err)
 		}
