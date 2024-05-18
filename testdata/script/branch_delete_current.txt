@@ -1,0 +1,27 @@
+# 'gs branch delete' on the current branch switches to trunk.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add foo.txt
+gs bc foo -m 'Add foo'
+git log --decorate --oneline --graph --branches
+cmp stdout $WORK/golden/before.txt
+
+gs branch delete --force foo
+git log --decorate --oneline --graph --branches
+cmp stdout $WORK/golden/after.txt
+
+-- repo/foo.txt --
+whatever
+
+-- golden/before.txt --
+* b435d70 (HEAD -> foo) Add foo
+* 3b9a56f (main) initial commit
+-- golden/after.txt --
+* 3b9a56f (HEAD -> main) initial commit
