@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -63,36 +62,31 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.Log = log.New(io.Discard)
 	}
 
-	out, err := newGitCmd(ctx, opts.Log,
+	root, err := newGitCmd(ctx, opts.Log,
 		"rev-parse",
 		"--show-toplevel",
-		"--absolute-git-dir",
 	).Dir(dir).OutputString(opts.exec)
 	if err != nil {
 		return nil, err
 	}
 
-	root, gitDir, ok := strings.Cut(out, "\n")
-	if !ok {
-		return nil, fmt.Errorf("unexpected output from git rev-parse: %q", out)
-	}
-
-	return &Repository{
-		root:   root,
-		gitDir: gitDir,
-		log:    opts.Log,
-		exec:   opts.exec,
-	}, nil
+	return newRepository(root, opts.Log, opts.exec), nil
 }
 
 // Repository is a handle to a Git repository.
 // It provides read-write access to the repository's contents.
 type Repository struct {
-	root   string
-	gitDir string
-
+	root string
 	log  *log.Logger
 	exec execer
+}
+
+func newRepository(root string, log *log.Logger, exec execer) *Repository {
+	return &Repository{
+		root: root,
+		log:  log,
+		exec: exec,
+	}
 }
 
 // gitCmd returns a gitCmd that will run
