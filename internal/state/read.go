@@ -36,20 +36,44 @@ type LookupResponse struct {
 	// BaseHash is the last known hash of the base branch.
 	// This may not match the current hash of the base branch.
 	BaseHash git.Hash
+
+	// PR is the number of the pull request associated with the branch,
+	// or zero if the branch is not associated with a PR.
+	PR int
+
+	// UpstreamBranch is the name of the upstream branch
+	// or an empty string if the branch is not tracking an upstream branch.
+	UpstreamBranch string
 }
 
 // Lookup returns information about a branch tracked by gs.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error) {
+	state, err := s.lookupBranchState(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LookupResponse{
+		Base:     state.Base.Name,
+		BaseHash: git.Hash(state.Base.Hash),
+	}
+	if gh := state.GitHub; gh != nil {
+		res.PR = gh.PR
+	}
+	if upstream := state.Upstream; upstream != nil {
+		res.UpstreamBranch = upstream.Branch
+	}
+
+	return res, nil
+}
+
+func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchState, error) {
 	var state branchState
 	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
 		return nil, fmt.Errorf("get branch state: %w", err)
 	}
-
-	return &LookupResponse{
-		Base:     state.Base.Name,
-		BaseHash: git.Hash(state.Base.Hash),
-	}, nil
+	return &state, nil
 }
 
 // List reports the names of all tracked branches.

@@ -62,17 +62,16 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("rename branch: %w", err)
 	}
 
-	// TODO:
-	// If branch has a PR, we'll want to retain the upstream branch name.
-	// Maybe 'branch submit' should track the upstream branch name.
 	update := state.UpdateRequest{
 		Message: fmt.Sprintf("rename %q to %q", oldName, cmd.Name),
 	}
 	if b, err := store.Lookup(ctx, oldName); err == nil {
 		req := state.UpsertRequest{
-			Name:     cmd.Name,
-			Base:     b.Base,
-			BaseHash: b.BaseHash,
+			Name:           cmd.Name,
+			Base:           b.Base,
+			BaseHash:       b.BaseHash,
+			PR:             b.PR,
+			UpstreamBranch: b.UpstreamBranch,
 		}
 
 		update.Upserts = append(update.Upserts, req)

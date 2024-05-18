@@ -67,6 +67,14 @@ type UpsertRequest struct {
 	//
 	// Leave empty to keep the current base hash.
 	BaseHash git.Hash
+
+	// PR is the number of the pull request associated with the branch.
+	// Leave zero to keep the current PR.
+	PR int
+
+	// UpstreamBranch is the name of the upstream branch to track.
+	// Leave empty to stop tracking an upstream branch.
+	UpstreamBranch string
 }
 
 // Update upates the store with the parameters in the request.
@@ -84,18 +92,13 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 			return fmt.Errorf("upsert [%d]: trunk branch is not managed by gs", i)
 		}
 
-		var b branchState
-		if prev, err := s.Lookup(ctx, req.Name); err != nil {
+		b, err := s.lookupBranchState(ctx, req.Name)
+		if err != nil {
 			if !errors.Is(err, ErrNotExist) {
 				return fmt.Errorf("get branch: %w", err)
 			}
 			// Branch does not exist yet.
-			// Everything is already set to the zero value.
-		} else {
-			b.Base = branchStateBase{
-				Name: prev.Base,
-				Hash: prev.BaseHash.String(),
-			}
+			b = &branchState{}
 		}
 
 		if req.Base != "" {
@@ -103,6 +106,16 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 		}
 		if req.BaseHash != "" {
 			b.Base.Hash = req.BaseHash.String()
+		}
+		if req.PR != 0 {
+			b.GitHub = &branchGitHubState{
+				PR: req.PR,
+			}
+		}
+		if req.UpstreamBranch != "" {
+			b.Upstream = &branchUpstreamState{
+				Branch: req.UpstreamBranch,
+			}
 		}
 
 		if b.Base.Name == "" {

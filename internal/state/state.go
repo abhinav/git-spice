@@ -27,8 +27,18 @@ type branchStateBase struct {
 	Hash string `json:"hash"`
 }
 
+type branchGitHubState struct {
+	PR int `json:"pr,omitempty"`
+}
+
+type branchUpstreamState struct {
+	Branch string `json:"branch,omitempty"`
+}
+
 type branchState struct {
-	Base branchStateBase `json:"base"`
+	Base     branchStateBase      `json:"base"`
+	Upstream *branchUpstreamState `json:"upstream,omitempty"`
+	GitHub   *branchGitHubState   `json:"github,omitempty"`
 }
 
 // branchJSON returns the path to the JSON file for the given branch

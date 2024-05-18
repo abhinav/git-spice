@@ -143,3 +143,55 @@ func ensureStore(
 
 	return nil, fmt.Errorf("open store: %w", err)
 }
+
+func ensureRemote(
+	ctx context.Context,
+	repo gs.GitRepository,
+	store *state.Store,
+	log *log.Logger,
+	globals *globalOptions,
+) (string, error) {
+	remote, err := store.Remote()
+	if err == nil {
+		return remote, nil
+	}
+
+	if !errors.Is(err, state.ErrNotExist) {
+		return "", fmt.Errorf("get remote: %w", err)
+	}
+
+	// No remote was specified at init time.
+	// Guess or prompt for one and update the store.
+	log.Warn("No remote was specified at init time")
+	remote, err = (&gs.Guesser{
+		Select: func(_ gs.GuessOp, opts []string, selected string) (string, error) {
+			if !globals.Prompt {
+				return "", errNoPrompt
+			}
+
+			options := make([]huh.Option[string], len(opts))
+			for i, opt := range opts {
+				options[i] = huh.NewOption(opt, opt).
+					Selected(opt == selected)
+			}
+
+			var result string
+			prompt := huh.NewSelect[string]().
+				Title("Please select the remote to which you'd like to push your changes").
+				Options(options...).
+				Value(&result)
+			err := prompt.Run()
+			return result, err
+		},
+	}).GuessRemote(ctx, repo)
+	if err != nil {
+		return "", fmt.Errorf("guess remote: %w", err)
+	}
+
+	if err := store.SetRemote(ctx, remote); err != nil {
+		return "", fmt.Errorf("set remote: %w", err)
+	}
+
+	log.Infof("Changed repository remote to %s", remote)
+	return remote, nil
+}

@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
-	"go.abhg.dev/gs/internal/gh"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
@@ -96,66 +95,31 @@ func (cmd *branchSubmitCmd) Run(
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
-	remote, err := store.Remote()
-	if err != nil {
-		if !errors.Is(err, state.ErrNotExist) {
-			return fmt.Errorf("get remote: %w", err)
-		}
-
-		// No remote was specified at init time.
-		// Guess or prompt for one and update the store.
-		log.Warn("No remote was specified at init time")
-		remote, err = (&gs.Guesser{
-			Select: func(_ gs.GuessOp, opts []string, selected string) (string, error) {
-				options := make([]huh.Option[string], len(opts))
-				for i, opt := range opts {
-					options[i] = huh.NewOption(opt, opt).
-						Selected(opt == selected)
-				}
-
-				var result string
-				prompt := huh.NewSelect[string]().
-					Title("Please select the remote to which you'd like to push your changes").
-					Options(options...).
-					Value(&result)
-				err := prompt.Run()
-				return result, err
-			},
-		}).GuessRemote(ctx, repo)
-		if err != nil {
-			return fmt.Errorf("guess remote: %w", err)
-		}
-
-		if err := store.SetRemote(ctx, remote); err != nil {
-			return fmt.Errorf("set remote: %w", err)
-		}
-
-		log.Infof("Changed repository remote to %s", remote)
+	// If the branch has already been pushed to upstream with a different name,
+	// use that name instead.
+	// This is useful for branches that were renamed locally.
+	upstreamBranch := cmd.Name
+	if branch.UpstreamBranch != "" {
+		upstreamBranch = branch.UpstreamBranch
 	}
 
-	remoteURL, err := repo.RemoteURL(ctx, remote)
+	remote, err := ensureRemote(ctx, repo, store, log, opts)
 	if err != nil {
-		return fmt.Errorf("get remote URL: %w", err)
-	}
-
-	// TODO: Take GITHUB_GIT_URL into account for ParseRepoInfo.
-	ghrepo, err := gh.ParseRepoInfo(remoteURL)
-	if err != nil {
-		log.Error("Could not guess GitHub repository from remote URL", "url", remoteURL)
-		log.Error("Are you sure the remote is a GitHub repository?")
 		return err
 	}
 
-	gh := github.NewClient(oauth2.NewClient(ctx, tokenSource))
-	if opts.GithubAPIURL != "" {
-		gh, err = gh.WithEnterpriseURLs(opts.GithubAPIURL, gh.UploadURL.String())
-		if err != nil {
-			return fmt.Errorf("set GitHub API URL: %w", err)
-		}
+	ghrepo, err := ensureGitHubRepo(ctx, log, repo, remote)
+	if err != nil {
+		return err
+	}
+
+	gh, err := newGitHubClient(ctx, tokenSource, opts)
+	if err != nil {
+		return fmt.Errorf("create GitHub client: %w", err)
 	}
 	pulls, _, err := gh.PullRequests.List(ctx, ghrepo.Owner, ghrepo.Name, &github.PullRequestListOptions{
 		State: "open",
-		Head:  ghrepo.Owner + ":" + cmd.Name,
+		Head:  ghrepo.Owner + ":" + upstreamBranch,
 		// Don't filter by base -- we may need to update it.
 	})
 	if err != nil {
@@ -247,15 +211,33 @@ func (cmd *branchSubmitCmd) Run(
 		}
 		must.NotBeBlankf(cmd.Title, "PR title must have been set")
 
+		upsert := state.UpsertRequest{
+			Name:           cmd.Name,
+			UpstreamBranch: upstreamBranch,
+		}
+
 		err = repo.Push(ctx, git.PushOptions{
 			Remote: remote,
 			Refspec: git.Refspec(
-				commitHash.String() + ":refs/heads/" + cmd.Name,
+				commitHash.String() + ":refs/heads/" + upstreamBranch,
 			),
 		})
 		if err != nil {
 			return fmt.Errorf("push branch: %w", err)
 		}
+
+		// At this point, even if any other operation fails,
+		// we need to save to the state that we pushed the branch
+		// with the recorded name.
+		defer func() {
+			err := store.Update(ctx, &state.UpdateRequest{
+				Upserts: []state.UpsertRequest{upsert},
+				Message: fmt.Sprintf("branch submit %s", cmd.Name),
+			})
+			if err != nil {
+				log.Warn("Could not update state", "error", err)
+			}
+		}()
 
 		upstream := remote + "/" + cmd.Name
 		if err := repo.SetBranchUpstream(ctx, cmd.Name, upstream); err != nil {
@@ -272,6 +254,7 @@ func (cmd *branchSubmitCmd) Run(
 		if err != nil {
 			return fmt.Errorf("create pull request: %w", err)
 		}
+		upsert.PR = pull.GetNumber()
 
 		log.Infof("Created #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
 
@@ -306,7 +289,7 @@ func (cmd *branchSubmitCmd) Run(
 			err := repo.Push(ctx, git.PushOptions{
 				Remote: remote,
 				Refspec: git.Refspec(
-					commitHash.String() + ":refs/heads/" + cmd.Name,
+					commitHash.String() + ":refs/heads/" + upstreamBranch,
 				),
 				// Force push, but only if the ref is exactly
 				// where we think it is.
