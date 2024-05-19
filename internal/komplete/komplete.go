@@ -1,38 +1,4 @@
-/*
-Unlike the rest of the code in this repository,
-this file is made available under the BSD 3-Clause License
-so that it can be copied into other projects.
-License text follows.
-------------------------------------------------------------------------------
-BSD 3-Clause License
-
-Copyright (c) 2024, Abhinav Gupta (https://abhinavg.net/)
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+// SPDX-License-Identifier: BSD-3-Clause
 
 // Package komplete is a package for generating completions for Kong CLIs.
 //
@@ -69,6 +35,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -219,7 +186,10 @@ func (k *kongPredictor) Predict(cargs complete.Args) (predictions []string) {
 	if p == nil {
 		return nil
 	}
-	return p.Predict(cargs)
+
+	// The predictor is only based on what has been fully typed.
+	// We'll want to filter those predictions on the last token.
+	return (&prefixPredictor{Predictor: p}).Predict(cargs)
 }
 
 func (k *kongPredictor) findPredictor(node *kong.Node, scan *kong.Scanner) complete.Predictor {
@@ -346,7 +316,25 @@ parser:
 			// Just skip over them.
 			for _, child := range node.Children {
 				if child.Type == kong.ArgumentNode {
-					_ = child.Argument.Parse(scan, child.Target) // consume the value
+					arg := child.Argument
+					v := reflect.New(arg.Target.Type()).Elem()
+					// For reference types, make sure they're initialized.
+					switch v.Kind() {
+					case reflect.Ptr:
+						v.Set(reflect.New(v.Type().Elem()))
+					case reflect.Slice:
+						v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+					case reflect.Map:
+						v.Set(reflect.MakeMap(v.Type()))
+					}
+					err := child.Argument.Parse(scan, v)
+					if err == nil {
+						positional = 0
+						node = child
+						continue parser
+					}
+
+					complete.Log("failed to parse argument: %+v", err)
 				}
 			}
 
@@ -372,17 +360,9 @@ parser:
 		})
 	}
 
-	var subcommands []string
-	for _, child := range node.Children {
-		if child.Hidden {
-			continue
-		}
-		if child.Type == kong.CommandNode {
-			subcommands = append(subcommands, child.Name)
-		}
-	}
-	if len(subcommands) > 0 {
-		predictors = append(predictors, complete.PredictSet(subcommands...))
+	if len(node.Children) > 0 {
+		// If there are subcommands, predict them.
+		predictors = append(predictors, &subcommandPredictor{parent: node})
 	}
 
 	// Only predict the current node's flags.
@@ -444,6 +424,37 @@ func (k *kongPredictor) matchFlag(flags []*kong.Flag, scan *kong.Scanner, arg st
 	}
 
 	return nil, flagNotMatched
+}
+
+// subcommandPredictor predicts subcommands for a node
+// that's been fully resolved.
+type subcommandPredictor struct {
+	parent *kong.Node
+}
+
+var _ complete.Predictor = (*subcommandPredictor)(nil)
+
+func (p *subcommandPredictor) Predict(cargs complete.Args) []string {
+	var predictions []string
+	for _, child := range p.parent.Children {
+		if child.Type != kong.CommandNode || child.Hidden {
+			continue
+		}
+
+		if strings.HasPrefix(child.Name, cargs.Last) {
+			predictions = append(predictions, child.Name)
+		}
+
+		// If an alias has been fully typed,
+		// include it in the predictions so it can be completed.
+		for _, alias := range child.Aliases {
+			if alias == cargs.Last {
+				predictions = append(predictions, alias)
+			}
+		}
+	}
+
+	return predictions
 }
 
 type valuePredictor struct {
@@ -511,4 +522,19 @@ func (p *flagsPredictor) Predict(cargs complete.Args) (predictions []string) {
 	}
 
 	return predictions
+}
+
+type prefixPredictor struct {
+	complete.Predictor
+}
+
+func (p *prefixPredictor) Predict(cargs complete.Args) (predictions []string) {
+	predictions = p.Predictor.Predict(cargs)
+	newPredictions := predictions[:0]
+	for _, prediction := range predictions {
+		if strings.HasPrefix(prediction, cargs.Last) {
+			newPredictions = append(newPredictions, prediction)
+		}
+	}
+	return newPredictions
 }

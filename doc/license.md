@@ -26,3 +26,4 @@ As an exception to the above, the following files are distributed
 under a different license. See the file headers for details:
 
     internal/komplete/komplete.go
+    internal/komplete/komplete_test.go
