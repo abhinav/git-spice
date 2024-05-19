@@ -38,7 +38,7 @@ gs stack restack
 git branch --show-current
 stdout '^feature3$'
 
-git log --decorate --oneline --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/branches.txt
 
 -- repo/feature1.txt --

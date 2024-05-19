@@ -39,7 +39,7 @@ stderr 'feature4: restacked on feature3'
 git branch
 cmp stdout $WORK/golden/main-branch.txt
 
-git log --decorate --oneline feature4
+git graph feature4
 cmp stdout $WORK/golden/feature4-log.txt
 
 -- repo/feature1.txt --
@@ -60,9 +60,9 @@ quux
   feature4
 * main
 -- golden/feature4-log.txt --
-379fe91 (feature4) Add feature4
-c6e0662 (feature3) Add feature3
-07b28ac (feature2) Add feature2
-86abde0 (feature1) Add feature1
-f8f027f (HEAD -> main) Add feature0
-9bad92b Initial commit
+* 379fe91 (feature4) Add feature4
+* c6e0662 (feature3) Add feature3
+* 07b28ac (feature2) Add feature2
+* 86abde0 (feature1) Add feature1
+* f8f027f (HEAD -> main) Add feature0
+* 9bad92b Initial commit

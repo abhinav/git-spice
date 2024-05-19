@@ -33,7 +33,7 @@ git add f1-s2-s.txt
 gs bc f1-s2-s -m 'Add feature 1 sub-feature 2 sub-feature'
 
 git checkout main
-git log --decorate --graph --branches --oneline
+git graph --branches
 cmp stdout $WORK/golden/git-log.txt
 
 # from main, 'bt' should fail in non-interactive mode

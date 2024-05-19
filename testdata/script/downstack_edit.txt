@@ -32,7 +32,7 @@ git checkout feature3
 gs downstack edit
 cmp $WORK/edit/got.txt $WORK/edit/want.txt
 
-git log --oneline --graph --decorate --branches
+git graph --branches
 cmp stdout $WORK/golden/log.txt
 
 # edit at bottom branch is meaningless

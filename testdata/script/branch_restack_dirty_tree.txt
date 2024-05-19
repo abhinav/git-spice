@@ -34,7 +34,7 @@ cmp init.txt $WORK/extra/init.3.txt
 git status --porcelain
 cmp stdout $WORK/golden/git-status.txt
 
-git log --decorate --oneline
+git graph
 cmp stdout $WORK/golden/git-log.txt
 
 -- repo/init.txt --
@@ -52,6 +52,6 @@ another file
 -- golden/git-status.txt --
  M init.txt
 -- golden/git-log.txt --
-973ebad (HEAD -> feature) modify init
-31b0f28 (main) Diverge
-9315e88 Initial commit
+* 973ebad (HEAD -> feature) modify init
+* 31b0f28 (main) Diverge
+* 9315e88 Initial commit

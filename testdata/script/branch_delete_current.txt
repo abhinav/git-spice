@@ -10,11 +10,11 @@ gs repo init
 
 git add foo.txt
 gs bc foo -m 'Add foo'
-git log --decorate --oneline --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/before.txt
 
 gs branch delete --force foo
-git log --decorate --oneline --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/after.txt
 
 -- repo/foo.txt --

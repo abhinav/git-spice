@@ -22,7 +22,7 @@ stderr 'branch foo needs to be restacked'
 gs branch restack
 gs branch fold
 
-git log --oneline --decorate --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/graph.txt
 
 -- repo/foo.txt --

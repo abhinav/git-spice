@@ -97,6 +97,7 @@ func TestScript(t *testing.T) {
 
 	defaultGitConfig := map[string]string{
 		"init.defaultBranch": "main",
+		"alias.graph":        "log --graph --decorate --oneline",
 	}
 
 	defaultEnv := make(map[string]string)

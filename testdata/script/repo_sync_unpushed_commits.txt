@@ -32,7 +32,7 @@ stderr 'feature1: #1 was merged'
 
 # now on main
 exists feature1.txt feature2.txt
-git log --branches --oneline --decorate --graph
+git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
 
 gh-dump-pull 1

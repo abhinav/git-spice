@@ -15,14 +15,14 @@ git add bar.txt
 gs bc bar -m 'Add bar.txt'
 
 # verify before state
-git log --oneline --decorate --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/git-log-before.txt
 
 # fold the branch
 gs branch fold
 
 # verify after state
-git log --oneline --decorate --graph --branches
+git graph --branches
 cmp stdout $WORK/golden/git-log-after.txt
 
 # verify the full stack

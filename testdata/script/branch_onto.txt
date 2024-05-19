@@ -27,7 +27,7 @@ gs branch onto feature1
 exists feature1.txt
 ! exists feature2.txt
 exists feature3.txt
-git log --decorate --graph --oneline --branches
+git graph --branches
 cmp stdout $WORK/golden/master-feature1-feature3.txt
 
 # Can't move trunk.

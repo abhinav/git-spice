@@ -11,13 +11,13 @@ gs repo init
 
 git add foo.txt
 gs bc foo -m 'add foo'
-git log --decorate --oneline foo
+git graph foo
 cmp stdout $WORK/golden/git-log-before.txt
 
 gs down
 git add bar.txt
 gs bc --insert bar -m 'add bar'
-git log --decorate --oneline foo
+git graph foo
 cmp stdout $WORK/golden/git-log-after.txt
 
 -- repo/foo.txt --
@@ -27,9 +27,9 @@ whatever
 something else
 
 -- golden/git-log-before.txt --
-4f4085d (HEAD -> foo) add foo
-9bad92b (main) Initial commit
+* 4f4085d (HEAD -> foo) add foo
+* 9bad92b (main) Initial commit
 -- golden/git-log-after.txt --
-e14e80f (foo) add foo
-0b259c0 (HEAD -> bar) add bar
-9bad92b (main) Initial commit
+* e14e80f (foo) add foo
+* 0b259c0 (HEAD -> bar) add bar
+* 9bad92b (main) Initial commit

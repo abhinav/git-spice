@@ -17,7 +17,7 @@ gs down
 gs bc head3 -m 'head3'
 gs down
 
-git log --graph --oneline head1 head2 head3
+git graph head1 head2 head3
 cmp stdout $WORK/golden/state-git-log.txt
 
 # cannot go up if there are multiple above
@@ -53,12 +53,12 @@ feed \r
 ┃ > head2
 ┃   head3
 -- golden/state-git-log.txt --
-* 524a964 head1
-| * 81559b1 head2
+* 524a964 (head1) head1
+| * 81559b1 (head2) head2
 |/  
-| * 155e1d0 head3
+| * 155e1d0 (head3) head3
 |/  
-* 9bad92b Initial commit
+* 9bad92b (HEAD -> main) Initial commit
 -- golden/git-branch.txt --
   head1
 * head2

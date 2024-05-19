@@ -23,7 +23,7 @@ git rebase feature1
 gs branch track
 stderr 'feature2: tracking with base feature1'
 
-git log --graph --oneline --decorate --branches
+git graph --branches
 cmp stdout $WORK/golden/log.txt
 
 -- repo/feature1.txt --

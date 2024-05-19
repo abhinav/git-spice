@@ -27,7 +27,7 @@ stderr 'bar: needs to be restacked'
 gs branch restack
 stderr 'bar: restacked on foo'
 
-git log bar --decorate --oneline
+git graph bar
 cmp stdout $WORK/golden/git-log.txt
 
 -- repo/foo.txt --
@@ -37,6 +37,6 @@ foo
 bar
 
 -- golden/git-log.txt --
-20836f3 (HEAD -> bar) Add bar
-c105eec (foo) Add foo
-9bad92b (main) Initial commit
+* 20836f3 (HEAD -> bar) Add bar
+* c105eec (foo) Add foo
+* 9bad92b (main) Initial commit

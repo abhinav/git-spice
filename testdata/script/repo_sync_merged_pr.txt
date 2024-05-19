@@ -27,7 +27,7 @@ stderr 'feature1: #1 was merged'
 # we should now be on main
 # and feature1 branch should be gone.
 exists feature1.txt
-git log --branches --oneline --decorate --graph
+git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
 
 gh-dump-pull 1
