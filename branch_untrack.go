@@ -11,7 +11,7 @@ import (
 )
 
 type branchUntrackCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch to untrack"`
+	Name string `arg:"" optional:"" help:"Name of the branch to untrack" predictor:"branches"`
 }
 
 func (*branchUntrackCmd) Help() string {

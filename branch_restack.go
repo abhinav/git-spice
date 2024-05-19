@@ -12,7 +12,7 @@ import (
 )
 
 type branchRestackCmd struct {
-	Name string `arg:"" optional:"" help:"Branch to restack"`
+	Name string `arg:"" optional:"" help:"Branch to restack" predictor:"trackedBranches"`
 }
 
 func (*branchRestackCmd) Help() string {

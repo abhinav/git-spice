@@ -15,8 +15,8 @@ import (
 )
 
 type repoInitCmd struct {
-	Trunk  string `placeholder:"BRANCH" help:"Name of the trunk branch"`
-	Remote string `placeholder:"NAME" help:"Name of the remote to push changes to"`
+	Trunk  string `placeholder:"BRANCH" predictor:"branches" help:"Name of the trunk branch"`
+	Remote string `placeholder:"NAME" predictor:"remotes" help:"Name of the remote to push changes to"`
 
 	Reset bool `help:"Reset the store if it's already initialized"`
 }

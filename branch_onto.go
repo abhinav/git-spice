@@ -12,8 +12,8 @@ import (
 )
 
 type branchOntoCmd struct {
-	Branch string `help:"Branch to move" placeholder:"NAME"`
-	Onto   string `arg:"" optional:"" help:"Destination branch"`
+	Branch string `help:"Branch to move" placeholder:"NAME" predictor:"trackedBranches"`
+	Onto   string `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
 }
 
 func (*branchOntoCmd) Help() string {

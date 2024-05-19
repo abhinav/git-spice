@@ -455,3 +455,28 @@ gs trunk (gg) [flags]
 
 Move to the trunk branch
 
+## gs complete
+
+```
+gs complete <shell> [flags]
+```
+
+Generate shell completion script
+
+Generates shell completion scripts for gs. To install the
+script, add the generated script to your shell's rc file.
+For example:
+
+	# bash
+	gs complete bash >> ~/.bashrc
+
+	# zsh
+	gs complete zsh >> ~/.zshrc
+
+	# fish
+	gs complete fish >> ~/.config/fish/config.fish
+
+**Arguments**
+
+* `shell`: Shell to generate completions for.
+

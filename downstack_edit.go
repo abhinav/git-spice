@@ -21,7 +21,7 @@ import (
 type downstackEditCmd struct {
 	Editor string `env:"EDITOR" help:"Editor to use for editing the downstack."`
 
-	Name string `arg:"" optional:"" help:"Name of the branch to start editing from."`
+	Name string `arg:"" optional:"" help:"Name of the branch to start editing from." predictor:"trackedBranches"`
 }
 
 func (*downstackEditCmd) Help() string {
