@@ -16,7 +16,7 @@ gs bc -m 'modify feature1'
 gs bco add-feature2
 gs bc -m 'add feature3'
 
-git log --decorate --graph --oneline --branches
+git graph --branches
 cmp stdout $WORK/golden/graph.txt
 
 -- golden/graph.txt --
