@@ -2,11 +2,14 @@ package gs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"unicode"
 
+	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
 )
@@ -60,16 +63,61 @@ func (s *Service) allBranches(ctx context.Context) ([]branchInfo, error) {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
 
-	infos := make([]branchInfo, len(names))
-	for i, name := range names {
+	infos := make([]branchInfo, 0, len(names))
+
+	deletes := make(map[string]*state.LookupResponse)
+	var update state.UpdateRequest
+	for _, name := range names {
 		resp, err := s.store.Lookup(ctx, name)
 		if err != nil {
 			return nil, fmt.Errorf("get branch %v: %w", name, err)
 		}
 
-		infos[i] = branchInfo{
+		// If the branch has been deleted out of band,
+		// pretend like it doesn't exist.
+		if _, err := s.repo.PeelToCommit(ctx, name); err != nil {
+			if !errors.Is(err, git.ErrNotExist) {
+				return nil, fmt.Errorf("resolve branch %q: %w", name, err)
+			}
+
+			log.Infof("%v: branch deleted outside gs: removing", name)
+			deletes[name] = resp
+			continue
+		}
+
+		// If the base branch of this branch has been deleted,
+		// use its base, or its base's base, and so on,
+		// and update the state to reflect the change.
+		var changed bool
+		for base, deleted := deletes[resp.Base]; deleted; base, deleted = deletes[resp.Base] {
+			resp.Base = base.Base
+			resp.BaseHash = base.BaseHash
+			changed = true
+		}
+
+		if changed {
+			update.Upserts = append(update.Upserts, state.UpsertRequest{
+				Name:     name,
+				Base:     resp.Base,
+				BaseHash: resp.BaseHash,
+			})
+		}
+
+		infos = append(infos, branchInfo{
 			Name:           name,
 			LookupResponse: resp,
+		})
+	}
+
+	if len(deletes) > 0 {
+		update.Deletes = make([]string, 0, len(deletes))
+		for name := range deletes {
+			update.Deletes = append(update.Deletes, name)
+		}
+
+		update.Message = "clean up deleted branches"
+		if err := s.store.Update(ctx, &update); err != nil {
+			log.Warn("Error updating state with deleted branches", "err", err)
 		}
 	}
 
