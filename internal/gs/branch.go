@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 	"unicode"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/state"
@@ -52,81 +52,280 @@ func GenerateBranchName(subject string) string {
 	return name.String()
 }
 
-type branchInfo struct {
+// LookupBranchResponse is the response to a LookupBranch request.
+// It includes information about the tracked branch.
+type LookupBranchResponse struct {
 	*state.LookupResponse
-	Name string
+
+	// Head is the commit at the head of the branch.
+	Head git.Hash
 }
 
-func (s *Service) allBranches(ctx context.Context) ([]branchInfo, error) {
+// DeletedBranchError is returned when a branch was deleted out of band.
+//
+// This error is used to indicate that the branch does not exist,
+// but its base might.
+type DeletedBranchError struct {
+	Name string
+
+	Base     string
+	BaseHash git.Hash
+}
+
+func (e *DeletedBranchError) Error() string {
+	return fmt.Sprintf("branch %v deleted outside gs", e.Name)
+}
+
+// LookupBranch returns information about a branch tracked by gs.
+//
+// If the branch was deleted out of band, a [DeletedBranchError] will be
+// returned but the branch will be left in the state.
+// If the branch is not tracked by gs, [state.ErrNotExist] will be returned.
+func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
+	resp, err := s.store.Lookup(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("get branch %v: %w", name, err)
+	}
+
+	head, err := s.repo.PeelToCommit(ctx, name)
+	if err != nil {
+		if !errors.Is(err, git.ErrNotExist) {
+			return nil, fmt.Errorf("resolve head: %w", err)
+		}
+
+		// If the branch was deleted out of band,
+		// pretend it doesn't exist.
+		return nil, &DeletedBranchError{
+			Name:     name,
+			Base:     resp.Base,
+			BaseHash: resp.BaseHash,
+		}
+	}
+
+	return &LookupBranchResponse{
+		LookupResponse: resp,
+		Head:           head,
+	}, nil
+}
+
+// ForgetBranch stops tracking a branch in gs,
+// updating the upstacks for it to point to its base.
+//
+// Returns an error matching [state.ErrNotExist] if the branch is not tracked.
+func (s *Service) ForgetBranch(ctx context.Context, name string) error {
+	// This does not use LookupBranch because we don't care if the branch
+	// doesn't exist, we just want to update the upstacks.
+	branch, err := s.store.Lookup(ctx, name)
+	if err != nil {
+		return fmt.Errorf("lookup branch: %w", err)
+	}
+
+	// Similarly, this doesn't use ListAbove
+	// because we don't want the deleted branch to be removed yet.
+	branchNames, err := s.store.List(ctx)
+	if err != nil {
+		return fmt.Errorf("list branches: %w", err)
+	}
+
+	update := state.UpdateRequest{
+		Message: fmt.Sprintf("untrack branch %q", name),
+		Deletes: []string{name},
+	}
+	for _, candidate := range branchNames {
+		if candidate == name {
+			continue
+		}
+
+		info, err := s.store.Lookup(ctx, candidate)
+		if err != nil {
+			return fmt.Errorf("lookup %v: %w", candidate, err)
+		}
+
+		if info.Base != name {
+			continue
+		}
+
+		update.Upserts = append(update.Upserts, state.UpsertRequest{
+			Name:     candidate,
+			Base:     branch.Base,
+			BaseHash: branch.BaseHash,
+		})
+	}
+
+	if err := s.store.Update(ctx, &update); err != nil {
+		return fmt.Errorf("forget branch: %w", err)
+	}
+
+	return nil
+}
+
+// RenameBranch renames a branch tracked by gs.
+// This handles both, renaming the branch in the repository,
+// and updating the internal state to reflect the new name.
+func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) error {
+	oldBranch, err := s.LookupBranch(ctx, oldName)
+	if err != nil {
+		return fmt.Errorf("lookup %v: %w", oldName, err)
+	}
+
+	// Verify new name is not already in use.
+	if _, err := s.repo.PeelToCommit(ctx, newName); err == nil {
+		// TODO: A force option should override this.
+		return fmt.Errorf("branch %v already exists", newName)
+	}
+
+	aboves, err := s.ListAbove(ctx, oldName)
+	if err != nil {
+		return fmt.Errorf("list branches above %v: %w", oldName, err)
+	}
+
+	if err := s.repo.RenameBranch(ctx, git.RenameBranchRequest{
+		OldName: oldName,
+		NewName: newName,
+	}); err != nil {
+		return fmt.Errorf("rename branch: %w", err)
+	}
+
+	update := state.UpdateRequest{
+		Message: fmt.Sprintf("rename %q to %q", oldName, newName),
+		Deletes: []string{oldName},
+		Upserts: []state.UpsertRequest{
+			{
+				Name:           newName,
+				Base:           oldBranch.Base,
+				BaseHash:       oldBranch.BaseHash,
+				PR:             oldBranch.PR,
+				UpstreamBranch: oldBranch.UpstreamBranch,
+			},
+		},
+	}
+	for _, above := range aboves {
+		update.Upserts = append(update.Upserts, state.UpsertRequest{
+			Name: above,
+			Base: newName,
+		})
+	}
+
+	if err := s.store.Update(ctx, &update); err != nil {
+		return fmt.Errorf("update state: %w", err)
+	}
+
+	return nil
+}
+
+// LoadBranchItem is a single branch returned by LoadBranches.
+type LoadBranchItem struct {
+	// Name is the name of the branch.
+	Name string
+
+	// Head is the commit at the head of the branch.
+	Head git.Hash
+
+	// Base is the name of the branch that this branch is based on.
+	Base string
+
+	// BaseHash is the last known commit hash of the base branch.
+	// This may not match the current commit hash of the base branch.
+	BaseHash git.Hash
+
+	// PR is the pull request number associated with the branch, if any.
+	PR int
+
+	// UpstreamBranch is the name under which this branch
+	// was pushed to the upstream repository.
+	UpstreamBranch string
+}
+
+// LoadBranches loads all branches tracked by gs and all their information
+// as a single operation.
+//
+// The returned branches are sorted by name.
+func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	names, err := s.store.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
 
-	infos := make([]branchInfo, 0, len(names))
+	items := make([]LoadBranchItem, 0, len(names))
 
-	deletes := make(map[string]*state.LookupResponse)
-	var update state.UpdateRequest
+	// These will be used if we encounter any branches
+	// that have been deleted out of band.
+	deletedBranches := make(map[string]*DeletedBranchError)
 	for _, name := range names {
-		resp, err := s.store.Lookup(ctx, name)
+		resp, err := s.LookupBranch(ctx, name)
 		if err != nil {
+			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
+				s.log.Infof("%v: removing...", delErr)
+				deletedBranches[name] = delErr
+				continue
+			}
+
 			return nil, fmt.Errorf("get branch %v: %w", name, err)
 		}
 
-		// If the branch has been deleted out of band,
-		// pretend like it doesn't exist.
-		if _, err := s.repo.PeelToCommit(ctx, name); err != nil {
-			if !errors.Is(err, git.ErrNotExist) {
-				return nil, fmt.Errorf("resolve branch %q: %w", name, err)
-			}
+		items = append(items, LoadBranchItem{
+			Name:           name,
+			Head:           resp.Head,
+			Base:           resp.Base,
+			BaseHash:       resp.BaseHash,
+			PR:             resp.PR,
+			UpstreamBranch: resp.UpstreamBranch,
+		})
+	}
 
-			log.Infof("%v: branch deleted outside gs: removing", name)
-			deletes[name] = resp
-			continue
-		}
+	slices.SortFunc(items, func(a, b LoadBranchItem) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
-		// If the base branch of this branch has been deleted,
-		// use its base, or its base's base, and so on,
-		// and update the state to reflect the change.
+	if len(deletedBranches) == 0 {
+		return items, nil
+	}
+
+	update := state.UpdateRequest{
+		Message: "clean up deleted branches",
+	}
+
+	update.Deletes = make([]string, 0, len(deletedBranches))
+	for name := range deletedBranches {
+		update.Deletes = append(update.Deletes, name)
+	}
+	sort.Strings(update.Deletes)
+
+	// Update bases of upstream branches of deleted branches.
+	//
+	// If a branch's base was deleted, use the base's base,
+	// or the base's base's base, and so on,
+	// until we find a base that is not deleted, or we reach trunk.
+	for i, item := range items {
 		var changed bool
-		for base, deleted := deletes[resp.Base]; deleted; base, deleted = deletes[resp.Base] {
-			resp.Base = base.Base
-			resp.BaseHash = base.BaseHash
+		delErr, deleted := deletedBranches[item.Base]
+		for deleted {
+			item.Base = delErr.Base
+			item.BaseHash = delErr.BaseHash
+			delErr, deleted = deletedBranches[item.Base]
 			changed = true
 		}
 
 		if changed {
+			items[i] = item
 			update.Upserts = append(update.Upserts, state.UpsertRequest{
-				Name:     name,
-				Base:     resp.Base,
-				BaseHash: resp.BaseHash,
+				Name:     item.Name,
+				Base:     item.Base,
+				BaseHash: item.BaseHash,
 			})
 		}
-
-		infos = append(infos, branchInfo{
-			Name:           name,
-			LookupResponse: resp,
-		})
 	}
 
-	if len(deletes) > 0 {
-		update.Deletes = make([]string, 0, len(deletes))
-		for name := range deletes {
-			update.Deletes = append(update.Deletes, name)
-		}
-
-		update.Message = "clean up deleted branches"
-		if err := s.store.Update(ctx, &update); err != nil {
-			log.Warn("Error updating state with deleted branches", "err", err)
-		}
+	if err := s.store.Update(ctx, &update); err != nil {
+		s.log.Warn("Error cleaning up after deleted branched", "err", err)
 	}
 
-	return infos, nil
+	return items, nil
 }
 
 func (s *Service) branchesByBase(ctx context.Context) (map[string][]string, error) {
 	branchesByBase := make(map[string][]string)
-	branches, err := s.allBranches(ctx)
+	branches, err := s.LoadBranches(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +342,7 @@ func (s *Service) branchesByBase(ctx context.Context) (map[string][]string, erro
 // The slice is empty if there are no branches above the given branch.
 func (s *Service) ListAbove(ctx context.Context, base string) ([]string, error) {
 	var children []string
-	branches, err := s.allBranches(ctx)
+	branches, err := s.LoadBranches(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -214,46 +413,74 @@ func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
 //
 // The given branch is the first element in the returned slice,
 // and the bottom-most branch is the last element.
+//
+// If there are no branches downstack because we're on trunk,
+// or because all branches are downstack from trunk have been deleted,
+// the returned slice will be nil.
 func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, error) {
-	if start == s.store.Trunk() {
-		return nil, nil // nothing downstack from trunk
-	}
-
-	downstacks := []string{start}
-	current := start
-	for {
-		b, err := s.store.Lookup(ctx, current)
-		if err != nil {
-			return nil, fmt.Errorf("lookup %v: %w", current, err)
+	var update state.UpdateRequest
+	defer func() {
+		if len(update.Upserts) == 0 {
+			return
 		}
 
-		if b.Base == s.store.Trunk() {
+		update.Message = "clean up deleted branches"
+		if err := s.store.Update(ctx, &update); err != nil {
+			s.log.Warn("Error cleaning up after deleted branched", "err", err)
+		}
+	}()
+
+	var (
+		downstacks []string
+		previous   string
+	)
+	current := start
+	for {
+		if current == s.store.Trunk() {
 			return downstacks, nil
 		}
 
-		current = b.Base
+		b, err := s.LookupBranch(ctx, current)
+		if err != nil {
+			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
+				// If branch was deleted out of band,
+				// pretend it doesn't exist,
+				// and update state to point the upstack branch
+				// to the base of the deleted branch.
+				//
+				// Leave the branch state as-is in case
+				// there are other upstacks that need to be updated.
+				current = delErr.Base
+				update.Upserts = append(update.Upserts, state.UpsertRequest{
+					Name: previous,
+					Base: current,
+				})
+				s.log.Infof("%v", delErr)
+				continue
+			}
+			return nil, fmt.Errorf("lookup %v: %w", current, err)
+		}
+
 		downstacks = append(downstacks, current)
+		previous, current = current, b.Base
 	}
 }
 
 // FindBottom returns the bottom-most branch in the downstack chain
 // starting at the given branch just before trunk.
+//
+// Returns an error if no downstack branches are found.
 func (s *Service) FindBottom(ctx context.Context, start string) (string, error) {
-	must.NotBeEqualf(start, s.store.Trunk(), "start branch must not be trunk")
-
-	current := start
-	for {
-		b, err := s.store.Lookup(ctx, current)
-		if err != nil {
-			return "", fmt.Errorf("lookup %v: %w", current, err)
-		}
-
-		if b.Base == s.store.Trunk() {
-			return current, nil
-		}
-
-		current = b.Base
+	downstacks, err := s.ListDownstack(ctx, start)
+	if err != nil {
+		return "", fmt.Errorf("get downstack branches: %w", err)
 	}
+
+	if len(downstacks) == 0 {
+		return "", fmt.Errorf("no downstack branches found")
+	}
+
+	return downstacks[len(downstacks)-1], nil
 }
 
 // ListStack returns the full stack of branches that the given branch is in.

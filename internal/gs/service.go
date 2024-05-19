@@ -35,7 +35,9 @@ type GitRepository interface {
 	// ListRemotes returns the names of all known remotes.
 	ListRemotes(ctx context.Context) ([]string, error)
 
-	Rebase(ctx context.Context, req git.RebaseRequest) error
+	Rebase(context.Context, git.RebaseRequest) error
+	RenameBranch(context.Context, git.RenameBranchRequest) error
+	DeleteBranch(context.Context, string, git.BranchDeleteOptions) error
 }
 
 var _ GitRepository = (*git.Repository)(nil)

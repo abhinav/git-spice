@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -47,7 +48,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	ontoHash, err := repo.PeelToCommit(ctx, cmd.Onto)
 	if err != nil {
-		return fmt.Errorf("peel to commit: %w", err)
+		return fmt.Errorf("resolve %v: %w", cmd.Onto, err)
 	}
 
 	store, err := ensureStore(ctx, repo, log, opts)
@@ -59,7 +60,9 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("cannot move trunk")
 	}
 
-	b, err := store.Lookup(ctx, cmd.Branch)
+	svc := gs.NewService(repo, store, log)
+
+	branch, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
@@ -67,14 +70,24 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	if b.Base == cmd.Onto {
+	if branch.Base == cmd.Onto {
 		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
 		return nil
 	}
 
+	// Onto must be tracked if it's not trunk.
+	if cmd.Onto != store.Trunk() {
+		if _, err := svc.LookupBranch(ctx, cmd.Onto); err != nil {
+			if errors.Is(err, state.ErrNotExist) {
+				return fmt.Errorf("branch not tracked: %s", cmd.Onto)
+			}
+			return fmt.Errorf("get branch: %w", err)
+		}
+	}
+
 	if err := repo.Rebase(ctx, git.RebaseRequest{
 		Branch:    cmd.Branch,
-		Upstream:  b.Base, // TODO: use fork point?
+		Upstream:  branch.Base, // TODO: use fork point?
 		Onto:      cmd.Onto,
 		Autostash: true,
 		Quiet:     true,

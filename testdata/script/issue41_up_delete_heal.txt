@@ -1,0 +1,41 @@
+# Reproduces https://github.com/abhinav/gs/issues/41
+
+as 'Test <test@example.com>'
+at '2024-05-19T09:05:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+# Delete feature1 out of band.
+git checkout main
+git branch -D feature1
+
+# gs up should gracefully handle the missing branch,
+# and we should end up on feature2.
+gs up
+stderr 'branch feature1 deleted outside gs'
+
+git branch --show-current
+stdout 'feature2'
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+feature1
+
+-- repo/feature2.txt --
+feature2
+
+-- golden/branches.txt --
+* a4db0a4 (HEAD -> feature2) Add feature2
+* 3a8c0b8 Add feature1
+* aaa8bab (main) Initial commit
