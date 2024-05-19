@@ -172,6 +172,7 @@ type mainCmd struct {
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 
+	Stack     stackCmd     `cmd:"" aliases:"s" group:"Stack"`
 	Upstack   upstackCmd   `cmd:"" aliases:"us" group:"Stack"`
 	Downstack downstackCmd `cmd:"" aliases:"ds" group:"Stack"`
 

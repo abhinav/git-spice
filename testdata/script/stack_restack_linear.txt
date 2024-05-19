@@ -1,0 +1,60 @@
+# Restack a stack of branches
+# from the middle of the stack.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a stack of 4 branches
+# on top of each other.
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+
+git add feature3.txt
+gs bc feature3 -m 'Add feature3'
+
+git add feature4.txt
+gs bc feature4 -m 'Add feature4'
+
+# go to main, make an edit.
+gs bco main
+cp $WORK/extra/feature0.txt .
+git add feature0.txt
+git commit -m 'Add feature0'
+
+# go to feature3 and restack the whole stack.
+git checkout feature3
+gs stack restack
+
+# should still be on feature3
+git branch --show-current
+stdout '^feature3$'
+
+git log --decorate --oneline --graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+foo
+-- repo/feature2.txt --
+bar
+-- repo/feature3.txt --
+baz
+-- repo/feature4.txt --
+qux
+-- extra/feature0.txt --
+quux
+-- golden/branches.txt --
+* 902a31a (feature4) Add feature4
+* d77470b (HEAD -> feature3) Add feature3
+* 3edfab3 (feature2) Add feature2
+* 77e2044 (feature1) Add feature1
+* 57660bd (main) Add feature0
+* 9bad92b Initial commit

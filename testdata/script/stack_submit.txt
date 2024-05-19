@@ -1,0 +1,154 @@
+# submit a stack of PRs with 'stack submit'.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+# submit the entire stack from the middle.
+git checkout feature1
+gs stack submit --fill
+cmpenv stderr $WORK/golden/submit-log.txt
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/start.json
+
+# Merge the bottom PR, sync, restack, and submit.
+gh-merge alice/example 1
+gs rs
+stderr '#1 was merged'
+gs srs  # stack restack
+gs ss   # stack submit
+stderr 'Updated #2'
+stderr 'Updated #3'
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pr-1-merged.json
+
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+
+-- golden/submit-log.txt --
+INF Created #1: $GITHUB_GIT_URL/alice/example/pull/1
+INF Created #2: $GITHUB_GIT_URL/alice/example/pull/2
+INF Created #3: $GITHUB_GIT_URL/alice/example/pull/3
+-- golden/start.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    },
+    "base": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "63b2d337c8172c9f79aec9c760efc95e3c0c8472"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    }
+  }
+]
+
+-- golden/pr-1-merged.json --
+[
+  {
+    "number": 1,
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "418d451b93d6d497541ea8a3670b5137834741e8"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "ce97ed17bf5f23059c1a32bc21ca4f9a9a5e4c26"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "418d451b93d6d497541ea8a3670b5137834741e8"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "html_url": "$GITHUB_GIT_URL/alice/example/pull/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "82da921d2f4531778b8ba0e3a7ad39713a6358ef"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "ce97ed17bf5f23059c1a32bc21ca4f9a9a5e4c26"
+    }
+  }
+]

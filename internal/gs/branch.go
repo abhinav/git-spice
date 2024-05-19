@@ -3,6 +3,7 @@ package gs
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -163,7 +164,8 @@ func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
 // ListDownstack lists all branches below the given branch
 // in the downstack chain, not including trunk.
 //
-// The given branch is the first element in the returned slice.
+// The given branch is the first element in the returned slice,
+// and the bottom-most branch is the last element.
 func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, error) {
 	if start == s.store.Trunk() {
 		return nil, nil // nothing downstack from trunk
@@ -204,4 +206,38 @@ func (s *Service) FindBottom(ctx context.Context, start string) (string, error) 
 
 		current = b.Base
 	}
+}
+
+// ListStack returns the full stack of branches that the given branch is in.
+//
+// If the start branch has multiple upstack branches,
+// all of them are included in the returned slice.
+// The result is ordered by branch position in the stack
+// with the bottom-most branch as the first element.
+func (s *Service) ListStack(ctx context.Context, start string) ([]string, error) {
+	var downstacks []string
+	if start != s.store.Trunk() {
+		var err error
+		downstacks, err = s.ListDownstack(ctx, start)
+		if err != nil {
+			return nil, fmt.Errorf("get downstack branches: %w", err)
+		}
+
+		must.NotBeEmptyf(downstacks, "downstack branches must not be empty")
+		must.BeEqualf(start, downstacks[0], "current branch must be first downstack")
+		downstacks = downstacks[1:] // Remove current branch from list
+		slices.Reverse(downstacks)
+	}
+
+	upstacks, err := s.ListUpstack(ctx, start)
+	if err != nil {
+		return nil, fmt.Errorf("get upstack branches: %w", err)
+	}
+	must.NotBeEmptyf(upstacks, "upstack branches must not be empty")
+	must.BeEqualf(start, upstacks[0], "current branch must be first upstack")
+
+	stack := make([]string, 0, len(downstacks)+len(upstacks))
+	stack = append(stack, downstacks...)
+	stack = append(stack, upstacks...)
+	return stack, nil
 }
