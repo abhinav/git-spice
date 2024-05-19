@@ -53,6 +53,27 @@ Pulls the latest changes from the remote repository.
 Deletes branches that have were merged into trunk,
 and updates the base branches of branches upstack from those.
 
+## gs stack submit
+
+```
+gs stack (s) submit (s) [flags]
+```
+
+Submit the current stack
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `--fill`: Fill in the pull request title and body from the commit messages
+
+## gs stack restack
+
+```
+gs stack (s) restack (rs)
+```
+
+Restack the current stack
+
 ## gs upstack restack
 
 ```
