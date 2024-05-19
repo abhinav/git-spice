@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/alecthomas/kong"
-	"github.com/posener/complete"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/ioutil"
@@ -55,21 +54,21 @@ func TestCommandRun(t *testing.T) {
 func TestKongPredictor(t *testing.T) {
 	// Helper to construct a complete.Args from a list of arguments.
 	// The last argument is what's being typed right now.
-	compLine := func(args ...string) complete.Args {
+	compLine := func(args ...string) Args {
 		if len(args) == 0 {
-			return complete.Args{}
+			return Args{}
 		}
 
 		completed := args[:len(args)-1]
 		last := args[len(args)-1]
-		return complete.Args{
+		return Args{
 			Completed: completed,
 			Last:      last,
 		}
 	}
 
 	type completeCase struct {
-		give complete.Args
+		give Args
 		want []string
 	}
 
@@ -294,9 +293,9 @@ func TestKongPredictor(t *testing.T) {
 				t.Fatalf("exit(%d)", code)
 			}
 
-			named := make(map[string]complete.Predictor)
+			named := make(map[string]Predictor)
 			for name, predictor := range tt.named {
-				named[name] = complete.PredictFunc(func(args complete.Args) []string {
+				named[name] = PredictFunc(func(args Args) []string {
 					return predictor(args.Completed, args.Last)
 				})
 			}

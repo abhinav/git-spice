@@ -34,14 +34,16 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/posener/complete"
+	"github.com/buildkite/shellwords"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -50,8 +52,10 @@ import (
 // - This package is inspired by https://github.com/WillAbides/kongplete,
 //   but it is a from-scratch implementation that more-or-less reimplements
 //   Kong's CLI parsing logic.
-// - We're not using complete/v2 because it does not expose
-//   the full argument list to predictors.
+// - It previously made use of github.com/posener/complete,
+//   but that required use of the now-deprecated v1 version of the package,
+//   as v2 did not provide sufficient control over the completion logic.
+//   So we interface with Bash directly instead.
 
 // Command is the command to run to generate the completion script.
 // It is intended to be used as a subcommand of the main CLI.
@@ -96,11 +100,25 @@ func (cmd *Command) Run(kctx *kong.Context) (err error) {
 
 	name := kctx.Model.Name
 	switch cmd.Shell {
-	case "bash":
-		fmt.Fprintf(out, "complete -C %s %s\n", exe, name)
-
 	case "zsh":
 		fmt.Fprintln(out, `autoload -U +X bashcompinit && bashcompinit`)
+		fallthrough // bash and zsh use the same logic
+	case "bash":
+		// complete is a bash built-in that arranges for exe
+		// to be called to request completions.
+		//
+		// exe will be called with some environment variables set.
+		// We care about:
+		//
+		//   - COMP_LINE: the current command line
+		//   - COMP_POINT: the cursor position
+		//
+		// The program must generate completions to stdout,
+		// one per line.
+		//
+		// Ref:
+		// https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion-Builtins.html#index-complete
+		// https://www.gnu.org/software/bash/manual/html_node/Bash-Variables.html#index-COMP_005fLINE
 		fmt.Fprintf(out, "complete -C %s %s\n", exe, name)
 
 	case "fish":
@@ -119,33 +137,121 @@ func (cmd *Command) Run(kctx *kong.Context) (err error) {
 	return nil
 }
 
+// Args holds the command line completion arguments.
+type Args struct {
+	// Completed is a list of arguments that have already been completed,
+	// preceding the argument currently being typed.
+	Completed []string
+
+	// Last is the typed portion of the current argument.
+	// Predictions will typically be matched against this.
+	Last string
+}
+
+func newArgs(line string, point int) Args {
+	// If the cursor is in the middle of the text,
+	// drop everything up to the cursor and the word under the cursor.
+	var last string
+	if point < len(line) {
+		line = line[:point]
+	}
+
+	if idx := strings.LastIndexByte(line, ' '); idx != -1 {
+		last = line[idx+1:]
+		line = line[:idx]
+	} else {
+		last = line
+	}
+
+	args, err := shellwords.SplitPosix(line)
+	if err != nil {
+		// If we can't parse the line, it's probably because
+		// we're in the middle of a quoted string or similar.
+		// Use basic splitting instead.
+		args = strings.Fields(line)
+	}
+	args = args[1:] // command name
+
+	return Args{
+		Completed: args,
+		Last:      last,
+	}
+}
+
+func (as Args) String() string {
+	return fmt.Sprintf("{completed: %q, last: %q}", as.Completed, as.Last)
+}
+
+// Predictor predicts completions for a given set of arguments.
+type Predictor interface {
+	Predict(Args) []string
+}
+
+type predictOr []Predictor
+
+func (p predictOr) Predict(cargs Args) (predictions []string) {
+	for _, predictor := range p {
+		predictions = append(predictions, predictor.Predict(cargs)...)
+	}
+	return predictions
+}
+
+// PredictFunc is a function that predicts completions for a set of arguments.
+type PredictFunc func(Args) []string
+
+// Predict calls the function to predict completions.
+func (f PredictFunc) Predict(cargs Args) []string {
+	return f(cargs)
+}
+
+// TODO: without a global
+var logf = func(string, ...any) {}
+
+func init() {
+	if os.Getenv("COMP_DEBUG") != "" {
+		logf = log.New(os.Stderr, "komplete: ", 0).Printf
+	}
+}
+
 // Run runs the CLI argument completer if the user has requested completions.
 // Otherwise, this is a no-op.
 func Run(parser *kong.Kong, opts ...Option) {
+	compLine := os.Getenv("COMP_LINE")
+	compPointStr := os.Getenv("COMP_POINT")
+	if compLine == "" {
+		return
+	}
+	logf("COMP_LINE: %q, COMP_POINT: %q", compLine, compPointStr)
+
+	compPoint, err := strconv.Atoi(compPointStr)
+	if err != nil {
+		logf("invalid COMP_POINT (%q): %v", compPointStr, err)
+		compPoint = len(compLine)
+	}
+	args := newArgs(compLine, compPoint)
+	logf("completion arguments: %v", args)
+
 	options := options{
-		named: make(map[string]complete.Predictor),
+		named: make(map[string]Predictor),
 	}
 	for _, opt := range opts {
 		opt(&options)
 	}
 
-	completer := complete.New(
-		parser.Model.Name,
-		complete.Command{
-			Args: newKongPredictor(parser.Model, options),
-		},
-	)
-	completer.Out = parser.Stdout
-	if done := completer.Complete(); done {
-		parser.Exit(0)
+	predictions := newKongPredictor(parser.Model, options).Predict(args)
+	stdout := parser.Stdout
+	for _, p := range predictions {
+		_, _ = fmt.Fprintln(stdout, p)
 	}
+
+	parser.Exit(0)
 }
 
 // Option customizes completion logic.
 type Option func(*options)
 
 type options struct {
-	named              map[string]complete.Predictor
+	named              map[string]Predictor
 	transformCompleted func([]string) []string
 }
 
@@ -162,7 +268,7 @@ type options struct {
 //	komplete.Run(parser,
 //		komplete.WithPredictor("branches", branchesPredictor),
 //	)
-func WithPredictor(name string, predictor complete.Predictor) Option {
+func WithPredictor(name string, predictor Predictor) Option {
 	return func(opts *options) {
 		opts.named[name] = predictor
 	}
@@ -177,19 +283,16 @@ func WithTransformCompleted(fn func([]string) []string) Option {
 	}
 }
 
-// kongPredictor is a [complete.Predictor] that interprets flags
+// kongPredictor is a [Predictor] that interprets flags
 // using Kong's CLI behaviors.
-//
-// It is intended to entirely replace complete.Command's flag and subcommand
-// behavior by being used as an Args predictor.
 type kongPredictor struct {
 	model *kong.Application
 
-	named              map[string]complete.Predictor // name => predictor
+	named              map[string]Predictor // name => predictor
 	transformCompleted func([]string) []string
 }
 
-var _ complete.Predictor = (*kongPredictor)(nil)
+var _ Predictor = (*kongPredictor)(nil)
 
 func newKongPredictor(model *kong.Application, opts options) *kongPredictor {
 	return &kongPredictor{
@@ -199,7 +302,7 @@ func newKongPredictor(model *kong.Application, opts options) *kongPredictor {
 	}
 }
 
-func (k *kongPredictor) Predict(cargs complete.Args) (predictions []string) {
+func (k *kongPredictor) Predict(cargs Args) (predictions []string) {
 	completed := cargs.Completed
 	if k.transformCompleted != nil {
 		completed = k.transformCompleted(completed)
@@ -215,7 +318,7 @@ func (k *kongPredictor) Predict(cargs complete.Args) (predictions []string) {
 	return (&prefixPredictor{Predictor: p}).Predict(cargs)
 }
 
-func (k *kongPredictor) findPredictor(node *kong.Node, scan *kong.Scanner) complete.Predictor {
+func (k *kongPredictor) findPredictor(node *kong.Node, scan *kong.Scanner) Predictor {
 	// Logic based on
 	// https://github.com/alecthomas/kong/blob/master/context.go#L370.
 
@@ -288,7 +391,7 @@ parser:
 				usedFlags[f.Name] = struct{}{}
 
 			case flagNotMatched:
-				complete.Log("unexpected flag: %v", token)
+				logf("unexpected flag: %v", token)
 				return nil
 
 			default:
@@ -297,7 +400,7 @@ parser:
 
 		case kong.FlagValueToken:
 			// Flag values are consumed in matchFlag.
-			complete.Log("unexpected flag value: %v", token)
+			logf("unexpected flag value: %v", token)
 			return nil
 
 		case kong.PositionalArgumentToken:
@@ -357,23 +460,23 @@ parser:
 						continue parser
 					}
 
-					complete.Log("failed to parse argument: %+v", err)
+					logf("failed to parse argument: %+v", err)
 				}
 			}
 
 			if !scan.Peek().IsEOL() {
 				// We have extra arguments. Stop predicting.
-				complete.Log("unexpected argument: %v (%v)", token, token.Type)
+				logf("unexpected argument: %v (%v)", token, token.Type)
 				return nil
 			}
 
 		default:
-			complete.Log("unexpected token: %v (%v)", token, token.Type)
+			logf("unexpected token: %v (%v)", token, token.Type)
 			return nil
 		}
 	}
 
-	var predictors []complete.Predictor
+	var predictors []Predictor
 	if positional < len(node.Positional) {
 		// If we haven't yet consumed all positional arguments of the
 		// current node, we can predict the next positional argument.
@@ -394,7 +497,7 @@ parser:
 		flags:    node.Flags,
 		used:     usedFlags,
 	})
-	return complete.PredictOr(predictors...)
+	return predictOr(predictors)
 }
 
 type flagStatus int
@@ -455,9 +558,9 @@ type subcommandPredictor struct {
 	parent *kong.Node
 }
 
-var _ complete.Predictor = (*subcommandPredictor)(nil)
+var _ Predictor = (*subcommandPredictor)(nil)
 
-func (p *subcommandPredictor) Predict(cargs complete.Args) []string {
+func (p *subcommandPredictor) Predict(cargs Args) []string {
 	var predictions []string
 	for _, child := range p.parent.Children {
 		if child.Type != kong.CommandNode || child.Hidden {
@@ -482,17 +585,17 @@ func (p *subcommandPredictor) Predict(cargs complete.Args) []string {
 
 type valuePredictor struct {
 	value *kong.Value
-	named map[string]complete.Predictor
+	named map[string]Predictor
 }
 
-var _ complete.Predictor = (*valuePredictor)(nil)
+var _ Predictor = (*valuePredictor)(nil)
 
-func (p *valuePredictor) Predict(cargs complete.Args) []string {
+func (p *valuePredictor) Predict(cargs Args) []string {
 	if name := p.value.Tag.Get("predictor"); name != "" {
 		if p, ok := p.named[name]; ok {
 			return p.Predict(cargs)
 		}
-		complete.Log("predictor not found: %s", name)
+		logf("predictor not found: %s", name)
 	}
 
 	if p.value.Enum != "" {
@@ -513,9 +616,9 @@ type flagsPredictor struct {
 	used     map[string]struct{}
 }
 
-var _ complete.Predictor = (*flagsPredictor)(nil)
+var _ Predictor = (*flagsPredictor)(nil)
 
-func (p *flagsPredictor) Predict(cargs complete.Args) (predictions []string) {
+func (p *flagsPredictor) Predict(cargs Args) (predictions []string) {
 	flagPrefix, _ := strings.CutPrefix(cargs.Last, "--")
 
 	flags := p.flags
@@ -548,10 +651,10 @@ func (p *flagsPredictor) Predict(cargs complete.Args) (predictions []string) {
 }
 
 type prefixPredictor struct {
-	complete.Predictor
+	Predictor
 }
 
-func (p *prefixPredictor) Predict(cargs complete.Args) (predictions []string) {
+func (p *prefixPredictor) Predict(cargs Args) (predictions []string) {
 	predictions = p.Predictor.Predict(cargs)
 	newPredictions := predictions[:0]
 	for _, prediction := range predictions {
