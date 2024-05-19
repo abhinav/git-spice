@@ -59,7 +59,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 	}
 
-	b, err := store.Lookup(ctx, cmd.Name)
+	b, err := svc.LookupBranch(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
 	}

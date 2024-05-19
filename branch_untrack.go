@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -42,18 +44,14 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return err
 	}
 
-	if _, err := store.Lookup(ctx, cmd.Name); err != nil {
-		return fmt.Errorf("branch already not tracked: %w", err)
-	}
+	svc := gs.NewService(repo, store, log)
 
-	// TODO: reject if there are upstream branches.
+	// TODO: prompt for confirmation?
+	if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return errors.New("branch not tracked")
+		}
 
-	// TODO: prompt for confirmation
-	err = store.Update(ctx, &state.UpdateRequest{
-		Deletes: []string{cmd.Name},
-		Message: fmt.Sprintf("untrack branch %q", cmd.Name),
-	})
-	if err != nil {
 		return fmt.Errorf("forget branch: %w", err)
 	}
 

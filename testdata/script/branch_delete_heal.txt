@@ -1,0 +1,67 @@
+# Deleting a tracked branch out-of-band,
+# and then running 'gs branch delete'
+# auto-heals the upstack of the deleted branch.
+
+as 'Test <test@example.com>'
+at '2024-05-19T14:30:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a stack with:
+#   main -> feature1 -> {feature2, feature3}
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+gs down
+git add feature3.txt
+gs bc -m feature3
+
+# sanity check
+git graph --branches
+cmp stdout $WORK/golden/before.txt
+
+# Delete feature1 branch out-of-band
+# and then run gs branch delete.
+git branch -D feature1
+
+gs branch delete feature1
+stderr 'branch has already been deleted'
+
+# state should have auto-healed.
+# feature3 should now have main as its base.
+gs down
+git branch --show-current
+stdout 'main'
+
+git graph --branches
+cmp stdout $WORK/golden/after.txt
+
+# TODO:
+# when 'gs ls' exists, check that feature1 is not listed.
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3
+
+-- golden/before.txt --
+* 762f63b (feature2) feature2
+| * 36a1e69 (HEAD -> feature3) feature3
+|/  
+* aa78494 (feature1) feature1
+* 102a190 (main) Initial commit
+-- golden/after.txt --
+* 762f63b (feature2) feature2
+| * 36a1e69 (feature3) feature3
+|/  
+* aa78494 feature1
+* 102a190 (HEAD -> main) Initial commit

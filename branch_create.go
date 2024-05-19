@@ -93,7 +93,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			return fmt.Errorf("--below cannot be used from  %v", trunk)
 		}
 
-		b, err := store.Lookup(ctx, currentBranch)
+		b, err := svc.LookupBranch(ctx, currentBranch)
 		if err != nil {
 			return fmt.Errorf("branch not tracked: %v", currentBranch)
 		}

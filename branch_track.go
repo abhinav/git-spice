@@ -131,10 +131,14 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	// Check if adding this connection would create a cycle.
+	// TODO: Perform this check in Store.Update,
+	// ensuring that 'branch onto' also checks for cycles.
 	path := []string{cmd.Name}
-	for branch := cmd.Base; branch != store.Trunk(); {
-		// TODO: Perform this check in Store.Update,
-		// ensuring that 'branch onto' also checks for cycles.
+	downstack, err := svc.ListDownstack(ctx, cmd.Base)
+	if err != nil {
+		return fmt.Errorf("list downstack: %w", err)
+	}
+	for _, branch := range downstack {
 		if slices.Contains(path, branch) {
 			path = append(path, branch)
 			slices.Reverse(path)
@@ -145,12 +149,6 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 
 		path = append(path, branch)
-
-		b, err := store.Lookup(ctx, branch)
-		if err != nil {
-			return fmt.Errorf("lookup branch: %w", err)
-		}
-		branch = b.Base
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)

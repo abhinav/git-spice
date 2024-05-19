@@ -30,7 +30,7 @@ git branch
 cmp stdout $WORK/golden/git_branch_feature1.output
 
 gs down
-stderr 'exiting stack: moving to trunk'
+stderr 'moving to trunk'
 git branch
 cmp stdout $WORK/golden/git_branch_main.output
 

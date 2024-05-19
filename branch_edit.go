@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -33,12 +34,14 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOpti
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	b, err := store.Lookup(ctx, currentBranch)
+	b, err := svc.LookupBranch(ctx, currentBranch)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return fmt.Errorf("branch not tracked: %s", currentBranch)

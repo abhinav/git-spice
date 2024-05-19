@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/text"
 	"golang.org/x/oauth2"
 )
@@ -45,7 +46,10 @@ func (*repoSyncCmd) Run(
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	remote, err := ensureRemote(ctx, repo, store, log, opts)
+	// TODO: move ensure remote to Service
 	if err != nil {
 		return err
 	}
@@ -212,19 +216,14 @@ func (*repoSyncCmd) Run(
 		prs      []int // prs[i] = PR for branches[i]
 	)
 	{
-		tracked, err := store.List(ctx)
+		tracked, err := svc.LoadBranches(ctx)
 		if err != nil {
 			return fmt.Errorf("list tracked branches: %w", err)
 		}
 
-		for _, branch := range tracked {
-			b, err := store.Lookup(ctx, branch)
-			if err != nil {
-				return fmt.Errorf("lookup branch %v: %w", branch, err)
-			}
-
+		for _, b := range tracked {
 			if b.PR != 0 {
-				branches = append(branches, branch)
+				branches = append(branches, b.Name)
 				prs = append(prs, b.PR)
 			}
 		}

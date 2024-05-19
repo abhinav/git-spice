@@ -76,7 +76,7 @@ func (cmd *branchSubmitCmd) Run(
 		cmd.Name = currentBranch
 	}
 
-	branch, err := store.Lookup(ctx, cmd.Name)
+	branch, err := svc.LookupBranch(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("lookup branch: %w", err)
 	}

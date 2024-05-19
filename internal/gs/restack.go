@@ -32,7 +32,7 @@ type RestackResponse struct {
 //
 // Returns [ErrAlreadyRestacked] if the branch does not need to be restacked.
 func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, error) {
-	b, err := s.store.Lookup(ctx, name)
+	b, err := s.LookupBranch(ctx, name)
 	if err != nil {
 		return nil, err // includes ErrNotExist
 	}
@@ -139,7 +139,7 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// is not its base branch's head.
 	//
 	// That is, the branch is not on top of its base branch's current head.
-	b, err := s.store.Lookup(ctx, name)
+	b, err := s.LookupBranch(ctx, name)
 	if err != nil {
 		return err // includes ErrNotExist
 	}

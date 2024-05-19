@@ -11,7 +11,7 @@ gs repo init
 
 git branch foo
 gs branch delete foo
-stderr 'not tracked by gs'
+stderr 'branch is not tracked'
 stderr 'deleting anyway'
 
 ! git rev-parse --verify foo

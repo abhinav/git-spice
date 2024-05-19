@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -35,25 +36,32 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) e
 		return err
 	}
 
+	svc := gs.NewService(repo, store, log)
+
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	trunk := store.Trunk()
-	if current == trunk {
-		return fmt.Errorf("%v: no branches found downstack", current)
-	}
-
-	b, err := store.Lookup(ctx, current)
+	downstack, err := svc.ListDownstack(ctx, current)
 	if err != nil {
-		return fmt.Errorf("look up branch %v: %w", current, err)
+		return fmt.Errorf("list downstacks: %w", err)
 	}
 
-	below := b.Base
-	if below == trunk {
-		log.Infof("exiting stack: moving to trunk: %v", trunk)
+	var below string
+	switch len(downstack) {
+	case 0:
+		return fmt.Errorf("%v: no branches found downstack", current)
+
+	case 1:
+		// Current branch is bottom of stack.
+		// Move to trunk.
+		log.Info("moving to trunk: end of stack")
+		below = store.Trunk()
+
+	default:
+		below = downstack[1]
 	}
 
 	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
