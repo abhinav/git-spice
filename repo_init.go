@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -23,17 +23,17 @@ type repoInitCmd struct {
 
 func (*repoInitCmd) Help() string {
 	return text.Dedent(`
-		Sets up a repository for use with gs.
+		Sets up a repository for use with git-spice.
 		This isn't strictly necessary to run as most commands will
 		auto-initialize the repository as needed.
 
 		Use the --trunk flag to specify the trunk branch.
 		This is typically 'main' or 'master',
-		and picking one is required for gs to function.
+		and picking one is required for git-spice to function.
 
 		Use the --remote flag to specify the remote to push changes to.
 		If a remote is not specified,
-		gs can still be used to stack branches locally.
+		git-spice can still be used to stack branches locally.
 		However, any commands that require a remote will fail.
 	`)
 }
@@ -46,18 +46,18 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	guesser := gs.Guesser{
-		Select: func(op gs.GuessOp, opts []string, selected string) (string, error) {
+	guesser := spice.Guesser{
+		Select: func(op spice.GuessOp, opts []string, selected string) (string, error) {
 			if !globalOpts.Prompt {
 				return "", errNoPrompt
 			}
 
 			var msg, desc string
 			switch op {
-			case gs.GuessRemote:
+			case spice.GuessRemote:
 				msg = "Please select a remote"
 				desc = "Merged changes will be pushed to this remote"
-			case gs.GuessTrunk:
+			case spice.GuessTrunk:
 				msg = "Please select the trunk branch"
 				desc = "Changes will be merged into this branch"
 			default:
@@ -115,7 +115,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 	return nil
 }
 
-// ensureStore will open the gs data store in the provided Git repository,
+// ensureStore will open the spice data store in the provided Git repository,
 // initializing it with `gs repo init` if it hasn't already been initialized.
 //
 // This allows nearly any other command to work without initialization
@@ -132,7 +132,7 @@ func ensureStore(
 	}
 
 	if errors.Is(err, state.ErrUninitialized) {
-		log.Info("Repository not initialized for use with gs. Initializing.")
+		log.Info("Repository not initialized for use with git-spice. Initializing.")
 		if err := (&repoInitCmd{}).Run(ctx, log, opts); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}
@@ -146,7 +146,7 @@ func ensureStore(
 
 func ensureRemote(
 	ctx context.Context,
-	repo gs.GitRepository,
+	repo spice.GitRepository,
 	store *state.Store,
 	log *log.Logger,
 	globals *globalOptions,
@@ -163,8 +163,8 @@ func ensureRemote(
 	// No remote was specified at init time.
 	// Guess or prompt for one and update the store.
 	log.Warn("No remote was specified at init time")
-	remote, err = (&gs.Guesser{
-		Select: func(_ gs.GuessOp, opts []string, selected string) (string, error) {
+	remote, err = (&spice.Guesser{
+		Select: func(_ spice.GuessOp, opts []string, selected string) (string, error) {
 			if !globals.Prompt {
 				return "", errNoPrompt
 			}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -36,7 +36,7 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) e
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {

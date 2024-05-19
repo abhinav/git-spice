@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -24,11 +24,11 @@ type branchTrackCmd struct {
 
 func (*branchTrackCmd) Help() string {
 	return text.Dedent(`
-		Starts tracking an existing branch with gs.
-		Use this to teach gs about branches created outside of gs,
+		Starts tracking an existing branch with git-spice.
+		Use this to teach git-spice about branches created outside of git-spice,
 		for example, with 'git checkout -b'.
 
-		gs will attempt to detect the base branch automatically.
+		git-spice will attempt to detect the base branch automatically.
 		You can override this with the --base flag.
 	`)
 }
@@ -53,7 +53,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	if cmd.Name == store.Trunk() {
 		return fmt.Errorf("cannot track trunk branch")
@@ -177,7 +177,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	log.Infof("%v: tracking with base %v", cmd.Name, cmd.Base)
 
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
-		if errors.Is(err, gs.ErrNeedsRestack) {
+		if errors.Is(err, spice.ErrNeedsRestack) {
 			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
 		}
 		log.Warnf("error checking branch: %v", err)

@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 )
 
 type stackRestackCmd struct{}
@@ -30,7 +30,7 @@ func (*stackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 	stack, err := svc.ListStack(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("list stack: %w", err)
@@ -46,7 +46,7 @@ loop:
 		res, err := svc.Restack(ctx, branch)
 		if err != nil {
 			switch {
-			case errors.Is(err, gs.ErrAlreadyRestacked):
+			case errors.Is(err, spice.ErrAlreadyRestacked):
 				// Log the "does not need to be restacked" message
 				// only for branches that are not the current branch.
 				if branch != currentBranch {

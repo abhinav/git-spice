@@ -46,7 +46,7 @@ type LookupResponse struct {
 	UpstreamBranch string
 }
 
-// Lookup returns information about a branch tracked by gs.
+// Lookup returns information about a branch tracked by git-spice.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error) {
 	state, err := s.lookupBranchState(ctx, name)

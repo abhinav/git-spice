@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"golang.org/x/oauth2"
 )
 
@@ -38,7 +38,7 @@ func (cmd *stackSubmitCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 	stack, err := svc.ListStack(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("list stack: %w", err)

@@ -10,8 +10,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 	"golang.org/x/oauth2"
@@ -66,7 +66,7 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	if cmd.Name == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)

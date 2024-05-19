@@ -11,7 +11,7 @@ import (
 type versionFlag bool
 
 func (v versionFlag) BeforeReset(app *kong.Kong) error {
-	fmt.Fprint(app.Stdout, "gs ", _version)
+	fmt.Fprint(app.Stdout, "git-spice ", _version)
 	if report := generateBuildReport(); report != "" {
 		fmt.Fprintf(app.Stdout, " (%s)", report)
 	}

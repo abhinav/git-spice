@@ -1,4 +1,4 @@
-// gs is a command line tool to manage a stack of GitHub pull requests.
+// git-spice is a command line tool for stacking Git branches.
 package main
 
 import (
@@ -54,7 +54,7 @@ func main() {
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
-		kong.Description("gs is a command line tool to manage stacks of GitHub pull requests."),
+		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.Vars{
@@ -157,11 +157,11 @@ func main() {
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		logger.Fatalf("gs: %v", err)
+		logger.Fatalf("git-spice: %v", err)
 	}
 
 	if err := kctx.Run(); err != nil {
-		logger.Fatalf("gs: %v", err)
+		logger.Fatalf("git-spice: %v", err)
 	}
 }
 
@@ -169,7 +169,7 @@ type globalOptions struct {
 	// Flags that are not accessed directly by command implementations:
 
 	Version versionFlag        `help:"Print version information and quit"`
-	Verbose bool               `short:"v" help:"Enable verbose output" env:"GS_VERBOSE"`
+	Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
 	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
 
 	// Flags that are accessed directly:

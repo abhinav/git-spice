@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -37,7 +37,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
@@ -52,7 +52,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	tracked, exists := true, true
 	base := store.Trunk()
 	if b, err := svc.LookupBranch(ctx, cmd.Name); err != nil {
-		if delErr := new(gs.DeletedBranchError); errors.As(err, &delErr) {
+		if delErr := new(spice.DeletedBranchError); errors.As(err, &delErr) {
 			exists = false
 			log.Info("branch has already been deleted", "branch", cmd.Name)
 		} else if errors.Is(err, state.ErrNotExist) {

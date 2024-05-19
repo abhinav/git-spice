@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 )
 
 type branchCheckoutCmd struct {
@@ -27,7 +27,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
@@ -36,9 +36,9 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
 		switch {
-		case errors.Is(err, gs.ErrNeedsRestack):
+		case errors.Is(err, spice.ErrNeedsRestack):
 			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
-		case errors.Is(err, gs.ErrNotExist):
+		case errors.Is(err, spice.ErrNotExist):
 			// TODO: in interactive mode, prompt to track.
 			if store.Trunk() != cmd.Name {
 				log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
