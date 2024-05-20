@@ -49,7 +49,6 @@ jobs:
     - name: Test
       run: make test TEST_FLAGS=-v
       shell: bash
-
     # TODO:
     # - name: Test
     #   run: make cover
@@ -58,3 +57,13 @@ jobs:
     #   uses: codecov/codecov-action@v4
     #   with:
     #     files: ./cover.out
+
+  # Depends on lint and test.
+  # Stable name for branch protection to require
+  # instead of adding lint and test there directly.
+  ok:
+    name: OK
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+    - run: echo "OK"
