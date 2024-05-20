@@ -16,6 +16,9 @@ type GitRepository interface {
 	// This is a commit that is an ancestor of both commits.
 	MergeBase(ctx context.Context, a, b string) (git.Hash, error)
 
+	// IsAncestor reports whether commit a is an ancestor of commit b.
+	IsAncestor(ctx context.Context, a, b git.Hash) bool
+
 	// ForkPoint reports the git hash at which branch b
 	// forked from branch a.
 	ForkPoint(ctx context.Context, a, b string) (git.Hash, error)

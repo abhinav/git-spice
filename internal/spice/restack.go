@@ -9,10 +9,6 @@ import (
 	"go.abhg.dev/gs/internal/state"
 )
 
-// ErrNeedsRestack indicates that a branch should be restacked
-// on top of its base branch.
-var ErrNeedsRestack = errors.New("branch needs to be restacked")
-
 // ErrNotExist indicates that a branch is not tracked.
 var ErrNotExist = git.ErrNotExist
 
@@ -25,8 +21,6 @@ type RestackResponse struct {
 	Base string
 }
 
-// TODO: Should we be using --is-ancestor to check if a branch is on top of another?
-
 // Restack restacks the given branch on top of its base branch,
 // handling movement of the base branch if necessary.
 //
@@ -37,42 +31,21 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		return nil, err // includes ErrNotExist
 	}
 
-	baseHash, err := s.repo.PeelToCommit(ctx, b.Base)
-	if err != nil {
-		// TODO:
-		// Base branch has been deleted.
-		// Suggest a means of repairing this:
-		// possibly by prompting to select a different base branch.
-		if errors.Is(err, git.ErrNotExist) {
-			return nil, fmt.Errorf("base branch %v does not exist", b.Base)
-		}
-		return nil, fmt.Errorf("peel to commit: %w", err)
-	}
-
-	// Case:
-	// The branch is already on top of its base branch.
-	mergeBase, err := s.repo.MergeBase(ctx, name, b.Base)
-	if err == nil && mergeBase == baseHash {
-		if mergeBase != b.BaseHash {
-			// If our information is stale,
-			// update the base hash stored in state.
-			err := s.store.Update(ctx, &state.UpdateRequest{
-				Upserts: []state.UpsertRequest{
-					{
-						Name:     name,
-						BaseHash: mergeBase,
-					},
-				},
-				Message: fmt.Sprintf("branch %v was restacked externally", name),
-			})
-			if err != nil {
-				s.log.Warnf("failed to update state with new base hash: %v", err)
-			}
-		}
-
+	err = s.VerifyRestacked(ctx, name)
+	if err == nil {
+		// Case:
+		// The branch is already on top of its base branch
 		return nil, ErrAlreadyRestacked
 	}
+	var restackErr *BranchNeedsRestackError
+	if !errors.As(err, &restackErr) {
+		return nil, fmt.Errorf("verify restacked: %w", err)
+	}
 
+	// The branch needs to be restacked on top of its base branch.
+	// We will proceed with the restack.
+
+	baseHash := restackErr.BaseHash
 	upstream := b.BaseHash
 	// Case:
 	// Current branch has diverged from what the target branch
@@ -126,6 +99,21 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	}, nil
 }
 
+// BranchNeedsRestackError is returned by [Service.VerifyRestacked]
+// when a branch needs to be restacked.
+type BranchNeedsRestackError struct {
+	// Base is the name of the base branch for the branch.
+	Base string
+
+	// BaseHash is the hash of the base branch.
+	// Note that this is the actual hash, not the hash stored in state.
+	BaseHash git.Hash
+}
+
+func (e *BranchNeedsRestackError) Error() string {
+	return fmt.Sprintf("branch needs to be restacked on top of %v", e.Base)
+}
+
 // VerifyRestacked verifies that the branch is on top of its base branch.
 // This also updates the base branch hash if the hash is out of date,
 // but the branch is restacked properly.
@@ -144,9 +132,6 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 		return err // includes ErrNotExist
 	}
 
-	// TODO: a lot of the logic is shared with Restack.
-	// See if we can implement this via a DryRun option in Restack.
-
 	baseHash, err := s.repo.PeelToCommit(ctx, b.Base)
 	if err != nil {
 		if errors.Is(err, git.ErrNotExist) {
@@ -155,18 +140,15 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 		return fmt.Errorf("find commit for %v: %w", b.Base, err)
 	}
 
-	mergeBase, err := s.repo.MergeBase(ctx, name, b.Base)
-	if err != nil {
-		return fmt.Errorf("merge-base(%v, %v): %w", name, b.Base, err)
-	}
-
-	// Branch needs to be restacked.
-	if baseHash != mergeBase {
-		return ErrNeedsRestack
+	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
+		return &BranchNeedsRestackError{
+			Base:     b.Base,
+			BaseHash: baseHash,
+		}
 	}
 
 	// Branch does not need to be restacked
-	// but the base hash stored in state is out of date.
+	// but the base hash stored in state may be out of date.
 	if b.BaseHash != baseHash {
 		req := state.UpdateRequest{
 			Upserts: []state.UpsertRequest{

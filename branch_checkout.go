@@ -35,8 +35,9 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 	}
 
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+		var restackErr *spice.BranchNeedsRestackError
 		switch {
-		case errors.Is(err, spice.ErrNeedsRestack):
+		case errors.As(err, &restackErr):
 			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
 		case errors.Is(err, spice.ErrNotExist):
 			// TODO: in interactive mode, prompt to track.
