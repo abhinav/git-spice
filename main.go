@@ -196,11 +196,11 @@ type mainCmd struct {
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
 	// Navigation
-	Up     upCmd     `cmd:"" aliases:"gu" group:"Navigation" help:"Move up one branch"`
-	Down   downCmd   `cmd:"" aliases:"gd" group:"Navigation" help:"Move down one branch"`
-	Top    topCmd    `cmd:"" aliases:"gt" group:"Navigation" help:"Move to the top of the stack"`
-	Bottom bottomCmd `cmd:"" aliases:"gb" group:"Navigation" help:"Move to the bottom of the stack"`
-	Trunk  trunkCmd  `cmd:"" aliases:"gg" group:"Navigation" help:"Move to the trunk branch"`
+	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`
+	Down   downCmd   `cmd:"" aliases:"d" group:"Navigation" help:"Move down one branch"`
+	Top    topCmd    `cmd:"" aliases:"U" group:"Navigation" help:"Move to the top of the stack"`
+	Bottom bottomCmd `cmd:"" aliases:"D" group:"Navigation" help:"Move to the bottom of the stack"`
+	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk branch"`
 
 	// Other
 	Complete completeCmd `name:"complete" cmd:"" group:"System" help:"Generate shell completion script"`
