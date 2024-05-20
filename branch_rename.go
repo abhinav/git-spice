@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -19,7 +19,7 @@ type branchRenameCmd struct {
 
 func (*branchRenameCmd) Help() string {
 	return text.Dedent(`
-		Renames a branch tracked by gs,
+		Renames a branch tracked by git-spice,
 		updating internal references to the branch.
 
 		If you renamed a branch without using this command,
@@ -51,7 +51,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 	if err := svc.RenameBranch(ctx, oldName, cmd.Name); err != nil {
 		return fmt.Errorf("rename branch: %w", err)
 	}

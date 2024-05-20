@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -65,7 +65,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 	trunk := store.Trunk()
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
@@ -141,7 +141,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			return fmt.Errorf("get commit subject: %w", err)
 		}
 
-		cmd.Name = gs.GenerateBranchName(subject)
+		cmd.Name = spice.GenerateBranchName(subject)
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{

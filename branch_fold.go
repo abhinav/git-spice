@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -38,7 +38,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	if cmd.Name == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -50,9 +50,9 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
 		switch {
-		case errors.Is(err, gs.ErrNotExist):
+		case errors.Is(err, spice.ErrNotExist):
 			return fmt.Errorf("branch %v not tracked", cmd.Name)
-		case errors.Is(err, gs.ErrNeedsRestack):
+		case errors.Is(err, spice.ErrNeedsRestack):
 			return fmt.Errorf("branch %v needs to be restacked before it can be folded", cmd.Name)
 		default:
 			return fmt.Errorf("verify restacked: %w", err)

@@ -13,8 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -64,7 +64,7 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return errors.New("cannot edit below trunk")
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	downstacks, err := svc.ListDownstack(ctx, cmd.Name)
 	if err != nil {
@@ -159,7 +159,7 @@ var _editFooter = `
 `
 
 func createEditFile(branches []string) (_ string, err error) {
-	file, err := os.CreateTemp("", "gs-edit-*.txt")
+	file, err := os.CreateTemp("", "spice-edit-*.txt")
 	if err != nil {
 		return "", fmt.Errorf("create temporary file: %w", err)
 	}

@@ -14,8 +14,8 @@ import (
 
 const (
 	_dataRef     = "refs/gs/data"
-	_authorName  = "gs"
-	_authorEmail = "gs@localhost"
+	_authorName  = "git-spice"
+	_authorEmail = "git-spice@localhost"
 )
 
 // GitRepository is the subset of the git.Repository API used by the state package.

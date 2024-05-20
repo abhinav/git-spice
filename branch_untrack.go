@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -18,9 +18,9 @@ type branchUntrackCmd struct {
 
 func (*branchUntrackCmd) Help() string {
 	return text.Dedent(`
-		Removes information about a tracked branch from gs.
-		Use this to forget about branches that were deleted outside gs,
-		or those that are no longer relevant.
+		Removes information about a tracked branch from git-spice.
+		Use this to forget about branches that were deleted outside
+		git-spice, or those that are no longer relevant.
 	`)
 }
 
@@ -44,7 +44,7 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	// TODO: prompt for confirmation?
 	if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {

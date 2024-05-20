@@ -4,7 +4,7 @@
 gs <command> [flags]
 ```
 
-gs is a command line tool to manage stacks of GitHub pull requests.
+git-spice is a command line tool for stacking Git branches.
 
 **Global flags**
 
@@ -22,17 +22,17 @@ gs repo (r) init (i) [flags]
 
 Initialize a repository
 
-Sets up a repository for use with gs.
+Sets up a repository for use with git-spice.
 This isn't strictly necessary to run as most commands will
 auto-initialize the repository as needed.
 
 Use the --trunk flag to specify the trunk branch.
 This is typically 'main' or 'master',
-and picking one is required for gs to function.
+and picking one is required for git-spice to function.
 
 Use the --remote flag to specify the remote to push changes to.
 If a remote is not specified,
-gs can still be used to stack branches locally.
+git-spice can still be used to stack branches locally.
 However, any commands that require a remote will fail.
 
 **Flags**
@@ -144,13 +144,13 @@ Branches deleted from the list will also not be modified.
 gs branch (b) track (tr) [<name>] [flags]
 ```
 
-Track a branch with gs
+Track a branch with git-spice
 
-Starts tracking an existing branch with gs.
-Use this to teach gs about branches created outside of gs,
+Starts tracking an existing branch with git-spice.
+Use this to teach git-spice about branches created outside of git-spice,
 for example, with 'git checkout -b'.
 
-gs will attempt to detect the base branch automatically.
+git-spice will attempt to detect the base branch automatically.
 You can override this with the --base flag.
 
 **Arguments**
@@ -167,11 +167,11 @@ You can override this with the --base flag.
 gs branch (b) untrack (untr) [<name>]
 ```
 
-Forget a branch tracked with gs
+Forget a branch tracked with git-spice
 
-Removes information about a tracked branch from gs.
-Use this to forget about branches that were deleted outside gs,
-or those that are no longer relevant.
+Removes information about a tracked branch from git-spice.
+Use this to forget about branches that were deleted outside
+git-spice, or those that are no longer relevant.
 
 **Arguments**
 
@@ -308,7 +308,7 @@ gs branch (b) rename (mv) [<name>]
 
 Rename a branch
 
-Renames a branch tracked by gs,
+Renames a branch tracked by git-spice,
 updating internal references to the branch.
 
 If you renamed a branch without using this command,
@@ -463,9 +463,9 @@ gs complete <shell> [flags]
 
 Generate shell completion script
 
-Generates shell completion scripts for gs. To install the
-script, add the generated script to your shell's rc file.
-For example:
+Generates shell completion scripts for git-spice.
+To install the script, add the generated script to your shell's
+rc file. For example:
 
 	# bash
 	gs complete bash >> ~/.bashrc

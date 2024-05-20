@@ -1,5 +1,5 @@
-// Package gs intends to provide the core functionality of the gs tool.
-package gs
+// Package spice intends to provide the core functionality of the git-spice tool.
+package spice
 
 import (
 	"context"
@@ -64,7 +64,7 @@ type BranchStore interface {
 
 var _ BranchStore = (*state.Store)(nil)
 
-// Service provides the core functionality of the gs tool.
+// Service provides the core functionality of the git-spice tool.
 type Service struct {
 	repo  GitRepository
 	store BranchStore

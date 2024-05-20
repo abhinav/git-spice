@@ -1,4 +1,4 @@
-# gs
+# git-spice
 
 TODO
 

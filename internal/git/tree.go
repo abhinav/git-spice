@@ -17,7 +17,7 @@ import (
 // Mode is the octal file mode of a Git tree entry.
 type Mode int
 
-// List of modes that gs cares about.
+// List of modes that git-spice cares about.
 // Git recognizes a few more, but we don't use them.
 const (
 	ZeroMode    Mode = 0o000000
@@ -232,7 +232,7 @@ type BlobInfo struct {
 // returning the new tree hash.
 func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ Hash, err error) {
 	// Use a temporary index file to update the tree.
-	indexFile, err := osutil.TempFilePath("", "gs-index-*")
+	indexFile, err := osutil.TempFilePath("", "spice-index-*")
 	if err != nil {
 		return ZeroHash, fmt.Errorf("create index: %w", err)
 	}

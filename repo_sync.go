@@ -10,7 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/gs"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"golang.org/x/oauth2"
 )
@@ -46,7 +46,7 @@ func (*repoSyncCmd) Run(
 		return err
 	}
 
-	svc := gs.NewService(repo, store, log)
+	svc := spice.NewService(repo, store, log)
 
 	remote, err := ensureRemote(ctx, repo, store, log, opts)
 	// TODO: move ensure remote to Service
@@ -288,7 +288,7 @@ func (*repoSyncCmd) Run(
 	// If --restack is set, restack the affected branches
 	// (or restack just the branches in this stack?)
 	// For this, we need the Delete operation to report the affected
-	// branches, which means it has to be refactored into a gs-level
+	// branches, which means it has to be refactored into a spice-level
 	// operation first.
 	return nil
 }
