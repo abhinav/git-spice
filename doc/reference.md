@@ -402,7 +402,7 @@ as you update a branch in the middle of the stack.
 ## gs up
 
 ```
-gs up (gu) [flags]
+gs up (u) [<n>] [flags]
 ```
 
 Move up one branch
@@ -411,10 +411,14 @@ Moves up the stack to the branch on top of the current one.
 If there are multiple branches with the current branch as base,
 you will be prompted to pick one.
 
+**Arguments**
+
+* `n`: Number of branches to move up.
+
 ## gs down
 
 ```
-gs down (gd) [flags]
+gs down (d) [<n>] [flags]
 ```
 
 Move down one branch
@@ -424,10 +428,14 @@ As a convenience,
 if the current branch is at the bottom of the stack,
 this command will move to the trunk branch.
 
+**Arguments**
+
+* `n`: Number of branches to move up.
+
 ## gs top
 
 ```
-gs top (gt) [flags]
+gs top (U) [flags]
 ```
 
 Move to the top of the stack
@@ -439,7 +447,7 @@ you will be prompted to pick one.
 ## gs bottom
 
 ```
-gs bottom (gb) [flags]
+gs bottom (D) [flags]
 ```
 
 Move to the bottom of the stack
@@ -450,7 +458,7 @@ This is the branch just above the trunk.
 ## gs trunk
 
 ```
-gs trunk (gg) [flags]
+gs trunk [flags]
 ```
 
 Move to the trunk branch
