@@ -12,15 +12,19 @@ export PATH := $(GOBIN):$(PATH)
 export GOEXPERIMENT = rangefunc
 
 TEST_FLAGS ?= -race
+STITCHMD_FLAGS ?= -o README.md -preface doc/preface.txt doc/SUMMARY.md
 
 GS = bin/gs
 MOCKGEN = bin/mockgen
-TOOLS = $(MOCKGEN) $(GS)
+STITCHMD = bin/stitchmd
+TOOLS = $(MOCKGEN) $(GS) $(STITCHMD)
 
 # Non-test Go files.
 GO_SRC_FILES = $(shell find . \
 	   -path '*/.*' -prune -o \
 	   '(' -type f -a -name '*.go' -a -not -name '*_test.go' ')' -print)
+
+DOC_MD_FILES = $(shell find doc -name '*.md')
 
 .PHONY: all
 all: build lint test
@@ -29,7 +33,7 @@ all: build lint test
 build: $(GS)
 
 .PHONY: lint
-lint: golangci-lint tidy-lint generate-lint
+lint: golangci-lint tidy-lint generate-lint stitchmd-lint
 
 .PHONY: generate
 generate: $(TOOLS)
@@ -47,6 +51,12 @@ cover:
 .PHONY: tidy
 tidy:
 	go mod tidy
+
+.PHONY: stitchmd
+stitchmd: README.md
+
+README.md: $(STITCHMD) $(DOC_MD_FILES)
+	stitchmd $(STITCHMD_FLAGS)
 
 .PHONY: golangci-lint
 golangci-lint:
@@ -66,8 +76,24 @@ generate-lint: $(TOOLS)
 		git diff --exit-code || \
 		(echo "'go generate' changed files" && false)
 
+# stitchmd-lint depends on generate-lint
+# because that updates doc/reference.md.
+# In the future, that can be make-managed.
+.PHONE: stitchmd-lint
+stitchmd-lint: $(STITCHMD) generate-lint
+	@echo "[lint] stitchmd"
+	@DIFF=$$($(STITCHMD) -diff $(STITCHMD_FLAGS)); \
+	if [[ -n "$$DIFF" ]]; then \
+		echo "stitchmd would change README:"; \
+		echo "$$DIFF"; \
+		false; \
+	fi \
+
 $(GS): $(GO_SRC_FILES)
 	go install go.abhg.dev/gs
 
 $(MOCKGEN): go.mod
 	go install go.uber.org/mock/mockgen
+
+$(STITCHMD): go.mod
+	go install go.abhg.dev/stitchmd

@@ -1,17 +1,4 @@
-<!-- DO NOT EDIT. This file is generated from doc/*.md. Edit those instead. -->
-
-# git-spice
-
-- [Introduction](#introduction)
-- [License](#license)
-
-## Introduction
-
-git-spice is a tool for stacking Git branches.
-
-TODO: more details
-
-## License
+# License
 
 This software is distributed under the GPL-3.0 License:
 
@@ -38,6 +25,4 @@ See LICENSE for details.
 As an exception to the above, the following files are distributed
 under a different license. See the file headers for details:
 
-```
-internal/komplete/komplete.go
-```
+    internal/komplete/komplete.go
