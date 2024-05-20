@@ -64,6 +64,26 @@ gs trunk
 git branch
 cmp stdout $WORK/golden/git_branch_main.output
 
+# up [N]
+gs up 3
+git branch
+cmp stdout $WORK/golden/git_branch_feature3.output
+
+# up [N] out of bounds
+gs up 5
+git branch
+cmp stdout $WORK/golden/git_branch_feature5.output
+
+# down [N]
+gs down 2
+git branch
+cmp stdout $WORK/golden/git_branch_feature3.output
+
+# down [N] out of bounds
+gs down 5
+git branch
+cmp stdout $WORK/golden/git_branch_main.output
+
 -- golden/git_branch_main.output --
   feature1
   feature2

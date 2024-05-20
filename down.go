@@ -11,7 +11,7 @@ import (
 )
 
 type downCmd struct {
-	// TODO: arg for number of branches to move down
+	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
 }
 
 func (*downCmd) Help() string {
@@ -23,7 +23,7 @@ func (*downCmd) Help() string {
 	`)
 }
 
-func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -44,24 +44,35 @@ func (*downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) e
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	downstack, err := svc.ListDownstack(ctx, current)
-	if err != nil {
-		return fmt.Errorf("list downstacks: %w", err)
-	}
-
 	var below string
-	switch len(downstack) {
-	case 0:
-		return fmt.Errorf("%v: no branches found downstack", current)
+outer:
+	for range cmd.N {
+		downstack, err := svc.ListDownstack(ctx, current)
+		if err != nil {
+			return fmt.Errorf("list downstacks: %w", err)
+		}
 
-	case 1:
-		// Current branch is bottom of stack.
-		// Move to trunk.
-		log.Info("moving to trunk: end of stack")
-		below = store.Trunk()
+		switch len(downstack) {
+		case 0:
+			if below != "" {
+				// If we've already moved up once,
+				// and there are no branches above the current one,
+				// we're done.
+				break outer
+			}
+			return fmt.Errorf("%v: no branches found downstack", current)
 
-	default:
-		below = downstack[1]
+		case 1:
+			// Current branch is bottom of stack.
+			// Move to trunk.
+			log.Info("moving to trunk: end of stack")
+			below = store.Trunk()
+
+		default:
+			below = downstack[1]
+		}
+
+		current = below
 	}
 
 	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
