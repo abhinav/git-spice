@@ -2,8 +2,8 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
 	"sort"
 
 	"go.abhg.dev/gs/internal/git"
@@ -25,7 +25,7 @@ func (s *Store) Remote() (string, error) {
 }
 
 // ErrNotExist indicates that a key that was expected to exist does not exist.
-var ErrNotExist = os.ErrNotExist
+var ErrNotExist = errors.New("does not exist in store")
 
 // LookupResponse is the response to a Lookup request.
 type LookupResponse struct {

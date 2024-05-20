@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/state"
 )
 
 type branchCheckoutCmd struct {
@@ -39,11 +40,13 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		switch {
 		case errors.As(err, &restackErr):
 			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
-		case errors.Is(err, spice.ErrNotExist):
+		case errors.Is(err, state.ErrNotExist):
 			// TODO: in interactive mode, prompt to track.
 			if store.Trunk() != cmd.Name {
 				log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
 			}
+		case errors.Is(err, git.ErrNotExist):
+			return fmt.Errorf("branch %q does not exist", cmd.Name)
 		default:
 			log.Warnf("error checking branch: %v", err)
 		}

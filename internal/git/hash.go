@@ -2,12 +2,12 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
 )
 
 // ErrNotExist is returned when a Git object does not exist.
-var ErrNotExist = os.ErrNotExist
+var ErrNotExist = errors.New("does not exist")
 
 // Hash is a 40-character Git object ID.
 type Hash string

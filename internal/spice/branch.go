@@ -78,23 +78,40 @@ func (e *DeletedBranchError) Error() string {
 
 // LookupBranch returns information about a branch tracked by gs.
 //
-// If the branch was deleted out of band, a [DeletedBranchError] will be
-// returned but the branch will be left in the state.
-// If the branch is not tracked by git-spice, [state.ErrNotExist] will be returned.
+// It returns [git.ErrNotExist] if the branch is nt known to the repository,
+// [state.ErrNotExist] if the branch is not tracked by git-spice,
+// or a [DeletedBranchError] if the branch is tracked, but was deleted out of band.
 func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
-	resp, err := s.store.Lookup(ctx, name)
-	if err != nil {
-		return nil, fmt.Errorf("get branch %v: %w", name, err)
+	resp, storeErr := s.store.Lookup(ctx, name)
+	head, gitErr := s.repo.PeelToCommit(ctx, name)
+
+	// Handle all scenarios:
+	//
+	// storeErr | gitErr | Result
+	// ---------|--------|-------
+	// nil      | nil    | Branch exists and is tracked
+	// nil      | !nil   | Branch is tracked, but was deleted out of band
+	// !nil     | nil    | Branch is not tracked
+	// !nil     | !nil   | Branch is not known to the repository
+	if storeErr == nil && gitErr == nil {
+		return &LookupBranchResponse{
+			LookupResponse: resp,
+			Head:           head,
+		}, nil
 	}
 
-	head, err := s.repo.PeelToCommit(ctx, name)
-	if err != nil {
-		if !errors.Is(err, git.ErrNotExist) {
-			return nil, fmt.Errorf("resolve head: %w", err)
+	// Only one of these errors is set.
+	if (storeErr != nil) != (gitErr != nil) {
+		// Branch is not tracked, but exists in the repository.
+		if storeErr != nil {
+			return nil, fmt.Errorf("lookup branch: %w", storeErr)
 		}
 
-		// If the branch was deleted out of band,
-		// pretend it doesn't exist.
+		if !errors.Is(gitErr, git.ErrNotExist) {
+			return nil, fmt.Errorf("resolve head: %w", gitErr)
+		}
+
+		// Branch is tracked, but was deleted out of band.
 		return nil, &DeletedBranchError{
 			Name:     name,
 			Base:     resp.Base,
@@ -102,10 +119,18 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 		}
 	}
 
-	return &LookupBranchResponse{
-		LookupResponse: resp,
-		Head:           head,
-	}, nil
+	// Both errors are set.
+	// If the branch is not known to the repository,
+	// return the git error.
+	if errors.Is(gitErr, git.ErrNotExist) {
+		return nil, fmt.Errorf("resolve head: %w", gitErr)
+	}
+
+	// Otherwise, something went wrong. Surface both errors.
+	return nil, errors.Join(
+		fmt.Errorf("lookup branch: %w", storeErr),
+		fmt.Errorf("resolve head: %w", gitErr),
+	)
 }
 
 // ForgetBranch stops tracking a branch in git-spice,

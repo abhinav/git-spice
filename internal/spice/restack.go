@@ -9,9 +9,6 @@ import (
 	"go.abhg.dev/gs/internal/state"
 )
 
-// ErrNotExist indicates that a branch is not tracked.
-var ErrNotExist = git.ErrNotExist
-
 // ErrAlreadyRestacked indicates that a branch is already restacked
 // on top of its base.
 var ErrAlreadyRestacked = errors.New("branch is already restacked")
@@ -119,7 +116,7 @@ func (e *BranchNeedsRestackError) Error() string {
 // but the branch is restacked properly.
 //
 // It returns [ErrNeedsRestack] if the branch needs to be restacked,
-// and [ErrNotExist] if the branch is not tracked.
+// [state.ErrNotExist] if the branch is not tracked.
 // Any other error indicates a problem with checking the branch.
 func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// A branch needs to be restacked if
@@ -129,7 +126,7 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// That is, the branch is not on top of its base branch's current head.
 	b, err := s.LookupBranch(ctx, name)
 	if err != nil {
-		return err // includes ErrNotExist
+		return err
 	}
 
 	baseHash, err := s.repo.PeelToCommit(ctx, b.Base)
