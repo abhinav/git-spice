@@ -31,6 +31,7 @@ jobs:
       with:
         mode: ${{ github.event_name == 'pull_request_target' && 'write' || 'check' }}
         summary: doc/SUMMARY.md
+        preface: doc/preface.txt
         output: README.md
 
     - uses: stefanzweifel/git-auto-commit-action@v5
