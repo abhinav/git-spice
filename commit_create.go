@@ -38,5 +38,6 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("commit: %w", err)
 	}
 
+	// TODO: handle not tracked
 	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }
