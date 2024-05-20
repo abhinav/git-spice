@@ -39,5 +39,6 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("commit: %w", err)
 	}
 
+	// TODO: handle not tracked
 	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

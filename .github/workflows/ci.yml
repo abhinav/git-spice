@@ -65,5 +65,14 @@ jobs:
     name: OK
     runs-on: ubuntu-latest
     needs: [lint, test]
+
+    # Workaround for GitHub marking this job as skipped,
+    # and allowing a bad PR to merge anyway.
+    if: always()
     steps:
-    - run: echo "OK"
+    - run: exit 1
+      if: >-
+        needs.lint.result != 'success' ||
+        needs.test.result != 'success'
+
+    - run: exit 0
