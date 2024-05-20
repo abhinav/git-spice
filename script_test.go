@@ -30,20 +30,7 @@ func TestMain(m *testing.M) {
 			main()
 			return 0
 		},
-
-		// mockedit <input>:
-		//
-		// An EDITOR that writes the contents of MOCKEDIT_GIVE
-		// into <input>.
-		// If MOCKEDIT_GIVE is not set, returns an error.
-		//
-		// If MOCKEDIT_RECORD is set, it will also copy the contents
-		// of <input> into that file.
-		"mockedit": func() int {
-			mockedit.Run()
-			return 0
-		},
-
+		"mockedit": mockedit.Main,
 		// with-term file -- cmd [args ...]
 		//
 		// Runs the given command inside a terminal emulator,

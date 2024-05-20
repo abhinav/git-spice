@@ -15,12 +15,28 @@ package mockedit
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/osutil"
 )
 
-// Run runs the mock editor and exits the process.
-func Run() {
+// Main runs the mock editor and exits the process.
+// Usage:
+//
+//	mockedit <file>
+//
+// mockedit writes the contents of MOCKEDIT_GIVE into the given file.
+// If MOCKEDIT_GIVE is not set, the file is returned unchanged.
+// If MOCKEDIT_RECORD is set, it will also copy the contents of <file> into it.
+//
+// If both MOCKEDIT_GIVE and MOCKEDIT_RECORD are unset, mockedit will fail.
+func Main() (exitCode int) {
 	log.SetFlags(0)
 	flag.Parse()
 
@@ -35,25 +51,83 @@ func Run() {
 		log.Fatalf("read %s: %s", input, err)
 	}
 
-	if record := os.Getenv("MOCKEDIT_RECORD"); record != "" {
+	give := os.Getenv("MOCKEDIT_GIVE")
+	record := os.Getenv("MOCKEDIT_RECORD")
+	if give == "" && record == "" {
+		log.Fatalf("unexpected edit, got:\n%s", string(data))
+	}
+
+	if record != "" {
 		if err := os.WriteFile(record, data, 0o644); err != nil {
 			log.Fatalf("write %s: %s", record, err)
 		}
 	}
 
-	give := os.Getenv("MOCKEDIT_GIVE")
-	if give == "" {
-		log.Fatalf("unexpected edit, got:\n%s", string(data))
+	if give != "" {
+		bs, err := os.ReadFile(give)
+		if err != nil {
+			log.Fatalf("read %s: %s", give, err)
+		}
+
+		if err := os.WriteFile(input, bs, 0o644); err != nil {
+			log.Fatalf("write %s: %s", input, err)
+		}
 	}
 
-	bs, err := os.ReadFile(give)
-	if err != nil {
-		log.Fatalf("read %s: %s", give, err)
-	}
+	return 0
+}
 
-	if err := os.WriteFile(input, bs, 0o644); err != nil {
-		log.Fatalf("write %s: %s", input, err)
-	}
+// Handle controls the behavior of the mock editor.
+type Handle struct {
+	t testing.TB
 
-	os.Exit(0)
+	dir    string // temporary working directory
+	record string // file to record the input
+}
+
+// Expect tells mockedit to expect a new edit operation.
+//
+// By default, following an Expect call,
+// mockedit will write back the file unchanged.
+//
+// Use Give to specify the contents to write back.
+func Expect(t testing.TB) *Handle {
+	dir := t.TempDir()
+	record, err := osutil.TempFilePath(dir, "mockedit-record")
+	require.NoError(t, err)
+
+	t.Setenv("EDITOR", "mockedit")
+	t.Setenv("MOCKEDIT_RECORD", record)
+
+	return &Handle{
+		t:      t,
+		dir:    dir,
+		record: record,
+	}
+}
+
+// Give tells mockedit to write the given contents back
+// for the next edit operation.
+func (e *Handle) Give(contents string) *Handle {
+	giveFile := filepath.Join(e.dir, "mockedit-give")
+	require.NoError(e.t, os.WriteFile(giveFile, []byte(contents), 0o644))
+	e.t.Setenv("MOCKEDIT_GIVE", giveFile)
+	return e
+}
+
+// GiveLines is a convenience method to give multiple lines of contents.
+func (e *Handle) GiveLines(lines ...string) *Handle {
+	var s strings.Builder
+	for _, line := range lines {
+		fmt.Fprintln(&s, line)
+	}
+	return e.Give(s.String())
+}
+
+// Got reports the contents of the recorded file.
+// This must be called only after an edit operation.
+func (e *Handle) Got() string {
+	bs, err := os.ReadFile(e.record)
+	require.NoError(e.t, err)
+	return string(bs)
 }
