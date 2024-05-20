@@ -51,7 +51,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		switch {
-		case errors.Is(err, spice.ErrNotExist):
+		case errors.Is(err, state.ErrNotExist):
 			return fmt.Errorf("branch %v not tracked", cmd.Name)
 		case errors.As(err, &restackErr):
 			return fmt.Errorf("branch %v needs to be restacked before it can be folded", cmd.Name)

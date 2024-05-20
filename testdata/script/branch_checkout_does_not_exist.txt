@@ -1,0 +1,17 @@
+# 'branch checkout' does not print the incorrect message
+# when the branch does not exist.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+! gs branch checkout does-not-exist
+cmp stderr $WORK/golden/expected.txt
+
+-- golden/expected.txt --
+FTL git-spice: branch "does-not-exist" does not exist

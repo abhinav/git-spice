@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -47,7 +48,7 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 	res, err := svc.Restack(ctx, cmd.Name)
 	if err != nil {
 		switch {
-		case errors.Is(err, spice.ErrNotExist):
+		case errors.Is(err, state.ErrNotExist):
 			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
 			return errors.New("untracked branch")
 		case errors.Is(err, spice.ErrAlreadyRestacked):
