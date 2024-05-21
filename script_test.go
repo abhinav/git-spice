@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"net/mail"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,6 +16,7 @@ import (
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
 	"go.abhg.dev/gs/internal/gh/ghtest"
+	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/termtest"
@@ -62,24 +62,8 @@ func TestScript(t *testing.T) {
 
 	type testingTBKey struct{}
 
-	defaultGitConfig := map[string]string{
-		"init.defaultBranch": "main",
-		"alias.graph":        "log --graph --decorate --oneline",
-	}
-
-	defaultEnv := make(map[string]string)
+	defaultEnv := gittest.DefaultConfig().EnvMap()
 	defaultEnv["EDITOR"] = "mockedit"
-
-	// We can set Git configuration values by setting
-	// GIT_CONFIG_KEY_<n>, GIT_CONFIG_VALUE_<n> and GIT_CONFIG_COUNT.
-	var numCfg int
-	for k, v := range defaultGitConfig {
-		n := strconv.Itoa(numCfg)
-		defaultEnv["GIT_CONFIG_KEY_"+n] = k
-		defaultEnv["GIT_CONFIG_VALUE_"+n] = v
-		numCfg++
-	}
-	defaultEnv["GIT_CONFIG_COUNT"] = strconv.Itoa(numCfg)
 
 	// Add a default author to all commits.
 	// Tests can override with 'as' and 'at'.
@@ -102,9 +86,9 @@ func TestScript(t *testing.T) {
 			return nil
 		},
 		Cmds: map[string]func(*testscript.TestScript, bool, []string){
-			"git":        cmdGit,
-			"as":         cmdAs,
-			"at":         cmdAt,
+			"git":        gittest.CmdGit,
+			"as":         gittest.CmdAs,
+			"at":         gittest.CmdAt,
 			"cmpenvJSON": cmdCmpenvJSON,
 
 			// Sets up a fake GitHub server.
@@ -267,48 +251,6 @@ func TestScript(t *testing.T) {
 			},
 		},
 	})
-}
-
-func cmdGit(ts *testscript.TestScript, neg bool, args []string) {
-	err := ts.Exec("git", args...)
-	if neg {
-		if err == nil {
-			ts.Fatalf("unexpected success, expected failure")
-		}
-	} else {
-		ts.Check(err)
-	}
-}
-
-func cmdAs(ts *testscript.TestScript, neg bool, args []string) {
-	if neg || len(args) != 1 {
-		ts.Fatalf("usage: as 'User Name <user@example.com>'")
-	}
-
-	addr, err := mail.ParseAddress(args[0])
-	if err != nil {
-		ts.Fatalf("invalid email address: %s", err)
-	}
-
-	ts.Setenv("GIT_AUTHOR_NAME", addr.Name)
-	ts.Setenv("GIT_AUTHOR_EMAIL", addr.Address)
-	ts.Setenv("GIT_COMMITTER_NAME", addr.Name)
-	ts.Setenv("GIT_COMMITTER_EMAIL", addr.Address)
-}
-
-func cmdAt(ts *testscript.TestScript, neg bool, args []string) {
-	if neg || len(args) != 1 {
-		ts.Fatalf("usage: at <YYYY-MM-DDTHH:MM:SS>")
-	}
-
-	t, err := time.Parse(time.RFC3339, args[0])
-	if err != nil {
-		ts.Fatalf("invalid time: %s", err)
-	}
-
-	gitTime := t.Format(time.RFC3339)
-	ts.Setenv("GIT_AUTHOR_DATE", gitTime)
-	ts.Setenv("GIT_COMMITTER_DATE", gitTime)
 }
 
 func cmdCmpenvJSON(ts *testscript.TestScript, neg bool, args []string) {
