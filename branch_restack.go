@@ -47,7 +47,17 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 	svc := spice.NewService(repo, store, log)
 	res, err := svc.Restack(ctx, cmd.Name)
 	if err != nil {
+		var rebaseErr *git.RebaseInterruptError
 		switch {
+		case errors.As(err, &rebaseErr):
+			// If the rebase is interrupted by a conflict,
+			// we'll resume by re-running this command.
+			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     rebaseErr,
+				Command: []string{"branch", "restack", cmd.Name},
+				Branch:  cmd.Name,
+				Message: fmt.Sprintf("interrupted: restack branch %s", cmd.Name),
+			})
 		case errors.Is(err, state.ErrNotExist):
 			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
 			return errors.New("untracked branch")

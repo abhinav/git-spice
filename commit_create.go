@@ -38,7 +38,7 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if _, err := repo.RebaseState(); err == nil {
+	if _, err := repo.RebaseState(ctx); err == nil {
 		// In the middle of a rebase.
 		// Don't restack upstack branches.
 		return nil

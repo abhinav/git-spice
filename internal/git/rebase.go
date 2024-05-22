@@ -12,9 +12,53 @@ import (
 	"go.abhg.dev/gs/internal/must"
 )
 
-// ErrRebaseInterrupted is returned when a rebase operation is interrupted
-// because of a
-var ErrRebaseInterrupted = errors.New("rebase interrupted")
+// RebaseInterruptKind specifies the kind of rebase interruption.
+type RebaseInterruptKind int
+
+const (
+	// RebaseInterruptConflict indicates that a rebase operation
+	// was interrupted due to a conflict.
+	RebaseInterruptConflict RebaseInterruptKind = iota
+
+	// RebaseInterruptDeliberate indicates that a rebase operation
+	// was interrupted deliberately by the user.
+	// This is usually done to edit the rebase instructions.
+	RebaseInterruptDeliberate
+)
+
+// RebaseInterruptError indicates that a rebasing operation was interrupted.
+// It includes the kind of interruption and the current rebase state.
+type RebaseInterruptError struct {
+	Kind  RebaseInterruptKind
+	State *RebaseState // always non-nil
+
+	// Err is non-nil only if the rebase operation failed
+	// due to a conflict.
+	Err error
+}
+
+func (e *RebaseInterruptError) Error() string {
+	var msg strings.Builder
+	msg.WriteString("rebase")
+	if e.State != nil {
+		fmt.Fprintf(&msg, " of %s", e.State.Branch)
+	}
+	msg.WriteString(" interrupted")
+	switch e.Kind {
+	case RebaseInterruptConflict:
+		msg.WriteString(" by a conflict")
+	case RebaseInterruptDeliberate:
+		msg.WriteString(" deliberately")
+	}
+	if e.Err != nil {
+		fmt.Fprintf(&msg, ": %v", e.Err)
+	}
+	return msg.String()
+}
+
+func (e *RebaseInterruptError) Unwrap() error {
+	return e.Err
+}
 
 // RebaseRequest is a request to rebase a branch.
 type RebaseRequest struct {
@@ -43,31 +87,11 @@ type RebaseRequest struct {
 	// with a list of rebase instructions to edit
 	// before starting the rebase operation.
 	Interactive bool
-
-	// InterruptFunc, if set, is called if a rebase operation
-	// is interrupted because of a conflict,
-	// or because the user an instruction to pause the rebase
-	// (e.g. 'edit' or 'break').
-	//
-	// The Rebase function will return the error returned by this function.
-	InterruptFunc func(context.Context, *RebaseState, RebaseInterruptKind) error
 }
 
-// RebaseInterruptKind specifies the kind of rebase interrupt.
-type RebaseInterruptKind int
-
-const (
-	// RebaseInterruptDeliberate indicates that the rebase was interrupted
-	// because the user deliberately paused the rebase operation
-	// (e.g. by using the 'edit' or 'break' instruction).
-	RebaseInterruptDeliberate RebaseInterruptKind = iota
-
-	// RebaseInterruptConflict indicates that the rebase was interrupted
-	// because of a conflict.
-	RebaseInterruptConflict
-)
-
 // Rebase runs a git rebase operation with the specified parameters.
+// It returns [ErrRebaseInterrupted] or [ErrRebaseConflict] for known
+// rebase interruptions.
 func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 	args := []string{"rebase"}
 	if req.Interactive {
@@ -91,41 +115,56 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 
 	cmd := r.gitCmd(ctx, args...)
 	if req.Interactive {
-		cmd.Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stderr)
+		cmd.Stdin(os.Stdin).Stdout(os.Stdout)
 	}
 
 	if err := cmd.Run(r.exec); err != nil {
-		originalErr := err
-		if exitErr := new(exec.ExitError); !errors.As(err, &exitErr) {
-			return fmt.Errorf("rebase: %w", err)
-		}
+		return r.handleRebaseError(ctx, err)
+	}
+	return r.handleRebaseFinish(ctx)
+}
 
-		// If the rebase operation actually ran, but failed,
-		// we might be in the middle of a rebase operation.
-		state, err := r.RebaseState()
-		if err != nil {
-			// Rebase probably failed for a different reason,
-			// so no need to log the state read failure verbosely.
-			r.log.Debug("Failed to read rebase state: %v", err)
-			return originalErr
-		}
+// RebaseContinue continues an ongoing rebase operation.
+func (r *Repository) RebaseContinue(ctx context.Context) error {
+	cmd := r.gitCmd(ctx, "rebase", "--continue").Stdin(os.Stdin).Stdout(os.Stdout)
+	if err := cmd.Run(r.exec); err != nil {
+		return r.handleRebaseError(ctx, err)
+	}
+	return r.handleRebaseFinish(ctx)
+}
 
-		if req.InterruptFunc == nil {
-			// The rebase failed, but we don't have a way to handle it.
-			// Return ErrRebaseInterrupted.
-			return errors.Join(ErrRebaseInterrupted, originalErr)
-		}
-
-		return req.InterruptFunc(ctx, state, RebaseInterruptConflict)
+func (r *Repository) handleRebaseError(ctx context.Context, err error) error {
+	originalErr := err
+	if exitErr := new(exec.ExitError); !errors.As(err, &exitErr) {
+		return fmt.Errorf("rebase: %w", err)
 	}
 
+	// If the rebase operation actually ran, but failed,
+	// we might be in the middle of a rebase operation.
+	state, err := r.RebaseState(ctx)
+	if err != nil {
+		// Rebase probably failed for a different reason,
+		// so no need to log the state read failure verbosely.
+		r.log.Debug("Failed to read rebase state: %v", err)
+		return originalErr
+	}
+
+	return &RebaseInterruptError{
+		Err:   originalErr,
+		Kind:  RebaseInterruptConflict,
+		State: state,
+	}
+}
+
+func (r *Repository) handleRebaseFinish(ctx context.Context) error {
 	// If we have rebase state after a successful return,
 	// this was a deliberate break or edit.
-	if state, err := r.RebaseState(); err == nil {
-		if req.InterruptFunc == nil {
-			return ErrRebaseInterrupted
+	if state, err := r.RebaseState(ctx); err == nil {
+		return &RebaseInterruptError{
+			Kind:  RebaseInterruptDeliberate,
+			State: state,
+			// TODO: should we include stderr as an Error
 		}
-		return req.InterruptFunc(ctx, state, RebaseInterruptDeliberate)
 	}
 
 	return nil
@@ -184,7 +223,7 @@ var ErrNoRebase = errors.New("no rebase in progress")
 
 // RebaseState loads information about an ongoing rebase,
 // or [ErrNoRebase] if no rebase is in progress.
-func (r *Repository) RebaseState() (*RebaseState, error) {
+func (r *Repository) RebaseState(context.Context) (*RebaseState, error) {
 	// Rebase state is stored inside .git/rebase-merge or .git/rebase-apply
 	// depending on the backend in use.
 	// See https://github.com/git/git/blob/d8ab1d464d07baa30e5a180eb33b3f9aa5c93adf/wt-status.c#L1711.

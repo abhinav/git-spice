@@ -1,0 +1,66 @@
+# 'branch edit' with a 'break' instruction
+# can continue work afterwards with a 'rebase continue'.
+
+as 'Test <test@example.com>'
+at '2024-05-27T13:57:09Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m 'Add feature 1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature 2' feature2
+
+git add feature3.txt
+gs bc -m 'Add feature 3' feature3
+
+gs bottom
+
+# Run a 'gs branch edit', and add a 'break' instruction
+# at the top of the rebase TODO.
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/rebase-todo.txt
+! gs branch edit
+stderr 'The rebase operation was interrupted'
+stderr '  gs rebase continue'
+stderr '  gs rebase abort'
+
+# Add a new commit.
+git add feature1-part2.txt
+gs cc -m 'Add part 2 of feature 1'
+
+gs rebase continue
+stderr 'feature2: restacked'
+stderr 'feature3: restacked'
+
+# current branch should be back to feature1
+git branch --show-current
+stdout 'feature1'
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+Contents of feature 1.
+
+-- repo/feature2.txt --
+Contents of feature 2.
+
+-- repo/feature3.txt --
+Contents of feature 3.
+
+-- repo/feature1-part2.txt --
+Part 2 of feature 1.
+
+-- input/rebase-todo.txt --
+edit 3972713 Add feature 1
+
+-- golden/branches.txt --
+* c7c7547 (feature3) Add feature 3
+* f5c4ede (feature2) Add feature 2
+* aaf0fbd (HEAD -> feature1) Add part 2 of feature 1
+* 3972713 Add feature 1
+* a798a87 (main) Initial commit

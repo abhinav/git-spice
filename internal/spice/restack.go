@@ -87,7 +87,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	}); err != nil {
 		return nil, fmt.Errorf("rebase: %w", err)
 		// TODO: detect conflicts in rebase,
-		// print message about "gs continue"
+		// print message about "gs rebase continue"
 	}
 
 	err = s.store.Update(ctx, &state.UpdateRequest{

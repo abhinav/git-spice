@@ -59,7 +59,17 @@ loop:
 
 		res, err := svc.Restack(ctx, upstack)
 		if err != nil {
+			var rebaseErr *git.RebaseInterruptError
 			switch {
+			case errors.As(err, &rebaseErr):
+				// If the rebase is interrupted by a conflict,
+				// we'll resume by re-running this command.
+				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+					Err:     rebaseErr,
+					Command: []string{"upstack", "restack"},
+					Branch:  currentBranch,
+					Message: fmt.Sprintf("interrupted: restack upstack of %v", currentBranch),
+				})
 			case errors.Is(err, spice.ErrAlreadyRestacked):
 				// Log the "does not need to be restacked" message
 				// only for branches that are not the current branch.

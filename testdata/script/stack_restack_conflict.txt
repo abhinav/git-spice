@@ -1,0 +1,99 @@
+# A 'stack restack' where a downstack and an upstack branch have conflicts.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:39:40Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/extra/feature1.txt feature1.txt
+git add feature1.txt
+gs bc -m feature1
+
+cp $WORK/extra/feature2.txt feature2.txt
+git add feature2.txt
+gs bc -m feature2
+
+cp $WORK/extra/feature3.txt feature3.txt
+git add feature3.txt
+gs bc -m feature3
+
+# go to main, add a file conflicting with feature1 and 3.
+gs trunk
+cp $WORK/extra/feature1.conflict.txt feature1.txt
+cp $WORK/extra/feature3.conflict.txt feature3.txt
+git add feature1.txt feature3.txt
+git commit -m 'Ad feature 1 and 3 here for some reason'
+
+env EDITOR=true
+
+# go back to feature2 and try to restack
+gs branch checkout feature2
+! gs stack restack
+stderr 'There was a conflict while rebasing'
+stderr '  gs rebase continue'
+stderr '  gs rebase abort'
+
+# only feature1.txt should be conflicting right now
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature1.txt
+
+# resolve the conflict and continue
+cp $WORK/extra/feature1.resolved.txt feature1.txt
+git add feature1.txt
+! gs rebase continue
+stderr 'There was a conflict while rebasing'
+
+# only feature3.txt should be conflicting right now
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature3.txt
+
+# resolve the conflict and continue
+cp $WORK/extra/feature3.resolved.txt feature3.txt
+git add feature3.txt
+gs rebase continue
+
+# the rebase should have succeeded
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+# verify files
+gs branch checkout feature3
+cmp feature1.txt $WORK/extra/feature1.resolved.txt
+cmp feature2.txt $WORK/extra/feature2.txt
+cmp feature3.txt $WORK/extra/feature3.resolved.txt
+
+-- extra/feature1.txt --
+foo
+-- extra/feature2.txt --
+bar
+-- extra/feature3.txt --
+baz
+
+-- extra/feature1.conflict.txt --
+not foo
+
+-- extra/feature3.conflict.txt --
+not baz
+
+-- extra/feature1.resolved.txt --
+foo
+not foo
+
+-- extra/feature3.resolved.txt --
+baz
+not baz
+
+-- golden/conflict-status-feature1.txt --
+AA feature1.txt
+-- golden/conflict-status-feature3.txt --
+AA feature3.txt
+-- golden/graph.txt --
+* 00e57c1 (feature3) feature3
+* f433bb9 (HEAD -> feature2) feature2
+* d231589 (feature1) feature1
+* e2b76d8 (main) Ad feature 1 and 3 here for some reason
+* a545001 Initial commit

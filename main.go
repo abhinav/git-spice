@@ -186,6 +186,8 @@ type globalOptions struct {
 type mainCmd struct {
 	globalOptions `group:"globals"`
 
+	Completion completionCmd `cmd:"" group:"Setup" help:"Generate shell completion script"`
+
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 
 	Stack     stackCmd     `cmd:"" aliases:"s" group:"Stack"`
@@ -195,15 +197,14 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
+	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
+
 	// Navigation
 	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`
 	Down   downCmd   `cmd:"" aliases:"d" group:"Navigation" help:"Move down one branch"`
 	Top    topCmd    `cmd:"" aliases:"U" group:"Navigation" help:"Move to the top of the stack"`
 	Bottom bottomCmd `cmd:"" aliases:"D" group:"Navigation" help:"Move to the bottom of the stack"`
 	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk branch"`
-
-	// Other
-	Completion completionCmd `name:"completion" cmd:"" group:"System" help:"Generate shell completion script"`
 
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dump-md" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`

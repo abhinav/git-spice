@@ -63,7 +63,7 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 	login(t, "foo")
 
 	// Test cases with no InterruptFunc.
-	// All must see ErrRebaseInterrupted.
+	// All must see RebseInterruptError.
 	noFuncTests := []struct {
 		name  string
 		lines []string
@@ -99,37 +99,13 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 				Interactive: true,
 			})
 			require.Error(t, err)
-			assert.ErrorIs(t, err, git.ErrRebaseInterrupted)
+
+			var rebaseErr *git.RebaseInterruptError
+			require.ErrorAs(t, err, &rebaseErr)
+			assert.Equal(t, &git.RebaseState{Branch: "feature"}, rebaseErr.State)
+			assert.Equal(t, git.RebaseInterruptDeliberate, rebaseErr.Kind)
 		})
 	}
-
-	t.Run("InterruptFunc", func(t *testing.T) {
-		defer func() {
-			assert.NoError(t, repo.RebaseAbort(ctx))
-		}()
-
-		// Either test case will do.
-		mockedit.Expect(t).
-			GiveLines(noFuncTests[0].lines...)
-
-		var calledInterrupt bool
-		defer func() {
-			assert.True(t, calledInterrupt, "InterruptFunc was not called")
-		}()
-
-		err = repo.Rebase(ctx, git.RebaseRequest{
-			Branch:      "feature",
-			Upstream:    "main",
-			Interactive: true,
-			InterruptFunc: func(_ context.Context, state *git.RebaseState, kind git.RebaseInterruptKind) error {
-				calledInterrupt = true
-
-				assert.Equal(t, &git.RebaseState{Branch: "feature"}, state)
-				assert.Equal(t, git.RebaseInterruptDeliberate, kind)
-				return nil
-			},
-		})
-	})
 }
 
 func TestRebase_unexpectedInterrupt(t *testing.T) {
@@ -181,31 +157,11 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 			Upstream: "main",
 		})
 		require.Error(t, err)
-		assert.ErrorIs(t, err, git.ErrRebaseInterrupted)
-	})
 
-	t.Run("InterruptFunc", func(t *testing.T) {
-		defer func() {
-			assert.NoError(t, repo.RebaseAbort(ctx))
-		}()
-
-		var calledInterrupt bool
-		defer func() {
-			assert.True(t, calledInterrupt, "InterruptFunc was not called")
-		}()
-
-		err = repo.Rebase(ctx, git.RebaseRequest{
-			Branch:   "feature",
-			Upstream: "main",
-			InterruptFunc: func(_ context.Context, state *git.RebaseState, kind git.RebaseInterruptKind) error {
-				calledInterrupt = true
-
-				assert.Equal(t, &git.RebaseState{Branch: "feature"}, state)
-				assert.Equal(t, git.RebaseInterruptConflict, kind)
-				return nil
-			},
-		})
-		require.NoError(t, err)
+		var rebaseErr *git.RebaseInterruptError
+		require.ErrorAs(t, err, &rebaseErr)
+		assert.Equal(t, &git.RebaseState{Branch: "feature"}, rebaseErr.State)
+		assert.Equal(t, git.RebaseInterruptConflict, rebaseErr.Kind)
 	})
 }
 
