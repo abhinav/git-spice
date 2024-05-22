@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 import (
 	"context"
@@ -9,11 +9,11 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/state"
-	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/git-spice/internal/must"
+	"go.abhg.dev/git-spice/internal/spice"
+	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/text"
 	"golang.org/x/oauth2"
 )
 

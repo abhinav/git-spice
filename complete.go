@@ -1,14 +1,14 @@
-package main
+package gitspice
 
 import (
 	"context"
 	"time"
 
 	"github.com/posener/complete"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/komplete"
-	"go.abhg.dev/gs/internal/state"
-	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/git-spice/internal/komplete"
+	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/text"
 )
 
 type completeCmd struct {

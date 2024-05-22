@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/git-spice/internal/logtest"
 )
 
 func NewTestRepository(t testing.TB, dir string, execer execer) *Repository {

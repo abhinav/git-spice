@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode"
 
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/state"
+	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/git-spice/internal/must"
+	"go.abhg.dev/git-spice/internal/state"
 )
 
 const _generatedBranchNameLimit = 32

@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 type branchCmd struct {
 	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Track a branch with git-spice"`

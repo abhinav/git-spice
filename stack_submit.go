@@ -1,12 +1,12 @@
-package main
+package gitspice
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/git-spice/internal/spice"
 	"golang.org/x/oauth2"
 )
 

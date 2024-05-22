@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 import (
 	"bufio"

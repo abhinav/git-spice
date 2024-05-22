@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/state"
-	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/git-spice/internal/spice"
+	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/text"
 )
 
 type branchUntrackCmd struct {
