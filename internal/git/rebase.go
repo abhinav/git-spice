@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/git-spice/internal/must"
 )
 
 // ErrRebaseInterrupted is returned when a rebase operation is interrupted

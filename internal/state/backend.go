@@ -9,11 +9,11 @@ import (
 	"io"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/git-spice/internal/git"
 )
 
 const (
-	_dataRef     = "refs/gs/data"
+	_dataRef     = "refs/spice/data"
 	_authorName  = "git-spice"
 	_authorEmail = "git-spice@localhost"
 )

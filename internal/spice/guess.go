@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/git-spice/internal/git"
 )
 
 // GuessOp specifies the kind of guess operation

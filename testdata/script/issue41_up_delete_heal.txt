@@ -1,4 +1,4 @@
-# Reproduces https://github.com/abhinav/gs/issues/41
+# Reproduces https://github.com/abhinav/git-spice/issues/41
 
 as 'Test <test@example.com>'
 at '2024-05-19T09:05:12Z'

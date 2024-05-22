@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 type upstackCmd struct {
 	Restack upstackRestackCmd `cmd:"" aliases:"rs" help:"Restack this branch those above it"`

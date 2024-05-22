@@ -1,4 +1,4 @@
-package main
+package gitspice
 
 type commitCmd struct {
 	Create commitCreateCmd `cmd:"" aliases:"c" help:"Create a new commit"`

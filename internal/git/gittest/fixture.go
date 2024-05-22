@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/git-spice/internal/must"
 )
 
 // Fixture is a temporary directory that contains a Git repository

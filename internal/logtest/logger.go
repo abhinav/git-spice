@@ -3,7 +3,7 @@ package logtest
 
 import (
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/ioutil"
+	"go.abhg.dev/git-spice/internal/ioutil"
 )
 
 // New builds a logger that writes messages

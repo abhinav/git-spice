@@ -90,7 +90,7 @@ stitchmd-lint: $(STITCHMD) generate-lint
 	fi \
 
 $(GS): $(GO_SRC_FILES)
-	go install go.abhg.dev/gs
+	go install go.abhg.dev/git-spice/cmd/gs
 
 $(MOCKGEN): go.mod
 	go install go.uber.org/mock/mockgen
