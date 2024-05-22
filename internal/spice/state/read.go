@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // Trunk reports the trunk branch configured for the repository.

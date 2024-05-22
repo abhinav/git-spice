@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 type downstackCmd struct {
 	Submit downstackSubmitCmd `cmd:"" aliases:"s" help:"Submit the current branch and those below it"`

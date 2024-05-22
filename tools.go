@@ -1,6 +1,6 @@
 //go:build tools
 
-package gitspice
+package main
 
 import (
 	_ "go.abhg.dev/stitchmd"

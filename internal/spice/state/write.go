@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // SetRemote changes teh remote name configured for the repository.

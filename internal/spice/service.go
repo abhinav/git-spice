@@ -5,8 +5,8 @@ import (
 	"context"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/spice/state"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // GitRepository provides read/write access to the conents of a git repository.

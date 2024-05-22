@@ -1,11 +1,11 @@
-package gitspice
+package main
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 type trunkCmd struct{}

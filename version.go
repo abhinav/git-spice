@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"fmt"

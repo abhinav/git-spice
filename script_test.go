@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"encoding/json"
@@ -15,11 +15,11 @@ import (
 	"github.com/google/go-github/v61/github"
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/git-spice/internal/gh/ghtest"
-	"go.abhg.dev/git-spice/internal/git/gittest"
-	"go.abhg.dev/git-spice/internal/logtest"
-	"go.abhg.dev/git-spice/internal/mockedit"
-	"go.abhg.dev/git-spice/internal/termtest"
+	"go.abhg.dev/gs/internal/gh/ghtest"
+	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/mockedit"
+	"go.abhg.dev/gs/internal/termtest"
 )
 
 var _update = flag.Bool("update", false, "update golden files")
@@ -27,7 +27,7 @@ var _update = flag.Bool("update", false, "update golden files")
 func TestMain(m *testing.M) {
 	testscript.RunMain(m, map[string]func() int{
 		"gs": func() int {
-			Main()
+			main()
 			return 0
 		},
 		"mockedit": mockedit.Main,

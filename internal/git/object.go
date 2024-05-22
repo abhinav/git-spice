@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"go.abhg.dev/git-spice/internal/must"
+	"go.abhg.dev/gs/internal/must"
 )
 
 // Type specifies the type of a Git object.

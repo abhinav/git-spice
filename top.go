@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/must"
-	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type topCmd struct{}
