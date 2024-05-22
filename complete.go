@@ -7,7 +7,7 @@ import (
 	"github.com/posener/complete"
 	"go.abhg.dev/git-spice/internal/git"
 	"go.abhg.dev/git-spice/internal/komplete"
-	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/spice/state"
 	"go.abhg.dev/git-spice/internal/text"
 )
 

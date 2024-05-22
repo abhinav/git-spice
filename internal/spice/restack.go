@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/spice/state"
 )
 
 // ErrAlreadyRestacked indicates that a branch is already restacked

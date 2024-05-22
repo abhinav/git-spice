@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/git-spice/internal/git"
 	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/spice/state"
 	"go.abhg.dev/git-spice/internal/text"
 )
 

@@ -11,7 +11,7 @@ import (
 
 	"go.abhg.dev/git-spice/internal/git"
 	"go.abhg.dev/git-spice/internal/must"
-	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/spice/state"
 )
 
 const _generatedBranchNameLimit = 32

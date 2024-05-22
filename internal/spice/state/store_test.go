@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/git-spice/internal/git"
 	"go.abhg.dev/git-spice/internal/logtest"
-	"go.abhg.dev/git-spice/internal/state"
+	"go.abhg.dev/git-spice/internal/spice/state"
 )
 
 func TestIntegrationStore(t *testing.T) {
