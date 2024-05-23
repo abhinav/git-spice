@@ -16,8 +16,7 @@ STITCHMD_FLAGS ?= -o README.md -preface doc/preface.txt doc/SUMMARY.md
 
 GS = bin/gs
 MOCKGEN = bin/mockgen
-STITCHMD = bin/stitchmd
-TOOLS = $(MOCKGEN) $(GS) $(STITCHMD)
+TOOLS = $(MOCKGEN) $(GS)
 
 # Non-test Go files.
 GO_SRC_FILES = $(shell find . \
@@ -33,7 +32,7 @@ all: build lint test
 build: $(GS)
 
 .PHONY: lint
-lint: golangci-lint tidy-lint generate-lint stitchmd-lint
+lint: golangci-lint tidy-lint generate-lint
 
 .PHONY: generate
 generate: $(TOOLS)
@@ -52,10 +51,7 @@ cover:
 tidy:
 	go mod tidy
 
-.PHONY: stitchmd
-stitchmd: README.md
-
-README.md: $(STITCHMD) $(DOC_MD_FILES)
+README.md: $(DOC_MD_FILES)
 	stitchmd $(STITCHMD_FLAGS)
 
 .PHONY: golangci-lint
@@ -76,13 +72,13 @@ generate-lint: $(TOOLS)
 		git diff --exit-code || \
 		(echo "'go generate' changed files" && false)
 
-# stitchmd-lint depends on generate-lint
+# readme-lint depends on generate-lint
 # because that updates doc/reference.md.
 # In the future, that can be make-managed.
-.PHONE: stitchmd-lint
-stitchmd-lint: $(STITCHMD) generate-lint
-	@echo "[lint] stitchmd"
-	@DIFF=$$($(STITCHMD) -diff $(STITCHMD_FLAGS)); \
+.PHONE: readme-lint
+readme-lint: generate-lint
+	@echo "[lint] readme"
+	@DIFF=$$(stitchmd -diff $(STITCHMD_FLAGS)); \
 	if [[ -n "$$DIFF" ]]; then \
 		echo "stitchmd would change README:"; \
 		echo "$$DIFF"; \
@@ -94,6 +90,3 @@ $(GS): $(GO_SRC_FILES)
 
 $(MOCKGEN): go.mod
 	go install go.uber.org/mock/mockgen
-
-$(STITCHMD): go.mod
-	go install go.abhg.dev/stitchmd
