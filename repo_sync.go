@@ -282,6 +282,14 @@ func (*repoSyncCmd) Run(
 		if err != nil {
 			return fmt.Errorf("delete branch %v: %w", branch, err)
 		}
+
+		// Also delete the remote tracking branch for this branch.
+		remoteBranch := remote + "/" + branch
+		if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
+			Remote: true,
+		}); err != nil {
+			log.Warn("Unable to delete remote tracking branch", "branch", remoteBranch, "error", err)
+		}
 	}
 
 	// TODO:

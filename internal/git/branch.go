@@ -143,6 +143,10 @@ type BranchDeleteOptions struct {
 	// Force specifies that a branch should be deleted
 	// even if it has unmerged changes.
 	Force bool
+
+	// Remote indicates that the branch being deleted
+	// is a remote tracking branch.
+	Remote bool
 }
 
 // DeleteBranch deletes a branch from the repository.
@@ -156,6 +160,9 @@ func (r *Repository) DeleteBranch(
 	args := []string{"branch", "--delete"}
 	if opts.Force {
 		args = append(args, "--force")
+	}
+	if opts.Remote {
+		args = append(args, "--remotes")
 	}
 	args = append(args, branch)
 
