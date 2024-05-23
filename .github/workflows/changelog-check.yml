@@ -1,0 +1,30 @@
+name: Require changelog
+
+on:
+  pull_request:
+    types:
+      # On by default if types not specified:
+      - "opened"
+      - "reopened"
+      - "synchronize"
+
+      # For `skip-label` handling:
+      - "labeled"
+      - "unlabeled"
+
+jobs:
+  check-changelog:
+    name: Check for changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        uses: brettcannon/check-for-changed-files@v1.2.0
+        with:
+          file-pattern: |
+            .changes/unreleased/*.yaml
+            CHANGELOG.md
+          skip-label: "skip changelog"
+          failure-message: >-
+            Missing a changelog file in ${file-pattern};
+            please add one or apply the ${skip-label} label to the pull request
+            if a changelog entry is not needed.
