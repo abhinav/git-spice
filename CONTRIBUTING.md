@@ -83,5 +83,6 @@ To release a new version, take the following steps:
 1. Trigger the [Prepare release workflow](https://github.com/abhinav/git-spice/actions/workflows/prepare-release.yml).
    This will create a pull request with the changelog entries for the release.
 2. Merge the pull request created by the workflow.
-3. Once the pull request has merged, [publish a release](https://github.com/abhinav/git-spice/releases/new)
-   for that tag.
+   Feel free to edit it before merging if needed.
+3. Once the pull request has merged, trigger the
+   [Publishh release workflow](https://github.com/abhinav/git-spice/actions/workflows/publish-release.yml).

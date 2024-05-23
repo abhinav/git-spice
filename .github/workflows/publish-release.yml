@@ -1,13 +1,16 @@
-name: Release
+name: Publish release
 
 on:
-  push:
-    tags: ['v*']
-
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release, including the 'v' prefix."
+        description: >-
+          Version to release (e.g. v1.2.3).
+          Uses latest version from changelog if unset.
+        default: ''
+        type: string
+      ref:
+        description: Git ref to release from.
         required: true
         type: string
 
@@ -19,9 +22,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: action/checkout@v4
       with:
-        ref: ${{ inputs.version || github.ref }}
+        ref: ${{ inputs.ref }}
+        token: ${{ secrets.PAT }}
 
     - name: Set up Go
       uses: actions/setup-go@v5
@@ -33,20 +37,22 @@ jobs:
       with:
         tool: parse-changelog@0.6.8
 
-    - name: Checkout
-      uses: actions/checkout@v4
+    - name: Query changie
+      if: inputs.version == ''
+      id: changie-latest
+      uses: miniscruff/changie-action@v2
       with:
-        fetch-depth: 0
+        args: latest
+    - name: Set version (changie)
+      if: inputs.version == ''
+      run:
+        echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
+      env:
+        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.version }}
 
-    - name: Determine version (tagged release)
-      if:  github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-      run: |
-        set -eou pipefail
-        REF=${{ github.ref }}
-        echo "VERSION=${REF#refs/tags/v}" >> "$GITHUB_ENV"
-    - name: Determine version (manual dispatch)
-      if:  github.event_name == 'workflow_dispatch'
-      run: |
+    - name: Set veresion (input)
+      if: inputs.version != ''
+      run:
         echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
       env:
         INPUT_VERSION: ${{ inputs.version }}
@@ -57,6 +63,11 @@ jobs:
         echo ::group::CHANGELOG
         cat ${{ github.workspace }}-CHANGELOG.txt
         echo ::endgroup::
+
+    - name: Tag a release
+      run: |
+        git tag v${{ env.VERSION }}
+        git push origin v${{ env.VERSION }}
 
     - name: Release
       uses: goreleaser/goreleaser-action@v5
