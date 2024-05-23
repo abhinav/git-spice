@@ -18,7 +18,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
-	"go.abhg.dev/git-spice/internal/ioutil"
+	"go.abhg.dev/gs/internal/ioutil"
 )
 
 // ShamHub is a fake GitHub server.

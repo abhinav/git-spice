@@ -21,7 +21,7 @@ stdout 'feature2'
 git branch -D feature1
 
 gs down
-stderr 'branch feature1 deleted outside git-spice'
+stderr 'branch feature1 was deleted out of band'
 
 git branch --show-current
 stdout 'main'

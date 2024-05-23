@@ -14,4 +14,4 @@ gs repo init
 cmp stderr $WORK/golden/expected.txt
 
 -- golden/expected.txt --
-FTL git-spice: branch "does-not-exist" does not exist
+FTL gs: branch "does-not-exist" does not exist

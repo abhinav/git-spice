@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type upstackRestackCmd struct{}

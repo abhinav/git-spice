@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchRenameCmd struct {
@@ -19,8 +19,7 @@ type branchRenameCmd struct {
 
 func (*branchRenameCmd) Help() string {
 	return text.Dedent(`
-		Renames a branch tracked by git-spice,
-		updating internal references to the branch.
+		Renames a tracked branch, updating internal references to it.
 
 		If you renamed a branch without using this command,
 		track the new branch name with 'gs branch track',

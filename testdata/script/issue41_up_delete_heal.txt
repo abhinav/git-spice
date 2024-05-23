@@ -21,7 +21,7 @@ git branch -D feature1
 # gs up should gracefully handle the missing branch,
 # and we should end up on feature2.
 gs up
-stderr 'branch feature1 deleted outside git-spice'
+stderr 'branch feature1 was deleted out of band'
 
 git branch --show-current
 stdout 'feature2'

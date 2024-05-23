@@ -9,11 +9,11 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/git/gittest"
-	"go.abhg.dev/git-spice/internal/logtest"
-	"go.abhg.dev/git-spice/internal/mockedit"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/mockedit"
+	"go.abhg.dev/gs/internal/text"
 )
 
 func TestMain(m *testing.M) {

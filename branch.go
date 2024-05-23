@@ -1,8 +1,8 @@
-package gitspice
+package main
 
 type branchCmd struct {
-	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Track a branch with git-spice"`
-	Untrack  branchUntrackCmd  `cmd:"" aliases:"untr" help:"Forget a branch tracked with git-spice"`
+	Track    branchTrackCmd    `cmd:"" aliases:"tr" help:"Track a branch"`
+	Untrack  branchUntrackCmd  `cmd:"" aliases:"untr" help:"Forget a tracked branch"`
 	Checkout branchCheckoutCmd `cmd:"" aliases:"co" help:"Switch to a branch"`
 	Onto     branchOntoCmd     `cmd:"" aliases:"on" help:"Move a branch onto another branch"`
 

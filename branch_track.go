@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/spice/state"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type branchTrackCmd struct {
@@ -24,12 +24,11 @@ type branchTrackCmd struct {
 
 func (*branchTrackCmd) Help() string {
 	return text.Dedent(`
-		Starts tracking an existing branch with git-spice.
-		Use this to teach git-spice about branches created outside of git-spice,
-		for example, with 'git checkout -b'.
+		Use this to track branches created without 'gs branch create',
+		e.g. with 'git checkout -b' or 'git branch'.
 
-		git-spice will attempt to detect the base branch automatically.
-		You can override this with the --base flag.
+		A base will be guessed based on the branch's history.
+		Use --base to specify a branch explicitly.
 	`)
 }
 

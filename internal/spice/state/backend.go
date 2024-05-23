@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 const (

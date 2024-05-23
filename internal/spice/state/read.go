@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // Trunk reports the trunk branch configured for the repository.
@@ -46,7 +46,7 @@ type LookupResponse struct {
 	UpstreamBranch string
 }
 
-// Lookup returns information about a branch tracked by git-spice.
+// Lookup returns information about a tracked branch.
 // If the branch is not found, [ErrNotExist] will be returned.
 func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error) {
 	state, err := s.lookupBranchState(ctx, name)

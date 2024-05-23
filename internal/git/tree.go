@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.abhg.dev/git-spice/internal/osutil"
+	"go.abhg.dev/gs/internal/osutil"
 )
 
 // Mode is the octal file mode of a Git tree entry.

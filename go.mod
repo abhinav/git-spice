@@ -1,4 +1,4 @@
-module go.abhg.dev/git-spice
+module go.abhg.dev/gs
 
 go 1.22.1
 

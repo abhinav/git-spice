@@ -1,4 +1,4 @@
-package gitspice
+package main
 
 import (
 	"context"
@@ -7,11 +7,11 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/must"
-	"go.abhg.dev/git-spice/internal/spice"
-	"go.abhg.dev/git-spice/internal/spice/state"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type repoInitCmd struct {
@@ -23,18 +23,18 @@ type repoInitCmd struct {
 
 func (*repoInitCmd) Help() string {
 	return text.Dedent(`
-		Sets up a repository for use with git-spice.
+		Sets up a repository for use.
 		This isn't strictly necessary to run as most commands will
 		auto-initialize the repository as needed.
 
 		Use the --trunk flag to specify the trunk branch.
 		This is typically 'main' or 'master',
-		and picking one is required for git-spice to function.
+		and picking one is required.
 
 		Use the --remote flag to specify the remote to push changes to.
-		If a remote is not specified,
-		git-spice can still be used to stack branches locally.
-		However, any commands that require a remote will fail.
+		A remote is not required--local stacking will work without it,
+		but any commands that require a remote will fail.
+		To add a remote later, re-run this command.
 	`)
 }
 
@@ -132,7 +132,7 @@ func ensureStore(
 	}
 
 	if errors.Is(err, state.ErrUninitialized) {
-		log.Info("Repository not initialized for use with git-spice. Initializing.")
+		log.Info("Repository not initialized. Initializing.")
 		if err := (&repoInitCmd{}).Run(ctx, log, opts); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}

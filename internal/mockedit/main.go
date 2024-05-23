@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/git-spice/internal/osutil"
+	"go.abhg.dev/gs/internal/osutil"
 )
 
 // Main runs the mock editor and exits the process.

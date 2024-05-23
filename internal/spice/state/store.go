@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// Store implements storage for git-spice state inside a Git repository.
+// Store implements storage for state tracked by gs.
 type Store struct {
 	b   storageBackend
 	log *log.Logger
@@ -77,7 +77,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 			_, err := store.Lookup(ctx, req.Trunk)
 			if err == nil {
 				// TODO: this should all be in 'repo init' implementation.
-				return nil, fmt.Errorf("trunk branch %q is tracked by git-spice; use --reset to clear", req.Trunk)
+				return nil, fmt.Errorf("trunk branch (%q) is tracked by gs; use --reset to clear", req.Trunk)
 			}
 		}
 	}

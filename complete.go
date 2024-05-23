@@ -1,14 +1,14 @@
-package gitspice
+package main
 
 import (
 	"context"
 	"time"
 
 	"github.com/posener/complete"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/komplete"
-	"go.abhg.dev/git-spice/internal/spice/state"
-	"go.abhg.dev/git-spice/internal/text"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/komplete"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type completeCmd struct {
@@ -17,9 +17,10 @@ type completeCmd struct {
 
 func (c *completeCmd) Help() string {
 	return text.Dedent(`
-		Generates shell completion scripts for git-spice.
-		To install the script, add the generated script to your shell's
-		rc file. For example:
+		Generates shell completion scripts.
+		To install the script, add the output of this command to your
+		shell's rc file.
+		For example:
 
 			# bash
 			gs complete bash >> ~/.bashrc

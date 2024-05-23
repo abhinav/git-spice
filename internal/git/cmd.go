@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/ioutil"
+	"go.abhg.dev/gs/internal/ioutil"
 )
 
 // execer controls actual execution of Git commands.

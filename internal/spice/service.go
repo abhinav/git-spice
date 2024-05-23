@@ -1,12 +1,12 @@
-// Package spice intends to provide the core functionality of the git-spice tool.
+// Package spice intends to provide the core functionality of the tool.
 package spice
 
 import (
 	"context"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/git-spice/internal/git"
-	"go.abhg.dev/git-spice/internal/spice/state"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // GitRepository provides read/write access to the conents of a git repository.
@@ -67,7 +67,9 @@ type BranchStore interface {
 
 var _ BranchStore = (*state.Store)(nil)
 
-// Service provides the core functionality of the git-spice tool.
+// Service provides the core functionality of the tool.
+// It combines together lower level pieces like access to the git repository
+// and the spice state.
 type Service struct {
 	repo  GitRepository
 	store BranchStore

@@ -74,7 +74,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/posener/complete"
-	"go.abhg.dev/git-spice/internal/must"
+	"go.abhg.dev/gs/internal/must"
 )
 
 // Implementation notes:

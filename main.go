@@ -1,7 +1,5 @@
-// Package gitspice implements the entry point for the git-spice CLI.
-// This package is not intended to be used as a library.
-// See cmd/gs for details about the CLI.
-package gitspice
+// gs (git-spice) is a command line tool for stacking Git branches.
+package main
 
 import (
 	"context"
@@ -17,8 +15,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
-	"go.abhg.dev/git-spice/internal/gh"
-	"go.abhg.dev/git-spice/internal/komplete"
+	"go.abhg.dev/gs/internal/gh"
+	"go.abhg.dev/gs/internal/komplete"
 	"golang.org/x/oauth2"
 )
 
@@ -26,8 +24,7 @@ var _version = "dev"
 
 var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 
-// Main runs the git-spice CLI and exits the program.
-func Main() {
+func main() {
 	logger := log.NewWithOptions(os.Stderr, log.Options{
 		Level: log.InfoLevel,
 	})
@@ -57,7 +54,7 @@ func Main() {
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
-		kong.Description("git-spice is a command line tool for stacking Git branches."),
+		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.Vars{
@@ -160,11 +157,11 @@ func Main() {
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		logger.Fatalf("git-spice: %v", err)
+		logger.Fatalf("gs: %v", err)
 	}
 
 	if err := kctx.Run(); err != nil {
-		logger.Fatalf("git-spice: %v", err)
+		logger.Fatalf("gs: %v", err)
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.abhg.dev/git-spice/internal/git"
+	"go.abhg.dev/gs/internal/git"
 )
 
 // SetRemote changes teh remote name configured for the repository.
@@ -89,7 +89,7 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 			return fmt.Errorf("upsert [%d]: branch name is required", i)
 		}
 		if req.Name == s.trunk {
-			return fmt.Errorf("upsert [%d]: trunk branch is not managed by git-spice", i)
+			return fmt.Errorf("upsert [%d]: trunk branch (%q) is not allowed", i, req.Name)
 		}
 
 		b, err := s.lookupBranchState(ctx, req.Name)
