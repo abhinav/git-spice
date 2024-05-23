@@ -20,6 +20,14 @@ func (h Hash) String() string {
 	return string(h)
 }
 
+// Short reports the short form of the hash.
+func (h Hash) Short() string {
+	if len(h) < 7 {
+		return string(h)
+	}
+	return string(h[:7])
+}
+
 // IsZero reports whether the hash is the zero hash.
 func (h Hash) IsZero() bool {
 	// We're not just comparing to ZeroHash
