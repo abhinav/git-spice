@@ -23,6 +23,9 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+release:
+  prerelease: auto
+
 # TODO: Enable when public
 # aurs:
 #   - name: git-spice-bin
