@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch delete: Report hash of deleted branch. Use this to recover the deleted branch before the next `git gc`.'
-time: 2024-05-22T21:15:31.661013-07:00
