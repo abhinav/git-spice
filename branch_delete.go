@@ -50,6 +50,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 
 	tracked, exists := true, true
+	var head git.Hash
 	base := store.Trunk()
 	if b, err := svc.LookupBranch(ctx, cmd.Name); err != nil {
 		if delErr := new(spice.DeletedBranchError); errors.As(err, &delErr) {
@@ -62,6 +63,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			return fmt.Errorf("lookup branch %v: %w", cmd.Name, err)
 		}
 	} else {
+		head = b.Head
 		base = b.Base
 	}
 
@@ -88,6 +90,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			// it may already have been deleted.
 			log.Warn("branch may already have been deleted", "err", err)
 		}
+
+		log.Infof("%v: deleted (was %v)", cmd.Name, head.Short())
 	}
 
 	if tracked {
