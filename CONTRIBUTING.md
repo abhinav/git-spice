@@ -80,48 +80,8 @@ Read more about the test script format in the documentation of the package.
 
 To release a new version, take the following steps:
 
-1. Create a new branch for the release. For example:
-
-    ```sh
-    VERSION=$(changie next minor)
-    gs branch create release-$VERSION -m "Release $VERSION"
-    ```
-
-2. Combine unreleased changes into a single Markdown document.
-
-    ```sh
-    changie batch $VERSION
-    ```
-
-3. Open up this file and verify everything looks good.
-
-    ```sh
-    $EDITOR .changes/$(changie latest).md
-    ```
-
-4. Merge these changes into CHANGELOG.md.
-
-    ```sh
-    changie merge
-    ```
-
-5. Commit the changes.
-
-    ```sh
-    git add CHANGELOG.md .changes
-    gs commit amend --no-edit
-    ```
-
-6. Create a pull request for the release.
-
-    ```sh
-    gs branch submit
-    ```
-
-7. Once the pull request is merged, tag the release
-   either with the GitHub UI or with the following command:
-
-    ```sh
-    git tag $(changie latest)
-    git push origin $(changie latest)
-    ```
+1. Trigger the [Prepare release workflow](https://github.com/abhinav/git-spice/actions/workflows/prepare-release.yml).
+   This will create a pull request with the changelog entries for the release.
+2. Merge the pull request created by the workflow.
+3. Once the pull request has merged, [publish a release](https://github.com/abhinav/git-spice/releases/new)
+   for that tag.
