@@ -122,6 +122,6 @@ To release a new version, take the following steps:
    either with the GitHub UI or with the following command:
 
     ```sh
-    git tag v$VERSION
-    git push origin v$VERSION
+    git tag $(changie latest)
+    git push origin $(changie latest)
     ```
