@@ -66,6 +66,6 @@ Contents of feature2
 * e40a703 (HEAD -> main) Add feature2
 *   7bfac22 (origin/main) Merge pull request #1
 |\  
-| * 9f1c9af (origin/feature1) Add feature1
+| * 9f1c9af Add feature1
 |/  
 * d90607e Initial commit
