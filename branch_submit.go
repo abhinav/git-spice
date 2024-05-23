@@ -141,23 +141,28 @@ func (cmd *branchSubmitCmd) Run(
 			return errors.New("no commits to submit")
 		}
 
-		defaultTitle := msgs[0].Subject
-
-		// If there's only one commit,
-		// just the body will be the default body.
-		// Otherwise, we'll concatenate all the messages.
-		var defaultBody string
+		var defaultTitle, defaultBody string
 		if len(msgs) == 1 {
+			// If there's only one commit,
+			// just the body will be the default body.
+			defaultTitle = msgs[0].Subject
 			defaultBody = msgs[0].Body
 		} else {
+			// Otherwise, we'll concatenate all the messages.
+			// The revisions are in reverse order,
+			// so we'll want to iterate in reverse.
 			var body strings.Builder
-			for i, msg := range msgs {
-				if i > 0 {
+			defaultTitle = msgs[len(msgs)-1].Subject
+			for i := len(msgs) - 1; i >= 0; i-- {
+				msg := msgs[i]
+				if body.Len() > 0 {
 					body.WriteString("\n\n")
 				}
 				body.WriteString(msg.Subject)
-				body.WriteString("\n\n")
-				body.WriteString(msg.Body)
+				if msg.Body != "" {
+					body.WriteString("\n\n")
+					body.WriteString(msg.Body)
+				}
 			}
 			defaultBody = body.String()
 		}

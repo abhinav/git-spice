@@ -12,6 +12,9 @@ on:
       - "labeled"
       - "unlabeled"
 
+permissions:
+  pull-requests: write
+
 jobs:
   check-changelog:
     name: Check for changelog
@@ -24,6 +27,7 @@ jobs:
             .changes/unreleased/*.yaml
             CHANGELOG.md
           skip-label: "skip changelog"
+          token: ${{ secrets.GITHUB_TOKEN }}
           failure-message: >-
             Missing a changelog file in ${file-pattern};
             please add one or apply the ${skip-label} label to the pull request
