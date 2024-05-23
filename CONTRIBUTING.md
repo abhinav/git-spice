@@ -115,7 +115,7 @@ To release a new version, take the following steps:
 6. Create a pull request for the release.
 
     ```sh
-    gh pr create
+    gs branch submit
     ```
 
 7. Once the pull request is merged, tag the release
