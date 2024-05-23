@@ -1,0 +1,66 @@
+project_name: git-spice
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    main: .
+    binary: gs
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    goarm: [5, 6, 7]
+    ldflags: '-s -w -X main._version={{.Version}}'
+    flags:
+      - -trimpath
+
+archives:
+  - format: tar.gz
+    # uname compatible archive name.
+    name_template: >-
+      {{- .ProjectName }}.
+      {{- title .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+# TODO: Enable when public
+# aurs:
+#   - name: git-spice-bin
+#     homepage: https://github.com/abhinav/git-spice
+#     description: "Stitch multiple Markdown files together into a single document."
+#     maintainers:
+#       - 'Abhinav Gupta <mail@abhinavg.net>'
+#     license: "GPL-3.0"
+#     git_url: "ssh://aur@aur.archlinux.org/git-spice-bin.git"
+#     skip_upload: auto
+#     private_key: '{{ .Env.AUR_KEY }}'
+#     package: |-
+#       install -Dm755 "./git-spice" "${pkgdir}/usr/bin/gs"
+#       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
+#       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
+#       install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
+#     commit_author:
+#       name: Abhinav Gupta
+#       email: mail@abhinavg.net
+#
+# brews:
+#   - tap:
+#       owner: abhinav
+#       name: homebrew-tap
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     commit_msg_template: "{{ .ProjectName }}: Update formula to {{ .Tag }}"
+#     commit_author:
+#       name: Abhinav Gupta
+#       email: mail@abhinavg.net
+#     homepage: https://github.com/abhinav/git-spice
+#     description: "Stitch multiple Markdown files together into a single document."
+#     license: "GPL-3.0"
+#     skip_upload: auto
+#     test: |
+#       system "#{bin}/gs -version"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incminor .Tag }}-dev"

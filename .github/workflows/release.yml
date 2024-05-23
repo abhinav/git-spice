@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, including the 'v' prefix."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.version || github.ref }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22.x
+
+    - name: Install parse-changelog
+      uses: taiki-e/install-action@v2
+      with:
+        tool: parse-changelog@0.6.8
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Determine version (tagged release)
+      if:  github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      run: |
+        set -eou pipefail
+        REF=${{ github.ref }}
+        echo "VERSION=${REF#refs/tags/v}" >> "$GITHUB_ENV"
+    - name: Determine version (manual dispatch)
+      if:  github.event_name == 'workflow_dispatch'
+      run: |
+        echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Extract changelog
+      run: |
+        parse-changelog CHANGELOG.md ${{ env.VERSION }} > ${{ github.workspace }}-CHANGELOG.txt
+        echo ::group::CHANGELOG
+        cat ${{ github.workspace }}-CHANGELOG.txt
+        echo ::endgroup::
+
+    - name: Release
+      uses: goreleaser/goreleaser-action@v5
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --clean --release-notes ${{ github.workspace }}-CHANGELOG.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GORELEASER_CURRENT_TAG: v${{ env.VERSION }}
