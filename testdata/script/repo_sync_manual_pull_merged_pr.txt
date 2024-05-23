@@ -1,0 +1,33 @@
+# 'repo sync' deletes merged branches
+# even if we ran a 'git pull' manually.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# submit a PR and merge it
+git add feature.txt
+gs bc -m 'Add feature' feature
+gs branch submit --fill
+stderr 'Created #'
+gh-merge alice/example 1
+
+# Pull the merged changes
+git checkout main
+git pull origin main
+gs repo sync
+stderr 'feature: #1 was merged'
+stderr 'feature: deleted \(was 8f14b6e\)'
+
+-- repo/feature.txt --
+Contents of feature
+

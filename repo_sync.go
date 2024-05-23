@@ -175,10 +175,9 @@ func (*repoSyncCmd) Run(
 
 	if trunkStartHash == trunkEndHash {
 		log.Infof("%v: already up-to-date", trunk)
-		return nil
-	}
-
-	if repo.IsAncestor(ctx, trunkStartHash, trunkEndHash) {
+	} else if repo.IsAncestor(ctx, trunkStartHash, trunkEndHash) {
+		// CountCommits only if IsAncestor is true
+		// because there may have been a force push.
 		count, err := repo.CountCommits(ctx,
 			git.CommitRangeFrom(trunkEndHash).ExcludeFrom(trunkStartHash))
 		if err != nil {
