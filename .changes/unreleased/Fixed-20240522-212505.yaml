@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'repo sync: Fix deleting merged branches after a manual ''git pull''.'
-time: 2024-05-22T21:25:05.527728-07:00
