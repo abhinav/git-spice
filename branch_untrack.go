@@ -18,9 +18,10 @@ type branchUntrackCmd struct {
 
 func (*branchUntrackCmd) Help() string {
 	return text.Dedent(`
-		Removes information about a tracked branch from git-spice.
-		Use this to forget about branches that were deleted outside
-		git-spice, or those that are no longer relevant.
+		Removes information about a tracked branch,
+		without deleting the branch itself.
+		If the branch has any branches upstack from it,
+		they will be updated to point to its base branch.
 	`)
 }
 

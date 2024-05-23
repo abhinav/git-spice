@@ -17,9 +17,10 @@ type completeCmd struct {
 
 func (c *completeCmd) Help() string {
 	return text.Dedent(`
-		Generates shell completion scripts for git-spice.
-		To install the script, add the generated script to your shell's
-		rc file. For example:
+		Generates shell completion scripts.
+		To install the script, add the output of this command to your
+		shell's rc file.
+		For example:
 
 			# bash
 			gs complete bash >> ~/.bashrc

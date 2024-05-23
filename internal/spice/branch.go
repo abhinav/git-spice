@@ -73,13 +73,13 @@ type DeletedBranchError struct {
 }
 
 func (e *DeletedBranchError) Error() string {
-	return fmt.Sprintf("branch %v deleted outside git-spice", e.Name)
+	return fmt.Sprintf("tracked branch %v was deleted out of band", e.Name)
 }
 
 // LookupBranch returns information about a branch tracked by gs.
 //
 // It returns [git.ErrNotExist] if the branch is nt known to the repository,
-// [state.ErrNotExist] if the branch is not tracked by git-spice,
+// [state.ErrNotExist] if the branch is not tracked,
 // or a [DeletedBranchError] if the branch is tracked, but was deleted out of band.
 func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
 	resp, storeErr := s.store.Lookup(ctx, name)
@@ -133,7 +133,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 	)
 }
 
-// ForgetBranch stops tracking a branch in git-spice,
+// ForgetBranch stops tracking a branch,
 // updating the upstacks for it to point to its base.
 //
 // Returns an error matching [state.ErrNotExist] if the branch is not tracked.
@@ -261,7 +261,7 @@ type LoadBranchItem struct {
 	UpstreamBranch string
 }
 
-// LoadBranches loads all branches tracked by git-spice
+// LoadBranches loads all tracked branches
 // and all their information as a single operation.
 //
 // The returned branches are sorted by name.

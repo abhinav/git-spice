@@ -54,7 +54,7 @@ func main() {
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
-		kong.Description("git-spice is a command line tool for stacking Git branches."),
+		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.Vars{
@@ -157,11 +157,11 @@ func main() {
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		logger.Fatalf("git-spice: %v", err)
+		logger.Fatalf("gs: %v", err)
 	}
 
 	if err := kctx.Run(); err != nil {
-		logger.Fatalf("git-spice: %v", err)
+		logger.Fatalf("gs: %v", err)
 	}
 }
 

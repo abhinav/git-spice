@@ -89,7 +89,7 @@ func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
 			return fmt.Errorf("upsert [%d]: branch name is required", i)
 		}
 		if req.Name == s.trunk {
-			return fmt.Errorf("upsert [%d]: trunk branch is not managed by git-spice", i)
+			return fmt.Errorf("upsert [%d]: trunk branch (%q) is not allowed", i, req.Name)
 		}
 
 		b, err := s.lookupBranchState(ctx, req.Name)

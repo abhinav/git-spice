@@ -17,7 +17,7 @@ gs down
 
 # attempt to re-init without --reset fails
 ! gs repo init --trunk feature2
-stderr 'trunk branch "feature2" is tracked'
+stderr 'trunk branch \("feature2"\) is tracked'
 stderr 'use --reset to clear'
 
 # init with feature2 as trunk,

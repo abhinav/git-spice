@@ -19,8 +19,7 @@ type branchRenameCmd struct {
 
 func (*branchRenameCmd) Help() string {
 	return text.Dedent(`
-		Renames a branch tracked by git-spice,
-		updating internal references to the branch.
+		Renames a tracked branch, updating internal references to it.
 
 		If you renamed a branch without using this command,
 		track the new branch name with 'gs branch track',
