@@ -203,7 +203,7 @@ type mainCmd struct {
 	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk branch"`
 
 	// Other
-	Complete completeCmd `name:"complete" cmd:"" group:"System" help:"Generate shell completion script"`
+	Completion completionCmd `name:"completion" cmd:"" group:"System" help:"Generate shell completion script"`
 
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dump-md" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`

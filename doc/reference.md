@@ -462,10 +462,10 @@ gs trunk [flags]
 
 Move to the trunk branch
 
-## gs complete
+## gs completion
 
 ```
-gs complete <shell> [flags]
+gs completion <shell> [flags]
 ```
 
 Generate shell completion script
@@ -476,13 +476,13 @@ shell's rc file.
 For example:
 
 	# bash
-	gs complete bash >> ~/.bashrc
+	gs completion bash >> ~/.bashrc
 
 	# zsh
-	gs complete zsh >> ~/.zshrc
+	gs completion zsh >> ~/.zshrc
 
 	# fish
-	gs complete fish >> ~/.config/fish/config.fish
+	gs completion fish >> ~/.config/fish/config.fish
 
 **Arguments**
 
