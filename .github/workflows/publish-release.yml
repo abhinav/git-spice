@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: action/checkout@v4
+    - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.ref }}
         token: ${{ secrets.PAT }}
@@ -48,7 +48,7 @@ jobs:
       run:
         echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
       env:
-        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.version }}
+        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.output }}
 
     - name: Set veresion (input)
       if: inputs.version != ''
@@ -56,6 +56,13 @@ jobs:
         echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
       env:
         INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Verify version
+      run: |
+        if [[ -z "$VERSION" ]]; then
+          echo "No version set"
+          exit 1
+        fi
 
     - name: Extract changelog
       run: |
@@ -66,8 +73,10 @@ jobs:
 
     - name: Tag a release
       run: |
-        git tag v${{ env.VERSION }}
-        git push origin v${{ env.VERSION }}
+        git tag "$TAG"
+        git push origin "$TAG"
+      env:
+        TAG: v${{ env.VERSION }}
 
     - name: Release
       uses: goreleaser/goreleaser-action@v5
