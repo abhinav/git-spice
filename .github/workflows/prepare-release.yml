@@ -1,0 +1,47 @@
+name: Prepare a release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (e.g. v1.2.3)
+        required: false
+        default: 'auto'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-pr:
+    runs-on: ubuntu-latest
+    name: Generate release PR
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Batch changes
+      uses: miniscruff/changie-action@v2
+      with:
+        args: batch ${{ inputs.version }}
+
+    - name: Merge changes
+      uses: miniscruff/changie-action@v2
+      with:
+        args: merge
+
+    - name: Get the latest version
+      id: latest
+      uses: miniscruff/changie-action@v2
+      with:
+        args: latest
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v6
+      with:
+        title: Release ${{ steps.latest.outputs.output }}
+        branch: release/${{ steps.latest.outputs.output }}
+        commit-message: Release ${{ steps.latest.outputs.output }}
+        token: ${{ secrets.GITHUB_TOKEN }}
