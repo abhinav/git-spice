@@ -39,6 +39,12 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("commit: %w", err)
 	}
 
+	if _, err := repo.RebaseState(); err == nil {
+		// In the middle of a rebase.
+		// Don't restack upstack branches.
+		return nil
+	}
+
 	// TODO: handle not tracked
 	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

@@ -121,13 +121,11 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 			Branch:      "feature",
 			Upstream:    "main",
 			Interactive: true,
-			InterruptFunc: func(_ context.Context, state *git.RebaseState) error {
+			InterruptFunc: func(_ context.Context, state *git.RebaseState, kind git.RebaseInterruptKind) error {
 				calledInterrupt = true
 
-				assert.Equal(t, &git.RebaseState{
-					Branch:     "feature",
-					Deliberate: true,
-				}, state)
+				assert.Equal(t, &git.RebaseState{Branch: "feature"}, state)
+				assert.Equal(t, git.RebaseInterruptDeliberate, kind)
 				return nil
 			},
 		})
@@ -199,12 +197,11 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 		err = repo.Rebase(ctx, git.RebaseRequest{
 			Branch:   "feature",
 			Upstream: "main",
-			InterruptFunc: func(_ context.Context, state *git.RebaseState) error {
+			InterruptFunc: func(_ context.Context, state *git.RebaseState, kind git.RebaseInterruptKind) error {
 				calledInterrupt = true
 
-				assert.Equal(t, &git.RebaseState{
-					Branch: "feature",
-				}, state)
+				assert.Equal(t, &git.RebaseState{Branch: "feature"}, state)
+				assert.Equal(t, git.RebaseInterruptConflict, kind)
 				return nil
 			},
 		})

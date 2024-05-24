@@ -1,0 +1,71 @@
+# commit create in the middle of a rebase
+# works like a plain git commit.
+
+as 'Test <test@example.com>'
+at '2024-05-23T19:23:24Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m 'Add feature 1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature 2' feature2
+
+git add feature3.txt
+gs bc -m 'Add feature 3' feature3
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/rebase-todo.txt
+git rebase -i HEAD~3
+
+# should be in detached head state on feature1
+git rev-parse HEAD
+stdout 94ce19e
+
+# add a commit with 'commit create'
+mv $WORK/extra/feature1-part2.txt feature1-part2.txt
+git add feature1-part2.txt
+gs cc -m 'Add part 2 of feature 1'
+
+git rev-parse HEAD
+stdout 914573f
+git rebase --continue
+
+git graph HEAD
+cmp stdout $WORK/golden/graph-after.txt
+
+-- repo/feature1.txt --
+Contents of feature 1.
+
+-- repo/feature2.txt --
+Contents of feature 2.
+
+-- repo/feature3.txt --
+Contents of feature 3.
+
+-- golden/graph-before.txt --
+* 4041fd7 (HEAD -> feature3) Add feature 3
+* 556ae49 (feature2) Add feature 2
+* 94ce19e (feature1) Add feature 1
+* 63c927d (main) Initial commit
+-- input/rebase-todo.txt --
+pick 94ce19e Add feature 1
+break
+pick 556ae49 Add feature 2
+pick 4041fd7 Add feature 3
+
+-- extra/feature1-part2.txt --
+Part 2 of feature 1.
+-- golden/graph-after.txt --
+* be60379 (HEAD -> feature3) Add feature 3
+* 092561c Add feature 2
+* 914573f Add part 2 of feature 1
+* 94ce19e (feature1) Add feature 1
+* 63c927d (main) Initial commit
