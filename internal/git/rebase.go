@@ -50,8 +50,22 @@ type RebaseRequest struct {
 	// (e.g. 'edit' or 'break').
 	//
 	// The Rebase function will return the error returned by this function.
-	InterruptFunc func(context.Context, *RebaseState) error
+	InterruptFunc func(context.Context, *RebaseState, RebaseInterruptKind) error
 }
+
+// RebaseInterruptKind specifies the kind of rebase interrupt.
+type RebaseInterruptKind int
+
+const (
+	// RebaseInterruptDeliberate indicates that the rebase was interrupted
+	// because the user deliberately paused the rebase operation
+	// (e.g. by using the 'edit' or 'break' instruction).
+	RebaseInterruptDeliberate RebaseInterruptKind = iota
+
+	// RebaseInterruptConflict indicates that the rebase was interrupted
+	// because of a conflict.
+	RebaseInterruptConflict
+)
 
 // Rebase runs a git rebase operation with the specified parameters.
 func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
@@ -84,7 +98,7 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 
 		// If the rebase operation actually ran, but failed,
 		// we might be in the middle of a rebase operation.
-		state, err := r.loadRebaseState(false /* deliberate */)
+		state, err := r.RebaseState()
 		if err != nil {
 			// Rebase probably failed for a different reason,
 			// so no need to log the state read failure verbosely.
@@ -98,16 +112,16 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 			return errors.Join(ErrRebaseInterrupted, originalErr)
 		}
 
-		return req.InterruptFunc(ctx, state)
+		return req.InterruptFunc(ctx, state, RebaseInterruptConflict)
 	}
 
 	// If we have rebase state after a successful return,
 	// this was a deliberate break or edit.
-	if state, err := r.loadRebaseState(true /* deliberate */); err == nil {
+	if state, err := r.RebaseState(); err == nil {
 		if req.InterruptFunc == nil {
 			return ErrRebaseInterrupted
 		}
-		return req.InterruptFunc(ctx, state)
+		return req.InterruptFunc(ctx, state, RebaseInterruptDeliberate)
 	}
 
 	return nil
@@ -159,23 +173,23 @@ type RebaseState struct {
 	// Merge is the default.
 	// Apply is rarely used and may be phased out in the future.
 	Backend RebaseBackend
-
-	// Deliberate is true if the rebase was interrupted
-	// because of a deliberate user action (e.g. 'edit' or 'break').
-	Deliberate bool
 }
 
-// loadRebaseState loads information about an ongoing rebase.
-//
-// Rebase state is stored inside .git/rebase-merge or .git/rebase-apply
-// depending on the backend in use.
-// See https://github.com/git/git/blob/d8ab1d464d07baa30e5a180eb33b3f9aa5c93adf/wt-status.c#L1711.
-// Inside that directory, we care about the following files:
-//
-//   - head-name: full ref name of the branch being rebased (e.g. refs/heads/main)
-//
-// There's no Git porcelain command to directly get this information.
-func (r *Repository) loadRebaseState(deliberate bool) (*RebaseState, error) {
+// ErrNoRebase indicates that a rebase is not in progress.
+var ErrNoRebase = errors.New("no rebase in progress")
+
+// RebaseState loads information about an ongoing rebase,
+// or [ErrNoRebase] if no rebase is in progress.
+func (r *Repository) RebaseState() (*RebaseState, error) {
+	// Rebase state is stored inside .git/rebase-merge or .git/rebase-apply
+	// depending on the backend in use.
+	// See https://github.com/git/git/blob/d8ab1d464d07baa30e5a180eb33b3f9aa5c93adf/wt-status.c#L1711.
+	//
+	// Inside that directory, we care about the following files:
+	//
+	//   - head-name: full ref name of the branch being rebased (e.g. refs/heads/main)
+	//
+	// There's no Git porcelain command to directly get this information.
 	for _, backend := range []RebaseBackend{RebaseBackendApply, RebaseBackendMerge} {
 		stateDir := filepath.Join(r.gitDir, backend.stateDir())
 		if _, err := os.Stat(stateDir); err != nil {
@@ -195,15 +209,14 @@ func (r *Repository) loadRebaseState(deliberate bool) (*RebaseState, error) {
 
 		branchRef := strings.TrimSpace(string(head))
 		state := &RebaseState{
-			Branch:     strings.TrimPrefix(branchRef, "refs/heads/"),
-			Backend:    backend,
-			Deliberate: deliberate,
+			Branch:  strings.TrimPrefix(branchRef, "refs/heads/"),
+			Backend: backend,
 		}
 
 		return state, nil
 	}
 
-	return nil, errors.New("no rebase in progress")
+	return nil, ErrNoRebase
 }
 
 // stateDir reports the directory inside the .git directory

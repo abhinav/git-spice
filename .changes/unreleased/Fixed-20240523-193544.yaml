@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'commit create, commit amend: Fix usage during an ongoing rebase. If used during a rebase, these commands will not rebase the upstack.'
+time: 2024-05-23T19:35:44.704921-07:00
