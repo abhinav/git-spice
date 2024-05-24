@@ -89,8 +89,12 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 		args = append(args, req.Branch)
 	}
 
-	err := r.gitCmd(ctx, args...).Run(r.exec)
-	if err != nil {
+	cmd := r.gitCmd(ctx, args...)
+	if req.Interactive {
+		cmd.Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stderr)
+	}
+
+	if err := cmd.Run(r.exec); err != nil {
 		originalErr := err
 		if exitErr := new(exec.ExitError); !errors.As(err, &exitErr) {
 			return fmt.Errorf("rebase: %w", err)
