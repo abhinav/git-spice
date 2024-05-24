@@ -14,7 +14,7 @@ type branchCmd struct {
 	// Mutation
 	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the commits in a branch"`
 	Rename  branchRenameCmd  `cmd:"" aliases:"mv" help:"Rename a branch"`
-	Restack branchRestackCmd `cmd:"" aliases:"rs" help:"Restack a branch"`
+	Restack branchRestackCmd `cmd:"" aliases:"r" help:"Restack a branch"`
 
 	// Pull request management
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`

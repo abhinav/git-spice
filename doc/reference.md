@@ -69,7 +69,7 @@ Submit the current stack
 ## gs stack restack
 
 ```
-gs stack (s) restack (rs)
+gs stack (s) restack (r)
 ```
 
 Restack the current stack
@@ -77,7 +77,7 @@ Restack the current stack
 ## gs upstack restack
 
 ```
-gs upstack (us) restack (rs)
+gs upstack (us) restack (r)
 ```
 
 Restack this branch those above it
@@ -321,7 +321,7 @@ and untrack the old name with 'gs branch untrack'.
 ## gs branch restack
 
 ```
-gs branch (b) restack (rs) [<name>]
+gs branch (b) restack (r) [<name>]
 ```
 
 Restack a branch

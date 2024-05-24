@@ -34,7 +34,7 @@ cmpenvJSON stdout $WORK/golden/start.json
 gh-merge alice/example 1
 gs rs
 stderr '#1 was merged'
-gs srs  # stack restack
+gs sr   # stack restack
 gs ss   # stack submit
 stderr 'Updated #2'
 stderr 'Updated #3'
