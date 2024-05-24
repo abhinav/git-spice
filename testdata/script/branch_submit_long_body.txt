@@ -1,0 +1,106 @@
+# branch submit should not truncate a long body.
+# https://github.com/abhinav/git-spice/issues/90
+
+as 'Test <test@example.com>'
+at '2024-05-23T20:06:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a branch with a long body
+git add feature.txt
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/commit-msg
+gs bc feature
+
+git log -n1 --format=%B
+cmp stdout $WORK/input/commit-msg
+
+# submit the branch
+with-term $WORK/input/prompt.txt -- gs branch submit
+cmp stdout $WORK/golden/prompt.txt
+stderr 'Created #1'
+
+gh-dump-pull
+stdout 'End of message.'
+
+-- repo/feature.txt --
+Contents of feature
+
+-- input/commit-msg --
+Add feature
+
+This adds a feature.
+This feature does many things,
+and therefore needs a long commit body
+with lots of explanation.
+
+Lorem ipsum dolor sit amet,
+consetetur sadipscing elitr,
+sed diam nonumy eirmod tempor
+invidunt ut labore et dolore magna aliquyam erat,
+sed diam voluptua.
+At vero eos et accusam et justo duo dolores et ea rebum.
+Stet clita kasd gubergren,
+no sea takimata sanctus est Lorem ipsum dolor sit amet.
+
+End of message.
+
+-- input/prompt.txt --
+await Detailed description
+snapshot initial
+feed \t
+await
+feed \t
+await
+snapshot last
+feed \r
+
+-- golden/prompt.txt --
+### initial ###
+┃ Title
+┃ Short summary of the pull request
+┃ > Add feature
+
+  Body
+  Detailed description of the pull request
+  This adds a feature.
+  This feature does many things,
+  and therefore needs a long commit body
+  with lots of explanation.
+
+  Lorem ipsum dolor sit amet,
+
+  Draft
+  Mark the pull request as a draft
+
+    Yes     No
+
+enter next
+### last ###
+  Title
+  Short summary of the pull request
+  > Add feature
+
+  Body
+  Detailed description of the pull request
+  sed diam voluptua.
+  At vero eos et accusam et justo duo dolores et ea rebum.
+  Stet clita kasd gubergren,
+  no sea takimata sanctus est Lorem ipsum dolor sit amet.
+
+  End of message.
+
+┃ Draft
+┃ Mark the pull request as a draft
+┃
+┃   Yes     No
+
+←/→ toggle • shift+tab back • enter submit

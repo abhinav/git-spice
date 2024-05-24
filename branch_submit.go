@@ -179,6 +179,7 @@ func (cmd *branchSubmitCmd) Run(
 					}
 					return nil
 				}).
+				CharLimit(0).
 				Value(&cmd.Title)
 			fields = append(fields, title.WithWidth(50))
 		}
@@ -188,6 +189,7 @@ func (cmd *branchSubmitCmd) Run(
 			body := huh.NewText().
 				Title("Body").
 				Description("Detailed description of the pull request").
+				CharLimit(0).
 				Value(&cmd.Body)
 			fields = append(fields, body.WithWidth(72))
 			// TODO: default body will also include the PR template
