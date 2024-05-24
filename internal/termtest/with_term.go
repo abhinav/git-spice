@@ -38,7 +38,7 @@ import (
 //   - await [txt]:
 //     Wait up to 1 second for the given text to become visible on the screen.
 //     If [txt] is absent, wait until contents of the screen change
-//     compared to the last captured snapshot.
+//     compared to the last captured snapshot or last await empty.
 //   - snapshot [name]:
 //     Take a picture of the screen as it is right now, and print it to stdout.
 //     If name is provided, the output will include that as a header.
@@ -127,11 +127,33 @@ func WithTerm() (exitCode int) {
 				continue
 			}
 
+			var (
+				last    []byte
+				matched bool
+			)
 			for time.Since(start) < timeout {
-				if match(emu.Snapshot()) {
+				last = emu.Snapshot()
+				if match(last) {
+					matched = true
 					break
 				}
 				time.Sleep(50 * time.Millisecond)
+			}
+
+			if !matched {
+				if len(rest) > 0 {
+					log.Printf("await: %q not found", rest)
+				} else {
+					log.Printf("await: screen did not change")
+				}
+
+				log.Printf("###\n%s\n###", last)
+			}
+
+			// If 'await' was given without an argument,
+			// save the match as the last snapshot.
+			if len(rest) == 0 {
+				lastSnapshot = last
 			}
 
 		case "snapshot":
