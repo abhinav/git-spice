@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch submit: Don''t truncate PR bodies longer than 400 characters.'
-time: 2024-05-23T20:26:28.232089-07:00

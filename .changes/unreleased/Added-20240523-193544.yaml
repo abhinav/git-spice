@@ -1,3 +1,0 @@
-kind: Added
-body: 'commit create, commit amend: Allow using during an ongoing rebase. During a rebase, these commands will not restack the upstack.'
-time: 2024-05-23T19:35:44.704921-07:00
