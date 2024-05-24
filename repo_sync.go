@@ -56,7 +56,10 @@ func (*repoSyncCmd) Run(
 
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
+		if !errors.Is(err, git.ErrDetachedHead) {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		currentBranch = "" // detached head
 	}
 
 	trunk := store.Trunk()
@@ -157,8 +160,8 @@ func (*repoSyncCmd) Run(
 				return fmt.Errorf("pull: %w", err)
 			}
 
-			if err := repo.Checkout(ctx, currentBranch); err != nil {
-				return fmt.Errorf("checkout current branch: %w", err)
+			if err := repo.Checkout(ctx, "-"); err != nil {
+				return fmt.Errorf("checkout old branch: %w", err)
 			}
 
 			// TODO: With a recent enough git,
