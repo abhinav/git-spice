@@ -44,26 +44,38 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 
 	baseHash := restackErr.BaseHash
 	upstream := b.BaseHash
+
 	// Case:
-	// Current branch has diverged from what the target branch
-	// was forked from. That is:
+	// Recorded base hash is super out of date,
+	// and is not an ancestor of the current branch.
+	// In that case, use fork point as a hail mary
+	// to guess the upstream start point.
 	//
-	//  ---X---A'---o current
+	// For context, fork point attempts to find the point
+	// where the current branch diverged from the branch it
+	// was originally forked from.
+	// For example, given:
+	//
+	//  ---X---A'---o foo
 	//      \
 	//       A
 	//        \
-	//         B---o---o target
+	//         B---o---o bar
 	//
-	// Upstack was forked from our branch when the child of X was A.
-	// Since then, we have amended A to get A',
-	// but the target branch still points to A.
+	// If bar branched from foo, when foo was at A,
+	// and then we amended foo to get A',
+	// bar will still refer to A.
 	//
 	// In this case, merge-base --fork-point will give us A,
-	// and that should be the base of the target branch.
-	forkPoint, err := s.repo.ForkPoint(ctx, b.Base, name)
-	if err == nil {
-		upstream = forkPoint
-		s.log.Debugf("Using fork point %v as rebase base", upstream)
+	// and that should be the upstream (commit to start rebasing from)
+	// if the recorded base hash is out of date
+	// because the user changed something externally.
+	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
+		forkPoint, err := s.repo.ForkPoint(ctx, b.Base, name)
+		if err == nil {
+			upstream = forkPoint
+			s.log.Debugf("Using fork point %v as rebase base", upstream)
+		}
 	}
 
 	if err := s.repo.Rebase(ctx, git.RebaseRequest{
