@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
@@ -82,7 +83,11 @@ outer:
 				Options(opts...).
 				Value(&branch)
 
-			if err := prompt.Run(); err != nil {
+			err := huh.NewForm(huh.NewGroup(prompt)).
+				WithOutput(os.Stdout).
+				WithShowHelp(false).
+				Run()
+			if err != nil {
 				return fmt.Errorf("a branch is required: %w", err)
 			}
 		}

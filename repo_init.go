@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
@@ -76,7 +77,11 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 				Description(desc).
 				Options(options...).
 				Value(&result)
-			err := prompt.Run()
+
+			err := huh.NewForm(huh.NewGroup(prompt)).
+				WithOutput(os.Stdout).
+				WithShowHelp(false).
+				Run()
 			return result, err
 		},
 	}
@@ -180,7 +185,10 @@ func ensureRemote(
 				Title("Please select the remote to which you'd like to push your changes").
 				Options(options...).
 				Value(&result)
-			err := prompt.Run()
+			err := huh.NewForm(huh.NewGroup(prompt)).
+				WithOutput(os.Stdout).
+				WithShowHelp(false).
+				Run()
 			return result, err
 		},
 	}).GuessRemote(ctx, repo)
