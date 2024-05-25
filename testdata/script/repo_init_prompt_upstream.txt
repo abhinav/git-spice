@@ -31,3 +31,4 @@ feed \r
 ┃   bar
 ┃   foo
 ┃ > main
+┃

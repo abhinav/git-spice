@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -211,7 +212,7 @@ func (cmd *branchSubmitCmd) Run(
 				return fmt.Errorf("prompt for commit information: %w", errNoPrompt)
 			}
 
-			form := huh.NewForm(huh.NewGroup(fields...))
+			form := huh.NewForm(huh.NewGroup(fields...)).WithOutput(os.Stdout)
 			if err := form.Run(); err != nil {
 				return fmt.Errorf("prompt form: %w", err)
 			}
