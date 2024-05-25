@@ -7,6 +7,14 @@
 
 ## Introduction
 
+<div align="center">
+  <img src="doc/img/logo.png" width="300"/>
+</div>
+
+[![CI](https://github.com/abhinav/git-spice/actions/workflows/ci.yml/badge.svg)](https://github.com/abhinav/git-spice/actions/workflows/ci.yml)
+
+</div>
+
 git-spice is a tool for stacking Git branches.
 
 TODO: more details
