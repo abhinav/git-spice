@@ -85,7 +85,7 @@ readme-lint: generate-lint
 		false; \
 	fi \
 
-$(GS): $(GO_SRC_FILES)
+$(GS): $(GO_SRC_FILES) go.mod
 	go install go.abhg.dev/gs
 
 $(MOCKGEN): go.mod
