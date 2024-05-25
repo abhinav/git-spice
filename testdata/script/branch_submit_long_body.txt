@@ -69,34 +69,34 @@ feed \r
 ┃ Short summary of the pull request
 ┃ > Add feature
 
-┃ Body
-┃ Detailed description of the pull request
-┃ This adds a feature.
-┃ This feature does many things,
-┃ and therefore needs a long commit body
-┃ with lots of explanation.
-┃
-┃ Lorem ipsum dolor sit amet,
+  Body
+  Detailed description of the pull request
+  This adds a feature.
+  This feature does many things,
+  and therefore needs a long commit body
+  with lots of explanation.
 
-┃ Draft
-┃ Mark the pull request as a draft
-┃
-┃   Yes     No
+  Lorem ipsum dolor sit amet,
+
+  Draft
+  Mark the pull request as a draft
+
+    Yes     No
 
 enter next
 ### last ###
-┃ Title
-┃ Short summary of the pull request
-┃ > Add feature
+  Title
+  Short summary of the pull request
+  > Add feature
 
-┃ Body
-┃ Detailed description of the pull request
-┃ sed diam voluptua.
-┃ At vero eos et accusam et justo duo dolores et ea rebum.
-┃ Stet clita kasd gubergren,
-┃ no sea takimata sanctus est Lorem ipsum dolor sit amet.
-┃
-┃ End of message.
+  Body
+  Detailed description of the pull request
+  sed diam voluptua.
+  At vero eos et accusam et justo duo dolores et ea rebum.
+  Stet clita kasd gubergren,
+  no sea takimata sanctus est Lorem ipsum dolor sit amet.
+
+  End of message.
 
 ┃ Draft
 ┃ Mark the pull request as a draft
