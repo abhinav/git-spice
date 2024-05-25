@@ -26,3 +26,4 @@ feed \r
 ┃ Merged changes will be pushed to this remote
 ┃ > origin
 ┃   upstream
+┃
