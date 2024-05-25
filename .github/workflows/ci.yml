@@ -47,7 +47,7 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
 
     - name: Test
-      run: make test TEST_FLAGS=-v
+      run: make test TEST_FLAGS=
       shell: bash
     # TODO:
     # - name: Test
