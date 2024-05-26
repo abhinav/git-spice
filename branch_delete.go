@@ -50,7 +50,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			Exclude:           []string{store.Trunk()},
 			ExcludeCheckedOut: true,
 			Title:             "Select a branch to delete",
-		}).Run(ctx, repo)
+		}).Run(ctx, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}

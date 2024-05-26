@@ -46,7 +46,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 			Exclude:           []string{currentBranch},
 			ExcludeCheckedOut: true,
 			Title:             "Select a branch to checkout",
-		}).Run(ctx, repo)
+		}).Run(ctx, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
