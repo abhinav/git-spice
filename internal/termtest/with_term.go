@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ import (
 // WithTerm is an entry point for a command line program "with-term".
 // Its usage is as follows:
 //
-//	with-term script -- cmd [args ...]
+//	with-term [options] script -- cmd [args ...]
 //
 // It runs cmd with the given arguments inside a terminal emulator,
 // using the script file to drive interactions with it.
@@ -46,6 +47,11 @@ import (
 //     Feed the given string into the terminal.
 //     Go string-style escape codes are permitted without quotes.
 //     Examples: \r, \x1b[B
+//
+// The following options may be provided before the script file.
+//
+//   - -cols int: terminal width (default 70)
+//   - -rows int: terminal height (default 40)
 func WithTerm() (exitCode int) {
 	defer func() {
 		// testscript.RunMain does not seem to respect
@@ -53,9 +59,13 @@ func WithTerm() (exitCode int) {
 		os.Exit(exitCode)
 	}()
 
-	log.SetFlags(0)
+	cols := flag.Int("cols", 70, "terminal width")
+	rows := flag.Int("rows", 40, "terminal height")
 
-	args := os.Args[1:]
+	log.SetFlags(0)
+	flag.Parse()
+
+	args := flag.Args()
 	if len(args) < 2 {
 		log.Println("usage: with-term file -- cmd [args ...]")
 		return 1
@@ -83,8 +93,8 @@ func WithTerm() (exitCode int) {
 	cmd.Stderr = os.Stderr
 
 	size := &pty.Winsize{
-		Rows: 40,
-		Cols: 70,
+		Rows: uint16(*rows),
+		Cols: uint16(*cols),
 	}
 	f, err := pty.StartWithSize(cmd, size)
 	if err != nil {
