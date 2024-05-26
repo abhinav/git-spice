@@ -15,7 +15,7 @@ with-term $WORK/input.txt -- gs repo init
 cmp stdout $WORK/golden/dialog.txt
 
 -- input.txt --
-await Pick a trunk
+await Please select the trunk branch
 snapshot dialog
 feed \r
 
