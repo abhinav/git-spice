@@ -39,9 +39,21 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 	svc := spice.NewService(repo, store, log)
 
-	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
-		return errors.New("branch name is required")
+		// If a branch name is not given, prompt for one;
+		// assuming we're in interactive mode.
+		if !opts.Prompt {
+			return fmt.Errorf("cannot proceed without branch name: %w", errNoPrompt)
+		}
+
+		cmd.Name, err = (&branchPrompt{
+			Exclude:           []string{store.Trunk()},
+			ExcludeCheckedOut: true,
+			Title:             "Select a branch to delete",
+		}).Run(ctx, repo)
+		if err != nil {
+			return fmt.Errorf("select branch: %w", err)
+		}
 	}
 
 	currentBranch, err := repo.CurrentBranch(ctx)
