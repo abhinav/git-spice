@@ -30,9 +30,26 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 
 	svc := spice.NewService(repo, store, log)
 
-	// TODO: prompt for branch if not provided or not an exact match
 	if cmd.Name == "" {
-		return errors.New("branch name is required")
+		if !opts.Prompt {
+			return fmt.Errorf("cannot proceed without a branch name: %w", errNoPrompt)
+		}
+
+		// If a branch name is not provided,
+		// list branches besides the current branch and pick one.
+		currentBranch, err := repo.CurrentBranch(ctx)
+		if err != nil {
+			currentBranch = ""
+		}
+
+		cmd.Name, err = (&branchPrompt{
+			Exclude:           []string{currentBranch},
+			ExcludeCheckedOut: true,
+			Title:             "Select a branch to checkout",
+		}).Run(ctx, repo)
+		if err != nil {
+			return fmt.Errorf("select branch: %w", err)
+		}
 	}
 
 	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {

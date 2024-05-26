@@ -1,0 +1,78 @@
+# branch checkout with lots of branches
+# and no argument prompts for branch name.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A couple tracked branches, and a couple untracked.
+git add foo.txt
+gs bc foo -m 'Add foo'
+
+git checkout -b baz
+git add baz.txt
+git commit -m 'Add baz'
+
+gs trunk
+
+git add bar.txt
+gs bc bar -m 'add bar.txt'
+
+git checkout -b qux
+git add qux.txt
+git commit -m 'Add qux'
+
+git checkout -b quux main
+git merge -m 'Merge many' foo bar baz qux
+
+with-term -rows 8 -cols 40 $WORK/input.txt -- gs branch checkout
+cmp stdout $WORK/golden/prompt.txt
+
+git branch --show-current
+stdout 'baz'
+
+-- repo/foo.txt --
+whatever
+
+-- repo/bar.txt --
+whatever
+
+-- repo/baz.txt --
+whatever
+
+-- repo/qux.txt --
+whatever
+
+-- input.txt --
+await Select a branch
+snapshot init
+feed ba
+await
+snapshot after-ba
+feed \x1b[B
+await
+snapshot end
+feed \r
+
+-- golden/prompt.txt --
+### init ###
+Select a branch to checkout:
+
+▶ bar
+  baz
+  foo
+  ▼▼▼
+### after-ba ###
+Select a branch to checkout:
+
+▶ bar
+  baz
+### end ###
+Select a branch to checkout:
+
+  bar
+▶ baz
