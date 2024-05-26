@@ -47,6 +47,12 @@ import (
 //     Go string-style escape codes are permitted without quotes.
 //     Examples: \r, \x1b[B
 func WithTerm() (exitCode int) {
+	defer func() {
+		// testscript.RunMain does not seem to respect
+		// the returned exit code.
+		os.Exit(exitCode)
+	}()
+
 	log.SetFlags(0)
 
 	args := os.Args[1:]
@@ -143,8 +149,10 @@ func WithTerm() (exitCode int) {
 			if !matched {
 				if len(rest) > 0 {
 					log.Printf("await: %q not found", rest)
+					exitCode = 1
 				} else {
 					log.Printf("await: screen did not change")
+					exitCode = 1
 				}
 
 				log.Printf("###\n%s\n###", last)
@@ -180,7 +188,7 @@ func WithTerm() (exitCode int) {
 		}
 	}
 
-	return 0
+	return exitCode
 }
 
 type terminalEmulator struct {

@@ -29,7 +29,7 @@ cmpenvJSON stdout $WORK/golden/pulls.json
 Contents of feature1
 
 -- input.txt --
-await Please select the remote
+await Please select a remote
 snapshot dialog
 feed \r
 
