@@ -1,0 +1,39 @@
+# Renaming a branch without a new name
+# prompts for a new name
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add foo.txt
+gs branch create oldname -m 'Do things'
+
+with-term $WORK/input.txt -- gs branch rename
+cmp stdout $WORK/golden/prompt.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/foo.txt --
+whatever
+
+-- input.txt --
+await Renaming branch: oldname
+snapshot dialog
+feed newname\r
+await
+snapshot submit
+
+-- golden/prompt.txt --
+### dialog ###
+New branch name:
+Renaming branch: oldname
+### submit ###
+New branch name: newname
+-- golden/graph.txt --
+* 52acf8b (HEAD -> newname) Do things
+* 9bad92b (main) Initial commit
