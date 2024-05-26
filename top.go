@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type topCmd struct{}
@@ -52,27 +51,18 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) er
 
 	branch := tops[0]
 	if len(tops) > 1 {
-		log.Info("There are multiple top-level branches reachable from the current branch.")
+		desc := "There are multiple top-level branches reachable from the current branch."
 		if !opts.Prompt {
+			log.Error(desc)
 			return errNoPrompt
 		}
 
 		// If there are multiple top-most branches,
 		// prompt the user to pick one.
-		opts := make([]huh.Option[string], len(tops))
-		for i, branch := range tops {
-			opts[i] = huh.NewOption(branch, branch)
-		}
-
-		prompt := huh.NewSelect[string]().
-			Title("Pick a branch").
-			Options(opts...).
-			Value(&branch)
-		err := huh.NewForm(huh.NewGroup(prompt)).
-			WithOutput(os.Stdout).
-			WithShowHelp(false).
-			Run()
-		if err != nil {
+		prompt := ui.NewSelect(&branch, tops...).
+			WithTitle("Pick a branch").
+			WithDescription(desc)
+		if err := ui.Run(prompt); err != nil {
 			return fmt.Errorf("a branch is required: %w", err)
 		}
 	}

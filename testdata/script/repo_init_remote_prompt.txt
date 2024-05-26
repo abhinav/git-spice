@@ -22,8 +22,9 @@ feed \r
 
 -- golden/dialog.txt --
 ### dialog ###
-┃ Please select a remote
-┃ Merged changes will be pushed to this remote
-┃ > origin
-┃   upstream
-┃
+Please select a remote:
+
+▶ origin
+  upstream
+
+Merged changes will be pushed to this remote

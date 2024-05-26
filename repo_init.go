@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type repoInitCmd struct {
@@ -65,24 +64,15 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 				must.Failf("unknown guess operation: %v", op)
 			}
 
-			options := make([]huh.Option[string], len(opts))
-			for i, opt := range opts {
-				options[i] = huh.NewOption(opt, opt).
-					Selected(opt == selected)
+			result := selected
+			prompt := ui.NewSelect(&result, opts...).
+				WithTitle(msg).
+				WithDescription(desc)
+			if err := ui.Run(prompt); err != nil {
+				return "", err
 			}
 
-			var result string
-			prompt := huh.NewSelect[string]().
-				Title(msg).
-				Description(desc).
-				Options(options...).
-				Value(&result)
-
-			err := huh.NewForm(huh.NewGroup(prompt)).
-				WithOutput(os.Stdout).
-				WithShowHelp(false).
-				Run()
-			return result, err
+			return result, nil
 		},
 	}
 
@@ -174,22 +164,15 @@ func ensureRemote(
 				return "", errNoPrompt
 			}
 
-			options := make([]huh.Option[string], len(opts))
-			for i, opt := range opts {
-				options[i] = huh.NewOption(opt, opt).
-					Selected(opt == selected)
+			result := selected
+			prompt := ui.NewSelect(&result, opts...).
+				WithTitle("Please select a remote").
+				WithDescription("Changes will be pushed to this remote")
+			if err := ui.Run(prompt); err != nil {
+				return "", err
 			}
 
-			var result string
-			prompt := huh.NewSelect[string]().
-				Title("Please select the remote to which you'd like to push your changes").
-				Options(options...).
-				Value(&result)
-			err := huh.NewForm(huh.NewGroup(prompt)).
-				WithOutput(os.Stdout).
-				WithShowHelp(false).
-				Run()
-			return result, err
+			return result, nil
 		},
 	}).GuessRemote(ctx, repo)
 	if err != nil {

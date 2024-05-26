@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/log"
 	"github.com/google/go-github/v61/github"
 	"go.abhg.dev/gs/internal/git"
@@ -15,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 	"golang.org/x/oauth2"
 )
 
@@ -168,42 +167,39 @@ func (cmd *branchSubmitCmd) Run(
 			defaultBody = body.String()
 		}
 
-		var fields []huh.Field
+		var fields []ui.Field
 		if cmd.Title == "" {
 			cmd.Title = defaultTitle
-			title := huh.NewInput().
-				Title("Title").
-				Description("Short summary of the pull request").
-				Validate(func(s string) error {
+			title := ui.NewInput(&cmd.Title).
+				WithTitle("Title").
+				WithDescription("Short summary of the pull request").
+				WithValidate(func(s string) error {
 					if strings.TrimSpace(s) == "" {
 						return errors.New("title cannot be blank")
 					}
 					return nil
-				}).
-				CharLimit(0).
-				Value(&cmd.Title)
-			fields = append(fields, title.WithWidth(50))
+				})
+			fields = append(fields, title)
 		}
+
 		if cmd.Body == "" {
 			cmd.Body = defaultBody
-			// TODO: replace with just a prompt to open the editor?
-			body := huh.NewText().
-				Title("Body").
-				Description("Detailed description of the pull request").
-				CharLimit(0).
-				Value(&cmd.Body)
-			fields = append(fields, body.WithWidth(72))
+			body := ui.NewOpenEditor(&cmd.Body).
+				WithTitle("Body").
+				WithDescription("Open your editor to write " +
+					"a detailed description of the pull request")
 			// TODO: default body will also include the PR template
 			// (if any) below the commit messages.
 			// Querying for PR template requires GraphQL API.
+			fields = append(fields, body)
 		}
+
 		if opts.Prompt {
 			// TODO: default to true if subject is "WIP" or similar.
-			body := huh.NewConfirm().
-				Title("Draft").
-				Description("Mark the pull request as a draft").
-				Value(&cmd.Draft)
-			fields = append(fields, body)
+			draft := ui.NewConfirm(&cmd.Draft).
+				WithTitle("Draft").
+				WithDescription("Mark the pull request as a draft?")
+			fields = append(fields, draft)
 		}
 
 		// TODO: should we assume --fill if --no-prompt?
@@ -212,7 +208,7 @@ func (cmd *branchSubmitCmd) Run(
 				return fmt.Errorf("prompt for commit information: %w", errNoPrompt)
 			}
 
-			form := huh.NewForm(huh.NewGroup(fields...)).WithOutput(os.Stdout)
+			form := ui.NewForm(fields...)
 			if err := form.Run(); err != nil {
 				return fmt.Errorf("prompt form: %w", err)
 			}
