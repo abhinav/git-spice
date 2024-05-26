@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -31,7 +32,8 @@ type branchCmd struct {
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
 }
 
-// branchPrompt prompts a user to select a branch.
+// branchPrompt prompts a user to select a local branch
+// that may or may not be tracked by the store.
 type branchPrompt struct {
 	// Exclude specifies branches that will not be included in the list.
 	Exclude []string
@@ -40,6 +42,9 @@ type branchPrompt struct {
 	// in any worktree should be excluded.
 	ExcludeCheckedOut bool
 
+	// TrackedOnly indicates that only tracked branches should be included.
+	TrackedOnly bool
+
 	// Title specifies the prompt to display to the user.
 	Title string
 
@@ -47,34 +52,60 @@ type branchPrompt struct {
 	Description string
 }
 
-func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository) (string, error) {
-	slices.Sort(p.Exclude)
+func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *state.Store) (string, error) {
+	var filters []func(git.LocalBranch) bool
 
-	branches, err := repo.LocalBranches(ctx)
+	if len(p.Exclude) > 0 {
+		slices.Sort(p.Exclude)
+		filters = append(filters, func(b git.LocalBranch) bool {
+			_, ok := slices.BinarySearch(p.Exclude, b.Name)
+			return !ok
+		})
+	}
+
+	if p.ExcludeCheckedOut {
+		filters = append(filters, func(b git.LocalBranch) bool {
+			return !b.CheckedOut
+		})
+	}
+
+	if p.TrackedOnly {
+		tracked, err := store.List(ctx)
+		if err != nil {
+			return "", fmt.Errorf("list tracked branches: %w", err)
+		}
+		slices.Sort(tracked)
+
+		filters = append(filters, func(b git.LocalBranch) bool {
+			_, ok := slices.BinarySearch(tracked, b.Name)
+			return ok
+		})
+	}
+
+	localBranches, err := repo.LocalBranches(ctx)
 	if err != nil {
 		return "", fmt.Errorf("list branches: %w", err)
 	}
 
-	branchNames := make([]string, 0, len(branches))
-	for _, branch := range branches {
-		if p.ExcludeCheckedOut && branch.CheckedOut {
-			continue
+	branches := make([]string, 0, len(localBranches))
+nextBranch:
+	for _, branch := range localBranches {
+		for _, filter := range filters {
+			if !filter(branch) {
+				continue nextBranch
+			}
 		}
 
-		if _, ok := slices.BinarySearch(p.Exclude, branch.Name); ok {
-			continue
-		}
-
-		branchNames = append(branchNames, branch.Name)
+		branches = append(branches, branch.Name)
 	}
-	sort.Strings(branchNames)
+	sort.Strings(branches)
 
-	if len(branchNames) == 0 {
+	if len(branches) == 0 {
 		return "", errors.New("no branches available")
 	}
 
 	var result string
-	prompt := ui.NewSelect(&result, branchNames...).
+	prompt := ui.NewSelect(&result, branches...).
 		WithTitle(p.Title).
 		WithDescription(p.Description)
 	if err := ui.Run(prompt); err != nil {
