@@ -33,6 +33,11 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("open repository: %w", err)
 	}
 
+	store, err := ensureStore(ctx, repo, log, opts)
+	if err != nil {
+		return err
+	}
+
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -40,24 +45,29 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 		cmd.Branch = currentBranch
 	}
+	if cmd.Branch == store.Trunk() {
+		return fmt.Errorf("cannot move trunk")
+	}
 
-	// TODO: fuzzy prompt for Onto if unset
 	if cmd.Onto == "" {
-		return fmt.Errorf("destination branch required")
+		if !opts.Prompt {
+			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
+		}
+
+		cmd.Onto, err = (&branchPrompt{
+			Exclude:     []string{cmd.Branch},
+			TrackedOnly: true,
+			Title:       "Select a branch to move onto",
+			Description: fmt.Sprintf("Moving %s onto another branch", cmd.Branch),
+		}).Run(ctx, repo, store)
+		if err != nil {
+			return fmt.Errorf("select branch: %w", err)
+		}
 	}
 
 	ontoHash, err := repo.PeelToCommit(ctx, cmd.Onto)
 	if err != nil {
 		return fmt.Errorf("resolve %v: %w", cmd.Onto, err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
-	if err != nil {
-		return err
-	}
-
-	if cmd.Branch == store.Trunk() {
-		return fmt.Errorf("cannot move trunk")
 	}
 
 	svc := spice.NewService(repo, store, log)
