@@ -32,6 +32,13 @@ linters:
     - musttag
 
 linters-settings:
+  errcheck:
+    exclude-functions:
+      # Usually used in the same capacity as fmt.Print*.
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+
   govet:
     enable:
       - niliness
