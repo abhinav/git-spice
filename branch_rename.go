@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchRenameCmd struct {
@@ -35,14 +35,21 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	// TODO: prompt for a name if not provided
-	if cmd.Name == "" {
-		return errors.New("branch name is required")
-	}
-
+	// TODO: support: rename [old] new
 	oldName, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if cmd.Name == "" {
+		prompt := ui.NewInput(&cmd.Name).
+			WithTitle("New branch name").
+			WithDescription(fmt.Sprintf("Renaming branch: %v", oldName))
+			// TODO: validate func
+
+		if err := ui.Run(prompt); err != nil {
+			return fmt.Errorf("prompt: %w", err)
+		}
 	}
 
 	store, err := ensureStore(ctx, repo, log, opts)
