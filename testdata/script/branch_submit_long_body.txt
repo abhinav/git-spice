@@ -54,12 +54,12 @@ no sea takimata sanctus est Lorem ipsum dolor sit amet.
 End of message.
 
 -- input/prompt.txt --
-await Detailed description
+await Title:
 snapshot initial
 feed \t
-await
+await Body:
 feed \t
-await
+await Draft:
 snapshot last
 feed \r
 

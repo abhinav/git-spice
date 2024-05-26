@@ -45,7 +45,6 @@ stderr 'not allowed to prompt for input'
 # from main, we should be prompted to pick between
 # f2, f1-s1, and f1-s2-s
 with-term $WORK/input/main-prompt.txt -- gs top
-stderr 'There are multiple top-level branches'
 cmp stdout $WORK/golden/main-prompt.txt
 
 # from f1, we should wee f1-s1 and f1-s2-s
@@ -78,7 +77,7 @@ feature 1 sub feature 2 sub feature
 |/  
 * 9bad92b (HEAD -> main) Initial commit
 -- input/main-prompt.txt --
-await 'Pick a branch'
+await Pick a branch
 snapshot
 feed \r
 -- golden/main-prompt.txt --
@@ -90,7 +89,7 @@ Pick a branch:
 
 There are multiple top-level branches reachable from the current branc
 -- input/f1-prompt.txt --
-await 'Pick a branch'
+await Pick a branch
 snapshot
 feed \r
 -- golden/f1-prompt.txt --
