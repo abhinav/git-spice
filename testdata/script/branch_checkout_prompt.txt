@@ -29,7 +29,7 @@ git commit -m 'Add qux'
 git checkout -b quux main
 git merge -m 'Merge many' foo bar baz qux
 
-with-term -rows 8 -cols 40 $WORK/input.txt -- gs branch checkout
+with-term -rows 8 -cols 50 $WORK/input.txt -- gs branch checkout
 cmp stdout $WORK/golden/prompt.txt
 
 git branch --show-current
@@ -55,7 +55,10 @@ await
 snapshot after-ba
 feed \x1b[B
 await
-snapshot end
+snapshot select
+feed \r
+await Do you want to track
+snapshot track
 feed \r
 
 -- golden/prompt.txt --
@@ -71,8 +74,15 @@ Select a branch to checkout:
 
 ▶ bar
   baz
-### end ###
+### select ###
 Select a branch to checkout:
 
   bar
 ▶ baz
+### track ###
+Select a branch to checkout:
+
+  bar
+▶ baz
+
+Do you want to track this branch now?: [Y/n]

@@ -97,7 +97,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	if err := repo.Rebase(ctx, git.RebaseRequest{
 		Branch:    cmd.Branch,
-		Upstream:  branch.Base, // TODO: use fork point?
+		Upstream:  branch.Base,
 		Onto:      cmd.Onto,
 		Autostash: true,
 		Quiet:     true,

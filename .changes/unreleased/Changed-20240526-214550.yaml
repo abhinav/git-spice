@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch checkout: Allow opting into tracking after checking out a branch.'
+time: 2024-05-26T21:45:50.553608-07:00

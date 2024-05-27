@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -44,8 +45,13 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	if cmd.Name == "" {
 		prompt := ui.NewInput(&cmd.Name).
 			WithTitle("New branch name").
-			WithDescription(fmt.Sprintf("Renaming branch: %v", oldName))
-			// TODO: validate func
+			WithDescription(fmt.Sprintf("Renaming branch: %v", oldName)).
+			WithValidate(func(s string) error {
+				if strings.TrimSpace(s) == "" {
+					return fmt.Errorf("branch name cannot be empty")
+				}
+				return nil
+			})
 
 		if err := ui.Run(prompt); err != nil {
 			return fmt.Errorf("prompt: %w", err)
