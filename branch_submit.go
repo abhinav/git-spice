@@ -184,7 +184,8 @@ func (cmd *branchSubmitCmd) Run(
 
 		if cmd.Body == "" {
 			cmd.Body = defaultBody
-			body := ui.NewOpenEditor(&cmd.Body).
+			body := ui.NewOpenEditor().
+				WithValue(&cmd.Body).
 				WithTitle("Body").
 				WithDescription("Open your editor to write " +
 					"a detailed description of the pull request")
