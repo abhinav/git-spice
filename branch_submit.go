@@ -196,7 +196,8 @@ func (cmd *branchSubmitCmd) Run(
 
 		if opts.Prompt {
 			// TODO: default to true if subject is "WIP" or similar.
-			draft := ui.NewConfirm(&cmd.Draft).
+			draft := ui.NewConfirm().
+				WithValue(&cmd.Draft).
 				WithTitle("Draft").
 				WithDescription("Mark the pull request as a draft?")
 			fields = append(fields, draft)

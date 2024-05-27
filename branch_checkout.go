@@ -65,7 +65,8 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 				} else {
 					log.Warnf("%v: branch not tracked", cmd.Name)
 					track := true
-					prompt := ui.NewConfirm(&track).
+					prompt := ui.NewConfirm().
+						WithValue(&track).
 						WithTitle("Do you want to track this branch now?")
 					if err := ui.Run(prompt); err != nil {
 						return fmt.Errorf("prompt: %w", err)

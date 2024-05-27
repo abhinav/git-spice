@@ -53,21 +53,32 @@ type Confirm struct {
 
 var _ Field = (*Confirm)(nil)
 
-// NewConfirm builds a new confirm field that writes its result
-// to the given boolean pointer.
-//
-// The initial value of the boolean pointer will be used as the default.
-func NewConfirm(value *bool) *Confirm {
+// NewConfirm builds a new confirm field that prompts the user
+// with a yes or no question.
+func NewConfirm() *Confirm {
 	return &Confirm{
 		KeyMap: DefaultConfirmKeyMap,
 		Style:  DefaultConfirmStyle,
-		value:  value,
+		value:  new(bool),
 	}
 }
 
 // Err reports any errors in the confirm field.
 func (c *Confirm) Err() error {
 	return nil
+}
+
+// WithValue sets the destination for the confirm field.
+// The result of the field will be written to the given boolean pointer.
+// The pointer's current value will be used as the default.
+func (c *Confirm) WithValue(value *bool) *Confirm {
+	c.value = value
+	return c
+}
+
+// Value returns the current value of the confirm field.
+func (c *Confirm) Value() bool {
+	return *c.value
 }
 
 // WithTitle sets the title for the confirm field.
