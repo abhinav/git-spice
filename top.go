@@ -59,7 +59,9 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) er
 
 		// If there are multiple top-most branches,
 		// prompt the user to pick one.
-		prompt := ui.NewSelect(&branch, tops...).
+		prompt := ui.NewSelect().
+			WithValue(&branch).
+			WithOptions(tops...).
 			WithTitle("Pick a branch").
 			WithDescription(desc)
 		if err := ui.Run(prompt); err != nil {

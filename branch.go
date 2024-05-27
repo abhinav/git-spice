@@ -104,13 +104,13 @@ nextBranch:
 		return "", errors.New("no branches available")
 	}
 
-	var result string
-	prompt := ui.NewSelect(&result, branches...).
+	prompt := ui.NewSelect().
+		WithOptions(branches...).
 		WithTitle(p.Title).
 		WithDescription(p.Description)
 	if err := ui.Run(prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)
 	}
 
-	return result, nil
+	return prompt.Value(), nil
 }

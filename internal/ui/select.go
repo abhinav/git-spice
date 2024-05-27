@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -82,13 +83,32 @@ type selectOption struct {
 
 var _ Field = (*Select)(nil)
 
-// NewSelect builds a new [Select] field
-// that will feed its result into the provided value.
-// The field will present opts as options to select from.
-// If the current value matches any of the options,
-// it will be selected by default.
-func NewSelect(value *string, opts ...string) *Select {
-	var selected int
+// NewSelect builds a new [Select] field.
+func NewSelect() *Select {
+	return &Select{
+		KeyMap: DefaultSelectKeyMap,
+		Style:  DefaultSelectStyle,
+		value:  new(string),
+	}
+}
+
+// WithValue sets the destination for the select field.
+// The existing value, if any, will be selected by default.
+func (s *Select) WithValue(value *string) *Select {
+	s.value = value
+	s.initSelected()
+	return s
+}
+
+// Value reports the current value of the select field.
+func (s *Select) Value() string {
+	return *s.value
+}
+
+// WithOptions sets the available options for the select field.
+// The options will be presented in the order they are provided.
+// Existing options will be replaced.
+func (s *Select) WithOptions(opts ...string) *Select {
 	options := make([]selectOption, len(opts))
 	matched := make([]int, len(options))
 	for i, v := range opts {
@@ -96,18 +116,20 @@ func NewSelect(value *string, opts ...string) *Select {
 			Value: v,
 		}
 		matched[i] = i
-		if *value == v {
-			selected = i
-		}
 	}
 
-	return &Select{
-		KeyMap:   DefaultSelectKeyMap,
-		Style:    DefaultSelectStyle,
-		value:    value,
-		options:  options,
-		matched:  matched,
-		selected: selected,
+	s.options = options
+	s.matched = matched
+	s.initSelected()
+	return s
+}
+
+func (s *Select) initSelected() {
+	idx := slices.IndexFunc(s.matched, func(optIdx int) bool {
+		return s.options[optIdx].Value == *s.value
+	})
+	if idx != -1 {
+		s.selected = idx
 	}
 }
 
