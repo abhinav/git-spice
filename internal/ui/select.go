@@ -259,11 +259,17 @@ func (s *Select) matchOption(opt *selectOption) bool {
 	return len(filter) == 0 // if any bit of filter is left, it's a mismatch
 }
 
-// View renders the select field.
-func (s *Select) View() string {
-	var out strings.Builder
+// Render renders the select field.
+func (s *Select) Render(out Writer) {
 	if s.title != "" {
+		// If there's a title, we're currently on the same line as the
+		// title following the ": " separator.
 		out.WriteString("\n")
+	}
+
+	if len(s.matched) == 0 {
+		s.err = fmt.Errorf("no matches for: %v", string(s.filter))
+		return
 	}
 
 	highlight := s.Style.Highlight
@@ -276,7 +282,7 @@ func (s *Select) View() string {
 	}
 
 	if offset > 0 {
-		fmt.Fprintf(&out, "%s\n", s.Style.ScrollMarker.Render("  ▲▲▲"))
+		fmt.Fprintf(out, "%s\n", s.Style.ScrollMarker.Render("  ▲▲▲"))
 	} else {
 		out.WriteString("\n")
 	}
@@ -304,13 +310,6 @@ func (s *Select) View() string {
 	}
 
 	if offset+s.visible < len(s.matched) {
-		fmt.Fprintf(&out, "%s\n", s.Style.ScrollMarker.Render("  ▼▼▼"))
+		fmt.Fprintf(out, "%s\n", s.Style.ScrollMarker.Render("  ▼▼▼"))
 	}
-
-	if len(s.matched) == 0 {
-		s.err = fmt.Errorf("no matches for: %v", string(s.filter))
-		return ""
-	}
-
-	return out.String()
 }

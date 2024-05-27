@@ -191,14 +191,11 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the field to the screen.
-func (a *OpenEditor) View() string {
-	var s strings.Builder
-	fmt.Fprintf(&s, "Press [%v] to open %v or [%v] to skip",
+// Render renders the field to the screen.
+func (a *OpenEditor) Render(w Writer) {
+	fmt.Fprintf(w, "Press [%v] to open %v or [%v] to skip",
 		a.Style.Key.Render(a.KeyMap.Edit.Help().Key),
 		a.Style.Editor.Render(a.Editor.Command),
 		a.Style.Key.Render(a.KeyMap.Accept.Help().Key),
 	)
-
-	return s.String()
 }

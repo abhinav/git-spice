@@ -116,7 +116,7 @@ func (i *Input) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// View renders the input field.
-func (i *Input) View() string {
-	return i.model.View()
+// Render renders the input field.
+func (i *Input) Render(w Writer) {
+	w.WriteString(i.model.View())
 }

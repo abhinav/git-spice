@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -116,19 +114,17 @@ func (c *Confirm) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// View renders the confirm field.
-func (c *Confirm) View() string {
-	var s strings.Builder
-	s.WriteString("[")
+// Render renders the confirm field to the given writer.
+func (c *Confirm) Render(w Writer) {
+	w.WriteString("[")
 	if *c.value {
-		s.WriteString(c.Style.DefaultValue.Render("Y"))
-		s.WriteString("/")
-		s.WriteString(c.Style.NonDefaultValue.Render("n"))
+		w.WriteString(c.Style.DefaultValue.Render("Y"))
+		w.WriteString("/")
+		w.WriteString(c.Style.NonDefaultValue.Render("n"))
 	} else {
-		s.WriteString(c.Style.NonDefaultValue.Render("y"))
-		s.WriteString("/")
-		s.WriteString(c.Style.DefaultValue.Render("N"))
+		w.WriteString(c.Style.NonDefaultValue.Render("y"))
+		w.WriteString("/")
+		w.WriteString(c.Style.DefaultValue.Render("N"))
 	}
-	s.WriteString("]")
-	return s.String()
+	w.WriteString("]")
 }
