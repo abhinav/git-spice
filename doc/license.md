@@ -3,7 +3,7 @@
 This software is distributed under the GPL-3.0 License:
 
 ```
-gs: Stacked Pull Requests
+git-spice: Stacked Pull Requests
 Copyright (C) 2024 Abhinav Gupta
 
 This program is free software: you can redistribute it and/or modify
