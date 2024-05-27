@@ -31,14 +31,12 @@ var DefaultConfirmKeyMap = ConfirmKeyMap{
 
 // ConfirmStyle configures the appearance of a [Confirm] field.
 type ConfirmStyle struct {
-	DefaultValue    lipgloss.Style // Y/N
-	NonDefaultValue lipgloss.Style // y/n
+	Key lipgloss.Style // how to highlight keys
 }
 
 // DefaultConfirmStyle is the default style for a [Confirm] field.
 var DefaultConfirmStyle = ConfirmStyle{
-	DefaultValue:    lipgloss.NewStyle().Foreground(_magentaColor),
-	NonDefaultValue: lipgloss.NewStyle().Foreground(_plainColor),
+	Key: lipgloss.NewStyle().Foreground(_magentaColor),
 }
 
 // Confirm is a boolean confirmation field that takes a yes or no answer.
@@ -129,13 +127,13 @@ func (c *Confirm) Update(msg tea.Msg) tea.Cmd {
 func (c *Confirm) Render(w Writer) {
 	w.WriteString("[")
 	if *c.value {
-		w.WriteString(c.Style.DefaultValue.Render("Y"))
+		w.WriteString(c.Style.Key.Render("Y"))
 		w.WriteString("/")
-		w.WriteString(c.Style.NonDefaultValue.Render("n"))
+		w.WriteString(c.Style.Key.Render("n"))
 	} else {
-		w.WriteString(c.Style.NonDefaultValue.Render("y"))
+		w.WriteString(c.Style.Key.Render("y"))
 		w.WriteString("/")
-		w.WriteString(c.Style.DefaultValue.Render("N"))
+		w.WriteString(c.Style.Key.Render("N"))
 	}
 	w.WriteString("]")
 }
