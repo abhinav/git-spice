@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -55,21 +53,32 @@ type Confirm struct {
 
 var _ Field = (*Confirm)(nil)
 
-// NewConfirm builds a new confirm field that writes its result
-// to the given boolean pointer.
-//
-// The initial value of the boolean pointer will be used as the default.
-func NewConfirm(value *bool) *Confirm {
+// NewConfirm builds a new confirm field that prompts the user
+// with a yes or no question.
+func NewConfirm() *Confirm {
 	return &Confirm{
 		KeyMap: DefaultConfirmKeyMap,
 		Style:  DefaultConfirmStyle,
-		value:  value,
+		value:  new(bool),
 	}
 }
 
 // Err reports any errors in the confirm field.
 func (c *Confirm) Err() error {
 	return nil
+}
+
+// WithValue sets the destination for the confirm field.
+// The result of the field will be written to the given boolean pointer.
+// The pointer's current value will be used as the default.
+func (c *Confirm) WithValue(value *bool) *Confirm {
+	c.value = value
+	return c
+}
+
+// Value returns the current value of the confirm field.
+func (c *Confirm) Value() bool {
+	return *c.value
 }
 
 // WithTitle sets the title for the confirm field.
@@ -116,19 +125,17 @@ func (c *Confirm) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// View renders the confirm field.
-func (c *Confirm) View() string {
-	var s strings.Builder
-	s.WriteString("[")
+// Render renders the confirm field to the given writer.
+func (c *Confirm) Render(w Writer) {
+	w.WriteString("[")
 	if *c.value {
-		s.WriteString(c.Style.DefaultValue.Render("Y"))
-		s.WriteString("/")
-		s.WriteString(c.Style.NonDefaultValue.Render("n"))
+		w.WriteString(c.Style.DefaultValue.Render("Y"))
+		w.WriteString("/")
+		w.WriteString(c.Style.NonDefaultValue.Render("n"))
 	} else {
-		s.WriteString(c.Style.NonDefaultValue.Render("y"))
-		s.WriteString("/")
-		s.WriteString(c.Style.DefaultValue.Render("N"))
+		w.WriteString(c.Style.NonDefaultValue.Render("y"))
+		w.WriteString("/")
+		w.WriteString(c.Style.DefaultValue.Render("N"))
 	}
-	s.WriteString("]")
-	return s.String()
+	w.WriteString("]")
 }

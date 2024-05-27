@@ -39,6 +39,10 @@ linters-settings:
       - fmt.Fprintf
       - fmt.Fprintln
 
+      # This is always a strings.Builder, and can't fail.
+      - (go.abhg.dev/gs/internal/ui.Writer).WriteString
+      - (go.abhg.dev/gs/internal/ui.Writer).Write
+
   govet:
     enable:
       - niliness

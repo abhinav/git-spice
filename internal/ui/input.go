@@ -40,21 +40,25 @@ type Input struct {
 
 var _ Field = (*Input)(nil)
 
-// NewInput builds a new input field that writes its result
-// to the given string pointer.
-//
-// If the value is non-empty, it will be used as the initial value.
-func NewInput(value *string) *Input {
+// NewInput builds a new input field.
+func NewInput() *Input {
 	m := textinput.New()
 	m.Prompt = "" // we have our own prompt
-	m.SetValue(*value)
 	m.Focus()
 	return &Input{
 		KeyMap: DefaultInputKeyMap,
 		Style:  DefaultInputStyle,
 		model:  &m,
-		value:  value,
+		value:  new(string),
 	}
+}
+
+// WithValue sets the destination for the input field.
+// If the value is non-empty, it will be used as the initial value.
+func (i *Input) WithValue(value *string) *Input {
+	i.value = value
+	i.model.SetValue(*value)
+	return i
 }
 
 // WithTitle sets the title of the input field.
@@ -116,7 +120,7 @@ func (i *Input) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// View renders the input field.
-func (i *Input) View() string {
-	return i.model.View()
+// Render renders the input field.
+func (i *Input) Render(w Writer) {
+	w.WriteString(i.model.View())
 }

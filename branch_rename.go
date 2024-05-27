@@ -43,7 +43,8 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 
 	if cmd.Name == "" {
-		prompt := ui.NewInput(&cmd.Name).
+		prompt := ui.NewInput().
+			WithValue(&cmd.Name).
 			WithTitle("New branch name").
 			WithDescription(fmt.Sprintf("Renaming branch: %v", oldName)).
 			WithValidate(func(s string) error {

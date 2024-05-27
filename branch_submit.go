@@ -170,7 +170,8 @@ func (cmd *branchSubmitCmd) Run(
 		var fields []ui.Field
 		if cmd.Title == "" {
 			cmd.Title = defaultTitle
-			title := ui.NewInput(&cmd.Title).
+			title := ui.NewInput().
+				WithValue(&cmd.Title).
 				WithTitle("Title").
 				WithDescription("Short summary of the pull request").
 				WithValidate(func(s string) error {
@@ -184,7 +185,8 @@ func (cmd *branchSubmitCmd) Run(
 
 		if cmd.Body == "" {
 			cmd.Body = defaultBody
-			body := ui.NewOpenEditor(&cmd.Body).
+			body := ui.NewOpenEditor().
+				WithValue(&cmd.Body).
 				WithTitle("Body").
 				WithDescription("Open your editor to write " +
 					"a detailed description of the pull request")
@@ -196,7 +198,8 @@ func (cmd *branchSubmitCmd) Run(
 
 		if opts.Prompt {
 			// TODO: default to true if subject is "WIP" or similar.
-			draft := ui.NewConfirm(&cmd.Draft).
+			draft := ui.NewConfirm().
+				WithValue(&cmd.Draft).
 				WithTitle("Draft").
 				WithDescription("Mark the pull request as a draft?")
 			fields = append(fields, draft)

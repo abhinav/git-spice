@@ -85,16 +85,15 @@ type OpenEditor struct {
 
 var _ Field = (*OpenEditor)(nil)
 
-// NewOpenEditor builds an [OpenEditor] field with default values.
-// It will feed the value pointer with the content of the editor.
-//
-// If the value is non-empty, the editor will be pre-filled with its content.
-func NewOpenEditor(value *string) *OpenEditor {
+// NewOpenEditor builds an [OpenEditor] field.
+// It will prompt the user to open an editor and write a message,
+// or accept the current value.
+func NewOpenEditor() *OpenEditor {
 	ed := &OpenEditor{
 		KeyMap: DefaultOpenEditorKeyMap,
 		Style:  DefaultOpenEditorStyle,
 		Editor: DefaultEditor(),
-		value:  value,
+		value:  new(string),
 	}
 	if ed.Editor.Command == "" {
 		ed.err = errors.New("no editor found: please set $EDITOR")
@@ -105,6 +104,15 @@ func NewOpenEditor(value *string) *OpenEditor {
 // Err reports any errors encountered during the operation.
 func (a *OpenEditor) Err() error {
 	return a.err
+}
+
+// WithValue specifies the value to edit.
+// The current value will be used as the initial content of the editor.
+// The value will be updated when the editor is closed,
+// or left unchanged if the user skips the editor.
+func (a *OpenEditor) WithValue(value *string) *OpenEditor {
+	a.value = value
+	return a
 }
 
 // WithTitle sets the title for the field.
@@ -191,14 +199,11 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// View renders the field to the screen.
-func (a *OpenEditor) View() string {
-	var s strings.Builder
-	fmt.Fprintf(&s, "Press [%v] to open %v or [%v] to skip",
+// Render renders the field to the screen.
+func (a *OpenEditor) Render(w Writer) {
+	fmt.Fprintf(w, "Press [%v] to open %v or [%v] to skip",
 		a.Style.Key.Render(a.KeyMap.Edit.Help().Key),
 		a.Style.Editor.Render(a.Editor.Command),
 		a.Style.Key.Render(a.KeyMap.Accept.Help().Key),
 	)
-
-	return s.String()
 }

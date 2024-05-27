@@ -57,11 +57,16 @@ func AcceptField() tea.Msg {
 	return acceptFieldMsg{}
 }
 
+// Writer receives a rendered view of a [Field].
+type Writer interface {
+	io.Writer
+	io.StringWriter
+}
+
 // Field is a single field in a form.
 type Field interface {
 	Update(msg tea.Msg) tea.Cmd
-	View() string
-	// FIXME: Refactor to View(io.Writer) error
+	Render(Writer)
 
 	// Err reports any errors for the field at render time.
 	// These will be rendered in red below the field.
@@ -187,7 +192,7 @@ func (f *Form) View() string {
 	return s.String()
 }
 
-func (f *Form) renderField(w io.Writer, field Field, accepted bool) {
+func (f *Form) renderField(w Writer, field Field, accepted bool) {
 	if title := field.Title(); title != "" {
 		titleStyle := f.Style.Title
 		if accepted {
@@ -196,7 +201,7 @@ func (f *Form) renderField(w io.Writer, field Field, accepted bool) {
 
 		fmt.Fprintf(w, "%s: ", titleStyle.Render(title))
 	}
-	fmt.Fprint(w, field.View())
+	field.Render(w)
 	if err := field.Err(); err != nil {
 		fmt.Fprintf(w, "\n%s", f.Style.Error.Render(err.Error()))
 	}
