@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch submit: Replace inline text editor with option to open `$EDITOR` or accept the default.'
-time: 2024-05-26T16:00:21.701516-07:00
