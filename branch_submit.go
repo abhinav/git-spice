@@ -170,7 +170,8 @@ func (cmd *branchSubmitCmd) Run(
 		var fields []ui.Field
 		if cmd.Title == "" {
 			cmd.Title = defaultTitle
-			title := ui.NewInput(&cmd.Title).
+			title := ui.NewInput().
+				WithValue(&cmd.Title).
 				WithTitle("Title").
 				WithDescription("Short summary of the pull request").
 				WithValidate(func(s string) error {
