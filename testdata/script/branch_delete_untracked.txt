@@ -13,5 +13,6 @@ git branch foo
 gs branch delete foo
 stderr 'branch is not tracked'
 stderr 'deleting anyway'
+stderr 'foo: deleted \(was 3b9a56f\)'
 
 ! git rev-parse --verify foo

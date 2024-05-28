@@ -9,9 +9,8 @@ git init
 git commit --allow-empty -m 'initial commit'
 gs repo init
 
-git checkout -b foo
 git add foo.txt
-git commit -m 'add foo.txt'
+gs bc foo -m 'add foo.txt'
 
 git checkout main
 
@@ -25,6 +24,7 @@ git rev-parse --verify foo
 stdout 'd844dc8b311d27c74fee35f8501171610124ee7a'
 
 gs branch delete --force foo
+stderr 'foo: deleted \(was d844dc8'
 ! git rev-parse --verify foo
 
 -- repo/foo.txt --

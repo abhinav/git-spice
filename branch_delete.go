@@ -79,6 +79,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			log.Info("branch has already been deleted", "branch", cmd.Name)
 		} else if errors.Is(err, state.ErrNotExist) {
 			tracked = false
+			log.Debug("branch is not tracked", "error", err)
 			log.Info("branch is not tracked: deleting anyway", "branch", cmd.Name)
 		} else {
 			return fmt.Errorf("lookup branch %v: %w", cmd.Name, err)
@@ -86,6 +87,14 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	} else {
 		head = b.Head
 		base = b.Base
+	}
+
+	if exists && head == "" {
+		hash, err := repo.PeelToCommit(ctx, cmd.Name)
+		if err != nil {
+			return fmt.Errorf("peel to commit: %w", err)
+		}
+		head = hash
 	}
 
 	// Move to the base of the branch
@@ -115,14 +124,6 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 				return fmt.Errorf("move %s onto %s: %w", above, base, err)
 			}
 		}
-
-		defer func() {
-			if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
-				log.Warn("Could not remove branch from state",
-					"branch", cmd.Name,
-					"err", err)
-			}
-		}()
 	}
 
 	if exists {
@@ -142,6 +143,12 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 
 		log.Infof("%v: deleted (was %v)", cmd.Name, head.Short())
+	}
+
+	if tracked {
+		if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
+			return fmt.Errorf("forget branch %v: %w", cmd.Name, err)
+		}
 	}
 
 	return nil
