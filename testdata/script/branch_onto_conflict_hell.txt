@@ -1,0 +1,112 @@
+# 'branch onto' is able to handle conflicts in the upstack.
+
+as 'Test <test@example.com>'
+at '2024-05-27T21:12:34Z'
+
+# set up
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/extra/feature1.txt feature.txt
+git add feature.txt
+gs bc -m feature1
+
+cp $WORK/extra/feature2.txt feature.txt
+git add feature.txt
+gs bc -m feature2
+
+cp $WORK/extra/feature3.txt feature.txt
+git add feature.txt
+gs bc -m feature3
+
+# We now have: trunk -> feature1 -> feature2 -> feature3
+# where feature2 and feature3 have a hard-dependency on feature1.
+# Create a new branch off trunk with a conflict against feature1,
+# and move feature1 onto it.
+# feature2 and 3 will have conflicts rebasing onto trunk.
+
+gs trunk
+cp $WORK/extra/feature0.txt feature.txt
+git add feature.txt
+gs bc -m feature0
+
+env EDITOR=true
+
+gs bco feature1
+! gs branch onto feature0
+stderr 'There was a conflict while rebasing'
+stderr '  gs rebase continue'
+stderr '  gs rebase abort'
+
+# There should be a conflict on the file.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature1.txt
+
+# Fix it
+cp $WORK/extra/feature1-resolved.txt feature.txt
+git add feature.txt
+! gs rebase continue
+stderr 'There was a conflict while rebasing'
+
+# There should be a conflict on the file.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature2.txt
+
+# Fix it.
+cp $WORK/extra/feature2-resolved.txt feature.txt
+git add feature.txt
+! gs rebase continue
+stderr 'There was a conflict while rebasing'
+
+# There's a conflict rebasing feature3.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature3.txt
+
+# Fix it.
+cp $WORK/extra/feature3-resolved.txt feature.txt
+git add feature.txt
+gs rebase continue
+
+# feature1 should be on feature0,
+# feature2 and feature3 should be on main.
+git graph --branches
+cmp stdout $WORK/golden/final-graph.txt
+
+# TODO: when gs list exists,
+# verify branch stack
+
+-- extra/feature1.txt --
+foo
+-- extra/feature2.txt --
+foo
+bar
+-- extra/feature3.txt --
+baz
+foo
+bar
+-- extra/feature0.txt --
+bad feature 0 version
+
+-- extra/feature1-resolved.txt --
+foo
+-- extra/feature2-resolved.txt --
+bar
+-- extra/feature3-resolved.txt --
+baz
+bar
+-- golden/conflict-status-feature1.txt --
+AA feature.txt
+-- golden/conflict-status-feature2.txt --
+DU feature.txt
+-- golden/conflict-status-feature3.txt --
+UU feature.txt
+-- golden/final-graph.txt --
+* 30733f4 (feature1) feature1
+* 8dd8426 (feature0) feature0
+| * 743a4d1 (feature3) feature3
+| * a3e3d08 (HEAD -> feature2) feature2
+|/  
+* 53ec458 (main) Initial commit

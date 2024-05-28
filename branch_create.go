@@ -33,10 +33,21 @@ func (*branchCreateCmd) Help() string {
 		on top of the new branch.
 		For example,
 
-			# trunk -> A -> B -> C
+			# Given:
+			#
+			#  trunk
+			#   └─A
+			#     └─B
+			#       └─C
 			git checkout A
 			gs branch create --insert X
-			# trunk -> A -> X -> B -> C
+			# Result:
+			#
+			#  trunk
+			#   └─A
+			#     └─X
+			#       └─B
+			#         └─C
 
 		Instead of --insert,
 		you can use --below to place the new branch
@@ -44,10 +55,21 @@ func (*branchCreateCmd) Help() string {
 		This is equivalent to checking out the base branch
 		and creating a new branch with --insert there.
 
-			# trunk -> A -> B -> C
+			# Given:
+			#
+			#  trunk
+			#   └─A
+			#     └─B
+			#       └─C
 			git checkout A
 			gs branch create --below X
-			# trunk -> X -> A -> B -> C
+			# Result:
+			#
+			#  trunk
+			#   └─X
+			#     └─A
+			#       └─B
+			#         └─C
 	`)
 }
 

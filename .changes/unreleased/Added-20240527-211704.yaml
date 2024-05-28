@@ -1,0 +1,3 @@
+kind: Added
+body: Add 'upstack onto' command to move a branch and its upstack onto a new base. This was previously the behavior of 'branch onto'.
+time: 2024-05-27T21:17:04.98707-07:00
