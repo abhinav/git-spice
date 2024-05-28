@@ -1,3 +1,0 @@
-kind: Added
-body: Add `gs rebase continue` (alias `gs rbc`) and `gs rebase abort` (alias `gs rba`) to continue git-spice operations interrupted by rebase conflicts.
-time: 2024-05-27T20:21:19.22906-07:00
