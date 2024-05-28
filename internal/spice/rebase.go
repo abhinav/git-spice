@@ -11,9 +11,6 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-// ErrRebaseInterrupted indicates that a rebase operation was interrupted.
-var ErrRebaseInterrupted = errors.New("rebase interrupted")
-
 // RebaseRescueRequest is a request to rescue a rebase operation.
 type RebaseRescueRequest struct {
 	// Err is the error that caused the rebase operation to be interrupted.
@@ -42,8 +39,41 @@ type RebaseRescueRequest struct {
 // future, it records the continuation command in the data store for later
 // resumption.
 //
-// This returns [ErrRebaseInterrupted] if the rebase was recovered from
-// so that the program can exit and the oepration can resume later.
+// Returns the original rebase error back to the caller
+// so that the program can exit.
+//
+// For commands that invoke other commands that may be interrupted by a rebase,
+// assuming both commands are idempotent and re-entrant,
+// the parent should also wrap the command in a rebase rescue operation.
+// For example, if we have a leaf operation that rescues:
+//
+//	func childOperation(...) error {
+//		if err := repo.Rebase(ctx, ...); err != nil {
+//			return svc.RebaseRescue(ctx, ...)
+//		}
+//		return nil
+//	}
+//
+//	func parentOperation(...) error {
+//		for _, child := range children {
+//			if err := childOperation(...); err != nil {
+//				return svc.RebaseRescue(ctx, ...)
+//			}
+//		}
+//	}
+//
+// This way, after a child rebase is resolved, the parent command will be
+// re-run to resolve its other rebases.
+//
+// Note that this tends to not be necessary for commands that end with a single
+// child operation, e.g.
+//
+//	func parentOperation(...) error {
+//		// ...
+//		return childOperation(...)
+//	}
+//
+// As at that point, re-running the child operation is sufficient.
 func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) error {
 	if req.Err == nil {
 		return nil
@@ -53,11 +83,6 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 	if !errors.As(req.Err, &rebaseErr) {
 		return req.Err
 	}
-
-	// TODO: This will also log git's standard advice for resolving conflicts.
-	// We could suppress that by setting advice.mergeConflict=false
-	// during the rebase operation.
-	s.log.Warn("rebase interrupted", "error", rebaseErr)
 
 	switch rebaseErr.Kind {
 	case git.RebaseInterruptConflict:
@@ -82,7 +107,7 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 
 	// No continuation to record.
 	if len(req.Command) == 0 {
-		return ErrRebaseInterrupted
+		return rebaseErr
 	}
 
 	branch := req.Branch
@@ -95,7 +120,7 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		msg = fmt.Sprintf("interrupted: branch %s", req.Branch)
 	}
 
-	if err := s.store.SetContinuation(ctx, state.SetContinuationRequest{
+	if err := s.store.AppendContinuation(ctx, state.SetContinuationRequest{
 		Command: req.Command,
 		Branch:  branch,
 		Message: msg,
@@ -103,5 +128,5 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		return fmt.Errorf("edit state: %w", err)
 	}
 
-	return ErrRebaseInterrupted
+	return rebaseErr
 }

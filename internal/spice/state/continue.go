@@ -21,36 +21,28 @@ type SetContinuationRequest struct {
 	Message string
 }
 
-// SetContinuation records a command that should run
+// AppendContinuation records a command that should run
 // when an interrupted rebase operation is resumed.
-func (s *Store) SetContinuation(ctx context.Context, req SetContinuationRequest) error {
+// If there are existing continuations, this will append to the list.
+func (s *Store) AppendContinuation(ctx context.Context, req SetContinuationRequest) error {
 	must.NotBeBlankf(req.Branch, "a branch name is required")
 	must.NotBeEmptyf(req.Command, "arguments for git-spice are required")
 	if req.Message == "" {
 		req.Message = "set rebase continuation"
 	}
 
-	// Sanity check:
-	// Must not have an existing continuation.
-	var cont rebaseContinuation
-	if err := s.b.Get(ctx, _rebaseContinueJSON, &cont); err == nil {
-		s.log.Errorf("Found an existing rebase continuation for %v: %q", cont.Branch, cont.Command)
-		return errors.New("an unfinished rebase continuation already exists")
-		// TODO: If we encounter this in practice from a normal workflow,
-		// we'll probably want a queue or stack for continuations.
+	state, err := s.getRebaseContinueState(ctx)
+	if err != nil {
+		return fmt.Errorf("get rebase continue state: %w", err)
 	}
 
-	cont = rebaseContinuation{
+	state.Continuations = append(state.Continuations, rebaseContinuation{
 		Branch:  req.Branch,
 		Command: req.Command,
-	}
-	if err := s.b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{Key: _rebaseContinueJSON, Val: cont},
-		},
-		Msg: req.Message,
-	}); err != nil {
-		return fmt.Errorf("set rebase continuation: %w", err)
+	})
+
+	if err := s.setRebaseContinueState(ctx, *state, req.Message); err != nil {
+		return fmt.Errorf("set rebase continue state: %w", err)
 	}
 
 	return nil
@@ -76,23 +68,47 @@ func (s *Store) TakeContinuation(ctx context.Context, msg string) (*TakeContinua
 		msg = "take rebase continuation"
 	}
 
-	var cont rebaseContinuation
-	if err := s.b.Get(ctx, _rebaseContinueJSON, &cont); err != nil {
-		if errors.Is(err, ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get rebase continuation: %w", err)
+	state, err := s.getRebaseContinueState(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get rebase continue state: %w", err)
 	}
 
-	if err := s.b.Update(ctx, updateRequest{
-		Dels: []string{_rebaseContinueJSON},
-		Msg:  msg,
-	}); err != nil {
-		return nil, fmt.Errorf("delete rebase continuation: %w", err)
+	if len(state.Continuations) == 0 {
+		return nil, nil
+	}
+
+	cont := state.Continuations[0]
+	state.Continuations = state.Continuations[1:]
+
+	if err := s.setRebaseContinueState(ctx, *state, msg); err != nil {
+		return nil, fmt.Errorf("set rebase continue state: %w", err)
 	}
 
 	return &TakeContinuationResult{
 		Command: cont.Command,
 		Branch:  cont.Branch,
 	}, nil
+}
+
+func (s *Store) getRebaseContinueState(ctx context.Context) (*rebaseContinueState, error) {
+	var state rebaseContinueState
+	if err := s.b.Get(ctx, _rebaseContinueJSON, &state); err != nil {
+		if errors.Is(err, ErrNotExist) {
+			return &rebaseContinueState{}, nil
+		}
+		return nil, fmt.Errorf("get rebase continue state: %w", err)
+	}
+	return &state, nil
+}
+
+func (s *Store) setRebaseContinueState(ctx context.Context, state rebaseContinueState, msg string) error {
+	if msg == "" {
+		msg = "set rebase continue state"
+	}
+	return s.b.Update(ctx, updateRequest{
+		Sets: []setRequest{
+			{Key: _rebaseContinueJSON, Val: state},
+		},
+		Msg: msg,
+	})
 }

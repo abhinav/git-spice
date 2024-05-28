@@ -23,6 +23,10 @@ func (i *repoInfo) Validate() error {
 	return nil
 }
 
+type rebaseContinueState struct {
+	Continuations []rebaseContinuation `json:"continuations"`
+}
+
 type rebaseContinuation struct {
 	// Command is the gs command that will be run.
 	Command []string `json:"command"`

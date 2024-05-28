@@ -74,7 +74,7 @@ func (cmd *rebaseContinueCmd) Run(
 		return errors.New("no operation to continue")
 	}
 	for cont != nil {
-		log.Debugf("Got rebase continuation: %q", cont.Command)
+		log.Debugf("Got rebase continuation: %q (branch: %s)", cont.Command, cont.Branch)
 		if err := repo.Checkout(ctx, cont.Branch); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", cont.Branch, err)
 		}

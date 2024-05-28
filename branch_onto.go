@@ -143,13 +143,16 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("list branches above %s: %w", cmd.Branch, err)
 	}
 	for _, above := range aboves {
-		// TODO: if the 'upstack onto' has a conflict,
-		// the continuation command may end up wrong.
 		if err := (&upstackOntoCmd{
 			Branch: above,
 			Onto:   branch.Base,
 		}).Run(ctx, log, opts); err != nil {
-			return fmt.Errorf("move %s onto %s: %w", above, branch.Base, err)
+			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     err,
+				Command: []string{"branch", "onto", cmd.Onto},
+				Branch:  cmd.Branch,
+				Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
+			})
 		}
 	}
 
