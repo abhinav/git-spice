@@ -1,0 +1,39 @@
+# 'gs branch delete' removes the changes that were made on the branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+git add feature3.txt
+gs bc -m feature3
+
+gs branch delete feature2 --force
+gs branch checkout feature3
+
+exists feature1.txt feature3.txt
+! exists feature2.txt
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3
+
+-- golden/branches.txt --
+* 7ed7e4b (HEAD -> feature3) feature3
+* 0ad3bcf (feature1) feature1
+* 3b9a56f (main) initial commit

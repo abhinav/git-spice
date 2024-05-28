@@ -19,8 +19,12 @@ type branchDeleteCmd struct {
 
 func (*branchDeleteCmd) Help() string {
 	return text.Dedent(`
-		Deletes the specified branch and updates upstack branches to
-		point to the next branch down.
+		Deletes the specified branch and removes its changes from the
+		stack. Branches above the deleted branch are rebased onto the
+		branch's base.
+
+		If a branch name is not provided, an interactive prompt will be
+		shown to pick one.
 	`)
 }
 
@@ -87,6 +91,35 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
+	// If this branch is tracked,
+	// move the the branches above this one to its base
+	// without including its own changes.
+	//
+	// Only then will we update internal state.
+	if tracked {
+		aboves, err := svc.ListAbove(ctx, cmd.Name)
+		if err != nil {
+			return fmt.Errorf("list above %v: %w", cmd.Name, err)
+		}
+
+		for _, above := range aboves {
+			if err := (&upstackOntoCmd{
+				Branch: above,
+				Onto:   base,
+			}).Run(ctx, log, opts); err != nil {
+				return fmt.Errorf("move %s onto %s: %w", above, base, err)
+			}
+		}
+
+		defer func() {
+			if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
+				log.Warn("Could not remove branch from state",
+					"branch", cmd.Name,
+					"err", err)
+			}
+		}()
+	}
+
 	if exists {
 		opts := git.BranchDeleteOptions{Force: cmd.Force}
 		if err := repo.DeleteBranch(ctx, cmd.Name, opts); err != nil {
@@ -106,12 +139,5 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		log.Infof("%v: deleted (was %v)", cmd.Name, head.Short())
 	}
 
-	if tracked {
-		if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
-			return fmt.Errorf("forget branch %v: %w", cmd.Name, err)
-		}
-	}
-
-	// TODO: flag to auto-restack upstack branches?
 	return nil
 }
