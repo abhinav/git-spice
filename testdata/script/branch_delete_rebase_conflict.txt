@@ -1,0 +1,55 @@
+# 'gs branch delete' continues the deletion
+# if rebasing the upstack encounters a conflict.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+cp $WORK/extra/feature1-extra.txt feature1.txt
+git add feature1.txt feature2.txt
+gs bc -m feature2
+
+# attempt to delete feature1
+gs trunk
+! gs branch delete --force feature1
+
+# feature2 conflict
+stderr 'There was a conflict while rebasing'
+git status --porcelain
+cmp stdout $WORK/golden/conflict.txt
+
+env EDITOR=true
+
+# fix the conflict
+git rm feature1.txt
+gs rebase continue
+
+# verify final state
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+gs bco feature2
+! exists feature1.txt
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- extra/feature1-extra.txt --
+feature 1 extra
+
+-- golden/conflict.txt --
+DU feature1.txt
+A  feature2.txt
+-- golden/graph.txt --
+* 597bc80 (feature2) feature2
+* 3b9a56f (HEAD -> main) initial commit
