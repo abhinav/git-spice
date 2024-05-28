@@ -16,8 +16,11 @@ type branchEditCmd struct{}
 
 func (*branchEditCmd) Help() string {
 	return text.Dedent(`
-		Allows editing the commits in the current branch
-		with an interactive rebase.
+		Begins an interactive rebase of a branch without affecting its
+		base branch. This allows you to edit the commits in the branch,
+		reword their messages, etc.
+		After the rebase, the branches upstack from the edited branch
+		will be restacked.
 	`)
 }
 
@@ -49,17 +52,21 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOpti
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	if err := repo.Rebase(ctx, git.RebaseRequest{
+	req := git.RebaseRequest{
 		Interactive: true,
 		Branch:      currentBranch,
 		Upstream:    b.Base,
-	}); err != nil {
-		return fmt.Errorf("rebase: %w", err)
 	}
-
-	// TODO: if, when rebase returns, we're in the middle of a rebase,
-	// print a message informing the user that they should run
-	// `gs continue` after they've finished the rebase operation.
+	if err := repo.Rebase(ctx, req); err != nil {
+		// if the rebase is interrupted,
+		// recover with an 'upstack restack' later.
+		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+			Err:     err,
+			Command: []string{"upstack", "restack"},
+			Branch:  currentBranch,
+			Message: fmt.Sprintf("interrupted: edit branch %s", currentBranch),
+		})
+	}
 
 	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

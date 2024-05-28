@@ -102,10 +102,15 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		Autostash: true,
 		Quiet:     true,
 	}); err != nil {
-		return fmt.Errorf("rebase: %w", err)
+		// If the rebase is interrupted,
+		// we'll just re-run this command again later.
+		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+			Err:     err,
+			Command: []string{"branch", "onto", cmd.Onto},
+			Branch:  cmd.Branch,
+			Message: fmt.Sprintf("interrupted: branch %s onto %s", cmd.Branch, cmd.Onto),
+		})
 	}
-
-	// TODO: handle conflicts/partial rebase
 
 	err = store.Update(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{

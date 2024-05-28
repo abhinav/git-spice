@@ -31,6 +31,8 @@ func TestMain(m *testing.M) {
 			return 0
 		},
 		"mockedit": mockedit.Main,
+		// "true" is a no-op command that always succeeds.
+		"true": func() int { return 0 },
 		// with-term file -- cmd [args ...]
 		//
 		// Runs the given command inside a terminal emulator,

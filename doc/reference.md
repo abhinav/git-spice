@@ -14,6 +14,32 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
+## gs completion
+
+```
+gs completion <shell> [flags]
+```
+
+Generate shell completion script
+
+Generates shell completion scripts.
+To install the script, add the output of this command to your
+shell's rc file.
+For example:
+
+	# bash
+	gs completion bash >> ~/.bashrc
+
+	# zsh
+	gs completion zsh >> ~/.zshrc
+
+	# fish
+	gs completion fish >> ~/.config/fish/config.fish
+
+**Arguments**
+
+* `shell`: Shell to generate completions for.
+
 ## gs repo init
 
 ```
@@ -297,8 +323,11 @@ gs branch (b) edit (e)
 
 Edit the commits in a branch
 
-Allows editing the commits in the current branch
-with an interactive rebase.
+Begins an interactive rebase of a branch without affecting its
+base branch. This allows you to edit the commits in the branch,
+reword their messages, etc.
+After the rebase, the branches upstack from the edited branch
+will be restacked.
 
 ## gs branch rename
 
@@ -398,6 +427,40 @@ as you update a branch in the middle of the stack.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
 * `-n`, `--no-edit`: Don't edit the commit message
 
+## gs rebase continue
+
+```
+gs rebase (rb) continue (c)
+```
+
+Continue an interrupted operation
+
+This command continues an ongoing git-spice operation that was
+interrupted by a Git rebase action.
+Without an ongoing git-spice operation,
+this is equivalent to 'git rebase --continue'.
+
+For example, if 'gs upstack restack' encounters a conflict,
+resolve the conflict and run 'gs rebase continue'
+(or its shorthand 'gs rbc') to continue the operation.
+
+## gs rebase abort
+
+```
+gs rebase (rb) abort (a)
+```
+
+Abort an operation
+
+This command cancels an ongoing git-spice operation that was
+interrupted by a Git rebase action.
+Without an ongoing git-spice operation,
+this is equivalent to 'git rebase --abort'.
+
+For example, if 'gs upstack restack' encounters a conflict,
+cancel the operation with 'gs rebase abort'
+(or its shorthand 'gs rba').
+
 ## gs up
 
 ```
@@ -461,30 +524,4 @@ gs trunk [flags]
 ```
 
 Move to the trunk branch
-
-## gs completion
-
-```
-gs completion <shell> [flags]
-```
-
-Generate shell completion script
-
-Generates shell completion scripts.
-To install the script, add the output of this command to your
-shell's rc file.
-For example:
-
-	# bash
-	gs completion bash >> ~/.bashrc
-
-	# zsh
-	gs completion zsh >> ~/.zshrc
-
-	# fish
-	gs completion fish >> ~/.config/fish/config.fish
-
-**Arguments**
-
-* `shell`: Shell to generate completions for.
 

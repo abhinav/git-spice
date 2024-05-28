@@ -63,6 +63,8 @@ type BranchStore interface {
 
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
+
+	SetContinuation(context.Context, state.SetContinuationRequest) error
 }
 
 var _ BranchStore = (*state.Store)(nil)

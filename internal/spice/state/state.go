@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	_repoJSON    = "repo"
-	_branchesDir = "branches"
+	_repoJSON           = "repo"
+	_branchesDir        = "branches"
+	_rebaseContinueJSON = "rebase-continue"
 )
 
 type repoInfo struct {
@@ -20,6 +21,14 @@ func (i *repoInfo) Validate() error {
 		return errors.New("trunk branch name is empty")
 	}
 	return nil
+}
+
+type rebaseContinuation struct {
+	// Command is the gs command that will be run.
+	Command []string `json:"command"`
+
+	// Branch on which the command must be run.
+	Branch string `json:"branch"`
 }
 
 type branchStateBase struct {

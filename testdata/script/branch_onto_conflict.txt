@@ -1,0 +1,71 @@
+# Changing the base for a branch with 'branch onto'
+# while resolving a conflict.
+
+as 'Test <test@example.com>'
+at '2024-05-27T16:58:12Z'
+
+# set up
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/extra/feature.1.txt feature.txt
+git add feature.txt
+gs bc A -m 'Add a feature'
+
+cp $WORK/extra/feature.2.txt feature.txt
+git add feature.txt
+gs bc B -m 'Make a change'
+
+cp $WORK/extra/feature.3.txt feature.txt
+git add feature.txt
+gs bc C -m 'Make a dependent change'
+
+# At this point, we have:
+#   A --> B --> C --> D
+# We'll attempt to move C onto A to get:
+#   A --> {B, C --> D}
+# But that'll conflict and we'll have to resolve it.
+! gs branch onto A
+stderr 'There was a conflict while rebasing'
+stderr '  gs rebase continue'
+stderr '  gs rebase abort'
+
+# Resolve the conflict
+cp $WORK/extra/feature.3-resolved.txt feature.txt
+git add feature.txt
+
+# Continue the rebase without editing the commit message
+env EDITOR=true
+gs rebase continue
+
+# Verify state
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+cmp feature.txt $WORK/extra/feature.3-resolved.txt
+
+-- extra/feature.1.txt --
+Add a feature
+
+-- extra/feature.2.txt --
+Add a feature
+Make a change
+
+-- extra/feature.3.txt --
+Add a feature
+Make a dependent change
+Make a change
+
+-- extra/feature.3-resolved.txt --
+Add a feature
+Make a dependent change
+
+-- golden/graph.txt --
+* 7321210 (B) Make a change
+| * 814d06b (HEAD -> C) Make a dependent change
+|/  
+* 5ada401 (A) Add a feature
+* 3cc7bfc (main) Initial commit
