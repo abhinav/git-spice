@@ -135,13 +135,14 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 
 // ForgetBranch stops tracking a branch,
 // updating the upstacks for it to point to its base.
-//
-// Returns an error matching [state.ErrNotExist] if the branch is not tracked.
 func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	// This does not use LookupBranch because we don't care if the branch
-	// doesn't exist, we just want to update the upstacks.
+	// doesn't actually exist, we just want to update the upstacks.
 	branch, err := s.store.Lookup(ctx, name)
 	if err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return nil
+		}
 		return fmt.Errorf("lookup branch: %w", err)
 	}
 
