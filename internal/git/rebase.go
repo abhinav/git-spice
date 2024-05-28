@@ -93,7 +93,12 @@ type RebaseRequest struct {
 // It returns [ErrRebaseInterrupted] or [ErrRebaseConflict] for known
 // rebase interruptions.
 func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
-	args := []string{"rebase"}
+	args := []string{
+		// Never include advice on how to resolve merge conflicts.
+		// We'll do that ourselves.
+		"-c", "advice.mergeConflict=false",
+		"rebase",
+	}
 	if req.Interactive {
 		args = append(args, "--interactive")
 	}
