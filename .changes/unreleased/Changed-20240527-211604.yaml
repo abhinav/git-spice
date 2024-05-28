@@ -1,6 +1,0 @@
-kind: Changed
-body: >-
-  (*Breaking*) branch onto: Extract only the commits of the target branch onto the new base.
-  The upstack will be rebased to point to its base.
-  Use 'upstack onto' to graft the entire upstack onto the new base.
-time: 2024-05-27T21:16:04.325925-07:00

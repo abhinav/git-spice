@@ -1,3 +1,0 @@
-kind: Changed
-body: '{branch, upstack, stack} restack: Support continuing the operation after resolving conflicts with `gs rebase continue`.'
-time: 2024-05-27T20:23:08.650923-07:00
