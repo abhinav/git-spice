@@ -45,7 +45,7 @@ func main() {
 	go func() {
 		select {
 		case <-sigc:
-			log.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
+			logger.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
 			cancel()
 		case <-ctx.Done():
 		}
