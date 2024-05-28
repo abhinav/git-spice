@@ -360,8 +360,12 @@ gs branch (b) delete (rm) [<name>] [flags]
 
 Delete a branch
 
-Deletes the specified branch and updates upstack branches to
-point to the next branch down.
+Deletes the specified branch and removes its changes from the
+stack. Branches above the deleted branch are rebased onto the
+branch's base.
+
+If a branch name is not provided, an interactive prompt will be
+shown to pick one.
 
 **Arguments**
 
