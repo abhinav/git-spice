@@ -121,7 +121,17 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 				Branch: above,
 				Onto:   base,
 			}).Run(ctx, log, opts); err != nil {
-				return fmt.Errorf("move %s onto %s: %w", above, base, err)
+				contCmd := []string{"branch", "delete"}
+				if cmd.Force {
+					contCmd = append(contCmd, "--force")
+				}
+				contCmd = append(contCmd, cmd.Name)
+				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+					Err:     err,
+					Command: contCmd,
+					Branch:  currentBranch,
+					Message: fmt.Sprintf("interrupted: %v: branch deleted", cmd.Name),
+				})
 			}
 		}
 	}
