@@ -12,17 +12,18 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type branchOntoCmd struct {
-	Branch string `help:"Branch to move" placeholder:"NAME" predictor:"trackedBranches"`
+type upstackOntoCmd struct {
+	Branch string `help:"Branch to start at" placeholder:"NAME" predictor:"trackedBranches"`
 	Onto   string `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
 }
 
-func (*branchOntoCmd) Help() string {
+// TODO: is 'upstack onto' just 'branch onto' followed by 'upstack restack'?
+
+func (*upstackOntoCmd) Help() string {
 	return text.Dedent(`
-		Transplants the commits of a branch on top of another branch
-		leaving the rest of the branch stack untouched.
-		Use this to extract a single branch from an otherwise unrelated
-		branch stack.
+		Moves a branch and its upstack branches onto another branch.
+		Use this to move a complete part of your branch stack to a
+		different base.
 
 		For example,
 
@@ -32,16 +33,16 @@ func (*branchOntoCmd) Help() string {
 			#     └─B
 			#       └─C
 			git checkout B
-			gs branch onto main
+			gs upstack onto main
 			# Result:
 			#  trunk
-			#   ├─B
-			#   └─A
+			#   ├─A
+			#   └─B
 			#     └─C
 	`)
 }
 
-func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -76,7 +77,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 			Exclude:     []string{cmd.Branch},
 			TrackedOnly: true,
 			Title:       "Select a branch to move onto",
-			Description: fmt.Sprintf("Moving %s onto another branch", cmd.Branch),
+			Description: fmt.Sprintf("Moving the upstack of %s onto another branch", cmd.Branch),
 		}).Run(ctx, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
@@ -111,10 +112,11 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 	}
 
-	// To do this operation successfully, we need to:
-	// Rebase the branch onto the destination branch.
-	// Following that, we need to graft the branch's upstack
-	// onto its original base.
+	// Implementation note:
+	// This is a pretty straightforward operation despite the large scope.
+	// It starts by rebasing only the current branch onto the target
+	// branch, updating internal state to point to the new base.
+	// Following that, an 'upstack restack' will handle the upstack branches.
 	if err := repo.Rebase(ctx, git.RebaseRequest{
 		Branch:    cmd.Branch,
 		Upstream:  branch.BaseHash.String(),
@@ -126,35 +128,12 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		// we'll just re-run this command again later.
 		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 			Err:     err,
-			Command: []string{"branch", "onto", cmd.Onto},
+			Command: []string{"upstack", "onto", cmd.Onto},
 			Branch:  cmd.Branch,
-			Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
+			Message: fmt.Sprintf("interrupted: %s: upstack onto %s", cmd.Branch, cmd.Onto),
 		})
 	}
 
-	// As long as there are any branches above this one,
-	// they need to be grafted onto this branch's original base.
-	// We won't update state for this branch until that's done.
-	//
-	// However, this move operation will be an 'upstack onto'
-	// as for each of these branches, we want to keep *their* upstacks.
-	aboves, err := svc.ListAbove(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("list branches above %s: %w", cmd.Branch, err)
-	}
-	for _, above := range aboves {
-		// TODO: if the 'upstack onto' has a conflict,
-		// the continuation command may end up wrong.
-		if err := (&upstackOntoCmd{
-			Branch: above,
-			Onto:   branch.Base,
-		}).Run(ctx, log, opts); err != nil {
-			return fmt.Errorf("move %s onto %s: %w", above, branch.Base, err)
-		}
-	}
-
-	// Once all the upstack branches have been grafted onto the original base,
-	// we can update the branch state to point to the new base.
 	err = store.Update(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
@@ -163,11 +142,11 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 				BaseHash: ontoHash,
 			},
 		},
-		Message: fmt.Sprintf("%s: branch onto %s", cmd.Branch, cmd.Onto),
+		Message: fmt.Sprintf("%s: upstack onto %s", cmd.Branch, cmd.Onto),
 	})
 	if err != nil {
 		return fmt.Errorf("update store: %w", err)
 	}
 
-	return repo.Checkout(ctx, cmd.Branch)
+	return (&upstackRestackCmd{}).Run(ctx, log, opts)
 }

@@ -1,4 +1,4 @@
-# Changing the base for a branch with 'branch onto'
+# Changing the base for a branch with 'upstack onto'
 # while resolving a conflict.
 
 as 'Test <test@example.com>'
@@ -28,7 +28,7 @@ gs bc C -m 'Make a dependent change'
 # We'll attempt to move C onto A to get:
 #   A --> {B, C --> D}
 # But that'll conflict and we'll have to resolve it.
-! gs branch onto A
+! gs upstack onto A
 stderr 'There was a conflict while rebasing'
 stderr '  gs rebase continue'
 stderr '  gs rebase abort'

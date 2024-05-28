@@ -116,6 +116,41 @@ they will all be restacked on top of the updated base.
 Run this command from the trunk branch
 to restack all managed branches.
 
+## gs upstack onto
+
+```
+gs upstack (us) onto (o) [<onto>] [flags]
+```
+
+Move this branch onto another branch
+
+Moves a branch and its upstack branches onto another branch.
+Use this to move a complete part of your branch stack to a
+different base.
+
+For example,
+
+	# Given:
+	#  trunk
+	#   └─A
+	#     └─B
+	#       └─C
+	git checkout B
+	gs upstack onto main
+	# Result:
+	#  trunk
+	#   ├─A
+	#   └─B
+	#     └─C
+
+**Arguments**
+
+* `onto`: Destination branch
+
+**Flags**
+
+* `--branch=NAME`: Branch to start at
+
 ## gs downstack submit
 
 ```
@@ -224,8 +259,24 @@ gs branch (b) onto (on) [<onto>] [flags]
 Move a branch onto another branch
 
 Transplants the commits of a branch on top of another branch
-without picking up any changes from the old base.
-The base for the branch will be updated to the new branch.
+leaving the rest of the branch stack untouched.
+Use this to extract a single branch from an otherwise unrelated
+branch stack.
+
+For example,
+
+	# Given:
+	#  trunk
+	#   └─A
+	#     └─B
+	#       └─C
+	git checkout B
+	gs branch onto main
+	# Result:
+	#  trunk
+	#   ├─B
+	#   └─A
+	#     └─C
 
 **Arguments**
 
@@ -253,10 +304,21 @@ Use the --insert flag to restack all existing upstack branches
 on top of the new branch.
 For example,
 
-	# trunk -> A -> B -> C
+	# Given:
+	#
+	#  trunk
+	#   └─A
+	#     └─B
+	#       └─C
 	git checkout A
 	gs branch create --insert X
-	# trunk -> A -> X -> B -> C
+	# Result:
+	#
+	#  trunk
+	#   └─A
+	#     └─X
+	#       └─B
+	#         └─C
 
 Instead of --insert,
 you can use --below to place the new branch
@@ -264,10 +326,21 @@ below the current branch.
 This is equivalent to checking out the base branch
 and creating a new branch with --insert there.
 
-	# trunk -> A -> B -> C
+	# Given:
+	#
+	#  trunk
+	#   └─A
+	#     └─B
+	#       └─C
 	git checkout A
 	gs branch create --below X
-	# trunk -> X -> A -> B -> C
+	# Result:
+	#
+	#  trunk
+	#   └─X
+	#     └─A
+	#       └─B
+	#         └─C
 
 **Arguments**
 
