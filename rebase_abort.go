@@ -61,8 +61,12 @@ func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	if cont == nil && !wasRebasing {
 		return errors.New("no operation to abort")
 	}
-	if cont != nil {
+	for cont != nil {
 		log.Debugf("%v: dropping continuation: %q", cont.Branch, cont.Command)
+		cont, err = store.TakeContinuation(ctx, "gs rebase abort")
+		if err != nil {
+			return fmt.Errorf("take rebase continuation: %w", err)
+		}
 	}
 
 	return nil
