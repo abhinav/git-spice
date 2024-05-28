@@ -50,10 +50,15 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			return fmt.Errorf("cannot proceed without branch name: %w", errNoPrompt)
 		}
 
+		currentBranch, err := repo.CurrentBranch(ctx)
+		if err == nil {
+			// Select current branch by default.
+			cmd.Name = currentBranch
+		}
+
 		cmd.Name, err = (&branchPrompt{
-			Exclude:           []string{store.Trunk()},
-			ExcludeCheckedOut: true,
-			Title:             "Select a branch to delete",
+			Exclude: []string{store.Trunk()},
+			Title:   "Select a branch to delete",
 		}).Run(ctx, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
