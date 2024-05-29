@@ -14,14 +14,15 @@ type rebaseAbortCmd struct{}
 
 func (*rebaseAbortCmd) Help() string {
 	return text.Dedent(`
-		This command cancels an ongoing git-spice operation that was
-		interrupted by a Git rebase action.
-		Without an ongoing git-spice operation,
-		this is equivalent to 'git rebase --abort'.
-
+		Cancels an ongoing git-spice operation that was interrupted by
+		a git rebase.
 		For example, if 'gs upstack restack' encounters a conflict,
 		cancel the operation with 'gs rebase abort'
-		(or its shorthand 'gs rba').
+		(or its shorthand 'gs rba'),
+		going back to the state before the rebase.
+
+		The command can be used in place of 'git rebase --abort'
+		even if a git-spice operation is not currently in progress.
 	`)
 }
 
@@ -43,10 +44,10 @@ func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		if !errors.Is(err, git.ErrNoRebase) {
 			return fmt.Errorf("get rebase state: %w", err)
 		}
-		// If the user ran 'git rebase --abort' instead,
+		// If the user ran 'git rebase --abort' first,
 		// we will not be in the middle of a rebase operation.
-		// That's okay -- assume that they still want to abort
-		// the gs operation they were running.
+		// That's okay, still drain the continuations
+		// to ensure we don't have any lingering state.
 	} else {
 		wasRebasing = true
 		if err := repo.RebaseAbort(ctx); err != nil {

@@ -512,14 +512,15 @@ gs rebase (rb) continue (c)
 
 Continue an interrupted operation
 
-This command continues an ongoing git-spice operation that was
-interrupted by a Git rebase action.
-Without an ongoing git-spice operation,
-this is equivalent to 'git rebase --continue'.
-
-For example, if 'gs upstack restack' encounters a conflict,
-resolve the conflict and run 'gs rebase continue'
+Continues an ongoing git-spice operation interrupted by
+a git rebase after all conflicts have been resolved.
+For example, if 'gs upstack restack' gets interrupted
+because a conflict arises during the rebase,
+you can resolve the conflict and run 'gs rebase continue'
 (or its shorthand 'gs rbc') to continue the operation.
+
+The command can be used in place of 'git rebase --continue'
+even if a git-spice operation is not currently in progress.
 
 ## gs rebase abort
 
@@ -529,14 +530,15 @@ gs rebase (rb) abort (a)
 
 Abort an operation
 
-This command cancels an ongoing git-spice operation that was
-interrupted by a Git rebase action.
-Without an ongoing git-spice operation,
-this is equivalent to 'git rebase --abort'.
-
+Cancels an ongoing git-spice operation that was interrupted by
+a git rebase.
 For example, if 'gs upstack restack' encounters a conflict,
 cancel the operation with 'gs rebase abort'
-(or its shorthand 'gs rba').
+(or its shorthand 'gs rba'),
+going back to the state before the rebase.
+
+The command can be used in place of 'git rebase --abort'
+even if a git-spice operation is not currently in progress.
 
 ## gs up
 
