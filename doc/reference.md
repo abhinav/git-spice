@@ -355,7 +355,7 @@ and creating a new branch with --insert there.
 ## gs branch delete
 
 ```
-gs branch (b) delete (rm) [<name>] [flags]
+gs branch (b) delete (d,rm) [<name>] [flags]
 ```
 
 Delete a branch
@@ -409,7 +409,7 @@ will be restacked.
 ## gs branch rename
 
 ```
-gs branch (b) rename (mv) [<name>]
+gs branch (b) rename (rn,mv) [<name>]
 ```
 
 Rename a branch

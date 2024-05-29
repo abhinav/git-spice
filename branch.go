@@ -20,12 +20,12 @@ type branchCmd struct {
 
 	// Creation and destruction
 	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
-	Delete branchDeleteCmd `cmd:"" aliases:"rm" help:"Delete a branch"`
+	Delete branchDeleteCmd `cmd:"" aliases:"d,rm" help:"Delete a branch"`
 	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
 
 	// Mutation
 	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the commits in a branch"`
-	Rename  branchRenameCmd  `cmd:"" aliases:"mv" help:"Rename a branch"`
+	Rename  branchRenameCmd  `cmd:"" aliases:"rn,mv" help:"Rename a branch"`
 	Restack branchRestackCmd `cmd:"" aliases:"r" help:"Restack a branch"`
 
 	// Pull request management
