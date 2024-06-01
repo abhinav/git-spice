@@ -13,9 +13,15 @@ gh-init
 gh-add-remote origin alice/example.git
 git push origin main
 
-# create a new branch and submit it
+# create a stack
 git add feature1.txt
 gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+# submit feature1
+gs bco feature1
 gs branch submit --fill
 stderr 'Created #'
 
@@ -24,8 +30,9 @@ gh-merge alice/example 1
 gs repo sync
 stderr 'feature1: #1 was merged'
 
-# we should now be on main
-# and feature1 branch should be gone.
+# we should now be on main,
+# feature1 branch should be gone,
+# and feature2 should be restacked.
 exists feature1.txt
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
@@ -35,6 +42,9 @@ cmpenvJSON stdout $WORK/golden/pull.json
 
 -- repo/feature1.txt --
 Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
 
 -- golden/pull.json --
 {
@@ -55,6 +65,7 @@ Contents of feature1
 }
 
 -- golden/merged-log.txt --
+* e40a703 (feature2) Add feature2
 *   7bfac22 (HEAD -> main, origin/main) Merge pull request #1
 |\  
 | * 9f1c9af Add feature1
