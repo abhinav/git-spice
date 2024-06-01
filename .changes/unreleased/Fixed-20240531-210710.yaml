@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch delete: Fix repository left on the wrong branch if upstacks were restacked.'
+time: 2024-05-31T21:07:10.655054-07:00
