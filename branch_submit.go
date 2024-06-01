@@ -7,14 +7,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/google/go-github/v61/github"
+	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
-	"golang.org/x/oauth2"
 )
 
 type branchSubmitCmd struct {
@@ -52,7 +51,7 @@ func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	opts *globalOptions,
-	tokenSource oauth2.TokenSource,
+	ghBuilder *github.Builder,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
@@ -108,25 +107,21 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	ghrepo, err := ensureGitHubRepo(ctx, log, repo, remote)
+	forge, err := ensureGitHubForge(ctx, log, ghBuilder, repo, remote)
 	if err != nil {
 		return err
 	}
 
-	gh, err := newGitHubClient(ctx, tokenSource, opts)
-	if err != nil {
-		return fmt.Errorf("create GitHub client: %w", err)
-	}
-	pulls, _, err := gh.PullRequests.List(ctx, ghrepo.Owner, ghrepo.Name, &github.PullRequestListOptions{
-		State: "open",
-		Head:  ghrepo.Owner + ":" + upstreamBranch,
-		// Don't filter by base -- we may need to update it.
+	changes, err := forge.ListChanges(ctx, github.ListChangesOptions{
+		State:  "open",
+		Branch: upstreamBranch,
+		// We don't filter by base here as that may be out of date.
 	})
 	if err != nil {
-		return fmt.Errorf("list pull requests: %w", err)
+		return fmt.Errorf("list changes: %w", err)
 	}
 
-	switch len(pulls) {
+	switch len(changes) {
 	case 0:
 		if cmd.DryRun {
 			log.Infof("WOULD create a pull request for %s", cmd.Name)
@@ -251,48 +246,48 @@ func (cmd *branchSubmitCmd) Run(
 			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
 		}
 
-		pull, _, err := gh.PullRequests.Create(ctx, ghrepo.Owner, ghrepo.Name, &github.NewPullRequest{
-			Title: &cmd.Title,
-			Body:  &cmd.Body,
-			Head:  &cmd.Name,
-			Base:  &branch.Base,
-			Draft: &cmd.Draft,
+		result, err := forge.SubmitChange(ctx, github.SubmitChangeRequest{
+			Subject: cmd.Title,
+			Body:    cmd.Body,
+			Head:    cmd.Name,
+			Base:    branch.Base,
+			Draft:   cmd.Draft,
 		})
 		if err != nil {
-			return fmt.Errorf("create pull request: %w", err)
+			return fmt.Errorf("create change: %w", err)
 		}
-		upsert.PR = pull.GetNumber()
+		upsert.PR = int(result.ID)
 
-		log.Infof("Created #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
+		log.Infof("Created %v: %s", result.ID, result.URL)
 
 	case 1:
 		// Check base and HEAD are up-to-date.
-		pull := pulls[0]
+		pull := changes[0]
 		var updates []string
-		if pull.Head.GetSHA() != commitHash.String() {
+		if pull.HeadHash != commitHash {
 			updates = append(updates, "push branch")
 		}
-		if pull.Base.GetRef() != branch.Base {
+		if pull.BaseName != branch.Base {
 			updates = append(updates, "set base to "+branch.Base)
 		}
-		if pull.GetDraft() != cmd.Draft {
+		if pull.Draft != cmd.Draft {
 			updates = append(updates, "set draft to "+fmt.Sprint(cmd.Draft))
 		}
 
 		if len(updates) == 0 {
-			log.Infof("Pull request #%d is up-to-date", pull.GetNumber())
+			log.Infof("Pull request %v is up-to-date", pull.ID)
 			return nil
 		}
 
 		if cmd.DryRun {
-			log.Infof("WOULD update PR #%d:", pull.GetNumber())
+			log.Infof("WOULD update PR %v:", pull.ID)
 			for _, update := range updates {
 				log.Infof("  - %s", update)
 			}
 			return nil
 		}
 
-		if pull.Head.GetSHA() != commitHash.String() {
+		if pull.HeadHash != commitHash {
 			err := repo.Push(ctx, git.PushOptions{
 				Remote: remote,
 				Refspec: git.Refspec(
@@ -300,7 +295,7 @@ func (cmd *branchSubmitCmd) Run(
 				),
 				// Force push, but only if the ref is exactly
 				// where we think it is.
-				ForceWithLease: cmd.Name + ":" + pull.Head.GetSHA(),
+				ForceWithLease: cmd.Name + ":" + pull.HeadHash.String(),
 			})
 			if err != nil {
 				log.Error("Branch may have been updated by someone else.")
@@ -308,19 +303,20 @@ func (cmd *branchSubmitCmd) Run(
 			}
 		}
 
-		if pull.Base.GetRef() != branch.Base || pull.GetDraft() != cmd.Draft {
-			_, _, err := gh.PullRequests.Edit(ctx, ghrepo.Owner, ghrepo.Name, pull.GetNumber(), &github.PullRequest{
-				Base: &github.PullRequestBranch{
-					Ref: &branch.Base,
-				},
-				Draft: &cmd.Draft,
-			})
-			if err != nil {
-				return fmt.Errorf("update PR #%d: %w", pull.GetNumber(), err)
+		if pull.BaseName != branch.Base || pull.Draft != cmd.Draft {
+			opts := github.EditChangeOptions{
+				Base: branch.Base,
+			}
+			if pull.Draft != cmd.Draft {
+				opts.Draft = &cmd.Draft
+			}
+
+			if err := forge.EditChange(ctx, pull.ID, opts); err != nil {
+				return fmt.Errorf("edit PR %v: %w", pull.ID, err)
 			}
 		}
 
-		log.Infof("Updated #%d: %s", pull.GetNumber(), pull.GetHTMLURL())
+		log.Infof("Updated %v: %s", pull.ID, pull.URL)
 
 	default:
 		// TODO: add a --pr flag to allow picking a PR?

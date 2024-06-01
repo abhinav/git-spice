@@ -1,5 +1,4 @@
-// Package gh gates our access to GitHub's APIs.
-package gh
+package github
 
 import (
 	"errors"
@@ -9,6 +8,10 @@ import (
 
 	"golang.org/x/oauth2"
 )
+
+// TODO: This is a massive hack, and we should not use this.
+// Replace this with Device Flow auth
+// https://github.com/abhinav/git-spice/issues/22.
 
 // CLITokenSource is an oauth2 token source
 // that uses the GitHub CLI to get a token.

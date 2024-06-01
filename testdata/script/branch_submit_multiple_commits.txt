@@ -41,7 +41,7 @@ Part 2 of the feature
     "state": "open",
     "title": "Add feature",
     "body": "Add feature\n\nAdd feature part 2",
-    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "html_url": "$GITHUB_URL/alice/example/pull/1",
     "head": {
       "ref": "feature",
       "sha": "c1a2497e4115fcbfc275d36b754a8ed4ca1169e4"

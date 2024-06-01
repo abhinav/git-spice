@@ -9,10 +9,10 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
-	"golang.org/x/oauth2"
 )
 
 type repoSyncCmd struct {
@@ -32,7 +32,7 @@ func (*repoSyncCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	opts *globalOptions,
-	tokenSource oauth2.TokenSource,
+	ghBuilder *github.Builder,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
@@ -191,14 +191,9 @@ func (*repoSyncCmd) Run(
 		}
 	}
 
-	ghrepo, err := ensureGitHubRepo(ctx, log, repo, remote)
+	forge, err := ensureGitHubForge(ctx, log, ghBuilder, repo, remote)
 	if err != nil {
 		return err
-	}
-
-	gh, err := newGitHubClient(ctx, tokenSource, opts)
-	if err != nil {
-		return fmt.Errorf("create GitHub client: %w", err)
 	}
 
 	// There are two options for detecting merged branches:
@@ -215,8 +210,8 @@ func (*repoSyncCmd) Run(
 	// In the future, we may need a hybrid approach that switches to (2).
 
 	var (
-		branches []string
-		prs      []int // prs[i] = PR for branches[i]
+		branches  []string
+		changeIDs []github.ChangeID // changeIDs[i] = PR for branches[i]
 	)
 	{
 		tracked, err := svc.LoadBranches(ctx)
@@ -227,7 +222,7 @@ func (*repoSyncCmd) Run(
 		for _, b := range tracked {
 			if b.PR != 0 {
 				branches = append(branches, b.Name)
-				prs = append(prs, b.PR)
+				changeIDs = append(changeIDs, github.ChangeID(b.PR))
 			}
 		}
 	}
@@ -237,7 +232,7 @@ func (*repoSyncCmd) Run(
 		return nil
 	}
 
-	prMerged := make([]bool, len(branches)) // whether prs[i] is merged
+	changesMerged := make([]bool, len(branches)) // whether changeIDs[i] is merged
 	{
 		idxc := make(chan int) // PRs to query
 
@@ -249,13 +244,14 @@ func (*repoSyncCmd) Run(
 				defer wg.Done()
 
 				for idx := range idxc {
-					merged, _, err := gh.PullRequests.IsMerged(ctx, ghrepo.Owner, ghrepo.Name, prs[idx])
+					id := changeIDs[idx]
+					merged, err := forge.IsMerged(ctx, id)
 					if err != nil {
-						log.Error("Failed to query PR status", "pr", prs[idx], "error", err)
+						log.Error("Failed to query PR status", "pr", id, "error", err)
 						continue
 					}
 
-					prMerged[idx] = merged
+					changesMerged[idx] = merged
 				}
 			}()
 		}
@@ -273,11 +269,11 @@ func (*repoSyncCmd) Run(
 	// Should the branches be deleted in any particular order?
 	// (e.g. from the bottom of the stack up)
 	for i, branch := range branches {
-		if !prMerged[i] {
+		if !changesMerged[i] {
 			continue
 		}
 
-		log.Infof("%v: #%v was merged: deleting...", branch, prs[i])
+		log.Infof("%v: %v was merged: deleting...", branch, changeIDs[i])
 		err := (&branchDeleteCmd{
 			Name:  branch,
 			Force: true,

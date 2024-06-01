@@ -15,7 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
-	"go.abhg.dev/gs/internal/gh"
+	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
 	"golang.org/x/oauth2"
 )
@@ -180,7 +180,8 @@ type globalOptions struct {
 	// GitHubToken will get replaced once we do Device Flow authentication.
 	// GithubAPIURL will remain hidden.
 	GitHubToken  string `name:"github-token" placeholder:"TOKEN" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
-	GithubAPIURL string `name:"github-api-url" placeholder:"URL" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
+	GitHubURL    string `name:"github-url" placeholder:"URL" hidden:"" env:"GITHUB_URL" help:"Base URL for GitHub web requests"`
+	GitHubAPIURL string `name:"github-api-url" placeholder:"URL" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
 }
 
 type mainCmd struct {
@@ -215,13 +216,18 @@ func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 		logger.SetLevel(log.DebugLevel)
 	}
 
-	var tokenSource oauth2.TokenSource = &gh.CLITokenSource{}
+	var tokenSource oauth2.TokenSource = &github.CLITokenSource{}
 	if token := cmd.GitHubToken; token != "" {
 		tokenSource = oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
 		)
 	}
 
-	kctx.BindTo(tokenSource, (*oauth2.TokenSource)(nil))
+	kctx.Bind(&github.Builder{
+		URL:    cmd.GitHubURL,
+		APIURL: cmd.GitHubAPIURL,
+		Token:  tokenSource,
+		Log:    logger,
+	})
 	return nil
 }

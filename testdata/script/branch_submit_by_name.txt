@@ -36,7 +36,7 @@ Contents of feature1
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+    "html_url": "$GITHUB_URL/alice/example/pull/1",
     "head": {
       "ref": "feature1",
       "sha": "25596d0f65bb595aa658f9fa7fe164949cd2ea0b"

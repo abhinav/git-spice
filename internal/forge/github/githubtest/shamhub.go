@@ -1,5 +1,5 @@
-// Package ghtest provides tools to test code that interacts with GitHub.
-package ghtest
+// Package githubtest provides tools to test code that interacts with GitHub.
+package githubtest
 
 import (
 	"encoding/json"

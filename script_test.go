@@ -15,7 +15,7 @@ import (
 	"github.com/google/go-github/v61/github"
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/gs/internal/gh/ghtest"
+	"go.abhg.dev/gs/internal/forge/github/githubtest"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/mockedit"
@@ -47,7 +47,7 @@ func TestScript(t *testing.T) {
 	// because testscript does not allow adding the value afterwards.
 	// We only set up the ShamHub on gh-init, though.
 	type shamHubKey struct{}
-	type shamHubValue struct{ v *ghtest.ShamHub }
+	type shamHubValue struct{ v *githubtest.ShamHub }
 
 	type testingTBKey struct{}
 
@@ -83,7 +83,7 @@ func TestScript(t *testing.T) {
 			// Sets up a fake GitHub server.
 			"gh-init": func(ts *testscript.TestScript, neg bool, args []string) {
 				t := ts.Value(testingTBKey{}).(testing.TB)
-				shamHub, err := ghtest.NewShamHub(ghtest.ShamHubConfig{
+				shamHub, err := githubtest.NewShamHub(githubtest.ShamHubConfig{
 					Log: logtest.New(t),
 				})
 				if err != nil {
@@ -106,7 +106,7 @@ func TestScript(t *testing.T) {
 				)
 
 				ts.Setenv("GITHUB_API_URL", shamHub.APIURL())
-				ts.Setenv("GITHUB_GIT_URL", shamHub.GitURL())
+				ts.Setenv("GITHUB_URL", shamHub.GitURL())
 				ts.Setenv("GITHUB_TOKEN", "test-token")
 			},
 
@@ -154,7 +154,7 @@ func TestScript(t *testing.T) {
 					ts.Fatalf("invalid PR number: %s", err)
 				}
 
-				req := ghtest.MergePullRequest{
+				req := githubtest.MergePullRequest{
 					Owner:  owner,
 					Repo:   repo,
 					Number: pr,

@@ -51,7 +51,7 @@ Contents of feature2
   "title": "Add feature1",
   "body": "",
   "merged": true,
-  "html_url": "$GITHUB_GIT_URL/alice/example/pull/1",
+  "html_url": "$GITHUB_URL/alice/example/pull/1",
   "head": {
     "ref": "feature1",
     "sha": "9f1c9af063d2363d6a1381581bfab2a25d12be4c"
