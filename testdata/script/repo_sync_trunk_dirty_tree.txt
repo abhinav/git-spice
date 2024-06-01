@@ -1,0 +1,43 @@
+# 'repo sync' on trunk with a dirty worktree.
+# https://github.com/abhinav/git-spice/issues/132
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+gs repo init
+
+# dirty the worktree
+cp $WORK/extra/feature1.txt .
+git add feature1.txt
+
+# update the remote out of band
+cd ..
+gh-clone alice/example.git fork
+cd fork
+cp $WORK/extra/feature2.txt .
+git add feature2.txt
+git commit -m 'Add feature2'
+git push origin main
+
+# sync the original repo
+cd ../repo
+gs repo sync
+stderr 'pulled 1 new commit'
+cmp feature1.txt $WORK/extra/feature1.txt
+cmp feature2.txt $WORK/extra/feature2.txt
+
+-- extra/feature1.txt --
+Contents of feature1
+
+-- extra/feature2.txt --
+Contents of feature2

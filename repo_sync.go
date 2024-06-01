@@ -86,9 +86,10 @@ func (*repoSyncCmd) Run(
 		// git pull --rebase will handle everything.
 		log.Debug("trunk is checked out: pulling changes")
 		opts := git.PullOptions{
-			Remote:  remote,
-			Rebase:  true,
-			Refspec: git.Refspec(trunk),
+			Remote:    remote,
+			Rebase:    true,
+			Autostash: true,
+			Refspec:   git.Refspec(trunk),
 		}
 		if err := repo.Pull(ctx, opts); err != nil {
 			return fmt.Errorf("pull: %w", err)

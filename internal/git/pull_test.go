@@ -33,6 +33,11 @@ func TestPullArgs(t *testing.T) {
 			want: []string{"pull", "origin"},
 		},
 		{
+			name: "autostash",
+			give: PullOptions{Autostash: true},
+			want: []string{"pull", "--autostash"},
+		},
+		{
 			name: "refspec",
 			give: PullOptions{
 				Remote:  "origin",
