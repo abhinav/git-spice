@@ -8,9 +8,10 @@ import (
 
 // PullOptions specifies options for the Pull operation.
 type PullOptions struct {
-	Remote  string
-	Rebase  bool
-	Refspec Refspec
+	Remote    string
+	Rebase    bool
+	Autostash bool
+	Refspec   Refspec
 }
 
 // Pull fetches objects and refs from a remote repository
@@ -23,6 +24,9 @@ func (r *Repository) Pull(ctx context.Context, opts PullOptions) error {
 	args := []string{"pull"}
 	if opts.Rebase {
 		args = append(args, "--rebase")
+	}
+	if opts.Autostash {
+		args = append(args, "--autostash")
 	}
 	if opts.Remote != "" {
 		args = append(args, opts.Remote)
