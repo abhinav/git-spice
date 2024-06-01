@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch delete: Don''t fail if the repository is in detached HEAD state.'
+time: 2024-05-31T20:34:41.301336-07:00
