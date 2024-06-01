@@ -1,0 +1,26 @@
+# Renaming a branch by name.
+
+as 'Test <test@example.com>'
+at '2024-06-01T12:15:12Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add foo.txt
+gs branch create oldname -m 'Do things'
+gs trunk
+
+gs branch rename oldname newname
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+
+-- repo/foo.txt --
+whatever
+
+-- golden/graph.txt --
+* 1f8dc81 (newname) Do things
+* 0cfef96 (HEAD -> main) Initial commit
