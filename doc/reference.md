@@ -241,7 +241,7 @@ they will be updated to point to its base branch.
 ## gs branch checkout
 
 ```
-gs branch (b) checkout (co) [<name>]
+gs branch (b) checkout (co) [<name>] [flags]
 ```
 
 Switch to a branch
@@ -249,6 +249,10 @@ Switch to a branch
 **Arguments**
 
 * `name`: Name of the branch to delete
+
+**Flags**
+
+* `-u`, `--untracked`: Show untracked branches if one isn't supplied
 
 ## gs branch onto
 

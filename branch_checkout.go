@@ -13,7 +13,8 @@ import (
 )
 
 type branchCheckoutCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
+	Untracked bool   `short:"u" help:"Show untracked branches if one isn't supplied"`
+	Name      string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
 }
 
 func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
@@ -46,6 +47,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		cmd.Name, err = (&branchPrompt{
 			Exclude:           []string{currentBranch},
 			ExcludeCheckedOut: true,
+			TrackedOnly:       !cmd.Untracked,
 			Title:             "Select a branch to checkout",
 		}).Run(ctx, repo, store)
 		if err != nil {
