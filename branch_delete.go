@@ -65,11 +65,6 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
-	currentBranch, err := repo.CurrentBranch(ctx)
-	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
-	}
-
 	tracked, exists := true, true
 	var head git.Hash
 	base := store.Trunk()
@@ -97,11 +92,30 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		head = hash
 	}
 
-	// Move to the base of the branch
-	// if we're on the branch we're deleting.
-	if cmd.Name == currentBranch {
-		if err := repo.Checkout(ctx, base); err != nil {
-			return fmt.Errorf("checkout %v: %w", base, err)
+	// upstack restack changes the current branch.
+	// Restore the current branch (or its base) after the operation.
+	//
+	// TODO: Make an 'upstack restack' spice.Service method
+	// that won't leave us on the wrong branch.
+	var checkoutTarget string
+	if currentBranch, err := repo.CurrentBranch(ctx); err != nil {
+		if !errors.Is(err, git.ErrDetachedHead) {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+
+		// We still want to check out the original branch
+		// if we're in detached HEAD state.
+		head, err := repo.PeelToCommit(ctx, "HEAD")
+		if err != nil {
+			return fmt.Errorf("peel to commit: %w", err)
+		}
+
+		checkoutTarget = head.String()
+	} else {
+		if cmd.Name == currentBranch {
+			checkoutTarget = base
+		} else {
+			checkoutTarget = currentBranch
 		}
 	}
 
@@ -129,11 +143,15 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 					Err:     err,
 					Command: contCmd,
-					Branch:  currentBranch,
+					Branch:  checkoutTarget,
 					Message: fmt.Sprintf("interrupted: %v: branch deleted", cmd.Name),
 				})
 			}
 		}
+	}
+
+	if err := repo.Checkout(ctx, checkoutTarget); err != nil {
+		return fmt.Errorf("checkout %v: %w", checkoutTarget, err)
 	}
 
 	if exists {

@@ -1,0 +1,20 @@
+# 'branch delete' should be able to delete branches if it's in detached head.
+# https://github.com/abhinav/git-spice/issues/131
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature.txt
+gs bc -m feature
+
+git checkout --detach
+gs branch delete feature
+
+-- repo/feature.txt --
+stuff
