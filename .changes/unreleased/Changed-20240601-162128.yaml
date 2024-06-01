@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch submit: Auto-detect PRs created outside git-spice, e.g. using the GitHub UI.'
-time: 2024-06-01T16:21:28.52887-07:00

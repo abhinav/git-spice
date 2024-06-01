@@ -1,3 +1,0 @@
-kind: Changed
-body: 'rebase continue: Don''t run continuations if a rebase wasn''t in progress. This avoids unexpected behavior from lefotver state.'
-time: 2024-05-28T19:57:46.263424-07:00

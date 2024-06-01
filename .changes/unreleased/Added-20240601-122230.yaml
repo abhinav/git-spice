@@ -1,3 +1,0 @@
-kind: Added
-body: 'branch rename: Support renaming another branch by name with the `branch rename <old> <new>` form of the command.'
-time: 2024-06-01T12:22:30.93713-07:00
