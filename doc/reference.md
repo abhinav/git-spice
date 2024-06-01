@@ -413,20 +413,30 @@ will be restacked.
 ## gs branch rename
 
 ```
-gs branch (b) rename (rn,mv) [<name>]
+gs branch (b) rename (rn,mv) [<old-name> [<new-name>]]
 ```
 
 Rename a branch
 
-Renames a tracked branch, updating internal references to it.
+The following modes are supported:
 
-If you renamed a branch without using this command,
+	# Rename <old> to <new>
+	gs branch rename <old> <new>
+
+	# Rename current branch to <new>
+	gs branch rename <new>
+
+	# Rename current branch interactively
+	gs branch rename
+
+If you renamed a branch without this command,
 track the new branch name with 'gs branch track',
 and untrack the old name with 'gs branch untrack'.
 
 **Arguments**
 
-* `name`: New name of the branch
+* `old-name`: Old name of the branch
+* `new-name`: New name of the branch
 
 ## gs branch restack
 
