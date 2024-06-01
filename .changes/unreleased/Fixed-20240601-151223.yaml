@@ -1,3 +1,0 @@
-kind: Fixed
-body: GitHub URL detection now respects non-standard URLs like GHES set via `$GITHUB_URL`.
-time: 2024-06-01T15:12:23.588802-07:00

@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch checkout: Prompt for picking a branch only shows tracked branches by default. Use -u/--untracked to also see untracked branches.'
-time: 2024-05-31T20:08:38.408083-07:00
