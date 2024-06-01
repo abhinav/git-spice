@@ -112,17 +112,60 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	changes, err := forge.ListChanges(ctx, github.ListChangesOptions{
-		State:  "open",
-		Branch: upstreamBranch,
-		// We don't filter by base here as that may be out of date.
-	})
-	if err != nil {
-		return fmt.Errorf("list changes: %w", err)
+	// If the branch doesn't have a PR associated with it,
+	// we'll probably need to create one,
+	// but verify that there isn't already one open.
+	var existingChange *github.FindChangeItem
+	if branch.PR == 0 {
+		changes, err := forge.FindChangesByBranch(ctx, upstreamBranch)
+		if err != nil {
+			return fmt.Errorf("list changes: %w", err)
+		}
+
+		switch len(changes) {
+		case 0:
+			// No PRs found, we'll create one.
+		case 1:
+			existingChange = &changes[0]
+
+			// A PR was found, but it wasn't associated with the branch.
+			// It was probably created manually.
+			// We'll heal the state while we're at it.
+			log.Infof("%v: Found existing PR %v", cmd.Name, existingChange.ID)
+			err := store.Update(ctx, &state.UpdateRequest{
+				Upserts: []state.UpsertRequest{
+					{
+						Name: cmd.Name,
+						PR:   int(existingChange.ID),
+					},
+				},
+				Message: fmt.Sprintf("%v: associate existing PR", cmd.Name),
+			})
+			if err != nil {
+				return fmt.Errorf("update state: %w", err)
+			}
+
+		default:
+			// GitHub doesn't allow multiple PRs for the same branch
+			// with the same base branch.
+			// If we get here, it means there are multiple PRs open
+			// with different base branches.
+			return fmt.Errorf("multiple open pull requests for %s", cmd.Name)
+			// TODO: Ask the user to pick one and associate it with the branch.
+		}
+	} else {
+		// If a PR is already associated with the branch,
+		// fetch information about it to compare with the current state.
+		change, err := forge.FindChangeByID(ctx, github.ChangeID(branch.PR))
+		if err != nil {
+			return fmt.Errorf("find change: %w", err)
+		}
+		// TODO: If the PR is closed, we should treat it as non-existent.
+		existingChange = change
 	}
 
-	switch len(changes) {
-	case 0:
+	// At this point, existingChange is nil only if we need to create a new PR.
+	if existingChange == nil {
 		if cmd.DryRun {
 			log.Infof("WOULD create a pull request for %s", cmd.Name)
 			return nil
@@ -259,10 +302,9 @@ func (cmd *branchSubmitCmd) Run(
 		upsert.PR = int(result.ID)
 
 		log.Infof("Created %v: %s", result.ID, result.URL)
-
-	case 1:
+	} else {
 		// Check base and HEAD are up-to-date.
-		pull := changes[0]
+		pull := existingChange
 		var updates []string
 		if pull.HeadHash != commitHash {
 			updates = append(updates, "push branch")
@@ -317,10 +359,6 @@ func (cmd *branchSubmitCmd) Run(
 		}
 
 		log.Infof("Updated %v: %s", pull.ID, pull.URL)
-
-	default:
-		// TODO: add a --pr flag to allow picking a PR?
-		return fmt.Errorf("multiple open pull requests for %s", cmd.Name)
 	}
 
 	return nil

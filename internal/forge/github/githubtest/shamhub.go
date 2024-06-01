@@ -314,6 +314,7 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	mux.HandleFunc("GET /repos/{owner}/{repo}/pulls", sh.listPullRequests)
 	mux.HandleFunc("POST /repos/{owner}/{repo}/pulls", sh.createPullRequest)
 	mux.HandleFunc("PATCH /repos/{owner}/{repo}/pulls/{number}", sh.updatePullRequest)
+	mux.HandleFunc("GET /repos/{owner}/{repo}/pulls/{number}", sh.getPullRequest)
 	mux.HandleFunc("GET /repos/{owner}/{repo}/pulls/{number}/merge", sh.prIsMerged)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -358,6 +359,51 @@ func (sh *ShamHub) prIsMerged(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	} else {
 		http.Error(w, "pull request not merged or not found", http.StatusNotFound)
+	}
+}
+
+func (sh *ShamHub) getPullRequest(w http.ResponseWriter, r *http.Request) {
+	owner, repo, numStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("number")
+	if owner == "" || repo == "" || numStr == "" {
+		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
+		return
+	}
+
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var (
+		got   shamPR
+		found bool
+	)
+	sh.mu.RLock()
+	for _, pr := range sh.pulls {
+		if pr.Owner == owner && pr.Repo == repo && pr.Number == num {
+			got = pr
+			found = true
+			break
+		}
+	}
+	sh.mu.RUnlock()
+
+	if !found {
+		http.Error(w, "pull request not found", http.StatusNotFound)
+		return
+	}
+
+	ghpr, err := sh.toGitHubPR(&got)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(ghpr); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
