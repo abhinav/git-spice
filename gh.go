@@ -6,31 +6,30 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 )
 
-func ensureGitHubForge(
+func openRemoteRepository(
 	ctx context.Context,
 	log *log.Logger,
-	builder *github.Builder,
-	repo *git.Repository,
+	gitRepo *git.Repository,
 	remote string,
-) (*github.Forge, error) {
-	remoteURL, err := repo.RemoteURL(ctx, remote)
+) (forge.Repository, error) {
+	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
 	if err != nil {
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	forge, err := builder.New(ctx, remoteURL)
+	forgeRepo, err := forge.OpenRepositoryURL(ctx, remoteURL)
 	if err != nil {
-		if errors.Is(err, github.ErrUnsupportedURL) {
-			log.Error("Could not guess GitHub repository from remote URL", "url", remoteURL)
-			log.Error("Are you sure the remote is a GitHub repository?")
+		if errors.Is(err, forge.ErrUnsupportedURL) {
+			log.Error("Could not guess repository from remote URL", "url", remoteURL)
+			log.Error("Are you sure the remote identifies a supported Git host?")
 			return nil, err
 		}
-		return nil, fmt.Errorf("build GitHub Forge: %w", err)
+		return nil, fmt.Errorf("open repository URL: %w", err)
 	}
 
-	return forge, nil
+	return forgeRepo, nil
 }

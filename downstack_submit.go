@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
@@ -37,7 +36,6 @@ func (cmd *downstackSubmitCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	opts *globalOptions,
-	ghBuilder *github.Builder,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
@@ -79,7 +77,7 @@ func (cmd *downstackSubmitCmd) Run(
 			DryRun: cmd.DryRun,
 			Fill:   cmd.Fill,
 			Name:   downstack,
-		}).Run(ctx, log, opts, ghBuilder)
+		}).Run(ctx, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)
 		}

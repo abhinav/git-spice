@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
@@ -51,7 +51,6 @@ func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	opts *globalOptions,
-	ghBuilder *github.Builder,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
@@ -107,7 +106,7 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	forge, err := ensureGitHubForge(ctx, log, ghBuilder, repo, remote)
+	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
 	if err != nil {
 		return err
 	}
@@ -115,9 +114,9 @@ func (cmd *branchSubmitCmd) Run(
 	// If the branch doesn't have a PR associated with it,
 	// we'll probably need to create one,
 	// but verify that there isn't already one open.
-	var existingChange *github.FindChangeItem
+	var existingChange *forge.FindChangeItem
 	if branch.PR == 0 {
-		changes, err := forge.FindChangesByBranch(ctx, upstreamBranch)
+		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch)
 		if err != nil {
 			return fmt.Errorf("list changes: %w", err)
 		}
@@ -126,7 +125,7 @@ func (cmd *branchSubmitCmd) Run(
 		case 0:
 			// No PRs found, we'll create one.
 		case 1:
-			existingChange = &changes[0]
+			existingChange = changes[0]
 
 			// A PR was found, but it wasn't associated with the branch.
 			// It was probably created manually.
@@ -156,7 +155,7 @@ func (cmd *branchSubmitCmd) Run(
 	} else {
 		// If a PR is already associated with the branch,
 		// fetch information about it to compare with the current state.
-		change, err := forge.FindChangeByID(ctx, github.ChangeID(branch.PR))
+		change, err := remoteRepo.FindChangeByID(ctx, forge.ChangeID(branch.PR))
 		if err != nil {
 			return fmt.Errorf("find change: %w", err)
 		}
@@ -289,7 +288,7 @@ func (cmd *branchSubmitCmd) Run(
 			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
 		}
 
-		result, err := forge.SubmitChange(ctx, github.SubmitChangeRequest{
+		result, err := remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
 			Subject: cmd.Title,
 			Body:    cmd.Body,
 			Head:    cmd.Name,
@@ -346,14 +345,14 @@ func (cmd *branchSubmitCmd) Run(
 		}
 
 		if pull.BaseName != branch.Base || pull.Draft != cmd.Draft {
-			opts := github.EditChangeOptions{
+			opts := forge.EditChangeOptions{
 				Base: branch.Base,
 			}
 			if pull.Draft != cmd.Draft {
 				opts.Draft = &cmd.Draft
 			}
 
-			if err := forge.EditChange(ctx, pull.ID, opts); err != nil {
+			if err := remoteRepo.EditChange(ctx, pull.ID, opts); err != nil {
 				return fmt.Errorf("edit PR %v: %w", pull.ID, err)
 			}
 		}

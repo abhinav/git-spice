@@ -5,23 +5,11 @@ import (
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/forge"
 )
 
-// EditChangeOptions specifies options for an operation to edit
-// an existing change.
-type EditChangeOptions struct {
-	// Base specifies the name of the base branch.
-	//
-	// If unset, the base branch is not changed.
-	Base string
-
-	// Draft specifies whether the change should be marked as a draft.
-	// If unset, the draft status is not changed.
-	Draft *bool
-}
-
 // EditChange edits an existing change in a repository.
-func (f *Forge) EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error {
+func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
 	// We don't know the GraphQL ID for the PR, so find it.
 	var graphQLID githubv4.ID
 	{
@@ -33,9 +21,9 @@ func (f *Forge) EditChange(ctx context.Context, id ChangeID, opts EditChangeOpti
 				} `graphql:"pullRequest(number: $number)"`
 			} `graphql:"repository(owner: $owner, name: $repo)"`
 		}
-		if err := f.client.Query(ctx, &q, map[string]any{
-			"owner":  githubv4.String(f.owner),
-			"repo":   githubv4.String(f.repo),
+		if err := r.client.Query(ctx, &q, map[string]any{
+			"owner":  githubv4.String(r.owner),
+			"repo":   githubv4.String(r.repo),
 			"number": githubv4.Int(id),
 		}); err != nil {
 			return fmt.Errorf("get pull request ID: %w", err)
@@ -57,7 +45,7 @@ func (f *Forge) EditChange(ctx context.Context, id ChangeID, opts EditChangeOpti
 			BaseRefName:   (*githubv4.String)(&opts.Base),
 		}
 
-		if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
+		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
 	}
@@ -93,7 +81,7 @@ func (f *Forge) EditChange(ctx context.Context, id ChangeID, opts EditChangeOpti
 			}
 		}
 
-		if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
+		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("update draft status: %w", err)
 		}
 	}

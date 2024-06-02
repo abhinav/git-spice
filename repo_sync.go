@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
@@ -32,7 +32,6 @@ func (*repoSyncCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	opts *globalOptions,
-	ghBuilder *github.Builder,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
@@ -191,7 +190,7 @@ func (*repoSyncCmd) Run(
 		}
 	}
 
-	forge, err := ensureGitHubForge(ctx, log, ghBuilder, repo, remote)
+	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
 	if err != nil {
 		return err
 	}
@@ -211,7 +210,7 @@ func (*repoSyncCmd) Run(
 
 	var (
 		branches  []string
-		changeIDs []github.ChangeID // changeIDs[i] = PR for branches[i]
+		changeIDs []forge.ChangeID // changeIDs[i] = PR for branches[i]
 	)
 	{
 		tracked, err := svc.LoadBranches(ctx)
@@ -222,7 +221,7 @@ func (*repoSyncCmd) Run(
 		for _, b := range tracked {
 			if b.PR != 0 {
 				branches = append(branches, b.Name)
-				changeIDs = append(changeIDs, github.ChangeID(b.PR))
+				changeIDs = append(changeIDs, forge.ChangeID(b.PR))
 			}
 		}
 	}
@@ -245,7 +244,7 @@ func (*repoSyncCmd) Run(
 
 				for idx := range idxc {
 					id := changeIDs[idx]
-					merged, err := forge.IsMerged(ctx, id)
+					merged, err := remoteRepo.IsMerged(ctx, id)
 					if err != nil {
 						log.Error("Failed to query PR status", "pr", id, "error", err)
 						continue

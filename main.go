@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
 	"github.com/posener/complete"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
 	"golang.org/x/oauth2"
@@ -223,11 +224,12 @@ func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 		)
 	}
 
-	kctx.Bind(&github.Builder{
+	forge.Register(&github.Forge{
 		URL:    cmd.GitHubURL,
 		APIURL: cmd.GitHubAPIURL,
 		Token:  tokenSource,
 		Log:    logger,
 	})
+
 	return nil
 }
