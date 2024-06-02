@@ -36,9 +36,9 @@ This is feature 2
 -- repo/feature3.txt --
 
 -- golden/submit-log.txt --
-INF Created #1: $GITHUB_URL/alice/example/pull/1
-INF Created #2: $GITHUB_URL/alice/example/pull/2
-INF Created #3: $GITHUB_URL/alice/example/pull/3
+INF Created #1: $SHAMHUB_URL/alice/example/change/1
+INF Created #2: $SHAMHUB_URL/alice/example/change/2
+INF Created #3: $SHAMHUB_URL/alice/example/change/3
 -- golden/pulls.json --
 [
   {
@@ -46,7 +46,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 1",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
@@ -61,7 +61,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 2",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/2",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
@@ -76,7 +76,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 3",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/3",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
       "ref": "feature3",
       "sha": "7122de7820daae3550784fd205f9064bcd046cce"

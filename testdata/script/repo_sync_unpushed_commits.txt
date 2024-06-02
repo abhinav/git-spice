@@ -51,20 +51,20 @@ Contents of feature2
   "title": "Add feature1",
   "body": "",
   "merged": true,
-  "html_url": "$GITHUB_URL/alice/example/pull/1",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
   "head": {
     "ref": "feature1",
     "sha": "9f1c9af063d2363d6a1381581bfab2a25d12be4c"
   },
   "base": {
     "ref": "main",
-    "sha": "7bfac22ffbcf563e3434adf877eb3cda0fef3d48"
+    "sha": "614e5f20a1e8cf2a4e552df1a817e92927dfffef"
   }
 }
 
 -- golden/merged-log.txt --
-* e40a703 (HEAD -> main) Add feature2
-*   7bfac22 (origin/main) Merge pull request #1
+* bd70ef4 (HEAD -> main) Add feature2
+*   614e5f2 (origin/main) Merge change #1
 |\  
 | * 9f1c9af Add feature1
 |/  

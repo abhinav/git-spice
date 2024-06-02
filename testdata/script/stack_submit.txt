@@ -51,9 +51,9 @@ This is feature 2
 This is feature 3
 
 -- golden/submit-log.txt --
-INF Created #1: $GITHUB_URL/alice/example/pull/1
-INF Created #2: $GITHUB_URL/alice/example/pull/2
-INF Created #3: $GITHUB_URL/alice/example/pull/3
+INF Created #1: $SHAMHUB_URL/alice/example/change/1
+INF Created #2: $SHAMHUB_URL/alice/example/change/2
+INF Created #3: $SHAMHUB_URL/alice/example/change/3
 -- golden/start.json --
 [
   {
@@ -61,7 +61,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 1",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
@@ -76,7 +76,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 2",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/2",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
@@ -91,7 +91,7 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 3",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/3",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
       "ref": "feature3",
       "sha": "63b2d337c8172c9f79aec9c760efc95e3c0c8472"
@@ -111,14 +111,14 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "merged": true,
     "title": "Add feature 1",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
     },
     "base": {
       "ref": "main",
-      "sha": "418d451b93d6d497541ea8a3670b5137834741e8"
+      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     }
   },
   {
@@ -126,14 +126,14 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 2",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/2",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
       "ref": "feature2",
-      "sha": "ce97ed17bf5f23059c1a32bc21ca4f9a9a5e4c26"
+      "sha": "18e5a5208175cd409480c2ab89588877726c1d57"
     },
     "base": {
       "ref": "main",
-      "sha": "418d451b93d6d497541ea8a3670b5137834741e8"
+      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     }
   },
   {
@@ -141,14 +141,14 @@ INF Created #3: $GITHUB_URL/alice/example/pull/3
     "state": "open",
     "title": "Add feature 3",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/3",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
       "ref": "feature3",
-      "sha": "82da921d2f4531778b8ba0e3a7ad39713a6358ef"
+      "sha": "aa7889fb8c0037d05573a0d27cacfcc78c5f1ba4"
     },
     "base": {
       "ref": "feature2",
-      "sha": "ce97ed17bf5f23059c1a32bc21ca4f9a9a5e4c26"
+      "sha": "18e5a5208175cd409480c2ab89588877726c1d57"
     }
   }
 ]
