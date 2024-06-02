@@ -4,52 +4,41 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-github/v61/github"
+	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/forge"
 )
 
-// SubmitChangeRequest is a request to submit a new change in a repository.
-// The change must have already been pushed to the remote.
-type SubmitChangeRequest struct {
-	// Subject is the title of the change.
-	Subject string // required
-
-	// Body is the description of the change.
-	Body string
-
-	// Base is the name of the base branch
-	// that this change is proposed against.
-	Base string // required
-
-	// Head is the name of the branch containing the change.
-	//
-	// This must have already been pushed to the remote.
-	Head string // required
-
-	// Draft specifies whether the change should be marked as a draft.
-	Draft bool
-}
-
-// SubmitChangeResult is the result of creating a new change in a repository.
-type SubmitChangeResult struct {
-	ID  ChangeID
-	URL string
-}
-
 // SubmitChange creates a new change in a repository.
-func (f *Forge) SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error) {
-	pr, _, err := f.client.PullRequests.Create(ctx, f.owner, f.repo, &github.NewPullRequest{
-		Title: &req.Subject,
-		Body:  &req.Body,
-		Base:  &req.Base,
-		Head:  &req.Head,
-		Draft: &req.Draft,
-	})
-	if err != nil {
-		return SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
+func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
+	var m struct {
+		CreatePullRequest struct {
+			PullRequest struct {
+				ID     githubv4.ID  `graphql:"id"`
+				Number githubv4.Int `graphql:"number"`
+				URL    githubv4.URI `graphql:"url"`
+			} `graphql:"pullRequest"`
+		} `graphql:"createPullRequest(input: $input)"`
 	}
 
-	return SubmitChangeResult{
-		ID:  ChangeID(pr.GetNumber()),
-		URL: pr.GetHTMLURL(),
+	input := githubv4.CreatePullRequestInput{
+		RepositoryID: r.repoID,
+		Title:        githubv4.String(req.Subject),
+		BaseRefName:  githubv4.String(req.Base),
+		HeadRefName:  githubv4.String(req.Head),
+	}
+	if req.Body != "" {
+		input.Body = (*githubv4.String)(&req.Body)
+	}
+	if req.Draft {
+		input.Draft = githubv4.NewBoolean(true)
+	}
+
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
+	}
+
+	return forge.SubmitChangeResult{
+		ID:  forge.ChangeID(m.CreatePullRequest.PullRequest.Number),
+		URL: m.CreatePullRequest.PullRequest.URL.String(),
 	}, nil
 }

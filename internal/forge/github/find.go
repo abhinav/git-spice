@@ -4,75 +4,74 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-github/v61/github"
+	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 )
 
-// FindChangeItem is a single result from searching for changes in the
-// repository.
-type FindChangeItem struct {
-	// ID is a unique identifier for the change.
-	ID ChangeID
-
-	// URL is the web URL at which the change can be viewed.
-	URL string
-
-	// Subject is the title of the change.
-	Subject string
-
-	// HeadHash is the hash of the commit at the top of the change.
-	HeadHash git.Hash
-
-	// BaseName is the name of the base branch
-	// that this change is proposed against.
-	BaseName string
-
-	// Draft is true if the change is not yet ready to be reviewed.
-	Draft bool
+type findPRNode struct {
+	ID          githubv4.ID          `graphql:"id"`
+	Number      githubv4.Int         `graphql:"number"`
+	URL         githubv4.URI         `graphql:"url"`
+	Title       githubv4.String      `graphql:"title"`
+	HeadRefOid  githubv4.GitObjectID `graphql:"headRefOid"`
+	BaseRefName githubv4.String      `graphql:"baseRefName"`
+	IsDraft     githubv4.Boolean     `graphql:"isDraft"`
 }
 
-// TODO: Reduce filtering options in favor of explicit queries,
-// e.g. "FindChangesForBranch" or "ListOpenChanges", etc.
+func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
+	return &forge.FindChangeItem{
+		ID:       forge.ChangeID(n.Number),
+		URL:      n.URL.String(),
+		Subject:  string(n.Title),
+		BaseName: string(n.BaseRefName),
+		HeadHash: git.Hash(n.HeadRefOid),
+		Draft:    bool(n.IsDraft),
+	}
+}
 
 // FindChangesByBranch searches for open changes with the given branch name.
 // Returns [ErrNotFound] if no changes are found.
-func (f *Forge) FindChangesByBranch(ctx context.Context, branch string) ([]FindChangeItem, error) {
-	pulls, _, err := f.client.PullRequests.List(ctx, f.owner, f.repo, &github.PullRequestListOptions{
-		State: "open",
-		Head:  f.owner + ":" + branch,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list pull requests: %w", err)
+func (r *Repository) FindChangesByBranch(ctx context.Context, branch string) ([]*forge.FindChangeItem, error) {
+	var q struct {
+		Repository struct {
+			PullRequests struct {
+				Nodes []findPRNode `graphql:"nodes"`
+			} `graphql:"pullRequests(first: 10, states: OPEN, headRefName: $branch)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
-	changes := make([]FindChangeItem, len(pulls))
-	for i, pull := range pulls {
-		changes[i] = FindChangeItem{
-			ID:       ChangeID(pull.GetNumber()),
-			URL:      pull.GetHTMLURL(),
-			Subject:  pull.GetTitle(),
-			BaseName: pull.GetBase().GetRef(),
-			HeadHash: git.Hash(pull.GetHead().GetSHA()),
-			Draft:    pull.GetDraft(),
-		}
+	if err := r.client.Query(ctx, &q, map[string]any{
+		"owner":  githubv4.String(r.owner),
+		"repo":   githubv4.String(r.repo),
+		"branch": githubv4.String(branch),
+	}); err != nil {
+		return nil, fmt.Errorf("find changes by branch: %w", err)
+	}
+
+	changes := make([]*forge.FindChangeItem, len(q.Repository.PullRequests.Nodes))
+	for i, node := range q.Repository.PullRequests.Nodes {
+		changes[i] = node.toFindChangeItem()
 	}
 
 	return changes, nil
 }
 
 // FindChangeByID searches for a change with the given ID.
-func (f *Forge) FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error) {
-	pull, _, err := f.client.PullRequests.Get(ctx, f.owner, f.repo, int(id))
-	if err != nil {
-		return nil, fmt.Errorf("get pull request: %w", err)
+func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
+	var q struct {
+		Repository struct {
+			PullRequest findPRNode `graphql:"pullRequest(number: $number)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
-	return &FindChangeItem{
-		ID:       ChangeID(pull.GetNumber()),
-		URL:      pull.GetHTMLURL(),
-		Subject:  pull.GetTitle(),
-		BaseName: pull.GetBase().GetRef(),
-		HeadHash: git.Hash(pull.GetHead().GetSHA()),
-		Draft:    pull.GetDraft(),
-	}, nil
+	if err := r.client.Query(ctx, &q, map[string]any{
+		"owner":  githubv4.String(r.owner),
+		"repo":   githubv4.String(r.repo),
+		"number": githubv4.Int(id),
+	}); err != nil {
+		return nil, fmt.Errorf("find change by ID: %w", err)
+	}
+
+	return q.Repository.PullRequest.toFindChangeItem(), nil
 }

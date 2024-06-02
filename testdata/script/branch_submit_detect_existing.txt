@@ -51,7 +51,7 @@ New contents of feature1
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "html_url": "$GITHUB_URL/alice/example/pull/1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
       "ref": "feature1",
       "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"

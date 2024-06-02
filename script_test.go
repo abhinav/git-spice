@@ -12,10 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v61/github"
+	"github.com/charmbracelet/log"
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/gs/internal/forge/github/githubtest"
+	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/mockedit"
@@ -27,6 +28,23 @@ var _update = flag.Bool("update", false, "update golden files")
 func TestMain(m *testing.M) {
 	testscript.RunMain(m, map[string]func() int{
 		"gs": func() int {
+			logger := log.NewWithOptions(os.Stderr, log.Options{
+				Level: log.DebugLevel,
+			})
+
+			shamhubAPIURL := os.Getenv("SHAMHUB_API_URL")
+			shamhubURL := os.Getenv("SHAMHUB_URL")
+			if (shamhubURL != "") != (shamhubAPIURL != "") {
+				logger.Fatalf("gs: SHAMHUB_API_URL and SHAMHUB_URL must be set together")
+			}
+			if shamhubURL != "" {
+				forge.Register(&shamhub.Forge{
+					URL:    shamhubURL,
+					APIURL: shamhubAPIURL,
+					Log:    logger,
+				})
+			}
+
 			main()
 			return 0
 		},
@@ -47,7 +65,7 @@ func TestScript(t *testing.T) {
 	// because testscript does not allow adding the value afterwards.
 	// We only set up the ShamHub on gh-init, though.
 	type shamHubKey struct{}
-	type shamHubValue struct{ v *githubtest.ShamHub }
+	type shamHubValue struct{ v *shamhub.ShamHub }
 
 	type testingTBKey struct{}
 
@@ -80,10 +98,13 @@ func TestScript(t *testing.T) {
 			"at":         gittest.CmdAt,
 			"cmpenvJSON": cmdCmpenvJSON,
 
-			// Sets up a fake GitHub server.
+			// TODO: rename "gh-*" to "shamhub-*".
+
+			// Sets up a fake code forge called shamhub.
+			// This will be picked up by "gs" commands.
 			"gh-init": func(ts *testscript.TestScript, neg bool, args []string) {
 				t := ts.Value(testingTBKey{}).(testing.TB)
-				shamHub, err := githubtest.NewShamHub(githubtest.ShamHubConfig{
+				shamHub, err := shamhub.New(shamhub.Config{
 					Log: logtest.New(t),
 				})
 				if err != nil {
@@ -105,9 +126,8 @@ func TestScript(t *testing.T) {
 					shamHub.GitRoot(),
 				)
 
-				ts.Setenv("GITHUB_API_URL", shamHub.APIURL())
-				ts.Setenv("GITHUB_URL", shamHub.GitURL())
-				ts.Setenv("GITHUB_TOKEN", "test-token")
+				ts.Setenv("SHAMHUB_API_URL", shamHub.APIURL())
+				ts.Setenv("SHAMHUB_URL", shamHub.GitURL())
 			},
 
 			// Clones a repository from the fake GitHub server.
@@ -154,7 +174,7 @@ func TestScript(t *testing.T) {
 					ts.Fatalf("invalid PR number: %s", err)
 				}
 
-				req := githubtest.MergePullRequest{
+				req := shamhub.MergeChangeRequest{
 					Owner:  owner,
 					Repo:   repo,
 					Number: pr,
@@ -174,7 +194,7 @@ func TestScript(t *testing.T) {
 					req.CommitterEmail = email
 				}
 
-				ts.Check(shamHub.MergePull(req))
+				ts.Check(shamHub.MergeChange(req))
 			},
 
 			"gh-add-remote": func(ts *testscript.TestScript, neg bool, args []string) {
@@ -211,27 +231,27 @@ func TestScript(t *testing.T) {
 					ts.Fatalf("gh-dump-pulls: ShamHub not initialized")
 				}
 
-				pulls, err := shamHub.ListPulls()
+				changes, err := shamHub.ListChanges()
 				if err != nil {
-					ts.Fatalf("list pulls: %s", err)
+					ts.Fatalf("list changes: %s", err)
 				}
 
 				var give any
 				if len(args) == 0 {
-					give = pulls
+					give = changes
 				} else {
-					wantPR, err := strconv.Atoi(args[0])
+					wantChange, err := strconv.Atoi(args[0])
 					if err != nil {
 						ts.Fatalf("invalid PR number: %s", err)
 					}
 
-					idx := slices.IndexFunc(pulls, func(pr *github.PullRequest) bool {
-						return pr.GetNumber() == wantPR
+					idx := slices.IndexFunc(changes, func(c *shamhub.Change) bool {
+						return c.Number == wantChange
 					})
 					if idx < 0 {
-						ts.Fatalf("PR %d not found", wantPR)
+						ts.Fatalf("PR %d not found", wantChange)
 					}
-					give = pulls[idx]
+					give = changes[idx]
 				}
 
 				enc := json.NewEncoder(ts.Stdout())
