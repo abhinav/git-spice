@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	// DefaultBaseURL is the default URL for GitHub.
-	DefaultBaseURL = "https://github.com"
+	// DefaultURL is the default URL for GitHub.
+	DefaultURL = "https://github.com"
 
 	// DefaultAPIURL is the default URL for the GitHub API.
 	DefaultAPIURL = "https://api.github.com"
@@ -49,15 +49,11 @@ func (*Forge) ID() string { return "github" }
 // OpenURL opens a GitHub repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitHub URL.
 func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {
-	if f.URL == "" {
-		f.URL = DefaultBaseURL
-		// TODO: Use this to build API URL if not set.
-	}
 	if f.Log == nil {
 		f.Log = log.New(io.Discard)
 	}
 
-	owner, repo, err := f.repoInfo(remoteURL)
+	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -70,11 +66,15 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 		ghc = githubv4.NewClient(oauthClient)
 	}
 
-	return newRepository(ctx, owner, repo, f.Log, ghc)
+	return newRepository(ctx, owner, repo, f.Log, ghc, nil)
 }
 
-func (f *Forge) repoInfo(remoteURL string) (owner, repo string, err error) {
-	baseURL, err := url.Parse(f.URL)
+func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {
+	if githubURL == "" {
+		githubURL = DefaultURL
+	}
+
+	baseURL, err := url.Parse(githubURL)
 	if err != nil {
 		return "", "", fmt.Errorf("bad base URL: %w", err)
 	}
@@ -102,13 +102,14 @@ func (f *Forge) repoInfo(remoteURL string) (owner, repo string, err error) {
 		return "", "", fmt.Errorf("%v is not a GitHub URL: expected host %q", u, baseURL.Host)
 	}
 
-	s := u.Path                       // /OWNER/REPO.git
-	s = strings.TrimPrefix(s, "/")    // OWNER/REPO.git
+	s := u.Path                       // /OWNER/REPO.git/
+	s = strings.TrimPrefix(s, "/")    // OWNER/REPO.git/
+	s = strings.TrimSuffix(s, "/")    // OWNER/REPO/
 	s = strings.TrimSuffix(s, ".git") // OWNER/REPO
 
 	owner, repo, ok := strings.Cut(s, "/")
 	if !ok {
-		return "", "", fmt.Errorf("path %q does not contain a GitHub repo", s)
+		return "", "", fmt.Errorf("path %q does not contain a GitHub repository", s)
 	}
 
 	return owner, repo, nil
