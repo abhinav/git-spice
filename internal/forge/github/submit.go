@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-github/v61/github"
+	"github.com/shurcooL/githubv4"
 )
 
 // SubmitChangeRequest is a request to submit a new change in a repository.
@@ -37,19 +37,35 @@ type SubmitChangeResult struct {
 
 // SubmitChange creates a new change in a repository.
 func (f *Forge) SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error) {
-	pr, _, err := f.client.PullRequests.Create(ctx, f.owner, f.repo, &github.NewPullRequest{
-		Title: &req.Subject,
-		Body:  &req.Body,
-		Base:  &req.Base,
-		Head:  &req.Head,
-		Draft: &req.Draft,
-	})
-	if err != nil {
+	var m struct {
+		CreatePullRequest struct {
+			PullRequest struct {
+				ID     githubv4.ID  `graphql:"id"`
+				Number githubv4.Int `graphql:"number"`
+				URL    githubv4.URI `graphql:"url"`
+			} `graphql:"pullRequest"`
+		} `graphql:"createPullRequest(input: $input)"`
+	}
+
+	input := githubv4.CreatePullRequestInput{
+		RepositoryID: f.repoID,
+		Title:        githubv4.String(req.Subject),
+		BaseRefName:  githubv4.String(req.Base),
+		HeadRefName:  githubv4.String(req.Head),
+	}
+	if req.Body != "" {
+		input.Body = (*githubv4.String)(&req.Body)
+	}
+	if req.Draft {
+		input.Draft = githubv4.NewBoolean(true)
+	}
+
+	if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
 		return SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
 
 	return SubmitChangeResult{
-		ID:  ChangeID(pr.GetNumber()),
-		URL: pr.GetHTMLURL(),
+		ID:  ChangeID(m.CreatePullRequest.PullRequest.Number),
+		URL: m.CreatePullRequest.PullRequest.URL.String(),
 	}, nil
 }

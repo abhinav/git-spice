@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-github/v61/github"
+	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -31,30 +31,49 @@ type FindChangeItem struct {
 	Draft bool
 }
 
-// TODO: Reduce filtering options in favor of explicit queries,
-// e.g. "FindChangesForBranch" or "ListOpenChanges", etc.
+type findPRNode struct {
+	ID          githubv4.ID          `graphql:"id"`
+	Number      githubv4.Int         `graphql:"number"`
+	URL         githubv4.URI         `graphql:"url"`
+	Title       githubv4.String      `graphql:"title"`
+	HeadRefOid  githubv4.GitObjectID `graphql:"headRefOid"`
+	BaseRefName githubv4.String      `graphql:"baseRefName"`
+	IsDraft     githubv4.Boolean     `graphql:"isDraft"`
+}
+
+func (n *findPRNode) toFindChangeItem() FindChangeItem {
+	return FindChangeItem{
+		ID:       ChangeID(n.Number),
+		URL:      n.URL.String(),
+		Subject:  string(n.Title),
+		BaseName: string(n.BaseRefName),
+		HeadHash: git.Hash(n.HeadRefOid),
+		Draft:    bool(n.IsDraft),
+	}
+}
 
 // FindChangesByBranch searches for open changes with the given branch name.
 // Returns [ErrNotFound] if no changes are found.
 func (f *Forge) FindChangesByBranch(ctx context.Context, branch string) ([]FindChangeItem, error) {
-	pulls, _, err := f.client.PullRequests.List(ctx, f.owner, f.repo, &github.PullRequestListOptions{
-		State: "open",
-		Head:  f.owner + ":" + branch,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list pull requests: %w", err)
+	var q struct {
+		Repository struct {
+			PullRequests struct {
+				Nodes []findPRNode `graphql:"nodes"`
+			} `graphql:"pullRequests(first: 10, states: OPEN, headRefName: $branch)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
-	changes := make([]FindChangeItem, len(pulls))
-	for i, pull := range pulls {
-		changes[i] = FindChangeItem{
-			ID:       ChangeID(pull.GetNumber()),
-			URL:      pull.GetHTMLURL(),
-			Subject:  pull.GetTitle(),
-			BaseName: pull.GetBase().GetRef(),
-			HeadHash: git.Hash(pull.GetHead().GetSHA()),
-			Draft:    pull.GetDraft(),
-		}
+	if err := f.client.Query(ctx, &q, map[string]any{
+		"owner":  githubv4.String(f.owner),
+		"repo":   githubv4.String(f.repo),
+		"branch": githubv4.String(branch),
+	}); err != nil {
+		return nil, fmt.Errorf("find changes by branch: %w", err)
+	}
+
+	changes := make([]FindChangeItem, len(q.Repository.PullRequests.Nodes))
+	for i, node := range q.Repository.PullRequests.Nodes {
+		changes[i] = node.toFindChangeItem()
 	}
 
 	return changes, nil
@@ -62,17 +81,20 @@ func (f *Forge) FindChangesByBranch(ctx context.Context, branch string) ([]FindC
 
 // FindChangeByID searches for a change with the given ID.
 func (f *Forge) FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error) {
-	pull, _, err := f.client.PullRequests.Get(ctx, f.owner, f.repo, int(id))
-	if err != nil {
-		return nil, fmt.Errorf("get pull request: %w", err)
+	var q struct {
+		Repository struct {
+			PullRequest findPRNode `graphql:"pullRequest(number: $number)"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
-	return &FindChangeItem{
-		ID:       ChangeID(pull.GetNumber()),
-		URL:      pull.GetHTMLURL(),
-		Subject:  pull.GetTitle(),
-		BaseName: pull.GetBase().GetRef(),
-		HeadHash: git.Hash(pull.GetHead().GetSHA()),
-		Draft:    pull.GetDraft(),
-	}, nil
+	if err := f.client.Query(ctx, &q, map[string]any{
+		"owner":  githubv4.String(f.owner),
+		"repo":   githubv4.String(f.repo),
+		"number": githubv4.Int(id),
+	}); err != nil {
+		return nil, fmt.Errorf("find change by ID: %w", err)
+	}
+
+	item := q.Repository.PullRequest.toFindChangeItem()
+	return &item, nil
 }

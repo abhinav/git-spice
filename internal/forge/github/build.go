@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/google/go-github/v61/github"
+	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
 
@@ -59,23 +59,15 @@ func (b *Builder) New(ctx context.Context, remoteURL string) (*Forge, error) {
 		return nil, fmt.Errorf("%w: %w", ErrUnsupportedURL, err)
 	}
 
-	ghc := github.NewClient(oauth2.NewClient(ctx, b.Token))
+	oauthClient := oauth2.NewClient(ctx, b.Token)
+	var ghc *githubv4.Client
 	if b.APIURL != "" {
-		var err error
-		// FIXME: If we need to ever use the UploadURL,
-		// we'll want to also fix that here.
-		ghc, err = ghc.WithEnterpriseURLs(b.APIURL, ghc.UploadURL.String())
-		if err != nil {
-			return nil, fmt.Errorf("set GitHub API URL: %w", err)
-		}
+		ghc = githubv4.NewEnterpriseClient(b.APIURL, oauthClient)
+	} else {
+		ghc = githubv4.NewClient(oauthClient)
 	}
 
-	return &Forge{
-		owner:  owner,
-		repo:   repo,
-		log:    b.Log,
-		client: ghc,
-	}, nil
+	return newForge(ctx, owner, repo, b.Log, ghc)
 }
 
 func (b *Builder) repoInfo(remoteURL string) (owner, repo string, err error) {
