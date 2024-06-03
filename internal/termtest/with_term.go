@@ -53,12 +53,6 @@ import (
 //   - -cols int: terminal width (default 70)
 //   - -rows int: terminal height (default 40)
 func WithTerm() (exitCode int) {
-	defer func() {
-		// testscript.RunMain does not seem to respect
-		// the returned exit code.
-		os.Exit(exitCode)
-	}()
-
 	cols := flag.Int("cols", 70, "terminal width")
 	rows := flag.Int("rows", 40, "terminal height")
 
