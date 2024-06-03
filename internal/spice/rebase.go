@@ -33,14 +33,23 @@ type RebaseRescueRequest struct {
 	Message string // optional
 }
 
+// rescuedRebaseError helps differentiate between rescued rebases
+// and non-rescued rebases so that we don't print the message twice
+type rescuedRebaseError struct {
+	err *git.RebaseInterruptError
+}
+
+func (r *rescuedRebaseError) Error() string {
+	return r.err.Error()
+}
+
 // RebaseRescue attempts to recover a git-spice operation that was interrupted
 // by a rebase conflict or other interruption.
 // If it determines that the rebase can be recovered from and continued in the
 // future, it records the continuation command in the data store for later
 // resumption.
 //
-// Returns the original rebase error back to the caller
-// so that the program can exit.
+// Returns an error back to the caller so that the program can exit.
 //
 // For commands that invoke other commands that may be interrupted by a rebase,
 // assuming both commands are idempotent and re-entrant,
@@ -75,39 +84,47 @@ type RebaseRescueRequest struct {
 //
 // As at that point, re-running the child operation is sufficient.
 func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) error {
-	if req.Err == nil {
-		return nil
-	}
+	var (
+		rescuedErr *rescuedRebaseError
+		rebaseErr  *git.RebaseInterruptError
+	)
+	switch {
+	case errors.As(req.Err, &rescuedErr):
+		// Already rescued.
+		// No need to print the error.
 
-	var rebaseErr *git.RebaseInterruptError
-	if !errors.As(req.Err, &rebaseErr) {
+	case errors.As(req.Err, &rebaseErr):
+		switch rebaseErr.Kind {
+		case git.RebaseInterruptConflict:
+			var msg strings.Builder
+			fmt.Fprintf(&msg, "There was a conflict while rebasing.\n")
+			fmt.Fprintf(&msg, "Resolve the conflict and run:\n")
+			fmt.Fprintf(&msg, "  gs rebase continue\n")
+			fmt.Fprintf(&msg, "Or abort the operation with:\n")
+			fmt.Fprintf(&msg, "  gs rebase abort\n")
+			s.log.Error(msg.String())
+		case git.RebaseInterruptDeliberate:
+			var msg strings.Builder
+			fmt.Fprintf(&msg, "The rebase operation was interrupted with an 'edit' or 'break' command.\n")
+			fmt.Fprintf(&msg, "When you're ready to continue, run:\n")
+			fmt.Fprintf(&msg, "  gs rebase continue\n")
+			fmt.Fprintf(&msg, "Or abort the operation with:\n")
+			fmt.Fprintf(&msg, "  gs rebase abort\n")
+			s.log.Info(msg.String())
+		default:
+			must.Failf("unexpected rebase interrupt kind: %v", rebaseErr.Kind)
+		}
+
+		rescuedErr = &rescuedRebaseError{err: rebaseErr}
+
+	default:
 		return req.Err
 	}
-
-	switch rebaseErr.Kind {
-	case git.RebaseInterruptConflict:
-		var msg strings.Builder
-		fmt.Fprintf(&msg, "There was a conflict while rebasing.\n")
-		fmt.Fprintf(&msg, "Resolve the conflict and run:\n")
-		fmt.Fprintf(&msg, "  gs rebase continue\n")
-		fmt.Fprintf(&msg, "Or abort the operation with:\n")
-		fmt.Fprintf(&msg, "  gs rebase abort\n")
-		s.log.Error(msg.String())
-	case git.RebaseInterruptDeliberate:
-		var msg strings.Builder
-		fmt.Fprintf(&msg, "The rebase operation was interrupted with an 'edit' or 'break' command.\n")
-		fmt.Fprintf(&msg, "When you're ready to continue, run:\n")
-		fmt.Fprintf(&msg, "  gs rebase continue\n")
-		fmt.Fprintf(&msg, "Or abort the operation with:\n")
-		fmt.Fprintf(&msg, "  gs rebase abort\n")
-		s.log.Info(msg.String())
-	default:
-		must.Failf("unexpected rebase interrupt kind: %v", rebaseErr.Kind)
-	}
+	must.NotBeNilf(rescuedErr, "rescuedErr must be set at this point")
 
 	// No continuation to record.
 	if len(req.Command) == 0 {
-		return rebaseErr
+		return rescuedErr
 	}
 
 	branch := req.Branch
@@ -128,5 +145,5 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		return fmt.Errorf("edit state: %w", err)
 	}
 
-	return rebaseErr
+	return rescuedErr
 }
