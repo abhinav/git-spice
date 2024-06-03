@@ -461,14 +461,19 @@ gs branch (b) submit (s) [<name>] [flags]
 
 Submit a branch
 
-Creates or updates a Pull Request for the specified branch,
+Creates or updates a pull request for the specified branch,
 or the current branch if none is specified.
-The Pull Request will use the tracked base branch
+The pull request will use the branch's base branch
 as the merge base.
 
-For new Pull Requests, a prompt will allow filling metadata.
-Use the --title and --body flags to set the title and body,
+For new pull requests, a prompt will allow filling metadata.
+Use the --title and --body flags to skip the prompt,
 or the --fill flag to use the commit message to fill them in.
+The --draft flag marks the pull request as a draft.
+
+When updating an existing pull request,
+the --[no-]draft flag can be used to update the draft status.
+Without the flag, the draft status is not changed.
 
 **Arguments**
 
@@ -477,9 +482,9 @@ or the --fill flag to use the commit message to fill them in.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--title=STRING`: Title of the pull request (if creating one)
-* `--body=STRING`: Body of the pull request (if creating one)
-* `--draft`: Mark the pull request as a draft
+* `--title=STRING`: Title of the pull request
+* `--body=STRING`: Body of the pull request
+* `--[no-]draft`: Whether to mark the pull request as draft
 * `--fill`: Fill in the pull request title and body from the commit messages
 
 ## gs commit create

@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch submit: Update an existing PR''s draft status only if `--draft` or `--no-draft` flags are provided.'
+time: 2024-06-03T04:57:56.435285-07:00

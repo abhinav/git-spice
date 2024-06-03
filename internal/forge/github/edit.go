@@ -5,11 +5,16 @@ import (
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/cmputil"
 	"go.abhg.dev/gs/internal/forge"
 )
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
+	if cmputil.Zero(opts) {
+		return nil // nothing to do
+	}
+
 	// We don't know the GraphQL ID for the PR, so find it.
 	var graphQLID githubv4.ID
 	{
