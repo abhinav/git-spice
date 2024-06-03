@@ -1,0 +1,169 @@
+# submit a stack of PRs with 'branch submit',
+# then submit the entire stack with 'stack submit',
+# but leave their draft status unchanged.
+
+as 'Test <test@example.com>'
+at '2024-06-03T04:56:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+gs branch submit --fill --draft
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+gs branch submit --fill --draft
+
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+gs branch submit --fill --draft
+
+# middle of the stack
+git checkout feature2
+
+# Dry run
+gs stack submit --dry-run
+cmp stderr $WORK/golden/submit-dry-run.txt
+! stderr 'draft' # draft status should not be changed
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/start.json
+
+# Merge the bottom PR, sync, restack, and submit.
+gh-merge alice/example 1
+gs rs
+stderr '#1 was merged'
+gs sr   # stack restack
+gs ss   # stack submit
+stderr 'Updated #2'
+stderr 'Updated #3'
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pr-1-merged.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+
+-- golden/submit-dry-run.txt --
+INF Pull request #1 is up-to-date
+INF Pull request #2 is up-to-date
+INF Pull request #3 is up-to-date
+-- golden/start.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature 1",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "2fdb9dfd9a5835e3604dafa788044409473ffffd"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "21283286a4dfbf7b8f4b0132ef3cf9a76704043e"
+    },
+    "base": {
+      "ref": "feature1",
+      "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "9d213feb71f5913a5bc20fab160efd973de93991"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "21283286a4dfbf7b8f4b0132ef3cf9a76704043e"
+    }
+  }
+]
+
+-- golden/pr-1-merged.json --
+[
+  {
+    "number": 1,
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "a6c91da75861301e73f0c8fd5585de39d27432b3"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "bac8cbd7c69c0a6d78d2ae4c1df7077f02d3577b"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "a6c91da75861301e73f0c8fd5585de39d27432b3"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "draft": true,
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "2ee6f663a29ecdcdda29aeace47dede1db4f7a4d"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "bac8cbd7c69c0a6d78d2ae4c1df7077f02d3577b"
+    }
+  }
+]

@@ -19,9 +19,9 @@ import (
 type branchSubmitCmd struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 
-	Title string `help:"Title of the pull request (if creating one)"`
-	Body  string `help:"Body of the pull request (if creating one)"`
-	Draft bool   `help:"Mark the pull request as a draft"`
+	Title string `help:"Title of the pull request"`
+	Body  string `help:"Body of the pull request"`
+	Draft *bool  `negatable:"" help:"Whether to mark the pull request as draft"`
 	Fill  bool   `help:"Fill in the pull request title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt
 
@@ -36,14 +36,19 @@ type branchSubmitCmd struct {
 
 func (*branchSubmitCmd) Help() string {
 	return text.Dedent(`
-		Creates or updates a Pull Request for the specified branch,
+		Creates or updates a pull request for the specified branch,
 		or the current branch if none is specified.
-		The Pull Request will use the tracked base branch
+		The pull request will use the branch's base branch
 		as the merge base.
 
-		For new Pull Requests, a prompt will allow filling metadata.
-		Use the --title and --body flags to set the title and body,
+		For new pull requests, a prompt will allow filling metadata.
+		Use the --title and --body flags to skip the prompt,
 		or the --fill flag to use the commit message to fill them in.
+		The --draft flag marks the pull request as a draft.
+
+		When updating an existing pull request,
+		the --[no-]draft flag can be used to update the draft status.
+		Without the flag, the draft status is not changed.
 	`)
 }
 
@@ -233,10 +238,11 @@ func (cmd *branchSubmitCmd) Run(
 			fields = append(fields, body)
 		}
 
-		if opts.Prompt {
+		if opts.Prompt && cmd.Draft == nil {
+			cmd.Draft = new(bool)
 			// TODO: default to true if subject is "WIP" or similar.
 			draft := ui.NewConfirm().
-				WithValue(&cmd.Draft).
+				WithValue(cmd.Draft).
 				WithTitle("Draft").
 				WithDescription("Mark the pull request as a draft?")
 			fields = append(fields, draft)
@@ -288,12 +294,17 @@ func (cmd *branchSubmitCmd) Run(
 			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
 		}
 
+		draft := false
+		if cmd.Draft != nil {
+			draft = *cmd.Draft
+		}
+
 		result, err := remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
 			Subject: cmd.Title,
 			Body:    cmd.Body,
 			Head:    cmd.Name,
 			Base:    branch.Base,
-			Draft:   cmd.Draft,
+			Draft:   draft,
 		})
 		if err != nil {
 			return fmt.Errorf("create change: %w", err)
@@ -311,7 +322,7 @@ func (cmd *branchSubmitCmd) Run(
 		if pull.BaseName != branch.Base {
 			updates = append(updates, "set base to "+branch.Base)
 		}
-		if pull.Draft != cmd.Draft {
+		if cmd.Draft != nil && pull.Draft != *cmd.Draft {
 			updates = append(updates, "set draft to "+fmt.Sprint(cmd.Draft))
 		}
 
@@ -344,12 +355,10 @@ func (cmd *branchSubmitCmd) Run(
 			}
 		}
 
-		if pull.BaseName != branch.Base || pull.Draft != cmd.Draft {
+		if len(updates) > 0 {
 			opts := forge.EditChangeOptions{
-				Base: branch.Base,
-			}
-			if pull.Draft != cmd.Draft {
-				opts.Draft = &cmd.Draft
+				Base:  branch.Base,
+				Draft: cmd.Draft,
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, opts); err != nil {
