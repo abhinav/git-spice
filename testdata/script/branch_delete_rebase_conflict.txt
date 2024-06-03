@@ -21,7 +21,7 @@ gs trunk
 ! gs branch delete --force feature1
 
 # feature2 conflict
-stderr 'There was a conflict while rebasing'
+stderr -count=1 'There was a conflict while rebasing'
 git status --porcelain
 cmp stdout $WORK/golden/conflict.txt
 

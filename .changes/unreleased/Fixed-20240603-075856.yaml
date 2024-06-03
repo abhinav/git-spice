@@ -1,0 +1,3 @@
+kind: Fixed
+body: Fix issue where some operations printed rebase conflict message two or more times.
+time: 2024-06-03T07:58:56.061696-07:00
