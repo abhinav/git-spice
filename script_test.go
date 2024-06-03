@@ -26,7 +26,7 @@ import (
 var _update = flag.Bool("update", false, "update golden files")
 
 func TestMain(m *testing.M) {
-	testscript.RunMain(m, map[string]func() int{
+	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"gs": func() int {
 			logger := log.NewWithOptions(os.Stderr, log.Options{
 				Level: log.DebugLevel,
@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 		// using the file to drive interactions with it.
 		// See [termtest.WithTerm] for supported commands.
 		"with-term": termtest.WithTerm,
-	})
+	}))
 }
 
 func TestScript(t *testing.T) {
