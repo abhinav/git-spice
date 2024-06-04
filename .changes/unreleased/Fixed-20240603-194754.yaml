@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'rebase {continue, abort}: Heal from external `git rebase --continue` or `git rebase --abort` and avoid running old rebase continuation commands.'
+time: 2024-06-03T19:47:54.882529-07:00

@@ -55,19 +55,16 @@ func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 	}
 
-	cont, err := store.TakeContinuation(ctx, "gs rebase abort")
+	conts, err := store.TakeContinuations(ctx, "gs rebase abort")
 	if err != nil {
-		return fmt.Errorf("take rebase continuation: %w", err)
+		return fmt.Errorf("take rebase continuations: %w", err)
 	}
-	if cont == nil && !wasRebasing {
+
+	// Make sure that *something* happened from the user's perspective.
+	// If we didn't abort a rebase, and we didn't delete a continuation,
+	// then this was a no-op, which this command should not be.
+	if len(conts) == 0 && !wasRebasing {
 		return errors.New("no operation to abort")
-	}
-	for cont != nil {
-		log.Debugf("%v: dropping continuation: %q", cont.Branch, cont.Command)
-		cont, err = store.TakeContinuation(ctx, "gs rebase abort")
-		if err != nil {
-			return fmt.Errorf("take rebase continuation: %w", err)
-		}
 	}
 
 	return nil
