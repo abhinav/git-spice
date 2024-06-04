@@ -330,6 +330,7 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	mux.HandleFunc("GET /{owner}/{repo}/change/{number}", sh.handleGetChange)
 	mux.HandleFunc("PATCH /{owner}/{repo}/change/{number}", sh.handleEditChange)
 	mux.HandleFunc("GET /{owner}/{repo}/change/{number}/merged", sh.handleIsMerged)
+	mux.HandleFunc("GET /{owner}/{repo}/change-template", sh.handleChangeTemplate)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		sh.log.Errorf("Unexpected request: %s %s", r.Method, r.URL.Path)
 		http.Error(w, "not found", http.StatusNotFound)
@@ -576,6 +577,44 @@ func (sh *ShamHub) handleIsMerged(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(isMergedResponse{Merged: merged}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+type changeTemplateResponse []*changeTemplate
+
+type changeTemplate struct {
+	Filename string `json:"filename,omitempty"`
+	Body     string `json:"body,omitempty"`
+}
+
+func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) {
+	owner, repo := r.PathValue("owner"), r.PathValue("repo")
+	if owner == "" || repo == "" {
+		http.Error(w, "owner, and repo are required", http.StatusBadRequest)
+		return
+	}
+
+	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
+	// that's the template to use.
+	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+	defer flush()
+
+	cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:.shamhub/CHANGE_TEMPLATE.md")
+	cmd.Dir = sh.repoDir(owner, repo)
+	cmd.Stderr = logw
+
+	var res changeTemplateResponse
+	if out, err := cmd.Output(); err == nil {
+		res = append(res, &changeTemplate{
+			Filename: "CHANGE_TEMPLATE.md",
+			Body:     strings.TrimSpace(string(out)) + "\n",
+		})
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(res); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

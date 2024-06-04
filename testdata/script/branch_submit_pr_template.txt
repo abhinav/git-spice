@@ -1,0 +1,69 @@
+# 'branch submit' requests the PR template, if there is one.
+
+as 'Test <test@example.com>'
+at '2024-06-03T08:32:32Z'
+
+# setup
+cd repo
+git init
+git add .shamhub
+git commit -m 'Initial commit'
+
+# set up a fake remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a branch and submit a PR
+git add feature.txt
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
+gs bc feature
+
+gs branch submit --fill
+stderr 'Created #1'
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+## Summary
+
+Explain the changes you made.
+
+## Testing
+
+Explain how these changes were tested.
+
+## Rollback Plan
+
+Explain how to revert these changes.
+
+-- repo/feature.txt --
+feature
+
+-- input/feature-commit-msg --
+Add feature
+
+This adds a feature.
+The feature does things.
+This is the starting commit message.
+
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature",
+    "body": "This adds a feature.\nThe feature does things.\nThis is the starting commit message.\n\n## Summary\n\nExplain the changes you made.\n\n## Testing\n\nExplain how these changes were tested.\n\n## Rollback Plan\n\nExplain how to revert these changes.\n",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature",
+      "sha": "c1141486e1a748c35a2f550decde01586b9dd2ed"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "d82f437b45089440ffaf5e3fa92b99d2d003f8e6"
+    }
+  }
+]
+

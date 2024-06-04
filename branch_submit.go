@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
@@ -175,6 +176,26 @@ func (cmd *branchSubmitCmd) Run(
 			return nil
 		}
 
+		// Fetch the template while we're figuring out the default PR
+		// title and body.
+		changeTemplate := make(chan *forge.ChangeTemplate, 1)
+		go func() {
+			defer close(changeTemplate)
+
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			defer cancel()
+
+			templates, err := remoteRepo.ListChangeTemplates(ctx)
+			if err != nil {
+				log.Warn("Could not list change templates", "error", err)
+				return
+			}
+
+			if len(templates) > 0 {
+				changeTemplate <- templates[0]
+			}
+		}()
+
 		msgs, err := repo.CommitMessageRange(ctx, cmd.Name, branch.Base)
 		if err != nil {
 			return fmt.Errorf("list commits: %w", err)
@@ -183,30 +204,31 @@ func (cmd *branchSubmitCmd) Run(
 			return errors.New("no commits to submit")
 		}
 
-		var defaultTitle, defaultBody string
+		var (
+			defaultTitle string
+			defaultBody  strings.Builder
+		)
 		if len(msgs) == 1 {
 			// If there's only one commit,
 			// just the body will be the default body.
 			defaultTitle = msgs[0].Subject
-			defaultBody = msgs[0].Body
+			defaultBody.WriteString(msgs[0].Body)
 		} else {
 			// Otherwise, we'll concatenate all the messages.
 			// The revisions are in reverse order,
 			// so we'll want to iterate in reverse.
-			var body strings.Builder
 			defaultTitle = msgs[len(msgs)-1].Subject
 			for i := len(msgs) - 1; i >= 0; i-- {
 				msg := msgs[i]
-				if body.Len() > 0 {
-					body.WriteString("\n\n")
+				if defaultBody.Len() > 0 {
+					defaultBody.WriteString("\n\n")
 				}
-				body.WriteString(msg.Subject)
+				defaultBody.WriteString(msg.Subject)
 				if msg.Body != "" {
-					body.WriteString("\n\n")
-					body.WriteString(msg.Body)
+					defaultBody.WriteString("\n\n")
+					defaultBody.WriteString(msg.Body)
 				}
 			}
-			defaultBody = body.String()
 		}
 
 		var fields []ui.Field
@@ -226,7 +248,12 @@ func (cmd *branchSubmitCmd) Run(
 		}
 
 		if cmd.Body == "" {
-			cmd.Body = defaultBody
+			if tmpl, ok := <-changeTemplate; ok {
+				defaultBody.WriteString("\n\n")
+				defaultBody.WriteString(tmpl.Body)
+			}
+
+			cmd.Body = defaultBody.String()
 			body := ui.NewOpenEditor().
 				WithValue(&cmd.Body).
 				WithTitle("Body").
