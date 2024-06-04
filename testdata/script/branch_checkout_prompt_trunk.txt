@@ -1,0 +1,31 @@
+# branch checkout prompt shows trunk
+# if it's not checked out.
+
+as 'Test <test@example.com>'
+at '2024-06-03T20:06:07Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature.txt
+gs bc -m feature
+
+with-term $WORK/input/prompt.txt -- gs branch checkout
+cmp stdout $WORK/golden/prompt.txt
+
+git branch --show-current
+stdout main
+
+-- repo/feature.txt --
+feature
+
+-- input/prompt.txt --
+await Select a branch
+snapshot
+feed ma\r
+-- golden/prompt.txt --
+Select a branch to checkout:
+
+▶ main
