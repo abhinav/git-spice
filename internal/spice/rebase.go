@@ -43,13 +43,21 @@ func (r *rescuedRebaseError) Error() string {
 	return r.err.Error()
 }
 
-// RebaseRescue attempts to recover a git-spice operation that was interrupted
-// by a rebase conflict or other interruption.
-// If it determines that the rebase can be recovered from and continued in the
-// future, it records the continuation command in the data store for later
-// resumption.
+// RebaseRescue helps operations continue from rebase conflicts.
+// To use it, call RebaseRescue with the error that caused the rebase
+// operation to be interrupted.
 //
-// Returns an error back to the caller so that the program can exit.
+// For example:
+//
+//	func myOperation(...) error {
+//		if err := repo.Rebase(ctx, ...); err != nil {
+//			return svc.RebaseRescue(ctx, ...)
+//		}
+//		return nil
+//	}
+//
+// The function returns an error back to the caller so that the program can
+// exit.
 //
 // For commands that invoke other commands that may be interrupted by a rebase,
 // assuming both commands are idempotent and re-entrant,
@@ -71,9 +79,6 @@ func (r *rescuedRebaseError) Error() string {
 //		}
 //	}
 //
-// This way, after a child rebase is resolved, the parent command will be
-// re-run to resolve its other rebases.
-//
 // Note that this tends to not be necessary for commands that end with a single
 // child operation, e.g.
 //
@@ -94,6 +99,12 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		// No need to print the error.
 
 	case errors.As(req.Err, &rebaseErr):
+		// First in a possible sequence of rescues up the call stack.
+		// Print the error message, and clear the continuation stack.
+		if _, err := s.store.TakeContinuations(ctx, "rebase rescue"); err != nil {
+			return fmt.Errorf("clear rebase continuations: %w", err)
+		}
+
 		switch rebaseErr.Kind {
 		case git.RebaseInterruptConflict:
 			var msg strings.Builder
@@ -137,10 +148,9 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		msg = fmt.Sprintf("interrupted: branch %s", req.Branch)
 	}
 
-	if err := s.store.AppendContinuation(ctx, state.SetContinuationRequest{
+	if err := s.store.AppendContinuations(ctx, msg, state.Continuation{
 		Command: req.Command,
 		Branch:  branch,
-		Message: msg,
 	}); err != nil {
 		return fmt.Errorf("edit state: %w", err)
 	}

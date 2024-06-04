@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -46,8 +46,6 @@ func (cmd *rebaseContinueCmd) Run(
 		return err
 	}
 
-	svc := spice.NewService(repo, store, log)
-
 	if _, err := repo.RebaseState(ctx); err != nil {
 		if !errors.Is(err, git.ErrNoRebase) {
 			return fmt.Errorf("get rebase state: %w", err)
@@ -57,16 +55,31 @@ func (cmd *rebaseContinueCmd) Run(
 
 	// Finish the ongoing rebase.
 	if err := repo.RebaseContinue(ctx); err != nil {
-		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-			Err: err,
-		})
+		var rebaseErr *git.RebaseInterruptError
+		if errors.As(err, &rebaseErr) {
+			var msg strings.Builder
+			fmt.Fprintf(&msg, "There are more conflicts to resolve.\n")
+			fmt.Fprintf(&msg, "Resolve them and run the following command again:\n")
+			fmt.Fprintf(&msg, "  gs rebase continue\n")
+			fmt.Fprintf(&msg, "To abort the remaining operations run:\n")
+			fmt.Fprintf(&msg, "  git rebase --abort\n")
+			log.Error(msg.String())
+		}
+		return err
 	}
 
-	cont, err := store.TakeContinuation(ctx, "gs rebase continue")
+	// Once we get here, we have a clean state to continue running
+	// rebase continuations on.
+	// However, if any of the continuations encounters another conflict,
+	// they will clear the continuation list.
+	// So we'll want to grab the whole list here,
+	// and push the remainder of it back on if a command fails.
+	conts, err := store.TakeContinuations(ctx, "gs rebase continue")
 	if err != nil {
-		return fmt.Errorf("take rebase continuation: %w", err)
+		return fmt.Errorf("take rebase continuations: %w", err)
 	}
-	for cont != nil {
+
+	for idx, cont := range conts {
 		log.Debugf("Got rebase continuation: %q (branch: %s)", cont.Command, cont.Branch)
 		if err := repo.Checkout(ctx, cont.Branch); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", cont.Branch, err)
@@ -79,12 +92,14 @@ func (cmd *rebaseContinueCmd) Run(
 		}
 
 		if err := kctx.Run(ctx); err != nil {
-			return fmt.Errorf("continue operation %q: %w", cont.Command, err)
-		}
+			// If the command failed, it has already printed the
+			// rebase message, and appended its continuations.
+			// We'll append the remainder.
+			if err := store.AppendContinuations(ctx, "rebase continue", conts[idx+1:]...); err != nil {
+				return fmt.Errorf("append rebase continuations: %w", err)
+			}
+			return err
 
-		cont, err = store.TakeContinuation(ctx, "gs rebase continue")
-		if err != nil {
-			return fmt.Errorf("take rebase continuation: %w", err)
 		}
 	}
 

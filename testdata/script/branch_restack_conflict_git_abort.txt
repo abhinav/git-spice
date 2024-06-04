@@ -1,0 +1,68 @@
+# 'branch restack' can recover from a manual 'git abort'.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# go back to main and modify init
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack the feature branch
+! gs branch restack
+stderr 'There was a conflict while rebasing'
+
+# abort the rebase, and try again.
+git rebase --abort
+! gs branch restack
+stderr 'There was a conflict while rebasing'
+
+# resolve the conflict
+cp $WORK/extra/init.resolved.txt init.txt
+git add init.txt
+env EDITOR=true
+gs rebase continue
+cmp stderr $WORK/golden/rebase-continue-stderr.txt
+
+# verify state
+cmp init.txt $WORK/extra/init.resolved.txt
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+gs trunk
+cmp init.txt $WORK/extra/init.new.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- extra/init.resolved.txt --
+updated init
+
+-- golden/rebase-continue-stderr.txt --
+INF feature: branch does not need to be restacked.
+-- golden/graph.txt --
+* bd2299a (HEAD -> feature) feature
+* 57ab3b0 (main) Change init
+* d692027 Initial commit
