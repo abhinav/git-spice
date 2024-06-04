@@ -42,7 +42,8 @@ type branchPrompt struct {
 	// in any worktree should be excluded.
 	ExcludeCheckedOut bool
 
-	// TrackedOnly indicates that only tracked branches should be included.
+	// TrackedOnly indicates that only tracked branches and Trunk
+	// should be included in the list.
 	TrackedOnly bool
 
 	// Title specifies the prompt to display to the user.
@@ -69,6 +70,7 @@ func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *sta
 		})
 	}
 
+	trunk := store.Trunk()
 	if p.TrackedOnly {
 		tracked, err := store.List(ctx)
 		if err != nil {
@@ -77,6 +79,10 @@ func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *sta
 		slices.Sort(tracked)
 
 		filters = append(filters, func(b git.LocalBranch) bool {
+			if b.Name == trunk {
+				// Always include Trunk
+				return true
+			}
 			_, ok := slices.BinarySearch(tracked, b.Name)
 			return ok
 		})
