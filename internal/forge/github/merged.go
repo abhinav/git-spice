@@ -8,8 +8,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// IsMerged reports whether a change has been merged.
-func (r *Repository) IsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
+// ChangeIsMerged reports whether a change has been merged.
+func (r *Repository) ChangeIsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
 	var q struct {
 		Repository struct {
 			PullRequest struct {

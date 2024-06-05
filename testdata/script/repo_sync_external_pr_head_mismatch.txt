@@ -1,0 +1,62 @@
+# When 'repo sync' is deleting a branch for an externally created PR,
+# if the heads mismatch and we're in interactive mode,
+# prompt the user for deletion.
+
+as 'Test <test@example.com>'
+at '2024-06-05T05:29:28Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# Create a branch, submit it.
+gs trunk
+git add feature.txt
+gs bc -m 'Add feature' feature
+gs branch submit --fill
+
+# Modify the branch, don't submit.
+mv $WORK/extra/modified-feature.txt feature.txt
+git add feature.txt
+gs cc -m 'Modify feature'
+
+# Forget all state and merge the branch server-side.
+gs repo init --reset --trunk=main --remote=origin
+gh-merge alice/example 1
+
+# Re-track the branch and sync in interactive mode.
+gs branch track --base=main feature
+with-term $WORK/input/prompt.txt -- gs rs
+cmp stdout $WORK/golden/prompt.txt
+stderr 'feature: deleted \(was 4513f9f\)'
+
+git graph --branches
+cmp stdout $WORK/golden/merged-log.txt
+
+-- repo/feature.txt --
+Contents of feature
+
+-- extra/modified-feature.txt --
+New contents of feature
+
+-- input/prompt.txt --
+await Delete feature
+snapshot
+feed y
+await
+
+-- golden/prompt.txt --
+Delete feature?: [y/N]
+#1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54
+-- golden/merged-log.txt --
+*   f512e87 (HEAD -> main, origin/main) Merge change #1
+|\  
+| * a1b54a6 Add feature
+|/  
+* 13538da Initial commit

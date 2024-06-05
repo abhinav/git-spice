@@ -326,7 +326,7 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /{owner}/{repo}/changes", sh.handleSubmitChange)
-	mux.HandleFunc("GET /{owner}/{repo}/changes/by-branch/{branch}", sh.handleGetChangesByBranch)
+	mux.HandleFunc("GET /{owner}/{repo}/changes/by-branch/{branch}", sh.handleFindChangesByBranch)
 	mux.HandleFunc("GET /{owner}/{repo}/change/{number}", sh.handleGetChange)
 	mux.HandleFunc("PATCH /{owner}/{repo}/change/{number}", sh.handleEditChange)
 	mux.HandleFunc("GET /{owner}/{repo}/change/{number}/merged", sh.handleIsMerged)
@@ -337,7 +337,7 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	})
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL.Path)
+		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL.String())
 		mux.ServeHTTP(w, r)
 	})
 }
@@ -457,21 +457,58 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (sh *ShamHub) handleGetChangesByBranch(w http.ResponseWriter, r *http.Request) {
-	// TODO: if we need more lookup patterns in the future,
-	// we can generalize this into a listChanges API.
+func (sh *ShamHub) handleFindChangesByBranch(w http.ResponseWriter, r *http.Request) {
 	owner, repo, branch := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("branch")
 	if owner == "" || repo == "" || branch == "" {
 		http.Error(w, "owner, repo, and branch are required", http.StatusBadRequest)
 		return
 	}
 
+	limit := 10
+	if l := r.FormValue("limit"); l != "" {
+		var err error
+		limit, err = strconv.Atoi(l)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	filters := []func(shamChange) bool{
+		func(c shamChange) bool { return c.Owner == owner },
+		func(c shamChange) bool { return c.Repo == repo },
+		func(c shamChange) bool { return c.Head == branch },
+	}
+
+	if state := r.FormValue("state"); state != "" && state != "all" {
+		var s shamChangeState
+		switch state {
+		case "open":
+			s = shamChangeOpen
+		case "closed":
+			s = shamChangeClosed
+		case "merged":
+			s = shamChangeMerged
+		}
+
+		filters = append(filters, func(c shamChange) bool { return c.State == s })
+	}
+
 	var got []shamChange
 	sh.mu.RLock()
+nextChange:
 	for _, c := range sh.changes {
-		if c.Owner == owner && c.Repo == repo && c.Head == branch {
-			got = append(got, c)
+		if len(got) >= limit {
+			break
 		}
+
+		for _, f := range filters {
+			if !f(c) {
+				continue nextChange
+			}
+		}
+
+		got = append(got, c)
 	}
 	sh.mu.RUnlock()
 

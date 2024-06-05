@@ -6,14 +6,14 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 245
+        content_length: 251
         transfer_encoding: []
         trailer: {}
         host: api.github.com
         remote_addr: ""
         request_uri: ""
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,headRefOid,baseRefName,isDraft}}}","variables":{"number":141,"owner":"abhinav","repo":"git-spice"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":141,"owner":"abhinav","repo":"git-spice"}}
         form: {}
         headers:
             Content-Type:
@@ -28,26 +28,26 @@ interactions:
         trailer: {}
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOJ2BQKs5xNT-u","number":141,"url":"https://github.com/abhinav/git-spice/pull/141","title":"branch submit: Heal from external PR submissions","headRefOid":"df0289d83ffae816105947875db01c992224913d","baseRefName":"main","isDraft":false}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOJ2BQKs5xNT-u","number":141,"url":"https://github.com/abhinav/git-spice/pull/141","title":"branch submit: Heal from external PR submissions","state":"MERGED","headRefOid":"df0289d83ffae816105947875db01c992224913d","baseRefName":"main","isDraft":false}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 188.794916ms
+        duration: 291.343334ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 245
+        content_length: 251
         transfer_encoding: []
         trailer: {}
         host: api.github.com
         remote_addr: ""
         request_uri: ""
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,headRefOid,baseRefName,isDraft}}}","variables":{"number":999,"owner":"abhinav","repo":"git-spice"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":999,"owner":"abhinav","repo":"git-spice"}}
         form: {}
         headers:
             Content-Type:
@@ -68,4 +68,4 @@ interactions:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 166.253667ms
+        duration: 216.053833ms
