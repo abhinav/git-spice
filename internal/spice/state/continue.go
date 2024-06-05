@@ -6,6 +6,20 @@ import (
 	"fmt"
 )
 
+const _rebaseContinueJSON = "rebase-continue"
+
+type rebaseContinueState struct {
+	Continuations []rebaseContinuation `json:"continuations"`
+}
+
+type rebaseContinuation struct {
+	// Command is the gs command that will be run.
+	Command []string `json:"command"`
+
+	// Branch on which the command must be run.
+	Branch string `json:"branch"`
+}
+
 // Continuation includes the information needed to resume a
 // rebase operation that was interrupted.
 type Continuation struct {
