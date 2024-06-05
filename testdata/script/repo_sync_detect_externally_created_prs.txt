@@ -1,0 +1,108 @@
+# 'repo sync' detects and deletes branches for PRs
+# that were created externally and then merged.
+
+as 'Test <test@example.com>'
+at '2024-06-05T05:29:28Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# Create a new branch and submit it
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Create another branch, submit it,
+# and create a local unpushed change.
+gs trunk
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+gs branch submit --fill
+mv $WORK/extra/modified-feature2.txt feature2.txt
+git add feature2.txt
+gs cc -m 'Modify feature2'
+
+# Forget all state.
+gs repo init --reset --trunk=main --remote=origin
+# At this point, gs has no knowledge of the PRs.
+# Merge them server-side.
+gh-merge alice/example 1
+gh-merge alice/example 2
+
+# Track the branches and sync.
+gs branch track --base=main feature1
+gs branch track --base=main feature2
+gs repo sync
+stderr 'feature1: #1 was merged'
+stderr 'feature2: #2 was merged but local SHA \(6b83ef3\) does not match remote SHA \(33f1653\). Skipping'
+
+git graph --branches
+cmp stdout $WORK/golden/merged-log.txt
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pull.json
+
+-- repo/feature1.txt --
+Contents of feature
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- extra/modified-feature2.txt --
+New contents of feature2
+
+-- golden/merged-log.txt --
+* 6b83ef3 (HEAD -> feature2) Modify feature2
+| *   e9220e5 (origin/main, main) Merge change #2
+| |\  
+| |/  
+|/|   
+* | 33f1653 (origin/feature2) Add feature2
+| * b58492c Merge change #1
+|/| 
+| * 7bf98f4 Add feature1
+|/  
+* 13538da Initial commit
+-- golden/pull.json --
+[
+  {
+    "number": 1,
+    "state": "closed",
+    "title": "Add feature1",
+    "body": "",
+    "merged": true,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "7bf98f4bf69e9ba74fdcfc42ac5b8b30dcccaf13"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
+    }
+  },
+  {
+    "base": {
+      "ref": "main",
+      "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
+    },
+    "body": "",
+    "head": {
+      "ref": "feature2",
+      "sha": "33f16530f499eb13bbe639deeed206df958c5b5a"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "merged": true,
+    "number": 2,
+    "state": "closed",
+    "title": "Add feature2"
+  }
+]

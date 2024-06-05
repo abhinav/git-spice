@@ -1,0 +1,3 @@
+kind: Added
+body: 'repo sync: Detect PRs for local branches created and merged externally.'
+time: 2024-06-05T08:22:45.051598-07:00

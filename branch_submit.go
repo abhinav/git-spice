@@ -122,7 +122,10 @@ func (cmd *branchSubmitCmd) Run(
 	// but verify that there isn't already one open.
 	var existingChange *forge.FindChangeItem
 	if branch.PR == 0 {
-		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch)
+		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch, forge.FindChangesOptions{
+			State: forge.ChangeOpen,
+			Limit: 3,
+		})
 		if err != nil {
 			return fmt.Errorf("list changes: %w", err)
 		}

@@ -142,6 +142,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 			ID:       141,
 			URL:      "https://github.com/abhinav/git-spice/pull/141",
 			Subject:  "branch submit: Heal from external PR submissions",
+			State:    forge.ChangeMerged,
 			BaseName: "main",
 			HeadHash: "df0289d83ffae816105947875db01c992224913d",
 			Draft:    false,
@@ -163,22 +164,23 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		changes, err := repo.FindChangesByBranch(ctx, "gh-graphql")
+		changes, err := repo.FindChangesByBranch(ctx, "gh-graphql", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []*forge.FindChangeItem{
 			{
 				ID:       144,
 				URL:      "https://github.com/abhinav/git-spice/pull/144",
-				Subject:  "WIP: GitHub: Use GraphQL API",
+				State:    forge.ChangeMerged,
+				Subject:  "GitHub: Use GraphQL API",
 				BaseName: "main",
-				HeadHash: "02195c2a399642a5f66ac9c65f57c7c97b1a7a6c",
+				HeadHash: "5d74cecfe3cb066044d129232229e07f5d04e194",
 				Draft:    false,
 			},
 		}, changes)
 	})
 
 	t.Run("not-found", func(t *testing.T) {
-		changes, err := repo.FindChangesByBranch(ctx, "does-not-exist")
+		changes, err := repo.FindChangesByBranch(ctx, "does-not-exist", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Empty(t, changes)
 	})
@@ -192,13 +194,13 @@ func TestIntegration_Repository_IsMerged(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("false", func(t *testing.T) {
-		ok, err := repo.IsMerged(ctx, 144)
+		ok, err := repo.ChangeIsMerged(ctx, 144)
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
 
 	t.Run("true", func(t *testing.T) {
-		ok, err := repo.IsMerged(ctx, 141)
+		ok, err := repo.ChangeIsMerged(ctx, 141)
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})

@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type repoSyncCmd struct {
@@ -28,11 +29,7 @@ func (*repoSyncCmd) Help() string {
 	`)
 }
 
-func (*repoSyncCmd) Run(
-	ctx context.Context,
-	log *log.Logger,
-	opts *globalOptions,
-) error {
+func (cmd *repoSyncCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -44,8 +41,6 @@ func (*repoSyncCmd) Run(
 	if err != nil {
 		return err
 	}
-
-	svc := spice.NewService(repo, store, log)
 
 	remote, err := ensureRemote(ctx, repo, store, log, opts)
 	// TODO: move ensure remote to Service
@@ -190,11 +185,24 @@ func (*repoSyncCmd) Run(
 		}
 	}
 
+	svc := spice.NewService(repo, store, log)
 	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
 	if err != nil {
 		return err
 	}
 
+	return cmd.deleteMergedBranches(ctx, log, remote, svc, repo, remoteRepo, opts)
+}
+
+func (cmd *repoSyncCmd) deleteMergedBranches(
+	ctx context.Context,
+	log *log.Logger,
+	remote string,
+	svc *spice.Service,
+	repo *git.Repository,
+	remoteRepo forge.Repository,
+	opts *globalOptions,
+) error {
 	// There are two options for detecting merged branches:
 	//
 	// 1. Query the PR status for each submitted branch.
@@ -208,71 +216,179 @@ func (*repoSyncCmd) Run(
 	// submitted branches is small enough that we can afford the API calls.
 	// In the future, we may need a hybrid approach that switches to (2).
 
-	var (
-		branches  []string
-		changeIDs []forge.ChangeID // changeIDs[i] = PR for branches[i]
-	)
-	{
-		tracked, err := svc.LoadBranches(ctx)
-		if err != nil {
-			return fmt.Errorf("list tracked branches: %w", err)
-		}
-
-		for _, b := range tracked {
-			if b.PR != 0 {
-				branches = append(branches, b.Name)
-				changeIDs = append(changeIDs, forge.ChangeID(b.PR))
-			}
-		}
+	knownBranches, err := svc.LoadBranches(ctx)
+	if err != nil {
+		return fmt.Errorf("list tracked branches: %w", err)
 	}
 
-	if len(branches) == 0 {
-		log.Debug("No PRs submitted from tracked branches")
-		return nil
+	type submittedBranch struct {
+		Name   string
+		Change forge.ChangeID
+		Merged bool
 	}
 
-	changesMerged := make([]bool, len(branches)) // whether changeIDs[i] is merged
-	{
-		idxc := make(chan int) // PRs to query
+	type trackedBranch struct {
+		Name string
 
-		// Spawn up to GOMAXPROCS workers to query PR status.
-		var wg sync.WaitGroup
-		for range min(runtime.GOMAXPROCS(0), len(branches)) {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		Change        forge.ChangeID
+		Merged        bool
+		RemoteHeadSHA git.Hash
+		LocalHeadSHA  git.Hash
+	}
 
-				for idx := range idxc {
-					id := changeIDs[idx]
-					merged, err := remoteRepo.IsMerged(ctx, id)
-					if err != nil {
-						log.Error("Failed to query PR status", "pr", id, "error", err)
+	// There are two kinds of branches under consideration:
+	//
+	// 1. Branches that we submitted PRs for with `gs branch submit`.
+	// 2. Branches that the user submitted PRs for manually
+	//    with 'gh pr create' or similar.
+	//
+	// For the first, we can perform a cheaper API call to check the PR status.
+	// For the second, we need to find recently merged PRs with that branch
+	// name, and match the remote head SHA to the branch head SHA.
+	//
+	// We'll try to do these checks concurrently.
+
+	submittedch := make(chan *submittedBranch)
+	trachedch := make(chan *trackedBranch)
+
+	var wg sync.WaitGroup
+	for range min(runtime.GOMAXPROCS(0), len(knownBranches)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			// We'll nil these out once they're closed.
+			submittedch := submittedch
+			trachedch := trachedch
+
+			for submittedch != nil || trachedch != nil {
+				select {
+				case b, ok := <-submittedch:
+					if !ok {
+						submittedch = nil
 						continue
 					}
 
-					changesMerged[idx] = merged
+					// TODO: Once we're recording GraphQL IDs in the store,
+					// we can combine all submitted PRs into one query.
+					merged, err := remoteRepo.ChangeIsMerged(ctx, b.Change)
+					if err != nil {
+						log.Error("Failed to query PR status", "pr", b.Change, "error", err)
+						continue
+					}
+
+					b.Merged = merged
+
+				case b, ok := <-trachedch:
+					if !ok {
+						trachedch = nil
+						continue
+					}
+
+					changes, err := remoteRepo.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
+						Limit: 3,
+						State: forge.ChangeMerged,
+					})
+					if err != nil {
+						log.Error("Failed to list changes", "branch", b.Name, "error", err)
+						continue
+					}
+
+					for _, c := range changes {
+						if c.State != forge.ChangeMerged {
+							continue
+						}
+
+						localSHA, err := repo.PeelToCommit(ctx, b.Name)
+						if err != nil {
+							log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
+							continue
+						}
+
+						b.Merged = true
+						b.Change = c.ID
+						b.RemoteHeadSHA = c.HeadHash
+						b.LocalHeadSHA = localSHA
+					}
+
 				}
-			}()
+			}
+		}()
+	}
+
+	var (
+		submittedBranches []*submittedBranch
+		trackedBranches   []*trackedBranch
+	)
+	for _, b := range knownBranches {
+		if b.PR != 0 {
+			b := &submittedBranch{
+				Name:   b.Name,
+				Change: forge.ChangeID(b.PR),
+			}
+			submittedBranches = append(submittedBranches, b)
+			submittedch <- b
+		} else {
+			b := &trackedBranch{Name: b.Name}
+			trackedBranches = append(trackedBranches, b)
+			trachedch <- b
+		}
+	}
+	close(submittedch)
+	close(trachedch)
+	wg.Wait()
+
+	var branchesToDelete []string
+	for _, branch := range submittedBranches {
+		if !branch.Merged {
+			continue
 		}
 
-		// Feed PRs to workers.
-		for i := range branches {
-			idxc <- i
-		}
-		close(idxc) // signal workers to exit
+		log.Infof("%v: %v was merged", branch.Name, branch.Change)
+		branchesToDelete = append(branchesToDelete, branch.Name)
+	}
 
-		wg.Wait()
+	for _, branch := range trackedBranches {
+		if !branch.Merged {
+			continue
+		}
+
+		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
+			log.Infof("%v: %v was merged", branch.Name, branch.Change)
+			branchesToDelete = append(branchesToDelete, branch.Name)
+			continue
+		}
+
+		mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
+			branch.Change, branch.LocalHeadSHA.Short(), branch.RemoteHeadSHA.Short())
+
+		// If the remote head SHA doesn't match the local head SHA,
+		// there may be local commits that haven't been pushed yet.
+		// Prompt for deletion if we have the option of prompting.
+		if !opts.Prompt {
+			log.Warnf("%v: %v. Skipping...", branch.Name, mismatchMsg)
+			continue
+		}
+
+		var shouldDelete bool
+		prompt := ui.NewConfirm().
+			WithTitle(fmt.Sprintf("Delete %v?", branch.Name)).
+			WithDescription(mismatchMsg).
+			WithValue(&shouldDelete)
+		if err := ui.Run(prompt); err != nil {
+			log.Warn("Skipping branch", "branch", branch.Name, "error", err)
+			continue
+		}
+
+		if shouldDelete {
+			branchesToDelete = append(branchesToDelete, branch.Name)
+		}
 	}
 
 	// TODO:
 	// Should the branches be deleted in any particular order?
 	// (e.g. from the bottom of the stack up)
-	for i, branch := range branches {
-		if !changesMerged[i] {
-			continue
-		}
-
-		log.Infof("%v: %v was merged: deleting...", branch, changeIDs[i])
+	for _, branch := range branchesToDelete {
 		err := (&branchDeleteCmd{
 			Name:  branch,
 			Force: true,

@@ -94,15 +94,26 @@ type Forge interface {
 type Repository interface {
 	SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error)
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
-	FindChangesByBranch(ctx context.Context, branch string) ([]*FindChangeItem, error)
+	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
-	IsMerged(ctx context.Context, id ChangeID) (bool, error)
+	ChangeIsMerged(ctx context.Context, id ChangeID) (bool, error)
 
 	// ListChangeTemplates returns templates defined in the repository
 	// for new change proposals.
 	//
 	// Returns an empty list if no templates are found.
 	ListChangeTemplates(context.Context) ([]*ChangeTemplate, error)
+}
+
+// FindChangesOptions specifies filtering options
+// for searching for changes.
+type FindChangesOptions struct {
+	State ChangeState // 0 = all
+
+	// Limit specifies the maximum number of changes to return.
+	// Changes are sorted by most recently updated.
+	// Defaults to 10.
+	Limit int
 }
 
 // SubmitChangeRequest is a request to submit a new change in a repository.
@@ -155,6 +166,9 @@ type FindChangeItem struct {
 	// URL is the web URL at which the change can be viewed.
 	URL string
 
+	// State is the current state of the change.
+	State ChangeState
+
 	// Subject is the title of the change.
 	Subject string
 
@@ -178,4 +192,57 @@ type ChangeTemplate struct {
 
 	// Body is the content of the template file.
 	Body string
+}
+
+// ChangeState is the current state of a change.
+type ChangeState int
+
+const (
+	// ChangeOpen specifies that a change is open.
+	ChangeOpen ChangeState = iota + 1
+
+	// ChangeMerged specifies that a change has been merged.
+	ChangeMerged
+
+	// ChangeClosed specifies that a change has been closed.
+	ChangeClosed
+)
+
+func (s ChangeState) String() string {
+	b, err := s.MarshalText()
+	if err != nil {
+		return "unknown"
+	}
+	return string(b)
+}
+
+// MarshalText serialize the change state to text.
+// This implements encoding.TextMarshaler.
+func (s ChangeState) MarshalText() ([]byte, error) {
+	switch s {
+	case ChangeOpen:
+		return []byte("open"), nil
+	case ChangeMerged:
+		return []byte("merged"), nil
+	case ChangeClosed:
+		return []byte("closed"), nil
+	default:
+		return nil, fmt.Errorf("unknown change state: %d", s)
+	}
+}
+
+// UnmarshalText parses the change state from text.
+// This implements encoding.TextUnmarshaler.
+func (s *ChangeState) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "open":
+		*s = ChangeOpen
+	case "merged":
+		*s = ChangeMerged
+	case "closed":
+		*s = ChangeClosed
+	default:
+		return fmt.Errorf("unknown change state: %q", b)
+	}
+	return nil
 }

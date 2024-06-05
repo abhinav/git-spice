@@ -99,8 +99,21 @@ func (f *forgeRepository) SubmitChange(ctx context.Context, r forge.SubmitChange
 	}, nil
 }
 
-func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string) ([]*forge.FindChangeItem, error) {
+func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
+	if opts.Limit == 0 {
+		opts.Limit = 10
+	}
+
 	u := f.apiURL.JoinPath(f.owner, f.repo, "changes", "by-branch", branch)
+	q := u.Query()
+	q.Set("limit", strconv.Itoa(opts.Limit))
+	if opts.State == 0 {
+		q.Set("state", "all")
+	} else {
+		q.Set("state", opts.State.String())
+	}
+	u.RawQuery = q.Encode()
+
 	var res []*Change
 	if err := f.client.Get(ctx, u.String(), &res); err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
@@ -108,9 +121,22 @@ func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 
 	changes := make([]*forge.FindChangeItem, len(res))
 	for i, c := range res {
+		var state forge.ChangeState
+		switch c.State {
+		case "open":
+			state = forge.ChangeOpen
+		case "closed":
+			if c.Merged {
+				state = forge.ChangeMerged
+			} else {
+				state = forge.ChangeClosed
+			}
+		}
+
 		changes[i] = &forge.FindChangeItem{
 			ID:       forge.ChangeID(c.Number),
 			URL:      c.URL,
+			State:    state,
 			Subject:  c.Subject,
 			HeadHash: git.Hash(c.Head.Hash),
 			BaseName: c.Base.Name,
@@ -155,7 +181,7 @@ func (f *forgeRepository) EditChange(ctx context.Context, id forge.ChangeID, opt
 	return nil
 }
 
-func (f *forgeRepository) IsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
+func (f *forgeRepository) ChangeIsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
 	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)), "merged")
 	var res isMergedResponse
 	if err := f.client.Get(ctx, u.String(), &res); err != nil {
