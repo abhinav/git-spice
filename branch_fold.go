@@ -98,7 +98,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 	}
 
-	err = store.Update(ctx, &state.UpdateRequest{
+	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: upserts,
 		Deletes: []string{cmd.Name},
 		Message: fmt.Sprintf("folding %v into %v", cmd.Name, b.Base),

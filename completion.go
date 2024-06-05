@@ -68,7 +68,7 @@ func predictTrackedBranches(args complete.Args) (predictions []string) {
 		return nil // not initialized
 	}
 
-	branches, err := store.List(ctx)
+	branches, err := store.ListBranches(ctx)
 	if err != nil {
 		return nil
 	}

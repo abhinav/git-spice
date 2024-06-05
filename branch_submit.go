@@ -136,7 +136,7 @@ func (cmd *branchSubmitCmd) Run(
 			// It was probably created manually.
 			// We'll heal the state while we're at it.
 			log.Infof("%v: Found existing PR %v", cmd.Name, existingChange.ID)
-			err := store.Update(ctx, &state.UpdateRequest{
+			err := store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{
 					{
 						Name: cmd.Name,
@@ -280,7 +280,7 @@ func (cmd *branchSubmitCmd) Run(
 		// we need to save to the state that we pushed the branch
 		// with the recorded name.
 		defer func() {
-			err := store.Update(ctx, &state.UpdateRequest{
+			err := store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{upsert},
 				Message: fmt.Sprintf("branch submit %s", cmd.Name),
 			})

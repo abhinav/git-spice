@@ -90,7 +90,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		// print message about "gs rebase continue"
 	}
 
-	err = s.store.Update(ctx, &state.UpdateRequest{
+	err = s.store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
 				Name:     name,
@@ -165,7 +165,7 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 			},
 			Message: fmt.Sprintf("branch %v was restacked externally", name),
 		}
-		if err := s.store.Update(ctx, &req); err != nil {
+		if err := s.store.UpdateBranch(ctx, &req); err != nil {
 			// This isn't a critical error. Just log it.
 			s.log.Warnf("failed to update state with new base hash: %v", err)
 		}

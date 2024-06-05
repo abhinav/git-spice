@@ -134,7 +134,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		})
 	}
 
-	err = store.Update(ctx, &state.UpdateRequest{
+	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
 				Name:     cmd.Branch,

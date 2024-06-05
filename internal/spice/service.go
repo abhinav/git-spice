@@ -51,19 +51,17 @@ type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
 
-	// TODO: suffix "Branch(es)" to Lookup, Update, List
-
-	// Lookup returns the branch state for the given branch,
+	// LookupBranch returns the branch state for the given branch,
 	// or [state.ErrNotExist] if the branch does not exist.
-	Lookup(ctx context.Context, name string) (*state.LookupResponse, error)
+	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
 
-	// Update adds, updates, or removes state information
+	// UpdateBranch adds, updates, or removes state information
 	// for zero or more branches.
-	Update(ctx context.Context, req *state.UpdateRequest) error
+	UpdateBranch(ctx context.Context, req *state.UpdateRequest) error
 
-	// List returns a list of all tracked branch names.
+	// ListBranches returns a list of all tracked branch names.
 	// This list never includes the trunk branch.
-	List(ctx context.Context) ([]string, error)
+	ListBranches(ctx context.Context) ([]string, error)
 
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)

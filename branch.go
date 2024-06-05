@@ -72,7 +72,7 @@ func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *sta
 
 	trunk := store.Trunk()
 	if p.TrackedOnly {
-		tracked, err := store.List(ctx)
+		tracked, err := store.ListBranches(ctx)
 		if err != nil {
 			return "", fmt.Errorf("list tracked branches: %w", err)
 		}

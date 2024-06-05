@@ -46,9 +46,9 @@ type LookupResponse struct {
 	UpstreamBranch string
 }
 
-// Lookup returns information about a tracked branch.
+// LookupBranch returns information about a tracked branch.
 // If the branch is not found, [ErrNotExist] will be returned.
-func (s *Store) Lookup(ctx context.Context, name string) (*LookupResponse, error) {
+func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse, error) {
 	state, err := s.lookupBranchState(ctx, name)
 	if err != nil {
 		return nil, err
@@ -76,9 +76,9 @@ func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchStat
 	return &state, nil
 }
 
-// List reports the names of all tracked branches.
+// ListBranches reports the names of all tracked branches.
 // The list is sorted in lexicographic order.
-func (s *Store) List(ctx context.Context) ([]string, error) {
+func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
 	branches, err := s.b.Keys(ctx, _branchesDir)
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
