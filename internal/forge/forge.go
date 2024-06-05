@@ -97,6 +97,12 @@ type Repository interface {
 	FindChangesByBranch(ctx context.Context, branch string) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	IsMerged(ctx context.Context, id ChangeID) (bool, error)
+
+	// ListChangeTemplates returns templates defined in the repository
+	// for new change proposals.
+	//
+	// Returns an empty list if no templates are found.
+	ListChangeTemplates(context.Context) ([]*ChangeTemplate, error)
 }
 
 // SubmitChangeRequest is a request to submit a new change in a repository.
@@ -161,4 +167,15 @@ type FindChangeItem struct {
 
 	// Draft is true if the change is not yet ready to be reviewed.
 	Draft bool
+}
+
+// ChangeTemplate is a template for a new change proposal.
+type ChangeTemplate struct {
+	// Filename is the name of the template file.
+	//
+	// This is NOT a path.
+	Filename string
+
+	// Body is the content of the template file.
+	Body string
 }

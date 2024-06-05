@@ -164,6 +164,24 @@ func (f *forgeRepository) IsMerged(ctx context.Context, id forge.ChangeID) (bool
 	return res.Merged, nil
 }
 
+func (f *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
+	u := f.apiURL.JoinPath(f.owner, f.repo, "change-template")
+	var res changeTemplateResponse
+	if err := f.client.Get(ctx, u.String(), &res); err != nil {
+		return nil, fmt.Errorf("lookup change body template: %w", err)
+	}
+
+	out := make([]*forge.ChangeTemplate, len(res))
+	for i, t := range res {
+		out[i] = &forge.ChangeTemplate{
+			Filename: t.Filename,
+			Body:     t.Body,
+		}
+	}
+
+	return out, nil
+}
+
 type jsonHTTPClient struct {
 	log    *log.Logger
 	client interface {

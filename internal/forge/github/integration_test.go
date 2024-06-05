@@ -203,3 +203,33 @@ func TestIntegration_Repository_IsMerged(t *testing.T) {
 		assert.True(t, ok)
 	})
 }
+
+func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("absent", func(t *testing.T) {
+		rec := newRecorder(t, t.Name())
+		ghc := githubv4.NewClient(rec.GetDefaultClient())
+		repo, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+		require.NoError(t, err)
+
+		templates, err := repo.ListChangeTemplates(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, templates)
+	})
+
+	t.Run("present", func(t *testing.T) {
+		rec := newRecorder(t, t.Name())
+		ghc := githubv4.NewClient(rec.GetDefaultClient())
+		repo, err := github.NewRepository(ctx, "golang", "go", logtest.New(t), ghc, nil)
+		require.NoError(t, err)
+
+		templates, err := repo.ListChangeTemplates(ctx)
+		require.NoError(t, err)
+		require.Len(t, templates, 1)
+
+		template := templates[0]
+		assert.Equal(t, "PULL_REQUEST_TEMPLATE", template.Filename)
+		assert.NotEmpty(t, template.Body)
+	})
+}
