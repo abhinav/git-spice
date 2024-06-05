@@ -203,7 +203,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		msg = fmt.Sprintf("create branch %s", cmd.Name)
 	}
 
-	if err := store.Update(ctx, &state.UpdateRequest{
+	if err := store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: upserts,
 		Message: msg,
 	}); err != nil {

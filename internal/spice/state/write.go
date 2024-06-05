@@ -77,8 +77,8 @@ type UpsertRequest struct {
 	UpstreamBranch string
 }
 
-// Update upates the store with the parameters in the request.
-func (s *Store) Update(ctx context.Context, req *UpdateRequest) error {
+// UpdateBranch upates the store with the parameters in the request.
+func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 	if req.Message == "" {
 		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
 	}

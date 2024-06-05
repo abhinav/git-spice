@@ -158,7 +158,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	// Once all the upstack branches have been grafted onto the original base,
 	// we can update the branch state to point to the new base.
-	err = store.Update(ctx, &state.UpdateRequest{
+	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
 				Name:     cmd.Branch,

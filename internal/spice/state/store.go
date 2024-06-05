@@ -74,7 +74,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		} else {
 			// If we're not resetting,
 			// ensure that the trunk branch is not tracked.
-			_, err := store.Lookup(ctx, req.Trunk)
+			_, err := store.LookupBranch(ctx, req.Trunk)
 			if err == nil {
 				// TODO: this should all be in 'repo init' implementation.
 				return nil, fmt.Errorf("trunk branch (%q) is tracked by gs; use --reset to clear", req.Trunk)

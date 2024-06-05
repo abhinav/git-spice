@@ -32,11 +32,11 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
-		_, err := store.Lookup(ctx, "main")
+		_, err := store.LookupBranch(ctx, "main")
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
-	err = store.Update(ctx, &state.UpdateRequest{
+	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
 			Name:     "foo",
 			Base:     "main",
@@ -47,7 +47,7 @@ func TestIntegrationStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
-		res, err := store.Lookup(ctx, "foo")
+		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
 		assert.Equal(t, &state.LookupResponse{
@@ -58,7 +58,7 @@ func TestIntegrationStore(t *testing.T) {
 	})
 
 	t.Run("overwrite", func(t *testing.T) {
-		err := store.Update(ctx, &state.UpdateRequest{
+		err := store.UpdateBranch(ctx, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:     "foo",
 				Base:     "bar",
@@ -68,7 +68,7 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.Lookup(ctx, "foo")
+		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
 		assert.Equal(t, &state.LookupResponse{
@@ -79,7 +79,7 @@ func TestIntegrationStore(t *testing.T) {
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
-		err := store.Update(ctx, &state.UpdateRequest{
+		err := store.UpdateBranch(ctx, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:     "bar/baz",
 				Base:     "main",
@@ -89,7 +89,7 @@ func TestIntegrationStore(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		res, err := store.Lookup(ctx, "bar/baz")
+		res, err := store.LookupBranch(ctx, "bar/baz")
 		require.NoError(t, err)
 		assert.Equal(t, &state.LookupResponse{
 			Base:     "main",

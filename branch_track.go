@@ -78,7 +78,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			return fmt.Errorf("list commits: %w", err)
 		}
 
-		trackedBranches, err := store.List(ctx)
+		trackedBranches, err := store.ListBranches(ctx)
 		if err != nil {
 			return fmt.Errorf("list tracked branches: %w", err)
 		}
@@ -159,7 +159,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	// if GitHub information is available, check if branch has an
 	// open PR and associate it with the branch.
 
-	err = store.Update(ctx, &state.UpdateRequest{
+	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
 				Name:     cmd.Name,

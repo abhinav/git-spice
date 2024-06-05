@@ -45,42 +45,41 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
-// BranchStore provides storage for branch state for gs.
-//
+// Store provides storage for gs.
 // It is a subset of the functionality provided by the state.Store type.
-type BranchStore interface {
-	// Lookup returns the branch state for the given branch,
-	// or [state.ErrNotExist] if the branch does not exist.
-	Lookup(ctx context.Context, name string) (*state.LookupResponse, error)
-
-	// Update adds, updates, or removes state information
-	// for zero or more branches.
-	Update(ctx context.Context, req *state.UpdateRequest) error
-
-	// List returns a list of all tracked branch names.
-	// This list never includes the trunk branch.
-	List(ctx context.Context) ([]string, error)
-
+type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
+
+	// LookupBranch returns the branch state for the given branch,
+	// or [state.ErrNotExist] if the branch does not exist.
+	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
+
+	// UpdateBranch adds, updates, or removes state information
+	// for zero or more branches.
+	UpdateBranch(ctx context.Context, req *state.UpdateRequest) error
+
+	// ListBranches returns a list of all tracked branch names.
+	// This list never includes the trunk branch.
+	ListBranches(ctx context.Context) ([]string, error)
 
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)
 }
 
-var _ BranchStore = (*state.Store)(nil)
+var _ Store = (*state.Store)(nil)
 
 // Service provides the core functionality of the tool.
 // It combines together lower level pieces like access to the git repository
 // and the spice state.
 type Service struct {
 	repo  GitRepository
-	store BranchStore
+	store Store
 	log   *log.Logger
 }
 
 // NewService builds a new service operating on the given repository and store.
-func NewService(repo GitRepository, store BranchStore, log *log.Logger) *Service {
+func NewService(repo GitRepository, store Store, log *log.Logger) *Service {
 	return &Service{
 		repo:  repo,
 		store: store,

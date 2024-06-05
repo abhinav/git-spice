@@ -82,7 +82,7 @@ func (e *DeletedBranchError) Error() string {
 // [state.ErrNotExist] if the branch is not tracked,
 // or a [DeletedBranchError] if the branch is tracked, but was deleted out of band.
 func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
-	resp, storeErr := s.store.Lookup(ctx, name)
+	resp, storeErr := s.store.LookupBranch(ctx, name)
 	head, gitErr := s.repo.PeelToCommit(ctx, name)
 
 	// Handle all scenarios:
@@ -138,7 +138,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	// This does not use LookupBranch because we don't care if the branch
 	// doesn't actually exist, we just want to update the upstacks.
-	branch, err := s.store.Lookup(ctx, name)
+	branch, err := s.store.LookupBranch(ctx, name)
 	if err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return nil
@@ -148,7 +148,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 
 	// Similarly, this doesn't use ListAbove
 	// because we don't want the deleted branch to be removed yet.
-	branchNames, err := s.store.List(ctx)
+	branchNames, err := s.store.ListBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("list branches: %w", err)
 	}
@@ -162,7 +162,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 			continue
 		}
 
-		info, err := s.store.Lookup(ctx, candidate)
+		info, err := s.store.LookupBranch(ctx, candidate)
 		if err != nil {
 			return fmt.Errorf("lookup %v: %w", candidate, err)
 		}
@@ -178,7 +178,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 		})
 	}
 
-	if err := s.store.Update(ctx, &update); err != nil {
+	if err := s.store.UpdateBranch(ctx, &update); err != nil {
 		return fmt.Errorf("forget branch: %w", err)
 	}
 
@@ -232,7 +232,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		})
 	}
 
-	if err := s.store.Update(ctx, &update); err != nil {
+	if err := s.store.UpdateBranch(ctx, &update); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
 
@@ -267,7 +267,7 @@ type LoadBranchItem struct {
 //
 // The returned branches are sorted by name.
 func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
-	names, err := s.store.List(ctx)
+	names, err := s.store.ListBranches(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
@@ -342,7 +342,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		}
 	}
 
-	if err := s.store.Update(ctx, &update); err != nil {
+	if err := s.store.UpdateBranch(ctx, &update); err != nil {
 		s.log.Warn("Error cleaning up after deleted branched", "err", err)
 	}
 
@@ -451,7 +451,7 @@ func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, er
 		}
 
 		update.Message = "clean up deleted branches"
-		if err := s.store.Update(ctx, &update); err != nil {
+		if err := s.store.UpdateBranch(ctx, &update); err != nil {
 			s.log.Warn("Error cleaning up after deleted branched", "err", err)
 		}
 	}()
