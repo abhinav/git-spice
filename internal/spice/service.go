@@ -45,10 +45,14 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
-// BranchStore provides storage for branch state for gs.
-//
+// Store provides storage for gs.
 // It is a subset of the functionality provided by the state.Store type.
-type BranchStore interface {
+type Store interface {
+	// Trunk returns the name of the trunk branch.
+	Trunk() string
+
+	// TODO: suffix "Branch(es)" to Lookup, Update, List
+
 	// Lookup returns the branch state for the given branch,
 	// or [state.ErrNotExist] if the branch does not exist.
 	Lookup(ctx context.Context, name string) (*state.LookupResponse, error)
@@ -61,26 +65,23 @@ type BranchStore interface {
 	// This list never includes the trunk branch.
 	List(ctx context.Context) ([]string, error)
 
-	// Trunk returns the name of the trunk branch.
-	Trunk() string
-
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)
 }
 
-var _ BranchStore = (*state.Store)(nil)
+var _ Store = (*state.Store)(nil)
 
 // Service provides the core functionality of the tool.
 // It combines together lower level pieces like access to the git repository
 // and the spice state.
 type Service struct {
 	repo  GitRepository
-	store BranchStore
+	store Store
 	log   *log.Logger
 }
 
 // NewService builds a new service operating on the given repository and store.
-func NewService(repo GitRepository, store BranchStore, log *log.Logger) *Service {
+func NewService(repo GitRepository, store Store, log *log.Logger) *Service {
 	return &Service{
 		repo:  repo,
 		store: store,
