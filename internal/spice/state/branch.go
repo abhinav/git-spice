@@ -4,39 +4,101 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
+	"sort"
 	"time"
 
 	"go.abhg.dev/gs/internal/git"
 )
 
-// SetRemote changes teh remote name configured for the repository.
-func (s *Store) SetRemote(ctx context.Context, remote string) error {
-	var info repoInfo
-	if err := s.b.Get(ctx, _repoJSON, &info); err != nil {
-		return fmt.Errorf("get repo info: %w", err)
-	}
-	info.Remote = remote
+const _branchesDir = "branches"
 
-	if err := info.Validate(); err != nil {
-		// Technically impossible if state was already validated
-		// but worth checking to be sure.
-		return fmt.Errorf("would corrupt state: %w", err)
-	}
+type branchStateBase struct {
+	Name string `json:"name"`
+	Hash string `json:"hash"`
+}
 
-	err := s.b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{
-				Key: _repoJSON,
-				Val: info,
-			},
-		},
-		Msg: fmt.Sprintf("set remote: %v", remote),
-	})
+type branchGitHubState struct {
+	PR int `json:"pr,omitempty"`
+}
+
+type branchUpstreamState struct {
+	Branch string `json:"branch,omitempty"`
+}
+
+type branchState struct {
+	Base     branchStateBase      `json:"base"`
+	Upstream *branchUpstreamState `json:"upstream,omitempty"`
+	GitHub   *branchGitHubState   `json:"github,omitempty"`
+}
+
+// branchJSON returns the path to the JSON file for the given branch
+// relative to the store's root.
+func (s *Store) branchJSON(name string) string {
+	return path.Join(_branchesDir, name)
+}
+
+// ErrNotExist indicates that a key that was expected to exist does not exist.
+var ErrNotExist = errors.New("does not exist in store")
+
+// LookupResponse is the response to a Lookup request.
+type LookupResponse struct {
+	// Base is the base branch configured
+	// for the requested branch.
+	Base string
+
+	// BaseHash is the last known hash of the base branch.
+	// This may not match the current hash of the base branch.
+	BaseHash git.Hash
+
+	// PR is the number of the pull request associated with the branch,
+	// or zero if the branch is not associated with a PR.
+	PR int
+
+	// UpstreamBranch is the name of the upstream branch
+	// or an empty string if the branch is not tracking an upstream branch.
+	UpstreamBranch string
+}
+
+// LookupBranch returns information about a tracked branch.
+// If the branch is not found, [ErrNotExist] will be returned.
+func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse, error) {
+	state, err := s.lookupBranchState(ctx, name)
 	if err != nil {
-		return fmt.Errorf("update: %w", err)
+		return nil, err
 	}
 
-	return nil
+	res := &LookupResponse{
+		Base:     state.Base.Name,
+		BaseHash: git.Hash(state.Base.Hash),
+	}
+	if gh := state.GitHub; gh != nil {
+		res.PR = gh.PR
+	}
+	if upstream := state.Upstream; upstream != nil {
+		res.UpstreamBranch = upstream.Branch
+	}
+
+	return res, nil
+}
+
+func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchState, error) {
+	var state branchState
+	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
+		return nil, fmt.Errorf("get branch state: %w", err)
+	}
+	return &state, nil
+}
+
+// ListBranches reports the names of all tracked branches.
+// The list is sorted in lexicographic order.
+func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
+	branches, err := s.b.Keys(ctx, _branchesDir)
+	if err != nil {
+		return nil, fmt.Errorf("list branches: %w", err)
+	}
+	sort.Strings(branches)
+	return branches, nil
 }
 
 // UpdateRequest is a request to add, update, or delete information about branches.
