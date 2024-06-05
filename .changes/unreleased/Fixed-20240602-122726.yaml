@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch submit: The --draft flag is no longer ignored. Whether a PR is draft or not will be changed on each submit.'
-time: 2024-06-02T12:27:26.168447-07:00

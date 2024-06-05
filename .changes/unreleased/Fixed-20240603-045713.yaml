@@ -1,3 +1,0 @@
-kind: Fixed
-body: '{downstack, stack} submit: Don''t change draft status of existing PRs. Use `branch submit --[no-]draft` to do that.'
-time: 2024-06-03T04:57:13.643413-07:00
