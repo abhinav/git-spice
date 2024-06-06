@@ -7,23 +7,24 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type logShortCmd struct {
+type logLongCmd struct {
 	branchLogCmd
 }
 
-func (*logShortCmd) Help() string {
+func (*logLongCmd) Help() string {
 	return text.Dedent(`
-		Provides a tree view of the branches in the current stack,
-		both upstack and downstack from it.
+		Provides a tree view of the branches in the current stack
+		and their commits,
 		By default, branches upstack and downstack from the current
 		branch are shown.
 		Use with the -a/--all flag to show all tracked branches.
 	`)
 }
 
-func (cmd *logShortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
+func (cmd *logLongCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
 	return cmd.run(ctx, &branchLogOptions{
 		Log:     log,
+		Commits: true,
 		Globals: opts,
 	})
 }

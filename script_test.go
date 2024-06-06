@@ -93,9 +93,18 @@ func TestScript(t *testing.T) {
 			return nil
 		},
 		Cmds: map[string]func(*testscript.TestScript, bool, []string){
-			"git":        gittest.CmdGit,
-			"as":         gittest.CmdAs,
-			"at":         gittest.CmdAt,
+			"git": gittest.CmdGit,
+			"as":  gittest.CmdAs,
+			"at": func(ts *testscript.TestScript, b bool, s []string) {
+				gittest.CmdAt(ts, b, s)
+
+				// Set the Git-speciifc environment variables,
+				// as well as git-spice's own GIT_SPICE_LOG_NOW.
+				// Tests that want a different behavior for log
+				// can set GIT_SPICE_LOG_NOW to a different value.
+				ts.Setenv("GIT_SPICE_LOG_NOW", ts.Getenv("GIT_COMMITTER_DATE"))
+			},
+
 			"cmpenvJSON": cmdCmpenvJSON,
 
 			// TODO: rename "gh-*" to "shamhub-*".

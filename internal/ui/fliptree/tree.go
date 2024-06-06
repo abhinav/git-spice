@@ -25,34 +25,33 @@ import (
 var DefaultNodeMarker = lipgloss.NewStyle().SetString("□")
 
 // Graph defines a directed graph.
-type Graph struct {
-	// Roots are the nodes at which we want to start rendering the tree.
-	// Each root will be rendered as a separate tree.
-	Roots []string
-
-	// View returns the text for the node.
-	// The value may be multiline, and may have its own styling.
-	View func(string) string
+type Graph[T any] struct {
+	// Values specifies the value for each node in the graph.
+	// All nodes must have a value.
+	Values []T
 
 	// Edges returns the nodes that are directly reachable
-	// from the given node.
-	Edges func(string) []string
+	// from the given node as indexes into the Values slice.
+	Edges func(T) []int
+
+	// Roots are indexes of nodes in the Values slice
+	// at which we start rendering the tree.
+	//
+	// Each root will be rendered as a separate tree.
+	Roots []int
+
+	// View returns the text for the node.
+	// The view for a node may be multiline, and may have its own styling.
+	View func(T) string
 }
 
 // Options configure the rendering of the tree.
-type Options struct {
-	Style *Style
-
-	// If non-nil, this map will be filled with the positions
-	// of each node in the rendered tree.
-	//
-	// The key is the node name, and the value is 0-indexed line number
-	// in the rendered tree where the node appears.
-	Offsets map[string]int
+type Options[T any] struct {
+	Style *Style[T]
 }
 
 // Style configures the visual appearance of the tree.
-type Style struct {
+type Style[T any] struct {
 	// Joint defines how the connecting joints between nodes are rendered.
 	Joint lipgloss.Style
 
@@ -60,37 +59,29 @@ type Style struct {
 	// placed next to each node based on the node's value.
 	//
 	// By default, all nodes are marked with [DefaultNodeMarker].
-	NodeMarker func(string) lipgloss.Style
+	NodeMarker func(T) lipgloss.Style
 }
 
 // DefaultStyle returns the default style for rendering trees.
-func DefaultStyle() *Style {
-	return &Style{
+func DefaultStyle[T any]() *Style[T] {
+	return &Style[T]{
 		Joint: ui.NewStyle().Faint(true),
-		NodeMarker: func(string) lipgloss.Style {
+		NodeMarker: func(T) lipgloss.Style {
 			return DefaultNodeMarker
 		},
 	}
 }
 
 // Write renders the tree of nodes in g.
-func Write(w io.Writer, g Graph, opts Options) error {
+func Write[T any](w io.Writer, g Graph[T], opts Options[T]) error {
 	if opts.Style == nil {
-		opts.Style = DefaultStyle()
+		opts.Style = DefaultStyle[T]()
 	}
 
-	setOffset := func(string, int) {}
-	if opts.Offsets != nil {
-		setOffset = func(node string, line int) {
-			opts.Offsets[node] = line
-		}
-	}
-
-	tw := treeWriter{
-		w:         bufio.NewWriter(w),
-		g:         g,
-		style:     opts.Style,
-		setOffset: setOffset,
+	tw := treeWriter[T]{
+		w:     bufio.NewWriter(w),
+		g:     g,
+		style: opts.Style,
 	}
 	for _, root := range g.Roots {
 		if err := tw.writeTree(root, nil, nil); err != nil {
@@ -100,13 +91,12 @@ func Write(w io.Writer, g Graph, opts Options) error {
 	return tw.w.Flush()
 }
 
-type treeWriter struct {
+type treeWriter[T any] struct {
 	w *bufio.Writer
-	g Graph
+	g Graph[T]
 
-	lineNum   int
-	style     *Style
-	setOffset func(string, int)
+	lineNum int
+	style   *Style[T]
 }
 
 const (
@@ -178,21 +168,22 @@ func (b boxRune) HasDown() bool {
 //
 // An empty path means the current node is the root.
 //
-// values[i] is the value for path[i].
-func (tw *treeWriter) writeTree(node string, path []int, values []string) error {
+// nodes[i] is the node for path[i], as an index into the Values slice.
+func (tw *treeWriter[T]) writeTree(nodeIdx int, path []int, pathNodeIxes []int) error {
 	// Infinite loops are possible.
-	for i, p := range values {
-		if p == node {
-			path := append(slices.Clone(path), i)
-			return &CycleError{Path: path}
+	for _, n := range pathNodeIxes {
+		if n == nodeIdx {
+			return &CycleError{Nodes: append(slices.Clone(pathNodeIxes), n)}
 		}
 	}
 
+	nodeValue := tw.g.Values[nodeIdx]
+
 	// Children render first.
 	var hasChildren bool
-	for i, child := range tw.g.Edges(node) {
+	for i, child := range tw.g.Edges(nodeValue) {
 		hasChildren = true
-		if err := tw.writeTree(child, append(path, i), append(values, node)); err != nil {
+		if err := tw.writeTree(child, append(path, i), append(pathNodeIxes, nodeIdx)); err != nil {
 			return err
 		}
 	}
@@ -204,7 +195,7 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 	// the current node has children.
 	// If it has children, then we need a connecting pipe
 	// for the branch above.
-	titlePrefix := tw.style.NodeMarker(node).String() + " "
+	titlePrefix := tw.style.NodeMarker(nodeValue).String() + " "
 	if hasChildren {
 		titlePrefix = tw.style.Joint.Render(string(_horizontalUp)) + titlePrefix
 	}
@@ -219,13 +210,12 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 		lastJoint = string(_verticalRight) + string(_horizontal)
 	}
 
-	lines := strings.Split(tw.g.View(node), "\n")
+	lines := strings.Split(tw.g.View(nodeValue), "\n")
 	for idx, line := range lines {
 		// The text may be multi-line.
 		// Only the first line has a title marker.
 		if idx == 0 {
 			tw.pipes(path, lastJoint, titlePrefix)
-			tw.setOffset(node, tw.lineNum)
 		} else {
 			tw.pipes(path, string(_vertical)+" ", bodyPrefix)
 		}
@@ -238,7 +228,7 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 	return nil
 }
 
-func (tw *treeWriter) pipes(path []int, joint string, marker string) {
+func (tw *treeWriter[T]) pipes(path []int, joint string, marker string) {
 	if len(path) == 0 {
 		return
 	}
@@ -262,8 +252,8 @@ func (tw *treeWriter) pipes(path []int, joint string, marker string) {
 
 // CycleError is returned when a cycle is detected in the tree.
 type CycleError struct {
-	// Path from root node to the node that formed the cycle.
-	Path []int
+	// Nodes that form the cycle.
+	Nodes []int
 }
 
 func (e *CycleError) Error() string {

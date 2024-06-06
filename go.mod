@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/charmbracelet/log v0.4.0
 	github.com/creack/pty/v2 v2.0.1
+	github.com/dustin/go-humanize v1.0.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/shurcooL/githubv4 v0.0.0-20240429030203-be2daab69064
