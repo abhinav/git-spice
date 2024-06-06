@@ -79,6 +79,22 @@ Pulls the latest changes from the remote repository.
 Deletes branches that have were merged into trunk,
 and updates the base branches of branches upstack from those.
 
+## gs log short
+
+```
+gs log (l) short (s) [flags]
+```
+
+Short view of stack
+
+Provides a tree view of the branches in the current stack,
+both upstack and downstack from it.
+Use with the -a flag to show all tracked branches.
+
+**Flags**
+
+* `-a`, `--all`: Show all tracked branches, not just the current stack.
+
 ## gs stack submit
 
 ```

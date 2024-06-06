@@ -1,0 +1,313 @@
+
+- name: linear
+  roots: [main]
+  graph:
+    main: [a]
+    a: [b]
+    b: [c]
+    c: [d]
+    d: [e]
+  want: |2
+            ┌── e
+          ┌─┴ d
+        ┌─┴ c
+      ┌─┴ b
+    ┌─┴ a
+    main
+  wantOffsets:
+    a: 4
+    b: 3
+    c: 2
+    d: 1
+    e: 0
+    main: 5
+
+- name: multiple roots
+  roots: [foo, bar]
+  graph:
+    foo: [a, b, c]
+    bar: [d, e, f]
+  want: |
+    ┌── a
+    ├── b
+    ├── c
+    foo
+    ┌── d
+    ├── e
+    ├── f
+    bar
+  wantOffsets:
+    a: 0
+    b: 1
+    bar: 7
+    c: 2
+    d: 4
+    e: 5
+    f: 6
+    foo: 3
+
+- name: linear multline
+  roots: [main]
+  graph:
+    main: [a]
+    a: [b]
+    b: [c]
+    c: [d]
+  values:
+    main: "main\nmain stuff"
+    a: "a\n|\nstuff"
+    b: "b\n|\nmore stuff"
+    c: "c\n\nboop"
+    d: "d\nbeep"
+  want: |2
+          ┌── d
+          │   beep
+        ┌─┴ c
+        │
+        │   boop
+      ┌─┴ b
+      │   |
+      │   more stuff
+    ┌─┴ a
+    │   |
+    │   stuff
+    main
+    main stuff
+  wantOffsets:
+    a: 8
+    b: 5
+    c: 2
+    d: 0
+    main: 11
+
+- name: many lines
+  roots: [main]
+  values:
+    main: "main"
+    a: "x\ny\nz"
+    b: "b\t1\n\t2\n\t3"
+    c: "i\nii\niii\niiii\niiiii\niiiiii"
+    d: "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\nq\nr\ns\nt\nu\nv\nw\nx"
+  graph:
+    main: [a, b, c, d]
+  want: |
+    ┌── x
+    │   y
+    │   z
+    ├── b	1
+    │   	2
+    │   	3
+    ├── i
+    │   ii
+    │   iii
+    │   iiii
+    │   iiiii
+    │   iiiiii
+    ├── a
+    │   b
+    │   c
+    │   d
+    │   e
+    │   f
+    │   g
+    │   h
+    │   i
+    │   j
+    │   k
+    │   l
+    │   m
+    │   n
+    │   o
+    │   p
+    │   q
+    │   r
+    │   s
+    │   t
+    │   u
+    │   v
+    │   w
+    │   x
+    main
+  wantOffsets:
+    a: 0
+    b: 3
+    c: 6
+    d: 12
+    main: 36
+
+- name: big graph
+  roots: [main]
+  graph:
+    main: [a, b, c]
+    a: [d, e, f]
+    b: [g, h]
+    c: [i, j, k, l]
+    d: [m, n, o]
+    e: [p, q, r]
+    f: [s, t, u, v, w, x]
+    g: [y, z, aa, ab]
+    h: [ac, ad, ae, af, ag, ah]
+    i: [ai, aj, ak, al, am, an, ao, ap]
+    j: [aq, ar, as, at, au, av, aw, ax, ay, az]
+    k: [ba, bb, bc, bd, be, bf, bg, bh, bi, bj, bk, bl]
+    l: [bm, bn, bo, bp, bq, br, bs, bt, bu, bv, bw, bx, by, bz]
+  want: |2
+        ┌── m
+        ├── n
+        ├── o
+      ┌─┴ d
+      │ ┌── p
+      │ ├── q
+      │ ├── r
+      ├─┴ e
+      │ ┌── s
+      │ ├── t
+      │ ├── u
+      │ ├── v
+      │ ├── w
+      │ ├── x
+      ├─┴ f
+    ┌─┴ a
+    │   ┌── y
+    │   ├── z
+    │   ├── aa
+    │   ├── ab
+    │ ┌─┴ g
+    │ │ ┌── ac
+    │ │ ├── ad
+    │ │ ├── ae
+    │ │ ├── af
+    │ │ ├── ag
+    │ │ ├── ah
+    │ ├─┴ h
+    ├─┴ b
+    │   ┌── ai
+    │   ├── aj
+    │   ├── ak
+    │   ├── al
+    │   ├── am
+    │   ├── an
+    │   ├── ao
+    │   ├── ap
+    │ ┌─┴ i
+    │ │ ┌── aq
+    │ │ ├── ar
+    │ │ ├── as
+    │ │ ├── at
+    │ │ ├── au
+    │ │ ├── av
+    │ │ ├── aw
+    │ │ ├── ax
+    │ │ ├── ay
+    │ │ ├── az
+    │ ├─┴ j
+    │ │ ┌── ba
+    │ │ ├── bb
+    │ │ ├── bc
+    │ │ ├── bd
+    │ │ ├── be
+    │ │ ├── bf
+    │ │ ├── bg
+    │ │ ├── bh
+    │ │ ├── bi
+    │ │ ├── bj
+    │ │ ├── bk
+    │ │ ├── bl
+    │ ├─┴ k
+    │ │ ┌── bm
+    │ │ ├── bn
+    │ │ ├── bo
+    │ │ ├── bp
+    │ │ ├── bq
+    │ │ ├── br
+    │ │ ├── bs
+    │ │ ├── bt
+    │ │ ├── bu
+    │ │ ├── bv
+    │ │ ├── bw
+    │ │ ├── bx
+    │ │ ├── by
+    │ │ ├── bz
+    │ ├─┴ l
+    ├─┴ c
+    main
+  wantOffsets:
+    a: 15
+    aa: 18
+    ab: 19
+    ac: 21
+    ad: 22
+    ae: 23
+    af: 24
+    ag: 25
+    ah: 26
+    ai: 29
+    aj: 30
+    ak: 31
+    al: 32
+    am: 33
+    an: 34
+    ao: 35
+    ap: 36
+    aq: 38
+    ar: 39
+    as: 40
+    at: 41
+    au: 42
+    av: 43
+    aw: 44
+    ax: 45
+    ay: 46
+    az: 47
+    b: 28
+    ba: 49
+    bb: 50
+    bc: 51
+    bd: 52
+    be: 53
+    bf: 54
+    bg: 55
+    bh: 56
+    bi: 57
+    bj: 58
+    bk: 59
+    bl: 60
+    bm: 62
+    bn: 63
+    bo: 64
+    bp: 65
+    bq: 66
+    br: 67
+    bs: 68
+    bt: 69
+    bu: 70
+    bv: 71
+    bw: 72
+    bx: 73
+    by: 74
+    bz: 75
+    c: 77
+    d: 3
+    e: 7
+    f: 14
+    g: 20
+    h: 27
+    i: 37
+    j: 48
+    k: 61
+    l: 76
+    m: 0
+    main: 78
+    "n": 1
+    o: 2
+    p: 4
+    q: 5
+    r: 6
+    s: 8
+    t: 9
+    u: 10
+    v: 11
+    w: 12
+    x: 13
+    "y": 16
+    z: 17

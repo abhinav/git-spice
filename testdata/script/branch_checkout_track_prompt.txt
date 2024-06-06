@@ -20,8 +20,8 @@ with-term $WORK/input.txt -- gs branch checkout feature
 stderr 'feature: branch not tracked'
 cmp stdout $WORK/golden/prompt.txt
 
-# TODO: when we have 'gs list',
-# verify branch is tracked.
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
 
 -- repo/foo.txt --
 whatever
@@ -34,3 +34,6 @@ await
 
 -- golden/prompt.txt --
 Do you want to track this branch now?: [Y/n]
+-- golden/ls.txt --
+┌── feature ◀
+main

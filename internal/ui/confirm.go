@@ -36,7 +36,7 @@ type ConfirmStyle struct {
 
 // DefaultConfirmStyle is the default style for a [Confirm] field.
 var DefaultConfirmStyle = ConfirmStyle{
-	Key: lipgloss.NewStyle().Foreground(_magentaColor),
+	Key: lipgloss.NewStyle().Foreground(Magenta),
 }
 
 // Confirm is a boolean confirmation field that takes a yes or no answer.

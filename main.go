@@ -191,6 +191,7 @@ type mainCmd struct {
 	Completion completionCmd `cmd:"" group:"Setup" help:"Generate shell completion script"`
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
+	Log  logCmd  `cmd:"" aliases:"l" group:"Log"`
 
 	Stack     stackCmd     `cmd:"" aliases:"s" group:"Stack"`
 	Upstack   upstackCmd   `cmd:"" aliases:"us" group:"Stack"`

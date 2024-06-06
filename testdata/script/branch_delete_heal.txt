@@ -43,8 +43,8 @@ stdout 'main'
 git graph --branches
 cmp stdout $WORK/golden/after.txt
 
-# TODO:
-# when 'gs ls' exists, check that feature1 is not listed.
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
 
 -- repo/feature1.txt --
 feature 1
@@ -65,3 +65,7 @@ feature 3
 |/  
 * aa78494 feature1
 * 102a190 (HEAD -> main) Initial commit
+-- golden/ls.txt --
+┌── feature2
+├── feature3
+main ◀

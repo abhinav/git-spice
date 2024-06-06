@@ -39,7 +39,7 @@ type FormStyle struct {
 
 // DefaultFormStyle is the default style for a [Form].
 var DefaultFormStyle = FormStyle{
-	Error:         lipgloss.NewStyle().Foreground(_redColor),
+	Error:         lipgloss.NewStyle().Foreground(Red),
 	Title:         _titleStyle,
 	Description:   _descriptionStyle,
 	AcceptedTitle: _acceptedTitleStyle,
