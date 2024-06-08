@@ -14,27 +14,26 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-## gs completion
+## gs shell completion
 
 ```
-gs completion <shell> [flags]
+gs shell completion <shell>
 ```
 
 Generate shell completion script
 
 Generates shell completion scripts.
-To install the script, add the output of this command to your
-shell's rc file.
-For example:
+To install the script, add the following line to your shell's
+rc file.
 
 	# bash
-	gs completion bash >> ~/.bashrc
+	eval "$(gs shell completion bash)"
 
 	# zsh
-	gs completion zsh >> ~/.zshrc
+	eval "$(gs shell completion zsh)"
 
 	# fish
-	gs completion fish >> ~/.config/fish/config.fish
+	eval "$(gs shell completion fish)"
 
 **Arguments**
 
