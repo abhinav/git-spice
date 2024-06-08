@@ -234,6 +234,17 @@ func (cmd *branchSubmitCmd) Run(
 			}
 		}
 
+		// getDefaultBody retrieves the default body,
+		// blocking until the template is fetched.
+		getDefaultBody := func() string {
+			if tmpl, ok := <-changeTemplate; ok {
+				defaultBody.WriteString("\n\n")
+				defaultBody.WriteString(tmpl.Body)
+			}
+
+			return defaultBody.String()
+		}
+
 		var fields []ui.Field
 		if cmd.Title == "" {
 			cmd.Title = defaultTitle
@@ -251,20 +262,19 @@ func (cmd *branchSubmitCmd) Run(
 		}
 
 		if cmd.Body == "" {
-			if tmpl, ok := <-changeTemplate; ok {
-				defaultBody.WriteString("\n\n")
-				defaultBody.WriteString(tmpl.Body)
+			// Resolve the default body only if we're not prompting
+			// because if we're prompting, we can wait until the user
+			// has finished editing the title.
+			if !opts.Prompt {
+				cmd.Body = getDefaultBody()
 			}
 
-			cmd.Body = defaultBody.String()
 			body := ui.NewOpenEditor().
 				WithValue(&cmd.Body).
+				WithDefaultFunc(getDefaultBody).
 				WithTitle("Body").
 				WithDescription("Open your editor to write " +
 					"a detailed description of the pull request")
-			// TODO: default body will also include the PR template
-			// (if any) below the commit messages.
-			// Querying for PR template requires GraphQL API.
 			fields = append(fields, body)
 		}
 
