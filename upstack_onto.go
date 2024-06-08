@@ -68,6 +68,14 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("cannot move trunk")
 	}
 
+	branch, err := svc.LookupBranch(ctx, cmd.Branch)
+	if err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
+	}
+
 	if cmd.Onto == "" {
 		if !opts.Prompt {
 			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
@@ -76,6 +84,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		cmd.Onto, err = (&branchPrompt{
 			Exclude:     []string{cmd.Branch},
 			TrackedOnly: true,
+			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving the upstack of %s onto another branch", cmd.Branch),
 		}).Run(ctx, repo, store)
@@ -87,14 +96,6 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	ontoHash, err := repo.PeelToCommit(ctx, cmd.Onto)
 	if err != nil {
 		return fmt.Errorf("resolve %v: %w", cmd.Onto, err)
-	}
-
-	branch, err := svc.LookupBranch(ctx, cmd.Branch)
-	if err != nil {
-		if errors.Is(err, state.ErrNotExist) {
-			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
-		}
-		return fmt.Errorf("get branch: %w", err)
 	}
 
 	if branch.Base == cmd.Onto {
