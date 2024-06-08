@@ -79,8 +79,9 @@ type OpenEditor struct {
 	title string
 	desc  string
 
-	value *string
-	err   error
+	defaultFunc func() string
+	value       *string
+	err         error
 }
 
 var _ Field = (*OpenEditor)(nil)
@@ -115,6 +116,15 @@ func (a *OpenEditor) WithValue(value *string) *OpenEditor {
 	return a
 }
 
+// WithDefaultFunc sets a function to generate the default value.
+// The function will be called when the field is initialized.
+//
+// If set, this overides the value set by [WithValue].
+func (a *OpenEditor) WithDefaultFunc(f func() string) *OpenEditor {
+	a.defaultFunc = f
+	return a
+}
+
 // WithTitle sets the title for the field.
 func (a *OpenEditor) WithTitle(title string) *OpenEditor {
 	a.title = title
@@ -139,6 +149,9 @@ func (a *OpenEditor) Description() string {
 
 // Init initializes the field.
 func (a *OpenEditor) Init() tea.Cmd {
+	if a.defaultFunc != nil {
+		*a.value = a.defaultFunc()
+	}
 	return nil
 }
 

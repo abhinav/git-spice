@@ -1,0 +1,94 @@
+# 'branch submit' uses the PR template if there is one
+# with the terminal prompt.
+
+as 'Test <test@example.com>'
+at '2024-06-03T08:32:32Z'
+
+# setup
+cd repo
+git init
+git add .shamhub
+git commit -m 'Initial commit'
+
+# set up a fake remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# create a branch and submit a PR
+git add feature.txt
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
+gs bc feature
+
+mkdir $WORK/output
+env MOCKEDIT_GIVE= MOCKEDIT_RECORD=$WORK/output/pr-body.txt
+with-term $WORK/input/prompt.txt -- gs branch submit
+stderr 'Created #1'
+cmp stdout $WORK/golden/prompt.txt
+
+cmp $WORK/output/pr-body.txt $WORK/golden/pr-body.txt
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+## Summary
+
+Explain the changes you made.
+
+## Testing
+
+Explain how these changes were tested.
+
+## Rollback Plan
+
+Explain how to revert these changes.
+
+-- repo/feature.txt --
+feature
+
+-- input/feature-commit-msg --
+Add feature
+
+This adds a feature.
+The feature does things.
+This is the starting commit message.
+
+-- input/prompt.txt --
+await Add feature
+snapshot title
+feed \r
+await Body
+snapshot body
+feed e
+await Draft
+snapshot draft
+feed \r
+
+-- golden/prompt.txt --
+### title ###
+Title: Add feature
+Short summary of the pull request
+### body ###
+Title: Add feature
+Body: Press [e] to open mockedit or [enter/tab] to skip
+Open your editor to write a detailed description of the pull request
+### draft ###
+Title: Add feature
+Body: Press [e] to open mockedit or [enter/tab] to skip
+Draft: [y/N]
+Mark the pull request as a draft?
+-- golden/pr-body.txt --
+This adds a feature.
+The feature does things.
+This is the starting commit message.
+
+## Summary
+
+Explain the changes you made.
+
+## Testing
+
+Explain how these changes were tested.
+
+## Rollback Plan
+
+Explain how to revert these changes.
