@@ -35,7 +35,8 @@ gs branch track feature3
 stderr 'base feature2'
 
 # Verify navigation.
-# TODO: replace with 'gs ls' command output in the future.
+gs ls
+cmp stdout $WORK/golden/ls.txt
 
 git branch
 cmp stdout $WORK/golden/feature3-branch-out.txt
@@ -59,6 +60,7 @@ Content of bar.txt
 -- repo/baz.txt --
 Content of baz.txt
 
+-- golden/ls.txt --
 -- golden/feature3-branch-out.txt --
   feature1
   feature2

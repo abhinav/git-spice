@@ -50,9 +50,9 @@ type SelectStyle struct {
 
 // DefaultSelectStyle is the default style for a [Select].
 var DefaultSelectStyle = SelectStyle{
-	Selected:     lipgloss.NewStyle().Foreground(_yellowColor),
-	Highlight:    lipgloss.NewStyle().Foreground(_cyanColor),
-	ScrollMarker: lipgloss.NewStyle().Foreground(_grayColor),
+	Selected:     lipgloss.NewStyle().Foreground(Yellow),
+	Highlight:    lipgloss.NewStyle().Foreground(Cyan),
+	ScrollMarker: lipgloss.NewStyle().Foreground(Gray),
 }
 
 // Select is a prompt that allows selecting from a list of options

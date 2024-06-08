@@ -99,8 +99,8 @@ cmp feature.txt $WORK/extra/feature2-resolved.txt
 gs bco feature3
 cmp feature.txt $WORK/extra/feature3-resolved.txt
 
-# TODO: when gs list exists,
-# verify branch stack
+gs log short -a
+cmp stderr $WORK/golden/list-short.txt
 
 -- extra/feature1.txt --
 foo
@@ -134,3 +134,9 @@ DU feature.txt
 | * 2ceb0a3 (feature3) feature3
 |/  
 * 53ec458 (main) Initial commit
+-- golden/list-short.txt --
+  ┌── feature1
+┌─┴ feature0
+├── feature2
+├── feature3 ◀
+main

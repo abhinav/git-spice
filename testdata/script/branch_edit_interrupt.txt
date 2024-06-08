@@ -21,7 +21,7 @@ gs bc -m 'Add feature 3' feature3
 gs bottom
 
 # Run a 'gs branch edit', and add a 'break' instruction
-# at the top of the rebase TODO.
+# at the top of the rebase todo.
 env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/rebase-todo.txt
 ! gs branch edit
 stderr 'The rebase operation was interrupted'

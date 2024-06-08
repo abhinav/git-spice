@@ -18,6 +18,9 @@ gs bc bar -m 'Add bar.txt'
 git graph --branches
 cmp stdout $WORK/golden/git-log-before.txt
 
+gs ls -a
+cmp stderr $WORK/golden/ls-before.txt
+
 # fold the branch
 gs branch fold
 
@@ -25,21 +28,8 @@ gs branch fold
 git graph --branches
 cmp stdout $WORK/golden/git-log-after.txt
 
-# verify the full stack
-gs down
-git branch --show-current
-stdout main
-
-gs up
-git branch --show-current
-stdout foo
-
-! gs up
-
-# TODO(abg):
-# Instead of traversing,
-# once we have a command to list all tracked branches,
-# we should just use that.
+gs ls -a
+cmp stderr $WORK/golden/ls-after.txt
 
 -- repo/foo.txt --
 foo
@@ -55,3 +45,10 @@ bar
 * 7cc01c7 (HEAD -> foo) Add bar.txt
 * 588349e Add foo.txt
 * 9bad92b (main) Initial commit
+-- golden/ls-before.txt --
+  ┌── bar ◀
+┌─┴ foo
+main
+-- golden/ls-after.txt --
+┌── foo ◀
+main

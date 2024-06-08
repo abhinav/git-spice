@@ -24,6 +24,8 @@ git commit -m 'Diverge'
 
 gs up
 stderr 'needs to be restacked'
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
 
 # dirty worktree
 cp $WORK/extra/init.3.txt init.txt
@@ -55,3 +57,6 @@ another file
 * 973ebad (HEAD -> feature) modify init
 * 31b0f28 (main) Diverge
 * 9315e88 Initial commit
+-- golden/ls.txt --
+┌── feature (needs restack) ◀
+main

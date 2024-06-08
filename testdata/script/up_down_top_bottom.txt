@@ -84,6 +84,9 @@ gs down 5
 git branch
 cmp stdout $WORK/golden/git_branch_main.output
 
+gs ls -a
+cmp stderr $WORK/golden/git_ls_a.output
+
 -- golden/git_branch_main.output --
   feature1
   feature2
@@ -126,3 +129,10 @@ cmp stdout $WORK/golden/git_branch_main.output
   feature4
 * feature5
   main
+-- golden/git_ls_a.output --
+        ┌── feature5
+      ┌─┴ feature4
+    ┌─┴ feature3
+  ┌─┴ feature2
+┌─┴ feature1
+main ◀

@@ -20,6 +20,9 @@ gs bc -m 'Add feature1' feature1
 gs branch submit --fill
 stderr 'Created #'
 
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
 gh-dump-pull
 cmpenvJSON stdout $WORK/golden/create.json
 
@@ -76,3 +79,7 @@ New contents of feature1
     }
   }
 ]
+
+-- golden/ls.txt --
+┌── feature1 (#1) ◀
+main
