@@ -23,18 +23,17 @@ gs shell completion <shell>
 Generate shell completion script
 
 Generates shell completion scripts.
-To install the script, add the output of this command to your
-shell's rc file.
-For example:
+To install the script, add the following line to your shell's
+rc file.
 
 	# bash
-	gs shell completion bash >> ~/.bashrc
+	eval "$(gs shell completion bash)"
 
 	# zsh
-	gs shell completion zsh >> ~/.zshrc
+	eval "$(gs shell completion zsh)"
 
 	# fish
-	gs shell completion fish >> ~/.config/fish/config.fish
+	eval "$(gs shell completion fish)"
 
 **Arguments**
 
