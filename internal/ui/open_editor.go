@@ -137,6 +137,11 @@ func (a *OpenEditor) Description() string {
 	return a.desc
 }
 
+// Init initializes the field.
+func (a *OpenEditor) Init() tea.Cmd {
+	return nil
+}
+
 type updateEditorValueMsg []byte
 
 // Update receives a new event from bubbletea

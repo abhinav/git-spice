@@ -44,7 +44,6 @@ var _ Field = (*Input)(nil)
 func NewInput() *Input {
 	m := textinput.New()
 	m.Prompt = "" // we have our own prompt
-	m.Focus()
 	return &Input{
 		KeyMap: DefaultInputKeyMap,
 		Style:  DefaultInputStyle,
@@ -96,6 +95,11 @@ func (i *Input) Err() error {
 func (i *Input) WithValidate(f func(string) error) *Input {
 	i.model.Validate = f
 	return i
+}
+
+// Init initializes the field.
+func (i *Input) Init() tea.Cmd {
+	return i.model.Focus()
 }
 
 // Update handles a bubbletea event.
