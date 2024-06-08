@@ -123,7 +123,7 @@ func TestIntegration_Repository(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := githubv4.NewClient(rec.GetDefaultClient())
-	_, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, nil)
+	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, nil)
 	require.NoError(t, err)
 }
 
@@ -131,7 +131,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := githubv4.NewClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := githubv4.NewClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -190,7 +190,7 @@ func TestIntegration_Repository_IsMerged(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := githubv4.NewClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("false", func(t *testing.T) {
@@ -212,7 +212,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	t.Run("absent", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := githubv4.NewClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+		repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
@@ -223,7 +223,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	t.Run("present", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := githubv4.NewClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, "golang", "go", logtest.New(t), ghc, nil)
+		repo, err := github.NewRepository(ctx, new(github.Forge), "golang", "go", logtest.New(t), ghc, nil)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)

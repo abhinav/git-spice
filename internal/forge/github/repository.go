@@ -15,12 +15,14 @@ type Repository struct {
 	repoID      githubv4.ID
 	log         *log.Logger
 	client      *githubv4.Client
+	forge       *Forge
 }
 
 var _ forge.Repository = (*Repository)(nil)
 
 func newRepository(
 	ctx context.Context,
+	forge *Forge,
 	owner, repo string,
 	log *log.Logger,
 	client *githubv4.Client,
@@ -50,3 +52,6 @@ func newRepository(
 		repoID: repoID,
 	}, nil
 }
+
+// Forge returns the forge this repository belongs to.
+func (r *Repository) Forge() forge.Forge { return r.forge }

@@ -7,6 +7,20 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
+// ChangeTemplatePaths reports the allowed paths for possible PR templates.
+//
+// Ref https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository.
+func (f *Forge) ChangeTemplatePaths() []string {
+	return []string{
+		"PULL_REQUEST_TEMPLATE.md",
+		"PULL_REQUEST_TEMPLATE",
+		".github/PULL_REQUEST_TEMPLATE.md",
+		".github/PULL_REQUEST_TEMPLATE",
+		"docs/PULL_REQUEST_TEMPLATE.md",
+		"docs/PULL_REQUEST_TEMPLATE",
+	}
+}
+
 // ListChangeTemplates returns PR templates defined in the repository.
 func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
 	var q struct {

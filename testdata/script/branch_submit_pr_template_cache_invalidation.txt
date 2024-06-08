@@ -1,0 +1,82 @@
+# 'branch submit' uses new templates if present on main.
+
+as 'Test <test@example.com>'
+at '2024-06-08T15:45:32Z'
+
+# setup
+cd repo
+git init
+git add .shamhub
+git commit -m 'Initial commit'
+
+# set up a fake remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+# Submit a PR with the first template.
+git add feature1.txt
+gs bc -m feature1
+gs branch submit --fill
+
+# While that PR is open, push a new template.
+gs trunk
+mv $WORK/extra/CHANGE_TEMPLATE.md .shamhub/CHANGE_TEMPLATE.md
+git add .shamhub/CHANGE_TEMPLATE.md
+git commit -m 'Change the template'
+git push origin main
+
+# Create a new PR with the new template.
+git add feature2.txt
+gs bc -m feature2
+gs branch submit --fill
+
+gh-dump-pull
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+This is the first template.
+
+-- extra/CHANGE_TEMPLATE.md --
+This is the second template.
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "feature1",
+    "body": "\n\nThis is the first template.\n",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "2cf8fafa7da354fa870d768c3aecb4999b876111"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "feature2",
+    "body": "\n\nThis is the second template.\n",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "6402d80c89e1b6d620d9059e426b3f1b4f232041"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
+    }
+  }
+]
+

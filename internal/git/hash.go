@@ -57,13 +57,9 @@ func (r *Repository) PeelToTree(ctx context.Context, ref string) (Hash, error) {
 	return r.revParse(ctx, ref+"^{tree}")
 }
 
-// TreeAt reports the hash of the tree object at the provided commit-ish and path.
-func (r *Repository) TreeAt(ctx context.Context, commitish, path string) (Hash, error) {
-	return r.revParse(ctx, commitish+":"+path)
-}
-
-// BlobAt reports the hash of the blob object at the provided tree-ish and path.
-func (r *Repository) BlobAt(ctx context.Context, treeish, path string) (Hash, error) {
+// HashAt reports the hash of the object at the provided path in the given
+// treeish.
+func (r *Repository) HashAt(ctx context.Context, treeish, path string) (Hash, error) {
 	return r.revParse(ctx, treeish+":"+path)
 }
 

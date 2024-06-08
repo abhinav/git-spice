@@ -637,16 +637,18 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 	defer flush()
 
-	cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:.shamhub/CHANGE_TEMPLATE.md")
-	cmd.Dir = sh.repoDir(owner, repo)
-	cmd.Stderr = logw
-
 	var res changeTemplateResponse
-	if out, err := cmd.Output(); err == nil {
-		res = append(res, &changeTemplate{
-			Filename: "CHANGE_TEMPLATE.md",
-			Body:     strings.TrimSpace(string(out)) + "\n",
-		})
+	for _, path := range _changeTemplatePaths {
+		cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+path)
+		cmd.Dir = sh.repoDir(owner, repo)
+		cmd.Stderr = logw
+
+		if out, err := cmd.Output(); err == nil {
+			res = append(res, &changeTemplate{
+				Filename: path,
+				Body:     strings.TrimSpace(string(out)) + "\n",
+			})
+		}
 	}
 
 	enc := json.NewEncoder(w)
