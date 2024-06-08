@@ -22,8 +22,7 @@ const (
 type GitRepository interface {
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	PeelToTree(ctx context.Context, ref string) (git.Hash, error)
-	BlobAt(ctx context.Context, treeish, path string) (git.Hash, error)
-	TreeAt(ctx context.Context, commitish, path string) (git.Hash, error)
+	HashAt(ctx context.Context, commitish, path string) (git.Hash, error)
 
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
@@ -76,7 +75,7 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) ([]string, err
 	if dir == "" {
 		treeHash, err = g.repo.PeelToTree(ctx, g.ref)
 	} else {
-		treeHash, err = g.repo.TreeAt(ctx, g.ref, dir)
+		treeHash, err = g.repo.HashAt(ctx, g.ref, dir)
 	}
 	if err != nil {
 		if errors.Is(err, git.ErrNotExist) {
@@ -105,7 +104,7 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) ([]string, err
 }
 
 func (g *gitStorageBackend) Get(ctx context.Context, key string, v interface{}) error {
-	blobHash, err := g.repo.BlobAt(ctx, g.ref, key)
+	blobHash, err := g.repo.HashAt(ctx, g.ref, key)
 	if err != nil {
 		return ErrNotExist
 	}

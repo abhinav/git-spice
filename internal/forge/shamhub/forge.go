@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -55,6 +56,7 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 	}
 
 	return &forgeRepository{
+		forge:  f,
 		owner:  owner,
 		repo:   repo,
 		apiURL: apiURL,
@@ -69,6 +71,7 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 // forgeRepository is a repository hosted on a ShamHub server.
 // It implements [forge.Repository].
 type forgeRepository struct {
+	forge  *Forge
 	owner  string
 	repo   string
 	apiURL *url.URL
@@ -77,6 +80,8 @@ type forgeRepository struct {
 }
 
 var _ forge.Repository = (*forgeRepository)(nil)
+
+func (f *forgeRepository) Forge() forge.Forge { return f.forge }
 
 func (f *forgeRepository) SubmitChange(ctx context.Context, r forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
 	req := submitChangeRequest{
@@ -188,6 +193,17 @@ func (f *forgeRepository) ChangeIsMerged(ctx context.Context, id forge.ChangeID)
 		return false, fmt.Errorf("is merged: %w", err)
 	}
 	return res.Merged, nil
+}
+
+var _changeTemplatePaths = []string{
+	".shamhub/CHANGE_TEMPLATE.md",
+	"CHANGE_TEMPLATE.md",
+}
+
+// ChangeTemplatePaths reports the case-insensitive paths at which
+// it's possible to define change templates in the repository.
+func (f *Forge) ChangeTemplatePaths() []string {
+	return slices.Clone(_changeTemplatePaths)
 }
 
 func (f *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {

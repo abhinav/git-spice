@@ -66,7 +66,7 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 		ghc = githubv4.NewClient(oauthClient)
 	}
 
-	return newRepository(ctx, owner, repo, f.Log, ghc, nil)
+	return newRepository(ctx, f, owner, repo, f.Log, ghc, nil)
 }
 
 func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {

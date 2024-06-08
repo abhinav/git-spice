@@ -188,7 +188,7 @@ func (cmd *branchSubmitCmd) Run(
 			ctx, cancel := context.WithTimeout(ctx, time.Second)
 			defer cancel()
 
-			templates, err := remoteRepo.ListChangeTemplates(ctx)
+			templates, err := svc.ListChangeTemplates(ctx, remoteRepo)
 			if err != nil {
 				log.Warn("Could not list change templates", "error", err)
 				return

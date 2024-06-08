@@ -41,6 +41,7 @@ type GitRepository interface {
 	Rebase(context.Context, git.RebaseRequest) error
 	RenameBranch(context.Context, git.RenameBranchRequest) error
 	DeleteBranch(context.Context, string, git.BranchDeleteOptions) error
+	HashAt(context.Context, string, string) (git.Hash, error)
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -65,6 +66,9 @@ type Store interface {
 
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)
+
+	LoadCachedTemplates(context.Context, string) ([]*state.CachedTemplate, error)
+	CacheTemplates(context.Context, string, []*state.CachedTemplate) error
 }
 
 var _ Store = (*state.Store)(nil)

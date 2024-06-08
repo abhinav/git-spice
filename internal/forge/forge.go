@@ -88,10 +88,16 @@ type Forge interface {
 	//
 	// Returns [ErrUnsupportedURL] if the URL is not supported.
 	OpenURL(ctx context.Context, remoteURL string) (Repository, error)
+
+	// ChangeTemplatePaths reports the case-insensitive paths at which
+	// it's possible to define change templates in the repository.
+	ChangeTemplatePaths() []string
 }
 
 // Repository is a Git repository hosted on a forge.
 type Repository interface {
+	Forge() Forge
+
 	SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error)
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
