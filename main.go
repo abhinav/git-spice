@@ -188,7 +188,7 @@ type globalOptions struct {
 type mainCmd struct {
 	globalOptions `group:"globals"`
 
-	Completion completionCmd `cmd:"" group:"Setup" help:"Generate shell completion script"`
+	Shell shellCmd `cmd:"" group:"Shell"`
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 	Log  logCmd  `cmd:"" aliases:"l" group:"Log"`

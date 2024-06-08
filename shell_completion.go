@@ -11,11 +11,11 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type completionCmd struct {
+type shellCompletionCmd struct {
 	*komplete.Command `embed:""`
 }
 
-func (c *completionCmd) Help() string {
+func (c *shellCompletionCmd) Help() string {
 	return text.Dedent(`
 		Generates shell completion scripts.
 		To install the script, add the output of this command to your
@@ -23,13 +23,13 @@ func (c *completionCmd) Help() string {
 		For example:
 
 			# bash
-			gs completion bash >> ~/.bashrc
+			gs shell completion bash >> ~/.bashrc
 
 			# zsh
-			gs completion zsh >> ~/.zshrc
+			gs shell completion zsh >> ~/.zshrc
 
 			# fish
-			gs completion fish >> ~/.config/fish/config.fish
+			gs shell completion fish >> ~/.config/fish/config.fish
 	`)
 }
 
