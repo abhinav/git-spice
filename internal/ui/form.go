@@ -65,6 +65,10 @@ type Writer interface {
 
 // Field is a single field in a form.
 type Field interface {
+	// Init initializes the field.
+	// This is called right before the field is first rendered,
+	// not when the form is initialized.
+	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
 	Render(Writer)
 
@@ -145,7 +149,11 @@ func (f *Form) Err() error {
 // Init initializes the form.
 func (f *Form) Init() tea.Cmd {
 	f.focused = 0
-	return nil
+	if len(f.fields) == 0 {
+		return tea.Quit
+	}
+
+	return f.fields[f.focused].Init()
 }
 
 // Update implements tea.Model.
@@ -166,6 +174,8 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// never be out of bounds.
 			return f, tea.Quit
 		}
+
+		return f, f.fields[f.focused].Init()
 
 	case tea.KeyMsg:
 		if key.Matches(msg, f.KeyMap.Cancel) {

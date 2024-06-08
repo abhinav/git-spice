@@ -96,7 +96,6 @@ func NewSelect() *Select {
 // The existing value, if any, will be selected by default.
 func (s *Select) WithValue(value *string) *Select {
 	s.value = value
-	s.initSelected()
 	return s
 }
 
@@ -120,17 +119,7 @@ func (s *Select) WithOptions(opts ...string) *Select {
 
 	s.options = options
 	s.matched = matched
-	s.initSelected()
 	return s
-}
-
-func (s *Select) initSelected() {
-	idx := slices.IndexFunc(s.matched, func(optIdx int) bool {
-		return s.options[optIdx].Value == *s.value
-	})
-	if idx != -1 {
-		s.selected = idx
-	}
 }
 
 // Title returns the title of the select field.
@@ -165,6 +154,17 @@ func (s *Select) WithVisible(visible int) *Select {
 // Err reports any errors in the select field.
 func (s *Select) Err() error {
 	return s.err
+}
+
+// Init initializes the field.
+func (s *Select) Init() tea.Cmd {
+	idx := slices.IndexFunc(s.matched, func(optIdx int) bool {
+		return s.options[optIdx].Value == *s.value
+	})
+	if idx != -1 {
+		s.selected = idx
+	}
+	return nil
 }
 
 // Update receives messages from bubbletea.

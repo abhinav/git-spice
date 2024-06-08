@@ -101,6 +101,11 @@ func (c *Confirm) Description() string {
 	return c.desc
 }
 
+// Init initializes the field.
+func (c *Confirm) Init() tea.Cmd {
+	return nil
+}
+
 // Update handles a bubbletea event.
 func (c *Confirm) Update(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
