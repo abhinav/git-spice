@@ -46,6 +46,9 @@ type branchPrompt struct {
 	// should be included in the list.
 	TrackedOnly bool
 
+	// Default specifies the branch to select by default.
+	Default string
+
 	// Title specifies the prompt to display to the user.
 	Title string
 
@@ -110,13 +113,15 @@ nextBranch:
 		return "", errors.New("no branches available")
 	}
 
+	value := p.Default
 	prompt := ui.NewSelect().
 		WithOptions(branches...).
 		WithTitle(p.Title).
+		WithValue(&value).
 		WithDescription(p.Description)
 	if err := ui.Run(prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)
 	}
 
-	return prompt.Value(), nil
+	return value, nil
 }

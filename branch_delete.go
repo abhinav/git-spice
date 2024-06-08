@@ -51,13 +51,13 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 
 		currentBranch, err := repo.CurrentBranch(ctx)
-		if err == nil {
-			// Select current branch by default.
-			cmd.Name = currentBranch
+		if err != nil {
+			currentBranch = ""
 		}
 
 		cmd.Name, err = (&branchPrompt{
 			Exclude: []string{store.Trunk()},
+			Default: currentBranch,
 			Title:   "Select a branch to delete",
 		}).Run(ctx, repo, store)
 		if err != nil {

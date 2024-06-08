@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch delete: When prompting for branch selection, select current branch by default.'
+time: 2024-06-08T09:22:27.459938-07:00
