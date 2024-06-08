@@ -1,23 +1,28 @@
-package fliptree_test
+package fliptree
 
 import (
 	"bytes"
 	"flag"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/ui/fliptree"
 	"gopkg.in/yaml.v3"
 	"pgregory.net/rapid"
 )
 
 var _update = flag.Bool("update", false, "update fixtures")
+
+func plainStyle() *Style {
+	return &Style{
+		Joint: lipgloss.NewStyle(),
+	}
+}
 
 func TestWrite(t *testing.T) {
 	type testCase struct {
@@ -39,7 +44,7 @@ func TestWrite(t *testing.T) {
 	var updated []int
 	for idx, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			g := fliptree.Graph{
+			g := Graph{
 				Roots: tt.Roots,
 				View: func(n string) string {
 					v, ok := tt.Values[n]
@@ -55,10 +60,8 @@ func TestWrite(t *testing.T) {
 
 			gotOffsets := make(map[string]int)
 			var sb strings.Builder
-			err := fliptree.Write(&sb, g, fliptree.Options{
-				Style: &fliptree.Style{
-					Joint: lipgloss.NewStyle(),
-				},
+			err := Write(&sb, g, Options{
+				Style:   plainStyle(),
 				Offsets: gotOffsets,
 			})
 			require.NoError(t, err)
@@ -140,21 +143,159 @@ func TestWriteProperty(t *testing.T) {
 }
 
 func testWriteProperty(t *rapid.T) {
-	allNodes := rapid.SliceOfN(rapid.String(), 1, -1).Draw(t, "nodes")
-	nodeg := rapid.SampledFrom(allNodes)
+	// Printable runes that aren't one of the box drawing characters.
+	runeGen := rapid.Rune().
+		Filter(func(r rune) bool {
+			switch {
+			case r == ' ':
+				return true
 
-	roots := rapid.SliceOfDistinct(nodeg, rapid.ID).Draw(t, "roots")
-	edges := rapid.MapOf(nodeg, rapid.SliceOfDistinct(nodeg, rapid.ID)).
+			case !unicode.IsPrint(r),
+				boxRune(r).Valid(),
+				unicode.IsSpace(r):
+				return false
+
+			default:
+				return true
+			}
+		})
+	stringGen := rapid.StringOfN(runeGen, 1, -1, -1)
+
+	allNodes := rapid.SliceOfN(stringGen, 1, -1).Draw(t, "nodes")
+	nodeGen := rapid.SampledFrom(allNodes)
+
+	roots := rapid.SliceOfDistinct(nodeGen, rapid.ID).Draw(t, "roots")
+	edges := rapid.MapOf(nodeGen, rapid.SliceOfDistinct(nodeGen, rapid.ID)).
 		Draw(t, "edges")
 
-	g := fliptree.Graph{
+	g := Graph{
 		Roots: roots,
 		View:  func(n string) string { return n },
 		Edges: func(n string) []string { return edges[n] },
 	}
+	offsets := make(map[string]int)
 
-	// Must not panic or infinite loop for any input.
-	_ = fliptree.Write(io.Discard, g, fliptree.Options{})
+	var out strings.Builder
+	if err := Write(&out, g, Options{
+		Style:   plainStyle(),
+		Offsets: offsets,
+	}); err != nil {
+		t.Skip(err)
+	}
+	t.Logf("output:\n%s", out.String())
+	lines := strings.Split(out.String(), "\n")
+
+	// Verify that all nodes have correct offsets in the output.
+	for node, offset := range offsets {
+		if offset < 0 || offset >= len(lines) {
+			t.Errorf("node %q: has invalid offset %d", node, offset)
+			continue
+		}
+
+		if want := node; !strings.HasSuffix(lines[offset], want) {
+			t.Errorf("node %q: expected line to end with %q, got: %q", node, want, lines[offset])
+		}
+	}
+
+	// Verify that all box drawing characters with attachment points
+	// are connected to other box drawing characters.
+	for lineIdx, lineStr := range lines {
+		lineNo := lineIdx + 1
+
+		line := []rune(lineStr)
+		for runeIdx, lineRune := range line {
+			colNo := runeIdx + 1
+			r := boxRune(lineRune)
+			if !r.Valid() {
+				// Not a box drawing character.
+				continue
+			}
+
+			// Expect rune on the left with a right attachment.
+			if r.HasLeft() {
+				if runeIdx == 0 {
+					t.Errorf("%d:%d:joint %q wants left attachment, got: start of line", lineNo, colNo, r)
+				}
+
+				left := boxRune(line[runeIdx-1])
+				if !left.Valid() || !left.HasRight() {
+					t.Errorf("%d:%d:joint %q wants left attachment, got: %q", lineNo, colNo, r, left)
+				}
+			}
+
+			// Expect a rune on the right with a left attachment
+			// OR a space and printable text.
+			if r.HasRight() {
+				if runeIdx == len(line)-1 {
+					t.Errorf("%d:%d:joint %q wants right attachment, got: end of line", lineNo, colNo, r)
+				}
+
+				right := boxRune(line[runeIdx+1])
+				ok := right.Valid() && right.HasLeft()
+
+				// If it's not a box character, it muts be a
+				// space and a printable character.
+				if !ok && right == ' ' {
+					if runeIdx+2 < len(line) && unicode.IsPrint(line[runeIdx+2]) {
+						ok = true
+					}
+				}
+
+				if !ok {
+					t.Errorf("%d:%d:joint %q wants right attachment or text, got: %q", lineNo, colNo, r, right)
+				}
+			}
+
+			// Expect a rune above with a down attachment.
+			if r.HasUp() {
+				if lineIdx == 0 {
+					t.Errorf("%d:%d:joint %q wants attachment above, got: start of file", lineNo, colNo, r)
+				}
+
+				lineAbove := []rune(lines[lineIdx-1])
+				if len(lineAbove) <= runeIdx {
+					t.Errorf("%d:%d:joint %q wants attachment above, got: line too short", lineNo, colNo, r)
+				}
+
+				above := boxRune(lineAbove[runeIdx])
+				if !above.Valid() || !above.HasDown() {
+					t.Errorf("%d:%d:joint %q wants attachment above, got: %q", lineNo, colNo, r, above)
+				}
+			}
+
+			// Expect a rune below with a top attachment
+			// OR if this is the second to last line,
+			// a printable character.
+			if r.HasDown() {
+				if lineIdx == len(lines)-1 {
+					t.Errorf("%d:%d:joint %q wants attachment below, got: end of file", lineNo, colNo, r)
+				}
+
+				lineBelow := []rune(lines[lineIdx+1])
+				if len(lineBelow) <= runeIdx {
+					t.Errorf("%d:%d:joint %q wants attachment below, got: line too short", lineNo, colNo, r)
+				}
+
+				below := boxRune(lineBelow[runeIdx])
+				ok := below.Valid() || !below.HasUp()
+
+				// If it's not a box character,
+				// this must be the second to last line
+				// and it must be a printable character.
+				if lineIdx+1 == len(lines)-1 {
+					if unicode.IsPrint(rune(below)) {
+						ok = true
+					}
+				}
+
+				if !ok {
+					t.Errorf("%d:%d:joint %q wants attachment below, got: %q", lineNo, colNo, r, below)
+				}
+
+			}
+
+		}
+	}
 }
 
 func stripTrailingSpaces(s string) string {

@@ -97,13 +97,63 @@ type treeWriter struct {
 }
 
 const (
-	_blank         = " "
-	_horizontal    = "─" // 2500
-	_vertical      = "│" // 2502
-	_downRight     = "┌" // 250C
-	_verticalRight = "├" // 251C
-	_horizontalUp  = "┴" // 2534
+	_vertical      boxRune = '│' // 0x2502
+	_horizontal    boxRune = '─' // 0x2500
+	_horizontalUp  boxRune = '┴' // 0x2534
+	_verticalRight boxRune = '├' // 0x251C
+	_downRight     boxRune = '┌' // 0x250C
 )
+
+type boxRune rune
+
+func (b boxRune) String() string {
+	return string(b)
+}
+
+func (b boxRune) Valid() bool {
+	switch b {
+	case _vertical, _horizontal, _horizontalUp, _verticalRight, _downRight:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b boxRune) HasLeft() bool {
+	switch b {
+	case _horizontal, _horizontalUp:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b boxRune) HasRight() bool {
+	switch b {
+	case _horizontal, _downRight, _verticalRight, _horizontalUp:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b boxRune) HasUp() bool {
+	switch b {
+	case _vertical, _horizontalUp, _verticalRight:
+		return true
+	default:
+		return false
+	}
+}
+
+func (b boxRune) HasDown() bool {
+	switch b {
+	case _vertical, _verticalRight, _downRight:
+		return true
+	default:
+		return false
+	}
+}
 
 // writeTree renders a subtree of the tree rooted at node.
 //
@@ -141,18 +191,18 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 	// the current node has children.
 	// If it has children, then we need a connecting pipe
 	// for the branch above.
-	titleMarker := _horizontal
+	titleMarker := string(_horizontal) + " "
 	if hasChildren {
-		titleMarker = _horizontalUp
+		titleMarker = string(_horizontalUp) + " "
 	}
 
-	lastJoint := _downRight + _horizontal
+	lastJoint := string(_downRight) + string(_horizontal)
 	if len(path) > 0 && path[len(path)-1] > 0 {
 		// If pos > 0, then we've drawn siblings
 		// above this branch, so we need a connecting pipe.
 		// Otherwise, this is the topmost branch,
 		// so we need no connecting pipe.
-		lastJoint = _verticalRight + _horizontal
+		lastJoint = string(_verticalRight) + string(_horizontal)
 	}
 
 	lines := strings.Split(tw.g.View(node), "\n")
@@ -160,10 +210,10 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 		// The text may be multi-line.
 		// Only the first line has a title marker.
 		if idx == 0 {
-			tw.pipes(path, lastJoint, titleMarker+" ")
+			tw.pipes(path, lastJoint, titleMarker)
 			tw.setOffset(node, tw.lineNum)
 		} else {
-			tw.pipes(path, _vertical+" ", "  ")
+			tw.pipes(path, string(_vertical)+" ", "  ")
 		}
 
 		_, _ = tw.w.WriteString(line)
@@ -186,7 +236,7 @@ func (tw *treeWriter) pipes(path []int, joint string, marker string) {
 	for _, pos := range path[:len(path)-1] {
 		if pos > 0 {
 			_, _ = tw.w.WriteString(
-				style.Render(_vertical) + " ",
+				style.Render(string(_vertical) + " "),
 			)
 		} else {
 			_, _ = tw.w.WriteString("  ")
