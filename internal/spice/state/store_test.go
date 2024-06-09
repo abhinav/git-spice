@@ -20,13 +20,11 @@ func TestIntegrationStore(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("init", func(t *testing.T) {
-		_, err := state.InitStore(ctx, state.InitStoreRequest{
-			Repository: repo,
-			Trunk:      "main",
-		})
-		require.NoError(t, err)
+	_, err = state.InitStore(ctx, state.InitStoreRequest{
+		Repository: repo,
+		Trunk:      "main",
 	})
+	require.NoError(t, err)
 
 	store, err := state.OpenStore(ctx, repo, logtest.New(t))
 	require.NoError(t, err)
