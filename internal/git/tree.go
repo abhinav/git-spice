@@ -406,6 +406,7 @@ func (du *directoryUpdate) Empty() bool {
 
 func (du *directoryUpdate) Put(ent TreeEntry) {
 	must.NotBeBlankf(ent.Name, "name must not be blank")
+	must.NotBeEqualf(ent.Name, ".", "name must not be .")
 
 	idx, ok := slices.BinarySearchFunc(du.Writes, ent.Name, entryByName)
 	if ok {

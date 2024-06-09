@@ -145,7 +145,7 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
 	}
 
-	sets := make([]setRequest, len(req.Upserts))
+	sets := make([]setRequest, 0, len(req.Upserts))
 	for i, req := range req.Upserts {
 		if req.Name == "" {
 			return fmt.Errorf("upsert [%d]: branch name is required", i)

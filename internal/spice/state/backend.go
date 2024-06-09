@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 )
 
 const (
@@ -170,6 +171,8 @@ type updateRequest struct {
 func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error {
 	setBlobs := make([]git.Hash, len(req.Sets))
 	for i, set := range req.Sets {
+		must.NotBeBlankf(set.Key, "key must not be blank")
+
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		enc.SetIndent("", "  ")
