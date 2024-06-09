@@ -48,4 +48,5 @@ under a different license. See the file headers for details:
 
 ```
 internal/komplete/komplete.go
+internal/komplete/komplete_test.go
 ```
