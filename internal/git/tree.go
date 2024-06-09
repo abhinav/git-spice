@@ -89,6 +89,18 @@ func (r *Repository) MakeTree(ctx context.Context, ents []TreeEntry) (_ Hash, er
 		if ent.Type == "" {
 			return ZeroHash, fmt.Errorf("type not set for %q", ent.Name)
 		}
+
+		if ent.Mode == ZeroMode {
+			switch ent.Type {
+			case BlobType:
+				ent.Mode = RegularMode
+			case TreeType:
+				ent.Mode = DirMode
+			default:
+				return ZeroHash, fmt.Errorf("mode not set for %q", ent.Name)
+			}
+		}
+
 		if strings.Contains(ent.Name, "/") {
 			return ZeroHash, fmt.Errorf("name %q contains a slash", ent.Name)
 		}
@@ -277,6 +289,9 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 
 	for _, blob := range req.Writes {
 		dir, name := pathSplit(blob.Path)
+		if blob.Mode == ZeroMode {
+			blob.Mode = RegularMode
+		}
 		ensureUpdate(dir).Put(TreeEntry{
 			Mode: blob.Mode,
 			Type: BlobType,
@@ -356,16 +371,7 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 
 	// If there are any updates that we didn't look at,
 	// we have a bug in our code and we should fail loudly.
-	if len(updates) > 0 {
-		var msg strings.Builder
-		msg.WriteString("unapplied updates:")
-		for dir := range updates {
-			msg.WriteString(" ")
-			msg.WriteString(dir)
-		}
-		must.Failf(msg.String())
-	}
-
+	must.BeEmptyMapf(updates, "unapplied updates")
 	return rootHash, nil
 }
 

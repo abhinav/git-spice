@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
@@ -15,13 +14,6 @@ import (
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/text"
 )
-
-func TestMain(m *testing.M) {
-	testscript.RunMain(m, map[string]func() int{
-		// mockedit <input>:
-		"mockedit": mockedit.Main,
-	})
-}
 
 func TestRebase_deliberateInterrupt(t *testing.T) {
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`

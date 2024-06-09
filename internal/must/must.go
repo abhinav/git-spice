@@ -26,6 +26,13 @@ func BeInRangef[T cmp.Ordered](v, min, max T, format string, args ...any) {
 	}
 }
 
+// BeEmptyMapf panics if m is not an empty map.
+func BeEmptyMapf[K comparable, V any](m map[K]V, format string, args ...any) {
+	if len(m) != 0 {
+		panicErrorf("%v\ngot: %v", fmt.Errorf(format, args...), m)
+	}
+}
+
 // NotBeEqualf panics if a == b.
 func NotBeEqualf[T comparable](a, b T, format string, args ...any) {
 	if a == b {
