@@ -32,6 +32,9 @@ linters:
     # Require field tags for serialized structs.
     - musttag
 
+    # Catch make([]T, N) used with append
+    - makezero
+
 linters-settings:
   errcheck:
     exclude-functions:
