@@ -79,9 +79,34 @@ func (cmd dumpMarkdownCmd) dump(app *kong.Application) {
 	}
 	cmd.println()
 
-	// TODO: command groups
+	var groupKeys, groupTitles []string
+	cmdByGroup := make(map[string][]*kong.Node)
 	for _, subcmd := range app.Leaves(true) {
-		cmd.dumpCommand(subcmd, 2)
+		var key, title string
+		if grp := subcmd.ClosestGroup(); grp != nil {
+			key = grp.Key
+			title = grp.Title
+		}
+
+		if _, ok := cmdByGroup[key]; !ok {
+			groupKeys = append(groupKeys, key)
+			groupTitles = append(groupTitles, title)
+		}
+
+		cmdByGroup[key] = append(cmdByGroup[key], subcmd)
+	}
+
+	for i, key := range groupKeys {
+		lvl := 2
+		title := groupTitles[i]
+		if title != "" {
+			cmd.header(lvl, title)
+			lvl++
+		}
+
+		for _, subcmd := range cmdByGroup[key] {
+			cmd.dumpCommand(subcmd, lvl)
+		}
 	}
 }
 

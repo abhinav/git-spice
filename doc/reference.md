@@ -14,7 +14,9 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-## gs shell completion
+## Shell
+
+### gs shell completion
 
 ```
 gs shell completion <shell>
@@ -39,7 +41,9 @@ rc file.
 
 * `shell`: Shell to generate completions for.
 
-## gs repo init
+## Repository
+
+### gs repo init
 
 ```
 gs repo (r) init (i) [flags]
@@ -66,7 +70,7 @@ To add a remote later, re-run this command.
 * `--remote=NAME`: Name of the remote to push changes to
 * `--reset`: Reset the store if it's already initialized
 
-## gs repo sync
+### gs repo sync
 
 ```
 gs repo (r) sync (s)
@@ -78,7 +82,9 @@ Pulls the latest changes from the remote repository.
 Deletes branches that have were merged into trunk,
 and updates the base branches of branches upstack from those.
 
-## gs log short
+## Log
+
+### gs log short
 
 ```
 gs log (l) short (s) [flags]
@@ -94,7 +100,9 @@ Use with the -a flag to show all tracked branches.
 
 * `-a`, `--all`: Show all tracked branches, not just the current stack.
 
-## gs stack submit
+## Stack
+
+### gs stack submit
 
 ```
 gs stack (s) submit (s) [flags]
@@ -107,7 +115,7 @@ Submit the current stack
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
 
-## gs stack restack
+### gs stack restack
 
 ```
 gs stack (s) restack (r)
@@ -115,7 +123,7 @@ gs stack (s) restack (r)
 
 Restack the current stack
 
-## gs upstack restack
+### gs upstack restack
 
 ```
 gs upstack (us) restack (r)
@@ -131,7 +139,7 @@ they will all be restacked on top of the updated base.
 Run this command from the trunk branch
 to restack all managed branches.
 
-## gs upstack onto
+### gs upstack onto
 
 ```
 gs upstack (us) onto (o) [<onto>] [flags]
@@ -166,7 +174,7 @@ For example,
 
 * `--branch=NAME`: Branch to start at
 
-## gs downstack submit
+### gs downstack submit
 
 ```
 gs downstack (ds) submit (s) [<name>] [flags]
@@ -191,7 +199,7 @@ and submit without a prompt.
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
 
-## gs downstack edit
+### gs downstack edit
 
 ```
 gs downstack (ds) edit (e) [<name>] [flags]
@@ -214,7 +222,9 @@ Branches deleted from the list will also not be modified.
 
 * `--editor=STRING`: Editor to use for editing the downstack.
 
-## gs branch track
+## Branch
+
+### gs branch track
 
 ```
 gs branch (b) track (tr) [<name>] [flags]
@@ -236,7 +246,7 @@ Use --base to specify a branch explicitly.
 
 * `-b`, `--base=STRING`: Base branch this merges into
 
-## gs branch untrack
+### gs branch untrack
 
 ```
 gs branch (b) untrack (untr) [<name>]
@@ -253,7 +263,7 @@ they will be updated to point to its base branch.
 
 * `name`: Name of the branch to untrack
 
-## gs branch checkout
+### gs branch checkout
 
 ```
 gs branch (b) checkout (co) [<name>] [flags]
@@ -269,7 +279,7 @@ Switch to a branch
 
 * `-u`, `--untracked`: Show untracked branches if one isn't supplied
 
-## gs branch onto
+### gs branch onto
 
 ```
 gs branch (b) onto (on) [<onto>] [flags]
@@ -305,7 +315,7 @@ For example,
 
 * `--branch=NAME`: Branch to move
 
-## gs branch create
+### gs branch create
 
 ```
 gs branch (b) create (c) [<name>] [flags]
@@ -371,7 +381,7 @@ and creating a new branch with --insert there.
 * `--below`: Place the branch below the current branch. Implies --insert.
 * `-m`, `--message=STRING`: Commit message
 
-## gs branch delete
+### gs branch delete
 
 ```
 gs branch (b) delete (d,rm) [<name>] [flags]
@@ -394,7 +404,7 @@ shown to pick one.
 
 * `-f`, `--force`: Force deletion of the branch
 
-## gs branch fold
+### gs branch fold
 
 ```
 gs branch (b) fold (fo) [<name>]
@@ -411,7 +421,7 @@ on top of the base branch.
 
 * `name`: Name of the branch
 
-## gs branch edit
+### gs branch edit
 
 ```
 gs branch (b) edit (e)
@@ -425,7 +435,7 @@ reword their messages, etc.
 After the rebase, the branches upstack from the edited branch
 will be restacked.
 
-## gs branch rename
+### gs branch rename
 
 ```
 gs branch (b) rename (rn,mv) [<old-name> [<new-name>]]
@@ -453,7 +463,7 @@ and untrack the old name with 'gs branch untrack'.
 * `old-name`: Old name of the branch
 * `new-name`: New name of the branch
 
-## gs branch restack
+### gs branch restack
 
 ```
 gs branch (b) restack (r) [<name>]
@@ -468,7 +478,7 @@ rebasing its commits on top of the base.
 
 * `name`: Branch to restack
 
-## gs branch submit
+### gs branch submit
 
 ```
 gs branch (b) submit (s) [<name>] [flags]
@@ -502,7 +512,9 @@ Without the flag, the draft status is not changed.
 * `--[no-]draft`: Whether to mark the pull request as draft
 * `--fill`: Fill in the pull request title and body from the commit messages
 
-## gs commit create
+## Commit
+
+### gs commit create
 
 ```
 gs commit (c) create (c) [flags]
@@ -520,7 +532,7 @@ as you update a branch in the middle of the stack.
 * `-a`, `--all`: Stage all changes before committing.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
 
-## gs commit amend
+### gs commit amend
 
 ```
 gs commit (c) amend (a) [flags]
@@ -538,7 +550,9 @@ as you update a branch in the middle of the stack.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
 * `-n`, `--no-edit`: Don't edit the commit message
 
-## gs rebase continue
+## Rebase
+
+### gs rebase continue
 
 ```
 gs rebase (rb) continue (c)
@@ -556,7 +570,7 @@ you can resolve the conflict and run 'gs rebase continue'
 The command can be used in place of 'git rebase --continue'
 even if a git-spice operation is not currently in progress.
 
-## gs rebase abort
+### gs rebase abort
 
 ```
 gs rebase (rb) abort (a)
@@ -574,7 +588,9 @@ going back to the state before the rebase.
 The command can be used in place of 'git rebase --abort'
 even if a git-spice operation is not currently in progress.
 
-## gs up
+## Navigation
+
+### gs up
 
 ```
 gs up (u) [<n>] [flags]
@@ -590,7 +606,7 @@ you will be prompted to pick one.
 
 * `n`: Number of branches to move up.
 
-## gs down
+### gs down
 
 ```
 gs down (d) [<n>] [flags]
@@ -607,7 +623,7 @@ this command will move to the trunk branch.
 
 * `n`: Number of branches to move up.
 
-## gs top
+### gs top
 
 ```
 gs top (U) [flags]
@@ -619,7 +635,7 @@ Jumps to the top-most branch in the current branch's stack.
 If there are multiple top-most branches,
 you will be prompted to pick one.
 
-## gs bottom
+### gs bottom
 
 ```
 gs bottom (D) [flags]
@@ -630,7 +646,7 @@ Move to the bottom of the stack
 Jumps to the bottom-most branch below the current branch.
 This is the branch just above the trunk.
 
-## gs trunk
+### gs trunk
 
 ```
 gs trunk [flags]
