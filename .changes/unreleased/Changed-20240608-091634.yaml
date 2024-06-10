@@ -1,3 +1,0 @@
-kind: Changed
-body: (*Breaking*) Rename `completion` to `shell completion`. Other shell helpers are expected in the future.
-time: 2024-06-08T09:16:34.91796-07:00
