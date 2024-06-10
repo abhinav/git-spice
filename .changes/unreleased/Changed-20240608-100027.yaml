@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch submit: Delay fetching PR templates until necessary. This should result in an apparent speed-up in the submission prompt.'
-time: 2024-06-08T10:00:27.698781-07:00

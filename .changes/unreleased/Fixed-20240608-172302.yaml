@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix bug in state management attempting to write files with empty names to state.
-time: 2024-06-08T17:23:02.05017-07:00

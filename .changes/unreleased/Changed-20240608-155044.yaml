@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch submit: Make fewer requests to GitHub for PR templates by caching them locally.'
-time: 2024-06-08T15:50:44.768147-07:00

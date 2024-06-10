@@ -1,3 +1,0 @@
-kind: Fixed
-body: '{branch, upstack} onto: When prompting for a new base, default to current base.'
-time: 2024-06-08T09:25:34.554148-07:00

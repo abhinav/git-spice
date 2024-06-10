@@ -1,3 +1,0 @@
-kind: Added
-body: Add 'log short' command (alias 'ls') to print the current stack. Use with `--all` to print all tracked branches.
-time: 2024-06-07T22:03:28.063254-07:00
