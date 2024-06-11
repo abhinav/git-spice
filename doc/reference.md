@@ -342,45 +342,29 @@ For example, given the following stack, with A checked out:
 	┌─┴ A ◀
 	trunk
 
-'gs branch create X' will create a new branch X on top of A
-and leave B and C unchanged:
+'gs branch create X' will have the following effects
+with different flags:
 
-	# gs branch create X
-	  ┌── X
-	  │ ┌── C
-	  ├─┴ B
-	┌─┴ A
-	trunk
-
-'gs branch create --insert X' will create a new branch X on top
-of A, and move B and C on top of X:
-
-	# gs branch create --insert X
-	      ┌── C
-	    ┌─┴ B
-	  ┌─┴ X
-	┌─┴ A
-	trunk
-
-'gs branch create --below X' will create a new branch X below A,
-and move A, B, and C on top of X:
-
-	# gs branch create --below X
-	      ┌── C
-	    ┌─┴ B
-	  ┌─┴ A
-	┌─┴ X
-	trunk
+	 default  │   --insert   │  --below
+	──────────┼──────────────┼──────────
+	  ┌── X   │        ┌── C │       ┌── C
+	  │ ┌── C │      ┌─┴ B   │     ┌─┴ B
+	  ├─┴ B   │    ┌─┴ X     │   ┌─┴ A
+	┌─┴ A     │  ┌─┴ A       │ ┌─┴ X
+	trunk     │  trunk       │ trunk
 
 In all cases above, use of -t/--target flag will change the
 target (A) to the specified branch:
 
-	# gs branch create --target B X
-	      ┌── C
-	    ┌─┴ B
-	  ┌─┴ X
-	┌─┴ A
-	trunk
+	              --target B
+
+	 default  │   --insert   │  --below
+	──────────┼──────────────┼────────────
+	    ┌── X │        ┌── C │       ┌── C
+	    ├── C │      ┌─┴ X   │     ┌─┴ B
+	  ┌─┴ B   │    ┌─┴ B     │   ┌─┴ X
+	┌─┴ A     │  ┌─┴ A       │ ┌─┴ A
+	trunk     │  trunk       │ trunk
 
 **Arguments**
 
@@ -388,9 +372,9 @@ target (A) to the specified branch:
 
 **Flags**
 
-* `--insert`: Restack the upstack of the current branch on top of the new branch
-* `--below`: Place the branch below the current branch. Implies --insert.
-* `-t`, `--target=STRING`: Branch to create the new branch above/below
+* `--insert`: Restack the upstack of the target branch onto the new branch
+* `--below`: Place the branch below the target branch and restack its upstack
+* `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-m`, `--message=STRING`: Commit message
 
 ### gs branch delete
