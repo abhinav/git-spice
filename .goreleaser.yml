@@ -32,7 +32,7 @@ release:
 # aurs:
 #   - name: git-spice-bin
 #     homepage: https://github.com/abhinav/git-spice
-#     description: "Stitch multiple Markdown files together into a single document."
+#     description: "A tool for stacking Git branches."
 #     maintainers:
 #       - 'Abhinav Gupta <mail@abhinavg.net>'
 #     license: "GPL-3.0"
@@ -58,11 +58,11 @@ release:
 #       name: Abhinav Gupta
 #       email: mail@abhinavg.net
 #     homepage: https://github.com/abhinav/git-spice
-#     description: "Stitch multiple Markdown files together into a single document."
+#     description: "A tool for stacking Git branches."
 #     license: "GPL-3.0"
 #     skip_upload: auto
 #     test: |
-#       system "#{bin}/gs -version"
+#       system "#{bin}/gs --version"
 
 checksum:
   name_template: 'checksums.txt'
