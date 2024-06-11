@@ -15,8 +15,9 @@ import (
 type branchCreateCmd struct {
 	Name string `arg:"" optional:"" help:"Name of the new branch"`
 
-	Insert bool `help:"Restack the upstack of the current branch on top of the new branch"`
-	Below  bool `help:"Place the branch below the current branch. Implies --insert."`
+	Insert bool   `help:"Restack the upstack of the current branch on top of the new branch"`
+	Below  bool   `help:"Place the branch below the current branch. Implies --insert."`
+	Target string `short:"t" help:"Branch to create the new branch above/below"`
 
 	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
 }
@@ -24,52 +25,63 @@ type branchCreateCmd struct {
 func (*branchCreateCmd) Help() string {
 	return text.Dedent(`
 		Creates a new branch containing the staged changes
-		on top of the current branch.
+		on top of the current branch, or --target if specified.
 		If there are no staged changes, creates an empty commit.
 
-		By default, the new branch is created on top of the current branch,
+		By default, the new branch is created on top of the target,
 		but it does not affect the rest of the stack.
-		Use the --insert flag to restack all existing upstack branches
-		on top of the new branch.
-		For example,
+		Use the --insert flag to move the upstack branches of the
+		target onto the new branch.
+		Alternatively, use the --below flag to place the new branch
+		below the target branch, making the new branch the base of the
+		rest of the stack.
 
-			# Given:
-			#
-			#  trunk
-			#   └─A
-			#     └─B
-			#       └─C
-			git checkout A
-			gs branch create --insert X
-			# Result:
-			#
-			#  trunk
-			#   └─A
-			#     └─X
-			#       └─B
-			#         └─C
+		For example, given the following stack, with A checked out:
 
-		Instead of --insert,
-		you can use --below to place the new branch
-		below the current branch.
-		This is equivalent to checking out the base branch
-		and creating a new branch with --insert there.
+			    ┌── C
+			  ┌─┴ B
+			┌─┴ A ◀
+			trunk
 
-			# Given:
-			#
-			#  trunk
-			#   └─A
-			#     └─B
-			#       └─C
-			git checkout A
-			gs branch create --below X
-			# Result:
-			#
-			#  trunk
-			#   └─X
-			#     └─A
-			#       └─B
-			#         └─C
+		'gs branch create X' will create a new branch X on top of A
+		and leave B and C unchanged:
+
+			# gs branch create X
+			  ┌── X
+			  │ ┌── C
+			  ├─┴ B
+			┌─┴ A
+			trunk
+
+		'gs branch create --insert X' will create a new branch X on top
+		of A, and move B and C on top of X:
+
+			# gs branch create --insert X
+			      ┌── C
+			    ┌─┴ B
+			  ┌─┴ X
+			┌─┴ A
+			trunk
+
+		'gs branch create --below X' will create a new branch X below A,
+		and move A, B, and C on top of X:
+
+			# gs branch create --below X
+			      ┌── C
+			    ┌─┴ B
+			  ┌─┴ A
+			┌─┴ X
+			trunk
+
+		In all cases above, use of -t/--target flag will change the
+		target (A) to the specified branch:
+
+			# gs branch create --target B X
+			      ┌── C
+			    ┌─┴ B
+			  ┌─┴ X
+			┌─┴ A
+			trunk
 	`)
 }
 
@@ -86,55 +98,58 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return err
 	}
 	trunk := store.Trunk()
-
 	svc := spice.NewService(repo, store, log)
 
-	currentBranch, err := repo.CurrentBranch(ctx)
-	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
+	if cmd.Target == "" {
+		cmd.Target, err = repo.CurrentBranch(ctx)
+		if err != nil {
+			return fmt.Errorf("get current branch: %w", err)
+		}
 	}
 
-	currentHash, err := repo.PeelToCommit(ctx, "HEAD")
-	if err != nil {
-		return fmt.Errorf("peel to tree: %w", err)
-	}
-
-	diff, err := repo.DiffIndex(ctx, currentHash.String())
+	diff, err := repo.DiffIndex(ctx, "HEAD")
 	if err != nil {
 		return fmt.Errorf("diff index: %w", err)
 	}
 
-	baseName := currentBranch
-	baseHash := currentHash
-
-	// Branches to restack on top of new branch.
-	var restackOntoNew []string
+	baseName := cmd.Target
+	var (
+		baseHash       git.Hash
+		restackOntoNew []string // branches to restack onto the new branch
+	)
 	if cmd.Below {
-		if currentBranch == trunk {
+		if cmd.Target == trunk {
 			log.Error("--below: cannot create a branch below trunk")
-			return fmt.Errorf("--below cannot be used from  %v", trunk)
+			return fmt.Errorf("--below cannot be used from %v", trunk)
 		}
 
-		b, err := svc.LookupBranch(ctx, currentBranch)
+		b, err := svc.LookupBranch(ctx, cmd.Target)
 		if err != nil {
-			return fmt.Errorf("branch not tracked: %v", currentBranch)
+			return fmt.Errorf("branch not tracked: %v", cmd.Target)
 		}
 
-		// If trying to insert below current branch,
-		// detach to base instead,
-		// and restack current branch on top.
+		// If trying to insert below the target branch,
+		// we'll detach to *its* base branch,
+		// and restack the base branch onwards.
+		restackOntoNew = append(restackOntoNew, cmd.Target)
 		baseName = b.Base
 		baseHash = b.BaseHash
-		restackOntoNew = append(restackOntoNew, currentBranch)
 	} else if cmd.Insert {
-		// If inserting, restacking all the upstacks of current branch
-		// onto the new branch.
-		aboves, err := svc.ListAbove(ctx, currentBranch)
+		// If inserting, above the target branch,
+		// restack all its upstack branches on top of the new branch.
+		aboves, err := svc.ListAbove(ctx, cmd.Target)
 		if err != nil {
-			return fmt.Errorf("list branches above %s: %w", currentBranch, err)
+			return fmt.Errorf("list branches above %s: %w", cmd.Target, err)
 		}
 
 		restackOntoNew = append(restackOntoNew, aboves...)
+	}
+
+	if baseHash == "" || baseHash.IsZero() {
+		baseHash, err = repo.PeelToCommit(ctx, baseName)
+		if err != nil {
+			return fmt.Errorf("resolve %v: %w", baseName, err)
+		}
 	}
 
 	if err := repo.DetachHead(ctx, baseName); err != nil {
@@ -144,7 +159,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	// restore the original branch.
 	defer func() {
 		if err != nil {
-			err = errors.Join(err, repo.Checkout(ctx, currentBranch))
+			err = errors.Join(err, repo.Checkout(ctx, cmd.Target))
 		}
 	}()
 
@@ -196,9 +211,9 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	var msg string
 	switch {
 	case cmd.Below:
-		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, baseName)
+		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, cmd.Target)
 	case cmd.Insert:
-		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, baseName)
+		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, cmd.Target)
 	default:
 		msg = fmt.Sprintf("create branch %s", cmd.Name)
 	}

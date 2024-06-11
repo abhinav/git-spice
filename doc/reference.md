@@ -324,52 +324,63 @@ gs branch (b) create (c) [<name>] [flags]
 Create a new branch
 
 Creates a new branch containing the staged changes
-on top of the current branch.
+on top of the current branch, or --target if specified.
 If there are no staged changes, creates an empty commit.
 
-By default, the new branch is created on top of the current branch,
+By default, the new branch is created on top of the target,
 but it does not affect the rest of the stack.
-Use the --insert flag to restack all existing upstack branches
-on top of the new branch.
-For example,
+Use the --insert flag to move the upstack branches of the
+target onto the new branch.
+Alternatively, use the --below flag to place the new branch
+below the target branch, making the new branch the base of the
+rest of the stack.
 
-	# Given:
-	#
-	#  trunk
-	#   └─A
-	#     └─B
-	#       └─C
-	git checkout A
-	gs branch create --insert X
-	# Result:
-	#
-	#  trunk
-	#   └─A
-	#     └─X
-	#       └─B
-	#         └─C
+For example, given the following stack, with A checked out:
 
-Instead of --insert,
-you can use --below to place the new branch
-below the current branch.
-This is equivalent to checking out the base branch
-and creating a new branch with --insert there.
+	    ┌── C
+	  ┌─┴ B
+	┌─┴ A ◀
+	trunk
 
-	# Given:
-	#
-	#  trunk
-	#   └─A
-	#     └─B
-	#       └─C
-	git checkout A
-	gs branch create --below X
-	# Result:
-	#
-	#  trunk
-	#   └─X
-	#     └─A
-	#       └─B
-	#         └─C
+'gs branch create X' will create a new branch X on top of A
+and leave B and C unchanged:
+
+	# gs branch create X
+	  ┌── X
+	  │ ┌── C
+	  ├─┴ B
+	┌─┴ A
+	trunk
+
+'gs branch create --insert X' will create a new branch X on top
+of A, and move B and C on top of X:
+
+	# gs branch create --insert X
+	      ┌── C
+	    ┌─┴ B
+	  ┌─┴ X
+	┌─┴ A
+	trunk
+
+'gs branch create --below X' will create a new branch X below A,
+and move A, B, and C on top of X:
+
+	# gs branch create --below X
+	      ┌── C
+	    ┌─┴ B
+	  ┌─┴ A
+	┌─┴ X
+	trunk
+
+In all cases above, use of -t/--target flag will change the
+target (A) to the specified branch:
+
+	# gs branch create --target B X
+	      ┌── C
+	    ┌─┴ B
+	  ┌─┴ X
+	┌─┴ A
+	trunk
 
 **Arguments**
 
@@ -379,6 +390,7 @@ and creating a new branch with --insert there.
 
 * `--insert`: Restack the upstack of the current branch on top of the new branch
 * `--below`: Place the branch below the current branch. Implies --insert.
+* `-t`, `--target=STRING`: Branch to create the new branch above/below
 * `-m`, `--message=STRING`: Commit message
 
 ### gs branch delete
