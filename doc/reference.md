@@ -514,6 +514,10 @@ When updating an existing pull request,
 the --[no-]draft flag can be used to update the draft status.
 Without the flag, the draft status is not changed.
 
+If --no-publish is specified, a remote branch will be pushed
+but a pull request will not be created.
+The flag has no effect if a pull request already exists.
+
 **Arguments**
 
 * `name`: Branch to submit
@@ -525,6 +529,7 @@ Without the flag, the draft status is not changed.
 * `--body=STRING`: Body of the pull request
 * `--[no-]draft`: Whether to mark the pull request as draft
 * `--fill`: Fill in the pull request title and body from the commit messages
+* `--no-publish`: Push the branch, but donn't create a pull request
 
 ## Commit
 

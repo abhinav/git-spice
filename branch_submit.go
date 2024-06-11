@@ -26,6 +26,8 @@ type branchSubmitCmd struct {
 	Fill  bool   `help:"Fill in the pull request title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt
 
+	NoPublish bool `name:"no-publish" help:"Push the branch, but donn't create a pull request"`
+
 	// TODO: Other creation options e.g.:
 	// - assignees
 	// - labels
@@ -50,6 +52,10 @@ func (*branchSubmitCmd) Help() string {
 		When updating an existing pull request,
 		the --[no-]draft flag can be used to update the draft status.
 		Without the flag, the draft status is not changed.
+
+		If --no-publish is specified, a remote branch will be pushed
+		but a pull request will not be created.
+		The flag has no effect if a pull request already exists.
 	`)
 }
 
@@ -175,143 +181,38 @@ func (cmd *branchSubmitCmd) Run(
 	// At this point, existingChange is nil only if we need to create a new PR.
 	if existingChange == nil {
 		if cmd.DryRun {
-			log.Infof("WOULD create a pull request for %s", cmd.Name)
+			if cmd.NoPublish {
+				log.Infof("WOULD push branch %s", cmd.Name)
+			} else {
+				log.Infof("WOULD create a pull request for %s", cmd.Name)
+			}
 			return nil
 		}
 
-		// Fetch the template while we're figuring out the default PR
-		// title and body.
-		changeTemplate := make(chan *forge.ChangeTemplate, 1)
-		go func() {
-			defer close(changeTemplate)
-
-			ctx, cancel := context.WithTimeout(ctx, time.Second)
-			defer cancel()
-
-			templates, err := svc.ListChangeTemplates(ctx, remoteRepo)
+		var prepared *preparedBranch
+		if !cmd.NoPublish {
+			prepared, err = cmd.preparePublish(ctx, log, opts, svc, repo, remoteRepo, branch.Base)
 			if err != nil {
-				log.Warn("Could not list change templates", "error", err)
-				return
-			}
-
-			if len(templates) > 0 {
-				changeTemplate <- templates[0]
-			}
-		}()
-
-		msgs, err := repo.CommitMessageRange(ctx, cmd.Name, branch.Base)
-		if err != nil {
-			return fmt.Errorf("list commits: %w", err)
-		}
-		if len(msgs) == 0 {
-			return errors.New("no commits to submit")
-		}
-
-		var (
-			defaultTitle string
-			defaultBody  strings.Builder
-		)
-		if len(msgs) == 1 {
-			// If there's only one commit,
-			// just the body will be the default body.
-			defaultTitle = msgs[0].Subject
-			defaultBody.WriteString(msgs[0].Body)
-		} else {
-			// Otherwise, we'll concatenate all the messages.
-			// The revisions are in reverse order,
-			// so we'll want to iterate in reverse.
-			defaultTitle = msgs[len(msgs)-1].Subject
-			for i := len(msgs) - 1; i >= 0; i-- {
-				msg := msgs[i]
-				if defaultBody.Len() > 0 {
-					defaultBody.WriteString("\n\n")
-				}
-				defaultBody.WriteString(msg.Subject)
-				if msg.Body != "" {
-					defaultBody.WriteString("\n\n")
-					defaultBody.WriteString(msg.Body)
-				}
+				return err
 			}
 		}
 
-		// getDefaultBody retrieves the default body,
-		// blocking until the template is fetched.
-		getDefaultBody := func() string {
-			if tmpl, ok := <-changeTemplate; ok {
-				defaultBody.WriteString("\n\n")
-				defaultBody.WriteString(tmpl.Body)
-			}
-
-			return defaultBody.String()
-		}
-
-		var fields []ui.Field
-		if cmd.Title == "" {
-			cmd.Title = defaultTitle
-			title := ui.NewInput().
-				WithValue(&cmd.Title).
-				WithTitle("Title").
-				WithDescription("Short summary of the pull request").
-				WithValidate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return errors.New("title cannot be blank")
-					}
-					return nil
-				})
-			fields = append(fields, title)
-		}
-
-		if cmd.Body == "" {
-			// Resolve the default body only if we're not prompting
-			// because if we're prompting, we can wait until the user
-			// has finished editing the title.
-			if !opts.Prompt {
-				cmd.Body = getDefaultBody()
-			}
-
-			body := ui.NewOpenEditor().
-				WithValue(&cmd.Body).
-				WithDefaultFunc(getDefaultBody).
-				WithTitle("Body").
-				WithDescription("Open your editor to write " +
-					"a detailed description of the pull request")
-			fields = append(fields, body)
-		}
-
-		if opts.Prompt && cmd.Draft == nil {
-			cmd.Draft = new(bool)
-			// TODO: default to true if subject is "WIP" or similar.
-			draft := ui.NewConfirm().
-				WithValue(cmd.Draft).
-				WithTitle("Draft").
-				WithDescription("Mark the pull request as a draft?")
-			fields = append(fields, draft)
-		}
-
-		// TODO: should we assume --fill if --no-prompt?
-		if len(fields) > 0 && !cmd.Fill {
-			if !opts.Prompt {
-				return fmt.Errorf("prompt for commit information: %w", errNoPrompt)
-			}
-
-			form := ui.NewForm(fields...)
-			if err := form.Run(); err != nil {
-				return fmt.Errorf("prompt form: %w", err)
-			}
-		}
-		must.NotBeBlankf(cmd.Title, "PR title must have been set")
-
-		upsert := state.UpsertRequest{
-			Name:           cmd.Name,
-			UpstreamBranch: upstreamBranch,
-		}
-
-		err = repo.Push(ctx, git.PushOptions{
+		pushOpts := git.PushOptions{
 			Remote: remote,
 			Refspec: git.Refspec(
 				commitHash.String() + ":refs/heads/" + upstreamBranch,
 			),
-		})
+		}
+
+		// If we've already pushed this branch before,
+		// we'll need a force push. Use a --force-with-lease to avoid
+		// overwriting someone else's changes.
+		existingHash, err := repo.PeelToCommit(ctx, remote+"/"+upstreamBranch)
+		if err == nil {
+			pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+		}
+
+		err = repo.Push(ctx, pushOpts)
 		if err != nil {
 			return fmt.Errorf("push branch: %w", err)
 		}
@@ -319,6 +220,10 @@ func (cmd *branchSubmitCmd) Run(
 		// At this point, even if any other operation fails,
 		// we need to save to the state that we pushed the branch
 		// with the recorded name.
+		upsert := state.UpsertRequest{
+			Name:           cmd.Name,
+			UpstreamBranch: upstreamBranch,
+		}
 		defer func() {
 			err := store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{upsert},
@@ -334,25 +239,20 @@ func (cmd *branchSubmitCmd) Run(
 			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
 		}
 
-		draft := false
-		if cmd.Draft != nil {
-			draft = *cmd.Draft
+		if prepared != nil {
+			changeID, err := prepared.Publish(ctx)
+			if err != nil {
+				return err
+			}
+			upsert.PR = int(changeID)
+		} else {
+			log.Infof("Pushed %s", cmd.Name)
 		}
-
-		result, err := remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
-			Subject: cmd.Title,
-			Body:    cmd.Body,
-			Head:    cmd.Name,
-			Base:    branch.Base,
-			Draft:   draft,
-		})
-		if err != nil {
-			return fmt.Errorf("create change: %w", err)
-		}
-		upsert.PR = int(result.ID)
-
-		log.Infof("Created %v: %s", result.ID, result.URL)
 	} else {
+		if cmd.NoPublish {
+			log.Warnf("Ignoring --no-publish: %s was already published: %s", cmd.Name, existingChange.URL)
+		}
+
 		// Check base and HEAD are up-to-date.
 		pull := existingChange
 		var updates []string
@@ -387,7 +287,7 @@ func (cmd *branchSubmitCmd) Run(
 				),
 				// Force push, but only if the ref is exactly
 				// where we think it is.
-				ForceWithLease: cmd.Name + ":" + pull.HeadHash.String(),
+				ForceWithLease: upstreamBranch + ":" + pull.HeadHash.String(),
 			})
 			if err != nil {
 				log.Error("Branch may have been updated by someone else.")
@@ -410,4 +310,181 @@ func (cmd *branchSubmitCmd) Run(
 	}
 
 	return nil
+}
+
+// Fills change information in the branch submit command.
+func (cmd *branchSubmitCmd) preparePublish(
+	ctx context.Context,
+	log *log.Logger,
+	opts *globalOptions,
+	svc *spice.Service,
+	repo *git.Repository,
+	remoteRepo forge.Repository,
+	baseBranch string,
+) (*preparedBranch, error) {
+	// Fetch the template while we're figuring out the default PR
+	// title and body.
+	changeTemplate := make(chan *forge.ChangeTemplate, 1)
+	go func() {
+		defer close(changeTemplate)
+
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+
+		templates, err := svc.ListChangeTemplates(ctx, remoteRepo)
+		if err != nil {
+			log.Warn("Could not list change templates", "error", err)
+			return
+		}
+
+		if len(templates) > 0 {
+			changeTemplate <- templates[0]
+		}
+	}()
+
+	msgs, err := repo.CommitMessageRange(ctx, cmd.Name, baseBranch)
+	if err != nil {
+		return nil, fmt.Errorf("list commits: %w", err)
+	}
+	if len(msgs) == 0 {
+		return nil, errors.New("no commits to submit")
+	}
+
+	var (
+		defaultTitle string
+		defaultBody  strings.Builder
+	)
+	if len(msgs) == 1 {
+		// If there's only one commit,
+		// just the body will be the default body.
+		defaultTitle = msgs[0].Subject
+		defaultBody.WriteString(msgs[0].Body)
+	} else {
+		// Otherwise, we'll concatenate all the messages.
+		// The revisions are in reverse order,
+		// so we'll want to iterate in reverse.
+		defaultTitle = msgs[len(msgs)-1].Subject
+		for i := len(msgs) - 1; i >= 0; i-- {
+			msg := msgs[i]
+			if defaultBody.Len() > 0 {
+				defaultBody.WriteString("\n\n")
+			}
+			defaultBody.WriteString(msg.Subject)
+			if msg.Body != "" {
+				defaultBody.WriteString("\n\n")
+				defaultBody.WriteString(msg.Body)
+			}
+		}
+	}
+
+	// getDefaultBody retrieves the default body,
+	// blocking until the template is fetched.
+	getDefaultBody := func() string {
+		if tmpl, ok := <-changeTemplate; ok {
+			defaultBody.WriteString("\n\n")
+			defaultBody.WriteString(tmpl.Body)
+		}
+
+		return defaultBody.String()
+	}
+
+	var fields []ui.Field
+	if cmd.Title == "" {
+		cmd.Title = defaultTitle
+		title := ui.NewInput().
+			WithValue(&cmd.Title).
+			WithTitle("Title").
+			WithDescription("Short summary of the pull request").
+			WithValidate(func(s string) error {
+				if strings.TrimSpace(s) == "" {
+					return errors.New("title cannot be blank")
+				}
+				return nil
+			})
+		fields = append(fields, title)
+	}
+
+	if cmd.Body == "" {
+		// Resolve the default body only if we're not prompting
+		// because if we're prompting, we can wait until the user
+		// has finished editing the title.
+		if !opts.Prompt {
+			cmd.Body = getDefaultBody()
+		}
+
+		body := ui.NewOpenEditor().
+			WithValue(&cmd.Body).
+			WithDefaultFunc(getDefaultBody).
+			WithTitle("Body").
+			WithDescription("Open your editor to write " +
+				"a detailed description of the pull request")
+		fields = append(fields, body)
+	}
+
+	if opts.Prompt && cmd.Draft == nil {
+		cmd.Draft = new(bool)
+		// TODO: default to true if subject is "WIP" or similar.
+		draft := ui.NewConfirm().
+			WithValue(cmd.Draft).
+			WithTitle("Draft").
+			WithDescription("Mark the pull request as a draft?")
+		fields = append(fields, draft)
+	}
+
+	// TODO: should we assume --fill if --no-prompt?
+	if len(fields) > 0 && !cmd.Fill {
+		if !opts.Prompt {
+			return nil, fmt.Errorf("prompt for commit information: %w", errNoPrompt)
+		}
+
+		form := ui.NewForm(fields...)
+		if err := form.Run(); err != nil {
+			return nil, fmt.Errorf("prompt form: %w", err)
+		}
+	}
+	must.NotBeBlankf(cmd.Title, "PR title must have been set")
+
+	var draft bool
+	if cmd.Draft != nil {
+		draft = *cmd.Draft
+	}
+
+	return &preparedBranch{
+		subject:    cmd.Title,
+		body:       cmd.Body,
+		head:       cmd.Name,
+		base:       baseBranch,
+		draft:      draft,
+		remoteRepo: remoteRepo,
+		log:        log,
+	}, nil
+}
+
+// preparedBranch is a branch that is ready to be published as a PR
+// (or equivalent).
+type preparedBranch struct {
+	subject string
+	body    string
+	head    string
+	base    string
+	draft   bool
+
+	remoteRepo forge.Repository
+	log        *log.Logger
+}
+
+func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
+	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: b.subject,
+		Body:    b.body,
+		Head:    b.head,
+		Base:    b.base,
+		Draft:   b.draft,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("create change: %w", err)
+	}
+
+	b.log.Infof("Created %v: %s", result.ID, result.URL)
+	return result.ID, nil
 }
