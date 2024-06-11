@@ -1,0 +1,80 @@
+# branch create with --target allows changing the target branch.
+
+as 'Test <test@example.com>'
+at '2024-06-10T20:05:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a simple stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# add feature3 above feature1, no --insert/--below.
+git checkout --detach
+git add feature3.txt
+gs bc feature3 -m 'Add feature 3' --target feature1
+gs ls -a
+cmp stderr $WORK/golden/add-feature3.txt
+
+# add feature4 above feature1 with --insert.
+git add feature4.txt
+gs bc feature4 -m 'Add feature 4' --target feature1 --insert
+gs ls -a
+cmp stderr $WORK/golden/add-feature4.txt
+
+# add feature5 below feature1 with --below.
+git add feature5.txt
+gs bc feature5 -m 'Add feature 5' --target feature1 --below
+gs ls -a
+cmp stderr $WORK/golden/add-feature5.txt
+
+# verify final state
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- repo/feature3.txt --
+feature 3
+
+-- repo/feature4.txt --
+feature 4
+
+-- repo/feature5.txt --
+feature 5
+
+-- golden/add-feature3.txt --
+  ┌── feature2
+  ├── feature3 ◀
+┌─┴ feature1
+main
+-- golden/add-feature4.txt --
+    ┌── feature2
+    ├── feature3
+  ┌─┴ feature4 ◀
+┌─┴ feature1
+main
+-- golden/add-feature5.txt --
+      ┌── feature2
+      ├── feature3
+    ┌─┴ feature4
+  ┌─┴ feature1
+┌─┴ feature5 ◀
+main
+-- golden/graph.txt --
+* 2996f1e (feature2) Add feature 2
+| * da27711 (feature3) Add feature 3
+|/  
+* 4cf138f (feature4) Add feature 4
+* 218877e (feature1) Add feature 1
+* bdbee4f (HEAD -> feature5) Add feature 5
+* 65011c2 (main) Initial commit
