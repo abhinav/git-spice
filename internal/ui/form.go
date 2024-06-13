@@ -40,12 +40,12 @@ type FormStyle struct {
 
 // DefaultFormStyle is the default style for a [Form].
 var DefaultFormStyle = FormStyle{
-	Error:         lipgloss.NewStyle().Foreground(Red),
+	Error:         NewStyle().Foreground(Red),
 	Title:         _titleStyle,
 	Description:   _descriptionStyle,
 	AcceptedTitle: _acceptedTitleStyle,
 
-	AcceptedField: lipgloss.NewStyle().Faint(true),
+	AcceptedField: NewStyle().Faint(true),
 }
 
 type acceptFieldMsg struct{}
@@ -183,6 +183,10 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			f.err = errors.New("user cancelled")
 			return f, tea.Quit
 		}
+	}
+
+	if f.focused >= len(f.fields) {
+		return f, tea.Quit
 	}
 
 	return f, f.fields[f.focused].Update(msg)

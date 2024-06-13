@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
+	"go.abhg.dev/gs/internal/ui"
 	"golang.org/x/oauth2"
 )
 
@@ -31,11 +32,11 @@ func main() {
 	})
 
 	styles := log.DefaultStyles()
-	styles.Levels[log.DebugLevel] = lipgloss.NewStyle().SetString("DBG").Bold(true)
-	styles.Levels[log.InfoLevel] = lipgloss.NewStyle().SetString("INF").Foreground(lipgloss.Color("10")).Bold(true) // green
-	styles.Levels[log.WarnLevel] = lipgloss.NewStyle().SetString("WRN").Foreground(lipgloss.Color("11")).Bold(true) // yellow
-	styles.Levels[log.ErrorLevel] = lipgloss.NewStyle().SetString("ERR").Foreground(lipgloss.Color("9")).Bold(true) // red
-	styles.Levels[log.FatalLevel] = lipgloss.NewStyle().SetString("FTL").Foreground(lipgloss.Color("9")).Bold(true) // red
+	styles.Levels[log.DebugLevel] = ui.NewStyle().SetString("DBG").Bold(true)
+	styles.Levels[log.InfoLevel] = ui.NewStyle().SetString("INF").Foreground(lipgloss.Color("10")).Bold(true) // green
+	styles.Levels[log.WarnLevel] = ui.NewStyle().SetString("WRN").Foreground(lipgloss.Color("11")).Bold(true) // yellow
+	styles.Levels[log.ErrorLevel] = ui.NewStyle().SetString("ERR").Foreground(lipgloss.Color("9")).Bold(true) // red
+	styles.Levels[log.FatalLevel] = ui.NewStyle().SetString("FTL").Foreground(lipgloss.Color("9")).Bold(true) // red
 	logger.SetStyles(styles)
 
 	ctx, cancel := context.WithCancel(context.Background())

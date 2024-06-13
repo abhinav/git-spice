@@ -50,9 +50,9 @@ type SelectStyle struct {
 
 // DefaultSelectStyle is the default style for a [Select].
 var DefaultSelectStyle = SelectStyle{
-	Selected:     lipgloss.NewStyle().Foreground(Yellow),
-	Highlight:    lipgloss.NewStyle().Foreground(Cyan),
-	ScrollMarker: lipgloss.NewStyle().Foreground(Gray),
+	Selected:     NewStyle().Foreground(Yellow),
+	Highlight:    NewStyle().Foreground(Cyan),
+	ScrollMarker: NewStyle().Foreground(Gray),
 }
 
 // Select is a prompt that allows selecting from a list of options
@@ -311,7 +311,7 @@ func (s *Select) Render(out Writer) {
 
 	for matchIdx, optionIdx := range matched {
 		matchIdx += offset
-		style := lipgloss.NewStyle()
+		style := NewStyle()
 		if matchIdx == s.selected {
 			style = s.Style.Selected
 			out.WriteString("▶ ")
