@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Check
         uses: brettcannon/check-for-changed-files@v1.2.0
+        # Run only if PR body doesn't contain '[skip changelog]'.
+        if: ${{ !contains(github.event.pull_request.body, '[skip changelog]') }}
         with:
           file-pattern: |
             .changes/unreleased/*.yaml
