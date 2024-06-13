@@ -50,11 +50,15 @@ import (
 //
 // The following options may be provided before the script file.
 //
-//   - -cols int: terminal width (default 70)
+//   - -cols int: terminal width (default 80)
 //   - -rows int: terminal height (default 40)
+//   - -final <name>:
+//     print a final snapshot on exit to stdout with the given name.
 func WithTerm() (exitCode int) {
-	cols := flag.Int("cols", 70, "terminal width")
+	cols := flag.Int("cols", 80, "terminal width")
 	rows := flag.Int("rows", 40, "terminal height")
+	finalSnapshot := flag.String("final", "",
+		"capture a snapshot on exit with the given name")
 
 	log.SetFlags(0)
 	flag.Parse()
@@ -84,7 +88,6 @@ func WithTerm() (exitCode int) {
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = append(os.Environ(), "TERM=screen")
-	cmd.Stderr = os.Stderr
 
 	size := &pty.Winsize{
 		Rows: uint16(*rows),
@@ -101,6 +104,15 @@ func WithTerm() (exitCode int) {
 		if err := emu.Close(); err != nil {
 			log.Printf("%v: %v", cmd, err)
 			exitCode = 1
+		}
+
+		if *finalSnapshot != "" {
+			if len(*finalSnapshot) > 0 {
+				fmt.Printf("### %s ###\n", *finalSnapshot)
+			}
+			if _, err := os.Stdout.Write(emu.Snapshot()); err != nil {
+				log.Printf("error writing to stdout: %v", err)
+			}
 		}
 	}()
 

@@ -17,7 +17,6 @@ git commit -m 'Add foo.txt'
 git checkout main
 
 with-term $WORK/input.txt -- gs branch checkout feature
-stderr 'feature: branch not tracked'
 cmp stdout $WORK/golden/prompt.txt
 
 gs ls -a
@@ -33,6 +32,7 @@ feed y
 await
 
 -- golden/prompt.txt --
+WRN feature: branch not tracked
 Do you want to track this branch now?: [Y/n]
 -- golden/ls.txt --
 ┌── feature ◀
