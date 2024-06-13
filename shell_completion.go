@@ -17,7 +17,10 @@ type shellCompletionCmd struct {
 
 func (c *shellCompletionCmd) Help() string {
 	return text.Dedent(`
-		Generates shell completion scripts.
+		Generates shell completion scripts for the provided shell.
+		If a shell name is not provided, the command will attempt to
+		guess the shell based on environment variables.
+
 		To install the script, add the following line to your shell's
 		rc file.
 

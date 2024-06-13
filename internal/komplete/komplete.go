@@ -35,6 +35,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -55,7 +56,7 @@ import (
 // Command is the command to run to generate the completion script.
 // It is intended to be used as a subcommand of the main CLI.
 type Command struct {
-	Shell string ` enum:"bash,zsh,fish" arg:"" required:"" help:"Shell to generate completions for."`
+	Shell string `enum:"bash,zsh,fish," arg:"" default:"" optional:"" help:"Shell to generate completions for."`
 }
 
 // Run runs the completion script generator.
@@ -70,6 +71,28 @@ func (cmd *Command) Run(kctx *kong.Context) (err error) {
 	defer func() {
 		err = errors.Join(err, out.Flush())
 	}()
+
+	// Guess based on basename $SHELL, or $FISH_VERSION.
+	if cmd.Shell == "" {
+		switch filepath.Base(os.Getenv("SHELL")) {
+		case "bash":
+			cmd.Shell = "bash"
+		case "zsh":
+			cmd.Shell = "zsh"
+		case "fish":
+			// Fish doesn't actually set $SHELL.
+			// We have this here for completeness.
+			cmd.Shell = "fish"
+		}
+
+		if cmd.Shell == "" && os.Getenv("FISH_VERSION") != "" {
+			cmd.Shell = "fish"
+		}
+
+		if cmd.Shell == "" {
+			return errors.New("could not guess shell, please provide one")
+		}
+	}
 
 	name := kctx.Model.Name
 	switch cmd.Shell {

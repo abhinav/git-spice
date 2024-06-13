@@ -1,0 +1,12 @@
+env SHELL=bash
+gs shell completion
+
+env SHELL=zsh
+gs shell completion
+
+env SHELL=
+! gs shell completion
+stderr 'could not guess shell'
+
+env FISH_VERSION=1.0
+gs shell completion
