@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -44,6 +45,17 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return nil
 	}
 
-	// TODO: handle not tracked
-	return (&upstackRestackCmd{}).Run(ctx, log, opts)
+	currentBranch, err := repo.CurrentBranch(ctx)
+	if err != nil {
+		// No restack needed if we're in a detached head state.
+		if errors.Is(err, git.ErrDetachedHead) {
+			return nil
+		}
+		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	return (&upstackRestackCmd{
+		Name:   currentBranch,
+		NoBase: true,
+	}).Run(ctx, log, opts)
 }

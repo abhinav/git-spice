@@ -126,18 +126,33 @@ Restack the current stack
 ### gs upstack restack
 
 ```
-gs upstack (us) restack (r)
+gs upstack (us) restack (r) [<name>] [flags]
 ```
 
 Restack this branch those above it
 
-Restacks the current branch and all branches above it
-on top of their respective bases.
-If multiple branches use another branch as their base,
-they will all be restacked on top of the updated base.
+Restacks the given branch and all branches above it
+on top of the new heads of their base branches.
+If multiple branches use this branch as their base,
+they will all be restacked.
 
+If a branch name is not provided,
+the current branch will be used.
 Run this command from the trunk branch
 to restack all managed branches.
+
+By default, the provided branch is also restacked
+on top of its base branch.
+Use the --no-base flag to only restack branches above it,
+and leave the branch itself untouched.
+
+**Arguments**
+
+* `name`: Branch to restack the upstack of
+
+**Flags**
+
+* `--no-base`: Do not restack the base branch
 
 ### gs upstack onto
 

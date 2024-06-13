@@ -1,0 +1,73 @@
+# https://github.com/abhinav/git-spice/issues/185
+#
+# commit create and amend should restack the upstack of the current branch
+# but not the current branch itself.
+
+as 'Test <test@example.com>'
+at '2024-06-13T05:17:32Z'
+
+# setup
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+# move trunk so feature1 needs to be restacked
+gs trunk
+cp $WORK/extra/README.md README.md
+git add README.md
+git commit -m 'New initial state'
+
+gs up
+stderr 'feature1: needs to be restacked'
+
+# commit create
+cp $WORK/extra/feature1.2.txt feature1.2.txt
+git add feature1.2.txt
+gs cc -m 'Feature 1 part 2'
+
+# feature1 should not have been restacked
+! exists README.md
+# feature2 should have been restacked
+gs up
+exists feature1.2.txt
+
+gs down
+
+# commit amend
+gs ca -m 'add part 2 of feature 1'
+# feature1 should not have been restacked
+! exists README.md
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/init.txt --
+initial state
+
+-- repo/feature1.txt --
+feature1
+
+-- repo/feature2.txt --
+feature2
+
+-- extra/README.md --
+this repository does things
+
+-- extra/feature1.2.txt --
+part 2 of feature 1
+
+-- golden/graph.txt --
+* 04a299e (feature2) feature2
+* 24241e1 (HEAD -> feature1) add part 2 of feature 1
+* 8910965 feature1
+| * 8392e5c (main) New initial state
+|/  
+* cd96984 Initial commit
