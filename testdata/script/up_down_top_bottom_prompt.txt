@@ -1,0 +1,124 @@
+# Moving in a linear stack with gs up/bd/bt/bb.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# main with initial commit
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a stack:
+# feature1 -> {feature2 -> feature3, feature4 -> feature5}
+
+gs bc -m feature1
+gs bc -m feature2
+gs bc -m feature3
+gs bco feature1
+gs bc -m feature4
+gs bc -m feature5
+gs trunk
+
+# sanity check
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+! gs down -n
+
+# up no prompt
+gs up -n
+stdout feature1
+gs up
+
+# up prompt
+with-term -final exit $WORK/input/up-prompt.txt -- gs up -n
+cmp stdout $WORK/golden/up-prompt.txt
+
+# top prompt
+with-term -final exit $WORK/input/top-prompt.txt -- gs top -n
+cmp stdout $WORK/golden/top-prompt.txt
+
+# top no prompt
+gs bco feature2
+gs top -n
+stdout feature3
+
+# bottom
+gs bottom -n
+stdout feature1
+
+# down
+gs up
+gs down -n
+stdout feature2
+
+# down [N]
+gs bco feature5
+gs down -n 2
+stdout feature1
+
+# up [N]
+gs trunk
+with-term -final exit $WORK/input/up-2-prompt.txt -- gs up -n 2
+cmp stdout $WORK/golden/up-2-prompt.txt
+
+-- golden/ls.txt --
+    ┌── feature3
+  ┌─┴ feature2
+  │ ┌── feature5
+  ├─┴ feature4
+┌─┴ feature1
+main ◀
+-- input/up-prompt.txt --
+await feature
+snapshot
+feed feature2\r
+-- golden/up-prompt.txt --
+Pick a branch:
+
+▶ feature2
+  feature4
+
+There are multiple branches above the current branch.
+### exit ###
+Pick a branch:
+
+▶ feature2
+
+feature2
+-- input/top-prompt.txt --
+await feature
+snapshot
+feed feature5\r
+-- golden/top-prompt.txt --
+Pick a branch:
+
+▶ feature3
+  feature5
+
+There are multiple top-level branches reachable from the current branch.
+### exit ###
+Pick a branch:
+
+▶ feature5
+
+feature5
+-- input/up-2-prompt.txt --
+await feature
+snapshot
+feed feature4\r
+-- golden/up-2-prompt.txt --
+Pick a branch:
+
+▶ feature2
+  feature4
+
+There are multiple branches above the current branch.
+### exit ###
+Pick a branch:
+
+▶ feature4
+
+feature4
