@@ -21,6 +21,7 @@ feed \r
 
 -- golden/dialog.txt --
 ### dialog ###
+WRN No remotes found. Commands that require a remote will fail.
 Please select the trunk branch:
 
   bar

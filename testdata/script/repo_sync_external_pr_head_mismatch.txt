@@ -32,9 +32,8 @@ gh-merge alice/example 1
 
 # Re-track the branch and sync in interactive mode.
 gs branch track --base=main feature
-with-term $WORK/input/prompt.txt -- gs rs
+with-term -final exit $WORK/input/prompt.txt -- gs rs
 cmp stdout $WORK/golden/prompt.txt
-stderr 'feature: deleted \(was 4513f9f\)'
 
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
@@ -52,8 +51,13 @@ feed y
 await
 
 -- golden/prompt.txt --
+INF main: pulled 2 new commit(s)
 Delete feature?: [y/N]
-#1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54
+#1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54a6)
+### exit ###
+INF main: pulled 2 new commit(s)
+Delete feature?: [Y/n]
+INF feature: deleted (was 4513f9f)
 -- golden/merged-log.txt --
 *   f512e87 (HEAD -> main, origin/main) Merge change #1
 |\  

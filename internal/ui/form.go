@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -122,7 +123,7 @@ func NewForm(fields ...Field) *Form {
 // Run runs the form and blocks until it's accepted or canceled.
 // It returns a combination of all errors returned by the fields.
 func (f *Form) Run() error {
-	if _, err := tea.NewProgram(f).Run(); err != nil {
+	if _, err := tea.NewProgram(f, tea.WithOutput(os.Stderr)).Run(); err != nil {
 		return err
 	}
 

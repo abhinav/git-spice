@@ -26,6 +26,7 @@ feed \r
 
 -- golden/dialog.txt --
 ### dialog ###
+INF Using remote: origin
 Please select the trunk branch:
 
   bar

@@ -1,0 +1,3 @@
+kind: Changed
+body: Prompts are now posted to stderr instead of stdout.
+time: 2024-06-13T07:33:52.091381-07:00

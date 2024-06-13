@@ -23,9 +23,8 @@ gs bc feature
 
 mkdir $WORK/output
 env MOCKEDIT_GIVE= MOCKEDIT_RECORD=$WORK/output/pr-body.txt
-with-term $WORK/input/prompt.txt -- gs branch submit
-stderr 'Created #1'
-cmp stdout $WORK/golden/prompt.txt
+with-term -final exit $WORK/input/prompt.txt -- gs branch submit
+cmpenv stdout $WORK/golden/prompt.txt
 
 cmp $WORK/output/pr-body.txt $WORK/golden/pr-body.txt
 
@@ -76,6 +75,11 @@ Title: Add feature
 Body: Press [e] to open mockedit or [enter/tab] to skip
 Draft: [y/N]
 Mark the pull request as a draft?
+### exit ###
+Title: Add feature
+Body: Press [e] to open mockedit or [enter/tab] to skip
+Draft: [y/N]
+INF Created #1: $SHAMHUB_URL/alice/example/change/1
 -- golden/pr-body.txt --
 This adds a feature.
 The feature does things.

@@ -35,6 +35,7 @@ feed \r
 
 -- golden/prompt.txt --
 ### dialog ###
+WRN No remote was specified at init time
 Please select a remote:
 
 ▶ origin

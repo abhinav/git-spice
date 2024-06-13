@@ -26,7 +26,6 @@ cmp stdout $WORK/input/commit-msg
 # submit the branch
 with-term $WORK/input/prompt.txt -- gs branch submit
 cmp stdout $WORK/golden/prompt.txt
-stderr 'Created #1'
 
 gh-dump-pull
 stdout 'End of message.'
