@@ -23,9 +23,25 @@ stderr 'try re-running with --force'
 git rev-parse --verify foo
 stdout 'd844dc8b311d27c74fee35f8501171610124ee7a'
 
-gs branch delete --force foo
-stderr 'foo: deleted \(was d844dc8'
+# delete with a prompt
+with-term -final exit $WORK/input/prompt.txt -- gs branch delete foo
+cmp stdout $WORK/golden/prompt.txt
+
+# doesn't exist anymore
 ! git rev-parse --verify foo
 
 -- repo/foo.txt --
 whatever
+-- input/prompt.txt --
+await Delete foo anyway?
+snapshot prompt
+feed Y
+-- golden/prompt.txt --
+### prompt ###
+WRN foo (d844dc8) is not reachable from HEAD
+Delete foo anyway?: [y/N]
+foo has not been merged into HEAD. This may result in data loss.
+### exit ###
+WRN foo (d844dc8) is not reachable from HEAD
+Delete foo anyway?: [Y/n]
+INF foo: deleted (was d844dc8)

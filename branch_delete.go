@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchDeleteCmd struct {
@@ -152,6 +153,20 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 	if err := repo.Checkout(ctx, checkoutTarget); err != nil {
 		return fmt.Errorf("checkout %v: %w", checkoutTarget, err)
+	}
+
+	// If the branch exists, and is not reachable from HEAD,
+	// git will refuse to delete it.
+	// If we can prompt, ask the user to upgrade to a forceful deletion.
+	if exists && !cmd.Force && opts.Prompt && !repo.IsAncestor(ctx, head, "HEAD") {
+		log.Warnf("%v (%v) is not reachable from HEAD", cmd.Name, head.Short())
+		prompt := ui.NewConfirm().
+			WithTitlef("Delete %v anyway?", cmd.Name).
+			WithDescriptionf("%v has not been merged into HEAD. This may result in data loss.", cmd.Name).
+			WithValue(&cmd.Force)
+		if err := ui.Run(prompt); err != nil {
+			return fmt.Errorf("run prompt: %w", err)
+		}
 	}
 
 	if exists {
