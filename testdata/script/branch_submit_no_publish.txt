@@ -1,0 +1,85 @@
+# branch submit --no-publish
+# pushes the branch but does not publish a PR.
+
+as 'Test <test@example.com>'
+at '2024-06-13T21:22:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+gh-init
+gh-add-remote origin alice/example.git
+git push origin main
+
+git add feature1.txt
+gs bc -m feature1
+gs branch submit --no-publish
+stderr 'Pushed feature1'
+
+# verify no PRs
+gh-dump-pull
+cmp stdout $WORK/golden/no-pulls.txt
+
+# verify the branch was pushed
+cd ../
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git graph --branches --remotes
+cmp stdout $WORK/golden/post-push.txt
+
+# update the branch without publishing
+cd ../repo
+git add feature1.2.txt
+gs commit amend --no-edit
+gs bs --no-publish
+
+# verify no PRs
+gh-dump-pull
+cmp stdout $WORK/golden/no-pulls.txt
+
+# finally publish a PR
+gs bs --fill
+gh-dump-pull
+cmpenv stdout $WORK/golden/post-publish.txt
+
+# update the PR with a new commit.
+# --no-publish is ignored.
+git add feature1.3.txt
+gs cc -m feature1.3
+
+gs bs --no-publish
+stderr 'Ignoring --no-publish'
+stderr 'Updated #1'
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature1.2.txt --
+feature 1.2
+-- repo/feature1.3.txt --
+feature 1.3
+-- golden/no-pulls.txt --
+[]
+-- golden/post-push.txt --
+* 9282351 (origin/feature1) feature1
+* a7a403e (HEAD -> main, origin/main, origin/HEAD) Initial commit
+-- golden/post-publish.txt --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "a7a403e829a6c61398b10b89b33b650f8c12f8da"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "bb631d588b836e747e37dfa48232a6f7cf2aff9e"
+    }
+  }
+]
