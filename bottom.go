@@ -11,7 +11,9 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type bottomCmd struct{}
+type bottomCmd struct {
+	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+}
 
 func (*bottomCmd) Help() string {
 	return text.Dedent(`
@@ -20,7 +22,7 @@ func (*bottomCmd) Help() string {
 	`)
 }
 
-func (*bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -48,6 +50,11 @@ func (*bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions)
 	bottom, err := svc.FindBottom(ctx, current)
 	if err != nil {
 		return fmt.Errorf("find bottom: %w", err)
+	}
+
+	if cmd.DryRun {
+		fmt.Println(bottom)
+		return nil
 	}
 
 	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log, opts)

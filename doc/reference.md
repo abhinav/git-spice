@@ -620,6 +620,10 @@ you will be prompted to pick one.
 
 * `n`: Number of branches to move up.
 
+**Flags**
+
+* `-n`, `--dry-run`: Print the target branch without checking it out.
+
 ### gs down
 
 ```
@@ -637,6 +641,10 @@ this command will move to the trunk branch.
 
 * `n`: Number of branches to move up.
 
+**Flags**
+
+* `-n`, `--dry-run`: Print the target branch without checking it out.
+
 ### gs top
 
 ```
@@ -649,6 +657,10 @@ Jumps to the top-most branch in the current branch's stack.
 If there are multiple top-most branches,
 you will be prompted to pick one.
 
+**Flags**
+
+* `-n`, `--dry-run`: Print the target branch without checking it out.
+
 ### gs bottom
 
 ```
@@ -659,6 +671,10 @@ Move to the bottom of the stack
 
 Jumps to the bottom-most branch below the current branch.
 This is the branch just above the trunk.
+
+**Flags**
+
+* `-n`, `--dry-run`: Print the target branch without checking it out.
 
 ### gs trunk
 

@@ -13,6 +13,8 @@ import (
 
 type upCmd struct {
 	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
+
+	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
 }
 
 func (*upCmd) Help() string {
@@ -82,6 +84,11 @@ outer:
 		}
 
 		current = branch
+	}
+
+	if cmd.DryRun {
+		fmt.Println(branch)
+		return nil
 	}
 
 	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)

@@ -12,7 +12,9 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-type topCmd struct{}
+type topCmd struct {
+	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+}
 
 func (*topCmd) Help() string {
 	return text.Dedent(`
@@ -22,7 +24,7 @@ func (*topCmd) Help() string {
 	`)
 }
 
-func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -67,6 +69,11 @@ func (*topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) er
 		if err := ui.Run(prompt); err != nil {
 			return fmt.Errorf("a branch is required: %w", err)
 		}
+	}
+
+	if cmd.DryRun {
+		fmt.Println(branch)
+		return nil
 	}
 
 	if branch == current {

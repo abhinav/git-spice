@@ -1,0 +1,3 @@
+kind: Added
+body: '{up, down, top, bottom}: Add -n/--dry-run flag. This will print the target branch name without checking it out. Output may be piped to other commands.'
+time: 2024-06-13T21:02:23.432088-07:00
