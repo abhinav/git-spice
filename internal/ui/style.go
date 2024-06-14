@@ -12,7 +12,7 @@ var (
 	Magenta = lipgloss.AdaptiveColor{Light: "5", Dark: "13"}
 	Gray    = lipgloss.AdaptiveColor{Light: "8", Dark: "8"}
 
-	_titleStyle         = lipgloss.NewStyle().Foreground(Green).Bold(true)
-	_descriptionStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Faint(true)
-	_acceptedTitleStyle = lipgloss.NewStyle().Foreground(Plain)
+	_titleStyle         = NewStyle().Foreground(Green).Bold(true)
+	_descriptionStyle   = NewStyle().Foreground(lipgloss.Color("8")).Faint(true)
+	_acceptedTitleStyle = NewStyle().Foreground(Plain)
 )

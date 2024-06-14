@@ -39,8 +39,8 @@ type OpenEditorStyle struct {
 
 // DefaultOpenEditorStyle is the default style for an [OpenEditor] field.
 var DefaultOpenEditorStyle = OpenEditorStyle{
-	Key:    lipgloss.NewStyle().Foreground(Magenta),
-	Editor: lipgloss.NewStyle().Foreground(Green),
+	Key:    NewStyle().Foreground(Magenta),
+	Editor: NewStyle().Foreground(Green),
 }
 
 // Editor configures the editor to open.

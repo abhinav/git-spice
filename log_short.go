@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
@@ -17,15 +16,15 @@ import (
 )
 
 var (
-	_currentBranchStyle = lipgloss.NewStyle().
+	_currentBranchStyle = ui.NewStyle().
 				Foreground(ui.Cyan).
 				Bold(true)
 
-	_needsRestackStyle = lipgloss.NewStyle().
+	_needsRestackStyle = ui.NewStyle().
 				Foreground(ui.Gray).
 				SetString(" (needs restack)")
 
-	_markerStyle = lipgloss.NewStyle().
+	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
 			Bold(true).
 			SetString("◀")

@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 // Graph defines a directed graph.
@@ -56,7 +57,7 @@ type Style struct {
 // DefaultStyle returns the default style for rendering trees.
 func DefaultStyle() *Style {
 	return &Style{
-		Joint: lipgloss.NewStyle().Faint(true),
+		Joint: ui.NewStyle().Faint(true),
 	}
 }
 
