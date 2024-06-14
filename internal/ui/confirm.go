@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -93,6 +95,18 @@ func (c *Confirm) Title() string {
 // WithDescription sets the desc for the confirm field.
 func (c *Confirm) WithDescription(desc string) *Confirm {
 	c.desc = desc
+	return c
+}
+
+// WithTitlef is a variant of WithTitle that accepts a format string.
+func (c *Confirm) WithTitlef(format string, args ...interface{}) *Confirm {
+	c.title = fmt.Sprintf(format, args...)
+	return c
+}
+
+// WithDescriptionf is a variant of WithDescription that accepts a format string.
+func (c *Confirm) WithDescriptionf(format string, args ...interface{}) *Confirm {
+	c.desc = fmt.Sprintf(format, args...)
 	return c
 }
 
