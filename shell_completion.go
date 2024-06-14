@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/posener/complete"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/komplete"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -35,7 +37,7 @@ func (c *shellCompletionCmd) Help() string {
 	`)
 }
 
-func predictBranches(args complete.Args) (predictions []string) {
+func predictBranches(args komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -56,7 +58,7 @@ func predictBranches(args complete.Args) (predictions []string) {
 	return predictions
 }
 
-func predictTrackedBranches(args complete.Args) (predictions []string) {
+func predictTrackedBranches(args komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -78,7 +80,7 @@ func predictTrackedBranches(args complete.Args) (predictions []string) {
 	return branches
 }
 
-func predictRemotes(args complete.Args) (predictions []string) {
+func predictRemotes(args komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -93,4 +95,32 @@ func predictRemotes(args complete.Args) (predictions []string) {
 	}
 
 	return remotes
+}
+
+func predictDirs(args komplete.Args) (predictions []string) {
+	dir, last := filepath.Split(args.Last)
+	dir = filepath.Clean(dir)
+
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	sep := string(filepath.Separator)
+
+	for _, ent := range ents {
+		if !ent.IsDir() || strings.HasPrefix(ent.Name(), ".") {
+			continue
+		}
+
+		if strings.HasPrefix(ent.Name(), last) {
+			name := filepath.Join(dir, ent.Name())
+			if !strings.HasSuffix(name, sep) {
+				name += sep
+			}
+
+			predictions = append(predictions, name)
+		}
+	}
+
+	return predictions
 }

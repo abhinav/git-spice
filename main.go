@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
-	"github.com/posener/complete"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
@@ -151,10 +150,10 @@ func main() {
 			}
 			return args
 		}),
-		komplete.WithPredictor("branches", complete.PredictFunc(predictBranches)),
-		komplete.WithPredictor("trackedBranches", complete.PredictFunc(predictTrackedBranches)),
-		komplete.WithPredictor("remotes", complete.PredictFunc(predictRemotes)),
-		komplete.WithPredictor("dirs", complete.PredictDirs("")),
+		komplete.WithPredictor("branches", komplete.PredictFunc(predictBranches)),
+		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
+		komplete.WithPredictor("remotes", komplete.PredictFunc(predictRemotes)),
+		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
 	)
 
 	kctx, err := parser.Parse(args)
