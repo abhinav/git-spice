@@ -2,6 +2,7 @@ package spice
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -55,7 +57,23 @@ func GenerateBranchName(subject string) string {
 // LookupBranchResponse is the response to a LookupBranch request.
 // It includes information about the tracked branch.
 type LookupBranchResponse struct {
-	*state.LookupResponse
+	// Base is the base branch configured
+	// for the requested branch.
+	Base string
+
+	// BaseHash is the last known hash of the base branch.
+	// This may not match the current hash of the base branch.
+	BaseHash git.Hash
+
+	// Change is information about the published change
+	// associated with the branch.
+	//
+	// This is nil if the branch hasn't been published yet.
+	Change forge.ChangeMetadata
+
+	// UpstreamBranch is the name of the upstream branch
+	// or an empty string if the branch is not tracking an upstream branch.
+	UpstreamBranch string
 
 	// Head is the commit at the head of the branch.
 	Head git.Hash
@@ -94,10 +112,43 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 	// !nil     | nil    | Branch is not tracked
 	// !nil     | !nil   | Branch is not known to the repository
 	if storeErr == nil && gitErr == nil {
-		return &LookupBranchResponse{
-			LookupResponse: resp,
+		out := &LookupBranchResponse{
+			Base:           resp.Base,
+			BaseHash:       resp.BaseHash,
+			UpstreamBranch: resp.UpstreamBranch,
 			Head:           head,
-		}, nil
+		}
+
+		if resp.ChangeMetadata != nil {
+			f := s.forge
+
+			// It's super unliely that the branch has this metadata
+			// but no forge is available to deserialize it,
+			// but we'll handle it defensively anyway.
+			//
+			// The forge ID can also mismatch if, when we support
+			// multiple forges, someone changes migrates their code
+			// to a different forge after submitting a PR.
+			if f == nil || f.ID() != resp.ChangeForge {
+				// See if we can get the forge from the registry.
+				f, _ = forge.Lookup(resp.ChangeForge)
+			}
+
+			if f != nil {
+				md, err := f.UnmarshalChangeMetadata(resp.ChangeMetadata)
+				if err != nil {
+					s.log.Warn("Corrupt change metadata associated with branch",
+						"branch", name,
+						"metadata", string(resp.ChangeMetadata),
+						"err", err,
+					)
+				} else {
+					out.Change = md
+				}
+			}
+		}
+
+		return out, nil
 	}
 
 	// Only one of these errors is set.
@@ -212,6 +263,20 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		return fmt.Errorf("rename branch: %w", err)
 	}
 
+	var (
+		changeForge    string
+		changeMetadata json.RawMessage
+	)
+	if md := oldBranch.Change; md != nil {
+		if f, ok := forge.Lookup(md.ForgeID()); ok {
+			changeForge = f.ID()
+			changeMetadata, err = f.MarshalChangeMetadata(md)
+			if err != nil {
+				return fmt.Errorf("marshal change metadata: %w", err)
+			}
+		}
+	}
+
 	update := state.UpdateRequest{
 		Message: fmt.Sprintf("rename %q to %q", oldName, newName),
 		Deletes: []string{oldName},
@@ -220,7 +285,8 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 				Name:           newName,
 				Base:           oldBranch.Base,
 				BaseHash:       oldBranch.BaseHash,
-				PR:             oldBranch.PR,
+				ChangeForge:    changeForge,
+				ChangeMetadata: changeMetadata,
 				UpstreamBranch: oldBranch.UpstreamBranch,
 			},
 		},
@@ -254,8 +320,9 @@ type LoadBranchItem struct {
 	// This may not match the current commit hash of the base branch.
 	BaseHash git.Hash
 
-	// PR is the pull request number associated with the branch, if any.
-	PR int
+	// Change is the metadata associated with the branch.
+	// This is nil if the branch has not been published.
+	Change forge.ChangeMetadata
 
 	// UpstreamBranch is the name under which this branch
 	// was pushed to the upstream repository.
@@ -294,8 +361,8 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 			Head:           resp.Head,
 			Base:           resp.Base,
 			BaseHash:       resp.BaseHash,
-			PR:             resp.PR,
 			UpstreamBranch: resp.UpstreamBranch,
+			Change:         resp.Change,
 		})
 	}
 

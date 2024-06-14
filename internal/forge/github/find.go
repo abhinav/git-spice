@@ -22,7 +22,10 @@ type findPRNode struct {
 
 func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 	return &forge.FindChangeItem{
-		ID:       forge.ChangeID(n.Number),
+		ID: &PR{
+			Number: int(n.Number),
+			GQLID:  n.ID,
+		},
 		URL:      n.URL.String(),
 		State:    forgeChangeState(n.State),
 		Subject:  string(n.Title),
@@ -113,7 +116,7 @@ func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*fo
 	if err := r.client.Query(ctx, &q, map[string]any{
 		"owner":  githubv4.String(r.owner),
 		"repo":   githubv4.String(r.repo),
-		"number": githubv4.Int(id),
+		"number": githubv4.Int(mustPR(id).Number),
 	}); err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}

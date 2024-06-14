@@ -135,11 +135,14 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		change, err := repo.FindChangeByID(ctx, 141)
+		change, err := repo.FindChangeByID(ctx, &github.PR{Number: 141})
 		require.NoError(t, err)
 
 		assert.Equal(t, &forge.FindChangeItem{
-			ID:       141,
+			ID: &github.PR{
+				Number: 141,
+				GQLID:  "PR_kwDOJ2BQKs5xNT-u",
+			},
 			URL:      "https://github.com/abhinav/git-spice/pull/141",
 			Subject:  "branch submit: Heal from external PR submissions",
 			State:    forge.ChangeMerged,
@@ -150,7 +153,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	})
 
 	t.Run("not-found", func(t *testing.T) {
-		_, err := repo.FindChangeByID(ctx, 999)
+		_, err := repo.FindChangeByID(ctx, &github.PR{Number: 999})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "Could not resolve")
 	})
@@ -168,7 +171,10 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []*forge.FindChangeItem{
 			{
-				ID:       144,
+				ID: &github.PR{
+					Number: 144,
+					GQLID:  "PR_kwDOJ2BQKs5xNeqO",
+				},
 				URL:      "https://github.com/abhinav/git-spice/pull/144",
 				State:    forge.ChangeMerged,
 				Subject:  "GitHub: Use GraphQL API",
@@ -194,13 +200,13 @@ func TestIntegration_Repository_IsMerged(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("false", func(t *testing.T) {
-		ok, err := repo.ChangeIsMerged(ctx, 144)
+		ok, err := repo.ChangeIsMerged(ctx, &github.PR{Number: 144})
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
 
 	t.Run("true", func(t *testing.T) {
-		ok, err := repo.ChangeIsMerged(ctx, 141)
+		ok, err := repo.ChangeIsMerged(ctx, &github.PR{Number: 141})
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
@@ -233,5 +239,31 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 		template := templates[0]
 		assert.Equal(t, "PULL_REQUEST_TEMPLATE", template.Filename)
 		assert.NotEmpty(t, template.Body)
+	})
+}
+
+func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
+	ctx := context.Background()
+
+	rec := newRecorder(t, t.Name())
+	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	require.NoError(t, err)
+
+	t.Run("valid", func(t *testing.T) {
+		md, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 196})
+		require.NoError(t, err)
+
+		assert.Equal(t, &github.PR{
+			Number: 196,
+			GQLID:  "PR_kwDOJ2BQKs5ylEYu",
+		}, md.ChangeID())
+		assert.Equal(t, "github", md.ForgeID())
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 10000})
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "get pull request ID")
 	})
 }

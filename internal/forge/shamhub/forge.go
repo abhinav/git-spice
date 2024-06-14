@@ -37,6 +37,53 @@ var _ forge.Forge = (*Forge)(nil)
 // ID reports a unique identifier for this forge.
 func (*Forge) ID() string { return "shamhub" }
 
+// ChangeMetadata records the metadata for a change on a ShamHub server.
+type ChangeMetadata struct {
+	Number int `json:"number"`
+}
+
+// ForgeID reports the forge ID that owns this metadata.
+func (*ChangeMetadata) ForgeID() string {
+	return "shamhub" // TODO: const
+}
+
+// ChangeID reports the change ID of the change.
+func (m *ChangeMetadata) ChangeID() forge.ChangeID {
+	return ChangeID(m.Number)
+}
+
+// NewChangeMetadata returns the metadata for a change on a ShamHub server.
+func (f *forgeRepository) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
+	return &ChangeMetadata{Number: int(id.(ChangeID))}, nil
+}
+
+// MarshalChangeMetadata marshals the given change metadata to JSON.
+func (f *Forge) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+	return json.Marshal(md)
+}
+
+// UnmarshalChangeMetadata unmarshals the given JSON data to change metadata.
+func (f *Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+	var md ChangeMetadata
+	if err := json.Unmarshal(data, &md); err != nil {
+		return nil, fmt.Errorf("unmarshal change metadata: %w", err)
+	}
+	return &md, nil
+}
+
+// ChangeID is a unique identifier for a change on a ShamHub server.
+type ChangeID int
+
+var _ forge.ChangeID = ChangeID(0)
+
+func (id ChangeID) String() string { return fmt.Sprintf("#%d", id) }
+
+// MatchURL reports whether the given URL is a ShamHub URL.
+func (f *Forge) MatchURL(remoteURL string) bool {
+	_, ok := strings.CutPrefix(remoteURL, f.URL)
+	return ok
+}
+
 // OpenURL opens a repository hosted on the forge with the given remote URL.
 func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {
 	tail, ok := strings.CutPrefix(remoteURL, f.URL)
@@ -99,7 +146,7 @@ func (f *forgeRepository) SubmitChange(ctx context.Context, r forge.SubmitChange
 	}
 
 	return forge.SubmitChangeResult{
-		ID:  forge.ChangeID(res.Number),
+		ID:  ChangeID(res.Number),
 		URL: res.URL,
 	}, nil
 }
@@ -139,7 +186,7 @@ func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 		}
 
 		changes[i] = &forge.FindChangeItem{
-			ID:       forge.ChangeID(c.Number),
+			ID:       ChangeID(c.Number),
 			URL:      c.URL,
 			State:    state,
 			Subject:  c.Subject,
@@ -151,7 +198,8 @@ func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 	return changes, nil
 }
 
-func (f *forgeRepository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
+func (f *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID) (*forge.FindChangeItem, error) {
+	id := fid.(ChangeID)
 	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)))
 	var res Change
 	if err := f.client.Get(ctx, u.String(), &res); err != nil {
@@ -159,7 +207,7 @@ func (f *forgeRepository) FindChangeByID(ctx context.Context, id forge.ChangeID)
 	}
 
 	return &forge.FindChangeItem{
-		ID:       forge.ChangeID(res.Number),
+		ID:       ChangeID(res.Number),
 		URL:      res.URL,
 		Subject:  res.Subject,
 		HeadHash: git.Hash(res.Head.Hash),
@@ -168,7 +216,7 @@ func (f *forgeRepository) FindChangeByID(ctx context.Context, id forge.ChangeID)
 	}, nil
 }
 
-func (f *forgeRepository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
+func (f *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
 	var req editChangeRequest
 	if opts.Base != "" {
 		req.Base = &opts.Base
@@ -177,6 +225,7 @@ func (f *forgeRepository) EditChange(ctx context.Context, id forge.ChangeID, opt
 		req.Draft = opts.Draft
 	}
 
+	id := fid.(ChangeID)
 	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)))
 	var res editChangeResponse
 	if err := f.client.Patch(ctx, u.String(), req, &res); err != nil {
@@ -186,7 +235,8 @@ func (f *forgeRepository) EditChange(ctx context.Context, id forge.ChangeID, opt
 	return nil
 }
 
-func (f *forgeRepository) ChangeIsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
+func (f *forgeRepository) ChangeIsMerged(ctx context.Context, fid forge.ChangeID) (bool, error) {
+	id := fid.(ChangeID)
 	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)), "merged")
 	var res isMergedResponse
 	if err := f.client.Get(ctx, u.String(), &res); err != nil {

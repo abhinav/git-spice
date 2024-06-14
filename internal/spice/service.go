@@ -5,9 +5,12 @@ import (
 	"context"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 )
+
+//go:generate mockgen -destination=mock_service_test.go -package=spice . GitRepository,Store
 
 // GitRepository provides read/write access to the conents of a git repository.
 // It is a subset of the functionality provied by the git.Repository type.
@@ -37,6 +40,7 @@ type GitRepository interface {
 
 	// ListRemotes returns the names of all known remotes.
 	ListRemotes(ctx context.Context) ([]string, error)
+	RemoteURL(ctx context.Context, remote string) (string, error)
 
 	Rebase(context.Context, git.RebaseRequest) error
 	RenameBranch(context.Context, git.RenameBranchRequest) error
@@ -51,6 +55,7 @@ var _ GitRepository = (*git.Repository)(nil)
 type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
+	Remote() (string, error)
 
 	// LookupBranch returns the branch state for the given branch,
 	// or [state.ErrNotExist] if the branch does not exist.
@@ -79,14 +84,26 @@ var _ Store = (*state.Store)(nil)
 type Service struct {
 	repo  GitRepository
 	store Store
+	forge forge.Forge
 	log   *log.Logger
 }
 
 // NewService builds a new service operating on the given repository and store.
-func NewService(repo GitRepository, store Store, log *log.Logger) *Service {
+func NewService(ctx context.Context, repo GitRepository, store Store, log *log.Logger) *Service {
+	var forg forge.Forge
+	if remote, err := store.Remote(); err == nil {
+		remoteURL, err := repo.RemoteURL(ctx, remote)
+		if err == nil {
+			if f, ok := forge.MatchForgeURL(remoteURL); ok {
+				forg = f
+			}
+		}
+	}
+
 	return &Service{
 		repo:  repo,
 		store: store,
 		log:   log,
+		forge: forg,
 	}
 }

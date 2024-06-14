@@ -46,6 +46,12 @@ var _ forge.Forge = (*Forge)(nil)
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "github" }
 
+// MatchURL reports whether the given URL is a GitHub URL.
+func (f *Forge) MatchURL(remoteURL string) bool {
+	_, _, err := extractRepoInfo(f.URL, remoteURL)
+	return err == nil
+}
+
 // OpenURL opens a GitHub repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitHub URL.
 func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {

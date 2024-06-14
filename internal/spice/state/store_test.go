@@ -2,6 +2,7 @@ package state_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,10 +37,11 @@ func TestIntegrationStore(t *testing.T) {
 
 	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
-			Name:     "foo",
-			Base:     "main",
-			BaseHash: "123456",
-			PR:       42,
+			Name:           "foo",
+			Base:           "main",
+			BaseHash:       "123456",
+			ChangeForge:    "shamhub",
+			ChangeMetadata: json.RawMessage(`{"number": 42}`),
 		}},
 	})
 	require.NoError(t, err)
@@ -48,20 +50,20 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.LookupResponse{
-			Base:     "main",
-			BaseHash: "123456",
-			PR:       42,
-		}, res)
+		assert.Equal(t, "main", res.Base)
+		assert.Equal(t, "123456", string(res.BaseHash))
+		assert.Equal(t, "shamhub", res.ChangeForge)
+		assert.JSONEq(t, `{"number": 42}`, string(res.ChangeMetadata))
 	})
 
 	t.Run("overwrite", func(t *testing.T) {
 		err := store.UpdateBranch(ctx, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
-				Name:     "foo",
-				Base:     "bar",
-				BaseHash: "54321",
-				PR:       43,
+				Name:           "foo",
+				Base:           "bar",
+				BaseHash:       "54321",
+				ChangeForge:    "shamhub",
+				ChangeMetadata: json.RawMessage(`{"id": 43}`),
 			}},
 		})
 		require.NoError(t, err)
@@ -69,30 +71,29 @@ func TestIntegrationStore(t *testing.T) {
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, &state.LookupResponse{
-			Base:     "bar",
-			BaseHash: "54321",
-			PR:       43,
-		}, res)
+		assert.Equal(t, "bar", res.Base)
+		assert.Equal(t, "54321", string(res.BaseHash))
+		assert.Equal(t, "shamhub", res.ChangeForge)
+		assert.JSONEq(t, `{"id": 43}`, string(res.ChangeMetadata))
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
 		err := store.UpdateBranch(ctx, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
-				Name:     "bar/baz",
-				Base:     "main",
-				PR:       44,
-				BaseHash: "abcdef",
+				Name:           "bar/baz",
+				Base:           "main",
+				ChangeForge:    "shamhub",
+				ChangeMetadata: json.RawMessage(`{"id": 44}`),
+				BaseHash:       "abcdef",
 			}},
 		})
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "bar/baz")
 		require.NoError(t, err)
-		assert.Equal(t, &state.LookupResponse{
-			Base:     "main",
-			BaseHash: "abcdef",
-			PR:       44,
-		}, res)
+		assert.Equal(t, "main", res.Base)
+		assert.Equal(t, "abcdef", string(res.BaseHash))
+		assert.Equal(t, "shamhub", res.ChangeForge)
+		assert.JSONEq(t, `{"id": 44}`, string(res.ChangeMetadata))
 	})
 }

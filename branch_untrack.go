@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -26,11 +24,9 @@ func (*branchUntrackCmd) Help() string {
 }
 
 func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
+	repo, _, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
+		return err
 	}
 
 	if cmd.Name == "" {
@@ -39,13 +35,6 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 			return fmt.Errorf("get current branch: %w", err)
 		}
 	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
-	if err != nil {
-		return err
-	}
-
-	svc := spice.NewService(repo, store, log)
 
 	// TODO: prompt for confirmation?
 	if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {

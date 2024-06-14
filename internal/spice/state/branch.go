@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/maputil"
+	"go.abhg.dev/gs/internal/must"
 )
 
 const _branchesDir = "branches"
@@ -18,18 +21,76 @@ type branchStateBase struct {
 	Hash string `json:"hash"`
 }
 
-type branchGitHubState struct {
-	PR int `json:"pr,omitempty"`
-}
-
 type branchUpstreamState struct {
 	Branch string `json:"branch,omitempty"`
+}
+
+type branchChangeState struct {
+	Forge  string
+	Change json.RawMessage
+}
+
+func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]any{bs.Forge: bs.Change})
+}
+
+func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return fmt.Errorf("unmarshal change state: %w", err)
+	}
+	if len(m) != 1 {
+		got := maputil.Keys(m)
+		return fmt.Errorf("expected 1 forge key, got %d: %v", len(got), got)
+	}
+
+	for forge, raw := range m {
+		bs.Forge = forge
+		bs.Change = raw
+	}
+
+	return nil
 }
 
 type branchState struct {
 	Base     branchStateBase      `json:"base"`
 	Upstream *branchUpstreamState `json:"upstream,omitempty"`
-	GitHub   *branchGitHubState   `json:"github,omitempty"`
+	Change   *branchChangeState   `json:"change,omitempty"`
+}
+
+func (bs *branchState) UnmarshalJSON(data []byte) error {
+	type rawBranchState branchState
+
+	var raw struct {
+		rawBranchState
+
+		GitHubChange json.RawMessage `json:"github,omitempty"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("unmarshal branch state: %w", err)
+	}
+
+	*bs = branchState(raw.rawBranchState)
+
+	// Backwards compatibility for "github" change ID.
+	// Upgrade to the new format.
+	if len(raw.GitHubChange) > 0 {
+		if bs.Change != nil {
+			if bs.Change.Forge != "github" {
+				return fmt.Errorf("branch state has mixed forge metadata: github and %s", bs.Change.Forge)
+			}
+			// If the change is already a github change,
+			// prefer the new format's version.
+		} else {
+			bs.Change = &branchChangeState{
+				Forge:  "github",
+				Change: raw.GitHubChange,
+			}
+		}
+		raw.GitHubChange = nil
+	}
+
+	return nil
 }
 
 // branchJSON returns the path to the JSON file for the given branch
@@ -51,9 +112,12 @@ type LookupResponse struct {
 	// This may not match the current hash of the base branch.
 	BaseHash git.Hash
 
-	// PR is the number of the pull request associated with the branch,
-	// or zero if the branch is not associated with a PR.
-	PR int
+	// ChangeMetadata holds the metadata for the published change.
+	// This is forge-specific and must be deserialized by the forge.
+	ChangeMetadata json.RawMessage
+
+	// ChangeForge is the forge that the change was published to.
+	ChangeForge string
 
 	// UpstreamBranch is the name of the upstream branch
 	// or an empty string if the branch is not tracking an upstream branch.
@@ -72,9 +136,12 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 		Base:     state.Base.Name,
 		BaseHash: git.Hash(state.Base.Hash),
 	}
-	if gh := state.GitHub; gh != nil {
-		res.PR = gh.PR
+
+	if change := state.Change; change != nil {
+		res.ChangeMetadata = change.Change
+		res.ChangeForge = change.Forge
 	}
+
 	if upstream := state.Upstream; upstream != nil {
 		res.UpstreamBranch = upstream.Branch
 	}
@@ -130,9 +197,16 @@ type UpsertRequest struct {
 	// Leave empty to keep the current base hash.
 	BaseHash git.Hash
 
-	// PR is the number of the pull request associated with the branch.
-	// Leave zero to keep the current PR.
-	PR int
+	// ChangeMetadata is arbitrary, forge-specific metadata
+	// recorded with the branch.
+	//
+	// Leave this unset to keep the current metadata.
+	ChangeMetadata json.RawMessage
+
+	// ChangeForge is the forge that recorded the change.
+	//
+	// If ChangeMetadata is set, this must also be set.
+	ChangeForge string
 
 	// UpstreamBranch is the name of the upstream branch to track.
 	// Leave empty to stop tracking an upstream branch.
@@ -169,11 +243,15 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 		if req.BaseHash != "" {
 			b.Base.Hash = req.BaseHash.String()
 		}
-		if req.PR != 0 {
-			b.GitHub = &branchGitHubState{
-				PR: req.PR,
+
+		if len(req.ChangeMetadata) > 0 {
+			must.NotBeBlankf(req.ChangeForge, "change forge is required when change metadata is set")
+			b.Change = &branchChangeState{
+				Forge:  req.ChangeForge,
+				Change: req.ChangeMetadata,
 			}
 		}
+
 		if req.UpstreamBranch != "" {
 			b.Upstream = &branchUpstreamState{
 				Branch: req.UpstreamBranch,

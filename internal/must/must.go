@@ -56,6 +56,14 @@ func NotBeEmptyf[T any](es []T, format string, args ...any) {
 	}
 }
 
+// NotBeZerof panics if v is the zero value.
+func NotBeZerof[T comparable](v T, format string, args ...any) {
+	var zero T
+	if v == zero {
+		panicErrorf(format, args...)
+	}
+}
+
 // NotBeNilf panics if v is nil.
 func NotBeNilf(v any, format string, args ...any) {
 	if v == nil {

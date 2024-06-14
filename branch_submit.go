@@ -64,19 +64,10 @@ func (cmd *branchSubmitCmd) Run(
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
 	}
-
-	svc := spice.NewService(repo, store, log)
 
 	if cmd.Name == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -127,7 +118,7 @@ func (cmd *branchSubmitCmd) Run(
 	// we'll probably need to create one,
 	// but verify that there isn't already one open.
 	var existingChange *forge.FindChangeItem
-	if branch.PR == 0 {
+	if branch.Change == nil {
 		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch, forge.FindChangesOptions{
 			State: forge.ChangeOpen,
 			Limit: 3,
@@ -142,15 +133,27 @@ func (cmd *branchSubmitCmd) Run(
 		case 1:
 			existingChange = changes[0]
 
+			md, err := remoteRepo.NewChangeMetadata(ctx, existingChange.ID)
+			if err != nil {
+				return fmt.Errorf("get change metadata: %w", err)
+			}
+
+			// TODO: this should all happen in Service, probably.
+			changeMeta, err := remoteRepo.Forge().MarshalChangeMetadata(md)
+			if err != nil {
+				return fmt.Errorf("marshal change metadata: %w", err)
+			}
+
 			// A PR was found, but it wasn't associated with the branch.
 			// It was probably created manually.
 			// We'll heal the state while we're at it.
 			log.Infof("%v: Found existing PR %v", cmd.Name, existingChange.ID)
-			err := store.UpdateBranch(ctx, &state.UpdateRequest{
+			err = store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{
 					{
-						Name: cmd.Name,
-						PR:   int(existingChange.ID),
+						Name:           cmd.Name,
+						ChangeForge:    md.ForgeID(),
+						ChangeMetadata: changeMeta,
 					},
 				},
 				Message: fmt.Sprintf("%v: associate existing PR", cmd.Name),
@@ -170,7 +173,8 @@ func (cmd *branchSubmitCmd) Run(
 	} else {
 		// If a PR is already associated with the branch,
 		// fetch information about it to compare with the current state.
-		change, err := remoteRepo.FindChangeByID(ctx, forge.ChangeID(branch.PR))
+		changeID := branch.Change.ChangeID()
+		change, err := remoteRepo.FindChangeByID(ctx, changeID)
 		if err != nil {
 			return fmt.Errorf("find change: %w", err)
 		}
@@ -244,7 +248,19 @@ func (cmd *branchSubmitCmd) Run(
 			if err != nil {
 				return err
 			}
-			upsert.PR = int(changeID)
+
+			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, changeID)
+			if err != nil {
+				return fmt.Errorf("get change metadata: %w", err)
+			}
+
+			changeIDJSON, err := remoteRepo.Forge().MarshalChangeMetadata(changeMeta)
+			if err != nil {
+				return fmt.Errorf("marshal change ID: %w", err)
+			}
+
+			upsert.ChangeForge = changeMeta.ForgeID()
+			upsert.ChangeMetadata = changeIDJSON
 		} else {
 			log.Infof("Pushed %s", cmd.Name)
 		}
@@ -482,7 +498,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
 		Draft:   b.draft,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("create change: %w", err)
+		return nil, fmt.Errorf("create change: %w", err)
 	}
 
 	b.log.Infof("Created %v: %s", result.ID, result.URL)

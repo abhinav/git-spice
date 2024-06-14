@@ -37,14 +37,7 @@ func (*upstackRestackCmd) Help() string {
 }
 
 func (cmd *upstackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
 	}
@@ -56,8 +49,6 @@ func (cmd *upstackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		}
 		cmd.Name = currentBranch
 	}
-
-	svc := spice.NewService(repo, store, log)
 
 	upstacks, err := svc.ListUpstack(ctx, cmd.Name)
 	if err != nil {

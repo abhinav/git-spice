@@ -12,9 +12,7 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -36,20 +34,13 @@ func (*downstackEditCmd) Help() string {
 }
 
 func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	if cmd.Editor == "" {
-		return errors.New("an editor is required: use --editor or set $EDITOR")
-	}
-
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
+	}
+
+	if cmd.Editor == "" {
+		return errors.New("an editor is required: use --editor or set $EDITOR")
 	}
 
 	if cmd.Name == "" {
@@ -63,8 +54,6 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 	if cmd.Name == store.Trunk() {
 		return errors.New("cannot edit below trunk")
 	}
-
-	svc := spice.NewService(repo, store, log)
 
 	downstacks, err := svc.ListDownstack(ctx, cmd.Name)
 	if err != nil {

@@ -10,30 +10,15 @@ import (
 )
 
 // EditChange edits an existing change in a repository.
-func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
+func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts) {
 		return nil // nothing to do
 	}
 
 	// We don't know the GraphQL ID for the PR, so find it.
-	var graphQLID githubv4.ID
-	{
-		// TODO: Record both, PR number and GraphQL ID, in the store.
-		var q struct {
-			Repository struct {
-				PullRequest struct {
-					ID githubv4.ID `graphql:"id"`
-				} `graphql:"pullRequest(number: $number)"`
-			} `graphql:"repository(owner: $owner, name: $repo)"`
-		}
-		if err := r.client.Query(ctx, &q, map[string]any{
-			"owner":  githubv4.String(r.owner),
-			"repo":   githubv4.String(r.repo),
-			"number": githubv4.Int(id),
-		}); err != nil {
-			return fmt.Errorf("get pull request ID: %w", err)
-		}
-		graphQLID = q.Repository.PullRequest.ID
+	graphQLID, err := r.graphQLID(ctx, mustPR(fid))
+	if err != nil {
+		return fmt.Errorf("get pull request ID: %w", err)
 	}
 
 	if opts.Base != "" {

@@ -2,12 +2,14 @@
 // and the underlying forge (e.g. GitHub, GitLab, Bitbucket).
 package forge
 
+// TODO: Rename this package to codeforge or something similar
+// so we can use "forge" in variable names more easily.
+
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
-	"strconv"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
@@ -25,73 +27,71 @@ func Register(f Forge) (unregister func()) {
 	}
 }
 
+// Lookup looks up a registered forge by its ID.
+func Lookup(id string) (Forge, bool) {
+	f, ok := _forgeRegistry.Load(id)
+	if !ok {
+		return nil, false
+	}
+	return f.(Forge), true
+}
+
+// MatchForgeURL attempts to match the given remote URL with a registered forge.
+// Returns the matched forge and true if a match was found.
+func MatchForgeURL(remoteURL string) (forge Forge, ok bool) {
+	_forgeRegistry.Range(func(_, value any) (keepGoing bool) {
+		f := value.(Forge)
+		if f.MatchURL(remoteURL) {
+			forge = f
+			ok = true
+			return false
+		}
+		return true
+	})
+	return forge, ok
+}
+
 // OpenRepositoryURL opens a repository hosted on a forge
 // by parsing the given remote URL.
 //
 // It will attempt to match the URL with all registered forges.
 func OpenRepositoryURL(ctx context.Context, remoteURL string) (repo Repository, _ error) {
-	var (
-		attempted []string
-		outerErr  error
-	)
-	_forgeRegistry.Range(func(key, value any) (keepGoing bool) {
-		id := key.(string)
-		forge := value.(Forge)
-
-		var err error
-		repo, err = forge.OpenURL(ctx, remoteURL)
-		if err == nil {
-			return false
-		}
-
-		if errors.Is(err, ErrUnsupportedURL) {
-			attempted = append(attempted, id)
-			return true
-		}
-
-		outerErr = fmt.Errorf("%v: %w", id, err)
-		return false
-	})
-
-	if outerErr != nil {
-		return nil, outerErr
+	forge, ok := MatchForgeURL(remoteURL)
+	if !ok {
+		return nil, ErrUnsupportedURL
 	}
-
-	if repo == nil {
-		sort.Strings(attempted)
-		return nil, fmt.Errorf("%w; attempted: %v", ErrUnsupportedURL, attempted)
-	}
-
-	return repo, nil
+	return forge.OpenURL(ctx, remoteURL)
 }
 
-// ChangeID is a unique identifier for a change in a repository.
-type ChangeID int
-
-// TODO: ChangeID will become an interface in the future.
-
-func (id ChangeID) String() string {
-	return "#" + strconv.Itoa(int(id))
-}
-
-// ErrUnsupportedURL is returned when the given URL is not a valid GitHub URL.
+// ErrUnsupportedURL indicates that the given remote URL
+// does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")
 
 // Forge is a forge that hosts Git repositories.
 type Forge interface {
 	// ID reports a unique identifier for the forge, e.g. "github".
 	ID() string
-	// TODO: Use ID as the storage key.
+
+	// MatchURL reports whether the given remote URL is hosted on the forge.
+	MatchURL(remoteURL string) bool
 
 	// OpenURL opens a repository hosted on the forge
 	// with the given remote URL.
 	//
-	// Returns [ErrUnsupportedURL] if the URL is not supported.
+	// This will only be called if MatchURL reports true.
 	OpenURL(ctx context.Context, remoteURL string) (Repository, error)
 
 	// ChangeTemplatePaths reports the case-insensitive paths at which
 	// it's possible to define change templates in the repository.
 	ChangeTemplatePaths() []string
+
+	// MarshalChangeMetadata serializes the given change metadata
+	// into a valid JSON blob.
+	MarshalChangeMetadata(ChangeMetadata) (json.RawMessage, error)
+
+	// UnmarshalChangeMetadata deserializes the given JSON blob
+	// into change metadata.
+	UnmarshalChangeMetadata(json.RawMessage) (ChangeMetadata, error)
 }
 
 // Repository is a Git repository hosted on a forge.
@@ -104,11 +104,39 @@ type Repository interface {
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeIsMerged(ctx context.Context, id ChangeID) (bool, error)
 
+	// NewChangeMetadata builds a ChangeMetadata for the given change ID.
+	//
+	// This may perform network requests to fetch additional information
+	// if necessary.
+	NewChangeMetadata(ctx context.Context, id ChangeID) (ChangeMetadata, error)
+
 	// ListChangeTemplates returns templates defined in the repository
 	// for new change proposals.
 	//
 	// Returns an empty list if no templates are found.
 	ListChangeTemplates(context.Context) ([]*ChangeTemplate, error)
+}
+
+// ChangeID is a unique identifier for a change in a repository.
+type ChangeID interface {
+	String() string
+}
+
+// ChangeMetadata defines Forge-specific per-change metadata.
+// This metadata is persisted to the state store alongside the branch state.
+// It is used to track the relationship between a branch
+// and its corresponding change in the forge.
+//
+// The implementation is per-forge, and should contain enough information
+// for the forge to uniquely identify a change within a repository.
+//
+// The metadata must be JSON-serializable (as defined by methods on Forge).
+type ChangeMetadata interface {
+	ForgeID() string
+
+	// ChangeID is a human-readable identifier for the change.
+	// This is presented to the user in the UI.
+	ChangeID() ChangeID
 }
 
 // FindChangesOptions specifies filtering options

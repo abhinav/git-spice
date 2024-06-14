@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/spice"
 )
 
 type stackSubmitCmd struct {
@@ -19,14 +17,7 @@ func (cmd *stackSubmitCmd) Run(
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
 	}
@@ -36,7 +27,6 @@ func (cmd *stackSubmitCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	svc := spice.NewService(repo, store, log)
 	stack, err := svc.ListStack(ctx, currentBranch)
 	if err != nil {
 		return fmt.Errorf("list stack: %w", err)
