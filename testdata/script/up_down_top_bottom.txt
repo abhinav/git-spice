@@ -142,13 +142,13 @@ cmp stderr $WORK/golden/git_ll_a.output
 main ◀
 -- golden/git_ll_a.output --
         ┏━□ feature5
-        ┃   └○ a9357f7 Add feature5 (now)
+        ┃   a9357f7 Add feature5 (now)
       ┏━┻□ feature4
-      ┃    └○ 93a1ae5 Add feature4 (now)
+      ┃    93a1ae5 Add feature4 (now)
     ┏━┻□ feature3
-    ┃    └○ 9fc19e9 Add feature3 (now)
+    ┃    9fc19e9 Add feature3 (now)
   ┏━┻□ feature2
-  ┃    └○ 953fcd4 Add feature2 (now)
+  ┃    953fcd4 Add feature2 (now)
 ┏━┻□ feature1
-┃    └○ 4d52225 Add feature1 (now)
+┃    4d52225 Add feature1 (now)
 main ◀
