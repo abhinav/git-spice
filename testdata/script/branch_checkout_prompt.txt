@@ -106,10 +106,6 @@ Select a branch to checkout:
   bar
 ▶ baz
 ### track ###
-Select a branch to checkout:
-
-  bar
-▶ baz
-
+Select a branch to checkout: baz
 WRN baz: branch not tracked
 Do you want to track this branch now?: [Y/n]

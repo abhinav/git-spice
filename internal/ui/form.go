@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"go.abhg.dev/gs/internal/must"
 )
 
 // FormKeyMap defines the key bindings for a form.
@@ -56,6 +55,13 @@ type acceptFieldMsg struct{}
 // to accept the field and move to the next one.
 func AcceptField() tea.Msg {
 	return acceptFieldMsg{}
+}
+
+type skipFieldMsg struct{}
+
+// SkipField is a [tea.Cmd] to skip the currently focused field.
+func SkipField() tea.Msg {
+	return skipFieldMsg{}
 }
 
 // Writer receives a rendered view of a [Field].
@@ -159,24 +165,18 @@ func (f *Form) Init() tea.Cmd {
 
 // Update implements tea.Model.
 func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	oldFocused := f.focused
+
 	switch msg := msg.(type) {
 	case acceptFieldMsg:
-		must.BeInRangef(f.focused, 0, len(f.fields),
-			"focused field (%v) out of range", f.focused)
-
 		// When a field is accepted, freeze its current view.
 		var acceptedView strings.Builder
 		f.renderField(&acceptedView, f.fields[f.focused], true)
 		f.accepted = append(f.accepted, acceptedView.String())
-
 		f.focused++
-		if f.focused >= len(f.fields) {
-			// Quitting here guarantees that we'll
-			// never be out of bounds.
-			return f, tea.Quit
-		}
 
-		return f, f.fields[f.focused].Init()
+	case skipFieldMsg:
+		f.focused++
 
 	case tea.KeyMsg:
 		if key.Matches(msg, f.KeyMap.Cancel) {
@@ -187,6 +187,10 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if f.focused >= len(f.fields) {
 		return f, tea.Quit
+	}
+
+	if oldFocused != f.focused {
+		return f, f.fields[f.focused].Init()
 	}
 
 	return f, f.fields[f.focused].Update(msg)

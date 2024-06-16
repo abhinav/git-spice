@@ -328,6 +328,94 @@ func (cmd *branchSubmitCmd) Run(
 	return nil
 }
 
+type branchSubmitForm struct {
+	ctx    context.Context
+	svc    *spice.Service
+	remote forge.Repository
+	log    *log.Logger
+
+	tmpl *forge.ChangeTemplate
+}
+
+func newBranchSubmitForm(
+	ctx context.Context,
+	svc *spice.Service,
+	remoteRepo forge.Repository,
+	log *log.Logger,
+) *branchSubmitForm {
+	return &branchSubmitForm{
+		ctx:    ctx,
+		svc:    svc,
+		log:    log,
+		remote: remoteRepo,
+	}
+}
+
+func (f *branchSubmitForm) titleField(title *string) ui.Field {
+	return ui.NewInput().
+		WithValue(title).
+		WithTitle("Title").
+		WithDescription("Short summary of the pull request").
+		WithValidate(func(s string) error {
+			if strings.TrimSpace(s) == "" {
+				return errors.New("title cannot be blank")
+			}
+			return nil
+		})
+}
+
+func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.ChangeTemplate) ui.Field {
+	return ui.Defer(func() ui.Field {
+		templates := <-changeTemplatesCh
+		switch len(templates) {
+		case 0:
+			return nil
+
+		case 1:
+			f.tmpl = templates[0]
+			return nil
+
+		default:
+			opts := make([]ui.Option[*forge.ChangeTemplate], len(templates))
+			for i, tmpl := range templates {
+				opts[i] = ui.Option[*forge.ChangeTemplate]{
+					Label: tmpl.Filename,
+					Value: tmpl,
+				}
+			}
+
+			return ui.NewSelect[*forge.ChangeTemplate]().
+				WithValue(&f.tmpl).
+				WithOptions(opts...).
+				WithTitle("Template").
+				WithDescription("Choose a template for the pull request body")
+		}
+	})
+}
+
+func (f *branchSubmitForm) bodyField(body *string) ui.Field {
+	return ui.Defer(func() ui.Field {
+		// By this point, the template field should have already run.
+		if f.tmpl != nil {
+			*body += "\n\n" + f.tmpl.Body
+		}
+
+		// TODO: Delete defaultFunc
+		return ui.NewOpenEditor().
+			WithValue(body).
+			WithTitle("Body").
+			WithDescription("Open your editor to write " +
+				"a detailed description of the pull request")
+	})
+}
+
+func (f *branchSubmitForm) draftField(draft *bool) ui.Field {
+	return ui.NewConfirm().
+		WithValue(draft).
+		WithTitle("Draft").
+		WithDescription("Mark the pull request as a draft?")
+}
+
 // Fills change information in the branch submit command.
 func (cmd *branchSubmitCmd) preparePublish(
 	ctx context.Context,
@@ -338,11 +426,10 @@ func (cmd *branchSubmitCmd) preparePublish(
 	remoteRepo forge.Repository,
 	baseBranch string,
 ) (*preparedBranch, error) {
-	// Fetch the template while we're figuring out the default PR
-	// title and body.
-	changeTemplate := make(chan *forge.ChangeTemplate, 1)
+	// Fetch the template while we're prompting the other fields.
+	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
 	go func() {
-		defer close(changeTemplate)
+		defer close(changeTemplatesCh)
 
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -350,12 +437,10 @@ func (cmd *branchSubmitCmd) preparePublish(
 		templates, err := svc.ListChangeTemplates(ctx, remoteRepo)
 		if err != nil {
 			log.Warn("Could not list change templates", "error", err)
-			return
+			templates = nil
 		}
 
-		if len(templates) > 0 {
-			changeTemplate <- templates[0]
-		}
+		changeTemplatesCh <- templates
 	}()
 
 	msgs, err := repo.CommitMessageRange(ctx, cmd.Name, baseBranch)
@@ -393,58 +478,36 @@ func (cmd *branchSubmitCmd) preparePublish(
 		}
 	}
 
-	// getDefaultBody retrieves the default body,
-	// blocking until the template is fetched.
-	getDefaultBody := func() string {
-		if tmpl, ok := <-changeTemplate; ok {
-			defaultBody.WriteString("\n\n")
-			defaultBody.WriteString(tmpl.Body)
-		}
-
-		return defaultBody.String()
-	}
-
 	var fields []ui.Field
+	form := newBranchSubmitForm(ctx, svc, remoteRepo, log)
 	if cmd.Title == "" {
 		cmd.Title = defaultTitle
-		title := ui.NewInput().
-			WithValue(&cmd.Title).
-			WithTitle("Title").
-			WithDescription("Short summary of the pull request").
-			WithValidate(func(s string) error {
-				if strings.TrimSpace(s) == "" {
-					return errors.New("title cannot be blank")
-				}
-				return nil
-			})
-		fields = append(fields, title)
+		fields = append(fields, form.titleField(&cmd.Title))
 	}
 
 	if cmd.Body == "" {
-		// Resolve the default body only if we're not prompting
-		// because if we're prompting, we can wait until the user
-		// has finished editing the title.
-		if !opts.Prompt {
-			cmd.Body = getDefaultBody()
+		cmd.Body = defaultBody.String()
+		if cmd.Fill {
+			// If the user selected --fill,
+			// and there are templates to choose from,
+			// just pick the first template in the body.
+			tmpls := <-changeTemplatesCh
+			if len(tmpls) > 0 {
+				cmd.Body += "\n\n" + tmpls[0].Body
+			}
+		} else {
+			// Otherwise, we'll prompt for the template (if needed)
+			// and the body.
+			fields = append(fields, form.templateField(changeTemplatesCh))
+			fields = append(fields, form.bodyField(&cmd.Body))
 		}
-
-		body := ui.NewOpenEditor().
-			WithValue(&cmd.Body).
-			WithDefaultFunc(getDefaultBody).
-			WithTitle("Body").
-			WithDescription("Open your editor to write " +
-				"a detailed description of the pull request")
-		fields = append(fields, body)
 	}
 
+	// Don't mess with draft setting if we're not prompting
+	// and the user didn't explicitly set it.
 	if opts.Prompt && cmd.Draft == nil {
 		cmd.Draft = new(bool)
-		// TODO: default to true if subject is "WIP" or similar.
-		draft := ui.NewConfirm().
-			WithValue(cmd.Draft).
-			WithTitle("Draft").
-			WithDescription("Mark the pull request as a draft?")
-		fields = append(fields, draft)
+		fields = append(fields, form.draftField(cmd.Draft))
 	}
 
 	// TODO: should we assume --fill if --no-prompt?
