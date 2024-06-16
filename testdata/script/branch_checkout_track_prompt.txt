@@ -35,5 +35,5 @@ await
 WRN feature: branch not tracked
 Do you want to track this branch now?: [Y/n]
 -- golden/ls.txt --
-┏━□ feature ◀
+┏━■ feature ◀
 main
