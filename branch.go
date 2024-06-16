@@ -114,8 +114,8 @@ nextBranch:
 	}
 
 	value := p.Default
-	prompt := ui.NewSelect().
-		WithOptions(branches...).
+	prompt := ui.NewSelect[string]().
+		With(ui.ComparableOptions(p.Default, branches...)).
 		WithTitle(p.Title).
 		WithValue(&value).
 		WithDescription(p.Description)

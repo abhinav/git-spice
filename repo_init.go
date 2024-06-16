@@ -64,10 +64,10 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 				must.Failf("unknown guess operation: %v", op)
 			}
 
-			result := selected
-			prompt := ui.NewSelect().
+			var result string
+			prompt := ui.NewSelect[string]().
 				WithValue(&result).
-				WithOptions(opts...).
+				With(ui.ComparableOptions(selected, opts...)).
 				WithTitle(msg).
 				WithDescription(desc)
 			if err := ui.Run(prompt); err != nil {
@@ -186,9 +186,9 @@ func ensureRemote(
 			}
 
 			result := selected
-			prompt := ui.NewSelect().
+			prompt := ui.NewSelect[string]().
 				WithValue(&result).
-				WithOptions(opts...).
+				With(ui.ComparableOptions(selected, opts...)).
 				WithTitle("Please select a remote").
 				WithDescription("Changes will be pushed to this remote")
 			if err := ui.Run(prompt); err != nil {
