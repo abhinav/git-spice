@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -129,6 +130,14 @@ func branchLog(ctx context.Context, opts *branchLogOptions) (err error) {
 		}
 	}
 
+	treeStyle := fliptree.DefaultStyle()
+	treeStyle.NodeMarker = func(branch string) lipgloss.Style {
+		if branch == currentBranch {
+			return fliptree.DefaultNodeMarker.SetString("■")
+		}
+		return fliptree.DefaultNodeMarker
+	}
+
 	var s strings.Builder
 	// TODO: Maybe Graph is parameterized over the node type.
 	err = fliptree.Write(&s, fliptree.Graph{
@@ -157,7 +166,7 @@ func branchLog(ctx context.Context, opts *branchLogOptions) (err error) {
 			return o.String()
 		},
 		Edges: edgesFn,
-	}, fliptree.Options{})
+	}, fliptree.Options{Style: treeStyle})
 	if err != nil {
 		return fmt.Errorf("write tree: %w", err)
 	}

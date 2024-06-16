@@ -138,5 +138,5 @@ DU feature.txt
   ┏━□ feature1
 ┏━┻□ feature0
 ┣━□ feature2
-┣━□ feature3 ◀
+┣━■ feature3 ◀
 main

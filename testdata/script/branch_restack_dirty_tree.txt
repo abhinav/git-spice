@@ -58,5 +58,5 @@ another file
 * 31b0f28 (main) Diverge
 * 9315e88 Initial commit
 -- golden/ls.txt --
-┏━□ feature (needs restack) ◀
+┏━■ feature (needs restack) ◀
 main

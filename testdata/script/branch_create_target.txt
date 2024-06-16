@@ -54,13 +54,13 @@ feature 5
 
 -- golden/add-feature3.txt --
   ┏━□ feature2
-  ┣━□ feature3 ◀
+  ┣━■ feature3 ◀
 ┏━┻□ feature1
 main
 -- golden/add-feature4.txt --
     ┏━□ feature2
     ┣━□ feature3
-  ┏━┻□ feature4 ◀
+  ┏━┻■ feature4 ◀
 ┏━┻□ feature1
 main
 -- golden/add-feature5.txt --
@@ -68,7 +68,7 @@ main
       ┣━□ feature3
     ┏━┻□ feature4
   ┏━┻□ feature1
-┏━┻□ feature5 ◀
+┏━┻■ feature5 ◀
 main
 -- golden/graph.txt --
 * 2996f1e (feature2) Add feature 2
