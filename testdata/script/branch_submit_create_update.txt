@@ -81,5 +81,5 @@ New contents of feature1
 ]
 
 -- golden/ls.txt --
-┌── feature1 (#1) ◀
+┏━□ feature1 (#1) ◀
 main

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/ui"
@@ -21,6 +22,9 @@ var _update = flag.Bool("update", false, "update fixtures")
 func plainStyle() *Style {
 	return &Style{
 		Joint: ui.NewStyle(),
+		NodeMarker: func(string) lipgloss.Style {
+			return ui.NewStyle().SetString("□")
+		},
 	}
 }
 
@@ -152,7 +156,8 @@ func testWriteProperty(t *rapid.T) {
 
 			case !unicode.IsPrint(r),
 				boxRune(r).Valid(),
-				unicode.IsSpace(r):
+				unicode.IsSpace(r),
+				r == '□':
 				return false
 
 			default:
@@ -224,7 +229,7 @@ func testWriteProperty(t *rapid.T) {
 			}
 
 			// Expect a rune on the right with a left attachment
-			// OR a space and printable text.
+			// OR a □ character.
 			if r.HasRight() {
 				if runeIdx == len(line)-1 {
 					t.Errorf("%d:%d:joint %q wants right attachment, got: end of line", lineNo, colNo, r)
@@ -233,16 +238,11 @@ func testWriteProperty(t *rapid.T) {
 				right := boxRune(line[runeIdx+1])
 				ok := right.Valid() && right.HasLeft()
 
-				// If it's not a box character, it muts be a
-				// space and a printable character.
-				if !ok && right == ' ' {
-					if runeIdx+2 < len(line) && unicode.IsPrint(line[runeIdx+2]) {
-						ok = true
-					}
-				}
+				// If it's not a box drawing character, it must be a □.
+				ok = ok || right == '□'
 
 				if !ok {
-					t.Errorf("%d:%d:joint %q wants right attachment or text, got: %q", lineNo, colNo, r, right)
+					t.Errorf("%d:%d:joint %q wants right attachment or '□', got: %q", lineNo, colNo, r, right)
 				}
 			}
 

@@ -21,6 +21,9 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
+// DefaultNodeMarker is the marker used for each node in the tree.
+var DefaultNodeMarker = lipgloss.NewStyle().SetString("□")
+
 // Graph defines a directed graph.
 type Graph struct {
 	// Roots are the nodes at which we want to start rendering the tree.
@@ -52,12 +55,21 @@ type Options struct {
 type Style struct {
 	// Joint defines how the connecting joints between nodes are rendered.
 	Joint lipgloss.Style
+
+	// NodeMarker returns the style of the marker
+	// placed next to each node based on the node's value.
+	//
+	// By default, all nodes are marked with [DefaultNodeMarker].
+	NodeMarker func(string) lipgloss.Style
 }
 
 // DefaultStyle returns the default style for rendering trees.
 func DefaultStyle() *Style {
 	return &Style{
 		Joint: ui.NewStyle().Faint(true),
+		NodeMarker: func(string) lipgloss.Style {
+			return DefaultNodeMarker
+		},
 	}
 }
 
@@ -98,11 +110,11 @@ type treeWriter struct {
 }
 
 const (
-	_vertical      boxRune = '│' // 0x2502
-	_horizontal    boxRune = '─' // 0x2500
-	_horizontalUp  boxRune = '┴' // 0x2534
-	_verticalRight boxRune = '├' // 0x251C
-	_downRight     boxRune = '┌' // 0x250C
+	_vertical      boxRune = '┃'
+	_horizontal    boxRune = '━'
+	_horizontalUp  boxRune = '┻'
+	_verticalRight boxRune = '┣'
+	_downRight     boxRune = '┏'
 )
 
 type boxRune rune
@@ -186,16 +198,17 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 	}
 
 	// In the following:
-	//   ┌── feat1.1
-	//  ─┴ feat1
+	//   ┌─□ feat1.1
+	//  ─┴□ feat1
 	// Whether we use add an upwards joint depends on whether
 	// the current node has children.
 	// If it has children, then we need a connecting pipe
 	// for the branch above.
-	titleMarker := string(_horizontal) + " "
+	titlePrefix := tw.style.NodeMarker(node).String() + " "
 	if hasChildren {
-		titleMarker = string(_horizontalUp) + " "
+		titlePrefix = tw.style.Joint.Render(string(_horizontalUp)) + titlePrefix
 	}
+	bodyPrefix := strings.Repeat(" ", lipgloss.Width(titlePrefix))
 
 	lastJoint := string(_downRight) + string(_horizontal)
 	if len(path) > 0 && path[len(path)-1] > 0 {
@@ -211,10 +224,10 @@ func (tw *treeWriter) writeTree(node string, path []int, values []string) error 
 		// The text may be multi-line.
 		// Only the first line has a title marker.
 		if idx == 0 {
-			tw.pipes(path, lastJoint, titleMarker)
+			tw.pipes(path, lastJoint, titlePrefix)
 			tw.setOffset(node, tw.lineNum)
 		} else {
-			tw.pipes(path, string(_vertical)+" ", "  ")
+			tw.pipes(path, string(_vertical)+" ", bodyPrefix)
 		}
 
 		_, _ = tw.w.WriteString(line)
@@ -244,7 +257,7 @@ func (tw *treeWriter) pipes(path []int, joint string, marker string) {
 		}
 	}
 
-	_, _ = tw.w.WriteString(style.Render(joint + marker))
+	_, _ = tw.w.WriteString(style.Render(joint) + marker)
 }
 
 // CycleError is returned when a cycle is detected in the tree.

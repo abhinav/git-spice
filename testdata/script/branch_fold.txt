@@ -46,9 +46,9 @@ bar
 * 588349e Add foo.txt
 * 9bad92b (main) Initial commit
 -- golden/ls-before.txt --
-  ┌── bar ◀
-┌─┴ foo
+  ┏━□ bar ◀
+┏━┻□ foo
 main
 -- golden/ls-after.txt --
-┌── foo ◀
+┏━□ foo ◀
 main
