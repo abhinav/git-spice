@@ -83,10 +83,7 @@ Pick a branch:
 
 There are multiple branches above the current branch.
 ### exit ###
-Pick a branch:
-
-▶ feature2
-
+Pick a branch: feature2
 feature2
 -- input/top-prompt.txt --
 await feature
@@ -100,10 +97,7 @@ Pick a branch:
 
 There are multiple top-level branches reachable from the current branch.
 ### exit ###
-Pick a branch:
-
-▶ feature5
-
+Pick a branch: feature5
 feature5
 -- input/up-2-prompt.txt --
 await feature
@@ -117,8 +111,5 @@ Pick a branch:
 
 There are multiple branches above the current branch.
 ### exit ###
-Pick a branch:
-
-▶ feature4
-
+Pick a branch: feature4
 feature4

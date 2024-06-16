@@ -72,7 +72,8 @@ type Select[T any] struct {
 	visible int // number of visible options, 0 means all (immutable)
 	offset  int // offset of the first visible option (mutable)
 
-	err error // error state
+	accepted bool  // true after the field has been accepted
+	err      error // error state
 }
 
 type selectOption[T any] struct {
@@ -246,6 +247,7 @@ func (s *Select[T]) Update(msg tea.Msg) tea.Cmd {
 			if s.selected < len(s.matched) {
 				*s.value = s.options[s.matched[s.selected]].Value
 				cmds = append(cmds, AcceptField)
+				s.accepted = true
 			}
 
 		case key.Matches(msg, s.KeyMap.DeleteFilterChar):
@@ -320,6 +322,13 @@ func (s *Select[T]) matchOption(opt *selectOption[T]) bool {
 
 // Render renders the select field.
 func (s *Select[T]) Render(out Writer) {
+	// If the field has been accepted, only render the label
+	// for the selected option.
+	if s.accepted {
+		out.WriteString(s.options[s.matched[s.selected]].Label)
+		return
+	}
+
 	if s.title != "" {
 		// If there's a title, we're currently on the same line as the
 		// title following the ": " separator.
