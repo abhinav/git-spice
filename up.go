@@ -61,9 +61,9 @@ outer:
 				return errNoPrompt
 			}
 
-			prompt := ui.NewSelect().
+			prompt := ui.NewSelect[string]().
 				WithValue(&branch).
-				WithOptions(aboves...).
+				With(ui.ComparableOptions(branch, aboves...)).
 				WithTitle("Pick a branch").
 				WithDescription(desc)
 

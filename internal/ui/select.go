@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"unicode"
 
@@ -57,18 +56,18 @@ var DefaultSelectStyle = SelectStyle{
 
 // Select is a prompt that allows selecting from a list of options
 // using a fuzzy filter.
-type Select struct {
+type Select[T any] struct {
 	KeyMap SelectKeyMap
 	Style  SelectStyle
 
 	title string
 	desc  string
-	value *string
+	value *T
 
-	options  []selectOption // list of options
-	filter   []rune         // filter to match options
-	matched  []int          // indexes of matched options
-	selected int            // index in matched of selected option
+	options  []selectOption[T] // list of options
+	filter   []rune            // filter to match options
+	matched  []int             // indexes of matched options
+	selected int               // index in matched of selected option
 
 	visible int // number of visible options, 0 means all (immutable)
 	offset  int // offset of the first visible option (mutable)
@@ -76,43 +75,80 @@ type Select struct {
 	err error // error state
 }
 
-type selectOption struct {
-	Value      string // value of the option
+type selectOption[T any] struct {
+	Label      string // label to show for this option
+	Value      T      // value to set when selected
 	Highlights []int  // indexes of runes to highlight
 }
 
-var _ Field = (*Select)(nil)
+var _ Field = (*Select[int])(nil)
 
 // NewSelect builds a new [Select] field.
-func NewSelect() *Select {
-	return &Select{
+func NewSelect[T any]() *Select[T] {
+	return &Select[T]{
 		KeyMap: DefaultSelectKeyMap,
 		Style:  DefaultSelectStyle,
-		value:  new(string),
+		value:  new(T),
 	}
 }
 
 // WithValue sets the destination for the select field.
 // The existing value, if any, will be selected by default.
-func (s *Select) WithValue(value *string) *Select {
+func (s *Select[T]) WithValue(value *T) *Select[T] {
 	s.value = value
 	return s
 }
 
 // Value reports the current value of the select field.
-func (s *Select) Value() string {
+func (s *Select[T]) Value() T {
 	return *s.value
+}
+
+// Option is a single option for a select field.
+type Option[T any] struct {
+	Label string
+	Value T
+}
+
+// With runs the given function with the select field.
+func (s *Select[T]) With(f func(*Select[T])) *Select[T] {
+	f(s)
+	return s
+}
+
+// ComparableOptions creates a list of options from a list of comparable values
+// and sets the selected option.
+//
+// The defeault string representation of the value is used as the label.
+func ComparableOptions[T comparable](selected T, opts ...T) func(*Select[T]) {
+	var selectedIdx int
+	options := make([]Option[T], len(opts))
+	for i, v := range opts {
+		if v == selected {
+			selectedIdx = i
+		}
+		options[i] = Option[T]{
+			Label: fmt.Sprintf("%v", v),
+			Value: v,
+		}
+	}
+
+	return func(s *Select[T]) {
+		s.WithOptions(options...)
+		s.WithSelected(selectedIdx)
+	}
 }
 
 // WithOptions sets the available options for the select field.
 // The options will be presented in the order they are provided.
 // Existing options will be replaced.
-func (s *Select) WithOptions(opts ...string) *Select {
-	options := make([]selectOption, len(opts))
+func (s *Select[T]) WithOptions(opts ...Option[T]) *Select[T] {
+	options := make([]selectOption[T], len(opts))
 	matched := make([]int, len(options))
 	for i, v := range opts {
-		options[i] = selectOption{
-			Value: v,
+		options[i] = selectOption[T]{
+			Label: v.Label,
+			Value: v.Value,
 		}
 		matched[i] = i
 	}
@@ -122,53 +158,54 @@ func (s *Select) WithOptions(opts ...string) *Select {
 	return s
 }
 
+// WithSelected sets the selected option for the select field.
+func (s *Select[T]) WithSelected(selected int) *Select[T] {
+	s.selected = selected
+	return s
+}
+
 // Title returns the title of the select field.
-func (s *Select) Title() string {
+func (s *Select[T]) Title() string {
 	return s.title
 }
 
 // WithTitle sets the title for the select field.
-func (s *Select) WithTitle(title string) *Select {
+func (s *Select[T]) WithTitle(title string) *Select[T] {
 	s.title = title
 	return s
 }
 
 // Description returns the description of the select field.
-func (s *Select) Description() string {
+func (s *Select[T]) Description() string {
 	return s.desc
 }
 
 // WithDescription sets the description for the select field.
-func (s *Select) WithDescription(desc string) *Select {
+func (s *Select[T]) WithDescription(desc string) *Select[T] {
 	s.desc = desc
 	return s
 }
 
 // WithVisible sets the number of visible options in the select field.
 // If unset, a default is picked based on the terminal height.
-func (s *Select) WithVisible(visible int) *Select {
+func (s *Select[T]) WithVisible(visible int) *Select[T] {
 	s.visible = visible
 	return s
 }
 
 // Err reports any errors in the select field.
-func (s *Select) Err() error {
+func (s *Select[T]) Err() error {
 	return s.err
 }
 
 // Init initializes the field.
-func (s *Select) Init() tea.Cmd {
-	idx := slices.IndexFunc(s.matched, func(optIdx int) bool {
-		return s.options[optIdx].Value == *s.value
-	})
-	if idx != -1 {
-		s.selected = idx
-	}
+func (s *Select[T]) Init() tea.Cmd {
+	s.selected = max(0, min(s.selected, len(s.matched)-1))
 	return nil
 }
 
 // Update receives messages from bubbletea.
-func (s *Select) Update(msg tea.Msg) tea.Cmd {
+func (s *Select[T]) Update(msg tea.Msg) tea.Cmd {
 	var (
 		cmds          []tea.Cmd
 		filterChanged bool
@@ -233,19 +270,19 @@ func (s *Select) Update(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (s *Select) updateSuggestions() {
+func (s *Select[T]) updateSuggestions() {
 	s.err = nil
 
 	var selected string
 	if s.selected < len(s.matched) {
-		selected = s.options[s.matched[s.selected]].Value
+		selected = s.options[s.matched[s.selected]].Label
 	}
 
 	var hasSelected bool
 	s.matched = s.matched[:0]
 	for i, opt := range s.options {
 		if s.matchOption(&opt) {
-			if opt.Value == selected {
+			if opt.Label == selected {
 				s.selected = len(s.matched)
 				hasSelected = true
 			}
@@ -259,14 +296,14 @@ func (s *Select) updateSuggestions() {
 	}
 }
 
-func (s *Select) matchOption(opt *selectOption) bool {
+func (s *Select[T]) matchOption(opt *selectOption[T]) bool {
 	opt.Highlights = opt.Highlights[:0]
 	if len(s.filter) == 0 {
 		return true
 	}
 
 	filter := s.filter
-	for idx, r := range strings.ToLower(opt.Value) {
+	for idx, r := range strings.ToLower(opt.Label) {
 		if len(filter) == 0 {
 			// Filter exhausted. Matched.
 			return true
@@ -282,7 +319,7 @@ func (s *Select) matchOption(opt *selectOption) bool {
 }
 
 // Render renders the select field.
-func (s *Select) Render(out Writer) {
+func (s *Select[T]) Render(out Writer) {
 	if s.title != "" {
 		// If there's a title, we're currently on the same line as the
 		// title following the ": " separator.
@@ -320,7 +357,7 @@ func (s *Select) Render(out Writer) {
 		}
 
 		// Highlight the matched runes.
-		value := s.options[optionIdx].Value
+		value := s.options[optionIdx].Label
 		lastRuneIdx := 0
 		for _, runeIdx := range s.options[optionIdx].Highlights {
 			out.WriteString(style.Render(value[lastRuneIdx:runeIdx]))
