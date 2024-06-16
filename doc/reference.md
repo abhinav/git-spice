@@ -169,20 +169,15 @@ Moves a branch and its upstack branches onto another branch.
 Use this to move a complete part of your branch stack to a
 different base.
 
-For example,
+For example, given the following stack with B checked out,
+running 'gs upstack onto main' will move B and C onto main:
 
-	# Given:
-	#  trunk
-	#   └─A
-	#     └─B
-	#       └─C
-	git checkout B
-	gs upstack onto main
-	# Result:
-	#  trunk
-	#   ├─A
-	#   └─B
-	#     └─C
+	       gs upstack onto main
+
+	    ┌── C                 ┌── C
+	  ┌─┴ B ◀               ┌─┴ B ◀
+	┌─┴ A                   ├── A
+	trunk                   trunk
 
 **Arguments**
 
@@ -310,20 +305,16 @@ leaving the rest of the branch stack untouched.
 Use this to extract a single branch from an otherwise unrelated
 branch stack.
 
-For example,
+For example, given the following stack with B checked out,
+running 'gs branch onto main' will move B onto main
+and leave C on top of A.
 
-	# Given:
-	#  trunk
-	#   └─A
-	#     └─B
-	#       └─C
-	git checkout B
-	gs branch onto main
-	# Result:
-	#  trunk
-	#   ├─B
-	#   └─A
-	#     └─C
+	       gs branch onto main
+
+	    ┌── C               ┌── B ◀
+	  ┌─┴ B ◀               │ ┌── C
+	┌─┴ A                   ├─┴ A
+	trunk                   trunk
 
 **Arguments**
 

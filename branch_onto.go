@@ -24,20 +24,16 @@ func (*branchOntoCmd) Help() string {
 		Use this to extract a single branch from an otherwise unrelated
 		branch stack.
 
-		For example,
+		For example, given the following stack with B checked out,
+		running 'gs branch onto main' will move B onto main
+		and leave C on top of A.
 
-			# Given:
-			#  trunk
-			#   └─A
-			#     └─B
-			#       └─C
-			git checkout B
-			gs branch onto main
-			# Result:
-			#  trunk
-			#   ├─B
-			#   └─A
-			#     └─C
+			       gs branch onto main
+
+			    ┌── C               ┌── B ◀
+			  ┌─┴ B ◀               │ ┌── C
+			┌─┴ A                   ├─┴ A
+			trunk                   trunk
 	`)
 }
 
