@@ -61,56 +61,56 @@ more
 
 -- golden/linear.txt --
         ┏━■ feature5 ◀
-        ┃   └○ 32bf40a Add feature5 (now)
+        ┃   32bf40a Add feature5 (now)
       ┏━┻□ feature4
-      ┃    └○ 16fd303 Add feature4 (16 minutes ago)
+      ┃    16fd303 Add feature4 (16 minutes ago)
     ┏━┻□ feature3
-    ┃    └○ 66b6e9e Add feature3 (30 minutes ago)
+    ┃    66b6e9e Add feature3 (30 minutes ago)
   ┏━┻□ feature2
-  ┃    └○ 04d722a Add feature2 (48 minutes ago)
+  ┃    04d722a Add feature2 (48 minutes ago)
 ┏━┻□ feature1
-┃    └○ b649e21 Add feature1 (1 hour ago)
+┃    b649e21 Add feature1 (1 hour ago)
 main
 -- golden/linear_next_day.txt --
         ┏━□ feature5
-        ┃   └○ 165476c Add feature5 (1 day ago)
+        ┃   165476c Add feature5 (1 day ago)
       ┏━┻□ feature4
-      ┃    └○ 97739c2 Add feature4 (1 day ago)
+      ┃    97739c2 Add feature4 (1 day ago)
     ┏━┻■ feature3 ◀
-    ┃    ├○ 87cc709 thing (now)
-    ┃    └○ 66b6e9e Add feature3 (1 day ago)
+    ┃    87cc709 thing (now)
+    ┃    66b6e9e Add feature3 (1 day ago)
   ┏━┻□ feature2
-  ┃    └○ 04d722a Add feature2 (1 day ago)
+  ┃    04d722a Add feature2 (1 day ago)
 ┏━┻□ feature1
-┃    └○ b649e21 Add feature1 (1 day ago)
+┃    b649e21 Add feature1 (1 day ago)
 main
 -- golden/linear_next_month.txt --
         ┏━□ feature5
-        ┃   └○ 02d2ceb Add feature5 (1 month ago)
+        ┃   02d2ceb Add feature5 (1 month ago)
       ┏━┻□ feature4
-      ┃    └○ 88bfff0 Add feature4 (1 month ago)
+      ┃    88bfff0 Add feature4 (1 month ago)
     ┏━┻□ feature3
-    ┃    ├○ 254a4f7 thing (1 month ago)
-    ┃    └○ 5a530c8 Add feature3 (1 month ago)
+    ┃    254a4f7 thing (1 month ago)
+    ┃    5a530c8 Add feature3 (1 month ago)
   ┏━┻■ feature2 ◀
-  ┃    ├○ 9abe2e6 stuff (now)
-  ┃    └○ 04d722a Add feature2 (1 month ago)
+  ┃    9abe2e6 stuff (now)
+  ┃    04d722a Add feature2 (1 month ago)
 ┏━┻□ feature1
-┃    └○ b649e21 Add feature1 (1 month ago)
+┃    b649e21 Add feature1 (1 month ago)
 main
 -- golden/merge_commit.txt --
         ┏━□ feature5
-        ┃   └○ 02d2ceb Add feature5 (1 month ago)
+        ┃   02d2ceb Add feature5 (1 month ago)
       ┏━┻□ feature4
-      ┃    └○ 88bfff0 Add feature4 (1 month ago)
+      ┃    88bfff0 Add feature4 (1 month ago)
     ┏━┻□ feature3
-    ┃    ├○ 254a4f7 thing (1 month ago)
-    ┃    └○ 5a530c8 Add feature3 (1 month ago)
+    ┃    254a4f7 thing (1 month ago)
+    ┃    5a530c8 Add feature3 (1 month ago)
   ┏━┻□ feature2 (needs restack)
-  ┃    ├○ 9abe2e6 stuff (30 minutes ago)
-  ┃    └○ 04d722a Add feature2 (1 month ago)
+  ┃    9abe2e6 stuff (30 minutes ago)
+  ┃    04d722a Add feature2 (1 month ago)
 ┏━┻■ feature1 ◀
-┃    ├○ a7e3da4 Merge feature2 into feature1 (now)
-┃    ├○ 210162b more (now)
-┃    └○ b649e21 Add feature1 (1 month ago)
+┃    a7e3da4 Merge feature2 into feature1 (now)
+┃    210162b more (now)
+┃    b649e21 Add feature1 (1 month ago)
 main

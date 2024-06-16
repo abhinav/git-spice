@@ -168,8 +168,6 @@ func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err e
 		return fliptree.DefaultNodeMarker
 	}
 
-	jointStyle := treeStyle.Joint
-
 	var s strings.Builder
 	err = fliptree.Write(&s, fliptree.Graph[*branchInfo]{
 		Roots:  []int{trunkIdx},
@@ -203,13 +201,8 @@ func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err e
 				commitTimeStyle = commitTimeStyle.Faint(true)
 			}
 
-			for idx, commit := range b.Commits {
+			for _, commit := range b.Commits {
 				o.WriteString("\n")
-				if idx < len(b.Commits)-1 {
-					o.WriteString(jointStyle.Render("├○ "))
-				} else {
-					o.WriteString(jointStyle.Render("└○ "))
-				}
 				o.WriteString(commitHashStyle.Render(commit.ShortHash.String()))
 				o.WriteString(" ")
 				o.WriteString(commitSubjectStyle.Render(commit.Subject))
