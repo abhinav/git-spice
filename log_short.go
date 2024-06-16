@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -43,11 +43,9 @@ func (*logShortCmd) Help() string {
 }
 
 func (cmd *logShortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
+		return err
 	}
 
 	currentBranch, err := repo.CurrentBranch(ctx)
@@ -55,21 +53,15 @@ func (cmd *logShortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 		currentBranch = "" // may be detached
 	}
 
-	store, err := ensureStore(ctx, repo, log, opts)
-	if err != nil {
-		return err
-	}
-
-	svc := spice.NewService(repo, store, log)
 	allBranches, err := svc.LoadBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("load branches: %w", err)
 	}
 
 	type trackedBranch struct {
-		Aboves []string
-		Base   string
-		PR     int
+		Aboves   []string
+		Base     string
+		ChangeID forge.ChangeID
 	}
 
 	infos := make(map[string]*trackedBranch, len(allBranches))
@@ -85,7 +77,9 @@ func (cmd *logShortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 	for _, branch := range allBranches {
 		b := branchInfo(branch.Name)
 		b.Base = branch.Base
-		b.PR = branch.PR
+		if md := branch.Change; md != nil {
+			b.ChangeID = md.ChangeID()
+		}
 
 		base := branchInfo(branch.Base)
 		base.Aboves = append(base.Aboves, branch.Name)
@@ -131,8 +125,8 @@ func (cmd *logShortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 			}
 
 			info := branchInfo(branch)
-			if info.PR != 0 {
-				_, _ = fmt.Fprintf(&o, " (#%d)", info.PR)
+			if info.ChangeID != nil {
+				_, _ = fmt.Fprintf(&o, " (%v)", info.ChangeID)
 			}
 
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, branch), &restackErr) {

@@ -112,6 +112,25 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 	return nil
 }
 
+func openRepo(ctx context.Context, log *log.Logger, opts *globalOptions) (
+	*git.Repository, *state.Store, *spice.Service, error,
+) {
+	repo, err := git.Open(ctx, ".", git.OpenOptions{
+		Log: log,
+	})
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("open repository: %w", err)
+	}
+
+	store, err := ensureStore(ctx, repo, log, opts)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("open store: %w", err)
+	}
+
+	svc := spice.NewService(ctx, repo, store, log)
+	return repo, store, svc, nil
+}
+
 // ensureStore will open the spice data store in the provided Git repository,
 // initializing it with `gs repo init` if it hasn't already been initialized.
 //

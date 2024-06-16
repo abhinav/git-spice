@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -38,11 +36,9 @@ func (*branchRenameCmd) Help() string {
 }
 
 func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
+	repo, _, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
+		return err
 	}
 
 	oldName, newName := cmd.OldName, cmd.NewName
@@ -79,12 +75,6 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	must.NotBeBlankf(oldName, "old branch name must be set")
 	must.NotBeBlankf(newName, "new branch name must be set")
 
-	store, err := ensureStore(ctx, repo, log, opts)
-	if err != nil {
-		return err
-	}
-
-	svc := spice.NewService(repo, store, log)
 	if err := svc.RenameBranch(ctx, oldName, newName); err != nil {
 		return fmt.Errorf("rename branch: %w", err)
 	}

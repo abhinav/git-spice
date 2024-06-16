@@ -1,0 +1,7 @@
+kind: Changed
+body: >-
+  Format for how PR information is stored was changed.
+  The format will be upgraded automatically when you run `gs branch submit`
+  with this release.
+  Support for the old format will be dropped in the release after this one.
+time: 2024-06-15T12:41:31.702997-07:00

@@ -30,14 +30,7 @@ func (*repoSyncCmd) Help() string {
 }
 
 func (cmd *repoSyncCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
 	}
@@ -185,7 +178,6 @@ func (cmd *repoSyncCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 		}
 	}
 
-	svc := spice.NewService(repo, store, log)
 	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
 	if err != nil {
 		return err
@@ -321,10 +313,10 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		trackedBranches   []*trackedBranch
 	)
 	for _, b := range knownBranches {
-		if b.PR != 0 {
+		if b.Change != nil {
 			b := &submittedBranch{
 				Name:   b.Name,
-				Change: forge.ChangeID(b.PR),
+				Change: b.Change.ChangeID(),
 			}
 			submittedBranches = append(submittedBranches, b)
 			submittedch <- b

@@ -7,9 +7,7 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -37,14 +35,7 @@ func (cmd *downstackSubmitCmd) Run(
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
 	}
@@ -61,7 +52,6 @@ func (cmd *downstackSubmitCmd) Run(
 		return errors.New("nothing to submit below trunk")
 	}
 
-	svc := spice.NewService(repo, store, log)
 	downstacks, err := svc.ListDownstack(ctx, cmd.Name)
 	if err != nil {
 		return fmt.Errorf("list downstack: %w", err)

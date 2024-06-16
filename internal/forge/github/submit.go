@@ -38,7 +38,10 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	}
 
 	return forge.SubmitChangeResult{
-		ID:  forge.ChangeID(m.CreatePullRequest.PullRequest.Number),
+		ID: &PR{
+			Number: int(m.CreatePullRequest.PullRequest.Number),
+			GQLID:  m.CreatePullRequest.PullRequest.ID,
+		},
 		URL: m.CreatePullRequest.PullRequest.URL.String(),
 	}, nil
 }
