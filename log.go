@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/dustin/go-humanize"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
@@ -19,14 +20,18 @@ import (
 
 type logCmd struct {
 	Short logShortCmd `cmd:"" aliases:"s" help:"Short view of stack"`
+	Long  logLongCmd  `cmd:"" aliases:"l" help:"Long view of stack"`
 }
 
 var (
-	_branchStyle = ui.NewStyle().Bold(true)
-
+	_branchStyle        = ui.NewStyle().Bold(true)
 	_currentBranchStyle = ui.NewStyle().
 				Foreground(ui.Cyan).
 				Bold(true)
+
+	_commitHashStyle    = ui.NewStyle().Foreground(ui.Yellow)
+	_commitSubjectStyle = ui.NewStyle().Foreground(ui.Plain)
+	_commitTimeStyle    = ui.NewStyle().Foreground(ui.Gray)
 
 	_needsRestackStyle = ui.NewStyle().
 				Foreground(ui.Gray).
@@ -38,16 +43,24 @@ var (
 			SetString("◀")
 )
 
+// branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
+type branchLogCmd struct {
+	All bool `short:"a" long:"all" help:"Show all tracked branches, not just the current stack."`
+
+	Now time.Time `hidden:"" env:"GIT_SPICE_LOG_NOW"` // used for relative time calculations
+}
+
 type branchLogOptions struct {
-	All     bool
 	Commits bool
 
 	Log     *log.Logger
 	Globals *globalOptions
 }
 
-func branchLog(ctx context.Context, opts *branchLogOptions) (err error) {
-	repo, store, svc, err := openRepo(ctx, opts.Log, opts.Globals)
+func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err error) {
+	log := opts.Log
+
+	repo, store, svc, err := openRepo(ctx, log, opts.Globals)
 	if err != nil {
 		return err
 	}
@@ -62,115 +75,173 @@ func branchLog(ctx context.Context, opts *branchLogOptions) (err error) {
 		return fmt.Errorf("load branches: %w", err)
 	}
 
-	type trackedBranch struct {
-		Aboves   []string
+	type branchInfo struct {
+		Index    int
+		Name     string
 		Base     string
 		ChangeID forge.ChangeID
 
-		HeadHash git.Hash
+		Commits []git.CommitDetail
+		Aboves  []int
 	}
 
-	infos := make(map[string]*trackedBranch, len(allBranches))
-	branchInfo := func(branch string) *trackedBranch {
-		if info, ok := infos[branch]; ok {
-			return info
-		}
-		info := &trackedBranch{}
-		infos[branch] = info
-		return info
-	}
-
+	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
+	infoIdxByName := make(map[string]int, len(allBranches))
 	for _, branch := range allBranches {
-		b := branchInfo(branch.Name)
-		b.Base = branch.Base
-		if md := branch.Change; md != nil {
-			b.ChangeID = md.ChangeID()
+		info := &branchInfo{
+			Name: branch.Name,
+			Base: branch.Base,
+		}
+		if branch.Change != nil {
+			info.ChangeID = branch.Change.ChangeID()
 		}
 
-		base := branchInfo(branch.Base)
-		base.Aboves = append(base.Aboves, branch.Name)
-	}
-
-	edgesFn := func(branch string) []string {
-		return branchInfo(branch).Aboves
-	}
-
-	var listBranches []string
-	if opts.All {
-		for branch := range infos {
-			listBranches = append(listBranches, branch)
-		}
-		sort.Strings(listBranches)
-	} else {
-		reachable := make(map[string]struct{})
-		for unseen := []string{currentBranch}; len(unseen) > 0; {
-			branch := unseen[len(unseen)-1]
-			unseen = unseen[:len(unseen)-1]
-			reachable[branch] = struct{}{}
-			unseen = append(unseen, branchInfo(branch).Aboves...)
-		}
-		for b := currentBranch; b != ""; b = branchInfo(b).Base {
-			reachable[b] = struct{}{}
-		}
-
-		for b := range reachable {
-			listBranches = append(listBranches, b)
-		}
-		sort.Strings(listBranches)
-
-		oldBranchesAbove := edgesFn
-		edgesFn = func(branch string) []string {
-			var bs []string
-			for _, b := range oldBranchesAbove(branch) {
-				if _, ok := reachable[b]; ok {
-					bs = append(bs, b)
-				}
+		if opts.Commits {
+			commits, err := repo.ListCommitsDetails(ctx,
+				git.CommitRangeFrom(branch.Head).
+					ExcludeFrom(branch.BaseHash).
+					FirstParent())
+			if err != nil {
+				log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "err", err)
+				continue
 			}
-			return bs
+			info.Commits = commits
+		}
+
+		idx := len(infos)
+		info.Index = idx
+		infos = append(infos, info)
+		infoIdxByName[branch.Name] = idx
+	}
+
+	trunkIdx := len(infos)
+	infos = append(infos, &branchInfo{
+		Index: trunkIdx,
+		Name:  store.Trunk(),
+	})
+	infoIdxByName[store.Trunk()] = trunkIdx
+
+	// Second pass: Connect the "aboves".
+	for idx, branch := range infos {
+		if branch.Base == "" {
+			continue
+		}
+
+		baseIdx, ok := infoIdxByName[branch.Base]
+		if !ok {
+			continue
+		}
+
+		infos[baseIdx].Aboves = append(infos[baseIdx].Aboves, idx)
+	}
+
+	isVisible := func(*branchInfo) bool { return true }
+	if !cmd.All && currentBranch != "" {
+		visible := make(map[int]struct{})
+		currentBranchIdx := infoIdxByName[currentBranch]
+
+		// Add the upstacks of the current branch to the visible set.
+		for unseen := []int{currentBranchIdx}; len(unseen) > 0; {
+			idx := unseen[len(unseen)-1]
+			unseen = unseen[:len(unseen)-1]
+
+			visible[idx] = struct{}{}
+			unseen = append(unseen, infos[idx].Aboves...)
+		}
+
+		// Add the downstack of the current branch to the visible set.
+		for idx, ok := currentBranchIdx, true; ok; idx, ok = infoIdxByName[infos[idx].Base] {
+			visible[idx] = struct{}{}
+		}
+
+		isVisible = func(info *branchInfo) bool {
+			_, ok := visible[info.Index]
+			return ok
 		}
 	}
 
-	treeStyle := fliptree.DefaultStyle()
-	treeStyle.NodeMarker = func(branch string) lipgloss.Style {
-		if branch == currentBranch {
+	treeStyle := fliptree.DefaultStyle[*branchInfo]()
+	treeStyle.NodeMarker = func(b *branchInfo) lipgloss.Style {
+		if b.Name == currentBranch {
 			return fliptree.DefaultNodeMarker.SetString("■")
 		}
 		return fliptree.DefaultNodeMarker
 	}
 
+	jointStyle := treeStyle.Joint
+
 	var s strings.Builder
-	// TODO: Maybe Graph is parameterized over the node type.
-	err = fliptree.Write(&s, fliptree.Graph{
-		Roots: []string{store.Trunk()},
-		View: func(branch string) string {
+	err = fliptree.Write(&s, fliptree.Graph[*branchInfo]{
+		Roots:  []int{trunkIdx},
+		Values: infos,
+		View: func(b *branchInfo) string {
 			var o strings.Builder
-			if branch == currentBranch {
-				o.WriteString(_currentBranchStyle.Render(branch))
+			if b.Name == currentBranch {
+				o.WriteString(_currentBranchStyle.Render(b.Name))
 			} else {
-				o.WriteString(_branchStyle.Render(branch))
+				o.WriteString(_branchStyle.Render(b.Name))
 			}
 
-			info := branchInfo(branch)
-			if info.ChangeID != nil {
-				_, _ = fmt.Fprintf(&o, " (%v)", info.ChangeID)
+			if b.ChangeID != nil {
+				_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
 			}
 
-			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, branch), &restackErr) {
+			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
 				o.WriteString(_needsRestackStyle.String())
 			}
 
-			if branch == currentBranch {
+			if b.Name == currentBranch {
 				o.WriteString(" " + _markerStyle.String())
+			}
+
+			commitHashStyle := _commitHashStyle
+			commitSubjectStyle := _commitSubjectStyle
+			commitTimeStyle := _commitTimeStyle
+			if b.Name != currentBranch {
+				commitHashStyle = commitHashStyle.Faint(true)
+				commitSubjectStyle = commitSubjectStyle.Faint(true)
+				commitTimeStyle = commitTimeStyle.Faint(true)
+			}
+
+			for idx, commit := range b.Commits {
+				o.WriteString("\n")
+				if idx < len(b.Commits)-1 {
+					o.WriteString(jointStyle.Render("├○ "))
+				} else {
+					o.WriteString(jointStyle.Render("└○ "))
+				}
+				o.WriteString(commitHashStyle.Render(commit.ShortHash.String()))
+				o.WriteString(" ")
+				o.WriteString(commitSubjectStyle.Render(commit.Subject))
+				o.WriteString(" ")
+				o.WriteString(commitTimeStyle.Render("(" + cmd.humanizeTime(commit.AuthorDate) + ")"))
 			}
 
 			return o.String()
 		},
-		Edges: edgesFn,
-	}, fliptree.Options{Style: treeStyle})
+		Edges: func(bi *branchInfo) []int {
+			aboves := make([]int, 0, len(bi.Aboves))
+			for _, above := range bi.Aboves {
+				if isVisible(infos[above]) {
+					aboves = append(aboves, above)
+				}
+			}
+			return aboves
+		},
+	}, fliptree.Options[*branchInfo]{Style: treeStyle})
 	if err != nil {
 		return fmt.Errorf("write tree: %w", err)
 	}
 
 	_, err = fmt.Fprint(os.Stderr, s.String())
 	return err
+}
+
+func (cmd *branchLogCmd) humanizeTime(t time.Time) string {
+	currentTime := cmd.Now
+	if currentTime.IsZero() {
+		currentTime = time.Now()
+	}
+
+	return humanize.RelTime(t, currentTime, "ago", "from now")
 }

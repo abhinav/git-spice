@@ -5,6 +5,8 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"unicode"
@@ -19,8 +21,8 @@ import (
 
 var _update = flag.Bool("update", false, "update fixtures")
 
-func plainStyle() *Style {
-	return &Style{
+func plainStyle() *Style[string] {
+	return &Style[string]{
 		Joint: ui.NewStyle(),
 		NodeMarker: func(string) lipgloss.Style {
 			return ui.NewStyle().SetString("□")
@@ -35,8 +37,7 @@ func TestWrite(t *testing.T) {
 		Graph  map[string][]string `yaml:"graph"`
 		Values map[string]string   `yaml:"values,omitempty"`
 
-		Want        string         `yaml:"want"`
-		WantOffsets map[string]int `yaml:"wantOffsets,omitempty"`
+		Want string `yaml:"want"`
 	}
 
 	testdata, err := os.ReadFile(filepath.Join("testdata", "write.yaml"))
@@ -48,8 +49,31 @@ func TestWrite(t *testing.T) {
 	var updated []int
 	for idx, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			g := Graph{
-				Roots: tt.Roots,
+			nodeSet := make(map[string]struct{})
+			for n, edges := range tt.Graph {
+				nodeSet[n] = struct{}{}
+				for _, e := range edges {
+					nodeSet[e] = struct{}{}
+				}
+			}
+
+			allNodes := make([]string, 0, len(nodeSet))
+			for n := range nodeSet {
+				allNodes = append(allNodes, n)
+			}
+			sort.Strings(allNodes)
+
+			roots := make([]int, len(tt.Roots))
+			for i, r := range tt.Roots {
+				var ok bool
+				roots[i], ok = slices.BinarySearch(allNodes, r)
+				require.True(t, ok,
+					"root %q not found in graph", r)
+			}
+
+			g := Graph[string]{
+				Values: allNodes,
+				Roots:  roots,
 				View: func(n string) string {
 					v, ok := tt.Values[n]
 					if !ok {
@@ -57,29 +81,33 @@ func TestWrite(t *testing.T) {
 					}
 					return v
 				},
-				Edges: func(n string) []string {
-					return tt.Graph[n]
+				Edges: func(n string) []int {
+					edgeNames := tt.Graph[n]
+					edges := make([]int, len(edgeNames))
+					for i, e := range edgeNames {
+						var ok bool
+						edges[i], ok = slices.BinarySearch(allNodes, e)
+						require.True(t, ok,
+							"edge %q not found in graph", e)
+					}
+					return edges
 				},
 			}
 
-			gotOffsets := make(map[string]int)
 			var sb strings.Builder
-			err := Write(&sb, g, Options{
-				Style:   plainStyle(),
-				Offsets: gotOffsets,
+			err := Write(&sb, g, Options[string]{
+				Style: plainStyle(),
 			})
 			require.NoError(t, err)
 
 			got := stripTrailingSpaces(sb.String())
 			if *_update {
 				tests[idx].Want = got
-				tests[idx].WantOffsets = gotOffsets
 				updated = append(updated, idx)
 				return
 			}
 
 			assert.Equal(t, tt.Want, got)
-			assert.Equal(t, tt.WantOffsets, gotOffsets)
 		})
 	}
 
@@ -106,7 +134,7 @@ func TestWrite(t *testing.T) {
 		for keyIdx := 0; keyIdx < len(testNode.Content); keyIdx += 2 {
 			require.Equal(t, yaml.ScalarNode, testNode.Content[keyIdx].Kind)
 			switch testNode.Content[keyIdx].Value {
-			case "want", "wantOffsets":
+			case "want":
 				// skip
 
 			default:
@@ -121,13 +149,6 @@ func TestWrite(t *testing.T) {
 			var key, value yaml.Node
 			key.SetString("want")
 			value.SetString(tests[testIdx].Want)
-			newChildren = append(newChildren, &key, &value)
-		}
-
-		{
-			var key, value yaml.Node
-			key.SetString("wantOffsets")
-			require.NoError(t, value.Encode(tests[testIdx].WantOffsets))
 			newChildren = append(newChildren, &key, &value)
 		}
 
@@ -167,40 +188,28 @@ func testWriteProperty(t *rapid.T) {
 	stringGen := rapid.StringOfN(runeGen, 1, -1, -1)
 
 	allNodes := rapid.SliceOfN(stringGen, 1, -1).Draw(t, "nodes")
-	nodeGen := rapid.SampledFrom(allNodes)
+	nodeIdxGen := rapid.IntRange(0, len(allNodes)-1)
+	nodeValueGen := rapid.SampledFrom(allNodes)
 
-	roots := rapid.SliceOfDistinct(nodeGen, rapid.ID).Draw(t, "roots")
-	edges := rapid.MapOf(nodeGen, rapid.SliceOfDistinct(nodeGen, rapid.ID)).
+	roots := rapid.SliceOfDistinct(nodeIdxGen, rapid.ID).Draw(t, "roots")
+	edges := rapid.MapOf(nodeValueGen, rapid.SliceOfDistinct(nodeIdxGen, rapid.ID)).
 		Draw(t, "edges")
 
-	g := Graph{
-		Roots: roots,
-		View:  func(n string) string { return n },
-		Edges: func(n string) []string { return edges[n] },
+	g := Graph[string]{
+		Roots:  roots,
+		Values: allNodes,
+		View:   func(n string) string { return n },
+		Edges:  func(n string) []int { return edges[n] },
 	}
-	offsets := make(map[string]int)
 
 	var out strings.Builder
-	if err := Write(&out, g, Options{
-		Style:   plainStyle(),
-		Offsets: offsets,
+	if err := Write(&out, g, Options[string]{
+		Style: plainStyle(),
 	}); err != nil {
 		t.Skip(err)
 	}
 	t.Logf("output:\n%s", out.String())
 	lines := strings.Split(out.String(), "\n")
-
-	// Verify that all nodes have correct offsets in the output.
-	for node, offset := range offsets {
-		if offset < 0 || offset >= len(lines) {
-			t.Errorf("node %q: has invalid offset %d", node, offset)
-			continue
-		}
-
-		if want := node; !strings.HasSuffix(lines[offset], want) {
-			t.Errorf("node %q: expected line to end with %q, got: %q", node, want, lines[offset])
-		}
-	}
 
 	// Verify that all box drawing characters with attachment points
 	// are connected to other box drawing characters.

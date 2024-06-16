@@ -97,7 +97,27 @@ Short view of stack
 
 Provides a tree view of the branches in the current stack,
 both upstack and downstack from it.
-Use with the -a flag to show all tracked branches.
+By default, branches upstack and downstack from the current
+branch are shown.
+Use with the -a/--all flag to show all tracked branches.
+
+**Flags**
+
+* `-a`, `--all`: Show all tracked branches, not just the current stack.
+
+### gs log long
+
+```
+gs log (l) long (l) [flags]
+```
+
+Long view of stack
+
+Provides a tree view of the branches in the current stack
+and their commits,
+By default, branches upstack and downstack from the current
+branch are shown.
+Use with the -a/--all flag to show all tracked branches.
 
 **Flags**
 

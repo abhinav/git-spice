@@ -5,12 +5,87 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // ListCommits returns a list of commits matched by the given range.
 func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Hash, error) {
-	args := make([]string, 0, len(commits)+1)
+	lines, err := r.listCommitsFormat(ctx, commits, "")
+	if err != nil {
+		return nil, err
+	}
+
+	hashes := make([]Hash, len(lines))
+	for i, line := range lines {
+		hashes[i] = Hash(line)
+	}
+
+	return hashes, nil
+}
+
+// CommitDetail contains information about a commit.
+type CommitDetail struct {
+	// ShortHash is the short (usually 7-character) hash of the commit.
+	ShortHash Hash
+
+	// Subject is the first line of the commit message.
+	Subject string
+
+	// AuthorDate is the time the commit was authored.
+	AuthorDate time.Time
+}
+
+func (cd *CommitDetail) String() string {
+	return fmt.Sprintf("%s %s %s", cd.ShortHash, cd.AuthorDate, cd.Subject)
+}
+
+// ListCommitsDetails returns details about commits matched by the given range.
+func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange) ([]CommitDetail, error) {
+	lines, err := r.listCommitsFormat(ctx, commits, "%h %at %s")
+	if err != nil {
+		return nil, err
+	}
+
+	details := make([]CommitDetail, len(lines))
+	for i, line := range lines {
+		hash, line, ok := strings.Cut(line, " ")
+		if !ok {
+			r.log.Warn("Bad rev-list output", "line", line, "error", "missing a hash")
+			continue
+		}
+
+		epochstr, subject, ok := strings.Cut(line, " ")
+		if !ok {
+			r.log.Warn("Bad rev-list output", "line", line, "error", "missing an time")
+			continue
+		}
+		epoch, err := strconv.ParseInt(epochstr, 10, 64)
+		if err != nil {
+			r.log.Warn("Bad rev-list output", "line", line, "error", err)
+			continue
+		}
+
+		details[i] = CommitDetail{
+			ShortHash:  Hash(hash),
+			Subject:    subject,
+			AuthorDate: time.Unix(epoch, 0),
+		}
+	}
+
+	return details, nil
+}
+
+// ListCommitsFormat lists commits matched by the given range,
+// formatted according to the given format string.
+//
+// See git-log(1) for details on the format string.
+func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange, format string) ([]string, error) {
+	args := make([]string, 0, len(commits)+3)
 	args = append(args, "rev-list")
+	if format != "" {
+		args = append(args, "--format="+format, "--no-commit-header")
+	}
 	args = append(args, []string(commits)...)
 
 	cmd := r.gitCmd(ctx, args...)
@@ -23,10 +98,11 @@ func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Ha
 		return nil, fmt.Errorf("start rev-list: %w", err)
 	}
 
-	var revs []Hash
+	// TODO: Return a string iterator
+	var lines []string
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-		revs = append(revs, Hash(scanner.Text()))
+		lines = append(lines, scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -37,7 +113,7 @@ func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Ha
 		return nil, fmt.Errorf("rev-list: %w", err)
 	}
 
-	return revs, nil
+	return lines, nil
 }
 
 // CountCommits reports the number of commits matched by the given range.
@@ -79,4 +155,10 @@ func (r CommitRange) ExcludeFrom(hash Hash) CommitRange {
 // Limit sets the maximum number of commits to list.
 func (r CommitRange) Limit(n int) CommitRange {
 	return append(r, "-n", strconv.Itoa(n))
+}
+
+// FirstParent indicates that only the first parent of each commit
+// should be listed if it is a merge commit.
+func (r CommitRange) FirstParent() CommitRange {
+	return append(r, "--first-parent")
 }
