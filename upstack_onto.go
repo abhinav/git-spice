@@ -25,20 +25,15 @@ func (*upstackOntoCmd) Help() string {
 		Use this to move a complete part of your branch stack to a
 		different base.
 
-		For example,
+		For example, given the following stack with B checked out,
+		running 'gs upstack onto main' will move B and C onto main:
 
-			# Given:
-			#  trunk
-			#   └─A
-			#     └─B
-			#       └─C
-			git checkout B
-			gs upstack onto main
-			# Result:
-			#  trunk
-			#   ├─A
-			#   └─B
-			#     └─C
+			       gs upstack onto main
+
+			    ┌── C                 ┌── C
+			  ┌─┴ B ◀               ┌─┴ B ◀
+			┌─┴ A                   ├── A
+			trunk                   trunk
 	`)
 }
 
