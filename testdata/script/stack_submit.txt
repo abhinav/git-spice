@@ -157,7 +157,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
 ]
 
 -- golden/ls.txt --
-    ┌── feature3 (#3)
-  ┌─┴ feature2 (#2)
-┌─┴ feature1 (#1) ◀
+    ┏━□ feature3 (#3)
+  ┏━┻□ feature2 (#2)
+┏━┻□ feature1 (#1) ◀
 main

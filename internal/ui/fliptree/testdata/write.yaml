@@ -8,11 +8,11 @@
     c: [d]
     d: [e]
   want: |2
-            ┌── e
-          ┌─┴ d
-        ┌─┴ c
-      ┌─┴ b
-    ┌─┴ a
+            ┏━□ e
+          ┏━┻□ d
+        ┏━┻□ c
+      ┏━┻□ b
+    ┏━┻□ a
     main
   wantOffsets:
     a: 4
@@ -28,13 +28,13 @@
     foo: [a, b, c]
     bar: [d, e, f]
   want: |
-    ┌── a
-    ├── b
-    ├── c
+    ┏━□ a
+    ┣━□ b
+    ┣━□ c
     foo
-    ┌── d
-    ├── e
-    ├── f
+    ┏━□ d
+    ┣━□ e
+    ┣━□ f
     bar
   wantOffsets:
     a: 0
@@ -60,17 +60,17 @@
     c: "c\n\nboop"
     d: "d\nbeep"
   want: |2
-          ┌── d
-          │   beep
-        ┌─┴ c
-        │
-        │   boop
-      ┌─┴ b
-      │   |
-      │   more stuff
-    ┌─┴ a
-    │   |
-    │   stuff
+          ┏━□ d
+          ┃   beep
+        ┏━┻□ c
+        ┃
+        ┃    boop
+      ┏━┻□ b
+      ┃    |
+      ┃    more stuff
+    ┏━┻□ a
+    ┃    |
+    ┃    stuff
     main
     main stuff
   wantOffsets:
@@ -91,42 +91,42 @@
   graph:
     main: [a, b, c, d]
   want: |
-    ┌── x
-    │   y
-    │   z
-    ├── b	1
-    │   	2
-    │   	3
-    ├── i
-    │   ii
-    │   iii
-    │   iiii
-    │   iiiii
-    │   iiiiii
-    ├── a
-    │   b
-    │   c
-    │   d
-    │   e
-    │   f
-    │   g
-    │   h
-    │   i
-    │   j
-    │   k
-    │   l
-    │   m
-    │   n
-    │   o
-    │   p
-    │   q
-    │   r
-    │   s
-    │   t
-    │   u
-    │   v
-    │   w
-    │   x
+    ┏━□ x
+    ┃   y
+    ┃   z
+    ┣━□ b	1
+    ┃   	2
+    ┃   	3
+    ┣━□ i
+    ┃   ii
+    ┃   iii
+    ┃   iiii
+    ┃   iiiii
+    ┃   iiiiii
+    ┣━□ a
+    ┃   b
+    ┃   c
+    ┃   d
+    ┃   e
+    ┃   f
+    ┃   g
+    ┃   h
+    ┃   i
+    ┃   j
+    ┃   k
+    ┃   l
+    ┃   m
+    ┃   n
+    ┃   o
+    ┃   p
+    ┃   q
+    ┃   r
+    ┃   s
+    ┃   t
+    ┃   u
+    ┃   v
+    ┃   w
+    ┃   x
     main
   wantOffsets:
     a: 0
@@ -152,84 +152,84 @@
     k: [ba, bb, bc, bd, be, bf, bg, bh, bi, bj, bk, bl]
     l: [bm, bn, bo, bp, bq, br, bs, bt, bu, bv, bw, bx, by, bz]
   want: |2
-        ┌── m
-        ├── n
-        ├── o
-      ┌─┴ d
-      │ ┌── p
-      │ ├── q
-      │ ├── r
-      ├─┴ e
-      │ ┌── s
-      │ ├── t
-      │ ├── u
-      │ ├── v
-      │ ├── w
-      │ ├── x
-      ├─┴ f
-    ┌─┴ a
-    │   ┌── y
-    │   ├── z
-    │   ├── aa
-    │   ├── ab
-    │ ┌─┴ g
-    │ │ ┌── ac
-    │ │ ├── ad
-    │ │ ├── ae
-    │ │ ├── af
-    │ │ ├── ag
-    │ │ ├── ah
-    │ ├─┴ h
-    ├─┴ b
-    │   ┌── ai
-    │   ├── aj
-    │   ├── ak
-    │   ├── al
-    │   ├── am
-    │   ├── an
-    │   ├── ao
-    │   ├── ap
-    │ ┌─┴ i
-    │ │ ┌── aq
-    │ │ ├── ar
-    │ │ ├── as
-    │ │ ├── at
-    │ │ ├── au
-    │ │ ├── av
-    │ │ ├── aw
-    │ │ ├── ax
-    │ │ ├── ay
-    │ │ ├── az
-    │ ├─┴ j
-    │ │ ┌── ba
-    │ │ ├── bb
-    │ │ ├── bc
-    │ │ ├── bd
-    │ │ ├── be
-    │ │ ├── bf
-    │ │ ├── bg
-    │ │ ├── bh
-    │ │ ├── bi
-    │ │ ├── bj
-    │ │ ├── bk
-    │ │ ├── bl
-    │ ├─┴ k
-    │ │ ┌── bm
-    │ │ ├── bn
-    │ │ ├── bo
-    │ │ ├── bp
-    │ │ ├── bq
-    │ │ ├── br
-    │ │ ├── bs
-    │ │ ├── bt
-    │ │ ├── bu
-    │ │ ├── bv
-    │ │ ├── bw
-    │ │ ├── bx
-    │ │ ├── by
-    │ │ ├── bz
-    │ ├─┴ l
-    ├─┴ c
+        ┏━□ m
+        ┣━□ n
+        ┣━□ o
+      ┏━┻□ d
+      ┃ ┏━□ p
+      ┃ ┣━□ q
+      ┃ ┣━□ r
+      ┣━┻□ e
+      ┃ ┏━□ s
+      ┃ ┣━□ t
+      ┃ ┣━□ u
+      ┃ ┣━□ v
+      ┃ ┣━□ w
+      ┃ ┣━□ x
+      ┣━┻□ f
+    ┏━┻□ a
+    ┃   ┏━□ y
+    ┃   ┣━□ z
+    ┃   ┣━□ aa
+    ┃   ┣━□ ab
+    ┃ ┏━┻□ g
+    ┃ ┃ ┏━□ ac
+    ┃ ┃ ┣━□ ad
+    ┃ ┃ ┣━□ ae
+    ┃ ┃ ┣━□ af
+    ┃ ┃ ┣━□ ag
+    ┃ ┃ ┣━□ ah
+    ┃ ┣━┻□ h
+    ┣━┻□ b
+    ┃   ┏━□ ai
+    ┃   ┣━□ aj
+    ┃   ┣━□ ak
+    ┃   ┣━□ al
+    ┃   ┣━□ am
+    ┃   ┣━□ an
+    ┃   ┣━□ ao
+    ┃   ┣━□ ap
+    ┃ ┏━┻□ i
+    ┃ ┃ ┏━□ aq
+    ┃ ┃ ┣━□ ar
+    ┃ ┃ ┣━□ as
+    ┃ ┃ ┣━□ at
+    ┃ ┃ ┣━□ au
+    ┃ ┃ ┣━□ av
+    ┃ ┃ ┣━□ aw
+    ┃ ┃ ┣━□ ax
+    ┃ ┃ ┣━□ ay
+    ┃ ┃ ┣━□ az
+    ┃ ┣━┻□ j
+    ┃ ┃ ┏━□ ba
+    ┃ ┃ ┣━□ bb
+    ┃ ┃ ┣━□ bc
+    ┃ ┃ ┣━□ bd
+    ┃ ┃ ┣━□ be
+    ┃ ┃ ┣━□ bf
+    ┃ ┃ ┣━□ bg
+    ┃ ┃ ┣━□ bh
+    ┃ ┃ ┣━□ bi
+    ┃ ┃ ┣━□ bj
+    ┃ ┃ ┣━□ bk
+    ┃ ┃ ┣━□ bl
+    ┃ ┣━┻□ k
+    ┃ ┃ ┏━□ bm
+    ┃ ┃ ┣━□ bn
+    ┃ ┃ ┣━□ bo
+    ┃ ┃ ┣━□ bp
+    ┃ ┃ ┣━□ bq
+    ┃ ┃ ┣━□ br
+    ┃ ┃ ┣━□ bs
+    ┃ ┃ ┣━□ bt
+    ┃ ┃ ┣━□ bu
+    ┃ ┃ ┣━□ bv
+    ┃ ┃ ┣━□ bw
+    ┃ ┃ ┣━□ bx
+    ┃ ┃ ┣━□ by
+    ┃ ┃ ┣━□ bz
+    ┃ ┣━┻□ l
+    ┣━┻□ c
     main
   wantOffsets:
     a: 15

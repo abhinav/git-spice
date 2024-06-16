@@ -65,11 +65,11 @@ with-term -final exit $WORK/input/up-2-prompt.txt -- gs up -n 2
 cmp stdout $WORK/golden/up-2-prompt.txt
 
 -- golden/ls.txt --
-    ┌── feature3
-  ┌─┴ feature2
-  │ ┌── feature5
-  ├─┴ feature4
-┌─┴ feature1
+    ┏━□ feature3
+  ┏━┻□ feature2
+  ┃ ┏━□ feature5
+  ┣━┻□ feature4
+┏━┻□ feature1
 main ◀
 -- input/up-prompt.txt --
 await feature

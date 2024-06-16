@@ -135,8 +135,8 @@ DU feature.txt
 |/  
 * 53ec458 (main) Initial commit
 -- golden/list-short.txt --
-  ┌── feature1
-┌─┴ feature0
-├── feature2
-├── feature3 ◀
+  ┏━□ feature1
+┏━┻□ feature0
+┣━□ feature2
+┣━□ feature3 ◀
 main

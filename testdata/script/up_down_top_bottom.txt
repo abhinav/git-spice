@@ -130,9 +130,9 @@ cmp stderr $WORK/golden/git_ls_a.output
 * feature5
   main
 -- golden/git_ls_a.output --
-        ┌── feature5
-      ┌─┴ feature4
-    ┌─┴ feature3
-  ┌─┴ feature2
-┌─┴ feature1
+        ┏━□ feature5
+      ┏━┻□ feature4
+    ┏━┻□ feature3
+  ┏━┻□ feature2
+┏━┻□ feature1
 main ◀
