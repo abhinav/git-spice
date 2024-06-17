@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix name for Linux AMD64 release tarball to match `uname -m` for easier fetching from scripts.
-time: 2024-06-10T20:27:56.061212-07:00
