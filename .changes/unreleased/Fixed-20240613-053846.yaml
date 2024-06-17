@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'commit {create, amend}: Don''t restack the current branch on commit. Only the upstacks will be restacked.'
-time: 2024-06-13T05:38:46.052377-07:00

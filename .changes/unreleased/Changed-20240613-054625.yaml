@@ -1,3 +1,0 @@
-kind: Changed
-body: 'shell completion: Make shell argument optional and guess shell based on environment.'
-time: 2024-06-13T05:46:25.297182-07:00

@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'shell completion: Better handling of quoted strings while predicting.'
-time: 2024-06-13T21:53:26.445604-07:00

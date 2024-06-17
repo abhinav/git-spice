@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch delete: Prompt to force delete unmerged branches instead of just letting Git fail.'
-time: 2024-06-13T21:44:48.472351-07:00
