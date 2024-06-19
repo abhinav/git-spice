@@ -397,10 +397,12 @@ func (f *branchSubmitForm) bodyField(body *string) ui.Field {
 	return ui.Defer(func() ui.Field {
 		// By this point, the template field should have already run.
 		if f.tmpl != nil {
-			*body += "\n\n" + f.tmpl.Body
+			if *body != "" {
+				*body += "\n\n"
+			}
+			*body += f.tmpl.Body
 		}
 
-		// TODO: Delete defaultFunc
 		return ui.NewOpenEditor().
 			WithValue(body).
 			WithTitle("Body").
