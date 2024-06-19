@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: If there''s a PR template but no commit body, don''t add extraneous newlines at the start of the default PR description.'
+time: 2024-06-19T04:36:11.516142-07:00
