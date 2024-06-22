@@ -1,0 +1,67 @@
+# https://github.com/abhinav/git-spice/issues/208
+#
+# commit create and amend should not restack the current branch
+# even if it's the only branch on the stack.
+
+as 'Test <test@example.com>'
+at '2024-06-22T07:18:32Z'
+
+# setup
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+# move trunk so feature1 needs to be restacked
+gs trunk
+cp $WORK/extra/README.md README.md
+git add README.md
+git commit -m 'New initial state'
+
+gs up
+stderr 'feature1: needs to be restacked'
+
+# commit create
+cp $WORK/extra/feature1.2.txt feature1.2.txt
+git add feature1.2.txt
+gs cc -m 'Feature 1 part 2'
+
+# feature1 should not have been restacked
+! exists README.md
+
+# commit amend
+gs ca -m 'add part 2 of feature 1'
+# feature1 should not have been restacked
+! exists README.md
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+-- repo/init.txt --
+initial state
+
+-- repo/feature1.txt --
+feature1
+
+-- extra/README.md --
+this repository does things
+
+-- extra/feature1.2.txt --
+part 2 of feature 1
+
+-- golden/graph.txt --
+* 2d05ced (HEAD -> feature1) add part 2 of feature 1
+* 2190093 feature1
+| * a2f130f (main) New initial state
+|/  
+* 43089bc Initial commit
+-- golden/ls.txt --
+┏━■ feature1 (needs restack) ◀
+main

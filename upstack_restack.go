@@ -54,8 +54,11 @@ func (cmd *upstackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 	if err != nil {
 		return fmt.Errorf("get upstack branches: %w", err)
 	}
-	if cmd.NoBase && len(upstacks) > 1 && upstacks[0] == cmd.Name {
+	if cmd.NoBase && len(upstacks) > 0 && upstacks[0] == cmd.Name {
 		upstacks = upstacks[1:]
+		if len(upstacks) == 0 {
+			return nil
+		}
 	}
 
 loop:
