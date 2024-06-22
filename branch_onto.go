@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -79,57 +78,15 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 	}
 
-	ontoHash, err := repo.PeelToCommit(ctx, cmd.Onto)
-	if err != nil {
-		return fmt.Errorf("resolve %v: %w", cmd.Onto, err)
-	}
-
-	if branch.Base == cmd.Onto {
-		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
-		return nil
-	}
-
-	// Onto must be tracked if it's not trunk.
-	if cmd.Onto != store.Trunk() {
-		if _, err := svc.LookupBranch(ctx, cmd.Onto); err != nil {
-			if errors.Is(err, state.ErrNotExist) {
-				return fmt.Errorf("branch not tracked: %s", cmd.Onto)
-			}
-			return fmt.Errorf("get branch: %w", err)
-		}
-	}
-
-	// To do this operation successfully, we need to:
-	// Rebase the branch onto the destination branch.
-	// Following that, we need to graft the branch's upstack
-	// onto its original base.
-	if err := repo.Rebase(ctx, git.RebaseRequest{
-		Branch:    cmd.Branch,
-		Upstream:  branch.BaseHash.String(),
-		Onto:      cmd.Onto,
-		Autostash: true,
-		Quiet:     true,
-	}); err != nil {
-		// If the rebase is interrupted,
-		// we'll just re-run this command again later.
-		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-			Err:     err,
-			Command: []string{"branch", "onto", cmd.Onto},
-			Branch:  cmd.Branch,
-			Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
-		})
-	}
-
-	// As long as there are any branches above this one,
-	// they need to be grafted onto this branch's original base.
-	// We won't update state for this branch until that's done.
-	//
-	// However, this move operation will be an 'upstack onto'
-	// as for each of these branches, we want to keep *their* upstacks.
 	aboves, err := svc.ListAbove(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("list branches above %s: %w", cmd.Branch, err)
 	}
+
+	// As long as there are any branches above this one,
+	// they need to be grafted onto this branch's original base.
+	// However, this move operation will be an 'upstack onto'
+	// as for each of these branches, we want to keep *their* upstacks.
 	for _, above := range aboves {
 		if err := (&upstackOntoCmd{
 			Branch: above,
@@ -144,20 +101,25 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		}
 	}
 
-	// Once all the upstack branches have been grafted onto the original base,
-	// we can update the branch state to point to the new base.
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertRequest{
-			{
-				Name:     cmd.Branch,
-				Base:     cmd.Onto,
-				BaseHash: ontoHash,
-			},
-		},
-		Message: fmt.Sprintf("%s: branch onto %s", cmd.Branch, cmd.Onto),
-	})
-	if err != nil {
-		return fmt.Errorf("update store: %w", err)
+	// Only after the upstacks have been moved
+	// will we move the branch itself and update its internal state.
+	if branch.Base != cmd.Onto {
+		if err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
+			Branch: cmd.Branch,
+			Onto:   cmd.Onto,
+		}); err != nil {
+			// If the rebase is interrupted,
+			// we'll just re-run this command again later.
+			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     err,
+				Command: []string{"branch", "onto", cmd.Onto},
+				Branch:  cmd.Branch,
+				Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
+			})
+		}
+	} else if len(aboves) == 0 {
+		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
+		return nil
 	}
 
 	return repo.Checkout(ctx, cmd.Branch)

@@ -52,16 +52,6 @@ env EDITOR=true GIT_SPICE_VERBOSE=1
 gs bco feature1
 ! gs branch onto feature0
 
-# feature1 conflict
-stderr 'There was a conflict while rebasing'
-git status --porcelain
-cmp stdout $WORK/golden/conflict-status-feature1.txt
-
-# fix feature1 conflict
-cp $WORK/extra/feature1-resolved.txt feature.txt
-git add feature.txt
-! gs rebase continue
-
 # feature2 conflict
 stderr 'There was a conflict while rebasing'
 git status --porcelain
@@ -79,6 +69,16 @@ cmp stdout $WORK/golden/conflict-status-feature3.txt
 
 # fix feature3 conflict
 cp $WORK/extra/feature3-resolved.txt feature.txt
+git add feature.txt
+! gs rebase continue
+
+# feature1 conflict
+stderr 'There was a conflict while rebasing'
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature1.txt
+
+# fix feature1 conflict
+cp $WORK/extra/feature1-resolved.txt feature.txt
 git add feature.txt
 gs rebase continue
 

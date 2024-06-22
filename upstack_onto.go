@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -16,8 +15,6 @@ type upstackOntoCmd struct {
 	Branch string `help:"Branch to start at" placeholder:"NAME" predictor:"trackedBranches"`
 	Onto   string `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
 }
-
-// TODO: is 'upstack onto' just 'branch onto' followed by 'upstack restack'?
 
 func (*upstackOntoCmd) Help() string {
 	return text.Dedent(`
@@ -79,24 +76,9 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 	}
 
-	ontoHash, err := repo.PeelToCommit(ctx, cmd.Onto)
-	if err != nil {
-		return fmt.Errorf("resolve %v: %w", cmd.Onto, err)
-	}
-
 	if branch.Base == cmd.Onto {
 		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
 		return nil
-	}
-
-	// Onto must be tracked if it's not trunk.
-	if cmd.Onto != store.Trunk() {
-		if _, err := svc.LookupBranch(ctx, cmd.Onto); err != nil {
-			if errors.Is(err, state.ErrNotExist) {
-				return fmt.Errorf("branch not tracked: %s", cmd.Onto)
-			}
-			return fmt.Errorf("get branch: %w", err)
-		}
 	}
 
 	// Implementation note:
@@ -104,13 +86,11 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	// It starts by rebasing only the current branch onto the target
 	// branch, updating internal state to point to the new base.
 	// Following that, an 'upstack restack' will handle the upstack branches.
-	if err := repo.Rebase(ctx, git.RebaseRequest{
-		Branch:    cmd.Branch,
-		Upstream:  branch.BaseHash.String(),
-		Onto:      cmd.Onto,
-		Autostash: true,
-		Quiet:     true,
-	}); err != nil {
+	err = svc.BranchOnto(ctx, &spice.BranchOntoRequest{
+		Branch: cmd.Branch,
+		Onto:   cmd.Onto,
+	})
+	if err != nil {
 		// If the rebase is interrupted,
 		// we'll just re-run this command again later.
 		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
@@ -121,19 +101,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		})
 	}
 
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertRequest{
-			{
-				Name:     cmd.Branch,
-				Base:     cmd.Onto,
-				BaseHash: ontoHash,
-			},
-		},
-		Message: fmt.Sprintf("%s: upstack onto %s", cmd.Branch, cmd.Onto),
-	})
-	if err != nil {
-		return fmt.Errorf("update store: %w", err)
-	}
-
-	return (&upstackRestackCmd{}).Run(ctx, log, opts)
+	return (&upstackRestackCmd{
+		NoBase: true, // we've already moved the current branch
+	}).Run(ctx, log, opts)
 }
