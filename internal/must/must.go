@@ -71,6 +71,15 @@ func NotBeNilf(v any, format string, args ...any) {
 	}
 }
 
+// NotContainf panics if e is in es.
+func NotContainf[T comparable](es []T, e T, format string, args ...any) {
+	for _, x := range es {
+		if x == e {
+			panicErrorf(format, args...)
+		}
+	}
+}
+
 // Failf unconditionally panics with the given message.
 func Failf(format string, args ...any) {
 	panicErrorf(format, args...)
