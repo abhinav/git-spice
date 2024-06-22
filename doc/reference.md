@@ -146,6 +146,26 @@ gs stack (s) restack (r)
 
 Restack the current stack
 
+### gs stack edit
+
+```
+gs stack (s) edit (e) [<name>] [flags]
+```
+
+Edit the order of branches in the stack
+
+Opens an editor to allow changing the order of branches
+in the current stack.
+Branches deleted from the list will not be modified.
+
+**Arguments**
+
+* `name`: Branch to edit from. Defaults to current branch.
+
+**Flags**
+
+* `--editor=STRING`: Editor to use for editing the branches.
+
 ### gs upstack restack
 
 ```
@@ -249,7 +269,7 @@ Branches deleted from the list will also not be modified.
 
 **Arguments**
 
-* `name`: Name of the branch to start editing from.
+* `name`: Branch to edit from. Defaults to current branch.
 
 **Flags**
 
