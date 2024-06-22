@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'commit {create, amend}: Fix unintended restacking of current branch when there''s only one branch in the stack.'
+time: 2024-06-22T07:22:19.986177-07:00
