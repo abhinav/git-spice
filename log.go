@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
-	"github.com/dustin/go-humanize"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/fliptree"
+	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type logCmd struct {
@@ -29,9 +28,12 @@ var (
 				Foreground(ui.Cyan).
 				Bold(true)
 
-	_commitHashStyle    = ui.NewStyle().Foreground(ui.Yellow)
-	_commitSubjectStyle = ui.NewStyle().Foreground(ui.Plain)
-	_commitTimeStyle    = ui.NewStyle().Foreground(ui.Gray)
+	_logCommitStyle = widget.CommitSummaryStyle{
+		Hash:    ui.NewStyle().Foreground(ui.Yellow),
+		Subject: ui.NewStyle().Foreground(ui.Plain),
+		Time:    ui.NewStyle().Foreground(ui.Gray),
+	}
+	_logCommitFaintStyle = _logCommitStyle.Faint(true)
 
 	_needsRestackStyle = ui.NewStyle().
 				Foreground(ui.Gray).
@@ -46,8 +48,6 @@ var (
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
 	All bool `short:"a" long:"all" help:"Show all tracked branches, not just the current stack."`
-
-	Now time.Time `hidden:"" env:"GIT_SPICE_LOG_NOW"` // used for relative time calculations
 }
 
 type branchLogOptions struct {
@@ -192,22 +192,18 @@ func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err e
 				o.WriteString(" " + _markerStyle.String())
 			}
 
-			commitHashStyle := _commitHashStyle
-			commitSubjectStyle := _commitSubjectStyle
-			commitTimeStyle := _commitTimeStyle
+			commitStyle := _logCommitStyle
 			if b.Name != currentBranch {
-				commitHashStyle = commitHashStyle.Faint(true)
-				commitSubjectStyle = commitSubjectStyle.Faint(true)
-				commitTimeStyle = commitTimeStyle.Faint(true)
+				commitStyle = _logCommitFaintStyle
 			}
 
 			for _, commit := range b.Commits {
 				o.WriteString("\n")
-				o.WriteString(commitHashStyle.Render(commit.ShortHash.String()))
-				o.WriteString(" ")
-				o.WriteString(commitSubjectStyle.Render(commit.Subject))
-				o.WriteString(" ")
-				o.WriteString(commitTimeStyle.Render("(" + cmd.humanizeTime(commit.AuthorDate) + ")"))
+				(&widget.CommitSummary{
+					ShortHash:  commit.ShortHash,
+					Subject:    commit.Subject,
+					AuthorDate: commit.AuthorDate,
+				}).Render(&o, commitStyle)
 			}
 
 			return o.String()
@@ -228,13 +224,4 @@ func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err e
 
 	_, err = fmt.Fprint(os.Stderr, s.String())
 	return err
-}
-
-func (cmd *branchLogCmd) humanizeTime(t time.Time) string {
-	currentTime := cmd.Now
-	if currentTime.IsZero() {
-		currentTime = time.Now()
-	}
-
-	return humanize.RelTime(t, currentTime, "ago", "from now")
 }
