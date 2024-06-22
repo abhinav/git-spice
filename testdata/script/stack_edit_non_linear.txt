@@ -1,0 +1,38 @@
+# Editing the order of a stack with 'stack edit'.
+
+as 'Test <test@example.com>'
+at '2024-06-22T12:24:34Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+gs down
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+# Now we have:
+#   main -> feature1 -> {feature2, feature3}
+gs bco main
+! gs stack edit
+cmp stderr $WORK/stderr.golden
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- stderr.golden --
+ERR main is part of a stack with a divergent upstack.
+ERR feature1 has multiple branches above it: feature2, feature3
+ERR Check out one of those branches and try again.
+FTL gs: current branch has ambiguous upstack

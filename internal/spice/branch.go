@@ -609,3 +609,58 @@ func (s *Service) ListStack(ctx context.Context, start string) ([]string, error)
 	stack = append(stack, upstacks...)
 	return stack, nil
 }
+
+// NonLinearStackError is returned when a stack is not linear.
+// This means that a branch has more than one upstack branch.
+type NonLinearStackError struct {
+	Branch string
+	Aboves []string
+}
+
+func (e *NonLinearStackError) Error() string {
+	return fmt.Sprintf("%v has %d branches above it", e.Branch, len(e.Aboves))
+}
+
+// ListStackLinear returns the full stack of branches that the given branch is in
+// but only if the stack is linear: each branch has only one upstack branch.
+// If the stack is not linear, [NonLinearStackError] is returned.
+//
+// The returned slice is ordered by branch position in the stack
+// with the bottom-most branch as the first element.
+func (s *Service) ListStackLinear(ctx context.Context, start string) ([]string, error) {
+	var downstacks []string
+	if start != s.store.Trunk() {
+		var err error
+		downstacks, err = s.ListDownstack(ctx, start)
+		if err != nil {
+			return nil, fmt.Errorf("get downstack branches: %w", err)
+		}
+
+		must.NotBeEmptyf(downstacks, "downstack branches must not be empty")
+		must.BeEqualf(start, downstacks[0], "current branch must be first downstack")
+		downstacks = downstacks[1:] // Remove current branch from list
+		slices.Reverse(downstacks)
+	}
+
+	branchesByBase, err := s.branchesByBase(ctx) // base -> [branches]
+	if err != nil {
+		return nil, err
+	}
+
+	upstacks := []string{start}
+	current := start
+	for aboves := branchesByBase[current]; len(aboves) > 0; {
+		if len(aboves) > 1 {
+			return nil, &NonLinearStackError{
+				Branch: current,
+				Aboves: aboves,
+			}
+		}
+
+		current = aboves[0]
+		upstacks = append(upstacks, current)
+		aboves = branchesByBase[current]
+	}
+
+	return slices.Concat(downstacks, upstacks), nil
+}
