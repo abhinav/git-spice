@@ -101,12 +101,20 @@ type CreateBranchRequest struct {
 	// Head is the commitish to start the branch from.
 	// Defaults to the current HEAD.
 	Head string
+
+	// Force specifies that the branch should be created
+	// at the given Head even if a branch with the same name
+	// already exists.
+	Force bool
 }
 
 // CreateBranch creates a new branch in the repository.
 // This operation fails if a branch with the same name already exists.
 func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) error {
 	args := []string{"branch", req.Name}
+	if req.Force {
+		args = append(args, "--force")
+	}
 	if req.Head != "" {
 		args = append(args, req.Head)
 	}
@@ -114,6 +122,12 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
+}
+
+// BranchExists reports whether a branch with the given name exists.
+func (r *Repository) BranchExists(ctx context.Context, branch string) bool {
+	return r.gitCmd(ctx, "rev-parse", "--verify", "refs/heads/"+branch).
+		Run(r.exec) == nil
 }
 
 // DetachHead detaches the HEAD from the current branch

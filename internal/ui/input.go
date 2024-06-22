@@ -99,6 +99,7 @@ func (i *Input) WithValidate(f func(string) error) *Input {
 
 // Init initializes the field.
 func (i *Input) Init() tea.Cmd {
+	i.model.Err = nil
 	return i.model.Focus()
 }
 

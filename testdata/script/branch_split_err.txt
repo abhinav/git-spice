@@ -1,0 +1,54 @@
+as 'Test <test@example.com>'
+at '2024-06-23T09:50:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+! gs branch split
+stderr 'cannot split trunk'
+
+git add feature0.txt
+gs bc feature0 -m 'Add feature0'
+
+git add feature1.txt
+gs bc features -m 'Add feature1'
+
+git add feature2.txt
+gs cc -m 'Add feature2'
+
+git add feature3.txt
+gs cc -m 'Add feature3'
+
+gs ll -a
+cmp stderr $WORK/golden/before.txt
+
+# commit out of range
+! gs branch split --at HEAD~3:featureX
+stderr 'b28a94c'
+stderr 'not in range feature0..features'
+
+# branch already exists
+! gs branch split --at HEAD~1:feature0
+stderr 'branch already exists'
+
+# duplicate branch name
+! gs branch split --at HEAD~2:featureX --at HEAD~1:featureX
+stderr 'branch name already taken'
+
+-- repo/feature0.txt --
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- repo/feature3.txt --
+feature3
+-- golden/before.txt --
+  ┏━■ features ◀
+  ┃   20c96d0 Add feature3 (now)
+  ┃   31bf33e Add feature2 (now)
+  ┃   97bc101 Add feature1 (now)
+┏━┻□ feature0
+┃    b28a94c Add feature0 (now)
+main
