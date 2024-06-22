@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
 	"slices"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -68,101 +64,24 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return nil
 	}
 
-	originalBranches := make(map[string]struct{}, len(downstacks))
-	for _, branch := range downstacks {
-		originalBranches[branch] = struct{}{}
-	}
-
-	instructionFile, err := createEditFile(downstacks)
+	slices.Reverse(downstacks) // branch closest to trunk first
+	res, err := svc.StackEdit(ctx, &spice.StackEditRequest{
+		Stack:  downstacks,
+		Editor: cmd.Editor,
+	})
 	if err != nil {
-		return err
-	}
-
-	editCmd := exec.CommandContext(ctx, cmd.Editor, instructionFile)
-	editCmd.Stdin = os.Stdin
-	editCmd.Stdout = os.Stdout
-	editCmd.Stderr = os.Stderr
-	if err := editCmd.Run(); err != nil {
-		return fmt.Errorf("run editor: %w", err)
-	}
-
-	f, err := os.Open(instructionFile)
-	if err != nil {
-		return fmt.Errorf("open edited file: %w", err)
-	}
-
-	newOrder := make([]string, 0, len(downstacks))
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		bs := bytes.TrimSpace(scanner.Bytes())
-		if len(bs) == 0 || bs[0] == '#' {
-			continue
+		if errors.Is(err, spice.ErrStackEditAborted) {
+			log.Infof("downstack edit aborted")
+			return nil
 		}
 
-		name := string(bs)
-		if _, ok := originalBranches[name]; !ok {
-			// TODO: better error
-			return fmt.Errorf("branch %q not in original downstack, or is duplicated", name)
-		}
-		delete(originalBranches, name)
-
-		newOrder = append(newOrder, name)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read edited file: %w", err)
-	}
-
-	if len(newOrder) == 0 {
-		log.Infof("downstack edit aborted or nothing to do")
-		return nil
-	}
-	newTop := newOrder[0]
-	slices.Reverse(newOrder)
-
-	base := store.Trunk()
-	for _, branch := range newOrder {
-		err := (&branchOntoCmd{
-			Branch: branch,
-			Onto:   base,
-		}).Run(ctx, log, opts)
-		if err != nil {
-			return fmt.Errorf("branch onto %s: %w", branch, err)
-		}
-		base = branch
+		// TODO: we can probably recover from the rebase operation
+		// by saving the branch list somewhere,
+		// and allowing it to be provided as input to the command.
+		return fmt.Errorf("edit downstack: %w", err)
 	}
 
 	return (&branchCheckoutCmd{
-		Name: newTop,
+		Name: res.Stack[len(res.Stack)-1],
 	}).Run(ctx, log, opts)
-}
-
-var _editFooter = `
-# Edit the order of branches by modifying the list above.
-# The branch at the bottom of the list will be merged into trunk first.
-# Branches above that will be stacked on top of it in the order they appear.
-# Branches deleted from the list will not be modified.
-#
-# Save and quit the editor to apply the changes.
-# Delete all lines in the editor to abort the operation.
-`
-
-func createEditFile(branches []string) (_ string, err error) {
-	file, err := os.CreateTemp("", "spice-edit-*.txt")
-	if err != nil {
-		return "", fmt.Errorf("create temporary file: %w", err)
-	}
-	defer func() { err = errors.Join(err, file.Close()) }()
-
-	for _, branch := range branches {
-		if _, err := fmt.Fprintln(file, branch); err != nil {
-			return "", fmt.Errorf("write branc: %w", err)
-		}
-	}
-
-	if _, err := io.WriteString(file, _editFooter); err != nil {
-		return "", fmt.Errorf("write footer: %w", err)
-	}
-
-	return file.Name(), nil
 }
