@@ -99,10 +99,10 @@ func TestScript(t *testing.T) {
 				gittest.CmdAt(ts, b, s)
 
 				// Set the Git-speciifc environment variables,
-				// as well as git-spice's own GIT_SPICE_LOG_NOW.
+				// as well as git-spice's own GIT_SPICE_NOW.
 				// Tests that want a different behavior for log
-				// can set GIT_SPICE_LOG_NOW to a different value.
-				ts.Setenv("GIT_SPICE_LOG_NOW", ts.Getenv("GIT_COMMITTER_DATE"))
+				// can set GIT_SPICE_NOW to a different value.
+				ts.Setenv("GIT_SPICE_NOW", ts.Getenv("GIT_COMMITTER_DATE"))
 			},
 
 			"cmpenvJSON": cmdCmpenvJSON,
