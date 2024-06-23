@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -40,6 +41,8 @@ import (
 //     Wait up to 1 second for the given text to become visible on the screen.
 //     If [txt] is absent, wait until contents of the screen change
 //     compared to the last captured snapshot or last await empty.
+//   - clear:
+//     Ignore current screen contents when awaiting text.
 //   - snapshot [name]:
 //     Take a picture of the screen as it is right now, and print it to stdout.
 //     If name is provided, the output will include that as a header.
@@ -110,13 +113,20 @@ func WithTerm() (exitCode int) {
 			if len(*finalSnapshot) > 0 {
 				fmt.Printf("### %s ###\n", *finalSnapshot)
 			}
-			if _, err := os.Stdout.Write(emu.Snapshot()); err != nil {
-				log.Printf("error writing to stdout: %v", err)
+			for _, line := range emu.Snapshot() {
+				fmt.Println(line)
 			}
 		}
 	}()
 
-	var lastSnapshot []byte
+	var (
+		// lastSnapshot is the last snapshot taken.
+		lastSnapshot []string
+
+		// lastMatchPrefix holds the contents of the screen
+		// up to and including the last 'await txt' match.
+		awaitStripPrefix []string
+	)
 	scan := bufio.NewScanner(instructionFile)
 	for scan.Scan() {
 		line := bytes.TrimSpace(scan.Bytes())
@@ -126,22 +136,44 @@ func WithTerm() (exitCode int) {
 
 		cmd, rest, _ := strings.Cut(string(line), " ")
 		switch cmd {
+		case "clear":
+			awaitStripPrefix = emu.Snapshot()
+
 		case "await":
 			timeout := time.Second
 			start := time.Now()
 
-			var match func([]byte) bool
+			var match func([]string) bool
 			switch {
 			case len(rest) > 0:
-				want := []byte(rest)
-				match = func(snap []byte) bool {
-					return bytes.Contains(snap, want)
+				want := rest
+				match = func(snap []string) bool {
+					// Strip prefix if "clear" was called.
+					if len(awaitStripPrefix) > 0 && len(snap) >= len(awaitStripPrefix) {
+						for i := 0; i < len(awaitStripPrefix); i++ {
+							if snap[i] != awaitStripPrefix[i] {
+								awaitStripPrefix = nil
+								break
+							}
+						}
+
+						if len(awaitStripPrefix) > 0 {
+							snap = snap[len(awaitStripPrefix):]
+						}
+					}
+
+					for _, line := range snap {
+						if strings.Contains(line, want) {
+							return true
+						}
+					}
+					return false
 				}
 			case len(lastSnapshot) > 0:
 				want := lastSnapshot
 				lastSnapshot = nil
-				match = func(snap []byte) bool {
-					return !bytes.Equal(snap, want)
+				match = func(snap []string) bool {
+					return !slices.Equal(snap, want)
 				}
 
 			default:
@@ -150,7 +182,7 @@ func WithTerm() (exitCode int) {
 			}
 
 			var (
-				last    []byte
+				last    []string
 				matched bool
 			)
 			for time.Since(start) < timeout {
@@ -185,8 +217,8 @@ func WithTerm() (exitCode int) {
 			if len(rest) > 0 {
 				fmt.Printf("### %s ###\n", rest)
 			}
-			if _, err := os.Stdout.Write(lastSnapshot); err != nil {
-				log.Printf("error writing to stdout: %v", err)
+			for _, line := range lastSnapshot {
+				fmt.Println(line)
 			}
 
 		case "feed":
@@ -273,16 +305,23 @@ func (m *terminalEmulator) FeedKeys(s string) error {
 	return err
 }
 
-func (m *terminalEmulator) Snapshot() []byte {
+func (m *terminalEmulator) Snapshot() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var buff bytes.Buffer
+	var lines []string
 	for _, row := range m.term.Content {
 		rowstr := strings.TrimRight(string(row), " \t\n")
-		buff.WriteString(rowstr)
-		buff.WriteRune('\n')
+		lines = append(lines, rowstr)
 	}
 
-	return append(bytes.TrimRight(buff.Bytes(), "\n"), '\n')
+	// Trim trailing empty lines.
+	for i := len(lines) - 1; i >= 0; i-- {
+		if len(lines[i]) > 0 {
+			lines = lines[:i+1]
+			break
+		}
+	}
+
+	return lines
 }
