@@ -9,6 +9,20 @@ import (
 	"strings"
 )
 
+// Bef panics if b is false.
+func Bef(b bool, format string, args ...any) {
+	if !b {
+		panicErrorf(format, args...)
+	}
+}
+
+// NotBef panics if b is true.
+func NotBef(b bool, format string, args ...any) {
+	if b {
+		panicErrorf(format, args...)
+	}
+}
+
 // BeEqualf panics if a != b.
 func BeEqualf[T comparable](a, b T, format string, args ...any) {
 	if a != b {

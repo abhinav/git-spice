@@ -466,6 +466,43 @@ on top of the base branch.
 
 * `name`: Name of the branch
 
+### gs branch split
+
+```
+gs branch (b) split (sp) [<branch>] [flags]
+```
+
+Split a branch on commits
+
+Splits a branch (the current branch by default)
+into two or more branches at specific commits,
+inserting the new branches into the stack
+at the positions of the commits.
+
+By default, the command runs in interactive mode.
+To use this command non-interactively, supply the --at flag
+one or more times:
+
+	--at COMMIT:NAME
+
+Where COMMIT resolves to a commit per gitrevisions(7),
+and NAME is the name of the new branch.
+For example:
+
+	# split at a specific commit
+	gs branch split --at 1234567:newbranch
+
+	# split at the previous commit
+	gs branch split --at HEAD^:newbranch
+
+**Arguments**
+
+* `branch`: Branch to split commits of.
+
+**Flags**
+
+* `--at=COMMIT:NAME,...`: Commits to split the branch at.
+
 ### gs branch edit
 
 ```

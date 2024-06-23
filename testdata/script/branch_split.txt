@@ -1,0 +1,46 @@
+as 'Test <test@example.com>'
+at '2024-06-23T09:50:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc features -m 'Add feature1'
+
+git add feature2.txt
+gs cc -m 'Add feature2'
+
+git add feature3.txt
+gs cc -m 'Add feature3'
+
+gs ls -a
+cmp stderr $WORK/golden/before.txt
+
+gs branch split --at HEAD~2:feature1 --at HEAD^:feature2
+
+gs ls -a
+cmp stderr $WORK/golden/after.txt
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- repo/feature3.txt --
+feature3
+-- golden/before.txt --
+┏━■ features ◀
+main
+-- golden/after.txt --
+    ┏━■ features ◀
+  ┏━┻□ feature2
+┏━┻□ feature1
+main
+-- golden/graph.txt --
+* 99827e4 (HEAD -> features) Add feature3
+* a1192a4 (feature2) Add feature2
+* b9014d5 (feature1) Add feature1
+* 5c2596e (main) Initial commit

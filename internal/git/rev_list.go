@@ -26,6 +26,9 @@ func (r *Repository) ListCommits(ctx context.Context, commits CommitRange) ([]Ha
 
 // CommitDetail contains information about a commit.
 type CommitDetail struct {
+	// Hash is the full hash of the commit.
+	Hash Hash
+
 	// ShortHash is the short (usually 7-character) hash of the commit.
 	ShortHash Hash
 
@@ -42,7 +45,7 @@ func (cd *CommitDetail) String() string {
 
 // ListCommitsDetails returns details about commits matched by the given range.
 func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange) ([]CommitDetail, error) {
-	lines, err := r.listCommitsFormat(ctx, commits, "%h %at %s")
+	lines, err := r.listCommitsFormat(ctx, commits, "%H %h %at %s")
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +55,12 @@ func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange
 		hash, line, ok := strings.Cut(line, " ")
 		if !ok {
 			r.log.Warn("Bad rev-list output", "line", line, "error", "missing a hash")
+			continue
+		}
+
+		shortHash, line, ok := strings.Cut(line, " ")
+		if !ok {
+			r.log.Warn("Bad rev-list output", "line", line, "error", "missing a short hash")
 			continue
 		}
 
@@ -67,7 +76,8 @@ func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange
 		}
 
 		details[i] = CommitDetail{
-			ShortHash:  Hash(hash),
+			Hash:       Hash(hash),
+			ShortHash:  Hash(shortHash),
 			Subject:    subject,
 			AuthorDate: time.Unix(epoch, 0),
 		}
@@ -161,4 +171,9 @@ func (r CommitRange) Limit(n int) CommitRange {
 // should be listed if it is a merge commit.
 func (r CommitRange) FirstParent() CommitRange {
 	return append(r, "--first-parent")
+}
+
+// Reverse indicates that the commits should be listed in reverse order.
+func (r CommitRange) Reverse() CommitRange {
+	return append(r, "--reverse")
 }
