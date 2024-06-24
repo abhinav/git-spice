@@ -20,7 +20,7 @@ gs bc -m 'Add feature1' feature1
 git checkout main
 
 # submit the branch
-gs branch submit --fill feature1
+gs branch submit --fill --branch=feature1
 stderr 'Created #1'
 gh-dump-pull
 cmpenvJSON stdout $WORK/golden/pulls.json

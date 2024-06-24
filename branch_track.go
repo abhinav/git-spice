@@ -15,20 +15,17 @@ import (
 )
 
 type branchTrackCmd struct {
-	Base string `short:"b" help:"Base branch this merges into" predictor:"branches"`
-	Name string `arg:"" optional:"" help:"Name of the branch to track" predictor:"branches"`
-
-	// TODO:
-	// PR   int    `help:"Pull request number to associate with this branch"`
+	Base   string `short:"b" placeholder:"BRANCH" help:"Base branch this merges into" predictor:"trackedBranches"`
+	Branch string `arg:"" optional:"" help:"Name of the branch to track" predictor:"branches"`
 }
 
 func (*branchTrackCmd) Help() string {
 	return text.Dedent(`
-		Use this to track branches created without 'gs branch create',
-		e.g. with 'git checkout -b' or 'git branch'.
+		A branch must be tracked to be able to run gs operations on it.
+		Use 'gs branch create' to automatically track new branches.
 
-		A base will be guessed based on the branch's history.
-		Use --base to specify a branch explicitly.
+		The base is guessed by comparing against other tracked branches.
+		Use --base to specify a base explicitly.
 	`)
 }
 
@@ -38,19 +35,19 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return err
 	}
 
-	if cmd.Name == "" {
-		cmd.Name, err = repo.CurrentBranch(ctx)
+	if cmd.Branch == "" {
+		cmd.Branch, err = repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
 	}
 
-	if cmd.Name == store.Trunk() {
+	if cmd.Branch == store.Trunk() {
 		return fmt.Errorf("cannot track trunk branch")
 	}
 
 	if cmd.Base == "" {
-		branchHash, err := repo.PeelToCommit(ctx, cmd.Name)
+		branchHash, err := repo.PeelToCommit(ctx, cmd.Branch)
 		if err != nil {
 			return fmt.Errorf("peel to commit: %w", err)
 		}
@@ -97,7 +94,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	revLoop:
 		for _, rev := range revs {
 			for branchIdx, branchName := range trackedBranches {
-				if branchName == cmd.Name {
+				if branchName == cmd.Branch {
 					continue
 				}
 
@@ -123,7 +120,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	// Check if adding this connection would create a cycle.
 	// TODO: Perform this check in Store.Update,
 	// ensuring that 'branch onto' also checks for cycles.
-	path := []string{cmd.Name}
+	path := []string{cmd.Branch}
 	downstack, err := svc.ListDownstack(ctx, cmd.Base)
 	if err != nil {
 		return fmt.Errorf("list downstack: %w", err)
@@ -133,7 +130,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			path = append(path, branch)
 			slices.Reverse(path)
 
-			log.Errorf("%v: base %v would create a cycle:", cmd.Name, cmd.Base)
+			log.Errorf("%v: base %v would create a cycle:", cmd.Branch, cmd.Base)
 			log.Errorf("  %v", strings.Join(path, " -> "))
 			return errors.New("cycle detected")
 		}
@@ -153,23 +150,23 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{
 			{
-				Name:     cmd.Name,
+				Name:     cmd.Branch,
 				Base:     cmd.Base,
 				BaseHash: baseHash,
 			},
 		},
-		Message: fmt.Sprintf("track %v with base %v", cmd.Name, cmd.Base),
+		Message: fmt.Sprintf("track %v with base %v", cmd.Branch, cmd.Base),
 	})
 	if err != nil {
 		return fmt.Errorf("set branch: %w", err)
 	}
 
-	log.Infof("%v: tracking with base %v", cmd.Name, cmd.Base)
+	log.Infof("%v: tracking with base %v", cmd.Branch, cmd.Base)
 
-	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		if errors.As(err, &restackErr) {
-			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Branch, cmd.Branch)
 		}
 		log.Warnf("error checking branch: %v", err)
 	}

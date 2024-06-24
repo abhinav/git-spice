@@ -14,18 +14,18 @@ import (
 )
 
 type branchDeleteCmd struct {
-	Name  string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
-	Force bool   `short:"f" help:"Force deletion of the branch"`
+	Force  bool   `short:"f" help:"Force deletion of the branch"`
+	Branch string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
 }
 
 func (*branchDeleteCmd) Help() string {
 	return text.Dedent(`
-		Deletes the specified branch and removes its changes from the
-		stack. Branches above the deleted branch are rebased onto the
-		branch's base.
+		The deleted branch and its commits are removed from the stack.
+		Branches above the deleted branch are rebased onto
+		the next branch downstack.
 
-		If a branch name is not provided, an interactive prompt will be
-		shown to pick one.
+		A prompt will allow selecting the target branch.
+		Provide a name as an argument to skip the prompt.
 	`)
 }
 
@@ -35,7 +35,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		// If a branch name is not given, prompt for one;
 		// assuming we're in interactive mode.
 		if !opts.Prompt {
@@ -47,7 +47,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			currentBranch = ""
 		}
 
-		cmd.Name, err = (&branchPrompt{
+		cmd.Branch, err = (&branchPrompt{
 			Exclude: []string{store.Trunk()},
 			Default: currentBranch,
 			Title:   "Select a branch to delete",
@@ -60,16 +60,16 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	tracked, exists := true, true
 	var head git.Hash
 	base := store.Trunk()
-	if b, err := svc.LookupBranch(ctx, cmd.Name); err != nil {
+	if b, err := svc.LookupBranch(ctx, cmd.Branch); err != nil {
 		if delErr := new(spice.DeletedBranchError); errors.As(err, &delErr) {
 			exists = false
-			log.Info("branch has already been deleted", "branch", cmd.Name)
+			log.Info("branch has already been deleted", "branch", cmd.Branch)
 		} else if errors.Is(err, state.ErrNotExist) {
 			tracked = false
 			log.Debug("branch is not tracked", "error", err)
-			log.Info("branch is not tracked: deleting anyway", "branch", cmd.Name)
+			log.Info("branch is not tracked: deleting anyway", "branch", cmd.Branch)
 		} else {
-			return fmt.Errorf("lookup branch %v: %w", cmd.Name, err)
+			return fmt.Errorf("lookup branch %v: %w", cmd.Branch, err)
 		}
 	} else {
 		head = b.Head
@@ -77,7 +77,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 
 	if exists && head == "" {
-		hash, err := repo.PeelToCommit(ctx, cmd.Name)
+		hash, err := repo.PeelToCommit(ctx, cmd.Branch)
 		if err != nil {
 			return fmt.Errorf("peel to commit: %w", err)
 		}
@@ -104,7 +104,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 		checkoutTarget = head.String()
 	} else {
-		if cmd.Name == currentBranch {
+		if cmd.Branch == currentBranch {
 			checkoutTarget = base
 		} else {
 			checkoutTarget = currentBranch
@@ -117,9 +117,9 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	//
 	// Only then will we update internal state.
 	if tracked {
-		aboves, err := svc.ListAbove(ctx, cmd.Name)
+		aboves, err := svc.ListAbove(ctx, cmd.Branch)
 		if err != nil {
-			return fmt.Errorf("list above %v: %w", cmd.Name, err)
+			return fmt.Errorf("list above %v: %w", cmd.Branch, err)
 		}
 
 		for _, above := range aboves {
@@ -131,12 +131,12 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 				if cmd.Force {
 					contCmd = append(contCmd, "--force")
 				}
-				contCmd = append(contCmd, cmd.Name)
+				contCmd = append(contCmd, cmd.Branch)
 				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 					Err:     err,
 					Command: contCmd,
 					Branch:  checkoutTarget,
-					Message: fmt.Sprintf("interrupted: %v: branch deleted", cmd.Name),
+					Message: fmt.Sprintf("interrupted: %v: branch deleted", cmd.Branch),
 				})
 			}
 		}
@@ -150,10 +150,10 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	// git will refuse to delete it.
 	// If we can prompt, ask the user to upgrade to a forceful deletion.
 	if exists && !cmd.Force && opts.Prompt && !repo.IsAncestor(ctx, head, "HEAD") {
-		log.Warnf("%v (%v) is not reachable from HEAD", cmd.Name, head.Short())
+		log.Warnf("%v (%v) is not reachable from HEAD", cmd.Branch, head.Short())
 		prompt := ui.NewConfirm().
-			WithTitlef("Delete %v anyway?", cmd.Name).
-			WithDescriptionf("%v has not been merged into HEAD. This may result in data loss.", cmd.Name).
+			WithTitlef("Delete %v anyway?", cmd.Branch).
+			WithDescriptionf("%v has not been merged into HEAD. This may result in data loss.", cmd.Branch).
 			WithValue(&cmd.Force)
 		if err := ui.Run(prompt); err != nil {
 			return fmt.Errorf("run prompt: %w", err)
@@ -162,10 +162,10 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 	if exists {
 		opts := git.BranchDeleteOptions{Force: cmd.Force}
-		if err := repo.DeleteBranch(ctx, cmd.Name, opts); err != nil {
+		if err := repo.DeleteBranch(ctx, cmd.Branch, opts); err != nil {
 			// If the branch still exists,
 			// it's likely because it's not merged.
-			if _, peelErr := repo.PeelToCommit(ctx, cmd.Name); peelErr == nil {
+			if _, peelErr := repo.PeelToCommit(ctx, cmd.Branch); peelErr == nil {
 				log.Error("git refused to delete the branch", "err", err)
 				log.Error("try re-running with --force")
 				return errors.New("branch not deleted")
@@ -176,12 +176,12 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			log.Warn("branch may already have been deleted", "err", err)
 		}
 
-		log.Infof("%v: deleted (was %v)", cmd.Name, head.Short())
+		log.Infof("%v: deleted (was %v)", cmd.Branch, head.Short())
 	}
 
 	if tracked {
-		if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
-			return fmt.Errorf("forget branch %v: %w", cmd.Name, err)
+		if err := svc.ForgetBranch(ctx, cmd.Branch); err != nil {
+			return fmt.Errorf("forget branch %v: %w", cmd.Branch, err)
 		}
 	}
 

@@ -12,27 +12,22 @@ import (
 )
 
 type upstackRestackCmd struct {
-	Name string `arg:"" optional:"" help:"Branch to restack the upstack of" predictor:"trackedBranches"`
-
-	NoBase bool `help:"Do not restack the base branch"`
+	Branch    string `help:"Branch to restack the upstack of" placeholder:"NAME" predictor:"trackedBranches"`
+	SkipStart bool   `help:"Do not restack the starting branch"`
 }
 
 func (*upstackRestackCmd) Help() string {
 	return text.Dedent(`
-		Restacks the given branch and all branches above it
-		on top of the new heads of their base branches.
-		If multiple branches use this branch as their base,
-		they will all be restacked.
+		The current branch and all branches above it
+		are rebased on top of their respective bases,
+		ensuring a linear history.
+		Use --branch to start at a different branch.
+		Use --skip-start to skip the starting branch,
+		but still rebase all branches above it.
 
-		If a branch name is not provided,
-		the current branch will be used.
-		Run this command from the trunk branch
-		to restack all managed branches.
-
-		By default, the provided branch is also restacked
-		on top of its base branch.
-		Use the --no-base flag to only restack branches above it,
-		and leave the branch itself untouched.
+		The target branch defaults to the current branch.
+		If run from the trunk branch,
+		all managed branches will be restacked.
 	`)
 }
 
@@ -42,19 +37,19 @@ func (cmd *upstackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	upstacks, err := svc.ListUpstack(ctx, cmd.Name)
+	upstacks, err := svc.ListUpstack(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("get upstack branches: %w", err)
 	}
-	if cmd.NoBase && len(upstacks) > 0 && upstacks[0] == cmd.Name {
+	if cmd.SkipStart && len(upstacks) > 0 && upstacks[0] == cmd.Branch {
 		upstacks = upstacks[1:]
 		if len(upstacks) == 0 {
 			return nil
@@ -78,13 +73,13 @@ loop:
 				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 					Err:     rebaseErr,
 					Command: []string{"upstack", "restack"},
-					Branch:  cmd.Name,
-					Message: fmt.Sprintf("interrupted: restack upstack of %v", cmd.Name),
+					Branch:  cmd.Branch,
+					Message: fmt.Sprintf("interrupted: restack upstack of %v", cmd.Branch),
 				})
 			case errors.Is(err, spice.ErrAlreadyRestacked):
 				// Log the "does not need to be restacked" message
 				// only for branches that are not the base branch.
-				if upstack != cmd.Name {
+				if upstack != cmd.Branch {
 					log.Infof("%v: branch does not need to be restacked.", upstack)
 				}
 				continue loop
@@ -97,8 +92,8 @@ loop:
 	}
 
 	// On success, check out the original branch.
-	if err := repo.Checkout(ctx, cmd.Name); err != nil {
-		return fmt.Errorf("checkout branch %v: %w", cmd.Name, err)
+	if err := repo.Checkout(ctx, cmd.Branch); err != nil {
+		return fmt.Errorf("checkout branch %v: %w", cmd.Branch, err)
 	}
 
 	return nil

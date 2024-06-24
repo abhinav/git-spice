@@ -24,12 +24,9 @@ gs shell completion [<shell>]
 
 Generate shell completion script
 
-Generates shell completion scripts for the provided shell.
-If a shell name is not provided, the command will attempt to
-guess the shell based on environment variables.
-
-To install the script, add the following line to your shell's
-rc file.
+To set up shell completion, eval the output of this command
+from your shell's rc file.
+For example:
 
 	# bash
 	eval "$(gs shell completion bash)"
@@ -39,6 +36,9 @@ rc file.
 
 	# fish
 	eval "$(gs shell completion fish)"
+
+If shell name is not provided, the current shell is guessed
+using a heuristic.
 
 **Arguments**
 
@@ -54,24 +54,24 @@ gs repo (r) init (i) [flags]
 
 Initialize a repository
 
-Sets up a repository for use.
-This isn't strictly necessary to run as most commands will
-auto-initialize the repository as needed.
+A trunk branch is required.
+This is the branch that changes will be merged into.
+A prompt will ask for one if not provided with --trunk.
 
-Use the --trunk flag to specify the trunk branch.
-This is typically 'main' or 'master',
-and picking one is required.
+Most branch stacking operations are local
+and do not require a network connection.
+For operations that push or pull commits, a remote is required.
+A prompt will ask for one during initialization
+if not provided with --remote.
 
-Use the --remote flag to specify the remote to push changes to.
-A remote is not required--local stacking will work without it,
-but any commands that require a remote will fail.
-To add a remote later, re-run this command.
+Re-run the command to change the trunk or remote.
+Re-run with --reset to discard all stored information.
 
 **Flags**
 
 * `--trunk=BRANCH`: Name of the trunk branch
 * `--remote=NAME`: Name of the remote to push changes to
-* `--reset`: Reset the store if it's already initialized
+* `--reset`: Forget all information about the repository
 
 ### gs repo sync
 
@@ -81,9 +81,12 @@ gs repo (r) sync (s)
 
 Pull latest changes from the remote
 
-Pulls the latest changes from the remote repository.
-Deletes branches that have were merged into trunk,
-and updates the base branches of branches upstack from those.
+Branches with merged Change Requests
+will be deleted after syncing.
+
+The repository must have a remote associated for syncing.
+A prompt will ask for one if the repository
+was not initialized with a remote.
 
 ## Log
 
@@ -93,11 +96,9 @@ and updates the base branches of branches upstack from those.
 gs log (l) short (s) [flags]
 ```
 
-Short view of stack
+List branches
 
-Provides a tree view of the branches in the current stack,
-both upstack and downstack from it.
-By default, branches upstack and downstack from the current
+Only branches that are upstack and downstack from the current
 branch are shown.
 Use with the -a/--all flag to show all tracked branches.
 
@@ -111,11 +112,9 @@ Use with the -a/--all flag to show all tracked branches.
 gs log (l) long (l) [flags]
 ```
 
-Long view of stack
+List branches and commits
 
-Provides a tree view of the branches in the current stack
-and their commits,
-By default, branches upstack and downstack from the current
+Only branches that are upstack and downstack from the current
 branch are shown.
 Use with the -a/--all flag to show all tracked branches.
 
@@ -131,7 +130,14 @@ Use with the -a/--all flag to show all tracked branches.
 gs stack (s) submit (s) [flags]
 ```
 
-Submit the current stack
+Submit a stack
+
+Change Requests are created or updated
+for all branches in the current stack.
+A prompt will ask for a title and body for each Change Request.
+Use --fill to populate these from the commit messages.
+Use --dry-run to see what would be submitted
+without actually submitting anything.
 
 **Flags**
 
@@ -144,58 +150,59 @@ Submit the current stack
 gs stack (s) restack (r)
 ```
 
-Restack the current stack
+Restack a stack
+
+All branches in the current stack are rebased on top of their
+respective bases, ensuring a linear history.
 
 ### gs stack edit
 
 ```
-gs stack (s) edit (e) [<name>] [flags]
+gs stack (s) edit (e) [flags]
 ```
 
-Edit the order of branches in the stack
+Edit the order of branches in a stack
 
-Opens an editor to allow changing the order of branches
-in the current stack.
-Branches deleted from the list will not be modified.
+This operation requires a linear stack:
+no branch can have multiple branches above it.
 
-**Arguments**
+An editor opens with a list of branches in the current stack in-order,
+with the topmost branch at the top of the file,
+and the branch closest to the trunk at the bottom.
 
-* `name`: Branch to edit from. Defaults to current branch.
+Modifications to the list will be reflected in the stack
+when the editor is closed.
+If the file is cleared, no changes will be made.
+Branches that are deleted from the list will be ignored.
 
 **Flags**
 
 * `--editor=STRING`: Editor to use for editing the branches.
+* `--branch=NAME`: Branch whose stack we're editing. Defaults to current branch.
 
 ### gs upstack restack
 
 ```
-gs upstack (us) restack (r) [<name>] [flags]
+gs upstack (us) restack (r) [flags]
 ```
 
-Restack this branch those above it
+Restack a branch and its upstack
 
-Restacks the given branch and all branches above it
-on top of the new heads of their base branches.
-If multiple branches use this branch as their base,
-they will all be restacked.
+The current branch and all branches above it
+are rebased on top of their respective bases,
+ensuring a linear history.
+Use --branch to start at a different branch.
+Use --skip-start to skip the starting branch,
+but still rebase all branches above it.
 
-If a branch name is not provided,
-the current branch will be used.
-Run this command from the trunk branch
-to restack all managed branches.
-
-By default, the provided branch is also restacked
-on top of its base branch.
-Use the --no-base flag to only restack branches above it,
-and leave the branch itself untouched.
-
-**Arguments**
-
-* `name`: Branch to restack the upstack of
+The target branch defaults to the current branch.
+If run from the trunk branch,
+all managed branches will be restacked.
 
 **Flags**
 
-* `--no-base`: Do not restack the base branch
+* `--branch=NAME`: Branch to restack the upstack of
+* `--skip-start`: Do not restack the starting branch
 
 ### gs upstack onto
 
@@ -203,14 +210,17 @@ and leave the branch itself untouched.
 gs upstack (us) onto (o) [<onto>] [flags]
 ```
 
-Move this branch onto another branch
+Move a branch onto another branch
 
-Moves a branch and its upstack branches onto another branch.
-Use this to move a complete part of your branch stack to a
-different base.
+The current branch and its upstack will move onto the new base.
+Use 'gs branch onto' to leave the branch's upstack alone.
+Use --branch to move a different branch than the current one.
+
+A prompt will allow selecting the new base.
+Provide the new base name as an argument to skip the prompt.
 
 For example, given the following stack with B checked out,
-running 'gs upstack onto main' will move B and C onto main:
+'gs upstack onto main' will have the following effect:
 
 	       gs upstack onto main
 
@@ -230,139 +240,113 @@ running 'gs upstack onto main' will move B and C onto main:
 ### gs downstack submit
 
 ```
-gs downstack (ds) submit (s) [<name>] [flags]
+gs downstack (ds) submit (s) [flags]
 ```
 
-Submit the current branch and those below it
+Submit a branch and those below it
 
-Submits Pull Requests for the current branch,
-and for all branches below, down to the trunk branch.
-Branches that already have open Pull Requests will be updated.
+Change Requests are created or updated
+for the current branch and all branches below it until trunk.
+Use --branch to start at a different branch.
 
-A prompt will allow filling metadata about new Pull Requests.
-Use the --fill flag to use the commit messages as-is
-and submit without a prompt.
-
-**Arguments**
-
-* `name`: Branch to start at
+A prompt will ask for a title and body for each Change Request.
+Use --fill to populate these from the commit messages.
+Use --dry-run to see what would be submitted
+without actually submitting anything.
 
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
+* `--branch=NAME`: Branch to start at
 
 ### gs downstack edit
 
 ```
-gs downstack (ds) edit (e) [<name>] [flags]
+gs downstack (ds) edit (e) [flags]
 ```
 
-Edit the order of branches below the current branch
+Edit the order of branches below a branch
 
-Opens an editor to allow changing the order of branches
-from trunk to the current branch.
-The branch at the top of the list will be checked out
-as the topmost branch in the downstack.
-Branches upstack of the current branch will not be modified.
-Branches deleted from the list will also not be modified.
+An editor opens with a list of branches in-order,
+starting from the current branch until trunk.
+The current branch is at the top of the list.
+Use --branch to start at a different branch.
 
-**Arguments**
-
-* `name`: Branch to edit from. Defaults to current branch.
+Modifications to the list will be reflected in the stack
+when the editor is closed, and the topmost branch will be checked out.
+If the file is cleared, no changes will be made.
+Branches that are deleted from the list will be ignored.
+Branches that are upstack of the current branch will not be modified.
 
 **Flags**
 
 * `--editor=STRING`: Editor to use for editing the downstack.
+* `--branch=NAME`: Branch to edit from. Defaults to current branch.
 
 ## Branch
 
 ### gs branch track
 
 ```
-gs branch (b) track (tr) [<name>] [flags]
+gs branch (b) track (tr) [<branch>] [flags]
 ```
 
 Track a branch
 
-Use this to track branches created without 'gs branch create',
-e.g. with 'git checkout -b' or 'git branch'.
+A branch must be tracked to be able to run gs operations on it.
+Use 'gs branch create' to automatically track new branches.
 
-A base will be guessed based on the branch's history.
-Use --base to specify a branch explicitly.
+The base is guessed by comparing against other tracked branches.
+Use --base to specify a base explicitly.
 
 **Arguments**
 
-* `name`: Name of the branch to track
+* `branch`: Name of the branch to track
 
 **Flags**
 
-* `-b`, `--base=STRING`: Base branch this merges into
+* `-b`, `--base=BRANCH`: Base branch this merges into
 
 ### gs branch untrack
 
 ```
-gs branch (b) untrack (untr) [<name>]
+gs branch (b) untrack (untr) [<branch>]
 ```
 
 Forget a tracked branch
 
-Removes information about a tracked branch,
-without deleting the branch itself.
-If the branch has any branches upstack from it,
-they will be updated to point to its base branch.
+The current branch is deleted from git-spice's data store
+but not deleted from the repository.
+Branches upstack from it are not affected,
+and will to the next branch downstack.
+
+Provide a branch name as an argument to target
+a different branch.
 
 **Arguments**
 
-* `name`: Name of the branch to untrack
+* `branch`: Name of the branch to untrack. Defaults to current.
 
 ### gs branch checkout
 
 ```
-gs branch (b) checkout (co) [<name>] [flags]
+gs branch (b) checkout (co) [<branch>] [flags]
 ```
 
 Switch to a branch
 
+A prompt will allow selecting between tracked branches.
+Provide a branch name as an argument to skip the prompt.
+Use -u/--untracked to show untracked branches in the prompt.
+
 **Arguments**
 
-* `name`: Name of the branch to delete
+* `branch`: Name of the branch to delete
 
 **Flags**
 
 * `-u`, `--untracked`: Show untracked branches if one isn't supplied
-
-### gs branch onto
-
-```
-gs branch (b) onto (on) [<onto>] [flags]
-```
-
-Move a branch onto another branch
-
-Transplants the commits of a branch on top of another branch
-leaving the rest of the branch stack untouched.
-Use this to extract a single branch from an otherwise unrelated
-branch stack.
-
-For example, given the following stack with B checked out,
-running 'gs branch onto main' will move B onto main
-and leave C on top of A.
-
-	       gs branch onto main
-
-	    ┌── C               ┌── B ◀
-	  ┌─┴ B ◀               │ ┌── C
-	┌─┴ A                   ├─┴ A
-	trunk                   trunk
-
-**Arguments**
-
-* `onto`: Destination branch
-
-**Flags**
-
-* `--branch=NAME`: Branch to move
 
 ### gs branch create
 
@@ -372,17 +356,17 @@ gs branch (b) create (c) [<name>] [flags]
 
 Create a new branch
 
-Creates a new branch containing the staged changes
-on top of the current branch, or --target if specified.
-If there are no staged changes, creates an empty commit.
+Staged changes will be committed to the new branch.
+If there are no staged changes, an empty commit will be created.
+If a branch name is not provided,
+it will be generated from the commit message.
 
-By default, the new branch is created on top of the target,
-but it does not affect the rest of the stack.
-Use the --insert flag to move the upstack branches of the
-target onto the new branch.
-Alternatively, use the --below flag to place the new branch
-below the target branch, making the new branch the base of the
-rest of the stack.
+The new branch will use the current branch as its base.
+Use --target to specify a different base branch.
+
+--insert will move the branches upstack from the target branch
+on top of the new branch.
+--below will create the new branch below the target branch.
 
 For example, given the following stack, with A checked out:
 
@@ -393,6 +377,8 @@ For example, given the following stack, with A checked out:
 
 'gs branch create X' will have the following effects
 with different flags:
+
+	         gs branch create X
 
 	 default  │   --insert   │  --below
 	──────────┼──────────────┼──────────
@@ -405,7 +391,7 @@ with different flags:
 In all cases above, use of -t/--target flag will change the
 target (A) to the specified branch:
 
-	              --target B
+	     gs branch create X --target B
 
 	 default  │   --insert   │  --below
 	──────────┼──────────────┼────────────
@@ -424,26 +410,26 @@ target (A) to the specified branch:
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
-* `-m`, `--message=STRING`: Commit message
+* `-m`, `--message=MSG`: Commit message
 
 ### gs branch delete
 
 ```
-gs branch (b) delete (d,rm) [<name>] [flags]
+gs branch (b) delete (d,rm) [<branch>] [flags]
 ```
 
 Delete a branch
 
-Deletes the specified branch and removes its changes from the
-stack. Branches above the deleted branch are rebased onto the
-branch's base.
+The deleted branch and its commits are removed from the stack.
+Branches above the deleted branch are rebased onto
+the next branch downstack.
 
-If a branch name is not provided, an interactive prompt will be
-shown to pick one.
+A prompt will allow selecting the target branch.
+Provide a name as an argument to skip the prompt.
 
 **Arguments**
 
-* `name`: Name of the branch to delete
+* `branch`: Name of the branch to delete
 
 **Flags**
 
@@ -452,36 +438,38 @@ shown to pick one.
 ### gs branch fold
 
 ```
-gs branch (b) fold (fo) [<name>]
+gs branch (b) fold (fo) [flags]
 ```
 
 Merge a branch into its base
 
-Merges the changes of a branch into its base branch
-and deletes it.
-Branches above the folded branch will be restacked
-on top of the base branch.
+Commits from the current branch will be merged into its base
+and the current branch will be deleted.
+Branches above the folded branch will point
+to the next branch downstack.
+Use the --branch flag to target a different branch.
 
-**Arguments**
+**Flags**
 
-* `name`: Name of the branch
+* `--branch=NAME`: Name of the branch
 
 ### gs branch split
 
 ```
-gs branch (b) split (sp) [<branch>] [flags]
+gs branch (b) split (sp) [flags]
 ```
 
 Split a branch on commits
 
-Splits a branch (the current branch by default)
-into two or more branches at specific commits,
-inserting the new branches into the stack
+Splits the current branch into two or more branches at specific
+commits, inserting the new branches into the stack
 at the positions of the commits.
+Use the --branch flag to specify a different branch to split.
 
-By default, the command runs in interactive mode.
-To use this command non-interactively, supply the --at flag
-one or more times:
+By default, the command will prompt for commits to introduce
+splits at.
+Supply the --at flag one or more times to split a branch
+without a prompt.
 
 	--at COMMIT:NAME
 
@@ -495,13 +483,10 @@ For example:
 	# split at the previous commit
 	gs branch split --at HEAD^:newbranch
 
-**Arguments**
-
-* `branch`: Branch to split commits of.
-
 **Flags**
 
 * `--at=COMMIT:NAME,...`: Commits to split the branch at.
+* `--branch=NAME`: Branch to split commits of.
 
 ### gs branch edit
 
@@ -511,10 +496,9 @@ gs branch (b) edit (e)
 
 Edit the commits in a branch
 
-Begins an interactive rebase of a branch without affecting its
-base branch. This allows you to edit the commits in the branch,
-reword their messages, etc.
-After the rebase, the branches upstack from the edited branch
+Starts an interactive rebase with only the commits
+in this branch.
+Following the rebase, branches upstack from this branch
 will be restacked.
 
 ### gs branch rename
@@ -536,9 +520,9 @@ The following modes are supported:
 	# Rename current branch interactively
 	gs branch rename
 
-If you renamed a branch without this command,
-track the new branch name with 'gs branch track',
-and untrack the old name with 'gs branch untrack'.
+For branches renamed with 'git branch -m',
+use 'gs branch track' and 'gs branch untrack'
+to update the branch tracking.
 
 **Arguments**
 
@@ -548,56 +532,86 @@ and untrack the old name with 'gs branch untrack'.
 ### gs branch restack
 
 ```
-gs branch (b) restack (r) [<name>]
+gs branch (b) restack (r) [flags]
 ```
 
 Restack a branch
 
-Updates a branch after its base branch has been changed,
-rebasing its commits on top of the base.
+The current branch will be rebased onto its base,
+ensuring a linear history.
+Use --branch to target a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to restack
+
+### gs branch onto
+
+```
+gs branch (b) onto (on) [<onto>] [flags]
+```
+
+Move a branch onto another branch
+
+The commits of the current branch are transplanted onto another
+branch.
+Branches upstack are moved to point to its original base.
+Use --branch to move a different branch than the current one.
+
+A prompt will allow selecting the new base.
+Provide the new base name as an argument to skip the prompt.
+
+For example, given the following stack with B checked out,
+running 'gs branch onto main' will move B onto main
+and leave C on top of A.
+
+	       gs branch onto main
+
+	    ┌── C               ┌── B ◀
+	  ┌─┴ B ◀               │ ┌── C
+	┌─┴ A                   ├─┴ A
+	trunk                   trunk
 
 **Arguments**
 
-* `name`: Branch to restack
+* `onto`: Destination branch
+
+**Flags**
+
+* `--branch=NAME`: Branch to move
 
 ### gs branch submit
 
 ```
-gs branch (b) submit (s) [<name>] [flags]
+gs branch (b) submit (s) [flags]
 ```
 
 Submit a branch
 
-Creates or updates a pull request for the specified branch,
-or the current branch if none is specified.
-The pull request will use the branch's base branch
-as the merge base.
+A Change Request is created for the current branch,
+or updated if it already exists.
+Use the --branch flag to target a different branch.
 
-For new pull requests, a prompt will allow filling metadata.
+For new Change Requests, a prompt will allow filling metadata.
 Use the --title and --body flags to skip the prompt,
 or the --fill flag to use the commit message to fill them in.
 The --draft flag marks the pull request as a draft.
-
-When updating an existing pull request,
-the --[no-]draft flag can be used to update the draft status.
+For updating Change Requests,
+use --draft/--no-draft to change its draft status.
 Without the flag, the draft status is not changed.
 
-If --no-publish is specified, a remote branch will be pushed
-but a pull request will not be created.
-The flag has no effect if a pull request already exists.
-
-**Arguments**
-
-* `name`: Branch to submit
+Use --no-publish to push the branch without creating a Change
+Request.
 
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--title=STRING`: Title of the pull request
-* `--body=STRING`: Body of the pull request
+* `--title=TITLE`: Title of the pull request
+* `--body=BODY`: Body of the pull request
 * `--[no-]draft`: Whether to mark the pull request as draft
 * `--fill`: Fill in the pull request title and body from the commit messages
 * `--no-publish`: Push the branch, but donn't create a pull request
+* `--branch=NAME`: Branch to submit
 
 ## Commit
 
@@ -609,10 +623,10 @@ gs commit (c) create (c) [flags]
 
 Create a new commit
 
-Commits the staged changes to the current branch,
-restacking upstack branches if necessary.
-Use this to keep upstack branches in sync
-as you update a branch in the middle of the stack.
+Staged changes are committed to the current branch.
+Branches upstack are restacked if necessary.
+Use this as a shortcut for 'git commit'
+followed by 'gs upstack restack'.
 
 **Flags**
 
@@ -627,14 +641,14 @@ gs commit (c) amend (a) [flags]
 
 Amend the current commit
 
-Amends the last commit with the staged changes,
-restacking upstack branches if necessary.
-Use this to keep upstack branches in sync
-as you update a branch in the middle of the stack.
+Staged changes are amended into the topmost commit.
+Branches upstack are restacked if necessary.
+Use this as a shortcut for 'git commit --amend'
+followed by 'gs upstack restack'.
 
 **Flags**
 
-* `-m`, `--message=STRING`: Use the given message as the commit message.
+* `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-n`, `--no-edit`: Don't edit the commit message
 
 ## Rebase
@@ -685,9 +699,10 @@ gs up (u) [<n>] [flags]
 
 Move up one branch
 
-Moves up the stack to the branch on top of the current one.
+Checks out the branch above the current one.
 If there are multiple branches with the current branch as base,
-you will be prompted to pick one.
+a prompt will allow picking between them.
+Use the -n flag to print the branch without checking it out.
 
 **Arguments**
 
@@ -705,10 +720,10 @@ gs down (d) [<n>] [flags]
 
 Move down one branch
 
-Moves down the stack to the branch below the current branch.
-As a convenience,
-if the current branch is at the bottom of the stack,
-this command will move to the trunk branch.
+Checks out the branch below the current branch.
+If the current branch is at the bottom of the stack,
+checks out the trunk branch.
+Use the -n flag to print the branch without checking it out.
 
 **Arguments**
 
@@ -726,9 +741,10 @@ gs top (U) [flags]
 
 Move to the top of the stack
 
-Jumps to the top-most branch in the current branch's stack.
-If there are multiple top-most branches,
-you will be prompted to pick one.
+Checks out the top-most branch in the current branch's stack.
+If there are multiple possible top-most branches,
+a prompt will ask you to pick one.
+Use the -n flag to print the branch without checking it out.
 
 **Flags**
 
@@ -742,8 +758,8 @@ gs bottom (D) [flags]
 
 Move to the bottom of the stack
 
-Jumps to the bottom-most branch below the current branch.
-This is the branch just above the trunk.
+Checks out the bottom-most branch in the current branch's stack.
+Use the -n flag to print the branch without checking it out.
 
 **Flags**
 

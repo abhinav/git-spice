@@ -18,12 +18,15 @@ type upstackOntoCmd struct {
 
 func (*upstackOntoCmd) Help() string {
 	return text.Dedent(`
-		Moves a branch and its upstack branches onto another branch.
-		Use this to move a complete part of your branch stack to a
-		different base.
+		The current branch and its upstack will move onto the new base.
+		Use 'gs branch onto' to leave the branch's upstack alone.
+		Use --branch to move a different branch than the current one.
+
+		A prompt will allow selecting the new base.
+		Provide the new base name as an argument to skip the prompt.
 
 		For example, given the following stack with B checked out,
-		running 'gs upstack onto main' will move B and C onto main:
+		'gs upstack onto main' will have the following effect:
 
 			       gs upstack onto main
 
@@ -102,6 +105,6 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	return (&upstackRestackCmd{
-		NoBase: true, // we've already moved the current branch
+		SkipStart: true, // we've already moved the current branch
 	}).Run(ctx, log, opts)
 }

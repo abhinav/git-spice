@@ -19,19 +19,20 @@ import (
 // along commit boundaries.
 type branchSplitCmd struct {
 	At     []branchSplit `placeholder:"COMMIT:NAME" help:"Commits to split the branch at."`
-	Branch string        `arg:"" optional:"" help:"Branch to split commits of."`
+	Branch string        `placeholder:"NAME" help:"Branch to split commits of."`
 }
 
 func (*branchSplitCmd) Help() string {
 	return text.Dedent(`
-		Splits a branch (the current branch by default)
-		into two or more branches at specific commits,
-		inserting the new branches into the stack
+		Splits the current branch into two or more branches at specific
+		commits, inserting the new branches into the stack
 		at the positions of the commits.
+		Use the --branch flag to specify a different branch to split.
 
-		By default, the command runs in interactive mode.
-		To use this command non-interactively, supply the --at flag
-		one or more times:
+		By default, the command will prompt for commits to introduce
+		splits at.
+		Supply the --at flag one or more times to split a branch
+		without a prompt.
 
 			--at COMMIT:NAME
 

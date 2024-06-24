@@ -16,10 +16,9 @@ type branchEditCmd struct{}
 
 func (*branchEditCmd) Help() string {
 	return text.Dedent(`
-		Begins an interactive rebase of a branch without affecting its
-		base branch. This allows you to edit the commits in the branch,
-		reword their messages, etc.
-		After the rebase, the branches upstack from the edited branch
+		Starts an interactive rebase with only the commits
+		in this branch.
+		Following the rebase, branches upstack from this branch
 		will be restacked.
 	`)
 }

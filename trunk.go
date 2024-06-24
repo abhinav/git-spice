@@ -24,5 +24,5 @@ func (*trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) 
 	}
 
 	trunk := store.Trunk()
-	return (&branchCheckoutCmd{Name: trunk}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: trunk}).Run(ctx, log, opts)
 }

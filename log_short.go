@@ -13,9 +13,7 @@ type logShortCmd struct {
 
 func (*logShortCmd) Help() string {
 	return text.Dedent(`
-		Provides a tree view of the branches in the current stack,
-		both upstack and downstack from it.
-		By default, branches upstack and downstack from the current
+		Only branches that are upstack and downstack from the current
 		branch are shown.
 		Use with the -a/--all flag to show all tracked branches.
 	`)

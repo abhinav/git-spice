@@ -8,9 +8,17 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type stackRestackCmd struct{}
+
+func (*stackRestackCmd) Help() string {
+	return text.Dedent(`
+		All branches in the current stack are rebased on top of their
+		respective bases, ensuring a linear history.
+	`)
+}
 
 func (*stackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, store, svc, err := openRepo(ctx, log, opts)

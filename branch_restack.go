@@ -13,13 +13,14 @@ import (
 )
 
 type branchRestackCmd struct {
-	Name string `arg:"" optional:"" help:"Branch to restack" predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Branch to restack" predictor:"trackedBranches"`
 }
 
 func (*branchRestackCmd) Help() string {
 	return text.Dedent(`
-		Updates a branch after its base branch has been changed,
-		rebasing its commits on top of the base.
+		The current branch will be rebased onto its base,
+		ensuring a linear history.
+		Use --branch to target a different branch.
 	`)
 }
 
@@ -29,15 +30,15 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	res, err := svc.Restack(ctx, cmd.Name)
+	res, err := svc.Restack(ctx, cmd.Branch)
 	if err != nil {
 		var rebaseErr *git.RebaseInterruptError
 		switch {
@@ -46,20 +47,20 @@ func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 			// we'll resume by re-running this command.
 			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     rebaseErr,
-				Command: []string{"branch", "restack", cmd.Name},
-				Branch:  cmd.Name,
-				Message: fmt.Sprintf("interrupted: restack branch %s", cmd.Name),
+				Command: []string{"branch", "restack"},
+				Branch:  cmd.Branch,
+				Message: fmt.Sprintf("interrupted: restack branch %s", cmd.Branch),
 			})
 		case errors.Is(err, state.ErrNotExist):
-			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
+			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
 			return errors.New("untracked branch")
 		case errors.Is(err, spice.ErrAlreadyRestacked):
-			log.Infof("%v: branch does not need to be restacked.", cmd.Name)
+			log.Infof("%v: branch does not need to be restacked.", cmd.Branch)
 			return nil
 		}
 		return fmt.Errorf("restack branch: %w", err)
 	}
 
-	log.Infof("%v: restacked on %v", cmd.Name, res.Base)
+	log.Infof("%v: restacked on %v", cmd.Branch, res.Base)
 	return nil
 }

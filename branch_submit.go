@@ -20,8 +20,8 @@ import (
 type branchSubmitCmd struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 
-	Title string `help:"Title of the pull request"`
-	Body  string `help:"Body of the pull request"`
+	Title string `help:"Title of the pull request" placeholder:"TITLE"`
+	Body  string `help:"Body of the pull request" placeholder:"BODY"`
 	Draft *bool  `negatable:"" help:"Whether to mark the pull request as draft"`
 	Fill  bool   `help:"Fill in the pull request title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt
@@ -34,28 +34,25 @@ type branchSubmitCmd struct {
 	// - milestone
 	// - reviewers
 
-	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to submit" predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
 
 func (*branchSubmitCmd) Help() string {
 	return text.Dedent(`
-		Creates or updates a pull request for the specified branch,
-		or the current branch if none is specified.
-		The pull request will use the branch's base branch
-		as the merge base.
+		A Change Request is created for the current branch,
+		or updated if it already exists.
+		Use the --branch flag to target a different branch.
 
-		For new pull requests, a prompt will allow filling metadata.
+		For new Change Requests, a prompt will allow filling metadata.
 		Use the --title and --body flags to skip the prompt,
 		or the --fill flag to use the commit message to fill them in.
 		The --draft flag marks the pull request as a draft.
-
-		When updating an existing pull request,
-		the --[no-]draft flag can be used to update the draft status.
+		For updating Change Requests,
+		use --draft/--no-draft to change its draft status.
 		Without the flag, the draft status is not changed.
 
-		If --no-publish is specified, a remote branch will be pushed
-		but a pull request will not be created.
-		The flag has no effect if a pull request already exists.
+		Use --no-publish to push the branch without creating a Change
+		Request.
 	`)
 }
 
@@ -69,29 +66,29 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	branch, err := svc.LookupBranch(ctx, cmd.Name)
+	branch, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("lookup branch: %w", err)
 	}
 
 	// Refuse to submit if the branch is not restacked.
-	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
-		log.Errorf("Branch %s needs to be restacked.", cmd.Name)
+	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
+		log.Errorf("Branch %s needs to be restacked.", cmd.Branch)
 		log.Errorf("Run the following command to fix this:")
-		log.Errorf("  gs branch restack %s", cmd.Name)
+		log.Errorf("  gs branch restack %s", cmd.Branch)
 		return errors.New("refusing to submit outdated branch")
 		// TODO: this can be made optional with a --force or a prompt.
 	}
 
-	commitHash, err := repo.PeelToCommit(ctx, cmd.Name)
+	commitHash, err := repo.PeelToCommit(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("peel to commit: %w", err)
 	}
@@ -99,7 +96,7 @@ func (cmd *branchSubmitCmd) Run(
 	// If the branch has already been pushed to upstream with a different name,
 	// use that name instead.
 	// This is useful for branches that were renamed locally.
-	upstreamBranch := cmd.Name
+	upstreamBranch := cmd.Branch
 	if branch.UpstreamBranch != "" {
 		upstreamBranch = branch.UpstreamBranch
 	}
@@ -147,16 +144,16 @@ func (cmd *branchSubmitCmd) Run(
 			// A PR was found, but it wasn't associated with the branch.
 			// It was probably created manually.
 			// We'll heal the state while we're at it.
-			log.Infof("%v: Found existing PR %v", cmd.Name, existingChange.ID)
+			log.Infof("%v: Found existing PR %v", cmd.Branch, existingChange.ID)
 			err = store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{
 					{
-						Name:           cmd.Name,
+						Name:           cmd.Branch,
 						ChangeForge:    md.ForgeID(),
 						ChangeMetadata: changeMeta,
 					},
 				},
-				Message: fmt.Sprintf("%v: associate existing PR", cmd.Name),
+				Message: fmt.Sprintf("%v: associate existing PR", cmd.Branch),
 			})
 			if err != nil {
 				return fmt.Errorf("update state: %w", err)
@@ -167,7 +164,7 @@ func (cmd *branchSubmitCmd) Run(
 			// with the same base branch.
 			// If we get here, it means there are multiple PRs open
 			// with different base branches.
-			return fmt.Errorf("multiple open pull requests for %s", cmd.Name)
+			return fmt.Errorf("multiple open pull requests for %s", cmd.Branch)
 			// TODO: Ask the user to pick one and associate it with the branch.
 		}
 	} else {
@@ -186,9 +183,9 @@ func (cmd *branchSubmitCmd) Run(
 	if existingChange == nil {
 		if cmd.DryRun {
 			if cmd.NoPublish {
-				log.Infof("WOULD push branch %s", cmd.Name)
+				log.Infof("WOULD push branch %s", cmd.Branch)
 			} else {
-				log.Infof("WOULD create a pull request for %s", cmd.Name)
+				log.Infof("WOULD create a pull request for %s", cmd.Branch)
 			}
 			return nil
 		}
@@ -225,22 +222,22 @@ func (cmd *branchSubmitCmd) Run(
 		// we need to save to the state that we pushed the branch
 		// with the recorded name.
 		upsert := state.UpsertRequest{
-			Name:           cmd.Name,
+			Name:           cmd.Branch,
 			UpstreamBranch: upstreamBranch,
 		}
 		defer func() {
 			err := store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{upsert},
-				Message: fmt.Sprintf("branch submit %s", cmd.Name),
+				Message: fmt.Sprintf("branch submit %s", cmd.Branch),
 			})
 			if err != nil {
 				log.Warn("Could not update state", "error", err)
 			}
 		}()
 
-		upstream := remote + "/" + cmd.Name
-		if err := repo.SetBranchUpstream(ctx, cmd.Name, upstream); err != nil {
-			log.Warn("Could not set upstream", "branch", cmd.Name, "remote", remote, "error", err)
+		upstream := remote + "/" + cmd.Branch
+		if err := repo.SetBranchUpstream(ctx, cmd.Branch, upstream); err != nil {
+			log.Warn("Could not set upstream", "branch", cmd.Branch, "remote", remote, "error", err)
 		}
 
 		if prepared != nil {
@@ -262,11 +259,11 @@ func (cmd *branchSubmitCmd) Run(
 			upsert.ChangeForge = changeMeta.ForgeID()
 			upsert.ChangeMetadata = changeIDJSON
 		} else {
-			log.Infof("Pushed %s", cmd.Name)
+			log.Infof("Pushed %s", cmd.Branch)
 		}
 	} else {
 		if cmd.NoPublish {
-			log.Warnf("Ignoring --no-publish: %s was already published: %s", cmd.Name, existingChange.URL)
+			log.Warnf("Ignoring --no-publish: %s was already published: %s", cmd.Branch, existingChange.URL)
 		}
 
 		// Check base and HEAD are up-to-date.
@@ -445,7 +442,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 		changeTemplatesCh <- templates
 	}()
 
-	msgs, err := repo.CommitMessageRange(ctx, cmd.Name, baseBranch)
+	msgs, err := repo.CommitMessageRange(ctx, cmd.Branch, baseBranch)
 	if err != nil {
 		return nil, fmt.Errorf("list commits: %w", err)
 	}
@@ -533,7 +530,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	return &preparedBranch{
 		subject:    cmd.Title,
 		body:       cmd.Body,
-		head:       cmd.Name,
+		head:       cmd.Branch,
 		base:       baseBranch,
 		draft:      draft,
 		remoteRepo: remoteRepo,

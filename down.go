@@ -16,10 +16,10 @@ type downCmd struct {
 
 func (*downCmd) Help() string {
 	return text.Dedent(`
-		Moves down the stack to the branch below the current branch.
-		As a convenience,
-		if the current branch is at the bottom of the stack,
-		this command will move to the trunk branch.
+		Checks out the branch below the current branch.
+		If the current branch is at the bottom of the stack,
+		checks out the trunk branch.
+		Use the -n flag to print the branch without checking it out.
 	`)
 }
 
@@ -71,5 +71,5 @@ outer:
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Name: below}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: below}).Run(ctx, log, opts)
 }

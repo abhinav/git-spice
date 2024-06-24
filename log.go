@@ -18,8 +18,8 @@ import (
 )
 
 type logCmd struct {
-	Short logShortCmd `cmd:"" aliases:"s" help:"Short view of stack"`
-	Long  logLongCmd  `cmd:"" aliases:"l" help:"Long view of stack"`
+	Short logShortCmd `cmd:"" aliases:"s" help:"List branches"`
+	Long  logLongCmd  `cmd:"" aliases:"l" help:"List branches and commits"`
 }
 
 var (

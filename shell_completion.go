@@ -19,12 +19,9 @@ type shellCompletionCmd struct {
 
 func (c *shellCompletionCmd) Help() string {
 	return text.Dedent(`
-		Generates shell completion scripts for the provided shell.
-		If a shell name is not provided, the command will attempt to
-		guess the shell based on environment variables.
-
-		To install the script, add the following line to your shell's
-		rc file.
+		To set up shell completion, eval the output of this command
+		from your shell's rc file.
+		For example:
 
 			# bash
 			eval "$(gs shell completion bash)"
@@ -34,6 +31,9 @@ func (c *shellCompletionCmd) Help() string {
 
 			# fish
 			eval "$(gs shell completion fish)"
+
+		If shell name is not provided, the current shell is guessed
+		using a heuristic.
 	`)
 }
 
