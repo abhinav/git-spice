@@ -17,10 +17,22 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )
 
+// Version of git-spice.
+// Set by goreleaser at build time.
 var _version = "dev"
+
+// _secretStash is the secret stash used by the application.
+//
+// This is overridden in tests to use a memory stash.
+var _secretStash secret.Stash = new(secret.Keyring)
+
+// TOOD:
+// Adaptive secret stash that uses plain text
+// if we don't have a keyring available.
 
 var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 
@@ -70,6 +82,7 @@ func main() {
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
+		kong.BindTo(_secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
 			// Default to prompting only when the terminal is interactive.
 			"defaultPrompt": strconv.FormatBool(isatty.IsTerminal(os.Stdin.Fd())),
@@ -166,6 +179,7 @@ func main() {
 		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
 		komplete.WithPredictor("remotes", komplete.PredictFunc(predictRemotes)),
 		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
+		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges)),
 	)
 
 	kctx, err := parser.Parse(args)
@@ -195,6 +209,7 @@ type mainCmd struct {
 	globalOptions `group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
+	Auth  authCmd  `cmd:"" group:"Authentication"`
 
 	Repo repoCmd `cmd:"" aliases:"r" group:"Repository"`
 	Log  logCmd  `cmd:"" aliases:"l" group:"Log"`

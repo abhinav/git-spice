@@ -5,6 +5,7 @@
 package shamhub
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,6 +43,9 @@ type ShamHub struct {
 
 	mu      sync.RWMutex
 	changes []shamChange // all changes
+
+	users  []shamUser        // all users
+	tokens map[string]string // token -> username
 }
 
 // Config configures a ShamHub server.
@@ -78,6 +82,7 @@ func New(cfg Config) (*ShamHub, error) {
 		log:     cfg.Log.With("module", "shamhub"),
 		gitRoot: gitRoot,
 		gitExe:  cfg.Git,
+		tokens:  make(map[string]string),
 	}
 	sh.apiServer = httptest.NewServer(sh.apiHandler())
 	sh.gitServer = httptest.NewServer(&cgi.Handler{
@@ -322,9 +327,30 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	return nil
 }
 
+type shamUser struct {
+	Username string
+}
+
+// RegisterUser registers a new user against the Forge
+// with the given username and password.
+func (sh *ShamHub) RegisterUser(username string) error {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for _, u := range sh.users {
+		if u.Username == username {
+			return fmt.Errorf("user %q already exists", username)
+		}
+	}
+
+	sh.users = append(sh.users, shamUser{Username: username})
+	return nil
+}
+
 func (sh *ShamHub) apiHandler() http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("POST /login", sh.handleLogin)
 	mux.HandleFunc("POST /{owner}/{repo}/changes", sh.handleSubmitChange)
 	mux.HandleFunc("GET /{owner}/{repo}/changes/by-branch/{branch}", sh.handleFindChangesByBranch)
 	mux.HandleFunc("GET /{owner}/{repo}/change/{number}", sh.handleGetChange)
@@ -338,8 +364,68 @@ func (sh *ShamHub) apiHandler() http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL.String())
+
+		// Everything except /auth/login requires a token.
+		if r.URL.Path != "/login" {
+			token := r.Header.Get("Authentication-Token")
+			if token == "" {
+				http.Error(w, "missing token", http.StatusUnauthorized)
+				return
+			}
+
+			sh.mu.RLock()
+			_, ok := sh.tokens[token]
+			sh.mu.RUnlock()
+			if !ok {
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+				return
+			}
+		}
+
 		mux.ServeHTTP(w, r)
 	})
+}
+
+type loginRequest struct {
+	Username string `json:"username,omitempty"`
+}
+
+type loginResponse struct {
+	Token string `json:"token,omitempty"`
+}
+
+func (sh *ShamHub) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var data loginRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&data); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var buf [8]byte
+	_, _ = rand.Read(buf[:])
+	token := fmt.Sprintf("%x", buf[:])
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for _, u := range sh.users {
+		if u.Username != data.Username {
+			continue
+		}
+
+		sh.tokens[token] = u.Username
+		res := loginResponse{Token: token}
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(res); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	http.Error(w, "user not found", http.StatusNotFound)
 }
 
 type submitChangeRequest struct {

@@ -11,6 +11,7 @@ git commit --allow-empty -m 'Initial commit'
 # set up a fake GitHub remote
 shamhub init
 shamhub new origin alice/example.git
+shamhub register alice
 git push origin main
 
 # create a stack:
@@ -21,6 +22,9 @@ git add feature2.txt
 gs branch create feature2 -m 'Add feature 2'
 git add feature3.txt
 gs branch create feature3 -m 'Add feature 3'
+
+env SHAMHUB_USERNAME=alice
+gs auth login
 
 # submit the entire stack from the middle.
 git checkout feature1

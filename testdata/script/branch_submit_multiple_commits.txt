@@ -14,7 +14,11 @@ git commit --allow-empty -m 'Initial commit'
 # set up a fake GitHub remote
 shamhub init
 shamhub new origin alice/example.git
+shamhub register alice
 git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login shamhub
 
 # create a branch and go back to main
 git add feature-part1.txt

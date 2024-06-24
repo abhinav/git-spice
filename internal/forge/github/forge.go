@@ -11,9 +11,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
-	"golang.org/x/oauth2"
 )
 
 // Options defines command line options for the GitHub Forge.
@@ -69,7 +67,7 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 
 // OpenURL opens a GitHub repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitHub URL.
-func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {
+func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
 	if f.Log == nil {
 		f.Log = log.New(io.Discard)
 	}
@@ -79,17 +77,10 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	var tokenSource oauth2.TokenSource = &CLITokenSource{}
-	if f.Options.Token != "" {
-		tokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: f.Options.Token})
-	}
-
-	oauthClient := oauth2.NewClient(ctx, tokenSource)
-	apiURL, err := url.JoinPath(f.APIURL(), "/graphql")
+	ghc, err := tok.(*AuthenticationToken).githubClient(ctx, f.APIURL())
 	if err != nil {
-		return nil, fmt.Errorf("join API URL: %w", err)
+		return nil, fmt.Errorf("create GitHub client: %w", err)
 	}
-	ghc := githubv4.NewEnterpriseClient(apiURL, oauthClient)
 
 	return newRepository(ctx, f, owner, repo, f.Log, ghc, nil)
 }

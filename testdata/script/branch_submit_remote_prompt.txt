@@ -12,12 +12,16 @@ gs repo init
 
 shamhub init
 shamhub new upstream alice/example.git
+shamhub register bob
 shamhub new origin bob/example-fork.git
 git push upstream main
 git push origin main
 
 git add feature1.txt
 gs bc -m 'Add feature1' feature1
+
+env SHAMHUB_USERNAME=bob
+gs auth login shamhub
 
 with-term $WORK/input.txt -- gs branch submit --fill
 cmp stdout $WORK/golden/prompt.txt

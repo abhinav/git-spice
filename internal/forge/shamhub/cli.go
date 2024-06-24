@@ -156,6 +156,17 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		ts.Check(sh.MergeChange(req))
 
+	case "register":
+		if len(args) != 1 {
+			ts.Fatalf("usage: shamhub register <username>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		username := args[0]
+		ts.Check(sh.RegisterUser(username))
+
 	case "dump":
 		if len(args) == 0 {
 			ts.Fatalf("usage: shamhub dump <cmd> [args ...]")

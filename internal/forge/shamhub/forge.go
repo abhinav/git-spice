@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/secret"
 )
 
 // Options defines CLI options for the ShamHub forge.
@@ -40,11 +43,81 @@ type Forge struct {
 
 var _ forge.Forge = (*Forge)(nil)
 
+func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
+	return &jsonHTTPClient{
+		log:    f.Log,
+		client: http.DefaultClient,
+	}
+}
+
 // ID reports a unique identifier for this forge.
 func (*Forge) ID() string { return "shamhub" }
 
 // CLIPlugin registers additional CLI flags for the ShamHub forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// AuthenticationToken defines the token returned by the ShamHub forge.
+type AuthenticationToken struct {
+	forge.AuthenticationToken
+
+	tok string
+}
+
+// AuthenticationFlow initiates the authentication flow for the ShamHub forge.
+// The flow is optimized for ease of use from test scripts
+// and is not representative of a real-world authentication flow.
+//
+// To authenticate, the user must set the SHAMHUB_USERNAME environment variable
+// before attempting to authenticate.
+// The flow will fail if these variables are not set.
+// The flow will also fail if the user is already authenticated.
+func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationToken, error) {
+	must.NotBeBlankf(f.APIURL, "API URL is required")
+
+	username := os.Getenv("SHAMHUB_USERNAME")
+	if username == "" {
+		return nil, errors.New("SHAMHUB_USERNAME is required")
+	}
+
+	loginURL, err := url.JoinPath(f.APIURL, "/login")
+	if err != nil {
+		return nil, fmt.Errorf("parse API URL: %w", err)
+	}
+
+	req := loginRequest{
+		Username: username,
+	}
+	var res loginResponse
+	if err := f.jsonHTTPClient().Post(ctx, loginURL, req, &res); err != nil {
+		return nil, fmt.Errorf("login: %w", err)
+	}
+
+	return &AuthenticationToken{tok: res.Token}, nil
+}
+
+func (f *Forge) secretService() string {
+	must.NotBeBlankf(f.URL, "URL is required")
+	return "shamhub:" + f.URL
+}
+
+// SaveAuthenticationToken saves the given authentication token to the stash.
+func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.AuthenticationToken) error {
+	return stash.SaveSecret(f.secretService(), "token", t.(*AuthenticationToken).tok)
+}
+
+// LoadAuthenticationToken loads the authentication token from the stash.
+func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
+	token, err := stash.LoadSecret(f.secretService(), "token")
+	if err != nil {
+		return nil, fmt.Errorf("load token: %w", err)
+	}
+	return &AuthenticationToken{tok: token}, nil
+}
+
+// ClearAuthenticationToken removes the authentication token from the stash.
+func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
+	return stash.DeleteSecret(f.secretService(), "token")
+}
 
 // ChangeMetadata records the metadata for a change on a ShamHub server.
 type ChangeMetadata struct {
@@ -96,9 +169,15 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 }
 
 // OpenURL opens a repository hosted on the forge with the given remote URL.
-func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {
+func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
 	must.NotBeBlankf(f.URL, "URL is required")
 	must.NotBeBlankf(f.APIURL, "API URL is required")
+
+	tok := token.(*AuthenticationToken).tok
+	client := f.jsonHTTPClient()
+	client.headers = map[string]string{
+		"Authentication-Token": tok,
+	}
 
 	tail, ok := strings.CutPrefix(remoteURL, f.URL)
 	if !ok {
@@ -122,10 +201,7 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 		repo:   repo,
 		apiURL: apiURL,
 		log:    f.Log,
-		client: &jsonHTTPClient{
-			client: http.DefaultClient,
-			log:    f.Log,
-		},
+		client: client,
 	}, nil
 }
 
@@ -289,8 +365,9 @@ func (f *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.Cha
 }
 
 type jsonHTTPClient struct {
-	log    *log.Logger
-	client interface {
+	log     *log.Logger
+	headers map[string]string
+	client  interface {
 		Do(*http.Request) (*http.Response, error)
 	}
 }
@@ -320,6 +397,9 @@ func (c *jsonHTTPClient) do(ctx context.Context, method, url string, req, res an
 	httpReq, err := http.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
 		return fmt.Errorf("create HTTP request: %w", err)
+	}
+	for k, v := range c.headers {
+		httpReq.Header.Set(k, v)
 	}
 
 	httpResp, err := c.client.Do(httpReq)

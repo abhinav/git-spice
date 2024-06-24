@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -32,7 +33,12 @@ func (*repoSyncCmd) Help() string {
 	`)
 }
 
-func (cmd *repoSyncCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *repoSyncCmd) Run(
+	ctx context.Context,
+	secretStash secret.Stash,
+	log *log.Logger,
+	opts *globalOptions,
+) error {
 	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
@@ -181,7 +187,7 @@ func (cmd *repoSyncCmd) Run(ctx context.Context, log *log.Logger, opts *globalOp
 		}
 	}
 
-	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
+	remoteRepo, err := openRemoteRepository(ctx, log, secretStash, repo, remote)
 	if err != nil {
 		return err
 	}
