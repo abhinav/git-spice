@@ -11,16 +11,16 @@ import (
 )
 
 type commitAmendCmd struct {
-	Message string `short:"m" help:"Use the given message as the commit message."`
+	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 	NoEdit  bool   `short:"n" help:"Don't edit the commit message"`
 }
 
 func (*commitAmendCmd) Help() string {
 	return text.Dedent(`
-		Amends the last commit with the staged changes,
-		restacking upstack branches if necessary.
-		Use this to keep upstack branches in sync
-		as you update a branch in the middle of the stack.
+		Staged changes are amended into the topmost commit.
+		Branches upstack are restacked if necessary.
+		Use this as a shortcut for 'git commit --amend'
+		followed by 'gs upstack restack'.
 	`)
 }
 
@@ -56,7 +56,7 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	return (&upstackRestackCmd{
-		Name:   currentBranch,
-		NoBase: true,
+		Branch:    currentBranch,
+		SkipStart: true,
 	}).Run(ctx, log, opts)
 }

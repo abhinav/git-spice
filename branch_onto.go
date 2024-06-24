@@ -18,10 +18,13 @@ type branchOntoCmd struct {
 
 func (*branchOntoCmd) Help() string {
 	return text.Dedent(`
-		Transplants the commits of a branch on top of another branch
-		leaving the rest of the branch stack untouched.
-		Use this to extract a single branch from an otherwise unrelated
-		branch stack.
+		The commits of the current branch are transplanted onto another
+		branch.
+		Branches upstack are moved to point to its original base.
+		Use --branch to move a different branch than the current one.
+
+		A prompt will allow selecting the new base.
+		Provide the new base name as an argument to skip the prompt.
 
 		For example, given the following stack with B checked out,
 		running 'gs branch onto main' will move B onto main

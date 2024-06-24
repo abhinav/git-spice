@@ -15,17 +15,21 @@ import (
 type downstackEditCmd struct {
 	Editor string `env:"EDITOR" help:"Editor to use for editing the downstack."`
 
-	Name string `arg:"" optional:"" help:"Branch to edit from. Defaults to current branch." predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Branch to edit from. Defaults to current branch." predictor:"trackedBranches"`
 }
 
 func (*downstackEditCmd) Help() string {
 	return text.Dedent(`
-		Opens an editor to allow changing the order of branches
-		from trunk to the current branch.
-		The branch at the top of the list will be checked out
-		as the topmost branch in the downstack.
-		Branches upstack of the current branch will not be modified.
-		Branches deleted from the list will also not be modified.
+		An editor opens with a list of branches in-order,
+		starting from the current branch until trunk.
+		The current branch is at the top of the list.
+		Use --branch to start at a different branch.
+
+		Modifications to the list will be reflected in the stack
+		when the editor is closed, and the topmost branch will be checked out.
+		If the file is cleared, no changes will be made.
+		Branches that are deleted from the list will be ignored.
+		Branches that are upstack of the current branch will not be modified.
 	`)
 }
 
@@ -39,28 +43,28 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return errors.New("an editor is required: use --editor or set $EDITOR")
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	if cmd.Name == store.Trunk() {
+	if cmd.Branch == store.Trunk() {
 		return errors.New("cannot edit below trunk")
 	}
 
-	downstacks, err := svc.ListDownstack(ctx, cmd.Name)
+	downstacks, err := svc.ListDownstack(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("list downstack: %w", err)
 	}
 	must.NotBeEmptyf(downstacks, "downstack cannot be empty")
-	must.BeEqualf(downstacks[0], cmd.Name,
+	must.BeEqualf(downstacks[0], cmd.Branch,
 		"downstack must start with the original branch")
 
 	if len(downstacks) == 1 {
-		log.Infof("nothing to edit below %s", cmd.Name)
+		log.Infof("nothing to edit below %s", cmd.Branch)
 		return nil
 	}
 
@@ -82,6 +86,6 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 	}
 
 	return (&branchCheckoutCmd{
-		Name: res.Stack[len(res.Stack)-1],
+		Branch: res.Stack[len(res.Stack)-1],
 	}).Run(ctx, log, opts)
 }

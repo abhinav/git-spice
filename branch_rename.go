@@ -29,9 +29,9 @@ func (*branchRenameCmd) Help() string {
 			# Rename current branch interactively
 			gs branch rename
 
-		If you renamed a branch without this command,
-		track the new branch name with 'gs branch track',
-		and untrack the old name with 'gs branch untrack'.
+		For branches renamed with 'git branch -m',
+		use 'gs branch track' and 'gs branch untrack'
+		to update the branch tracking.
 	`)
 }
 

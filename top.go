@@ -16,9 +16,10 @@ type topCmd struct {
 
 func (*topCmd) Help() string {
 	return text.Dedent(`
-		Jumps to the top-most branch in the current branch's stack.
-		If there are multiple top-most branches,
-		you will be prompted to pick one.
+		Checks out the top-most branch in the current branch's stack.
+		If there are multiple possible top-most branches,
+		a prompt will ask you to pick one.
+		Use the -n flag to print the branch without checking it out.
 	`)
 }
 
@@ -70,5 +71,5 @@ func (cmd *topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: branch}).Run(ctx, log, opts)
 }

@@ -17,9 +17,10 @@ type upCmd struct {
 
 func (*upCmd) Help() string {
 	return text.Dedent(`
-		Moves up the stack to the branch on top of the current one.
+		Checks out the branch above the current one.
 		If there are multiple branches with the current branch as base,
-		you will be prompted to pick one.
+		a prompt will allow picking between them.
+		Use the -n flag to print the branch without checking it out.
 	`)
 }
 
@@ -80,5 +81,5 @@ outer:
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Name: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: branch}).Run(ctx, log, opts)
 }

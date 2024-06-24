@@ -23,9 +23,12 @@ type repoSyncCmd struct {
 
 func (*repoSyncCmd) Help() string {
 	return text.Dedent(`
-		Pulls the latest changes from the remote repository.
-		Deletes branches that have were merged into trunk,
-		and updates the base branches of branches upstack from those.
+		Branches with merged Change Requests
+		will be deleted after syncing.
+
+		The repository must have a remote associated for syncing.
+		A prompt will ask for one if the repository
+		was not initialized with a remote.
 	`)
 }
 
@@ -382,8 +385,8 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	// (e.g. from the bottom of the stack up)
 	for _, branch := range branchesToDelete {
 		err := (&branchDeleteCmd{
-			Name:  branch,
-			Force: true,
+			Branch: branch,
+			Force:  true,
 		}).Run(ctx, log, opts)
 		if err != nil {
 			return fmt.Errorf("delete branch %v: %w", branch, err)

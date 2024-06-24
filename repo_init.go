@@ -18,23 +18,23 @@ type repoInitCmd struct {
 	Trunk  string `placeholder:"BRANCH" predictor:"branches" help:"Name of the trunk branch"`
 	Remote string `placeholder:"NAME" predictor:"remotes" help:"Name of the remote to push changes to"`
 
-	Reset bool `help:"Reset the store if it's already initialized"`
+	Reset bool `help:"Forget all information about the repository"`
 }
 
 func (*repoInitCmd) Help() string {
 	return text.Dedent(`
-		Sets up a repository for use.
-		This isn't strictly necessary to run as most commands will
-		auto-initialize the repository as needed.
+		A trunk branch is required.
+		This is the branch that changes will be merged into.
+		A prompt will ask for one if not provided with --trunk.
 
-		Use the --trunk flag to specify the trunk branch.
-		This is typically 'main' or 'master',
-		and picking one is required.
+		Most branch stacking operations are local
+		and do not require a network connection.
+		For operations that push or pull commits, a remote is required.
+		A prompt will ask for one during initialization
+		if not provided with --remote.
 
-		Use the --remote flag to specify the remote to push changes to.
-		A remote is not required--local stacking will work without it,
-		but any commands that require a remote will fail.
-		To add a remote later, re-run this command.
+		Re-run the command to change the trunk or remote.
+		Re-run with --reset to discard all stored information.
 	`)
 }
 

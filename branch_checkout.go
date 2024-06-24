@@ -9,12 +9,21 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchCheckoutCmd struct {
 	Untracked bool   `short:"u" help:"Show untracked branches if one isn't supplied"`
-	Name      string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
+	Branch    string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
+}
+
+func (*branchCheckoutCmd) Help() string {
+	return text.Dedent(`
+		A prompt will allow selecting between tracked branches.
+		Provide a branch name as an argument to skip the prompt.
+		Use -u/--untracked to show untracked branches in the prompt.
+	`)
 }
 
 func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
@@ -23,7 +32,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		if !opts.Prompt {
 			return fmt.Errorf("cannot proceed without a branch name: %w", errNoPrompt)
 		}
@@ -35,7 +44,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 			currentBranch = ""
 		}
 
-		cmd.Name, err = (&branchPrompt{
+		cmd.Branch, err = (&branchPrompt{
 			Exclude:           []string{currentBranch},
 			ExcludeCheckedOut: true,
 			TrackedOnly:       !cmd.Untracked,
@@ -46,17 +55,17 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		}
 	}
 
-	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		switch {
 		case errors.As(err, &restackErr):
-			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Name, cmd.Name)
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Branch, cmd.Branch)
 		case errors.Is(err, state.ErrNotExist):
-			if store.Trunk() != cmd.Name {
+			if store.Trunk() != cmd.Branch {
 				if !opts.Prompt {
-					log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Name)
+					log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
 				} else {
-					log.Warnf("%v: branch not tracked", cmd.Name)
+					log.Warnf("%v: branch not tracked", cmd.Branch)
 					track := true
 					prompt := ui.NewConfirm().
 						WithValue(&track).
@@ -67,7 +76,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 
 					if track {
 						err := (&branchTrackCmd{
-							Name: cmd.Name,
+							Branch: cmd.Branch,
 						}).Run(ctx, log, opts)
 						if err != nil {
 							return fmt.Errorf("track branch: %w", err)
@@ -77,14 +86,14 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 				}
 			}
 		case errors.Is(err, git.ErrNotExist):
-			return fmt.Errorf("branch %q does not exist", cmd.Name)
+			return fmt.Errorf("branch %q does not exist", cmd.Branch)
 		default:
 			log.Warnf("error checking branch: %v", err)
 		}
 	}
 
-	if err := repo.Checkout(ctx, cmd.Name); err != nil {
-		return fmt.Errorf("checkout %q: %w", cmd.Name, err)
+	if err := repo.Checkout(ctx, cmd.Branch); err != nil {
+		return fmt.Errorf("checkout %q: %w", cmd.Branch, err)
 	}
 
 	return nil

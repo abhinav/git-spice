@@ -17,10 +17,10 @@ type commitCreateCmd struct {
 
 func (*commitCreateCmd) Help() string {
 	return text.Dedent(`
-		Commits the staged changes to the current branch,
-		restacking upstack branches if necessary.
-		Use this to keep upstack branches in sync
-		as you update a branch in the middle of the stack.
+		Staged changes are committed to the current branch.
+		Branches upstack are restacked if necessary.
+		Use this as a shortcut for 'git commit'
+		followed by 'gs upstack restack'.
 	`)
 }
 
@@ -55,7 +55,7 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 
 	return (&upstackRestackCmd{
-		Name:   currentBranch,
-		NoBase: true,
+		Branch:    currentBranch,
+		SkipStart: true,
 	}).Run(ctx, log, opts)
 }

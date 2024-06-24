@@ -15,8 +15,8 @@ type bottomCmd struct {
 
 func (*bottomCmd) Help() string {
 	return text.Dedent(`
-		Jumps to the bottom-most branch below the current branch.
-		This is the branch just above the trunk.
+		Checks out the bottom-most branch in the current branch's stack.
+		Use the -n flag to print the branch without checking it out.
 	`)
 }
 
@@ -46,5 +46,5 @@ func (cmd *bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOpti
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Name: bottom}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: bottom}).Run(ctx, log, opts)
 }

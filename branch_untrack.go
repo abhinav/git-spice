@@ -11,15 +11,18 @@ import (
 )
 
 type branchUntrackCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch to untrack" predictor:"branches"`
+	Branch string `arg:"" optional:"" help:"Name of the branch to untrack. Defaults to current." predictor:"branches"`
 }
 
 func (*branchUntrackCmd) Help() string {
 	return text.Dedent(`
-		Removes information about a tracked branch,
-		without deleting the branch itself.
-		If the branch has any branches upstack from it,
-		they will be updated to point to its base branch.
+		The current branch is deleted from git-spice's data store
+		but not deleted from the repository.
+		Branches upstack from it are not affected,
+		and will to the next branch downstack.
+
+		Provide a branch name as an argument to target
+		a different branch.
 	`)
 }
 
@@ -29,15 +32,15 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		return err
 	}
 
-	if cmd.Name == "" {
-		cmd.Name, err = repo.CurrentBranch(ctx)
+	if cmd.Branch == "" {
+		cmd.Branch, err = repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
 	}
 
 	// TODO: prompt for confirmation?
-	if err := svc.ForgetBranch(ctx, cmd.Name); err != nil {
+	if err := svc.ForgetBranch(ctx, cmd.Branch); err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return errors.New("branch not tracked")
 		}

@@ -13,15 +13,16 @@ import (
 )
 
 type branchFoldCmd struct {
-	Name string `arg:"" optional:"" help:"Name of the branch" predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Name of the branch" predictor:"trackedBranches"`
 }
 
 func (*branchFoldCmd) Help() string {
 	return text.Dedent(`
-		Merges the changes of a branch into its base branch
-		and deletes it.
-		Branches above the folded branch will be restacked
-		on top of the base branch.
+		Commits from the current branch will be merged into its base
+		and the current branch will be deleted.
+		Branches above the folded branch will point
+		to the next branch downstack.
+		Use the --branch flag to target a different branch.
 	`)
 }
 
@@ -31,32 +32,32 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	if err := svc.VerifyRestacked(ctx, cmd.Name); err != nil {
+	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		switch {
 		case errors.Is(err, state.ErrNotExist):
-			return fmt.Errorf("branch %v not tracked", cmd.Name)
+			return fmt.Errorf("branch %v not tracked", cmd.Branch)
 		case errors.As(err, &restackErr):
-			return fmt.Errorf("branch %v needs to be restacked before it can be folded", cmd.Name)
+			return fmt.Errorf("branch %v needs to be restacked before it can be folded", cmd.Branch)
 		default:
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 	}
 
-	b, err := svc.LookupBranch(ctx, cmd.Name)
+	b, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	aboves, err := svc.ListAbove(ctx, cmd.Name)
+	aboves, err := svc.ListAbove(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("list above: %w", err)
 	}
@@ -67,7 +68,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	if err := repo.Fetch(ctx, git.FetchOptions{
 		Remote: ".", // local repository
 		Refspecs: []git.Refspec{
-			git.Refspec(cmd.Name + ":" + b.Base),
+			git.Refspec(cmd.Branch + ":" + b.Base),
 		},
 	}); err != nil {
 		return fmt.Errorf("update base branch: %w", err)
@@ -91,24 +92,24 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	err = store.UpdateBranch(ctx, &state.UpdateRequest{
 		Upserts: upserts,
-		Deletes: []string{cmd.Name},
-		Message: fmt.Sprintf("folding %v into %v", cmd.Name, b.Base),
+		Deletes: []string{cmd.Branch},
+		Message: fmt.Sprintf("folding %v into %v", cmd.Branch, b.Base),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert branches: %w", err)
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Name: b.Base}).Run(ctx, log, opts); err != nil {
+	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(ctx, log, opts); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 
-	if err := repo.DeleteBranch(ctx, cmd.Name, git.BranchDeleteOptions{
+	if err := repo.DeleteBranch(ctx, cmd.Branch, git.BranchDeleteOptions{
 		Force: true, // we know it's merged
 	}); err != nil {
 		return fmt.Errorf("delete branch: %w", err)
 	}
 
-	log.Infof("Branch %v has been folded into %v", cmd.Name, b.Base)
+	log.Infof("Branch %v has been folded into %v", cmd.Branch, b.Base)
 	return nil
 }

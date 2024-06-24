@@ -5,11 +5,23 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type stackSubmitCmd struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
+}
+
+func (*stackSubmitCmd) Help() string {
+	return text.Dedent(`
+		Change Requests are created or updated
+		for all branches in the current stack.
+		A prompt will ask for a title and body for each Change Request.
+		Use --fill to populate these from the commit messages.
+		Use --dry-run to see what would be submitted
+		without actually submitting anything.
+	`)
 }
 
 func (cmd *stackSubmitCmd) Run(
@@ -43,7 +55,7 @@ func (cmd *stackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			DryRun: cmd.DryRun,
 			Fill:   cmd.Fill,
-			Name:   branch,
+			Branch: branch,
 		}).Run(ctx, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", branch, err)

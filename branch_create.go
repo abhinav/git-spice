@@ -19,22 +19,22 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
-	Message string `short:"m" long:"message" optional:"" help:"Commit message"`
+	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
 }
 
 func (*branchCreateCmd) Help() string {
 	return text.Dedent(`
-		Creates a new branch containing the staged changes
-		on top of the current branch, or --target if specified.
-		If there are no staged changes, creates an empty commit.
+		Staged changes will be committed to the new branch.
+		If there are no staged changes, an empty commit will be created.
+		If a branch name is not provided,
+		it will be generated from the commit message.
 
-		By default, the new branch is created on top of the target,
-		but it does not affect the rest of the stack.
-		Use the --insert flag to move the upstack branches of the
-		target onto the new branch.
-		Alternatively, use the --below flag to place the new branch
-		below the target branch, making the new branch the base of the
-		rest of the stack.
+		The new branch will use the current branch as its base.
+		Use --target to specify a different base branch.
+
+		--insert will move the branches upstack from the target branch
+		on top of the new branch.
+		--below will create the new branch below the target branch.
 
 		For example, given the following stack, with A checked out:
 
@@ -45,6 +45,8 @@ func (*branchCreateCmd) Help() string {
 
 		'gs branch create X' will have the following effects
 		with different flags:
+
+			         gs branch create X
 
 			 default  │   --insert   │  --below
 			──────────┼──────────────┼──────────
@@ -57,7 +59,7 @@ func (*branchCreateCmd) Help() string {
 		In all cases above, use of -t/--target flag will change the
 		target (A) to the specified branch:
 
-			              --target B
+			     gs branch create X --target B
 
 			 default  │   --insert   │  --below
 			──────────┼──────────────┼────────────

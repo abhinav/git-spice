@@ -15,18 +15,19 @@ type downstackSubmitCmd struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
 
-	Name string `arg:"" optional:"" placeholder:"BRANCH" help:"Branch to start at" predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Branch to start at" predictor:"trackedBranches"`
 }
 
 func (*downstackSubmitCmd) Help() string {
 	return text.Dedent(`
-		Submits Pull Requests for the current branch,
-		and for all branches below, down to the trunk branch.
-		Branches that already have open Pull Requests will be updated.
+		Change Requests are created or updated
+		for the current branch and all branches below it until trunk.
+		Use --branch to start at a different branch.
 
-		A prompt will allow filling metadata about new Pull Requests.
-		Use the --fill flag to use the commit messages as-is
-		and submit without a prompt.
+		A prompt will ask for a title and body for each Change Request.
+		Use --fill to populate these from the commit messages.
+		Use --dry-run to see what would be submitted
+		without actually submitting anything.
 	`)
 }
 
@@ -40,19 +41,19 @@ func (cmd *downstackSubmitCmd) Run(
 		return err
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	if cmd.Name == store.Trunk() {
+	if cmd.Branch == store.Trunk() {
 		return errors.New("nothing to submit below trunk")
 	}
 
-	downstacks, err := svc.ListDownstack(ctx, cmd.Name)
+	downstacks, err := svc.ListDownstack(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("list downstack: %w", err)
 	}
@@ -66,7 +67,7 @@ func (cmd *downstackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			DryRun: cmd.DryRun,
 			Fill:   cmd.Fill,
-			Name:   downstack,
+			Branch: downstack,
 		}).Run(ctx, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)

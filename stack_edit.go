@@ -14,14 +14,22 @@ import (
 type stackEditCmd struct {
 	Editor string `env:"EDITOR" help:"Editor to use for editing the branches."`
 
-	Name string `arg:"" optional:"" help:"Branch to edit from. Defaults to current branch." predictor:"trackedBranches"`
+	Branch string `placeholder:"NAME" help:"Branch whose stack we're editing. Defaults to current branch." predictor:"trackedBranches"`
 }
 
 func (*stackEditCmd) Help() string {
 	return text.Dedent(`
-		Opens an editor to allow changing the order of branches
-		in the current stack.
-		Branches deleted from the list will not be modified.
+		This operation requires a linear stack:
+		no branch can have multiple branches above it.
+
+		An editor opens with a list of branches in the current stack in-order,
+		with the topmost branch at the top of the file,
+		and the branch closest to the trunk at the bottom.
+
+		Modifications to the list will be reflected in the stack
+		when the editor is closed.
+		If the file is cleared, no changes will be made.
+		Branches that are deleted from the list will be ignored.
 	`)
 }
 
@@ -35,20 +43,20 @@ func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalO
 		return errors.New("an editor is required: use --editor or set $EDITOR")
 	}
 
-	if cmd.Name == "" {
+	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
-		cmd.Name = currentBranch
+		cmd.Branch = currentBranch
 	}
 
-	stack, err := svc.ListStackLinear(ctx, cmd.Name)
+	stack, err := svc.ListStackLinear(ctx, cmd.Branch)
 	if err != nil {
 		var nonLinearErr *spice.NonLinearStackError
 		if errors.As(err, &nonLinearErr) {
 			// TODO: We could provide a prompt here to select a linear stack to edit from.
-			log.Errorf("%v is part of a stack with a divergent upstack.", cmd.Name)
+			log.Errorf("%v is part of a stack with a divergent upstack.", cmd.Branch)
 			log.Errorf("%v has multiple branches above it: %s", nonLinearErr.Branch, strings.Join(nonLinearErr.Aboves, ", "))
 			log.Errorf("Check out one of those branches and try again.")
 			return errors.New("current branch has ambiguous upstack")
@@ -82,5 +90,5 @@ func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalO
 		return fmt.Errorf("edit downstack: %w", err)
 	}
 
-	return (&branchCheckoutCmd{Name: cmd.Name}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: cmd.Branch}).Run(ctx, log, opts)
 }
