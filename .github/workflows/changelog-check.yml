@@ -19,7 +19,7 @@ jobs:
   check-changelog:
     name: Check for changelog
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    if: ${{ github.actor != 'renovate[bot]' }}
     steps:
       - name: Check
         uses: brettcannon/check-for-changed-files@v1.2.1
