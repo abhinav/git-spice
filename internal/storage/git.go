@@ -1,4 +1,4 @@
-package state
+package storage
 
 import (
 	"bytes"
@@ -11,12 +11,6 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
-)
-
-const (
-	_dataRef     = "refs/spice/data"
-	_authorName  = "git-spice"
-	_authorEmail = "git-spice@localhost"
 )
 
 // GitRepository is the subset of the git.Repository API used by the state package.
@@ -38,37 +32,45 @@ type GitRepository interface {
 
 var _ GitRepository = (*git.Repository)(nil)
 
-// storageBackend abstracts away the JSON value storage for the state store.
-// There's only one implementation in practice (gitStorageBackend).
-type storageBackend interface {
-	Get(ctx context.Context, key string, v interface{}) error
-	Clear(ctx context.Context, msg string) error
-	Update(ctx context.Context, req updateRequest) error
-	Keys(ctx context.Context, dir string) ([]string, error)
-}
-
-type gitStorageBackend struct {
+// GitBackend implements a storage backend using a Git repository
+// reference as the storage medium.
+type GitBackend struct {
 	repo GitRepository
 	ref  string
 	sig  git.Signature
 	log  *log.Logger
 }
 
-var _ storageBackend = (*gitStorageBackend)(nil)
+var _ Backend = (*GitBackend)(nil)
 
-func newGitStorageBackend(repo GitRepository, log *log.Logger) *gitStorageBackend {
-	return &gitStorageBackend{
-		repo: repo,
-		ref:  _dataRef,
+// GitConfig is used to configure a GitBackend.
+type GitConfig struct {
+	Repo                    GitRepository
+	Ref                     string
+	AuthorName, AuthorEmail string
+	Log                     *log.Logger
+}
+
+// NewGitBackend creates a new GitBackend that stores data
+// in the given Git repository.
+func NewGitBackend(cfg GitConfig) *GitBackend {
+	if cfg.Log == nil {
+		cfg.Log = log.New(io.Discard)
+	}
+
+	return &GitBackend{
+		repo: cfg.Repo,
+		ref:  cfg.Ref,
 		sig: git.Signature{
-			Name:  _authorName,
-			Email: _authorEmail,
+			Name:  cfg.AuthorName,
+			Email: cfg.AuthorEmail,
 		},
-		log: log,
+		log: cfg.Log,
 	}
 }
 
-func (g *gitStorageBackend) Keys(ctx context.Context, dir string) ([]string, error) {
+// Keys lists the keys in the store in the given directory.
+func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 	var (
 		treeHash git.Hash
 		err      error
@@ -104,7 +106,8 @@ func (g *gitStorageBackend) Keys(ctx context.Context, dir string) ([]string, err
 	return keys, nil
 }
 
-func (g *gitStorageBackend) Get(ctx context.Context, key string, v interface{}) error {
+// Get retrieves a value from the store and decodes it into v.
+func (g *GitBackend) Get(ctx context.Context, key string, v interface{}) error {
 	blobHash, err := g.repo.HashAt(ctx, g.ref, key)
 	if err != nil {
 		return ErrNotExist
@@ -122,7 +125,8 @@ func (g *gitStorageBackend) Get(ctx context.Context, key string, v interface{}) 
 	return nil
 }
 
-func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
+// Clear removes all keys from the store.
+func (g *GitBackend) Clear(ctx context.Context, msg string) error {
 	prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
 	if err != nil {
 		prevCommit = "" // not initialized
@@ -157,18 +161,8 @@ func (g *gitStorageBackend) Clear(ctx context.Context, msg string) error {
 	return nil
 }
 
-type setRequest struct {
-	Key string
-	Val interface{}
-}
-
-type updateRequest struct {
-	Sets []setRequest // TODO: iterators?
-	Dels []string
-	Msg  string
-}
-
-func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error {
+// Update applies a batch of changes to the store.
+func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 	setBlobs := make([]git.Hash, len(req.Sets))
 	for i, set := range req.Sets {
 		must.NotBeBlankf(set.Key, "key must not be blank")
@@ -176,7 +170,7 @@ func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error
 		var buf bytes.Buffer
 		enc := json.NewEncoder(&buf)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(set.Val); err != nil {
+		if err := enc.Encode(set.Value); err != nil {
 			return fmt.Errorf("encode JSON: %w", err)
 		}
 
@@ -214,7 +208,7 @@ func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error
 		newTree, err := g.repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree:    prevTree,
 			Writes:  writes,
-			Deletes: req.Dels,
+			Deletes: req.Deletes,
 		})
 		if err != nil {
 			return fmt.Errorf("update tree: %w", err)
@@ -222,7 +216,7 @@ func (g *gitStorageBackend) Update(ctx context.Context, req updateRequest) error
 
 		commitReq := git.CommitTreeRequest{
 			Tree:    newTree,
-			Message: req.Msg,
+			Message: req.Message,
 			Author:  &g.sig,
 		}
 		if prevCommit != "" {

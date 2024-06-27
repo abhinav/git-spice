@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/storage"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -99,10 +100,10 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 	must.NotBeBlankf(cmd.Trunk, "trunk branch must have been set")
 
 	_, err = state.InitStore(ctx, state.InitStoreRequest{
-		Repository: repo,
-		Trunk:      cmd.Trunk,
-		Remote:     cmd.Remote,
-		Reset:      cmd.Reset,
+		DB:     newRepoStorage(repo, log),
+		Trunk:  cmd.Trunk,
+		Remote: cmd.Remote,
+		Reset:  cmd.Reset,
 	})
 	if err != nil {
 		return fmt.Errorf("initialize storage: %w", err)
@@ -110,6 +111,22 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 
 	log.Info("Initialized repository", "trunk", cmd.Trunk)
 	return nil
+}
+
+const (
+	_dataRef     = "refs/spice/data"
+	_authorName  = "git-spice"
+	_authorEmail = "git-spice@localhost"
+)
+
+func newRepoStorage(repo storage.GitRepository, log *log.Logger) *storage.DB {
+	return storage.NewDB(storage.NewGitBackend(storage.GitConfig{
+		Repo:        repo,
+		Ref:         _dataRef,
+		AuthorName:  _authorName,
+		AuthorEmail: _authorEmail,
+		Log:         log,
+	}))
 }
 
 func openRepo(ctx context.Context, log *log.Logger, opts *globalOptions) (
@@ -138,11 +155,12 @@ func openRepo(ctx context.Context, log *log.Logger, opts *globalOptions) (
 // by auto-initializing the repository at that time.
 func ensureStore(
 	ctx context.Context,
-	repo state.GitRepository,
+	repo storage.GitRepository,
 	log *log.Logger,
 	opts *globalOptions,
 ) (*state.Store, error) {
-	store, err := state.OpenStore(ctx, repo, log)
+	db := newRepoStorage(repo, log)
+	store, err := state.OpenStore(ctx, db, log)
 	if err == nil {
 		return store, nil
 	}
@@ -154,7 +172,7 @@ func ensureStore(
 		}
 
 		// Assume initialization was a success.
-		return state.OpenStore(ctx, repo, log)
+		return state.OpenStore(ctx, db, log)
 	}
 
 	return nil, fmt.Errorf("open store: %w", err)

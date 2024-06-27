@@ -8,11 +8,25 @@ import (
 	"io"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/storage"
 )
+
+// DB provides a key-value store that holds JSON values.
+type DB interface {
+	Get(ctx context.Context, k string, v any) error
+	Keys(ctx context.Context, dir string) ([]string, error)
+
+	Set(ctx context.Context, k string, v any, msg string) error
+	Delete(ctx context.Context, k, msg string) error
+	Update(ctx context.Context, req storage.UpdateRequest) error
+	Clear(ctx context.Context, msg string) error
+}
+
+var _ DB = (*storage.DB)(nil)
 
 // Store implements storage for state tracked by gs.
 type Store struct {
-	b   storageBackend
+	db  DB
 	log *log.Logger
 
 	trunk  string
@@ -22,9 +36,7 @@ type Store struct {
 // InitStoreRequest is a request to initialize the store
 // in a Git repository.
 type InitStoreRequest struct {
-	// Repository is the Git repository being initialized.
-	// State will be stored in a ref in this repository.
-	Repository GitRepository
+	DB DB
 
 	// Trunk is the name of the trunk branch,
 	// e.g. "main" or "master".
@@ -59,16 +71,16 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		return nil, errors.New("trunk branch name is required")
 	}
 
-	b := newGitStorageBackend(req.Repository, logger)
+	db := req.DB
 	store := &Store{
-		b:      b,
+		db:     db,
 		trunk:  req.Trunk,
 		remote: req.Remote,
 		log:    logger,
 	}
-	if err := b.Get(ctx, _repoJSON, new(repoInfo)); err == nil {
+	if err := db.Get(ctx, _repoJSON, new(repoInfo)); err == nil {
 		if req.Reset {
-			if err := b.Clear(ctx, "reset store"); err != nil {
+			if err := db.Clear(ctx, "reset store"); err != nil {
 				return nil, fmt.Errorf("clear store: %w", err)
 			}
 		} else {
@@ -86,16 +98,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		Trunk:  req.Trunk,
 		Remote: req.Remote,
 	}
-	err := b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{
-				Key: _repoJSON,
-				Val: info,
-			},
-		},
-		Msg: "initialize store",
-	})
-	if err != nil {
+	if err := db.Set(ctx, _repoJSON, info, "initialize store"); err != nil {
 		return nil, fmt.Errorf("put repo state: %w", err)
 	}
 
@@ -108,14 +111,13 @@ var ErrUninitialized = errors.New("store not initialized")
 // OpenStore opens the Store for the given Git repository.
 //
 // It returns [ErrUninitialized] if the repository is not initialized.
-func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*Store, error) {
+func OpenStore(ctx context.Context, db DB, logger *log.Logger) (*Store, error) {
 	if logger == nil {
 		logger = log.New(io.Discard)
 	}
-	b := newGitStorageBackend(repo, logger)
 
 	var info repoInfo
-	if err := b.Get(ctx, _repoJSON, &info); err != nil {
+	if err := db.Get(ctx, _repoJSON, &info); err != nil {
 		if errors.Is(err, ErrNotExist) {
 			return nil, ErrUninitialized
 		}
@@ -127,7 +129,7 @@ func OpenStore(ctx context.Context, repo GitRepository, logger *log.Logger) (*St
 	}
 
 	return &Store{
-		b:      b,
+		db:     db,
 		trunk:  info.Trunk,
 		remote: info.Remote,
 		log:    logger,

@@ -7,27 +7,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/storage"
 )
 
-func TestIntegrationStore(t *testing.T) {
-	repoDir := t.TempDir()
+func TestStore(t *testing.T) {
 	ctx := context.Background()
-	repo, err := git.Init(ctx, repoDir, git.InitOptions{
-		Log:    logtest.New(t),
-		Branch: "main",
+	db := storage.NewDB(storage.NewMemBackend())
+
+	_, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
 	})
 	require.NoError(t, err)
 
-	_, err = state.InitStore(ctx, state.InitStoreRequest{
-		Repository: repo,
-		Trunk:      "main",
-	})
-	require.NoError(t, err)
-
-	store, err := state.OpenStore(ctx, repo, logtest.New(t))
+	store, err := state.OpenStore(ctx, db, logtest.New(t))
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {

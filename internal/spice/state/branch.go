@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/maputil"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/storage"
 )
 
 const _branchesDir = "branches"
@@ -100,7 +101,7 @@ func (s *Store) branchJSON(name string) string {
 }
 
 // ErrNotExist indicates that a key that was expected to exist does not exist.
-var ErrNotExist = errors.New("does not exist in store")
+var ErrNotExist = storage.ErrNotExist
 
 // LookupResponse is the response to a Lookup request.
 type LookupResponse struct {
@@ -151,7 +152,7 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 
 func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchState, error) {
 	var state branchState
-	if err := s.b.Get(ctx, s.branchJSON(name), &state); err != nil {
+	if err := s.db.Get(ctx, s.branchJSON(name), &state); err != nil {
 		return nil, fmt.Errorf("get branch state: %w", err)
 	}
 	return &state, nil
@@ -160,7 +161,7 @@ func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchStat
 // ListBranches reports the names of all tracked branches.
 // The list is sorted in lexicographic order.
 func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
-	branches, err := s.b.Keys(ctx, _branchesDir)
+	branches, err := s.db.Keys(ctx, _branchesDir)
 	if err != nil {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
@@ -219,7 +220,7 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
 	}
 
-	sets := make([]setRequest, 0, len(req.Upserts))
+	sets := make([]storage.SetRequest, 0, len(req.Upserts))
 	for i, req := range req.Upserts {
 		if req.Name == "" {
 			return fmt.Errorf("upsert [%d]: branch name is required", i)
@@ -262,9 +263,9 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 			return fmt.Errorf("branch %q (%d) would have no base", req.Name, i)
 		}
 
-		sets = append(sets, setRequest{
-			Key: s.branchJSON(req.Name),
-			Val: b,
+		sets = append(sets, storage.SetRequest{
+			Key:   s.branchJSON(req.Name),
+			Value: b,
 		})
 	}
 
@@ -273,10 +274,10 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 		deletes[i] = s.branchJSON(name)
 	}
 
-	err := s.b.Update(ctx, updateRequest{
-		Sets: sets,
-		Dels: deletes,
-		Msg:  req.Message,
+	err := s.db.Update(ctx, storage.UpdateRequest{
+		Sets:    sets,
+		Deletes: deletes,
+		Message: req.Message,
 	})
 	if err != nil {
 		return fmt.Errorf("update: %w", err)
