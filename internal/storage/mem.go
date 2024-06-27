@@ -77,8 +77,8 @@ func (m *MemBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 
 	keys := make([]string, 0, len(m.items))
 	for k := range m.items {
-		if strings.HasPrefix(k, dir) {
-			keys = append(keys, k)
+		if rest, ok := strings.CutPrefix(k, dir); ok {
+			keys = append(keys, rest)
 		}
 	}
 	sort.Strings(keys)

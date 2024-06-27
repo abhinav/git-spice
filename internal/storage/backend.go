@@ -44,7 +44,9 @@ type Backend interface {
 	Update(ctx context.Context, req UpdateRequest) error
 	Clear(ctx context.Context, msg string) error
 
-	// Keys lists the keys in the store in the given directory.
+	// Keys lists the keys in the store in the given directory,
+	// with the directory prefix removed.
+	//
 	// The directory is defined as '/'-separated components in the key.
 	// If dir is empty, all keys are listed.
 	Keys(ctx context.Context, dir string) ([]string, error)
