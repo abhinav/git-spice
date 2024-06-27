@@ -67,7 +67,8 @@ func predictTrackedBranches(args komplete.Args) (predictions []string) {
 		return nil
 	}
 
-	store, err := state.OpenStore(ctx, repo, nil /* log */)
+	db := newRepoStorage(repo, nil /* log */)
+	store, err := state.OpenStore(ctx, db, nil /* log */)
 	if err != nil {
 		return nil // not initialized
 	}

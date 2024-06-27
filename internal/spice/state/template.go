@@ -34,7 +34,7 @@ type CachedTemplate struct {
 // or there are no cached templates.
 func (s *Store) LoadCachedTemplates(ctx context.Context, cacheKey string) ([]*CachedTemplate, error) {
 	var state templateState
-	if err := s.b.Get(ctx, _templatesJSON, &state); err != nil {
+	if err := s.db.Get(ctx, _templatesJSON, &state); err != nil {
 		return nil, fmt.Errorf("load template state: %w", err)
 	}
 
@@ -67,16 +67,7 @@ func (s *Store) CacheTemplates(ctx context.Context, cacheKey string, ts []*Cache
 		}
 	}
 
-	err := s.b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{
-				Key: _templatesJSON,
-				Val: state,
-			},
-		},
-		Msg: "cache templates",
-	})
-	if err != nil {
+	if err := s.db.Set(ctx, _templatesJSON, state, "cache templates"); err != nil {
 		return fmt.Errorf("cache templates: %w", err)
 	}
 

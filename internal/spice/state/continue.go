@@ -88,7 +88,7 @@ func (s *Store) TakeContinuations(ctx context.Context, msg string) ([]Continuati
 
 func (s *Store) getRebaseContinueState(ctx context.Context) (*rebaseContinueState, error) {
 	var state rebaseContinueState
-	if err := s.b.Get(ctx, _rebaseContinueJSON, &state); err != nil {
+	if err := s.db.Get(ctx, _rebaseContinueJSON, &state); err != nil {
 		if errors.Is(err, ErrNotExist) {
 			return &rebaseContinueState{}, nil
 		}
@@ -101,10 +101,5 @@ func (s *Store) setRebaseContinueState(ctx context.Context, state *rebaseContinu
 	if msg == "" {
 		msg = "set rebase continue state"
 	}
-	return s.b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{Key: _rebaseContinueJSON, Val: state},
-		},
-		Msg: msg,
-	})
+	return s.db.Set(ctx, _rebaseContinueJSON, state, msg)
 }

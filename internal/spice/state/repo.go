@@ -38,7 +38,7 @@ func (s *Store) Remote() (string, error) {
 // SetRemote changes teh remote name configured for the repository.
 func (s *Store) SetRemote(ctx context.Context, remote string) error {
 	var info repoInfo
-	if err := s.b.Get(ctx, _repoJSON, &info); err != nil {
+	if err := s.db.Get(ctx, _repoJSON, &info); err != nil {
 		return fmt.Errorf("get repo info: %w", err)
 	}
 	info.Remote = remote
@@ -49,15 +49,7 @@ func (s *Store) SetRemote(ctx context.Context, remote string) error {
 		return fmt.Errorf("would corrupt state: %w", err)
 	}
 
-	err := s.b.Update(ctx, updateRequest{
-		Sets: []setRequest{
-			{
-				Key: _repoJSON,
-				Val: info,
-			},
-		},
-		Msg: fmt.Sprintf("set remote: %v", remote),
-	})
+	err := s.db.Set(ctx, _repoJSON, info, fmt.Sprintf("set remote: %v", remote))
 	if err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
