@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch onto: Move the upstack of the target branch before the brach itself. This makes the operation better able to recover from conflicts.'
-time: 2024-06-22T11:58:11.90579-07:00

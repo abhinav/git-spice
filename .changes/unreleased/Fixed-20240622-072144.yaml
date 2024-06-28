@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'upstack restack: Fix --no-base ignored when there''s only one branch.'
-time: 2024-06-22T07:21:44.549109-07:00
