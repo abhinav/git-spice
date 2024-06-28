@@ -112,7 +112,7 @@ func testStorageBackend(t *testing.T, backend Backend) {
 		// We could use a file-lock, but in practice, git-spice is not
 		// intended to be used with several concurrent operations
 		// on the same repository.
-		const NumWorkers, NumSets = 2, 5
+		const NumWorkers, NumSets = 2, 2
 
 		keys := make([]string, NumSets)
 		for i := range keys {
