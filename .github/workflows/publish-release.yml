@@ -62,7 +62,7 @@ jobs:
     - name: Extract changelog
       run: |
         tail -n+2 .changes/v${{ env.VERSION }}.md \
-        | tee ${{ github.workspace }}-CHANGELOG.txt >> "$GITHUB_STEP_SUMMARY"
+          | tee ${{ github.workspace }}-CHANGELOG.txt
 
     - name: Tag a release
       run: |
