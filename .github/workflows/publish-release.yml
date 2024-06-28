@@ -32,11 +32,6 @@ jobs:
       with:
         go-version: 1.22.x
 
-    - name: Install parse-changelog
-      uses: taiki-e/install-action@v2
-      with:
-        tool: parse-changelog@0.6.8
-
     - name: Query changie
       if: inputs.version == ''
       id: changie-latest
@@ -50,7 +45,7 @@ jobs:
       env:
         CHANGIE_VERSION: ${{ steps.changie-latest.outputs.output }}
 
-    - name: Set veresion (input)
+    - name: Set version (input)
       if: inputs.version != ''
       run:
         echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
@@ -66,10 +61,8 @@ jobs:
 
     - name: Extract changelog
       run: |
-        parse-changelog CHANGELOG.md ${{ env.VERSION }} > ${{ github.workspace }}-CHANGELOG.txt
-        echo ::group::CHANGELOG
-        cat ${{ github.workspace }}-CHANGELOG.txt
-        echo ::endgroup::
+        tail -n+2 .changes/v${{ env.VERSION }}.md \
+        | tee ${{ github.workspace }}-CHANGELOG.txt >> "$GITHUB_STEP_SUMMARY"
 
     - name: Tag a release
       run: |
