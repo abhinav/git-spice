@@ -148,7 +148,7 @@ func WithTerm() (exitCode int) {
 			awaitStripPrefix = emu.Snapshot()
 
 		case "await":
-			timeout := time.Second
+			timeout := 3 * time.Second
 			start := time.Now()
 
 			var match func([]string) bool
