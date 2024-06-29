@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -44,6 +45,7 @@ var _ Field = (*Input)(nil)
 func NewInput() *Input {
 	m := textinput.New()
 	m.Prompt = "" // we have our own prompt
+	m.Cursor.SetMode(cursor.CursorStatic)
 	return &Input{
 		KeyMap: DefaultInputKeyMap,
 		Style:  DefaultInputStyle,
