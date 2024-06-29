@@ -291,12 +291,25 @@ loop:
 }
 
 func (m *terminalEmulator) Close() error {
-	_, err := m.pty.Write([]byte{4}) // EOT
-	return errors.Join(
-		err,
-		m.cmd.Wait(),
-		m.pty.Close(),
-	)
+	_, writeErr := m.pty.Write([]byte{4}) // EOT
+
+	waitErrc := make(chan error, 1)
+	go func() {
+		waitErrc <- m.cmd.Wait()
+	}()
+
+	var waitErr error
+	select {
+	case waitErr = <-waitErrc:
+		// ok
+	case <-time.After(3 * time.Second):
+		waitErr = fmt.Errorf("timeout waiting for %v", m.cmd)
+		_ = m.cmd.Process.Kill()
+	}
+
+	closeErr := m.pty.Close()
+
+	return errors.Join(waitErr, closeErr, writeErr)
 }
 
 func (m *terminalEmulator) FeedKeys(s string) error {
