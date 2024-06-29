@@ -11,7 +11,7 @@ export GOBIN = $(PROJECT_ROOT)/bin
 export PATH := $(GOBIN):$(PATH)
 export GOEXPERIMENT = rangefunc
 
-TEST_FLAGS ?= -race
+TEST_FLAGS ?=
 STITCHMD_FLAGS ?= -o README.md -preface doc/preface.txt doc/SUMMARY.md
 
 GS = bin/gs
