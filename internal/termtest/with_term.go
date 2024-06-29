@@ -60,6 +60,9 @@ import (
 func WithTerm() (exitCode int) {
 	cols := flag.Int("cols", 80, "terminal width")
 	rows := flag.Int("rows", 40, "terminal height")
+	fixed := flag.Bool("fixed", false,
+		"don't automatically resize the terminal as output increases "+
+			"(useful for testing scrolling behavior)")
 	finalSnapshot := flag.String("final", "",
 		"capture a snapshot on exit with the given name")
 
@@ -102,7 +105,12 @@ func WithTerm() (exitCode int) {
 		return 1
 	}
 
-	emu := newVT100Emulator(f, cmd, int(size.Rows), int(size.Cols), log.Printf)
+	emu := newVT100Emulator(f, cmd,
+		int(size.Rows),
+		int(size.Cols),
+		!*fixed,
+		log.Printf,
+	)
 	defer func() {
 		if err := emu.Close(); err != nil {
 			log.Printf("%v: %v", cmd, err)
@@ -252,12 +260,15 @@ func newVT100Emulator(
 	f *os.File,
 	cmd *exec.Cmd,
 	rows, cols int,
+	autoResize bool,
 	logf func(string, ...any),
 ) *terminalEmulator {
 	if logf == nil {
 		logf = log.Printf
 	}
 	term := midterm.NewTerminal(rows, cols)
+	term.AutoResizeX = autoResize
+	term.AutoResizeY = autoResize
 	m := terminalEmulator{
 		pty:  f,
 		cmd:  cmd,
