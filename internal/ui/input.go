@@ -34,7 +34,7 @@ type Input struct {
 	title string
 	desc  string
 
-	model *textinput.Model
+	model textinput.Model
 	value *string
 }
 
@@ -47,7 +47,7 @@ func NewInput() *Input {
 	return &Input{
 		KeyMap: DefaultInputKeyMap,
 		Style:  DefaultInputStyle,
-		model:  &m,
+		model:  m,
 		value:  new(string),
 	}
 }
@@ -105,24 +105,18 @@ func (i *Input) Init() tea.Cmd {
 
 // Update handles a bubbletea event.
 func (i *Input) Update(msg tea.Msg) tea.Cmd {
-	var (
-		cmds []tea.Cmd
-		cmd  tea.Cmd
-	)
-
-	*i.model, cmd = i.model.Update(msg)
-	*i.value = i.model.Value()
-	cmds = append(cmds, cmd)
-
 	if keyMsg, ok := msg.(tea.KeyMsg); ok && key.Matches(keyMsg, i.KeyMap.Accept) {
 		// Accept only if input is valid.
 		if err := i.model.Err; err == nil {
 			i.model.Blur()
-			cmds = append(cmds, AcceptField)
+			return AcceptField
 		}
 	}
 
-	return tea.Batch(cmds...)
+	var cmd tea.Cmd
+	i.model, cmd = i.model.Update(msg)
+	*i.value = i.model.Value()
+	return cmd
 }
 
 // Render renders the input field.

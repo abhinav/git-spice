@@ -211,7 +211,10 @@ func WithTerm() (exitCode int) {
 					exitCode = 1
 				}
 
-				log.Printf("###\n%s\n###", last)
+				log.Printf("### screen ###")
+				for _, line := range last {
+					log.Printf("%s", line)
+				}
 			}
 
 			// If 'await' was given without an argument,
