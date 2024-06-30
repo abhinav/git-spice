@@ -55,6 +55,7 @@ import (
 //
 //   - -cols int: terminal width (default 80)
 //   - -rows int: terminal height (default 40)
+//   - -fixed: don't auto-grow the terminal as output increases
 //   - -final <name>:
 //     print a final snapshot on exit to stdout with the given name.
 func WithTerm() (exitCode int) {

@@ -10,8 +10,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # submit a PR and merge it
@@ -19,7 +19,7 @@ git add feature.txt
 gs bc -m 'Add feature' feature
 gs branch submit --fill
 stderr 'Created #'
-gh-merge alice/example 1
+shamhub merge alice/example 1
 
 # Pull the merged changes
 git checkout main

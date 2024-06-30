@@ -10,8 +10,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 git add feature1.txt
@@ -20,7 +20,7 @@ gs branch submit --no-publish
 stderr 'Pushed feature1'
 
 # verify no PRs
-gh-dump-pull
+shamhub dump changes
 cmp stdout $WORK/golden/no-pulls.txt
 
 # verify the branch was pushed
@@ -37,12 +37,12 @@ gs commit amend --no-edit
 gs bs --no-publish
 
 # verify no PRs
-gh-dump-pull
+shamhub dump changes
 cmp stdout $WORK/golden/no-pulls.txt
 
 # finally publish a PR
 gs bs --fill
-gh-dump-pull
+shamhub dump changes
 cmpenv stdout $WORK/golden/post-publish.txt
 
 # update the PR with a new commit.

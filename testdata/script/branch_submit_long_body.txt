@@ -10,8 +10,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a branch with a long body
@@ -27,7 +27,7 @@ cmp stdout $WORK/input/commit-msg
 with-term $WORK/input/prompt.txt -- gs branch submit
 cmp stdout $WORK/golden/prompt.txt
 
-gh-dump-pull
+shamhub dump changes
 stdout 'End of message.'
 
 -- repo/feature.txt --

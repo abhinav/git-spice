@@ -10,9 +10,9 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
-gh-init
-gh-add-remote upstream alice/example.git
-gh-add-remote origin bob/example-fork.git
+shamhub init
+shamhub new upstream alice/example.git
+shamhub new origin bob/example-fork.git
 git push upstream main
 git push origin main
 
@@ -22,7 +22,7 @@ gs bc -m 'Add feature1' feature1
 with-term $WORK/input.txt -- gs branch submit --fill
 cmp stdout $WORK/golden/prompt.txt
 
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
 
 -- repo/feature1.txt --

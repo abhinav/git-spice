@@ -11,8 +11,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a stack:
@@ -37,11 +37,11 @@ gs stack submit --dry-run
 cmp stderr $WORK/golden/submit-dry-run.txt
 ! stderr 'draft' # draft status should not be changed
 
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/start.json
 
 # Merge the bottom PR, sync, restack, and submit.
-gh-merge alice/example 1
+shamhub merge alice/example 1
 gs rs
 stderr '#1 was merged'
 gs sr   # stack restack
@@ -49,7 +49,7 @@ gs ss   # stack submit
 stderr 'Updated #2'
 stderr 'Updated #3'
 
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pr-1-merged.json
 
 -- repo/feature1.txt --

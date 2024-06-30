@@ -10,8 +10,8 @@ git add .shamhub
 git commit -m 'Initial commit'
 
 # set up a fake remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a branch and submit a PR
@@ -22,7 +22,7 @@ gs bc feature
 
 gs branch submit --fill
 stderr 'Created #1'
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
 
 -- repo/.shamhub/CHANGE_TEMPLATE.md --
