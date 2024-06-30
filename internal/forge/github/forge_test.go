@@ -63,7 +63,8 @@ func TestExtractRepoInfo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			owner, repo, err := extractRepoInfo(tt.githubURL, tt.give)
+			f := Forge{Options: Options{URL: tt.githubURL}}
+			owner, repo, err := extractRepoInfo(f.URL(), tt.give)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.wantOwner, owner, "owner")
@@ -108,7 +109,8 @@ func TestExtractRepoInfoErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := extractRepoInfo(tt.githubURL, tt.give)
+			f := Forge{Options: Options{URL: tt.githubURL}}
+			_, _, err := extractRepoInfo(f.URL(), tt.give)
 			require.Error(t, err)
 
 			for _, want := range tt.wantErr {

@@ -18,7 +18,6 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
 	"go.abhg.dev/gs/internal/ui"
-	"golang.org/x/oauth2"
 )
 
 var _version = "dev"
@@ -29,6 +28,9 @@ func main() {
 	logger := log.NewWithOptions(os.Stderr, log.Options{
 		Level: log.InfoLevel,
 	})
+
+	// Register supported forges.
+	forge.Register(&github.Forge{Log: logger})
 
 	styles := log.DefaultStyles()
 	styles.Levels[log.DebugLevel] = ui.NewStyle().SetString("DBG").Bold(true)
@@ -53,6 +55,16 @@ func main() {
 	}()
 
 	var cmd mainCmd
+
+	// Forges may register additional command line flags
+	// by implementing CLIPlugin.
+	forge.All(func(f forge.Forge) bool {
+		if plugin := f.CLIPlugin(); plugin != nil {
+			cmd.Plugins = append(cmd.Plugins, plugin)
+		}
+		return true
+	})
+
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
@@ -176,16 +188,10 @@ type globalOptions struct {
 	// Flags that are accessed directly:
 
 	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
-
-	// TODO:
-	// GitHubToken will get replaced once we do Device Flow authentication.
-	// GithubAPIURL will remain hidden.
-	GitHubToken  string `name:"github-token" placeholder:"TOKEN" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
-	GitHubURL    string `name:"github-url" placeholder:"URL" hidden:"" env:"GITHUB_URL" help:"Base URL for GitHub web requests"`
-	GitHubAPIURL string `name:"github-api-url" placeholder:"URL" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
 }
 
 type mainCmd struct {
+	kong.Plugins
 	globalOptions `group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
@@ -217,20 +223,6 @@ func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 	if cmd.Verbose {
 		logger.SetLevel(log.DebugLevel)
 	}
-
-	var tokenSource oauth2.TokenSource = &github.CLITokenSource{}
-	if token := cmd.GitHubToken; token != "" {
-		tokenSource = oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		)
-	}
-
-	forge.Register(&github.Forge{
-		URL:    cmd.GitHubURL,
-		APIURL: cmd.GitHubAPIURL,
-		Token:  tokenSource,
-		Log:    logger,
-	})
 
 	return nil
 }

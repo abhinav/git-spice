@@ -32,19 +32,7 @@ func TestMain(m *testing.M) {
 				Level: log.DebugLevel,
 			})
 
-			shamhubAPIURL := os.Getenv("SHAMHUB_API_URL")
-			shamhubURL := os.Getenv("SHAMHUB_URL")
-			if (shamhubURL != "") != (shamhubAPIURL != "") {
-				logger.Fatalf("gs: SHAMHUB_API_URL and SHAMHUB_URL must be set together")
-			}
-			if shamhubURL != "" {
-				forge.Register(&shamhub.Forge{
-					URL:    shamhubURL,
-					APIURL: shamhubAPIURL,
-					Log:    logger,
-				})
-			}
-
+			forge.Register(&shamhub.Forge{Log: logger})
 			main()
 			return 0
 		},

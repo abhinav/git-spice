@@ -46,9 +46,11 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	t.Cleanup(shamhubServer.Close)
 
 	shamhubForge := &shamhub.Forge{
-		Log:    logtest.New(t),
-		URL:    shamhubServer.URL,
-		APIURL: shamhubServer.URL,
+		Log: logtest.New(t),
+		Options: shamhub.Options{
+			URL:    shamhubServer.URL,
+			APIURL: shamhubServer.URL,
+		},
 	}
 	t.Cleanup(forge.Register(shamhubForge))
 

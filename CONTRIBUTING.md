@@ -23,11 +23,19 @@ Follow the usual GitHub contribution process for making changes
 with the following notes:
 
 - Add changelog entries for user-facing changes with `changie new`.
+  If a change is not user-facing, add a note in the following format
+  to the PR description:
+
+  ```
+  [skip changelog]: reason why no changelog entry is needed
+  ```
+
 - If you edit documentation in doc/, run `make README.md` to update the README.
   This requires stitchmd to be installed.
+
 - All commits must include meaningful commit messages.
 - Test new features and bug fixes.
-  If it doesn't have a test, it's not fixed.
+  If it does not have a test, the bug is not fixed.
 - Verify tests pass before submitting a pull request.
 
 ### Stacking changes
