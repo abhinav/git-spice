@@ -10,8 +10,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # Create a new branch and submit it
@@ -34,8 +34,8 @@ gs cc -m 'Modify feature2'
 gs repo init --reset --trunk=main --remote=origin
 # At this point, gs has no knowledge of the PRs.
 # Merge them server-side.
-gh-merge alice/example 1
-gh-merge alice/example 2
+shamhub merge alice/example 1
+shamhub merge alice/example 2
 
 # Track the branches and sync.
 gs branch track --base=main feature1
@@ -47,7 +47,7 @@ stderr 'feature2: #2 was merged but local SHA \(6b83ef3\) does not match remote 
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
 
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pull.json
 
 -- repo/feature1.txt --

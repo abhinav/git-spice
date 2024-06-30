@@ -9,8 +9,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a stack
@@ -26,7 +26,7 @@ gs branch submit --fill
 stderr 'Created #'
 
 # merge the PR server side and sync.
-gh-merge alice/example 1
+shamhub merge alice/example 1
 gs repo sync
 stderr 'feature1: #1 was merged'
 
@@ -37,7 +37,7 @@ exists feature1.txt
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
 
-gh-dump-pull 1
+shamhub dump change 1
 cmpenvJSON stdout $WORK/golden/pull.json
 
 -- repo/feature1.txt --

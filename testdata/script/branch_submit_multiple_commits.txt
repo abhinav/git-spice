@@ -12,8 +12,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a branch and go back to main
@@ -25,7 +25,7 @@ gs cc -m 'Add feature part 2'
 
 gs branch submit --fill
 stderr 'Created #1'
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
 
 -- repo/feature-part1.txt --

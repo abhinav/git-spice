@@ -11,8 +11,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 gs repo init
 
@@ -22,7 +22,7 @@ git add feature1.txt
 
 # update the remote out of band
 cd ..
-gh-clone alice/example.git fork
+shamhub clone alice/example.git fork
 cd fork
 cp $WORK/extra/feature2.txt .
 git add feature2.txt

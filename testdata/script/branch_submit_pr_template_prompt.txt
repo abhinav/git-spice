@@ -11,8 +11,8 @@ git add .shamhub
 git commit -m 'Initial commit'
 
 # set up a fake remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a branch and submit a PR

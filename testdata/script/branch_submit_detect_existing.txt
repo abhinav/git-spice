@@ -10,8 +10,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # create a new branch and submit it
@@ -35,7 +35,7 @@ gs branch submit
 stderr 'feature1: Found existing PR #'
 stderr 'Updated #'
 
-gh-dump-pull
+shamhub dump changes
 cmpenvJSON stdout $WORK/golden/update.json
 
 -- repo/feature1.txt --

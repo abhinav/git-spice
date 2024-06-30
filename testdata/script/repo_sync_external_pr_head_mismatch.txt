@@ -11,8 +11,8 @@ git init
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
-gh-init
-gh-add-remote origin alice/example.git
+shamhub init
+shamhub new origin alice/example.git
 git push origin main
 
 # Create a branch, submit it.
@@ -28,7 +28,7 @@ gs cc -m 'Modify feature'
 
 # Forget all state and merge the branch server-side.
 gs repo init --reset --trunk=main --remote=origin
-gh-merge alice/example 1
+shamhub merge alice/example 1
 
 # Re-track the branch and sync in interactive mode.
 gs branch track --base=main feature
