@@ -373,9 +373,9 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 			return nil
 
 		default:
-			opts := make([]ui.Option[*forge.ChangeTemplate], len(templates))
+			opts := make([]ui.SelectOption[*forge.ChangeTemplate], len(templates))
 			for i, tmpl := range templates {
-				opts[i] = ui.Option[*forge.ChangeTemplate]{
+				opts[i] = ui.SelectOption[*forge.ChangeTemplate]{
 					Label: tmpl.Filename,
 					Value: tmpl,
 				}
