@@ -17,6 +17,13 @@ import (
 
 var _forgeRegistry sync.Map
 
+// All is an iterator that yields all registered forges.
+func All(yield func(Forge) bool) {
+	_forgeRegistry.Range(func(_, value any) bool {
+		return yield(value.(Forge))
+	})
+}
+
 // Register registers a forge with the given ID.
 // Returns a function to unregister the forge.
 func Register(f Forge) (unregister func()) {
@@ -72,10 +79,15 @@ type Forge interface {
 	// ID reports a unique identifier for the forge, e.g. "github".
 	ID() string
 
+	// CLIPlugin returns a Kong plugin for this Forge.
+	// Return nil if the forge does not require any extra CLI flags.
+	CLIPlugin() any
+	// TODO: Perhaps some validation function for the flags?
+
 	// MatchURL reports whether the given remote URL is hosted on the forge.
 	MatchURL(remoteURL string) bool
 
-	// OpenURL opens a repository hosted on the forge
+	// OpenURL opens a repository hosted on the Forge
 	// with the given remote URL.
 	//
 	// This will only be called if MatchURL reports true.

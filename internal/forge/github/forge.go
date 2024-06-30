@@ -3,6 +3,7 @@
 package github
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"io"
@@ -15,27 +16,26 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	// DefaultURL is the default URL for GitHub.
-	DefaultURL = "https://github.com"
-
-	// DefaultAPIURL is the default URL for the GitHub API.
-	DefaultAPIURL = "https://api.github.com"
-)
-
-// Forge builds a GitHub Forge.
-type Forge struct {
+// Options defines command line options for the GitHub Forge.
+// These are all hidden in the CLI,
+// and are expected to be set only via environment variables.
+type Options struct {
 	// URL is the URL for GitHub.
 	// Override this for testing or GitHub Enterprise.
-	URL string
+	URL string `name:"github-url" hidden:"" env:"GITHUB_URL" help:"Base URL for GitHub web requests"`
 
 	// APIURL is the URL for the GitHub API.
 	// Override this for testing or GitHub Enterprise.
-	APIURL string
+	APIURL string `name:"github-api-url" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
 
-	// Token is the OAuth2 token source to use
-	// to authenticate with GitHub.
-	Token oauth2.TokenSource
+	// Token is a fixed token used to authenticate with GitHub.
+	// This may be used to skip the login flow.
+	Token string `name:"github-token" hidden:"" env:"GITHUB_TOKEN" help:"GitHub API token"`
+}
+
+// Forge builds a GitHub Forge.
+type Forge struct {
+	Options Options
 
 	// Log specifies the logger to use.
 	Log *log.Logger
@@ -43,12 +43,27 @@ type Forge struct {
 
 var _ forge.Forge = (*Forge)(nil)
 
+// URL returns the base URL configured for the GitHub Forge
+// or the default URL if none is set.
+func (f *Forge) URL() string {
+	return cmp.Or(f.Options.URL, "https://github.com")
+}
+
+// APIURL returns the base API URL configured for the GitHub Forge
+// or the default URL if none is set.
+func (f *Forge) APIURL() string {
+	return cmp.Or(f.Options.APIURL, "https://api.github.com")
+}
+
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "github" }
 
+// CLIPlugin returns the CLI plugin for the GitHub Forge.
+func (f *Forge) CLIPlugin() any { return &f.Options }
+
 // MatchURL reports whether the given URL is a GitHub URL.
 func (f *Forge) MatchURL(remoteURL string) bool {
-	_, _, err := extractRepoInfo(f.URL, remoteURL)
+	_, _, err := extractRepoInfo(f.URL(), remoteURL)
 	return err == nil
 }
 
@@ -59,27 +74,27 @@ func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository
 		f.Log = log.New(io.Discard)
 	}
 
-	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	oauthClient := oauth2.NewClient(ctx, f.Token)
-	var ghc *githubv4.Client
-	if f.APIURL != "" {
-		ghc = githubv4.NewEnterpriseClient(f.APIURL, oauthClient)
-	} else {
-		ghc = githubv4.NewClient(oauthClient)
+	var tokenSource oauth2.TokenSource = &CLITokenSource{}
+	if f.Options.Token != "" {
+		tokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: f.Options.Token})
 	}
+
+	oauthClient := oauth2.NewClient(ctx, tokenSource)
+	apiURL, err := url.JoinPath(f.APIURL(), "/graphql")
+	if err != nil {
+		return nil, fmt.Errorf("join API URL: %w", err)
+	}
+	ghc := githubv4.NewEnterpriseClient(apiURL, oauthClient)
 
 	return newRepository(ctx, f, owner, repo, f.Log, ghc, nil)
 }
 
 func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {
-	if githubURL == "" {
-		githubURL = DefaultURL
-	}
-
 	baseURL, err := url.Parse(githubURL)
 	if err != nil {
 		return "", "", fmt.Errorf("bad base URL: %w", err)

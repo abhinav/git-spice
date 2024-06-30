@@ -15,18 +15,24 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 )
+
+// Options defines CLI options for the ShamHub forge.
+type Options struct {
+	// URL is the base URL for Git repositories
+	// hosted on the ShamHub server.
+	// URLs under this must implement the Git HTTP protocol.
+	URL string `name:"shamhub-url" hidden:"" env:"SHAMHUB_URL" help:"Base URL for ShamHub requests"`
+
+	// APIURL is the base URL for the ShamHub API.
+	APIURL string `name:"shamhub-api-url" hidden:"" env:"SHAMHUB_API_URL" help:"Base URL for ShamHub API requests"`
+}
 
 // Forge provides an implementation of [forge.Forge] backed by a ShamHub
 // server.
 type Forge struct {
-	// BaseURL is the base URL for Git repositories
-	// hosted on the ShamHub server.
-	// URLs under this must implement the Git HTTP protocol.
-	URL string
-
-	// APIURL is the base URL for the ShamHub API.
-	APIURL string
+	Options
 
 	// Log is the logger to use for logging.
 	Log *log.Logger
@@ -36,6 +42,9 @@ var _ forge.Forge = (*Forge)(nil)
 
 // ID reports a unique identifier for this forge.
 func (*Forge) ID() string { return "shamhub" }
+
+// CLIPlugin registers additional CLI flags for the ShamHub forge.
+func (f *Forge) CLIPlugin() any { return &f.Options }
 
 // ChangeMetadata records the metadata for a change on a ShamHub server.
 type ChangeMetadata struct {
@@ -80,12 +89,17 @@ func (id ChangeID) String() string { return fmt.Sprintf("#%d", id) }
 
 // MatchURL reports whether the given URL is a ShamHub URL.
 func (f *Forge) MatchURL(remoteURL string) bool {
+	must.NotBeBlankf(f.URL, "URL is required")
+
 	_, ok := strings.CutPrefix(remoteURL, f.URL)
 	return ok
 }
 
 // OpenURL opens a repository hosted on the forge with the given remote URL.
 func (f *Forge) OpenURL(ctx context.Context, remoteURL string) (forge.Repository, error) {
+	must.NotBeBlankf(f.URL, "URL is required")
+	must.NotBeBlankf(f.APIURL, "API URL is required")
+
 	tail, ok := strings.CutPrefix(remoteURL, f.URL)
 	if !ok {
 		return nil, forge.ErrUnsupportedURL
