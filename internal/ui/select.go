@@ -76,6 +76,12 @@ type Select[T any] struct {
 	err      error // error state
 }
 
+// SelectOption is a single option for a select field.
+type SelectOption[T any] struct {
+	Label string
+	Value T
+}
+
 type selectOption[T any] struct {
 	Label      string // label to show for this option
 	Value      T      // value to set when selected
@@ -105,12 +111,6 @@ func (s *Select[T]) Value() T {
 	return *s.value
 }
 
-// Option is a single option for a select field.
-type Option[T any] struct {
-	Label string
-	Value T
-}
-
 // With runs the given function with the select field.
 func (s *Select[T]) With(f func(*Select[T])) *Select[T] {
 	f(s)
@@ -123,12 +123,12 @@ func (s *Select[T]) With(f func(*Select[T])) *Select[T] {
 // The defeault string representation of the value is used as the label.
 func ComparableOptions[T comparable](selected T, opts ...T) func(*Select[T]) {
 	var selectedIdx int
-	options := make([]Option[T], len(opts))
+	options := make([]SelectOption[T], len(opts))
 	for i, v := range opts {
 		if v == selected {
 			selectedIdx = i
 		}
-		options[i] = Option[T]{
+		options[i] = SelectOption[T]{
 			Label: fmt.Sprintf("%v", v),
 			Value: v,
 		}
@@ -143,7 +143,7 @@ func ComparableOptions[T comparable](selected T, opts ...T) func(*Select[T]) {
 // WithOptions sets the available options for the select field.
 // The options will be presented in the order they are provided.
 // Existing options will be replaced.
-func (s *Select[T]) WithOptions(opts ...Option[T]) *Select[T] {
+func (s *Select[T]) WithOptions(opts ...SelectOption[T]) *Select[T] {
 	options := make([]selectOption[T], len(opts))
 	matched := make([]int, len(options))
 	for i, v := range opts {
