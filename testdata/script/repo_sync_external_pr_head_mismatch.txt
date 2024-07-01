@@ -17,7 +17,7 @@ shamhub register alice
 git push origin main
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 # Create a branch, submit it.
 gs trunk

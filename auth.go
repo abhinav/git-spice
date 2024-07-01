@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -18,6 +19,24 @@ type authCmd struct {
 	Login  authLoginCmd  `cmd:"" help:"Log in to a service"`
 	Status authStatusCmd `cmd:"" help:"Show current login status"`
 	Logout authLogoutCmd `cmd:"" help:"Log out of a service"`
+
+	Forge string `help:"Name of the forge to log into" placeholder:"NAME" predictor:"forges"`
+}
+
+// AfterApply makes the Forge available to all subcommands.
+func (c *authCmd) AfterApply(
+	ctx context.Context,
+	kctx *kong.Context,
+	log *log.Logger,
+	globals *globalOptions,
+) error {
+	f, err := resolveForge(ctx, log, globals, c.Forge)
+	if err != nil {
+		return err
+	}
+
+	kctx.BindTo(f, (*forge.Forge)(nil))
+	return nil
 }
 
 // resolveForge resolves a forge by name.
@@ -40,11 +59,6 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 		return f, nil
 	}
 
-	if !globals.Prompt {
-		log.Error("No Forge specified, and could not guess one from the repository", "error", err)
-		return nil, fmt.Errorf("%w: please set a Forge explicitly", errNoPrompt)
-	}
-
 	var opts []ui.SelectOption[forge.Forge]
 	forge.All(func(f forge.Forge) bool {
 		opts = append(opts, ui.SelectOption[forge.Forge]{
@@ -57,8 +71,18 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 		return cmp.Compare(a.Label, b.Label)
 	})
 
+	// If there's only one known Forge, there's no need to prompt.
+	if len(opts) == 1 {
+		return opts[0].Value, nil
+	}
+
+	if !globals.Prompt {
+		log.Error("No Forge specified, and could not guess one from the repository", "error", err)
+		return nil, fmt.Errorf("%w: please use the --forge flag", errNoPrompt)
+	}
+
 	field := ui.NewSelect[forge.Forge]().
-		WithTitle("Select a forge to log into").
+		WithTitle("Select a Forge").
 		WithOptions(opts...).
 		WithValue(&f)
 	err = ui.Run(field)
@@ -75,15 +99,35 @@ func guessCurrentForge(ctx context.Context, log *log.Logger) (forge.Forge, error
 		return nil, errors.New("not in a Git repository")
 	}
 
-	db := newRepoStorage(repo, log)
-	store, err := state.OpenStore(ctx, db, log)
-	if err != nil {
-		return nil, errors.New("repository not initialized")
+	// If the repository is already initialized with gs,
+	// and a remote is configured, use the forge for that remote.
+	var remote string
+	if store, err := state.OpenStore(ctx, newRepoStorage(repo, log), log); err == nil {
+		remote, err = store.Remote()
+		if err != nil {
+			remote = ""
+		}
 	}
 
-	remote, err := store.Remote()
-	if err != nil {
-		return nil, errors.New("no remote set for repository")
+	// Otherwise, look at the existing remotes.
+	if remote == "" {
+		remotes, err := repo.ListRemotes(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list remotes: %w", err)
+		}
+		switch len(remotes) {
+		case 0:
+			return nil, errors.New("no remote set for repository")
+
+		case 1:
+			remote = remotes[0]
+
+		default:
+			// Repository not initialized with gs
+			// and has multiple remotes.
+			// We can't guess the forge in this case.
+			return nil, errors.New("multiple remotes found: initialize with gs first")
+		}
 	}
 
 	remoteURL, err := repo.RemoteURL(ctx, remote)

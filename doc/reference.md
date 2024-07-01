@@ -49,14 +49,10 @@ using a heuristic.
 ### gs auth login
 
 ```
-gs auth login [<forge>] [flags]
+gs auth login [flags]
 ```
 
 Log in to a service
-
-**Arguments**
-
-* `forge`: Service to log into
 
 **Flags**
 
@@ -65,26 +61,18 @@ Log in to a service
 ### gs auth status
 
 ```
-gs auth status [<forge>]
+gs auth status [flags]
 ```
 
 Show current login status
 
-**Arguments**
-
-* `forge`: Service to log into
-
 ### gs auth logout
 
 ```
-gs auth logout [<forge>]
+gs auth logout [flags]
 ```
 
 Log out of a service
-
-**Arguments**
-
-* `forge`: Service to log into
 
 ## Repository
 

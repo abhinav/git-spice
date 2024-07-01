@@ -21,7 +21,7 @@ git add feature1.txt
 gs bc -m 'Add feature1' feature1
 
 env SHAMHUB_USERNAME=bob
-gs auth login shamhub
+gs auth login --forge=shamhub
 
 with-term $WORK/input.txt -- gs branch submit --fill
 cmp stdout $WORK/golden/prompt.txt

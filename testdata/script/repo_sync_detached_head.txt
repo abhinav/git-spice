@@ -18,7 +18,7 @@ git push origin main
 gs repo init
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 # update the remote out of band
 cd ..

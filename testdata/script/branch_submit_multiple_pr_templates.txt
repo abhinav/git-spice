@@ -16,7 +16,7 @@ shamhub register alice
 git push origin main
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
 gs bc feature

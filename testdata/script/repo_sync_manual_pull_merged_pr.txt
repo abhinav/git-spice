@@ -16,7 +16,7 @@ shamhub register alice
 git push origin main
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 # submit a PR and merge it
 git add feature.txt

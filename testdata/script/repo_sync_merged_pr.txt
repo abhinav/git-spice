@@ -15,7 +15,7 @@ shamhub register alice
 git push origin main
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 # create a stack
 git add feature1.txt

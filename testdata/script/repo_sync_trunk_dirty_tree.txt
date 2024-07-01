@@ -18,7 +18,7 @@ git push origin main
 gs repo init
 
 env SHAMHUB_USERNAME=alice
-gs auth login shamhub
+gs auth login
 
 # dirty the worktree
 cp $WORK/extra/feature1.txt .
