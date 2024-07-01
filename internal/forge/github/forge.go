@@ -77,7 +77,7 @@ func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remo
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	ghc, err := tok.(*AuthenticationToken).githubClient(ctx, f.APIURL())
+	ghc, err := tok.(*AuthenticationToken).githubv4Client(ctx, f.APIURL())
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub client: %w", err)
 	}

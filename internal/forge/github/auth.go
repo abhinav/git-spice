@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/dustin/go-humanize"
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
@@ -29,7 +30,7 @@ type AuthenticationToken struct {
 	tok string
 }
 
-func (t *AuthenticationToken) githubClient(ctx context.Context, apiURL string) (*githubv4.Client, error) {
+func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string) (*githubv4.Client, error) {
 	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
 	if err != nil {
 		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
@@ -38,6 +39,19 @@ func (t *AuthenticationToken) githubClient(ctx context.Context, apiURL string) (
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.tok})
 	httpClient := oauth2.NewClient(ctx, tokenSource)
 	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
+}
+
+func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
+	u, err := url.Parse(f.URL())
+	if err != nil {
+		return oauth2.Endpoint{}, fmt.Errorf("bad GitHub URL: %w", err)
+	}
+
+	return oauth2.Endpoint{
+		AuthURL:       u.JoinPath("/login/oauth/authorize").String(),
+		TokenURL:      u.JoinPath("/login/oauth/access_token").String(),
+		DeviceAuthURL: u.JoinPath("/login/device/code").String(),
+	}, nil
 }
 
 // AuthenticationFlow prompts the user to authenticate with GitHub.
@@ -55,13 +69,18 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 		return nil, errors.New("already authenticated")
 	}
 
+	oauthEndpoint, err := f.oauth2Endpoint()
+	if err != nil {
+		return nil, fmt.Errorf("get OAuth endpoint: %w", err)
+	}
+
 	methods := []ui.ListItem[authenticationMethod]{
 		{
 			Title:       "OAuth",
 			Description: _oauthDesc,
 			Value: (&DeviceFlowAuthenticator{
-				Forge:    f,
-				Log:      f.Log,
+				Endpoint: oauthEndpoint,
+				Stderr:   os.Stderr,
 				ClientID: _oauthAppClientID,
 				Scopes:   []string{"repo"},
 			}).Authenticate,
@@ -70,8 +89,8 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 			Title:       "OAuth: Public repositories only",
 			Description: _oauthPublicDesc,
 			Value: (&DeviceFlowAuthenticator{
-				Forge:    f,
-				Log:      f.Log,
+				Endpoint: oauthEndpoint,
+				Stderr:   os.Stderr,
 				ClientID: _oauthAppClientID,
 				Scopes:   []string{"public_repo"},
 			}).Authenticate,
@@ -80,8 +99,8 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 			Title:       "GitHub App",
 			Description: _githubAppDesc,
 			Value: (&DeviceFlowAuthenticator{
-				Forge:    f,
-				Log:      f.Log,
+				Endpoint: oauthEndpoint,
+				Stderr:   os.Stderr,
 				ClientID: _githubAppClientID,
 				// No scopes needed for GitHub App.
 			}).Authenticate,
@@ -90,7 +109,6 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 			Title:       "Personal Access Token",
 			Description: _patDesc,
 			Value: (&PersonalAccessTokenAuthenticator{
-				Forge:  f,
 				APIURL: f.Options.APIURL,
 				Log:    f.Log,
 			}).Authenticate,
@@ -170,8 +188,8 @@ You can use this method if you do not have the ability to install a GitHub or OA
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
 type DeviceFlowAuthenticator struct {
-	// Forge is the forge to authenticate with.
-	Forge *Forge
+	// Endpoint is the OAuth endpoint to use.
+	Endpoint oauth2.Endpoint
 
 	// ClientID for the OAuth or GitHub App.
 	ClientID string
@@ -179,21 +197,14 @@ type DeviceFlowAuthenticator struct {
 	// Scopes specifies the OAuth scopes to request.
 	Scopes []string
 
-	// Log is the logger to use for logging.
-	Log *log.Logger
+	Stderr io.Writer
 }
 
 // Authenticate executes the OAuth authentication flow.
 func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
-	log := a.Log
-	endpoint, err := a.Forge.oauth2Endpoint()
-	if err != nil {
-		return nil, err
-	}
-
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
-		Endpoint:    endpoint,
+		Endpoint:    a.Endpoint,
 		Scopes:      a.Scopes,
 		RedirectURL: "http://127.0.0.1/callback",
 	}
@@ -203,11 +214,16 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.Authe
 		return nil, err
 	}
 
-	log.Infof("Please visit %s and enter the following code", resp.VerificationURI)
-	log.Infof("    %s", resp.UserCode) // TODO: styling
-	log.Infof("The code expires %s", humanize.Time(resp.Expiry))
-	log.Infof("It will take %v or more seconds to verify the code after you enter it", resp.Interval)
-	// TODO: open browser with flag opt-out
+	urlStle := ui.NewStyle().Foreground(ui.Cyan).Bold(true).Underline(true)
+	codeStyle := ui.NewStyle().Foreground(ui.Cyan).Bold(true)
+	bullet := ui.NewStyle().PaddingLeft(2).Foreground(ui.Gray)
+	faint := ui.NewStyle().Faint(true)
+
+	fmt.Fprintf(a.Stderr, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
+	fmt.Fprintf(a.Stderr, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
+	fmt.Fprintln(a.Stderr, faint.Render("The code expires in a few minutes."))
+	fmt.Fprintln(a.Stderr, faint.Render("It will take a few seconds to verify after you enter it."))
+	// TODO: maybe open browser with flag opt-out
 
 	token, err := cfg.DeviceAccessToken(ctx, resp,
 		oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"))
@@ -218,24 +234,8 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.Authe
 	return &AuthenticationToken{tok: token.AccessToken}, nil
 }
 
-func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
-	u, err := url.Parse(f.URL())
-	if err != nil {
-		return oauth2.Endpoint{}, fmt.Errorf("bad GitHub URL: %w", err)
-	}
-
-	return oauth2.Endpoint{
-		AuthURL:       u.JoinPath("/login/oauth/authorize").String(),
-		TokenURL:      u.JoinPath("/login/oauth/access_token").String(),
-		DeviceAuthURL: u.JoinPath("/login/device/code").String(),
-	}, nil
-}
-
 // PersonalAccessTokenAuthenticator implements PAT authentication for GitHub.
 type PersonalAccessTokenAuthenticator struct {
-	// Forge is the forge to authenticate with.
-	Forge *Forge
-
 	// APIURL is the URL at which the GitHub API is hosted.
 	APIURL string
 
@@ -260,7 +260,6 @@ func (a *PersonalAccessTokenAuthenticator) Authenticate(ctx context.Context) (fo
 		return nil, err
 	}
 
-	// TODO: validate token by making a request to the API
-
+	// TODO: Should we validate the token by making a request?
 	return &AuthenticationToken{tok: token}, nil
 }
