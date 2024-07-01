@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/log"
@@ -48,7 +49,7 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 	if forgeID != "" {
 		f, ok := forge.Lookup(forgeID)
 		if !ok {
-			log.Errorf("Forge ID must be one of: %s", forge.IDs())
+			log.Errorf("Forge ID must be one of: %s", strings.Join(forge.IDs(), ", "))
 			return nil, fmt.Errorf("unknown forge: %s", forgeID)
 		}
 		return f, nil

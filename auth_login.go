@@ -21,9 +21,8 @@ func (cmd *authLoginCmd) Run(
 	f forge.Forge,
 ) error {
 	if _, err := f.LoadAuthenticationToken(stash); err == nil && !cmd.Refresh {
-		log.Errorf("Already logged into %s", f.ID())
 		log.Errorf("Use --refresh to force a refresh of the authentication token")
-		return fmt.Errorf("already logged in")
+		return fmt.Errorf("%s: already logged in", f.ID())
 	}
 
 	secret, err := f.AuthenticationFlow(ctx)

@@ -1,0 +1,34 @@
+# auth operations prompt for forge if it cannot be guessed
+
+as 'Test <test@example.com>'
+at '2024-07-01T04:30:32Z'
+
+shamhub init
+shamhub register alice
+env SHAMHUB_USERNAME=alice
+
+with-term -final exit input.txt -- gs auth login
+cmp stdout golden.txt
+
+-- input.txt --
+await Select a Forge
+snapshot initial
+feed \x1b[B
+await
+snapshot select
+feed \r
+
+-- golden.txt --
+### initial ###
+Select a Forge:
+
+▶ github
+  shamhub
+### select ###
+Select a Forge:
+
+  github
+▶ shamhub
+### exit ###
+Select a Forge: shamhub
+INF shamhub: successfully logged in

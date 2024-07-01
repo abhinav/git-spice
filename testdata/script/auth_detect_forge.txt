@@ -1,0 +1,51 @@
+# auth operations auto-detect the forge if possible.
+
+as 'Test <test@example.com>'
+at '2024-07-01T04:30:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub init
+shamhub register alice
+env SHAMHUB_USERNAME=alice
+
+# err: not initialized, no remote
+! gs auth login
+stderr 'no remote set'
+
+# success: not initialized, but has remote
+shamhub new origin alice/example.git
+git push origin main
+! gs auth status
+stderr 'shamhub: not logged in'
+
+# err: not initialized, multiple remotes
+shamhub new fork bob/fork.git
+! gs auth login
+stderr 'multiple remotes found'
+
+# success: initialized
+gs repo init --remote=origin
+
+gs auth login
+stderr 'shamhub: successfully logged in'
+
+! gs auth login
+stderr 'shamhub: already logged in'
+
+gs auth status
+stderr 'shamhub: currently logged in'
+
+gs auth login --refresh
+stderr 'shamhub: successfully logged in'
+
+gs auth status
+stderr 'shamhub: currently logged in'
+
+gs auth logout
+stderr 'shamhub: logged out'
+
+! gs auth status
+stderr 'shamhub: not logged in'

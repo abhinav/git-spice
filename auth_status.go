@@ -21,7 +21,7 @@ func (cmd *authStatusCmd) Run(
 ) error {
 	if _, err := f.LoadAuthenticationToken(stash); err != nil {
 		if errors.Is(err, secret.ErrNotFound) {
-			return fmt.Errorf("not logged into %s", f.ID())
+			return fmt.Errorf("%s: not logged in", f.ID())
 		}
 		return fmt.Errorf("load authentication token: %w", err)
 	}
