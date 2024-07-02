@@ -1,7 +1,0 @@
-kind: Added
-body: >-
-  Add 'gs auth login', 'gs auth logout', and 'gs auth status' commands
-  to log in, log out, and check the authentication status.
-  Supports OAuth, GitHub App, and Personal Access Token.
-  Authentication tokens are stored in the system keychain.
-time: 2024-06-30T12:16:42.397402-07:00
