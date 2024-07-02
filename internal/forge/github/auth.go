@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
@@ -27,7 +26,7 @@ const (
 type AuthenticationToken struct {
 	forge.AuthenticationToken
 
-	tok string
+	AccessToken string
 }
 
 func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string) (*githubv4.Client, error) {
@@ -36,7 +35,7 @@ func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string)
 		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
 	}
 
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.tok})
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
 	httpClient := oauth2.NewClient(ctx, tokenSource)
 	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
@@ -74,62 +73,16 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 		return nil, fmt.Errorf("get OAuth endpoint: %w", err)
 	}
 
-	methods := []ui.ListItem[authenticationMethod]{
-		{
-			Title:       "OAuth",
-			Description: _oauthDesc,
-			Value: (&DeviceFlowAuthenticator{
-				Endpoint: oauthEndpoint,
-				Stderr:   os.Stderr,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"repo"},
-			}).Authenticate,
-		},
-		{
-			Title:       "OAuth: Public repositories only",
-			Description: _oauthPublicDesc,
-			Value: (&DeviceFlowAuthenticator{
-				Endpoint: oauthEndpoint,
-				Stderr:   os.Stderr,
-				ClientID: _oauthAppClientID,
-				Scopes:   []string{"public_repo"},
-			}).Authenticate,
-		},
-		{
-			Title:       "GitHub App",
-			Description: _githubAppDesc,
-			Value: (&DeviceFlowAuthenticator{
-				Endpoint: oauthEndpoint,
-				Stderr:   os.Stderr,
-				ClientID: _githubAppClientID,
-				// No scopes needed for GitHub App.
-			}).Authenticate,
-		},
-		{
-			Title:       "Personal Access Token",
-			Description: _patDesc,
-			Value: (&PersonalAccessTokenAuthenticator{
-				APIURL: f.Options.APIURL,
-				Log:    f.Log,
-			}).Authenticate,
-		},
-	}
-
-	var method authenticationMethod
-	field := ui.NewList[authenticationMethod]().
-		WithTitle("Select an authentication method").
-		WithItems(methods...).
-		WithValue(&method)
-	if err := ui.Run(field); err != nil {
-		return nil, err
-	}
-
-	return method(ctx)
+	return (&githubAuthenticator{
+		Endpoint: oauthEndpoint,
+		Stdin:    os.Stdin,
+		Stderr:   os.Stderr,
+	}).Authenticate(ctx)
 }
 
 // SaveAuthenticationToken saves the given authentication token to the stash.
 func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.AuthenticationToken) error {
-	tok := t.(*AuthenticationToken).tok
+	tok := t.(*AuthenticationToken).AccessToken
 	if f.Options.Token != "" && f.Options.Token == tok {
 		// If the user has set GITHUB_TOKEN,
 		// we should not save it to the stash.
@@ -144,7 +97,7 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 	if f.Options.Token != "" {
 		// If the user has set GITHUB_TOKEN, we should use that
 		// regardless of what's in the stash.
-		return &AuthenticationToken{tok: f.Options.Token}, nil
+		return &AuthenticationToken{AccessToken: f.Options.Token}, nil
 	}
 
 	tok, err := stash.LoadSecret(f.URL(), "token")
@@ -152,7 +105,7 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 		return nil, fmt.Errorf("load token: %w", err)
 	}
 
-	return &AuthenticationToken{tok: tok}, nil
+	return &AuthenticationToken{AccessToken: tok}, nil
 }
 
 // ClearAuthenticationToken removes the authentication token from the stash.
@@ -161,6 +114,69 @@ func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 }
 
 type authenticationMethod func(context.Context) (forge.AuthenticationToken, error)
+
+// githubAuthenticator presents the user with multiple authentication methods,
+// prompts them to choose one, and executes the chosen method.
+type githubAuthenticator struct {
+	Endpoint oauth2.Endpoint
+	Stdin    io.Reader
+	Stderr   io.Writer
+}
+
+func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+	methods := []ui.ListItem[authenticationMethod]{
+		{
+			Title:       "OAuth",
+			Description: _oauthDesc,
+			Value: (&DeviceFlowAuthenticator{
+				Endpoint: a.Endpoint,
+				Stderr:   a.Stderr,
+				ClientID: _oauthAppClientID,
+				Scopes:   []string{"repo"},
+			}).Authenticate,
+		},
+		{
+			Title:       "OAuth: Public repositories only",
+			Description: _oauthPublicDesc,
+			Value: (&DeviceFlowAuthenticator{
+				Endpoint: a.Endpoint,
+				Stderr:   a.Stderr,
+				ClientID: _oauthAppClientID,
+				Scopes:   []string{"public_repo"},
+			}).Authenticate,
+		},
+		{
+			Title:       "GitHub App",
+			Description: _githubAppDesc,
+			Value: (&DeviceFlowAuthenticator{
+				Endpoint: a.Endpoint,
+				Stderr:   a.Stderr,
+				ClientID: _githubAppClientID,
+				// No scopes needed for GitHub App.
+			}).Authenticate,
+		},
+		{
+			Title:       "Personal Access Token",
+			Description: _patDesc,
+			Value: (&PATAuthenticator{
+				Stdin:  a.Stdin,
+				Stderr: a.Stderr,
+			}).Authenticate,
+		},
+	}
+
+	var method authenticationMethod
+	field := ui.NewList[authenticationMethod]().
+		WithTitle("Select an authentication method").
+		WithItems(methods...).
+		WithValue(&method)
+	err := ui.Run(field, ui.WithInput(a.Stdin), ui.WithOutput(a.Stderr))
+	if err != nil {
+		return nil, err
+	}
+
+	return method(ctx)
+}
 
 var _oauthDesc = strings.TrimSpace(`
 Authorize git-spice to act on your behalf from this device only.
@@ -231,21 +247,18 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.Authe
 		return nil, err
 	}
 
-	return &AuthenticationToken{tok: token.AccessToken}, nil
+	return &AuthenticationToken{AccessToken: token.AccessToken}, nil
 }
 
-// PersonalAccessTokenAuthenticator implements PAT authentication for GitHub.
-type PersonalAccessTokenAuthenticator struct {
-	// APIURL is the URL at which the GitHub API is hosted.
-	APIURL string
-
-	// Log is used for logging messages to the user.
-	Log *log.Logger
+// PATAuthenticator implements PAT authentication for GitHub.
+type PATAuthenticator struct {
+	Stdin  io.Reader
+	Stderr io.Writer
 }
 
 // Authenticate prompts the user for a Personal Access Token,
 // validates it, and returns the token if successful.
-func (a *PersonalAccessTokenAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+func (a *PATAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
 	var token string
 	err := ui.Run(ui.NewInput().
 		WithTitle("Enter Personal Access Token").
@@ -254,12 +267,14 @@ func (a *PersonalAccessTokenAuthenticator) Authenticate(ctx context.Context) (fo
 				return errors.New("token is required")
 			}
 			return nil
-		}).
-		WithValue(&token))
+		}).WithValue(&token),
+		ui.WithInput(a.Stdin),
+		ui.WithOutput(a.Stderr),
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: Should we validate the token by making a request?
-	return &AuthenticationToken{tok: token}, nil
+	return &AuthenticationToken{AccessToken: token}, nil
 }
