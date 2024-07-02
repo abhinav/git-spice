@@ -210,6 +210,31 @@ Branches that are deleted from the list will be ignored.
 * `--editor=STRING`: Editor to use for editing the branches.
 * `--branch=NAME`: Branch whose stack we're editing. Defaults to current branch.
 
+### gs upstack submit
+
+```
+gs upstack (us) submit (s) [flags]
+```
+
+Submit a branch and those above it
+
+Change Requests are created or updated
+for the current branch and all branches upstack from it.
+If the base of the current branch is not trunk,
+it must have already been submitted by a prior command.
+Use --branch to start at a different branch.
+
+A prompt will ask for a title and body for each Change Request.
+Use --fill to populate these from the commit messages.
+Use --dry-run to see what would be submitted
+without actually submitting anything.
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `--fill`: Fill in the pull request title and body from the commit messages
+* `--branch=NAME`: Branch to start at
+
 ### gs upstack restack
 
 ```

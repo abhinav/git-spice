@@ -155,7 +155,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 	if (storeErr != nil) != (gitErr != nil) {
 		// Branch is not tracked, but exists in the repository.
 		if storeErr != nil {
-			return nil, fmt.Errorf("lookup branch: %w", storeErr)
+			return nil, fmt.Errorf("untracked branch %v: %w", name, storeErr)
 		}
 
 		if !errors.Is(gitErr, git.ErrNotExist) {
@@ -179,7 +179,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 
 	// Otherwise, something went wrong. Surface both errors.
 	return nil, errors.Join(
-		fmt.Errorf("lookup branch: %w", storeErr),
+		fmt.Errorf("untracked branch %v: %w", name, storeErr),
 		fmt.Errorf("resolve head: %w", gitErr),
 	)
 }
