@@ -1,0 +1,29 @@
+# auth operations accept forge name explicitly
+
+as 'Test <test@example.com>'
+at '2024-07-01T04:30:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+gs repo init
+
+! gs auth status --forge=unrecognized
+stderr 'unknown forge: unrecognized'
+stderr 'must be one of'
+
+! gs auth status --forge=shamhub
+stderr 'shamhub: not logged in'
+
+env SHAMHUB_USERNAME=alice
+gs auth login --forge=shamhub
+stderr 'shamhub: successfully logged in'
+
+gs auth logout --forge=shamhub
+stderr 'shamhub: logged out'

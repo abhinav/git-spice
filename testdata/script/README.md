@@ -141,6 +141,16 @@ shamhub dump change <num>
 
 Dumps a JSON blob of all changes or a single change made against ShamHub.
 
+#### shamhub register
+
+```
+shamhub register <username>
+```
+
+Registers a new user on ShamHub. No password is required.
+To log in as the user, set `SHAMHUB_USERNAME` to the username
+and run `gs auth login`.
+
 ### true
 
 ```

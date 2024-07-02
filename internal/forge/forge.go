@@ -10,9 +10,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/secret"
 )
 
 var _forgeRegistry sync.Map
@@ -22,6 +24,17 @@ func All(yield func(Forge) bool) {
 	_forgeRegistry.Range(func(_, value any) bool {
 		return yield(value.(Forge))
 	})
+}
+
+// IDs returns a sorted list of all registered forge IDs.
+func IDs() []string {
+	var names []string
+	All(func(f Forge) bool {
+		names = append(names, f.ID())
+		return true
+	})
+	sort.Strings(names)
+	return names
 }
 
 // Register registers a forge with the given ID.
@@ -58,18 +71,6 @@ func MatchForgeURL(remoteURL string) (forge Forge, ok bool) {
 	return forge, ok
 }
 
-// OpenRepositoryURL opens a repository hosted on a forge
-// by parsing the given remote URL.
-//
-// It will attempt to match the URL with all registered forges.
-func OpenRepositoryURL(ctx context.Context, remoteURL string) (repo Repository, _ error) {
-	forge, ok := MatchForgeURL(remoteURL)
-	if !ok {
-		return nil, ErrUnsupportedURL
-	}
-	return forge.OpenURL(ctx, remoteURL)
-}
-
 // ErrUnsupportedURL indicates that the given remote URL
 // does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")
@@ -91,7 +92,7 @@ type Forge interface {
 	// with the given remote URL.
 	//
 	// This will only be called if MatchURL reports true.
-	OpenURL(ctx context.Context, remoteURL string) (Repository, error)
+	OpenURL(ctx context.Context, tok AuthenticationToken, remoteURL string) (Repository, error)
 
 	// ChangeTemplatePaths reports the case-insensitive paths at which
 	// it's possible to define change templates in the repository.
@@ -104,6 +105,34 @@ type Forge interface {
 	// UnmarshalChangeMetadata deserializes the given JSON blob
 	// into change metadata.
 	UnmarshalChangeMetadata(json.RawMessage) (ChangeMetadata, error)
+
+	// AuthenticationFlow runs the authentication flow for the forge.
+	// This may prompt the user, perform network requests, etc.
+	//
+	// The implementation should return a secret that the Forge
+	// can serialize and store for future use.
+	AuthenticationFlow(ctx context.Context) (AuthenticationToken, error)
+
+	// SaveAuthenticationToken saves the given authentication token
+	// to the secret stash.
+	SaveAuthenticationToken(secret.Stash, AuthenticationToken) error
+
+	// LoadAuthenticationToken loads the authentication token
+	// from the secret stash.
+	LoadAuthenticationToken(secret.Stash) (AuthenticationToken, error)
+
+	// ClearAuthenticationToken removes the authentication token
+	// from the secret stash.
+	ClearAuthenticationToken(secret.Stash) error
+}
+
+// AuthenticationToken is a secret that results from a successful login.
+// It will be persisted in a safe place,
+// and re-used for future authentication with the forge.
+//
+// Implementations must embed this interface.
+type AuthenticationToken interface {
+	secret() // marker method
 }
 
 // Repository is a Git repository hosted on a forge.

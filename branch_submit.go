@@ -11,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -58,6 +59,7 @@ func (*branchSubmitCmd) Help() string {
 
 func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
+	secretStash secret.Stash,
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
@@ -106,7 +108,7 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	remoteRepo, err := openRemoteRepository(ctx, log, repo, remote)
+	remoteRepo, err := openRemoteRepository(ctx, log, secretStash, repo, remote)
 	if err != nil {
 		return err
 	}

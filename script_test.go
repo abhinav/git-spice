@@ -15,17 +15,32 @@ import (
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/mockedit"
+	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/secret/secrettest"
 	"go.abhg.dev/gs/internal/termtest"
 )
 
 var _update = flag.Bool("update", false, "update golden files")
 
 func TestMain(m *testing.M) {
+	// Always override the secret stash with a memory stash
+	// so that tests don't accidentally use the system keyring.
+	_secretStash = new(secret.MemoryStash)
+
 	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"gs": func() int {
 			logger := log.NewWithOptions(os.Stderr, log.Options{
 				Level: log.DebugLevel,
 			})
+
+			// If a secret server is configured, use it.
+			if secretURL := os.Getenv("SECRET_SERVER_URL"); secretURL != "" {
+				var err error
+				_secretStash, err = secrettest.NewClient(secretURL)
+				if err != nil {
+					logger.Fatalf("Could not create secret client: %v", err)
+				}
+			}
 
 			forge.Register(&shamhub.Forge{Log: logger})
 			main()
@@ -61,9 +76,15 @@ func TestScript(t *testing.T) {
 		UpdateScripts:      *_update,
 		RequireUniqueNames: true,
 		Setup: func(e *testscript.Env) error {
+			t := e.T().(testing.TB)
+
 			for k, v := range defaultEnv {
 				e.Setenv(k, v)
 			}
+
+			secretServer := secrettest.NewServer(t)
+			t.Logf("Secret server URL: %s", secretServer.URL())
+			e.Setenv("SECRET_SERVER_URL", secretServer.URL())
 
 			shamhubCmd.Setup(t, e)
 			return nil

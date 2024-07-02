@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/komplete"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -124,4 +126,14 @@ func predictDirs(args komplete.Args) (predictions []string) {
 	}
 
 	return predictions
+}
+
+func predictForges(args komplete.Args) (predictions []string) {
+	var ids []string
+	forge.All(func(f forge.Forge) bool {
+		ids = append(ids, f.ID())
+		return true
+	})
+	sort.Strings(ids)
+	return ids
 }

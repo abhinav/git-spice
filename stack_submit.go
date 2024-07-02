@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -26,6 +27,7 @@ func (*stackSubmitCmd) Help() string {
 
 func (cmd *stackSubmitCmd) Run(
 	ctx context.Context,
+	secretStash secret.Stash,
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
@@ -56,7 +58,7 @@ func (cmd *stackSubmitCmd) Run(
 			DryRun: cmd.DryRun,
 			Fill:   cmd.Fill,
 			Branch: branch,
-		}).Run(ctx, log, opts)
+		}).Run(ctx, secretStash, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", branch, err)
 		}

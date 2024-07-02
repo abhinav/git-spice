@@ -44,6 +44,36 @@ using a heuristic.
 
 * `shell`: Shell to generate completions for.
 
+## Authentication
+
+### gs auth login
+
+```
+gs auth login [flags]
+```
+
+Log in to a service
+
+**Flags**
+
+* `--refresh`: Force a refresh of the authentication token
+
+### gs auth status
+
+```
+gs auth status [flags]
+```
+
+Show current login status
+
+### gs auth logout
+
+```
+gs auth logout [flags]
+```
+
+Log out of a service
+
 ## Repository
 
 ### gs repo init

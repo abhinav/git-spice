@@ -1,0 +1,3 @@
+kind: Removed
+body: (**Breaking**) git-spice no longer defers to the GitHub CLI for authentication. Use the new 'gs auth' command to log in.
+time: 2024-06-30T12:15:24.893344-07:00

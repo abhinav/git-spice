@@ -12,7 +12,11 @@ git commit -m 'Initial commit'
 # set up a fake remote
 shamhub init
 shamhub new origin alice/example.git
+shamhub register alice
 git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
 
 env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
 gs bc feature

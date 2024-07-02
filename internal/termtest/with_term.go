@@ -337,19 +337,5 @@ func (m *terminalEmulator) Snapshot() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var lines []string
-	for _, row := range m.term.Content {
-		rowstr := strings.TrimRight(string(row), " \t\n")
-		lines = append(lines, rowstr)
-	}
-
-	// Trim trailing empty lines.
-	for i := len(lines) - 1; i >= 0; i-- {
-		if len(lines[i]) > 0 {
-			lines = lines[:i+1]
-			break
-		}
-	}
-
-	return lines
+	return Rows(m.term.Screen)
 }
