@@ -1,0 +1,147 @@
+# submit a stack of PRs with 'upstack submit' from main.
+
+as 'Test <test@example.com>'
+at '2024-07-02T05:56:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+gs repo init
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack:
+# main -> feature1 -> {feature2, feature3 -> feature4}
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+gs down
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+git add feature4.txt
+gs branch create feature4 -m 'Add feature 4'
+
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+# err: cannot submit from feature2 as feature1 is not submitted
+gs branch checkout feature2
+! gs upstack submit --fill
+stderr 'base \(feature1\) has not been submitted'
+
+# can submit from a branch just above base
+gs branch checkout feature1
+gs upstack submit --dry-run
+cmp stderr $WORK/golden/submit-dry-run.txt
+
+# submit the entire stack from main
+gs trunk
+gs upstack submit --fill
+cmpenv stderr $WORK/golden/submit-log.txt
+
+gs ls
+cmp stderr $WORK/golden/ls-after.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+-- repo/feature4.txt --
+This is feature 4
+-- golden/submit-dry-run.txt --
+INF WOULD create a pull request for feature1
+INF WOULD create a pull request for feature2
+INF WOULD create a pull request for feature3
+INF WOULD create a pull request for feature4
+-- golden/submit-log.txt --
+INF Created #1: $SHAMHUB_URL/alice/example/change/1
+INF Created #2: $SHAMHUB_URL/alice/example/change/2
+INF Created #3: $SHAMHUB_URL/alice/example/change/3
+INF Created #4: $SHAMHUB_URL/alice/example/change/4
+-- golden/ls-before.txt --
+    ┏━■ feature4 ◀
+  ┏━┻□ feature3
+┏━┻□ feature1
+main
+-- golden/ls-after.txt --
+  ┏━□ feature2 (#2)
+  ┃ ┏━□ feature4 (#4)
+  ┣━┻□ feature3 (#3)
+┏━┻□ feature1 (#1)
+main ◀
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "eb08cced301c285d7984fd6db0033449e67c1e25"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "ref": "feature1",
+      "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
+    },
+    "head": {
+      "ref": "feature2",
+      "sha": "ba0a60390bf660907454bda9561bc4b92d4ec647"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "base": {
+      "ref": "feature1",
+      "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
+    },
+    "head": {
+      "ref": "feature3",
+      "sha": "e1140adca0d49b855e1d102d884bcff9d5c693fe"
+    }
+  },
+  {
+    "number": 4,
+    "html_url": "$SHAMHUB_URL/alice/example/change/4",
+    "state": "open",
+    "title": "Add feature 4",
+    "body": "",
+    "base": {
+      "ref": "feature3",
+      "sha": "e1140adca0d49b855e1d102d884bcff9d5c693fe"
+    },
+    "head": {
+      "ref": "feature4",
+      "sha": "3ca1010ea95ec9e8181ec804fef100a987102cd4"
+    }
+  }
+]

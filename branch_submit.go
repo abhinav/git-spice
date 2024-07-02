@@ -76,6 +76,10 @@ func (cmd *branchSubmitCmd) Run(
 		cmd.Branch = currentBranch
 	}
 
+	if cmd.Branch == store.Trunk() {
+		return errors.New("cannot submit trunk")
+	}
+
 	branch, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
 		return fmt.Errorf("lookup branch: %w", err)
