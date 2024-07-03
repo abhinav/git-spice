@@ -450,6 +450,9 @@ Create a new branch
 
 Staged changes will be committed to the new branch.
 If there are no staged changes, an empty commit will be created.
+Use -a/--all to automatically stage modified and deleted files,
+just like 'git commit -a'.
+
 If a branch name is not provided,
 it will be generated from the commit message.
 
@@ -502,6 +505,7 @@ target (A) to the specified branch:
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
+* `-a`, `--all`: Automatically stage modified and deleted files
 * `-m`, `--message=MSG`: Commit message
 
 ### gs branch delete

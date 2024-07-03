@@ -19,6 +19,7 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
+	All     bool   `short:"a" help:"Automatically stage modified and deleted files"`
 	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
 }
 
@@ -26,6 +27,9 @@ func (*branchCreateCmd) Help() string {
 	return text.Dedent(`
 		Staged changes will be committed to the new branch.
 		If there are no staged changes, an empty commit will be created.
+		Use -a/--all to automatically stage modified and deleted files,
+		just like 'git commit -a'.
+
 		If a branch name is not provided,
 		it will be generated from the commit message.
 
@@ -144,6 +148,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	if err := repo.Commit(ctx, git.CommitRequest{
 		AllowEmpty: len(diff) == 0,
 		Message:    cmd.Message,
+		All:        cmd.All,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
