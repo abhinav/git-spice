@@ -6,9 +6,19 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/text"
 )
 
 type authLogoutCmd struct{}
+
+func (*authLogoutCmd) Help() string {
+	return text.Dedent(`
+		The stored authentication information is deleted from secure storage.
+		Use 'gs auth login' to log in again.
+
+		No-op if not logged in.
+	`)
+}
 
 func (cmd *authLogoutCmd) Run(
 	ctx context.Context,
