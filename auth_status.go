@@ -12,6 +12,10 @@ import (
 
 type authStatusCmd struct{}
 
+func (*authStatusCmd) Help() string {
+	return `Exits with a non-zero code if not logged in.`
+}
+
 func (cmd *authStatusCmd) Run(
 	ctx context.Context,
 	stash secret.Stash,

@@ -54,6 +54,17 @@ gs auth login [flags]
 
 Log in to a service
 
+For GitHub, a prompt will allow selecting between
+OAuth, GitHub App, and Personal Access Token-based authentication.
+The differences between them are explained in the prompt.
+
+The authentication token is stored in a system-provided secure storage.
+Use 'gs auth logout' to log out and delete the token from storage.
+
+Fails if already logged in.
+Use --refresh to force a refresh of the authentication token,
+or change the authentication method.
+
 **Flags**
 
 * `--refresh`: Force a refresh of the authentication token
@@ -66,6 +77,8 @@ gs auth status [flags]
 
 Show current login status
 
+Exits with a non-zero code if not logged in.
+
 ### gs auth logout
 
 ```
@@ -73,6 +86,11 @@ gs auth logout [flags]
 ```
 
 Log out of a service
+
+The stored authentication information is deleted from secure storage.
+Use 'gs auth login' to log in again.
+
+No-op if not logged in.
 
 ## Repository
 
