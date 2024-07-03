@@ -18,22 +18,36 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-type branchSubmitCmd struct {
+// submitOptions defines options that are common to all submit commands.
+type submitOptions struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-
-	Title string `help:"Title of the pull request" placeholder:"TITLE"`
-	Body  string `help:"Body of the pull request" placeholder:"BODY"`
-	Draft *bool  `negatable:"" help:"Whether to mark the pull request as draft"`
-	Fill  bool   `help:"Fill in the pull request title and body from the commit messages"`
-	// TODO: Default to Fill if --no-prompt
-
-	NoPublish bool `name:"no-publish" help:"Push the branch, but donn't create a pull request"`
+	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
+	// TODO: Default to Fill if --no-prompt?
+	Draft     *bool `negatable:"" help:"Whether to mark pull requests as drafts"`
+	NoPublish bool  `name:"no-publish" help:"Push branches but don't create pull requests"`
 
 	// TODO: Other creation options e.g.:
 	// - assignees
 	// - labels
 	// - milestone
 	// - reviewers
+}
+
+const _submitHelp = `
+Use --dry-run to print what would be submitted without submitting it.
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages,
+and --[no-]draft to set the draft status.
+Omitting the draft flag will leave the status unchanged of open CRs.
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+`
+
+type branchSubmitCmd struct {
+	submitOptions
+
+	Title string `help:"Title of the pull request" placeholder:"TITLE"`
+	Body  string `help:"Body of the pull request" placeholder:"BODY"`
 
 	Branch string `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
