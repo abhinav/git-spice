@@ -58,7 +58,6 @@ func NewInput() *Input {
 // If the value is non-empty, it will be used as the initial value.
 func (i *Input) WithValue(value *string) *Input {
 	i.value = value
-	i.model.SetValue(*value)
 	return i
 }
 
@@ -101,6 +100,7 @@ func (i *Input) WithValidate(f func(string) error) *Input {
 
 // Init initializes the field.
 func (i *Input) Init() tea.Cmd {
+	i.model.SetValue(*i.value)
 	i.model.Err = nil
 	return i.model.Focus()
 }

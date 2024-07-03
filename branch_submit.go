@@ -212,7 +212,16 @@ func (cmd *branchSubmitCmd) Run(
 
 		var prepared *preparedBranch
 		if !cmd.NoPublish {
-			prepared, err = cmd.preparePublish(ctx, log, opts, svc, repo, remoteRepo, branch.Base)
+			prepared, err = cmd.preparePublish(
+				ctx,
+				log,
+				opts,
+				svc,
+				store,
+				repo,
+				remoteRepo,
+				branch.Base,
+			)
 			if err != nil {
 				return err
 			}
@@ -441,6 +450,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	log *log.Logger,
 	opts *globalOptions,
 	svc *spice.Service,
+	store *state.Store,
 	repo *git.Repository,
 	remoteRepo forge.Repository,
 	baseBranch string,
@@ -535,6 +545,34 @@ func (cmd *branchSubmitCmd) preparePublish(
 			return nil, fmt.Errorf("prompt for commit information: %w", errNoPrompt)
 		}
 
+		// If we're prompting and there's a prior submission attempt,
+		// change the title and body to the saved values.
+		prePrepared, err := store.LoadPreparedBranch(ctx, cmd.Branch)
+		if err == nil && prePrepared != nil {
+			usePrepared := true
+			f := ui.NewConfirm().
+				WithValue(&usePrepared).
+				WithTitle("Recover previously filled information?").
+				WithDescription(
+					"We found previously filled information for this branch.\n" +
+						"Would you like to recover and edit it?")
+			if err := ui.Run(f); err != nil {
+				return nil, fmt.Errorf("prompt for recovery: %w", err)
+			}
+
+			if usePrepared {
+				cmd.Title = prePrepared.Subject
+				cmd.Body = prePrepared.Body
+			} else {
+				// It will get cleared anyway when the branch
+				// is submitted, but clear it now to avoid the
+				// prompt again if this submission also fails.
+				if err := store.ClearPreparedBranch(ctx, cmd.Branch); err != nil {
+					log.Warn("Could not clear prepared branch information", "error", err)
+				}
+			}
+		}
+
 		form := ui.NewForm(fields...)
 		if err := form.Run(); err != nil {
 			return nil, fmt.Errorf("prompt form: %w", err)
@@ -542,45 +580,60 @@ func (cmd *branchSubmitCmd) preparePublish(
 	}
 	must.NotBeBlankf(cmd.Title, "PR title must have been set")
 
+	storePrepared := state.PreparedBranch{
+		Name:    cmd.Branch,
+		Subject: cmd.Title,
+		Body:    cmd.Body,
+	}
+
 	var draft bool
 	if cmd.Draft != nil {
 		draft = *cmd.Draft
 	}
 
+	if err := store.SavePreparedBranch(ctx, &storePrepared); err != nil {
+		log.Warn("Could not save prepared branch. Will be unable to recover CR metadata if the push fails.", "error", err)
+	}
+
 	return &preparedBranch{
-		subject:    cmd.Title,
-		body:       cmd.Body,
-		head:       cmd.Branch,
-		base:       baseBranch,
-		draft:      draft,
-		remoteRepo: remoteRepo,
-		log:        log,
+		PreparedBranch: storePrepared,
+		draft:          draft,
+		head:           cmd.Branch,
+		base:           baseBranch,
+		remoteRepo:     remoteRepo,
+		store:          store,
+		log:            log,
 	}, nil
 }
 
 // preparedBranch is a branch that is ready to be published as a PR
 // (or equivalent).
 type preparedBranch struct {
-	subject string
-	body    string
-	head    string
-	base    string
-	draft   bool
+	state.PreparedBranch
+
+	head  string
+	base  string
+	draft bool
 
 	remoteRepo forge.Repository
+	store      *state.Store
 	log        *log.Logger
 }
 
 func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
-		Subject: b.subject,
-		Body:    b.body,
+		Subject: b.Subject,
+		Body:    b.Body,
 		Head:    b.head,
 		Base:    b.base,
 		Draft:   b.draft,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create change: %w", err)
+	}
+
+	if err := b.store.ClearPreparedBranch(ctx, b.Name); err != nil {
+		b.log.Warn("Could not clear prepared branch", "error", err)
 	}
 
 	b.log.Infof("Created %v: %s", result.ID, result.URL)
