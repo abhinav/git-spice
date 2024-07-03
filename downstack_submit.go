@@ -13,8 +13,7 @@ import (
 )
 
 type downstackSubmitCmd struct {
-	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
+	submitOptions
 
 	Branch string `placeholder:"NAME" help:"Branch to start at" predictor:"trackedBranches"`
 }
@@ -24,12 +23,7 @@ func (*downstackSubmitCmd) Help() string {
 		Change Requests are created or updated
 		for the current branch and all branches below it until trunk.
 		Use --branch to start at a different branch.
-
-		A prompt will ask for a title and body for each Change Request.
-		Use --fill to populate these from the commit messages.
-		Use --dry-run to see what would be submitted
-		without actually submitting anything.
-	`)
+	`) + "\n" + _submitHelp
 }
 
 func (cmd *downstackSubmitCmd) Run(
@@ -67,9 +61,8 @@ func (cmd *downstackSubmitCmd) Run(
 	// TODO: submits should be done in parallel
 	for _, downstack := range downstacks {
 		err := (&branchSubmitCmd{
-			DryRun: cmd.DryRun,
-			Fill:   cmd.Fill,
-			Branch: downstack,
+			submitOptions: cmd.submitOptions,
+			Branch:        downstack,
 		}).Run(ctx, secretStash, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)

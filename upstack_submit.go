@@ -11,8 +11,7 @@ import (
 )
 
 type upstackSubmitCmd struct {
-	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
+	submitOptions
 
 	Branch string `placeholder:"NAME" help:"Branch to start at" predictor:"trackedBranches"`
 }
@@ -24,12 +23,7 @@ func (*upstackSubmitCmd) Help() string {
 		If the base of the current branch is not trunk,
 		it must have already been submitted by a prior command.
 		Use --branch to start at a different branch.
-
-		A prompt will ask for a title and body for each Change Request.
-		Use --fill to populate these from the commit messages.
-		Use --dry-run to see what would be submitted
-		without actually submitting anything.
-	`)
+	`) + "\n" + _submitHelp
 }
 
 func (cmd *upstackSubmitCmd) Run(
@@ -86,9 +80,8 @@ func (cmd *upstackSubmitCmd) Run(
 	// TODO: submits should be done in parallel
 	for _, b := range upstacks {
 		err := (&branchSubmitCmd{
-			DryRun: cmd.DryRun,
-			Fill:   cmd.Fill,
-			Branch: b,
+			submitOptions: cmd.submitOptions,
+			Branch:        b,
 		}).Run(ctx, secretStash, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", b, err)

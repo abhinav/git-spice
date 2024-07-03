@@ -164,15 +164,22 @@ Submit a stack
 
 Change Requests are created or updated
 for all branches in the current stack.
-A prompt will ask for a title and body for each Change Request.
-Use --fill to populate these from the commit messages.
-Use --dry-run to see what would be submitted
-without actually submitting anything.
+
+Use --dry-run to print what would be submitted without submitting it.
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages,
+and --[no-]draft to set the draft status.
+Omitting the draft flag will leave the status unchanged of open CRs.
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
 
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
+* `--[no-]draft`: Whether to mark pull requests as drafts
+* `--no-publish`: Push branches but don't create pull requests
 
 ### gs stack restack
 
@@ -224,15 +231,21 @@ If the base of the current branch is not trunk,
 it must have already been submitted by a prior command.
 Use --branch to start at a different branch.
 
-A prompt will ask for a title and body for each Change Request.
-Use --fill to populate these from the commit messages.
-Use --dry-run to see what would be submitted
-without actually submitting anything.
+Use --dry-run to print what would be submitted without submitting it.
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages,
+and --[no-]draft to set the draft status.
+Omitting the draft flag will leave the status unchanged of open CRs.
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
 
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
+* `--[no-]draft`: Whether to mark pull requests as drafts
+* `--no-publish`: Push branches but don't create pull requests
 * `--branch=NAME`: Branch to start at
 
 ### gs upstack restack
@@ -304,15 +317,21 @@ Change Requests are created or updated
 for the current branch and all branches below it until trunk.
 Use --branch to start at a different branch.
 
-A prompt will ask for a title and body for each Change Request.
-Use --fill to populate these from the commit messages.
-Use --dry-run to see what would be submitted
-without actually submitting anything.
+Use --dry-run to print what would be submitted without submitting it.
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages,
+and --[no-]draft to set the draft status.
+Omitting the draft flag will leave the status unchanged of open CRs.
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
 
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
 * `--fill`: Fill in the pull request title and body from the commit messages
+* `--[no-]draft`: Whether to mark pull requests as drafts
+* `--no-publish`: Push branches but don't create pull requests
 * `--branch=NAME`: Branch to start at
 
 ### gs downstack edit
@@ -661,11 +680,11 @@ Request.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
+* `--fill`: Fill in the pull request title and body from the commit messages
+* `--[no-]draft`: Whether to mark pull requests as drafts
+* `--no-publish`: Push branches but don't create pull requests
 * `--title=TITLE`: Title of the pull request
 * `--body=BODY`: Body of the pull request
-* `--[no-]draft`: Whether to mark the pull request as draft
-* `--fill`: Fill in the pull request title and body from the commit messages
-* `--no-publish`: Push the branch, but donn't create a pull request
 * `--branch=NAME`: Branch to submit
 
 ## Commit
