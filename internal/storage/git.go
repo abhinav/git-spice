@@ -214,6 +214,11 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 			return fmt.Errorf("update tree: %w", err)
 		}
 
+		// The tree didn't change, so we don't need to commit.
+		if prevTree == newTree {
+			return nil
+		}
+
 		commitReq := git.CommitTreeRequest{
 			Tree:    newTree,
 			Message: req.Message,
