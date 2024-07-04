@@ -35,20 +35,15 @@ var DefaultListKeyMap = ListKeyMap{
 type ListStyle struct {
 	Cursor lipgloss.Style
 
-	ItemTitle       lipgloss.Style
-	ItemDescription lipgloss.Style
-
-	SelectedItemTitle       lipgloss.Style
-	SelectedItemDescription lipgloss.Style
+	ItemTitle         lipgloss.Style
+	SelectedItemTitle lipgloss.Style
 }
 
 // DefaultListStyle is the default style for a [List].
 var DefaultListStyle = ListStyle{
-	Cursor:                  NewStyle().Foreground(Yellow).Bold(true).SetString("▶"),
-	ItemTitle:               NewStyle().Foreground(Gray),
-	ItemDescription:         NewStyle().Foreground(Gray).PaddingLeft(2),
-	SelectedItemTitle:       NewStyle().Foreground(Yellow),
-	SelectedItemDescription: NewStyle().Foreground(Plain).PaddingLeft(2),
+	Cursor:            NewStyle().Foreground(Yellow).Bold(true).SetString("▶"),
+	ItemTitle:         NewStyle().Foreground(Gray),
+	SelectedItemTitle: NewStyle().Foreground(Yellow),
 }
 
 // List is a prompt that allows selecting from a list of options.
@@ -73,7 +68,7 @@ var _ Field = (*List[int])(nil)
 // ListItem is an item in a [List].
 type ListItem[T any] struct {
 	Title       string
-	Description string
+	Description func(focused bool) string
 	Value       T
 }
 
@@ -210,16 +205,15 @@ func (l *List[T]) Render(w Writer) {
 
 	for i, item := range l.items {
 		titleStyle := l.Style.ItemTitle
-		descStyle := l.Style.ItemDescription
 		cursor := "  "
+		descStyle := lipgloss.NewStyle().Width(l.width - 4)
 		if i == l.selected {
 			cursor = l.Style.Cursor.String() + " "
 			titleStyle = l.Style.SelectedItemTitle
-			descStyle = l.Style.SelectedItemDescription
 		} else {
+			descStyle = descStyle.Faint(true)
 			w.WriteString(" ")
 		}
-		descStyle = descStyle.Width(l.width - 4)
 
 		w.WriteString("\n")
 		w.WriteString(lipgloss.JoinHorizontal(
@@ -228,7 +222,7 @@ func (l *List[T]) Render(w Writer) {
 			lipgloss.JoinVertical(
 				lipgloss.Left,
 				titleStyle.Render(item.Title),
-				descStyle.Render(item.Description),
+				descStyle.Render(item.Description(i == l.selected)),
 			),
 		))
 	}

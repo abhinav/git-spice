@@ -11,9 +11,11 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	"golang.org/x/oauth2"
 )
@@ -155,7 +157,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 	methods := []ui.ListItem[authenticationMethod]{
 		{
 			Title:       "OAuth",
-			Description: _oauthDesc,
+			Description: oauthDesc,
 			Value: (&DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
@@ -165,7 +167,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 		},
 		{
 			Title:       "OAuth: Public repositories only",
-			Description: _oauthPublicDesc,
+			Description: oauthPublicDesc,
 			Value: (&DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
@@ -175,7 +177,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 		},
 		{
 			Title:       "GitHub App",
-			Description: _githubAppDesc,
+			Description: githubAppDesc,
 			Value: (&DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
@@ -185,7 +187,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 		},
 		{
 			Title:       "Personal Access Token",
-			Description: _patDesc,
+			Description: patDesc,
 			Value: (&PATAuthenticator{
 				Stdin:  a.Stdin,
 				Stderr: a.Stderr,
@@ -198,7 +200,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 	if ghExe, err := exec.LookPath("gh"); err == nil {
 		methods = append(methods, ui.ListItem[authenticationMethod]{
 			Title:       "GitHub CLI",
-			Description: _ghDesc,
+			Description: ghDesc,
 			Value:       (&CLIAuthenticator{GH: ghExe}).Authenticate,
 		})
 	}
@@ -216,36 +218,63 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 	return method(ctx)
 }
 
-var _oauthDesc = strings.TrimSpace(`
-Authorize git-spice to act on your behalf from this device only.
-git-spice will get access to all repositories: public and private.
-For private repositories, you will need to request installation from a repository owner.
-`)
+func oauthDesc(focused bool) string {
+	return text.Dedent(`
+	Authorize git-spice to act on your behalf from this device only.
+	git-spice will get access to all repositories: public and private.
+	For private repositories, you will need to request installation from a repository owner.
+	`)
+}
 
-var _oauthPublicDesc = strings.TrimSpace(`
-Authorize git-spice to act on your behalf from this device only.
-git-spice will only get access to public repositories.
-`)
+func oauthPublicDesc(focused bool) string {
+	return text.Dedent(`
+	Authorize git-spice to act on your behalf from this device only.
+	git-spice will only get access to public repositories.
+	`)
+}
 
-var _githubAppDesc = strings.TrimSpace(`
-Authorize git-spice to act on your behalf from this device only.
-git-spice will only get access to repositories where the git-spice GitHub App is installed explicitly.
-Use https://github.com/apps/git-spice to install the App on repositories.
-For private repositories, you will need to request installation from a repository owner.
-`)
+func githubAppDesc(focused bool) string {
+	return text.Dedentf(`
+	Authorize git-spice to act on your behalf from this device only.
+	git-spice will only get access to repositories where the git-spice GitHub App is installed explicitly.
+	Use %[1]s to install the App on repositories.
+	For private repositories, you will need to request installation from a repository owner.
+	`, urlStyle(focused).Render("https://github.com/apps/git-spice"))
+}
 
-var _patDesc = strings.TrimSpace(`
-Enter a classic or fine-grained Personal Access Token generated from https://github.com/settings/tokens.
-Classic tokens need at least one of the following scopes: repo or public_repo.
-Fine-grained tokens need read/write access to Repository Contents and Pull requests.
-You can use this method if you do not have the ability to install a GitHub or OAuth App on your repositories.
-`)
+func patDesc(focused bool) string {
+	scopeStyle := ui.NewStyle()
+	if focused {
+		scopeStyle = scopeStyle.Bold(true)
+	}
 
-var _ghDesc = strings.TrimSpace(`
-Re-use an existing GitHub CLI (https://cli.github.com) session.
-You must be logged into gh with 'gh auth login' for this to work.
-You can use this if you're just experimenting and don't want to set up a token yet.
-`)
+	return text.Dedentf(`
+	Enter a classic or fine-grained Personal Access Token generated from %[1]s.
+	Classic tokens need at least one of the following scopes: %[2]s or %[3]s.
+	Fine-grained tokens need read/write access to Repository %[4]s and %[5]s.
+	You can use this method if you do not have the ability to install a GitHub or OAuth App on your repositories.
+	`,
+		urlStyle(focused).Render("https://github.com/settings/tokens"),
+		scopeStyle.Render("repo"), scopeStyle.Render("public_repo"),
+		scopeStyle.Render("Contents"), scopeStyle.Render("Pull requests"),
+	)
+}
+
+func ghDesc(focused bool) string {
+	return text.Dedentf(`
+	Re-use an existing GitHub CLI (%[1]s) session.
+	You must be logged into gh with 'gh auth login' for this to work.
+	You can use this if you're just experimenting and don't want to set up a token yet.
+	`, urlStyle(focused).Render("https://cli.github.com"))
+}
+
+func urlStyle(focused bool) lipgloss.Style {
+	s := ui.NewStyle()
+	if focused {
+		s = s.Bold(true).Foreground(ui.Magenta).Underline(true)
+	}
+	return s
+}
 
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
