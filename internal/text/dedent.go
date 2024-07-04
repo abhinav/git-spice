@@ -1,7 +1,15 @@
 // Package text provides text manipulation functions.
 package text
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
+
+// Dedentf is a variant of [Dedent] that takes a format string.
+func Dedentf(format string, args ...interface{}) string {
+	return Dedent(fmt.Sprintf(format, args...))
+}
 
 // Dedent removes a common indent from all lines in a string.
 // It allows writing multi-line strings in a more readable way.
