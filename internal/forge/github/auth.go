@@ -2,11 +2,13 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/shurcooL/githubv4"
@@ -26,8 +28,16 @@ const (
 type AuthenticationToken struct {
 	forge.AuthenticationToken
 
-	AccessToken string
+	// GitHubCLI is true if we should use GitHub CLI for API requests.
+	//
+	// If true, AccessToken is not used.
+	GitHubCLI bool `json:"github_cli,omitempty"`
+
+	// AccessToken is the GitHub access token.
+	AccessToken string `json:"access_token,omitempty"`
 }
+
+var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 
 func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string) (*githubv4.Client, error) {
 	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
@@ -35,7 +45,13 @@ func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string)
 		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
 	}
 
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
+	var tokenSource oauth2.TokenSource
+	if t.GitHubCLI {
+		tokenSource = &CLITokenSource{}
+	} else {
+		tokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
+	}
+
 	httpClient := oauth2.NewClient(ctx, tokenSource)
 	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
@@ -82,13 +98,19 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 
 // SaveAuthenticationToken saves the given authentication token to the stash.
 func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.AuthenticationToken) error {
-	tok := t.(*AuthenticationToken).AccessToken
-	if f.Options.Token != "" && f.Options.Token == tok {
+	ght := t.(*AuthenticationToken)
+	if f.Options.Token != "" && f.Options.Token == ght.AccessToken {
 		// If the user has set GITHUB_TOKEN,
 		// we should not save it to the stash.
 		return nil
 	}
-	return stash.SaveSecret(f.URL(), "token", tok)
+
+	bs, err := json.Marshal(ght)
+	if err != nil {
+		return fmt.Errorf("marshal token: %w", err)
+	}
+
+	return stash.SaveSecret(f.URL(), "token", string(bs))
 }
 
 // LoadAuthenticationToken loads the authentication token from the stash.
@@ -100,12 +122,18 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 		return &AuthenticationToken{AccessToken: f.Options.Token}, nil
 	}
 
-	tok, err := stash.LoadSecret(f.URL(), "token")
+	tokstr, err := stash.LoadSecret(f.URL(), "token")
 	if err != nil {
 		return nil, fmt.Errorf("load token: %w", err)
 	}
 
-	return &AuthenticationToken{AccessToken: tok}, nil
+	var tok AuthenticationToken
+	if err := json.Unmarshal([]byte(tokstr), &tok); err != nil {
+		// Old token format, just use it as the access token.
+		return &AuthenticationToken{AccessToken: tokstr}, nil
+	}
+
+	return &tok, nil
 }
 
 // ClearAuthenticationToken removes the authentication token from the stash.
@@ -165,6 +193,16 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 		},
 	}
 
+	// If the user has gh installed,
+	// also offer the option to authenticate with gh.
+	if ghExe, err := exec.LookPath("gh"); err == nil {
+		methods = append(methods, ui.ListItem[authenticationMethod]{
+			Title:       "GitHub CLI",
+			Description: _ghDesc,
+			Value:       (&CLIAuthenticator{GH: ghExe}).Authenticate,
+		})
+	}
+
 	var method authenticationMethod
 	field := ui.NewList[authenticationMethod]().
 		WithTitle("Select an authentication method").
@@ -181,6 +219,7 @@ func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.Authentic
 var _oauthDesc = strings.TrimSpace(`
 Authorize git-spice to act on your behalf from this device only.
 git-spice will get access to all repositories: public and private.
+For private repositories, you will need to request installation from a repository owner.
 `)
 
 var _oauthPublicDesc = strings.TrimSpace(`
@@ -192,6 +231,7 @@ var _githubAppDesc = strings.TrimSpace(`
 Authorize git-spice to act on your behalf from this device only.
 git-spice will only get access to repositories where the git-spice GitHub App is installed explicitly.
 Use https://github.com/apps/git-spice to install the App on repositories.
+For private repositories, you will need to request installation from a repository owner.
 `)
 
 var _patDesc = strings.TrimSpace(`
@@ -199,6 +239,12 @@ Enter a classic or fine-grained Personal Access Token generated from https://git
 Classic tokens need at least one of the following scopes: repo or public_repo.
 Fine-grained tokens need read/write access to Repository Contents and Pull requests.
 You can use this method if you do not have the ability to install a GitHub or OAuth App on your repositories.
+`)
+
+var _ghDesc = strings.TrimSpace(`
+Re-use an existing GitHub CLI (https://cli.github.com) session.
+You must be logged into gh with 'gh auth login' for this to work.
+You can use this if you're just experimenting and don't want to set up a token yet.
 `)
 
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
@@ -277,4 +323,33 @@ func (a *PATAuthenticator) Authenticate(ctx context.Context) (forge.Authenticati
 
 	// TODO: Should we validate the token by making a request?
 	return &AuthenticationToken{AccessToken: token}, nil
+}
+
+// CLIAuthenticator implements GitHub CLI authentication flow.
+// This doesn't do anything special besides checking if the user is logged in.
+type CLIAuthenticator struct {
+	GH string
+
+	runCmd func(*exec.Cmd) error
+}
+
+// Authenticate checks if the user is authenticated with GitHub CLI.
+func (a *CLIAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+	runCmd := (*exec.Cmd).Run
+	if a.runCmd != nil {
+		runCmd = a.runCmd
+	}
+
+	if err := runCmd(exec.Command(a.GH, "auth", "token")); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, errors.Join(
+				errors.New("gh is not authenticated"),
+				fmt.Errorf("stderr: %s", exitErr.Stderr),
+			)
+		}
+		return nil, fmt.Errorf("run gh: %w", err)
+	}
+
+	return &AuthenticationToken{GitHubCLI: true}, nil
 }

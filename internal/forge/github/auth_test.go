@@ -52,6 +52,21 @@ func TestAuthHasGitHubToken(t *testing.T) {
 	})
 }
 
+func TestLoadAuthenticationTokenOldFormat(t *testing.T) {
+	f := github.Forge{
+		Log: log.New(io.Discard),
+	}
+
+	var stash secret.MemoryStash
+	require.NoError(t, stash.SaveSecret(f.URL(), "token", "old-token"))
+
+	tok, err := f.LoadAuthenticationToken(&stash)
+	require.NoError(t, err)
+
+	assert.Equal(t, "old-token",
+		tok.(*github.AuthenticationToken).AccessToken)
+}
+
 func TestPATAuthenticator(t *testing.T) {
 	stdin, stdinW := io.Pipe()
 	defer func() {
