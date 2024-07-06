@@ -45,10 +45,12 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		}
 
 		cmd.Branch, err = (&branchPrompt{
-			Exclude:           []string{currentBranch},
-			ExcludeCheckedOut: true,
-			TrackedOnly:       !cmd.Untracked,
-			Title:             "Select a branch to checkout",
+			Disabled: func(b git.LocalBranch) bool {
+				return b.Name != currentBranch && b.CheckedOut
+			},
+			Default:     currentBranch,
+			TrackedOnly: !cmd.Untracked,
+			Title:       "Select a branch to checkout",
 		}).Run(ctx, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)

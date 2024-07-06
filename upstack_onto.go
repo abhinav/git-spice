@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -68,7 +69,9 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 
 		cmd.Onto, err = (&branchPrompt{
-			Exclude:     []string{cmd.Branch},
+			Disabled: func(b git.LocalBranch) bool {
+				return b.Name == cmd.Branch
+			},
 			TrackedOnly: true,
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",

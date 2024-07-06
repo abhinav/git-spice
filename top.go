@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type topCmd struct {
@@ -49,11 +50,19 @@ func (cmd *topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions
 			return errNoPrompt
 		}
 
+		items := make([]widget.BranchTreeItem, len(tops))
+		for i, b := range tops {
+			items[i] = widget.BranchTreeItem{
+				Branch: b,
+				Base:   current,
+			}
+		}
+
 		// If there are multiple top-most branches,
 		// prompt the user to pick one.
-		prompt := ui.NewSelect[string]().
+		prompt := widget.NewBranchTreeSelect().
 			WithValue(&branch).
-			With(ui.ComparableOptions(branch, tops...)).
+			WithItems(items...).
 			WithTitle("Pick a branch").
 			WithDescription(desc)
 		if err := ui.Run(prompt); err != nil {

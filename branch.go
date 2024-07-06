@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
-	"sort"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type branchCmd struct {
@@ -36,12 +35,8 @@ type branchCmd struct {
 // branchPrompt prompts a user to select a local branch
 // that may or may not be tracked by the store.
 type branchPrompt struct {
-	// Exclude specifies branches that will not be included in the list.
-	Exclude []string
-
-	// ExcludeCheckedOut specifies whether branches that are checked out
-	// in any worktree should be excluded.
-	ExcludeCheckedOut bool
+	// Disabled specifies whether the given branch is selectable.
+	Disabled func(git.LocalBranch) bool
 
 	// TrackedOnly indicates that only tracked branches and Trunk
 	// should be included in the list.
@@ -58,38 +53,32 @@ type branchPrompt struct {
 }
 
 func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *state.Store) (string, error) {
-	var filters []func(git.LocalBranch) bool
-
-	if len(p.Exclude) > 0 {
-		slices.Sort(p.Exclude)
-		filters = append(filters, func(b git.LocalBranch) bool {
-			_, ok := slices.BinarySearch(p.Exclude, b.Name)
-			return !ok
-		})
+	disabled := func(git.LocalBranch) bool { return false }
+	if p.Disabled != nil {
+		disabled = p.Disabled
+		// TODO: allow disabled branches to specify a reason.
+		// Can be used to say "(checked out elsewhere)" or similar.
 	}
 
-	if p.ExcludeCheckedOut {
-		filters = append(filters, func(b git.LocalBranch) bool {
-			return !b.CheckedOut
-		})
-	}
-
-	trunk := store.Trunk()
+	filter := func(git.LocalBranch) bool { return true }
 	if p.TrackedOnly {
+		trunk := store.Trunk()
 		tracked, err := store.ListBranches(ctx)
 		if err != nil {
 			return "", fmt.Errorf("list tracked branches: %w", err)
 		}
 		slices.Sort(tracked)
 
-		filters = append(filters, func(b git.LocalBranch) bool {
+		oldFilter := filter
+		filter = func(b git.LocalBranch) bool {
 			if b.Name == trunk {
-				// Always include Trunk
-				return true
+				// Always consider Trunk tracked.
+				return oldFilter(b)
 			}
+
 			_, ok := slices.BinarySearch(tracked, b.Name)
-			return ok
-		})
+			return ok && oldFilter(b)
+		}
 	}
 
 	localBranches, err := repo.LocalBranches(ctx)
@@ -97,28 +86,31 @@ func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *sta
 		return "", fmt.Errorf("list branches: %w", err)
 	}
 
-	branches := make([]string, 0, len(localBranches))
-nextBranch:
+	bases := make(map[string]string) // branch -> base
 	for _, branch := range localBranches {
-		for _, filter := range filters {
-			if !filter(branch) {
-				continue nextBranch
-			}
+		res, err := store.LookupBranch(ctx, branch.Name)
+		if err == nil {
+			bases[branch.Name] = res.Base
 		}
-
-		branches = append(branches, branch.Name)
 	}
-	sort.Strings(branches)
 
-	if len(branches) == 0 {
-		return "", errors.New("no branches available")
+	items := make([]widget.BranchTreeItem, 0, len(localBranches))
+	for _, branch := range localBranches {
+		if !filter(branch) {
+			continue
+		}
+		items = append(items, widget.BranchTreeItem{
+			Base:     bases[branch.Name],
+			Branch:   branch.Name,
+			Disabled: disabled(branch),
+		})
 	}
 
 	value := p.Default
-	prompt := ui.NewSelect[string]().
-		With(ui.ComparableOptions(p.Default, branches...)).
+	prompt := widget.NewBranchTreeSelect().
 		WithTitle(p.Title).
 		WithValue(&value).
+		WithItems(items...).
 		WithDescription(p.Description)
 	if err := ui.Run(prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)

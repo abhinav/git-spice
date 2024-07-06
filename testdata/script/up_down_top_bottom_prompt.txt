@@ -77,9 +77,9 @@ snapshot
 feed feature2\r
 -- golden/up-prompt.txt --
 Pick a branch:
-
-▶ feature2
-  feature4
+┏━■ feature2 ◀
+┣━□ feature4
+feature1
 
 There are multiple branches above the current branch.
 ### exit ###
@@ -91,9 +91,9 @@ snapshot
 feed feature5\r
 -- golden/top-prompt.txt --
 Pick a branch:
-
-▶ feature3
-  feature5
+┏━■ feature3 ◀
+┣━□ feature5
+feature1
 
 There are multiple top-level branches reachable from the current branch.
 ### exit ###
@@ -105,9 +105,9 @@ snapshot
 feed feature4\r
 -- golden/up-2-prompt.txt --
 Pick a branch:
-
-▶ feature2
-  feature4
+┏━■ feature2 ◀
+┣━□ feature4
+feature1
 
 There are multiple branches above the current branch.
 ### exit ###

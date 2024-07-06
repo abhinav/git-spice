@@ -72,7 +72,7 @@ snapshot after-ba
 feed \x1b[B
 await
 snapshot select
-feed \r
+feed z\r
 await Do you want to track
 snapshot track
 feed \r
@@ -80,31 +80,29 @@ feed \r
 -- golden/prompt-tracked.txt --
 ### init ###
 Select a branch to checkout:
-
-▶ bar
-  foo
+┏━■ bar ◀
+┣━□ foo
+main
 ### after ###
 Select a branch to checkout:
-
-▶ bar
+bar ◀
 -- golden/prompt-all.txt --
 ### init ###
 Select a branch to checkout:
-
-▶ bar
-  baz
-  foo
-  ▼▼▼
+baz ◀
+┏━□ bar
+┣━□ foo
+main
+quux
+qux
 ### after-ba ###
 Select a branch to checkout:
-
-▶ bar
-  baz
+baz ◀
+bar
 ### select ###
 Select a branch to checkout:
-
-  bar
-▶ baz
+baz
+bar ◀
 ### track ###
 Select a branch to checkout: baz
 WRN baz: branch not tracked

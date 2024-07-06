@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type upCmd struct {
@@ -62,12 +63,19 @@ outer:
 				return errNoPrompt
 			}
 
-			prompt := ui.NewSelect[string]().
+			items := make([]widget.BranchTreeItem, len(aboves))
+			for i, b := range aboves {
+				items[i] = widget.BranchTreeItem{
+					Branch: b,
+					Base:   current,
+				}
+			}
+
+			prompt := widget.NewBranchTreeSelect().
 				WithValue(&branch).
-				With(ui.ComparableOptions(branch, aboves...)).
+				WithItems(items...).
 				WithTitle("Pick a branch").
 				WithDescription(desc)
-
 			if err := ui.Run(prompt); err != nil {
 				return fmt.Errorf("a branch is required: %w", err)
 			}

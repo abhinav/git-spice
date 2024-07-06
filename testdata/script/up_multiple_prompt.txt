@@ -44,18 +44,18 @@ feed \r
 -- golden/interact.txt --
 ### dialog ###
 Pick a branch:
-
-▶ head1
-  head2
-  head3
+┏━■ head1 ◀
+┣━□ head2
+┣━□ head3
+main
 
 There are multiple branches above the current branch.
 ### select ###
 Pick a branch:
-
-  head1
-▶ head2
-  head3
+┏━□ head1
+┣━■ head2 ◀
+┣━□ head3
+main
 
 There are multiple branches above the current branch.
 -- golden/state-git-log.txt --

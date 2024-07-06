@@ -48,7 +48,9 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 
 		cmd.Branch, err = (&branchPrompt{
-			Exclude: []string{store.Trunk()},
+			Disabled: func(b git.LocalBranch) bool {
+				return b.Name == store.Trunk()
+			},
 			Default: currentBranch,
 			Title:   "Select a branch to delete",
 		}).Run(ctx, repo, store)
