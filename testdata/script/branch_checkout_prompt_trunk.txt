@@ -27,5 +27,5 @@ snapshot
 feed ma\r
 -- golden/prompt.txt --
 Select a branch to checkout:
-
-▶ main
+┏━■ feature ◀
+main

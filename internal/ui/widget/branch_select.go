@@ -1,0 +1,439 @@
+package widget
+
+import (
+	"fmt"
+	"slices"
+	"sort"
+	"strings"
+	"unicode"
+
+	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/fliptree"
+)
+
+// BranchSelectKeyMap defines the key bindings for [Select].
+type BranchSelectKeyMap struct {
+	Up   key.Binding // move up the list
+	Down key.Binding // move down the list
+
+	Accept key.Binding // accept the focused option
+	Delete key.Binding // delete the last character in the filter
+}
+
+// DefaultBranchSelectKeyMap is the default key map for a [Select].
+var DefaultBranchSelectKeyMap = BranchSelectKeyMap{
+	Up: key.NewBinding(
+		key.WithKeys("up"),
+		key.WithHelp("up", "go up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down"),
+		key.WithHelp("down", "go down"),
+	),
+	Accept: key.NewBinding(
+		key.WithKeys("enter", "tab"),
+		key.WithHelp("enter/tab", "accept"),
+	),
+	Delete: key.NewBinding(
+		key.WithKeys("backspace", "ctrl+h"),
+		key.WithHelp("backspace", "delete filter character"),
+	),
+}
+
+// BranchTreeSelectStyle defines the styling for a [BranchTreeSelect] widget.
+type BranchTreeSelectStyle struct {
+	Name            lipgloss.Style
+	DisabedName     lipgloss.Style
+	SelectedName    lipgloss.Style
+	HighlightedName lipgloss.Style
+
+	Marker lipgloss.Style
+}
+
+// DefaultBranchTreeSelectStyle is the default style for a [BranchTreeSelect] widget.
+var DefaultBranchTreeSelectStyle = BranchTreeSelectStyle{
+	Name:            ui.NewStyle(),
+	SelectedName:    ui.NewStyle().Bold(true).Foreground(ui.Yellow),
+	DisabedName:     ui.NewStyle().Foreground(ui.Gray),
+	HighlightedName: ui.NewStyle().Foreground(ui.Cyan),
+	Marker:          ui.NewStyle().Foreground(ui.Yellow).Bold(true).SetString("◀"),
+}
+
+// BranchTreeItem is a single item in a [BranchTreeSelect].
+type BranchTreeItem struct {
+	// Branch is the name of the branch.
+	Branch string
+
+	// Base is the name of the branch this branch is on top of.
+	// This will be used to create a tree view of branches.
+	// Branches with no base are considered root branches.
+	Base string
+
+	// Disabled indicates that this branch cannot be selected.
+	// It will appear grayed out in the list.
+	Disabled bool
+}
+
+type branchInfo struct {
+	BranchTreeItem
+
+	Index      int   // index in all
+	Aboves     []int // indexes of branches in 'all' with this as base
+	Highlights []int // indexes of runes in Branch name to highlight
+	Visible    bool  // whether this branch is visible
+}
+
+// BranchTreeSelect is a prompt that allows selecting a branch
+// from a tree-view of branches.
+// The trunk branch is shown at the bottom of the tree similarly to 'gs ls'.
+//
+// In addition to arrow-based navigation,
+// it allows fuzzy filtering branches by typing the branch name.
+type BranchTreeSelect struct {
+	Style  BranchTreeSelectStyle
+	KeyMap BranchSelectKeyMap
+
+	all       []*branchInfo  // all known branches
+	roots     []int          // indexes in 'all' of root branches
+	idxByName map[string]int // index in 'all' by branch name
+
+	selectable []int // indexes that can be selected and are visible
+	focused    int   // index in 'selectable' of the currently focused branch
+
+	filter []rune // filter text
+	err    error
+
+	title    string
+	desc     string
+	value    *string // selected branch name
+	accepted bool    // whether the current selection has been accepted
+}
+
+var _ ui.Field = (*BranchTreeSelect)(nil)
+
+// NewBranchTreeSelect creates a new [BranchTreeSelect] widget.
+func NewBranchTreeSelect() *BranchTreeSelect {
+	return &BranchTreeSelect{
+		Style:     DefaultBranchTreeSelectStyle,
+		KeyMap:    DefaultBranchSelectKeyMap,
+		idxByName: make(map[string]int),
+		value:     new(string),
+	}
+}
+
+// Err reports any errors in the current state of the widget.
+func (b *BranchTreeSelect) Err() error {
+	return b.err
+}
+
+// Value returns the selected branch name.
+func (b *BranchTreeSelect) Value() string {
+	return *b.value
+}
+
+// WithValue specifies the destination for the selected branch.
+// If the existing value matches a branch name, it will be selected.
+func (b *BranchTreeSelect) WithValue(value *string) *BranchTreeSelect {
+	b.value = value
+	return b
+}
+
+// Init initializes the widget.
+func (b *BranchTreeSelect) Init() tea.Cmd {
+	rootSet := make(map[int]struct{})
+
+	// Connect the branches to their bases,
+	// and track which branches are root branches.
+	selected := -1
+	for _, bi := range b.all {
+		bi.Visible = true
+		if bi.Base == "" {
+			rootSet[bi.Index] = struct{}{}
+			continue
+		}
+		if bi.Branch == *b.value {
+			selected = bi.Index
+		}
+
+		var base *branchInfo
+		if idx, ok := b.idxByName[bi.Base]; ok {
+			base = b.all[idx]
+		} else {
+			// This branch is not in the list of inputs
+			// and so it isn't selectable,
+			// but it still needs to be shown
+			// for the tree to render correctly.
+			base = &branchInfo{
+				Index:   len(b.all),
+				Visible: true,
+				BranchTreeItem: BranchTreeItem{
+					Branch:   bi.Base,
+					Disabled: true,
+				},
+			}
+			b.all = append(b.all, base)
+			b.idxByName[base.Branch] = base.Index
+			rootSet[base.Index] = struct{}{}
+		}
+
+		base.Aboves = append(base.Aboves, bi.Index)
+	}
+
+	roots := make([]int, 0, len(rootSet))
+	for idx := range rootSet {
+		roots = append(roots, idx)
+	}
+	sort.Ints(roots)
+	b.roots = roots
+
+	b.updateSelectable()
+	if selected >= 0 {
+		b.focused = max(slices.Index(b.selectable, selected), 0)
+	}
+
+	return nil
+}
+
+// Title returns the title of the widget.
+func (b *BranchTreeSelect) Title() string {
+	return b.title
+}
+
+// WithTitle sets the title of the widget.
+func (b *BranchTreeSelect) WithTitle(title string) *BranchTreeSelect {
+	b.title = title
+	return b
+}
+
+// Description returns the description of the widget.
+func (b *BranchTreeSelect) Description() string {
+	return b.desc
+}
+
+// WithDescription sets the description of the widget.
+func (b *BranchTreeSelect) WithDescription(description string) *BranchTreeSelect {
+	b.desc = description
+	return b
+}
+
+// WithItems adds a branch and its base to the widget with the given base.
+// The named branch can be selected, but the base cannot.
+func (b *BranchTreeSelect) WithItems(items ...BranchTreeItem) *BranchTreeSelect {
+	for _, item := range items {
+		idx := len(b.all)
+		b.all = append(b.all, &branchInfo{
+			BranchTreeItem: item,
+			Index:          idx,
+		})
+		b.idxByName[item.Branch] = idx
+	}
+	return b
+}
+
+// Update updates the state of the widget based on a bubbletea message.
+func (b *BranchTreeSelect) Update(msg tea.Msg) tea.Cmd {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return nil
+	}
+
+	var filterChanged bool
+	switch {
+	case key.Matches(keyMsg, b.KeyMap.Up):
+		b.moveCursor(-1)
+
+	case key.Matches(keyMsg, b.KeyMap.Down):
+		b.moveCursor(1)
+
+	case key.Matches(keyMsg, b.KeyMap.Accept):
+		if b.focused >= 0 && b.focused < len(b.selectable) {
+			*b.value = b.all[b.selectable[b.focused]].Branch
+			b.accepted = true
+			return ui.AcceptField
+		}
+
+	case key.Matches(keyMsg, b.KeyMap.Delete):
+		if len(b.filter) > 0 {
+			b.filter = b.filter[:len(b.filter)-1]
+			filterChanged = true
+		}
+
+	case keyMsg.Type == tea.KeyRunes:
+		for _, r := range keyMsg.Runes {
+			b.filter = append(b.filter, unicode.ToLower(r))
+		}
+		filterChanged = true
+	}
+
+	if filterChanged {
+		b.updateSelectable()
+	}
+
+	return nil
+}
+
+func (b *BranchTreeSelect) moveCursor(delta int) {
+	// Nothing to select.
+	if len(b.selectable) == 0 {
+		return
+	}
+
+	b.focused = (b.focused + delta) % len(b.selectable)
+	if b.focused < 0 {
+		b.focused += len(b.selectable)
+	}
+}
+
+func (b *BranchTreeSelect) updateSelectable() {
+	b.err = nil
+
+	selected := -1
+	if b.focused >= 0 && b.focused < len(b.selectable) {
+		selected = b.selectable[b.focused]
+	}
+
+	b.selectable = b.selectable[:0]
+	var visit func(int)
+	visit = func(idx int) {
+		for _, above := range b.all[idx].Aboves {
+			visit(above)
+		}
+
+		b.all[idx].Visible = b.matchesFilter(b.all[idx])
+		if b.all[idx].Visible && !b.all[idx].Disabled {
+			b.selectable = append(b.selectable, idx)
+		}
+	}
+
+	// Depth-first traversal gives us the same order
+	// as the tree view.
+	for _, root := range b.roots {
+		visit(root)
+	}
+
+	if len(b.selectable) == 0 {
+		b.err = fmt.Errorf("no available matches: %s", string(b.filter))
+		return
+	}
+
+	b.focused = max(slices.Index(b.selectable, selected), 0)
+}
+
+func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
+	bi.Highlights = bi.Highlights[:0]
+	// Check if the filter matches the branch name.
+	// We use a simple case-insensitive substring match.
+	filter := b.filter // []rune
+	name := []rune(strings.ToLower(bi.Branch))
+	for i, r := range name {
+		if len(filter) == 0 {
+			return true
+		}
+
+		if r == filter[0] {
+			filter = filter[1:]
+			bi.Highlights = append(bi.Highlights, i)
+		}
+	}
+
+	return len(filter) == 0
+}
+
+// Render renders the widget.
+func (b *BranchTreeSelect) Render(w ui.Writer) {
+	if b.accepted {
+		w.WriteString(b.Value())
+		return
+	}
+
+	if b.title != "" {
+		w.WriteString("\n")
+	}
+
+	// visibleDescendants(start, dst)
+	//
+	// fills dst with the indexes of visible descendants
+	// of the branches in start.
+	// In short, for each branch in start,
+	//
+	//  - if the branch is visible, it is added to dst
+	//  - otherwise, for each of its Above branches,
+	//    their visible descendants are added to dst.
+	//
+	// The idea is that if we can't show 'foo',
+	// we should show its children 'bar' and 'baz' instead.
+	var visibleDescendants func([]int, []int) []int
+	visibleDescendants = func(starts []int, visibles []int) []int {
+		for _, idx := range starts {
+			if b.all[idx].Visible {
+				visibles = append(visibles, idx)
+				continue
+			}
+
+			visibles = visibleDescendants(b.all[idx].Aboves, visibles)
+		}
+
+		return visibles
+	}
+
+	selected := -1
+	if b.focused >= 0 && b.focused < len(b.selectable) {
+		selected = b.selectable[b.focused]
+	}
+
+	treeStyle := fliptree.DefaultStyle[*branchInfo]()
+	treeStyle.NodeMarker = func(bi *branchInfo) lipgloss.Style {
+		switch {
+		case bi.Disabled:
+			return fliptree.DefaultNodeMarker.Faint(true)
+		case bi.Index == selected:
+			return fliptree.DefaultNodeMarker.SetString("■")
+		default:
+			return fliptree.DefaultNodeMarker
+		}
+	}
+
+	// Render the tree.
+	_ = fliptree.Write(w, fliptree.Graph[*branchInfo]{
+		Roots:  visibleDescendants(b.roots, nil),
+		Values: b.all,
+		Edges: func(bi *branchInfo) []int {
+			return visibleDescendants(bi.Aboves, nil)
+		},
+		View: func(bi *branchInfo) string {
+			highlights := bi.Highlights
+
+			nameStyle := b.Style.Name
+			highlightStyle := b.Style.HighlightedName
+			switch {
+			case bi.Disabled:
+				nameStyle = b.Style.DisabedName
+				highlightStyle = b.Style.DisabedName
+			case bi.Index == selected:
+				nameStyle = b.Style.SelectedName
+			}
+
+			var o strings.Builder
+			lastRuneIdx := 0
+			label := []rune(bi.Branch)
+			for _, runeIdx := range highlights {
+				o.WriteString(nameStyle.Render(string(label[lastRuneIdx:runeIdx])))
+				o.WriteString(highlightStyle.Render(string(label[runeIdx])))
+				lastRuneIdx = runeIdx + 1
+			}
+			o.WriteString(nameStyle.Render(string(label[lastRuneIdx:])))
+
+			if bi.Index == selected {
+				o.WriteString(" ")
+				o.WriteString(b.Style.Marker.String())
+			}
+
+			return o.String()
+		},
+	}, fliptree.Options[*branchInfo]{
+		Style: treeStyle,
+	})
+}
