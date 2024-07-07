@@ -101,8 +101,13 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 type CommitRequest struct {
 	// Message is the commit message.
 	//
-	// If empty, $EDITOR is opened to edit the message.
+	// If this and ReuseMessag are empty,
+	// $EDITOR is opened to edit the message.
 	Message string
+
+	// ReuseMessage uses the commit message from the given commitish
+	// as the commit message.
+	ReuseMessage string
 
 	// All stages all changes before committing.
 	All bool
@@ -135,6 +140,9 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.AllowEmpty {
 		args = append(args, "--allow-empty")
+	}
+	if req.ReuseMessage != "" {
+		args = append(args, "-C", req.ReuseMessage)
 	}
 
 	err := r.gitCmd(ctx, args...).
