@@ -747,6 +747,22 @@ followed by 'gs upstack restack'.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-n`, `--no-edit`: Don't edit the commit message
 
+### gs commit split
+
+```
+gs commit (c) split (sp) [flags]
+```
+
+Split the current commit
+
+Interactively select hunks from the current commit
+to split into new commits below it.
+Branches upstack are restacked as needed.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Use the given message as the commit message.
+
 ## Rebase
 
 ### gs rebase continue
