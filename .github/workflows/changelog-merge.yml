@@ -1,0 +1,37 @@
+name: Merge release changelog
+
+# When a .changes/v*.md file is modified in a release PR,
+# we should update the root CHANGELOG.md.
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+
+jobs:
+  merge:
+    name: Merge
+    runs-on: ubuntu-latest
+
+    # Run only if the PR is a release PR.
+    if: >-
+      contains(
+        github.event.pull_request.labels.*.name,
+        'prepare-release'
+      )
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.PAT }}  # for push
+
+    - name: Batch changes
+      uses: miniscruff/changie-action@v2
+      with:
+        args: merge
+
+    - name: Push changes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: Update CHANGELOG.md
+        file_pattern: CHANGELOG.md

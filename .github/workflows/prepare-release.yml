@@ -43,6 +43,7 @@ jobs:
       with:
         title: Release ${{ steps.latest.outputs.output }}
         branch: release/${{ steps.latest.outputs.output }}
+        labels: prepare-release
         commit-message: Release ${{ steps.latest.outputs.output }}
         token: ${{ secrets.PAT }}
         body: ''
