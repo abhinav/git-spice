@@ -1,3 +1,0 @@
-kind: Changed
-body: Branch prompt now presents a tree-style view where possible. This includes 'branch checkout', 'branch onto', 'up', and more.
-time: 2024-07-07T11:23:50.188422-07:00
