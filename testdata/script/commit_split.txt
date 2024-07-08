@@ -1,0 +1,151 @@
+# Basic 'commit split' usage.
+
+as 'Test <test@example.com>'
+at '2024-07-08T05:04:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt feature2.txt
+gs bc -m 'Add features' features
+
+git add feature3.txt
+gs bc -m 'Add feature 3' feature3
+gs down
+
+with-term -final exit $WORK/input.txt -- gs commit split -m 'Add feature 1'
+cmp stdout $WORK/golden/output.txt
+
+git log --patch
+cmp stdout $WORK/golden/log.txt
+
+gs ll
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- repo/feature3.txt --
+feature 3
+
+-- input.txt --
+await feature1
+snapshot first
+feed y\r
+await feature2
+snapshot second
+feed q\r
+await
+
+-- golden/output.txt --
+### first ###
+INF Select hunks to extract into a new commit
+diff --git b/feature1.txt a/feature1.txt
+new file mode 100644
+index 0000000..b30fa09
+--- /dev/null
++++ a/feature1.txt
+@@ -0,0 +1,2 @@
++feature 1
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,?]?
+### second ###
+INF Select hunks to extract into a new commit
+diff --git b/feature1.txt a/feature1.txt
+new file mode 100644
+index 0000000..b30fa09
+--- /dev/null
++++ a/feature1.txt
+@@ -0,0 +1,2 @@
++feature 1
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? y
+
+diff --git b/feature2.txt a/feature2.txt
+new file mode 100644
+index 0000000..4357a3d
+--- /dev/null
++++ a/feature2.txt
+@@ -0,0 +1,2 @@
++feature 2
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,?]?
+### exit ###
+INF Select hunks to extract into a new commit
+diff --git b/feature1.txt a/feature1.txt
+new file mode 100644
+index 0000000..b30fa09
+--- /dev/null
++++ a/feature1.txt
+@@ -0,0 +1,2 @@
++feature 1
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? y
+
+diff --git b/feature2.txt a/feature2.txt
+new file mode 100644
+index 0000000..4357a3d
+--- /dev/null
++++ a/feature2.txt
+@@ -0,0 +1,2 @@
++feature 2
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? q
+
+[features 5c5b54e] Add feature 1
+ 1 file changed, 2 insertions(+)
+ create mode 100644 feature1.txt
+[features d5849e7] Add features
+ Date: Mon Jul 8 05:04:32 2024 +0000
+ 1 file changed, 2 insertions(+)
+ create mode 100644 feature2.txt
+INF feature3: restacked on features
+-- golden/log.txt --
+commit d5849e70445dbe7c0b8ea46c1cb22b175f5ceca0
+Author: Test <test@example.com>
+Date:   Mon Jul 8 05:04:32 2024 +0000
+
+    Add features
+
+diff --git a/feature2.txt b/feature2.txt
+new file mode 100644
+index 0000000..4357a3d
+--- /dev/null
++++ b/feature2.txt
+@@ -0,0 +1,2 @@
++feature 2
++
+
+commit 5c5b54e2a2d6274e8b3862935ef979ea695a975c
+Author: Test <test@example.com>
+Date:   Mon Jul 8 05:04:32 2024 +0000
+
+    Add feature 1
+
+diff --git a/feature1.txt b/feature1.txt
+new file mode 100644
+index 0000000..b30fa09
+--- /dev/null
++++ b/feature1.txt
+@@ -0,0 +1,2 @@
++feature 1
++
+
+commit 2123b7327c4c4b5c3964ae826e4f10caa3888244
+Author: Test <test@example.com>
+Date:   Mon Jul 8 05:04:32 2024 +0000
+
+    Initial commit
+-- golden/ll.txt --
+  ┏━□ feature3
+  ┃   be650d2 Add feature 3 (now)
+┏━┻■ features ◀
+┃    d5849e7 Add features (now)
+┃    5c5b54e Add feature 1 (now)
+main
