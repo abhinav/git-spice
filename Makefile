@@ -16,6 +16,7 @@ STITCHMD_FLAGS ?= -o README.md -preface doc/preface.txt doc/SUMMARY.md
 
 GS = bin/gs
 MOCKGEN = bin/mockgen
+REQUIREDFIELD = bin/requiredfield
 TOOLS = $(MOCKGEN) $(GS)
 
 # Non-test Go files.
@@ -32,7 +33,7 @@ all: build lint test
 build: $(GS)
 
 .PHONY: lint
-lint: golangci-lint tidy-lint generate-lint
+lint: golangci-lint requiredfield-lint tidy-lint generate-lint
 
 .PHONY: generate
 generate: $(TOOLS)
@@ -57,6 +58,11 @@ README.md: $(DOC_MD_FILES)
 .PHONY: golangci-lint
 golangci-lint:
 	golangci-lint run
+
+.PHONY: requiredfield-lint
+requiredfield-lint: $(REQUIREDFIELD)
+	@echo "[lint] requiredfield"
+	@go vet -vettool=$(REQUIREDFIELD) ./...
 
 .PHONY: tidy-lint
 tidy-lint:
@@ -90,3 +96,6 @@ $(GS): $(GO_SRC_FILES) go.mod
 
 $(MOCKGEN): go.mod
 	go install go.uber.org/mock/mockgen
+
+$(REQUIREDFIELD): go.mod
+	go install go.abhg.dev/requiredfield/cmd/requiredfield

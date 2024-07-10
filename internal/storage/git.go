@@ -45,10 +45,11 @@ var _ Backend = (*GitBackend)(nil)
 
 // GitConfig is used to configure a GitBackend.
 type GitConfig struct {
-	Repo                    GitRepository
-	Ref                     string
-	AuthorName, AuthorEmail string
-	Log                     *log.Logger
+	Repo                    GitRepository // required
+	Ref                     string        // required
+	AuthorName, AuthorEmail string        // required
+
+	Log *log.Logger
 }
 
 // NewGitBackend creates a new GitBackend that stores data
