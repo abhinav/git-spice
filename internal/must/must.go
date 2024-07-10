@@ -4,7 +4,6 @@
 package must
 
 import (
-	"cmp"
 	"fmt"
 	"strings"
 )
@@ -29,14 +28,6 @@ func BeEqualf[T comparable](a, b T, format string, args ...any) {
 		panicErrorf("%v\nwant a == b\na = %v\nb = %v",
 			fmt.Errorf(format, args...), a, b,
 		)
-	}
-}
-
-// BeInRangef panics if v is not in the range [min, max).
-func BeInRangef[T cmp.Ordered](v, min, max T, format string, args ...any) {
-	if v < min || v >= max {
-		panicErrorf("%v\nwant %v <= v < %v\nv = %v",
-			fmt.Errorf(format, args...), min, max, v)
 	}
 }
 
@@ -66,14 +57,6 @@ func NotBeBlankf(s string, format string, args ...any) {
 // NotBeEmptyf panics if es is an empty slice.
 func NotBeEmptyf[T any](es []T, format string, args ...any) {
 	if len(es) == 0 {
-		panicErrorf(format, args...)
-	}
-}
-
-// NotBeZerof panics if v is the zero value.
-func NotBeZerof[T comparable](v T, format string, args ...any) {
-	var zero T
-	if v == zero {
 		panicErrorf(format, args...)
 	}
 }
