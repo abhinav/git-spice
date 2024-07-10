@@ -26,7 +26,7 @@ func (v versionFlag) BeforeReset(app *kong.Kong) error {
 	return nil
 }
 
-func generateBuildReport() string {
+var generateBuildReport = func() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return ""
