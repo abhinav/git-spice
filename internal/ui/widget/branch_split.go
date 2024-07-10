@@ -51,7 +51,7 @@ func NewBranchSplit() *BranchSplit {
 
 // WithCommits sets the commits to be listed in a branch split widget.
 func (b *BranchSplit) WithCommits(commits ...CommitSummary) *BranchSplit {
-	must.Bef(len(commits) > 2, "cannot split a branch with fewer than 2 commits")
+	must.Bef(len(commits) >= 2, "cannot split a branch with fewer than 2 commits")
 	b.commits = commits
 	return b
 }
