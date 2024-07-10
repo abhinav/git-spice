@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -132,27 +130,6 @@ func (l *List[T]) WithSelected(selected int) *List[T] {
 func (l *List[T]) With(f func(l *List[T])) *List[T] {
 	f(l)
 	return l
-}
-
-// ComparableListItems configures a [List]
-// to list the presented items and select 'selected' by default.
-func ComparableListItems[T comparable](selected T, items ...T) func(*List[T]) {
-	var selectedIdx int
-	options := make([]ListItem[T], len(items))
-	for i, v := range items {
-		options[i] = ListItem[T]{
-			Title: fmt.Sprintf("%v", v),
-			Value: v,
-		}
-		if v == selected {
-			selectedIdx = i
-		}
-	}
-
-	return func(l *List[T]) {
-		l.WithItems(options...)
-		l.WithSelected(selectedIdx)
-	}
 }
 
 // Err returns nil.
