@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
@@ -41,21 +40,11 @@ type AuthenticationToken struct {
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 
-func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string) (*githubv4.Client, error) {
-	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
-	if err != nil {
-		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
-	}
-
-	var tokenSource oauth2.TokenSource
+func (t *AuthenticationToken) tokenSource() oauth2.TokenSource {
 	if t.GitHubCLI {
-		tokenSource = &CLITokenSource{}
-	} else {
-		tokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
+		return &CLITokenSource{}
 	}
-
-	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
+	return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
 }
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {

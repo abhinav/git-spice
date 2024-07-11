@@ -1,4 +1,4 @@
-package github_test
+package github
 
 import (
 	"bytes"
@@ -12,15 +12,56 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/termtest"
 )
 
+func TestAuthenticationToken_tokenSource(t *testing.T) {
+	t.Run("AccessToken", func(t *testing.T) {
+		tok := &AuthenticationToken{
+			AccessToken: "token",
+		}
+
+		src := tok.tokenSource()
+		got, err := src.Token()
+		require.NoError(t, err)
+
+		assert.Equal(t, "token", got.AccessToken)
+	})
+
+	t.Run("GitHubCLI", func(t *testing.T) {
+		token := &AuthenticationToken{
+			GitHubCLI: true,
+		}
+
+		src := token.tokenSource()
+		assert.IsType(t, new(CLITokenSource), src)
+	})
+}
+
+func TestForgeOAuth2Endpoint(t *testing.T) {
+	f := Forge{
+		Options: Options{
+			URL: "https://github.example.com",
+		},
+	}
+
+	ep, err := f.oauth2Endpoint()
+	require.NoError(t, err)
+	assert.Equal(t, "https://github.example.com/login/oauth/access_token", ep.TokenURL)
+	assert.Equal(t, "https://github.example.com/login/device/code", ep.DeviceAuthURL)
+
+	t.Run("bad URL", func(t *testing.T) {
+		f.Options.URL = ":not a valid URL:"
+		_, err := f.oauth2Endpoint()
+		require.Error(t, err)
+	})
+}
+
 func TestAuthHasGitHubToken(t *testing.T) {
 	var logBuffer bytes.Buffer
-	f := github.Forge{
-		Options: github.Options{
+	f := Forge{
+		Options: Options{
 			Token: "token",
 		},
 		Log: log.New(&logBuffer),
@@ -53,7 +94,7 @@ func TestAuthHasGitHubToken(t *testing.T) {
 }
 
 func TestLoadAuthenticationTokenOldFormat(t *testing.T) {
-	f := github.Forge{
+	f := Forge{
 		Log: log.New(io.Discard),
 	}
 
@@ -64,7 +105,7 @@ func TestLoadAuthenticationTokenOldFormat(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "old-token",
-		tok.(*github.AuthenticationToken).AccessToken)
+		tok.(*AuthenticationToken).AccessToken)
 }
 
 func TestPATAuthenticator(t *testing.T) {
@@ -84,7 +125,7 @@ func TestPATAuthenticator(t *testing.T) {
 	go func() {
 		defer close(resultc)
 
-		got, err := (&github.PATAuthenticator{
+		got, err := (&PATAuthenticator{
 			Stdin:  stdin,
 			Stderr: term,
 		}).Authenticate(context.Background())
@@ -108,7 +149,7 @@ func TestPATAuthenticator(t *testing.T) {
 		tok, err := res.tok, res.err
 		require.NoError(t, err)
 
-		ght, ok := tok.(*github.AuthenticationToken)
+		ght, ok := tok.(*AuthenticationToken)
 		require.True(t, ok, "want *github.AuthenticationToken, got %T", tok)
 		assert.Equal(t, "token", ght.AccessToken)
 
