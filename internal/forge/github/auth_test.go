@@ -3,7 +3,13 @@ package github
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -14,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/termtest"
+	"golang.org/x/oauth2"
 )
 
 func TestAuthenticationToken_tokenSource(t *testing.T) {
@@ -108,6 +115,78 @@ func TestLoadAuthenticationTokenOldFormat(t *testing.T) {
 		tok.(*AuthenticationToken).AccessToken)
 }
 
+func TestDeviceFlowAuthenticator(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /device/code", func(w http.ResponseWriter, r *http.Request) {
+		clientID := r.FormValue("client_id")
+		if !assert.Equal(t, "client-id", clientID) {
+			http.Error(w, "bad client_id", http.StatusBadRequest)
+			return
+		}
+
+		scope := r.FormValue("scope")
+		if !assert.Equal(t, "scope", scope) {
+			http.Error(w, "bad scope", http.StatusBadRequest)
+			return
+		}
+
+		_, _ = w.Write([]byte(`{
+			"device_code": "device-code",
+			"verification_uri": "https://example.com/verify",
+			"expires_in": 900,
+			"interval": 1
+		}`))
+	})
+
+	mux.HandleFunc("POST /oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+		clientID := r.FormValue("client_id")
+		if !assert.Equal(t, "client-id", clientID) {
+			http.Error(w, "bad client_id", http.StatusBadRequest)
+			return
+		}
+
+		deviceCode := r.FormValue("device_code")
+		if !assert.Equal(t, "device-code", deviceCode) {
+			http.Error(w, "bad device_code", http.StatusBadRequest)
+			return
+		}
+
+		result := map[string]string{
+			"access_token": "my-token",
+			"token_type":   "bearer",
+			"scope":        "scope",
+		}
+
+		switch r.Header.Get("Accept") {
+		case "application/json":
+			_ = json.NewEncoder(w).Encode(result)
+		default:
+			q := make(url.Values)
+			for k, v := range result {
+				q.Set(k, v)
+			}
+			_, _ = io.WriteString(w, q.Encode())
+		}
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	tok, err := (&DeviceFlowAuthenticator{
+		ClientID: "client-id",
+		Scopes:   []string{"scope"},
+		Stderr:   io.Discard,
+		Endpoint: oauth2.Endpoint{
+			DeviceAuthURL: srv.URL + "/device/code",
+			TokenURL:      srv.URL + "/oauth/access_token",
+		},
+	}).Authenticate(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, "my-token", tok.AccessToken)
+	assert.False(t, tok.GitHubCLI)
+}
+
 func TestPATAuthenticator(t *testing.T) {
 	stdin, stdinW := io.Pipe()
 	defer func() {
@@ -156,4 +235,54 @@ func TestPATAuthenticator(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out")
 	}
+}
+
+func TestAuthCLI(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		tok, err := (&CLIAuthenticator{
+			GH: "gh",
+			runCmd: func(*exec.Cmd) error {
+				return nil
+			},
+		}).Authenticate(context.Background())
+		require.NoError(t, err)
+
+		f := Forge{
+			Log: log.New(io.Discard),
+		}
+		var stash secret.MemoryStash
+		require.NoError(t, f.SaveAuthenticationToken(&stash, tok))
+
+		t.Run("load", func(t *testing.T) {
+			tok, err := f.LoadAuthenticationToken(&stash)
+			require.NoError(t, err)
+
+			assert.True(t, tok.(*AuthenticationToken).GitHubCLI)
+		})
+	})
+
+	t.Run("unauthenticated", func(t *testing.T) {
+		_, err := (&CLIAuthenticator{
+			GH: "gh",
+			runCmd: func(*exec.Cmd) error {
+				return &exec.ExitError{
+					Stderr: []byte("great sadness"),
+				}
+			},
+		}).Authenticate(context.Background())
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "not authenticated")
+		assert.ErrorContains(t, err, "great sadness")
+	})
+
+	t.Run("other error", func(t *testing.T) {
+		_, err := (&CLIAuthenticator{
+			GH: "gh",
+			runCmd: func(*exec.Cmd) error {
+				return errors.New("gh not found")
+			},
+		}).Authenticate(context.Background())
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "gh not found")
+	})
 }
