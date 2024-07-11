@@ -187,6 +187,59 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 	assert.False(t, tok.GitHubCLI)
 }
 
+func TestSelectAuthenticator(t *testing.T) {
+	stdin, stdinW := io.Pipe()
+	defer func() {
+		assert.NoError(t, stdinW.Close())
+		assert.NoError(t, stdin.Close())
+	}()
+
+	term := midterm.NewAutoResizingTerminal()
+
+	type result struct {
+		auth authenticator
+		err  error
+	}
+	resultc := make(chan result, 1)
+	go func() {
+		defer close(resultc)
+
+		got, err := selectAuthenticator(authenticatorOptions{
+			Stdin:    stdin,
+			Stderr:   term,
+			Endpoint: oauth2.Endpoint{},
+		})
+		resultc <- result{got, err}
+	}()
+
+	// TODO: Generalize termtest and use that here
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		assert.Contains(t,
+			termtest.Screen(term.Screen),
+			"Select an authentication method",
+		)
+	}, time.Second, 50*time.Millisecond)
+
+	// Go through all options, roll back around to the first, and select it
+	for range len(_authenticationMethods) {
+		_, _ = io.WriteString(stdinW, "\x1b[B") // Down arrow
+	}
+	_, _ = io.WriteString(stdinW, "\r") // Enter
+
+	select {
+	case res, ok := <-resultc:
+		require.True(t, ok)
+		auth, err := res.auth, res.err
+		require.NoError(t, err)
+
+		_, ok = auth.(*DeviceFlowAuthenticator)
+		require.True(t, ok, "want *github.DeviceFlowAuthenticator, got %T", auth)
+
+	case <-time.After(time.Second):
+		t.Fatal("timed out")
+	}
+}
+
 func TestPATAuthenticator(t *testing.T) {
 	stdin, stdinW := io.Pipe()
 	defer func() {
@@ -211,8 +264,7 @@ func TestPATAuthenticator(t *testing.T) {
 		resultc <- result{got, err}
 	}()
 
-	// TODO: Would be nice to be able to re-use termtest's
-	// scripting functionality here.
+	// TODO: Generalize termtest and use that here
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		assert.Contains(t,
 			termtest.Screen(term.Screen),
