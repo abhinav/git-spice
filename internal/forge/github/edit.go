@@ -46,7 +46,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		// whether it's true or false.
 		var m, input any
 		if *opts.Draft {
-			m = struct {
+			m = &struct {
 				ConvertPullRequestToDraft struct {
 					PullRequest struct {
 						ID githubv4.ID `graphql:"id"`
@@ -58,7 +58,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 				PullRequestID: graphQLID,
 			}
 		} else {
-			m = struct {
+			m = &struct {
 				MarkPullRequestReadyForReview struct {
 					PullRequest struct {
 						ID githubv4.ID `graphql:"id"`
@@ -71,7 +71,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 			}
 		}
 
-		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		if err := r.client.Mutate(ctx, m, input, nil); err != nil {
 			return fmt.Errorf("update draft status: %w", err)
 		}
 	}

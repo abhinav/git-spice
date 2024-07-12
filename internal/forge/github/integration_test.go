@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,7 +18,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/random"
 	"golang.org/x/oauth2"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
@@ -27,6 +31,13 @@ import (
 // using recorded fixtures.
 
 var _update = flag.Bool("update", false, "update test fixtures")
+
+// To avoid looking this up for every test that needs the repo ID,
+// we'll just hardcode it here.
+var (
+	_gitSpiceRepoID = githubv4.ID("R_kgDOJ2BQKg")
+	_testRepoID     = githubv4.ID("R_kgDOMVd0xg")
+)
 
 func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	t.Cleanup(func() {
@@ -115,9 +126,6 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 
 	return rec
 }
-
-// To avoid looking this up for every test that needs a repo.
-var _gitSpiceRepoID = githubv4.ID("R_kgDOJ2BQKg")
 
 func TestIntegration_Repository(t *testing.T) {
 	ctx := context.Background()
@@ -265,5 +273,178 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 		_, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 10000})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "get pull request ID")
+	})
+}
+
+func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
+	ctx := context.Background()
+
+	branchFile := filepath.Join("testdata", t.Name(), "branch")
+	var (
+		branchName string
+		gitRepo    *git.Repository // only when _update is true
+	)
+	if *_update {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		// Generate a new branch name since we're updating the fixtures.
+		branchName = random.Alnum(8)
+		require.NoError(t,
+			os.MkdirAll(filepath.Dir(branchFile), 0o755))
+		require.NoError(t,
+			os.WriteFile(branchFile, []byte(branchName), 0o644))
+
+		output := ioutil.TestOutputWriter(t, "[git] ")
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd.Stdout = output
+		cmd.Stdout = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		var err error
+		gitRepo, err = git.Open(ctx, repoDir, git.OpenOptions{
+			Log: logtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+
+		t.Logf("Creating branch: %s", branchName)
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchName,
+		}), "could not create branch: %s", branchName)
+		require.NoError(t, gitRepo.Checkout(ctx, branchName),
+			"could not checkout branch: %s", branchName)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchName+".txt"),
+			[]byte(random.Alnum(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitRepo.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin")
+		require.NoError(t,
+			gitRepo.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchName),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			t.Logf("Deleting remote branch: %s", branchName)
+			assert.NoError(t,
+				gitRepo.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchName),
+				}), "error deleting branch")
+		})
+	} else {
+		bs, err := os.ReadFile(branchFile)
+		require.NoError(t, err, "could not read branch file")
+
+		branchName = strings.TrimSpace(string(bs))
+		t.Logf("Using branch: %s", branchName)
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	change, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: branchName,
+		Body:    "Test PR",
+		Base:    "main",
+		Head:    branchName,
+	})
+	require.NoError(t, err, "error creating PR")
+	changeID := change.ID
+
+	t.Run("ChangeBase", func(t *testing.T) {
+		newBaseFile := filepath.Join("testdata", t.Name(), "new-base")
+		var newBase string
+		if *_update {
+			newBase = random.Alnum(8)
+			require.NoError(t,
+				os.MkdirAll(filepath.Dir(newBaseFile), 0o755),
+				"error creating directory")
+			require.NoError(t,
+				os.WriteFile(newBaseFile, []byte(newBase), 0o644),
+				"could not write new base file")
+
+			t.Logf("Pushing new base: %s", newBase)
+			require.NoError(t,
+				gitRepo.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec("main:" + newBase),
+				}), "could not push base branch")
+
+			t.Cleanup(func() {
+				t.Logf("Deleting remote branch: %s", newBase)
+				require.NoError(t,
+					gitRepo.Push(ctx, git.PushOptions{
+						Remote:  "origin",
+						Refspec: git.Refspec(":" + newBase),
+					}), "error deleting branch")
+			})
+		} else {
+			bs, err := os.ReadFile(newBaseFile)
+			require.NoError(t, err, "could not read new base file")
+
+			newBase = strings.TrimSpace(string(bs))
+			t.Logf("Using new base: %s", newBase)
+		}
+
+		t.Logf("Changing base to: %s", newBase)
+		require.NoError(t,
+			repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				Base: newBase,
+			}), "could not update base branch for PR")
+		t.Cleanup(func() {
+			t.Logf("Changing base back to: main")
+			require.NoError(t,
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+					Base: "main",
+				}), "error restoring base branch")
+		})
+
+		change, err := repo.FindChangeByID(ctx, changeID)
+		require.NoError(t, err, "could not find PR after changing base")
+
+		assert.Equal(t, newBase, change.BaseName,
+			"base change did not take effect")
+	})
+
+	t.Run("ChangeDraft", func(t *testing.T) {
+		t.Logf("Changing to draft")
+		draft := true
+		require.NoError(t,
+			repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				Draft: &draft,
+			}), "could not update draft status for PR")
+		t.Cleanup(func() {
+			t.Logf("Changing to ready for review")
+			draft = false
+			require.NoError(t,
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+					Draft: &draft,
+				}), "error restoring draft status")
+		})
+
+		change, err := repo.FindChangeByID(ctx, changeID)
+		require.NoError(t, err, "could not find PR after changing draft")
+		assert.True(t, change.Draft, "draft change did not take effect")
 	})
 }
