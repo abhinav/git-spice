@@ -3,6 +3,7 @@ package github_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"flag"
 	"io"
 	"maps"
@@ -21,7 +22,6 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
-	"go.abhg.dev/gs/internal/random"
 	"golang.org/x/oauth2"
 	"gopkg.in/dnaeon/go-vcr.v3/cassette"
 	"gopkg.in/dnaeon/go-vcr.v3/recorder"
@@ -291,7 +291,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
 
 		// Generate a new branch name since we're updating the fixtures.
-		branchName = random.Alnum(8)
+		branchName = randomString(8)
 		require.NoError(t,
 			os.MkdirAll(filepath.Dir(branchFile), 0o755))
 		require.NoError(t,
@@ -320,7 +320,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),
-			[]byte(random.Alnum(32)),
+			[]byte(randomString(32)),
 			0o644,
 		), "could not write file to branch")
 
@@ -376,7 +376,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		newBaseFile := filepath.Join("testdata", t.Name(), "new-base")
 		var newBase string
 		if *_update {
-			newBase = random.Alnum(8)
+			newBase = randomString(8)
 			require.NoError(t,
 				os.MkdirAll(filepath.Dir(newBaseFile), 0o755),
 				"error creating directory")
@@ -447,4 +447,18 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		require.NoError(t, err, "could not find PR after changing draft")
 		assert.True(t, change.Draft, "draft change did not take effect")
 	})
+}
+
+const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+// randomString generates a random alphanumeric string of length n.
+func randomString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		var buf [1]byte
+		_, _ = rand.Read(buf[:])
+		idx := int(buf[0]) % len(_alnum)
+		b[i] = _alnum[idx]
+	}
+	return string(b)
 }
