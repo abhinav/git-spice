@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
@@ -41,21 +40,11 @@ type AuthenticationToken struct {
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 
-func (t *AuthenticationToken) githubv4Client(ctx context.Context, apiURL string) (*githubv4.Client, error) {
-	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
-	if err != nil {
-		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
-	}
-
-	var tokenSource oauth2.TokenSource
+func (t *AuthenticationToken) tokenSource() oauth2.TokenSource {
 	if t.GitHubCLI {
-		tokenSource = &CLITokenSource{}
-	} else {
-		tokenSource = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
+		return &CLITokenSource{}
 	}
-
-	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
+	return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
 }
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
@@ -91,11 +80,16 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 		return nil, fmt.Errorf("get OAuth endpoint: %w", err)
 	}
 
-	return (&githubAuthenticator{
+	auth, err := selectAuthenticator(authenticatorOptions{
 		Endpoint: oauthEndpoint,
 		Stdin:    os.Stdin,
 		Stderr:   os.Stderr,
-	}).Authenticate(ctx)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("select authenticator: %w", err)
+	}
+
+	return auth.Authenticate(ctx)
 }
 
 // SaveAuthenticationToken saves the given authentication token to the stash.
@@ -143,79 +137,105 @@ func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 	return stash.DeleteSecret(f.URL(), "token")
 }
 
-type authenticationMethod func(context.Context) (forge.AuthenticationToken, error)
-
-// githubAuthenticator presents the user with multiple authentication methods,
-// prompts them to choose one, and executes the chosen method.
-type githubAuthenticator struct {
-	Endpoint oauth2.Endpoint
-	Stdin    io.Reader
-	Stderr   io.Writer
+type authenticator interface {
+	Authenticate(context.Context) (*AuthenticationToken, error)
 }
 
-func (a *githubAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
-	methods := []ui.ListItem[authenticationMethod]{
-		{
-			Title:       "OAuth",
-			Description: oauthDesc,
-			Value: (&DeviceFlowAuthenticator{
+var _authenticationMethods = []struct {
+	Title       string
+	Description func(focused bool) string
+	Build       func(authenticatorOptions) authenticator
+}{
+	{
+		Title:       "OAuth",
+		Description: oauthDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			return &DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
 				ClientID: _oauthAppClientID,
 				Scopes:   []string{"repo"},
-			}).Authenticate,
+			}
 		},
-		{
-			Title:       "OAuth: Public repositories only",
-			Description: oauthPublicDesc,
-			Value: (&DeviceFlowAuthenticator{
+	},
+	{
+		Title:       "OAuth: Public repositories only",
+		Description: oauthPublicDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			return &DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
 				ClientID: _oauthAppClientID,
 				Scopes:   []string{"public_repo"},
-			}).Authenticate,
+			}
 		},
-		{
-			Title:       "GitHub App",
-			Description: githubAppDesc,
-			Value: (&DeviceFlowAuthenticator{
+	},
+	{
+		Title:       "GitHub App",
+		Description: githubAppDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			return &DeviceFlowAuthenticator{
 				Endpoint: a.Endpoint,
 				Stderr:   a.Stderr,
 				ClientID: _githubAppClientID,
 				// No scopes needed for GitHub App.
-			}).Authenticate,
+			}
 		},
-		{
-			Title:       "Personal Access Token",
-			Description: patDesc,
-			Value: (&PATAuthenticator{
+	},
+	{
+		Title:       "Personal Access Token",
+		Description: patDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			return &PATAuthenticator{
 				Stdin:  a.Stdin,
 				Stderr: a.Stderr,
-			}).Authenticate,
+			}
 		},
+	},
+	{
+		Title:       "GitHub CLI",
+		Description: ghDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			// Offer this option only if the user
+			// has the GH CLI installed.
+			ghExe, err := exec.LookPath("gh")
+			if err != nil {
+				return nil
+			}
+
+			return &CLIAuthenticator{GH: ghExe}
+		},
+	},
+}
+
+// authenticatorOptions presents the user with multiple authentication methods,
+// prompts them to choose one, and executes the chosen method.
+type authenticatorOptions struct {
+	Endpoint oauth2.Endpoint // required
+	Stdin    io.Reader       // required
+	Stderr   io.Writer       // required
+}
+
+func selectAuthenticator(a authenticatorOptions) (authenticator, error) {
+	var methods []ui.ListItem[authenticator]
+	for _, m := range _authenticationMethods {
+		auth := m.Build(a)
+		if auth != nil {
+			methods = append(methods, ui.ListItem[authenticator]{
+				Title:       m.Title,
+				Description: m.Description,
+				Value:       auth,
+			})
+		}
 	}
 
-	// If the user has gh installed,
-	// also offer the option to authenticate with gh.
-	if ghExe, err := exec.LookPath("gh"); err == nil {
-		methods = append(methods, ui.ListItem[authenticationMethod]{
-			Title:       "GitHub CLI",
-			Description: ghDesc,
-			Value:       (&CLIAuthenticator{GH: ghExe}).Authenticate,
-		})
-	}
-
-	var method authenticationMethod
-	field := ui.NewList[authenticationMethod]().
+	var method authenticator
+	field := ui.NewList[authenticator]().
 		WithTitle("Select an authentication method").
 		WithItems(methods...).
 		WithValue(&method)
 	err := ui.Run(field, ui.WithInput(a.Stdin), ui.WithOutput(a.Stderr))
-	if err != nil {
-		return nil, err
-	}
-
-	return method(ctx)
+	return method, err
 }
 
 func oauthDesc(focused bool) string {
@@ -288,11 +308,11 @@ type DeviceFlowAuthenticator struct {
 	// Scopes specifies the OAuth scopes to request.
 	Scopes []string
 
-	Stderr io.Writer
+	Stderr io.Writer // required
 }
 
 // Authenticate executes the OAuth authentication flow.
-func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (*AuthenticationToken, error) {
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,
@@ -327,13 +347,13 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (forge.Authe
 
 // PATAuthenticator implements PAT authentication for GitHub.
 type PATAuthenticator struct {
-	Stdin  io.Reader
-	Stderr io.Writer
+	Stdin  io.Reader // required
+	Stderr io.Writer // required
 }
 
 // Authenticate prompts the user for a Personal Access Token,
 // validates it, and returns the token if successful.
-func (a *PATAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+func (a *PATAuthenticator) Authenticate(ctx context.Context) (*AuthenticationToken, error) {
 	var token string
 	err := ui.Run(ui.NewInput().
 		WithTitle("Enter Personal Access Token").
@@ -346,24 +366,21 @@ func (a *PATAuthenticator) Authenticate(ctx context.Context) (forge.Authenticati
 		ui.WithInput(a.Stdin),
 		ui.WithOutput(a.Stderr),
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	// TODO: Should we validate the token by making a request?
-	return &AuthenticationToken{AccessToken: token}, nil
+	return &AuthenticationToken{AccessToken: token}, err
 }
 
 // CLIAuthenticator implements GitHub CLI authentication flow.
 // This doesn't do anything special besides checking if the user is logged in.
 type CLIAuthenticator struct {
-	GH string
+	GH string // required
 
 	runCmd func(*exec.Cmd) error
 }
 
 // Authenticate checks if the user is authenticated with GitHub CLI.
-func (a *CLIAuthenticator) Authenticate(ctx context.Context) (forge.AuthenticationToken, error) {
+func (a *CLIAuthenticator) Authenticate(ctx context.Context) (*AuthenticationToken, error) {
 	runCmd := (*exec.Cmd).Run
 	if a.runCmd != nil {
 		runCmd = a.runCmd

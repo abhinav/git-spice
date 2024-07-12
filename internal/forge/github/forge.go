@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"golang.org/x/oauth2"
 )
 
 // Options defines command line options for the GitHub Forge.
@@ -77,12 +79,23 @@ func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remo
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	ghc, err := tok.(*AuthenticationToken).githubv4Client(ctx, f.APIURL())
+	tokenSource := tok.(*AuthenticationToken).tokenSource()
+	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub client: %w", err)
 	}
 
 	return newRepository(ctx, f, owner, repo, f.Log, ghc, nil)
+}
+
+func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.TokenSource) (*githubv4.Client, error) {
+	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
+	if err != nil {
+		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
+	}
+
+	httpClient := oauth2.NewClient(ctx, tokenSource)
+	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
 func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {

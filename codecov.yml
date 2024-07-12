@@ -1,3 +1,5 @@
+# Treat all coverage status updates as informational.
+# Don't block PRs based on coverage status.
 coverage:
   status:
     project:
@@ -6,6 +8,20 @@ coverage:
     patch:
       default:
         informational: true
+
+# Do not leave comments on PRs.
 comment: false
+
+# Do not show PR annotations.
 github_checks:
   annotations: false
+
+ignore:
+  # Do not count test utilities towards coverage.
+  - internal/forge/shamhub
+  - internal/git/gittest
+  - internal/log/logtest
+  - internal/mockedit
+  - internal/secret/secrettest
+  - internal/stub
+  - internal/termtest

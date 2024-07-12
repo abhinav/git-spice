@@ -6,6 +6,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBef(t *testing.T) {
+	assert.Panics(t, func() {
+		Bef(false, "false")
+	})
+
+	assert.NotPanics(t, func() {
+		Bef(true, "true")
+	})
+}
+
+func TestNotBef(t *testing.T) {
+	assert.Panics(t, func() {
+		NotBef(true, "true")
+	})
+
+	assert.NotPanics(t, func() {
+		NotBef(false, "false")
+	})
+}
+
 func TestBeEqualf(t *testing.T) {
 	assert.Panics(t, func() {
 		BeEqualf(1, 2, "1 != 2")
@@ -13,6 +33,16 @@ func TestBeEqualf(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		BeEqualf(1, 1, "1 == 1")
+	})
+}
+
+func TestBeEmptyMapf(t *testing.T) {
+	assert.Panics(t, func() {
+		BeEmptyMapf(map[int]int{1: 1}, "not empty")
+	})
+
+	assert.NotPanics(t, func() {
+		BeEmptyMapf(map[int]int{}, "empty")
 	})
 }
 
@@ -57,5 +87,21 @@ func TestNotBeNilf(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		NotBeNilf(0, "not nil")
+	})
+}
+
+func TestNotContainf(t *testing.T) {
+	assert.Panics(t, func() {
+		NotContainf([]int{1, 2, 3}, 2, "contain")
+	})
+
+	assert.NotPanics(t, func() {
+		NotContainf([]int{1, 2, 3}, 4, "not contain")
+	})
+}
+
+func TestFailf(t *testing.T) {
+	assert.Panics(t, func() {
+		Failf("fail")
 	})
 }
