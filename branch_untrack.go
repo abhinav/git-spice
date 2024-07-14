@@ -19,7 +19,7 @@ func (*branchUntrackCmd) Help() string {
 		The current branch is deleted from git-spice's data store
 		but not deleted from the repository.
 		Branches upstack from it are not affected,
-		and will to the next branch downstack.
+		and will use the next branch downstack as their new base.
 
 		Provide a branch name as an argument to target
 		a different branch.

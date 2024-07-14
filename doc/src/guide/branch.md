@@ -1,0 +1,558 @@
+---
+title: Branch stacks
+icon: octicons/git-branch-16
+description: >-
+  Manage, navigate, and manipulate stacks of branches with git-spice.
+---
+
+# Branch stacks
+
+Starting at the trunk branch, any number of branches may be stacked on top.
+You may stack branches using one of the following methods:
+
+- [**Automatic stacking**](#automatic-stacking):
+  Use git-spice to create a branch, commit to it,
+  and stack it on top of the current branch in one go.
+- [**Manual stacking**](#manual-stacking):
+  Create a branch with Git as usual, and then track it with git-spice.
+
+## Automatic stacking
+
+```freeze language="terminal" float="right"
+{green}${reset} $EDITOR file.txt
+{gray}# make your changes{reset}
+{green}${reset} git add file.txt
+{green}${reset} gs branch create my-feature
+```
+
+The preferred way to create a stacked branch is:
+make your changes, prepare them to be committed with `git add`,
+and then use $$gs branch create$$ to commit these changes to a new branch
+stacked on top of the current branch.
+
+This creates a new branch `my-feature` stacked on top of the current branch,
+and commits the staged changes to it.
+An editor will open to let you write a commit message
+if one was not provided with the `-m`/`--message` flag.
+
+!!! tip "But I use `git commit -a`"
+
+    If you prefer to use `git commit -a` to automatically stage files
+    before committing, use `gs branch create -a` to do the same with git-spice.
+
+    Explore the full list of options at $$gs branch create$$.
+
+## Manual stacking
+
+git-spice does not require to change your workflow too drastically.
+If you prefer to use your usual workflow to create branches and commit changes,
+use $$gs branch track$$ to inform git-spice of the branch after creating it.
+
+```freeze language="terminal"
+{green}${reset} git checkout -b my-feature
+{gray}# make your changes{reset}
+{green}${reset} git commit
+{green}${reset} gs branch track
+{green}INF{reset} my-feature: tracking with base main
+```
+
+$$gs branch track$$ automatically detects the base branch.
+Use the `--base` option to specify it manually.
+
+## Navigating the stack
+
+git-spice offers the following commands to navigate within a stack of branches:
+
+<div class="grid" markdown>
+
+<div markdown>
+* $$gs down$$ checks out the branch below the current branch
+* $$gs up$$ checks out a branch stacked on top of the current branch,
+  prompting to pick one if there are multiple
+* $$gs bottom$$ moves to the bottommost branch in the stack,
+  right above the trunk
+* $$gs top$$ moves to the topmost branch in the stack,
+  prompting to pick one if there are multiple
+* $$gs trunk$$ checks out the trunk branch
+* $$gs branch checkout$$ checks out any branch in the repository
+</div>
+
+```pikchr float="right"
+lineht = 0.3in
+linewid = 0.4in
+
+up
+Main: box "main" fit ht 0.25in fill 0xffffff
+dot; line
+
+box "A" same
+dot; line
+box "B" same fill 0xd0cee0
+dot; line lineht/2
+
+ADot: dot invis
+left; line
+up; line ht lineht/2
+box "C" same fill A.fill
+
+move to ADot
+right; line
+up; line ht lineht/2
+box "D" same
+
+dot; line
+box "E" same
+
+color = gray
+linerad = 0.05in
+
+arrow chop thin \
+  from B go left 0.3in \
+  then down until even with Main \
+  then to Main
+text "gs trunk " mono rjust \
+ at 0.3in west of 1/2 way between B and Main
+
+arrow chop thin \
+  from B go right 0.3in \
+  then down until even with A \
+  then to A
+text " gs down" mono ljust \
+ at 0.3in east of 1/2 way between A and B
+
+arrow behind Main chop thin \
+  from B up until even with C \
+  then to C
+arrow behind Main chop thin \
+  from B up until even with D \
+  then to D
+text "gs up" mono at 0.1in north of 1/2 way between C and D
+
+arrow chop thin \
+  from B go right until even with 0.1in east of E.e \
+  then up until even with E \
+  then to E
+text " gs top" mono ljust \
+  at (0.1in east of E.e.x, B.y+(E.y-B.y)/2)
+
+arrow chop thin \
+  from B go left until even with 0.1in west of C.w \
+  then up until even with C \
+  then to C
+text "gs top " mono rjust \
+  at (0.1in west of C.w.x, B.y+(C.y-B.y)/2)
+```
+
+</div>
+
+These commands allow for relative movement within the stack,
+so that you don't have to remember exact branch names
+or their positions in the stack.
+
+!!! question "What's the value of `gs branch checkout`?"
+
+    ```freeze language="terminal" float="right"
+    {green}${reset} gs branch checkout my-feature
+    ```
+
+    You may be wondering about $$gs branch checkout$$
+    when `git checkout` exists.
+    The command behaves not much differently than `git checkout`
+    when provided with a branch name as an argument.
+
+    ```freeze language="terminal" float="right"
+    {green}${reset} gs branch checkout {gray}# or gs bco{reset}
+    {green}Select a branch to checkout{reset}:
+    ┏━■ {yellow}docs ◀{reset}
+    ┃ ┏━□ github-optimization
+    ┣━┻□ github-support
+    main
+    ```
+
+    Its real value lies in the interactive mode.
+    Invoke it without arguments to get a fuzzy-searchable list of branches,
+    visualized as a tree-like structure to help you navigate the stack.
+
+## Committing and restacking
+
+With a stacked branch checked out,
+you can commit to it as usual with `git commit`, `git commit --amend`, etc.
+However, after committing, the branches upstack from the current branch
+need to be restacked to maintain a linear history.
+Use $$gs upstack restack$$ to do this.
+
+<div class="grid" markdown>
+
+```freeze language="terminal"
+{green}${reset} gs branch checkout feat1
+{green}${reset} $EDITOR file.txt
+{gray}# prepare your changes{reset}
+{green}${reset} git commit
+{green}${reset} gs upstack restack
+```
+
+```pikchr
+linewid = 0.25in
+
+X: [
+  right
+  text "A" small; line; text "B" small;
+  line go linewid heading 45; right; text "C" small
+
+  text "feat1" with e at A.w
+  text "feat2" with e at (last text.e.x, C.y)
+  line thin chop dotted from last to C
+]
+
+Y: [
+  right
+  text "A" small; line; text "B" small; line; text "D" small
+  move to B.ne;
+  line go linewid heading 45; right;
+  text "C" small
+
+  text "feat1" with e at A.w
+  text "feat2" with e at (last text.e.x, C.y)
+  line thin chop dotted from last to C
+] with nw at 0.5in south of last.sw
+
+Z: [
+  right
+  text "A" small; line; text "B" small; line; text "D" small
+  line go linewid heading 45; right; text "C" small
+
+  text "feat1" with e at A.w
+  text "feat2" with e at (last text.e.x, C.y)
+  line thin chop dotted from last to C
+] with nw at 0.5in south of last.sw
+
+arrow color gray from X.s down until even with Y.n
+text "git commit" mono with w at last.e
+
+arrow color gray from Y.s down until even with Z.n
+text "gs upstack restack" mono with w at last.e
+```
+
+</div>
+
+!!! tip
+
+    git-spice also offers
+    $$gs branch restack$$ to restack just the current branch onto its base,
+    and $$gs stack restack$$ to restack all branches in the current stack.
+
+### Automatic restacking
+
+git-spice provides a handful of convenience commands
+for common commit-related tasks
+that will automatically restack upstack branches for you:
+
+- $$gs commit create$$ (or $$gs commit create|gs cc$$)
+  commits changes to the current branch and restacks upstack branches
+- $$gs commit amend$$ (or $$gs commit amend|gs ca$$)
+  amends the last commit and restacks upstack branches
+- $$gs commit split$$ (or $$gs commit split|gs csp$$)
+  interactively splits the last commit into two and restacks upstack branches
+- $$gs branch edit$$ (or $$gs branch edit|gs be$$)
+  opens an interactive rebase of the commits in the current branch
+  and restacks upstack branches after the rebase completes successfully
+
+For example, the interaction above can be shortened to:
+
+```freeze language="terminal"
+{green}${reset} gs branch checkout feat1
+{green}${reset} $EDITOR file.txt
+{gray}# prepare your changes{reset}
+{green}${reset} gs commit create {gray}# or gs cc{reset}
+```
+
+## Inserting into the stack
+
+By default, $$gs branch create$$ creates a branch
+stacked on top of the current branch.
+It does not manipulate the existing stack in any way.
+
+If you're in the middle of the stack, use the `--insert` option
+to stack the new branch between the current branch and its upstack branches.
+
+=== "With `--insert`"
+
+    <div class="grid" markdown>
+
+    ```freeze language="terminal"
+    {green}${reset} gs branch checkout feat1
+    {green}${reset} gs branch create --insert feat4
+    ```
+
+    ```pikchr
+    linerad = 0.05in
+
+    X: [
+      up; text "feat1"; F1: dot invis
+      line go up 0.15in then go right 0.15in
+      text "feat2"
+      line from F1 go up 0.3in then go right 0.15in
+      text "feat3"
+    ]
+
+
+    Y: [
+      up; text "feat1"; F1: dot invis
+      line go up 0.15in then go right 0.15in
+      text "feat4"; up; F2: dot invis
+      line from F2 go up 0.15in then go right 0.15in
+      text "feat2"
+      line from F2 go up 0.30in then go right 0.15in
+      text "feat3"
+    ] with sw at 0.5in east of last.se
+
+    arrow color gray from X.e go right until even with Y.w
+    ```
+
+    </div>
+
+=== "Without `--insert`"
+
+    <div class="grid" markdown>
+
+    ```freeze language="terminal"
+    {green}${reset} gs branch checkout feat1
+    {green}${reset} gs branch create feat4
+    ```
+
+    ```pikchr
+    linerad = 0.05in
+
+    X: [
+      up; text "feat1"; F1: dot invis
+      line go up 0.15in then go right 0.15in
+      text "feat2"
+      line from F1 go up 0.3in then go right 0.15in
+      text "feat3"
+    ]
+
+
+    Y: [
+      up; text "feat1"; F1: dot invis
+      line go up 0.15in then go right 0.15in
+      text "feat2"
+      line from F1 go up 0.3in then go right 0.15in
+      text "feat3"
+      line from F1 go up 0.45in then go right 0.15in
+      text "feat4"
+    ] with sw at 0.5in east of last.se
+
+    arrow color gray from X.e go right until even with Y.w
+    ```
+
+    </div>
+
+## Splitting the stack
+
+Use $$gs branch split$$ to split a branch with one or more commits
+into two or more branches.
+
+The command presents a prompt allowing you to select one or more
+*split points* in the branch's history.
+After selecting the split points,
+it will prompt you for a name for each new branch.
+
+```freeze language="terminal"
+{green}${reset} gs branch split
+{green}Select commits{reset}:
+{yellow}▶   c4fb996{reset} Add an aardvark {gray}(12 minutes ago){reset}
+{yellow}    f1d2d2f{reset} Refactor the pangolin {gray}(5 minutes ago){reset}
+  ■ {yellow}4186a53{reset} Invent penguins {gray}(1 second ago){reset} [penguin]
+  Done
+```
+
+!!! tip
+
+    You can use $$gs commit split$$ and $$gs branch edit$$
+    to safely and easily manipulate the commits in the branch
+    before splitting it into multiple branches.
+
+### Splitting non-interactively
+
+```freeze language="terminal" float="right"
+{green}${reset} gs branch split {gray}\{reset}
+    --at HEAD~2:aardvark {gray}\{reset}
+    --at HEAD~1:pangolin
+```
+
+If the interactive prompt is not suitable for your workflow,
+you can also split a branch non-interactively
+by specifying the split points with the `--at` option
+one or more times.
+
+The option takes the form:
+
+```
+--at COMMIT:NAME
+```
+
+Where `COMMIT` is a reference to a commit in the branch's history,
+and `NAME` is the name of the new branch.
+
+## Moving branches around
+
+Use the $$gs upstack onto$$ command to move a branch onto another base branch,
+and bring its upstack branches along with it.
+
+<div class="grid" markdown>
+
+```freeze language="terminal"
+{green}${reset} gs branch checkout feat2
+{green}${reset} gs upstack onto main
+```
+
+```pikchr
+linerad = 0.05in
+lineht = 0.15in
+linewid = 0.15in
+
+X: [
+  text "main"; up;
+  line go up then go right
+  text "feat1"; up;
+  line go up then go right
+  text "feat2"; up;
+  line go up then go right
+  text "feat3"
+]
+
+Y: [
+  text "main"; up; M: dot invis
+  line go up then go right
+  text "feat1"; up;
+  move to M
+  line go up lineht*2.5 then go right
+  text "feat2"; up;
+  line go up then go right
+  text "feat3"
+] with sw at 0.5in east of last.se
+
+color = gray
+arrow from X.e go right until even with Y.w
+```
+
+</div>
+
+!!! tip
+
+    Omit the target branch name
+    to get a list of branches to choose from.
+
+This is useful when you realize that a branch
+does not actually depend on the base branch it is stacked on.
+With this command, you can move an entire section of the stack
+down to a different base branch, or even to the trunk branch,
+reducing the number of changes that need to merge before the target branch.
+
+### Moving only the current branch
+
+In rarer cases, you want to extract the current branch from the stack
+and move it to a different base branch,
+while leaving the upstack branches where they are.
+
+Use $$gs branch onto$$ for this purpose.
+
+<div class="grid" markdown>
+
+```freeze language="terminal"
+{green}${reset} gs branch checkout feat2
+{green}${reset} gs branch onto main
+```
+
+```pikchr
+linerad = 0.05in
+lineht = 0.15in
+linewid = 0.15in
+
+X: [
+  text "main"; up;
+  line go up then go right
+  text "feat1"; up;
+  line go up then go right
+  text "feat2"; up;
+  line go up then go right
+  text "feat3"
+]
+
+Y: [
+  text "main"; up; M: dot invis
+  line go up then go right
+  text "feat1"; up;
+  line go up then go right
+  text "feat3"; up
+  move to M
+  line go up lineht*4 then go right
+  text "feat2"
+] with sw at 0.5in east of last.se
+
+color = gray
+arrow from X.e go right until even with Y.w
+```
+
+</div>
+
+This is most useful when you find that a branch is completely independent
+of other changes in the stack.
+
+## Removing branches from the stack
+
+Use $$gs branch delete$$ to remove a branch from the stack
+and delete it from the repository.
+Branches that are upstack from the deleted branch
+will be restacked on top of the deleted branch's original base branch.
+
+<div class="grid" markdown>
+
+```freeze language="terminal"
+{green}${reset} gs branch delete feat2
+{green}INF{reset} feat2: deleted (was 644a286)
+```
+
+```pikchr
+linerad = 0.05in
+lineht = 0.15in
+linewid = 0.15in
+
+X: [
+  text "main"; up;
+  line go up then go right
+  text "feat1"; up;
+  line go up then go right
+  text "feat2"; up;
+  line go up then go right
+  text "feat3"
+]
+
+Y: [
+  text "main"; up;
+  line go up then go right
+  text "feat1"; up;
+  line go up then go right
+  text "feat3"
+] with sw at 0.5in east of last.se
+
+color = gray
+arrow from X.e go right until even with Y.w
+```
+
+</div>
+
+!!! tip
+
+    Omit the target branch name
+    to get a list of branches to choose from.
+
+### Removing a branch without deleting it
+
+```freeze language="terminal" float="left"
+{green}${reset} gs branch untrack feat2
+```
+
+If you want to remove a branch from the stack
+but don't want to delete the branch from the repository,
+use the $$gs branch untrack$$ command.

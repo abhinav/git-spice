@@ -1,0 +1,5 @@
+[32m$[0m gs branch submit
+[2m[32mTitle[0m: branch submit: Fix directory+ref conflict
+[2m[32mBody[0m: Press [[95me[39m[0m] to open [92mnvim[0m or [[95menter/tab[0m] to skip
+[2m[32mDraft[0m: [[95my[39m/[95mN[0m]
+[1m[92mINF[0m Created #261: https://github.com/abhinav/git-spice/pull/261

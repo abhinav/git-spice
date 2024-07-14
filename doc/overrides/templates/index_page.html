@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% macro render_content(nav_item, ref = nav_item) %}
+  {% if nav_item.is_page and nav_item.meta.icon %}
+    <span class="twemoji lg middle">
+      {% include ".icons/" ~ nav_item.meta.icon ~ ".svg" %}
+    </span>
+  {% elif nav_item.is_section and nav_item.children %}
+    {% set first = nav_item.children | first %}
+    {% if first.is_index and first.meta.icon  %}
+      <span class="twemoji lg middle">
+        {% include ".icons/" ~ first.meta.icon ~ ".svg" %}
+      </span>
+    {% endif %}
+  {% endif %}
+  <span class="md-ellipsis">
+    {{ ref.title }}
+  </span>
+{% endmacro %}
+
+{% macro render_item(item) %}
+<li>
+  <a href="{{ item.url | url }}" class="md-nav__link"
+    {{ render_content(item) }}
+  </a>
+  {% if item.meta.description %}
+    <hr/>
+    <p>{{ item.meta.description }}</p>
+  {% endif %}
+</li>
+{% endmacro %}
+
+{% macro render_index_children(index_page) %}
+  {% set parent = page.parent %}
+  {% if parent and (parent.children | length > 1) %}
+    <div class="grid cards">
+      <ul>
+        {% for item in parent.children %}
+          {% if item.is_page and item != index_page %}
+            {{ render_item(item) }}
+          {% elif item.is_section and item.children and (item.children|first).is_index %}
+            {{ render_item(item.children|first) }}
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+  {{ super() }}
+
+  {% if page.is_index %}
+    <hr/>
+
+    {{ render_index_children(page) }}
+  {% endif %}
+{% endblock %}

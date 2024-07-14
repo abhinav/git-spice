@@ -12,7 +12,6 @@ export PATH := $(GOBIN):$(PATH)
 export GOEXPERIMENT = rangefunc
 
 TEST_FLAGS ?=
-STITCHMD_FLAGS ?= -o README.md -preface doc/preface.txt doc/SUMMARY.md
 
 GS = bin/gs
 MOCKGEN = bin/mockgen
@@ -23,8 +22,6 @@ TOOLS = $(MOCKGEN) $(GS)
 GO_SRC_FILES = $(shell find . \
 	   -path '*/.*' -prune -o \
 	   '(' -type f -a -name '*.go' -a -not -name '*_test.go' ')' -print)
-
-DOC_MD_FILES = $(shell find doc -name '*.md')
 
 .PHONY: all
 all: build lint test
@@ -38,6 +35,7 @@ lint: golangci-lint requiredfield-lint tidy-lint generate-lint
 .PHONY: generate
 generate: $(TOOLS)
 	go generate -x ./...
+	make -C doc generate
 
 .PHONY: test
 test:
@@ -51,9 +49,6 @@ cover:
 .PHONY: tidy
 tidy:
 	go mod tidy
-
-README.md: $(DOC_MD_FILES)
-	stitchmd $(STITCHMD_FLAGS)
 
 .PHONY: golangci-lint
 golangci-lint:
@@ -77,19 +72,6 @@ generate-lint: $(TOOLS)
 	@go generate ./... && \
 		git diff --exit-code || \
 		(echo "'go generate' changed files" && false)
-
-# readme-lint depends on generate-lint
-# because that updates doc/reference.md.
-# In the future, that can be make-managed.
-.PHONE: readme-lint
-readme-lint: generate-lint
-	@echo "[lint] readme"
-	@DIFF=$$(stitchmd -diff $(STITCHMD_FLAGS)); \
-	if [[ -n "$$DIFF" ]]; then \
-		echo "stitchmd would change README:"; \
-		echo "$$DIFF"; \
-		false; \
-	fi \
 
 $(GS): $(GO_SRC_FILES) go.mod
 	go install go.abhg.dev/gs
