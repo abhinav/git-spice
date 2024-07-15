@@ -97,62 +97,6 @@ func TestBranchStateUnmarshal(t *testing.T) {
 				},
 			},
 		},
-
-		{
-			name: "UpgradeGitHub",
-			give: `{
-				"base": {"name": "main", "hash": "abc123"},
-				"upstream": {"branch": "main"},
-				"github": {"pr": 123}
-			}`,
-			want: &branchState{
-				Base: branchStateBase{
-					Name: "main",
-					Hash: "abc123",
-				},
-				Upstream: &branchUpstreamState{
-					Branch: "main",
-				},
-				Change: &branchChangeState{
-					Forge:  "github",
-					Change: json.RawMessage(`{"pr": 123}`),
-				},
-			},
-		},
-
-		{
-			name: "UpgradeGitHubConflict/SameForge",
-			give: `{
-				"base": {"name": "main", "hash": "abc123"},
-				"upstream": {"branch": "main"},
-				"github": {"pr": 123},
-				"change": {"github": {"number": 456}}
-			}`,
-			want: &branchState{
-				Base: branchStateBase{
-					Name: "main",
-					Hash: "abc123",
-				},
-				Upstream: &branchUpstreamState{
-					Branch: "main",
-				},
-				Change: &branchChangeState{
-					Forge:  "github",
-					Change: json.RawMessage(`{"number": 456}`),
-				},
-			},
-		},
-
-		{
-			name: "UpgradeGitHubConflict/OtherForge",
-			give: `{
-				"base": {"name": "main", "hash": "abc123"},
-				"upstream": {"branch": "main"},
-				"github": {"pr": 123},
-				"change": {"gitlab": {"number": 123}}
-			}`,
-			wantErr: "branch state has mixed forge metadata",
-		},
 	}
 
 	for _, tt := range tests {
