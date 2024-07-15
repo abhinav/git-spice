@@ -59,41 +59,6 @@ type branchState struct {
 	Change   *branchChangeState   `json:"change,omitempty"`
 }
 
-func (bs *branchState) UnmarshalJSON(data []byte) error {
-	type rawBranchState branchState
-
-	var raw struct {
-		rawBranchState
-
-		GitHubChange json.RawMessage `json:"github,omitempty"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("unmarshal branch state: %w", err)
-	}
-
-	*bs = branchState(raw.rawBranchState)
-
-	// Backwards compatibility for "github" change ID.
-	// Upgrade to the new format.
-	if len(raw.GitHubChange) > 0 {
-		if bs.Change != nil {
-			if bs.Change.Forge != "github" {
-				return fmt.Errorf("branch state has mixed forge metadata: github and %s", bs.Change.Forge)
-			}
-			// If the change is already a github change,
-			// prefer the new format's version.
-		} else {
-			bs.Change = &branchChangeState{
-				Forge:  "github",
-				Change: raw.GitHubChange,
-			}
-		}
-		raw.GitHubChange = nil
-	}
-
-	return nil
-}
-
 // branchJSON returns the path to the JSON file for the given branch
 // relative to the store's root.
 func (s *Store) branchJSON(name string) string {
