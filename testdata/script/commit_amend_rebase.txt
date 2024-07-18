@@ -29,13 +29,21 @@ git rebase -i HEAD~3
 git rev-parse HEAD
 stdout 94ce19e
 
-# add a commit with 'commit create'
+# amend the feature 1 commit
 mv $WORK/extra/feature1-part2.txt feature1-part2.txt
 git add feature1-part2.txt
 gs commit amend -n
 
 git rev-parse HEAD
 stdout 95044b5
+git rebase --continue
+
+# amend the feature 2 commit with -a flag
+mv $WORK/extra/new-feature2.txt feature2.txt
+gs commit amend -a -n
+
+git rev-parse HEAD
+stdout ad5037b
 git rebase --continue
 
 git graph HEAD
@@ -59,12 +67,16 @@ Contents of feature 3.
 pick 94ce19e Add feature 1
 break
 pick 556ae49 Add feature 2
+break
 pick 4041fd7 Add feature 3
 
 -- extra/feature1-part2.txt --
 Part 2 of feature 1.
+-- extra/new-feature2.txt --
+New contents of feature2.txt
+
 -- golden/graph-after.txt --
-* 20cdfa1 (HEAD -> feature3) Add feature 3
-* bfd39aa Add feature 2
+* 28fb9e0 (HEAD -> feature3) Add feature 3
+* ad5037b Add feature 2
 * 95044b5 Add feature 1
 * 63c927d (main) Initial commit
