@@ -11,6 +11,7 @@ import (
 )
 
 type commitAmendCmd struct {
+	All     bool   `short:"a" help:"Stage all changes before committing."`
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 	NoEdit  bool   `short:"n" help:"Don't edit the commit message"`
 }
@@ -36,6 +37,7 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		Message: cmd.Message,
 		Amend:   true,
 		NoEdit:  cmd.NoEdit,
+		All:     cmd.All,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
