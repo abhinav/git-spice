@@ -1,0 +1,3 @@
+kind: Added
+body: 'commit amend: Add -a/--all flag to stage changes to tracked files before committing.'
+time: 2024-07-18T17:07:45.173851-07:00
