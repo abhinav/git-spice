@@ -158,8 +158,9 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 
 // CommitSubject returns the subject of a commit.
 func (r *Repository) CommitSubject(ctx context.Context, commitish string) (string, error) {
-	out, err := r.gitCmd(ctx, "rev-list", "--no-commit-header", "-n1", "--format=%s", commitish).
-		OutputString(r.exec)
+	out, err := r.gitCmd(ctx, "rev-list",
+		"--no-commit-header", "-n1", "--format=%s", commitish, "--",
+	).OutputString(r.exec)
 	if err != nil {
 		return "", fmt.Errorf("git log: %w", err)
 	}
@@ -190,7 +191,8 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 	cmd := r.gitCmd(ctx, "rev-list",
 		"--no-commit-header",
 		"--format=%B%x00", // null-byte separated
-		start, "--not", stop)
+		start, "--not", stop, "--",
+	)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("pipe: %w", err)
