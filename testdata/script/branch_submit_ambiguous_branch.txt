@@ -1,0 +1,31 @@
+# When there's a branch with the same name
+# as a directory or file in the root of the repo,
+# git rev-list doesn't know whether it's an ref or path.
+#
+# This is a repro and test for it.
+
+as 'Test <test@example.com>'
+at '2024-07-18T09:38:08Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add doc
+gs bc doc -m 'Add docs'
+gs branch submit --fill
+stderr 'Created #'
+
+-- repo/doc/README.md --
+Contents of README
+
