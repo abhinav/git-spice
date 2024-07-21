@@ -430,6 +430,42 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	})
 }
 
+func TestIntegration_Repository_comments(t *testing.T) {
+	ctx := context.Background()
+	rec := newRecorder(t, t.Name())
+	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	commentBody := fixturetest.New(_fixtures, "comment", func() string {
+		return randomString(32)
+	}).Get(t)
+	commentID, err := repo.PostChangeComment(ctx, &github.PR{
+		Number: 4,
+		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
+	}, commentBody)
+	require.NoError(t, err, "could not post comment")
+	t.Cleanup(func() {
+		t.Logf("Deleting comment: %s", commentID)
+
+		require.NoError(t,
+			repo.DeleteChangeComment(ctx, commentID),
+			"could not delete comment")
+	})
+
+	t.Run("UpdateChangeComment", func(t *testing.T) {
+		newCommentBody := fixturetest.New(_fixtures, "new-comment", func() string {
+			return randomString(32)
+		}).Get(t)
+
+		require.NoError(t,
+			repo.UpdateChangeComment(ctx, commentID, newCommentBody),
+			"could not update comment")
+	})
+}
+
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // randomString generates a random alphanumeric string of length n.

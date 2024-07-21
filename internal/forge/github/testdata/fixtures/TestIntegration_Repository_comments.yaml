@@ -1,0 +1,105 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 200
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: |
+            {"query":"mutation($input:AddCommentInput!){addComment(input: $input){commentEdge{node{id,url}}}}","variables":{"input":{"subjectId":"PR_kwDOMVd0xs51N_9r","body":"iKGPcmSP0n5nGHdpPIU4PkZcBHAVCOYQ"}}}
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"addComment":{"commentEdge":{"node":{"id":"IC_kwDOMVd0xs6FnjcA","url":"https://github.com/abhinav/test-repo/pull/4#issuecomment-2241738496"}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 985.31525ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 200
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: |
+            {"query":"mutation($input:UpdateIssueCommentInput!){updateIssueComment(input: $input){issueComment{id}}}","variables":{"input":{"id":"IC_kwDOMVd0xs6FnjcA","body":"nKRcddPDoRmdWhAZK6B3lZeV7d9ddVVb"}}}
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"updateIssueComment":{"issueComment":{"id":"IC_kwDOMVd0xs6FnjcA"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 483.852083ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 158
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: |
+            {"query":"mutation($input:DeleteIssueCommentInput!){deleteIssueComment(input: $input){clientMutationId}}","variables":{"input":{"id":"IC_kwDOMVd0xs6FnjcA"}}}
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"deleteIssueComment":{"clientMutationId":null}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 795.707959ms
