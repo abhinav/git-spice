@@ -124,9 +124,7 @@ func main() {
 		}
 	}
 
-	shorthands := map[string][]string{
-		"can": {"commit", "amend", "--no-edit"},
-	}
+	shorthands := make(shorthands)
 
 	// For each leaf subcommand, define a combined shorthand alias.
 	// For example, if the command was "branch (b) create (c)",
@@ -150,27 +148,31 @@ func main() {
 		}
 
 		slices.Reverse(fragments)
-		shorthand := strings.Join(fragments, "")
-		if other, ok := shorthands[shorthand]; ok {
-			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", shorthand, n.Path(), other))
+		short := strings.Join(fragments, "")
+		if other, ok := shorthands[short]; ok {
+			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", short, n.Path(), other.Expanded))
 		}
 		// TODO: check if shorthand conflicts with any other aliases.
 
-		shorthands[shorthand] = fragments
+		shorthands[short] = shorthand{
+			Expanded: fragments,
+			Command:  n,
+		}
 	}
 
 	args := os.Args[1:]
 	if len(args) > 0 {
-		if path, ok := shorthands[args[0]]; ok {
-			args = slices.Replace(args, 0, 1, path...)
+		if short, ok := shorthands[args[0]]; ok {
+			// TODO: Replace first non-flag argument instead.
+			args = slices.Replace(args, 0, 1, short.Expanded...)
 		}
 	}
 
 	komplete.Run(parser,
 		komplete.WithTransformCompleted(func(args []string) []string {
 			if len(args) > 0 {
-				if path, ok := shorthands[args[0]]; ok {
-					args = slices.Replace(args, 0, 1, path...)
+				if short, ok := shorthands[args[0]]; ok {
+					args = slices.Replace(args, 0, 1, short.Expanded...)
 				}
 			}
 			return args
@@ -187,10 +189,17 @@ func main() {
 		logger.Fatalf("gs: %v", err)
 	}
 
-	if err := kctx.Run(); err != nil {
+	if err := kctx.Run(shorthands); err != nil {
 		logger.Fatalf("gs: %v", err)
 	}
 }
+
+type shorthand struct {
+	Expanded []string
+	Command  *kong.Node
+}
+
+type shorthands map[string]shorthand
 
 type globalOptions struct {
 	// Flags that are not accessed directly by command implementations:
@@ -231,7 +240,7 @@ type mainCmd struct {
 	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk branch"`
 
 	// Hidden commands:
-	DumpMD dumpMarkdownCmd `name:"dump-md" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
+	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {

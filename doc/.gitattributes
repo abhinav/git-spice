@@ -1,0 +1,3 @@
+** linguist-documentation
+*.svg -diff
+*.drawio -diff

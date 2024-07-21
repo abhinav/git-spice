@@ -1,0 +1,126 @@
+site_name: git-spice
+site_url: https://abhinav.github.io/git-spice
+site_description: >-
+  git-spice is a tool for stacking Git branches.
+  It helps you manage and navigate a stack of branches
+  that build on top of each other.
+copyright: '&copy; 2024 Abhinav Gupta'
+
+repo_url: https://github.com/abhinav/git-spice
+repo_name: abhinav/git-spice
+edit_uri: edit/main/doc/src/
+
+docs_dir: src
+site_dir: _site
+
+extra:
+  analytics:
+    provider: custom
+    token: !ENV [CLOUDFLARE_ANALYTICS_TOKEN, '']
+
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/abhinav
+    - icon: fontawesome/brands/mastodon
+      link: https://hachyderm.io/@abhinav
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/abhg.dev
+
+validation:
+  omitted_files: warn
+  absolute_links: relative_to_docs
+  unrecognized_links: warn
+  anchors: warn  # New in MkDocs 1.6
+strict: true
+
+theme:
+  name: material
+  custom_dir: overrides
+  palette:
+    scheme: slate
+
+  logo: img/logo.png
+  favicon: img/logo.png
+
+  icon:
+    repo: fontawesome/brands/github-alt
+
+  features:
+    - content.action.edit
+    - content.code.copy
+    - header.autohide
+    - navigation.expand
+    - navigation.indexes
+    - search.suggest
+    - toc.follow
+
+exclude_docs: |
+  img/README.md
+
+plugins:
+  - markdown-exec
+  - privacy:
+      enabled: !ENV [CI, false]
+  - search
+  - social:
+      enabled: !ENV [CI, false]
+
+hooks:
+  - hooks/cliref.py
+  - hooks/footer.py
+  - hooks/freeze.py
+  - hooks/listing.py
+  - hooks/pikchr.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      base_path: [includes]
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc: {permalink: true}
+
+nav:
+  - Home: index.md
+  - Get started:
+    - start/index.md
+    - start/install.md
+  - User Guide:
+    - guide/index.md
+    - guide/concepts.md
+    - guide/branch.md
+    - guide/pr.md
+    - guide/limits.md
+    - guide/internals.md
+  - Setting up:
+    - setup/index.md
+    - setup/auth.md
+    - setup/completion.md
+  - CLI:
+    - cli/index.md
+    - cli/shorthand.md
+  - how-to.md
+  - FAQ: faq.md
+  - Changelog: changelog.md
+
+not_in_nav: |
+  # Listed manually
+  start/stack.md
+  start/submit.md
+
+watch:
+  - includes
+  - overrides

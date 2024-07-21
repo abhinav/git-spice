@@ -13,9 +13,9 @@ The following tools are needed to work on this project:
 - [Changie](https://changie.dev/):
   We use Changie to manage the changelog.
   You'll need this if you make user-facing changes.
-- [stitchmd](https://github.com/abhinav/stitchmd):
-  We use stitchmd to generate the README from files inside the doc/ directory.
-  You'll need this to edit the README.
+- [pipenv](https://pipenv.pypa.io/en/latest/):
+  We use pipenv to manage Python dependencies for documentation generation.
+  You'll need this to preview changes to the doc/ directory.
 
 ## Making contributions
 
@@ -30,8 +30,8 @@ with the following notes:
   [skip changelog]: reason why no changelog entry is needed
   ```
 
-- If you edit documentation in doc/, run `make README.md` to update the README.
-  This requires stitchmd to be installed.
+- If you edit documentation in doc/,
+  run `pipenv install && pipenv run mkdocs serve` to preview changes.
 
 - All commits must include meaningful commit messages.
 - Test new features and bug fixes.

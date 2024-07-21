@@ -1,8 +1,8 @@
+//go:build dumpmd
+
 package main
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,52 +12,107 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-// dumpMarkdownCmd is a hidden flag that makes the command
-// dupm a Markdown reference to stdout and exit.
+// dumpMarkdownCmd is a hidden commnad that dumps
+// a Markdown reference to stdout and exit.
 type dumpMarkdownCmd struct {
-	Out string `help:"Output file" type:"path"`
-
-	w io.Writer
+	Ref        string `name:"ref" help:"Output file for command reference."`
+	Shorthands string `name:"shorthands" help:"Output file for shorthands table."`
 }
 
-func (cmd *dumpMarkdownCmd) Run(app *kong.Kong) (err error) {
-	var w io.Writer = os.Stdout
-	if cmd.Out != "" && cmd.Out != "-" {
-		f, err := os.Create(cmd.Out)
-		if err != nil {
-			return fmt.Errorf("create output file: %w", err)
-		}
-		defer func() {
-			err = errors.Join(err, f.Close())
-		}()
-		w = f
+func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts shorthands) (err error) {
+	ref, err := os.Create(cmd.Ref)
+	if err != nil {
+		return err
 	}
+	defer func() { _ = ref.Close() }()
 
-	buf := bufio.NewWriter(w)
-	defer func() {
-		err = errors.Join(err, buf.Flush())
-	}()
+	d := cliDumper{w: ref}
+	d.dump(app.Model)
 
-	cmd.w = buf
-	cmd.dump(app.Model)
+	if cmd.Shorthands != "" {
+		f, err := os.Create(cmd.Shorthands)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = f.Close() }()
+		dumpShorthands(f, shorts)
+	}
 	return nil
 }
 
-func (cmd *dumpMarkdownCmd) println(args ...interface{}) {
-	fmt.Fprintln(cmd.w, args...)
+func dumpShorthands(w io.Writer, shorts shorthands) {
+	keys := make([]string, 0, len(shorts))
+	for key := range shorts {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+
+	var t table
+	t.appendHeaders("Shorthand", "Long form")
+	for _, key := range keys {
+		cmd := cmdFullName(shorts[key].Command)
+		link := fmt.Sprintf("[%v](/cli/index.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
+		t.addRow("gs "+key, link)
+	}
+	t.dump(w)
 }
 
-func (cmd *dumpMarkdownCmd) print(args ...interface{}) {
-	fmt.Fprint(cmd.w, args...)
+type table struct {
+	headers []string
+	rows    [][]string
+
+	headerColumn bool
 }
 
-func (cmd *dumpMarkdownCmd) printf(format string, args ...interface{}) {
-	fmt.Fprintf(cmd.w, format, args...)
+func (t *table) appendHeaders(headers ...string) {
+	t.headers = append(t.headers, headers...)
 }
 
-func (cmd dumpMarkdownCmd) dump(app *kong.Application) {
-	cmd.header(1, app.Name+" command reference")
+func (t *table) addRow(row ...string) {
+	t.rows = append(t.rows, row)
+}
 
+func (t *table) dump(w io.Writer) {
+	fmt.Fprint(w, "|")
+	for _, h := range t.headers {
+		fmt.Fprintf(w, " **%s** |", h)
+	}
+	fmt.Fprintln(w)
+
+	fmt.Fprintln(w, "|", strings.Repeat(" --- |", len(t.headers)))
+	for _, row := range t.rows {
+		if t.headerColumn {
+			row[0] = "**" + row[0] + "**"
+		}
+		fmt.Fprintln(w, "|", strings.Join(row, " | "), "|")
+	}
+}
+
+type cliDumper struct {
+	w io.Writer
+}
+
+func (cmd *cliDumper) dump(app *kong.Application) {
+	// H1 is filled by the Markdown file that includes the result.
+
+	var groupKeys, groupTitles []string
+	cmdByGroup := make(map[string][]*kong.Node)
+	for _, subcmd := range app.Leaves(true) {
+		var key, title string
+		if grp := subcmd.ClosestGroup(); grp != nil {
+			key = grp.Key
+			title = grp.Title
+		}
+
+		if _, ok := cmdByGroup[key]; !ok {
+			groupKeys = append(groupKeys, key)
+			groupTitles = append(groupTitles, title)
+		}
+
+		cmdByGroup[key] = append(cmdByGroup[key], subcmd)
+	}
+
+	// TODO: separate "inspect" and "dump" steps
 	cmd.println("```")
 	cmd.println("gs" + app.Summary())
 	cmd.println("```")
@@ -79,23 +134,6 @@ func (cmd dumpMarkdownCmd) dump(app *kong.Application) {
 	}
 	cmd.println()
 
-	var groupKeys, groupTitles []string
-	cmdByGroup := make(map[string][]*kong.Node)
-	for _, subcmd := range app.Leaves(true) {
-		var key, title string
-		if grp := subcmd.ClosestGroup(); grp != nil {
-			key = grp.Key
-			title = grp.Title
-		}
-
-		if _, ok := cmdByGroup[key]; !ok {
-			groupKeys = append(groupKeys, key)
-			groupTitles = append(groupTitles, title)
-		}
-
-		cmdByGroup[key] = append(cmdByGroup[key], subcmd)
-	}
-
 	for i, key := range groupKeys {
 		lvl := 2
 		title := groupTitles[i]
@@ -110,19 +148,12 @@ func (cmd dumpMarkdownCmd) dump(app *kong.Application) {
 	}
 }
 
-func (cmd dumpMarkdownCmd) dumpCommand(node *kong.Node, level int) {
+func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 	if node.Hidden {
 		return
 	}
 
-	var parts []string
-	for n := node; n != nil && n.Type == kong.CommandNode; n = n.Parent {
-		parts = append(parts, n.Name)
-	}
-	parts = append(parts, "gs")
-	slices.Reverse(parts)
-
-	cmd.header(level, strings.Join(parts, " "))
+	cmd.header(level, cmdFullName(node))
 	cmd.println("```")
 	cmd.println("gs " + node.Summary())
 	cmd.println("```")
@@ -159,11 +190,11 @@ func (cmd dumpMarkdownCmd) dumpCommand(node *kong.Node, level int) {
 	}
 }
 
-func (cmd dumpMarkdownCmd) dumpArg(arg *kong.Positional) {
+func (cmd cliDumper) dumpArg(arg *kong.Positional) {
 	cmd.printf("* `%s`: %s\n", arg.Name, arg.Help)
 }
 
-func (cmd dumpMarkdownCmd) dumpFlag(flag *kong.Flag) {
+func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 	if flag.Hidden {
 		return
 	}
@@ -191,6 +222,28 @@ func (cmd dumpMarkdownCmd) dumpFlag(flag *kong.Flag) {
 	cmd.printf("`: %s\n", flag.Help)
 }
 
-func (cmd dumpMarkdownCmd) header(level int, text string) {
+func (cmd cliDumper) header(level int, text string) {
 	cmd.printf("%s %s\n\n", strings.Repeat("#", level), text)
+}
+
+func (cmd cliDumper) println(args ...interface{}) {
+	fmt.Fprintln(cmd.w, args...)
+}
+
+func (cmd cliDumper) print(args ...interface{}) {
+	fmt.Fprint(cmd.w, args...)
+}
+
+func (cmd cliDumper) printf(format string, args ...interface{}) {
+	fmt.Fprintf(cmd.w, format, args...)
+}
+
+func cmdFullName(node *kong.Node) string {
+	var parts []string
+	for n := node; n != nil && n.Type == kong.CommandNode; n = n.Parent {
+		parts = append(parts, n.Name)
+	}
+	parts = append(parts, "gs")
+	slices.Reverse(parts)
+	return strings.Join(parts, " ")
 }

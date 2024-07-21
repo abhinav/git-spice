@@ -1,14 +1,9 @@
-<!-- DO NOT EDIT. This file is generated from doc/*.md. Edit those instead. -->
-
 # git-spice
-
-- [Introduction](#introduction)
-- [License](#license)
 
 ## Introduction
 
 <div align="center">
-  <img src="doc/img/logo.png" width="300"/>
+  <img src="doc/src/img/logo.png" width="300"/>
 </div>
 
 [![CI](https://github.com/abhinav/git-spice/actions/workflows/ci.yml/badge.svg)](https://github.com/abhinav/git-spice/actions/workflows/ci.yml)
