@@ -150,12 +150,12 @@ func (b *BranchTreeSelect) Init() tea.Cmd {
 	selected := -1
 	for _, bi := range b.all {
 		bi.Visible = true
+		if bi.Branch == *b.value {
+			selected = bi.Index
+		}
 		if bi.Base == "" {
 			rootSet[bi.Index] = struct{}{}
 			continue
-		}
-		if bi.Branch == *b.value {
-			selected = bi.Index
 		}
 
 		var base *branchInfo

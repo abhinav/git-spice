@@ -80,19 +80,19 @@ feed \r
 -- golden/prompt-tracked.txt --
 ### init ###
 Select a branch to checkout:
-┏━■ bar ◀
+┏━□ bar
 ┣━□ foo
-main
+main ◀
 ### after ###
 Select a branch to checkout:
 bar ◀
 -- golden/prompt-all.txt --
 ### init ###
 Select a branch to checkout:
-baz ◀
+baz
 ┏━□ bar
 ┣━□ foo
-main
+main ◀
 quux
 qux
 ### after-ba ###
