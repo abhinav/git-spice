@@ -108,7 +108,7 @@ nav:
   - Setting up:
     - setup/index.md
     - setup/auth.md
-    - setup/completion.md
+    - setup/shell.md
   - CLI:
     - cli/index.md
     - cli/shorthand.md
