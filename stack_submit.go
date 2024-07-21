@@ -43,7 +43,8 @@ func (cmd *stackSubmitCmd) Run(
 
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
-	// TODO: submits should be done in parallel
+
+	var session submitSession
 	for _, branch := range stack {
 		if branch == store.Trunk() {
 			continue
@@ -52,7 +53,7 @@ func (cmd *stackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        branch,
-		}).Run(ctx, secretStash, log, opts)
+		}).run(ctx, &session, repo, store, svc, secretStash, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", branch, err)
 		}

@@ -1,0 +1,3 @@
+kind: Fixed
+body: '{upstack, downstack, stack} submit: Drop a few redundant calls to GitHub API.'
+time: 2024-07-21T14:45:39.905863-07:00
