@@ -12,8 +12,47 @@
 </div>
 
 git-spice is a tool for stacking Git branches.
+It lets you manage and navigate stacks of branches,
+conveniently modify and rebase them,
+and create GitHub Pull Requests from them.
 
-TODO: more details
+See <https://abhinav.github.io/git-spice/> for more details.
+
+Usage looks like this:
+
+```shell
+# Create a branch
+$ gs branch create
+
+# Restack a branck
+$ gs branch restack
+
+# Restack all branches
+$ gs stack restack
+
+# Submit a PR
+$ gs branch submit
+
+# Submit all PRs
+$ gs stack submit
+
+# Sync with trunk
+$ gs repo sync
+```
+
+## Features
+
+- Create, edit, and navigate stacks of branches with ease.
+- Create and update GitHub Pull Requests for the entire stack
+  or parts of it with a single command.
+- Keep using your existing workflow and adopt git-spice incrementally.
+- Completely offline operation with no external dependencies
+  until you push or pull from a remote repository.
+- Easy-to-remember shorthands for most commands.
+
+## Documentation
+
+See <https://abhinav.github.io/git-spice/> for the full documentation.
 
 ## License
 
