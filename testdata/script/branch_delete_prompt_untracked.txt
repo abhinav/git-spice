@@ -1,0 +1,39 @@
+# 'gs branch delete' with an untracked branch checked out
+# correctly focuses on the current branch by default.
+#
+# https://github.com/abhinav/git-spice/issues/258
+
+as 'Test <test@example.com>'
+at '2024-07-20T22:53:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git branch a
+git branch b
+git branch c
+git branch d
+
+git checkout c
+with-term -final exit $WORK/input.txt -- gs branch delete
+cmp stdout $WORK/golden.txt
+
+-- input.txt --
+await Select a branch
+snapshot prompt
+feed \r
+-- golden.txt --
+### prompt ###
+Select a branch to delete:
+a
+b
+c ◀
+d
+main
+### exit ###
+Select a branch to delete: c
+INF branch is not tracked: deleting anyway branch=c
+INF c: deleted (was 2848185)
