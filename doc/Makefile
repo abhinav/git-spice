@@ -40,6 +40,7 @@ generate: $(GS)
 	touch .cache/.install
 
 bin/pikchr: cmd/pikchr/pikchr.c
+	mkdir -p $(dir $@)
 	gcc -DPIKCHR_SHELL -o $@ $< -lm
 
 bin/gs: $(GO_SRC_FILES)
