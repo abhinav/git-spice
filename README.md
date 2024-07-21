@@ -18,26 +18,34 @@ and create GitHub Pull Requests from them.
 
 See <https://abhinav.github.io/git-spice/> for more details.
 
-Usage looks like this:
+Usage looks roughly like this:
 
 ```shell
-# Create a branch
-$ gs branch create
+# Stack a branch on top of the current branch.
+$ gs branch create feat1
 
-# Restack a branck
-$ gs branch restack
+# Stack aonther branch on top of feat1.
+$ gs branch create feat2
 
-# Restack all branches
-$ gs stack restack
-
-# Submit a PR
-$ gs branch submit
-
-# Submit all PRs
+# Submit pull requests for feat1 and feat2.
 $ gs stack submit
 
-# Sync with trunk
+# Pull latest changes from the remote repository
+# and delete merged branches.
 $ gs repo sync
+
+# Restack branches on top of the latest changes.
+$ gs stack restack
+```
+
+Or equivalently, using [CLI shorthands](https://abhinav.github.io/git-spice/cli/shorthand/):
+
+```shell
+$ gs bc feat1  # branch create feat1
+$ gs bc feat2  # branch create feat2
+$ gs ss        # stack submit
+$ gs rs        # repo sync
+$ gs sr        # stack restack
 ```
 
 ## Features
