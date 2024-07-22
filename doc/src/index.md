@@ -17,20 +17,29 @@ It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them,
 and create GitHub Pull Requests from them.
 
+It works with Git instead of trying to replace Git.
+Introduce it in small places in your existing workflow
+without changing how you work wholesale.
+
 <div class="grid" markdown>
 
 ```freeze language="shell"
 # Create a branch
-$ gs branch create
+$ git checkout -b feat1
+$ gs branch track
+# Or
+$ gs branch create feat1
 
 # Restack a branck
+$ git rebase -i base
+# Or
 $ gs branch restack
-
-# Restack all branches
-$ gs stack restack
 ```
 
 ```freeze language="shell"
+# Restack all branches
+$ gs stack restack
+
 # Submit a PR
 $ gs branch submit
 
