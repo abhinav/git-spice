@@ -177,22 +177,40 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		var give any
 
-		changes, err := sh.ListChanges()
-		if err != nil {
-			ts.Fatalf("list changes: %s", err)
-		}
-
 		cmd, args := args[0], args[1:]
 		switch cmd {
 		case "changes":
 			if len(args) != 0 {
 				ts.Fatalf("usage: shamhub dump changes")
 			}
+
+			changes, err := sh.ListChanges()
+			if err != nil {
+				ts.Fatalf("list changes: %s", err)
+			}
+
 			give = changes
+
+		case "comments":
+			if len(args) != 0 {
+				ts.Fatalf("usage: shamhub dump comments")
+			}
+
+			comments, err := sh.ListChangeComments()
+			if err != nil {
+				ts.Fatalf("list comments: %s", err)
+			}
+
+			give = comments
 
 		case "change":
 			if len(args) != 1 {
 				ts.Fatalf("usage: shamhub dump change <N>")
+			}
+
+			changes, err := sh.ListChanges()
+			if err != nil {
+				ts.Fatalf("list changes: %s", err)
 			}
 
 			want, err := strconv.Atoi(args[0])

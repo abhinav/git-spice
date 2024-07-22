@@ -145,6 +145,10 @@ type Repository interface {
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeIsMerged(ctx context.Context, id ChangeID) (bool, error)
 
+	// Post and update comments on changes.
+	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
+	UpdateChangeComment(context.Context, ChangeCommentID, string) error
+
 	// NewChangeMetadata builds a ChangeMetadata for the given change ID.
 	//
 	// This may perform network requests to fetch additional information
@@ -160,6 +164,11 @@ type Repository interface {
 
 // ChangeID is a unique identifier for a change in a repository.
 type ChangeID interface {
+	String() string
+}
+
+// ChangeCommentID is a unique identifier for a comment on a change.
+type ChangeCommentID interface {
 	String() string
 }
 
