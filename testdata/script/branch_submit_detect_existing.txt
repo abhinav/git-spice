@@ -36,7 +36,7 @@ git add feature1.txt
 git commit -m 'update feature1'
 
 gs branch submit
-stderr 'feature1: Found existing PR #'
+stderr 'feature1: Found existing CR #'
 stderr 'Updated #'
 
 shamhub dump changes

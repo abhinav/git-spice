@@ -65,10 +65,10 @@ This is feature 3
 -- repo/feature4.txt --
 This is feature 4
 -- golden/submit-dry-run.txt --
-INF WOULD create a pull request for feature1
-INF WOULD create a pull request for feature2
-INF WOULD create a pull request for feature3
-INF WOULD create a pull request for feature4
+INF WOULD create a CR for feature1
+INF WOULD create a CR for feature2
+INF WOULD create a CR for feature3
+INF WOULD create a CR for feature4
 -- golden/submit-log.txt --
 INF Created #1: $SHAMHUB_URL/alice/example/change/1
 INF Created #2: $SHAMHUB_URL/alice/example/change/2

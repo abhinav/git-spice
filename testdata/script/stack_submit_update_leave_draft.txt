@@ -38,7 +38,7 @@ git checkout feature2
 
 # Dry run
 gs stack submit --dry-run
-cmp stderr $WORK/golden/submit-dry-run.txt
+cmpenv stderr $WORK/golden/submit-dry-run.txt
 ! stderr 'draft' # draft status should not be changed
 
 shamhub dump changes
@@ -70,9 +70,9 @@ This is feature 2
 This is feature 3
 
 -- golden/submit-dry-run.txt --
-INF Pull request #1 is up-to-date
-INF Pull request #2 is up-to-date
-INF Pull request #3 is up-to-date
+INF CR #1 is up-to-date: $SHAMHUB_URL/alice/example/change/1
+INF CR #2 is up-to-date: $SHAMHUB_URL/alice/example/change/2
+INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
 -- golden/start.json --
 [
   {
