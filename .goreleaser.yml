@@ -28,41 +28,40 @@ archives:
 release:
   prerelease: auto
 
-# TODO: Enable when public
-# aurs:
-#   - name: git-spice-bin
-#     homepage: https://github.com/abhinav/git-spice
-#     description: "A tool for stacking Git branches."
-#     maintainers:
-#       - 'Abhinav Gupta <mail@abhinavg.net>'
-#     license: "GPL-3.0"
-#     git_url: "ssh://aur@aur.archlinux.org/git-spice-bin.git"
-#     skip_upload: auto
-#     private_key: '{{ .Env.AUR_KEY }}'
-#     package: |-
-#       install -Dm755 "./git-spice" "${pkgdir}/usr/bin/gs"
-#       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
-#       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
-#       install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
-#     commit_author:
-#       name: Abhinav Gupta
-#       email: mail@abhinavg.net
-#
-# brews:
-#   - tap:
-#       owner: abhinav
-#       name: homebrew-tap
-#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-#     commit_msg_template: "{{ .ProjectName }}: Update formula to {{ .Tag }}"
-#     commit_author:
-#       name: Abhinav Gupta
-#       email: mail@abhinavg.net
-#     homepage: https://github.com/abhinav/git-spice
-#     description: "A tool for stacking Git branches."
-#     license: "GPL-3.0"
-#     skip_upload: auto
-#     test: |
-#       system "#{bin}/gs --version"
+aurs:
+  - name: git-spice-bin
+    homepage: "https://abhinav.github.io/git-spice/"
+    description: "A tool for stacking Git branches."
+    maintainers:
+      - 'Abhinav Gupta <mail@abhinavg.net>'
+    license: "GPL-3.0"
+    git_url: "ssh://aur@aur.archlinux.org/git-spice-bin.git"
+    skip_upload: auto
+    private_key: '{{ .Env.AUR_KEY }}'
+    package: |-
+      install -Dm755 "./git-spice" "${pkgdir}/usr/bin/gs"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
+      install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
+    commit_author:
+      name: Abhinav Gupta
+      email: mail@abhinavg.net
+
+brews:
+  - repository:
+      owner: abhinav
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "{{ .ProjectName }}: Update formula to {{ .Tag }}"
+    commit_author:
+      name: Abhinav Gupta
+      email: mail@abhinavg.net
+    homepage: https://abhinav.github.io/git-spice/
+    description: "A tool for stacking Git branches."
+    license: "GPL-3.0"
+    skip_upload: auto
+    test: |
+      system "#{bin}/gs --version"
 
 checksum:
   name_template: 'checksums.txt'
