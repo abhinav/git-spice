@@ -17,6 +17,7 @@ import (
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
@@ -30,7 +31,10 @@ import (
 // This file tests basic, end-to-end interactions with the GitHub API
 // using recorded fixtures.
 
-var _update = flag.Bool("update", false, "update test fixtures")
+var (
+	_update   = flag.Bool("update", false, "update test fixtures")
+	_fixtures = fixturetest.Config{Update: _update}
+)
 
 // To avoid looking this up for every test that needs the repo ID,
 // we'll just hardcode it here.
@@ -278,24 +282,19 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 
 func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	ctx := context.Background()
+	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
+		return randomString(8)
+	})
 
-	branchFile := filepath.Join("testdata", t.Name(), "branch")
-	var (
-		branchName string
-		gitRepo    *git.Repository // only when _update is true
-	)
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	var gitRepo *git.Repository // only when _update is true
 	if *_update {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
-
-		// Generate a new branch name since we're updating the fixtures.
-		branchName = randomString(8)
-		require.NoError(t,
-			os.MkdirAll(filepath.Dir(branchFile), 0o755))
-		require.NoError(t,
-			os.WriteFile(branchFile, []byte(branchName), 0o644))
 
 		output := ioutil.TestOutputWriter(t, "[git] ")
 
@@ -312,7 +311,6 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		})
 		require.NoError(t, err, "failed to open git repo")
 
-		t.Logf("Creating branch: %s", branchName)
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
@@ -348,12 +346,6 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 					Refspec: git.Refspec(":" + branchName),
 				}), "error deleting branch")
 		})
-	} else {
-		bs, err := os.ReadFile(branchFile)
-		require.NoError(t, err, "could not read branch file")
-
-		branchName = strings.TrimSpace(string(bs))
-		t.Logf("Using branch: %s", branchName)
 	}
 
 	rec := newRecorder(t, t.Name())
@@ -373,18 +365,13 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	changeID := change.ID
 
 	t.Run("ChangeBase", func(t *testing.T) {
-		newBaseFile := filepath.Join("testdata", t.Name(), "new-base")
-		var newBase string
-		if *_update {
-			newBase = randomString(8)
-			require.NoError(t,
-				os.MkdirAll(filepath.Dir(newBaseFile), 0o755),
-				"error creating directory")
-			require.NoError(t,
-				os.WriteFile(newBaseFile, []byte(newBase), 0o644),
-				"could not write new base file")
+		newBaseFixture := fixturetest.New(_fixtures, "new-base", func() string {
+			return randomString(8)
+		})
 
-			t.Logf("Pushing new base: %s", newBase)
+		newBase := newBaseFixture.Get(t)
+		t.Logf("Pushing new base: %s", newBase)
+		if *_update {
 			require.NoError(t,
 				gitRepo.Push(ctx, git.PushOptions{
 					Remote:  "origin",
@@ -399,12 +386,6 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 						Refspec: git.Refspec(":" + newBase),
 					}), "error deleting branch")
 			})
-		} else {
-			bs, err := os.ReadFile(newBaseFile)
-			require.NoError(t, err, "could not read new base file")
-
-			newBase = strings.TrimSpace(string(bs))
-			t.Logf("Using new base: %s", newBase)
 		}
 
 		t.Logf("Changing base to: %s", newBase)
