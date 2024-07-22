@@ -53,6 +53,9 @@ cmp stderr $WORK/golden/ls-after.txt
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/changes.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/comments.json
+
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
@@ -145,3 +148,40 @@ main ◀
     }
   }
 ]
+-- golden/comments.json --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+        - #3
+            - #4
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #3 ◀
+            - #4
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 4
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #3
+            - #4 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>

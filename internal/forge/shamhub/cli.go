@@ -10,6 +10,7 @@ import (
 
 	"github.com/rogpeppe/go-internal/testscript"
 	"go.abhg.dev/gs/internal/logtest"
+	"gopkg.in/yaml.v3"
 )
 
 type (
@@ -175,6 +176,15 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			ts.Fatalf("ShamHub not initialized")
 		}
 
+		// Historically, we've used JSON values.
+		// New commands should use YAML or something more human-readable.
+		encode := func(v interface{}) error {
+			enc := json.NewEncoder(ts.Stdout())
+			enc.SetEscapeHTML(false)
+			enc.SetIndent("", "  ")
+			return enc.Encode(v)
+		}
+
 		var give any
 
 		cmd, args := args[0], args[1:]
@@ -196,12 +206,39 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 				ts.Fatalf("usage: shamhub dump comments")
 			}
 
-			comments, err := sh.ListChangeComments()
+			// Actual change comments have non-deterministic IDs.
+			// We'll just dump the comments and the changes they're
+			// on, sorted by change number and then comment text.
+			type changeComment struct {
+				Change int
+				Body   string
+			}
+
+			shamComments, err := sh.ListChangeComments()
 			if err != nil {
 				ts.Fatalf("list comments: %s", err)
 			}
 
+			var comments []changeComment
+			for _, c := range shamComments {
+				comments = append(comments, changeComment{
+					Change: c.Change,
+					Body:   c.Body,
+				})
+			}
+			slices.SortFunc(comments, func(a, b changeComment) int {
+				if a.Change != b.Change {
+					return a.Change - b.Change
+				}
+				return strings.Compare(a.Body, b.Body)
+			})
+
 			give = comments
+			encode = func(v interface{}) error {
+				enc := yaml.NewEncoder(ts.Stdout())
+				enc.SetIndent(2)
+				return enc.Encode(v)
+			}
 
 		case "change":
 			if len(args) != 1 {
@@ -230,9 +267,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			ts.Fatalf("unknown dump command: %s", cmd)
 		}
 
-		enc := json.NewEncoder(ts.Stdout())
-		enc.SetIndent("", "  ")
-		ts.Check(enc.Encode(give))
+		ts.Check(encode(give))
 
 	default:
 		ts.Fatalf("unknown command: %s", cmd)

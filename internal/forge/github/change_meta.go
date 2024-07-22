@@ -12,6 +12,8 @@ import (
 // PRMetadata is the metadata for a pull request.
 type PRMetadata struct {
 	PR *PR `json:"pr,omitempty"`
+
+	StackComment *PRComment `json:"comment,omitempty"`
 }
 
 var _ forge.ChangeMetadata = (*PRMetadata)(nil)
@@ -26,9 +28,30 @@ func (m *PRMetadata) ChangeID() forge.ChangeID {
 	return m.PR
 }
 
+// StackCommentID reports the comment ID of the stack comment
+// left on the pull request.
+func (m *PRMetadata) StackCommentID() forge.ChangeCommentID {
+	if m.StackComment == nil {
+		return nil
+	}
+	return m.StackComment
+}
+
+// SetStackCommentID sets the comment ID of the stack comment
+// left on the pull request.
+//
+// id may be nil.
+func (m *PRMetadata) SetStackCommentID(id forge.ChangeCommentID) {
+	m.StackComment = mustPRComment(id)
+}
+
 // NewChangeMetadata returns the metadata for a pull request.
-func (f *Repository) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
+func (f *Repository) NewChangeMetadata(
+	ctx context.Context,
+	id forge.ChangeID,
+) (forge.ChangeMetadata, error) {
 	pr := mustPR(id)
+
 	var err error
 	pr.GQLID, err = f.graphQLID(ctx, pr) // ensure GQL ID is set
 	if err != nil {
