@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch submit: Fix --draft/--no-draft API failures for existing PRs.'
-time: 2024-07-12T06:01:08.008134-07:00
