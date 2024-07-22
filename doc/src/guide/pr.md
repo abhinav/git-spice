@@ -39,6 +39,12 @@ For example:
     so that you can push branches to it.
     See [Limitations](limits.md) for more information.
 
+Pull Requests created by git-spice will include a comment at the top
+with a visual representation of the stack,
+and the position of the current branch in it.
+
+![Example of a stack comment](../img/stack-comment.png)
+
 ### Non-interactive submission
 
 Use the `--fill` flag provided by all the above commands
