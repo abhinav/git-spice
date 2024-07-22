@@ -41,6 +41,8 @@ jobs:
       - name: Build
         run: make build
         working-directory: doc
+        env:
+          CLOUDFLARE_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
