@@ -18,7 +18,7 @@ This page covers the authentication options for git-spice.
 To authenticate with GitHub, run:
 
 ```sh
-gs auth login github
+gs auth login
 ```
 
 This will present you with a list of authentication methods.
