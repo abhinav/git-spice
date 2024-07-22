@@ -187,6 +187,16 @@ type ChangeMetadata interface {
 	// ChangeID is a human-readable identifier for the change.
 	// This is presented to the user in the UI.
 	ChangeID() ChangeID
+
+	// StackCommentID is a comment left on the Change
+	// that contains a visualization of the stack.
+	StackCommentID() ChangeCommentID
+
+	// SetStackCommentID sets the ID of the stack comment
+	// on the chnage metadata to persist it later.
+	//
+	// The ID may be nil to indicate that there is no stack comment.
+	SetStackCommentID(ChangeCommentID)
 }
 
 // FindChangesOptions specifies filtering options

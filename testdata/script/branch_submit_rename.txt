@@ -28,6 +28,9 @@ stderr 'Created #'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/create.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/create-comments.txt
+
 # rename the branch
 gs branch rename feature1-new-name
 
@@ -40,6 +43,8 @@ gs bs
 stderr 'Updated #'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/update.json
+shamhub dump comments
+cmp stdout $WORK/golden/update-comments.txt
 
 -- repo/feature1.txt --
 Contents of feature1
@@ -66,6 +71,14 @@ New contents of feature1
   }
 ]
 
+-- golden/create-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
 -- golden/update.json --
 [
   {
@@ -84,3 +97,12 @@ New contents of feature1
     }
   }
 ]
+
+-- golden/update-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>

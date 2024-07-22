@@ -42,6 +42,12 @@ stderr 'Updated #'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/update.json
 
+# We'll have a duplicate comment
+# because we'll have lost information
+# about the previous comment.
+shamhub dump comments
+cmp stdout $WORK/golden/comments.txt
+
 -- repo/feature1.txt --
 Contents of feature1
 
@@ -66,3 +72,19 @@ New contents of feature1
     }
   }
 ]
+
+-- golden/comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>

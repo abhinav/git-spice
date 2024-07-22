@@ -37,6 +37,9 @@ cmp stderr $WORK/golden/ls.txt
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/start.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/start-comments.txt
+
 # Merge the bottom PR, sync, restack, and submit.
 shamhub merge alice/example 1
 gs rs
@@ -49,6 +52,8 @@ stderr 'Updated #3'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pr-1-merged.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/pr-1-merged-comments.txt
 
 -- repo/feature1.txt --
 This is feature 1
@@ -110,6 +115,34 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
   }
 ]
 
+-- golden/start-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
 -- golden/pr-1-merged.json --
 [
   {
@@ -160,6 +193,32 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
   }
 ]
 
+-- golden/pr-1-merged-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #2 ◀
+        - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #2
+        - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
 -- golden/ls.txt --
     ┏━□ feature3 (#3)
   ┏━┻□ feature2 (#2)

@@ -83,7 +83,22 @@ func (cmd *branchSubmitCmd) Run(
 	}
 
 	var session submitSession
-	return cmd.run(ctx, &session, repo, store, svc, secretStash, log, opts)
+	if err := cmd.run(ctx, &session, repo, store, svc, secretStash, log, opts); err != nil {
+		return err
+	}
+
+	if cmd.DryRun {
+		return nil
+	}
+
+	return syncStackComments(
+		ctx,
+		store,
+		svc,
+		session.remoteRepo.Require(),
+		log,
+		session.branches,
+	)
 }
 
 func (cmd *branchSubmitCmd) run(
@@ -120,6 +135,10 @@ func (cmd *branchSubmitCmd) run(
 		log.Errorf("  gs branch restack %s", cmd.Branch)
 		return errors.New("refusing to submit outdated branch")
 		// TODO: this can be made optional with a --force or a prompt.
+	}
+
+	if !cmd.DryRun {
+		session.branches = append(session.branches, cmd.Branch)
 	}
 
 	commitHash, err := repo.PeelToCommit(ctx, cmd.Branch)
@@ -369,7 +388,6 @@ func (cmd *branchSubmitCmd) run(
 		log.Infof("Updated %v: %s", pull.ID, pull.URL)
 	}
 
-	session.branches = append(session.branches, cmd.Branch)
 	return nil
 }
 

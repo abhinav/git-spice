@@ -33,6 +33,9 @@ cmpenv stderr $WORK/golden/submit-log.txt
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/comments.txt
+
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
@@ -91,3 +94,32 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     }
   }
 ]
+
+-- golden/comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>

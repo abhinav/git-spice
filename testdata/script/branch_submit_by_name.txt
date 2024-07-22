@@ -29,6 +29,8 @@ stderr 'Created #1'
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
 
+shamhub dump comments
+cmp stdout $WORK/golden/comments.json
 
 -- repo/feature1.txt --
 Contents of feature1
@@ -52,3 +54,11 @@ Contents of feature1
   }
 ]
 
+-- golden/comments.json --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>

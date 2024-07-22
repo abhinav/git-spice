@@ -70,5 +70,16 @@ func (cmd *downstackSubmitCmd) Run(
 		}
 	}
 
-	return nil
+	if cmd.DryRun {
+		return nil
+	}
+
+	return syncStackComments(
+		ctx,
+		store,
+		svc,
+		session.remoteRepo.Require(),
+		log,
+		session.branches,
+	)
 }
