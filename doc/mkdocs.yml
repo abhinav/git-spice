@@ -14,9 +14,7 @@ docs_dir: src
 site_dir: _site
 
 extra:
-  analytics:
-    provider: custom
-    token: !ENV [CLOUDFLARE_ANALYTICS_TOKEN, '']
+  cloudflare_token: !ENV [CLOUDFLARE_ANALYTICS_TOKEN, '']
 
   social:
     - icon: fontawesome/brands/github-alt
