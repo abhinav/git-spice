@@ -4,6 +4,6 @@
   {{ super() }}
 
   {% if config.extra.cloudflare_token -%}
-  <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "{{ config.extra.cloudflare_token }}"}'></script>
+  <script src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "{{ config.extra.cloudflare_token }}"}'></script>
   {%- endif %}
 {% endblock %}
