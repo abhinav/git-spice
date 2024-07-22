@@ -109,4 +109,13 @@ $ gs repo sync
     Explore the list of shorthands with `--help` or at [Shorthands](cli/shorthand.md).
     We recommend adopting these incrementally.
 
+-   [:material-currency-usd-off:{ .lg .middle } __Free and open-source__](https://github.com/abhinav/git-spice)
+
+    ---
+
+    git-spice is free and open-source software.
+    It is made available under the GPL-3.0 license.
+    You may use it to develop proprietary software,
+    but any changes you make to git-spice itself must be shared.
+
 </div>
