@@ -82,6 +82,20 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
+	var session submitSession
+	return cmd.run(ctx, &session, repo, store, svc, secretStash, log, opts)
+}
+
+func (cmd *branchSubmitCmd) run(
+	ctx context.Context,
+	session *submitSession,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+	secretStash secret.Stash,
+	log *log.Logger,
+	opts *globalOptions,
+) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -121,12 +135,16 @@ func (cmd *branchSubmitCmd) Run(
 		upstreamBranch = branch.UpstreamBranch
 	}
 
-	remote, err := ensureRemote(ctx, repo, store, log, opts)
+	remote, err := session.remote.Get(func() (string, error) {
+		return ensureRemote(ctx, repo, store, log, opts)
+	})
 	if err != nil {
 		return err
 	}
 
-	remoteRepo, err := openRemoteRepository(ctx, log, secretStash, repo, remote)
+	remoteRepo, err := session.remoteRepo.Get(func() (forge.Repository, error) {
+		return openRemoteRepository(ctx, log, secretStash, repo, remote)
+	})
 	if err != nil {
 		return err
 	}
@@ -146,7 +164,8 @@ func (cmd *branchSubmitCmd) Run(
 
 		switch len(changes) {
 		case 0:
-			// No PRs found, we'll create one.
+			// No PRs found, one will be created later.
+
 		case 1:
 			existingChange = changes[0]
 
@@ -190,8 +209,7 @@ func (cmd *branchSubmitCmd) Run(
 	} else {
 		// If a PR is already associated with the branch,
 		// fetch information about it to compare with the current state.
-		changeID := branch.Change.ChangeID()
-		change, err := remoteRepo.FindChangeByID(ctx, changeID)
+		change, err := remoteRepo.FindChangeByID(ctx, branch.Change.ChangeID())
 		if err != nil {
 			return fmt.Errorf("find change: %w", err)
 		}
@@ -351,6 +369,7 @@ func (cmd *branchSubmitCmd) Run(
 		log.Infof("Updated %v: %s", pull.ID, pull.URL)
 	}
 
+	session.branches = append(session.branches, cmd.Branch)
 	return nil
 }
 

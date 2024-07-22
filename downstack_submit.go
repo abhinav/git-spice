@@ -59,11 +59,12 @@ func (cmd *downstackSubmitCmd) Run(
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 	// TODO: submits should be done in parallel
+	var session submitSession
 	for _, downstack := range downstacks {
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        downstack,
-		}).Run(ctx, secretStash, log, opts)
+		}).run(ctx, &session, repo, store, svc, secretStash, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)
 		}
