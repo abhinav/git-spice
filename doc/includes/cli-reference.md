@@ -193,9 +193,9 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the pull request title and body from the commit messages
-* `--[no-]draft`: Whether to mark pull requests as drafts
-* `--no-publish`: Push branches but don't create pull requests
+* `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--no-publish`: Push branches but don't create change requests
 
 ### gs stack restack
 
@@ -259,9 +259,9 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the pull request title and body from the commit messages
-* `--[no-]draft`: Whether to mark pull requests as drafts
-* `--no-publish`: Push branches but don't create pull requests
+* `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--no-publish`: Push branches but don't create change requests
 * `--branch=NAME`: Branch to start at
 
 ### gs upstack restack
@@ -345,9 +345,9 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the pull request title and body from the commit messages
-* `--[no-]draft`: Whether to mark pull requests as drafts
-* `--no-publish`: Push branches but don't create pull requests
+* `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--no-publish`: Push branches but don't create change requests
 * `--branch=NAME`: Branch to start at
 
 ### gs downstack edit
@@ -689,7 +689,7 @@ Use the --branch flag to target a different branch.
 For new Change Requests, a prompt will allow filling metadata.
 Use the --title and --body flags to skip the prompt,
 or the --fill flag to use the commit message to fill them in.
-The --draft flag marks the pull request as a draft.
+The --draft flag marks the change request as a draft.
 For updating Change Requests,
 use --draft/--no-draft to change its draft status.
 Without the flag, the draft status is not changed.
@@ -700,11 +700,11 @@ Request.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the pull request title and body from the commit messages
-* `--[no-]draft`: Whether to mark pull requests as drafts
-* `--no-publish`: Push branches but don't create pull requests
-* `--title=TITLE`: Title of the pull request
-* `--body=BODY`: Body of the pull request
+* `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--no-publish`: Push branches but don't create change requests
+* `--title=TITLE`: Title of the change request
+* `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
 ## Commit

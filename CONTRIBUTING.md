@@ -31,8 +31,7 @@ with the following notes:
   ```
 
 - If you edit documentation in doc/,
-  run `pipenv install && pipenv run mkdocs serve` to preview changes.
-
+  install `pipenv` and run `make serve` to preview changes.
 - All commits must include meaningful commit messages.
 - Test new features and bug fixes.
   If it does not have a test, the bug is not fixed.

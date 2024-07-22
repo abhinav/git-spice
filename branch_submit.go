@@ -21,10 +21,10 @@ import (
 // submitOptions defines options that are common to all submit commands.
 type submitOptions struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `help:"Fill in the pull request title and body from the commit messages"`
+	Fill   bool `help:"Fill in the change title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt?
-	Draft     *bool `negatable:"" help:"Whether to mark pull requests as drafts"`
-	NoPublish bool  `name:"no-publish" help:"Push branches but don't create pull requests"`
+	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
+	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
 
 	// TODO: Other creation options e.g.:
 	// - assignees
@@ -46,8 +46,8 @@ This has no effect if a branch already has an open CR.
 type branchSubmitCmd struct {
 	submitOptions
 
-	Title string `help:"Title of the pull request" placeholder:"TITLE"`
-	Body  string `help:"Body of the pull request" placeholder:"BODY"`
+	Title string `help:"Title of the change request" placeholder:"TITLE"`
+	Body  string `help:"Body of the change request" placeholder:"BODY"`
 
 	Branch string `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
@@ -61,7 +61,7 @@ func (*branchSubmitCmd) Help() string {
 		For new Change Requests, a prompt will allow filling metadata.
 		Use the --title and --body flags to skip the prompt,
 		or the --fill flag to use the commit message to fill them in.
-		The --draft flag marks the pull request as a draft.
+		The --draft flag marks the change request as a draft.
 		For updating Change Requests,
 		use --draft/--no-draft to change its draft status.
 		Without the flag, the draft status is not changed.
@@ -168,7 +168,7 @@ func (cmd *branchSubmitCmd) run(
 		return err
 	}
 
-	// If the branch doesn't have a PR associated with it,
+	// If the branch doesn't have a CR associated with it,
 	// we'll probably need to create one,
 	// but verify that there isn't already one open.
 	var existingChange *forge.FindChangeItem
@@ -199,10 +199,10 @@ func (cmd *branchSubmitCmd) run(
 				return fmt.Errorf("marshal change metadata: %w", err)
 			}
 
-			// A PR was found, but it wasn't associated with the branch.
+			// A CR was found, but it wasn't associated with the branch.
 			// It was probably created manually.
 			// We'll heal the state while we're at it.
-			log.Infof("%v: Found existing PR %v", cmd.Branch, existingChange.ID)
+			log.Infof("%v: Found existing CR %v", cmd.Branch, existingChange.ID)
 			err = store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{
 					{
@@ -211,7 +211,7 @@ func (cmd *branchSubmitCmd) run(
 						ChangeMetadata: changeMeta,
 					},
 				},
-				Message: fmt.Sprintf("%v: associate existing PR", cmd.Branch),
+				Message: fmt.Sprintf("%v: associate existing CR", cmd.Branch),
 			})
 			if err != nil {
 				return fmt.Errorf("update state: %w", err)
@@ -222,27 +222,27 @@ func (cmd *branchSubmitCmd) run(
 			// with the same base branch.
 			// If we get here, it means there are multiple PRs open
 			// with different base branches.
-			return fmt.Errorf("multiple open pull requests for %s", cmd.Branch)
+			return fmt.Errorf("multiple open change requests for %s", cmd.Branch)
 			// TODO: Ask the user to pick one and associate it with the branch.
 		}
 	} else {
-		// If a PR is already associated with the branch,
+		// If a CR is already associated with the branch,
 		// fetch information about it to compare with the current state.
 		change, err := remoteRepo.FindChangeByID(ctx, branch.Change.ChangeID())
 		if err != nil {
 			return fmt.Errorf("find change: %w", err)
 		}
-		// TODO: If the PR is closed, we should treat it as non-existent.
+		// TODO: If the CR is closed, we should treat it as non-existent.
 		existingChange = change
 	}
 
-	// At this point, existingChange is nil only if we need to create a new PR.
+	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
 		if cmd.DryRun {
 			if cmd.NoPublish {
 				log.Infof("WOULD push branch %s", cmd.Branch)
 			} else {
-				log.Infof("WOULD create a pull request for %s", cmd.Branch)
+				log.Infof("WOULD create a CR for %s", cmd.Branch)
 			}
 			return nil
 		}
@@ -346,12 +346,12 @@ func (cmd *branchSubmitCmd) run(
 		}
 
 		if len(updates) == 0 {
-			log.Infof("Pull request %v is up-to-date", pull.ID)
+			log.Infof("CR %v is up-to-date: %s", pull.ID, pull.URL)
 			return nil
 		}
 
 		if cmd.DryRun {
-			log.Infof("WOULD update PR %v:", pull.ID)
+			log.Infof("WOULD update CR %v:", pull.ID)
 			for _, update := range updates {
 				log.Infof("  - %s", update)
 			}
@@ -381,7 +381,7 @@ func (cmd *branchSubmitCmd) run(
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, opts); err != nil {
-				return fmt.Errorf("edit PR %v: %w", pull.ID, err)
+				return fmt.Errorf("edit CR %v: %w", pull.ID, err)
 			}
 		}
 
@@ -418,7 +418,7 @@ func (f *branchSubmitForm) titleField(title *string) ui.Field {
 	return ui.NewInput().
 		WithValue(title).
 		WithTitle("Title").
-		WithDescription("Short summary of the pull request").
+		WithDescription("Short summary of the change").
 		WithValidate(func(s string) error {
 			if strings.TrimSpace(s) == "" {
 				return errors.New("title cannot be blank")
@@ -451,7 +451,7 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 				WithValue(&f.tmpl).
 				WithOptions(opts...).
 				WithTitle("Template").
-				WithDescription("Choose a template for the pull request body")
+				WithDescription("Choose a template for the change body")
 		}
 	})
 }
@@ -470,7 +470,7 @@ func (f *branchSubmitForm) bodyField(body *string) ui.Field {
 			WithValue(body).
 			WithTitle("Body").
 			WithDescription("Open your editor to write " +
-				"a detailed description of the pull request")
+				"a detailed description of the change")
 	})
 }
 
@@ -478,7 +478,7 @@ func (f *branchSubmitForm) draftField(draft *bool) ui.Field {
 	return ui.NewConfirm().
 		WithValue(draft).
 		WithTitle("Draft").
-		WithDescription("Mark the pull request as a draft?")
+		WithDescription("Mark the change as a draft?")
 }
 
 // Fills change information in the branch submit command.
@@ -615,7 +615,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 			return nil, fmt.Errorf("prompt form: %w", err)
 		}
 	}
-	must.NotBeBlankf(cmd.Title, "PR title must have been set")
+	must.NotBeBlankf(cmd.Title, "CR title must have been set")
 
 	storePrepared := state.PreparedBranch{
 		Name:    cmd.Branch,
@@ -643,7 +643,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	}, nil
 }
 
-// preparedBranch is a branch that is ready to be published as a PR
+// preparedBranch is a branch that is ready to be published as a CR
 // (or equivalent).
 type preparedBranch struct {
 	state.PreparedBranch

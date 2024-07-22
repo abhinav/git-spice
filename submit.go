@@ -267,7 +267,7 @@ func syncStackComments(
 type stackedChange struct {
 	Change forge.ChangeID
 
-	Base   int // -1 = no base PR
+	Base   int // -1 = no base CR
 	Aboves []int
 }
 

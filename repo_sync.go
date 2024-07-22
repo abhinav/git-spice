@@ -206,11 +206,11 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 ) error {
 	// There are two options for detecting merged branches:
 	//
-	// 1. Query the PR status for each submitted branch.
+	// 1. Query the CR status for each submitted branch.
 	//    This is more accurate, but requires a lot of API calls.
 	// 2. List recently merged PRs and match against tracked branches.
 	//    The number of API calls here is smaller,
-	//    but the matching is less accurate because the PR may have been
+	//    but the matching is less accurate because the CR may have been
 	//    submitted by someone else.
 	//
 	// For now, we'll go for (1) with the assumption that the number of
@@ -243,7 +243,7 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	// 2. Branches that the user submitted PRs for manually
 	//    with 'gh pr create' or similar.
 	//
-	// For the first, we can perform a cheaper API call to check the PR status.
+	// For the first, we can perform a cheaper API call to check the CR status.
 	// For the second, we need to find recently merged PRs with that branch
 	// name, and match the remote head SHA to the branch head SHA.
 	//
@@ -274,7 +274,7 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 					// we can combine all submitted PRs into one query.
 					merged, err := remoteRepo.ChangeIsMerged(ctx, b.Change)
 					if err != nil {
-						log.Error("Failed to query PR status", "pr", b.Change, "error", err)
+						log.Error("Failed to query CR status", "change", b.Change, "error", err)
 						continue
 					}
 

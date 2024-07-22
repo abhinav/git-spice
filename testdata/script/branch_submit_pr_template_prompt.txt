@@ -69,16 +69,16 @@ feed \r
 -- golden/prompt.txt --
 ### title ###
 Title: Add feature
-Short summary of the pull request
+Short summary of the change
 ### body ###
 Title: Add feature
 Body: Press [e] to open mockedit or [enter/tab] to skip
-Open your editor to write a detailed description of the pull request
+Open your editor to write a detailed description of the change
 ### draft ###
 Title: Add feature
 Body: Press [e] to open mockedit or [enter/tab] to skip
 Draft: [y/N]
-Mark the pull request as a draft?
+Mark the change as a draft?
 ### exit ###
 Title: Add feature
 Body: Press [e] to open mockedit or [enter/tab] to skip
