@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: Allow `$EDITOR` to be a shell command, not just an executable name.'
+time: 2024-07-23T07:10:06.624028-07:00

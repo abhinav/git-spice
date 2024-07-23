@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"go.abhg.dev/gs/internal/execedit"
 	"go.abhg.dev/gs/internal/osutil"
 )
 
@@ -47,12 +47,16 @@ var DefaultOpenEditorStyle = OpenEditorStyle{
 type Editor struct {
 	// Command is the editor command to run.
 	//
-	// Defaults to "$EDITOR".
+	// This may be a shell command like:
+	//
+	//	FOO=bar gvim --nofork
+	//
+	// or a binary name like:
+	//
+	//	nvim
+	//
+	// For the former case, we'll use 'sh -c' to run the command.
 	Command string
-
-	// Args are the arguments to pass to the editor command
-	// before the file name.
-	Args []string
 
 	// Ext is the extension to assign to the file
 	// before opening the editor.
@@ -88,17 +92,13 @@ var _ Field = (*OpenEditor)(nil)
 // NewOpenEditor builds an [OpenEditor] field.
 // It will prompt the user to open an editor and write a message,
 // or accept the current value.
-func NewOpenEditor() *OpenEditor {
-	ed := &OpenEditor{
+func NewOpenEditor(editor Editor) *OpenEditor {
+	return &OpenEditor{
 		KeyMap: DefaultOpenEditorKeyMap,
 		Style:  DefaultOpenEditorStyle,
-		Editor: DefaultEditor(),
+		Editor: editor,
 		value:  new(string),
 	}
-	if ed.Editor.Command == "" {
-		ed.err = errors.New("no editor found: please set $EDITOR")
-	}
-	return ed
 }
 
 // Err reports any errors encountered during the operation.
@@ -174,11 +174,7 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 				return tea.Quit
 			}
 
-			var args []string
-			args = append(args, a.Editor.Args...)
-			args = append(args, tmpFile)
-			cmd := exec.Command(a.Editor.Command, args...)
-
+			cmd := execedit.Command(a.Editor.Command, tmpFile)
 			return tea.ExecProcess(cmd, func(err error) tea.Msg {
 				defer func() { _ = os.Remove(tmpFile) }()
 

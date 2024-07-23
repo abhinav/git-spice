@@ -231,7 +231,7 @@ Branches that are deleted from the list will be ignored.
 
 **Flags**
 
-* `--editor=STRING`: Editor to use for editing the branches.
+* `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch whose stack we're editing. Defaults to current branch.
 
 ### gs upstack submit
@@ -374,7 +374,7 @@ Branches that are upstack of the current branch will not be modified.
 
 **Flags**
 
-* `--editor=STRING`: Editor to use for editing the downstack.
+* `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch to edit from. Defaults to current branch.
 
 ## Branch
