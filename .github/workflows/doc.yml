@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: doc/Pipfile.lock
 
       - name: Install pipenv
-        run: pip install pipenv
+        run: pip install pipenv==2024.0.1
 
       - name: Install Python dependencies
         run: pipenv install --deploy
