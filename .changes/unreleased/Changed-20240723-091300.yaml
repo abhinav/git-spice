@@ -1,0 +1,3 @@
+kind: Changed
+body: 'cli: Run the help command when no subcommands are included'
+time: 2024-07-23T09:13:00.419337+09:00
