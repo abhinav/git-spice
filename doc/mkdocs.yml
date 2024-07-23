@@ -109,6 +109,7 @@ nav:
     - setup/shell.md
   - CLI:
     - cli/index.md
+    - cli/reference.md
     - cli/shorthand.md
   - how-to.md
   - FAQ: faq.md

@@ -7,7 +7,7 @@ from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.structure.files import Files
 
 
-_CLI_PAGE = "cli/index.md"
+_CLI_PAGE = "cli/reference.md"
 _cmd_re = re.compile(r"\$\$([^$]+)\$\$")
 
 

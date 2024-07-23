@@ -51,7 +51,7 @@ func dumpShorthands(w io.Writer, shorts shorthands) {
 	t.appendHeaders("Shorthand", "Long form")
 	for _, key := range keys {
 		cmd := cmdFullName(shorts[key].Command)
-		link := fmt.Sprintf("[%v](/cli/index.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
+		link := fmt.Sprintf("[%v](/cli/reference.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
 		t.addRow("gs "+key, link)
 	}
 	t.dump(w)

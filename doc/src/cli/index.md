@@ -1,10 +1,12 @@
 ---
-icon: material/console
+icon: material/console-line
+template: templates/index_page.html
+hide: [toc]
 description: >-
-  Comprehensive list of all available commands and options
-  for the git-spice CLI.
+  Learn about the specifics of the git-spice CLI.
 ---
 
-# CLI Reference
+# CLI
 
---8<-- "cli-reference.md"
+The git-spice CLI is delivered as the command `gs`.
+Explore the [complete list of available commands here](reference.md).
