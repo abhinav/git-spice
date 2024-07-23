@@ -161,11 +161,11 @@ func main() {
 	}
 
 	args := os.Args[1:]
-	if len(args) > 0 {
-		if short, ok := shorthands[args[0]]; ok {
-			// TODO: Replace first non-flag argument instead.
-			args = slices.Replace(args, 0, 1, short.Expanded...)
-		}
+	if len(args) == 0 {
+		args = []string{"--help"}
+	} else if short, ok := shorthands[args[0]]; ok {
+		// TODO: Replace first non-flag argument instead.
+		args = slices.Replace(args, 0, 1, short.Expanded...)
 	}
 
 	komplete.Run(parser,
