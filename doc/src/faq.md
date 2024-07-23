@@ -54,3 +54,20 @@ This makes it easier for PR reviewers to work through the changes.
 
 And with GitHub squash-merges, you can still get a clean history
 consisting of atomic, revertible commits on the trunk branch.
+
+## How does git-spice interact with `rebase.updateRefs`?
+
+The [--update-refs](https://git-scm.com/docs/git-rebase/2.42.1#Documentation/git-rebase.txt---update-refs) flag
+and its accompanying
+[`rebase.updateRefs`](https://git-scm.com/docs/git-rebase/2.42.1#Documentation/git-rebase.txt-rebaseupdateRefs)
+configuration tell `git rebase` to automatically force-update
+intermediate branches associated with commits affected by the rebase.
+Some use it to help locally manage their stack of branches.
+
+git-spice does not conflict with `--update-refs`.
+If you prefer to use `--update-refs` for branch stacking,
+you can continue to do so,
+while still using git-spice to navigate the stack and submit PRs.
+If you run a git-spice restack operation,
+it will automatically detect that the branches are already properly stacked,
+and leave them as-is.
