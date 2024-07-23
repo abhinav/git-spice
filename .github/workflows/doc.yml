@@ -9,6 +9,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+env:
+  PIPENV_VERSION: 2024.0.1
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,7 +35,7 @@ jobs:
           cache-dependency-path: doc/Pipfile.lock
 
       - name: Install pipenv
-        run: pip install pipenv
+        run: pip install pipenv==${{ env.PIPENV_VERSION }}
 
       - name: Install Python dependencies
         run: pipenv install --deploy
