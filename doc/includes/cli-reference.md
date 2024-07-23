@@ -196,6 +196,7 @@ This has no effect if a branch already has an open CR.
 * `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--force`: Force push, bypassing safety checks
 
 ### gs stack restack
 
@@ -262,6 +263,7 @@ This has no effect if a branch already has an open CR.
 * `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
 
 ### gs upstack restack
@@ -348,6 +350,7 @@ This has no effect if a branch already has an open CR.
 * `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
 
 ### gs downstack edit
@@ -703,6 +706,7 @@ Request.
 * `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--force`: Force push, bypassing safety checks
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit

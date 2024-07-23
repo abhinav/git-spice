@@ -26,6 +26,8 @@ type submitOptions struct {
 	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
 	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
 
+	Force bool `help:"Force push, bypassing safety checks"`
+
 	// TODO: Other creation options e.g.:
 	// - assignees
 	// - labels
@@ -129,12 +131,15 @@ func (cmd *branchSubmitCmd) run(
 	}
 
 	// Refuse to submit if the branch is not restacked.
-	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
-		log.Errorf("Branch %s needs to be restacked.", cmd.Branch)
-		log.Errorf("Run the following command to fix this:")
-		log.Errorf("  gs branch restack %s", cmd.Branch)
-		return errors.New("refusing to submit outdated branch")
-		// TODO: this can be made optional with a --force or a prompt.
+	if !cmd.Force {
+		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
+			log.Errorf("Branch %s needs to be restacked.", cmd.Branch)
+			log.Errorf("Run the following command to fix this:")
+			log.Errorf("  gs branch restack %s", cmd.Branch)
+			log.Errorf("Or, try again with --force to submit anyway.")
+			return errors.New("refusing to submit outdated branch")
+			// TODO: this can be made optional with a --force or a prompt.
+		}
 	}
 
 	if !cmd.DryRun && !cmd.NoPublish {
@@ -269,14 +274,18 @@ func (cmd *branchSubmitCmd) run(
 			Refspec: git.Refspec(
 				commitHash.String() + ":refs/heads/" + upstreamBranch,
 			),
+			Force: cmd.Force,
 		}
 
 		// If we've already pushed this branch before,
-		// we'll need a force push. Use a --force-with-lease to avoid
+		// we'll need a force push.
+		// Use a --force-with-lease to avoid
 		// overwriting someone else's changes.
-		existingHash, err := repo.PeelToCommit(ctx, remote+"/"+upstreamBranch)
-		if err == nil {
-			pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+		if !cmd.Force {
+			existingHash, err := repo.PeelToCommit(ctx, remote+"/"+upstreamBranch)
+			if err == nil {
+				pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+			}
 		}
 
 		err = repo.Push(ctx, pushOpts)
@@ -359,17 +368,24 @@ func (cmd *branchSubmitCmd) run(
 		}
 
 		if pull.HeadHash != commitHash {
-			err := repo.Push(ctx, git.PushOptions{
+			pushOpts := git.PushOptions{
 				Remote: remote,
 				Refspec: git.Refspec(
 					commitHash.String() + ":refs/heads/" + upstreamBranch,
 				),
+				Force: cmd.Force,
+			}
+			if !cmd.Force {
 				// Force push, but only if the ref is exactly
 				// where we think it is.
-				ForceWithLease: upstreamBranch + ":" + pull.HeadHash.String(),
-			})
-			if err != nil {
-				log.Error("Branch may have been updated by someone else.")
+				existingHash, err := repo.PeelToCommit(ctx, remote+"/"+upstreamBranch)
+				if err == nil {
+					pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+				}
+			}
+
+			if err := repo.Push(ctx, pushOpts); err != nil {
+				log.Error("Push failed. Branch may have been updated by someone else. Try with --force.")
 				return fmt.Errorf("push branch: %w", err)
 			}
 		}

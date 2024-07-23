@@ -15,6 +15,9 @@ type PushOptions struct {
 	// the operation fails.
 	Remote string
 
+	// Force indicates that a push should overwrite the ref.
+	Force bool
+
 	// ForceWithLease indicates that a push should overwrite a ref
 	// even if the new value is not a descendant of the current value
 	// provided that our knowledge of the current value is up-to-date.
@@ -34,6 +37,9 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 	args := []string{"push"}
 	if lease := opts.ForceWithLease; lease != "" {
 		args = append(args, "--force-with-lease="+lease)
+	}
+	if opts.Force {
+		args = append(args, "--force")
 	}
 	if opts.Remote != "" {
 		args = append(args, opts.Remote)
