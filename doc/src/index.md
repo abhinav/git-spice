@@ -30,7 +30,7 @@ $ gs branch track
 # Or
 $ gs branch create feat1
 
-# Restack a branck
+# Restack a branch
 $ git rebase -i base
 # Or
 $ gs branch restack
