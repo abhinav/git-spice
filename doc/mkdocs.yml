@@ -46,11 +46,15 @@ theme:
   features:
     - content.action.edit
     - content.code.copy
+    - content.tooltips
     - header.autohide
     - navigation.expand
     - navigation.indexes
     - search.suggest
     - toc.follow
+
+extra_css:
+  - css/custom.css
 
 exclude_docs: |
   img/README.md
@@ -65,6 +69,7 @@ plugins:
 
 hooks:
   - hooks/cliref.py
+  - hooks/released.py
   - hooks/footer.py
   - hooks/freeze.py
   - hooks/listing.py
