@@ -1,0 +1,67 @@
+# 'gs branch submit' with a branch that's lagging behind its base
+# rejects the push without --force.
+
+as 'Test <test@example.com>'
+at '2024-07-22T19:51:01Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+# create a branch and go back to main
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs down
+
+# Move main ahead.
+git add README.md
+git commit -m 'Add a README'
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Try to submit feature1
+gs up
+! gs branch submit --fill
+stderr 'Branch feature1 needs to be restacked'
+stderr 'refusing to submit outdated'
+cmp stdout $WORK/golden/empty.json
+
+gs branch submit --force --fill
+stderr 'Created #1'
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/README.md --
+documentation
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- golden/empty.json --
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature1",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "cfb6dc9b08f78ac8e9214faacc745a06fbb58e8d"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "66ae103f1e2d92ef05fa5730e77ff468801a57fa"
+    }
+  }
+]
+

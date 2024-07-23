@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: Fix bug where updating an open PR would overwrite changes pushed to it by others. Use --force to overwrite these changes.'
+time: 2024-07-22T20:05:42.592509-07:00

@@ -1,0 +1,61 @@
+# 'gs brnach submit --force' can overwrite remote changes.
+
+as 'Test <test@example.com>'
+at '2024-07-22T19:56:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+# create a branch and go back to main
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs branch submit --fill
+
+# Push to the branch from elsewhere.
+cd $WORK
+shamhub clone alice/example fork
+cd fork
+git checkout feature1
+cp $WORK/extra/feature1-conflict.txt feature1.txt
+git add feature1.txt
+git commit -m 'Introduce a conflict'
+git push
+
+cd $WORK/repo
+cp $WORK/extra/feature1-new.txt feature1.txt
+git add feature1.txt
+git commit -m 'Update feature1'
+
+! gs branch submit
+stderr 'Branch may have been updated by someone else'
+stderr 'failed to push some refs'
+
+gs branch submit --force
+
+# verify the result
+cd $WORK/fork
+git fetch
+git cat-file blob origin/feature1:feature1.txt
+cmp stdout $WORK/repo/feature1.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-new.txt --
+Contents of feature1
+with some fixes
+
+-- extra/feature1-conflict.txt --
+Contents of feature1
+with conflicting changes

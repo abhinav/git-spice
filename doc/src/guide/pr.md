@@ -77,6 +77,19 @@ you may also specify title and body directly.
     If the `--draft` or `--no-draft` flags are provided,
     the draft state of all PRs will be set accordingly.
 
+### Force pushing
+
+<!-- gs:version unreleased -->
+
+```freeze language="terminal" float="right"
+{green}${reset} gs branch submit --force
+```
+
+By default, git-spice will refuse to push to branches
+if the operation could result in data loss.
+To override these safety checks
+and push to a branch anyway, use the `--force` flag.
+
 ## Syncing with upstream
 
 To sync with the upstream repository,
