@@ -79,7 +79,7 @@ you may also specify title and body directly.
 
 ### Force pushing
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.2.0 -->
 
 ```freeze language="terminal" float="right"
 {green}${reset} gs branch submit --force
