@@ -160,14 +160,6 @@ func main() {
 		}
 	}
 
-	args := os.Args[1:]
-	if len(args) == 0 {
-		args = []string{"--help"}
-	} else if short, ok := shorthands[args[0]]; ok {
-		// TODO: Replace first non-flag argument instead.
-		args = slices.Replace(args, 0, 1, short.Expanded...)
-	}
-
 	komplete.Run(parser,
 		komplete.WithTransformCompleted(func(args []string) []string {
 			if len(args) > 0 {
@@ -183,6 +175,23 @@ func main() {
 		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
 		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges)),
 	)
+
+	args := os.Args[1:]
+	if len(args) == 0 {
+		// If invoked with no arguments, show help,
+		// but then exit with a non-zero status code.
+		args = []string{"--help"}
+		parser.Exit = func(int) {
+			logger.Print("")
+			logger.Fatal("gs: please provide a command")
+		}
+	} else {
+		// Otherwise, expand the first argument if it's a shorthand.
+		if short, ok := shorthands[args[0]]; ok {
+			// TODO: Replace first non-flag argument instead.
+			args = slices.Replace(args, 0, 1, short.Expanded...)
+		}
+	}
 
 	kctx, err := parser.Parse(args)
 	if err != nil {

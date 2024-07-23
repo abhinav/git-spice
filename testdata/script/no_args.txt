@@ -1,0 +1,7 @@
+# Running 'gs' with no arguments
+# exits with a non-zero status code,
+# but prints a help message to stderr.
+
+! gs
+stdout 'Usage: gs '
+stderr 'please provide a command'
