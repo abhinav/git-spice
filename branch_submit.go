@@ -410,6 +410,7 @@ func (cmd *branchSubmitCmd) run(
 type branchSubmitForm struct {
 	ctx    context.Context
 	svc    *spice.Service
+	repo   *git.Repository
 	remote forge.Repository
 	log    *log.Logger
 
@@ -419,6 +420,7 @@ type branchSubmitForm struct {
 func newBranchSubmitForm(
 	ctx context.Context,
 	svc *spice.Service,
+	repo *git.Repository,
 	remoteRepo forge.Repository,
 	log *log.Logger,
 ) *branchSubmitForm {
@@ -426,6 +428,7 @@ func newBranchSubmitForm(
 		ctx:    ctx,
 		svc:    svc,
 		log:    log,
+		repo:   repo,
 		remote: remoteRepo,
 	}
 }
@@ -473,6 +476,11 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 }
 
 func (f *branchSubmitForm) bodyField(body *string) ui.Field {
+	editor := ui.Editor{
+		Command: gitEditor(f.ctx, f.repo),
+		Ext:     "md",
+	}
+
 	return ui.Defer(func() ui.Field {
 		// By this point, the template field should have already run.
 		if f.tmpl != nil {
@@ -482,7 +490,7 @@ func (f *branchSubmitForm) bodyField(body *string) ui.Field {
 			*body += f.tmpl.Body
 		}
 
-		return ui.NewOpenEditor().
+		return ui.NewOpenEditor(editor).
 			WithValue(body).
 			WithTitle("Body").
 			WithDescription("Open your editor to write " +
@@ -561,7 +569,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	}
 
 	var fields []ui.Field
-	form := newBranchSubmitForm(ctx, svc, remoteRepo, log)
+	form := newBranchSubmitForm(ctx, svc, repo, remoteRepo, log)
 	if cmd.Title == "" {
 		cmd.Title = defaultTitle
 		fields = append(fields, form.titleField(&cmd.Title))

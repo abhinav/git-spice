@@ -1,0 +1,69 @@
+# branch submit uses the editor set by Git.
+# https://github.com/abhinav/git-spice/issues/274
+
+as 'Test <test@example.com>'
+at '2024-07-23T07:11:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a long body
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+git config core.editor MOCKEDIT_GIVE=$WORK/input/pr-body.txt' mockedit'
+
+git config core.editor
+cmpenv stdout $WORK/golden/editor.txt
+
+with-term $WORK/input/prompt.txt -- gs branch submit
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.txt
+
+-- repo/feature.txt --
+Contents of feature
+
+-- input/pr-body.txt --
+This is the body of the PR.
+It contains details about the change.
+
+-- input/prompt.txt --
+await Title:
+feed \r
+await Body:
+feed e
+await Draft:
+feed \r
+
+-- golden/editor.txt --
+MOCKEDIT_GIVE=$WORK/input/pr-body.txt mockedit
+-- golden/changes.txt --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature",
+    "body": "This is the body of the PR.\nIt contains details about the change.\n\n",
+    "base": {
+      "ref": "main",
+      "sha": "acab7ca3bb06c21544d59de8a41f06a7f5089e06"
+    },
+    "head": {
+      "ref": "feature",
+      "sha": "8834aad8a5ba54b7bdd43774e11a8c99a0ff98e8"
+    }
+  }
+]

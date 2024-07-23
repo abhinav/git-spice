@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"slices"
 
+	"go.abhg.dev/gs/internal/execedit"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -82,10 +82,7 @@ func editStackFile(ctx context.Context, editor string, branches []string) ([]str
 		return nil, err
 	}
 
-	editCmd := exec.CommandContext(ctx, editor, branchesFile)
-	editCmd.Stdin = os.Stdin
-	editCmd.Stdout = os.Stdout
-	editCmd.Stderr = os.Stderr
+	editCmd := execedit.Command(editor, branchesFile)
 	if err := editCmd.Run(); err != nil {
 		return nil, fmt.Errorf("run editor: %w", err)
 	}

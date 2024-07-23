@@ -12,7 +12,7 @@ import (
 )
 
 type stackEditCmd struct {
-	Editor string `env:"EDITOR" help:"Editor to use for editing the branches."`
+	Editor string `help:"Editor to use for editing the downstack. Defaults to Git's default editor."`
 
 	Branch string `placeholder:"NAME" help:"Branch whose stack we're editing. Defaults to current branch." predictor:"trackedBranches"`
 }
@@ -40,7 +40,7 @@ func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalO
 	}
 
 	if cmd.Editor == "" {
-		return errors.New("an editor is required: use --editor or set $EDITOR")
+		cmd.Editor = gitEditor(ctx, repo)
 	}
 
 	if cmd.Branch == "" {
