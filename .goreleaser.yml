@@ -41,8 +41,11 @@ aurs:
     git_url: "ssh://aur@aur.archlinux.org/git-spice-bin.git"
     skip_upload: auto
     private_key: '{{ .Env.AUR_KEY }}'
+    conflicts:
+      - git-spice    # no non-bin package exists yet, but just in case
+      - ghostscript  # ghostscript also provides a 'gs' binary
     package: |-
-      install -Dm755 "./git-spice" "${pkgdir}/usr/bin/gs"
+      install -Dm755 "./gs" "${pkgdir}/usr/bin/gs"
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
       install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
