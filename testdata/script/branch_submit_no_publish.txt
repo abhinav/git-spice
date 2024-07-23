@@ -21,7 +21,7 @@ gs auth login
 git add feature1.txt
 gs bc -m feature1
 gs branch submit --no-publish
-stderr 'Pushed feature1'
+cmp stderr $WORK/golden/first-submit.stderr
 
 # verify no PRs
 shamhub dump changes
@@ -67,6 +67,8 @@ feature 1
 feature 1.2
 -- repo/feature1.3.txt --
 feature 1.3
+-- golden/first-submit.stderr --
+INF Pushed feature1
 -- golden/no-pulls.txt --
 []
 -- golden/no-comments.txt --

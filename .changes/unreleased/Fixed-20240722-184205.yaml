@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  branch submit: Fix incorrect warning about current branch not being tracked
+  when --no-publish is used.
+time: 2024-07-22T18:42:05.631607-07:00

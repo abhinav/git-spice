@@ -137,7 +137,7 @@ func (cmd *branchSubmitCmd) run(
 		// TODO: this can be made optional with a --force or a prompt.
 	}
 
-	if !cmd.DryRun {
+	if !cmd.DryRun && !cmd.NoPublish {
 		session.branches = append(session.branches, cmd.Branch)
 	}
 
