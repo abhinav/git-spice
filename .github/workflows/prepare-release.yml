@@ -38,6 +38,13 @@ jobs:
       with:
         args: latest
 
+    - name: Update unreleased references in docs
+      run: |
+        grep -rlF '<!-- gs:version unreleased -->' doc/src |
+          xargs perl -p -i -e \
+          's/<!-- gs:version unreleased -->/<!-- gs:version ${{ steps.latest.outputs.output }} -->/g'
+
+
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v6
       with:
