@@ -83,10 +83,10 @@ $ gs repo sync
 
     Create GitHub Pull Requests from your stack with a single command.
     git-spice can create
-    [a PR for the current branch](cli/index.md#gs-branch-submit),
-    [PRs for the entire stack](cli/index.md#gs-stack-submit), or
-    [parts of](cli/index.md#gs-upstack-submit)
-    [the stack](cli/index.md#gs-downstack-submit).
+    [a PR for the current branch](cli/reference.md#gs-branch-submit),
+    [PRs for the entire stack](cli/reference.md#gs-stack-submit), or
+    [parts of](cli/reference.md#gs-upstack-submit)
+    [the stack](cli/reference.md#gs-downstack-submit).
     If a branch already has a PR, git-spice will update it.
     If a PR is merged,
     git-spice will automatically restack branches that depend on it.
