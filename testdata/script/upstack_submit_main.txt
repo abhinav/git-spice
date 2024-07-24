@@ -44,7 +44,7 @@ cmp stderr $WORK/golden/submit-dry-run.txt
 
 # submit the entire stack from main
 gs trunk
-gs upstack submit --fill
+gs upstack submit -c
 cmpenv stderr $WORK/golden/submit-log.txt
 
 gs ls
