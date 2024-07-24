@@ -34,7 +34,7 @@ keeping them up-to-date and in sync with each other.
 ## Where is the GitHub authentication token stored?
 
 git-spice stores the GitHub authentication in a system-specific secure storage.
-See [Secret storage](guide/internals.md#secret-storage) for more details.
+See [Authentication > Safety](setup/auth.md#safety) for details.
 
 ## Why doesn't git-spice create one PR per commit?
 

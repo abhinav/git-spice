@@ -48,19 +48,6 @@ the following command in a repository using git-spice:
 git log --patch refs/spice/data
 ```
 
-## Secret storage
-
-git-spice stores your GitHub authentication token
-in a system-specific secure storage.
-
-On macOS, this is the system Keychain.
-On Linux, it uses the [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),
-which is typically provided by [GNOME Keyring](https://specifications.freedesktop.org/secret-service/latest/).
-<!-- TODO (if we enable Windows): On Windows, it uses the Windows Credential Manager APIs. -->
-
-Credit goes to [zalando/go-keyring](https://github.com/zalando/go-keyring)
-for providing a cross-platform API for this purpose.
-
 ## Git interactions
 
 git-spice does not use a third-party Git implementation.

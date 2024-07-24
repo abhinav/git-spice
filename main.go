@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,10 +30,6 @@ var _version = "dev"
 //
 // This is overridden in tests to use a memory stash.
 var _secretStash secret.Stash = new(secret.Keyring)
-
-// TOOD:
-// Adaptive secret stash that uses plain text
-// if we don't have a keyring available.
 
 var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 
@@ -66,6 +63,26 @@ func main() {
 		}
 	}()
 
+	// On macOS, UserConfigDir always returns ~/Library/Application Support.
+	// XDG_CONFIG_HOME should take precedence if set.
+	userConfigDir := os.Getenv("XDG_CONFIG_HOME")
+	if userConfigDir == "" {
+		var err error
+		userConfigDir, err = os.UserConfigDir()
+		if err != nil {
+			logger.Fatalf("Error getting user config directory: %v", err)
+		}
+	}
+
+	spiceConfigDir := filepath.Join(userConfigDir, "git-spice")
+	secretStash := &secret.FallbackStash{
+		Primary: _secretStash,
+		Secondary: &secret.UnsafeStash{
+			Path: filepath.Join(spiceConfigDir, "secrets.json"),
+			Log:  logger,
+		},
+	}
+
 	var cmd mainCmd
 
 	// Forges may register additional command line flags
@@ -82,7 +99,7 @@ func main() {
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
-		kong.BindTo(_secretStash, (*secret.Stash)(nil)),
+		kong.BindTo(secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
 			// Default to prompting only when the terminal is interactive.
 			"defaultPrompt": strconv.FormatBool(isatty.IsTerminal(os.Stdin.Fd())),
