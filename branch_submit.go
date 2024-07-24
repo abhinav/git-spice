@@ -21,7 +21,7 @@ import (
 // submitOptions defines options that are common to all submit commands.
 type submitOptions struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `help:"Fill in the change title and body from the commit messages"`
+	Fill   bool `short:"c" help:"Fill in the change title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt?
 	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
 	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
