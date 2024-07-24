@@ -31,18 +31,18 @@ func TestStash(t *testing.T) {
 		testStash(t, new(secret.Keyring))
 	})
 
-	t.Run("Unsafe", func(t *testing.T) {
+	t.Run("Insecure", func(t *testing.T) {
 		file := filepath.Join(t.TempDir(), "secrets.json")
-		stash := secret.UnsafeStash{
+		stash := secret.InsecureStash{
 			Path: file,
 			Log:  logtest.New(t),
 		}
 		testStash(t, &stash)
 	})
 
-	t.Run("Unsafe/NestedDir", func(t *testing.T) {
+	t.Run("Insecure/NestedDir", func(t *testing.T) {
 		file := filepath.Join(t.TempDir(), "nested", "dir", "secrets.json")
-		stash := secret.UnsafeStash{
+		stash := secret.InsecureStash{
 			Path: file,
 			Log:  logtest.New(t),
 		}

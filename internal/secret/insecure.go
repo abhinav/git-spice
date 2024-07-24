@@ -10,9 +10,9 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// UnsafeStash is a secrets stash that stores secrets in plain text.
+// InsecureStash is a secrets stash that stores secrets in plain text.
 // It prints a warning to stderr the first time it creates the file.
-type UnsafeStash struct {
+type InsecureStash struct {
 	// Destination path to the secrets file.
 	Path string // required
 
@@ -20,21 +20,21 @@ type UnsafeStash struct {
 	Log *log.Logger // required
 }
 
-var _ Stash = (*UnsafeStash)(nil)
+var _ Stash = (*InsecureStash)(nil)
 
-type unsafeStashData struct {
-	// Services is a map from service name to unsafeStashService.
-	Services map[string]*unsafeStashService `json:"services"`
+type insecureStashData struct {
+	// Services is a map from service name to insecureStashService.
+	Services map[string]*insecureStashService `json:"services"`
 }
 
-func (d *unsafeStashData) services() map[string]*unsafeStashService {
+func (d *insecureStashData) services() map[string]*insecureStashService {
 	if d.Services == nil {
-		d.Services = make(map[string]*unsafeStashService)
+		d.Services = make(map[string]*insecureStashService)
 	}
 	return d.Services
 }
 
-func (d *unsafeStashData) empty() bool {
+func (d *insecureStashData) empty() bool {
 	if len(d.Services) == 0 {
 		return true
 	}
@@ -48,37 +48,37 @@ func (d *unsafeStashData) empty() bool {
 	return true
 }
 
-type unsafeStashService struct {
-	// Secrets is a map from key to unsafeStashSecret.
-	Secrets map[string]*unsafeStashSecret `json:"secrets"`
+type insecureStashService struct {
+	// Secrets is a map from key to insecureStashSecret.
+	Secrets map[string]*insecureStashSecret `json:"secrets"`
 }
 
-func (s *unsafeStashService) secrets() map[string]*unsafeStashSecret {
+func (s *insecureStashService) secrets() map[string]*insecureStashSecret {
 	if s.Secrets == nil {
-		s.Secrets = make(map[string]*unsafeStashSecret)
+		s.Secrets = make(map[string]*insecureStashSecret)
 	}
 	return s.Secrets
 }
 
-func (s *unsafeStashService) empty() bool {
+func (s *insecureStashService) empty() bool {
 	return len(s.Secrets) == 0
 }
 
-type unsafeStashSecret struct {
+type insecureStashSecret struct {
 	Value string `json:"value"`
 }
 
-func (f *UnsafeStash) load() (*unsafeStashData, error) {
+func (f *InsecureStash) load() (*insecureStashData, error) {
 	bs, err := os.ReadFile(f.Path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return new(unsafeStashData), nil
+			return new(insecureStashData), nil
 		}
 
 		return nil, fmt.Errorf("read: %w", err)
 	}
 
-	var data unsafeStashData
+	var data insecureStashData
 	if err := json.Unmarshal(bs, &data); err != nil {
 		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
@@ -86,7 +86,7 @@ func (f *UnsafeStash) load() (*unsafeStashData, error) {
 	return &data, nil
 }
 
-func (f *UnsafeStash) save(data *unsafeStashData) error {
+func (f *InsecureStash) save(data *insecureStashData) error {
 	if data.empty() {
 		if err := os.Remove(f.Path); err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
@@ -124,7 +124,7 @@ func (f *UnsafeStash) save(data *unsafeStashData) error {
 
 // SaveSecret stores a secret in the stash.
 // The first time it creates the file, it prints a warning to stderr.
-func (f *UnsafeStash) SaveSecret(service, key, secret string) error {
+func (f *InsecureStash) SaveSecret(service, key, secret string) error {
 	data, err := f.load()
 	if err != nil {
 		return err
@@ -132,17 +132,17 @@ func (f *UnsafeStash) SaveSecret(service, key, secret string) error {
 
 	svc, ok := data.services()[service]
 	if !ok {
-		svc = new(unsafeStashService)
+		svc = new(insecureStashService)
 		data.services()[service] = svc
 	}
-	svc.secrets()[key] = &unsafeStashSecret{Value: secret}
+	svc.secrets()[key] = &insecureStashSecret{Value: secret}
 
 	return f.save(data)
 }
 
 // LoadSecret retrieves a secret from the stash.
 // It returns ErrNotFound if the secret does not exist.
-func (f *UnsafeStash) LoadSecret(service, key string) (string, error) {
+func (f *InsecureStash) LoadSecret(service, key string) (string, error) {
 	data, err := f.load()
 	if err != nil {
 		return "", err
@@ -163,7 +163,7 @@ func (f *UnsafeStash) LoadSecret(service, key string) (string, error) {
 
 // DeleteSecret deletes a secret from the stash.
 // It is a no-op if the secret does not exist.
-func (f *UnsafeStash) DeleteSecret(service, key string) error {
+func (f *InsecureStash) DeleteSecret(service, key string) error {
 	data, err := f.load()
 	if err != nil {
 		return err

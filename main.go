@@ -77,7 +77,7 @@ func main() {
 	spiceConfigDir := filepath.Join(userConfigDir, "git-spice")
 	secretStash := &secret.FallbackStash{
 		Primary: _secretStash,
-		Secondary: &secret.UnsafeStash{
+		Secondary: &secret.InsecureStash{
 			Path: filepath.Join(spiceConfigDir, "secrets.json"),
 			Log:  logger,
 		},
