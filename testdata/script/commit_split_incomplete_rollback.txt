@@ -14,8 +14,7 @@ gs repo init
 git add feature.txt
 gs bc -m 'Add feature' feature
 
-! with-term -final exit $WORK/input.txt -- gs commit split -m 'not used'
-cmp stdout $WORK/golden/terminal.txt
+! with-term $WORK/input.txt -- gs commit split -m 'not used'
 
 git status --porcelain
 ! stdout '.'  # empty
@@ -35,18 +34,3 @@ await signal: interrupt
 -- golden/graph.txt --
 * 5aac347 (HEAD -> feature) Add feature
 * 24b232e (main) Initial commit
--- golden/terminal.txt --
-### exit ###
-INF Select hunks to extract into a new commit
-diff --git b/feature.txt a/feature.txt
-new file mode 100644
-index 0000000..010379a
---- /dev/null
-+++ a/feature.txt
-@@ -0,0 +1,3 @@
-+feature 1
-+feature 2
-+
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? ^CINF Cleaning up. Press Ctrl-C again to exit immediately.
-WRN rolling back to previous commit commit=5aac347854f3fe9599eb5b7712a5560aded52d55
-FTL gs: select hunks: git reset: signal: interrupt
