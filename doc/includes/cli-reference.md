@@ -530,7 +530,7 @@ Provide a name as an argument to skip the prompt.
 
 **Flags**
 
-* `-f`, `--force`: Force deletion of the branch
+* `--force`: Force deletion of the branch
 
 ### gs branch fold
 
