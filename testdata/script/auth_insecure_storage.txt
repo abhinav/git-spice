@@ -1,5 +1,5 @@
 # auth operations store secret information
-# in unsafe storage if secure storage is broken.
+# in insecure storage if secure storage is broken.
 
 as 'Test <test@example.com>'
 at '2024-08-23T22:29:32Z'
@@ -15,7 +15,7 @@ git push origin main
 gs repo init
 
 # Invalidate secret server URL
-# so we'll have to authenticate with unsafe storage.
+# so we'll have to authenticate with insecure storage.
 env OLD_SECRET_SERVER_URL=$SECRET_SERVER_URL
 env SECRET_SERVER_URL=
 

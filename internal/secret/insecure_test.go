@@ -10,15 +10,15 @@ import (
 	"go.abhg.dev/gs/internal/logtest"
 )
 
-func TestUnsafeStashSaveEmptyDeletesFile(t *testing.T) {
+func TestInsecureStashSaveEmptyDeletesFile(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "secrets.json")
-	stash := UnsafeStash{
+	stash := InsecureStash{
 		Path: file,
 		Log:  logtest.New(t),
 	}
 
 	// Delete non-existent secret.
-	require.NoError(t, stash.save(&unsafeStashData{}))
+	require.NoError(t, stash.save(&insecureStashData{}))
 	assert.NoFileExists(t, file)
 
 	require.NoError(t,
@@ -30,13 +30,13 @@ func TestUnsafeStashSaveEmptyDeletesFile(t *testing.T) {
 	assert.NoFileExists(t, file)
 }
 
-func TestUnsafeCannotReadOrWrite(t *testing.T) {
+func TestInsecureCannotReadOrWrite(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "secrets.json")
 	// Creating a directory where the file should be
 	// will prevent the file from being created.
 	require.NoError(t, os.Mkdir(file, 0o700))
 
-	stash := UnsafeStash{
+	stash := InsecureStash{
 		Path: file,
 		Log:  logtest.New(t),
 	}
