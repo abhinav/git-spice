@@ -187,7 +187,30 @@ However, it requires manual token management, making it less convenient.
 [GITHUB_TOKEN](#github_token) is the least convenient and the least secure method.
 It is intended only for CI/CD environments where you have no other choice.
 
-!!! question "Where is my token stored?"
+## Safety
 
-    The token is stored in a system-specific secure storage.
-    See [Secret storage](../guide/internals.md#secret-storage) for details.
+By default, git-spice stores your GitHub authentication token
+in a system-specific secure storage.
+On macOS, this is the system Keychain.
+On Linux, it uses the [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),
+which is typically provided by [GNOME Keyring](https://specifications.freedesktop.org/secret-service/latest/).
+<!-- TODO (if we enable Windows): On Windows, it uses the Windows Credential Manager APIs. -->
+
+Since version <!-- gs:version unreleased -->,
+if your system does not provide a secure storage service,
+git-spice will fall back to storing secrets in a plain-text file
+at `$XDG_CONFIG_HOME/git-spice/secrets.json` or the user's configuration directory.
+If it does that, it will clearly indicate so at login time,
+reporting the full path to the secrets file.
+
+<details>
+  <summary>Example</summary>
+
+```freeze language="terminal"
+{green}${reset} gs auth login
+{gray}...{reset}
+{yellow}WRN{reset} Storing secrets in plain text at /home/user/.config/git-spice/secrets.json. Be careful!
+{green}INF{reset} github: successfully logged in
+```
+
+</details>

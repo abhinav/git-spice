@@ -1,0 +1,47 @@
+# auth operations store secret information
+# in unsafe storage if secure storage is broken.
+
+as 'Test <test@example.com>'
+at '2024-08-23T22:29:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+gs repo init
+
+# Invalidate secret server URL
+# so we'll have to authenticate with unsafe storage.
+env OLD_SECRET_SERVER_URL=$SECRET_SERVER_URL
+env SECRET_SERVER_URL=
+
+env SHAMHUB_USERNAME=alice
+gs auth login --forge=shamhub
+cmpenv stderr $WORK/golden/login.stderr
+exists $WORK/home/.config/git-spice/secrets.json
+
+gs auth status
+stderr 'shamhub: currently logged in'
+
+gs auth logout
+stderr 'shamhub: logged out'
+! exists $WORK/home/.config/git-spice/secrets.json
+
+# Bring back secure storage.
+env SECRET_SERVER_URL=$OLD_SECRET_SERVER_URL
+
+# We aren't signed in anymore, but we can still do it.
+! gs auth status
+stderr 'not logged in'
+gs auth login --forge=shamhub
+cmp stderr $WORK/golden/login-secure.stderr
+
+-- golden/login.stderr --
+WRN Storing secrets in plain text at $WORK/home/.config/git-spice/secrets.json. Be careful!
+INF shamhub: successfully logged in
+-- golden/login-secure.stderr --
+INF shamhub: successfully logged in

@@ -116,7 +116,7 @@ func (f *UnsafeStash) save(data *unsafeStashData) error {
 	}
 
 	if firstTime {
-		f.Log.Warnf("Using plain text secrets stash at %s. Be careful!", f.Path)
+		f.Log.Warnf("Storing secrets in plain text at %s. Be careful!", f.Path)
 	}
 
 	return nil

@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
+	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
@@ -34,12 +35,10 @@ func TestMain(m *testing.M) {
 			})
 
 			// If a secret server is configured, use it.
-			if secretURL := os.Getenv("SECRET_SERVER_URL"); secretURL != "" {
-				var err error
-				_secretStash, err = secrettest.NewClient(secretURL)
-				if err != nil {
-					logger.Fatalf("Could not create secret client: %v", err)
-				}
+			var err error
+			_secretStash, err = secrettest.NewClient(os.Getenv("SECRET_SERVER_URL"))
+			if err != nil {
+				logger.Fatalf("Could not create secret client: %v", err)
 			}
 
 			forge.Register(&shamhub.Forge{Log: logger})
@@ -77,6 +76,11 @@ func TestScript(t *testing.T) {
 		RequireUniqueNames: true,
 		Setup: func(e *testscript.Env) error {
 			t := e.T().(testing.TB)
+
+			homeDir := filepath.Join(e.WorkDir, "home")
+			require.NoError(t, os.Mkdir(homeDir, 0o755))
+			e.Setenv("HOME", homeDir)
+			e.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".config"))
 
 			for k, v := range defaultEnv {
 				e.Setenv(k, v)

@@ -1,5 +1,5 @@
 ---
-icon: material/console-line
+icon: material/bash
 description: >-
   Set up shell completion for Bash, Zsh, and Fish.
 ---
