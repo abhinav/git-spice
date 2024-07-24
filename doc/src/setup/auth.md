@@ -187,6 +187,20 @@ However, it requires manual token management, making it less convenient.
 [GITHUB_TOKEN](#github_token) is the least convenient and the least secure method.
 It is intended only for CI/CD environments where you have no other choice.
 
+## GitHub Enterprise
+
+To use git-spice with a GitHub Enterprise instance,
+set the following environment variables in your shell configuration file,
+authenticate, and use git-spice as usual.
+
+```freeze language="bash"
+# URL of your GitHub Enterprise instance.
+export GITHUB_URL=https://github.example.com
+
+# URL at which the GitHub API is available on your instance.
+export GITHUB_API_URL=https://github.example.com/api
+```
+
 ## Safety
 
 By default, git-spice stores your GitHub authentication token
