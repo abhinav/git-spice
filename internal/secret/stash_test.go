@@ -2,11 +2,13 @@ package secret_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zalando/go-keyring"
+	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/secret"
 )
 
@@ -27,6 +29,24 @@ func TestStash(t *testing.T) {
 	t.Run("Keyring", func(t *testing.T) {
 		testStash(t, new(secret.Keyring))
 	})
+
+	t.Run("Unsafe", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "secrets.json")
+		stash := secret.UnsafeStash{
+			Path: file,
+			Log:  logtest.New(t),
+		}
+		testStash(t, &stash)
+	})
+
+	t.Run("Unsafe/NestedDir", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "nested", "dir", "secrets.json")
+		stash := secret.UnsafeStash{
+			Path: file,
+			Log:  logtest.New(t),
+		}
+		testStash(t, &stash)
+	})
 }
 
 func testStash(t *testing.T, stash secret.Stash) {
@@ -43,6 +63,11 @@ func testStash(t *testing.T, stash secret.Stash) {
 		secret, err := stash.LoadSecret(_service, "key")
 		require.NoError(t, err)
 		assert.Equal(t, "secret", secret)
+	})
+
+	t.Run("LoadAnotherMissing", func(t *testing.T) {
+		_, err := stash.LoadSecret(_service, "another-key")
+		require.ErrorIs(t, err, secret.ErrNotFound)
 	})
 
 	t.Run("Overwrite", func(t *testing.T) {
