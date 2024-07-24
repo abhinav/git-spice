@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'commit split: Fix bug where canceling the split would fail to revert to original state.'
-time: 2024-07-23T17:27:18.6663-07:00

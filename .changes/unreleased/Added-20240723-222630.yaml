@@ -1,3 +1,0 @@
-kind: Added
-body: 'Authentication: If a secure storage is not available, fall back to plain text, but warn the user about it.'
-time: 2024-07-23T22:26:30.604158-07:00

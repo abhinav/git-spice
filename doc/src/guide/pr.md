@@ -47,7 +47,7 @@ and the position of the current branch in it.
 
 ### Non-interactive submission
 
-Use the `--fill` flag (or `-c` since <!-- gs:version unreleased -->)
+Use the `--fill` flag (or `-c` since <!-- gs:version v0.3.0 -->)
 provided by all the above commands
 to fill in the PR information from commit messages
 and skip the interactive prompts.

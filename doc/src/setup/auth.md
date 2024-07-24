@@ -210,7 +210,7 @@ On Linux, it uses the [Secret Service](https://specifications.freedesktop.org/se
 which is typically provided by [GNOME Keyring](https://specifications.freedesktop.org/secret-service/latest/).
 <!-- TODO (if we enable Windows): On Windows, it uses the Windows Credential Manager APIs. -->
 
-Since version <!-- gs:version unreleased -->,
+Since version <!-- gs:version v0.3.0 -->,
 if your system does not provide a secure storage service,
 git-spice will fall back to storing secrets in a plain-text file
 at `$XDG_CONFIG_HOME/git-spice/secrets.json` or the user's configuration directory.
