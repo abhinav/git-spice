@@ -14,7 +14,7 @@ import (
 )
 
 type branchDeleteCmd struct {
-	Force  bool   `short:"f" help:"Force deletion of the branch"`
+	Force  bool   `help:"Force deletion of the branch"`
 	Branch string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
 }
 

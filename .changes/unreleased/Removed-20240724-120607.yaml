@@ -1,0 +1,3 @@
+kind: Removed
+body: 'branch delete: Drop short form `-f` for the `--force` flag.'
+time: 2024-07-24T12:06:07.858133-07:00
