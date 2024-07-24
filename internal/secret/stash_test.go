@@ -1,6 +1,7 @@
 package secret_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,6 +48,24 @@ func TestStash(t *testing.T) {
 		}
 		testStash(t, &stash)
 	})
+
+	t.Run("Fallback/PrimaryBroken", func(t *testing.T) {
+		testStash(t, &secret.FallbackStash{
+			Primary: &brokenStash{
+				err: errors.New("great sadness"),
+			},
+			Secondary: new(secret.MemoryStash),
+		})
+	})
+
+	t.Run("Fallback/PrimaryOkay", func(t *testing.T) {
+		testStash(t, &secret.FallbackStash{
+			Primary: new(secret.MemoryStash),
+			Secondary: &brokenStash{
+				err: errors.New("great sadness"),
+			},
+		})
+	})
 }
 
 func testStash(t *testing.T, stash secret.Stash) {
@@ -88,4 +107,21 @@ func testStash(t *testing.T, stash secret.Stash) {
 	t.Run("DeleteMissing", func(t *testing.T) {
 		require.NoError(t, stash.DeleteSecret(_service, "missing"))
 	})
+}
+
+// brokenStash is a Stash that always returns an error.
+type brokenStash struct {
+	err error
+}
+
+func (b *brokenStash) SaveSecret(service, key, secret string) error {
+	return b.err
+}
+
+func (b *brokenStash) LoadSecret(service, key string) (string, error) {
+	return "", b.err
+}
+
+func (b *brokenStash) DeleteSecret(service, key string) error {
+	return b.err
 }
