@@ -297,7 +297,7 @@ loop:
 			}
 		}
 		if err != nil {
-			if !errors.Is(err, io.EOF) {
+			if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) {
 				m.logf("read error: %v", err)
 			}
 			break loop
