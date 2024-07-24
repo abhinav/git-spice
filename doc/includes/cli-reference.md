@@ -193,7 +193,7 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
 * `--force`: Force push, bypassing safety checks
@@ -260,7 +260,7 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
 * `--force`: Force push, bypassing safety checks
@@ -347,7 +347,7 @@ This has no effect if a branch already has an open CR.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
 * `--force`: Force push, bypassing safety checks
@@ -703,7 +703,7 @@ Request.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
 * `--force`: Force push, bypassing safety checks
