@@ -48,6 +48,12 @@ func (cmd *commitSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 
 	defer func() {
 		if err != nil {
+			// The operation may have failed
+			// because the user pressed Ctrl-C.
+			// That would invalidate the current context.
+			// Create an uncanceled context to perform the rollback.
+			ctx := context.WithoutCancel(ctx)
+
 			log.Warn("rolling back to previous commit", "commit", head)
 			err = errors.Join(err, repo.Reset(ctx, head.String(), git.ResetOptions{
 				Mode: git.ResetMixed,
