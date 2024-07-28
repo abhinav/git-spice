@@ -194,6 +194,10 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 
 		case key.Matches(msg, a.KeyMap.Accept):
 			return AcceptField
+
+		case a.Editor.Command == "":
+			a.err = errors.New("please set $EDITOR environment variable")
+			return tea.Quit
 		}
 	}
 
