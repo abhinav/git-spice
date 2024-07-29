@@ -6,7 +6,7 @@ replace go.abhg.dev/gs => ../
 
 require (
 	github.com/charmbracelet/freeze v0.1.7-0.20240607113933-578e9d05c319
-	go.abhg.dev/gs v0.1.0
+	go.abhg.dev/gs v0.3.0
 )
 
 require (
