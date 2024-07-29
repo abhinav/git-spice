@@ -44,7 +44,7 @@ bin/pikchr: cmd/pikchr/pikchr.c
 	gcc -DPIKCHR_SHELL -o $@ $< -lm
 
 bin/gs: $(GO_SRC_FILES)
-	go install -tags dumpmd go.abhg.dev/gs
+	go -C .. install -tags dumpmd go.abhg.dev/gs
 
 bin/freeze: go.mod
 	go install github.com/charmbracelet/freeze
