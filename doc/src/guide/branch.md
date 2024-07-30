@@ -5,33 +5,35 @@ description: >-
   Manage, navigate, and manipulate stacks of branches with git-spice.
 ---
 
-# Branch stacks
+# Local development with branch stacks
+
+## Stacking branches
 
 Starting at the trunk branch, any number of branches may be stacked on top.
-You may stack branches using one of the following methods:
+git-spice learns about the relationships between branches by 'tracking' them
+in an [internal data store](internals.md).
+Branches may be tracked manually or automatically:
 
-- [**Automatic stacking**](#automatic-stacking):
-  Use git-spice to create a branch, commit to it,
-  and stack it on top of the current branch in one go.
-- [**Manual stacking**](#manual-stacking):
-  Create a branch with Git as usual, and then track it with git-spice.
+- [**Automatic stacking**](#automatic-stacking) with $$gs branch create$$
+- [**Manual stacking**](#manual-stacking) with $$gs branch track$$
 
-## Automatic stacking
+### Automatic stacking
 
 ```freeze language="terminal" float="right"
 {green}${reset} $EDITOR file.txt
 {gray}# make your changes{reset}
 {green}${reset} git add file.txt
-{green}${reset} gs branch create my-feature
+{green}${reset} gs branch create feat1
 ```
 
-The preferred way to create a stacked branch is:
-make your changes, prepare them to be committed with `git add`,
-and then use $$gs branch create$$ to commit these changes to a new branch
-stacked on top of the current branch.
+The preferred way to create and track a stacked branch is with
+$$gs branch create$$. The steps are simple:
 
-This creates a new branch `my-feature` stacked on top of the current branch,
-and commits the staged changes to it.
+1. Modify your code and prepare your changes to be committed with `git add`.
+2. Run $$gs branch create$$.
+
+This will create a new branch stacked on top of the current branch,
+commit the staged files to it, and track it with the current branch as base.
 An editor will open to let you write a commit message
 if one was not provided with the `-m`/`--message` flag.
 
@@ -42,22 +44,43 @@ if one was not provided with the `-m`/`--message` flag.
 
     Explore the full list of options at $$gs branch create$$.
 
-## Manual stacking
+### Manual stacking
 
 git-spice does not require to change your workflow too drastically.
 If you prefer to use your usual workflow to create branches and commit changes,
 use $$gs branch track$$ to inform git-spice of the branch after creating it.
 
-```freeze language="terminal"
-{green}${reset} git checkout -b my-feature
+```freeze language="terminal" float="right"
+{green}${reset} git checkout -b feat1
 {gray}# make your changes{reset}
 {green}${reset} git commit
 {green}${reset} gs branch track
-{green}INF{reset} my-feature: tracking with base main
+{green}INF{reset} feat1: tracking with base main
 ```
 
-$$gs branch track$$ automatically detects the base branch.
-Use the `--base` option to specify it manually.
+For example, you may:
+
+1. Create a new branch with `git checkout -b`.
+2. Make changes and commit them with `git commit`.
+3. Run $$gs branch track$$ to track the branch.
+
+The $$gs branch track$$ command automatically guesses the base branch
+for the newly tracked branch.
+Use the `--base` option to set it manually.
+
+## Naming branches
+
+We advise picking descriptive names for branches.
+You don't need to remember the exact names as git-spice provides
+a number of utilities to help navigate and manipulate the stack.
+Most places where a branch name is required provide
+[shell completion](../setup/shell.md) and fuzzy-searchable lists.
+
+!!! tip "Can't think of a branch name?"
+
+    If you can't think of a name for a branch,
+    run $$gs branch create$$ without any arguments.
+    git-spice will use the commit message to generate a branch name for you.
 
 ## Navigating the stack
 
