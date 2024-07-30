@@ -490,11 +490,15 @@ func (f *branchSubmitForm) bodyField(body *string) ui.Field {
 			*body += f.tmpl.Body
 		}
 
-		return ui.NewOpenEditor(editor).
+		ed := ui.NewOpenEditor(editor).
 			WithValue(body).
 			WithTitle("Body").
 			WithDescription("Open your editor to write " +
 				"a detailed description of the change")
+		ed.Style.NoEditorMessage = "" +
+			"Please configure a Git core.editor, " +
+			"or set the EDITOR environment variable."
+		return ed
 	})
 }
 

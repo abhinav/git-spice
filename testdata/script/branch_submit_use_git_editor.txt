@@ -18,7 +18,6 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-# create a branch with a long body
 git add feature.txt
 gs bc feature -m 'Add feature'
 
