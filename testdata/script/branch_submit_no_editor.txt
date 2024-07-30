@@ -1,0 +1,38 @@
+# branch submit fails if there's no editor.
+# https://github.com/abhinav/git-spice/issues/310
+
+as 'Test <test@example.com>'
+at '2024-07-29T19:25:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+env GIT_EDITOR= EDITOR=
+! with-term $WORK/input/prompt.txt -- gs branch submit
+stdout 'Please configure a Git core.editor, or set the EDITOR environment variable.'
+
+-- repo/feature.txt --
+Contents of feature
+
+-- input/prompt.txt --
+await Title:
+feed \r
+await Body:
+snapshot init
+feed e
+await Please configure
+snapshot err

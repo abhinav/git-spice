@@ -35,12 +35,15 @@ var DefaultOpenEditorKeyMap = OpenEditorKeyMap{
 type OpenEditorStyle struct {
 	Key    lipgloss.Style // how to highlight keys
 	Editor lipgloss.Style
+
+	NoEditorMessage string
 }
 
 // DefaultOpenEditorStyle is the default style for an [OpenEditor] field.
 var DefaultOpenEditorStyle = OpenEditorStyle{
-	Key:    NewStyle().Foreground(Magenta),
-	Editor: NewStyle().Foreground(Green),
+	Key:             NewStyle().Foreground(Magenta),
+	Editor:          NewStyle().Foreground(Green),
+	NoEditorMessage: "please set an editor",
 }
 
 // Editor configures the editor to open.
@@ -196,7 +199,7 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 			return AcceptField
 
 		case a.Editor.Command == "":
-			a.err = errors.New("please set $EDITOR environment variable")
+			a.err = errors.New(a.Style.NoEditorMessage)
 			return tea.Quit
 		}
 	}
