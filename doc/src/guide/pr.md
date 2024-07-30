@@ -5,7 +5,7 @@ description: >-
   Create and update stacked pull requests from a stack of branches.
 ---
 
-# Pull Request Stacks
+# Working with Pull Requests
 
 ## Submitting pull requests
 
