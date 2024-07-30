@@ -1,0 +1,22 @@
+# branch create generates a unique branch name
+# even if the original name is already taken
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc -m 'add feature1'
+gs bc -m 'add feature1'
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- golden/graph.txt --
+* 82864be (HEAD -> add-feature1-2) add feature1
+* d9cde2c (add-feature1) add feature1
+* 9bad92b (main) Initial commit

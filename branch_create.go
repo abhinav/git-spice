@@ -89,6 +89,14 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
+	// If a branch name was specified, verify it's unused.
+	// We do this before any changes to the working tree or index.
+	if cmd.Name != "" {
+		if _, err := repo.PeelToCommit(ctx, cmd.Name); err == nil {
+			return fmt.Errorf("branch already exists: %v", cmd.Name)
+		}
+	}
+
 	diff, err := repo.DiffIndex(ctx, "HEAD")
 	if err != nil {
 		return fmt.Errorf("diff index: %w", err)
@@ -153,15 +161,26 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	// Branch name was not specified.
-	// Generate one from the commit message.
 	if cmd.Name == "" {
+		// Branch name was not specified.
+		// Generate one from the commit message.
 		subject, err := repo.CommitSubject(ctx, "HEAD")
 		if err != nil {
 			return fmt.Errorf("get commit subject: %w", err)
 		}
 
-		cmd.Name = spice.GenerateBranchName(subject)
+		name := spice.GenerateBranchName(subject)
+		current := name
+
+		// If the auto-generated branch name already exists,
+		// append a number to it until we find an unused name.
+		_, err = repo.PeelToCommit(ctx, current)
+		for num := 2; err == nil; num++ {
+			current = fmt.Sprintf("%s-%d", name, num)
+			_, err = repo.PeelToCommit(ctx, current)
+		}
+
+		cmd.Name = current
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{

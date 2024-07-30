@@ -1,0 +1,32 @@
+# 'branch create' handles the case where the requested name already exists.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+git add feature1.txt
+git commit -m 'Add feature1'
+
+git checkout main
+git add feature2.txt
+! gs branch create feature -m 'Add feature2'
+stderr 'branch already exists: feature'
+
+# should not lose the file.
+exists feature2.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- golden/graph.txt --
+* faafa13 (feature) Add feature1
+* 9bad92b (HEAD -> main) Initial commit
