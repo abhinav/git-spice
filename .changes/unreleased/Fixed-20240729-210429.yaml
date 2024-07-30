@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch create: Don''t lose data if the branch cannot be created for any reason.'
+time: 2024-07-29T21:04:29.049874-07:00

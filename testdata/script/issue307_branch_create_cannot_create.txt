@@ -1,0 +1,34 @@
+# 'branch create' does not lose files if a branch cannot be created.
+# https://github.com/abhinav/git-spice/issues/307
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+git add feature1.txt
+git commit -m 'Add feature1'
+
+git checkout main
+git add feature2.txt
+
+# will be unable to create the branch because
+# 'feature' is a file so a directory cannot be created there.
+! gs branch create feature/2 -m 'Add feature2'
+
+# should not lose the file.
+exists feature2.txt
+
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- golden/status.txt --
+A  feature2.txt
