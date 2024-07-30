@@ -162,7 +162,7 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		if errors.As(err, &restackErr) {
-			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Branch, cmd.Branch)
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
 		}
 		log.Warnf("error checking branch: %v", err)
 	}

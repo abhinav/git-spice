@@ -135,7 +135,7 @@ func (cmd *branchSubmitCmd) run(
 		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 			log.Errorf("Branch %s needs to be restacked.", cmd.Branch)
 			log.Errorf("Run the following command to fix this:")
-			log.Errorf("  gs branch restack %s", cmd.Branch)
+			log.Errorf("  gs branch restack --branch=%s", cmd.Branch)
 			log.Errorf("Or, try again with --force to submit anyway.")
 			return errors.New("refusing to submit outdated branch")
 			// TODO: this can be made optional with a --force or a prompt.

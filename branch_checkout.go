@@ -61,7 +61,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 		var restackErr *spice.BranchNeedsRestackError
 		switch {
 		case errors.As(err, &restackErr):
-			log.Warnf("%v: needs to be restacked: run 'gs branch restack %v'", cmd.Branch, cmd.Branch)
+			log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
 		case errors.Is(err, state.ErrNotExist):
 			if store.Trunk() != cmd.Branch {
 				if !opts.Prompt {
