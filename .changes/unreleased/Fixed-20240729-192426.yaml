@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch submit: Fail if Git editor is explicitly unset and there''s no fallback.'
-time: 2024-07-29T19:24:26.018128-07:00
