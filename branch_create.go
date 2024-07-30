@@ -145,12 +145,39 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	if err := repo.DetachHead(ctx, baseName); err != nil {
 		return fmt.Errorf("detach head: %w", err)
 	}
-	// From this point on, if there's an error,
-	// restore the original branch.
+
+	// From this point on, to prevent data loss,
+	// we'll revert to original branch while keeping the changes
+	// if we failed to successfully create the new branch.
+	//
+	// The condition for this is not whether an error is returned,
+	// and whether the new branch was successfully created.
+	var (
+		branchCreated bool     // whether the new branch was created
+		commitHash    git.Hash // hash of the commit (if created)
+	)
 	defer func() {
-		if err != nil {
-			err = errors.Join(err, repo.Checkout(ctx, cmd.Target))
+		if branchCreated {
+			return
 		}
+
+		log.Warn("Unable to create branch. Rolling back.",
+			"branch", cmd.Target)
+
+		// Move HEAD to the state just before the commit
+		// while leaving the index and working tree as-is.
+		resetErr := repo.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
+			Mode:  git.ResetSoft,
+			Quiet: true,
+		})
+		if resetErr != nil {
+			log.Warn("Could not reset to parent commit.",
+				"commit", commitHash,
+				"error", resetErr)
+		}
+
+		err = errors.Join(err,
+			repo.Checkout(ctx, cmd.Target))
 	}()
 
 	if err := repo.Commit(ctx, git.CommitRequest{
@@ -159,6 +186,11 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		All:        cmd.All,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
+	}
+
+	commitHash, err = repo.Head(ctx)
+	if err != nil {
+		return fmt.Errorf("get commit hash: %w", err)
 	}
 
 	if cmd.Name == "" {
@@ -190,6 +222,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("create branch: %w", err)
 	}
 
+	branchCreated = true
 	if err := repo.Checkout(ctx, cmd.Name); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
