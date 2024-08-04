@@ -16,8 +16,10 @@ import (
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/komplete"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -73,11 +75,21 @@ func main() {
 		}
 	}
 
-	spiceConfigDir := filepath.Join(userConfigDir, "git-spice")
+	spiceConfig, err := spice.LoadConfig(
+		ctx,
+		git.NewConfig(git.ConfigOptions{Log: logger}),
+		spice.ConfigOptions{
+			Log: logger,
+		},
+	)
+	if err != nil {
+		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
+	}
+
 	secretStash := &secret.FallbackStash{
 		Primary: _secretStash,
 		Secondary: &secret.InsecureStash{
-			Path: filepath.Join(spiceConfigDir, "secrets.json"),
+			Path: filepath.Join(filepath.Join(userConfigDir, "git-spice"), "secrets.json"),
 			Log:  logger,
 		},
 	}
@@ -96,6 +108,7 @@ func main() {
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
+		kong.Resolvers(spiceConfig),
 		kong.Bind(logger, &cmd.globalOptions),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(secretStash, (*secret.Stash)(nil)),
