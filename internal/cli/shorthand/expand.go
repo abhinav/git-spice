@@ -15,6 +15,22 @@ type Source interface {
 	ExpandShorthand(string) ([]string, bool)
 }
 
+// Sources is a list of shorthand sources composed together.
+// These are tried in order until one works.
+type Sources []Source
+
+var _ Source = Sources(nil)
+
+// ExpandShorthand expands the given shorthand command.
+func (ss Sources) ExpandShorthand(cmd string) ([]string, bool) {
+	for _, s := range ss {
+		if args, ok := s.ExpandShorthand(cmd); ok {
+			return args, true
+		}
+	}
+	return nil, false
+}
+
 // Expand expands the given arguments using the given source repeatedly
 // until there's nothing left to expand.
 //

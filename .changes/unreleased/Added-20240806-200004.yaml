@@ -1,0 +1,3 @@
+kind: Added
+body: Support defining custom shorthands with git-config by setting `spice.shorthand.*`.
+time: 2024-08-06T20:00:04.545263-07:00

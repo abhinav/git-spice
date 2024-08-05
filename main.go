@@ -153,10 +153,13 @@ func main() {
 		}
 	}
 
-	shorthands, err := shorthand.NewBuiltin(parser.Model)
+	builtinShorthands, err := shorthand.NewBuiltin(parser.Model)
 	if err != nil {
 		panic(err)
 	}
+
+	// user-configured shorthands take precedence over builtins.
+	shorthands := shorthand.Sources{spiceConfig, builtinShorthands}
 
 	komplete.Run(parser,
 		komplete.WithTransformCompleted(func(args []string) []string {
@@ -188,7 +191,7 @@ func main() {
 		logger.Fatalf("gs: %v", err)
 	}
 
-	if err := kctx.Run(shorthands); err != nil {
+	if err := kctx.Run(builtinShorthands); err != nil {
 		logger.Fatalf("gs: %v", err)
 	}
 }
