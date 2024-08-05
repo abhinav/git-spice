@@ -19,8 +19,8 @@ require (
 	github.com/zalando/go-keyring v0.2.5
 	go.abhg.dev/requiredfield v0.3.0
 	go.uber.org/mock v0.4.0
-	golang.org/x/oauth2 v0.21.0
-	gopkg.in/dnaeon/go-vcr.v3 v3.2.0
+	golang.org/x/oauth2 v0.22.0
+	gopkg.in/dnaeon/go-vcr.v3 v3.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.1.0
 )
