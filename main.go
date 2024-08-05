@@ -7,14 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
+	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/komplete"
@@ -141,50 +140,14 @@ func main() {
 		}
 	}
 
-	shorthands := make(shorthands)
-
-	// For each leaf subcommand, define a combined shorthand alias.
-	// For example, if the command was "branch (b) create (c)",
-	// the shorthand would be "bc".
-	// For commands with multiple aliases, only the first is used.
-	for _, n := range parser.Model.Leaves(false) {
-		if n.Type != kong.CommandNode || len(n.Aliases) == 0 {
-			continue
-		}
-
-		var fragments []string
-		for c := n; c != nil && c.Type == kong.CommandNode; c = c.Parent {
-			if len(c.Aliases) < 1 {
-				panic(fmt.Sprintf("expected an alias for %q (%v)", c.Name, c.Path()))
-			}
-			fragments = append(fragments, c.Aliases[0])
-		}
-		if len(fragments) < 2 {
-			// If the command is already a single word, don't add an alias.
-			continue
-		}
-
-		slices.Reverse(fragments)
-		short := strings.Join(fragments, "")
-		if other, ok := shorthands[short]; ok {
-			panic(fmt.Sprintf("shorthand %q for %v is already in use by %v", short, n.Path(), other.Expanded))
-		}
-		// TODO: check if shorthand conflicts with any other aliases.
-
-		shorthands[short] = shorthand{
-			Expanded: fragments,
-			Command:  n,
-		}
+	shorthands, err := shorthand.NewBuiltin(parser.Model)
+	if err != nil {
+		panic(err)
 	}
 
 	komplete.Run(parser,
 		komplete.WithTransformCompleted(func(args []string) []string {
-			if len(args) > 0 {
-				if short, ok := shorthands[args[0]]; ok {
-					args = slices.Replace(args, 0, 1, short.Expanded...)
-				}
-			}
-			return args
+			return shorthand.Expand(shorthands, args)
 		}),
 		komplete.WithPredictor("branches", komplete.PredictFunc(predictBranches)),
 		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
@@ -203,11 +166,8 @@ func main() {
 			logger.Fatal("gs: please provide a command")
 		}
 	} else {
-		// Otherwise, expand the first argument if it's a shorthand.
-		if short, ok := shorthands[args[0]]; ok {
-			// TODO: Replace first non-flag argument instead.
-			args = slices.Replace(args, 0, 1, short.Expanded...)
-		}
+		// Otherwise, expand the shorthands before parsing.
+		args = shorthand.Expand(shorthands, args)
 	}
 
 	kctx, err := parser.Parse(args)
@@ -219,13 +179,6 @@ func main() {
 		logger.Fatalf("gs: %v", err)
 	}
 }
-
-type shorthand struct {
-	Expanded []string
-	Command  *kong.Node
-}
-
-type shorthands map[string]shorthand
 
 type globalOptions struct {
 	// Flags that are not accessed directly by command implementations:

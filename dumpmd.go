@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"go.abhg.dev/gs/internal/cli/shorthand"
 )
 
 // dumpMarkdownCmd is a hidden commnad that dumps
@@ -19,7 +20,7 @@ type dumpMarkdownCmd struct {
 	Shorthands string `name:"shorthands" help:"Output file for shorthands table."`
 }
 
-func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts shorthands) (err error) {
+func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts *shorthand.BuiltinSource) (err error) {
 	ref, err := os.Create(cmd.Ref)
 	if err != nil {
 		return err
@@ -40,17 +41,13 @@ func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts shorthands) (err error) {
 	return nil
 }
 
-func dumpShorthands(w io.Writer, shorts shorthands) {
-	keys := make([]string, 0, len(shorts))
-	for key := range shorts {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
+func dumpShorthands(w io.Writer, shorts *shorthand.BuiltinSource) {
+	keys := shorts.Keys()
 
 	var t table
 	t.appendHeaders("Shorthand", "Long form")
 	for _, key := range keys {
-		cmd := cmdFullName(shorts[key].Command)
+		cmd := cmdFullName(shorts.Node(key))
 		link := fmt.Sprintf("[%v](/cli/reference.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
 		t.addRow("gs "+key, link)
 	}
