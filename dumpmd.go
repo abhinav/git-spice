@@ -215,8 +215,18 @@ func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 	if !flag.IsBool() && !flag.IsCounter() {
 		cmd.printf("=%s", flag.FormatPlaceHolder())
 	}
+	cmd.printf("`")
 
-	cmd.printf("`: %s\n", flag.Help)
+	// If the flag can also be set by configuration,
+	// add a link to /cli/config.md#<key>.
+	// This will ensure all configuration keys are documented.
+	if key := flag.Tag.Get("config"); key != "" {
+		key = "spice." + key
+		anchor := strings.ToLower(strings.ReplaceAll(key, ".", ""))
+		cmd.printf(" ([:material-wrench:{ .middle title=%q }](/cli/config.md#%s))", key, anchor)
+	}
+
+	cmd.printf(": %s\n", flag.Help)
 }
 
 func (cmd cliDumper) header(level int, text string) {
