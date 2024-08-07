@@ -22,11 +22,11 @@ import (
 type Options struct {
 	// URL is the URL for GitHub.
 	// Override this for testing or GitHub Enterprise.
-	URL string `name:"github-url" hidden:"" env:"GITHUB_URL" help:"Base URL for GitHub web requests"`
+	URL string `name:"github-url" hidden:"" config:"forge.github.url" env:"GITHUB_URL" help:"Base URL for GitHub web requests"`
 
 	// APIURL is the URL for the GitHub API.
 	// Override this for testing or GitHub Enterprise.
-	APIURL string `name:"github-api-url" hidden:"" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
+	APIURL string `name:"github-api-url" hidden:"" config:"forge.github.apiUrl" env:"GITHUB_API_URL" help:"Base URL for GitHub API requests"`
 
 	// Token is a fixed token used to authenticate with GitHub.
 	// This may be used to skip the login flow.

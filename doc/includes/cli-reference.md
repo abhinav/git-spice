@@ -12,6 +12,8 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
+**Configuration**: [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl)
+
 ## Shell
 
 ### gs shell completion
