@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/buildkite/shellwords"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 )
@@ -14,6 +16,7 @@ import (
 const (
 	_configKey             = "config"
 	_configNamespace       = "spice"
+	_configShorthandKey    = "shorthand"
 	_configNamespacePrefix = _configNamespace + "."
 )
 
@@ -58,9 +61,13 @@ type Config struct {
 	// items is a map from configuration key (without the "spice." prefix)
 	// to list of values for that field.
 	items map[string][]string
+
+	// shorthands is a map from shorthand to the list of arguments
+	// that that it expands to.
+	shorthands map[string][]string
 }
 
-// ConfigOptions specifies options for the [Config].
+// ConfigOptions spceifies options for the [Config].
 type ConfigOptions struct {
 	// Log specifies the logger to use for logging.
 	// Defaults to no logging.
@@ -79,21 +86,42 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	}
 
 	items := make(map[string][]string)
+	shorthands := make(map[string][]string)
 
 	err = nil // TODO: use a range loop after Go 1.23
 	entries(func(entry git.ConfigEntry, iterErr error) bool {
+		const _shorthandPrefix = _configShorthandKey + "."
+
 		if iterErr != nil {
 			err = iterErr
 			return false
 		}
 
-		// ok=false will never happen if git config --get-regexp
-		// behaves correctly, but it's easy to handle.
 		key, ok := strings.CutPrefix(entry.Key, _configNamespacePrefix)
-		if ok {
-			items[key] = append(items[key], entry.Value)
+		if !ok {
+			// This will never happen if git config --get-regexp
+			// behaves correctly, but it's easy to handle.
+			return true
 		}
 
+		// Special-case: Everything under "spice.shorthand.*"
+		// defines a shorthand.
+		if short, ok := strings.CutPrefix(key, _shorthandPrefix); ok {
+			longform, err := shellwords.SplitPosix(entry.Value)
+			if err != nil {
+				opts.Log.Warn("skipping shorthand with invalid value",
+					"shorthand", short,
+					"value", entry.Value,
+					"error", err,
+				)
+				return true
+			}
+
+			shorthands[short] = longform
+			return true
+		}
+
+		items[key] = append(items[key], entry.Value)
 		return true
 	})
 	if err != nil {
@@ -101,8 +129,26 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	}
 
 	return &Config{
-		items: items,
+		items:      items,
+		shorthands: shorthands,
 	}, nil
+}
+
+// ExpandShorthand returns the long form of a custom shorthand command.
+// Returns false if the shorthand is not defined.
+func (c *Config) ExpandShorthand(name string) ([]string, bool) {
+	args, ok := c.shorthands[name]
+	return args, ok
+}
+
+// Shorthands returns a sorted list of all defined shorthands.
+func (c *Config) Shorthands() []string {
+	shorthands := make([]string, 0, len(c.shorthands))
+	for short := range c.shorthands {
+		shorthands = append(shorthands, short)
+	}
+	sort.Strings(shorthands)
+	return shorthands
 }
 
 // Validate checks if the configuration is valid for the given application.
@@ -123,19 +169,20 @@ func (c *Config) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag)
 
 	case 1:
 		return values[0], nil
-	}
 
-	if flag.IsSlice() {
-		if flag.Tag.Sep != -1 {
-			// If there are multiple values, and a separator is defined,
-			// let Kong split the values.
-			return kong.JoinEscaped(values, flag.Tag.Sep), nil
+	default:
+		if flag.IsSlice() {
+			if flag.Tag.Sep != -1 {
+				// If there are multiple values, and a separator is defined,
+				// let Kong split the values.
+				return kong.JoinEscaped(values, flag.Tag.Sep), nil
+			}
+
+			return nil, fmt.Errorf("key %q has multiple values but no separator is defined", key)
 		}
 
-		return nil, fmt.Errorf("key %q has multiple values but no separator is defined", key)
+		// Last value wins if there are multiple instances
+		// for a single-valued flag.
+		return values[len(values)-1], nil
 	}
-
-	// Last value wins if there are multiple instances
-	// for a single-valued flag.
-	return values[len(values)-1], nil
 }

@@ -52,6 +52,15 @@ func TestExpand(t *testing.T) {
 			args: []string{"foo"},
 			want: []string{},
 		},
+		{
+			name: "Sources",
+			src: shorthand.Sources{
+				shorthandMap{"foo": {"bar", "baz"}},
+				shorthandMap{"bar": {"qux"}},
+			},
+			args: []string{"foo"},
+			want: []string{"qux", "baz"},
+		},
 	}
 
 	for _, tt := range tests {

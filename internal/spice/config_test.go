@@ -27,6 +27,8 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 		args   []string
 		want   any
 
+		shorthands map[string][]string
+
 		wantErr []string // non-empty if error messages are expected
 	}{
 		{name: "Empty", want: struct {
@@ -160,6 +162,20 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 				Level string `config:"level"`
 			}{Level: "hot"},
 		},
+		{
+			name: "Shorthands",
+			config: text.Dedent(`
+				[spice.shorthand]
+				can = commit amend --no-edit
+				wip = commit create -m \"wip: \\\"quoted\\\"\"
+				poorly = \"  # ignored (not a valid shorthand)
+			`),
+			want: struct{}{},
+			shorthands: map[string][]string{
+				"can": {"commit", "amend", "--no-edit"},
+				"wip": {"commit", "create", "-m", `wip: "quoted"`},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -209,6 +225,19 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 
 			require.NoError(t, err, "parse flags")
 			assert.Equal(t, tt.want, gotptr.Elem().Interface())
+
+			gotShorthands := make(map[string][]string)
+			for _, shorthand := range spicecfg.Shorthands() {
+				longform, ok := spicecfg.ExpandShorthand(shorthand)
+				require.True(t, ok, "expand(%q)", shorthand)
+				gotShorthands[shorthand] = longform
+			}
+
+			if tt.shorthands == nil {
+				tt.shorthands = make(map[string][]string)
+			}
+
+			assert.Equal(t, tt.shorthands, gotShorthands)
 		})
 	}
 }

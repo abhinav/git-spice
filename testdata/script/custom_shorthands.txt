@@ -1,0 +1,41 @@
+# We support defining custom shorthands with spice.shorthand.* configurations.
+
+as 'Test <test@example.com>'
+at '2024-08-06T20:03:01Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# global shorthand
+git add feature1.txt
+git config --global spice.shorthand.wip 'commit create -m "[wip]"'
+
+# local shorthand
+git config spice.shorthand.can 'commit amend --no-edit'
+
+gs wip
+git log --oneline -1
+stdout 'a66b737 \[wip\]'
+
+git add feature2.txt
+gs can
+git log --oneline -1
+stdout '745b23d \[wip\]'
+
+cd ..
+git clone repo repo2
+cd repo2
+
+# repo-level shorthand no longer available
+rm feature2.txt
+git add -u
+! gs can
+stderr 'unexpected argument'
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
