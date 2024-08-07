@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/buildkite/shellwords"
@@ -14,10 +13,10 @@ import (
 )
 
 const (
-	_configKey             = "config"
-	_configNamespace       = "spice"
-	_configShorthandKey    = "shorthand"
-	_configNamespacePrefix = _configNamespace + "."
+	_configTag           = "config"
+	_configSection       = "spice"
+	_shorthandSubsection = "shorthand"
+	_configSectionPrefix = _configSection + "."
 )
 
 // GitConfigLister provides access to git-config output.
@@ -60,7 +59,7 @@ var _ GitConfigLister = (*git.Config)(nil)
 type Config struct {
 	// items is a map from configuration key (without the "spice." prefix)
 	// to list of values for that field.
-	items map[string][]string
+	items map[git.ConfigKey][]string
 
 	// shorthands is a map from shorthand to the list of arguments
 	// that that it expands to.
@@ -80,25 +79,25 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 		opts.Log = log.New(io.Discard)
 	}
 
-	entries, err := cfg.ListRegexp(ctx, `^`+_configNamespace+`\.`)
+	entries, err := cfg.ListRegexp(ctx, `^`+_configSection+`\.`)
 	if err != nil {
 		return nil, fmt.Errorf("list configuration: %w", err)
 	}
 
-	items := make(map[string][]string)
+	items := make(map[git.ConfigKey][]string)
 	shorthands := make(map[string][]string)
 
 	err = nil // TODO: use a range loop after Go 1.23
 	entries(func(entry git.ConfigEntry, iterErr error) bool {
-		const _shorthandPrefix = _configShorthandKey + "."
-
 		if iterErr != nil {
 			err = iterErr
 			return false
 		}
 
-		key, ok := strings.CutPrefix(entry.Key, _configNamespacePrefix)
-		if !ok {
+		key := entry.Key.Canonical()
+		section, subsection, name := key.Split()
+		if section != _configSection {
+			// Ignore keys that are not in the spice namespace.
 			// This will never happen if git config --get-regexp
 			// behaves correctly, but it's easy to handle.
 			return true
@@ -106,7 +105,8 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 
 		// Special-case: Everything under "spice.shorthand.*"
 		// defines a shorthand.
-		if short, ok := strings.CutPrefix(key, _shorthandPrefix); ok {
+		if subsection == _shorthandSubsection {
+			short := name
 			longform, err := shellwords.SplitPosix(entry.Value)
 			if err != nil {
 				opts.Log.Warn("skipping shorthand with invalid value",
@@ -157,11 +157,12 @@ func (*Config) Validate(*kong.Application) error { return nil }
 
 // Resolve resolves the value for a flag from configuration.
 func (c *Config) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
-	key := flag.Tag.Get(_configKey)
-	if key == "" {
+	k := flag.Tag.Get(_configTag)
+	if k == "" {
 		return nil, nil
 	}
 
+	key := git.ConfigKey(_configSectionPrefix + k).Canonical()
 	values := c.items[key]
 	switch len(values) {
 	case 0:

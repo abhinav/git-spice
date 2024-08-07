@@ -39,11 +39,16 @@ For example:
     so that you can push branches to it.
     See [Limitations](limits.md) for more information.
 
-Pull Requests created by git-spice will include a comment at the top
-with a visual representation of the stack,
+### Navigation comments
+
+Pull Requests created by git-spice will include a navigation comment
+at the top with a visual representation of the stack,
 and the position of the current branch in it.
 
 ![Example of a stack comment](../img/stack-comment.png)
+
+This behavior may be changed with the $$spice.submit.navigationComment$$
+configuration key.
 
 ### Non-interactive submission
 

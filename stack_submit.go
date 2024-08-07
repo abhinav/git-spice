@@ -69,6 +69,7 @@ func (cmd *stackSubmitCmd) Run(
 		svc,
 		session.remoteRepo.Require(),
 		log,
+		cmd.NavigationComment,
 		session.branches,
 	)
 }

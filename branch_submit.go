@@ -26,6 +26,8 @@ type submitOptions struct {
 	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
 	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
 
+	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" placeholder:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+
 	Force bool `help:"Force push, bypassing safety checks"`
 
 	// TODO: Other creation options e.g.:
@@ -43,6 +45,8 @@ and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 `
 
 type branchSubmitCmd struct {
@@ -70,6 +74,8 @@ func (*branchSubmitCmd) Help() string {
 
 		Use --no-publish to push the branch without creating a Change
 		Request.
+		Use --nav-comment=false to disable navigation comments in CRs,
+		or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 	`)
 }
 
@@ -99,6 +105,7 @@ func (cmd *branchSubmitCmd) Run(
 		svc,
 		session.remoteRepo.Require(),
 		log,
+		cmd.NavigationComment,
 		session.branches,
 	)
 }

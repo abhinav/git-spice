@@ -14,6 +14,60 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+func TestConfigKey(t *testing.T) {
+	tests := []struct {
+		give string
+
+		canonical  string
+		section    string
+		subsection string
+		name       string
+	}{
+		{
+			give:      "key",
+			canonical: "key",
+			name:      "key",
+		},
+		{
+			give:      "section.key",
+			canonical: "section.key",
+			section:   "section",
+			name:      "key",
+		},
+		{
+			give:       "section.subsection.key",
+			canonical:  "section.subsection.key",
+			section:    "section",
+			subsection: "subsection",
+			name:       "key",
+		},
+		{
+			give:       "section.multiple.subsections.key",
+			canonical:  "section.multiple.subsections.key",
+			section:    "section",
+			subsection: "multiple.subsections",
+			name:       "key",
+		},
+		{
+			give:       "mixedCaseSection.mixedCaseSubsection.mixedCaseKey",
+			canonical:  "mixedcasesection.mixedCaseSubsection.mixedcasekey",
+			section:    "mixedCaseSection",
+			subsection: "mixedCaseSubsection",
+			name:       "mixedCaseKey",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			key := ConfigKey(tt.give)
+			assert.Equal(t, tt.canonical, string(key.Canonical()))
+			assert.Equal(t, tt.section, key.Section())
+			assert.Equal(t, tt.subsection, key.Subsection())
+			assert.Equal(t, tt.name, key.Name())
+		})
+	}
+}
+
 func TestConfigListRegexp(t *testing.T) {
 	pair := func(key, value string) string {
 		return key + "\n" + value
