@@ -131,6 +131,8 @@ func (cmd *cliDumper) dump(app *kong.Application) {
 	}
 	cmd.println()
 
+	cmd.dumpConfigFooter(app.Node)
+
 	for i, key := range groupKeys {
 		lvl := 2
 		title := groupTitles[i]
@@ -182,8 +184,37 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 		cmd.println()
 	}
 
+	cmd.dumpConfigFooter(node)
+
 	for _, child := range node.Children {
 		cmd.dumpCommand(child, level+1)
+	}
+}
+
+func (cmd cliDumper) dumpConfigFooter(node *kong.Node) {
+	var configKeys []string
+	for _, flag := range node.Flags {
+		key := flag.Tag.Get("config")
+		if key == "" {
+			continue
+		}
+		configKeys = append(configKeys, key)
+	}
+
+	if len(configKeys) == 0 {
+		return
+	}
+
+	cmd.print("**Configuration**:")
+	defer cmd.printf("\n\n")
+
+	for i, key := range configKeys {
+		key := "spice." + key
+		id := strings.ToLower(strings.ReplaceAll(key, ".", ""))
+		if i > 0 {
+			cmd.print(",")
+		}
+		cmd.printf(" [%v](/cli/config.md#%s)", key, id)
 	}
 }
 
