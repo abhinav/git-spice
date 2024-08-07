@@ -60,7 +60,7 @@ type Config struct {
 	items map[string][]string
 }
 
-// ConfigOptions spceifies options for the [Config].
+// ConfigOptions specifies options for the [Config].
 type ConfigOptions struct {
 	// Log specifies the logger to use for logging.
 	// Defaults to no logging.
@@ -87,14 +87,13 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 			return false
 		}
 
+		// ok=false will never happen if git config --get-regexp
+		// behaves correctly, but it's easy to handle.
 		key, ok := strings.CutPrefix(entry.Key, _configNamespacePrefix)
-		if !ok {
-			// This will never happen if git config --get-regexp
-			// behaves correctly, but it's easy to handle.
-			return true
+		if ok {
+			items[key] = append(items[key], entry.Value)
 		}
 
-		items[key] = append(items[key], entry.Value)
 		return true
 	})
 	if err != nil {
@@ -124,20 +123,19 @@ func (c *Config) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag)
 
 	case 1:
 		return values[0], nil
+	}
 
-	default:
-		if flag.IsSlice() {
-			if flag.Tag.Sep != -1 {
-				// If there are multiple values, and a separator is defined,
-				// let Kong split the values.
-				return kong.JoinEscaped(values, flag.Tag.Sep), nil
-			}
-
-			return nil, fmt.Errorf("key %q has multiple values but no separator is defined", key)
+	if flag.IsSlice() {
+		if flag.Tag.Sep != -1 {
+			// If there are multiple values, and a separator is defined,
+			// let Kong split the values.
+			return kong.JoinEscaped(values, flag.Tag.Sep), nil
 		}
 
-		// Last value wins if there are multiple instances
-		// for a single-valued flag.
-		return values[len(values)-1], nil
+		return nil, fmt.Errorf("key %q has multiple values but no separator is defined", key)
 	}
+
+	// Last value wins if there are multiple instances
+	// for a single-valued flag.
+	return values[len(values)-1], nil
 }
