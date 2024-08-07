@@ -1,5 +1,16 @@
-# Introduces a $$...$$ syntax for references to CLI commands in the reference.
-# $$command|text$$ will use {text} as the link text.
+"""
+Introduces a $$...$$ syntax for references to CLI commands or configuration
+in documentation
+
+The syntax is:
+
+- $$gs *$$ will produce a link to the CLI reference page.
+- $$spice.*$$ will produce a link to the configuration reference page.
+
+By default, $$foo$$ will use {foo} as the link text.
+The form $$foo|text$$ will use {text} as the link text,
+while still linking to {foo}.
+"""
 
 import re
 from mkdocs.structure.pages import Page
