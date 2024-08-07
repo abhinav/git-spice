@@ -115,6 +115,7 @@ nav:
   - CLI:
     - cli/index.md
     - cli/reference.md
+    - cli/config.md
     - cli/shorthand.md
   - how-to.md
   - FAQ: faq.md
