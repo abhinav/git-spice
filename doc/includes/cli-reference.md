@@ -150,7 +150,7 @@ Use with the -a/--all flag to show all tracked branches.
 
 **Flags**
 
-* `-a`, `--all`: Show all tracked branches, not just the current stack.
+* `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
 
 ### gs log long
 
@@ -166,7 +166,7 @@ Use with the -a/--all flag to show all tracked branches.
 
 **Flags**
 
-* `-a`, `--all`: Show all tracked branches, not just the current stack.
+* `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
 
 ## Stack
 

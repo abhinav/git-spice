@@ -15,10 +15,10 @@ or at the repository level with the `--local` flag.
 
 ```freeze language="terminal"
 {gray}# Set an option for current user{reset}
-{green}${reset} git config --global spice.{red}<key>{reset} {mag}<value>{reset}
+{green}${reset} git config --global {red}<key>{reset} {mag}<value>{reset}
 
 {gray}# Set an option for current repository{reset}
-{green}${reset} git config --local spice.{red}<key>{reset} {mag}<value>{reset}
+{green}${reset} git config --local {red}<key>{reset} {mag}<value>{reset}
 ```
 
 ??? question "What about `--system` and `--worktree`?"
@@ -27,3 +27,15 @@ or at the repository level with the `--local` flag.
     although `--system` and `--worktree` are less commonly used.
     Use `--worktree` to override repository-level settings
     for a specific [git-worktree](https://git-scm.com/docs/git-worktree).
+
+## Available options
+
+### spice.log.all
+
+Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,
+instead of showing just the current stack.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
