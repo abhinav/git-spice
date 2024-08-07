@@ -201,6 +201,17 @@ export GITHUB_URL=https://github.example.com
 export GITHUB_API_URL=https://github.example.com/api
 ```
 
+Since <!-- gs:version unreleased -->,
+use the $$spice.forge.github.url$$ and $$spice.forge.github.apiUrl$$
+configuration options to set these values
+if environment variables are inconvenient.
+
+```freeze language="terminal"
+git config {green}spice.forge.github.url{reset} {mag}https://github.example.com{reset}
+git config {green}spice.forge.github.apiUrl{reset} {mag}https://github.example.com/api{reset}
+```
+
+
 ## Safety
 
 By default, git-spice stores your GitHub authentication token

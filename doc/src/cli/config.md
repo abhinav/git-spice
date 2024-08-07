@@ -30,6 +30,20 @@ or at the repository level with the `--local` flag.
 
 ## Available options
 
+### spice.forge.github.apiUrl
+
+URL at which the GitHub API is available.
+Defaults to `$GITHUB_API_URL` if set, or `https://api.github.com` otherwise.
+
+See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
+
+### spice.forge.github.url
+
+URL of the GitHub instance used for GitHub requests.
+Defaults to `$GITHUB_URL` if set, or `https://github.com` otherwise.
+
+See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
+
 ### spice.log.all
 
 Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,
