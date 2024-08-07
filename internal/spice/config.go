@@ -67,7 +67,7 @@ type Config struct {
 	shorthands map[string][]string
 }
 
-// ConfigOptions spceifies options for the [Config].
+// ConfigOptions specifies options for the [Config].
 type ConfigOptions struct {
 	// Log specifies the logger to use for logging.
 	// Defaults to no logging.
