@@ -26,7 +26,7 @@ type submitOptions struct {
 	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
 	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
 
-	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" placeholder:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
 	Force bool `help:"Force push, bypassing safety checks"`
 
