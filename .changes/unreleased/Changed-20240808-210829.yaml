@@ -1,3 +1,0 @@
-kind: Changed
-body: 'GitHub Enterprise: `GITHUB_API_URL` is now optional. If not set, we''ll guess it from the GitHub URL.'
-time: 2024-08-08T21:08:29.592021-07:00

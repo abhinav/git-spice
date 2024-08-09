@@ -1,3 +1,0 @@
-kind: Added
-body: Add `spice.log.all` option to always set --all for `gs log long` and `gs log short`.
-time: 2024-08-07T05:31:24.566371-07:00
