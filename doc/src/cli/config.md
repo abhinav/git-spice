@@ -33,7 +33,8 @@ or at the repository level with the `--local` flag.
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.
-Defaults to `$GITHUB_API_URL` if set, or `https://api.github.com` otherwise.
+Defaults to `$GITHUB_API_URL` if set,
+or computed from the GitHub URL if not set.
 
 See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 

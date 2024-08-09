@@ -16,6 +16,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Default URLs for GitHub and its API.
+const (
+	DefaultURL    = "https://github.com"
+	DefaultAPIURL = "https://api.github.com"
+)
+
 // Options defines command line options for the GitHub Forge.
 // These are all hidden in the CLI,
 // and are expected to be set only via environment variables.
@@ -46,13 +52,26 @@ var _ forge.Forge = (*Forge)(nil)
 // URL returns the base URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) URL() string {
-	return cmp.Or(f.Options.URL, "https://github.com")
+	return cmp.Or(f.Options.URL, DefaultURL)
 }
 
 // APIURL returns the base API URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) APIURL() string {
-	return cmp.Or(f.Options.APIURL, "https://api.github.com")
+	if f.Options.APIURL != "" {
+		return f.Options.APIURL
+	}
+
+	// If the API URL is not set, and base URL is NOT github.com,
+	// assume API URL is $baseURL/api.
+	if f.Options.URL != "" && f.Options.URL != DefaultURL {
+		apiURL, err := url.JoinPath(f.Options.URL, "/api")
+		if err == nil {
+			return apiURL
+		}
+	}
+
+	return DefaultAPIURL
 }
 
 // ID reports a unique key for this forge.

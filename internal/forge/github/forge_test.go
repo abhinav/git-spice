@@ -7,6 +7,58 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestURLs(t *testing.T) {
+	tests := []struct {
+		name string
+		opts Options
+
+		wantURL    string
+		wantAPIURL string
+	}{
+		{
+			name:       "Default",
+			wantURL:    DefaultURL,
+			wantAPIURL: DefaultAPIURL,
+		},
+		{
+			name:       "ExplicitURL",
+			opts:       Options{URL: DefaultURL},
+			wantURL:    DefaultURL,
+			wantAPIURL: DefaultAPIURL,
+		},
+		{
+			name:       "CustomURL",
+			opts:       Options{URL: "https://example.com"},
+			wantURL:    "https://example.com",
+			wantAPIURL: "https://example.com/api",
+		},
+		{
+			name: "CustomBoth",
+			opts: Options{
+				URL:    "https://example.com",
+				APIURL: "https://api.example.com",
+			},
+			wantURL:    "https://example.com",
+			wantAPIURL: "https://api.example.com",
+		},
+		{
+			name:       "InvalidURL",
+			opts:       Options{URL: ":/"},
+			wantURL:    ":/",
+			wantAPIURL: DefaultAPIURL,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := Forge{Options: tt.opts}
+
+			assert.Equal(t, tt.wantURL, f.URL())
+			assert.Equal(t, tt.wantAPIURL, f.APIURL())
+		})
+	}
+}
+
 func TestExtractRepoInfo(t *testing.T) {
 	tests := []struct {
 		name      string
