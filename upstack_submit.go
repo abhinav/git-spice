@@ -98,6 +98,7 @@ func (cmd *upstackSubmitCmd) Run(
 		svc,
 		session.remoteRepo.Require(),
 		log,
+		cmd.NavigationComment,
 		session.branches,
 	)
 }

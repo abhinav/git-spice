@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateStackComment(t *testing.T) {
@@ -106,6 +107,45 @@ func TestGenerateStackComment(t *testing.T) {
 			assert.Equal(t, want, got)
 		})
 	}
+}
+
+func TestNavigationCommentWhen_StringMarshal(t *testing.T) {
+	tests := []struct {
+		give string
+		want navigationCommentWhen
+		str  string
+	}{
+		{
+			give: "true",
+			want: navigationCommentAlways,
+			str:  "true",
+		},
+		{
+			give: "false",
+			want: navigationCommentNever,
+			str:  "false",
+		},
+		{
+			give: "multiple",
+			want: navigationCommentOnMultiple,
+			str:  "multiple",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			var got navigationCommentWhen
+			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.give, got.String())
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		var f navigationCommentWhen
+		require.Error(t, f.UnmarshalText([]byte("unknown")))
+		assert.Equal(t, "unknown", navigationCommentWhen(42).String())
+	})
 }
 
 type _changeID string

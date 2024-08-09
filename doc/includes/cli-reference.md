@@ -194,6 +194,8 @@ and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -202,7 +204,10 @@ This has no effect if a branch already has an open CR.
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs stack restack
 
@@ -261,6 +266,8 @@ and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -269,8 +276,11 @@ This has no effect if a branch already has an open CR.
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
+
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs upstack restack
 
@@ -348,6 +358,8 @@ and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -356,8 +368,11 @@ This has no effect if a branch already has an open CR.
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
+
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs downstack edit
 
@@ -705,6 +720,8 @@ Without the flag, the draft status is not changed.
 
 Use --no-publish to push the branch without creating a Change
 Request.
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
 **Flags**
 
@@ -712,10 +729,13 @@ Request.
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--no-publish`: Push branches but don't create change requests
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
+
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ## Commit
 

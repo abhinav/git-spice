@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -54,9 +55,79 @@ func NewConfig(opts ConfigOptions) *Config {
 	}
 }
 
+// ConfigKey is divided into three parts:
+//
+//	section.subsection.name
+//
+// subsection may be absent, or may be comprised of multiple parts.
+// section and name are case-insensitive.
+// subsection is case-sensitive.
+type ConfigKey string
+
+// Split splits the key into its three parts:
+// section, subsection, and name.
+func (k ConfigKey) Split() (section, subsection, name string) {
+	idx := strings.LastIndex(string(k), ".")
+	if idx == -1 {
+		// "foo" => "", "", "foo"
+		return "", "", string(k)
+	}
+
+	name = string(k[idx+1:])
+	k = k[:idx]
+
+	idx = strings.Index(string(k), ".")
+	if idx == -1 {
+		// "foo.bar" => "foo", "", "bar"
+		return string(k), "", name
+	}
+
+	// "foo.bar.baz" => "foo", "bar", "baz"
+	return string(k[:idx]), string(k[idx+1:]), name
+}
+
+// Canonical returns a canonicalized form of the key.
+// As the section and name are case-insensitive, they are lowercased,
+// and the subsection is left as-is.
+func (k ConfigKey) Canonical() ConfigKey {
+	section, subsection, name := k.Split()
+
+	var buf strings.Builder
+	if section != "" {
+		buf.WriteString(strings.ToLower(section))
+		buf.WriteByte('.')
+	}
+	if subsection != "" {
+		buf.WriteString(subsection)
+		buf.WriteByte('.')
+	}
+	buf.WriteString(strings.ToLower(name))
+	return ConfigKey(buf.String())
+}
+
+// Section returns the section name for the key,
+// or the key itself if it doesn't have a section.
+func (k ConfigKey) Section() string {
+	section, _, _ := k.Split()
+	return section
+}
+
+// Subsection returns the subsection name for the key,
+// or an empty string if it doesn't have a subsection.
+func (k ConfigKey) Subsection() string {
+	_, subsection, _ := k.Split()
+	return subsection
+}
+
+// Name returns the name for the key.
+func (k ConfigKey) Name() string {
+	_, _, name := k.Split()
+	return name
+}
+
 // ConfigEntry is a single key-value pair in Git configuration.
 type ConfigEntry struct {
-	Key   string
+	Key   ConfigKey
 	Value string
 }
 
@@ -116,7 +187,7 @@ func (cfg *Config) list(ctx context.Context, args ...string) (
 			}
 
 			if !yield(ConfigEntry{
-				Key:   string(key),
+				Key:   ConfigKey(key),
 				Value: string(value),
 			}, nil) {
 				return

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding"
 	"fmt"
 	"runtime"
 	"strings"
@@ -53,6 +54,54 @@ func (m *memoizedValue[A]) Get(f func() (A, error)) (_ A, err error) {
 	return m.value, err
 }
 
+// navigationCommentWhen specifies when a navigation comment should be posted
+// (or updated if it already exists).
+type navigationCommentWhen int
+
+const (
+	// navigationCommentAlways always posts a navigation comment.
+	// This is the default.
+	navigationCommentAlways navigationCommentWhen = iota
+
+	// navigationCommentNever disables posting navigation comments.
+	// If an existing comment is found, it is left as is.
+	navigationCommentNever
+
+	// navigationCommentOnMultiple posts a navigation comment
+	// only if there are multiple branches in the stack
+	// that the current branch is part of.
+	navigationCommentOnMultiple
+)
+
+var _ encoding.TextUnmarshaler = (*navigationCommentWhen)(nil)
+
+func (f *navigationCommentWhen) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "true", "1", "yes":
+		*f = navigationCommentAlways
+	case "false", "0", "no":
+		*f = navigationCommentNever
+	case "multiple":
+		*f = navigationCommentOnMultiple
+	default:
+		return fmt.Errorf("invalid value %q: expected true, false, or multiple", bs)
+	}
+	return nil
+}
+
+func (f navigationCommentWhen) String() string {
+	switch f {
+	case navigationCommentAlways:
+		return "true"
+	case navigationCommentNever:
+		return "false"
+	case navigationCommentOnMultiple:
+		return "multiple"
+	default:
+		return "unknown"
+	}
+}
+
 // For each branch in the list of submitted branches,
 // we'll add or update a comment in the form:
 //
@@ -73,8 +122,13 @@ func syncStackComments(
 	svc *spice.Service,
 	remoteRepo forge.Repository,
 	log *log.Logger,
+	navComment navigationCommentWhen,
 	submittedBranches []string,
 ) error {
+	if navComment == navigationCommentNever {
+		return nil // nothing to do
+	}
+
 	// Look up branch graph once, and share between all syncs.
 	trackedBranches, err := svc.LoadBranches(ctx)
 	if err != nil {
@@ -220,6 +274,15 @@ func syncStackComments(
 			// This should never happen.
 			log.Warnf("branch %q not found in tracked branches", branch)
 			continue
+		}
+
+		// If we're only posting on multiple,
+		// we'll need to check if the branch is part of a stack
+		// that has at least one other branch.
+		if navComment == navigationCommentOnMultiple {
+			if len(nodes[idx].Aboves) == 0 && nodes[idx].Base == -1 {
+				continue
+			}
 		}
 
 		info := infos[idx]

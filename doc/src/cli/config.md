@@ -53,3 +53,15 @@ instead of showing just the current stack.
 
 - `true`
 - `false` (default)
+
+### spice.submit.navigationComment
+
+Specifies whether CR submission commands ($$gs branch submit$$ and friends)
+should post or update a navigation comment to the CR.
+
+**Accepted values:**
+
+- `true` (default): always post or update navigation comments
+- `false`: don't post or update navigation comments
+- `multiple`:
+  post or update navigation comments only for stacks with at least two CRs

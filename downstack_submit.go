@@ -80,6 +80,7 @@ func (cmd *downstackSubmitCmd) Run(
 		svc,
 		session.remoteRepo.Require(),
 		log,
+		cmd.NavigationComment,
 		session.branches,
 	)
 }
