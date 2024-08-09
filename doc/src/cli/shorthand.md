@@ -51,7 +51,7 @@ Below is a complete list of shorthands built into git-spice.
 
 ## Custom shorthands
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.4.0 -->
 
 git-spice's [configuration system](config.md) supports defining
 custom shorthands for git-spice commands

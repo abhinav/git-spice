@@ -7,7 +7,7 @@ description: >-
 
 # CLI configuration
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.4.0 -->
 
 The behavior of git-spice can be customized with `git config`.
 Configuration options may be set at the user level with the `--global` flag,

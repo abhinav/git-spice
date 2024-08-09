@@ -192,7 +192,7 @@ It is intended only for CI/CD environments where you have no other choice.
 To use git-spice with a GitHub Enterprise instance,
 inform it of the instance URL, authenticate, and use git-spice as usual.
 
-=== "<!-- gs:version unreleased -->"
+=== "<!-- gs:version v0.4.0 -->"
 
     Set the $$spice.forge.github.url$$ configuration option
     to the address of your GitHub Enterprise instance.

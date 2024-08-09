@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Support opting out or reducing navigation comment frequency with the --nav-comment flag.
-  The spice.submit.navigationComment configuration option may be used for the same purpose.
-time: 2024-08-06T21:18:07.260181-07:00
