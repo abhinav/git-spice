@@ -61,6 +61,53 @@ func TestExpand(t *testing.T) {
 			args: []string{"foo"},
 			want: []string{"qux", "baz"},
 		},
+		{
+			name: "Sources/Cooperative",
+			src: shorthand.Sources{
+				shorthandMap{"can": {"ca", "--no-edit"}},
+				shorthandMap{"ca": {"c", "--amend"}},
+				shorthandMap{"c": {"commit"}},
+			},
+			args: []string{"can", "--all"},
+			want: []string{"commit", "--amend", "--no-edit", "--all"},
+		},
+		{
+			name: "Sources/CooperativeReverse",
+			src: shorthand.Sources{
+				shorthandMap{"c": {"commit"}},
+				shorthandMap{"ca": {"c", "--amend"}},
+				shorthandMap{"can": {"ca", "--no-edit"}},
+			},
+			args: []string{"can", "--all"},
+			want: []string{"commit", "--amend", "--no-edit", "--all"},
+		},
+		{
+			name: "Sources/Delete",
+			src: shorthand.Sources{
+				shorthandMap{"foo": {"bar", "baz"}},
+				shorthandMap{"bar": {}},
+			},
+			args: []string{"foo"},
+			want: []string{"baz"},
+		},
+		{
+			name: "Sources/NoMatch",
+			src: shorthand.Sources{
+				shorthandMap{"foo": {"bar", "baz"}},
+				shorthandMap{"bar": {"qux"}},
+			},
+			args: []string{"qux"},
+			want: []string{"qux"},
+		},
+		{
+			name: "Sources/InfiniteLoop",
+			src: shorthand.Sources{
+				shorthandMap{"foo": {"bar"}},
+				shorthandMap{"bar": {"foo"}},
+			},
+			args: []string{"foo"},
+			want: []string{"foo"},
+		},
 	}
 
 	for _, tt := range tests {
