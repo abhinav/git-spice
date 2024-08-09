@@ -82,3 +82,11 @@ For example:
 {gray}# Replace the "branch restack" shorthand{reset}
 {green}${reset} git config --global spice.shorthand.br "branch rename"
 ```
+
+If the result of a user-defined shorthand refers to a built-in shorthand,
+both will be expanded.
+
+```freeze language="terminal"
+{green}${reset} git config --global spice.shorthand.bb bco
+{gray}# bb will expand to bco, which will expand to "branch checkout"{reset}
+```
