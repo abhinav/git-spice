@@ -30,6 +30,17 @@ or at the repository level with the `--local` flag.
 
 ## Available options
 
+### spice.branchCheckout.showUntracked
+
+When running $$gs branch checkout$$ without any arguments,
+git-spice presents a prompt to select a branch to checkout.
+This option controls whether untracked branches are shown in the prompt.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.

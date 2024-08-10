@@ -1,0 +1,3 @@
+kind: Added
+body: 'branch checkout: Add ''spice.branchCheckout.showUntracked'' configuration to always show untracked branches in checkout prompt.'
+time: 2024-08-10T10:03:19.137432-07:00

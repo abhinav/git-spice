@@ -14,7 +14,7 @@ import (
 )
 
 type branchCheckoutCmd struct {
-	Untracked bool   `short:"u" help:"Show untracked branches if one isn't supplied"`
+	Untracked bool   `short:"u" config:"branchCheckout.showUntracked" help:"Show untracked branches if one isn't supplied"`
 	Branch    string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
 }
 
