@@ -43,6 +43,14 @@ cmp stdout $WORK/golden/prompt-all.txt
 git branch --show-current
 stdout 'baz'
 
+# showing all branches via config
+gs branch untrack baz
+gs trunk
+with-term -rows 8 -cols 50 $WORK/input/all.txt -- gs branch checkout -u
+cmp stdout $WORK/golden/prompt-all.txt
+git branch --show-current
+stdout 'baz'
+
 -- repo/foo.txt --
 whatever
 

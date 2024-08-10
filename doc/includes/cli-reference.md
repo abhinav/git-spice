@@ -460,7 +460,9 @@ Use -u/--untracked to show untracked branches in the prompt.
 
 **Flags**
 
-* `-u`, `--untracked`: Show untracked branches if one isn't supplied
+* `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
+
+**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked)
 
 ### gs branch create
 
