@@ -32,6 +32,8 @@ or at the repository level with the `--local` flag.
 
 ### spice.branchCheckout.showUntracked
 
+<!-- gs:version unreleased -->
+
 When running $$gs branch checkout$$ without any arguments,
 git-spice presents a prompt to select a branch to checkout.
 This option controls whether untracked branches are shown in the prompt.
