@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 mkdocs-material = {extras = ["imaging"], version = "*"}
 markdown-exec = {extras = ["ansi"], version = "*"}
+mkdocs-redirects = "*"
 
 [dev-packages]
 
