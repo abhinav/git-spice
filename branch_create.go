@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -97,11 +96,6 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
-	diff, err := repo.DiffIndex(ctx, "HEAD")
-	if err != nil {
-		return fmt.Errorf("diff index: %w", err)
-	}
-
 	baseName := cmd.Target
 	var (
 		baseHash       git.Hash
@@ -142,20 +136,19 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
-	if err := repo.DetachHead(ctx, baseName); err != nil {
-		return fmt.Errorf("detach head: %w", err)
+	commitHash, restore, err := cmd.commit(ctx, repo, baseName)
+	if err != nil {
+		return err
 	}
 
+	// Staged changes are committed to commitHash.
 	// From this point on, to prevent data loss,
-	// we'll revert to original branch while keeping the changes
-	// if we failed to successfully create the new branch.
+	// we'll want to revert to original branch while keeping the changes
+	// if we failed to create the new branch for any reason.
 	//
 	// The condition for this is not whether an error is returned,
-	// and whether the new branch was successfully created.
-	var (
-		branchCreated bool     // whether the new branch was created
-		commitHash    git.Hash // hash of the commit (if created)
-	)
+	// but whether the new branch was successfully created.
+	var branchCreated bool // set only after CreateBranch
 	defer func() {
 		if branchCreated {
 			return
@@ -164,39 +157,16 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		log.Warn("Unable to create branch. Rolling back.",
 			"branch", cmd.Target)
 
-		// Move HEAD to the state just before the commit
-		// while leaving the index and working tree as-is.
-		resetErr := repo.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
-			Mode:  git.ResetSoft,
-			Quiet: true,
-		})
-		if resetErr != nil {
-			log.Warn("Could not reset to parent commit.",
-				"commit", commitHash,
-				"error", resetErr)
+		if restoreErr := restore(); restoreErr != nil {
+			log.Error("Could not roll back. You may need to reset manually.", "error", restoreErr)
+			log.Errorf("Get your changes from: %s", commitHash)
 		}
-
-		err = errors.Join(err,
-			repo.Checkout(ctx, cmd.Target))
 	}()
-
-	if err := repo.Commit(ctx, git.CommitRequest{
-		AllowEmpty: len(diff) == 0,
-		Message:    cmd.Message,
-		All:        cmd.All,
-	}); err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-
-	commitHash, err = repo.Head(ctx)
-	if err != nil {
-		return fmt.Errorf("get commit hash: %w", err)
-	}
 
 	if cmd.Name == "" {
 		// Branch name was not specified.
 		// Generate one from the commit message.
-		subject, err := repo.CommitSubject(ctx, "HEAD")
+		subject, err := repo.CommitSubject(ctx, commitHash.String())
 		if err != nil {
 			return fmt.Errorf("get commit subject: %w", err)
 		}
@@ -217,7 +187,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
 		Name: cmd.Name,
-		Head: "HEAD",
+		Head: commitHash.String(),
 	}); err != nil {
 		return fmt.Errorf("create branch: %w", err)
 	}
@@ -265,4 +235,52 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	}
 
 	return nil
+}
+
+// commit commits the staged changes to a detached HEAD
+// and returns the hash of the commit.
+//
+// It also returns a function that can be used to restore
+// the repository to its original state if an error occurs.
+func (cmd *branchCreateCmd) commit(
+	ctx context.Context,
+	repo *git.Repository,
+	baseCommitish string,
+) (commitHash git.Hash, restore func() error, err error) {
+	// We'll need --allow-empty if there are no staged changes.
+	diff, err := repo.DiffIndex(ctx, "HEAD")
+	if err != nil {
+		return "", nil, fmt.Errorf("diff index: %w", err)
+	}
+
+	if err := repo.DetachHead(ctx, baseCommitish); err != nil {
+		return "", nil, fmt.Errorf("detach head: %w", err)
+	}
+
+	if err := repo.Commit(ctx, git.CommitRequest{
+		AllowEmpty: len(diff) == 0,
+		Message:    cmd.Message,
+		All:        cmd.All,
+	}); err != nil {
+		return "", nil, fmt.Errorf("commit: %w", err)
+	}
+
+	commitHash, err = repo.Head(ctx)
+	if err != nil {
+		return "", nil, fmt.Errorf("get commit hash: %w", err)
+	}
+
+	return commitHash, func() error {
+		// Move HEAD to the state just before the commit
+		// while leaving the index and working tree as-is.
+		err := repo.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
+			Mode:  git.ResetSoft,
+			Quiet: true,
+		})
+		if err != nil {
+			return fmt.Errorf("reset to parent commit: %w", err)
+		}
+
+		return repo.Checkout(ctx, baseCommitish)
+	}, nil
 }
