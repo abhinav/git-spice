@@ -1,6 +1,6 @@
 module go.abhg.dev/gs/doc
 
-go 1.22.5
+go 1.23
 
 require github.com/charmbracelet/freeze v0.1.7-0.20240607113933-578e9d05c319
 
