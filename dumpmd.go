@@ -46,7 +46,7 @@ func dumpShorthands(w io.Writer, shorts *shorthand.BuiltinSource) {
 
 	var t table
 	t.appendHeaders("Shorthand", "Long form")
-	for _, key := range keys {
+	for key := range keys {
 		cmd := cmdFullName(shorts.Node(key))
 		link := fmt.Sprintf("[%v](/cli/reference.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
 		t.addRow("gs "+key, link)
