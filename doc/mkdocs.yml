@@ -63,6 +63,9 @@ plugins:
   - markdown-exec
   - privacy:
       enabled: !ENV [CI, false]
+  - redirects:
+      redirect_maps:
+        'how-to.md': 'recipes.md'
   - search
   - social:
       enabled: !ENV [CI, false]
@@ -117,7 +120,7 @@ nav:
     - cli/reference.md
     - cli/config.md
     - cli/shorthand.md
-  - how-to.md
+  - Recipes: recipes.md
   - FAQ: faq.md
   - Changelog: changelog.md
 
