@@ -98,12 +98,11 @@ func main() {
 
 	// Forges may register additional command line flags
 	// by implementing CLIPlugin.
-	forge.All(func(f forge.Forge) bool {
+	for f := range forge.All {
 		if plugin := f.CLIPlugin(); plugin != nil {
 			cmd.Plugins = append(cmd.Plugins, plugin)
 		}
-		return true
-	})
+	}
 
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),

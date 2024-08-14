@@ -49,7 +49,13 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 	if forgeID != "" {
 		f, ok := forge.Lookup(forgeID)
 		if !ok {
-			log.Errorf("Forge ID must be one of: %s", strings.Join(forge.IDs(), ", "))
+			var available []string
+			for f := range forge.All {
+				available = append(available, f.ID())
+			}
+			slices.Sort(available)
+
+			log.Errorf("Forge ID must be one of: %s", strings.Join(available, ", "))
 			return nil, fmt.Errorf("unknown forge: %s", forgeID)
 		}
 		return f, nil
@@ -61,13 +67,12 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 	}
 
 	var opts []ui.SelectOption[forge.Forge]
-	forge.All(func(f forge.Forge) bool {
+	for f := range forge.All {
 		opts = append(opts, ui.SelectOption[forge.Forge]{
 			Label: f.ID(),
 			Value: f,
 		})
-		return true
-	})
+	}
 	slices.SortFunc(opts, func(a, b ui.SelectOption[forge.Forge]) int {
 		return cmp.Compare(a.Label, b.Label)
 	})
