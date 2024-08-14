@@ -476,6 +476,7 @@ Staged changes will be committed to the new branch.
 If there are no staged changes, an empty commit will be created.
 Use -a/--all to automatically stage modified and deleted files,
 just like 'git commit -a'.
+Use --no-commit to create the branch without committing.
 
 If a branch name is not provided,
 it will be generated from the commit message.
@@ -531,6 +532,9 @@ target (A) to the specified branch:
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
 * `-m`, `--message=MSG`: Commit message
+* `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
+
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit)
 
 ### gs branch delete
 

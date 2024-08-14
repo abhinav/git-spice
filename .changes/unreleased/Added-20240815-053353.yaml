@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  branch create: Add `--[no-]commit` flag
+  and accompayning `spice.branchCreate.commit` configuration
+  to create stacked branches without committing changes.
+time: 2024-08-15T05:33:53.799135-07:00

@@ -7,6 +7,43 @@ description: >-
 
 # Recipes
 
+## Workflows
+
+### Create branches without committing
+
+<!-- gs:version unreleased -->
+
+The default workflow for git-spice forces you to commit immediately
+to new branches: $$gs branch create$$ will create a new branch,
+and commit staged changes to it immediately,
+or if there are no staged changes, it will create an empty commit.
+
+If you have a workflow where you prefer to create branches first,
+and then work on them, you can use the following to adjust the workflow:
+
+- Configure $$gs branch create$$ to never commit by default
+  by setting $$spice.branchCreate.commit$$ to false.
+
+    ```bash
+    git config --global spice.branchCreate.commit false
+    ```
+
+- Use $$gs branch create$$ as usual to create branches.
+  Changes will not be committed automatically anymore.
+
+    ```bash
+    gs branch create my-branch
+    ```
+
+- If, for some branches, you do want to commit staged changes upon creation,
+  use the `--commit` flag.
+
+    ```bash
+    gs branch create my-branch --commit
+    ```
+
+## Tasks
+
 ### Import a Pull Request from GitHub
 
 git-spice can recognize and manage GitHub Pull Requests
