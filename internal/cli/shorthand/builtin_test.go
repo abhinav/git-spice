@@ -125,7 +125,7 @@ func TestBuiltinSource(t *testing.T) {
 
 			require.NoError(t, err)
 			got := make(map[string][]string)
-			for _, key := range src.Keys() {
+			for key := range src.Keys() {
 				var ok bool
 				got[key], ok = src.ExpandShorthand(key)
 				require.True(t, ok, "expand(%q)", key)

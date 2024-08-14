@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
@@ -24,17 +23,6 @@ func All(yield func(Forge) bool) {
 	_forgeRegistry.Range(func(_, value any) bool {
 		return yield(value.(Forge))
 	})
-}
-
-// IDs returns a sorted list of all registered forge IDs.
-func IDs() []string {
-	var names []string
-	All(func(f Forge) bool {
-		names = append(names, f.ID())
-		return true
-	})
-	sort.Strings(names)
-	return names
 }
 
 // Register registers a forge with the given ID.

@@ -130,10 +130,9 @@ func predictDirs(args komplete.Args) (predictions []string) {
 
 func predictForges(args komplete.Args) (predictions []string) {
 	var ids []string
-	forge.All(func(f forge.Forge) bool {
+	for f := range forge.All {
 		ids = append(ids, f.ID())
-		return true
-	})
+	}
 	sort.Strings(ids)
 	return ids
 }

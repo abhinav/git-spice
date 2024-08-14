@@ -2,6 +2,8 @@ package shorthand
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"slices"
 	"strings"
 
@@ -82,13 +84,8 @@ func (s *BuiltinSource) ExpandShorthand(cmd string) ([]string, bool) {
 }
 
 // Keys returns the list of shorthand keys in the source.
-func (s *BuiltinSource) Keys() []string {
-	keys := make([]string, 0, len(s.items))
-	for key := range s.items {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	return keys
+func (s *BuiltinSource) Keys() iter.Seq[string] {
+	return maps.Keys(s.items)
 }
 
 // Node returns the command node for the given shorthand key

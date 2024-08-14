@@ -17,17 +17,13 @@ func TestRegister(t *testing.T) {
 
 	t.Run("All", func(t *testing.T) {
 		var ok bool
-		forge.All(func(f forge.Forge) bool {
+		for f := range forge.All {
 			if f.ID() == "a" {
 				ok = true
+				break
 			}
-			return !ok
-		})
+		}
 		assert.True(t, ok, "forge not found")
-	})
-
-	t.Run("IDs", func(t *testing.T) {
-		assert.Contains(t, forge.IDs(), "a", "forge not found")
 	})
 
 	t.Run("Lookup", func(t *testing.T) {
