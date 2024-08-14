@@ -3,6 +3,8 @@ name: GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [ '*' ]
   workflow_dispatch:
 
 concurrency:
@@ -51,6 +53,9 @@ jobs:
 
   deploy:
     needs: build
+
+    # Deploy only on main builds, or for manual triggers.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
     permissions:
       pages: write
