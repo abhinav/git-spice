@@ -42,11 +42,11 @@ func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts *shorthand.BuiltinSource)
 }
 
 func dumpShorthands(w io.Writer, shorts *shorthand.BuiltinSource) {
-	keys := shorts.Keys()
+	keys := slices.Sorted(shorts.Keys())
 
 	var t table
 	t.appendHeaders("Shorthand", "Long form")
-	for key := range keys {
+	for _, key := range keys {
 		cmd := cmdFullName(shorts.Node(key))
 		link := fmt.Sprintf("[%v](/cli/reference.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
 		t.addRow("gs "+key, link)
