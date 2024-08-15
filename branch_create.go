@@ -20,6 +20,8 @@ type branchCreateCmd struct {
 
 	All     bool   `short:"a" help:"Automatically stage modified and deleted files"`
 	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
+
+	Commit bool `negatable:"" default:"true" config:"branchCreate.commit" help:"Commit staged changes to the new branch, or create an empty commit"`
 }
 
 func (*branchCreateCmd) Help() string {
@@ -28,6 +30,7 @@ func (*branchCreateCmd) Help() string {
 		If there are no staged changes, an empty commit will be created.
 		Use -a/--all to automatically stage modified and deleted files,
 		just like 'git commit -a'.
+		Use --no-commit to create the branch without committing.
 
 		If a branch name is not provided,
 		it will be generated from the commit message.
@@ -75,6 +78,10 @@ func (*branchCreateCmd) Help() string {
 }
 
 func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
+	if cmd.Name == "" && !cmd.Commit {
+		return fmt.Errorf("a branch name is required with --no-commit")
+	}
+
 	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
@@ -136,58 +143,62 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
-	commitHash, restore, err := cmd.commit(ctx, repo, baseName)
-	if err != nil {
-		return err
-	}
-
-	// Staged changes are committed to commitHash.
-	// From this point on, to prevent data loss,
-	// we'll want to revert to original branch while keeping the changes
-	// if we failed to create the new branch for any reason.
-	//
-	// The condition for this is not whether an error is returned,
-	// but whether the new branch was successfully created.
 	var branchCreated bool // set only after CreateBranch
-	defer func() {
-		if branchCreated {
-			return
-		}
-
-		log.Warn("Unable to create branch. Rolling back.",
-			"branch", cmd.Target)
-
-		if restoreErr := restore(); restoreErr != nil {
-			log.Error("Could not roll back. You may need to reset manually.", "error", restoreErr)
-			log.Errorf("Get your changes from: %s", commitHash)
-		}
-	}()
-
-	if cmd.Name == "" {
-		// Branch name was not specified.
-		// Generate one from the commit message.
-		subject, err := repo.CommitSubject(ctx, commitHash.String())
+	branchAt := baseHash
+	if cmd.Commit {
+		commitHash, restore, err := cmd.commit(ctx, repo, baseName)
 		if err != nil {
-			return fmt.Errorf("get commit subject: %w", err)
+			return err
 		}
+		branchAt = commitHash
 
-		name := spice.GenerateBranchName(subject)
-		current := name
+		// Staged changes are committed to commitHash.
+		// From this point on, to prevent data loss,
+		// we'll want to revert to original branch while keeping the changes
+		// if we failed to create the new branch for any reason.
+		//
+		// The condition for this is not whether an error is returned,
+		// but whether the new branch was successfully created.
+		defer func() {
+			if branchCreated {
+				return
+			}
 
-		// If the auto-generated branch name already exists,
-		// append a number to it until we find an unused name.
-		_, err = repo.PeelToCommit(ctx, current)
-		for num := 2; err == nil; num++ {
-			current = fmt.Sprintf("%s-%d", name, num)
+			log.Warn("Unable to create branch. Rolling back.",
+				"branch", cmd.Target)
+
+			if restoreErr := restore(); restoreErr != nil {
+				log.Error("Could not roll back. You may need to reset manually.", "error", restoreErr)
+				log.Errorf("Get your changes from: %s", commitHash)
+			}
+		}()
+
+		if cmd.Name == "" {
+			// Branch name was not specified.
+			// Generate one from the commit message.
+			subject, err := repo.CommitSubject(ctx, commitHash.String())
+			if err != nil {
+				return fmt.Errorf("get commit subject: %w", err)
+			}
+
+			name := spice.GenerateBranchName(subject)
+			current := name
+
+			// If the auto-generated branch name already exists,
+			// append a number to it until we find an unused name.
 			_, err = repo.PeelToCommit(ctx, current)
-		}
+			for num := 2; err == nil; num++ {
+				current = fmt.Sprintf("%s-%d", name, num)
+				_, err = repo.PeelToCommit(ctx, current)
+			}
 
-		cmd.Name = current
+			cmd.Name = current
+		}
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
 		Name: cmd.Name,
-		Head: commitHash.String(),
+		Head: branchAt.String(),
 	}); err != nil {
 		return fmt.Errorf("create branch: %w", err)
 	}

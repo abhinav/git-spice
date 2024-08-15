@@ -37,12 +37,19 @@ commit the staged files to it, and track it with the current branch as base.
 An editor will open to let you write a commit message
 if one was not provided with the `-m`/`--message` flag.
 
-!!! tip "But I use `git commit -a`"
+??? tip "But I use `git commit -a`"
 
     If you prefer to use `git commit -a` to automatically stage files
     before committing, use `gs branch create -a` to do the same with git-spice.
 
     Explore the full list of options at $$gs branch create$$.
+
+??? info "Creating branches without committing"
+
+    If you prefer a workflow where you create branches first
+    and then work on them,
+    you can configure git-spice to never commit by default.
+    See [Create branches without committing](../recipes.md#create-branches-without-committing).
 
 ### Manual stacking
 

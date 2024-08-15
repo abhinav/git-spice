@@ -43,6 +43,17 @@ This option controls whether untracked branches are shown in the prompt.
 - `true`
 - `false` (default)
 
+### spice.branchCreate.commit
+
+<!-- gs:version unreleased -->
+
+Whether $$gs branch create$$ should commit staged changes to the new branch.
+Set this to `false` to default to creating new branches without committing,
+and use the `--commit` flag to commit changes when needed.
+
+- `true` (default)
+- `false`
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.

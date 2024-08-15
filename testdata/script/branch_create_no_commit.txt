@@ -1,0 +1,75 @@
+# branch create --no-commit stacks branches
+# without committing staged changes.
+
+as 'Test <test@example.com>'
+at '2024-08-15T05:26:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add foo.txt
+gs bc --no-commit feat1
+
+git status --porcelain
+cmp stdout $WORK/golden/foo-staged.txt
+gs ls
+cmp stderr $WORK/golden/ls-feat1.txt
+
+# make it the default, try again
+git config spice.branchCreate.commit false
+git add bar.txt
+gs bc feat2
+
+git status --porcelain
+cmp stdout $WORK/golden/both-staged.txt
+gs ls
+cmp stderr $WORK/golden/ls-feat2.txt
+
+# commit opt-in overrides the config
+gs bc --commit feat3 -m 'Add foo and bar'
+git status --porcelain
+cmp stdout $WORK/golden/clean.txt
+gs ls
+cmp stderr $WORK/golden/ls-feat3.txt
+
+git graph --branches
+cmp stdout $WORK/golden/final-graph.txt
+
+gs ll
+cmp stderr $WORK/golden/ll-feat3.txt
+
+-- repo/foo.txt --
+foo
+-- repo/bar.txt --
+bar
+
+-- golden/clean.txt --
+-- golden/foo-staged.txt --
+A  foo.txt
+?? bar.txt
+-- golden/both-staged.txt --
+A  bar.txt
+A  foo.txt
+-- golden/ls-feat1.txt --
+┏━■ feat1 ◀
+main
+-- golden/ls-feat2.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1
+main
+-- golden/ls-feat3.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/ll-feat3.txt --
+    ┏━■ feat3 ◀
+    ┃   2a17718 Add foo and bar (now)
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/final-graph.txt --
+* 2a17718 (HEAD -> feat3) Add foo and bar
+* 356f4ce (main, feat2, feat1) Initial commit
