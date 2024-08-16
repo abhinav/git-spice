@@ -82,11 +82,6 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 	}
 
-	if branch.Base == cmd.Onto {
-		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
-		return nil
-	}
-
 	// Implementation note:
 	// This is a pretty straightforward operation despite the large scope.
 	// It starts by rebasing only the current branch onto the target
@@ -106,6 +101,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			Message: fmt.Sprintf("interrupted: %s: upstack onto %s", cmd.Branch, cmd.Onto),
 		})
 	}
+	log.Infof("%v: moved upstack onto %v", cmd.Branch, cmd.Onto)
 
 	return (&upstackRestackCmd{
 		SkipStart: true, // we've already moved the current branch

@@ -109,24 +109,20 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 
 	// Only after the upstacks have been moved
 	// will we move the branch itself and update its internal state.
-	if branch.Base != cmd.Onto {
-		if err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
-			Branch: cmd.Branch,
-			Onto:   cmd.Onto,
-		}); err != nil {
-			// If the rebase is interrupted,
-			// we'll just re-run this command again later.
-			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-				Err:     err,
-				Command: []string{"branch", "onto", cmd.Onto},
-				Branch:  cmd.Branch,
-				Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
-			})
-		}
-	} else if len(aboves) == 0 {
-		log.Infof("%s: already on %s", cmd.Branch, cmd.Onto)
-		return nil
+	if err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
+		Branch: cmd.Branch,
+		Onto:   cmd.Onto,
+	}); err != nil {
+		// If the rebase is interrupted,
+		// we'll just re-run this command again later.
+		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+			Err:     err,
+			Command: []string{"branch", "onto", cmd.Onto},
+			Branch:  cmd.Branch,
+			Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
+		})
 	}
 
+	log.Infof("%s: moved onto %s", cmd.Branch, cmd.Onto)
 	return repo.Checkout(ctx, cmd.Branch)
 }
