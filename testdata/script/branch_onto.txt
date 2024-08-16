@@ -24,6 +24,7 @@ exists feature1.txt feature2.txt feature3.txt
 
 # Move feature3 to be based on feature1
 gs branch onto feature1
+stderr 'feature3: moved onto feature1'
 exists feature1.txt
 ! exists feature2.txt
 exists feature3.txt
@@ -38,7 +39,7 @@ stderr 'cannot move trunk'
 # Already based on feature1.
 git checkout feature2
 gs branch onto feature1
-stderr 'already on feature1'
+stderr 'feature2: moved onto feature1'
 
 -- repo/feature1.txt --
 Feature 1

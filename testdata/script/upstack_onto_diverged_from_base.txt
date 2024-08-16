@@ -1,0 +1,61 @@
+# 'upstack onto' rebases the branch
+# if it has fallen behind target
+# even if the base already matches.
+
+as 'Test <test@example.com>'
+at '2024-08-16T08:00:00Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up main -> feat1 -> feat2 -> feat3
+gs bc --no-commit feat1
+git add feat2.txt
+gs bc feat2 -m 'Add feature 2'
+git add feat3.txt
+gs bc feat3 -m 'Add feature 3'
+gs ll
+cmp stderr $WORK/golden/ls-before.txt
+
+# add a commit to feat1
+gs bottom
+git add feat1.txt
+git commit -m 'Add feature 1'
+
+gs up
+stderr 'feat2: needs to be restacked'
+
+gs upstack onto feat1
+stderr 'feat2: moved upstack onto feat1'
+stderr 'feat3: restacked on feat2'
+
+gs ll
+cmp stderr $WORK/golden/ls-after.txt
+
+-- repo/feat1.txt --
+feature 1
+
+-- repo/feat2.txt --
+feature 2
+
+-- repo/feat3.txt --
+feature 3
+
+-- golden/ls-before.txt --
+    ┏━■ feat3 ◀
+    ┃   e6984b4 Add feature 3 (now)
+  ┏━┻□ feat2
+  ┃    e3b0e7d Add feature 2 (now)
+┏━┻□ feat1
+main
+-- golden/ls-after.txt --
+    ┏━□ feat3
+    ┃   d4de41e Add feature 3 (now)
+  ┏━┻■ feat2 ◀
+  ┃    9995287 Add feature 2 (now)
+┏━┻□ feat1
+┃    c6747e9 Add feature 1 (now)
+main

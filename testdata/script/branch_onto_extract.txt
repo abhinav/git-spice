@@ -22,6 +22,8 @@ gs bc -m feature3
 # move feature2 onto main
 git checkout feature2
 gs branch onto main
+stderr 'feature3: moved upstack onto feature1'
+stderr 'feature2: moved onto main'
 
 git graph --branches
 cmp stdout $WORK/golden/branches-graph.txt
