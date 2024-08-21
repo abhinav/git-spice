@@ -90,3 +90,20 @@ should post or update a navigation comment to the CR.
 - `false`: don't post or update navigation comments
 - `multiple`:
   post or update navigation comments only for stacks with at least two CRs
+
+### spice.submit.publish
+
+<!-- gs:version unreleased -->
+
+Whether submission commands ($$gs branch submit$$ and friends)
+should publish a CR to the forge.
+
+If this is set to false, submit commands will push branches,
+but not create CRs.
+In that case, the `--publish` flag will opt-in to creating CRs
+on a case-by-case basis.
+
+**Accepted values:**
+
+- `true` (default)
+- `false`

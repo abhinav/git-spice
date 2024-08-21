@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  {branch, downstack, upstack, stack} submit:
+  Support changing the default for --no-publish with the 'spice.submit.publish' configuration.
+  If the configuration is set to false, use the --publish flag to opt-in to publishing.
+time: 2024-08-21T21:35:15.287687-07:00
