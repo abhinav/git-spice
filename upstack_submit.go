@@ -57,7 +57,7 @@ func (cmd *upstackSubmitCmd) Run(
 				return fmt.Errorf("lookup base %v: %w", b.Base, err)
 			}
 
-			if base.Change == nil {
+			if base.Change == nil && !cmd.NoPublish {
 				log.Errorf("%v: base (%v) has not been submitted", cmd.Branch, b.Base)
 				return errors.New("submit the base branch first")
 			}
@@ -92,18 +92,12 @@ func (cmd *upstackSubmitCmd) Run(
 		return nil
 	}
 
-	remoteRepo, err := session.RemoteRepo.Get(ctx)
-	if err != nil {
-		return err
-	}
-
 	return syncStackComments(
 		ctx,
 		store,
 		svc,
-		remoteRepo,
 		log,
 		cmd.NavigationComment,
-		session.branches,
+		session,
 	)
 }

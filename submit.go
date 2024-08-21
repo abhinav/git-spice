@@ -136,11 +136,20 @@ func syncStackComments(
 	ctx context.Context,
 	store *state.Store,
 	svc *spice.Service,
-	remoteRepo forge.Repository,
 	log *log.Logger,
 	navComment navigationCommentWhen,
-	submittedBranches []string,
+	session *submitSession,
 ) error {
+	submittedBranches := session.branches
+	if len(submittedBranches) == 0 {
+		return nil
+	}
+
+	remoteRepo, err := session.RemoteRepo.Get(ctx)
+	if err != nil {
+		return fmt.Errorf("resolve remote repository: %w", err)
+	}
+
 	if navComment == navigationCommentNever {
 		return nil // nothing to do
 	}
