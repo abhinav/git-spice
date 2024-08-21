@@ -1,0 +1,7 @@
+kind: Added
+body: >-
+  submit: When importing existing CRs,
+  git-spice will also detect existing stack navigation comments
+  and update them instead of posting duplicates.
+  This will work only for comments posted by this version or newer.
+time: 2024-08-24T11:54:59.628818-07:00

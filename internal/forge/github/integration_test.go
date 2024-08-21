@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -458,6 +459,99 @@ func TestIntegration_Repository_comments(t *testing.T) {
 			repo.UpdateChangeComment(ctx, commentID, newCommentBody),
 			"could not update comment")
 	})
+}
+
+func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
+	const _prGQLID = "PR_kwDOJ2BQKs55Hpxz" // https://github.com/abhinav/git-spice/pull/356
+	prID := &github.PR{Number: 356, GQLID: githubv4.ID(_prGQLID)}
+
+	ctx := context.Background()
+	rec := newRecorder(t, t.Name())
+	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID,
+	)
+	require.NoError(t, err)
+
+	listOpts := &forge.ListChangeCommentsOptions{
+		CanUpdate: true,
+		BodyMatchesAll: []*regexp.Regexp{
+			regexp.MustCompile(`(?m)^This change is part of the following stack:$`),
+			regexp.MustCompile(`- #356`),
+		},
+	}
+	var items []*forge.ListChangeCommentItem
+	for comment, err := range repo.ListChangeComments(ctx, prID, listOpts) {
+		require.NoError(t, err)
+		items = append(items, comment)
+	}
+
+	assert.Equal(t, []*forge.ListChangeCommentItem{
+		{
+			ID: &github.PRComment{
+				GQLID: githubv4.ID("IC_kwDOJ2BQKs6JXKfO"),
+				URL:   "https://github.com/abhinav/git-spice/pull/356#issuecomment-2304550862",
+			},
+			Body: "This change is part of the following stack:\n\n" +
+				"- #356 ◀\n\n" +
+				"<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>\n",
+		},
+	}, items)
+}
+
+func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
+	const TotalComments = 10
+	github.SetListChangeCommentsPageSize(t, 3)
+
+	// https://github.com/abhinav/test-repo/pull/4
+	prID := &github.PR{
+		Number: 4,
+		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
+	}
+
+	ctx := context.Background()
+	rec := newRecorder(t, t.Name())
+	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	comments := fixturetest.New(_fixtures, "comments", func() []string {
+		comments := make([]string, TotalComments)
+		for i := range comments {
+			comments[i] = randomString(32)
+		}
+		return comments
+	}).Get(t)
+
+	var commentIDs []forge.ChangeCommentID
+	t.Cleanup(func() {
+		for _, commentID := range commentIDs {
+			t.Logf("Deleting comment: %s", commentID)
+
+			assert.NoError(t,
+				repo.DeleteChangeComment(ctx, commentID),
+				"could not delete comment")
+		}
+	})
+
+	// Post the comments before listing them.
+	for _, comment := range comments {
+		commentID, err := repo.PostChangeComment(ctx, prID, comment)
+		require.NoError(t, err, "could not post comment")
+		t.Logf("Posted comment: %s", commentID)
+		commentIDs = append(commentIDs, commentID)
+	}
+
+	var gotBodies []string
+	for comment, err := range repo.ListChangeComments(ctx, prID, nil /* opts */) {
+		require.NoError(t, err)
+		gotBodies = append(gotBodies, comment.Body)
+	}
+
+	assert.Len(t, gotBodies, TotalComments)
+	assert.ElementsMatch(t, comments, gotBodies)
 }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

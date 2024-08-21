@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"net/http"
 	"strconv"
 
@@ -50,6 +51,7 @@ type shamComment struct {
 }
 
 var (
+	_ = shamhubHandler("GET /{owner}/{repo}/comments", (*ShamHub).handleListChangeComments)
 	_ = shamhubHandler("POST /{owner}/{repo}/comments", (*ShamHub).handlePostChangeComment)
 	_ = shamhubHandler("PATCH /{owner}/{repo}/comments/{id}", (*ShamHub).handleUpdateChangeComment)
 )
@@ -198,4 +200,124 @@ func (r *forgeRepository) UpdateChangeComment(
 	}
 
 	return nil
+}
+
+type listChangeCommentsResponse struct {
+	Items   []listChangeCommentsItem `json:"items,omitempty"`
+	Offset  int                      `json:"offset,omitempty"`
+	HasMore bool                     `json:"hasMore,omitempty"`
+}
+
+type listChangeCommentsItem struct {
+	ID   int    `json:"id,omitempty"`
+	Body string `json:"body,omitempty"`
+}
+
+func (sh *ShamHub) handleListChangeComments(w http.ResponseWriter, r *http.Request) {
+	owner, repo := r.PathValue("owner"), r.PathValue("repo")
+	if owner == "" || repo == "" {
+		http.Error(w, "owner and repo are required", http.StatusBadRequest)
+		return
+	}
+
+	change, offsetstr, limitstr := r.FormValue("change"), r.FormValue("offset"), r.FormValue("limit")
+	if change == "" {
+		http.Error(w, "change is required", http.StatusBadRequest)
+		return
+	}
+
+	changeNum, err := strconv.Atoi(change)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	offset := 0
+	if offsetstr != "" {
+		offset, err = strconv.Atoi(offsetstr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	limit := 10
+	if limitstr != "" {
+		limit, err = strconv.Atoi(limitstr)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	sh.mu.RLock()
+	var comments []shamComment
+	for _, c := range sh.comments {
+		if c.Change == changeNum {
+			comments = append(comments, c)
+		}
+	}
+	sh.mu.RUnlock()
+
+	offset = min(offset, len(comments))      // bound the offset
+	limit = min(limit, len(comments)-offset) // bound the limit
+
+	var items []listChangeCommentsItem
+	for _, c := range comments[offset : offset+limit] {
+		items = append(items, listChangeCommentsItem{
+			ID:   c.ID,
+			Body: c.Body,
+		})
+	}
+
+	res := listChangeCommentsResponse{
+		Items:   items,
+		Offset:  offset + limit,
+		HasMore: offset+limit < len(comments),
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(res); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (r *forgeRepository) ListChangeComments(
+	ctx context.Context,
+	id forge.ChangeID,
+	options *forge.ListChangeCommentsOptions,
+) iter.Seq2[*forge.ListChangeCommentItem, error] {
+	u := r.apiURL.JoinPath(r.owner, r.repo, "comments")
+	q := u.Query()
+	q.Set("change", strconv.Itoa(int(id.(ChangeID))))
+	u.RawQuery = q.Encode()
+
+	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
+		offset := 0
+		for {
+			q.Set("offset", strconv.Itoa(offset))
+			q.Set("limit", "10")
+			u.RawQuery = q.Encode()
+
+			var res listChangeCommentsResponse
+			if err := r.client.Get(ctx, u.String(), &res); err != nil {
+				yield(nil, err)
+				return
+			}
+
+			for _, item := range res.Items {
+				yield(&forge.ListChangeCommentItem{
+					ID:   ChangeCommentID(item.ID),
+					Body: item.Body,
+				}, nil)
+			}
+
+			if !res.HasMore {
+				return
+			}
+
+			offset = res.Offset
+		}
+	}
 }

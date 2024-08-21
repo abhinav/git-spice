@@ -159,6 +159,7 @@ main ◀
             - #4
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -167,6 +168,7 @@ main ◀
         - #2 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -176,6 +178,7 @@ main ◀
             - #4
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 4
   body: |
     This change is part of the following stack:
@@ -185,3 +188,4 @@ main ◀
             - #4 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

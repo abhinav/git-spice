@@ -192,11 +192,33 @@ func (cmd *branchSubmitCmd) run(
 			// No PRs found, one will be created later.
 
 		case 1:
+			// A CR was found, but it wasn't associated with the branch.
+			// It was probably created manually.
+			// We'll associate it now.
 			existingChange = changes[0]
+			log.Infof("%v: Found existing CR %v", cmd.Branch, existingChange.ID)
 
 			md, err := remoteRepo.NewChangeMetadata(ctx, existingChange.ID)
 			if err != nil {
 				return fmt.Errorf("get change metadata: %w", err)
+			}
+
+			// If we're importing an existing CR,
+			// also check if there's a stack navigation comment to import.
+			listCommentOpts := forge.ListChangeCommentsOptions{
+				BodyMatchesAll: _navCommentRegexes,
+				CanUpdate:      true,
+			}
+
+			for comment, err := range remoteRepo.ListChangeComments(ctx, existingChange.ID, &listCommentOpts) {
+				if err != nil {
+					log.Warn("Could not list comments for CR. Ignoring existing comments.", "cr", existingChange.ID, "error", err)
+					break
+				}
+
+				log.Infof("%v: Found existing navigation comment: %v", cmd.Branch, comment.ID)
+				md.SetNavigationCommentID(comment.ID)
+				break
 			}
 
 			// TODO: this should all happen in Service, probably.
@@ -205,10 +227,6 @@ func (cmd *branchSubmitCmd) run(
 				return fmt.Errorf("marshal change metadata: %w", err)
 			}
 
-			// A CR was found, but it wasn't associated with the branch.
-			// It was probably created manually.
-			// We'll heal the state while we're at it.
-			log.Infof("%v: Found existing CR %v", cmd.Branch, existingChange.ID)
 			err = store.UpdateBranch(ctx, &state.UpdateRequest{
 				Upserts: []state.UpsertRequest{
 					{

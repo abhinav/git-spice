@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"iter"
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
@@ -122,4 +123,112 @@ func (f *Repository) DeleteChangeComment(
 	}
 
 	return nil
+}
+
+// There isn't a way to filter comments by contents server-side,
+// so we'll be doing that client-side.
+// GitHub's GraphQL API rate limits based on the number of nodes queried,
+// so we'll be fetching comments in pages of 10 instead of an obnoxious number.
+//
+// Since our comment will usually be among the first few comments,
+// that, plus the ascending order of comments, should make this good enough.
+var _listChangeCommentsPageSize = 10 // var for testing
+
+// ListChangeComments lists comments on a PR,
+// optionally applying the given filtering options.
+func (f *Repository) ListChangeComments(
+	ctx context.Context,
+	id forge.ChangeID,
+	options *forge.ListChangeCommentsOptions,
+) iter.Seq2[*forge.ListChangeCommentItem, error] {
+	type commentNode struct {
+		ID   githubv4.ID `graphql:"id"`
+		Body string      `graphql:"body"`
+		URL  string      `graphql:"url"`
+
+		ViewerCanUpdate bool `graphql:"viewerCanUpdate"`
+		ViewerDidAuthor bool `graphql:"viewerDidAuthor"`
+
+		CreatedAt githubv4.DateTime `graphql:"createdAt"`
+		UpdatedAt githubv4.DateTime `graphql:"updatedAt"`
+	}
+
+	var filters []func(commentNode) (keep bool)
+	if options != nil {
+		if len(options.BodyMatchesAll) != 0 {
+			for _, re := range options.BodyMatchesAll {
+				filters = append(filters, func(node commentNode) bool {
+					return re.MatchString(node.Body)
+				})
+			}
+		}
+		if options.CanUpdate {
+			filters = append(filters, func(node commentNode) bool {
+				return node.ViewerCanUpdate
+			})
+		}
+	}
+
+	gqlID, err := f.graphQLID(ctx, mustPR(id))
+	if err != nil {
+		return func(yield func(*forge.ListChangeCommentItem, error) bool) {
+			yield(nil, err)
+		}
+	}
+
+	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
+		var q struct {
+			Node struct {
+				PullRequest struct {
+					Comments struct {
+						PageInfo struct {
+							EndCursor   githubv4.String `graphql:"endCursor"`
+							HasNextPage bool            `graphql:"hasNextPage"`
+						} `graphql:"pageInfo"`
+
+						Nodes []commentNode `graphql:"nodes"`
+					} `graphql:"comments(first: $first, after: $after)"`
+				} `graphql:"... on PullRequest"`
+			} `graphql:"node(id: $id)"`
+		}
+
+		variables := map[string]any{
+			"id":    gqlID,
+			"first": githubv4.Int(_listChangeCommentsPageSize),
+			"after": (*githubv4.String)(nil),
+		}
+
+		for pageNum := 1; true; pageNum++ {
+			if err := f.client.Query(ctx, &q, variables); err != nil {
+				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
+				return
+			}
+
+			for _, node := range q.Node.PullRequest.Comments.Nodes {
+				for _, filter := range filters {
+					if !filter(node) {
+						continue
+					}
+				}
+
+				item := &forge.ListChangeCommentItem{
+					ID: &PRComment{
+						GQLID: node.ID,
+						URL:   node.URL,
+					},
+					Body: node.Body,
+				}
+
+				if !yield(item, nil) {
+					return
+				}
+			}
+
+			if !q.Node.PullRequest.Comments.PageInfo.HasNextPage {
+				return
+			}
+
+			variables["after"] = q.Node.PullRequest.Comments.PageInfo.EndCursor
+		}
+	}
 }

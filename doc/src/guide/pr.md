@@ -111,3 +111,45 @@ use $$gs repo sync$$ (or $$gs repo sync|gs rs$$).
 This will update the trunk branch (e.g. `main`)
 with the latest changes from the upstream repository,
 and delete any local branches whose PRs have been merged.
+
+## Importing pull requests
+
+You can import an existing PR into git-spice
+by checking it out locally, tracking the branch with git-spice,
+and re-submitting it.
+
+For example, if you have the GitHub CLI installed:
+
+```freeze language="terminal"
+{gray}# Check out the PR locally{reset}
+{green}${reset} gh pr checkout 359
+
+{gray}# Track it with git-spice{reset}
+{green}${reset} gs branch track
+
+{gray}# Re-submit it{reset}
+{green}${reset} gs branch submit
+{green}INF{reset} comment-recovery: Found existing CR #359
+{green}INF{reset} CR #359 is up-to-date: https://github.com/abhinav/git-spice/pull/359
+```
+
+!!! important
+
+    For this to work, the following MUST all be true:
+
+    - The PR is pushed to a branch in the upstream repository
+    - The local branch name exactly matches the upstream branch name
+
+This will work even for PRs that were not created by git-spice,
+or authored by someone else, as long as the above conditions are met.
+
+In <!-- gs:version unreleased --> or newer,
+this will also auto-detect [navigation comments](#navigation-comments)
+posted to the PR by git-spice, and update them if necessary.
+
+```freeze language="terminal"
+{green}${reset} gs branch submit
+{green}INF{reset} comment-recovery: Found existing CR #359
+{green}INF{reset} comment-recovery: Found existing navigation comment: {gray}...{reset}
+```
+
