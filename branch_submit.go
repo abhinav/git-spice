@@ -90,8 +90,8 @@ func (cmd *branchSubmitCmd) Run(
 		return err
 	}
 
-	var session submitSession
-	if err := cmd.run(ctx, &session, repo, store, svc, secretStash, log, opts); err != nil {
+	session := newSubmitSession(repo, store, secretStash, opts, log)
+	if err := cmd.run(ctx, session, repo, store, svc, log, opts); err != nil {
 		return err
 	}
 
@@ -99,11 +99,16 @@ func (cmd *branchSubmitCmd) Run(
 		return nil
 	}
 
+	remoteRepo, err := session.RemoteRepo.Get(ctx)
+	if err != nil {
+		return err
+	}
+
 	return syncStackComments(
 		ctx,
 		store,
 		svc,
-		session.remoteRepo.Require(),
+		remoteRepo,
 		log,
 		cmd.NavigationComment,
 		session.branches,
@@ -116,7 +121,6 @@ func (cmd *branchSubmitCmd) run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
-	secretStash secret.Stash,
 	log *log.Logger,
 	opts *globalOptions,
 ) error {
@@ -166,16 +170,12 @@ func (cmd *branchSubmitCmd) run(
 		upstreamBranch = branch.UpstreamBranch
 	}
 
-	remote, err := session.remote.Get(func() (string, error) {
-		return ensureRemote(ctx, repo, store, log, opts)
-	})
+	remote, err := session.Remote.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	remoteRepo, err := session.remoteRepo.Get(func() (forge.Repository, error) {
-		return openRemoteRepository(ctx, log, secretStash, repo, remote)
-	})
+	remoteRepo, err := session.RemoteRepo.Get(ctx)
 	if err != nil {
 		return err
 	}
