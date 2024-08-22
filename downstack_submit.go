@@ -74,7 +74,7 @@ func (cmd *downstackSubmitCmd) Run(
 		return nil
 	}
 
-	return syncStackComments(
+	return updateNavigationComments(
 		ctx,
 		store,
 		svc,

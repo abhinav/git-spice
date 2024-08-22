@@ -176,15 +176,15 @@ type ChangeMetadata interface {
 	// This is presented to the user in the UI.
 	ChangeID() ChangeID
 
-	// StackCommentID is a comment left on the Change
+	// NavigationCommentID is a comment left on the Change
 	// that contains a visualization of the stack.
-	StackCommentID() ChangeCommentID
+	NavigationCommentID() ChangeCommentID
 
-	// SetStackCommentID sets the ID of the stack comment
+	// SetNavigationCommentID sets the ID of the navigation comment
 	// on the chnage metadata to persist it later.
 	//
-	// The ID may be nil to indicate that there is no stack comment.
-	SetStackCommentID(ChangeCommentID)
+	// The ID may be nil to indicate that there is no navigation comment.
+	SetNavigationCommentID(ChangeCommentID)
 }
 
 // FindChangesOptions specifies filtering options

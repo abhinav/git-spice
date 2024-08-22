@@ -45,7 +45,7 @@ Pull Requests created by git-spice will include a navigation comment
 at the top with a visual representation of the stack,
 and the position of the current branch in it.
 
-![Example of a stack comment](../img/stack-comment.png)
+![Example of a stack navigation comment](../img/stack-comment.png)
 
 This behavior may be changed with the $$spice.submit.navigationComment$$
 configuration key.

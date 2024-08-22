@@ -13,7 +13,7 @@ import (
 type PRMetadata struct {
 	PR *PR `json:"pr,omitempty"`
 
-	StackComment *PRComment `json:"comment,omitempty"`
+	NavigationComment *PRComment `json:"comment,omitempty"`
 }
 
 var _ forge.ChangeMetadata = (*PRMetadata)(nil)
@@ -28,21 +28,21 @@ func (m *PRMetadata) ChangeID() forge.ChangeID {
 	return m.PR
 }
 
-// StackCommentID reports the comment ID of the stack comment
+// NavigationCommentID reports the comment ID of the navigation comment
 // left on the pull request.
-func (m *PRMetadata) StackCommentID() forge.ChangeCommentID {
-	if m.StackComment == nil {
+func (m *PRMetadata) NavigationCommentID() forge.ChangeCommentID {
+	if m.NavigationComment == nil {
 		return nil
 	}
-	return m.StackComment
+	return m.NavigationComment
 }
 
-// SetStackCommentID sets the comment ID of the stack comment
+// SetNavigationCommentID sets the comment ID of the navigation comment
 // left on the pull request.
 //
 // id may be nil.
-func (m *PRMetadata) SetStackCommentID(id forge.ChangeCommentID) {
-	m.StackComment = mustPRComment(id)
+func (m *PRMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
+	m.NavigationComment = mustPRComment(id)
 }
 
 // NewChangeMetadata returns the metadata for a pull request.

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGenerateStackComment(t *testing.T) {
+func TestGenerateStackNavigationComment(t *testing.T) {
 	tests := []struct {
 		name    string
 		graph   []*stackedChange
@@ -103,7 +103,7 @@ func TestGenerateStackComment(t *testing.T) {
 			}
 
 			want := _commentHeader + tt.want + _commentFooter
-			got := generateStackComment(tt.graph, tt.current)
+			got := generateStackNavigationComment(tt.graph, tt.current)
 			assert.Equal(t, want, got)
 		})
 	}
