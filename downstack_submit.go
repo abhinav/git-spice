@@ -74,18 +74,12 @@ func (cmd *downstackSubmitCmd) Run(
 		return nil
 	}
 
-	remoteRepo, err := session.RemoteRepo.Get(ctx)
-	if err != nil {
-		return err
-	}
-
 	return syncStackComments(
 		ctx,
 		store,
 		svc,
-		remoteRepo,
 		log,
 		cmd.NavigationComment,
-		session.branches,
+		session,
 	)
 }

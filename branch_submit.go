@@ -99,19 +99,13 @@ func (cmd *branchSubmitCmd) Run(
 		return nil
 	}
 
-	remoteRepo, err := session.RemoteRepo.Get(ctx)
-	if err != nil {
-		return err
-	}
-
 	return syncStackComments(
 		ctx,
 		store,
 		svc,
-		remoteRepo,
 		log,
 		cmd.NavigationComment,
-		session.branches,
+		session,
 	)
 }
 
@@ -175,16 +169,16 @@ func (cmd *branchSubmitCmd) run(
 		return err
 	}
 
-	remoteRepo, err := session.RemoteRepo.Get(ctx)
-	if err != nil {
-		return err
-	}
-
-	// If the branch doesn't have a CR associated with it,
-	// we'll probably need to create one,
-	// but verify that there isn't already one open.
 	var existingChange *forge.FindChangeItem
-	if branch.Change == nil {
+	if branch.Change == nil && !cmd.NoPublish {
+		// If the branch doesn't have a CR associated with it,
+		// we'll probably need to create one,
+		// but verify that there isn't already one open.
+		remoteRepo, err := session.RemoteRepo.Get(ctx)
+		if err != nil {
+			return fmt.Errorf("discover CR for %s: %w", cmd.Branch, err)
+		}
+
 		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch, forge.FindChangesOptions{
 			State: forge.ChangeOpen,
 			Limit: 3,
@@ -237,13 +231,19 @@ func (cmd *branchSubmitCmd) run(
 			return fmt.Errorf("multiple open change requests for %s", cmd.Branch)
 			// TODO: Ask the user to pick one and associate it with the branch.
 		}
-	} else {
+	} else if branch.Change != nil {
+		remoteRepo, err := session.RemoteRepo.Get(ctx)
+		if err != nil {
+			return fmt.Errorf("look up CR %v: %w", branch.Change.ChangeID(), err)
+		}
+
 		// If a CR is already associated with the branch,
 		// fetch information about it to compare with the current state.
 		change, err := remoteRepo.FindChangeByID(ctx, branch.Change.ChangeID())
 		if err != nil {
 			return fmt.Errorf("find change: %w", err)
 		}
+
 		// TODO: If the CR is closed, we should treat it as non-existent.
 		existingChange = change
 	}
@@ -261,6 +261,15 @@ func (cmd *branchSubmitCmd) run(
 
 		var prepared *preparedBranch
 		if !cmd.NoPublish {
+			remoteRepo, err := session.RemoteRepo.Get(ctx)
+			if err != nil {
+				return fmt.Errorf("prepare publish: %w", err)
+			}
+
+			// TODO: Refactor:
+			// NoPublish and DryRun are checked repeatedly.
+			// Extract the logic that needs them into no-ops
+			// and make this function flow more linearly.
 			prepared, err = cmd.preparePublish(
 				ctx,
 				log,
@@ -328,6 +337,7 @@ func (cmd *branchSubmitCmd) run(
 				return err
 			}
 
+			remoteRepo := prepared.remoteRepo
 			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, changeID)
 			if err != nil {
 				return fmt.Errorf("get change metadata: %w", err)
@@ -401,6 +411,12 @@ func (cmd *branchSubmitCmd) run(
 			opts := forge.EditChangeOptions{
 				Base:  branch.Base,
 				Draft: cmd.Draft,
+			}
+
+			// remoteRepo is guaranteed to be available at this point.
+			remoteRepo, err := session.RemoteRepo.Get(ctx)
+			if err != nil {
+				return fmt.Errorf("edit CR %v: %w", pull.ID, err)
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, opts); err != nil {

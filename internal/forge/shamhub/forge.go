@@ -11,7 +11,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/must"
 )
 
 // Options defines CLI options for the ShamHub forge.
@@ -51,7 +50,10 @@ func (f *Forge) CLIPlugin() any { return &f.Options }
 
 // MatchURL reports whether the given URL is a ShamHub URL.
 func (f *Forge) MatchURL(remoteURL string) bool {
-	must.NotBeBlankf(f.URL, "URL is required")
+	if f.URL == "" {
+		// ShamHub is not initialized.
+		return false
+	}
 
 	_, ok := strings.CutPrefix(remoteURL, f.URL)
 	return ok
