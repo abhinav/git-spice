@@ -57,7 +57,7 @@ func (cmd *upstackSubmitCmd) Run(
 				return fmt.Errorf("lookup base %v: %w", b.Base, err)
 			}
 
-			if base.Change == nil && !cmd.NoPublish {
+			if base.Change == nil && cmd.Publish {
 				log.Errorf("%v: base (%v) has not been submitted", cmd.Branch, b.Base)
 				return errors.New("submit the base branch first")
 			}

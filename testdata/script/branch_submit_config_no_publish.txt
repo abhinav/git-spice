@@ -1,0 +1,83 @@
+# branch submit supports spice.submit.publish configuration
+# to disable publishing until --publish is specified.
+
+as 'Test <test@example.com>'
+at '2024-08-21T21:29:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# opt out of publishing
+git config spice.submit.publish false
+
+git add feature1.txt
+gs bc -m feature1
+gs branch submit
+
+# branch submit doesn't publish
+shamhub dump changes
+cmp stdout $WORK/golden/no-pulls.txt
+
+mv feature1-v2.txt feature1.txt
+git add feature1.txt
+gs cc -m feature1-v2
+gs branch submit
+
+# branch submit doesn't publish
+shamhub dump changes
+cmp stdout $WORK/golden/no-pulls.txt
+
+# publish
+mv feature1-v3.txt feature1.txt
+git add feature1.txt
+gs ca -n -m 'feature1 v3'
+gs branch submit --publish --fill
+
+gs ll
+cmp stderr $WORK/golden/log-long.txt
+
+shamhub dump changes
+cmpenv stdout $WORK/golden/post-publish.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature1-v2.txt --
+feature 1 v2
+-- repo/feature1-v3.txt --
+feature 1 v3
+-- golden/no-pulls.txt --
+[]
+-- golden/log-long.txt --
+┏━■ feature1 (#1) ◀
+┃   5a09fe1 feature1 v3 (now)
+┃   293742b feature1 (now)
+main
+-- golden/post-publish.txt --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "feature1\n\nfeature1 v3",
+    "base": {
+      "ref": "main",
+      "sha": "b709fee62def5240cbbf662a05fdad097ab30e20"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "5a09fe1c62b68c6aad1c811929ba69d591f3babb"
+    }
+  }
+]

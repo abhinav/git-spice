@@ -23,8 +23,8 @@ type submitOptions struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 	Fill   bool `short:"c" help:"Fill in the change title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt?
-	Draft     *bool `negatable:"" help:"Whether to mark change requests as drafts"`
-	NoPublish bool  `name:"no-publish" help:"Push branches but don't create change requests"`
+	Draft   *bool `negatable:"" help:"Whether to mark change requests as drafts"`
+	Publish bool  `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
 
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
@@ -147,7 +147,7 @@ func (cmd *branchSubmitCmd) run(
 		}
 	}
 
-	if !cmd.DryRun && !cmd.NoPublish {
+	if !cmd.DryRun && cmd.Publish {
 		session.branches = append(session.branches, cmd.Branch)
 	}
 
@@ -170,7 +170,7 @@ func (cmd *branchSubmitCmd) run(
 	}
 
 	var existingChange *forge.FindChangeItem
-	if branch.Change == nil && !cmd.NoPublish {
+	if branch.Change == nil && cmd.Publish {
 		// If the branch doesn't have a CR associated with it,
 		// we'll probably need to create one,
 		// but verify that there isn't already one open.
@@ -251,16 +251,16 @@ func (cmd *branchSubmitCmd) run(
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
 		if cmd.DryRun {
-			if cmd.NoPublish {
-				log.Infof("WOULD push branch %s", cmd.Branch)
-			} else {
+			if cmd.Publish {
 				log.Infof("WOULD create a CR for %s", cmd.Branch)
+			} else {
+				log.Infof("WOULD push branch %s", cmd.Branch)
 			}
 			return nil
 		}
 
 		var prepared *preparedBranch
-		if !cmd.NoPublish {
+		if cmd.Publish {
 			remoteRepo, err := session.RemoteRepo.Get(ctx)
 			if err != nil {
 				return fmt.Errorf("prepare publish: %w", err)
@@ -354,7 +354,7 @@ func (cmd *branchSubmitCmd) run(
 			log.Infof("Pushed %s", cmd.Branch)
 		}
 	} else {
-		if cmd.NoPublish {
+		if !cmd.Publish {
 			log.Warnf("Ignoring --no-publish: %s was already published: %s", cmd.Branch, existingChange.URL)
 		}
 
