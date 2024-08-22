@@ -10,7 +10,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 )
@@ -19,16 +20,37 @@ import (
 // This provides the ability to share state between
 // the multiple 'branch submit' invocations made by
 // 'stack submit', 'upstack submit', and 'downstack submit'.
-//
-// The zero value of this type is a valid empty session.
 type submitSession struct {
 	// Branches that have been submitted (created or updated)
 	// in this session.
 	branches []string
 
 	// Values that are memoized across multiple branch submits.
-	remote     memoizedValue[string]
-	remoteRepo memoizedValue[forge.Repository]
+	Remote     memoizedValue[string]
+	RemoteRepo memoizedValue[forge.Repository]
+}
+
+func newSubmitSession(
+	repo *git.Repository,
+	store *state.Store,
+	stash secret.Stash,
+	globals *globalOptions,
+	log *log.Logger,
+) *submitSession {
+	var s submitSession
+	s.Remote.get = func(ctx context.Context) (string, error) {
+		return ensureRemote(ctx, repo, store, log, globals)
+	}
+
+	s.RemoteRepo.get = func(ctx context.Context) (forge.Repository, error) {
+		remote, err := s.Remote.Get(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return openRemoteRepository(ctx, log, stash, repo, remote)
+	}
+	return &s
 }
 
 // This whole type is a bit of a hack.
@@ -36,22 +58,16 @@ type submitSession struct {
 // between the submits.
 // Maybe newSubmitSession should handle opening remote repo.
 type memoizedValue[A any] struct {
-	once  sync.Once
-	done  bool
-	value A
+	once sync.Once
+
+	val A
+	err error
+	get func(context.Context) (A, error)
 }
 
-func (m *memoizedValue[A]) Require() A {
-	must.Bef(m.done, "memoized value not set: Require called without Get")
-	return m.value
-}
-
-func (m *memoizedValue[A]) Get(f func() (A, error)) (_ A, err error) {
-	m.once.Do(func() {
-		m.value, err = f()
-		m.done = true
-	})
-	return m.value, err
+func (m *memoizedValue[A]) Get(ctx context.Context) (_ A, err error) {
+	m.once.Do(func() { m.val, m.err = m.get(ctx) })
+	return m.val, m.err
 }
 
 // navigationCommentWhen specifies when a navigation comment should be posted

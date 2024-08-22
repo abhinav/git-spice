@@ -77,12 +77,12 @@ func (cmd *upstackSubmitCmd) Run(
 
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
-	var session submitSession
+	session := newSubmitSession(repo, store, secretStash, opts, log)
 	for _, b := range upstacks {
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        b,
-		}).run(ctx, &session, repo, store, svc, secretStash, log, opts)
+		}).run(ctx, session, repo, store, svc, log, opts)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", b, err)
 		}
@@ -92,11 +92,16 @@ func (cmd *upstackSubmitCmd) Run(
 		return nil
 	}
 
+	remoteRepo, err := session.RemoteRepo.Get(ctx)
+	if err != nil {
+		return err
+	}
+
 	return syncStackComments(
 		ctx,
 		store,
 		svc,
-		session.remoteRepo.Require(),
+		remoteRepo,
 		log,
 		cmd.NavigationComment,
 		session.branches,
