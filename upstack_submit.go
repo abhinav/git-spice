@@ -92,7 +92,7 @@ func (cmd *upstackSubmitCmd) Run(
 		return nil
 	}
 
-	return syncStackComments(
+	return updateNavigationComments(
 		ctx,
 		store,
 		svc,

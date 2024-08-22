@@ -132,7 +132,7 @@ func (f navigationCommentWhen) String() string {
 // Where the arrow indicates the current branch.
 // For cases where this is the first time we're posting the comment,
 // we'll need to also update the store to record the comment ID for later.
-func syncStackComments(
+func updateNavigationComments(
 	ctx context.Context,
 	store *state.Store,
 	svc *spice.Service,
@@ -255,7 +255,7 @@ func syncStackComments(
 					}
 
 					meta := post.Meta
-					meta.SetStackCommentID(commentID)
+					meta.SetNavigationCommentID(commentID)
 					bs, err := remoteRepo.Forge().MarshalChangeMetadata(meta)
 					if err != nil {
 						log.Warn("Error marshaling change metadata",
@@ -311,8 +311,8 @@ func syncStackComments(
 		}
 
 		info := infos[idx]
-		commentBody := generateStackComment(nodes, idx)
-		if info.Meta.StackCommentID() == nil {
+		commentBody := generateStackNavigationComment(nodes, idx)
+		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: branch,
 				Meta:   info.Meta,
@@ -322,7 +322,7 @@ func syncStackComments(
 		} else {
 			updatec <- &updateComment{
 				Change:  info.Meta.ChangeID(),
-				Comment: info.Meta.StackCommentID(),
+				Comment: info.Meta.NavigationCommentID(),
 				Body:    commentBody,
 			}
 		}
@@ -336,7 +336,7 @@ func syncStackComments(
 	}
 
 	var msg strings.Builder
-	msg.WriteString("Post stack comments\n\n")
+	msg.WriteString("Post stack navigation comments\n\n")
 	for _, upsert := range upserts {
 		fmt.Fprintf(&msg, "- %s\n", upsert.Name)
 	}
@@ -364,7 +364,7 @@ const (
 	_commentFooter = "\n<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>\n"
 )
 
-func generateStackComment(
+func generateStackNavigationComment(
 	nodes []*stackedChange,
 	current int,
 ) string {

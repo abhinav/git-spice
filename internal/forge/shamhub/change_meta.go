@@ -10,8 +10,9 @@ import (
 
 // ChangeMetadata records the metadata for a change on a ShamHub server.
 type ChangeMetadata struct {
-	Number       int `json:"number"`
-	StackComment int `json:"stack_comment"`
+	Number int `json:"number"`
+
+	NavigationComment int `json:"nav_comment"`
 }
 
 // ForgeID reports the forge ID that owns this metadata.
@@ -24,21 +25,21 @@ func (m *ChangeMetadata) ChangeID() forge.ChangeID {
 	return ChangeID(m.Number)
 }
 
-// StackCommentID reports the comment ID of the stack comment.
-func (m *ChangeMetadata) StackCommentID() forge.ChangeCommentID {
-	if m.StackComment == 0 {
+// NavigationCommentID reports the comment ID of the navigation comment.
+func (m *ChangeMetadata) NavigationCommentID() forge.ChangeCommentID {
+	if m.NavigationComment == 0 {
 		return nil
 	}
-	return ChangeCommentID(m.StackComment)
+	return ChangeCommentID(m.NavigationComment)
 }
 
-// SetStackCommentID sets the comment ID of the stack comment.
+// SetNavigationCommentID sets the comment ID of the navigation comment.
 // id may be nil.
-func (m *ChangeMetadata) SetStackCommentID(id forge.ChangeCommentID) {
+func (m *ChangeMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
 	if id == nil {
-		m.StackComment = 0
+		m.NavigationComment = 0
 	} else {
-		m.StackComment = int(id.(ChangeCommentID))
+		m.NavigationComment = int(id.(ChangeCommentID))
 	}
 }
 

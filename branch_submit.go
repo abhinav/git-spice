@@ -99,7 +99,7 @@ func (cmd *branchSubmitCmd) Run(
 		return nil
 	}
 
-	return syncStackComments(
+	return updateNavigationComments(
 		ctx,
 		store,
 		svc,
