@@ -24,8 +24,8 @@ import (
 	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
 	"golang.org/x/oauth2"
-	"gopkg.in/dnaeon/go-vcr.v3/cassette"
-	"gopkg.in/dnaeon/go-vcr.v3/recorder"
+	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
+	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
 
 // This file tests basic, end-to-end interactions with the GitHub API
@@ -51,10 +51,8 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 		}
 	})
 
-	var (
-		realTransport    http.RoundTripper
-		afterCaptureHook recorder.HookFunc
-	)
+	var realTransport http.RoundTripper
+	afterCaptureHook := func(*cassette.Interaction) error { return nil }
 	mode := recorder.ModeReplayOnly
 	if *_update {
 		mode = recorder.ModeRecordOnly
@@ -96,37 +94,33 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 		}
 	}
 
-	rec, err := recorder.NewWithOptions(&recorder.Options{
-		CassetteName:       filepath.Join("testdata", "fixtures", name),
-		Mode:               mode,
-		RealTransport:      realTransport,
-		SkipRequestLatency: true, // don't go slow
-	})
+	rec, err := recorder.New(filepath.Join("testdata", "fixtures", name),
+		recorder.WithMode(mode),
+		recorder.WithRealTransport(realTransport),
+		recorder.WithSkipRequestLatency(true),
+		recorder.WithHook(afterCaptureHook, recorder.AfterCaptureHook),
+
+		// GraphQL requests will all have the same method and URL.
+		// We'll need to match the body instead.
+		recorder.WithMatcher(func(r *http.Request, i cassette.Request) bool {
+			if r.Body == nil || r.Body == http.NoBody {
+				return cassette.DefaultMatcher(r, i)
+			}
+
+			reqBody, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			assert.NoError(t, r.Body.Close())
+
+			r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+			return r.Method == i.Method &&
+				r.URL.String() == i.URL &&
+				string(reqBody) == i.Body
+		}),
+	)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, rec.Stop())
 	})
-
-	// GraphQL requests will all have the same method and URL.
-	// We'll need to match the body instead.
-	rec.SetMatcher(func(r *http.Request, i cassette.Request) bool {
-		if r.Body == nil || r.Body == http.NoBody {
-			return cassette.DefaultMatcher(r, i)
-		}
-
-		reqBody, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-		assert.NoError(t, r.Body.Close())
-
-		r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
-		return r.Method == i.Method &&
-			r.URL.String() == i.URL &&
-			string(reqBody) == i.Body
-	})
-
-	if afterCaptureHook != nil {
-		rec.AddHook(afterCaptureHook, recorder.AfterCaptureHook)
-	}
 
 	return rec
 }
