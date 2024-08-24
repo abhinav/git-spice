@@ -79,6 +79,7 @@ New contents of feature1
     - #1 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 -- golden/update.json --
 [
   {
@@ -106,3 +107,4 @@ New contents of feature1
     - #1 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

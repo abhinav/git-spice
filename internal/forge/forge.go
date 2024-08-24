@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
+	"regexp"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
@@ -137,6 +139,9 @@ type Repository interface {
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
 	UpdateChangeComment(context.Context, ChangeCommentID, string) error
 
+	// List comments on a CR, optionally filtered per the given options.
+	ListChangeComments(context.Context, ChangeID, *ListChangeCommentsOptions) iter.Seq2[*ListChangeCommentItem, error]
+
 	// NewChangeMetadata builds a ChangeMetadata for the given change ID.
 	//
 	// This may perform network requests to fetch additional information
@@ -196,6 +201,30 @@ type FindChangesOptions struct {
 	// Changes are sorted by most recently updated.
 	// Defaults to 10.
 	Limit int
+}
+
+// ListChangeCommentsOptions specifies options for filtering
+// and limiting comments listed by ListChangeComments.
+//
+// Conditions specified here are combined with AND.
+type ListChangeCommentsOptions struct {
+	// BodyMatchesAll specifies zero or more regular expressions
+	// that must all match the comment body.
+	//
+	// If empty, all comments are returned.
+	BodyMatchesAll []*regexp.Regexp
+
+	// CanUpdate specifies whether only comments that can be updated
+	// by the current user should be returned.
+	//
+	// If false, all comments are returned.
+	CanUpdate bool
+}
+
+// ListChangeCommentItem is a single result from listing comments on a change.
+type ListChangeCommentItem struct {
+	ID   ChangeCommentID
+	Body string
 }
 
 // SubmitChangeRequest is a request to submit a new change in a repository.

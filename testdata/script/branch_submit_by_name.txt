@@ -62,3 +62,4 @@ Contents of feature1
     - #1 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

@@ -63,6 +63,7 @@ foo
         - #2
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -71,3 +72,4 @@ foo
         - #2 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

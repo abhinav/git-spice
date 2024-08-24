@@ -102,9 +102,20 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.graph[n.Base].Aboves = append(tt.graph[n.Base].Aboves, i)
 			}
 
-			want := _commentHeader + tt.want + _commentFooter
+			want := _commentHeader + "\n\n" +
+				tt.want + "\n" +
+				_commentFooter + "\n" +
+				_commentMarker + "\n"
 			got := generateStackNavigationComment(tt.graph, tt.current)
 			assert.Equal(t, want, got)
+
+			// Sanity check: All generated comments must match
+			// these regular expressions.
+			t.Run("Regexp", func(t *testing.T) {
+				for _, re := range _navCommentRegexes {
+					assert.True(t, re.MatchString(got), "regexp %q failed", re)
+				}
+			})
 		})
 	}
 }

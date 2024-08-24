@@ -24,7 +24,29 @@ gs bc -m 'Add feature1' feature1
 gs branch submit --fill
 stderr 'Created #'
 
+# Verify initial state
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls-initial.json
+
+shamhub dump comments
+cmpenv stdout $WORK/golden/comments-initial.txt
+
 # forget all state, and re-track the branch
+gs repo init --reset --trunk=main --remote=origin
+gs branch track --base=main feature1
+
+# re-submitting should detect that the PR already exists
+gs branch submit
+stderr 'feature1: Found existing CR #'
+stderr 'feature1: Found existing navigation comment'
+stderr 'CR #\d+ is up-to-date'
+
+# no changes to comments
+shamhub dump comments
+cmpenv stdout $WORK/golden/comments-initial.txt
+
+# again: forget all state, and re-track the branch
 gs repo init --reset --trunk=main --remote=origin
 gs branch track --base=main feature1
 
@@ -35,18 +57,23 @@ cp $WORK/extra/feature1-update.txt feature1.txt
 git add feature1.txt
 git commit -m 'update feature1'
 
-gs branch submit
+# Stack another branch on top.
+mv $WORK/extra/feature2.txt feature2.txt
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+gs downstack submit --fill
 stderr 'feature1: Found existing CR #'
+stderr 'feature1: Found existing navigation comment'
 stderr 'Updated #'
+stderr 'Created #'
 
 shamhub dump changes
-cmpenvJSON stdout $WORK/golden/update.json
+cmpenvJSON stdout $WORK/golden/pulls-updated.json
 
-# We'll have a duplicate comment
-# because we'll have lost information
-# about the previous comment.
+# There's no duplicate comment.
 shamhub dump comments
-cmp stdout $WORK/golden/comments.txt
+cmp stdout $WORK/golden/comments-updated.txt
 
 -- repo/feature1.txt --
 Contents of feature1
@@ -54,7 +81,38 @@ Contents of feature1
 -- extra/feature1-update.txt --
 New contents of feature1
 
--- golden/update.json --
+-- extra/feature2.txt --
+feature 2
+
+-- golden/pulls-initial.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature1",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "854f3268c794eb5ec30439658dfb43ac494d9074"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
+    }
+  }
+]
+
+-- golden/comments-initial.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/pulls-updated.json --
 [
   {
     "number": 1,
@@ -70,21 +128,41 @@ New contents of feature1
       "ref": "main",
       "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
     }
+  },
+  {
+  "base": {
+      "ref": "feature1",
+      "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
+    },
+    "body": "",
+    "head": {
+      "ref": "feature2",
+      "sha": "a81df03d4738f5277d0b122b1a4e053a4e2b236e"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "number": 2,
+    "state": "open",
+    "title": "Add feature2"
   }
 ]
 
--- golden/comments.txt --
+
+-- golden/comments-updated.txt --
 - change: 1
   body: |
     This change is part of the following stack:
 
     - #1 ◀
+        - #2
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-- change: 1
+    <!-- gs:navigation comment -->
+- change: 2
   body: |
     This change is part of the following stack:
 
-    - #1 ◀
+    - #1
+        - #2 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

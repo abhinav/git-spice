@@ -125,6 +125,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
             - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -134,6 +135,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
             - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -143,6 +145,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
             - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 -- golden/pr-1-merged.json --
 [
   {
@@ -203,6 +206,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
             - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -211,6 +215,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
         - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -219,6 +224,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
         - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 -- golden/ls.txt --
     ┏━□ feature3 (#3)
   ┏━┻□ feature2 (#2)

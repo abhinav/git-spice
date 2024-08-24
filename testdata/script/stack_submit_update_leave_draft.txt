@@ -186,6 +186,7 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     - #1 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -194,6 +195,7 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
         - #2 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -203,6 +205,7 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
             - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 -- golden/comments/pr-1-merged.txt --
 - change: 1
   body: |
@@ -211,6 +214,7 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     - #1 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -219,6 +223,7 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
         - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -227,3 +232,4 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
         - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

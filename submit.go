@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding"
 	"fmt"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -360,9 +361,18 @@ type stackedChange struct {
 }
 
 const (
-	_commentHeader = "This change is part of the following stack:\n\n"
-	_commentFooter = "\n<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>\n"
+	_commentHeader = "This change is part of the following stack:"
+	_commentFooter = "<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>"
+	_commentMarker = "<!-- gs:navigation comment -->"
 )
+
+// Regular expressions that must ALL match a comment
+// for it to be considered a navigation comment
+// when detecting existing comments.
+var _navCommentRegexes = []*regexp.Regexp{
+	regexp.MustCompile(`(?m)^\Q` + _commentHeader + `\E$`),
+	regexp.MustCompile(`(?m)^\Q` + _commentMarker + `\E$`),
+}
 
 func generateStackNavigationComment(
 	nodes []*stackedChange,
@@ -370,6 +380,7 @@ func generateStackNavigationComment(
 ) string {
 	var sb strings.Builder
 	sb.WriteString(_commentHeader)
+	sb.WriteString("\n\n")
 	write := func(nodeIdx, indent int) {
 		node := nodes[nodeIdx]
 		for range indent {
@@ -427,6 +438,13 @@ func generateStackNavigationComment(
 
 	// Current branch and its upstacks.
 	visit(current, indent)
+	sb.WriteString("\n")
+
 	sb.WriteString(_commentFooter)
+	sb.WriteString("\n")
+
+	sb.WriteString(_commentMarker)
+	sb.WriteString("\n")
+
 	return sb.String()
 }
