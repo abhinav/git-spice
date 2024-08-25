@@ -143,7 +143,7 @@ For example, if you have the GitHub CLI installed:
 This will work even for PRs that were not created by git-spice,
 or authored by someone else, as long as the above conditions are met.
 
-In <!-- gs:version unreleased --> or newer,
+In <!-- gs:version v0.5.0 --> or newer,
 this will also auto-detect [navigation comments](#navigation-comments)
 posted to the PR by git-spice, and update them if necessary.
 

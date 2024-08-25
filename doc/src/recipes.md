@@ -11,7 +11,7 @@ description: >-
 
 ### Create branches without committing
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.5.0 -->
 
 The default workflow for git-spice forces you to commit immediately
 to new branches: $$gs branch create$$ will create a new branch,
