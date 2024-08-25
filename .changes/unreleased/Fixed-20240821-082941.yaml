@@ -1,3 +1,0 @@
-kind: Fixed
-body: '{branch, stack, upstack, downstack} submit: When submitting with --no-publish, allow pushing to repositories managed by unsupported forges.'
-time: 2024-08-21T08:29:41.537238-07:00

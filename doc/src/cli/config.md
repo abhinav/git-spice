@@ -32,7 +32,7 @@ or at the repository level with the `--local` flag.
 
 ### spice.branchCheckout.showUntracked
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.5.0 -->
 
 When running $$gs branch checkout$$ without any arguments,
 git-spice presents a prompt to select a branch to checkout.
@@ -45,7 +45,7 @@ This option controls whether untracked branches are shown in the prompt.
 
 ### spice.branchCreate.commit
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.5.0 -->
 
 Whether $$gs branch create$$ should commit staged changes to the new branch.
 Set this to `false` to default to creating new branches without committing,
@@ -93,7 +93,7 @@ should post or update a navigation comment to the CR.
 
 ### spice.submit.publish
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.5.0 -->
 
 Whether submission commands ($$gs branch submit$$ and friends)
 should publish a CR to the forge.

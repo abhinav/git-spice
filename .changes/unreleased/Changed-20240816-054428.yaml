@@ -1,5 +1,0 @@
-kind: Changed
-body: >-
-  {branch, upstack} onto: Rebase commits even if the branch's base matches the target.
-  This better matches expectations when the branch falls behind the target.
-time: 2024-08-16T05:44:28.62315-07:00
