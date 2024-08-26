@@ -1,0 +1,11 @@
+[tool.uv]
+dev-dependencies = [
+    "mkdocs-material[imaging]>=9.5.33",
+    "markdown-exec[ansi]>=1.9.3",
+    "mkdocs-redirects>=1.2.1",
+    "mkdocs>=1.6.0",
+    "cairosvg>=2.7.1",
+    "pillow>=10.4.0",
+]
+[tool.uv.workspace]
+members = []

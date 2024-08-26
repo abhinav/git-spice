@@ -13,8 +13,8 @@ The following tools are needed to work on this project:
 - [Changie](https://changie.dev/):
   We use Changie to manage the changelog.
   You'll need this if you make user-facing changes.
-- [pipenv](https://pipenv.pypa.io/en/latest/):
-  We use pipenv to manage Python dependencies for documentation generation.
+- [uv](https://docs.astral.sh/uv/):
+  We use uv to manage Python dependencies for documentation generation.
   You'll need this to preview changes to the doc/ directory.
 
 ## Making contributions
@@ -31,7 +31,7 @@ with the following notes:
   ```
 
 - If you edit documentation in doc/,
-  install `pipenv` and run `make serve` to preview changes.
+  install `uv` and run `make serve` to preview changes.
 - All commits must include meaningful commit messages.
 - Test new features and bug fixes.
   If it does not have a test, the bug is not fixed.
