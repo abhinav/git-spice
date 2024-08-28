@@ -1,0 +1,3 @@
+kind: Fixed
+body: Support use with older Git versions by dropping use of a v2.33-only flag.
+time: 2024-08-27T22:13:31.124136-07:00

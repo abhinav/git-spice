@@ -94,7 +94,7 @@ func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange,
 	args := make([]string, 0, len(commits)+3)
 	args = append(args, "rev-list")
 	if format != "" {
-		args = append(args, "--format="+format, "--no-commit-header")
+		args = append(args, "--format="+format)
 	}
 	args = append(args, []string(commits)...)
 
@@ -112,6 +112,23 @@ func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange,
 	var lines []string
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
+		line := scanner.Text()
+
+		// With --format, rev-list output is in the form:
+		//
+		//    commit <hash>
+		//    <formatted message>
+		//
+		// We'll need to ignore the first line.
+		//
+		// This is a bit of a hack, but the --no-commit-header flag
+		// that suppresses this line is only available in git 2.33+.
+		if format != "" && strings.HasPrefix(line, "commit ") {
+			if !scanner.Scan() {
+				break
+			}
+		}
+
 		lines = append(lines, scanner.Text())
 	}
 
