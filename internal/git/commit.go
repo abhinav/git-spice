@@ -158,8 +158,8 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 
 // CommitSubject returns the subject of a commit.
 func (r *Repository) CommitSubject(ctx context.Context, commitish string) (string, error) {
-	out, err := r.gitCmd(ctx, "rev-list",
-		"--no-commit-header", "-n1", "--format=%s", commitish, "--",
+	out, err := r.gitCmd(ctx,
+		"show", "--no-patch", "--format=%s", commitish,
 	).OutputString(r.exec)
 	if err != nil {
 		return "", fmt.Errorf("git log: %w", err)
@@ -189,7 +189,6 @@ func (m CommitMessage) String() string {
 // That is, all commits reachable from start but not from stop.
 func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string) ([]CommitMessage, error) {
 	cmd := r.gitCmd(ctx, "rev-list",
-		"--no-commit-header",
 		"--format=%B%x00", // null-byte separated
 		start, "--not", stop, "--",
 	)
@@ -211,6 +210,14 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 		if len(raw) == 0 {
 			continue
 		}
+
+		// --format with rev-list writes in the form:
+		//
+		//	commit <hash>\n
+		//	<format string>
+		//
+		// We need to drop the first line.
+		_, raw, _ = strings.Cut(raw, "\n")
 		subject, body, _ := strings.Cut(raw, "\n")
 		bodies = append(bodies, CommitMessage{
 			Subject: strings.TrimSpace(subject),
