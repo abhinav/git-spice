@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"strings"
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
@@ -11,7 +12,7 @@ import (
 //
 // Ref https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository.
 func (f *Forge) ChangeTemplatePaths() []string {
-	return []string{
+	paths := []string{
 		"PULL_REQUEST_TEMPLATE.md",
 		"PULL_REQUEST_TEMPLATE",
 		".github/PULL_REQUEST_TEMPLATE.md",
@@ -19,6 +20,13 @@ func (f *Forge) ChangeTemplatePaths() []string {
 		"docs/PULL_REQUEST_TEMPLATE.md",
 		"docs/PULL_REQUEST_TEMPLATE",
 	}
+
+	// GitHub accepts PULL_REQUEST_TEMPLATE and pull_request_template.
+	for _, p := range paths {
+		paths = append(paths, strings.ToLower(p))
+	}
+
+	return paths
 }
 
 // ListChangeTemplates returns PR templates defined in the repository.

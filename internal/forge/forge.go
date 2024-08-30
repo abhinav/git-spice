@@ -84,8 +84,9 @@ type Forge interface {
 	// This will only be called if MatchURL reports true.
 	OpenURL(ctx context.Context, tok AuthenticationToken, remoteURL string) (Repository, error)
 
-	// ChangeTemplatePaths reports the case-insensitive paths at which
+	// ChangeTemplatePaths reports the paths at which
 	// it's possible to define change templates in the repository.
+	// These paths are case-sensitive.
 	ChangeTemplatePaths() []string
 
 	// MarshalChangeMetadata serializes the given change metadata
