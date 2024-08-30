@@ -14,7 +14,11 @@ import (
 
 // ListChangeTemplates returns the Change templates defined in the repository.
 // For GitHub, these are PR templates.
-func (s *Service) ListChangeTemplates(ctx context.Context, fr forge.Repository) ([]*forge.ChangeTemplate, error) {
+func (s *Service) ListChangeTemplates(
+	ctx context.Context,
+	remoteName string,
+	fr forge.Repository,
+) ([]*forge.ChangeTemplate, error) {
 	// TODO: Should Repo be injected?
 	templatePaths := fr.Forge().ChangeTemplatePaths()
 	sort.Strings(templatePaths)
@@ -26,7 +30,7 @@ func (s *Service) ListChangeTemplates(ctx context.Context, fr forge.Repository) 
 	keyHash := sha256.New()
 	_, _ = fmt.Fprintf(keyHash, "%d\n", len(templatePaths))
 	for _, path := range templatePaths {
-		h, err := s.repo.HashAt(ctx, s.store.Trunk(), path)
+		h, err := s.repo.HashAt(ctx, remoteName+"/"+s.store.Trunk(), path)
 		if err != nil {
 			if errors.Is(err, git.ErrNotExist) {
 				_, _ = fmt.Fprintf(keyHash, "0\n")
