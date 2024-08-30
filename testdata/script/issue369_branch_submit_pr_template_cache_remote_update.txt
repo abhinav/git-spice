@@ -1,0 +1,94 @@
+# 'branch submit' invalidates template cache
+# if remote has an update even if the local branch is behind.
+#
+# https://github.com/abhinav/git-spice/issues/369
+
+as 'Test <test@example.com>'
+at '2024-08-29T20:21:22Z'
+
+# setup
+cd repo
+git init
+git add .shamhub
+git commit -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Submit a PR with the first template.
+git add feature1.txt
+gs bc -m feature1
+gs branch submit --fill
+
+# Update the template remotely
+cd $WORK
+shamhub clone alice/example.git fork
+cd fork
+mv $WORK/extra/CHANGE_TEMPLATE.md .shamhub/CHANGE_TEMPLATE.md
+git add .shamhub/CHANGE_TEMPLATE.md
+git commit -m 'Change the template'
+git push origin main
+
+# Update origin/main but not main
+cd $WORK/repo
+git fetch
+
+# Create a new PR with the new template.
+git add feature2.txt
+gs bc -m feature2
+gs branch submit --fill
+
+shamhub dump changes
+cmpenv stdout $WORK/golden/pulls.json
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+This is the first template.
+
+-- extra/CHANGE_TEMPLATE.md --
+This is the second template.
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "\n\nThis is the first template.\n",
+    "base": {
+      "ref": "main",
+      "sha": "a272771860a18e5e7ee7ef971e749c27574826fd"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "feature2",
+    "body": "\n\nThis is the second template.\n",
+    "base": {
+      "ref": "feature1",
+      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d"
+    },
+    "head": {
+      "ref": "feature2",
+      "sha": "bfe1a896f408b265d43552a2d450618a181e8f8b"
+    }
+  }
+]

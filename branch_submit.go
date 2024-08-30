@@ -295,6 +295,7 @@ func (cmd *branchSubmitCmd) run(
 				svc,
 				store,
 				repo,
+				remote,
 				remoteRepo,
 				branch.Base,
 			)
@@ -558,6 +559,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	svc *spice.Service,
 	store *state.Store,
 	repo *git.Repository,
+	remoteName string,
 	remoteRepo forge.Repository,
 	baseBranch string,
 ) (*preparedBranch, error) {
@@ -569,7 +571,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
 
-		templates, err := svc.ListChangeTemplates(ctx, remoteRepo)
+		templates, err := svc.ListChangeTemplates(ctx, remoteName, remoteRepo)
 		if err != nil {
 			log.Warn("Could not list change templates", "error", err)
 			templates = nil
