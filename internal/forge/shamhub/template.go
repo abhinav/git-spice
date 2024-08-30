@@ -46,8 +46,15 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 	defer flush()
 
+	templatePaths := make(map[string]struct{})
+	for _, p := range _changeTemplatePaths {
+		templatePaths[p] = struct{}{}
+		templatePaths[strings.ToLower(p)] = struct{}{}
+		templatePaths[strings.ToUpper(p)] = struct{}{}
+	}
+
 	var res changeTemplateResponse
-	for _, path := range _changeTemplatePaths {
+	for path := range templatePaths {
 		cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+path)
 		cmd.Dir = sh.repoDir(owner, repo)
 		cmd.Stderr = logw
