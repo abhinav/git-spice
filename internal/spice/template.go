@@ -5,7 +5,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"sort"
+	"maps"
+	"path"
+	"slices"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -20,8 +23,17 @@ func (s *Service) ListChangeTemplates(
 	fr forge.Repository,
 ) ([]*forge.ChangeTemplate, error) {
 	// TODO: Should Repo be injected?
-	templatePaths := fr.Forge().ChangeTemplatePaths()
-	sort.Strings(templatePaths)
+	pathSet := make(map[string]struct{})
+	for _, p := range fr.Forge().ChangeTemplatePaths() {
+		pathSet[p] = struct{}{}
+
+		// Template paths are case-insensitive,
+		// so we'll also want to check other variants:
+		dir, file := path.Split(p)
+		pathSet[path.Join(dir, strings.ToLower(file))] = struct{}{}
+		pathSet[path.Join(dir, strings.ToUpper(file))] = struct{}{}
+	}
+	templatePaths := slices.Sorted(maps.Keys(pathSet))
 
 	// Cache key is a SHA256 hash of the following, in order:
 	//   - Number of allowed template paths

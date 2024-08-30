@@ -1,0 +1,88 @@
+# 'branch submit' invalidates template cache when a template is changed,
+# and it has a lower-cased name.
+#
+# https://github.com/abhinav/git-spice/issues/369
+
+as 'Test <test@example.com>'
+at '2024-08-29T20:21:22Z'
+
+# setup
+cd repo
+git init
+git add .shamhub
+git commit -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Submit a PR with the first template.
+git add feature1.txt
+gs bc -m feature1
+gs branch submit --fill
+
+# Push a new template
+gs trunk
+mv $WORK/extra/change_template.md .shamhub/change_template.md
+git add .shamhub/change_template.md
+git commit -m 'Change the template'
+git push origin main
+
+# Create a new PR with the new template.
+git add feature2.txt
+gs bc -m feature2
+gs branch submit --fill
+
+shamhub dump changes
+cmpenv stdout $WORK/golden/pulls.json
+
+-- repo/.shamhub/change_template.md --
+This is the first template.
+
+-- extra/change_template.md --
+This is the second template.
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "\n\nThis is the first template.\n",
+    "base": {
+      "ref": "main",
+      "sha": "2036762c8e15b28b80f94f5085db6d4d1f2678e8"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "56594727085e14b4c394420451042c322eaf9441"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "feature2",
+    "body": "\n\nThis is the second template.\n",
+    "base": {
+      "ref": "main",
+      "sha": "2036762c8e15b28b80f94f5085db6d4d1f2678e8"
+    },
+    "head": {
+      "ref": "feature2",
+      "sha": "91537b46b0c34e9df135cebe1e9270d5d7627952"
+    }
+  }
+]
