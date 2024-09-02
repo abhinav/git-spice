@@ -15,7 +15,7 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/stretchr/testify v1.9.0
-	github.com/vito/midterm v0.1.5-0.20240307214207-d0271a7ca452
+	github.com/vito/midterm v0.2.0
 	github.com/zalando/go-keyring v0.2.5
 	go.abhg.dev/requiredfield v0.3.0
 	go.uber.org/mock v0.4.0
