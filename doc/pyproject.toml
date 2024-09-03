@@ -1,3 +1,9 @@
+[project]
+name = "git-spice-docs"
+description = "Documentation for git-spice"
+version = "0.1.0"
+requires-python = ">=3.12"
+
 [tool.uv]
 dev-dependencies = [
     "mkdocs-material[imaging]>=9.5.33",
@@ -7,5 +13,3 @@ dev-dependencies = [
     "cairosvg>=2.7.1",
     "pillow>=10.4.0",
 ]
-[tool.uv.workspace]
-members = []

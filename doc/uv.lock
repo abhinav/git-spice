@@ -1,16 +1,6 @@
 version = 1
 requires-python = ">=3.12"
 
-[manifest]
-requirements = [
-    { name = "cairosvg", specifier = ">=2.7.1" },
-    { name = "markdown-exec", extras = ["ansi"], specifier = ">=1.9.3" },
-    { name = "mkdocs", specifier = ">=1.6.0" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.33" },
-    { name = "mkdocs-redirects", specifier = ">=1.2.1" },
-    { name = "pillow", specifier = ">=10.4.0" },
-]
-
 [[package]]
 name = "babel"
 version = "2.16.0"
@@ -167,6 +157,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d9/29/d40217cbe2f6b1359e00c6c307bb3fc876ba74068cbab3dde77f03ca0dc4/ghp-import-2.1.0.tar.gz", hash = "sha256:9c535c4c61193c2df8871222567d7fd7e5014d835f97dc7b7439069e2413d343", size = 10943 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/ec/67fbef5d497f86283db54c22eec6f6140243aae73265799baaaa19cd17fb/ghp_import-2.1.0-py3-none-any.whl", hash = "sha256:8337dd7b50877f163d4c0289bc1f1c7f127550241988d568c1db512c4324a619", size = 11034 },
+]
+
+[[package]]
+name = "git-spice-docs"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "cairosvg" },
+    { name = "markdown-exec", extra = ["ansi"] },
+    { name = "mkdocs" },
+    { name = "mkdocs-material", extra = ["imaging"] },
+    { name = "mkdocs-redirects" },
+    { name = "pillow" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "cairosvg", specifier = ">=2.7.1" },
+    { name = "markdown-exec", extras = ["ansi"], specifier = ">=1.9.3" },
+    { name = "mkdocs", specifier = ">=1.6.0" },
+    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.33" },
+    { name = "mkdocs-redirects", specifier = ">=1.2.1" },
+    { name = "pillow", specifier = ">=10.4.0" },
 ]
 
 [[package]]
