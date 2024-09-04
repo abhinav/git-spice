@@ -56,14 +56,25 @@ type shamChange struct {
 	Owner string
 	Repo  string
 
+	// State is the current state of the change.
+	// It can be open, closed, or merged.
+	State shamChangeState
+
+	// Number is the numeric identifier of the change.
+	// These increment monotonically.
 	Number int
-	Draft  bool
-	State  shamChangeState
+
+	// Draft indicates that the change is not yet ready to be reviewed.
+	Draft bool
 
 	Subject string
 	Body    string
 
+	// Name of the base branch.
 	Base string
+
+	// Name of the head branch.
+	// This is the branch that contains the changes to be merged.
 	Head string
 }
 

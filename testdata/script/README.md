@@ -132,14 +132,25 @@ shamhub merge <owner/repo> <num>
 Merges Change Request `<num>` made in the given repository
 into its default branch.
 
+### shamhub reject
+
+```
+shamhub reject <owner/repo> <num>
+```
+
+Rejects Change Request `<num>` made in the given repository.
+Closes the CR without merging.
+
 #### shamhub dump
 
 ```
 shamhub dump changes
 shamhub dump change <num>
+shamhub dump comments
 ```
 
-Dumps a JSON blob of all changes or a single change made against ShamHub.
+Dumps information about all changes, a single change, or all comments
+to stdout.
 
 #### shamhub register
 
