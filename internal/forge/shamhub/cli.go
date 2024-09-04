@@ -157,6 +157,31 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		ts.Check(sh.MergeChange(req))
 
+	case "reject":
+		if len(args) != 2 {
+			ts.Fatalf("usage: shamhub reject <owner/repo> <pr>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr := args[0], args[1]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		req := RejectChangeRequest{
+			Owner:  owner,
+			Repo:   repo,
+			Number: pr,
+		}
+		ts.Check(sh.RejectChange(req))
+
 	case "register":
 		if len(args) != 1 {
 			ts.Fatalf("usage: shamhub register <username>")

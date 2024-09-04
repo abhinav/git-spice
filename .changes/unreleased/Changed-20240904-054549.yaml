@@ -1,0 +1,7 @@
+kind: Changed
+body: >-
+  submit: If a CR for a branch is closed or merged,
+  and the branch is submitted again,
+  git-spice will now create a new CR for that branch
+  instead of failing to update the existing CR.
+time: 2024-09-04T05:45:49.967536-07:00

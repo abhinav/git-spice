@@ -263,8 +263,22 @@ func (cmd *branchSubmitCmd) run(
 			return fmt.Errorf("find change: %w", err)
 		}
 
-		// TODO: If the CR is closed, we should treat it as non-existent.
-		existingChange = change
+		// Consider the PR only if it's open.
+		if change.State == forge.ChangeOpen {
+			existingChange = change
+		} else {
+			var state string
+			if change.State == forge.ChangeMerged {
+				state = "merged"
+			} else {
+				state = "closed"
+			}
+
+			log.Infof("%v: Ignoring CR %v as it was %s: %v", cmd.Branch, change.ID, state, change.URL)
+			// TODO:
+			// We could offer to reopen the CR if it was closed,
+			// but not if it was merged.
+		}
 	}
 
 	// At this point, existingChange is nil only if we need to create a new CR.

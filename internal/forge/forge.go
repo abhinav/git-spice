@@ -272,26 +272,26 @@ type EditChangeOptions struct {
 // repository.
 type FindChangeItem struct {
 	// ID is a unique identifier for the change.
-	ID ChangeID
+	ID ChangeID // required
 
 	// URL is the web URL at which the change can be viewed.
-	URL string
+	URL string // required
 
 	// State is the current state of the change.
-	State ChangeState
+	State ChangeState // required
 
 	// Subject is the title of the change.
-	Subject string
+	Subject string // required
 
 	// HeadHash is the hash of the commit at the top of the change.
-	HeadHash git.Hash
+	HeadHash git.Hash // required
 
 	// BaseName is the name of the base branch
 	// that this change is proposed against.
-	BaseName string
+	BaseName string // required
 
 	// Draft is true if the change is not yet ready to be reviewed.
-	Draft bool
+	Draft bool // required
 }
 
 // ChangeTemplate is a template for a new change proposal.

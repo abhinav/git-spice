@@ -1,0 +1,100 @@
+# 'branch submit' gracefully handles the case
+# where a PR being updated is already closed.
+#
+# https://github.com/abhinav/git-spice/issues/374
+
+as 'Test <test@example.com>'
+at '2024-09-04T05:06:07Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc -m feat1
+gs bs -c
+stderr 'Created #'
+
+gs ll -a
+cmp stderr $WORK/golden/open.txt
+
+# Merge the PR
+shamhub merge alice/example.git 1
+
+mv $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+gs cc -m 'Update feature 1'
+
+# Pull merged changes
+gs trunk
+git pull origin main
+gs bco feat1
+gs branch restack
+
+gs branch submit --fill
+stderr 'Ignoring CR #1 as it was merged'
+
+gs ll -a
+cmp stderr $WORK/golden/resubmit.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feat1.txt --
+Contents of feature 1
+
+-- extra/feat1-new.txt --
+New contents of feature 1
+
+-- golden/open.txt --
+┏━■ feat1 (#1) ◀
+┃   fabf34f feat1 (now)
+main
+-- golden/resubmit.txt --
+┏━■ feat1 (#2) ◀
+┃   514d04f Update feature 1 (now)
+main
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "feat1",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "15b8bd3ef43442fc33ef191420c9e3e65fecce9c"
+    },
+    "head": {
+      "ref": "feat1",
+      "sha": "514d04f142ffe91be67967699e1ae61c6e5bcb51"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Update feature 1",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "15b8bd3ef43442fc33ef191420c9e3e65fecce9c"
+    },
+    "head": {
+      "ref": "feat1",
+      "sha": "514d04f142ffe91be67967699e1ae61c6e5bcb51"
+    }
+  }
+]

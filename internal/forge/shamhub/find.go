@@ -142,6 +142,18 @@ func (f *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
+	var state forge.ChangeState
+	switch res.State {
+	case "open":
+		state = forge.ChangeOpen
+	case "closed":
+		if res.Merged {
+			state = forge.ChangeMerged
+		} else {
+			state = forge.ChangeClosed
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID:       ChangeID(res.Number),
 		URL:      res.URL,
@@ -149,6 +161,7 @@ func (f *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		HeadHash: git.Hash(res.Head.Hash),
 		BaseName: res.Base.Name,
 		Draft:    res.Draft,
+		State:    state,
 	}, nil
 }
 
