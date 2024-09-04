@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -576,6 +577,10 @@ func (cmd *branchSubmitCmd) preparePublish(
 			log.Warn("Could not list change templates", "error", err)
 			templates = nil
 		}
+
+		slices.SortFunc(templates, func(a, b *forge.ChangeTemplate) int {
+			return strings.Compare(a.Filename, b.Filename)
+		})
 
 		changeTemplatesCh <- templates
 	}()
