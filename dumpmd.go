@@ -109,7 +109,6 @@ func (cmd *cliDumper) dump(app *kong.Application) {
 		cmdByGroup[key] = append(cmdByGroup[key], subcmd)
 	}
 
-	// TODO: separate "inspect" and "dump" steps
 	cmd.println("```")
 	cmd.println("gs" + app.Summary())
 	cmd.println("```")

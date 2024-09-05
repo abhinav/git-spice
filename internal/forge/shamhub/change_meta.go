@@ -17,7 +17,7 @@ type ChangeMetadata struct {
 
 // ForgeID reports the forge ID that owns this metadata.
 func (*ChangeMetadata) ForgeID() string {
-	return "shamhub" // TODO: const
+	return "shamhub"
 }
 
 // ChangeID reports the change ID of the change.

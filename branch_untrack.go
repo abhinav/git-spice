@@ -39,7 +39,6 @@ func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 		}
 	}
 
-	// TODO: prompt for confirmation?
 	if err := svc.ForgetBranch(ctx, cmd.Branch); err != nil {
 		if errors.Is(err, state.ErrNotExist) {
 			return errors.New("branch not tracked")

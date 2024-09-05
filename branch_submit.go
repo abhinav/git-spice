@@ -144,7 +144,6 @@ func (cmd *branchSubmitCmd) run(
 			log.Errorf("  gs branch restack --branch=%s", cmd.Branch)
 			log.Errorf("Or, try again with --force to submit anyway.")
 			return errors.New("refusing to submit outdated branch")
-			// TODO: this can be made optional with a --force or a prompt.
 		}
 	}
 
