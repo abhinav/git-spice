@@ -407,11 +407,5 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		}
 	}
 
-	// TODO:
-	// If --restack is set, restack the affected branches
-	// (or restack just the branches in this stack?)
-	// For this, we need the Delete operation to report the affected
-	// branches, which means it has to be refactored into a spice-level
-	// operation first.
 	return nil
 }

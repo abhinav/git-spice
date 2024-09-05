@@ -20,7 +20,7 @@ var _ forge.ChangeMetadata = (*PRMetadata)(nil)
 
 // ForgeID reports the forge ID that owns this metadata.
 func (*PRMetadata) ForgeID() string {
-	return "github" // TODO: const
+	return "github"
 }
 
 // ChangeID reports the change ID of the pull request.

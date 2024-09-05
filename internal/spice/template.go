@@ -22,7 +22,6 @@ func (s *Service) ListChangeTemplates(
 	remoteName string,
 	fr forge.Repository,
 ) ([]*forge.ChangeTemplate, error) {
-	// TODO: Should Repo be injected?
 	pathSet := make(map[string]struct{})
 	for _, p := range fr.Forge().ChangeTemplatePaths() {
 		pathSet[p] = struct{}{}
