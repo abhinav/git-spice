@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"iter"
 	"sort"
 
 	"github.com/alecthomas/kong"
@@ -21,10 +22,7 @@ const (
 
 // GitConfigLister provides access to git-config output.
 type GitConfigLister interface {
-	ListRegexp(context.Context, string) (
-		func(yield func(git.ConfigEntry, error) bool),
-		error,
-	)
+	ListRegexp(context.Context, string) iter.Seq2[git.ConfigEntry, error]
 }
 
 var _ GitConfigLister = (*git.Config)(nil)
@@ -79,19 +77,12 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 		opts.Log = log.New(io.Discard)
 	}
 
-	entries, err := cfg.ListRegexp(ctx, `^`+_configSection+`\.`)
-	if err != nil {
-		return nil, fmt.Errorf("list configuration: %w", err)
-	}
-
 	items := make(map[git.ConfigKey][]string)
 	shorthands := make(map[string][]string)
 
-	err = nil // TODO: use a range loop after Go 1.23
-	entries(func(entry git.ConfigEntry, iterErr error) bool {
-		if iterErr != nil {
-			err = iterErr
-			return false
+	for entry, err := range cfg.ListRegexp(ctx, `^`+_configSection+`\.`) {
+		if err != nil {
+			return nil, fmt.Errorf("list configuration: %w", err)
 		}
 
 		key := entry.Key.Canonical()
@@ -100,7 +91,7 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 			// Ignore keys that are not in the spice namespace.
 			// This will never happen if git config --get-regexp
 			// behaves correctly, but it's easy to handle.
-			return true
+			continue
 		}
 
 		// Special-case: Everything under "spice.shorthand.*"
@@ -114,18 +105,14 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 					"value", entry.Value,
 					"error", err,
 				)
-				return true
+				continue
 			}
 
 			shorthands[short] = longform
-			return true
+			continue
 		}
 
 		items[key] = append(items[key], entry.Value)
-		return true
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read configuration: %w", err)
 	}
 
 	return &Config{

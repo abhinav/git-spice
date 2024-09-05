@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.uber.org/mock/gomock"
 )
 
@@ -146,16 +147,8 @@ func TestConfigListRegexp(t *testing.T) {
 				exec: execer,
 			})
 
-			iter, err := cfg.ListRegexp(context.Background(), ".")
+			got, err := sliceutil.CollectErr(cfg.ListRegexp(context.Background(), "."))
 			require.NoError(t, err)
-
-			var got []ConfigEntry
-			iter(func(entry ConfigEntry, err error) bool {
-				require.NoError(t, err)
-				got = append(got, entry)
-				return true
-			})
-
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -251,15 +244,8 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 				Log: log,
 			})
 
-			var got []ConfigEntry
-			iter, err := cfg.ListRegexp(ctx, tt.pattern)
+			got, err := sliceutil.CollectErr(cfg.ListRegexp(ctx, tt.pattern))
 			require.NoError(t, err)
-			iter(func(entry ConfigEntry, err error) bool {
-				require.NoError(t, err)
-				got = append(got, entry)
-				return true
-			})
-
 			assert.ElementsMatch(t, tt.want, got)
 		})
 	}

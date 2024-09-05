@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"iter"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -133,10 +134,7 @@ type ConfigEntry struct {
 
 // ListRegexp lists all configuration entries that match the given pattern.
 // If pattern is empty, '.' is used to match all entries.
-func (cfg *Config) ListRegexp(ctx context.Context, pattern string) (
-	func(yield func(ConfigEntry, error) bool),
-	error,
-) {
+func (cfg *Config) ListRegexp(ctx context.Context, pattern string) iter.Seq2[ConfigEntry, error] {
 	if pattern == "" {
 		pattern = "."
 	}
@@ -145,26 +143,25 @@ func (cfg *Config) ListRegexp(ctx context.Context, pattern string) (
 
 var _newline = []byte("\n")
 
-func (cfg *Config) list(ctx context.Context, args ...string) (
-	func(yield func(ConfigEntry, error) bool),
-	error,
-) {
-	args = append([]string{"config", "--null"}, args...)
-	cmd := newGitCmd(ctx, cfg.log, args...).
-		Dir(cfg.dir).
-		AppendEnv(cfg.env...)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
-	}
-
-	if err := cmd.Start(cfg.exec); err != nil {
-		return nil, fmt.Errorf("start git-config: %w", err)
-	}
-
+func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEntry, error] {
 	log := cfg.log
+	args = append([]string{"config", "--null"}, args...)
 	return func(yield func(ConfigEntry, error) bool) {
+		cmd := newGitCmd(ctx, cfg.log, args...).
+			Dir(cfg.dir).
+			AppendEnv(cfg.env...)
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			yield(ConfigEntry{}, fmt.Errorf("stdout pipe: %w", err))
+			return
+		}
+
+		if err := cmd.Start(cfg.exec); err != nil {
+			yield(ConfigEntry{}, fmt.Errorf("start git-config: %w", err))
+			return
+		}
+
 		// Always wait for the command to finish when this returns.
 		// Ignore the error because git-config fails if there are no matches.
 		// It's not an error for us if there are no matches.
@@ -195,9 +192,10 @@ func (cfg *Config) list(ctx context.Context, args ...string) (
 		}
 
 		if err := scan.Err(); err != nil {
-			_ = yield(ConfigEntry{}, fmt.Errorf("scan git-config output: %w", err))
+			yield(ConfigEntry{}, fmt.Errorf("scan git-config output: %w", err))
+			return
 		}
-	}, nil
+	}
 }
 
 // scanNullDelimited is a bufio.SplitFunc that splits on null bytes.
