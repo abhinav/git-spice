@@ -44,7 +44,7 @@ func (s *Service) StackEdit(ctx context.Context, req *StackEditRequest) (*StackE
 	must.NotContainf(req.Stack, s.store.Trunk(), "cannot edit trunk")
 	must.NotBeBlankf(req.Editor, "editor is required")
 
-	branches, err := editStackFile(ctx, req.Editor, req.Stack)
+	branches, err := editStackFile(req.Editor, req.Stack)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (s *Service) StackEdit(ctx context.Context, req *StackEditRequest) (*StackE
 // The response list will be in the same order as the input list.
 //
 // Returns ErrStackEditAborted if the user aborts the edit operation.
-func editStackFile(ctx context.Context, editor string, branches []string) ([]string, error) {
+func editStackFile(editor string, branches []string) ([]string, error) {
 	originals := make(map[string]struct{}, len(branches))
 	for _, branch := range branches {
 		originals[branch] = struct{}{}
