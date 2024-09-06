@@ -1057,6 +1057,39 @@ This command requires at least Git 2.45.
 
 * `commit`: The commit to fixup. Must be reachable from the HEAD commit.
 
+### gs commit pick
+
+```
+gs commit (c) pick (p) [<commit>] [flags]
+```
+
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[commitPick](/cli/experiments.md#commitpick)</span></span>
+
+Cherry-pick a commit
+
+Apply the changes introduced by a commit to the current branch
+and restack the upstack branches.
+
+If a commit is not specified, a prompt will allow picking
+from commits of upstack branches of the current branch.
+Use the --from option to pick a commit from a different branch
+or its upstack.
+
+If it's not possible to cherry-pick the requested commit
+without causing a conflict, the command will fail.
+If the requested commit is a merge commit,
+the command will fail.
+
+This command requires at least Git 2.45.
+
+**Arguments**
+
+* `commit`: Commit to cherry-pick
+
+**Flags**
+
+* `--from=NAME`: Branch whose upstack commits will be considered.
+
 ## Rebase
 
 ### gs rebase continue
@@ -1083,7 +1116,7 @@ and use --edit to override it.
 
 **Flags**
 
-* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whehter to open an editor to edit the commit message.
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whether to open an editor to edit the commit message.
 
 **Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
 

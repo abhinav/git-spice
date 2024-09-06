@@ -493,6 +493,143 @@ func TestRepository_ReadCommit_integration(t *testing.T) {
 	})
 }
 
+func TestRepository_CommitTree_authorAndCommitter(t *testing.T) {
+	// Prevent system and user config from interfering with the test.
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("USER", "testuser")
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("GIT_COMMITTER_NAME", "")
+	t.Setenv("GIT_COMMITTER_EMAIL", "")
+	t.Setenv("GIT_AUTHOR_NAME", "")
+	t.Setenv("GIT_AUTHOR_EMAIL", "")
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test Author <test@author.com>'
+		at '2025-06-20T21:28:29Z'
+		git init
+		git add initial.txt
+		git commit -m 'Initial commit'
+
+		-- initial.txt --
+		initial content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	ctx := t.Context()
+
+	headCommit, err := repo.PeelToCommit(ctx, "HEAD")
+	require.NoError(t, err)
+
+	headTree, err := repo.PeelToTree(ctx, headCommit.String())
+	require.NoError(t, err)
+
+	author := git.Signature{
+		Name:  "Custom Author",
+		Email: "author@example.com",
+	}
+	committer := git.Signature{
+		Name:  "Custom Committer",
+		Email: "committer@example.com",
+	}
+
+	tests := []struct {
+		name string
+		env  map[string]string
+
+		giveAuthor    *git.Signature
+		giveCommitter *git.Signature
+
+		wantAuthor    git.Signature
+		wantCommitter git.Signature
+
+		wantFail bool
+	}{
+		{name: "NoAuthorOrCommitter", wantFail: true},
+		{
+			name:          "ExplicitAuthorAndCommitter",
+			giveAuthor:    &author,
+			giveCommitter: &committer,
+			wantAuthor:    author,
+			wantCommitter: committer,
+		},
+		{
+			name: "EnvAuthorAndCommitter",
+			env: map[string]string{
+				"GIT_AUTHOR_NAME":     author.Name,
+				"GIT_AUTHOR_EMAIL":    author.Email,
+				"GIT_COMMITTER_NAME":  committer.Name,
+				"GIT_COMMITTER_EMAIL": committer.Email,
+			},
+			wantAuthor:    author,
+			wantCommitter: committer,
+		},
+		{
+			name: "ExplicitAuthorEnvCommitter",
+			env: map[string]string{
+				"GIT_COMMITTER_NAME":  committer.Name,
+				"GIT_COMMITTER_EMAIL": committer.Email,
+			},
+			giveAuthor:    &author,
+			wantAuthor:    author,
+			wantCommitter: committer,
+		},
+		{
+			name: "EnvAuthorExplicitCommitter",
+			env: map[string]string{
+				"GIT_AUTHOR_NAME":  author.Name,
+				"GIT_AUTHOR_EMAIL": author.Email,
+			},
+			giveCommitter: &committer,
+			wantAuthor:    author,
+			wantCommitter: committer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
+			commitHash, err := repo.CommitTree(ctx, git.CommitTreeRequest{
+				Tree:      headTree,
+				Message:   "Test commit",
+				Parents:   []git.Hash{headCommit},
+				Author:    tt.giveAuthor,
+				Committer: tt.giveCommitter,
+			})
+			if tt.wantFail {
+				if !assert.Error(t, err) {
+					commitObj, err := repo.ReadCommit(ctx, commitHash.String())
+					if err == nil {
+						t.Errorf("Unexpectedly created commit: %+v", commitObj)
+					}
+				}
+				return
+			}
+			require.NoError(t, err)
+
+			commitObj, err := repo.ReadCommit(ctx, commitHash.String())
+			require.NoError(t, err)
+
+			// Zero out time for easier comparison.
+			commitObj.Author.Time = time.Time{}
+			commitObj.Committer.Time = time.Time{}
+
+			assert.Equal(t, tt.wantAuthor, commitObj.Author)
+			assert.Equal(t, tt.wantCommitter, commitObj.Committer)
+		})
+	}
+}
+
 // joinNull joins strings with null bytes for testing git log output parsing.
 func joinNull(parts ...string) string {
 	return strings.Join(parts, "\x00")

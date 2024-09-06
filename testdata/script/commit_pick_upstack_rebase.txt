@@ -1,0 +1,57 @@
+# 'gs commit pick' restacks upstack branches after cherry-pick.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# source branch defines the commit to cherry-pick.
+git add source.txt
+gs branch create source -m 'Add source file'
+
+# Target branch with a couple of upstack branches on top.
+gs trunk
+git add target.txt
+gs branch create target -m 'Add target file'
+
+git add upstack1.txt
+gs branch create upstack1 -m 'Add upstack1 file'
+
+git add upstack2.txt
+gs branch create upstack2 -m 'Add upstack2 file'
+
+# Cherry-pick from the target branch.
+gs bottom
+gs commit pick source
+
+# Source file exists in working tree
+# with the same contents as in the source branch.
+git cat-file -p source:source.txt
+cmp stdout source.txt
+
+# Upstack branches were restacked.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/source.txt --
+Content from source branch
+-- repo/target.txt --
+Content from target branch
+-- repo/upstack1.txt --
+Content from upstack1 branch
+-- repo/upstack2.txt --
+Content from upstack2 branch
+-- golden/graph.txt --
+* 95ae649 (source) Add source file
+| * b656730 (upstack2) Add upstack2 file
+| * 66f0f7d (upstack1) Add upstack1 file
+| * 1268d85 (HEAD -> target) Add source file
+| * 9faf6d0 Add target file
+|/  
+* 852c1f1 (main) Initial commit

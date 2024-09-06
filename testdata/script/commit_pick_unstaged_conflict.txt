@@ -1,0 +1,65 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test that cherry-pick fails when working tree has unstaged changes to same file as cherry-picked commit
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create a shared file and commit it
+git add shared.txt
+git commit -m 'Add shared file'
+
+# Create source branch and modify the shared file
+cp $WORK/extra/shared-source.txt shared.txt
+git add shared.txt
+gs branch create source -m 'Modify shared file in source'
+
+# Create target branch from main
+git checkout main
+gs branch create target -m 'Create target branch'
+
+# Make unstaged changes to shared file (different from source changes)
+cp $WORK/extra/shared-unstaged.txt shared.txt
+
+# Verify unstaged changes exist before cherry-pick
+git status --porcelain
+cmp stdout $WORK/golden/status-before.txt
+
+# Cherry-pick should fail due to unstaged changes to same file
+! gs commit pick source
+stderr 'Local changes would be overwritten'
+
+# Verify cherry-pick failed and unstaged changes remain
+git status --porcelain
+cmp stdout $WORK/golden/status-before.txt
+
+# Verify original unstaged content is unchanged
+cmp shared.txt $WORK/golden/unstaged-content.txt
+
+-- repo/shared.txt --
+line 1
+line 2
+line 3
+-- extra/shared-source.txt --
+line 1
+SOURCE MODIFICATION
+line 2
+line 3
+-- extra/shared-unstaged.txt --
+line 1
+line 2
+UNSTAGED MODIFICATION
+line 3
+-- golden/status-before.txt --
+ M shared.txt
+-- golden/unstaged-content.txt --
+line 1
+line 2
+UNSTAGED MODIFICATION
+line 3

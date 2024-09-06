@@ -1,0 +1,46 @@
+# 'gs commit pick' retains author information
+# but changes committer to current user.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create a commit as a different author
+as 'Original Author <original@example.com>'
+git add feature.txt
+gs branch create feature -m 'Add feature by original author'
+
+# Switch back to different author for cherry-picking
+as 'Test User <test@example.com>'
+at 2025-09-01T23:50:12Z
+git checkout main
+git add other.txt
+gs branch create target -m 'Add target branch'
+
+gs commit pick feature
+
+# Cherry-picked commit has the same author and author date.
+git log --format='Author: %an <%ae>%nDate: %aD' -1 HEAD
+cmp stdout $WORK/golden/author.txt
+
+# But the committer and commit date are updated.
+git log --format='Committer: %cn <%ce>%nDate: %cD' -1 HEAD
+cmp stdout $WORK/golden/committer.txt
+
+-- repo/feature.txt --
+Feature content from original author
+-- repo/other.txt --
+Other content
+-- golden/author.txt --
+Author: Original Author <original@example.com>
+Date: Mon, 1 Sep 2025 23:40:12 +0000
+-- golden/committer.txt --
+Committer: Test User <test@example.com>
+Date: Mon, 1 Sep 2025 23:50:12 +0000

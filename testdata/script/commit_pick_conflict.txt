@@ -1,0 +1,55 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test cherry-pick rejection when conflicts would occur
+# TODO: handle conflicts correctly instead of rejecting them
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create a file that both branches will modify
+git add shared.txt
+git commit -m 'Add shared file'
+
+# Create first branch and modify the shared file
+cp $WORK/extra/shared-feature1.txt shared.txt
+git add shared.txt
+gs branch create feature1 -m 'Modify shared file in feature1'
+
+# Create second branch from main and modify the same file differently
+git checkout main
+cp $WORK/extra/shared-feature2.txt shared.txt
+git add shared.txt
+gs branch create feature2 -m 'Modify shared file in feature2'
+
+# Try to cherry-pick feature1's commit onto feature2 - should fail due to conflict
+! gs commit pick feature1
+stderr 'conflict'
+
+# Verify git state unchanged (no new commits)
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/shared.txt --
+Original shared content
+line 2
+line 3
+-- extra/shared-feature1.txt --
+Original shared content
+MODIFIED line 2 in feature1
+line 3
+-- extra/shared-feature2.txt --
+Original shared content
+DIFFERENT line 2 in feature2
+line 3
+-- golden/graph.txt --
+* 4eb4acd (feature1) Modify shared file in feature1
+| * 2b5132b (HEAD -> feature2) Modify shared file in feature2
+|/  
+* b6be209 (main) Add shared file
+* 852c1f1 Initial commit

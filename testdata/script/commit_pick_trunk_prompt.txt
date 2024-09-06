@@ -1,0 +1,70 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+# commit pick on trunk branch should prompt for confirmation.
+
+as 'Test <test@example.com>'
+at '2025-10-12T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create a feature branch with a commit to cherry-pick
+git add feature.txt
+gs branch create feature -m 'Add feature file'
+
+# Return to trunk
+git checkout main
+
+# Interactive mode should prompt for confirmation.
+env ROBOT_INPUT=$WORK/golden/robot.txt ROBOT_OUTPUT=$WORK/robot.actual
+
+# First prompt, we'll answer no and abort.
+! gs commit pick feature
+stderr 'operation aborted'
+! exists feature.txt
+git branch --show-current
+stdout 'main'
+
+# Second prompt, we'll answer yes and proceed.
+gs commit pick feature
+
+exists feature.txt
+git branch --show-current
+stdout 'main'
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+cmp $WORK/robot.actual $WORK/golden/robot.txt
+
+-- repo/feature.txt --
+Feature content
+-- golden/robot.txt --
+===
+> Do you want to cherry-pick on trunk?: 
+> ▶ Yes                                                                         
+>   Cherry-pick commit 7d0f580 on trunk                                          
+>   No                                                                          
+>   Abort the operation                                                         
+> You are about to cherry-pick commit 7d0f580 on the trunk branch (main). This is usually not what you want to do.
+"No"
+===
+> Do you want to cherry-pick on trunk?: 
+> ▶ Yes                                                                         
+>   Cherry-pick commit 7d0f580 on trunk                                          
+>   No                                                                          
+>   Abort the operation                                                         
+> You are about to cherry-pick commit 7d0f580 on the trunk branch (main). This is usually not what you want to do.
+"Yes"
+-- golden/graph.txt --
+* d146e2e (HEAD -> main, feature) Add feature file
+* 63343e8 Initial commit
+-- golden/ls.txt --
+┏━□ feature
+main ◀

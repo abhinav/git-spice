@@ -7,4 +7,7 @@ type commitCmd struct {
 
 	Fixup commitFixupCmd `cmd:"" aliases:"f" experiment:"commitFixup" help:"Fixup a commit below the current commit"`
 	// TODO: When fixup is stabilized, add a 'released:' tag here.
+
+	Pick commitPickCmd `cmd:"" aliases:"p" experiment:"commitPick" help:"Cherry-pick a commit"`
+	// TODO: When pick is stabilized, add a 'released:' tag here.
 }

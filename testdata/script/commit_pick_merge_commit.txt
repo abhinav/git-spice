@@ -1,0 +1,53 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# 'gs commit pick' refuses to cherry-pick merge commits.
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# create feature1 and feature2,
+# merge feature1 into feature2
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+gs trunk
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+git merge --no-ff feature1 -m 'Merge feature1 into feature2'
+
+# Target branch to cherry-pick to
+git checkout main
+gs branch create target -m 'Create target branch'
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+# cherry-pick merge commit should fail
+! gs commit pick feature2
+stderr 'cannot cherry-pick merge commit'
+
+# Verify git state unchanged
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+Feature 1 content
+-- repo/feature2.txt --
+Feature 2 content  
+-- golden/log.txt --
+fd6df9f Create target branch
+852c1f1 Initial commit
+-- golden/graph.txt --
+*   b47ee6b (feature2) Merge feature1 into feature2
+|\  
+| * 8f4d690 (feature1) Add feature1
+* | b5af621 Add feature2
+|/  
+| * fd6df9f (HEAD -> target) Create target branch
+|/  
+* 852c1f1 (main) Initial commit

@@ -57,11 +57,9 @@ type CommitTreeRequest struct {
 	Parents []Hash
 
 	// Author and Committer sign the commit.
-	// If Committer is nil, Author is used for both.
 	//
-	// If both are nil, the current user is used.
-	// Note that current user may not be available in all contexts.
-	// Prefer to set Author and Committer explicitly.
+	// The current user is used for anything that is nil.
+	// The current user may not be available in all contexts.
 	Author, Committer *Signature
 
 	// GPGSign indicates whether to GPG sign the commit.
@@ -75,9 +73,6 @@ type CommitTreeRequest struct {
 func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Hash, error) {
 	if req.Message == "" {
 		return ZeroHash, errors.New("empty commit message")
-	}
-	if req.Committer == nil {
-		req.Committer = req.Author
 	}
 
 	args := make([]string, 0, 2+2*len(req.Parents))
