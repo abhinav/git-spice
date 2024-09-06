@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  New 'commit pick' command allows cherry-picking commits
+  and updating the upstack branches, all with one command.
+  Run this without any arguments to pick a commit interactively.
+time: 2024-12-28T19:33:38.719477-06:00
