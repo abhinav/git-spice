@@ -14,7 +14,7 @@ import (
 )
 
 type rebaseContinueCmd struct {
-	Edit bool `default:"true" negatable:"" config:"rebaseContinue.edit" help:"Whehter to open an editor to edit the commit message."`
+	Edit bool `default:"true" negatable:"" config:"rebaseContinue.edit" help:"Whether to open an editor to edit the commit message."`
 }
 
 func (*rebaseContinueCmd) Help() string {
