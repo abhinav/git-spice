@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/creack/pty/v2"
+	"github.com/creack/pty"
 	"github.com/vito/midterm"
 )
 
