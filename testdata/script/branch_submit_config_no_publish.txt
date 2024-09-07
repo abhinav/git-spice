@@ -39,7 +39,7 @@ shamhub dump changes
 cmp stdout $WORK/golden/no-pulls.txt
 
 # publish
-mv feature1-v3.txt feature1.txt
+cp feature1-v3.txt feature1.txt
 git add feature1.txt
 gs ca -n -m 'feature1 v3'
 gs branch submit --publish --fill

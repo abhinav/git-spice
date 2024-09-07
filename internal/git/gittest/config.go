@@ -11,6 +11,7 @@ func DefaultConfig() Config {
 	return Config{
 		"init.defaultBranch": "main",
 		"alias.graph":        "log --graph --decorate --oneline",
+		"core.autocrlf":      "false",
 	}
 }
 

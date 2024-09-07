@@ -3,6 +3,8 @@
 #
 # https://github.com/abhinav/git-spice/issues/258
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-07-20T22:53:32Z'
 

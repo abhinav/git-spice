@@ -1,6 +1,8 @@
 # 'gs repo init' prompts for a remote
 # if there are multiple remotes.
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 

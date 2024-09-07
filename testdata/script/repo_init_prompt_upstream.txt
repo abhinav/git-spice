@@ -1,5 +1,7 @@
 # 'gs repo init' prefers upstream default branch.
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 # set up an upstream
 mkdir upstream
 cd upstream

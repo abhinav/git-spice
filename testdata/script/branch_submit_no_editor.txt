@@ -1,6 +1,8 @@
 # branch submit fails if there's no editor.
 # https://github.com/abhinav/git-spice/issues/310
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-07-29T19:25:12Z'
 

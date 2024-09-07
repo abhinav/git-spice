@@ -18,11 +18,6 @@ MOCKGEN = bin/mockgen
 REQUIREDFIELD = bin/requiredfield
 TOOLS = $(MOCKGEN) $(GS)
 
-# Non-test Go files.
-GO_SRC_FILES = $(shell find . \
-	   -path '*/.*' -prune -o \
-	   '(' -type f -a -name '*.go' -a -not -name '*_test.go' ')' -print)
-
 .PHONY: all
 all: build lint test
 
@@ -73,8 +68,11 @@ generate-lint: $(TOOLS)
 		git diff --exit-code || \
 		(echo "'go generate' changed files" && false)
 
-$(GS): $(GO_SRC_FILES) go.mod
+$(GS): _always
 	go install go.abhg.dev/gs
+
+.PHONY: _always
+_always:
 
 $(MOCKGEN): go.mod
 	go install go.uber.org/mock/mockgen

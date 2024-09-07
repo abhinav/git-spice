@@ -41,7 +41,7 @@ gs auth login --forge=shamhub
 cmp stderr $WORK/golden/login-secure.stderr
 
 -- golden/login.stderr --
-WRN Storing secrets in plain text at $WORK/home/.config/git-spice/secrets.json. Be careful!
+WRN Storing secrets in plain text at $WORK${/}home${/}.config${/}git-spice${/}secrets.json. Be careful!
 INF shamhub: successfully logged in
 -- golden/login-secure.stderr --
 INF shamhub: successfully logged in
