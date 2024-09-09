@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/alecthomas/kong v0.9.0
 	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10
-	github.com/charmbracelet/bubbles v0.19.0
+	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/charmbracelet/log v0.4.0
@@ -19,7 +19,7 @@ require (
 	github.com/zalando/go-keyring v0.2.5
 	go.abhg.dev/requiredfield v0.3.0
 	go.uber.org/mock v0.4.0
-	golang.org/x/oauth2 v0.22.0
+	golang.org/x/oauth2 v0.23.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.1
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.1.0
