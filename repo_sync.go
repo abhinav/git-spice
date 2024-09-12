@@ -398,12 +398,15 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 			return fmt.Errorf("delete branch %v: %w", branch, err)
 		}
 
-		// Also delete the remote tracking branch for this branch.
+		// Also delete the remote tracking branch for this branch
+		// if it still exists.
 		remoteBranch := remote + "/" + branch
-		if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
-			Remote: true,
-		}); err != nil {
-			log.Warn("Unable to delete remote tracking branch", "branch", remoteBranch, "error", err)
+		if _, err := repo.PeelToCommit(ctx, remoteBranch); err == nil {
+			if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
+				Remote: true,
+			}); err != nil {
+				log.Warn("Unable to delete remote tracking branch", "branch", remoteBranch, "error", err)
+			}
 		}
 	}
 

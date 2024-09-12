@@ -2,6 +2,8 @@ package shamhub
 
 import (
 	"encoding/json"
+	"flag"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
+	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
 	"gopkg.in/yaml.v3"
 )
@@ -119,11 +122,25 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		}
 
 	case "merge":
-		if len(args) != 2 {
-			ts.Fatalf("usage: shamhub merge <owner/repo> <pr>")
-		}
 		if sh == nil {
 			ts.Fatalf("ShamHub not initialized")
+		}
+
+		logw, closeLogw := ioutil.LogfWriter(ts.Logf, "shamhub merge: ")
+		ts.Defer(closeLogw)
+
+		flag := flag.NewFlagSet("shamhub merge", flag.ContinueOnError)
+		flag.SetOutput(logw)
+		flag.Usage = func() {
+			fmt.Fprintln(logw, "usage: shamhub merge [-prune] <owner/repo> <pr>")
+		}
+
+		prune := flag.Bool("prune", false, "prune the branch after merging")
+		ts.Check(flag.Parse(args))
+		args = flag.Args()
+		if len(args) != 2 {
+			flag.Usage()
+			ts.Fatalf("expected 2 arguments, got %d", len(args))
 		}
 
 		ownerRepo, prStr := args[0], args[1]
@@ -137,9 +154,10 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		}
 
 		req := MergeChangeRequest{
-			Owner:  owner,
-			Repo:   repo,
-			Number: pr,
+			Owner:        owner,
+			Repo:         repo,
+			Number:       pr,
+			DeleteBranch: *prune,
 		}
 		if at := ts.Getenv("GIT_COMMITTER_DATE"); at != "" {
 			t, err := time.Parse(time.RFC3339, at)

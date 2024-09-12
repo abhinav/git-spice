@@ -34,6 +34,9 @@ shamhub merge alice/example 1
 gs repo sync
 stderr 'feature1: #1 was merged'
 
+git branch -r
+cmp stdout $WORK/golden/merged-branches.txt
+
 # we should now be on main,
 # feature1 branch should be gone,
 # and feature2 should be restacked.
@@ -50,6 +53,8 @@ Contents of feature1
 -- repo/feature2.txt --
 Contents of feature2
 
+-- golden/merged-branches.txt --
+  origin/main
 -- golden/pull.json --
 {
   "number": 1,
