@@ -282,6 +282,44 @@ func TestKongPredictor(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "negation/default",
+			grammar: &struct {
+				Spicy bool `negatable:""` // --spicy, --no-spicy
+			}{},
+			cases: []completeCase{
+				{
+					want: []string{"--help", "--spicy", "--no-spicy"},
+				},
+				{
+					give: compLine("--s"),
+					want: []string{"--spicy"},
+				},
+				{
+					give: compLine("--n"),
+					want: []string{"--no-spicy"},
+				},
+			},
+		},
+		{
+			name: "negation/custom",
+			grammar: &struct {
+				Spicy bool `negatable:"mild"` // --spicy, --mild
+			}{},
+			cases: []completeCase{
+				{
+					want: []string{"--help", "--spicy", "--mild"},
+				},
+				{
+					give: compLine("--s"),
+					want: []string{"--spicy"},
+				},
+				{
+					give: compLine("--m"),
+					want: []string{"--mild"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
