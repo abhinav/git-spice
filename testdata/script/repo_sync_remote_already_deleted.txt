@@ -1,0 +1,45 @@
+# 'repo sync' doesn't complain about a missing tracking branch
+# if it's been deleted manually with a git pull.
+
+as 'Test <test@example.com>'
+at '2024-09-12T05:04:03Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# submit a PR and merge it
+git add feature.txt
+gs bc -m 'Add feature' feature
+gs branch submit --fill
+stderr 'Created #'
+shamhub merge -prune alice/example 1
+
+# Pull the merged changes
+git checkout main
+git fetch --prune origin
+git pull origin main
+
+# sanity check: the tracking branch is gone
+git branch -r
+cmp stdout $WORK/golden/branch-gone.txt
+
+gs repo sync
+stderr 'feature: #\d was merged'
+stderr 'feature: deleted'
+! stderr 'Unable to delete remote tracking branch'
+
+-- repo/feature.txt --
+Contents of feature
+-- golden/branch-gone.txt --
+  origin/main

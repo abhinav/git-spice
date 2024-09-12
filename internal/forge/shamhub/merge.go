@@ -82,6 +82,10 @@ type MergeChangeRequest struct {
 	CommitterName, CommitterEmail string
 	// TODO: Use git.Signature here instead?
 
+	// DeleteBranch indicates that the merged branch
+	// should be deleted after the merge.
+	DeleteBranch bool
+
 	// TODO: option to use squash commit
 }
 
@@ -194,6 +198,25 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}()
 	if err != nil {
 		return err
+	}
+
+	if req.DeleteBranch {
+		err := func() error {
+			logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+			defer flush()
+
+			cmd := exec.Command(sh.gitExe, "branch", "-D", sh.changes[changeIdx].Head)
+			cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+			cmd.Stderr = logw
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("delete branch: %w", err)
+			}
+
+			return nil
+		}()
+		if err != nil {
+			return fmt.Errorf("delete branch: %w", err)
+		}
 	}
 
 	sh.changes[changeIdx].State = shamChangeMerged
