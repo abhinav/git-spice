@@ -237,8 +237,15 @@ func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 
 	// long flag
 	cmd.print("`--")
-	if flag.IsBool() && flag.Tag.Negatable {
-		cmd.print("[no-]")
+	if flag.IsBool() && flag.Tag.Negatable != "" {
+		// Value is "_" for "--no-<flag>",
+		// and anything else for "--<neg>".
+		if flag.Tag.Negatable == "_" {
+			cmd.print("[no-]")
+		} else {
+			// Don't need this yet, so don't bother.
+			panic("not yet implemented")
+		}
 	}
 	cmd.print(name)
 	// =value

@@ -529,8 +529,8 @@ func (k *kongPredictor) matchFlag(flags []*kong.Flag, scan *kong.Scanner, arg st
 			matched = "-"+string(flag.Short) == arg
 		}
 
-		if !matched && flag.Tag.Negatable {
-			matched = "--no-"+flag.Name == arg
+		if negFlag := negatableFlagName(flag); !matched && negFlag != "" {
+			matched = negFlag == arg
 		}
 
 		if !matched {
@@ -632,8 +632,8 @@ func (p *flagsPredictor) Predict(cargs Args) (predictions []string) {
 		}
 
 		predictions = append(predictions, "--"+flag.Name)
-		if flag.Tag.Negatable {
-			predictions = append(predictions, "--no-"+flag.Name)
+		if negFlag := negatableFlagName(flag); negFlag != "" {
+			predictions = append(predictions, negFlag)
 		}
 
 		// Include aliases only if the user has typed a prefix.
@@ -663,4 +663,17 @@ func (p *prefixPredictor) Predict(cargs Args) (predictions []string) {
 		}
 	}
 	return newPredictions
+}
+
+func negatableFlagName(f *kong.Flag) string {
+	// Kong uses "_" as a placeholder for "--no-<flag>".
+	// Any other value means the flag is "--<negation>".
+	switch f.Tag.Negatable {
+	case "":
+		return ""
+	case "_":
+		return "--no-" + f.Name
+	default:
+		return "--" + f.Tag.Negatable
+	}
 }
