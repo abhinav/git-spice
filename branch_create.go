@@ -146,7 +146,7 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	var branchCreated bool // set only after CreateBranch
 	branchAt := baseHash
 	if cmd.Commit {
-		commitHash, restore, err := cmd.commit(ctx, repo, baseName)
+		commitHash, restore, err := cmd.commit(ctx, repo, baseName, log)
 		if err != nil {
 			return err
 		}
@@ -256,7 +256,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 func (cmd *branchCreateCmd) commit(
 	ctx context.Context,
 	repo *git.Repository,
-	baseCommitish string,
+	baseName string,
+	log *log.Logger,
 ) (commitHash git.Hash, restore func() error, err error) {
 	// We'll need --allow-empty if there are no staged changes.
 	diff, err := repo.DiffIndex(ctx, "HEAD")
@@ -264,7 +265,7 @@ func (cmd *branchCreateCmd) commit(
 		return "", nil, fmt.Errorf("diff index: %w", err)
 	}
 
-	if err := repo.DetachHead(ctx, baseCommitish); err != nil {
+	if err := repo.DetachHead(ctx, baseName); err != nil {
 		return "", nil, fmt.Errorf("detach head: %w", err)
 	}
 
@@ -273,6 +274,9 @@ func (cmd *branchCreateCmd) commit(
 		Message:    cmd.Message,
 		All:        cmd.All,
 	}); err != nil {
+		if err := repo.Checkout(ctx, baseName); err != nil {
+			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)
+		}
 		return "", nil, fmt.Errorf("commit: %w", err)
 	}
 
@@ -292,6 +296,6 @@ func (cmd *branchCreateCmd) commit(
 			return fmt.Errorf("reset to parent commit: %w", err)
 		}
 
-		return repo.Checkout(ctx, baseCommitish)
+		return repo.Checkout(ctx, baseName)
 	}, nil
 }

@@ -1,0 +1,38 @@
+# aborting a commit during 'branch create'
+# should not leave the tree in a detached state.
+#
+# https://github.com/abhinav/git-spice/issues/393
+
+as 'Test <test@example.com>'
+at '2024-09-12T04:44:44Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat1.txt
+
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
+git branch
+cmp stdout $WORK/golden/branch.txt
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/empty.txt
+! gs bc feat1
+stderr 'Aborting commit due to empty commit message'
+
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
+git branch
+cmp stdout $WORK/golden/branch.txt
+
+-- repo/feat1.txt --
+feat 1
+-- input/empty.txt --
+-- golden/status.txt --
+A  feat1.txt
+-- golden/branch.txt --
+* main
