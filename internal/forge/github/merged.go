@@ -8,25 +8,41 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// ChangeIsMerged reports whether a change has been merged.
-func (r *Repository) ChangeIsMerged(ctx context.Context, id forge.ChangeID) (bool, error) {
-	// TODO: Bulk ChangesAreMerged that takes a list of IDs.
-
+// ChangesAreMerged reports whether the given changes have been merged.
+// The returned slice is in the same order as the input slice.
+func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
 	var q struct {
-		Repository struct {
+		Nodes []struct {
 			PullRequest struct {
 				Merged bool `graphql:"merged"`
-			} `graphql:"pullRequest(number: $number)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-	err := r.client.Query(ctx, &q, map[string]any{
-		"owner":  githubv4.String(r.owner),
-		"repo":   githubv4.String(r.repo),
-		"number": githubv4.Int(mustPR(id).Number),
-	})
-	if err != nil {
-		return false, fmt.Errorf("query failed: %w", err)
+			} `graphql:"... on PullRequest"`
+		} `graphql:"nodes(ids: $ids)"`
 	}
 
-	return q.Repository.PullRequest.Merged, nil
+	gqlIDs := make([]githubv4.ID, len(ids))
+	for i, id := range ids {
+		// Since before the first stable v0.1.0,
+		// the data store has tracked the GraphQL ID of each change,
+		// so this won't actually make a network request.
+		//
+		// However, if a [PR] was constructed in-process
+		// and not from the data store, we need to resolve it,
+		// and that will make a network request.
+		var err error
+		gqlIDs[i], err = r.graphQLID(ctx, mustPR(id))
+		if err != nil {
+			return nil, fmt.Errorf("resolve ID %v: %w", id, err)
+		}
+	}
+
+	if err := r.client.Query(ctx, &q, map[string]any{"ids": gqlIDs}); err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+
+	merged := make([]bool, len(ids))
+	for i, pr := range q.Nodes {
+		merged[i] = pr.PullRequest.Merged
+	}
+
+	return merged, nil
 }

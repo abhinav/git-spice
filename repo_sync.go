@@ -272,13 +272,13 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 
 					// TODO: Once we're recording GraphQL IDs in the store,
 					// we can combine all submitted PRs into one query.
-					merged, err := remoteRepo.ChangeIsMerged(ctx, b.Change)
+					merged, err := remoteRepo.ChangesAreMerged(ctx, []forge.ChangeID{b.Change})
 					if err != nil {
 						log.Error("Failed to query CR status", "change", b.Change, "error", err)
 						continue
 					}
 
-					b.Merged = merged
+					b.Merged = merged[0]
 
 				case b, ok := <-trachedch:
 					if !ok {

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,57 +15,77 @@ import (
 	"go.abhg.dev/gs/internal/ioutil"
 )
 
-type isMergedResponse struct {
-	Merged bool `json:"merged"`
+type areMergedRequest struct {
+	IDs []ChangeID `json:"ids"`
 }
 
-var _ = shamhubHandler("GET /{owner}/{repo}/change/{number}/merged", (*ShamHub).handleIsMerged)
+type areMergedResponse struct {
+	Merged []bool `json:"merged"`
+}
 
-func (sh *ShamHub) handleIsMerged(w http.ResponseWriter, r *http.Request) {
-	owner, repo, numStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("number")
-	if owner == "" || repo == "" || numStr == "" {
+var _ = shamhubHandler("POST /{owner}/{repo}/change/merged", (*ShamHub).handleAreMerged)
+
+func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
+	owner, repo := r.PathValue("owner"), r.PathValue("repo")
+	if owner == "" || repo == "" {
 		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
 		return
 	}
 
-	num, err := strconv.Atoi(numStr)
-	if err != nil {
+	var req areMergedRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	changeNumToIdx := make(map[int]int, len(req.IDs))
+	for i, id := range req.IDs {
+		changeNumToIdx[int(id)] = i
+	}
+
 	sh.mu.RLock()
-	var (
-		merged bool
-		found  bool
-	)
+	merged := make([]bool, len(sh.changes))
 	for _, c := range sh.changes {
-		if c.Owner == owner && c.Repo == repo && c.Number == num {
-			merged = c.State == shamChangeMerged
-			found = true
-			break
+		if c.Owner == owner && c.Repo == repo {
+			idx, ok := changeNumToIdx[c.Number]
+			if !ok {
+				continue
+			}
+			merged[idx] = c.State == shamChangeMerged
+			delete(changeNumToIdx, c.Number)
+
+			if len(changeNumToIdx) == 0 {
+				break
+			}
 		}
 	}
 	sh.mu.RUnlock()
 
-	if !found {
-		http.Error(w, "change not found", http.StatusNotFound)
+	if len(changeNumToIdx) > 0 {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "changes not found: %v", changeNumToIdx)
 		return
 	}
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(isMergedResponse{Merged: merged}); err != nil {
+	if err := enc.Encode(areMergedResponse{Merged: merged}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (f *forgeRepository) ChangeIsMerged(ctx context.Context, fid forge.ChangeID) (bool, error) {
-	id := fid.(ChangeID)
-	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)), "merged")
-	var res isMergedResponse
-	if err := f.client.Get(ctx, u.String(), &res); err != nil {
-		return false, fmt.Errorf("is merged: %w", err)
+func (f *forgeRepository) ChangesAreMerged(ctx context.Context, fids []forge.ChangeID) ([]bool, error) {
+	ids := make([]ChangeID, len(fids))
+	for i, fid := range fids {
+		ids[i] = fid.(ChangeID)
+	}
+
+	u := f.apiURL.JoinPath(f.owner, f.repo, "change", "merged")
+	req := areMergedRequest{IDs: ids}
+
+	var res areMergedResponse
+	if err := f.client.Post(ctx, u.String(), req, &res); err != nil {
+		return nil, fmt.Errorf("are merged: %w", err)
 	}
 	return res.Merged, nil
 }

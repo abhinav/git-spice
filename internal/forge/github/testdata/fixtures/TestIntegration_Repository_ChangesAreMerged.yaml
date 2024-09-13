@@ -1,0 +1,37 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 187
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: |
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{merged}}}","variables":{"ids":["PR_kwDOJ2BQKs5ylEYu","PR_kwDOJ2BQKs56wX01","PR_kwDOJ2BQKs5xNeqO","PR_kwDOMVd0xs51N_9r"]}}
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"nodes":[{"merged":true},{"merged":false},{"merged":true},{"merged":false}]}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 269.167291ms
