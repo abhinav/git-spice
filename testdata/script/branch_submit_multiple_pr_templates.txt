@@ -1,7 +1,5 @@
 # 'branch submit' shows a prompt if there are multiple PR templates.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-15T21:55:32Z'
 

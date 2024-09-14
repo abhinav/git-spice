@@ -1,8 +1,6 @@
 # 'branch submit' with a PR template and no additional commit body
 # places the template at the top.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-19T04:32:32Z'
 

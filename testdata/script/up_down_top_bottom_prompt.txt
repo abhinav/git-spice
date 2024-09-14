@@ -1,7 +1,5 @@
 # Moving in a linear stack with gs up/bd/bt/bb.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 

@@ -1,8 +1,6 @@
 # 'branch submit' uses the PR template if there is one
 # with the terminal prompt.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-03T08:32:32Z'
 

@@ -2,8 +2,6 @@
 # if the heads mismatch and we're in interactive mode,
 # prompt the user for deletion.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-05T05:29:28Z'
 

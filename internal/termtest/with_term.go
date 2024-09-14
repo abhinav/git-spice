@@ -11,13 +11,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/creack/pty"
+	"github.com/creack/pty/v2"
 	"github.com/vito/midterm"
 )
 
@@ -68,6 +69,8 @@ func WithTerm() (exitCode int) {
 		"capture a snapshot on exit with the given name")
 
 	log.SetFlags(0)
+	log.SetOutput(os.Stderr)
+	log.SetPrefix("term: ")
 	flag.Parse()
 
 	args := flag.Args()
@@ -254,14 +257,14 @@ func WithTerm() (exitCode int) {
 type terminalEmulator struct {
 	mu   sync.Mutex
 	cmd  *exec.Cmd
-	pty  *os.File
+	pty  pty.Pty
 	logf func(string, ...any)
 
 	term *midterm.Terminal
 }
 
 func newVT100Emulator(
-	f *os.File,
+	f pty.Pty,
 	cmd *exec.Cmd,
 	rows, cols int,
 	autoResize bool,
@@ -307,29 +310,38 @@ loop:
 
 func (m *terminalEmulator) Close() error {
 	_, writeErr := m.pty.Write([]byte{4}) // EOT
+	if writeErr != nil {
+		writeErr = fmt.Errorf("send EOT: %w", writeErr)
+	}
 
 	waitErrc := make(chan error, 1)
 	go func() {
-		waitErrc <- m.cmd.Wait()
+		err := m.cmd.Wait()
+		if err != nil {
+			err = fmt.Errorf("command %v: %w", m.cmd, err)
+		}
+		waitErrc <- err
 	}()
 
 	var waitErr error
 	select {
 	case waitErr = <-waitErrc:
 		// ok
-	case <-time.After(3 * time.Second):
+	case <-time.After(10 * time.Second):
 		waitErr = fmt.Errorf("timeout waiting for %v", m.cmd)
 		_ = m.cmd.Process.Kill()
 	}
 
-	closeErr := m.pty.Close()
-
-	return errors.Join(waitErr, closeErr, writeErr)
+	errs := []error{waitErr, writeErr}
+	if runtime.GOOS != "windows" {
+		// On Windows, pty.Close seems to freeze right now.
+		errs = append(errs, m.pty.Close())
+	}
+	return errors.Join(errs...)
 }
 
 func (m *terminalEmulator) FeedKeys(s string) error {
 	_, err := io.WriteString(m.pty, s)
-	_ = m.pty.Sync()
 	return err
 }
 

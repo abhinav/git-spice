@@ -1,7 +1,5 @@
 # auth operations prompt for forge if it cannot be guessed
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-07-01T04:30:32Z'
 

@@ -1,8 +1,6 @@
 # 'branch submit' after initializing without a remote
 # will ask for a remote to push to.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
 

@@ -9,7 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.1.1
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/charmbracelet/log v0.4.0
-	github.com/creack/pty v1.1.23
+	github.com/creack/pty/v2 v2.0.0-20231028221118-e9c1f000f465
 	github.com/dustin/go-humanize v1.0.1
 	github.com/mattn/go-isatty v0.0.20
 	github.com/rogpeppe/go-internal v1.12.0

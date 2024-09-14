@@ -1,8 +1,6 @@
 # branch submit should not truncate a long body.
 # https://github.com/abhinav/git-spice/issues/90
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-05-23T20:06:32Z'
 
