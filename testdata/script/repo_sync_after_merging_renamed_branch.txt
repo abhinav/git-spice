@@ -1,0 +1,47 @@
+# If a branch is renamed after being submitted, and then merged,
+# repo sync should still delete the correct tracking branch.
+
+as 'Test <test@example.com>'
+at '2024-09-14T12:05:06Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a new branch and submit it
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# rename and re-submit
+gs branch rename feat1
+cp $WORK/extra/feature1-update.txt feature1.txt
+git add feature1.txt
+git commit -m 'update feature1'
+
+# merge the PR
+shamhub merge alice/example 1
+
+gs repo sync
+stderr 'feat1: deleted'
+
+# tracking branch must have been deleted
+! git rev-parse --verify origin/feature1
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-update.txt --
+New contents of feature1
+
