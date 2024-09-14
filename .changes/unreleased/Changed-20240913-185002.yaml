@@ -1,0 +1,3 @@
+kind: Changed
+body: 'repo sync: Reduce the number of network requests made to check status of submitted branches.'
+time: 2024-09-13T18:50:02.036293-07:00
