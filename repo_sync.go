@@ -204,19 +204,6 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	remoteRepo forge.Repository,
 	opts *globalOptions,
 ) error {
-	// There are two options for detecting merged branches:
-	//
-	// 1. Query the CR status for each submitted branch.
-	//    This is more accurate, but requires a lot of API calls.
-	// 2. List recently merged PRs and match against tracked branches.
-	//    The number of API calls here is smaller,
-	//    but the matching is less accurate because the CR may have been
-	//    submitted by someone else.
-	//
-	// For now, we'll go for (1) with the assumption that the number of
-	// submitted branches is small enough that we can afford the API calls.
-	// In the future, we may need a hybrid approach that switches to (2).
-
 	knownBranches, err := svc.LoadBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("list tracked branches: %w", err)
@@ -226,6 +213,9 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		Name   string
 		Change forge.ChangeID
 		Merged bool
+
+		// Branch name pushed to the remote.
+		UpstreamBranch string
 	}
 
 	type trackedBranch struct {
@@ -235,6 +225,9 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		Merged        bool
 		RemoteHeadSHA git.Hash
 		LocalHeadSHA  git.Hash
+
+		// Branch name pushed to the remote.
+		UpstreamBranch string
 	}
 
 	// There are two kinds of branches under consideration:
@@ -254,10 +247,16 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		trackedBranches   []*trackedBranch
 	)
 	for _, b := range knownBranches {
+		upstreamBranch := b.UpstreamBranch
+		if upstreamBranch == "" {
+			upstreamBranch = b.Name
+		}
+
 		if b.Change != nil {
 			b := &submittedBranch{
-				Name:   b.Name,
-				Change: b.Change.ChangeID(),
+				Name:           b.Name,
+				Change:         b.Change.ChangeID(),
+				UpstreamBranch: upstreamBranch,
 			}
 			submittedBranches = append(submittedBranches, b)
 		} else {
@@ -265,7 +264,10 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 			// Filter down to only branches that have
 			// a remote tracking branch:
 			// either $remote/$UpstreamBranch or $remote/$branch exists.
-			b := &trackedBranch{Name: b.Name}
+			b := &trackedBranch{
+				Name:           b.Name,
+				UpstreamBranch: upstreamBranch,
+			}
 			trackedBranches = append(trackedBranches, b)
 		}
 	}
@@ -338,14 +340,22 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	}
 	wg.Wait()
 
-	var branchesToDelete []string
+	type branchDeletion struct {
+		BranchName   string
+		UpstreamName string
+	}
+
+	var branchesToDelete []branchDeletion
 	for _, branch := range submittedBranches {
 		if !branch.Merged {
 			continue
 		}
 
 		log.Infof("%v: %v was merged", branch.Name, branch.Change)
-		branchesToDelete = append(branchesToDelete, branch.Name)
+		branchesToDelete = append(branchesToDelete, branchDeletion{
+			BranchName:   branch.Name,
+			UpstreamName: branch.UpstreamBranch,
+		})
 	}
 
 	for _, branch := range trackedBranches {
@@ -355,7 +365,10 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 
 		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
 			log.Infof("%v: %v was merged", branch.Name, branch.Change)
-			branchesToDelete = append(branchesToDelete, branch.Name)
+			branchesToDelete = append(branchesToDelete, branchDeletion{
+				BranchName:   branch.Name,
+				UpstreamName: branch.UpstreamBranch,
+			})
 			continue
 		}
 
@@ -381,7 +394,10 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		}
 
 		if shouldDelete {
-			branchesToDelete = append(branchesToDelete, branch.Name)
+			branchesToDelete = append(branchesToDelete, branchDeletion{
+				BranchName:   branch.Name,
+				UpstreamName: branch.UpstreamBranch,
+			})
 		}
 	}
 
@@ -390,7 +406,7 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	// (e.g. from the bottom of the stack up)
 	for _, branch := range branchesToDelete {
 		err := (&branchDeleteCmd{
-			Branch: branch,
+			Branch: branch.BranchName,
 			Force:  true,
 		}).Run(ctx, log, opts)
 		if err != nil {
@@ -399,7 +415,7 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 
 		// Also delete the remote tracking branch for this branch
 		// if it still exists.
-		remoteBranch := remote + "/" + branch
+		remoteBranch := remote + "/" + branch.UpstreamName
 		if _, err := repo.PeelToCommit(ctx, remoteBranch); err == nil {
 			if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
 				Remote: true,
