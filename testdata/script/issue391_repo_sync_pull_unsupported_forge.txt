@@ -1,0 +1,61 @@
+# 'repo sync' is able to pull main from unsupported forges.
+#
+# https://github.com/abhinav/git-spice/issues/391
+
+as 'Test <test@example.com>'
+at '2024-09-14T11:35:36Z'
+
+# setup an upstream repository
+mkdir upstream
+cd upstream
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# receive updates to the current branch
+git config receive.denyCurrentBranch updateInstead
+
+# setup the git-spice managed repository
+cd ..
+git clone upstream repo
+cd repo
+gs repo init
+
+# Don't attempt to publish PRs for the unsupported forge
+git config spice.submit.publish false
+
+# set up a stack: feat1 -> feat2
+mv $WORK/extra/feat1.txt feat1.txt
+git add feat1.txt
+gs bc -m feat1
+mv $WORK/extra/feat2.txt feat2.txt
+git add feat2.txt
+gs bc -m feat2
+gs stack submit
+
+# merge the PR server-side with a merge-commit
+cd ../upstream
+git branch
+cmp stdout $WORK/golden/upstream-branches.txt
+git merge feat1
+git branch -d feat1
+
+# repo sync
+cd ../repo
+gs repo sync
+git graph --branches
+cmp stdout $WORK/golden/repo-sync-graph.txt
+
+# TODO: detect the merge commit and delete feat1
+
+-- extra/feat1.txt --
+feature 1
+-- extra/feat2.txt --
+feature 2
+-- golden/upstream-branches.txt --
+  feat1
+  feat2
+* main
+-- golden/repo-sync-graph.txt --
+* b3ed169 (HEAD -> feat2, origin/feat2) feat2
+* 1993921 (origin/main, origin/feat1, origin/HEAD, main, feat1) feat1
+* 8b0535b Initial commit

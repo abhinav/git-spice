@@ -1,0 +1,8 @@
+kind: Changed
+body: >-
+  repo sync:
+  Don't fail while attempting to make API requests
+  if the Git remote points to an unsupported hosting service.
+  This provides a more graceful degradation of functionality
+  when git-spice is used with non-GitHub remotes.
+time: 2024-09-14T17:58:29.581188-07:00

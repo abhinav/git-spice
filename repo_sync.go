@@ -187,8 +187,18 @@ func (cmd *repoSyncCmd) Run(
 		}
 	}
 
-	remoteRepo, err := openRemoteRepository(ctx, log, secretStash, repo, remote)
+	remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, repo, remote)
 	if err != nil {
+		var unsupported *unsupportedForgeError
+		if errors.As(err, &unsupported) {
+			// TODO: Detect merged branches by checking whether
+			// commits of branches are reachable.
+			// This won't handle squash/rebase merges,
+			// but it's better than nothing.
+			log.Warn("Skipping branch deletion: unsupported Git host", "url", unsupported.RemoteURL)
+			return nil
+		}
+
 		return err
 	}
 
