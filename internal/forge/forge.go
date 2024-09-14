@@ -133,7 +133,7 @@ type Repository interface {
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
-	ChangeIsMerged(ctx context.Context, id ChangeID) (bool, error)
+	ChangesAreMerged(ctx context.Context, ids []ChangeID) ([]bool, error)
 
 	// Post and update comments on changes.
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)

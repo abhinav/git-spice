@@ -199,24 +199,22 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	})
 }
 
-func TestIntegration_Repository_IsMerged(t *testing.T) {
+func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := githubv4.NewClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
-	t.Run("false", func(t *testing.T) {
-		ok, err := repo.ChangeIsMerged(ctx, &github.PR{Number: 144})
-		require.NoError(t, err)
-		assert.False(t, ok)
+	merged, err := repo.ChangesAreMerged(ctx, []forge.ChangeID{
+		&github.PR{Number: 196, GQLID: "PR_kwDOJ2BQKs5ylEYu"}, // merged
+		&github.PR{Number: 387, GQLID: "PR_kwDOJ2BQKs56wX01"}, // open (not merged)
+		&github.PR{Number: 144, GQLID: "PR_kwDOJ2BQKs5xNeqO"}, // merged
+		// Explicit GQL ID means we don't need to be in the same repo.
+		&github.PR{Number: 4, GQLID: githubv4.ID("PR_kwDOMVd0xs51N_9r")}, // closed (not merged)
 	})
-
-	t.Run("true", func(t *testing.T) {
-		ok, err := repo.ChangeIsMerged(ctx, &github.PR{Number: 141})
-		require.NoError(t, err)
-		assert.True(t, ok)
-	})
+	require.NoError(t, err)
+	assert.Equal(t, []bool{true, false, true, false}, merged)
 }
 
 func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
