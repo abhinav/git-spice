@@ -243,49 +243,64 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	// 2. Branches that the user submitted PRs for manually
 	//    with 'gh pr create' or similar.
 	//
-	// For the first, we can perform a cheaper API call to check the CR status.
+	// For the first, we can perform a cheap API call to check the CR status.
 	// For the second, we need to find recently merged PRs with that branch
 	// name, and match the remote head SHA to the branch head SHA.
 	//
 	// We'll try to do these checks concurrently.
 
-	submittedch := make(chan *submittedBranch)
-	trachedch := make(chan *trackedBranch)
+	var (
+		submittedBranches []*submittedBranch
+		trackedBranches   []*trackedBranch
+	)
+	for _, b := range knownBranches {
+		if b.Change != nil {
+			b := &submittedBranch{
+				Name:   b.Name,
+				Change: b.Change.ChangeID(),
+			}
+			submittedBranches = append(submittedBranches, b)
+		} else {
+			// TODO:
+			// Filter down to only branches that have
+			// a remote tracking branch:
+			// either $remote/$UpstreamBranch or $remote/$branch exists.
+			b := &trackedBranch{Name: b.Name}
+			trackedBranches = append(trackedBranches, b)
+		}
+	}
 
 	var wg sync.WaitGroup
-	for range min(runtime.GOMAXPROCS(0), len(knownBranches)) {
+	if len(submittedBranches) > 0 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
-			// We'll nil these out once they're closed.
-			submittedch := submittedch
-			trachedch := trachedch
+			changeIDs := make([]forge.ChangeID, len(submittedBranches))
+			for i, b := range submittedBranches {
+				changeIDs[i] = b.Change
+			}
 
-			for submittedch != nil || trachedch != nil {
-				select {
-				case b, ok := <-submittedch:
-					if !ok {
-						submittedch = nil
-						continue
-					}
+			merged, err := remoteRepo.ChangesAreMerged(ctx, changeIDs)
+			if err != nil {
+				log.Error("Failed to query CR status", "error", err)
+				return
+			}
 
-					// TODO: Once we're recording GraphQL IDs in the store,
-					// we can combine all submitted PRs into one query.
-					merged, err := remoteRepo.ChangesAreMerged(ctx, []forge.ChangeID{b.Change})
-					if err != nil {
-						log.Error("Failed to query CR status", "change", b.Change, "error", err)
-						continue
-					}
+			for i, m := range merged {
+				submittedBranches[i].Merged = m
+			}
+		}()
+	}
 
-					b.Merged = merged[0]
+	if len(trackedBranches) > 0 {
+		trackedch := make(chan *trackedBranch)
+		for range min(runtime.GOMAXPROCS(0), len(trackedBranches)) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-				case b, ok := <-trachedch:
-					if !ok {
-						trachedch = nil
-						continue
-					}
-
+				for b := range trackedch {
 					changes, err := remoteRepo.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
 						Limit: 3,
 						State: forge.ChangeMerged,
@@ -313,30 +328,14 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 					}
 
 				}
-			}
-		}()
-	}
-
-	var (
-		submittedBranches []*submittedBranch
-		trackedBranches   []*trackedBranch
-	)
-	for _, b := range knownBranches {
-		if b.Change != nil {
-			b := &submittedBranch{
-				Name:   b.Name,
-				Change: b.Change.ChangeID(),
-			}
-			submittedBranches = append(submittedBranches, b)
-			submittedch <- b
-		} else {
-			b := &trackedBranch{Name: b.Name}
-			trackedBranches = append(trackedBranches, b)
-			trachedch <- b
+			}()
 		}
+
+		for _, b := range trackedBranches {
+			trackedch <- b
+		}
+		close(trackedch)
 	}
-	close(submittedch)
-	close(trachedch)
 	wg.Wait()
 
 	var branchesToDelete []string
