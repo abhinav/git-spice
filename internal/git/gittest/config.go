@@ -1,8 +1,8 @@
 package gittest
 
 import (
-	"fmt"
-	"os/exec"
+	"sort"
+	"strconv"
 )
 
 // DefaultConfig is the default Git configuration
@@ -18,15 +18,33 @@ func DefaultConfig() Config {
 // Config is a set of Git configuration values.
 type Config map[string]string
 
-// WriteTo writes the Git configuration to the given file,
-// creating it if it does not exist.
-func (cfg Config) WriteTo(path string) error {
-	args := []string{"config", "--file", path}
-	for k, v := range cfg {
-		cmd := exec.Command("git", append(args, k, v)...)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("set %s: %w", k, err)
-		}
+// Env generates a list of environment variable assignments that will have
+// the same effect as setting these configuration values in a Git repository.
+// This is suitable for passing to exec.Cmd.Env.
+func (c Config) Env() []string {
+	m := c.EnvMap()
+	env := make([]string, 0, len(m))
+	for k, v := range m {
+		env = append(env, k+"="+v)
 	}
-	return nil
+	sort.Strings(env)
+	return env
+}
+
+// EnvMap generates a map of environment variable assignments that will have
+// the same effect as setting these configuration values in a Git repository.
+func (c Config) EnvMap() map[string]string {
+	env := make(map[string]string, len(c))
+
+	// We can set Git configuration values by setting
+	// GIT_CONFIG_KEY_<n>, GIT_CONFIG_VALUE_<n> and GIT_CONFIG_COUNT.
+	var numCfg int
+	for k, v := range c {
+		n := strconv.Itoa(numCfg)
+		env["GIT_CONFIG_KEY_"+n] = k
+		env["GIT_CONFIG_VALUE_"+n] = v
+		numCfg++
+	}
+	env["GIT_CONFIG_COUNT"] = strconv.Itoa(numCfg)
+	return env
 }
