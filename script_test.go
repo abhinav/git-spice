@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestScript(t *testing.T) {
-	defaultEnv := gittest.DefaultConfig().EnvMap()
+	defaultEnv := make(map[string]string)
 	defaultEnv["EDITOR"] = "mockedit"
 
 	// Add a default author to all commits.
@@ -67,6 +67,11 @@ func TestScript(t *testing.T) {
 	defaultEnv["GIT_AUTHOR_EMAIL"] = "test@example.com"
 	defaultEnv["GIT_COMMITTER_NAME"] = "Test"
 	defaultEnv["GIT_COMMITTER_EMAIL"] = "test@example.com"
+
+	systemGit := filepath.Join(t.TempDir(), "gitconfig")
+	require.NoError(t,
+		gittest.DefaultConfig().WriteTo(systemGit))
+	defaultEnv["GIT_CONFIG_SYSTEM"] = systemGit
 
 	var shamhubCmd shamhub.Cmd
 

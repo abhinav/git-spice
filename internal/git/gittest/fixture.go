@@ -51,17 +51,24 @@ func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}
+
 	tmpScript := filepath.Join(tmpDir, "test.txt")
 	if err := os.WriteFile(tmpScript, script, 0o644); err != nil {
 		return nil, fmt.Errorf("write script: %w", err)
 	}
 
-	defaultEnv := DefaultConfig().EnvMap()
-	defaultEnv["EDITOR"] = "false"
-	defaultEnv["GIT_AUTHOR_NAME"] = "Test"
-	defaultEnv["GIT_AUTHOR_EMAIL"] = "test@example.com"
-	defaultEnv["GIT_COMMITTER_NAME"] = "Test"
-	defaultEnv["GIT_COMMITTER_EMAIL"] = "test@example.com"
+	gitConfig := filepath.Join(tmpDir, "gitconfig")
+	if err := DefaultConfig().WriteTo(gitConfig); err != nil {
+		return nil, fmt.Errorf("generate gitconfig: %w", err)
+	}
+
+	env := make(map[string]string)
+	env["EDITOR"] = "false"
+	env["GIT_AUTHOR_NAME"] = "Test"
+	env["GIT_AUTHOR_EMAIL"] = "test@example.com"
+	env["GIT_COMMITTER_NAME"] = "Test"
+	env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+	env["GIT_CONFIG_SYSTEM"] = gitConfig
 
 	var (
 		t          fakeT
@@ -80,7 +87,7 @@ func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
 			TestWork:           true,
 			RequireUniqueNames: true,
 			Setup: func(e *testscript.Env) error {
-				for k, v := range defaultEnv {
+				for k, v := range env {
 					e.Setenv(k, v)
 				}
 
