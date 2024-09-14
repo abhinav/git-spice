@@ -1,6 +1,8 @@
 # Renaming a branch without a new name
 # prompts for a new name
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 

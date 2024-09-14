@@ -1,3 +1,5 @@
+[!unix] skip # pending https://github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-06-23T10:00:12Z'
 

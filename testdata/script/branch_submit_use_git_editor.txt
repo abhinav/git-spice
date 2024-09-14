@@ -1,6 +1,8 @@
 # branch submit uses the editor set by Git.
 # https://github.com/abhinav/git-spice/issues/274
 
+[!unix] skip # pending github.com/creack/pty/pull/155
+
 as 'Test <test@example.com>'
 at '2024-07-23T07:11:32Z'
 
