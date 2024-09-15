@@ -202,21 +202,25 @@ func (cmd *repoSyncCmd) Run(
 		return err
 	}
 
-	return cmd.deleteMergedBranches(ctx, log, remote, svc, repo, remoteRepo, opts)
+	branchesToDelete, err := cmd.findMergedBranches(ctx, log, svc, repo, remoteRepo, opts)
+	if err != nil {
+		return fmt.Errorf("find merged branches: %w", err)
+	}
+
+	return cmd.deleteBranches(ctx, opts, log, repo, remote, branchesToDelete)
 }
 
-func (cmd *repoSyncCmd) deleteMergedBranches(
+func (cmd *repoSyncCmd) findMergedBranches(
 	ctx context.Context,
 	log *log.Logger,
-	remote string,
 	svc *spice.Service,
 	repo *git.Repository,
 	remoteRepo forge.Repository,
 	opts *globalOptions,
-) error {
+) ([]branchDeletion, error) {
 	knownBranches, err := svc.LoadBranches(ctx)
 	if err != nil {
-		return fmt.Errorf("list tracked branches: %w", err)
+		return nil, fmt.Errorf("list tracked branches: %w", err)
 	}
 
 	type submittedBranch struct {
@@ -350,11 +354,6 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 	}
 	wg.Wait()
 
-	type branchDeletion struct {
-		BranchName   string
-		UpstreamName string
-	}
-
 	var branchesToDelete []branchDeletion
 	for _, branch := range submittedBranches {
 		if !branch.Merged {
@@ -411,6 +410,22 @@ func (cmd *repoSyncCmd) deleteMergedBranches(
 		}
 	}
 
+	return branchesToDelete, nil
+}
+
+type branchDeletion struct {
+	BranchName   string
+	UpstreamName string
+}
+
+func (cmd *repoSyncCmd) deleteBranches(
+	ctx context.Context,
+	opts *globalOptions,
+	log *log.Logger,
+	repo *git.Repository,
+	remote string,
+	branchesToDelete []branchDeletion,
+) error {
 	// TODO:
 	// Should the branches be deleted in any particular order?
 	// (e.g. from the bottom of the stack up)
