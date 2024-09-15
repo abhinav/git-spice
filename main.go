@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -192,8 +193,46 @@ func main() {
 			fmt.Fprintln(os.Stderr)
 			logger.Fatalf("%v: please provide a command", cmdName)
 		}
+	} else if shellCmd, ok := spiceConfig.ShellCommand(args[0]); ok {
+		const (
+			recursionDepthLimit  = 10
+			recursionDepthEnvVar = "__GS_SHELL_COMMAND_DEPTH"
+		)
+
+		var depth int
+		if depthStr := os.Getenv(recursionDepthEnvVar); depthStr != "" {
+			// Prevent infinite loops by limiting recursion depth.
+			var err error
+			depth, err = strconv.Atoi(depthStr)
+			if err != nil {
+				// Assume depth is 0 if invalid.
+				depth = 0
+			}
+		}
+		if depth >= recursionDepthLimit {
+			logger.Fatalf("%v: shell command recursion depth limit exceeded (%d): %v",
+				cmdName, recursionDepthLimit, args[0])
+		}
+
+		// The first argument might be a shell command alias.
+		// If so, invoke the shell command directly and exit.
+		shArgs := []string{"-c", shellCmd}
+		if len(args) > 1 {
+			shArgs = append(shArgs, cmdName) // $0
+			shArgs = append(shArgs, args[1:]...)
+		}
+
+		cmd := exec.CommandContext(ctx, "sh", shArgs...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Env = append(os.Environ(), fmt.Sprintf("%v=%d", recursionDepthEnvVar, depth+1))
+		if err := cmd.Run(); err != nil {
+			logger.Fatalf("%v: %v", cmdName, err)
+		}
+		return
 	} else {
-		// Otherwise, expand the shorthands before parsing.
+		// Otherwise, expand the shorthand,
+		// parse the arguments, and proceed as usual.
 		args = shorthand.Expand(shorthands, args)
 	}
 

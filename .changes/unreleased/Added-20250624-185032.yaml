@@ -1,0 +1,3 @@
+kind: Added
+body: Custom shorthands now support invoking external shell commands, allowing for workflow-specific automations with `gs` subcommands.
+time: 2025-06-24T18:50:32.781141-07:00

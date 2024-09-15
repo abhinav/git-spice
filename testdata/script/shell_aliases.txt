@@ -1,0 +1,69 @@
+# Test shell aliases (commands prefixed with !) in spice.shorthand.* configurations.
+
+as 'Test <test@example.com>'
+at '2025-06-25T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create some test files and branches
+git checkout -b feature/foo
+git add foo.txt
+git commit -m 'Add foo'
+
+git checkout main
+git checkout -b feature/bar
+git add bar.txt
+git commit -m 'Add bar'
+
+git config spice.shorthand.current-branch '!git rev-parse --abbrev-ref HEAD'
+git config spice.shorthand.list-branches '!git branch | sed "s/^[* ] //"'
+git config spice.shorthand.commit-count '!git rev-list --count HEAD ^main'
+
+gs current-branch
+stdout 'feature/bar'
+
+gs list-branches
+stdout 'feature/bar'
+stdout 'feature/foo'
+stdout 'main'
+
+# Test commit count shell alias
+gs commit-count
+stdout '1'
+
+git checkout feature/foo
+gs current-branch
+stdout 'feature/foo'
+
+gs commit-count
+stdout '1'
+
+git config spice.shorthand.show-head '!git log -1 --oneline'
+gs show-head
+stdout -count=1 '[a-f0-9]+ Add foo'
+
+# Test shell alias with CLI arguments passed through
+# Set up an alias that uses $1, $2, etc. to access passed arguments
+git config spice.shorthand.show-commit '!git log --oneline -n "${1:-1}" | head -n "${1:-1}"'
+
+# Test with no arguments (should default to 1)
+gs show-commit
+stdout -count=1 '[a-f0-9]+ Add foo'
+
+# Test with argument passed through (should show 2 commits)
+gs show-commit 2
+stdout -count=1 '[a-f0-9]+ Add foo'
+stdout -count=1 '[a-f0-9]+ Initial commit'
+
+# Test shell alias that uses multiple arguments
+git config spice.shorthand.echo-args '!echo "arg1=$1 arg2=$2"'
+gs echo-args hello world
+stdout 'arg1=hello arg2=world'
+
+-- repo/foo.txt --
+foo content
+-- repo/bar.txt --
+bar content
