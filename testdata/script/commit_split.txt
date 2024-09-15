@@ -19,7 +19,9 @@ gs bc -m 'Add feature 3' feature3
 gs down
 
 with-term -final exit $WORK/input.txt -- gs commit split -m 'Add feature 1'
-cmp stdout $WORK/golden/output.txt
+# git 2.45 added more options to interactive staging.
+# Our captured output is of those options, so require at least 2.45.
+[git:2.45] cmp stdout $WORK/golden/output.txt
 
 git log --patch
 cmp stdout $WORK/golden/log.txt

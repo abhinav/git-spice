@@ -2,7 +2,10 @@
 package gittest
 
 import (
+	"bytes"
+	"fmt"
 	"net/mail"
+	"os/exec"
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -20,6 +23,26 @@ func CmdGit(ts *testscript.TestScript, neg bool, args []string) {
 	} else {
 		ts.Check(err)
 	}
+}
+
+// CondGitVersion checks if the current version of Git
+// is at least the given version.
+func CondGitVersion(wantStr string) (bool, error) {
+	want, err := ParseVersion(wantStr)
+	if err != nil {
+		return false, fmt.Errorf("parse wanted Git version: %w", err)
+	}
+
+	raw, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return false, fmt.Errorf("get Git version: %w", err)
+	}
+	got, err := ParseVersion(string(bytes.TrimSpace(raw)))
+	if err != nil {
+		return false, fmt.Errorf("parse Git version output: %w", err)
+	}
+
+	return got.Compare(want) >= 0, nil
 }
 
 // CmdAs sets the author and committer of the commits that follow.

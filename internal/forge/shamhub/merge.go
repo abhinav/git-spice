@@ -156,6 +156,8 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	// If the above fails, there's a conflict, so reject the merge.
 	// Otherwise, create a commit with the TREE and the commit message
 	// using git commit-tree, and update the ref to point to the new commit.
+	//
+	// This requires at least Git 2.38.
 	tree, err := func() (string, error) {
 		logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 		defer flush()

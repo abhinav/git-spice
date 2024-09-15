@@ -37,16 +37,64 @@ jobs:
 
   test:
     runs-on: ${{ matrix.os }}
-    name: Test (${{ matrix.os}})
+    name: Test (${{ matrix.os}}, Git ${{ matrix.git-version }})
+
     strategy:
       matrix:
         os: ["ubuntu-latest", "windows-latest"]
+        git-version: ["system"]
+        include:
+          # On Linux, also test against specific versions built from source.
+          - {os: ubuntu-latest, git-version: "2.38.0"}
+
     steps:
     - uses: actions/checkout@v4
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
         go-version: ${{ env.GO_VERSION }}
+
+    # TODO: extract into separate action
+    - name: Determine Git cache directory
+      shell: bash
+      if: matrix.git-version != 'system'
+      run: |
+        echo "GIT_VERSION=$GIT_VERSION" >> "$GITHUB_ENV"
+        echo "GIT_CACHE_DIR=$HOME/.cache/git/$GIT_VERSION" >> "$GITHUB_ENV"
+      env:
+        GIT_VERSION: ${{ matrix.git-version }}
+    - name: Fill Git cache
+      if: matrix.git-version != 'system'
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.GIT_CACHE_DIR }}
+        key: ${{ runner.os }}-git-${{ matrix.git-version }}
+    - name: Install Git
+      shell: bash
+      if: matrix.git-version != 'system'
+      run: |
+        if [[ ! -x "$GIT_CACHE_DIR/bin/git" ]]; then
+          URL=https://mirrors.edge.kernel.org/pub/software/scm/git/git-${GIT_VERSION}.tar.gz
+          echo "Downloading Git $GIT_VERSION from $URL"
+          sudo apt-get install \
+              dh-autoreconf libcurl4-gnutls-dev libexpat1-dev gettext \
+              libz-dev libssl-dev
+          GIT_SRC_DIR=$(mktemp -d)
+          ( mkdir -p "$GIT_SRC_DIR" &&
+            cd "$GIT_SRC_DIR" &&
+            (curl -sSL "$URL" | tar -xz --strip-components=1) &&
+            make prefix="$GIT_CACHE_DIR" &&
+            make prefix="$GIT_CACHE_DIR" install )
+        fi
+        if [[ ! -x "$GIT_CACHE_DIR/bin/git" ]]; then
+          echo "Failed to build Git $GIT_VERSION"
+          exit 1
+        fi
+        echo "$GIT_CACHE_DIR/bin" >> "$GITHUB_PATH"
+    - name: Report Git version
+      shell: bash
+      run:
+        git --version
 
     - name: Test
       run: make cover

@@ -179,3 +179,19 @@ with-term [options] <script> -- <command> <args...>
 Runs the given command inside a terminal emulator.
 The `<script>` controls the terminal's behavior.
 See the internal/termtest package for more details.
+
+## Conditions
+
+In addition to testscript's standard conditions,
+the following are available:
+
+### git:VERSION
+
+```
+[git:VERSION]
+```
+
+Evaluates to true only if the current version of Git
+is at least the specified version.
+
+VERSION must be a valid version string, such as `2.30`.
