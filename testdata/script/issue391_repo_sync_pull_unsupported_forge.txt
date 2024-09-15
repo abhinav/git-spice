@@ -42,10 +42,27 @@ git branch -d feat1
 # repo sync
 cd ../repo
 gs repo sync
+stderr 'Unsupported remote "origin"'
+stderr 'feat1: deleted'
 git graph --branches
 cmp stdout $WORK/golden/repo-sync-graph.txt
 
-# TODO: detect the merge commit and delete feat1
+gs ll -a
+cmp stderr $WORK/golden/repo-sync-ll.txt
+
+# merge feat2
+cd ../upstream
+git merge feat2
+git branch -d feat2
+
+# repo sync
+cd ../repo
+gs repo sync
+# Don't log the message if all tracked branches are deleted
+! stderr 'Unsupported remote "origin"'
+stderr 'feat2: deleted'
+git graph --branches
+cmp stdout $WORK/golden/repo-sync-graph-2.txt
 
 -- extra/feat1.txt --
 feature 1
@@ -57,5 +74,13 @@ feature 2
 * main
 -- golden/repo-sync-graph.txt --
 * b3ed169 (HEAD -> feat2, origin/feat2) feat2
-* 1993921 (origin/main, origin/feat1, origin/HEAD, main, feat1) feat1
+* 1993921 (origin/main, origin/HEAD, main) feat1
+* 8b0535b Initial commit
+-- golden/repo-sync-ll.txt --
+┏━■ feat2 ◀
+┃   b3ed169 feat2 (now)
+main
+-- golden/repo-sync-graph-2.txt --
+* b3ed169 (HEAD -> main, origin/main, origin/HEAD) feat2
+* 1993921 feat1
 * 8b0535b Initial commit

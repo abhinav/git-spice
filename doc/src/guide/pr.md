@@ -7,6 +7,17 @@ description: >-
 
 # Working with Pull Requests
 
+!!! note
+
+    This page assumes you're using git-spice with GitHub.
+    If you're using a different Git hosting service,
+    you can still use git-spice, but some features may not be available.
+
+    See:
+
+    - [:material-tooltip-check: Recipes > Working with non-GitHub remotes](../recipes.md#working-with-non-github-remotes)
+    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../faq.md#will-git-spice-add-support-for-other-git-hosting-services)
+
 ## Submitting pull requests
 
 When your local changes are ready,

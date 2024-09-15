@@ -42,6 +42,28 @@ and then work on them, you can use the following to adjust the workflow:
     gs branch create my-branch --commit
     ```
 
+### Working with non-GitHub remotes
+
+<!-- gs:version unreleased -->
+
+If you're using a Git hosting service that is not GitHub
+(e.g. GitLab, Bitbucket, etc.),
+you can use git-spice to manage your branches locally without any issues.
+However, when it comes to pushing branches to the remote,
+there are some options that can help your workflow.
+
+- Stop git-spice from trying to create GitHub Pull Requests
+  by setting $$spice.submit.publish$$ to false.
+
+    ```bash
+    git config spice.submit.publish false
+    ```
+
+- $$gs repo sync$$ will detect branches that were merged
+  with merge commits or fast-forwards, and delete them locally.
+  For branches that were merged by rebasing or squashing,
+  you'll need to manually delete merged branches with $$gs branch delete$$.
+
 ## Tasks
 
 ### Import a Pull Request from GitHub

@@ -11,13 +11,18 @@ import (
 	"go.abhg.dev/gs/internal/secret"
 )
 
-type unsupportedForgeError struct{ RemoteURL string }
-
-func (e *unsupportedForgeError) Error() string {
-	return fmt.Sprintf("unsupported Git remote URL: %s", e.RemoteURL)
+type unsupportedForgeError struct {
+	Remote    string // required
+	RemoteURL string // required
 }
 
-type notLoggedInError struct{ Forge forge.Forge }
+func (e *unsupportedForgeError) Error() string {
+	return fmt.Sprintf("unsupported Git remote %q: %s", e.Remote, e.RemoteURL)
+}
+
+type notLoggedInError struct {
+	Forge forge.Forge // required
+}
 
 func (e *notLoggedInError) Error() string {
 	return fmt.Sprintf("not logged in to %s", e.Forge.ID())
@@ -44,13 +49,16 @@ func openRemoteRepositorySilent(
 
 	f, ok := forge.MatchForgeURL(remoteURL)
 	if !ok {
-		return nil, &unsupportedForgeError{remoteURL}
+		return nil, &unsupportedForgeError{
+			Remote:    remote,
+			RemoteURL: remoteURL,
+		}
 	}
 
 	tok, err := f.LoadAuthenticationToken(stash)
 	if err != nil {
 		if errors.Is(err, secret.ErrNotFound) {
-			return nil, &notLoggedInError{f}
+			return nil, &notLoggedInError{Forge: f}
 		}
 		return nil, fmt.Errorf("load authentication token: %w", err)
 	}

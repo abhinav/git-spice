@@ -1,8 +1,9 @@
 kind: Changed
 body: >-
   repo sync:
-  Don't fail while attempting to make API requests
-  if the Git remote points to an unsupported hosting service.
-  This provides a more graceful degradation of functionality
-  when git-spice is used with non-GitHub remotes.
+  Gracefully degrade for unsupported Git hosting services
+  by looking for merged branches locally
+  instead of attempting to make API requests and failing.
+  This only works for merge commits and fast-forwards,
+  but it makes it easier to use git-spice with non-GitHub remotes.
 time: 2024-09-14T17:58:29.581188-07:00
