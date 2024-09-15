@@ -187,42 +187,81 @@ func (cmd *repoSyncCmd) Run(
 		}
 	}
 
-	remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, repo, remote)
+	candidates, err := svc.LoadBranches(ctx)
 	if err != nil {
-		var unsupported *unsupportedForgeError
-		if errors.As(err, &unsupported) {
-			// TODO: Detect merged branches by checking whether
-			// commits of branches are reachable.
-			// This won't handle squash/rebase merges,
-			// but it's better than nothing.
-			log.Warn("Skipping branch deletion: unsupported Git host", "url", unsupported.RemoteURL)
-			return nil
-		}
-
-		return err
+		return fmt.Errorf("list tracked branches: %w", err)
 	}
 
-	branchesToDelete, err := cmd.findMergedBranches(ctx, log, svc, repo, remoteRepo, opts)
-	if err != nil {
-		return fmt.Errorf("find merged branches: %w", err)
+	var branchesToDelete []branchDeletion
+	if remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, repo, remote); err != nil {
+		var unsupported *unsupportedForgeError
+		if !errors.As(err, &unsupported) {
+			return err
+		}
+
+		// Unsupported forge.
+		// Find merged branches by checking what's reachable from trunk.
+		defer func() {
+			// Less log noise if all known branches were merged.
+			if len(branchesToDelete) == len(candidates) {
+				return
+			}
+
+			log.Infof("Unsupported remote %q (%v)", unsupported.Remote, unsupported.RemoteURL)
+			log.Info("All merged branches may not have been deleted. Use 'gs branch delete' to delete them.")
+		}()
+
+		branchesToDelete, err = cmd.findLocalMergedBranches(ctx, log, repo, candidates, trunkEndHash)
+		if err != nil {
+			return fmt.Errorf("find merged branches: %w", err)
+		}
+	} else {
+		// Supported forge. Check for merged CRs and upstream branches.
+		branchesToDelete, err = cmd.findForgeMergedBranches(ctx, log, repo, remoteRepo, candidates, opts)
+		if err != nil {
+			return fmt.Errorf("find merged CRs: %w", err)
+		}
 	}
 
 	return cmd.deleteBranches(ctx, opts, log, repo, remote, branchesToDelete)
 }
 
-func (cmd *repoSyncCmd) findMergedBranches(
+// findLocalMergedBranches finds branches that have been merged
+// by inspecting what's reachable from the trunk.
+//
+// This will only work for merges and fast-forwards.
+// Squash or rebase merges will need to be handled manually by the user.
+func (cmd *repoSyncCmd) findLocalMergedBranches(
 	ctx context.Context,
 	log *log.Logger,
-	svc *spice.Service,
 	repo *git.Repository,
-	remoteRepo forge.Repository,
-	opts *globalOptions,
+	knownBranches []spice.LoadBranchItem,
+	trunkHash git.Hash,
 ) ([]branchDeletion, error) {
-	knownBranches, err := svc.LoadBranches(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list tracked branches: %w", err)
+	// Find branches that have been merged by checking
+	// if they are reachable from the trunk.
+	var branchesToDelete []branchDeletion
+	for _, b := range knownBranches {
+		if repo.IsAncestor(ctx, b.Head, trunkHash) {
+			log.Infof("%v was merged", b.Name)
+			branchesToDelete = append(branchesToDelete, branchDeletion{
+				BranchName:   b.Name,
+				UpstreamName: b.UpstreamBranch,
+			})
+		}
 	}
 
+	return branchesToDelete, nil
+}
+
+func (cmd *repoSyncCmd) findForgeMergedBranches(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	remoteRepo forge.Repository,
+	knownBranches []spice.LoadBranchItem,
+	opts *globalOptions,
+) ([]branchDeletion, error) {
 	type submittedBranch struct {
 		Name   string
 		Change forge.ChangeID

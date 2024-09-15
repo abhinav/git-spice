@@ -71,3 +71,21 @@ while still using git-spice to navigate the stack and submit PRs.
 If you run a git-spice restack operation,
 it will automatically detect that the branches are already properly stacked,
 and leave them as-is.
+
+## Will git-spice add support for other Git hosting services?
+
+git-spice is designed with room for other Git hosting services.
+Most of the code is Git hosting service-agnostic,
+The internal abstractions isolate GitHub-specific functionality into the
+[`internal/forge/github` package](https://github.com/abhinav/git-spice/tree/340b95dd7028a2af6e34d041d7dd596d42ac61c9/internal/forge/github).
+It is possible to add support for other Git hosting services
+by implementing a similar integration satisfying the same interfaces.
+In fact, most integration tests for git-spice run against a local-only,
+fake Git service developed alongside the GitHub integration.
+
+While we do not have plans to work on new integrations at this time,
+we are willing to accept contributions that add such functionality.
+If you're serious about contributing a new integration,
+feel free to reach out to us on the issue tracker.
+We will be happy to provide guidance
+and work with you to get the contribution merged.
