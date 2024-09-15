@@ -10,6 +10,20 @@ next_page: stack.md
 git-spice may be installed with a pre-built binary
 or built from source.
 
+!!! info "System requirements"
+
+    - **Operating system**:
+      Linux and macOS are fully supported.
+      Windows support was added in <!-- gs:version unreleased -->.
+
+    - **Architecture**:
+      x86_64 and aarch64 architectures are supported.
+      Additionally on Linux, some 32-bit ARM architectures are also supported.
+
+    - **Git**:
+      At least Git 2.38 is required for git-spice to operate correctly.
+      Earlier versions may work, but are not officially supported.
+
 ## Pre-built binary
 
 To install a **pre-built binary**, take the following steps:
