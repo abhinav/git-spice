@@ -73,22 +73,24 @@ jobs:
       shell: bash
       if: matrix.git-version != 'system'
       run: |
-        if [[ ! -x "$GIT_CACHE_DIR/git" ]]; then
+        if [[ ! -x "$GIT_CACHE_DIR/bin/git" ]]; then
           URL=https://mirrors.edge.kernel.org/pub/software/scm/git/git-${GIT_VERSION}.tar.gz
           echo "Downloading Git $GIT_VERSION from $URL"
           sudo apt-get install \
               dh-autoreconf libcurl4-gnutls-dev libexpat1-dev gettext \
               libz-dev libssl-dev
-          ( mkdir -p "$GIT_CACHE_DIR" &&
-            cd "$GIT_CACHE_DIR" &&
+          GIT_SRC_DIR=$(mktemp -d)
+          ( mkdir -p "$GIT_SRC_DIR" &&
+            cd "$GIT_SRC_DIR" &&
             (curl -sSL "$URL" | tar -xz --strip-components=1) &&
-            make )
+            make prefix="$GIT_CACHE_DIR" &&
+            make prefix="$GIT_CACHE_DIR" install )
         fi
-        if [[ ! -x "$GIT_CACHE_DIR/git" ]]; then
+        if [[ ! -x "$GIT_CACHE_DIR/bin/git" ]]; then
           echo "Failed to build Git $GIT_VERSION"
           exit 1
         fi
-        echo "$GIT_CACHE_DIR" >> "$GITHUB_PATH"
+        echo "$GIT_CACHE_DIR/bin" >> "$GITHUB_PATH"
     - name: Report Git version
       shell: bash
       run:
