@@ -25,6 +25,7 @@ git add feature1.txt
 gs bc -m 'Add feature1' feature1
 
 # install a hook that will fail the submission
+mkdir .git/hooks
 cp $WORK/hooks/pre-push .git/hooks/pre-push
 chmod 755 .git/hooks/pre-push
 

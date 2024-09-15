@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/log"
@@ -92,6 +94,13 @@ func TestScript(t *testing.T) {
 
 			shamhubCmd.Setup(t, e)
 			return nil
+		},
+		Condition: func(cond string) (bool, error) {
+			if wantVersion, ok := strings.CutPrefix(cond, "git:"); ok {
+				return gittest.CondGitVersion(wantVersion)
+			}
+
+			return false, fmt.Errorf("unknown condition: %q", cond)
 		},
 		Cmds: map[string]func(*testscript.TestScript, bool, []string){
 			"git": gittest.CmdGit,
