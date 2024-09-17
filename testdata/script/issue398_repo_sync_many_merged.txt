@@ -1,0 +1,162 @@
+# repo sync witha number of different merged branches
+# does not cause any issues.
+#
+# https://github.com/abhinav/git-spice/issues/398
+
+as 'Test <test@example.com>'
+at '2024-09-28T15:16:17Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+# feat1->feat2->feat3->feat4
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+git add feat3.txt
+gs bc -m feat3
+git add feat4.txt
+gs bc -m feat4
+
+# add an extra branch off each feature branch
+gs bco feat1
+mv feat1.part2.txt feat1.txt
+git add feat1.txt
+gs bc -m feat1.part2 -t feat1
+
+gs bco feat2
+mv feat2.part2.txt feat2.txt
+git add feat2.txt
+gs bc -m feat2.part2 -t feat2
+
+gs bco feat3
+mv feat3.part2.txt feat3.txt
+git add feat3.txt
+gs bc -m feat3.part2 -t feat3
+
+gs bco feat4
+mv feat4.part2.txt feat4.txt
+git add feat4.txt
+gs bc -m feat4.part2 -t feat4
+
+# sanity check: branch state
+gs trunk
+gs ll -a
+cmp stderr $WORK/golden/ll.start.txt
+
+# We'll submit PRs for everything,
+# but since we want deterministic PR numbers,
+# we'll manually submit them in the order we want.
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs branch submit --branch feat1 --fill
+gs branch submit --branch feat2 --fill
+gs branch submit --branch feat3 --fill
+gs branch submit --branch feat4 --fill
+
+gs branch submit --branch feat1-part2 --fill
+gs branch submit --branch feat2-part2 --fill
+gs branch submit --branch feat3-part2 --fill
+gs branch submit --branch feat4-part2 --fill
+
+# sanity check: submitted
+gs trunk
+gs ls -a
+cmp stderr $WORK/golden/ls.submit.txt
+
+# merge 1-4 server-side
+shamhub merge alice/example 4
+shamhub merge alice/example 3
+shamhub merge alice/example 2
+shamhub merge alice/example 1
+
+# sync, and don't expect to move upstacks
+# of the merged branches; they should just be deleted.
+gs repo sync
+! stderr 'feat1: moved upstack'
+! stderr 'feat2: moved upstack'
+! stderr 'feat3: moved upstack'
+! stderr 'feat4: moved upstack'
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- repo/feat4.txt --
+feat4
+-- repo/feat1.part2.txt --
+feat1 part2
+-- repo/feat2.part2.txt --
+feat2 part2
+-- repo/feat3.part2.txt --
+feat3 part2
+-- repo/feat4.part2.txt --
+feat4 part2
+-- golden/ll.start.txt --
+  ┏━□ feat1-part2
+  ┃   3b90c1c feat1.part2 (now)
+  ┃ ┏━□ feat2-part2
+  ┃ ┃   a252f85 feat2.part2 (now)
+  ┃ ┃ ┏━□ feat3-part2
+  ┃ ┃ ┃   9a90907 feat3.part2 (now)
+  ┃ ┃ ┃ ┏━□ feat4-part2
+  ┃ ┃ ┃ ┃   d568d96 feat4.part2 (now)
+  ┃ ┃ ┣━┻□ feat4
+  ┃ ┃ ┃    267a7ec feat4 (now)
+  ┃ ┣━┻□ feat3
+  ┃ ┃    fcb4332 feat3 (now)
+  ┣━┻□ feat2
+  ┃    aee78bc feat2 (now)
+┏━┻□ feat1
+┃    fc49b37 feat1 (now)
+main ◀
+-- golden/ls.submit.txt --
+  ┏━□ feat1-part2 (#5)
+  ┃ ┏━□ feat2-part2 (#6)
+  ┃ ┃ ┏━□ feat3-part2 (#7)
+  ┃ ┃ ┃ ┏━□ feat4-part2 (#8)
+  ┃ ┃ ┣━┻□ feat4 (#4)
+  ┃ ┣━┻□ feat3 (#3)
+  ┣━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main ◀
+-- golden/graph.txt --
+* ab3dc43 (feat1-part2) feat1.part2
+| * 9bffe4e (feat2-part2) feat2.part2
+|/  
+| * f27faaa (feat3-part2) feat3.part2
+|/  
+| * 43f356c (feat4-part2) feat4.part2
+|/  
+*   d744bd8 (HEAD -> main, origin/main) Merge change #1
+|\  
+| *   a2aa887 Merge change #2
+| |\  
+| | *   0e75bc3 Merge change #3
+| | |\  
+| | | *   50c346f Merge change #4
+| | | |\  
+| | | | * 267a7ec feat4
+| | | |/  
+| | | * fcb4332 feat3
+| | |/  
+| | * aee78bc feat2
+| |/  
+| * fc49b37 feat1
+|/  
+* f6036b5 Initial commit

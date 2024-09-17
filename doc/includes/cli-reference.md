@@ -545,21 +545,20 @@ target (A) to the specified branch:
 ### gs branch delete
 
 ```
-gs branch (b) delete (d,rm) [<branch>] [flags]
+gs branch (b) delete (d,rm) [<branches> ...] [flags]
 ```
 
-Delete a branch
+Delete branches
 
-The deleted branch and its commits are removed from the stack.
-Branches above the deleted branch are rebased onto
-the next branch downstack.
+The deleted branches and their commits are removed from the stack.
+Branches above the deleted branches are rebased onto
+the next branches available downstack.
 
-A prompt will allow selecting the target branch.
-Provide a name as an argument to skip the prompt.
+A prompt will allow selecting the target branch if none are provided.
 
 **Arguments**
 
-* `branch`: Name of the branch to delete
+* `branches`: Names of the branches to delete
 
 **Flags**
 

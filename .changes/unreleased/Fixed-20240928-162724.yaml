@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'repo sync: Fix case when many branches from the same stack are merged, and order of deletion causes a restacking error or conflict.'
+time: 2024-09-28T16:27:24.379249-07:00
