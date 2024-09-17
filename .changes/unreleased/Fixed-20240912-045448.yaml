@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch create: Fix bug where aborting a commit would leave the repository in a detached HEAD state.'
-time: 2024-09-12T04:54:48.790051-07:00

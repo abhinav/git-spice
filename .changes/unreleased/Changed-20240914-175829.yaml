@@ -1,9 +1,0 @@
-kind: Changed
-body: >-
-  repo sync:
-  Gracefully degrade for unsupported Git hosting services
-  by looking for merged branches locally
-  instead of attempting to make API requests and failing.
-  This only works for merge commits and fast-forwards,
-  but it makes it easier to use git-spice with non-GitHub remotes.
-time: 2024-09-14T17:58:29.581188-07:00
