@@ -44,7 +44,7 @@ and then work on them, you can use the following to adjust the workflow:
 
 ### Working with non-GitHub remotes
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.6.0 -->
 
 If you're using a Git hosting service that is not GitHub
 (e.g. GitLab, Bitbucket, etc.),

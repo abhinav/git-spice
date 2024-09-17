@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'repo sync: Don''t warn about missing remote tracking branch if it was already deleted by a ''git fetch --prune'' or similar operation.'
-time: 2024-09-12T05:17:52.115595-07:00

@@ -14,7 +14,7 @@ or built from source.
 
     - **Operating system**:
       Linux and macOS are fully supported.
-      Windows support was added in <!-- gs:version unreleased -->.
+      Windows support was added in <!-- gs:version v0.6.0 -->.
 
     - **Architecture**:
       x86_64 and aarch64 architectures are supported.
