@@ -12,7 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/maputil"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/storage"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
 const _branchesDir = "branches"

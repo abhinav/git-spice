@@ -10,7 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
-	"go.abhg.dev/gs/internal/storage"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )

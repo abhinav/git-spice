@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path"
 
-	"go.abhg.dev/gs/internal/storage"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
 // _preparedDir is the directory holding information about branches
