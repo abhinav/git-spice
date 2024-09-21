@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -115,27 +113,6 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}
 
 		log.Debugf("Detected base branch: %v", cmd.Base)
-	}
-
-	// Check if adding this connection would create a cycle.
-	// TODO: Perform this check in Store.Update,
-	// ensuring that 'branch onto' also checks for cycles.
-	path := []string{cmd.Branch}
-	downstack, err := svc.ListDownstack(ctx, cmd.Base)
-	if err != nil {
-		return fmt.Errorf("list downstack: %w", err)
-	}
-	for _, branch := range downstack {
-		if slices.Contains(path, branch) {
-			path = append(path, branch)
-			slices.Reverse(path)
-
-			log.Errorf("%v: base %v would create a cycle:", cmd.Branch, cmd.Base)
-			log.Errorf("  %v", strings.Join(path, " -> "))
-			return errors.New("cycle detected")
-		}
-
-		path = append(path, branch)
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)

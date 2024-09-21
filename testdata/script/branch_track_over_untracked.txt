@@ -1,0 +1,22 @@
+# 'branch track' with an untracked parent fails.
+
+as 'Test <test@example.com>'
+at '2024-09-19T05:06:07Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feat1
+git add feat1.txt
+git commit -m 'Add feature 1'
+
+git checkout -b feat2
+! gs branch track --base=feat1
+stderr 'branch feat1 is not tracked'
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2

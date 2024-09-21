@@ -16,7 +16,7 @@ gs bc feature3 -m 'Add feature 3'
 
 git checkout feature1
 ! gs branch track --base feature3
-stderr 'feature1: base feature3 would create a cycle'
+stderr 'would create a cycle'
 stderr 'feature1 -> feature2 -> feature3 -> feature1'
 
 -- repo/feature1.txt --

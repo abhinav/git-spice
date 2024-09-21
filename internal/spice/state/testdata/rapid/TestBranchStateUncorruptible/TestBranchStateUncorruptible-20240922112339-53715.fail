@@ -1,0 +1,43 @@
+# 2024/09/22 11:23:39.956568 [TestBranchStateUncorruptible] [rapid] draw trunk: "a"
+# 2024/09/22 11:23:39.956575 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAndDeleteMany"
+# 2024/09/22 11:23:39.956577 [TestBranchStateUncorruptible] [rapid] draw upserts: []state.UpsertRequest{state.UpsertRequest{Name:"b", Base:"c", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}}
+# 2024/09/22 11:23:39.956581 [TestBranchStateUncorruptible] [rapid] draw deletes: []string{}
+# 2024/09/22 11:23:39.956581 [TestBranchStateUncorruptible] update: upsert and delete random branches
+# 2024/09/22 11:23:39.956582 [TestBranchStateUncorruptible] upsert branch: name=b base=c
+# 2024/09/22 11:23:39.956602 [TestBranchStateUncorruptible] 
+# 	Error Trace:	/Users/abg/src/git-spice/internal/spice/state/branch_test.go:211
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:202
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/statemachine.go:63
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:156
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:368
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:377
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:203
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:118
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:127
+# 	Error:      	Received unexpected error:
+# 	            	get branch state: does not exist in store
+# 	Test:       	TestBranchStateUncorruptible
+# 	Messages:   	lookup branch "c" (path: [b c])
+# 
+v0.4.8#486208119485145749
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1084210842108
+0x38e38e38e38e4
+0x2
+0x5555555555555
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x2
+0x0
+0x0
+0x0

@@ -1,0 +1,48 @@
+# 2024/09/22 11:40:01.995749 [TestBranchStateUncorruptible] [rapid] draw trunk: "a"
+# 2024/09/22 11:40:01.995757 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:40:01.995758 [TestBranchStateUncorruptible] [rapid] draw branch: "b"
+# 2024/09/22 11:40:01.995758 [TestBranchStateUncorruptible] [rapid] draw base: "a"
+# 2024/09/22 11:40:01.995759 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:40:01.995760 [TestBranchStateUncorruptible] upsert branch: name=b base=a
+# 2024/09/22 11:40:01.995762 [TestBranchStateUncorruptible] [rapid] draw action: "ChangeTrunk"
+# 2024/09/22 11:40:01.995763 [TestBranchStateUncorruptible] [rapid] draw newTrunk: "c"
+# 2024/09/22 11:40:01.995765 [TestBranchStateUncorruptible] changed trunk to "c"
+# 2024/09/22 11:40:01.995785 [TestBranchStateUncorruptible] 
+# 	Error Trace:	/Users/abg/src/git-spice/internal/spice/state/branch_test.go:213
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:204
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/statemachine.go:63
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:166
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:368
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:377
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:203
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:118
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:127
+# 	Error:      	Received unexpected error:
+# 	            	get branch state: does not exist in store
+# 	Test:       	TestBranchStateUncorruptible
+# 	Messages:   	lookup branch "a" (path: [b a])
+# 
+v0.4.8#9970712975274626543
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1084210842108
+0x38e38e38e38e4
+0x3
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x1084210842108
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x2
+0x0
