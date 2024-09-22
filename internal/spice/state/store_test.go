@@ -26,7 +26,7 @@ func TestStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
-		_, err := store.LookupBranch(ctx, "main")
+		_, err := store.LookupBranch(ctx, "foo")
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
@@ -51,22 +51,34 @@ func TestStore(t *testing.T) {
 		assert.JSONEq(t, `{"number": 42}`, string(res.ChangeMetadata))
 	})
 
+	require.NoError(t, store.UpdateBranch(ctx, &state.UpdateRequest{
+		Upserts: []state.UpsertRequest{{
+			Name:           "bar2",
+			Base:           "main",
+			BaseHash:       "abcdef",
+			ChangeForge:    "shamhub",
+			ChangeMetadata: json.RawMessage(`{"id": 42}`),
+		}},
+	}))
+
 	t.Run("overwrite", func(t *testing.T) {
 		err := store.UpdateBranch(ctx, &state.UpdateRequest{
-			Upserts: []state.UpsertRequest{{
-				Name:           "foo",
-				Base:           "bar",
-				BaseHash:       "54321",
-				ChangeForge:    "shamhub",
-				ChangeMetadata: json.RawMessage(`{"id": 43}`),
-			}},
+			Upserts: []state.UpsertRequest{
+				{
+					Name:           "foo",
+					Base:           "bar2",
+					BaseHash:       "54321",
+					ChangeForge:    "shamhub",
+					ChangeMetadata: json.RawMessage(`{"id": 43}`),
+				},
+			},
 		})
 		require.NoError(t, err)
 
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
-		assert.Equal(t, "bar", res.Base)
+		assert.Equal(t, "bar2", res.Base)
 		assert.Equal(t, "54321", string(res.BaseHash))
 		assert.Equal(t, "shamhub", res.ChangeForge)
 		assert.JSONEq(t, `{"id": 43}`, string(res.ChangeMetadata))

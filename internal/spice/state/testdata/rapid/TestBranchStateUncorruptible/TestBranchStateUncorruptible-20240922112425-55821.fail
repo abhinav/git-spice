@@ -1,0 +1,434 @@
+# 2024/09/22 11:24:25.581273 [TestBranchStateUncorruptible] [rapid] draw trunk: "bd"
+# 2024/09/22 11:24:25.581313 [TestBranchStateUncorruptible] [rapid] draw action: "DeleteOne"
+# 2024/09/22 11:24:25.581316 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "b"
+# 2024/09/22 11:24:25.581320 [TestBranchStateUncorruptible] update: delete random branch
+# 2024/09/22 11:24:25.581321 [TestBranchStateUncorruptible] delete branch: name=b
+# 2024/09/22 11:24:25.581326 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581328 [TestBranchStateUncorruptible] [rapid] draw branch: "j"
+# 2024/09/22 11:24:25.581329 [TestBranchStateUncorruptible] [rapid] draw base: "bd"
+# 2024/09/22 11:24:25.581330 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581335 [TestBranchStateUncorruptible] upsert branch: name=j base=bd
+# 2024/09/22 11:24:25.581343 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertOne"
+# 2024/09/22 11:24:25.581345 [TestBranchStateUncorruptible] [rapid] draw branch: "e"
+# 2024/09/22 11:24:25.581346 [TestBranchStateUncorruptible] [rapid] draw base: "ps"
+# 2024/09/22 11:24:25.581347 [TestBranchStateUncorruptible] update: upsert random branch
+# 2024/09/22 11:24:25.581354 [TestBranchStateUncorruptible] failed to upsert branch: name=e base=ps: add branch e with base ps: branch ps is not tracked
+# 2024/09/22 11:24:25.581364 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581366 [TestBranchStateUncorruptible] [rapid] draw branch: "bp"
+# 2024/09/22 11:24:25.581368 [TestBranchStateUncorruptible] [rapid] draw base: "j"
+# 2024/09/22 11:24:25.581368 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581373 [TestBranchStateUncorruptible] upsert branch: name=bp base=j
+# 2024/09/22 11:24:25.581385 [TestBranchStateUncorruptible] [rapid] draw action: "DeleteOne"
+# 2024/09/22 11:24:25.581387 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "z"
+# 2024/09/22 11:24:25.581387 [TestBranchStateUncorruptible] update: delete random branch
+# 2024/09/22 11:24:25.581391 [TestBranchStateUncorruptible] delete branch: name=z
+# 2024/09/22 11:24:25.581403 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertOne"
+# 2024/09/22 11:24:25.581405 [TestBranchStateUncorruptible] [rapid] draw branch: "d"
+# 2024/09/22 11:24:25.581406 [TestBranchStateUncorruptible] [rapid] draw base: "y"
+# 2024/09/22 11:24:25.581406 [TestBranchStateUncorruptible] update: upsert random branch
+# 2024/09/22 11:24:25.581412 [TestBranchStateUncorruptible] failed to upsert branch: name=d base=y: add branch d with base y: branch y is not tracked
+# 2024/09/22 11:24:25.581425 [TestBranchStateUncorruptible] [rapid] draw action: "DeleteOne"
+# 2024/09/22 11:24:25.581427 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "s"
+# 2024/09/22 11:24:25.581427 [TestBranchStateUncorruptible] update: delete random branch
+# 2024/09/22 11:24:25.581431 [TestBranchStateUncorruptible] delete branch: name=s
+# 2024/09/22 11:24:25.581446 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581449 [TestBranchStateUncorruptible] [rapid] draw branch: "g"
+# 2024/09/22 11:24:25.581451 [TestBranchStateUncorruptible] [rapid] draw base: "j"
+# 2024/09/22 11:24:25.581451 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581457 [TestBranchStateUncorruptible] upsert branch: name=g base=j
+# 2024/09/22 11:24:25.581473 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAndDeleteMany"
+# 2024/09/22 11:24:25.581496 [TestBranchStateUncorruptible] [rapid] draw upserts: []state.UpsertRequest{state.UpsertRequest{Name:"sa", Base:"l", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"g", Base:"k", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"d", Base:"a", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"x", Base:"hb", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"b", Base:"r", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"lm", Base:"zp", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"d", Base:"q", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"um", Base:"a", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"dg", Base:"r", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"m", Base:"eh", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"b", Base:"wy", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"c", Base:"g", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}, state.UpsertRequest{Name:"fn", Base:"ak", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}}
+# 2024/09/22 11:24:25.581527 [TestBranchStateUncorruptible] [rapid] draw deletes: []string{}
+# 2024/09/22 11:24:25.581527 [TestBranchStateUncorruptible] update: upsert and delete random branches
+# 2024/09/22 11:24:25.581534 [TestBranchStateUncorruptible] failed to upsert branch: name=sa base=l: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581535 [TestBranchStateUncorruptible] failed to upsert branch: name=g base=k: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581536 [TestBranchStateUncorruptible] failed to upsert branch: name=d base=a: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581537 [TestBranchStateUncorruptible] failed to upsert branch: name=x base=hb: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581538 [TestBranchStateUncorruptible] failed to upsert branch: name=b base=r: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581542 [TestBranchStateUncorruptible] failed to upsert branch: name=lm base=zp: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581543 [TestBranchStateUncorruptible] failed to upsert branch: name=d base=q: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581544 [TestBranchStateUncorruptible] failed to upsert branch: name=um base=a: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581544 [TestBranchStateUncorruptible] failed to upsert branch: name=dg base=r: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581545 [TestBranchStateUncorruptible] failed to upsert branch: name=m base=eh: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581546 [TestBranchStateUncorruptible] failed to upsert branch: name=b base=wy: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581546 [TestBranchStateUncorruptible] failed to upsert branch: name=c base=g: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581547 [TestBranchStateUncorruptible] failed to upsert branch: name=fn base=ak: add branch sa with base l: branch l is not tracked
+# 2024/09/22 11:24:25.581564 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581566 [TestBranchStateUncorruptible] [rapid] draw branch: "i"
+# 2024/09/22 11:24:25.581568 [TestBranchStateUncorruptible] [rapid] draw base: "bp"
+# 2024/09/22 11:24:25.581568 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581575 [TestBranchStateUncorruptible] upsert branch: name=i base=bp
+# 2024/09/22 11:24:25.581602 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581605 [TestBranchStateUncorruptible] [rapid] draw branch: "da"
+# 2024/09/22 11:24:25.581606 [TestBranchStateUncorruptible] [rapid] draw base: "i"
+# 2024/09/22 11:24:25.581607 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581615 [TestBranchStateUncorruptible] upsert branch: name=da base=i
+# 2024/09/22 11:24:25.581650 [TestBranchStateUncorruptible] [rapid] draw action: "DeleteOne"
+# 2024/09/22 11:24:25.581652 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "n"
+# 2024/09/22 11:24:25.581652 [TestBranchStateUncorruptible] update: delete random branch
+# 2024/09/22 11:24:25.581660 [TestBranchStateUncorruptible] delete branch: name=n
+# 2024/09/22 11:24:25.581697 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581698 [TestBranchStateUncorruptible] [rapid] draw branch: "r"
+# 2024/09/22 11:24:25.581700 [TestBranchStateUncorruptible] [rapid] draw base: "i"
+# 2024/09/22 11:24:25.581701 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581709 [TestBranchStateUncorruptible] upsert branch: name=r base=i
+# 2024/09/22 11:24:25.581751 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/22 11:24:25.581753 [TestBranchStateUncorruptible] [rapid] draw branch: "j"
+# 2024/09/22 11:24:25.581755 [TestBranchStateUncorruptible] [rapid] draw base: "bp"
+# 2024/09/22 11:24:25.581755 [TestBranchStateUncorruptible] update: upsert branch with known base
+# 2024/09/22 11:24:25.581776 [TestBranchStateUncorruptible] upsert branch: name=j base=bp
+# 2024/09/22 11:24:25.581788 [TestBranchStateUncorruptible] cycle detected: [j bp j]
+# 
+v0.4.8#2037984656130102425
+0x26511f1eed507
+0x0
+0x2994bbf11cf1d
+0x1
+0x1597fbb16a468d
+0x0
+0x1161155f808584
+0x1c
+0x3
+0x17de3947d85e48
+0x16f644211b87c5
+0x1d6b6da7b6863b
+0x0
+0x1074e8759eb3fc
+0x0
+0x15fe3c89fc09db
+0x1
+0xc8a315ab0167
+0x13f8152f2b1378
+0x1bc8c752c3dc57
+0x1
+0xd823df588a405
+0x0
+0x17807ef107813e
+0x9
+0xd76c15f19fac4
+0x1a93cb8357dcb2
+0x0
+0x70de9a693a9cc
+0xf4caea02a9359
+0x3
+0x594a517b294b4
+0x0
+0x117d61897c23e1
+0x4
+0x11790a2b43c0c3
+0xda43715dfd81f
+0x0
+0xb4e87f3840515
+0xf
+0x167efbdc66d7ea
+0x0
+0x1bb631759febbe
+0x12
+0xda10f19087cda
+0x1585fc9de25cc4
+0x1dda808d023e6e
+0x1
+0x112e40a1faa1f3
+0x0
+0x31130e39bc068
+0x1
+0x1d1fafab962a06
+0x0
+0xeb32f91f78d01
+0x1d
+0x1c
+0xf
+0x4f54f21c5bf6b
+0xd270c252332bf
+0x0
+0x6d046f4a7aa63
+0x88282d8cf9767
+0x0
+0x10c8800e0f0705
+0x0
+0x1ff6b0ddeaf197
+0xffffffffffffffff
+0x5a75391a3eb92
+0x1acc742d963c91
+0xd9044ab76645b
+0x3
+0x1d99cebdcd6a81
+0x0
+0x1ca2acb43ba099
+0x3
+0x10a4926707a5e3
+0x1b389d2d2ca452
+0x0
+0x1276f4ba241a98
+0x18
+0x143192dfb97384
+0x447c536bfb27d
+0x14a3e101ea0b0
+0x0
+0xdb11598e526f
+0x0
+0x1469f1e9fc3b56
+0x12
+0x87afc20d63a3f
+0x1305751f25c262
+0x6d202b2a4e2e0
+0x1
+0x1203ba769def41
+0x0
+0x1c191ac672a750
+0x1f
+0x1c
+0x6
+0xea2b0900a2bd9
+0xdb3353a73dab8
+0x0
+0x92cce67ba1beb
+0x9bf5db2b11cc0
+0x2
+0x5985cec4c26f4
+0x108439d729f204
+0x0
+0x138eb8948ad3db
+0x12
+0x1a8ea5de8ef84f
+0x0
+0x28c674de8cfb1
+0x0
+0x129250e41796f5
+0x112718173dd8d2
+0x0
+0x1e61df3a52024e
+0xb
+0x100cbea6eb9157
+0x1d762fd65a51a5
+0x86c9645d8f3a6
+0x0
+0x12668250014718
+0x6
+0x13c902d30c554f
+0x43ac5494b694
+0x0
+0x1ca3832fea1cd4
+0xa
+0x1a2be93f53f78
+0x11c7baf69cd0e7
+0x1150d463e30441
+0x0
+0x613fa04e52ebb
+0x3
+0x8a435f3ee742f
+0x120665b288f36f
+0x0
+0x2b0c63c992c90
+0x0
+0x5fa79471b0fbc
+0x5ad0852c7aeed
+0x1b0d37771e7325
+0x0
+0x16d5698befc079
+0x1f
+0x17
+0x4415a8ddc647c
+0x142bddd9b58b5
+0x0
+0x16fb7eaded2862
+0x7
+0x17a119cc5e0fbc
+0x0
+0x1af25e3596ed5a
+0x1
+0x14c3107bc805d4
+0xe1a4e13372562
+0xe0c7bcd271d0
+0x0
+0x42bd327e704cd
+0x1
+0x7c2ff956f75a9
+0x13e13ca558a91e
+0x0
+0x1cba39d14997d5
+0x1b
+0x11
+0x7e4771f72a437
+0x11ebd18351701b
+0x17da92190fcdf6
+0x0
+0x15d750e1b732f8
+0xb
+0x19305e003b558e
+0x0
+0x142a9376485413
+0xc
+0xd5fa489058347
+0xfb169f9813c69
+0x0
+0x1d2f39a42b9184
+0x19
+0x16d7486ca76ebb
+0x0
+0x14c038d47588a6
+0xf
+0x1bd872114bcf51
+0x7b70b53f5d076
+0x11ea2b1977e0d2
+0x0
+0x591a74c57ddc9
+0x3
+0xe555afdf7c4b9
+0x1baf71a7030eb9
+0x0
+0x12e0d499a6c877
+0x10
+0x1016a0024857da
+0x17261f6e0c714c
+0xfb7bee3edeb37
+0x0
+0x1a22d07f5a5960
+0x14
+0x1ce6d8c6c61493
+0x0
+0x1c5f8ce4bcbc97
+0xc
+0x155b1cdae416d0
+0x88e1f35286f0c
+0x0
+0x847181ede5d50
+0x0
+0x15309ba3825857
+0x1f3b77c502d0eb
+0x15330e9fb58970
+0x0
+0x1a3dde00457830
+0x3
+0x17561f10b6708b
+0x0
+0x1be40cb5c52a56
+0x6
+0x16121e2cc21ac1
+0x5669d1851139c
+0x0
+0xf1d5d03667541
+0x11
+0x6eee508d4bc60
+0x10a1a2019bc089
+0xc263091e43474
+0x0
+0x10d844bbc1e650
+0xc
+0x4ce05141ee918
+0x5e51aac8ab372
+0x0
+0xcd013e87cdc24
+0x4
+0x1c3123b908bb62
+0x0
+0x15e7bfe2d5eec1
+0x7
+0xc9341f41b1ec8
+0x14942dbe456c81
+0xef7fad9753a3b
+0x0
+0x1550af82eb64ac
+0x1
+0x9187bbf876149
+0x1719d3c664a83b
+0x0
+0xf8bbac4f27b85
+0x1a
+0x1a
+0x16
+0x1c70015eabe6a9
+0x0
+0x14acbbc1089a89
+0x18
+0xa19c9534e3ca2
+0xe9e593b23db40
+0x108912033a354b
+0x0
+0xc9b44add1a1a2
+0x2
+0x8469ff4d4c398
+0x1c3e048b3d9324
+0x0
+0x1a66a81ce06bc7
+0x6
+0x1082e79442197a
+0xb04a56be86caa
+0x1b916577ae9bd1
+0x0
+0x1b63a6a6f9a98c
+0x5
+0x1c81b1faa2437f
+0x0
+0x12dc80fa2ca40a
+0x1a
+0x1b
+0xd
+0xf5298dcc8bd19
+0x2f13d948ef8ee
+0x0
+0x211bffb61b075
+0x0
+0x1baf690e3d70f5
+0x0
+0x17ee998d1c014d
+0xa
+0x1b3b2b7ddfafdc
+0x1f52bfdfc0973
+0xc4b283f7e017
+0x64a8abad1ba17
+0x6652f27a7ce2
+0x1
+0x2dfe0abce793a
+0x0
+0x1ea79dfbb68e2d
+0x8
+0xe376ac85fc424
+0x152d583838cd6b
+0x3
+0x3
+0x1
+0xcc1314ef3cf8e
+0x1c3d70b1485d8b
+0x1
+0xbcd80552636b8
+0x0
+0x61c34ce141dd5
+0x3
+0x1b639cbe052d3d
+0x0
+0x225b7f0086a70
+0x0
+0x10555eab08535
+0x124ad6fe19c985
+0x3
+0x18f09c28013be4
+0x84e3ab310a6fa
+0x0
+0x17e124ae3eed8f
+0x0
+0x1919238cf81d6d
+0xd
+0x11944d3d279d87
+0x1bb2749f730e9c
+0x18ab59aeeac25a
+0x1
+0x18a38ed48b2a82
+0x0
+0x195f501d394eb8
+0x11
+0xa562374282ca3
+0x1cda0de186d47c
+0x5
+0x5
+0x2
+0x1ce4877cf587fc
+0x92476b809f8c5
+0x1
+0x87c12bf327c71
+0x0
+0x1025a5809df721
+0x9
+0xb14dc4038bc63
+0x934dd5653454b
+0x4

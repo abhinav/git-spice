@@ -78,18 +78,29 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		remote: req.Remote,
 		log:    logger,
 	}
-	if err := db.Get(ctx, _repoJSON, new(repoInfo)); err == nil {
+	var oldRepoInfo repoInfo
+	if err := db.Get(ctx, _repoJSON, &oldRepoInfo); err == nil {
 		if req.Reset {
 			if err := db.Clear(ctx, "reset store"); err != nil {
 				return nil, fmt.Errorf("clear store: %w", err)
 			}
 		} else {
 			// If we're not resetting,
-			// ensure that the trunk branch is not tracked.
+			// ensure that the new trunk branch is not tracked.
 			_, err := store.LookupBranch(ctx, req.Trunk)
 			if err == nil {
 				// TODO: this should all be in 'repo init' implementation.
 				return nil, fmt.Errorf("trunk branch (%q) is tracked by gs; use --reset to clear", req.Trunk)
+			}
+
+			// Additionally,
+			// for any branches that were using the
+			// old trunk branch as their base,
+			// update them to use the new trunk.
+			if oldRepoInfo.Trunk != req.Trunk {
+				if err := transferTrunkBranch(ctx, db, oldRepoInfo.Trunk, req.Trunk); err != nil {
+					return nil, fmt.Errorf("transfer branches from old trunk: %w", err)
+				}
 			}
 		}
 	}
@@ -103,6 +114,44 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	}
 
 	return store, nil
+}
+
+func transferTrunkBranch(ctx context.Context, db DB, oldTrunk, newTrunk string) error {
+	branches, err := db.Keys(ctx, _branchesDir)
+	if err != nil {
+		return fmt.Errorf("list branches: %w", err)
+	}
+
+	// This is a rare operation so we'll just dig into the state directly.
+	var sets []storage.SetRequest
+	for _, name := range branches {
+		var state branchState
+		if err := db.Get(ctx, branchKey(name), &state); err != nil {
+			return fmt.Errorf("get branch state: %w", err)
+		}
+
+		if state.Base.Name == oldTrunk {
+			state.Base.Name = newTrunk
+			sets = append(sets, storage.SetRequest{
+				Key:   branchKey(name),
+				Value: state,
+			})
+		}
+	}
+
+	if len(sets) == 0 {
+		return nil
+	}
+
+	req := storage.UpdateRequest{
+		Sets:    sets,
+		Message: fmt.Sprintf("update trunk branch from %q to %q", oldTrunk, newTrunk),
+	}
+	if err := db.Update(ctx, req); err != nil {
+		return fmt.Errorf("update trunk branches: %w", err)
+	}
+
+	return nil
 }
 
 // ErrUninitialized indicates that the store is not initialized.

@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  branch create: Prevent creation of tracked branches with untracked bases
+  as this leaves the storage in a corrupted state.
+time: 2024-09-19T05:34:01.509947-07:00

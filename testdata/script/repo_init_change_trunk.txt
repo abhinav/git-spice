@@ -14,7 +14,7 @@ gs bc feature2 -m 'feature2'
 gs bc feature3 -m 'feature3'
 git checkout main
 
-git branch trunk
+git checkout -b trunk
 gs repo init --trunk trunk
 
 # should be on feature3
