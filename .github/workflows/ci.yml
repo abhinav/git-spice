@@ -12,7 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: 1.23.x
   GOLANGCI_LINT_VERSION: v1.60.1
 
 jobs:
@@ -26,7 +25,7 @@ jobs:
     - uses: actions/setup-go@v5
       name: Set up Go
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version-file: go.mod
     - uses: golangci/golangci-lint-action@v6
       name: Install golangci-lint
       with:
@@ -52,7 +51,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version-file: go.mod
 
     # TODO: extract into separate action
     - name: Determine Git cache directory
