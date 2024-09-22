@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/logtest"
 	"go.abhg.dev/gs/internal/spice/state"
-	"go.abhg.dev/gs/internal/storage"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
 func TestStore(t *testing.T) {
