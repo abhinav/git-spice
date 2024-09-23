@@ -112,8 +112,14 @@ For operations that push or pull commits, a remote is required.
 A prompt will ask for one during initialization
 if not provided with --remote.
 
-Re-run the command to change the trunk or remote.
-Re-run with --reset to discard all stored information.
+Re-run the command on an already initialized repository
+to change the trunk or remote.
+If the trunk branch is changed on re-initialization,
+existing branches stacked on the old trunk
+will be updated to point to the new trunk.
+
+Re-run with --reset to discard all stored information
+and untrack all branches.
 
 **Flags**
 
