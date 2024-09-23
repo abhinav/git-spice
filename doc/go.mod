@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20240912144405-7b228654b684
+require github.com/charmbracelet/freeze v0.1.7-0.20240917123315-7608512fb00d
 
 require (
 	github.com/adrg/xdg v0.5.0 // indirect
@@ -18,7 +18,7 @@ require (
 	github.com/charmbracelet/huh v0.6.0 // indirect
 	github.com/charmbracelet/lipgloss v0.13.0 // indirect
 	github.com/charmbracelet/log v0.4.0 // indirect
-	github.com/charmbracelet/x/ansi v0.3.0 // indirect
+	github.com/charmbracelet/x/ansi v0.3.2 // indirect
 	github.com/charmbracelet/x/errors v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/term v0.0.0-20240403043919-dea9035a27d4 // indirect
