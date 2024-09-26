@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"maps"
 	"path"
 	"slices"
 	"sort"
@@ -206,17 +207,19 @@ func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
 type BranchTx struct {
 	store *Store
 
-	sets map[string]*branchState // branches modified or added
-	dels map[string]struct{}     // branches to delete
+	states map[string]*branchState // cached states with changes
+	sets   map[string]struct{}     // branches to set
+	dels   map[string]struct{}     // branches to delete
 }
 
 // BeginBranchTx starts a new transaction for updating the branch graph.
 // Changes are not persisted until Commit is called.
 func (s *Store) BeginBranchTx() *BranchTx {
 	return &BranchTx{
-		store: s,
-		sets:  make(map[string]*branchState),
-		dels:  make(map[string]struct{}),
+		store:  s,
+		states: make(map[string]*branchState),
+		sets:   make(map[string]struct{}),
+		dels:   make(map[string]struct{}),
 	}
 }
 
@@ -272,7 +275,8 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 
 		must.NotBeBlankf(req.Base, "new branch %q must have a base", req.Name)
 		state = &branchState{Base: branchStateBase{Name: req.Base}}
-		tx.sets[req.Name] = state
+		tx.states[req.Name] = state
+		tx.sets[req.Name] = struct{}{}
 	}
 
 	if req.Base != "" {
@@ -315,7 +319,8 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		}
 	}
 
-	tx.sets[req.Name] = state
+	tx.states[req.Name] = state
+	tx.sets[req.Name] = struct{}{}
 	return nil
 }
 
@@ -338,6 +343,7 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 
 	tx.dels[name] = struct{}{}
 	delete(tx.sets, name)
+	delete(tx.states, name)
 	return nil
 }
 
@@ -346,19 +352,17 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 	req := updateBranchesRequest{
 		Sets:    make([]setBranchStateRequest, 0, len(tx.sets)),
-		Deletes: make([]string, 0, len(tx.dels)),
+		Deletes: slices.Collect(maps.Keys(tx.dels)),
 		Message: msg,
 	}
 
-	for branch, state := range tx.sets {
+	for branch := range tx.sets {
+		state, ok := tx.states[branch]
+		must.Bef(ok, "branch %q is set but has no state", branch)
 		req.Sets = append(req.Sets, setBranchStateRequest{
 			Branch: branch,
 			State:  state,
 		})
-	}
-
-	for branch := range tx.dels {
-		req.Deletes = append(req.Deletes, branch)
 	}
 
 	if err := tx.store.updateBranches(ctx, req); err != nil {
@@ -367,6 +371,7 @@ func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
 
 	clear(tx.sets)
 	clear(tx.dels)
+	clear(tx.states)
 	return nil
 }
 
@@ -375,7 +380,7 @@ func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, err
 		return nil, ErrNotExist
 	}
 
-	if state, ok := tx.sets[branch]; ok {
+	if state, ok := tx.states[branch]; ok {
 		return state, nil
 	}
 
@@ -383,8 +388,9 @@ func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, err
 	if err != nil {
 		return nil, err
 	}
-	newState := *state
-	return &newState, nil
+
+	tx.states[branch] = state
+	return state, nil
 }
 
 func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
