@@ -139,11 +139,8 @@ func (s *Store) lookupBranchState(ctx context.Context, branch string) (*branchSt
 // The list is sorted in lexicographic order.
 func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
 	branches, err := sliceutil.CollectErr(s.listBranches(ctx))
-	if err != nil {
-		return nil, err
-	}
 	sort.Strings(branches)
-	return branches, nil
+	return branches, err
 }
 
 // listBranches returns the names of all branches in the store.
@@ -273,10 +270,14 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 			return err
 		}
 
-		must.NotBeBlankf(req.Base, "new branch %q must have a base", req.Name)
+		if req.Base == "" {
+			return errors.New("new branch must have a base")
+		}
+
 		state = &branchState{Base: branchStateBase{Name: req.Base}}
-		tx.states[req.Name] = state
-		tx.sets[req.Name] = struct{}{}
+		// Note:
+		// Don't persist the state here until the rest
+		// of the request is validated.
 	}
 
 	if req.Base != "" {
@@ -321,6 +322,7 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 
 	tx.states[req.Name] = state
 	tx.sets[req.Name] = struct{}{}
+	delete(tx.dels, req.Name)
 	return nil
 }
 
@@ -329,8 +331,15 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 // The branch must not be a base for any other branch,
 // or an error will be returned.
 func (tx *BranchTx) Delete(ctx context.Context, name string) error {
+	if name == "" {
+		return errors.New("branch name is required")
+	}
 	if name == tx.store.trunk {
 		return ErrTrunk
+	}
+
+	if _, err := tx.state(ctx, name); err != nil {
+		return err
 	}
 
 	aboves, err := sliceutil.CollectErr(tx.aboves(ctx, name))

@@ -121,6 +121,181 @@ func TestBranchStateUnmarshal(t *testing.T) {
 	}
 }
 
+func TestBranchTxUpsertErrors(t *testing.T) {
+	ctx := context.Background()
+	db := storage.NewDB(storage.NewMemBackend())
+	store, err := InitStore(ctx, InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	t.Run("MissingBranch", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Upsert(ctx, UpsertRequest{})
+		assert.ErrorContains(t, err, "branch name is required")
+		require.NoError(t, tx.Commit(ctx, "no op"))
+	})
+
+	t.Run("TrunkNotAllowed", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Upsert(ctx, UpsertRequest{
+			Name: "main",
+			Base: "whatever",
+		})
+		assert.ErrorIs(t, err, ErrTrunk)
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		_, err = store.LookupBranch(ctx, "main")
+		require.ErrorIs(t, err, ErrNotExist)
+	})
+
+	t.Run("NewBranchNoBase", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Upsert(ctx, UpsertRequest{
+			Name: "foo",
+		})
+		assert.ErrorContains(t, err, "new branch must have a base")
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		_, err = store.LookupBranch(ctx, "foo")
+		require.ErrorIs(t, err, ErrNotExist)
+	})
+
+	t.Run("NewBranchUnknownBase", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Upsert(ctx, UpsertRequest{
+			Name: "foo",
+			Base: "unknown",
+		})
+		assert.ErrorContains(t, err, "branch unknown is not tracked")
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		_, err = store.LookupBranch(ctx, "foo")
+		require.Error(t, err)
+		require.ErrorIs(t, err, ErrNotExist)
+	})
+
+	// Add a couple branches to work with.
+	{
+		tx := store.BeginBranchTx()
+		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			Name: "foo",
+			Base: "main",
+		}))
+		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			Name: "bar",
+			Base: "foo",
+		}))
+		require.NoError(t, tx.Commit(ctx, "add foo and bar"))
+	}
+
+	t.Run("Cycle", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Upsert(ctx, UpsertRequest{
+			Name: "foo",
+			Base: "bar",
+		})
+		assert.ErrorContains(t, err, `would create a cycle`)
+		assert.ErrorContains(t, err, `foo -> bar -> foo`)
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		foo, err := store.LookupBranch(ctx, "foo")
+		require.NoError(t, err)
+		assert.Equal(t, "main", foo.Base)
+	})
+
+	t.Run("DeletedBase", func(t *testing.T) {
+		{
+			tx := store.BeginBranchTx()
+			require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+				Name: "baz",
+				Base: "main",
+			}))
+			require.NoError(t, tx.Commit(ctx, "add baz"))
+		}
+
+		tx := store.BeginBranchTx()
+		require.NoError(t, tx.Delete(ctx, "baz"))
+		err := tx.Upsert(ctx, UpsertRequest{
+			Name: "qux",
+			Base: "baz",
+		})
+		assert.ErrorContains(t, err, `branch baz is not tracked`)
+		require.NoError(t, tx.Commit(ctx, "delete baz"))
+
+		_, err = store.LookupBranch(ctx, "baz")
+		require.ErrorIs(t, err, ErrNotExist)
+	})
+}
+
+func TestBranchTxDelete(t *testing.T) {
+	ctx := context.Background()
+	db := storage.NewDB(storage.NewMemBackend())
+	store, err := InitStore(ctx, InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	t.Run("MissingBranch", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Delete(ctx, "")
+		assert.ErrorContains(t, err, "branch name is required")
+		require.NoError(t, tx.Commit(ctx, "no op"))
+	})
+
+	t.Run("TrunkNotAllowed", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Delete(ctx, "main")
+		assert.ErrorIs(t, err, ErrTrunk)
+		require.NoError(t, tx.Commit(ctx, "no op"))
+	})
+
+	t.Run("UnknownBranch", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Delete(ctx, "unknown")
+		assert.ErrorIs(t, err, ErrNotExist)
+	})
+
+	// Add a couple branches to work with.
+	{
+		tx := store.BeginBranchTx()
+		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			Name: "foo",
+			Base: "main",
+		}))
+		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			Name: "bar",
+			Base: "foo",
+		}))
+		require.NoError(t, tx.Commit(ctx, "add foo and bar"))
+	}
+
+	t.Run("HasAboves", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		err := tx.Delete(ctx, "foo")
+		assert.ErrorContains(t, err, "needed by bar")
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		_, err = store.LookupBranch(ctx, "foo")
+		require.NoError(t, err)
+	})
+
+	t.Run("UpsertAndDelete", func(t *testing.T) {
+		tx := store.BeginBranchTx()
+		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			Name: "baz",
+			Base: "main",
+		}))
+		require.NoError(t, tx.Delete(ctx, "baz"))
+		require.NoError(t, tx.Commit(ctx, "no op"))
+
+		_, err := store.LookupBranch(ctx, "baz")
+		require.ErrorIs(t, err, ErrNotExist)
+	})
+}
+
 // Uses rapid to run randomized scenarios on the branch state
 // to ensure we never leave it in a corrupted state.
 func TestBranchStateUncorruptible(t *testing.T) {
@@ -255,6 +430,20 @@ func (sm *branchStateUncorruptible) DeleteOne(t *rapid.T) {
 	})
 }
 
+func (sm *branchStateUncorruptible) DeleteOneTx(t *rapid.T) {
+	name := sm.branchNameGen.Draw(t, "branchToDelete")
+	tx := sm.store.BeginBranchTx()
+
+	if err := tx.Delete(sm.ctx, name); err != nil {
+		t.Logf("failed to delete branch %q: %v", name, err)
+	} else {
+		t.Logf("deleted branch %q", name)
+		delete(sm.knownBranches, name)
+	}
+
+	require.NoError(t, tx.Commit(sm.ctx, "delete branch"))
+}
+
 func (sm *branchStateUncorruptible) UpsertOne(t *rapid.T) {
 	sm.update(t, &UpdateRequest{
 		Upserts: []UpsertRequest{
@@ -265,6 +454,24 @@ func (sm *branchStateUncorruptible) UpsertOne(t *rapid.T) {
 		},
 		Message: "upsert random branch",
 	})
+}
+
+func (sm *branchStateUncorruptible) UpsertOneTx(t *rapid.T) {
+	name := sm.branchNameGen.Draw(t, "branch")
+	base := sm.branchNameGen.Draw(t, "base")
+	tx := sm.store.BeginBranchTx()
+
+	if err := tx.Upsert(sm.ctx, UpsertRequest{
+		Name: name,
+		Base: base,
+	}); err != nil {
+		t.Logf("failed to upsert branch %q: %v", name, err)
+	} else {
+		t.Logf("upserted branch %q with base %q", name, base)
+		sm.knownBranches[name] = struct{}{}
+	}
+
+	require.NoError(t, tx.Commit(sm.ctx, "upsert branch"))
 }
 
 func (sm *branchStateUncorruptible) UpsertAndDeleteMany(t *rapid.T) {
@@ -280,11 +487,55 @@ func (sm *branchStateUncorruptible) UpsertAndDeleteMany(t *rapid.T) {
 	})
 }
 
+func (sm *branchStateUncorruptible) UpsertAndDeleteManyTx(t *rapid.T) {
+	operationGen := rapid.SampledFrom([]string{"upsert", "delete"})
+
+	upsertGen := rapid.Custom(func(t *rapid.T) UpsertRequest {
+		return UpsertRequest{
+			Name: sm.branchNameGen.Draw(t, "branch"),
+			Base: sm.branchNameGen.Draw(t, "base"),
+		}
+	})
+
+	tx := sm.store.BeginBranchTx()
+	for range rapid.IntRange(0, 10).Draw(t, "operations") {
+		switch operationGen.Draw(t, "operation") {
+		case "upsert":
+			req := upsertGen.Draw(t, "upsert")
+			if err := tx.Upsert(sm.ctx, req); err != nil {
+				t.Logf("failed to upsert branch %q: %v", req.Name, err)
+			} else {
+				t.Logf("upserted branch %q with base %q", req.Name, req.Base)
+				sm.knownBranches[req.Name] = struct{}{}
+			}
+
+		case "delete":
+			name := sm.branchNameGen.Draw(t, "branchToDelete")
+			if err := tx.Delete(sm.ctx, name); err != nil {
+				t.Logf("failed to delete branch %q: %v", name, err)
+			} else {
+				t.Logf("deleted branch %q", name)
+				delete(sm.knownBranches, name)
+			}
+
+		default:
+			t.Fatalf("unexpected operation")
+		}
+	}
+
+	require.NoError(t, tx.Commit(sm.ctx, "upsert and delete branches"))
+}
+
 func (sm *branchStateUncorruptible) UpsertAlwaysSuccess(t *rapid.T) {
+	newBranchGen := sm.branchNameGen.Filter(func(name string) bool {
+		_, ok := sm.knownBranches[name]
+		return !ok
+	})
+
 	sm.update(t, &UpdateRequest{
 		Upserts: []UpsertRequest{
 			{
-				Name: sm.branchNameGen.Draw(t, "branch"),
+				Name: newBranchGen.Draw(t, "branch"),
 				Base: sm.knownBranchGen.Draw(t, "base"),
 			},
 		},

@@ -1,0 +1,115 @@
+# 2024/09/27 05:54:00.641364 [TestBranchStateUncorruptible] [rapid] draw trunk: "a"
+# 2024/09/27 05:54:00.641374 [TestBranchStateUncorruptible] [rapid] draw action: "ChangeTrunk"
+# 2024/09/27 05:54:00.641375 [TestBranchStateUncorruptible] [rapid] draw newTrunk: "d"
+# 2024/09/27 05:54:00.641378 [TestBranchStateUncorruptible] changed trunk to "d"
+# 2024/09/27 05:54:00.641380 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAlwaysSuccess"
+# 2024/09/27 05:54:00.641381 [TestBranchStateUncorruptible] [rapid] draw branch: "a"
+# 2024/09/27 05:54:00.641381 [TestBranchStateUncorruptible] [rapid] draw base: "d"
+# 2024/09/27 05:54:00.641381 [TestBranchStateUncorruptible] try update: upsert branch with known base
+# 2024/09/27 05:54:00.641383 [TestBranchStateUncorruptible] upsert branch: name=a base=d
+# 2024/09/27 05:54:00.641386 [TestBranchStateUncorruptible] [rapid] draw action: "UpsertAndDeleteManyTx"
+# 2024/09/27 05:54:00.641387 [TestBranchStateUncorruptible] [rapid] draw operations: 3
+# 2024/09/27 05:54:00.641387 [TestBranchStateUncorruptible] [rapid] draw operation: "delete"
+# 2024/09/27 05:54:00.641387 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "a"
+# 2024/09/27 05:54:00.641388 [TestBranchStateUncorruptible] deleted branch "a"
+# 2024/09/27 05:54:00.641389 [TestBranchStateUncorruptible] [rapid] draw operation: "delete"
+# 2024/09/27 05:54:00.641389 [TestBranchStateUncorruptible] [rapid] draw branchToDelete: "a"
+# 2024/09/27 05:54:00.641389 [TestBranchStateUncorruptible] failed to delete branch "a": does not exist in store
+# 2024/09/27 05:54:00.641390 [TestBranchStateUncorruptible] [rapid] draw operation: "upsert"
+# 2024/09/27 05:54:00.641390 [TestBranchStateUncorruptible] [rapid] draw upsert: state.UpsertRequest{Name:"a", Base:"d", BaseHash:"", ChangeMetadata:json.RawMessage(nil), ChangeForge:"", UpstreamBranch:""}
+# 2024/09/27 05:54:00.641394 [TestBranchStateUncorruptible] upserted branch "a" with base "d"
+# 2024/09/27 05:54:00.641417 [TestBranchStateUncorruptible] 
+# 	Error Trace:	/Users/abg/src/git-spice/internal/spice/state/branch_test.go:366
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/statemachine.go:63
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:341
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:368
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:377
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:203
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:118
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:302
+# 	Error:      	Not equal: 
+# 	            	expected: []string{"a"}
+# 	            	actual  : []string(nil)
+# 	            	
+# 	            	Diff:
+# 	            	--- Expected
+# 	            	+++ Actual
+# 	            	@@ -1,4 +1,2 @@
+# 	            	-([]string) (len=1) {
+# 	            	- (string) (len=1) "a"
+# 	            	-}
+# 	            	+([]string) <nil>
+# 	            	 
+# 	Test:       	TestBranchStateUncorruptible
+# 	Messages:   	known branches does not match listed branches
+# 2024/09/27 05:54:00.641436 [TestBranchStateUncorruptible] 
+# 	Error Trace:	/Users/abg/src/git-spice/internal/spice/state/branch_test.go:388
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:379
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/statemachine.go:63
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:341
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:368
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:377
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:203
+# 	            				/Users/abg/go/pkg/mod/pgregory.net/rapid@v1.1.0/engine.go:118
+# 	            				/Users/abg/src/git-spice/internal/spice/state/branch_test.go:302
+# 	Error:      	Received unexpected error:
+# 	            	load branch "a": does not exist in store
+# 	Test:       	TestBranchStateUncorruptible
+# 	Messages:   	lookup branch "a" (path: [a])
+# 
+v0.4.8#3918114873337884568
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1084210842108
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x3
+0x0
+0x1084210842108
+0x6b74f03291620
+0x4
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1084210842108
+0x6b74f03291620
+0x6
+0x0
+0x38e38e38e38e4
+0x3
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x3
+0x0
