@@ -17,7 +17,18 @@ git commit -m 'Add feature 1'
 git add feat2.txt
 ! gs bc feat2 -m 'Add feature 2'
 
+git graph --branches
+cmp stdout $WORK/golden/branch-graph.txt
+
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
 -- repo/feat1.txt --
 feature 1
 -- repo/feat2.txt --
 feature 2
+-- golden/branch-graph.txt --
+* b6be74c (HEAD -> feat1) Add feature 1
+* 7cee8ef (main) Initial commit
+-- golden/status.txt --
+A  feat2.txt
