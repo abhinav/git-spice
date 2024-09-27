@@ -103,4 +103,23 @@ func TestStore(t *testing.T) {
 		assert.Equal(t, "shamhub", res.ChangeForge)
 		assert.JSONEq(t, `{"id": 44}`, string(res.ChangeMetadata))
 	})
+
+	t.Run("upstream branch", func(t *testing.T) {
+		err := store.UpdateBranch(ctx, &state.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name:           "localBranch",
+				Base:           "main",
+				BaseHash:       "abcdef",
+				UpstreamBranch: "remoteBranch",
+			}},
+		})
+		require.NoError(t, err)
+
+		res, err := store.LookupBranch(ctx, "localBranch")
+		require.NoError(t, err)
+
+		assert.Equal(t, "main", res.Base)
+		assert.Equal(t, "abcdef", string(res.BaseHash))
+		assert.Equal(t, "remoteBranch", res.UpstreamBranch)
+	})
 }

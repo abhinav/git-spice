@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
+	"maps"
 	"path"
 	"slices"
 	"sort"
@@ -14,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/maputil"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
@@ -121,10 +124,13 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 	return res, nil
 }
 
-func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchState, error) {
+// lookupBranchState loads the state of the given branch from the store.
+// Returns [ErrNotExist] if the branch does not exist in the store.
+// Trunk branch never exists in the store.
+func (s *Store) lookupBranchState(ctx context.Context, branch string) (*branchState, error) {
 	var state branchState
-	if err := s.db.Get(ctx, branchKey(name), &state); err != nil {
-		return nil, fmt.Errorf("get branch state: %w", err)
+	if err := s.db.Get(ctx, branchKey(branch), &state); err != nil {
+		return nil, fmt.Errorf("load branch %q: %w", branch, err)
 	}
 	return &state, nil
 }
@@ -132,12 +138,27 @@ func (s *Store) lookupBranchState(ctx context.Context, name string) (*branchStat
 // ListBranches reports the names of all tracked branches.
 // The list is sorted in lexicographic order.
 func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
-	branches, err := s.db.Keys(ctx, _branchesDir)
-	if err != nil {
-		return nil, fmt.Errorf("list branches: %w", err)
-	}
+	branches, err := sliceutil.CollectErr(s.listBranches(ctx))
 	sort.Strings(branches)
-	return branches, nil
+	return branches, err
+}
+
+// listBranches returns the names of all branches in the store.
+// The list is in no particular order.
+func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		branches, err := s.db.Keys(ctx, _branchesDir)
+		if err != nil {
+			yield("", err)
+			return
+		}
+
+		for _, branch := range branches {
+			if !yield(branch, nil) {
+				return
+			}
+		}
+	}
 }
 
 // UpdateRequest is a request to add, update, or delete information about branches.
@@ -151,6 +172,52 @@ type UpdateRequest struct {
 	// Message is a message specifying the reason for the update.
 	// This will be persisted in the Git commit message.
 	Message string
+}
+
+// UpdateBranch upates the store with the parameters in the request.
+func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
+	// TODO: delete this in favor of BeginBranchTx
+	tx := s.BeginBranchTx()
+	for idx, upsert := range req.Upserts {
+		if err := tx.Upsert(ctx, upsert); err != nil {
+			return fmt.Errorf("upsert [%d] %q: %w", idx, upsert.Name, err)
+		}
+	}
+
+	for idx, name := range req.Deletes {
+		if err := tx.Delete(ctx, name); err != nil {
+			return fmt.Errorf("delete [%d] %q: %w", idx, name, err)
+		}
+	}
+
+	if err := tx.Commit(ctx, req.Message); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	return nil
+}
+
+// BranchTx is an ongoing change to the branch graph.
+// Changes made to it are not persisted until Commit is called.
+// However, in-flight changes are visible to the transaction,
+// so it can use them to prevent cycles and other issues.
+type BranchTx struct {
+	store *Store
+
+	states map[string]*branchState // cached states with changes
+	sets   map[string]struct{}     // branches to set
+	dels   map[string]struct{}     // branches to delete
+}
+
+// BeginBranchTx starts a new transaction for updating the branch graph.
+// Changes are not persisted until Commit is called.
+func (s *Store) BeginBranchTx() *BranchTx {
+	return &BranchTx{
+		store:  s,
+		states: make(map[string]*branchState),
+		sets:   make(map[string]struct{}),
+		dels:   make(map[string]struct{}),
+	}
 }
 
 // UpsertRequest is a request to add or update information about a branch.
@@ -185,272 +252,291 @@ type UpsertRequest struct {
 	UpstreamBranch string
 }
 
-// branchGraph is an acyclic directed graph of branches.
-// Edges describe branch->base relationships.
-type branchGraph struct {
-	byName map[string]int
+// Upsert adds or updates information about a branch.
+// If the branch is not known, it will be added.
+// For new branches, a base MUST be provided.
+func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
+	if req.Name == "" {
+		return errors.New("branch name is required")
+	}
 
-	trunk  string         // name of trunk
-	names  []string       // name of branch[i]
-	bases  []int          // index of branch[i].Base
-	states []*branchState // state of branch[i]
-	aboves [][]int        // branches with branch[i] as base, sorted
-}
+	if req.Name == tx.store.trunk {
+		return ErrTrunk
+	}
 
-func loadGraph(ctx context.Context, s *Store) (*branchGraph, error) {
-	names, err := s.ListBranches(ctx)
+	state, err := tx.state(ctx, req.Name)
 	if err != nil {
-		return nil, fmt.Errorf("list branches: %w", err)
-	}
-	// Always put trunk in the front.
-	names = slices.Insert(names, 0, s.trunk)
-
-	byName := make(map[string]int, len(names))
-	states := make([]*branchState, len(names))
-	for i, name := range names {
-		if i == 0 {
-			// no state for trunk
-			byName[name] = i
-			continue
+		if !errors.Is(err, ErrNotExist) {
+			return err
 		}
 
-		state, err := s.lookupBranchState(ctx, name)
-		if err != nil {
-			return nil, fmt.Errorf("get branch %q: %w", name, err)
+		if req.Base == "" {
+			return errors.New("new branch must have a base")
 		}
 
-		byName[name] = i
-		states[i] = state
+		state = &branchState{Base: branchStateBase{Name: req.Base}}
+		// Note:
+		// Don't persist the state here until the rest
+		// of the request is validated.
 	}
 
-	bases := make([]int, len(names))
-	aboves := make([][]int, len(names))
-	for i, state := range states {
-		if i == 0 {
-			// no base for trunk
-			bases[i] = -1
-			continue
-		}
-
-		base := state.Base.Name
-		must.NotBeBlankf(base, "branch %q has no base", names[i])
-
-		baseIdx, ok := byName[base]
-		if !ok {
-			return nil, fmt.Errorf("branch %q has untracked base %q", names[i], base)
-		}
-
-		bases[i] = baseIdx
-		aboves[baseIdx] = append(aboves[baseIdx], i)
-	}
-	for _, above := range aboves {
-		sort.Ints(above)
-	}
-
-	return &branchGraph{
-		byName: byName,
-		names:  names,
-		bases:  bases,
-		states: states,
-		aboves: aboves,
-		trunk:  s.trunk,
-	}, nil
-}
-
-// Path returns the path from 'from' to 'to' in the branch graph,
-// or nil if there is no path.
-//
-// If the returned path is non-nil,
-// the first element will always be 'from'
-// and the last element will always be 'to'.
-func (g *branchGraph) path(from, to int) []int {
-	if from == 0 {
-		// There will never be a path from trunk to any other branch.
-		return nil
-	}
-
-	var p []int
-	for cur := from; cur != to; cur = g.bases[cur] {
-		if cur == -1 {
-			return nil
-		}
-		p = append(p, cur)
-	}
-	return append(p, to)
-}
-
-// State returns the state of the branch with the given name
-// or nil if the branch does not exist.
-func (g *branchGraph) State(name string) *branchState {
-	must.NotBeEqualf(name, g.trunk, "trunk has no state")
-	idx, ok := g.byName[name]
-	if !ok {
-		return nil
-	}
-	return g.states[idx]
-}
-
-func (g *branchGraph) NewBranch(name string) *branchState {
-	must.NotBeEqualf(name, g.trunk, "trunk has no state")
-	idx, ok := g.byName[name]
-	must.Bef(!ok || idx == -1, "branch %q already exists", name)
-
-	idx = len(g.names)
-	state := &branchState{}
-	g.names = append(g.names, name)
-	g.bases = append(g.bases, -1)
-	g.states = append(g.states, state)
-	g.aboves = append(g.aboves, nil)
-	g.byName[name] = idx
-	return state
-}
-
-func (g *branchGraph) SetBase(name, base string) error {
-	// Base must already exist for name->base to be valid.
-	baseIdx, ok := g.byName[base]
-	if !ok || baseIdx == -1 {
-		return &branchUntrackedError{Name: base}
-	}
-
-	nameIdx, ok := g.byName[name]
-	if !ok || baseIdx == -1 {
-		return fmt.Errorf("branch %q does not exist", name)
-	}
-
-	// Adding a name->base edge will not create a cycle
-	// only if there's no existing path from base to name.
-	if p := g.path(baseIdx, nameIdx); len(p) > 0 {
-		path := make([]string, len(p))
-		for i, idx := range p {
-			path[i] = g.names[idx]
-		}
-		return newBranchCycleError(path)
-	}
-
-	if oldBaseIdx := g.bases[nameIdx]; oldBaseIdx != -1 && oldBaseIdx != baseIdx {
-		// If the old base is not the same,
-		// remove name from the old base's aboves.
-		aboves := g.aboves[oldBaseIdx]
-		if idx, ok := slices.BinarySearch(aboves, nameIdx); ok {
-			aboves = slices.Delete(aboves, idx, idx+1)
-			g.aboves[oldBaseIdx] = aboves
-		}
-	}
-
-	g.bases[nameIdx] = baseIdx
-	g.aboves[baseIdx] = append(g.aboves[baseIdx], nameIdx)
-	return nil
-}
-
-func (g *branchGraph) DeleteBranch(name string) error {
-	must.NotBeEqualf(name, g.trunk, "trunk cannot be deleted")
-
-	idx, ok := g.byName[name]
-	if !ok || idx == -1 {
-		return fmt.Errorf("branch %q does not exist", name)
-	}
-
-	// Deletion will not cause a broken path
-	// only if the branch is not a base for any other branch.
-	if aboves := g.aboves[idx]; len(aboves) > 0 {
-		var sb strings.Builder
-		for i, idx := range aboves {
-			if i > 0 {
-				sb.WriteString(", ")
+	if req.Base != "" {
+		if req.Base != tx.store.trunk {
+			// Base must already be tracked for name->base to be valid.
+			if _, err := tx.state(ctx, req.Base); err != nil {
+				if errors.Is(err, ErrNotExist) {
+					return &branchUntrackedError{Name: req.Base}
+				}
+				return fmt.Errorf("load base %q: %w", req.Base, err)
 			}
-			sb.WriteString(g.names[idx])
+
+			// Adding name->base will not create a cycle
+			// only if there's no existing path from base to name.
+			if path, err := tx.path(ctx, req.Base, req.Name); err != nil {
+				return fmt.Errorf("find path from trunk to %q: %w", req.Name, err)
+			} else if len(path) > 0 {
+				return newBranchCycleError(path)
+			}
+
 		}
-		return fmt.Errorf("branch %v is needed by %v", name, sb.String())
+		state.Base.Name = req.Base
 	}
 
-	// So as not to break existing indexes,
-	// just invalidate all information about the branch.
-	g.byName[name] = -1
-	g.names[idx] = ""
-	g.bases[idx] = -1
-	g.states[idx] = nil
-	g.aboves[idx] = nil
+	if req.BaseHash != "" {
+		state.Base.Hash = req.BaseHash.String()
+	}
+
+	if len(req.ChangeMetadata) > 0 {
+		must.NotBeBlankf(req.ChangeForge, "change forge is required when change metadata is set")
+		state.Change = &branchChangeState{
+			Forge:  req.ChangeForge,
+			Change: req.ChangeMetadata,
+		}
+	}
+
+	if req.UpstreamBranch != "" {
+		state.Upstream = &branchUpstreamState{
+			Branch: req.UpstreamBranch,
+		}
+	}
+
+	tx.states[req.Name] = state
+	tx.sets[req.Name] = struct{}{}
+	delete(tx.dels, req.Name)
 	return nil
 }
 
-// UpdateBranch upates the store with the parameters in the request.
-func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
+// Delete removes information about a branch from the store.
+//
+// The branch must not be a base for any other branch,
+// or an error will be returned.
+func (tx *BranchTx) Delete(ctx context.Context, name string) error {
+	if name == "" {
+		return errors.New("branch name is required")
+	}
+	if name == tx.store.trunk {
+		return ErrTrunk
+	}
+
+	if _, err := tx.state(ctx, name); err != nil {
+		return err
+	}
+
+	aboves, err := sliceutil.CollectErr(tx.aboves(ctx, name))
+	if err != nil {
+		return fmt.Errorf("list branches above %v: %w", name, err)
+	}
+	if len(aboves) > 0 {
+		return fmt.Errorf("branch %v is needed by %v", name, strings.Join(aboves, ", "))
+	}
+
+	tx.dels[name] = struct{}{}
+	delete(tx.sets, name)
+	delete(tx.states, name)
+	return nil
+}
+
+// Commit persists all planned changes to the store.
+// If there are no changes, this is a no-op.
+func (tx *BranchTx) Commit(ctx context.Context, msg string) error {
+	req := updateBranchesRequest{
+		Sets:    make([]setBranchStateRequest, 0, len(tx.sets)),
+		Deletes: slices.Collect(maps.Keys(tx.dels)),
+		Message: msg,
+	}
+
+	for branch := range tx.sets {
+		state, ok := tx.states[branch]
+		must.Bef(ok, "branch %q is set but has no state", branch)
+		req.Sets = append(req.Sets, setBranchStateRequest{
+			Branch: branch,
+			State:  state,
+		})
+	}
+
+	if err := tx.store.updateBranches(ctx, req); err != nil {
+		return fmt.Errorf("commit: %w", err)
+	}
+
+	clear(tx.sets)
+	clear(tx.dels)
+	clear(tx.states)
+	return nil
+}
+
+func (tx *BranchTx) state(ctx context.Context, branch string) (*branchState, error) {
+	if _, ok := tx.dels[branch]; ok {
+		return nil, ErrNotExist
+	}
+
+	if state, ok := tx.states[branch]; ok {
+		return state, nil
+	}
+
+	state, err := tx.store.lookupBranchState(ctx, branch)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.states[branch] = state
+	return state, nil
+}
+
+func (tx *BranchTx) listBranches(ctx context.Context) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		// seen prevents underlying branches from being listed twice.
+		seen := make(map[string]struct{})
+
+		// Entries in tx.sets take precedence unless they are deleted.
+		for branch := range tx.sets {
+			if _, ok := tx.dels[branch]; ok {
+				continue
+			}
+
+			if !yield(branch, nil) {
+				return
+			}
+			seen[branch] = struct{}{}
+		}
+
+		// List underlying branches.
+		for branch, err := range tx.store.listBranches(ctx) {
+			if err != nil {
+				yield("", fmt.Errorf("list branches: %w", err))
+				return
+			}
+
+			_, overridden := seen[branch]
+			_, deleted := tx.dels[branch]
+			if overridden || deleted {
+				continue
+			}
+
+			if !yield(branch, err) {
+				return
+			}
+			seen[branch] = struct{}{}
+		}
+	}
+}
+
+func (tx *BranchTx) aboves(ctx context.Context, branch string) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		for branchName, err := range tx.listBranches(ctx) {
+			if err != nil {
+				yield("", err)
+				return
+			}
+
+			state, err := tx.state(ctx, branchName)
+			if err != nil {
+				yield("", fmt.Errorf("load branch %q: %w", branchName, err))
+				return
+			}
+
+			if state.Base.Name == branch {
+				if !yield(branchName, nil) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (tx *BranchTx) path(ctx context.Context, from, to string) ([]string, error) {
+	seen := make(map[string]struct{})
+	var p []string
+	for cur := from; cur != to; {
+		if cur == tx.store.trunk {
+			// There can never be a path from trunk to any other branch.
+			return nil, nil
+		}
+
+		// We avoid state corruption by checking for cycles at add time.
+		// If we see a cycle here, the state is already corrupt.
+		// This is a bug and not recoverable.
+		if _, ok := seen[cur]; ok {
+			panic(fmt.Sprintf("corrupt store: cycle detected in branch graph: %v", append(p, cur)))
+		}
+		seen[cur] = struct{}{}
+
+		state, err := tx.state(ctx, cur)
+		if err != nil {
+			return nil, fmt.Errorf("load branch %q: %w", cur, err)
+		}
+
+		p = append(p, cur)
+		must.NotBeBlankf(state.Base.Name, "branch %q has no base", cur)
+		cur = state.Base.Name
+	}
+
+	return append(p, to), nil
+}
+
+// setBranchStateRequest is a request to set the state of a branch.
+type setBranchStateRequest struct {
+	Branch string
+	State  *branchState
+}
+
+// updateBranchesRequest is a request to update the state of multiple branches.
+// The request can set the state of branches, delete branches, or both.
+// A message is recorded with the update.
+type updateBranchesRequest struct {
+	Sets    []setBranchStateRequest
+	Deletes []string
+	Message string // required
+}
+
+// updateBranches atomically updates the state of multiple branches in the store.
+func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) error {
+	if len(req.Sets) == 0 && len(req.Deletes) == 0 {
+		return nil
+	}
+
 	if req.Message == "" {
 		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
 	}
 
-	graph, err := loadGraph(ctx, s)
-	if err != nil {
-		return fmt.Errorf("load branch graph: %w", err)
+	sets := make([]storage.SetRequest, len(req.Sets))
+	for idx, set := range req.Sets {
+		sets[idx] = storage.SetRequest{
+			Key:   branchKey(set.Branch),
+			Value: set.State,
+		}
 	}
 
-	sets := make([]storage.SetRequest, 0, len(req.Upserts))
-	for i, req := range req.Upserts {
-		if req.Name == "" {
-			return fmt.Errorf("upsert [%d]: branch name is required", i)
-		}
-		if req.Name == s.trunk {
-			return fmt.Errorf("upsert [%d] (%q): %w", i, req.Name, ErrTrunk)
-		}
-
-		b := graph.State(req.Name)
-		if b == nil {
-			b = graph.NewBranch(req.Name)
-		}
-
-		if req.Base != "" {
-			if err := graph.SetBase(req.Name, req.Base); err != nil {
-				return fmt.Errorf("add branch %v with base %v: %w", req.Name, req.Base, err)
-			}
-			b.Base.Name = req.Base
-		}
-		if req.BaseHash != "" {
-			b.Base.Hash = req.BaseHash.String()
-		}
-
-		if len(req.ChangeMetadata) > 0 {
-			must.NotBeBlankf(req.ChangeForge, "change forge is required when change metadata is set")
-			b.Change = &branchChangeState{
-				Forge:  req.ChangeForge,
-				Change: req.ChangeMetadata,
-			}
-		}
-
-		if req.UpstreamBranch != "" {
-			b.Upstream = &branchUpstreamState{
-				Branch: req.UpstreamBranch,
-			}
-		}
-
-		if b.Base.Name == "" {
-			return fmt.Errorf("branch %q would have no base", req.Name)
-		}
-
-		sets = append(sets, storage.SetRequest{
-			Key:   branchKey(req.Name),
-			Value: b,
-		})
+	dels := make([]string, len(req.Deletes))
+	for idx, del := range req.Deletes {
+		dels[idx] = branchKey(del)
 	}
 
-	deletes := make([]string, len(req.Deletes))
-	for i, name := range req.Deletes {
-		if name == s.trunk {
-			return fmt.Errorf("delete [%d] (%q): %w", i, name, ErrTrunk)
-		}
-
-		if err := graph.DeleteBranch(name); err != nil {
-			return fmt.Errorf("delete branch %v: %w", name, err)
-		}
-
-		deletes[i] = branchKey(name)
-	}
-
-	err = s.db.Update(ctx, storage.UpdateRequest{
+	updReq := storage.UpdateRequest{
 		Sets:    sets,
-		Deletes: deletes,
+		Deletes: dels,
 		Message: req.Message,
-	})
-	if err != nil {
+	}
+	if err := s.db.Update(ctx, updReq); err != nil {
 		return fmt.Errorf("update: %w", err)
 	}
 
