@@ -196,6 +196,34 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		}
 	}
 
+	// Start the transaction and make sure it would work
+	// before actually creating the branch.
+	// This way, if the transaction would've failed anyway
+	// (e.g. because of a cycle or an untracked base branch)
+	// then we won't commit any changes to the new branch
+	// and rollback to the original branch and staged changes.
+	branchTx := store.BeginBranchTx()
+	if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		Name:     cmd.Name,
+		Base:     baseName,
+		BaseHash: baseHash,
+	}); err != nil {
+		return fmt.Errorf("add branch %v with base %v: %w", cmd.Name, baseName, err)
+	}
+
+	for _, branch := range restackOntoNew {
+		// For --insert and --below, set the base branch of all affected
+		// branches to the newly created branch.
+		//
+		// We'll run a restack command after this to update the state.
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name: branch,
+			Base: cmd.Name,
+		}); err != nil {
+			return fmt.Errorf("update base branch of %v: %w", branch, err)
+		}
+	}
+
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
 		Name: cmd.Name,
 		Head: branchAt.String(),
@@ -208,22 +236,6 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
-	var upserts []state.UpsertRequest
-	upserts = append(upserts, state.UpsertRequest{
-		Name:     cmd.Name,
-		Base:     baseName,
-		BaseHash: baseHash,
-	})
-
-	for _, branch := range restackOntoNew {
-		// For --insert and --below, set the base branch of all affected
-		// branches to the newly created branch and run a restack.
-		upserts = append(upserts, state.UpsertRequest{
-			Name: branch,
-			Base: cmd.Name,
-		})
-	}
-
 	var msg string
 	switch {
 	case cmd.Below:
@@ -234,11 +246,8 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		msg = fmt.Sprintf("create branch %s", cmd.Name)
 	}
 
-	if err := store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: upserts,
-		Message: msg,
-	}); err != nil {
-		return fmt.Errorf("update state: %w", err)
+	if err := branchTx.Commit(ctx, msg); err != nil {
+		return fmt.Errorf("update branch state: %w", err)
 	}
 
 	if cmd.Below || cmd.Insert {
