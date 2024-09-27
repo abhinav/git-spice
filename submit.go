@@ -225,11 +225,11 @@ func updateNavigationComments(
 
 	postc := make(chan *postComment)
 	updatec := make(chan *updateComment)
+	branchTx := store.BeginBranchTx()
 	var (
-		wg sync.WaitGroup
-
-		mu      sync.Mutex // guards upserts
-		upserts []state.UpsertRequest
+		wg       sync.WaitGroup
+		mu       sync.Mutex // guards branchTx
+		upserted []string
 	)
 	for range min(runtime.GOMAXPROCS(0), len(submittedBranches)) {
 		wg.Add(1)
@@ -267,11 +267,18 @@ func updateNavigationComments(
 					}
 
 					mu.Lock()
-					upserts = append(upserts, state.UpsertRequest{
+					if err := branchTx.Upsert(ctx, state.UpsertRequest{
 						Name:           post.Branch,
 						ChangeMetadata: bs,
 						ChangeForge:    remoteRepo.Forge().ID(),
-					})
+					}); err != nil {
+						log.Error("Unable to update branch metadata",
+							"branch", post.Branch,
+							"error", err,
+						)
+					} else {
+						upserted = append(upserted, post.Branch)
+					}
 					mu.Unlock()
 
 				case update, ok := <-updatec:
@@ -332,21 +339,13 @@ func updateNavigationComments(
 	close(updatec)
 	wg.Wait()
 
-	if len(upserts) == 0 {
-		return nil
-	}
-
 	var msg strings.Builder
 	msg.WriteString("Post stack navigation comments\n\n")
-	for _, upsert := range upserts {
-		fmt.Fprintf(&msg, "- %s\n", upsert.Name)
+	for _, name := range upserted {
+		fmt.Fprintf(&msg, "- %s\n", name)
 	}
 
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: upserts,
-		Message: msg.String(),
-	})
-	if err != nil {
+	if err := branchTx.Commit(ctx, msg.String()); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
 
