@@ -465,20 +465,26 @@ func (cmd *repoSyncCmd) deleteBranches(
 	remote string,
 	branchesToDelete []branchDeletion,
 ) error {
-	// TODO:
-	// Should the branches be deleted in any particular order?
-	// (e.g. from the bottom of the stack up)
-	for _, branch := range branchesToDelete {
-		err := (&branchDeleteCmd{
-			Branch: branch.BranchName,
-			Force:  true,
-		}).Run(ctx, log, opts)
-		if err != nil {
-			return fmt.Errorf("delete branch %v: %w", branch, err)
-		}
+	if len(branchesToDelete) == 0 {
+		return nil
+	}
 
-		// Also delete the remote tracking branch for this branch
-		// if it still exists.
+	branchNames := make([]string, len(branchesToDelete))
+	for i, b := range branchesToDelete {
+		branchNames[i] = b.BranchName
+	}
+
+	err := (&branchDeleteCmd{
+		Branches: branchNames,
+		Force:    true,
+	}).Run(ctx, log, opts)
+	if err != nil {
+		return fmt.Errorf("delete merged branches: %w", err)
+	}
+
+	// Also delete the remote tracking branch for this branch
+	// if it still exists.
+	for _, branch := range branchesToDelete {
 		remoteBranch := remote + "/" + branch.UpstreamName
 		if _, err := repo.PeelToCommit(ctx, remoteBranch); err == nil {
 			if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{

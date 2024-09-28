@@ -410,8 +410,8 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		if base != origBase {
 			if err := tx.Upsert(ctx, state.UpsertRequest{
 				Name:     item.Name,
-				Base:     item.Base,
-				BaseHash: item.BaseHash,
+				Base:     base,
+				BaseHash: baseHash,
 			}); err != nil {
 				s.log.Warn("Could not update base of branch upstack from deleted branch",
 					"branch", item.Name,

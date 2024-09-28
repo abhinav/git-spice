@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'repo sync: Reduce the number of redundant operations performed when processing multiple merged branches.'
+time: 2024-09-28T16:28:26.362279-07:00

@@ -18,7 +18,7 @@ type branchCmd struct {
 
 	// Creation and destruction
 	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
-	Delete branchDeleteCmd `cmd:"" aliases:"d,rm" help:"Delete a branch"`
+	Delete branchDeleteCmd `cmd:"" aliases:"d,rm" help:"Delete branches"`
 	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
 	Split  branchSplitCmd  `cmd:"" aliases:"sp" help:"Split a branch on commits"`
 
