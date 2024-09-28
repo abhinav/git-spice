@@ -61,9 +61,9 @@ type Store interface {
 	// or [state.ErrNotExist] if the branch does not exist.
 	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
 
-	// UpdateBranch adds, updates, or removes state information
-	// for zero or more branches.
-	UpdateBranch(ctx context.Context, req *state.UpdateRequest) error
+	// BeginBranchTx begins a transaction to modify state
+	// for zero or more branches
+	BeginBranchTx() *state.BranchTx
 
 	// ListBranches returns a list of all tracked branch names.
 	// This list never includes the trunk branch.

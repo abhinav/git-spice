@@ -274,6 +274,20 @@ func (mr *MockStoreMockRecorder) AppendContinuations(arg0, arg1 any, arg2 ...any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendContinuations", reflect.TypeOf((*MockStore)(nil).AppendContinuations), varargs...)
 }
 
+// BeginBranchTx mocks base method.
+func (m *MockStore) BeginBranchTx() *state.BranchTx {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BeginBranchTx")
+	ret0, _ := ret[0].(*state.BranchTx)
+	return ret0
+}
+
+// BeginBranchTx indicates an expected call of BeginBranchTx.
+func (mr *MockStoreMockRecorder) BeginBranchTx() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginBranchTx", reflect.TypeOf((*MockStore)(nil).BeginBranchTx))
+}
+
 // CacheTemplates mocks base method.
 func (m *MockStore) CacheTemplates(arg0 context.Context, arg1 string, arg2 []*state.CachedTemplate) error {
 	m.ctrl.T.Helper()
@@ -375,18 +389,4 @@ func (m *MockStore) Trunk() string {
 func (mr *MockStoreMockRecorder) Trunk() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trunk", reflect.TypeOf((*MockStore)(nil).Trunk))
-}
-
-// UpdateBranch mocks base method.
-func (m *MockStore) UpdateBranch(arg0 context.Context, arg1 *state.UpdateRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateBranch", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateBranch indicates an expected call of UpdateBranch.
-func (mr *MockStoreMockRecorder) UpdateBranch(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBranch", reflect.TypeOf((*MockStore)(nil).UpdateBranch), arg0, arg1)
 }

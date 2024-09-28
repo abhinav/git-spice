@@ -192,11 +192,39 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		commitHashes[i] = commitHash
 	}
 
-	// Split the branch. The commits are in oldest-to-newst order,
+	// First we'll stage the state changes.
+	// The commits are in oldest-to-newst order,
 	// so we can just go through them in order.
-	upserts := make([]state.UpsertRequest, 0, len(cmd.At)+1)
-	base := branch.Base
-	baseHash := branch.BaseHash
+	branchTx := store.BeginBranchTx()
+	for idx, split := range cmd.At {
+		base, baseHash := branch.Base, branch.BaseHash
+		if idx > 0 {
+			base, baseHash = cmd.At[idx-1].Name, commitHashes[idx-1]
+		}
+
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name:     split.Name,
+			Base:     base,
+			BaseHash: baseHash,
+		}); err != nil {
+			return fmt.Errorf("add branch %v with base %v: %w", split.Name, base, err)
+		}
+	}
+
+	finalBase, finalBaseHash := branch.Base, branch.BaseHash
+	if len(cmd.At) > 0 {
+		finalBase, finalBaseHash = cmd.At[len(cmd.At)-1].Name, commitHashes[len(cmd.At)-1]
+	}
+	if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		Name:     cmd.Branch,
+		Base:     finalBase,
+		BaseHash: finalBaseHash,
+	}); err != nil {
+		return fmt.Errorf("update branch %v with base %v: %w", cmd.Branch, finalBase, err)
+	}
+
+	// State updates will probably succeed if we got here,
+	// so make the branch changes in the repo.
 	for idx, split := range cmd.At {
 		if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: split.Name,
@@ -204,28 +232,9 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		}); err != nil {
 			return fmt.Errorf("create branch %q: %w", split.Name, err)
 		}
-
-		upserts = append(upserts, state.UpsertRequest{
-			Name:     split.Name,
-			Base:     base,
-			BaseHash: baseHash,
-		})
-
-		base = split.Name
-		baseHash = commitHashes[idx]
 	}
 
-	// The last branch is the remainder of the original branch.
-	upserts = append(upserts, state.UpsertRequest{
-		Name:     cmd.Branch,
-		Base:     base,
-		BaseHash: baseHash,
-	})
-
-	if err := store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: upserts,
-		Message: fmt.Sprintf("%v: split %d new branches", cmd.Branch, len(cmd.At)),
-	}); err != nil {
+	if err := branchTx.Commit(ctx, fmt.Sprintf("%v: split %d new branches", cmd.Branch, len(cmd.At))); err != nil {
 		return fmt.Errorf("update store: %w", err)
 	}
 

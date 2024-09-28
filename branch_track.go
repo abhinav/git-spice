@@ -120,18 +120,18 @@ func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertRequest{
-			{
-				Name:     cmd.Branch,
-				Base:     cmd.Base,
-				BaseHash: baseHash,
-			},
-		},
-		Message: fmt.Sprintf("track %v with base %v", cmd.Branch, cmd.Base),
-	})
-	if err != nil {
-		return fmt.Errorf("set branch: %w", err)
+	msg := fmt.Sprintf("track %v with base %v", cmd.Branch, cmd.Base)
+	tx := store.BeginBranchTx()
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:     cmd.Branch,
+		Base:     cmd.Base,
+		BaseHash: baseHash,
+	},
+	); err != nil {
+		return fmt.Errorf("%s: %w", msg, err)
+	}
+	if err := tx.Commit(ctx, msg); err != nil {
+		return fmt.Errorf("update state: %w", err)
 	}
 
 	log.Infof("%v: tracking with base %v", cmd.Branch, cmd.Base)

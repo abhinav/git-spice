@@ -8,8 +8,13 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
+git checkout -b foo
 git add foo.txt
-gs bc foo -m 'Add foo.txt'
+git commit -m 'Add foo.txt'
+
+! gs branch fold
+stderr 'branch foo not tracked'
+gs btr
 
 gs bco main
 git add bar.txt

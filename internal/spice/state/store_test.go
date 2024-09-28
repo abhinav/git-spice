@@ -30,7 +30,7 @@ func TestStore(t *testing.T) {
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
+	err = state.UpdateBranch(ctx, store, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
 			Name:           "foo",
 			Base:           "main",
@@ -51,7 +51,7 @@ func TestStore(t *testing.T) {
 		assert.JSONEq(t, `{"number": 42}`, string(res.ChangeMetadata))
 	})
 
-	require.NoError(t, store.UpdateBranch(ctx, &state.UpdateRequest{
+	require.NoError(t, state.UpdateBranch(ctx, store, &state.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
 			Name:           "bar2",
 			Base:           "main",
@@ -62,7 +62,7 @@ func TestStore(t *testing.T) {
 	}))
 
 	t.Run("overwrite", func(t *testing.T) {
-		err := store.UpdateBranch(ctx, &state.UpdateRequest{
+		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{
 				{
 					Name:           "foo",
@@ -85,7 +85,7 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
-		err := store.UpdateBranch(ctx, &state.UpdateRequest{
+		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "bar/baz",
 				Base:           "main",
@@ -105,7 +105,7 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("upstream branch", func(t *testing.T) {
-		err := store.UpdateBranch(ctx, &state.UpdateRequest{
+		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "localBranch",
 				Base:           "main",

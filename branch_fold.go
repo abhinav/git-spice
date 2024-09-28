@@ -57,11 +57,6 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("get branch: %w", err)
 	}
 
-	aboves, err := svc.ListAbove(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("list above: %w", err)
-	}
-
 	// Merge base into current branch using a fast-forward.
 	// To do this without checking out the base, we can use a local fetch
 	// and fetch the feature branch "into" the base branch.
@@ -79,24 +74,31 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
+	tx := store.BeginBranchTx()
+
 	// Change the base of all branches above us
 	// to the base of the branch we are folding.
-	upserts := make([]state.UpsertRequest, len(aboves))
-	for i, above := range aboves {
-		upserts[i] = state.UpsertRequest{
+	aboves, err := svc.ListAbove(ctx, cmd.Branch)
+	if err != nil {
+		return fmt.Errorf("list above: %w", err)
+	}
+
+	for _, above := range aboves {
+		if err := tx.Upsert(ctx, state.UpsertRequest{
 			Name:     above,
 			Base:     b.Base,
 			BaseHash: newBaseHash,
+		}); err != nil {
+			return fmt.Errorf("set base of %v to %v: %w", above, b.Base, err)
 		}
 	}
 
-	err = store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: upserts,
-		Deletes: []string{cmd.Branch},
-		Message: fmt.Sprintf("folding %v into %v", cmd.Branch, b.Base),
-	})
-	if err != nil {
-		return fmt.Errorf("upsert branches: %w", err)
+	if err := tx.Delete(ctx, cmd.Branch); err != nil {
+		return fmt.Errorf("delete branch %v from state: %w", cmd.Branch, err)
+	}
+
+	if err := tx.Commit(ctx, fmt.Sprintf("folding %v into %v", cmd.Branch, b.Base)); err != nil {
+		return fmt.Errorf("update state: %w", err)
 	}
 
 	// Check out base and delete the branch we are folding.

@@ -1,0 +1,55 @@
+# 'branch fold' updates the upstack branches
+# to point to the base of the folded branch.
+
+as 'Test <test@example.com>'
+at '2024-09-28T10:46:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat1.txt
+gs bc -m feat1
+
+git add feat2.1.txt
+gs bc -m feat2.1
+
+gs down
+git add feat2.2.txt
+gs bc -m feat2.2
+
+git add feat3.txt
+gs bc -m feat3
+
+git graph --branches
+cmp stdout $WORK/golden/graph.before.txt
+
+gs bco feat1
+gs branch fold
+
+git graph --branches
+cmp stdout $WORK/golden/graph.after.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.1.txt --
+feature 2.1
+-- repo/feat2.2.txt --
+feature 2.2
+-- repo/feat3.txt --
+feature 3
+-- golden/graph.before.txt --
+* b493c53 (feat2-1) feat2.1
+| * 846be58 (HEAD -> feat3) feat3
+| * 149f4ab (feat2-2) feat2.2
+|/  
+* ef5508e (feat1) feat1
+* 8dcf166 (main) Initial commit
+-- golden/graph.after.txt --
+* b493c53 (feat2-1) feat2.1
+| * 846be58 (feat3) feat3
+| * 149f4ab (feat2-2) feat2.2
+|/  
+* ef5508e (HEAD -> main) feat1
+* 8dcf166 Initial commit

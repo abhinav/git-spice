@@ -88,17 +88,16 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		return nil, fmt.Errorf("rebase: %w", err)
 	}
 
-	err = s.store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertRequest{
-			{
-				Name:     name,
-				BaseHash: baseHash,
-			},
-		},
-		Message: fmt.Sprintf("%s: restacked on %s", name, b.Base),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("update branch information: %w", err)
+	tx := s.store.BeginBranchTx()
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:     name,
+		BaseHash: baseHash,
+	}); err != nil {
+		return nil, fmt.Errorf("update base hash of %v: %w", name, err)
+	}
+
+	if err := tx.Commit(ctx, fmt.Sprintf("%v: restacked on %v", name, b.Base)); err != nil {
+		return nil, fmt.Errorf("update state: %w", err)
 	}
 
 	return &RestackResponse{
@@ -157,13 +156,16 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// Branch does not need to be restacked
 	// but the base hash stored in state may be out of date.
 	if b.BaseHash != baseHash {
-		req := state.UpdateRequest{
-			Upserts: []state.UpsertRequest{
-				{Name: name, BaseHash: baseHash},
-			},
-			Message: fmt.Sprintf("branch %v was restacked externally", name),
+		tx := s.store.BeginBranchTx()
+		if err := tx.Upsert(ctx, state.UpsertRequest{
+			Name:     name,
+			BaseHash: baseHash,
+		}); err != nil {
+			s.log.Warnf("failed to update state with new base hash: %v", err)
+			return nil
 		}
-		if err := s.store.UpdateBranch(ctx, &req); err != nil {
+
+		if err := tx.Commit(ctx, fmt.Sprintf("%v: branch was restacked externally", name)); err != nil {
 			// This isn't a critical error. Just log it.
 			s.log.Warnf("failed to update state with new base hash: %v", err)
 		}
