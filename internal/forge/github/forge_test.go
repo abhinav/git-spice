@@ -111,6 +111,20 @@ func TestExtractRepoInfo(t *testing.T) {
 			wantOwner: "example",
 			wantRepo:  "repo",
 		},
+		{
+			// https://github.com/abhinav/git-spice/issues/425
+			name:      "ssh protocol with port",
+			give:      "ssh://git@ssh.github.com:443/mycompany/myrepo.git",
+			wantOwner: "mycompany",
+			wantRepo:  "myrepo",
+		},
+		{
+			name:      "ssh protocol with custom port",
+			githubURL: "ssh://git@ssh.mygithub.example.com:1443",
+			give:      "ssh://git@ssh.mygithub.example.com:1443/mycompany/myrepo",
+			wantOwner: "mycompany",
+			wantRepo:  "myrepo",
+		},
 	}
 
 	for _, tt := range tests {
