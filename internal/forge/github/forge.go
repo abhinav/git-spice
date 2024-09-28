@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"strings"
 
@@ -142,8 +143,21 @@ func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error
 		return "", "", fmt.Errorf("parse remote URL: %w", err)
 	}
 
-	if u.Host != baseURL.Host {
-		return "", "", fmt.Errorf("%v is not a GitHub URL: expected host %q", u, baseURL.Host)
+	// If base URL doesn't explicitly specify a port,
+	// and the remote URL does, *and* it's a default port,
+	// strip it from the remote URL.
+	if baseURL.Port() == "" {
+		if host, port, err := net.SplitHostPort(u.Host); err == nil {
+			switch port {
+			case "443", "80":
+				u.Host = host
+			}
+		}
+	}
+
+	// May be a subdomain of base URL.
+	if u.Host != baseURL.Host && !strings.HasSuffix(u.Host, "."+baseURL.Host) {
+		return "", "", fmt.Errorf("%v is not a GitHub URL: expected host %q, got %q", u, baseURL.Host, u.Host)
 	}
 
 	s := u.Path                       // /OWNER/REPO.git/
