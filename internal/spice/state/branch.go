@@ -161,42 +161,6 @@ func (s *Store) listBranches(ctx context.Context) iter.Seq2[string, error] {
 	}
 }
 
-// UpdateRequest is a request to add, update, or delete information about branches.
-type UpdateRequest struct {
-	// Upserts are requests to add or update information about branches.
-	Upserts []UpsertRequest
-
-	// Deletes are requests to delete information about branches.
-	Deletes []string
-
-	// Message is a message specifying the reason for the update.
-	// This will be persisted in the Git commit message.
-	Message string
-}
-
-// UpdateBranch upates the store with the parameters in the request.
-func (s *Store) UpdateBranch(ctx context.Context, req *UpdateRequest) error {
-	// TODO: delete this in favor of BeginBranchTx
-	tx := s.BeginBranchTx()
-	for idx, upsert := range req.Upserts {
-		if err := tx.Upsert(ctx, upsert); err != nil {
-			return fmt.Errorf("upsert [%d] %q: %w", idx, upsert.Name, err)
-		}
-	}
-
-	for idx, name := range req.Deletes {
-		if err := tx.Delete(ctx, name); err != nil {
-			return fmt.Errorf("delete [%d] %q: %w", idx, name, err)
-		}
-	}
-
-	if err := tx.Commit(ctx, req.Message); err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-
-	return nil
-}
-
 // BranchTx is an ongoing change to the branch graph.
 // Changes made to it are not persisted until Commit is called.
 // However, in-flight changes are visible to the transaction,

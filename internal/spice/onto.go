@@ -48,6 +48,15 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		ontoHash = onto.Head
 	}
 
+	branchTx := s.store.BeginBranchTx()
+	if err := branchTx.Upsert(ctx, state.UpsertRequest{
+		Name:     req.Branch,
+		Base:     req.Onto,
+		BaseHash: ontoHash,
+	}); err != nil {
+		return fmt.Errorf("set base of branch %s to %s: %w", req.Branch, req.Onto, err)
+	}
+
 	if err := s.repo.Rebase(ctx, git.RebaseRequest{
 		Branch:    req.Branch,
 		Upstream:  branch.BaseHash.String(),
@@ -58,18 +67,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		return fmt.Errorf("rebase: %w", err)
 	}
 
-	// If the operation succeeded, update internal state.
-	err = s.store.UpdateBranch(ctx, &state.UpdateRequest{
-		Upserts: []state.UpsertRequest{
-			{
-				Name:     req.Branch,
-				Base:     req.Onto,
-				BaseHash: ontoHash,
-			},
-		},
-		Message: fmt.Sprintf("%v: onto %v", req.Branch, req.Onto),
-	})
-	if err != nil {
+	if err := branchTx.Commit(ctx, fmt.Sprintf("%v: onto %v", req.Branch, req.Onto)); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
 

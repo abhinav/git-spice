@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch onto: Don''t rebase the branch if changing its base would corrupt the data store.'
+time: 2024-09-27T22:12:56.066674-07:00

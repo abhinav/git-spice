@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"unicode"
 
@@ -204,10 +203,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 		return fmt.Errorf("list branches: %w", err)
 	}
 
-	update := state.UpdateRequest{
-		Message: fmt.Sprintf("untrack branch %q", name),
-		Deletes: []string{name},
-	}
+	branchTx := s.store.BeginBranchTx()
 	for _, candidate := range branchNames {
 		if candidate == name {
 			continue
@@ -222,15 +218,21 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 			continue
 		}
 
-		update.Upserts = append(update.Upserts, state.UpsertRequest{
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
 			Name:     candidate,
 			Base:     branch.Base,
 			BaseHash: branch.BaseHash,
-		})
+		}); err != nil {
+			return fmt.Errorf("change base of %v to %v: %w", candidate, branch.Base, err)
+		}
 	}
 
-	if err := s.store.UpdateBranch(ctx, &update); err != nil {
-		return fmt.Errorf("forget branch: %w", err)
+	if err := branchTx.Delete(ctx, name); err != nil {
+		return fmt.Errorf("delete branch %v: %w", name, err)
+	}
+
+	if err := branchTx.Commit(ctx, fmt.Sprintf("untrack branch %q", name)); err != nil {
+		return fmt.Errorf("update state: %w", err)
 	}
 
 	return nil
@@ -256,13 +258,6 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		return fmt.Errorf("list branches above %v: %w", oldName, err)
 	}
 
-	if err := s.repo.RenameBranch(ctx, git.RenameBranchRequest{
-		OldName: oldName,
-		NewName: newName,
-	}); err != nil {
-		return fmt.Errorf("rename branch: %w", err)
-	}
-
 	var (
 		changeForge    string
 		changeMetadata json.RawMessage
@@ -277,28 +272,46 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		}
 	}
 
-	update := state.UpdateRequest{
-		Message: fmt.Sprintf("rename %q to %q", oldName, newName),
-		Deletes: []string{oldName},
-		Upserts: []state.UpsertRequest{
-			{
-				Name:           newName,
-				Base:           oldBranch.Base,
-				BaseHash:       oldBranch.BaseHash,
-				ChangeForge:    changeForge,
-				ChangeMetadata: changeMetadata,
-				UpstreamBranch: oldBranch.UpstreamBranch,
-			},
-		},
-	}
-	for _, above := range aboves {
-		update.Upserts = append(update.Upserts, state.UpsertRequest{
-			Name: above,
-			Base: newName,
-		})
+	tx := s.store.BeginBranchTx()
+
+	// Create the new branch with the same base
+	// and other state as the old branch.
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:           newName,
+		Base:           oldBranch.Base,
+		BaseHash:       oldBranch.BaseHash,
+		ChangeForge:    changeForge,
+		ChangeMetadata: changeMetadata,
+		UpstreamBranch: oldBranch.UpstreamBranch,
+	}); err != nil {
+		return fmt.Errorf("create branch with name %v: %w", newName, err)
 	}
 
-	if err := s.store.UpdateBranch(ctx, &update); err != nil {
+	// Point the branches above the old branch to the new branch.
+	for _, above := range aboves {
+		if err := tx.Upsert(ctx, state.UpsertRequest{
+			Name: above,
+			Base: newName,
+		}); err != nil {
+			return fmt.Errorf("update branch %v to point to %v: %w", above, newName, err)
+		}
+	}
+
+	// Delete the old branch.
+	if err := tx.Delete(ctx, oldName); err != nil {
+		return fmt.Errorf("delete branch %v: %w", oldName, err)
+	}
+
+	// If we get here, the change will be committed successfully.
+	// We can perform the Git rename and commit.
+	if err := s.repo.RenameBranch(ctx, git.RenameBranchRequest{
+		OldName: oldName,
+		NewName: newName,
+	}); err != nil {
+		return fmt.Errorf("rename branch: %w", err)
+	}
+
+	if err := tx.Commit(ctx, fmt.Sprintf("rename %q to %q", oldName, newName)); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
 
@@ -374,42 +387,56 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		return items, nil
 	}
 
-	update := state.UpdateRequest{
-		Message: "clean up deleted branches",
-	}
+	// Some of the branches we've loaded have been deleted out of band.
+	// We'll delete these from the data store.
+	tx := s.store.BeginBranchTx()
 
-	update.Deletes = make([]string, 0, len(deletedBranches))
-	for name := range deletedBranches {
-		update.Deletes = append(update.Deletes, name)
-	}
-	sort.Strings(update.Deletes)
-
-	// Update bases of upstream branches of deleted branches.
+	// But first, we need to point the branches above deletes branches
+	// to the bases of the deleted branches, or the bases of the bases,
+	// and so on until we find a base that is not deleted.
 	//
-	// If a branch's base was deleted, use the base's base,
-	// or the base's base's base, and so on,
-	// until we find a base that is not deleted, or we reach trunk.
+	// This will also update the LoadBranchItem instances
+	// to reflect these changes so we're not re-reading the state.
 	for i, item := range items {
-		var changed bool
-		delErr, deleted := deletedBranches[item.Base]
+		origBase := item.Base
+		base, baseHash := item.Base, item.BaseHash
+
+		delErr, deleted := deletedBranches[base]
 		for deleted {
-			item.Base = delErr.Base
-			item.BaseHash = delErr.BaseHash
-			delErr, deleted = deletedBranches[item.Base]
-			changed = true
+			base, baseHash = delErr.Base, delErr.BaseHash
+			delErr, deleted = deletedBranches[base]
 		}
 
-		if changed {
-			items[i] = item
-			update.Upserts = append(update.Upserts, state.UpsertRequest{
+		if base != origBase {
+			if err := tx.Upsert(ctx, state.UpsertRequest{
 				Name:     item.Name,
 				Base:     item.Base,
 				BaseHash: item.BaseHash,
-			})
+			}); err != nil {
+				s.log.Warn("Could not update base of branch upstack from deleted branch",
+					"branch", item.Name,
+					"newBase", item.Base,
+					"error", err,
+				)
+				continue
+			}
+
+			item.Base = base
+			item.BaseHash = baseHash
+			items[i] = item
 		}
 	}
 
-	if err := s.store.UpdateBranch(ctx, &update); err != nil {
+	// At this point, the deleted branches should not have any branches above them,
+	// except those that we failed to update above.
+	// Delete what we can, log the rest.
+	for name := range deletedBranches {
+		if err := tx.Delete(ctx, name); err != nil {
+			s.log.Warn("Unable to delete branch", "branch", name, "err", err)
+		}
+	}
+
+	if err := tx.Commit(ctx, "clean up deleted branches"); err != nil {
 		s.log.Warn("Error cleaning up after deleted branched", "err", err)
 	}
 
@@ -511,14 +538,9 @@ func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
 // or because all branches are downstack from trunk have been deleted,
 // the returned slice will be nil.
 func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, error) {
-	var update state.UpdateRequest
+	tx := s.store.BeginBranchTx()
 	defer func() {
-		if len(update.Upserts) == 0 {
-			return
-		}
-
-		update.Message = "clean up deleted branches"
-		if err := s.store.UpdateBranch(ctx, &update); err != nil {
+		if err := tx.Commit(ctx, "clean up deleted branches"); err != nil {
 			s.log.Warn("Error cleaning up after deleted branched", "err", err)
 		}
 	}()
@@ -536,6 +558,7 @@ func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, er
 		b, err := s.LookupBranch(ctx, current)
 		if err != nil {
 			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
+				s.log.Infof("%v", delErr)
 				// If branch was deleted out of band,
 				// pretend it doesn't exist,
 				// and update state to point the upstack branch
@@ -544,11 +567,16 @@ func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, er
 				// Leave the branch state as-is in case
 				// there are other upstacks that need to be updated.
 				current = delErr.Base
-				update.Upserts = append(update.Upserts, state.UpsertRequest{
+				if err := tx.Upsert(ctx, state.UpsertRequest{
 					Name: previous,
 					Base: current,
-				})
-				s.log.Infof("%v", delErr)
+				}); err != nil {
+					s.log.Warn("Could not update upstack of deleted branch",
+						"branch", previous,
+						"newBase", current,
+						"error", err,
+					)
+				}
 				continue
 			}
 			return nil, fmt.Errorf("lookup %v: %w", current, err)

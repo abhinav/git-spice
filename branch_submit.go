@@ -227,17 +227,17 @@ func (cmd *branchSubmitCmd) run(
 				return fmt.Errorf("marshal change metadata: %w", err)
 			}
 
-			err = store.UpdateBranch(ctx, &state.UpdateRequest{
-				Upserts: []state.UpsertRequest{
-					{
-						Name:           cmd.Branch,
-						ChangeForge:    md.ForgeID(),
-						ChangeMetadata: changeMeta,
-					},
-				},
-				Message: fmt.Sprintf("%v: associate existing CR", cmd.Branch),
-			})
-			if err != nil {
+			tx := store.BeginBranchTx()
+			msg := fmt.Sprintf("%v: associate existing CR", cmd.Branch)
+			if err := tx.Upsert(ctx, state.UpsertRequest{
+				Name:           cmd.Branch,
+				ChangeForge:    md.ForgeID(),
+				ChangeMetadata: changeMeta,
+			}); err != nil {
+				return fmt.Errorf("%s: %w", msg, err)
+			}
+
+			if err := tx.Commit(ctx, msg); err != nil {
 				return fmt.Errorf("update state: %w", err)
 			}
 
@@ -350,12 +350,17 @@ func (cmd *branchSubmitCmd) run(
 			UpstreamBranch: upstreamBranch,
 		}
 		defer func() {
-			err := store.UpdateBranch(ctx, &state.UpdateRequest{
-				Upserts: []state.UpsertRequest{upsert},
-				Message: fmt.Sprintf("branch submit %s", cmd.Branch),
-			})
+			msg := fmt.Sprintf("branch submit %s", cmd.Branch)
+			tx := store.BeginBranchTx()
+			err := errors.Join(
+				tx.Upsert(ctx, upsert),
+				tx.Commit(ctx, msg),
+			)
 			if err != nil {
-				log.Warn("Could not update state", "error", err)
+				log.Warn("Could not update branch state",
+					"branch", cmd.Branch,
+					"error", err)
+				return
 			}
 		}()
 
