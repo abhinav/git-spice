@@ -107,12 +107,12 @@ quux
 qux
 ### after-ba ###
 Select a branch to checkout:
-baz ◀
-bar
-### select ###
-Select a branch to checkout:
 baz
 bar ◀
+### select ###
+Select a branch to checkout:
+baz ◀
+bar
 ### track ###
 Select a branch to checkout: baz
 WRN baz: branch not tracked
