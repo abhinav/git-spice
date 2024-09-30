@@ -326,7 +326,7 @@ func (b *BranchTreeSelect) updateSelectable() {
 		b.focused = max(slices.Index(b.selectable, selected), 0)
 		return
 	}
-	// rerank
+	// rank the selectable branches
 	branches := make([]string, len(b.selectable))
 	for i, idx := range b.selectable {
 		branches[i] = b.all[idx].Branch
