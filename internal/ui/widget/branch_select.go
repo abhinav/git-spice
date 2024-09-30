@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/sahilm/fuzzy"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/fliptree"
 )
@@ -302,8 +303,9 @@ func (b *BranchTreeSelect) updateSelectable() {
 			visit(above)
 		}
 
-		b.all[idx].Visible = b.matchesFilter(b.all[idx])
-		if b.all[idx].Visible && !b.all[idx].Disabled {
+		visible := b.matchesFilter(b.all[idx])
+		b.all[idx].Visible = visible
+		if visible && !b.all[idx].Disabled {
 			b.selectable = append(b.selectable, idx)
 		}
 	}
@@ -319,27 +321,35 @@ func (b *BranchTreeSelect) updateSelectable() {
 		return
 	}
 
-	b.focused = max(slices.Index(b.selectable, selected), 0)
+	if len(b.filter) == 0 {
+		// choose the default selected if no filter
+		b.focused = max(slices.Index(b.selectable, selected), 0)
+		return
+	}
+	// rerank
+	branches := make([]string, len(b.selectable))
+	for i, idx := range b.selectable {
+		branches[i] = b.all[idx].Branch
+	}
+	matches := fuzzy.Find(string(b.filter), branches)
+	bestSelectable := selected
+	if len(matches) > 0 {
+		bestSelectable = b.selectable[matches[0].Index]
+	}
+	b.focused = max(slices.Index(b.selectable, bestSelectable), 0)
 }
 
 func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
 	bi.Highlights = bi.Highlights[:0]
-	// Check if the filter matches the branch name.
-	// We use a simple case-insensitive substring match.
-	filter := b.filter // []rune
-	name := []rune(strings.ToLower(bi.Branch))
-	for i, r := range name {
-		if len(filter) == 0 {
-			return true
-		}
-
-		if r == filter[0] {
-			filter = filter[1:]
-			bi.Highlights = append(bi.Highlights, i)
-		}
+	if len(b.filter) == 0 {
+		return true
 	}
-
-	return len(filter) == 0
+	matches := fuzzy.Find(string(b.filter), []string{bi.Branch})
+	if len(matches) == 0 {
+		return false
+	}
+	bi.Highlights = matches[0].MatchedIndexes
+	return true
 }
 
 // Render renders the widget.
