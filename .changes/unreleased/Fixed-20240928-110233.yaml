@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'github: Recognize remote URLs in the form `ssh://git@ssh.github.com:443/org/repo`.'
-time: 2024-09-28T11:02:33.331213-07:00
