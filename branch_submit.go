@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -406,7 +407,7 @@ func (cmd *branchSubmitCmd) run(
 			updates = append(updates, "set base to "+branch.Base)
 		}
 		if cmd.Draft != nil && pull.Draft != *cmd.Draft {
-			updates = append(updates, "set draft to "+fmt.Sprint(cmd.Draft))
+			updates = append(updates, "set draft to "+strconv.FormatBool(*cmd.Draft))
 		}
 
 		if len(updates) == 0 {

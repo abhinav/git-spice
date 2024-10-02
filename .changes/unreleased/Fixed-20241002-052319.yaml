@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: Fix bad log statement in --dry-run mode.'
+time: 2024-10-02T05:23:19.718591-07:00
