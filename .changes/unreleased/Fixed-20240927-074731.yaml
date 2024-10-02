@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch create: Don''t commit staged changes if git-spice is unable to save the branch to its internal storage.'
-time: 2024-09-27T07:47:31.749911-07:00
