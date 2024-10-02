@@ -82,3 +82,48 @@ jobs:
         AUR_KEY: ${{ secrets.AUR_KEY }}
         HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
         GORELEASER_CURRENT_TAG: v${{ env.VERSION }}
+
+  # Run only if the release was successful.
+  homebrew:
+    name: Bump Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Query changie
+      if: inputs.version == ''
+      id: changie-latest
+      uses: miniscruff/changie-action@v2
+      with:
+        args: latest
+    - name: Set version (changie)
+      if: inputs.version == ''
+      run:
+        echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
+      env:
+        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.output }}
+
+    - name: Set version (input)
+      if: inputs.version != ''
+      run:
+        echo "VERSION=${INPUT_VERSION#v}" >> "$GITHUB_ENV"
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
+
+    - name: Verify version
+      run: |
+        if [[ -z "$VERSION" ]]; then
+          echo "No version set"
+          exit 1
+        fi
+
+    - name: Update Homebrew Formula
+      uses: dawidd6/action-homebrew-bump-formula@v3.11.0
+      with:
+        token: ${{ secrets.PAT }}
+        user_name: Abhinav Gupta
+        user_email: "41730+abhinav@users.noreply.github.com"
+        formula: git-spice
+        tag: v${{ env.VERSION }}
