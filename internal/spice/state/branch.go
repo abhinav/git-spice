@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -184,6 +185,9 @@ func (s *Store) BeginBranchTx() *BranchTx {
 	}
 }
 
+// Null is a JSON null value.
+var Null = json.RawMessage("null")
+
 // UpsertRequest is a request to add or update information about a branch.
 type UpsertRequest struct {
 	// Name is the name of the branch.
@@ -203,17 +207,19 @@ type UpsertRequest struct {
 	// ChangeMetadata is arbitrary, forge-specific metadata
 	// recorded with the branch.
 	//
+	// Use Null to clear the current metadata.
+	//
 	// Leave this unset to keep the current metadata.
 	ChangeMetadata json.RawMessage
 
 	// ChangeForge is the forge that recorded the change.
 	//
-	// If ChangeMetadata is set, this must also be set.
+	// If ChangeMetadata is set and not Null, this must be set.
 	ChangeForge string
 
 	// UpstreamBranch is the name of the upstream branch to track.
-	// Leave empty to stop tracking an upstream branch.
-	UpstreamBranch string
+	// Leave nil to leave it unchanged, or set to an empty string to clear it.
+	UpstreamBranch *string
 }
 
 // Upsert adds or updates information about a branch.
@@ -271,16 +277,24 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 	}
 
 	if len(req.ChangeMetadata) > 0 {
-		must.NotBeBlankf(req.ChangeForge, "change forge is required when change metadata is set")
-		state.Change = &branchChangeState{
-			Forge:  req.ChangeForge,
-			Change: req.ChangeMetadata,
+		if bytes.Equal(req.ChangeMetadata, Null) {
+			state.Change = nil
+		} else {
+			must.NotBeBlankf(req.ChangeForge, "change forge is required when change metadata is set")
+			state.Change = &branchChangeState{
+				Forge:  req.ChangeForge,
+				Change: req.ChangeMetadata,
+			}
 		}
 	}
 
-	if req.UpstreamBranch != "" {
-		state.Upstream = &branchUpstreamState{
-			Branch: req.UpstreamBranch,
+	if req.UpstreamBranch != nil {
+		if *req.UpstreamBranch == "" {
+			state.Upstream = nil
+		} else {
+			state.Upstream = &branchUpstreamState{
+				Branch: *req.UpstreamBranch,
+			}
 		}
 	}
 

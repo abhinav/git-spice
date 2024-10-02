@@ -264,6 +264,18 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 		assert.Equal(t, "origin/feature1", upstream)
 	})
 
+	t.Run("unset upstream", func(t *testing.T) {
+		require.NoError(t,
+			repo.SetBranchUpstream(ctx, "feature1", ""))
+
+		_, err := repo.BranchUpstream(ctx, "feature1")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, git.ErrNotExist)
+	})
+
+	require.NoError(t,
+		repo.SetBranchUpstream(ctx, "feature1", "origin/feature1"))
+
 	t.Run("delete upstream", func(t *testing.T) {
 		require.NoError(t,
 			repo.DeleteBranch(ctx, "origin/feature1", git.BranchDeleteOptions{

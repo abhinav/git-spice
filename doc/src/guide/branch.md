@@ -402,6 +402,15 @@ it will prompt you for a name for each new branch.
     to safely and easily manipulate the commits in the branch
     before splitting it into multiple branches.
 
+<!-- gs:version unreleased -->
+If you split a branch after submitting it for review,
+git-spice will prompt you to assign the submitted CR
+to one of the branches.
+
+```freeze language="ansi"
+--8<-- "captures/branch-split-reassociate.txt"
+```
+
 ### Splitting non-interactively
 
 ```freeze language="terminal" float="right"
@@ -423,6 +432,10 @@ The option takes the form:
 
 Where `COMMIT` is a reference to a commit in the branch's history,
 and `NAME` is the name of the new branch.
+
+If running in non-interactive mode
+and the branch has already been submitted for review,
+it will be left assigned to the original branch.
 
 ## Moving branches around
 

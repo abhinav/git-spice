@@ -1,0 +1,8 @@
+[1;92mAssign CR #123 to branch[0m: 
+
+  aardvark
+  pangolin
+▶ [93mpenguin[0m
+
+[2;90mBranch being split has an open CR assigned to it.[0m
+[2;90mSelect which branch should take over the CR.[0m
