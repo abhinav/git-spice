@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/stub"
+	"go.abhg.dev/testing/stub"
 )
 
 func TestVersionFlag(t *testing.T) {
