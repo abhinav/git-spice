@@ -1,0 +1,37 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 152
+        transfer_encoding: []
+        trailer: {}
+        host: api.github.com
+        remote_addr: ""
+        request_uri: ""
+        body: |
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"abhinav","repo":"does-not-exist-repo"}}
+        form: {}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":null},"errors":[{"type":"NOT_FOUND","path":["repository"],"locations":[{"line":1,"column":36}],"message":"Could not resolve to a Repository with the name ''abhinav/does-not-exist-repo''."}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 281.154625ms

@@ -115,7 +115,7 @@ func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.To
 	}
 
 	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return githubv4.NewEnterpriseClient(graphQLAPIURL, httpClient), nil
+	return newGitHubEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
 func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {
