@@ -22,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/graphqlutil"
 	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
 	"golang.org/x/oauth2"
@@ -126,10 +127,17 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	return rec
 }
 
+func newGitHubClient(
+	httpClient *http.Client,
+) *githubv4.Client {
+	httpClient.Transport = graphqlutil.WrapTransport(httpClient.Transport)
+	return githubv4.NewClient(httpClient)
+}
+
 func TestIntegration_Repository(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, nil)
 	require.NoError(t, err)
 }
@@ -137,7 +145,7 @@ func TestIntegration_Repository(t *testing.T) {
 func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
@@ -169,7 +177,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
@@ -202,7 +210,7 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
@@ -222,7 +230,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 
 	t.Run("absent", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
-		ghc := githubv4.NewClient(rec.GetDefaultClient())
+		ghc := newGitHubClient(rec.GetDefaultClient())
 		repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 		require.NoError(t, err)
 
@@ -233,7 +241,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 
 	t.Run("present", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
-		ghc := githubv4.NewClient(rec.GetDefaultClient())
+		ghc := newGitHubClient(rec.GetDefaultClient())
 		repo, err := github.NewRepository(ctx, new(github.Forge), "golang", "go", logtest.New(t), ghc, nil)
 		require.NoError(t, err)
 
@@ -251,7 +259,7 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	ctx := context.Background()
 
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
@@ -342,7 +350,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	}
 
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
 		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
@@ -426,7 +434,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 func TestIntegration_Repository_comments(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
 		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
@@ -465,7 +473,7 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
 		ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID,
 	)
@@ -509,7 +517,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := githubv4.NewClient(rec.GetDefaultClient())
+	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
 		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
@@ -550,6 +558,24 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 
 	assert.Len(t, gotBodies, TotalComments)
 	assert.ElementsMatch(t, comments, gotBodies)
+}
+
+func TestIntegration_Repository_notFoundError(t *testing.T) {
+	ctx := context.Background()
+	rec := newRecorder(t, t.Name())
+	client := rec.GetDefaultClient()
+	client.Transport = graphqlutil.WrapTransport(client.Transport)
+	ghc := newGitHubClient(client)
+	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "does-not-exist-repo", logtest.New(t), ghc, nil)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, graphqlutil.ErrNotFound)
+
+	var gqlError *graphqlutil.Error
+	if assert.ErrorAs(t, err, &gqlError) {
+		assert.Equal(t, "NOT_FOUND", gqlError.Type)
+		assert.Equal(t, []any{"repository"}, gqlError.Path)
+		assert.Contains(t, gqlError.Message, "abhinav/does-not-exist-repo")
+	}
 }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
