@@ -18,6 +18,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/vito/midterm v0.2.0
 	github.com/zalando/go-keyring v0.2.5
+	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/requiredfield v0.3.0
 	go.uber.org/mock v0.4.0
 	golang.org/x/oauth2 v0.23.0

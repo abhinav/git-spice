@@ -17,10 +17,10 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/komplete"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/komplete"
 )
 
 // Version of git-spice.
