@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20240917123315-7608512fb00d
+require github.com/charmbracelet/freeze v0.1.7-0.20241007112143-5b941dfc27db
 
 require (
 	github.com/adrg/xdg v0.5.0 // indirect
@@ -42,6 +42,6 @@ require (
 	github.com/tetratelabs/wazero v1.8.0 // indirect
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 )
