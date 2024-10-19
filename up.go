@@ -11,9 +11,9 @@ import (
 )
 
 type upCmd struct {
-	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
+	checkoutOptions
 
-	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
 }
 
 func (*upCmd) Help() string {
@@ -84,10 +84,8 @@ outer:
 		current = branch
 	}
 
-	if cmd.DryRun {
-		fmt.Println(branch)
-		return nil
-	}
-
-	return (&branchCheckoutCmd{Branch: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{
+		checkoutOptions: cmd.checkoutOptions,
+		Branch:          branch,
+	}).Run(ctx, log, opts)
 }

@@ -9,9 +9,9 @@ import (
 )
 
 type downCmd struct {
-	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
+	checkoutOptions
 
-	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
 }
 
 func (*downCmd) Help() string {
@@ -66,10 +66,8 @@ outer:
 		current = below
 	}
 
-	if cmd.DryRun {
-		fmt.Println(below)
-		return nil
-	}
-
-	return (&branchCheckoutCmd{Branch: below}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{
+		checkoutOptions: cmd.checkoutOptions,
+		Branch:          below,
+	}).Run(ctx, log, opts)
 }

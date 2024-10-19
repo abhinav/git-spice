@@ -10,7 +10,7 @@ import (
 )
 
 type bottomCmd struct {
-	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+	checkoutOptions
 }
 
 func (*bottomCmd) Help() string {
@@ -41,10 +41,8 @@ func (cmd *bottomCmd) Run(ctx context.Context, log *log.Logger, opts *globalOpti
 		return fmt.Errorf("find bottom: %w", err)
 	}
 
-	if cmd.DryRun {
-		fmt.Println(bottom)
-		return nil
-	}
-
-	return (&branchCheckoutCmd{Branch: bottom}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{
+		checkoutOptions: cmd.checkoutOptions,
+		Branch:          bottom,
+	}).Run(ctx, log, opts)
 }
