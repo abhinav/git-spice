@@ -142,6 +142,25 @@ func (b *BranchTreeSelect) WithValue(value *string) *BranchTreeSelect {
 	return b
 }
 
+// UnmarshalValue unmarshals the value of the field
+// using the given unmarshal function.
+func (b *BranchTreeSelect) UnmarshalValue(unmarshal func(interface{}) error) error {
+	var got string
+	if err := unmarshal(&got); err != nil {
+		return err
+	}
+
+	for _, bi := range b.all {
+		if bi.Branch == got && !bi.Disabled {
+			*b.value = got
+			b.accepted = true
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unknown branch: %s", got)
+}
+
 // Init initializes the widget.
 func (b *BranchTreeSelect) Init() tea.Cmd {
 	rootSet := make(map[int]struct{})

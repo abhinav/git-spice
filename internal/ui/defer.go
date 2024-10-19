@@ -1,6 +1,10 @@
 package ui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"errors"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 // Deferred is a field that is not constructed
 // until initialization time.
@@ -35,6 +39,14 @@ func (d *Deferred) Title() string {
 		return ""
 	}
 	return d.f.Title()
+}
+
+// UnmarshalValue unmarshals the value of the deferred field.
+func (d *Deferred) UnmarshalValue(unmarshal func(any) error) error {
+	if d.f == nil {
+		return errors.New("value provided for uninitialized deferred field")
+	}
+	return d.f.UnmarshalValue(unmarshal)
 }
 
 // Description returns the description of the deferred field.

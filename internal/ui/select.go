@@ -111,6 +111,24 @@ func (s *Select[T]) Value() T {
 	return *s.value
 }
 
+// UnmarshalValue unmarshals the value of the select field
+// using the provided unmarshal function.
+func (s *Select[T]) UnmarshalValue(unmarshal func(any) error) error {
+	var selectLabel string
+	if err := unmarshal(&selectLabel); err != nil {
+		return err
+	}
+
+	for _, opt := range s.options {
+		if opt.Label == selectLabel {
+			*s.value = opt.Value
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no option with label: %v", selectLabel)
+}
+
 // With runs the given function with the select field.
 func (s *Select[T]) With(f func(*Select[T])) *Select[T] {
 	f(s)

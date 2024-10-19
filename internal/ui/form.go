@@ -75,9 +75,21 @@ type Field interface {
 	// Init initializes the field.
 	// This is called right before the field is first rendered,
 	// not when the form is initialized.
+	//
+	// If this returns [SkipField], the field will be skipped.
 	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
 	Render(Writer)
+
+	// UnmarshalValue unmarshals the field's value
+	// using the given unmarshal function.
+	//
+	// The unmarhal function should be called with a pointer to a value
+	// and it will attempt to decode the underlying raw value into it,
+	// behaving similarly to encoding/json.Unmarshal.
+	//
+	// This function is used in tests to simulate user input.
+	UnmarshalValue(unmarshal func(any) error) error
 
 	// Err reports any errors for the field at render time.
 	// These will be rendered in red below the field.

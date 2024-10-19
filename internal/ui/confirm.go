@@ -81,6 +81,11 @@ func (c *Confirm) Value() bool {
 	return *c.value
 }
 
+// UnmarshalValue reads a boolean value from the given unmarshal function.
+func (c *Confirm) UnmarshalValue(unmarshal func(any) error) error {
+	return unmarshal(c.value)
+}
+
 // WithTitle sets the title for the confirm field.
 func (c *Confirm) WithTitle(title string) *Confirm {
 	c.title = title

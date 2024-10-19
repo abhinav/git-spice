@@ -118,6 +118,46 @@ func (a *OpenEditor) WithValue(value *string) *OpenEditor {
 	return a
 }
 
+// UnmarshalValue reads the value for the field from simulated input.
+// It accepts one of the following types:
+//
+//	string
+//	  conents of the string will be used as-is
+//
+//	{
+//	    // If set, the initial value is expected to be this value.
+//	    want: string?,
+//
+//	    // If set, the value will be set to this value.
+//	    // Otherwise it'll be left unchanged.
+//	    give: string?,
+//	}
+func (a *OpenEditor) UnmarshalValue(unmarshal func(any) error) error {
+	var give string
+	if err := unmarshal(&give); err == nil {
+		*a.value = give
+		return nil
+	}
+
+	var value struct {
+		Want *string `json:"want"`
+		Give *string `json:"give"`
+	}
+	if err := unmarshal(&value); err != nil {
+		return err
+	}
+
+	if value.Want != nil && *value.Want != *a.value {
+		return fmt.Errorf("expected value %q, got %q", *value.Want, *a.value)
+	}
+
+	if value.Give != nil {
+		*a.value = *value.Give
+	}
+
+	return nil
+}
+
 // WithTitle sets the title for the field.
 func (a *OpenEditor) WithTitle(title string) *OpenEditor {
 	a.title = title
