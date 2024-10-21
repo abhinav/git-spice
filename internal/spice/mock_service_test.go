@@ -22,6 +22,7 @@ import (
 type MockGitRepository struct {
 	ctrl     *gomock.Controller
 	recorder *MockGitRepositoryMockRecorder
+	isgomock struct{}
 }
 
 // MockGitRepositoryMockRecorder is the mock recorder for MockGitRepository.
@@ -42,18 +43,18 @@ func (m *MockGitRepository) EXPECT() *MockGitRepositoryMockRecorder {
 }
 
 // CurrentBranch mocks base method.
-func (m *MockGitRepository) CurrentBranch(arg0 context.Context) (string, error) {
+func (m *MockGitRepository) CurrentBranch(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CurrentBranch", arg0)
+	ret := m.ctrl.Call(m, "CurrentBranch", ctx)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CurrentBranch indicates an expected call of CurrentBranch.
-func (mr *MockGitRepositoryMockRecorder) CurrentBranch(arg0 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) CurrentBranch(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitRepository)(nil).CurrentBranch), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitRepository)(nil).CurrentBranch), ctx)
 }
 
 // DeleteBranch mocks base method.
@@ -71,18 +72,18 @@ func (mr *MockGitRepositoryMockRecorder) DeleteBranch(arg0, arg1, arg2 any) *gom
 }
 
 // ForkPoint mocks base method.
-func (m *MockGitRepository) ForkPoint(arg0 context.Context, arg1, arg2 string) (git.Hash, error) {
+func (m *MockGitRepository) ForkPoint(ctx context.Context, a, b string) (git.Hash, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForkPoint", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ForkPoint", ctx, a, b)
 	ret0, _ := ret[0].(git.Hash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ForkPoint indicates an expected call of ForkPoint.
-func (mr *MockGitRepositoryMockRecorder) ForkPoint(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) ForkPoint(ctx, a, b any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkPoint", reflect.TypeOf((*MockGitRepository)(nil).ForkPoint), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkPoint", reflect.TypeOf((*MockGitRepository)(nil).ForkPoint), ctx, a, b)
 }
 
 // HashAt mocks base method.
@@ -101,77 +102,77 @@ func (mr *MockGitRepositoryMockRecorder) HashAt(arg0, arg1, arg2 any) *gomock.Ca
 }
 
 // IsAncestor mocks base method.
-func (m *MockGitRepository) IsAncestor(arg0 context.Context, arg1, arg2 git.Hash) bool {
+func (m *MockGitRepository) IsAncestor(ctx context.Context, a, b git.Hash) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAncestor", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IsAncestor", ctx, a, b)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsAncestor indicates an expected call of IsAncestor.
-func (mr *MockGitRepositoryMockRecorder) IsAncestor(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) IsAncestor(ctx, a, b any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAncestor", reflect.TypeOf((*MockGitRepository)(nil).IsAncestor), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAncestor", reflect.TypeOf((*MockGitRepository)(nil).IsAncestor), ctx, a, b)
 }
 
 // ListRemotes mocks base method.
-func (m *MockGitRepository) ListRemotes(arg0 context.Context) ([]string, error) {
+func (m *MockGitRepository) ListRemotes(ctx context.Context) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRemotes", arg0)
+	ret := m.ctrl.Call(m, "ListRemotes", ctx)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListRemotes indicates an expected call of ListRemotes.
-func (mr *MockGitRepositoryMockRecorder) ListRemotes(arg0 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) ListRemotes(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRemotes", reflect.TypeOf((*MockGitRepository)(nil).ListRemotes), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRemotes", reflect.TypeOf((*MockGitRepository)(nil).ListRemotes), ctx)
 }
 
 // LocalBranches mocks base method.
-func (m *MockGitRepository) LocalBranches(arg0 context.Context) ([]git.LocalBranch, error) {
+func (m *MockGitRepository) LocalBranches(ctx context.Context) ([]git.LocalBranch, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LocalBranches", arg0)
+	ret := m.ctrl.Call(m, "LocalBranches", ctx)
 	ret0, _ := ret[0].([]git.LocalBranch)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LocalBranches indicates an expected call of LocalBranches.
-func (mr *MockGitRepositoryMockRecorder) LocalBranches(arg0 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) LocalBranches(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalBranches", reflect.TypeOf((*MockGitRepository)(nil).LocalBranches), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalBranches", reflect.TypeOf((*MockGitRepository)(nil).LocalBranches), ctx)
 }
 
 // MergeBase mocks base method.
-func (m *MockGitRepository) MergeBase(arg0 context.Context, arg1, arg2 string) (git.Hash, error) {
+func (m *MockGitRepository) MergeBase(ctx context.Context, a, b string) (git.Hash, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeBase", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "MergeBase", ctx, a, b)
 	ret0, _ := ret[0].(git.Hash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MergeBase indicates an expected call of MergeBase.
-func (mr *MockGitRepositoryMockRecorder) MergeBase(arg0, arg1, arg2 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) MergeBase(ctx, a, b any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeBase", reflect.TypeOf((*MockGitRepository)(nil).MergeBase), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeBase", reflect.TypeOf((*MockGitRepository)(nil).MergeBase), ctx, a, b)
 }
 
 // PeelToCommit mocks base method.
-func (m *MockGitRepository) PeelToCommit(arg0 context.Context, arg1 string) (git.Hash, error) {
+func (m *MockGitRepository) PeelToCommit(ctx context.Context, ref string) (git.Hash, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PeelToCommit", arg0, arg1)
+	ret := m.ctrl.Call(m, "PeelToCommit", ctx, ref)
 	ret0, _ := ret[0].(git.Hash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PeelToCommit indicates an expected call of PeelToCommit.
-func (mr *MockGitRepositoryMockRecorder) PeelToCommit(arg0, arg1 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) PeelToCommit(ctx, ref any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeelToCommit", reflect.TypeOf((*MockGitRepository)(nil).PeelToCommit), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PeelToCommit", reflect.TypeOf((*MockGitRepository)(nil).PeelToCommit), ctx, ref)
 }
 
 // Rebase mocks base method.
@@ -189,33 +190,33 @@ func (mr *MockGitRepositoryMockRecorder) Rebase(arg0, arg1 any) *gomock.Call {
 }
 
 // RemoteDefaultBranch mocks base method.
-func (m *MockGitRepository) RemoteDefaultBranch(arg0 context.Context, arg1 string) (string, error) {
+func (m *MockGitRepository) RemoteDefaultBranch(ctx context.Context, remote string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoteDefaultBranch", arg0, arg1)
+	ret := m.ctrl.Call(m, "RemoteDefaultBranch", ctx, remote)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RemoteDefaultBranch indicates an expected call of RemoteDefaultBranch.
-func (mr *MockGitRepositoryMockRecorder) RemoteDefaultBranch(arg0, arg1 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) RemoteDefaultBranch(ctx, remote any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteDefaultBranch", reflect.TypeOf((*MockGitRepository)(nil).RemoteDefaultBranch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteDefaultBranch", reflect.TypeOf((*MockGitRepository)(nil).RemoteDefaultBranch), ctx, remote)
 }
 
 // RemoteURL mocks base method.
-func (m *MockGitRepository) RemoteURL(arg0 context.Context, arg1 string) (string, error) {
+func (m *MockGitRepository) RemoteURL(ctx context.Context, remote string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoteURL", arg0, arg1)
+	ret := m.ctrl.Call(m, "RemoteURL", ctx, remote)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RemoteURL indicates an expected call of RemoteURL.
-func (mr *MockGitRepositoryMockRecorder) RemoteURL(arg0, arg1 any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) RemoteURL(ctx, remote any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteURL", reflect.TypeOf((*MockGitRepository)(nil).RemoteURL), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteURL", reflect.TypeOf((*MockGitRepository)(nil).RemoteURL), ctx, remote)
 }
 
 // RenameBranch mocks base method.
@@ -236,6 +237,7 @@ func (mr *MockGitRepositoryMockRecorder) RenameBranch(arg0, arg1 any) *gomock.Ca
 type MockStore struct {
 	ctrl     *gomock.Controller
 	recorder *MockStoreMockRecorder
+	isgomock struct{}
 }
 
 // MockStoreMockRecorder is the mock recorder for MockStore.
@@ -303,18 +305,18 @@ func (mr *MockStoreMockRecorder) CacheTemplates(arg0, arg1, arg2 any) *gomock.Ca
 }
 
 // ListBranches mocks base method.
-func (m *MockStore) ListBranches(arg0 context.Context) ([]string, error) {
+func (m *MockStore) ListBranches(ctx context.Context) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListBranches", arg0)
+	ret := m.ctrl.Call(m, "ListBranches", ctx)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListBranches indicates an expected call of ListBranches.
-func (mr *MockStoreMockRecorder) ListBranches(arg0 any) *gomock.Call {
+func (mr *MockStoreMockRecorder) ListBranches(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBranches", reflect.TypeOf((*MockStore)(nil).ListBranches), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBranches", reflect.TypeOf((*MockStore)(nil).ListBranches), ctx)
 }
 
 // LoadCachedTemplates mocks base method.
@@ -333,18 +335,18 @@ func (mr *MockStoreMockRecorder) LoadCachedTemplates(arg0, arg1 any) *gomock.Cal
 }
 
 // LookupBranch mocks base method.
-func (m *MockStore) LookupBranch(arg0 context.Context, arg1 string) (*state.LookupResponse, error) {
+func (m *MockStore) LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LookupBranch", arg0, arg1)
+	ret := m.ctrl.Call(m, "LookupBranch", ctx, name)
 	ret0, _ := ret[0].(*state.LookupResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LookupBranch indicates an expected call of LookupBranch.
-func (mr *MockStoreMockRecorder) LookupBranch(arg0, arg1 any) *gomock.Call {
+func (mr *MockStoreMockRecorder) LookupBranch(ctx, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockStore)(nil).LookupBranch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockStore)(nil).LookupBranch), ctx, name)
 }
 
 // Remote mocks base method.
