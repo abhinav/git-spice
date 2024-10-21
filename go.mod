@@ -22,7 +22,7 @@ require (
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/requiredfield v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
-	go.uber.org/mock v0.4.0
+	go.uber.org/mock v0.5.0
 	golang.org/x/oauth2 v0.23.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.1
 	gopkg.in/yaml.v3 v3.0.1
