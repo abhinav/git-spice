@@ -205,10 +205,15 @@ func (f *Repository) ListChangeComments(
 			}
 
 			for _, node := range q.Node.PullRequest.Comments.Nodes {
+				isNavigationComment := true
 				for _, filter := range filters {
 					if !filter(node) {
-						continue
+						isNavigationComment = false
+						break
 					}
+				}
+				if !isNavigationComment {
+					continue
 				}
 
 				item := &forge.ListChangeCommentItem{
