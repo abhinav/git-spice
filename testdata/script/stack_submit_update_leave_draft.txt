@@ -41,6 +41,11 @@ gs stack submit --dry-run
 cmpenv stderr $WORK/golden/submit-dry-run.txt
 ! stderr 'draft' # draft status should not be changed
 
+# dry-run: verify --dry-run *would* change draft status
+gs stack submit --no-draft --dry-run
+stderr 'WOULD update'
+stderr 'set draft to false'
+
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/start.json
 
