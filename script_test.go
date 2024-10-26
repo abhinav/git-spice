@@ -14,6 +14,8 @@ import (
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/browser"
+	"go.abhg.dev/gs/internal/browser/browsertest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
@@ -30,6 +32,10 @@ func TestMain(m *testing.M) {
 	// so that tests don't accidentally use the system keyring.
 	_secretStash = new(secret.MemoryStash)
 
+	// Always override the browser launcher with a no-op launcher
+	// so tests don't accidentally open a browser.
+	_browserLauncher = new(browser.Noop)
+
 	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"gs": func() int {
 			logger := log.NewWithOptions(os.Stderr, log.Options{
@@ -41,6 +47,11 @@ func TestMain(m *testing.M) {
 			_secretStash, err = secrettest.NewClient(os.Getenv("SECRET_SERVER_URL"))
 			if err != nil {
 				logger.Fatalf("Could not create secret client: %v", err)
+			}
+
+			// If a browser launcher is configured, use it.
+			if browserFile := os.Getenv("BROWSER_RECORDER_FILE"); browserFile != "" {
+				_browserLauncher = browsertest.NewRecorder(browserFile)
 			}
 
 			forge.Register(&shamhub.Forge{Log: logger})

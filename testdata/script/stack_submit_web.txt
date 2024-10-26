@@ -1,0 +1,41 @@
+# 'stack submit' supports the -w flag.
+
+as 'Test <test@example.com>'
+at '2024-10-26T10:38:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+git add feat3.txt
+gs bc -m feat3
+
+gs trunk
+gs stack submit --fill --web
+cmpenv $WORK/browser.txt $WORK/golden/browser.txt
+
+-- repo/feat1.txt --
+This is feature 1
+-- repo/feat2.txt --
+This is feature 2
+-- repo/feat3.txt --
+This is feature 3
+-- golden/browser.txt --
+$SHAMHUB_URL/alice/example/change/1
+$SHAMHUB_URL/alice/example/change/2
+$SHAMHUB_URL/alice/example/change/3

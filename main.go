@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
+	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
@@ -27,10 +28,15 @@ import (
 // Set by goreleaser at build time.
 var _version = "dev"
 
-// _secretStash is the secret stash used by the application.
-//
-// This is overridden in tests to use a memory stash.
-var _secretStash secret.Stash = new(secret.Keyring)
+var (
+	// _secretStash is the secret stash used by the application.
+	//
+	// This is overridden in tests to use a memory stash.
+	_secretStash secret.Stash = new(secret.Keyring)
+
+	// _browserLauncher opens URLs in the user's configured browser.
+	_browserLauncher browser.Launcher = new(browser.Browser)
+)
 
 var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 

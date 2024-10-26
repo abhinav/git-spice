@@ -107,3 +107,15 @@ on a case-by-case basis.
 
 - `true` (default)
 - `false`
+
+### spice.submit.web
+
+<!-- gs:version unreleased -->
+
+Whether submission commands ($$gs branch submit$$ and friends)
+should open a web browser with submitted CRs.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)

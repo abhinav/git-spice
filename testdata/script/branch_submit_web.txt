@@ -1,0 +1,44 @@
+# 'branch submit' supports the -w flag.
+
+as 'Test <test@example.com>'
+at '2024-10-26T10:26:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill --web
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# re-submission should also open the browser
+cp $WORK/extra/feature1-new.txt feature1.txt
+git add feature1.txt
+gs cc -m 'Update feature1'
+gs branch submit --web
+grep -count=2 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# error in opening the browser is logged but doesn't fail
+env BROWSER_RECORDER_FILE=$WORK/non-existent-dir/browser.txt
+gs branch submit --web
+stderr 'Could not open browser'
+stderr $SHAMHUB_URL/alice/example/change/1
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-new.txt --
+New contents of feature1
