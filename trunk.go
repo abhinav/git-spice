@@ -8,9 +8,11 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
-type trunkCmd struct{}
+type trunkCmd struct {
+	checkoutOptions
+}
 
-func (*trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -24,5 +26,8 @@ func (*trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) 
 	}
 
 	trunk := store.Trunk()
-	return (&branchCheckoutCmd{Branch: trunk}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{
+		checkoutOptions: cmd.checkoutOptions,
+		Branch:          trunk,
+	}).Run(ctx, log, opts)
 }

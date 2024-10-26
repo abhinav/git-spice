@@ -1,0 +1,99 @@
+# up, down, top, bottom, and bco support dry run and detach.
+
+as 'Test <test@example.com>'
+at '2024-10-26T09:22:23Z'
+
+# main with initial commit
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc -m feat1
+gs bc -m feat2
+gs bc -m feat3
+gs bc -m feat4
+gs bc -m feat5
+
+gs bottom -n
+stdout '^feat1$'
+
+gs trunk -n
+stdout '^main$'
+
+# nothing above feat5
+! gs up -n
+
+git graph --branches
+cmp stdout $WORK/golden/feat5_graph.txt
+
+gs down --detach
+git branch
+cmp stdout $WORK/golden/feat4_branch.txt
+
+# TODO: maybe we can match detached head to branch in the future.
+! gs up
+stderr 'in detached HEAD state'
+
+gs bco feat1 -n
+stdout '^feat1$'
+gs bco feat1 --detach
+git branch
+cmp stdout $WORK/golden/feat1_branch.txt
+
+gs bco feat2
+gs up -n
+stdout '^feat3$'
+gs down -n
+stdout '^feat1$'
+
+gs top -n
+stdout '^feat5$'
+gs top --detach
+git branch
+cmp stdout $WORK/golden/feat5_branch.txt
+
+gs trunk --detach
+git branch
+cmp stdout $WORK/golden/trunk_branch.txt
+
+-- golden/feat5_graph.txt --
+* 372d1de (HEAD -> feat5) feat5
+* d3ab99d (feat4) feat4
+* 4eac2b9 (feat3) feat3
+* dc8887b (feat2) feat2
+* dcda5c3 (feat1) feat1
+* ff53bfb (main) Initial commit
+-- golden/feat4_branch.txt --
+* (HEAD detached at refs/heads/feat4)
+  feat1
+  feat2
+  feat3
+  feat4
+  feat5
+  main
+-- golden/feat1_branch.txt --
+* (HEAD detached at refs/heads/feat1)
+  feat1
+  feat2
+  feat3
+  feat4
+  feat5
+  main
+-- golden/feat5_branch.txt --
+* (HEAD detached at refs/heads/feat5)
+  feat1
+  feat2
+  feat3
+  feat4
+  feat5
+  main
+-- golden/trunk_branch.txt --
+* (HEAD detached at refs/heads/main)
+  feat1
+  feat2
+  feat3
+  feat4
+  feat5
+  main

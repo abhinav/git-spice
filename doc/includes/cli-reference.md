@@ -466,6 +466,8 @@ Use -u/--untracked to show untracked branches in the prompt.
 
 **Flags**
 
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 * `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
 
 **Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked)
@@ -862,7 +864,8 @@ Use the -n flag to print the branch without checking it out.
 
 **Flags**
 
-* `-n`, `--dry-run`: Print the target branch without checking it out.
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 
 ### gs down
 
@@ -883,7 +886,8 @@ Use the -n flag to print the branch without checking it out.
 
 **Flags**
 
-* `-n`, `--dry-run`: Print the target branch without checking it out.
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 
 ### gs top
 
@@ -900,7 +904,8 @@ Use the -n flag to print the branch without checking it out.
 
 **Flags**
 
-* `-n`, `--dry-run`: Print the target branch without checking it out.
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 
 ### gs bottom
 
@@ -915,7 +920,8 @@ Use the -n flag to print the branch without checking it out.
 
 **Flags**
 
-* `-n`, `--dry-run`: Print the target branch without checking it out.
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 
 ### gs trunk
 
@@ -924,4 +930,9 @@ gs trunk [flags]
 ```
 
 Move to the trunk branch
+
+**Flags**
+
+* `-n`, `--dry-run`: Print the target branch without checking it out
+* `--detach`: Detach HEAD after checking out
 

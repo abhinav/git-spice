@@ -12,7 +12,7 @@ import (
 )
 
 type topCmd struct {
-	DryRun bool `short:"n" help:"Print the target branch without checking it out."`
+	checkoutOptions
 }
 
 func (*topCmd) Help() string {
@@ -70,15 +70,13 @@ func (cmd *topCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions
 		}
 	}
 
-	if cmd.DryRun {
-		fmt.Println(branch)
-		return nil
-	}
-
-	if branch == current {
+	if branch == current && !cmd.DryRun {
 		log.Info("Already on the top-most branch in this stack")
 		return nil
 	}
 
-	return (&branchCheckoutCmd{Branch: branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{
+		checkoutOptions: cmd.checkoutOptions,
+		Branch:          branch,
+	}).Run(ctx, log, opts)
 }

@@ -1,0 +1,4 @@
+kind: Added
+body: >-
+  {trunk, branch checkout}: Add -n/--dry-run flag to print the target branch.
+time: 2024-10-19T11:03:54.694618-07:00
