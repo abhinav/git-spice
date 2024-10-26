@@ -27,6 +27,7 @@ type submitOptions struct {
 	// TODO: Default to Fill if --no-prompt?
 	Draft   *bool `negatable:"" help:"Whether to mark change requests as drafts"`
 	Publish bool  `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
+	Web     bool  `short:"w" negatable:"" config:"submit.web" help:"Open submitted changes in a web browser"`
 
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
@@ -281,6 +282,20 @@ func (cmd *branchSubmitCmd) run(
 		}
 	}
 
+	var openURL string
+	if cmd.Web {
+		defer func() {
+			if openURL == "" {
+				return
+			}
+			if err := _browserLauncher.OpenURL(openURL); err != nil {
+				log.Warn("Could not open browser",
+					"url", openURL,
+					"error", err)
+			}
+		}()
+	}
+
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
 		if cmd.DryRun {
@@ -371,10 +386,11 @@ func (cmd *branchSubmitCmd) run(
 		}
 
 		if prepared != nil {
-			changeID, err := prepared.Publish(ctx)
+			changeID, changeURL, err := prepared.Publish(ctx)
 			if err != nil {
 				return err
 			}
+			openURL = changeURL
 
 			remoteRepo := prepared.remoteRepo
 			changeMeta, err := remoteRepo.NewChangeMetadata(ctx, changeID)
@@ -390,6 +406,7 @@ func (cmd *branchSubmitCmd) run(
 			upsert.ChangeForge = changeMeta.ForgeID()
 			upsert.ChangeMetadata = changeIDJSON
 		} else {
+			// no-publish mode, so no CR was created.
 			log.Infof("Pushed %s", cmd.Branch)
 		}
 	} else {
@@ -399,6 +416,7 @@ func (cmd *branchSubmitCmd) run(
 
 		// Check base and HEAD are up-to-date.
 		pull := existingChange
+		openURL = pull.URL
 		var updates []string
 		if pull.HeadHash != commitHash {
 			updates = append(updates, "push branch")
@@ -752,7 +770,7 @@ type preparedBranch struct {
 	log        *log.Logger
 }
 
-func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
+func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
 		Subject: b.Subject,
 		Body:    b.Body,
@@ -761,7 +779,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
 		Draft:   b.draft,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create change: %w", err)
+		return nil, "", fmt.Errorf("create change: %w", err)
 	}
 
 	if err := b.store.ClearPreparedBranch(ctx, b.Name); err != nil {
@@ -769,5 +787,5 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, error) {
 	}
 
 	b.log.Infof("Created %v: %s", result.ID, result.URL)
-	return result.ID, nil
+	return result.ID, result.URL, nil
 }

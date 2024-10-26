@@ -1,0 +1,39 @@
+# If 'branch submit' is the default, --no-web opts out.
+
+as 'Test <test@example.com>'
+at '2024-10-26T10:32:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git config spice.submit.web true
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+# no-publish won't open the browser
+gs branch submit --no-publish
+! exists $WORK/browser.txt
+
+# submit with --no-web won't open the browser
+gs branch submit --no-web --fill
+! exists $WORK/browser.txt
+
+# submit again will open the browser
+gs branch submit --fill
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+-- repo/feature1.txt --
+Contents of feature1

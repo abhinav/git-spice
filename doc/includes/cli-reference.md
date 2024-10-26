@@ -210,10 +210,11 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs stack restack
 
@@ -282,11 +283,12 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs upstack restack
 
@@ -374,11 +376,12 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ### gs downstack edit
 
@@ -740,13 +743,14 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
 ## Commit
 
