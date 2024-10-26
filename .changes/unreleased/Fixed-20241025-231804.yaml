@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  branch submit: Fix bug when importing externally created PRs,
-  where the first comment in the PR would be hijacked as the navigation comment.
-time: 2024-10-25T23:18:04.61755+05:30
