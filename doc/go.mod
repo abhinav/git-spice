@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20241007112143-5b941dfc27db
+require github.com/charmbracelet/freeze v0.1.7-0.20241021201709-146ac2e83672
 
 require (
 	github.com/adrg/xdg v0.5.0 // indirect
