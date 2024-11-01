@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -158,12 +159,26 @@ func (cmd *branchSubmitCmd) run(
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
+	// TODO:
+	// Encapsulate (localBranch, upstreamBranch) in a struct.
+
 	// If the branch has already been pushed to upstream with a different name,
 	// use that name instead.
 	// This is useful for branches that were renamed locally.
 	upstreamBranch := cmd.Branch
 	if branch.UpstreamBranch != "" {
 		upstreamBranch = branch.UpstreamBranch
+	}
+
+	// Similarly, if the branch's base has a different name upstream,
+	// use that name instead.
+	upstreamBase := branch.Base
+	if branch.Base != store.Trunk() {
+		baseBranch, err := svc.LookupBranch(ctx, branch.Base)
+		if err != nil {
+			return fmt.Errorf("lookup base branch: %w", err)
+		}
+		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
 	}
 
 	remote, err := session.Remote.Get(ctx)
@@ -327,7 +342,8 @@ func (cmd *branchSubmitCmd) run(
 				repo,
 				remote,
 				remoteRepo,
-				branch.Base,
+				upstreamBranch,
+				branch.Base, upstreamBase,
 			)
 			if err != nil {
 				return err
@@ -421,8 +437,8 @@ func (cmd *branchSubmitCmd) run(
 		if pull.HeadHash != commitHash {
 			updates = append(updates, "push branch")
 		}
-		if pull.BaseName != branch.Base {
-			updates = append(updates, "set base to "+branch.Base)
+		if pull.BaseName != upstreamBase {
+			updates = append(updates, "set base to "+upstreamBase)
 		}
 		if cmd.Draft != nil && pull.Draft != *cmd.Draft {
 			updates = append(updates, "set draft to "+strconv.FormatBool(*cmd.Draft))
@@ -466,7 +482,7 @@ func (cmd *branchSubmitCmd) run(
 
 		if len(updates) > 0 {
 			opts := forge.EditChangeOptions{
-				Base:  branch.Base,
+				Base:  upstreamBase,
 				Draft: cmd.Draft,
 			}
 
@@ -599,7 +615,8 @@ func (cmd *branchSubmitCmd) preparePublish(
 	repo *git.Repository,
 	remoteName string,
 	remoteRepo forge.Repository,
-	baseBranch string,
+	upstreamBranch,
+	baseBranch, upstreamBase string,
 ) (*preparedBranch, error) {
 	// Fetch the template while we're prompting the other fields.
 	changeTemplatesCh := make(chan []*forge.ChangeTemplate, 1)
@@ -748,8 +765,8 @@ func (cmd *branchSubmitCmd) preparePublish(
 	return &preparedBranch{
 		PreparedBranch: storePrepared,
 		draft:          draft,
-		head:           cmd.Branch,
-		base:           baseBranch,
+		head:           upstreamBranch,
+		base:           upstreamBase,
 		remoteRepo:     remoteRepo,
 		store:          store,
 		log:            log,
