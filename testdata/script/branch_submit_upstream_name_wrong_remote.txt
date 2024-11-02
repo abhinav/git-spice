@@ -1,0 +1,64 @@
+# If the branch has alreday been pushed with '--set-upstream',
+# but to a different remote, don't use that branch name.
+
+as 'Test <test@example.com>'
+at '2024-11-06T05:18:19Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+cd ..
+git clone repo fork
+cd fork
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new upstream alice/example.git
+shamhub register alice
+git push upstream main
+
+env SHAMHUB_USERNAME=alice
+gs repo init --remote=upstream
+gs auth login
+
+cp $WORK/extra/feat1.txt feat1.txt
+git add feat1.txt
+gs bc feat1 -m 'Add feature 1'
+
+git push --set-upstream origin feat1:feature1
+gs branch submit --fill
+
+gs ll
+cmp stderr $WORK/golden/ll.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+
+-- extra/feat1.txt --
+feature 1
+-- golden/ll.txt --
+┏━■ feat1 (#1) ◀
+┃   aa30b56 Add feature 1 (now)
+main
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "bb59b1128830316c4a7939f3c97d31579793376f"
+    },
+    "head": {
+      "ref": "feat1",
+      "sha": "aa30b568f30e13394f834da24a76ca42e5bf9400"
+    }
+  }
+]

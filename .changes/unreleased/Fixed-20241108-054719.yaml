@@ -1,0 +1,5 @@
+kind: Changed
+body: >-
+  submit: If a branch name is already taken in the remote,
+  generate a unique name for the remote branch that is used to submit the CR.
+time: 2024-11-08T05:47:19.503116-08:00

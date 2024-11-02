@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: When matching externally submitted CRs to a branch, reject matches where the names are equal but their HEADs are not.'
+time: 2024-11-08T05:51:22.431767-08:00

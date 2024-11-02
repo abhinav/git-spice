@@ -159,15 +159,27 @@ func (cmd *branchSubmitCmd) run(
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
+	remote, err := session.Remote.Get(ctx)
+	if err != nil {
+		return err
+	}
+
 	// TODO:
 	// Encapsulate (localBranch, upstreamBranch) in a struct.
 
-	// If the branch has already been pushed to upstream with a different name,
-	// use that name instead.
-	// This is useful for branches that were renamed locally.
-	upstreamBranch := cmd.Branch
-	if branch.UpstreamBranch != "" {
-		upstreamBranch = branch.UpstreamBranch
+	// Prefer the upstream branch name stored in the data store if available.
+	// This is how we account for branches that have been renamed after submitting.
+	upstreamBranch := branch.UpstreamBranch
+	if upstreamBranch == "" {
+		// If the branch doesn't have an upstream branch name,
+		// but has been manually pushed with an upstream branch name
+		// to the same remote, use that.
+		if upstream, err := repo.BranchUpstream(ctx, cmd.Branch); err == nil {
+			// origin/branch -> branch
+			if b, ok := strings.CutPrefix(upstream, remote+"/"); ok {
+				upstreamBranch = b
+			}
+		}
 	}
 
 	// Similarly, if the branch's base has a different name upstream,
@@ -181,11 +193,6 @@ func (cmd *branchSubmitCmd) run(
 		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
 	}
 
-	remote, err := session.Remote.Get(ctx)
-	if err != nil {
-		return err
-	}
-
 	var existingChange *forge.FindChangeItem
 	if branch.Change == nil && cmd.Publish {
 		// If the branch doesn't have a CR associated with it,
@@ -196,7 +203,11 @@ func (cmd *branchSubmitCmd) run(
 			return fmt.Errorf("discover CR for %s: %w", cmd.Branch, err)
 		}
 
-		changes, err := remoteRepo.FindChangesByBranch(ctx, upstreamBranch, forge.FindChangesOptions{
+		// Search for a CR associated with the branch's upstream branch
+		// or the branch name itself if we don't have an upstream branch.
+		// In case of the latter, we'll need to verify that the HEAD matches.
+		crBranch := cmp.Or(upstreamBranch, cmd.Branch)
+		changes, err := remoteRepo.FindChangesByBranch(ctx, crBranch, forge.FindChangesOptions{
 			State: forge.ChangeOpen,
 			Limit: 3,
 		})
@@ -209,6 +220,18 @@ func (cmd *branchSubmitCmd) run(
 			// No PRs found, one will be created later.
 
 		case 1:
+			// If matching by local branch name, verify that the HEAD matches.
+			// If not, pretend we didn't find a matching CR.
+			if upstreamBranch == "" {
+				change := changes[0]
+				if change.HeadHash != commitHash {
+					log.Infof("%v: Ignoring CR %v with the same branch name: remote HEAD (%v) does not match local HEAD (%v)",
+						cmd.Branch, change.ID, change.HeadHash, commitHash)
+					break
+				}
+				upstreamBranch = cmd.Branch
+			}
+
 			// A CR was found, but it wasn't associated with the branch.
 			// It was probably created manually.
 			// We'll associate it now.
@@ -250,6 +273,7 @@ func (cmd *branchSubmitCmd) run(
 				Name:           cmd.Branch,
 				ChangeForge:    md.ForgeID(),
 				ChangeMetadata: changeMeta,
+				UpstreamBranch: upstreamBranch,
 			}); err != nil {
 				return fmt.Errorf("%s: %w", msg, err)
 			}
@@ -313,6 +337,18 @@ func (cmd *branchSubmitCmd) run(
 
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
+		if upstreamBranch == "" {
+			unique, err := svc.UnusedBranchName(ctx, remote, cmd.Branch)
+			if err != nil {
+				return fmt.Errorf("find unique branch name: %w", err)
+			}
+
+			if unique != cmd.Branch {
+				log.Infof("%v: using upstream branch %v", cmd.Branch, unique)
+			}
+			upstreamBranch = unique
+		}
+
 		if cmd.DryRun {
 			if cmd.Publish {
 				log.Infof("WOULD create a CR for %s", cmd.Branch)
@@ -396,7 +432,7 @@ func (cmd *branchSubmitCmd) run(
 			}
 		}()
 
-		upstream := remote + "/" + cmd.Branch
+		upstream := remote + "/" + upstreamBranch
 		if err := repo.SetBranchUpstream(ctx, cmd.Branch, upstream); err != nil {
 			log.Warn("Could not set upstream", "branch", cmd.Branch, "remote", remote, "error", err)
 		}
@@ -426,6 +462,8 @@ func (cmd *branchSubmitCmd) run(
 			log.Infof("Pushed %s", cmd.Branch)
 		}
 	} else {
+		must.NotBeBlankf(upstreamBranch, "upstream branch must be set if branch has a CR")
+
 		if !cmd.Publish {
 			log.Warnf("Ignoring --no-publish: %s was already published: %s", cmd.Branch, existingChange.URL)
 		}

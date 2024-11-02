@@ -3,6 +3,7 @@ package spice
 
 import (
 	"context"
+	"iter"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
@@ -41,6 +42,12 @@ type GitRepository interface {
 	// ListRemotes returns the names of all known remotes.
 	ListRemotes(ctx context.Context) ([]string, error)
 	RemoteURL(ctx context.Context, remote string) (string, error)
+
+	// ListRemoteRefs returns an iterator over references in a remote
+	// Git repository that match the given options.
+	ListRemoteRefs(
+		ctx context.Context, remote string, opts *git.ListRemoteRefsOptions,
+	) iter.Seq2[git.RemoteRef, error]
 
 	Rebase(context.Context, git.RebaseRequest) error
 	RenameBranch(context.Context, git.RenameBranchRequest) error
@@ -100,10 +107,19 @@ func NewService(ctx context.Context, repo GitRepository, store Store, log *log.L
 		}
 	}
 
+	return newService(repo, store, forg, log)
+}
+
+func newService(
+	repo GitRepository,
+	store Store,
+	forge forge.Forge,
+	log *log.Logger,
+) *Service {
 	return &Service{
 		repo:  repo,
 		store: store,
+		forge: forge,
 		log:   log,
-		forge: forg,
 	}
 }

@@ -11,6 +11,7 @@ package spice
 
 import (
 	context "context"
+	iter "iter"
 	reflect "reflect"
 
 	git "go.abhg.dev/gs/internal/git"
@@ -113,6 +114,20 @@ func (m *MockGitRepository) IsAncestor(ctx context.Context, a, b git.Hash) bool 
 func (mr *MockGitRepositoryMockRecorder) IsAncestor(ctx, a, b any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAncestor", reflect.TypeOf((*MockGitRepository)(nil).IsAncestor), ctx, a, b)
+}
+
+// ListRemoteRefs mocks base method.
+func (m *MockGitRepository) ListRemoteRefs(ctx context.Context, remote string, opts *git.ListRemoteRefsOptions) iter.Seq2[git.RemoteRef, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRemoteRefs", ctx, remote, opts)
+	ret0, _ := ret[0].(iter.Seq2[git.RemoteRef, error])
+	return ret0
+}
+
+// ListRemoteRefs indicates an expected call of ListRemoteRefs.
+func (mr *MockGitRepositoryMockRecorder) ListRemoteRefs(ctx, remote, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRemoteRefs", reflect.TypeOf((*MockGitRepository)(nil).ListRemoteRefs), ctx, remote, opts)
 }
 
 // ListRemotes mocks base method.

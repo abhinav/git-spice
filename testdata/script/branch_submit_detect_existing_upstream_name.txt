@@ -1,0 +1,58 @@
+# 'branch submit' should detect a PR created
+# outside of the 'branch submit' command
+# even if it used a different name with `--set-upstream`.
+
+as 'Test <test@example.com>'
+at '2024-11-06T05:26:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a new branch and submit it
+git add feat1.txt
+gs bc -m feat1
+git push --set-upstream origin feat1:feature1
+gs bs --fill
+stderr 'Created #'
+git cat-file blob refs/spice/data:branches/feat1
+cmp stdout $WORK/golden/feat1-state.txt
+
+# forget all state, re-track the branch
+gs repo init --reset --trunk=main --remote=origin
+gs branch track --base=main feat1
+# re-submitting should detect that the PR already exists
+
+gs branch submit
+stderr 'feat1: Found existing CR #1'
+stderr 'feat1: Found existing navigation comment'
+stderr 'CR #\d+ is up-to-date'
+
+-- repo/feat1.txt --
+feature 1
+-- golden/feat1-state.txt --
+{
+  "base": {
+    "name": "main",
+    "hash": "2ff547329e55465505b962b0615d398764bea3de"
+  },
+  "upstream": {
+    "branch": "feature1"
+  },
+  "change": {
+    "shamhub": {
+      "number": 1,
+      "nav_comment": 1
+    }
+  }
+}
