@@ -2,10 +2,10 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20241021201709-146ac2e83672
+require github.com/charmbracelet/freeze v0.1.7-0.20241031190340-d223bb821054
 
 require (
-	github.com/adrg/xdg v0.5.0 // indirect
+	github.com/adrg/xdg v0.5.2 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/alecthomas/kong v1.2.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -14,11 +14,11 @@ require (
 	github.com/caarlos0/go-shellwords v1.0.12 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
 	github.com/charmbracelet/bubbles v0.20.0 // indirect
-	github.com/charmbracelet/bubbletea v1.1.0 // indirect
+	github.com/charmbracelet/bubbletea v1.1.2 // indirect
 	github.com/charmbracelet/huh v0.6.0 // indirect
-	github.com/charmbracelet/lipgloss v0.13.0 // indirect
+	github.com/charmbracelet/lipgloss v0.13.1 // indirect
 	github.com/charmbracelet/log v0.4.0 // indirect
-	github.com/charmbracelet/x/ansi v0.3.2 // indirect
+	github.com/charmbracelet/x/ansi v0.4.0 // indirect
 	github.com/charmbracelet/x/errors v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/term v0.0.0-20240403043919-dea9035a27d4 // indirect
