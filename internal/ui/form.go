@@ -202,6 +202,10 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case acceptFieldMsg:
+		if f.focused >= len(f.fields) {
+			return f, tea.Quit
+		}
+
 		// When a field is accepted, freeze its current view.
 		var acceptedView strings.Builder
 		f.renderField(&acceptedView, f.fields[f.focused], true)

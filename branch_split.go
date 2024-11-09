@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -48,7 +50,7 @@ func (*branchSplitCmd) Help() string {
 	`)
 }
 
-func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
 	repo, store, svc, err := openRepo(ctx, log, opts)
 	if err != nil {
 		return err
@@ -164,7 +166,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 
 	// Turn each commitish into a commit.
 	commitHashes := make([]git.Hash, len(cmd.At))
-	newTakenNames := make(map[string]int, len(cmd.At))
+	newTakenNames := make(map[string]int, len(cmd.At)) // index into cmd.At
 	for i, split := range cmd.At {
 		// Interactive prompt verifies if the branch name is taken,
 		// but we have to check again here.
@@ -223,6 +225,60 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("update branch %v with base %v: %w", cmd.Branch, finalBase, err)
 	}
 
+	// If the branch being split had a Change associated with it,
+	// ask the user which branch to associate the Change with.
+	if branch.Change != nil && !opts.Prompt {
+		log.Info("Branch has an associated CR. Leaving it assigned to the original branch.",
+			"cr", branch.Change.ChangeID())
+	} else if branch.Change != nil {
+		branchNames := make([]string, len(cmd.At)+1)
+		for i, split := range cmd.At {
+			branchNames[i] = split.Name
+		}
+		branchNames[len(branchNames)-1] = cmd.Branch
+
+		// TODO:
+		// use ll branch-style widget instead
+		// showing the commits for each branch.
+
+		var changeBranch string
+		prompt := ui.NewSelect[string]().
+			WithTitle(fmt.Sprintf("Assign CR %v to branch", branch.Change.ChangeID())).
+			WithDescription("Branch being split has an open CR assigned to it.\n" +
+				"Select which branch should take over the CR.").
+			WithValue(&changeBranch).
+			With(ui.ComparableOptions(cmd.Branch, branchNames...))
+		if err := ui.Run(prompt); err != nil {
+			return fmt.Errorf("prompt: %w", err)
+		}
+
+		// The user selected a branch that is not the original branch
+		// so update the Change metadata to reflect the new branch.
+		if changeBranch != cmd.Branch {
+			transfer, err := prepareChangeMetadataTransfer(
+				ctx,
+				log,
+				repo,
+				store,
+				cmd.Branch,
+				changeBranch,
+				branch.Change,
+				branch.UpstreamBranch,
+				branchTx,
+			)
+			if err != nil {
+				return fmt.Errorf("transfer CR %v to %v: %w", branch.Change.ChangeID(), changeBranch, err)
+			}
+
+			// Perform the actual transfer only if the transaction succeeds.
+			defer func() {
+				if err == nil {
+					transfer()
+				}
+			}()
+		}
+	}
+
 	// State updates will probably succeed if we got here,
 	// so make the branch changes in the repo.
 	for idx, split := range cmd.At {
@@ -239,6 +295,79 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	return nil
+}
+
+func prepareChangeMetadataTransfer(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	fromBranch, toBranch string,
+	meta forge.ChangeMetadata,
+	upstreamBranch string,
+	tx *state.BranchTx,
+) (transfer func(), _ error) {
+	forgeID := meta.ForgeID()
+	f, ok := forge.Lookup(forgeID)
+	if !ok {
+		return nil, fmt.Errorf("unknown forge: %v", forgeID)
+	}
+
+	remote, err := store.Remote()
+	if err != nil {
+		return nil, fmt.Errorf("get remote: %w", err)
+	}
+
+	metaJSON, err := f.MarshalChangeMetadata(meta)
+	if err != nil {
+		return nil, fmt.Errorf("marshal change metadata: %w", err)
+	}
+
+	// The original CR was pushed to this upstream branch name.
+	// The new branch will inherit this upstream branch name.
+	//
+	// However, if this name matches the original branch name (which it usually does),
+	// we'll want to warn the user that they should use a different name
+	// when they push it upstream.
+	toUpstreamBranch := cmp.Or(upstreamBranch, fromBranch)
+
+	var empty string
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:           fromBranch,
+		ChangeMetadata: state.Null,
+		UpstreamBranch: &empty,
+	}); err != nil {
+		return nil, fmt.Errorf("clear change metadata from %v: %w", fromBranch, err)
+	}
+
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:           toBranch,
+		ChangeMetadata: metaJSON,
+		ChangeForge:    forgeID,
+		UpstreamBranch: &toUpstreamBranch,
+	}); err != nil {
+		return nil, fmt.Errorf("set change metadata on %v: %w", toBranch, err)
+	}
+
+	return func() {
+		if err := repo.SetBranchUpstream(ctx, toBranch, remote+"/"+toUpstreamBranch); err != nil {
+			log.Warnf("%v: Failed to set upstream branch %v: %v", toBranch, toUpstreamBranch, err)
+		}
+
+		if _, err := repo.BranchUpstream(ctx, fromBranch); err == nil {
+			if err := repo.SetBranchUpstream(ctx, fromBranch, ""); err != nil {
+				log.Warnf("%v: Failed to unset upstream branch %v: %v", fromBranch, upstreamBranch, err)
+			}
+		}
+
+		log.Infof("%v: Upstream branch '%v' transferred to '%v'", fromBranch, toUpstreamBranch, toBranch)
+		if toUpstreamBranch == fromBranch {
+			pushCmd := fmt.Sprintf("git push -u %v %v:<new name>", remote, fromBranch)
+
+			log.Warnf("%v: If you push this branch with 'git push' instead of 'gs branch submit',", fromBranch)
+			log.Warnf("%v: remember to use a different upstream branch name with the command:\n\t%s", fromBranch, _highlightStyle.Render(pushCmd))
+		}
+	}, nil
 }
 
 type branchSplit struct {

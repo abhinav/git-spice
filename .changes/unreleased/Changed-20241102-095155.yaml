@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch split: If the branch being split has been submitted, allow attachind the CR to one of the split branches.'
+time: 2024-11-02T09:51:55.847657-07:00

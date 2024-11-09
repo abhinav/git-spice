@@ -40,6 +40,8 @@ var (
 
 var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
 
+var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
+
 func main() {
 	logger := log.NewWithOptions(os.Stderr, log.Options{
 		Level: log.InfoLevel,

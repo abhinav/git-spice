@@ -105,12 +105,13 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("upstream branch", func(t *testing.T) {
+		upstream := "remoteBranch"
 		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "localBranch",
 				Base:           "main",
 				BaseHash:       "abcdef",
-				UpstreamBranch: "remoteBranch",
+				UpstreamBranch: &upstream,
 			}},
 		})
 		require.NoError(t, err)

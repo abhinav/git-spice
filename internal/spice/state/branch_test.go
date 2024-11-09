@@ -297,6 +297,91 @@ func TestBranchTxDelete(t *testing.T) {
 	})
 }
 
+func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
+	ctx := context.Background()
+	db := storage.NewDB(storage.NewMemBackend())
+	store, err := InitStore(ctx, InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
+		Upserts: []UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				ChangeMetadata: json.RawMessage(`{"number": 123}`),
+				ChangeForge:    "github",
+			},
+		},
+		Message: "add foo",
+	}))
+
+	foo, err := store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, "github", foo.ChangeForge)
+	assert.JSONEq(t, `{"number": 123}`, string(foo.ChangeMetadata))
+
+	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
+		Upserts: []UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				ChangeMetadata: Null,
+			},
+		},
+		Message: "clear foo",
+	}))
+
+	foo, err = store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, "", foo.ChangeForge)
+	assert.Nil(t, foo.ChangeMetadata)
+}
+
+func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
+	ctx := context.Background()
+	db := storage.NewDB(storage.NewMemBackend())
+	store, err := InitStore(ctx, InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	upstream := "thing"
+	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
+		Upserts: []UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				UpstreamBranch: &upstream,
+			},
+		},
+		Message: "add foo",
+	}))
+
+	foo, err := store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, "thing", foo.UpstreamBranch)
+
+	var empty string
+	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
+		Upserts: []UpsertRequest{
+			{
+				Name:           "foo",
+				Base:           "main",
+				UpstreamBranch: &empty,
+			},
+		},
+		Message: "clear foo",
+	}))
+
+	foo, err = store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, "", foo.UpstreamBranch)
+}
+
 // Uses rapid to run randomized scenarios on the branch state
 // to ensure we never leave it in a corrupted state.
 func TestBranchStateUncorruptible(t *testing.T) {

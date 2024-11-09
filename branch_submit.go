@@ -279,7 +279,7 @@ func (cmd *branchSubmitCmd) run(
 				Name:           cmd.Branch,
 				ChangeForge:    md.ForgeID(),
 				ChangeMetadata: changeMeta,
-				UpstreamBranch: upstreamBranch,
+				UpstreamBranch: &upstreamBranch,
 			}); err != nil {
 				return fmt.Errorf("%s: %w", msg, err)
 			}
@@ -422,7 +422,7 @@ func (cmd *branchSubmitCmd) run(
 		// with the recorded name.
 		upsert := state.UpsertRequest{
 			Name:           cmd.Branch,
-			UpstreamBranch: upstreamBranch,
+			UpstreamBranch: &upstreamBranch,
 		}
 		defer func() {
 			msg := fmt.Sprintf("branch submit %s", cmd.Branch)

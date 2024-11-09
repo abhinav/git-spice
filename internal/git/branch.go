@@ -223,15 +223,21 @@ func (r *Repository) BranchUpstream(ctx context.Context, branch string) (string,
 
 // SetBranchUpstream sets the upstream ref for a local branch.
 // The upstream must be in the form "remote/branch".
+//
+// If upstream is empty, the upstream is unset.
 func (r *Repository) SetBranchUpstream(
 	ctx context.Context,
 	branch, upstream string,
 ) error {
-	if err := r.gitCmd(ctx,
-		"branch",
-		"--set-upstream-to="+upstream,
-		branch,
-	).Run(r.exec); err != nil {
+	args := []string{"branch"}
+	if upstream == "" {
+		args = append(args, "--unset-upstream")
+	} else {
+		args = append(args, "--set-upstream-to="+upstream)
+	}
+	args = append(args, branch)
+
+	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil

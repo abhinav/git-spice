@@ -1,0 +1,177 @@
+# branch split supports reassigning submitted CRs
+# to a different branch.
+
+[!unix] skip # pending https://github.com/creack/pty/pull/155
+
+as 'Test <test@example.com>'
+at '2024-10-26T17:30:31Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# setup: one branch with three commits
+git add feat1.txt
+gs bc -m feat1 features
+git add feat2.txt
+gs cc -m feat2
+git add feat3.txt
+gs cc -m feat3
+
+# sanity check
+gs ll -a
+cmp stderr $WORK/golden/ll-before.txt
+
+# setup: submit the branch
+gs bs --fill
+
+# splitting the branch prompts for reassignment
+with-term -final exit $WORK/input/prompt.txt -- gs branch split --at HEAD~2:feat1 --at HEAD^:feat2
+cmp stdout $WORK/golden/prompt.txt
+
+gs ll -a
+cmp stderr $WORK/golden/ll-split.txt
+
+# modify the branch that owns the CR
+gs bottom
+cp $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+gs cc -m 'new feat 1'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-commit-feat1.txt
+
+# submit the entire stack
+gs stack submit --fill
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+gs ll -a
+cmp stderr $WORK/golden/ll-final.txt
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- repo/feat3.txt --
+feat 3
+-- extra/feat1-new.txt --
+new feat 1
+-- golden/ll-before.txt --
+┏━■ features ◀
+┃   f460550 feat3 (now)
+┃   f9c1263 feat2 (now)
+┃   1578492 feat1 (now)
+main
+-- input/prompt.txt --
+await Assign CR #1 to branch
+snapshot init
+feed feat1
+await
+snapshot search
+feed \r
+-- golden/prompt.txt --
+### init ###
+Assign CR #1 to branch:
+
+  feat1
+  feat2
+▶ features
+
+Branch being split has an open CR assigned to it.
+Select which branch should take over the CR.
+### search ###
+Assign CR #1 to branch:
+
+▶ feat1
+
+Branch being split has an open CR assigned to it.
+Select which branch should take over the CR.
+### exit ###
+Assign CR #1 to branch: feat1
+INF features: Upstream branch 'features' transferred to 'feat1'
+WRN features: If you push this branch with 'git push' instead of 'gs branch submit',
+WRN features: remember to use a different upstream branch name with the command:
+    git push -u origin features:<new name>
+-- golden/ll-split.txt --
+    ┏━■ features ◀
+    ┃   f460550 feat3 (now)
+  ┏━┻□ feat2
+  ┃    f9c1263 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    1578492 feat1 (now)
+main
+-- golden/ll-commit-feat1.txt --
+    ┏━□ features
+    ┃   d543265 feat3 (now)
+  ┏━┻□ feat2
+  ┃    4432c24 feat2 (now)
+┏━┻■ feat1 (#1) ◀
+┃    215a01b new feat 1 (now)
+┃    1578492 feat1 (now)
+main
+-- golden/ll-final.txt --
+    ┏━□ features (#3)
+    ┃   d543265 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    4432c24 feat2 (now)
+┏━┻■ feat1 (#1) ◀
+┃    215a01b new feat 1 (now)
+┃    1578492 feat1 (now)
+main
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feat1",
+    "body": "feat1\n\nfeat2\n\nfeat3",
+    "base": {
+      "ref": "main",
+      "sha": "5142f7714f22cf4dcf062504922f0cb20dd7ba00"
+    },
+    "head": {
+      "ref": "features",
+      "sha": "215a01b45667f154f7d8cbc15ac81ceeba837124"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "feat2",
+    "body": "",
+    "base": {
+      "ref": "features",
+      "sha": "215a01b45667f154f7d8cbc15ac81ceeba837124"
+    },
+    "head": {
+      "ref": "feat2",
+      "sha": "4432c24dc64b97751d795163fbb8c2c71b20dedd"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "feat3",
+    "body": "",
+    "base": {
+      "ref": "feat2",
+      "sha": "4432c24dc64b97751d795163fbb8c2c71b20dedd"
+    },
+    "head": {
+      "ref": "features-2",
+      "sha": "d543265b0dc321aaae88c652f0d7937fc8fea257"
+    }
+  }
+]

@@ -282,7 +282,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		BaseHash:       oldBranch.BaseHash,
 		ChangeForge:    changeForge,
 		ChangeMetadata: changeMetadata,
-		UpstreamBranch: oldBranch.UpstreamBranch,
+		UpstreamBranch: &oldBranch.UpstreamBranch,
 	}); err != nil {
 		return fmt.Errorf("create branch with name %v: %w", newName, err)
 	}
