@@ -38,7 +38,7 @@ gs auth login
 git add feat1.txt
 gs bc -m 'add feature' feature
 gs bs --fill
-stderr 'Branch name alread in use in remote ''origin'''
+stderr 'Branch name already in use in remote ''origin'''
 stderr 'Using upstream name ''feature-10'''
 
 git rev-parse --abbrev-ref feature@{upstream}
