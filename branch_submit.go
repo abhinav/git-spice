@@ -59,6 +59,9 @@ type branchSubmitCmd struct {
 	Title string `help:"Title of the change request" placeholder:"TITLE"`
 	Body  string `help:"Body of the change request" placeholder:"BODY"`
 
+	// ListTemplatesTimeout controls the timeout for listing CR templates.
+	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
+
 	Branch string `placeholder:"NAME" help:"Branch to submit" predictor:"trackedBranches"`
 }
 
@@ -665,20 +668,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 	go func() {
 		defer close(changeTemplatesCh)
 
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-
-		templates, err := svc.ListChangeTemplates(ctx, remoteName, remoteRepo)
-		if err != nil {
-			log.Warn("Could not list change templates", "error", err)
-			templates = nil
-		}
-
-		slices.SortFunc(templates, func(a, b *forge.ChangeTemplate) int {
-			return strings.Compare(a.Filename, b.Filename)
-		})
-
-		changeTemplatesCh <- templates
+		changeTemplatesCh <- cmd.listChangeTemplates(ctx, log, svc, remoteName, remoteRepo)
 	}()
 
 	msgs, err := repo.CommitMessageRange(ctx, cmd.Branch, baseBranch)
@@ -813,6 +803,36 @@ func (cmd *branchSubmitCmd) preparePublish(
 		store:          store,
 		log:            log,
 	}, nil
+}
+
+type spiceTemplateService interface {
+	ListChangeTemplates(context.Context, string, forge.Repository) ([]*forge.ChangeTemplate, error)
+}
+
+func (cmd *branchSubmitCmd) listChangeTemplates(
+	ctx context.Context,
+	log *log.Logger,
+	svc spiceTemplateService,
+	remoteName string,
+	remoteRepo forge.Repository,
+) []*forge.ChangeTemplate {
+	if cmd.ListTemplatesTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cmd.ListTemplatesTimeout)
+		defer cancel()
+	}
+
+	templates, err := svc.ListChangeTemplates(ctx, remoteName, remoteRepo)
+	if err != nil {
+		log.Warn("Could not list change templates", "error", err)
+		return nil
+	}
+
+	slices.SortFunc(templates, func(a, b *forge.ChangeTemplate) int {
+		return strings.Compare(a.Filename, b.Filename)
+	})
+
+	return templates
 }
 
 // preparedBranch is a branch that is ready to be published as a CR

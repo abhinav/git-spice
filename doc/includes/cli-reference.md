@@ -752,7 +752,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout)
 
 ## Commit
 

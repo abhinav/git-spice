@@ -1,0 +1,3 @@
+kind: Added
+body: 'submit: Add `spice.submit.listTemplatesTimeout` configuration option to change the timeout for template lookup operations.'
+time: 2024-11-09T09:55:15.926195-08:00

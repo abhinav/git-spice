@@ -79,6 +79,26 @@ instead of showing just the current stack.
 - `true`
 - `false` (default)
 
+### spice.submit.listTemplatesTimeout
+
+<!-- gs:version unreleased -->
+
+Maximum duration that $$gs branch submit$$ will wait
+to receive a list of available CR templates from the forge.
+If the timeout is reached, the command will proceed without a template.
+
+Value must be a duration string such as `5s`, `1m`, `1h`, etc.
+Defaults to `1s`.
+
+Bump this value if you see warnings like any of the following:
+
+```
+WRN Failed to cache templates err="cache templates: write object: hash-object: signal: killed"
+WRN Could not list change templates error="list templates: Post \"https://api.github.com/graphql\": context deadline exceeded"
+```
+
+Set to `0` to disable the timeout completely.
+
 ### spice.submit.navigationComment
 
 Specifies whether CR submission commands ($$gs branch submit$$ and friends)
