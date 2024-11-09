@@ -1,5 +1,0 @@
-kind: Changed
-body: >-
-  submit: If CR template lookup from the forge times out,
-  present the outdated templates to the user instead of presenting none.
-time: 2024-11-09T10:53:06.221285-08:00

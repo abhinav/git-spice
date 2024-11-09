@@ -1,3 +1,0 @@
-kind: Added
-body: '{up, down, top, bottom, branch checkout}: Add --detach flag to detach HEAD after checking out the target branch.'
-time: 2024-10-19T11:04:30.374611-07:00

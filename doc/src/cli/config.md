@@ -81,7 +81,7 @@ instead of showing just the current stack.
 
 ### spice.submit.listTemplatesTimeout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.8.0 -->
 
 Maximum duration that $$gs branch submit$$ will wait
 to receive a list of available CR templates from the forge.
@@ -130,7 +130,7 @@ on a case-by-case basis.
 
 ### spice.submit.web
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.8.0 -->
 
 Whether submission commands ($$gs branch submit$$ and friends)
 should open a web browser with submitted CRs.
