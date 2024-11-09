@@ -19,6 +19,7 @@ github_checks:
 ignore:
   # Do not count test utilities towards coverage.
   - internal/forge/shamhub
+  - internal/forge/forgetest
   - internal/git/gittest
   - internal/log/logtest
   - internal/mockedit

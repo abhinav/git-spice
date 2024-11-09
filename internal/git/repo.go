@@ -80,6 +80,28 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 	return newRepository(root, gitDir, opts.Log, opts.exec), nil
 }
 
+// CloneOptions configures the behavior of [Clone].
+type CloneOptions struct {
+	// Log specifies the logger to use for messages.
+	Log *log.Logger
+
+	exec execer
+}
+
+// Clone clones a Git repository from the given URL to the given directory.
+func Clone(ctx context.Context, url, dir string, opts CloneOptions) (*Repository, error) {
+	if opts.exec == nil {
+		opts.exec = _realExec
+	}
+
+	cloneCmd := newGitCmd(ctx, opts.Log, "clone", url, dir)
+	if err := cloneCmd.Run(opts.exec); err != nil {
+		return nil, fmt.Errorf("git clone: %w", err)
+	}
+
+	return Open(ctx, dir, OpenOptions(opts))
+}
+
 // Repository is a handle to a Git repository.
 // It provides read-write access to the repository's contents.
 type Repository struct {

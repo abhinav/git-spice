@@ -335,18 +335,19 @@ func (mr *MockStoreMockRecorder) ListBranches(ctx any) *gomock.Call {
 }
 
 // LoadCachedTemplates mocks base method.
-func (m *MockStore) LoadCachedTemplates(arg0 context.Context, arg1 string) ([]*state.CachedTemplate, error) {
+func (m *MockStore) LoadCachedTemplates(arg0 context.Context) (string, []*state.CachedTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadCachedTemplates", arg0, arg1)
-	ret0, _ := ret[0].([]*state.CachedTemplate)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "LoadCachedTemplates", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].([]*state.CachedTemplate)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // LoadCachedTemplates indicates an expected call of LoadCachedTemplates.
-func (mr *MockStoreMockRecorder) LoadCachedTemplates(arg0, arg1 any) *gomock.Call {
+func (mr *MockStoreMockRecorder) LoadCachedTemplates(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadCachedTemplates", reflect.TypeOf((*MockStore)(nil).LoadCachedTemplates), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadCachedTemplates", reflect.TypeOf((*MockStore)(nil).LoadCachedTemplates), arg0)
 }
 
 // LookupBranch mocks base method.

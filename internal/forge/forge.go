@@ -65,6 +65,8 @@ func MatchForgeURL(remoteURL string) (forge Forge, ok bool) {
 // does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")
 
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,Repository
+
 // Forge is a forge that hosts Git repositories.
 type Forge interface {
 	// ID reports a unique identifier for the forge, e.g. "github".
