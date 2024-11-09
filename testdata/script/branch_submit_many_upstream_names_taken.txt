@@ -1,0 +1,76 @@
+# 'branch submit' correctly handles the case when a bunch of $name-$number
+# branch names are taken.
+
+as 'Test <test@example.com>'
+at '2024-11-08T05:38:39Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+gs repo init
+
+# take feature, feature-2, and so on until feature-9.
+git branch feature
+git branch feature-2
+git branch feature-3
+git branch feature-4
+git branch feature-5
+git branch feature-6
+git branch feature-7
+git branch feature-8
+git branch feature-9
+git push origin feature feature-2 feature-3 feature-4 feature-5 feature-6 feature-7 feature-8 feature-9
+
+# free up 'feature' for local use.
+git branch -D feature
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a CR with the name "feature"
+git add feat1.txt
+gs bc -m 'add feature' feature
+gs bs --fill
+stderr 'Branch name already in use in remote ''origin'''
+stderr 'Using upstream name ''feature-10'''
+
+git rev-parse --abbrev-ref feature@{upstream}
+stdout 'origin/feature-10'
+
+gs ll
+cmp stderr $WORK/golden/ll.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feat1.txt --
+feature 1
+-- golden/ll.txt --
+┏━■ feature (#1) ◀
+┃   4af1d44 add feature (now)
+main
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "add feature",
+    "body": "",
+    "base": {
+      "ref": "main",
+      "sha": "27316d3a0e4f2410c3b0215fb5153bfe5b4e2b9a"
+    },
+    "head": {
+      "ref": "feature-10",
+      "sha": "4af1d441e9ebd2a2abd75de1d969a90c3f25fb6f"
+    }
+  }
+]

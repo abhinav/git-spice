@@ -1,0 +1,68 @@
+# If the branch has already been pushed with '--set-upstream',
+# that name is preferred over the branch name.
+
+as 'Test <test@example.com>'
+at '2024-11-06T05:06:07Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc feat1 -m 'Add feature 1'
+git push --set-upstream origin feat1:feature1
+
+cp $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+git commit -m 'update feature 1'
+
+gs branch submit --fill
+stderr 'feat1: Using upstream name ''feature1'''
+stderr 'If this is incorrect, cancel this operation'
+stderr 'git branch --unset-upstream feat1'
+
+gs ll
+cmp stderr $WORK/golden/ll.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/feat1.txt --
+feature 1
+
+-- extra/feat1-new.txt --
+feature 1 new
+
+-- golden/ll.txt --
+┏━■ feat1 (#1) ◀
+┃   b7f8335 update feature 1 (now)
+┃   6731361 Add feature 1 (now)
+main
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "Add feature 1\n\nupdate feature 1",
+    "base": {
+      "ref": "main",
+      "sha": "c8486fbc58e9e6ee1058aac1a82e5f14fe50fc7c"
+    },
+    "head": {
+      "ref": "feature1",
+      "sha": "b7f833587ec8e8e0deab17f6e222861e302a18ce"
+    }
+  }
+]
