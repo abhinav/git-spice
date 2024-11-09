@@ -328,7 +328,7 @@ func (cmd *branchSubmitCmd) run(
 	}
 
 	var openURL string
-	if cmd.Web {
+	if cmd.Web && !cmd.DryRun {
 		defer func() {
 			if openURL == "" {
 				return
