@@ -230,6 +230,8 @@ func ensureRemote(
 		return "", fmt.Errorf("set remote: %w", err)
 	}
 
+	// TODO: this should also update the Forge associated with the spice.Service.
+
 	log.Infof("Changed repository remote to %s", remote)
 	return remote, nil
 }

@@ -29,28 +29,26 @@ type CachedTemplate struct {
 	Body string
 }
 
-// LoadCachedTemplates returns the cached templates if the cache key matches.
-// Returns [ErrNotExist] if the cache key does not match,
-// or there are no cached templates.
-func (s *Store) LoadCachedTemplates(ctx context.Context, cacheKey string) ([]*CachedTemplate, error) {
+// LoadCachedTemplates returns the cached templates and the key used to cache them.
+// Returns [ErrNotExist] if there are no cached templates.
+//
+// Caller should check the cache key to ensure the templates are still valid.
+func (s *Store) LoadCachedTemplates(ctx context.Context) (cacheKey string, ts []*CachedTemplate, err error) {
 	var state templateState
 	if err := s.db.Get(ctx, _templatesJSON, &state); err != nil {
-		return nil, fmt.Errorf("load template state: %w", err)
+		return "", nil, fmt.Errorf("load template state: %w", err)
 	}
 
-	if state.CacheKey != cacheKey {
-		return nil, fmt.Errorf("cache key mismatch: %w", ErrNotExist)
-	}
-
-	out := make([]*CachedTemplate, len(state.Templates))
+	cacheKey = state.CacheKey
+	ts = make([]*CachedTemplate, len(state.Templates))
 	for i, t := range state.Templates {
-		out[i] = &CachedTemplate{
+		ts[i] = &CachedTemplate{
 			Filename: t.Filename,
 			Body:     t.Body,
 		}
 	}
 
-	return out, nil
+	return cacheKey, ts, nil
 }
 
 // CacheTemplates caches the given templates with the given cache key.

@@ -79,7 +79,7 @@ type Store interface {
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)
 
-	LoadCachedTemplates(context.Context, string) ([]*state.CachedTemplate, error)
+	LoadCachedTemplates(context.Context) (string, []*state.CachedTemplate, error)
 	CacheTemplates(context.Context, string, []*state.CachedTemplate) error
 }
 

@@ -53,20 +53,22 @@ func (s *Service) ListChangeTemplates(
 	}
 
 	key := fmt.Sprintf("%x", keyHash.Sum(nil))
-	if ts, err := s.store.LoadCachedTemplates(ctx, key); err == nil {
-		result := make([]*forge.ChangeTemplate, len(ts))
-		for i, t := range ts {
-			result[i] = &forge.ChangeTemplate{
-				Filename: t.Filename,
-				Body:     t.Body,
-			}
-		}
-		return result, nil
+	cachedKey, cachedTemplates, err := s.store.LoadCachedTemplates(ctx)
+	if err == nil && key == cachedKey {
+		// If the cache key matches, return the cached templates.
+		return cachedTemplatesToForge(cachedTemplates), nil
 	}
 
 	// Fetch templates from the forge.
 	ts, err := fr.ListChangeTemplates(ctx)
 	if err != nil {
+		// If the forge times out, we'll use the cached templates.
+		if errors.Is(err, context.DeadlineExceeded) && len(cachedTemplates) > 0 {
+			s.log.Warn("Timed out fetching templates from forge, using outdated templates from cache")
+			s.log.Warn("Use the 'spice.submit.listTemplatesTimeout' setting to increase this timeout")
+			return cachedTemplatesToForge(cachedTemplates), nil
+
+		}
 		return nil, fmt.Errorf("list templates: %w", err)
 	}
 
@@ -82,4 +84,15 @@ func (s *Service) ListChangeTemplates(
 	}
 
 	return ts, nil
+}
+
+func cachedTemplatesToForge(ts []*state.CachedTemplate) []*forge.ChangeTemplate {
+	result := make([]*forge.ChangeTemplate, len(ts))
+	for i, t := range ts {
+		result[i] = &forge.ChangeTemplate{
+			Filename: t.Filename,
+			Body:     t.Body,
+		}
+	}
+	return result
 }
