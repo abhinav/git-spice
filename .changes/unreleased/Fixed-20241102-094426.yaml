@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'submit: Fix incorrect branch name used when a base branch of a submitted branch is renamed.'
-time: 2024-11-02T09:44:26.588392-07:00

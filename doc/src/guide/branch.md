@@ -402,7 +402,7 @@ it will prompt you for a name for each new branch.
     to safely and easily manipulate the commits in the branch
     before splitting it into multiple branches.
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.8.0 -->
 If you split a branch after submitting it for review,
 git-spice will prompt you to assign the submitted CR
 to one of the branches.

@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Add -w/--web flag to open a browser with the submitted CR,
-  and a `spice.submit.web` configuration option to allow making this the default.
-time: 2024-10-26T10:23:34.749014-07:00
