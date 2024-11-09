@@ -27,6 +27,9 @@ git add feat1.txt
 git commit -m 'update feature 1'
 
 gs branch submit --fill
+stderr 'feat1: Using upstream name ''feature1'''
+stderr 'If this is incorrect, cancel this operation'
+stderr 'git branch --unset-upstream feat1'
 
 gs ll
 cmp stderr $WORK/golden/ll.txt

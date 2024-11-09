@@ -38,7 +38,9 @@ gs bc feature -m 'Add feature 2'
 gs branch submit --fill
 stderr 'Ignoring CR #\d+ with the same branch name'
 stderr 'remote HEAD .+? does not match local HEAD'
-stderr 'using upstream branch feature-2'
+stderr 'If this is incorrect, cancel this operation.*git pull.*and retry'
+stderr 'Branch name already in use in remote ''origin'''
+stderr 'Using upstream name ''feature-2'''
 
 git rev-parse --abbrev-ref feature@{upstream}
 stdout 'origin/feature-2'

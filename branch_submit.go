@@ -178,6 +178,8 @@ func (cmd *branchSubmitCmd) run(
 			// origin/branch -> branch
 			if b, ok := strings.CutPrefix(upstream, remote+"/"); ok {
 				upstreamBranch = b
+				log.Infof("%v: Using upstream name '%v'", cmd.Branch, upstreamBranch)
+				log.Infof("%v: If this is incorrect, cancel this operation and run 'git branch --unset-upstream %v'.", cmd.Branch, cmd.Branch)
 			}
 		}
 	}
@@ -227,6 +229,7 @@ func (cmd *branchSubmitCmd) run(
 				if change.HeadHash != commitHash {
 					log.Infof("%v: Ignoring CR %v with the same branch name: remote HEAD (%v) does not match local HEAD (%v)",
 						cmd.Branch, change.ID, change.HeadHash, commitHash)
+					log.Infof("%v: If this is incorrect, cancel this operation, 'git pull' the branch, and retry.", cmd.Branch)
 					break
 				}
 				upstreamBranch = cmd.Branch
@@ -344,7 +347,8 @@ func (cmd *branchSubmitCmd) run(
 			}
 
 			if unique != cmd.Branch {
-				log.Infof("%v: using upstream branch %v", cmd.Branch, unique)
+				log.Infof("%v: Branch name already in use in remote '%v'", cmd.Branch, remote)
+				log.Infof("%v: Using upstream name '%v' instead", cmd.Branch, unique)
 			}
 			upstreamBranch = unique
 		}
