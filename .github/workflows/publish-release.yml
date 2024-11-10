@@ -124,8 +124,8 @@ jobs:
     - name: Update Homebrew Formula
       uses: dawidd6/action-homebrew-bump-formula@v3.11.0
       with:
-        token: ${{ secrets.PAT }}
+        token: ${{ secrets.ROBOT_PAT }}
         user_name: Abhinav Gupta
-        user_email: "41730+abhinav@users.noreply.github.com"
+        user_email: "187913561+abhinav-robot@users.noreply.github.com"
         formula: git-spice
         tag: v${{ env.VERSION }}
