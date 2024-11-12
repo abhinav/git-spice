@@ -112,8 +112,9 @@ func main() {
 		}
 	}
 
+	cmdName := filepath.Base(os.Args[0])
 	parser, err := kong.New(&cmd,
-		kong.Name("gs"),
+		kong.Name(cmdName),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
 		kong.Bind(logger, &cmd.globalOptions),
@@ -133,11 +134,11 @@ func main() {
 			// For the help of the top-level command,
 			// print a note about shorthand aliases.
 			if len(ctx.Command()) == 0 {
-				_, _ = fmt.Fprint(ctx.Stdout,
-					"\n",
-					"Aliases can be combined to form shorthands for commands. For example:\n",
-					"  gs bc => gs branch create\n",
-					"  gs cc => gs commit create\n",
+				_, _ = fmt.Fprintf(ctx.Stdout,
+					"\nAliases can be combined to form shorthands for commands. For example:\n"+
+						"  %[1]v bc => %[1]v branch create\n"+
+						"  %[1]v cc => %[1]v commit create\n",
+					cmdName,
 				)
 			}
 
@@ -186,7 +187,7 @@ func main() {
 		args = []string{"--help"}
 		parser.Exit = func(int) {
 			logger.Print("")
-			logger.Fatal("gs: please provide a command")
+			logger.Fatalf("%v: please provide a command", cmdName)
 		}
 	} else {
 		// Otherwise, expand the shorthands before parsing.
@@ -195,11 +196,11 @@ func main() {
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		logger.Fatalf("gs: %v", err)
+		logger.Fatalf("%v: %v", cmdName, err)
 	}
 
 	if err := kctx.Run(builtinShorthands); err != nil {
-		logger.Fatalf("gs: %v", err)
+		logger.Fatalf("%v: %v", cmdName, err)
 	}
 }
 
