@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'Shell completion: Don''t use an incorrect command name if the binary is renamed.'
-time: 2024-11-11T18:21:44.646934-08:00
