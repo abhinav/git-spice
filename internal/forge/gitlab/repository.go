@@ -1,7 +1,6 @@
 package gitlab
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -67,8 +66,3 @@ func newRepository(
 
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
-
-func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
-	// TODO implement me
-	panic("implement me")
-}
