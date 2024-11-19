@@ -7,11 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/xanzy/go-gitlab"
 	"go.abhg.dev/gs/internal/forge"
 )
 
@@ -61,9 +63,30 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 	return err == nil
 }
 
-func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
-	// TODO implement me
-	panic("implement me")
+// OpenURL opens a GitLab repository from a remote URL.
+// Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitLab URL.
+func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
+	if f.Log == nil {
+		f.Log = log.New(io.Discard)
+	}
+
+	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+	}
+
+	accessToken := token.(*AuthenticationToken).AccessToken
+	glc, err := newGitLabClient(f.URL(), accessToken)
+	if err != nil {
+		return nil, fmt.Errorf("create GitLab client: %w", err)
+	}
+
+	return newRepository(f, owner, repo, f.Log, glc, nil)
+}
+
+func newGitLabClient(baseURL string, accessToken string) (*gitlab.Client, error) {
+	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
+	return client, err
 }
 
 func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error) {
