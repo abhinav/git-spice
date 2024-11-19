@@ -59,16 +59,6 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	panic("implement me")
 }
 
-func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
 func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
 	// TODO implement me
 	panic("implement me")
