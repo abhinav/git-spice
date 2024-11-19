@@ -171,11 +171,6 @@ func hasGitProtocol(url string) bool {
 	return false
 }
 
-func (f *Forge) ChangeTemplatePaths() []string {
-	// TODO implement me
-	panic("implement me")
-}
-
 func (f *Forge) MarshalChangeMetadata(metadata forge.ChangeMetadata) (json.RawMessage, error) {
 	// TODO implement me
 	panic("implement me")

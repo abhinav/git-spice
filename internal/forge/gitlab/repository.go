@@ -83,8 +83,3 @@ func (r *Repository) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (
 	// TODO implement me
 	panic("implement me")
 }
-
-func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
-	// TODO implement me
-	panic("implement me")
-}
