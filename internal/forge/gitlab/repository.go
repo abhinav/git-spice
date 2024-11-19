@@ -77,13 +77,3 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 	// TODO implement me
 	panic("implement me")
 }
-
-func (r *Repository) PostChangeComment(ctx context.Context, id forge.ChangeID, s string) (forge.ChangeCommentID, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (r *Repository) UpdateChangeComment(ctx context.Context, id forge.ChangeCommentID, s string) error {
-	// TODO implement me
-	panic("implement me")
-}

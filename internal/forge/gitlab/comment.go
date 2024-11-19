@@ -12,7 +12,8 @@ import (
 
 // MRComment is a ChangeCommentID for a GitLab MR comment.
 type MRComment struct {
-	Number int `json:"number"`
+	Number   int `json:"number"`
+	MRNumber int `json:"mr_number"`
 }
 
 var _ forge.ChangeCommentID = (*MRComment)(nil)
@@ -31,6 +32,49 @@ func mustMRComment(id forge.ChangeCommentID) *MRComment {
 
 func (c *MRComment) String() string {
 	return strconv.Itoa(c.Number) // TODO: return URL?
+}
+
+// PostChangeComment posts a new comment on an MR.
+func (r *Repository) PostChangeComment(
+	_ context.Context,
+	id forge.ChangeID,
+	markdown string,
+) (forge.ChangeCommentID, error) {
+	noteOptions := gitlab.CreateMergeRequestNoteOptions{
+		Body: &markdown,
+	}
+
+	mrNumber := mustMR(id).Number
+	note, _, err := r.client.Notes.CreateMergeRequestNote(r.repoID, mrNumber, &noteOptions)
+	if err != nil {
+		return nil, fmt.Errorf("post comment: %w", err)
+	}
+
+	r.log.Debug("Posted comment", "id", note.ID) // TODO URL?
+	return &MRComment{
+		Number:   note.ID,
+		MRNumber: mrNumber,
+	}, nil
+}
+
+// UpdateChangeComment updates the contents of an existing comment on an MR.
+func (r *Repository) UpdateChangeComment(
+	_ context.Context,
+	id forge.ChangeCommentID,
+	markdown string,
+) error {
+	mrComment := mustMRComment(id)
+	noteOptions := gitlab.UpdateMergeRequestNoteOptions{
+		Body: &markdown,
+	}
+	_, _, err := r.client.Notes.UpdateMergeRequestNote(r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions)
+	if err != nil {
+		return fmt.Errorf("update comment: %w", err)
+	}
+
+	r.log.Debug("Updated comment", "id", mrComment.Number) // TODO URL?
+
+	return nil
 }
 
 // There isn't a way to filter comments by contents server-side,
