@@ -68,11 +68,6 @@ func newRepository(
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
 
-func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
-	// TODO implement me
-	panic("implement me")
-}
-
 func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
 	// TODO implement me
 	panic("implement me")
