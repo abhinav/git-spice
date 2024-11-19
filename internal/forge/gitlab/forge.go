@@ -5,7 +5,6 @@ package gitlab
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -169,14 +168,4 @@ func hasGitProtocol(url string) bool {
 		}
 	}
 	return false
-}
-
-func (f *Forge) MarshalChangeMetadata(metadata forge.ChangeMetadata) (json.RawMessage, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (f *Forge) UnmarshalChangeMetadata(message json.RawMessage) (forge.ChangeMetadata, error) {
-	// TODO implement me
-	panic("implement me")
 }

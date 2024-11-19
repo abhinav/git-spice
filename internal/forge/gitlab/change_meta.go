@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -49,6 +50,20 @@ func (r *Repository) NewChangeMetadata(_ context.Context, id forge.ChangeID) (fo
 	return &MRMetadata{MR: mr}, nil
 }
 
+// MarshalChangeMetadata serializes a MRMetadata into JSON.
+func (*Forge) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+	return json.Marshal(md)
+}
+
+// UnmarshalChangeMetadata deserializes a MRMetadata from JSON.
+func (*Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+	var md MRMetadata
+	if err := json.Unmarshal(data, &md); err != nil {
+		return nil, fmt.Errorf("unmarshal MR metadata: %w", err)
+	}
+	return &md, nil
+}
+
 // MR uniquely identifies an MR in GitLab repository.
 // It's a valid forge.ChangeID.
 type MR struct {
@@ -69,4 +84,15 @@ func mustMR(id forge.ChangeID) *MR {
 
 func (id *MR) String() string {
 	return fmt.Sprintf("!%d", id.Number)
+}
+
+// UnmarshalJSON unmarshals a GitLab change ID.
+// It accepts the following format: {"number": 123}
+func (id *MR) UnmarshalJSON(data []byte) error {
+	type newFormat MR
+	if err := json.Unmarshal(data, (*newFormat)(id)); err != nil {
+		return fmt.Errorf("unmarshal GitLab change ID: %w", err)
+	}
+
+	return nil
 }
