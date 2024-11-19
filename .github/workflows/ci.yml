@@ -100,7 +100,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4.6.0
+      uses: codecov/codecov-action@v5.0.3
       with:
         files: ./cover.out
         token: ${{ secrets.CODECOV_TOKEN }}
