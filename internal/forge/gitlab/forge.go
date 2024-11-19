@@ -13,7 +13,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/secret"
 )
 
 // DefaultURL Default URLs for GitLab and its API.
@@ -160,26 +159,6 @@ func (f *Forge) MarshalChangeMetadata(metadata forge.ChangeMetadata) (json.RawMe
 }
 
 func (f *Forge) UnmarshalChangeMetadata(message json.RawMessage) (forge.ChangeMetadata, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationToken, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (f *Forge) SaveAuthenticationToken(stash secret.Stash, token forge.AuthenticationToken) error {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 	// TODO implement me
 	panic("implement me")
 }
