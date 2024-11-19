@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
@@ -49,6 +50,7 @@ func main() {
 
 	// Register supported forges.
 	forge.Register(&github.Forge{Log: logger})
+	forge.Register(&gitlab.Forge{Log: logger})
 
 	styles := log.DefaultStyles()
 	styles.Levels[log.DebugLevel] = ui.NewStyle().SetString("DBG").Bold(true)
