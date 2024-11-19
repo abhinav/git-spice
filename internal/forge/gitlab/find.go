@@ -82,7 +82,11 @@ func (r *Repository) FindChangesByBranch(_ context.Context, branch string, opts 
 }
 
 // FindChangeByID searches for a change with the given ID.
-func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	// TODO implement me
-	panic("implement me")
+func (r *Repository) FindChangeByID(_ context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
+	mr, _, err := r.client.MergeRequests.GetMergeRequest(r.repoID, mustMR(id).Number, nil)
+	if err != nil {
+		return nil, fmt.Errorf("find change by ID: %w", err)
+	}
+
+	return toFindChangeItem(mr), nil
 }
