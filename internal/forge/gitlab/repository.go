@@ -22,8 +22,9 @@ type Repository struct {
 	userRole gitlab.AccessLevelValue
 
 	// API access:
-	client *gitlab.Client
-	notes  notesService
+	notes            notesService
+	mergeRequests    mergeRequestsService
+	projectTemplates projectTemplatesService
 }
 
 var _ forge.Repository = (*Repository)(nil)
@@ -63,15 +64,16 @@ func newRepository(
 	}
 
 	return &Repository{
-		owner:    owner,
-		repo:     repo,
-		forge:    forge,
-		log:      log,
-		client:   client,
-		userID:   user.ID,
-		userRole: accessLevel,
-		repoID:   project.ID,
-		notes:    client.Notes,
+		owner:            owner,
+		repo:             repo,
+		forge:            forge,
+		log:              log,
+		userID:           user.ID,
+		userRole:         accessLevel,
+		repoID:           project.ID,
+		notes:            client.Notes,
+		mergeRequests:    client.MergeRequests,
+		projectTemplates: client.ProjectTemplates,
 	}, nil
 }
 
