@@ -16,8 +16,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// DefaultURL Default URLs for GitLab and its API.
 const (
+	// DefaultURL Default URLs for GitLab and its API.
 	DefaultURL = "https://gitlab.com"
 )
 
