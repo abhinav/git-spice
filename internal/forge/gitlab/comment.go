@@ -108,7 +108,12 @@ func (r *Repository) ListChangeComments(
 			}
 		}
 
-		// Only the author or maintainers can update comments.
+		// GitLab's API does not tell you whether you can update a comment.
+		// This can be inferred based on the current user's role, though.
+		// Per https://docs.gitlab.com/ee/user/discussions/#edit-a-comment,
+		//
+		// > You can edit your own comment at any time.
+		// > Anyone with at least the Maintainer role can also edit a comment made by someone else.
 		if options.CanUpdate {
 			filters = append(filters, func(note gitlab.Note) bool {
 				return note.Author.ID == r.userID || *r.userRole >= gitlab.MaintainerPermissions
@@ -125,7 +130,7 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			notesOptions.ListOptions.Page = pageNum
+			notesOptions.Page = pageNum
 			notes, response, err := r.notes.ListMergeRequestNotes(r.repoID, mustMR(id).Number, &notesOptions)
 			if err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
