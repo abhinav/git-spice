@@ -19,7 +19,7 @@ import (
 
 type repoSyncCmd struct {
 	// TODO: flag to not delete merged branches?
-	// TODO: flag to auto-restack current stack
+	Restack bool `help:"Restack the current stack after syncing"`
 }
 
 func (*repoSyncCmd) Help() string {
@@ -223,7 +223,16 @@ func (cmd *repoSyncCmd) Run(
 		}
 	}
 
-	return cmd.deleteBranches(ctx, opts, log, repo, remote, branchesToDelete)
+	err = cmd.deleteBranches(ctx, opts, log, repo, remote, branchesToDelete)
+	if err != nil {
+		return err
+	}
+
+	if cmd.Restack {
+		return (&stackRestackCmd{}).Run(ctx, log, opts)
+	}
+
+	return nil
 }
 
 // findLocalMergedBranches finds branches that have been merged
