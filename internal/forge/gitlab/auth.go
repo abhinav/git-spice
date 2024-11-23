@@ -177,7 +177,7 @@ func patDesc(focused bool) string {
 	}
 
 	return text.Dedentf(`
-	Enter a classic or fine-grained Personal Access Token generated from %[1]s.
+	Enter a Personal Access Token generated from %[1]s.
 	The Personal Access Token need the following scope: %[2]s.
 	`,
 		urlStyle(focused).Render("https://gitlab.com/-/user_settings/personal_access_tokens"),
