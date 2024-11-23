@@ -13,7 +13,7 @@ import (
 const draftRegex = `(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`
 
 // EditChange edits an existing change in a repository.
-func (r *Repository) EditChange(_ context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
+func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts) {
 		return nil // nothing to do
 	}
@@ -25,7 +25,10 @@ func (r *Repository) EditChange(_ context.Context, id forge.ChangeID, opts forge
 	}
 
 	if opts.Draft != nil {
-		mr, _, err := r.client.MergeRequests.GetMergeRequest(r.repoID, mustMR(id).Number, nil)
+		mr, _, err := r.client.MergeRequests.GetMergeRequest(
+			r.repoID, mustMR(id).Number, nil,
+			gitlab.WithContext(ctx),
+		)
 		if err != nil {
 			return fmt.Errorf("get merge request for update: %w", err)
 		}
@@ -41,7 +44,10 @@ func (r *Repository) EditChange(_ context.Context, id forge.ChangeID, opts forge
 		}
 	}
 
-	_, _, err := r.client.MergeRequests.UpdateMergeRequest(r.repoID, mustMR(id).Number, &updateOptions)
+	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
+		r.repoID, mustMR(id).Number, &updateOptions,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return fmt.Errorf("update draft status: %w", err)
 	}

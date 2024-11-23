@@ -64,7 +64,7 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 
 // OpenURL opens a GitLab repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitLab URL.
-func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
+func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
 	if f.Log == nil {
 		f.Log = log.New(io.Discard)
 	}
@@ -80,7 +80,7 @@ func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remo
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}
 
-	return newRepository(f, owner, repo, f.Log, glc, nil)
+	return newRepository(ctx, f, owner, repo, f.Log, glc, nil)
 }
 
 func newGitLabClient(baseURL string, accessToken string) (*gitlab.Client, error) {

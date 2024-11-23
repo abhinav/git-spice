@@ -9,15 +9,16 @@ import (
 )
 
 // ChangesAreMerged reports whether the given changes have been merged.
-func (r *Repository) ChangesAreMerged(_ context.Context, ids []forge.ChangeID) ([]bool, error) {
+func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
 	mrIDs := make([]int, len(ids))
 	for i, id := range ids {
 		mrIDs[i] = mustMR(id).Number
 	}
 
-	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(r.repoID, &gitlab.ListProjectMergeRequestsOptions{
-		IIDs: &mrIDs,
-	})
+	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
+		r.repoID, &gitlab.ListProjectMergeRequestsOptions{IIDs: &mrIDs},
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}

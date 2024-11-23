@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -28,6 +29,7 @@ type Repository struct {
 var _ forge.Repository = (*Repository)(nil)
 
 func newRepository(
+	ctx context.Context,
 	forge *Forge,
 	owner, repo string,
 	log *log.Logger,
@@ -41,12 +43,14 @@ func newRepository(
 		projectIdentifier = owner + "/" + repo
 	}
 
-	project, _, err := client.Projects.GetProject(projectIdentifier, nil)
+	project, _, err := client.Projects.GetProject(projectIdentifier, nil,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("get repository ID: %w", err)
 	}
 
-	user, _, err := client.Users.CurrentUser()
+	user, _, err := client.Users.CurrentUser(gitlab.WithContext(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("get current user: %w", err)
 	}

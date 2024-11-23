@@ -42,7 +42,7 @@ func (c *MRComment) String() string {
 
 // PostChangeComment posts a new comment on an MR.
 func (r *Repository) PostChangeComment(
-	_ context.Context,
+	ctx context.Context,
 	id forge.ChangeID,
 	markdown string,
 ) (forge.ChangeCommentID, error) {
@@ -51,7 +51,10 @@ func (r *Repository) PostChangeComment(
 	}
 
 	mrNumber := mustMR(id).Number
-	note, _, err := r.notes.CreateMergeRequestNote(r.repoID, mrNumber, &noteOptions)
+	note, _, err := r.notes.CreateMergeRequestNote(
+		r.repoID, mrNumber, &noteOptions,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
@@ -65,7 +68,7 @@ func (r *Repository) PostChangeComment(
 
 // UpdateChangeComment updates the contents of an existing comment on an MR.
 func (r *Repository) UpdateChangeComment(
-	_ context.Context,
+	ctx context.Context,
 	id forge.ChangeCommentID,
 	markdown string,
 ) error {
@@ -73,7 +76,10 @@ func (r *Repository) UpdateChangeComment(
 	noteOptions := gitlab.UpdateMergeRequestNoteOptions{
 		Body: &markdown,
 	}
-	_, _, err := r.notes.UpdateMergeRequestNote(r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions)
+	_, _, err := r.notes.UpdateMergeRequestNote(
+		r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
@@ -94,7 +100,7 @@ var _listChangeCommentsPageSize = 20 // var for testing
 // ListChangeComments lists comments on an MR,
 // optionally applying the given filtering options.
 func (r *Repository) ListChangeComments(
-	_ context.Context,
+	ctx context.Context,
 	id forge.ChangeID,
 	options *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
@@ -130,7 +136,10 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			notes, response, err := r.notes.ListMergeRequestNotes(r.repoID, mustMR(id).Number, &notesOptions)
+			notes, response, err := r.notes.ListMergeRequestNotes(
+				r.repoID, mustMR(id).Number, &notesOptions,
+				gitlab.WithContext(ctx),
+			)
 			if err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
 				return

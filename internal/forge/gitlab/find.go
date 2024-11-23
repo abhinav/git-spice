@@ -52,7 +52,7 @@ func forgeChangeState(s string) forge.ChangeState {
 // FindChangesByBranch searches for changes with the given branch name.
 // It returns both open and closed changes.
 // Only recent changes are returned, limited by the given limit.
-func (r *Repository) FindChangesByBranch(_ context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
+func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
 	if opts.Limit == 0 {
 		opts.Limit = 10
 	}
@@ -68,7 +68,10 @@ func (r *Repository) FindChangesByBranch(_ context.Context, branch string, opts 
 	if opts.State != 0 {
 		opt.State = gitlab.Ptr(mergeRequestState(opts.State))
 	}
-	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(r.repoID, opt)
+	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
+		r.repoID, opt,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
@@ -82,8 +85,11 @@ func (r *Repository) FindChangesByBranch(_ context.Context, branch string, opts 
 }
 
 // FindChangeByID searches for a change with the given ID.
-func (r *Repository) FindChangeByID(_ context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	mr, _, err := r.client.MergeRequests.GetMergeRequest(r.repoID, mustMR(id).Number, nil)
+func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
+	mr, _, err := r.client.MergeRequests.GetMergeRequest(
+		r.repoID, mustMR(id).Number, nil,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}

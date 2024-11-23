@@ -12,7 +12,7 @@ import (
 const DRAFT = "Draft:"
 
 // SubmitChange creates a new change in a repository.
-func (r *Repository) SubmitChange(_ context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
+func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
 	input := &gitlab.CreateMergeRequestOptions{
 		Title:        &req.Subject,
 		TargetBranch: &req.Base,
@@ -24,7 +24,10 @@ func (r *Repository) SubmitChange(_ context.Context, req forge.SubmitChangeReque
 	if req.Draft {
 		input.Title = gitlab.Ptr(fmt.Sprintf("%s %s", DRAFT, req.Subject))
 	}
-	request, _, err := r.client.MergeRequests.CreateMergeRequest(r.repoID, input)
+	request, _, err := r.client.MergeRequests.CreateMergeRequest(
+		r.repoID, input,
+		gitlab.WithContext(ctx),
+	)
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("create merge request: %w", err)
 	}
