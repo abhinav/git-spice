@@ -18,10 +18,10 @@ func (f *Forge) ChangeTemplatePaths() []string {
 
 // ListChangeTemplates returns MR templates defined in the repository.
 func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
-	const TemplateType = "merge_requests"
+	const templateType = "merge_requests"
 
 	templates, _, err := r.client.ProjectTemplates.ListTemplates(
-		r.repoID, TemplateType, nil,
+		r.repoID, templateType, nil,
 		gitlab.WithContext(ctx),
 	)
 	if err != nil {
@@ -31,7 +31,7 @@ func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTe
 	var out []*forge.ChangeTemplate
 	for _, t := range templates {
 		template, _, err := r.client.ProjectTemplates.GetProjectTemplate(
-			r.repoID, TemplateType, t.Name,
+			r.repoID, templateType, t.Name,
 			gitlab.WithContext(ctx),
 		)
 		if err != nil {
