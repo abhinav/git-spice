@@ -8,8 +8,9 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// DRAFT is the prefix for draft merge requests.
-const DRAFT = "Draft:"
+// _draftPrefix is the prefix added for Draft merge requests.
+// (GitLab identifies draft MRs by their title.)
+const _draftPrefix = "Draft:"
 
 // SubmitChange creates a new change in a repository.
 func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
@@ -22,7 +23,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		input.Description = &req.Body
 	}
 	if req.Draft {
-		input.Title = gitlab.Ptr(fmt.Sprintf("%s %s", DRAFT, req.Subject))
+		input.Title = gitlab.Ptr(fmt.Sprintf("%s %s", _draftPrefix, req.Subject))
 	}
 	request, _, err := r.client.MergeRequests.CreateMergeRequest(
 		r.repoID, input,
