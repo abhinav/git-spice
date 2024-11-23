@@ -9,6 +9,19 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
+func TestMRMetadata(t *testing.T) {
+	md := &MRMetadata{
+		MR: &MR{Number: 42},
+	}
+
+	assert.Equal(t, "gitlab", md.ForgeID())
+	assert.Equal(t, &MR{Number: 42}, md.ChangeID())
+	assert.Nil(t, md.NavigationCommentID())
+
+	md.SetNavigationCommentID(&MRComment{Number: 123})
+	assert.Equal(t, &MRComment{Number: 123}, md.NavigationCommentID())
+}
+
 func TestMustMR(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		assert.Equal(t, &MR{Number: 42}, mustMR(&MR{Number: 42}))

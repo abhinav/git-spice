@@ -8,10 +8,14 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// MRMetadata is the metadata for a merge request.
+// MRMetadata is the metadata for a merge request
+// persisted in git-spice's data store.
 type MRMetadata struct {
+	// MR is the merge request this metadata is for.
 	MR *MR `json:"mr,omitempty"`
 
+	// NavigationComment is the comment on the merge request
+	// where we visualize the stack of MRs.
 	NavigationComment *MRComment `json:"comment,omitempty"`
 }
 
@@ -64,12 +68,12 @@ func (*Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadat
 	return &md, nil
 }
 
-// MR uniquely identifies an MR in GitLab repository.
+// MR uniquely identifies a Merge Request in GitLab.
 // It's a valid forge.ChangeID.
 type MR struct {
 	// Number is the merge request number.
 	// This will always be set.
-	Number int `json:"number"`
+	Number int `json:"number"` // required
 }
 
 var _ forge.ChangeID = (*MR)(nil)
