@@ -68,7 +68,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 	if opts.State != 0 {
 		opt.State = gitlab.Ptr(mergeRequestState(opts.State))
 	}
-	requests, _, err := r.mergeRequests.ListProjectMergeRequests(
+	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
 		r.repoID, opt,
 		gitlab.WithContext(ctx),
 	)
@@ -86,7 +86,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 // FindChangeByID searches for a change with the given ID.
 func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	mr, _, err := r.mergeRequests.GetMergeRequest(
+	mr, _, err := r.client.MergeRequests.GetMergeRequest(
 		r.repoID, mustMR(id).Number, nil,
 		gitlab.WithContext(ctx),
 	)

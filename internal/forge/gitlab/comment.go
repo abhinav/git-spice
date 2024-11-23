@@ -51,7 +51,7 @@ func (r *Repository) PostChangeComment(
 	}
 
 	mrNumber := mustMR(id).Number
-	note, _, err := r.notes.CreateMergeRequestNote(
+	note, _, err := r.client.Notes.CreateMergeRequestNote(
 		r.repoID, mrNumber, &noteOptions,
 		gitlab.WithContext(ctx),
 	)
@@ -76,7 +76,7 @@ func (r *Repository) UpdateChangeComment(
 	noteOptions := gitlab.UpdateMergeRequestNoteOptions{
 		Body: &markdown,
 	}
-	_, _, err := r.notes.UpdateMergeRequestNote(
+	_, _, err := r.client.Notes.UpdateMergeRequestNote(
 		r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
 		gitlab.WithContext(ctx),
 	)
@@ -136,7 +136,7 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			notes, response, err := r.notes.ListMergeRequestNotes(
+			notes, response, err := r.client.Notes.ListMergeRequestNotes(
 				r.repoID, mustMR(id).Number, &notesOptions,
 				gitlab.WithContext(ctx),
 			)

@@ -24,7 +24,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	if req.Draft {
 		input.Title = gitlab.Ptr(fmt.Sprintf("%s %s", DRAFT, req.Subject))
 	}
-	request, _, err := r.mergeRequests.CreateMergeRequest(
+	request, _, err := r.client.MergeRequests.CreateMergeRequest(
 		r.repoID, input,
 		gitlab.WithContext(ctx),
 	)

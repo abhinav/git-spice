@@ -28,7 +28,7 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	}
 
 	if opts.Draft != nil {
-		mr, _, err := r.mergeRequests.GetMergeRequest(
+		mr, _, err := r.client.MergeRequests.GetMergeRequest(
 			r.repoID, mustMR(id).Number, nil,
 			gitlab.WithContext(ctx),
 		)
@@ -48,7 +48,7 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		}
 	}
 
-	_, _, err := r.mergeRequests.UpdateMergeRequest(
+	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
 		r.repoID, mustMR(id).Number, &updateOptions,
 		gitlab.WithContext(ctx),
 	)

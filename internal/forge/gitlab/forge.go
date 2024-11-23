@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/xanzy/go-gitlab"
 	"go.abhg.dev/gs/internal/forge"
 )
 
@@ -81,11 +80,6 @@ func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, re
 	}
 
 	return newRepository(ctx, f, owner, repo, f.Log, glc, nil)
-}
-
-func newGitLabClient(baseURL string, accessToken string) (*gitlab.Client, error) {
-	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
-	return client, err
 }
 
 func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error) {

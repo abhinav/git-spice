@@ -11,6 +11,8 @@ import (
 
 // Repository is a GitLab repository.
 type Repository struct {
+	client *gitlabClient
+
 	owner, repo string
 	log         *log.Logger
 	forge       *Forge
@@ -20,11 +22,6 @@ type Repository struct {
 	// Information about the current user:
 	userID   int
 	userRole gitlab.AccessLevelValue
-
-	// API access:
-	notes            notesService
-	mergeRequests    mergeRequestsService
-	projectTemplates projectTemplatesService
 }
 
 var _ forge.Repository = (*Repository)(nil)
@@ -34,7 +31,7 @@ func newRepository(
 	forge *Forge,
 	owner, repo string,
 	log *log.Logger,
-	client *gitlab.Client,
+	client *gitlabClient,
 	repoID *int,
 ) (*Repository, error) {
 	var projectIdentifier string
@@ -64,16 +61,14 @@ func newRepository(
 	}
 
 	return &Repository{
-		owner:            owner,
-		repo:             repo,
-		forge:            forge,
-		log:              log,
-		userID:           user.ID,
-		userRole:         accessLevel,
-		repoID:           project.ID,
-		notes:            client.Notes,
-		mergeRequests:    client.MergeRequests,
-		projectTemplates: client.ProjectTemplates,
+		client:   client,
+		owner:    owner,
+		repo:     repo,
+		forge:    forge,
+		log:      log,
+		userID:   user.ID,
+		userRole: accessLevel,
+		repoID:   project.ID,
 	}, nil
 }
 

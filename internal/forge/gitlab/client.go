@@ -2,7 +2,27 @@ package gitlab
 
 import "github.com/xanzy/go-gitlab"
 
-// This file defines subset of the GitLab client API that we use.
+type gitlabClient struct {
+	MergeRequests    mergeRequestsService
+	Notes            notesService
+	Projects         projectsService
+	ProjectTemplates projectTemplatesService
+	Users            usersService
+}
+
+func newGitLabClient(baseURL string, accessToken string) (*gitlabClient, error) {
+	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
+	if err != nil {
+		return nil, err
+	}
+	return &gitlabClient{
+		MergeRequests:    client.MergeRequests,
+		Notes:            client.Notes,
+		ProjectTemplates: client.ProjectTemplates,
+		Projects:         client.Projects,
+		Users:            client.Users,
+	}, nil
+}
 
 // mergeRequestsService allows creating, listing, and fetching merge requests.
 type mergeRequestsService interface {
@@ -59,6 +79,15 @@ type notesService interface {
 	) ([]*gitlab.Note, *gitlab.Response, error)
 }
 
+// projectsService allows listing and accessing projects.
+type projectsService interface {
+	GetProject(
+		pid interface{},
+		opt *gitlab.GetProjectOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.Project, *gitlab.Response, error)
+}
+
 // projectTemplatesService allows listing and accessing project templates.
 type projectTemplatesService interface {
 	ListTemplates(
@@ -74,4 +103,11 @@ type projectTemplatesService interface {
 		templateName string,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.ProjectTemplate, *gitlab.Response, error)
+}
+
+// usersService allows listing and accessing users.
+type usersService interface {
+	CurrentUser(
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.User, *gitlab.Response, error)
 }

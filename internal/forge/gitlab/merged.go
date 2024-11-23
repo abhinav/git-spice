@@ -15,7 +15,7 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		mrIDs[i] = mustMR(id).Number
 	}
 
-	requests, _, err := r.mergeRequests.ListProjectMergeRequests(
+	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
 		r.repoID, &gitlab.ListProjectMergeRequestsOptions{IIDs: &mrIDs},
 		gitlab.WithContext(ctx),
 	)
