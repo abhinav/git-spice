@@ -69,6 +69,11 @@ Defaults to `$GITHUB_URL` if set, or `https://github.com` otherwise.
 
 See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
+### spice.forge.gitlab.url
+
+URL of the GitLab instance used for GitLab requests.
+Defaults to `$GITLAB_URL` if set, or `https://gitlab.com` otherwise.
+
 ### spice.log.all
 
 Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,
