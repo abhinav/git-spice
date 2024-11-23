@@ -3,6 +3,7 @@ package gitlab
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/charmbracelet/log"
 	"github.com/xanzy/go-gitlab"
@@ -32,11 +33,11 @@ func newRepository(
 	owner, repo string,
 	log *log.Logger,
 	client *gitlabClient,
-	repoID *int,
+	repoID *int, // if nil, repository ID will be looked up
 ) (*Repository, error) {
 	var projectIdentifier string
 	if repoID != nil {
-		projectIdentifier = fmt.Sprintf("%d", *repoID)
+		projectIdentifier = strconv.Itoa(*repoID)
 	} else {
 		projectIdentifier = owner + "/" + repo
 	}
