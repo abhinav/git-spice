@@ -11,14 +11,18 @@ import (
 // Repository is a GitLab repository.
 type Repository struct {
 	owner, repo string
-	repoID      int
 	log         *log.Logger
-	client      *gitlab.Client
-	userID      int
 	forge       *Forge
 
-	notes notesService
+	repoID int
+
+	// Information about the current user:
+	userID   int
 	userRole gitlab.AccessLevelValue
+
+	// API access:
+	client *gitlab.Client
+	notes  notesService
 }
 
 var _ forge.Repository = (*Repository)(nil)
