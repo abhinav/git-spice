@@ -51,19 +51,17 @@ func TestAuthHasGitLabToken(t *testing.T) {
 	})
 }
 
-func TestLoadAuthenticationTokenOldFormat(t *testing.T) {
+func TestLoadAuthenticationToken_badJSON(t *testing.T) {
 	f := Forge{
 		Log: log.New(io.Discard),
 	}
 
 	var stash secret.MemoryStash
-	require.NoError(t, stash.SaveSecret(f.URL(), "token", "old-token"))
+	require.NoError(t, stash.SaveSecret(f.URL(), "token", "not valid JSON"))
 
-	tok, err := f.LoadAuthenticationToken(&stash)
-	require.NoError(t, err)
-
-	assert.Equal(t, "old-token",
-		tok.(*AuthenticationToken).AccessToken)
+	_, err := f.LoadAuthenticationToken(&stash)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "unmarshal token")
 }
 
 func TestPATAuthenticator(t *testing.T) {

@@ -106,8 +106,7 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 
 	var tok AuthenticationToken
 	if err := json.Unmarshal([]byte(tokstr), &tok); err != nil {
-		// Old token format, just use it as the access token.
-		return &AuthenticationToken{AccessToken: tokstr}, nil
+		return nil, fmt.Errorf("unmarshal token: %w", err)
 	}
 
 	return &tok, nil
