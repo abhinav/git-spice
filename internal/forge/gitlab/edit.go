@@ -10,7 +10,11 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-const draftRegex = `(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`
+// GitLab tracks draft status in the title of a merge request
+// with one of the following prefixes.
+//
+// https://docs.gitlab.com/ee/user/project/merge_requests/drafts.html#mark-merge-requests-as-drafts
+var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
@@ -18,8 +22,7 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		return nil // nothing to do
 	}
 
-	updateOptions := gitlab.UpdateMergeRequestOptions{}
-
+	var updateOptions gitlab.UpdateMergeRequestOptions
 	if opts.Base != "" {
 		updateOptions.TargetBranch = &opts.Base
 	}
@@ -32,14 +35,15 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		if err != nil {
 			return fmt.Errorf("get merge request for update: %w", err)
 		}
+
 		if *opts.Draft {
 			if !mr.Draft {
 				updateOptions.Title = gitlab.Ptr(fmt.Sprintf("%s %s", DRAFT, mr.Title))
 			}
 		} else {
 			if mr.Draft {
-				compile := regexp.MustCompile(draftRegex)
-				updateOptions.Title = gitlab.Ptr(compile.ReplaceAllString(mr.Title, ""))
+				title := _draftRegex.ReplaceAllString(mr.Title, "")
+				updateOptions.Title = &title
 			}
 		}
 	}
