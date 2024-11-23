@@ -116,7 +116,7 @@ func (r *Repository) ListChangeComments(
 		// > Anyone with at least the Maintainer role can also edit a comment made by someone else.
 		if options.CanUpdate {
 			filters = append(filters, func(note gitlab.Note) bool {
-				return note.Author.ID == r.userID || *r.userRole >= gitlab.MaintainerPermissions
+				return note.Author.ID == r.userID || r.userRole >= gitlab.MaintainerPermissions
 			})
 		}
 	}
