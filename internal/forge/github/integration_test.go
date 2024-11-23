@@ -6,13 +6,11 @@ import (
 	"crypto/rand"
 	"flag"
 	"io"
-	"maps"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/shurcooL/githubv4"
@@ -23,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graphqlutil"
+	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
 	"golang.org/x/oauth2"
@@ -53,58 +52,23 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 		}
 	})
 
-	var realTransport http.RoundTripper
-	afterCaptureHook := func(*cassette.Interaction) error { return nil }
-	mode := recorder.ModeReplayOnly
-	if *_update {
-		mode = recorder.ModeRecordOnly
-		githubToken := os.Getenv("GITHUB_TOKEN")
-		require.NotEmpty(t, githubToken,
-			"$GITHUB_TOKEN must be set in record mode")
+	return httptest.NewTransportRecorder(t, name, httptest.TransportRecorderOptions{
+		Update: _update,
+		WrapRealTransport: func(t testing.TB, transport http.RoundTripper) http.RoundTripper {
+			githubToken := os.Getenv("GITHUB_TOKEN")
+			require.NotEmpty(t, githubToken,
+				"$GITHUB_TOKEN must be set in record mode")
 
-		realTransport = &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(&oauth2.Token{
-				AccessToken: githubToken,
-			}),
-		}
-
-		// Because the oauth transport is the inner transport,
-		// the recorder will never see the Authorization header.
-		// But for extra paranoia, we'll strip all but a handful
-		// of headers from the request and response before saving.
-		afterCaptureHook = func(i *cassette.Interaction) error {
-			allHeaders := make(http.Header)
-			maps.Copy(allHeaders, i.Request.Headers)
-			maps.Copy(allHeaders, i.Response.Headers)
-
-			var toRemove []string
-			for k := range allHeaders {
-				switch strings.ToLower(k) {
-				case "content-type", "content-length", "user-agent":
-					// ok
-				default:
-					toRemove = append(toRemove, k)
-				}
+			return &oauth2.Transport{
+				Base: transport,
+				Source: oauth2.StaticTokenSource(&oauth2.Token{
+					AccessToken: githubToken,
+				}),
 			}
-
-			for _, k := range toRemove {
-				delete(i.Request.Headers, k)
-				delete(i.Response.Headers, k)
-			}
-
-			return nil
-		}
-	}
-
-	rec, err := recorder.New(filepath.Join("testdata", "fixtures", name),
-		recorder.WithMode(mode),
-		recorder.WithRealTransport(realTransport),
-		recorder.WithSkipRequestLatency(true),
-		recorder.WithHook(afterCaptureHook, recorder.AfterCaptureHook),
-
+		},
 		// GraphQL requests will all have the same method and URL.
 		// We'll need to match the body instead.
-		recorder.WithMatcher(func(r *http.Request, i cassette.Request) bool {
+		Matcher: func(r *http.Request, i cassette.Request) bool {
 			if r.Body == nil || r.Body == http.NoBody {
 				return cassette.DefaultMatcher(r, i)
 			}
@@ -117,14 +81,8 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 			return r.Method == i.Method &&
 				r.URL.String() == i.URL &&
 				string(reqBody) == i.Body
-		}),
-	)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, rec.Stop())
+		},
 	})
-
-	return rec
 }
 
 func newGitHubClient(
