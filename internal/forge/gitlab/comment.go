@@ -130,7 +130,6 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			notesOptions.Page = pageNum
 			notes, response, err := r.notes.ListMergeRequestNotes(r.repoID, mustMR(id).Number, &notesOptions)
 			if err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
@@ -161,9 +160,11 @@ func (r *Repository) ListChangeComments(
 				}
 			}
 
-			if pageNum >= response.TotalPages {
+			if response.CurrentPage >= response.TotalPages {
 				return
 			}
+
+			notesOptions.Page = response.NextPage
 		}
 	}
 }
