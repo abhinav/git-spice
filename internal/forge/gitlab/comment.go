@@ -10,9 +10,15 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// MRComment is a ChangeCommentID for a GitLab MR comment.
+// MRComment identifies a comment on a GitLab MR.
+// These are referred to as "notes" in GitLab's API.
+//
+// MRComment implements [forge.ChangeCommentID].
 type MRComment struct {
-	Number   int `json:"number"`
+	// Number is the ID of the note.
+	Number int `json:"number"`
+
+	// MRNumber is the ID of the MR the note is on.
 	MRNumber int `json:"mr_number"`
 }
 
@@ -31,7 +37,7 @@ func mustMRComment(id forge.ChangeCommentID) *MRComment {
 }
 
 func (c *MRComment) String() string {
-	return strconv.Itoa(c.Number) // TODO: return URL?
+	return strconv.Itoa(c.Number)
 }
 
 // PostChangeComment posts a new comment on an MR.
@@ -45,12 +51,12 @@ func (r *Repository) PostChangeComment(
 	}
 
 	mrNumber := mustMR(id).Number
-	note, _, err := r.client.Notes.CreateMergeRequestNote(r.repoID, mrNumber, &noteOptions)
+	note, _, err := r.notes.CreateMergeRequestNote(r.repoID, mrNumber, &noteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
 
-	r.log.Debug("Posted comment", "id", note.ID) // TODO URL?
+	r.log.Debug("Posted comment", "id", note.ID)
 	return &MRComment{
 		Number:   note.ID,
 		MRNumber: mrNumber,
@@ -67,7 +73,7 @@ func (r *Repository) UpdateChangeComment(
 	noteOptions := gitlab.UpdateMergeRequestNoteOptions{
 		Body: &markdown,
 	}
-	_, _, err := r.client.Notes.UpdateMergeRequestNote(r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions)
+	_, _, err := r.notes.UpdateMergeRequestNote(r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions)
 	if err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
@@ -120,7 +126,7 @@ func (r *Repository) ListChangeComments(
 
 		for pageNum := 1; true; pageNum++ {
 			notesOptions.ListOptions.Page = pageNum
-			notes, response, err := r.client.Notes.ListMergeRequestNotes(r.repoID, mustMR(id).Number, &notesOptions)
+			notes, response, err := r.notes.ListMergeRequestNotes(r.repoID, mustMR(id).Number, &notesOptions)
 			if err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
 				return

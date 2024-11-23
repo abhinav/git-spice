@@ -17,6 +17,8 @@ type Repository struct {
 	userID      int
 	userRole    *gitlab.AccessLevelValue
 	forge       *Forge
+
+	notes notesService
 }
 
 var _ forge.Repository = (*Repository)(nil)
@@ -61,6 +63,7 @@ func newRepository(
 		userID:   user.ID,
 		userRole: &accessLevel,
 		repoID:   project.ID,
+		notes:    client.Notes,
 	}, nil
 }
 
