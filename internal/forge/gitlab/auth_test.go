@@ -3,7 +3,11 @@ package gitlab
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -14,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/termtest"
+	"golang.org/x/oauth2"
 )
 
 func TestForgeOAuth2Endpoint(t *testing.T) {
@@ -67,6 +72,7 @@ func TestAuthSaveAndLoad(t *testing.T) {
 
 	require.NoError(t, f.SaveAuthenticationToken(&stash, &AuthenticationToken{
 		AccessToken: "token",
+		AuthType:    AuthTypePAT,
 	}))
 
 	t.Run("Exists", func(t *testing.T) {
@@ -75,7 +81,16 @@ func TestAuthSaveAndLoad(t *testing.T) {
 
 		assert.Equal(t, &AuthenticationToken{
 			AccessToken: "token",
+			AuthType:    AuthTypePAT,
 		}, tok)
+	})
+
+	t.Run("CantSaveEnv", func(t *testing.T) {
+		err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+			AccessToken: "foo",
+			AuthType:    AuthTypeEnvironmentVariable,
+		})
+		require.Error(t, err)
 	})
 }
 
@@ -127,6 +142,56 @@ func TestLoadAuthenticationToken_badJSON(t *testing.T) {
 	assert.ErrorContains(t, err, "unmarshal token")
 }
 
+func TestAuthType(t *testing.T) {
+	for _, typ := range []AuthType{AuthTypePAT, AuthTypeOAuth2} {
+		t.Run(typ.String(), func(t *testing.T) {
+			t.Run("JSONRoundTrip", func(t *testing.T) {
+				bs, err := json.Marshal(typ)
+				require.NoError(t, err)
+
+				var got AuthType
+				require.NoError(t, json.Unmarshal(bs, &got))
+
+				assert.Equal(t, typ, got)
+			})
+		})
+	}
+
+	t.Run("JSONError", func(t *testing.T) {
+		t.Run("AuthTypeEnvironmentVariable", func(t *testing.T) {
+			_, err := json.Marshal(AuthTypeEnvironmentVariable)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "should never save")
+		})
+
+		t.Run("Unknown", func(t *testing.T) {
+			_, err := json.Marshal(AuthType(42))
+			require.Error(t, err)
+
+			var got AuthType
+			require.Error(t, json.Unmarshal([]byte(`"foo"`), &got))
+		})
+	})
+
+	t.Run("String", func(t *testing.T) {
+		tests := []struct {
+			typ AuthType
+			str string
+		}{
+			{AuthTypePAT, "Personal Access Token"},
+			{AuthTypeOAuth2, "OAuth2"},
+			{AuthTypeEnvironmentVariable, "Environment Variable"},
+			{AuthType(42), "AuthType(42)"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.str, func(t *testing.T) {
+				assert.Equal(t, tt.str, tt.typ.String())
+			})
+		}
+	})
+}
+
 func TestPATAuthenticator(t *testing.T) {
 	stdin, stdinW := io.Pipe()
 	defer func() {
@@ -174,4 +239,78 @@ func TestPATAuthenticator(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out")
 	}
+}
+
+func TestDeviceFlowAuthenticator(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /oauth/authorize_device", func(w http.ResponseWriter, r *http.Request) {
+		clientID := r.FormValue("client_id")
+		if !assert.Equal(t, "client-id", clientID) {
+			http.Error(w, "bad client_id", http.StatusBadRequest)
+			return
+		}
+
+		scope := r.FormValue("scope")
+		if !assert.Equal(t, "scope", scope) {
+			http.Error(w, "bad scope", http.StatusBadRequest)
+			return
+		}
+
+		_, _ = w.Write([]byte(`{
+			"device_code": "device-code",
+			"verification_uri": "https://example.com/verify",
+			"expires_in": 900,
+			"interval": 1
+		}`))
+	})
+
+	mux.HandleFunc("POST /oauth/token", func(w http.ResponseWriter, r *http.Request) {
+		clientID := r.FormValue("client_id")
+		if !assert.Equal(t, "client-id", clientID) {
+			http.Error(w, "bad client_id", http.StatusBadRequest)
+			return
+		}
+
+		deviceCode := r.FormValue("device_code")
+		if !assert.Equal(t, "device-code", deviceCode) {
+			http.Error(w, "bad device_code", http.StatusBadRequest)
+			return
+		}
+
+		result := map[string]string{
+			"access_token": "my-token",
+			"token_type":   "bearer",
+			"scope":        "scope",
+		}
+
+		switch r.Header.Get("Accept") {
+		case "application/json":
+			_ = json.NewEncoder(w).Encode(result)
+		default:
+			q := make(url.Values)
+			for k, v := range result {
+				q.Set(k, v)
+			}
+			_, _ = io.WriteString(w, q.Encode())
+		}
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	tok, err := (&DeviceFlowAuthenticator{
+		ClientID: "client-id",
+		Scopes:   []string{"scope"},
+		Stderr:   io.Discard,
+		Endpoint: oauth2.Endpoint{
+			DeviceAuthURL: srv.URL + "/oauth/authorize_device",
+			TokenURL:      srv.URL + "/oauth/token",
+		},
+	}).Authenticate(context.Background())
+	require.NoError(t, err)
+
+	assert.Equal(t, &AuthenticationToken{
+		AccessToken: "my-token",
+		AuthType:    AuthTypeOAuth2,
+	}, tok)
 }

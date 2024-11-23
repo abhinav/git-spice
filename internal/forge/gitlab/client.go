@@ -1,6 +1,10 @@
 package gitlab
 
-import "github.com/xanzy/go-gitlab"
+import (
+	"fmt"
+
+	"github.com/xanzy/go-gitlab"
+)
 
 type gitlabClient struct {
 	MergeRequests    mergeRequestsService
@@ -10,8 +14,18 @@ type gitlabClient struct {
 	Users            usersService
 }
 
-func newGitLabClient(baseURL string, accessToken string) (*gitlabClient, error) {
-	client, err := gitlab.NewClient(accessToken, gitlab.WithBaseURL(baseURL))
+func newGitLabClient(baseURL string, tok *AuthenticationToken) (*gitlabClient, error) {
+	var newClient func(string, ...gitlab.ClientOptionFunc) (*gitlab.Client, error)
+	switch tok.AuthType {
+	case AuthTypePAT:
+		newClient = gitlab.NewClient
+	case AuthTypeOAuth2:
+		newClient = gitlab.NewOAuthClient
+	default:
+		return nil, fmt.Errorf("unknown auth type: %d", tok.AuthType)
+	}
+
+	client, err := newClient(tok.AccessToken, gitlab.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, err
 	}

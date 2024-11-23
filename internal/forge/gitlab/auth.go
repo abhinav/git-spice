@@ -18,15 +18,80 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// (This is not secret.)
+const _oauthAppID = "3467e093f73e133c18ea6008817c00f2c91ac2ee0ec60d6be8aca6fa7c64f7c1"
+
 // AuthenticationToken defines the token returned by the GitLab forge.
 type AuthenticationToken struct {
 	forge.AuthenticationToken
 
+	// AuthType specifies the kind of authentication method used.
+	// This c
+	AuthType AuthType `json:"auth_type,omitempty"` // required
+
 	// AccessToken is the GitLab access token.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitempty"` // required
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
+
+// AuthType specifies the kind of authentication method used.
+type AuthType int
+
+const (
+	// AuthTypePAT states that PAT authentication was used.
+	AuthTypePAT AuthType = iota
+
+	// AuthTypeOAuth2 states that OAuth2 authentication was used.
+	AuthTypeOAuth2
+
+	// AuthTypeEnvironmentVariable states
+	// that the token was set via an environment variable.
+	//
+	// This is not a real authentication method.
+	AuthTypeEnvironmentVariable AuthType = 100
+)
+
+// MarshalText implements encoding.TextMarshaler.
+func (a AuthType) MarshalText() ([]byte, error) {
+	switch a {
+	case AuthTypePAT:
+		return []byte("pat"), nil
+	case AuthTypeOAuth2:
+		return []byte("oauth2"), nil
+	case AuthTypeEnvironmentVariable:
+		return nil, fmt.Errorf("should never save AuthTypeEnvironmentVariable")
+	default:
+		return nil, fmt.Errorf("unknown auth type: %d", a)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (a *AuthType) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "pat":
+		*a = AuthTypePAT
+	case "oauth2":
+		*a = AuthTypeOAuth2
+	default:
+		return fmt.Errorf("unknown auth type: %q", b)
+	}
+	return nil
+}
+
+// String returns the string representation of the AuthType.
+func (a AuthType) String() string {
+	switch a {
+	case AuthTypePAT:
+		return "Personal Access Token"
+	case AuthTypeOAuth2:
+		return "OAuth2"
+	case AuthTypeEnvironmentVariable:
+		return "Environment Variable"
+	default:
+		return fmt.Sprintf("AuthType(%d)", int(a))
+	}
+}
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
 	u, err := url.Parse(f.URL())
@@ -96,7 +161,10 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 	if f.Options.Token != "" {
 		// If the user has set GITLAB_TOKEN, we should use that
 		// regardless of what's in the stash.
-		return &AuthenticationToken{AccessToken: f.Options.Token}, nil
+		return &AuthenticationToken{
+			AccessToken: f.Options.Token,
+			AuthType:    AuthTypeEnvironmentVariable,
+		}, nil
 	}
 
 	tokstr, err := stash.LoadSecret(f.URL(), "token")
@@ -126,7 +194,22 @@ var _authenticationMethods = []struct {
 	Description func(focused bool) string
 	Build       func(authenticatorOptions) authenticator
 }{
-	// TODO: OAuth
+	{
+		Title:       "OAuth",
+		Description: oauthDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			return &DeviceFlowAuthenticator{
+				ClientID: _oauthAppID,
+				Endpoint: a.Endpoint,
+				Stderr:   a.Stderr,
+				Scopes: []string{
+					"api",
+					"read_user",
+					"write_repository",
+				},
+			}
+		},
+	},
 	{
 		Title:       "Personal Access Token",
 		Description: patDesc,
@@ -170,6 +253,14 @@ func selectAuthenticator(a authenticatorOptions) (authenticator, error) {
 	return method, err
 }
 
+func oauthDesc(focused bool) string {
+	return text.Dedent(`
+	Authorize git-spice to act on your behalf from this device only.
+	git-spice will get access to all repositories: public and private.
+	For private repositories, you will need to request installation from a repository owner.
+	`)
+}
+
 func patDesc(focused bool) string {
 	scopeStyle := ui.NewStyle()
 	if focused {
@@ -192,6 +283,8 @@ func urlStyle(focused bool) lipgloss.Style {
 	}
 	return s
 }
+
+// TODO: share authenticators with GitHub
 
 // PATAuthenticator implements PAT authentication for GitLab.
 type PATAuthenticator struct {
@@ -216,5 +309,60 @@ func (a *PATAuthenticator) Authenticate(_ context.Context) (*AuthenticationToken
 	)
 
 	// TODO: Should we validate the token by making a request?
-	return &AuthenticationToken{AccessToken: token}, err
+	return &AuthenticationToken{
+		AccessToken: token,
+		AuthType:    AuthTypePAT,
+	}, err
+}
+
+// DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
+// This is used for OAuth and GitHub App authentication.
+type DeviceFlowAuthenticator struct {
+	// Endpoint is the OAuth endpoint to use.
+	Endpoint oauth2.Endpoint
+
+	// ClientID for the OAuth or GitHub App.
+	ClientID string
+
+	// Scopes specifies the OAuth scopes to request.
+	Scopes []string
+
+	Stderr io.Writer // required
+}
+
+// Authenticate executes the OAuth authentication flow.
+func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (*AuthenticationToken, error) {
+	cfg := oauth2.Config{
+		ClientID:    a.ClientID,
+		Endpoint:    a.Endpoint,
+		Scopes:      a.Scopes,
+		RedirectURL: "http://127.0.0.1/callback",
+	}
+
+	resp, err := cfg.DeviceAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	urlStle := ui.NewStyle().Foreground(ui.Cyan).Bold(true).Underline(true)
+	codeStyle := ui.NewStyle().Foreground(ui.Cyan).Bold(true)
+	bullet := ui.NewStyle().PaddingLeft(2).Foreground(ui.Gray)
+	faint := ui.NewStyle().Faint(true)
+
+	fmt.Fprintf(a.Stderr, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
+	fmt.Fprintf(a.Stderr, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
+	fmt.Fprintln(a.Stderr, faint.Render("The code expires in a few minutes."))
+	fmt.Fprintln(a.Stderr, faint.Render("It will take a few seconds to verify after you enter it."))
+	// TODO: maybe open browser with flag opt-out
+
+	token, err := cfg.DeviceAccessToken(ctx, resp,
+		oauth2.SetAuthURLParam("grant_type", "urn:ietf:params:oauth:grant-type:device_code"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthenticationToken{
+		AccessToken: token.AccessToken,
+		AuthType:    AuthTypeOAuth2,
+	}, nil
 }
