@@ -16,6 +16,42 @@ import (
 	"go.abhg.dev/gs/internal/termtest"
 )
 
+func TestForgeOAuth2Endpoint(t *testing.T) {
+	t.Run("DefaultURL", func(t *testing.T) {
+		var f Forge
+
+		ep, err := f.oauth2Endpoint()
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://gitlab.com/oauth/authorize", ep.AuthURL)
+	})
+
+	t.Run("CustomURL", func(t *testing.T) {
+		f := Forge{
+			Options: Options{
+				URL: "https://gitlab.example.com",
+			},
+		}
+
+		ep, err := f.oauth2Endpoint()
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://gitlab.example.com/oauth/authorize", ep.AuthURL)
+	})
+
+	t.Run("BadURL", func(t *testing.T) {
+		f := Forge{
+			Options: Options{
+				URL: "://",
+			},
+		}
+
+		_, err := f.oauth2Endpoint()
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "bad GitLab URL")
+	})
+}
+
 func TestAuthHasGitLabToken(t *testing.T) {
 	var logBuffer bytes.Buffer
 	f := Forge{
