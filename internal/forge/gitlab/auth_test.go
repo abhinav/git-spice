@@ -52,7 +52,34 @@ func TestForgeOAuth2Endpoint(t *testing.T) {
 	})
 }
 
-func TestAuthHasGitLabToken(t *testing.T) {
+func TestAuthSaveAndLoad(t *testing.T) {
+	var logBuffer bytes.Buffer
+	f := Forge{
+		Log: log.New(&logBuffer),
+	}
+
+	var stash secret.MemoryStash
+	t.Run("DoesNotExist", func(t *testing.T) {
+		_, err := f.LoadAuthenticationToken(&stash)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, secret.ErrNotFound)
+	})
+
+	require.NoError(t, f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+		AccessToken: "token",
+	}))
+
+	t.Run("Exists", func(t *testing.T) {
+		tok, err := f.LoadAuthenticationToken(&stash)
+		require.NoError(t, err)
+
+		assert.Equal(t, &AuthenticationToken{
+			AccessToken: "token",
+		}, tok)
+	})
+}
+
+func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 	var logBuffer bytes.Buffer
 	f := Forge{
 		Options: Options{
