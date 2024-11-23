@@ -36,7 +36,7 @@ func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
 
 	return oauth2.Endpoint{
 		AuthURL:       u.JoinPath("/oauth/authorize").String(),
-		TokenURL:      u.JoinPath("/oauth/access_token").String(),
+		TokenURL:      u.JoinPath("/oauth/token").String(),
 		DeviceAuthURL: u.JoinPath("/oauth/authorize_device").String(),
 	}, nil
 }
