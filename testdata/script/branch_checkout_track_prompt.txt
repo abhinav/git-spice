@@ -1,8 +1,6 @@
 # branch checkout of an untracked branch
 # prompts to check it out.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 
@@ -18,8 +16,9 @@ git commit -m 'Add foo.txt'
 
 git checkout main
 
-with-term $WORK/input.txt -- gs branch checkout feature
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch checkout feature
+cmp $WORK/robot.actual $WORK/robot.golden
 
 gs ls -a
 cmp stderr $WORK/golden/ls.txt
@@ -27,15 +26,11 @@ cmp stderr $WORK/golden/ls.txt
 -- repo/foo.txt --
 whatever
 
--- input.txt --
-await Do you want to track
-snapshot
-feed y
-await
+-- robot.golden --
+===
+> Do you want to track this branch now?: [Y/n]
+true
 
--- golden/prompt.txt --
-WRN feature: branch not tracked
-Do you want to track this branch now?: [Y/n]
 -- golden/ls.txt --
 ┏━■ feature ◀
 main

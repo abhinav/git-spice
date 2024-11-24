@@ -1,8 +1,6 @@
 # 'branch submit' with a PR template and no additional commit body
 # places the template at the top.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-19T04:32:32Z'
 
@@ -26,9 +24,9 @@ git add feature.txt
 
 git add feature.txt
 gs bc feature -m 'Add feature'
-env EDITOR=true
-with-term -final exit $WORK/input/prompt.txt -- gs branch submit
-cmpenv stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit
+cmp $WORK/robot.actual $WORK/robot.golden
 
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
@@ -46,35 +44,22 @@ Issue:
 -- repo/feature.txt --
 feature
 
--- input/prompt.txt --
-await Add feature
-snapshot title
-feed \r
-await Body
-snapshot body
-feed e
-await Draft
-snapshot draft
-feed \r
+-- robot.golden --
+===
+> Title: Add feature 
+> Short summary of the change
+"Add feature"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{
+  "want": "## Summary\n\nDetails\n\n## Test plan\n\nExplain\n\nIssue:\n"
+}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
 
--- golden/prompt.txt --
-### title ###
-Title: Add feature
-Short summary of the change
-### body ###
-Title: Add feature
-Body: Press [e] to open true or [enter/tab] to skip
-Open your editor to write a detailed description of the change
-### draft ###
-Title: Add feature
-Body: Press [e] to open true or [enter/tab] to skip
-Draft: [y/N]
-Mark the change as a draft?
-### exit ###
-Title: Add feature
-Body: Press [e] to open true or [enter/tab] to skip
-Draft: [y/N]
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
 -- golden/pulls.json --
 [
   {

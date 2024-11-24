@@ -1,7 +1,5 @@
 # Moving in a linear stack with gs up/bd/bt/bb.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 
@@ -35,12 +33,15 @@ stdout feature1
 gs up
 
 # up prompt
-with-term -final exit $WORK/input/up-prompt.txt -- gs up -n
-cmp stdout $WORK/golden/up-prompt.txt
+env ROBOT_INPUT=$WORK/robot.up.golden ROBOT_OUTPUT=$WORK/robot.up.actual
+gs up -n
+cmp $WORK/robot.up.actual $WORK/robot.up.golden
 
 # top prompt
-with-term -final exit $WORK/input/top-prompt.txt -- gs top -n
-cmp stdout $WORK/golden/top-prompt.txt
+env ROBOT_INPUT=$WORK/robot.top.golden ROBOT_OUTPUT=$WORK/robot.top.actual
+gs top -n
+cmp $WORK/robot.top.actual $WORK/robot.top.golden
+
 
 # top no prompt
 gs bco feature2
@@ -63,8 +64,9 @@ stdout feature1
 
 # up [N]
 gs trunk
-with-term -final exit $WORK/input/up-2-prompt.txt -- gs up -n 2
-cmp stdout $WORK/golden/up-2-prompt.txt
+env ROBOT_INPUT=$WORK/robot.up-2.golden ROBOT_OUTPUT=$WORK/robot.up-2.actual
+gs up -n 2
+cmp $WORK/robot.up-2.actual $WORK/robot.up-2.golden
 
 -- golden/ls.txt --
     ┏━□ feature3
@@ -73,45 +75,32 @@ cmp stdout $WORK/golden/up-2-prompt.txt
   ┣━┻□ feature4
 ┏━┻□ feature1
 main ◀
--- input/up-prompt.txt --
-await feature
-snapshot
-feed feature2\r
--- golden/up-prompt.txt --
-Pick a branch:
-┏━■ feature2 ◀
-┣━□ feature4
-feature1
+-- robot.up.golden --
+===
+> Pick a branch: 
+> ┏━■ feature2 ◀
+> ┣━□ feature4
+> feature1
+>
+> There are multiple branches above the current branch.
+"feature2"
 
-There are multiple branches above the current branch.
-### exit ###
-Pick a branch: feature2
-feature2
--- input/top-prompt.txt --
-await feature
-snapshot
-feed feature5\r
--- golden/top-prompt.txt --
-Pick a branch:
-┏━■ feature3 ◀
-┣━□ feature5
-feature1
+-- robot.top.golden --
+===
+> Pick a branch: 
+> ┏━■ feature3 ◀
+> ┣━□ feature5
+> feature1
+>
+> There are multiple top-level branches reachable from the current branch.
+"feature5"
 
-There are multiple top-level branches reachable from the current branch.
-### exit ###
-Pick a branch: feature5
-feature5
--- input/up-2-prompt.txt --
-await feature
-snapshot
-feed feature4\r
--- golden/up-2-prompt.txt --
-Pick a branch:
-┏━■ feature2 ◀
-┣━□ feature4
-feature1
-
-There are multiple branches above the current branch.
-### exit ###
-Pick a branch: feature4
-feature4
+-- robot.up-2.golden --
+===
+> Pick a branch: 
+> ┏━■ feature2 ◀
+> ┣━□ feature4
+> feature1
+>
+> There are multiple branches above the current branch.
+"feature4"

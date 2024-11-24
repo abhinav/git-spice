@@ -1,8 +1,6 @@
 # 'gs repo init' prompts for a remote
 # if there are multiple remotes.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 
@@ -14,19 +12,16 @@ git commit --allow-empty -m 'Initial commit'
 git remote add origin https://example.com/foo-fork.git
 git remote add upstream https://example.com/foo.git
 
-with-term $WORK/input.txt -- gs repo init
-cmp stdout $WORK/golden/dialog.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs repo init
+cmp $WORK/robot.actual $WORK/robot.golden
 
--- input.txt --
-await Please select a remote:
-snapshot dialog
-feed \r
-
--- golden/dialog.txt --
-### dialog ###
-Please select a remote:
-
-▶ origin
-  upstream
-
-Merged changes will be pushed to this remote
+-- robot.golden --
+===
+> Please select a remote: 
+>
+> ▶ origin
+>   upstream
+>
+> Merged changes will be pushed to this remote
+"origin"
