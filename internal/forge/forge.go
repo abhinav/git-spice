@@ -16,6 +16,7 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 var _forgeRegistry sync.Map
@@ -103,7 +104,7 @@ type Forge interface {
 	//
 	// The implementation should return a secret that the Forge
 	// can serialize and store for future use.
-	AuthenticationFlow(ctx context.Context) (AuthenticationToken, error)
+	AuthenticationFlow(ctx context.Context, view ui.View) (AuthenticationToken, error)
 
 	// SaveAuthenticationToken saves the given authentication token
 	// to the secret stash.

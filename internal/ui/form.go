@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -75,9 +74,21 @@ type Field interface {
 	// Init initializes the field.
 	// This is called right before the field is first rendered,
 	// not when the form is initialized.
+	//
+	// If this returns [SkipField], the field will be skipped.
 	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
 	Render(Writer)
+
+	// UnmarshalValue unmarshals the field's value
+	// using the given unmarshal function.
+	//
+	// The unmarhal function should be called with a pointer to a value
+	// and it will attempt to decode the underlying raw value into it,
+	// behaving similarly to encoding/json.Unmarshal.
+	//
+	// This function is used in tests to simulate user input.
+	UnmarshalValue(unmarshal func(any) error) error
 
 	// Err reports any errors for the field at render time.
 	// These will be rendered in red below the field.
@@ -95,12 +106,15 @@ type Field interface {
 	Description() string
 }
 
-// Run presents a single field to the user and blocks until
-// it's accepted or canceled.
-//
-// This is a convenience function for forms with just one field.
-func Run(f Field, opts ...RunOption) error {
-	return NewForm(f).Run(opts...)
+// Run presents the given field to the user using the given View.
+// If the view is not interactive, it will return an error.
+func Run(v View, fs ...Field) error {
+	iv, ok := v.(InteractiveView)
+	if !ok {
+		return ErrPrompt
+	}
+
+	return iv.Prompt(fs...)
 }
 
 // Form presents a series of fields for the user to fill.
@@ -126,40 +140,12 @@ func NewForm(fields ...Field) *Form {
 	}
 }
 
-type runOptions struct {
-	input  io.Reader
-	output io.Writer
-}
-
-// RunOption is an option for a form's [Run] method.
-type RunOption func(*runOptions)
-
-// WithInput sets the input stream for the form.
-func WithInput(r io.Reader) func(*runOptions) {
-	return func(f *runOptions) { f.input = r }
-}
-
-// WithOutput sets the output stream for the form.
-func WithOutput(w io.Writer) func(*runOptions) {
-	return func(f *runOptions) { f.output = w }
-}
-
 // Run runs the form and blocks until it's accepted or canceled.
 // It returns a combination of all errors returned by the fields.
-func (f *Form) Run(opts ...RunOption) error {
-	o := runOptions{
-		output: os.Stderr,
-	}
-	for _, opt := range opts {
-		opt(&o)
-	}
-
-	var teaOpts []tea.ProgramOption
-	if o.input != nil {
-		teaOpts = append(teaOpts, tea.WithInput(o.input))
-	}
-	if o.output != nil {
-		teaOpts = append(teaOpts, tea.WithOutput(o.output))
+func (f *Form) Run(view *TerminalView) error {
+	teaOpts := []tea.ProgramOption{
+		tea.WithInput(view.R),
+		tea.WithOutput(view.W),
 	}
 
 	if _, err := tea.NewProgram(f, teaOpts...).Run(); err != nil {

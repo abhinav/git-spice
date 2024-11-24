@@ -76,10 +76,14 @@ make cover
 
 ### Test scripts
 
-Tests for the project make heavy use of the
-[testscript package](https://pkg.go.dev/github.com/rogpeppe/go-internal/testscript).
+Tests for the project make heavy use of the go-internal/testscript package.
+Read more about the test script language at [testscript package](https://pkg.go.dev/github.com/rogpeppe/go-internal/testscript).
+
 Tests scripts are stored inside the testdata/script directory.
-Read more about the test script format in the documentation of the package.
+On top of the base functionality of testscript,
+we add a bunch of custom commands and infrastructure to make testing easier.
+
+Read more about these in the [test scripts README](testdata/script/README.md).
 
 ## Releasing a new version
 

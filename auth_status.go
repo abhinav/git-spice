@@ -20,7 +20,6 @@ func (cmd *authStatusCmd) Run(
 	ctx context.Context,
 	stash secret.Stash,
 	log *log.Logger,
-	globals *globalOptions,
 	f forge.Forge,
 ) error {
 	if _, err := f.LoadAuthenticationToken(stash); err != nil {

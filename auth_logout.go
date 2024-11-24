@@ -24,7 +24,6 @@ func (cmd *authLogoutCmd) Run(
 	ctx context.Context,
 	stash secret.Stash,
 	log *log.Logger,
-	globals *globalOptions,
 	f forge.Forge,
 ) error {
 	if err := f.ClearAuthenticationToken(stash); err != nil {

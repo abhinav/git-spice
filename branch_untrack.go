@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchUntrackCmd struct {
@@ -26,8 +27,8 @@ func (*branchUntrackCmd) Help() string {
 	`)
 }
 
-func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, _, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, _, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}

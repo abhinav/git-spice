@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type rebaseContinueCmd struct{}
@@ -31,7 +32,7 @@ func (*rebaseContinueCmd) Help() string {
 func (cmd *rebaseContinueCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 	parser *kong.Kong,
 ) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
@@ -41,7 +42,7 @@ func (cmd *rebaseContinueCmd) Run(
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log, opts)
+	store, err := ensureStore(ctx, repo, log, view)
 	if err != nil {
 		return err
 	}

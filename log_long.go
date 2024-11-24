@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type logLongCmd struct {
@@ -19,10 +20,9 @@ func (*logLongCmd) Help() string {
 	`)
 }
 
-func (cmd *logLongCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
-	return cmd.run(ctx, &branchLogOptions{
+func (cmd *logLongCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
+	return cmd.run(ctx, view, &branchLogOptions{
 		Log:     log,
 		Commits: true,
-		Globals: opts,
 	})
 }

@@ -110,6 +110,21 @@ func (s *MultiSelect[T]) Value() []T {
 	return items
 }
 
+// UnmarshalValue unmarshals the result of the field from the given function.
+// The input source must be a list of indexes, not []T.
+func (s *MultiSelect[T]) UnmarshalValue(unmarshal func(any) error) error {
+	var selected []int
+	if err := unmarshal(&selected); err != nil {
+		return err
+	}
+
+	for i := range s.options {
+		s.options[i].Selected = slices.Contains(selected, i)
+	}
+
+	return nil
+}
+
 // MultiSelectOption is an option for a multi-select field.
 type MultiSelectOption[T any] struct {
 	// Value of the option.

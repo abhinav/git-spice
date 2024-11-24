@@ -1,8 +1,13 @@
 package widget
 
 import (
+	"encoding/json"
+	"fmt"
+	"slices"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -59,6 +64,36 @@ func (b *BranchSplit) WithCommits(commits ...CommitSummary) *BranchSplit {
 // Selected returns the indexes of the selected commits.
 func (b *BranchSplit) Selected() []int {
 	return b.model.Selected()
+}
+
+// UnmarshalValue reads a list of commit hashes
+// for the selected commits.
+func (b *BranchSplit) UnmarshalValue(unmarshal func(any) error) error {
+	var commits []git.Hash
+	if err := unmarshal(&commits); err != nil {
+		return err
+	}
+
+	selected := make([]int, 0, len(commits))
+	for _, commit := range commits {
+		idx := slices.IndexFunc(b.commits, func(c CommitSummary) bool {
+			return c.ShortHash == commit
+		})
+		if idx == -1 {
+			return fmt.Errorf("cannot select %v: commit not found", commit)
+		}
+
+		selected = append(selected, idx)
+	}
+
+	bs, err := json.Marshal(selected)
+	if err != nil {
+		return fmt.Errorf("marshal selected: %w", err)
+	}
+
+	return b.model.UnmarshalValue(func(a any) error {
+		return json.Unmarshal(bs, a)
+	})
 }
 
 // Title returns the title of the widget.

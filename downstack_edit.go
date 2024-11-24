@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type downstackEditCmd struct {
@@ -33,8 +34,8 @@ func (*downstackEditCmd) Help() string {
 	`)
 }
 
-func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -87,5 +88,5 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, opts *glo
 
 	return (&branchCheckoutCmd{
 		Branch: res.Stack[len(res.Stack)-1],
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 }

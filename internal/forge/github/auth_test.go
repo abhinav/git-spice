@@ -20,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/termtest"
+	"go.abhg.dev/gs/internal/ui"
 	"golang.org/x/oauth2"
 )
 
@@ -75,9 +76,10 @@ func TestAuthHasGitHubToken(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	view := &ui.FileView{W: io.Discard}
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
-		_, err := f.AuthenticationFlow(ctx)
+		_, err := f.AuthenticationFlow(ctx, view)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "already authenticated")
 		assert.Contains(t, logBuffer.String(), "Already authenticated")
@@ -175,12 +177,11 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 	tok, err := (&DeviceFlowAuthenticator{
 		ClientID: "client-id",
 		Scopes:   []string{"scope"},
-		Stderr:   io.Discard,
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: srv.URL + "/device/code",
 			TokenURL:      srv.URL + "/oauth/access_token",
 		},
-	}).Authenticate(context.Background())
+	}).Authenticate(context.Background(), &ui.FileView{W: io.Discard})
 	require.NoError(t, err)
 
 	assert.Equal(t, "my-token", tok.AccessToken)
@@ -195,6 +196,10 @@ func TestSelectAuthenticator(t *testing.T) {
 	}()
 
 	term := midterm.NewAutoResizingTerminal()
+	view := &ui.TerminalView{
+		R: stdin,
+		W: term,
+	}
 
 	type result struct {
 		auth authenticator
@@ -204,9 +209,7 @@ func TestSelectAuthenticator(t *testing.T) {
 	go func() {
 		defer close(resultc)
 
-		got, err := selectAuthenticator(authenticatorOptions{
-			Stdin:    stdin,
-			Stderr:   term,
+		got, err := selectAuthenticator(view, authenticatorOptions{
 			Endpoint: oauth2.Endpoint{},
 		})
 		resultc <- result{got, err}
@@ -221,7 +224,7 @@ func TestSelectAuthenticator(t *testing.T) {
 	}, time.Second, 50*time.Millisecond)
 
 	// Go through all options, roll back around to the first, and select it
-	for range len(_authenticationMethods) {
+	for range _authenticationMethods {
 		_, _ = io.WriteString(stdinW, "\x1b[B") // Down arrow
 	}
 	_, _ = io.WriteString(stdinW, "\r") // Enter
@@ -248,6 +251,10 @@ func TestPATAuthenticator(t *testing.T) {
 	}()
 
 	term := midterm.NewAutoResizingTerminal()
+	view := &ui.TerminalView{
+		R: stdin,
+		W: term,
+	}
 
 	type result struct {
 		tok forge.AuthenticationToken
@@ -257,10 +264,7 @@ func TestPATAuthenticator(t *testing.T) {
 	go func() {
 		defer close(resultc)
 
-		got, err := (&PATAuthenticator{
-			Stdin:  stdin,
-			Stderr: term,
-		}).Authenticate(context.Background())
+		got, err := (&PATAuthenticator{}).Authenticate(context.Background(), view)
 		resultc <- result{got, err}
 	}()
 
@@ -290,13 +294,15 @@ func TestPATAuthenticator(t *testing.T) {
 }
 
 func TestAuthCLI(t *testing.T) {
+	discardView := &ui.FileView{W: io.Discard}
+
 	t.Run("success", func(t *testing.T) {
 		tok, err := (&CLIAuthenticator{
 			GH: "gh",
 			runCmd: func(*exec.Cmd) error {
 				return nil
 			},
-		}).Authenticate(context.Background())
+		}).Authenticate(context.Background(), discardView)
 		require.NoError(t, err)
 
 		f := Forge{
@@ -321,7 +327,7 @@ func TestAuthCLI(t *testing.T) {
 					Stderr: []byte("great sadness"),
 				}
 			},
-		}).Authenticate(context.Background())
+		}).Authenticate(context.Background(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "not authenticated")
 		assert.ErrorContains(t, err, "great sadness")
@@ -333,7 +339,7 @@ func TestAuthCLI(t *testing.T) {
 			runCmd: func(*exec.Cmd) error {
 				return errors.New("gh not found")
 			},
-		}).Authenticate(context.Background())
+		}).Authenticate(context.Background(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "gh not found")
 	})

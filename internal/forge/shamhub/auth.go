@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type loginRequest struct {
@@ -94,7 +95,7 @@ type AuthenticationToken struct {
 // before attempting to authenticate.
 // The flow will fail if these variables are not set.
 // The flow will also fail if the user is already authenticated.
-func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationToken, error) {
+func (f *Forge) AuthenticationFlow(ctx context.Context, _ ui.View) (forge.AuthenticationToken, error) {
 	must.NotBeBlankf(f.APIURL, "API URL is required")
 
 	username := os.Getenv("SHAMHUB_USERNAME")

@@ -13,7 +13,92 @@ but in short:
 - Supporting files are specified below the script
   using `-- path/to/file --` syntax (see [txtar](https://pkg.go.dev/github.com/rogpeppe/go-internal/txtar))
 
-## Commands
+## Testing external systems
+
+For most external dependencies, we use fake implementations
+controlled by environment variables or custom commands.
+Some of these are listed in the [Command Reference](#command-reference).
+
+### Secrets storage
+
+The `secrettest` package provides a fake secrets stash
+that can be used by gs commands to save and load secrets in a test script.
+This is installed in all test scripts by default and requires no setup.
+
+### Opening external URLs
+
+Some commands open URLs in the browser.
+By default, these operations no-op in test scripts.
+To see what _would_ have been opened,
+set `BROWSER_RECORDER_FILE` to a file path:
+
+```
+env BROWSER_RECORDER_FILE=$WORK/browser.log
+```
+
+This will record URLs that would have been opened in a browser,
+one per line, to the specified file.
+
+Afterwards, compare these against the test's golden copy:
+
+```
+cmpenv $WORK/browser.log $WORK/browser.log.golden
+```
+
+### Interactive prompts
+
+Many commands in git-spice prompt the user for input.
+To test these, we have two options:
+
+- (**Deprecated**) `with-term`:
+  This runs the command with an in-memory terminal emulator
+  and a simple scripting language to control its behavior.
+  Details are explained below in the command reference.
+  Do not use this for new tests.
+- (**Recommended**) `RobotView`:
+  Replaces git-spice's concept of an interactive terminal
+  with a robot that fills each prompt with a pre-defined answer.
+  Answers are read from a fixture file.
+  The rest of this section explains this further.
+
+To use `RobotView`, write a fixture file with the following format
+inside the test script with a file name ending in `.golden`:
+
+```
+===
+> comment
+"JSON-encoded answer"
+===
+> another comment
+"another JSON-encoded answer"
+```
+
+The comment is optional when you first write it,
+but the JSON-encoded answer is required.
+These answers will be fed to the corresponding terminal widget in-order.
+
+Before invoking `gs` in the test script,
+set the `ROBOT_INPUT` environment variable to the fixture file.
+Optionally, also set `ROBOT_OUTPUT` to another file
+without the `.golden` suffix.
+
+```
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot
+```
+
+When git-spice runs, it will read and answer prompts from the fixture file.
+For each prompt, it will render the prompt and its input to the output file
+(if set) in the same format as the fixture file.
+
+After the test, you can compare the output file with the golden file:
+
+```
+cmpenv $WORK/robot $WORK/robot.golden
+```
+
+Use `-update` to automatically update the golden file when you first write it.
+
+## Command Reference
 
 Besides the base functionality of testscript,
 we instrument the engine with the following additional commands:
@@ -171,6 +256,8 @@ true <args...>
 Exits with status 0 regardless of parameters or input.
 
 ### with-term
+
+**Deprecated**: Do not use for new tests.
 
 ```
 with-term [options] <script> -- <command> <args...>

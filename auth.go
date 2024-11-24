@@ -29,9 +29,9 @@ func (c *authCmd) AfterApply(
 	ctx context.Context,
 	kctx *kong.Context,
 	log *log.Logger,
-	globals *globalOptions,
+	view ui.View,
 ) error {
-	f, err := resolveForge(ctx, log, globals, c.Forge)
+	f, err := resolveForge(ctx, log, view, c.Forge)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (c *authCmd) AfterApply(
 // repository's remote URL.
 // If the forge cannot be guessed, it will prompt the user to select one
 // if we're in interactive mode.
-func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, forgeID string) (forge.Forge, error) {
+func resolveForge(ctx context.Context, log *log.Logger, view ui.View, forgeID string) (forge.Forge, error) {
 	if forgeID != "" {
 		f, ok := forge.Lookup(forgeID)
 		if !ok {
@@ -82,7 +82,7 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 		return opts[0].Value, nil
 	}
 
-	if !globals.Prompt {
+	if !ui.Interactive(view) {
 		log.Error("No Forge specified, and could not guess one from the repository", "error", err)
 		return nil, fmt.Errorf("%w: please use the --forge flag", errNoPrompt)
 	}
@@ -91,7 +91,7 @@ func resolveForge(ctx context.Context, log *log.Logger, globals *globalOptions, 
 		WithTitle("Select a Forge").
 		WithOptions(opts...).
 		WithValue(&f)
-	err = ui.Run(field)
+	err = ui.Run(view, field)
 	return f, err
 }
 

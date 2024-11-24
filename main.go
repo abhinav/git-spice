@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -119,7 +120,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &cmd.globalOptions),
+		kong.Bind(logger),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
@@ -206,21 +207,17 @@ func main() {
 	}
 }
 
-type globalOptions struct {
-	// Flags that are not accessed directly by command implementations:
-
-	Version versionFlag        `help:"Print version information and quit"`
-	Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
-	Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
-
-	// Flags that are accessed directly:
-
-	Prompt bool `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
-}
-
 type mainCmd struct {
 	kong.Plugins
-	globalOptions `group:"globals"`
+
+	// Global options that are never accessed directly by subcommands.
+	Globals struct {
+		// Flags with built-in side effects.
+		Version versionFlag        `help:"Print version information and quit"`
+		Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
+		Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
+		Prompt  bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+	} `embed:"" group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
 	Auth  authCmd  `cmd:"" group:"Authentication"`
@@ -249,9 +246,25 @@ type mainCmd struct {
 }
 
 func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
-	if cmd.Verbose {
+	if cmd.Globals.Verbose {
 		logger.SetLevel(log.DebugLevel)
 	}
 
+	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)
+	if err != nil {
+		return fmt.Errorf("build view: %w", err)
+	}
+	kctx.BindTo(view, (*ui.View)(nil))
+
 	return nil
+}
+
+var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {
+	if interactive {
+		return &ui.TerminalView{
+			R: stdin,
+			W: stderr,
+		}, nil
+	}
+	return &ui.FileView{W: stderr}, nil
 }

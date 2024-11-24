@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackEditCmd struct {
@@ -33,8 +34,8 @@ func (*stackEditCmd) Help() string {
 	`)
 }
 
-func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -90,5 +91,5 @@ func (cmd *stackEditCmd) Run(ctx context.Context, log *log.Logger, opts *globalO
 		return fmt.Errorf("edit downstack: %w", err)
 	}
 
-	return (&branchCheckoutCmd{Branch: cmd.Branch}).Run(ctx, log, opts)
+	return (&branchCheckoutCmd{Branch: cmd.Branch}).Run(ctx, log, view)
 }

@@ -15,6 +15,7 @@ import (
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 // submitSession is a single session of submitting branches.
@@ -35,12 +36,12 @@ func newSubmitSession(
 	repo *git.Repository,
 	store *state.Store,
 	stash secret.Stash,
-	globals *globalOptions,
+	view ui.View,
 	log *log.Logger,
 ) *submitSession {
 	var s submitSession
 	s.Remote.get = func(ctx context.Context) (string, error) {
-		return ensureRemote(ctx, repo, store, log, globals)
+		return ensureRemote(ctx, repo, store, log, view)
 	}
 
 	s.RemoteRepo.get = func(ctx context.Context) (forge.Repository, error) {
