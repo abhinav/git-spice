@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,6 +24,8 @@ import (
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/secret/secrettest"
 	"go.abhg.dev/gs/internal/termtest"
+	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/uitest"
 )
 
 var _update = flag.Bool("update", false, "update golden files")
@@ -52,6 +55,20 @@ func TestMain(m *testing.M) {
 			// If a browser launcher is configured, use it.
 			if browserFile := os.Getenv("BROWSER_RECORDER_FILE"); browserFile != "" {
 				_browserLauncher = browsertest.NewRecorder(browserFile)
+			}
+
+			// If ROBOT_INPUT is set, install a uitest.RobotView
+			// instead of the normal view. This will always be interactive.
+			if fixtureFile := os.Getenv("ROBOT_INPUT"); fixtureFile != "" {
+				_buildView = func(_ io.Reader, stderr io.Writer, _ bool) (ui.View, error) {
+					return uitest.NewRobotView(
+						fixtureFile,
+						&uitest.RobotViewOptions{
+							OutputFile: os.Getenv("ROBOT_OUTPUT"),
+							LogOutput:  stderr,
+						},
+					)
+				}
 			}
 
 			forge.Register(&shamhub.Forge{Log: logger})
