@@ -1,0 +1,67 @@
+# 'repo sync' with --restack flag restacks branches after syncing
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+git add feature3.txt
+gs bc -m 'Add feature3' feature3
+
+# submit feature1
+gs bco feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# merge the PR server side and sync with restack
+shamhub merge alice/example 1
+gs repo sync --restack
+stderr 'feature1: #1 was merged'
+
+# verify the stack was restacked after sync
+gs ls -a
+cmp stderr $WORK/golden/restacked.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- repo/feature3.txt --
+Contents of feature3
+
+-- golden/restacked.txt --
+  ┏━□ feature3
+┏━┻□ feature2
+main ◀
+-- golden/graph.txt --
+* 935a1f6 (feature3) Add feature3
+* bd70ef4 (feature2) Add feature2
+*   614e5f2 (HEAD -> main, origin/main) Merge change #1
+|\  
+| * 9f1c9af Add feature1
+|/  
+* d90607e Initial commit
