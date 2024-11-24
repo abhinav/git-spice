@@ -1,8 +1,6 @@
 # 'gs repo init' with multiple local branches
 # prompts for a selection.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 # setup
 mkdir repo
 cd repo
@@ -12,22 +10,18 @@ git branch foo
 git branch bar
 
 # current branch is the default
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
 git checkout foo
-with-term $WORK/input.txt -- gs repo init
-cmp stdout $WORK/golden/dialog.txt
+gs repo init
+cmp $WORK/robot.actual $WORK/robot.golden
 
--- input.txt --
-await Please select the trunk branch
-snapshot dialog
-feed \r
-
--- golden/dialog.txt --
-### dialog ###
-WRN No remotes found. Commands that require a remote will fail.
-Please select the trunk branch:
-
-  bar
-▶ foo
-  main
-
-Changes will be merged into this branch
+-- robot.golden --
+===
+> Please select the trunk branch: 
+>
+>   bar
+> ▶ foo
+>   main
+>
+> Changes will be merged into this branch
+"foo"

@@ -2,8 +2,6 @@
 # if the heads mismatch and we're in interactive mode,
 # prompt the user for deletion.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-05T05:29:28Z'
 
@@ -38,8 +36,9 @@ shamhub merge alice/example 1
 
 # Re-track the branch and sync in interactive mode.
 gs branch track --base=main feature
-with-term -final exit $WORK/input/prompt.txt -- gs rs
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs rs
+cmp $WORK/robot.actual $WORK/robot.golden
 
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
@@ -50,20 +49,11 @@ Contents of feature
 -- extra/modified-feature.txt --
 New contents of feature
 
--- input/prompt.txt --
-await Delete feature
-snapshot
-feed y
-await
-
--- golden/prompt.txt --
-INF main: pulled 2 new commit(s)
-Delete feature?: [y/N]
-#1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54a6)
-### exit ###
-INF main: pulled 2 new commit(s)
-Delete feature?: [Y/n]
-INF feature: deleted (was 4513f9f)
+-- robot.golden --
+===
+> Delete feature?: [y/N]
+> #1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54a6)
+true
 -- golden/merged-log.txt --
 *   f512e87 (HEAD -> main, origin/main) Merge change #1
 |\  

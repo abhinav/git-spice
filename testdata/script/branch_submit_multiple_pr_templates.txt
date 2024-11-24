@@ -1,7 +1,5 @@
 # 'branch submit' shows a prompt if there are multiple PR templates.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-15T21:55:32Z'
 
@@ -24,11 +22,9 @@ env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
 gs bc feature
 
 mkdir $WORK/output
-env MOCKEDIT_GIVE= MOCKEDIT_RECORD=$WORK/output/pr-body.txt
-with-term -final exit $WORK/input/prompt.txt -- gs branch submit
-cmpenv stdout $WORK/golden/prompt.txt
-
-cmp $WORK/output/pr-body.txt $WORK/golden/pr-body.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit
+cmp $WORK/robot.actual $WORK/robot.golden
 
 -- repo/CHANGE_TEMPLATE.md --
 ROOT TEMPLATE
@@ -44,34 +40,26 @@ Add feature
 
 This adds a feature with a long original commit message.
 
--- input/prompt.txt --
-await Add feature
-feed \r
-await Template
-snapshot template
-feed \r
-await Body
-feed e
-await Draft
-feed \r
-
--- golden/prompt.txt --
-### template ###
-Title: Add feature
-Template:
-
-▶ .shamhub/CHANGE_TEMPLATE.md
-  CHANGE_TEMPLATE.md
-  ▼▼▼
-
-Choose a template for the change body
-### exit ###
-Title: Add feature
-Template: .shamhub/CHANGE_TEMPLATE.md
-Body: Press [e] to open mockedit or [enter/tab] to skip
-Draft: [y/N]
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
--- golden/pr-body.txt --
-This adds a feature with a long original commit message.
-
-HIDDEN TEMPLATE
+-- robot.golden --
+===
+> Title: Add feature 
+> Short summary of the change
+"Add feature"
+===
+> Template: 
+>
+> ▶ .shamhub/CHANGE_TEMPLATE.md
+>   CHANGE_TEMPLATE.md
+>
+> Choose a template for the change body
+".shamhub/CHANGE_TEMPLATE.md"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{
+  "want": "This adds a feature with a long original commit message.\n\nHIDDEN TEMPLATE\n"
+}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false

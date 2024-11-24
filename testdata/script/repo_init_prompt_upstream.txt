@@ -1,7 +1,5 @@
 # 'gs repo init' prefers upstream default branch.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 # set up an upstream
 mkdir upstream
 cd upstream
@@ -18,21 +16,18 @@ git branch bar
 
 # upstream branch is default
 git checkout foo
-with-term $WORK/input.txt -- gs repo init
-cmp stdout $WORK/golden/dialog.txt
 
--- input.txt --
-await Please select the trunk branch
-snapshot dialog
-feed \r
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs repo init
+cmp $WORK/robot.actual $WORK/robot.golden
 
--- golden/dialog.txt --
-### dialog ###
-INF Using remote: origin
-Please select the trunk branch:
-
-  bar
-  foo
-▶ main
-
-Changes will be merged into this branch
+-- robot.golden --
+===
+> Please select the trunk branch: 
+>
+>   bar
+>   foo
+> ▶ main
+>
+> Changes will be merged into this branch
+"main"

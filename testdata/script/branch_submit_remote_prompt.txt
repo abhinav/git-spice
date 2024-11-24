@@ -1,8 +1,6 @@
 # 'branch submit' after initializing without a remote
 # will ask for a remote to push to.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
 
@@ -25,8 +23,9 @@ gs bc -m 'Add feature1' feature1
 env SHAMHUB_USERNAME=bob
 gs auth login --forge=shamhub
 
-with-term $WORK/input.txt -- gs branch submit --fill
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit --fill
+cmp $WORK/robot.actual $WORK/robot.golden
 
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
@@ -34,21 +33,16 @@ cmpenvJSON stdout $WORK/golden/pulls.json
 -- repo/feature1.txt --
 Contents of feature1
 
--- input.txt --
-await Please select a remote
-snapshot dialog
-feed \r
-await
+-- robot.golden --
+===
+> Please select a remote: 
+>
+> ▶ origin
+>   upstream
+>
+> Changes will be pushed to this remote
+"origin"
 
--- golden/prompt.txt --
-### dialog ###
-WRN No remote was specified at init time
-Please select a remote:
-
-▶ origin
-  upstream
-
-Changes will be pushed to this remote
 -- golden/pulls.json --
 [
   {

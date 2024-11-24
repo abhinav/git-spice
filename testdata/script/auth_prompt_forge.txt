@@ -1,7 +1,5 @@
 # auth operations prompt for forge if it cannot be guessed
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-07-01T04:30:32Z'
 
@@ -9,28 +7,14 @@ shamhub init
 shamhub register alice
 env SHAMHUB_USERNAME=alice
 
-with-term -final exit input.txt -- gs auth login
-cmp stdout golden.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs auth login
+cmp $WORK/robot.actual $WORK/robot.golden
 
--- input.txt --
-await Select a Forge
-snapshot initial
-feed \x1b[B
-await
-snapshot select
-feed \r
-
--- golden.txt --
-### initial ###
-Select a Forge:
-
-▶ github
-  shamhub
-### select ###
-Select a Forge:
-
-  github
-▶ shamhub
-### exit ###
-Select a Forge: shamhub
-INF shamhub: successfully logged in
+-- robot.golden --
+===
+> Select a Forge: 
+>
+> ▶ github
+>   shamhub
+"shamhub"
