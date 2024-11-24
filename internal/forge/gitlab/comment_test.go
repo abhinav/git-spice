@@ -8,12 +8,22 @@ import (
 	"regexp"
 	"testing"
 
+	"go.abhg.dev/testing/stub"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/xanzy/go-gitlab"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/logtest"
 )
+
+// SetListChangeCommentsPageSize changes the page size
+// used for listing change comments.
+//
+// It restores the old value after the test finishes.
+func SetListChangeCommentsPageSize(t testing.TB, pageSize int) {
+	t.Cleanup(stub.Value(&_listChangeCommentsPageSize, pageSize))
+}
 
 type author struct {
 	ID        int    `json:"id"`
@@ -157,13 +167,13 @@ func TestListChangeComments(t *testing.T) {
 				AuthType:    AuthTypePAT,
 				AccessToken: "token",
 			})
-			repoId := 100
+			repoID := 100
 			repo, err := newRepository(
 				context.Background(), new(Forge),
 				"owner", "repo",
 				logtest.New(t),
 				client,
-				&repoId,
+				&repoID,
 			)
 			require.NoError(t, err)
 

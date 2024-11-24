@@ -89,6 +89,26 @@ func (r *Repository) UpdateChangeComment(
 	return nil
 }
 
+// DeleteChangeComment deletes an existing comment on a PR.
+func (r *Repository) DeleteChangeComment(
+	ctx context.Context,
+	id forge.ChangeCommentID,
+) error {
+	// DeleteChangeComment isn't part of the forge.Repository interface.
+	// It's just nice to have to clean up after the integration test.
+	mrComment := mustMRComment(id)
+
+	_, err := r.client.Notes.DeleteMergeRequestNote(
+		r.repoID, mrComment.MRNumber, mrComment.Number,
+		gitlab.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("delete comment: %w", err)
+	}
+
+	return nil
+}
+
 // There isn't a way to filter comments by contents server-side,
 // so we'll be doing that client-side.
 // GitLab's API paginates the notes listing endpoints so we will fetch them by 20 per page.

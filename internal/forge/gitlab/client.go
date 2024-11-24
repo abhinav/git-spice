@@ -91,6 +91,12 @@ type notesService interface {
 		opt *gitlab.ListMergeRequestNotesOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.Note, *gitlab.Response, error)
+
+	DeleteMergeRequestNote(
+		pid interface{},
+		mergeRequest, note int,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.Response, error)
 }
 
 // projectsService allows listing and accessing projects.

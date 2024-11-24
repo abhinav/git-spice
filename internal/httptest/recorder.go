@@ -70,7 +70,7 @@ func NewTransportRecorder(
 			var toRemove []string
 			for k := range allHeaders {
 				switch strings.ToLower(k) {
-				case "content-type", "content-length", "user-agent":
+				case "content-type", "content-length", "user-agent", "x-next-page", "x-total-pages", "x-page":
 					// ok
 				default:
 					toRemove = append(toRemove, k)

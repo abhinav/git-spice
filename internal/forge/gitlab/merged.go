@@ -15,7 +15,7 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		mrIDs[i] = mustMR(id).Number
 	}
 
-	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
+	mergeRequests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
 		r.repoID, &gitlab.ListProjectMergeRequestsOptions{IIDs: &mrIDs},
 		gitlab.WithContext(ctx),
 	)
@@ -23,9 +23,15 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 
-	merged := make([]bool, len(ids))
-	for i, mr := range requests {
-		merged[i] = mr.State == "merged"
+	// create a map of MR IDs to MRs
+	mrMap := make(map[int]*gitlab.MergeRequest)
+	for _, mr := range mergeRequests {
+		mrMap[mr.IID] = mr
+	}
+
+	merged := make([]bool, len(mrIDs))
+	for i, id := range mrIDs {
+		merged[i] = mrMap[id].State == "merged"
 	}
 
 	return merged, nil

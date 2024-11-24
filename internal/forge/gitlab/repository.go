@@ -57,7 +57,7 @@ func newRepository(
 	var accessLevel gitlab.AccessLevelValue
 	if project.Permissions.ProjectAccess != nil {
 		accessLevel = project.Permissions.ProjectAccess.AccessLevel
-	} else {
+	} else if project.Permissions.GroupAccess != nil {
 		accessLevel = project.Permissions.GroupAccess.AccessLevel
 	}
 
