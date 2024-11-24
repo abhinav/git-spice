@@ -10,6 +10,11 @@ The following tools are needed to work on this project:
 
 - [Go](https://go.dev/):
   The project is written in Go, so you need the Go compiler.
+- [gofumpt](https://github.com/mvdan/gofumpt):
+  Go code formatter used by the project.
+  It's a stricter version of the standard `gofmt`.
+- [golangci-lint](https://golangci-lint.run/):
+  Bulk linter for Go code.
 - [Changie](https://changie.dev/):
   We use Changie to manage the changelog.
   You'll need this if you make user-facing changes.
@@ -19,10 +24,19 @@ The following tools are needed to work on this project:
 
 ## Making contributions
 
-Follow the usual GitHub contribution process for making changes
-with the following notes:
+Follow the usual GitHub contribution process for making changes:
+fork and create a pull request.
 
-- Add changelog entries for user-facing changes with `changie new`.
+Follow usual best practices for making changes:
+
+- All commits must include meaningful commit messages.
+- Test new features and bug fixes.
+  If it does not have a test, the bug is not fixed.
+- Verify tests pass before submitting a pull request.
+
+More specific guidelines follow:
+
+- For all *user-facing changes*, add a changelog entry with `changie new`.
   If a change is not user-facing, add a note in the following format
   to the PR description:
 
@@ -30,12 +44,13 @@ with the following notes:
   [skip changelog]: reason why no changelog entry is needed
   ```
 
-- If you edit documentation in doc/,
-  install `uv` and run `make serve` to preview changes.
-- All commits must include meaningful commit messages.
-- Test new features and bug fixes.
-  If it does not have a test, the bug is not fixed.
-- Verify tests pass before submitting a pull request.
+- For *documentation website changes* (changes made to the doc/ directory),
+  install [`uv`](https://docs.astral.sh/uv/) and run `make serve`
+  to preview changes locally before submitting a pull request.
+
+- For *code changes*,
+  format all code with [gofumpt](https://github.com/mvdan/gofumpt),
+  and verify lint checks pass with `make lint`.
 
 ### Stacking changes
 
@@ -59,6 +74,53 @@ to stack changes with git-spice for a contribution:
 
 3. Create a pull request to the upstream repository with the top branch
    of your stack.
+
+## Style
+
+### Code style
+
+Guidelines from the following sources apply:
+
+- [Effective Go](https://go.dev/doc/effective_go)
+- [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments)
+- [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
+
+When these conflict, the maintainer's preference takes precedence.
+
+### Documentation style
+
+This section covers style guidelines for both
+Markdown files and code comments.
+
+- Paragraphs must employ [Semantic Line Breaks](https://sembr.org/).
+  Do not write overly long sentences on single lines.
+  Do not "re-flow" paragraphs to fit within N columns.
+
+  ```
+  Bad paragraph with sentences all in one line in the file. Text editors will not wrap this by default. Browsers will require horizontal scrolling when reviewing the raw text.
+
+  Bad paragraph with sentence text re-flowed to fit within 80 columns. While
+  this is more readable, it makes it more annoying to edit a single clause of
+  the sentence during review. Diffs to a single clause in a sentence can reflow
+  the entire paragraph.
+
+  Good paragraph employing semantic line breaks.
+  Each sentence is on its own line,
+  or even across multiple lines if needed.
+  Easy to read in raw code form
+  and easy to edit singular clauses during review.
+  ```
+
+- Markdown must use `#`-style headers, not `=` or `-` style.
+
+  ```
+  Bad header
+  ==========
+
+  ## Good header
+  ```
+
+- In code, all exported symbols must be documented with `//`-style comments.
 
 ## Testing
 
