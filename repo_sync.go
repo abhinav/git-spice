@@ -37,14 +37,14 @@ func (cmd *repoSyncCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
 
-	remote, err := ensureRemote(ctx, repo, store, log, opts)
+	remote, err := ensureRemote(ctx, repo, store, log, view)
 	// TODO: move ensure remote to Service
 	if err != nil {
 		return err
@@ -217,19 +217,17 @@ func (cmd *repoSyncCmd) Run(
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = cmd.findForgeMergedBranches(ctx, log, repo, remoteRepo, candidates, opts)
+		branchesToDelete, err = cmd.findForgeMergedBranches(ctx, log, repo, remoteRepo, candidates, view)
 		if err != nil {
 			return fmt.Errorf("find merged CRs: %w", err)
 		}
 	}
-
-	err = cmd.deleteBranches(ctx, opts, log, repo, remote, branchesToDelete)
-	if err != nil {
+	if err := cmd.deleteBranches(ctx, view, log, repo, remote, branchesToDelete); err != nil {
 		return err
 	}
 
 	if cmd.Restack {
-		return (&stackRestackCmd{}).Run(ctx, log, opts)
+		return (&stackRestackCmd{}).Run(ctx, log, view)
 	}
 
 	return nil
@@ -269,7 +267,7 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	repo *git.Repository,
 	remoteRepo forge.Repository,
 	knownBranches []spice.LoadBranchItem,
-	opts *globalOptions,
+	view ui.View,
 ) ([]branchDeletion, error) {
 	type submittedBranch struct {
 		Name   string
@@ -435,7 +433,7 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		// If the remote head SHA doesn't match the local head SHA,
 		// there may be local commits that haven't been pushed yet.
 		// Prompt for deletion if we have the option of prompting.
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			log.Warnf("%v: %v. Skipping...", branch.Name, mismatchMsg)
 			continue
 		}
@@ -445,7 +443,7 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 			WithTitle(fmt.Sprintf("Delete %v?", branch.Name)).
 			WithDescription(mismatchMsg).
 			WithValue(&shouldDelete)
-		if err := ui.Run(prompt); err != nil {
+		if err := ui.Run(view, prompt); err != nil {
 			log.Warn("Skipping branch", "branch", branch.Name, "error", err)
 			continue
 		}
@@ -468,7 +466,7 @@ type branchDeletion struct {
 
 func (cmd *repoSyncCmd) deleteBranches(
 	ctx context.Context,
-	opts *globalOptions,
+	view ui.View,
 	log *log.Logger,
 	repo *git.Repository,
 	remote string,
@@ -486,7 +484,7 @@ func (cmd *repoSyncCmd) deleteBranches(
 	err := (&branchDeleteCmd{
 		Branches: branchNames,
 		Force:    true,
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)
 	}

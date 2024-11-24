@@ -90,15 +90,15 @@ func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
 
-	session := newSubmitSession(repo, store, secretStash, opts, log)
-	if err := cmd.run(ctx, session, repo, store, svc, log, opts); err != nil {
+	session := newSubmitSession(repo, store, secretStash, view, log)
+	if err := cmd.run(ctx, session, repo, store, svc, log, view); err != nil {
 		return err
 	}
 
@@ -123,7 +123,7 @@ func (cmd *branchSubmitCmd) run(
 	store *state.Store,
 	svc *spice.Service,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -379,7 +379,7 @@ func (cmd *branchSubmitCmd) run(
 			prepared, err = cmd.preparePublish(
 				ctx,
 				log,
-				opts,
+				view,
 				svc,
 				store,
 				repo,
@@ -654,7 +654,7 @@ func (f *branchSubmitForm) draftField(draft *bool) ui.Field {
 func (cmd *branchSubmitCmd) preparePublish(
 	ctx context.Context,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 	svc *spice.Service,
 	store *state.Store,
 	repo *git.Repository,
@@ -733,14 +733,14 @@ func (cmd *branchSubmitCmd) preparePublish(
 
 	// Don't mess with draft setting if we're not prompting
 	// and the user didn't explicitly set it.
-	if opts.Prompt && cmd.Draft == nil {
+	if ui.Interactive(view) && cmd.Draft == nil {
 		cmd.Draft = new(bool)
 		fields = append(fields, form.draftField(cmd.Draft))
 	}
 
 	// TODO: should we assume --fill if --no-prompt?
 	if len(fields) > 0 && !cmd.Fill {
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return nil, fmt.Errorf("prompt for commit information: %w", errNoPrompt)
 		}
 
@@ -755,7 +755,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 				WithDescription(
 					"We found previously filled information for this branch.\n" +
 						"Would you like to recover and edit it?")
-			if err := ui.Run(f); err != nil {
+			if err := ui.Run(view, f); err != nil {
 				return nil, fmt.Errorf("prompt for recovery: %w", err)
 			}
 
@@ -772,8 +772,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 			}
 		}
 
-		form := ui.NewForm(fields...)
-		if err := form.Run(); err != nil {
+		if err := ui.Run(view, fields...); err != nil {
 			return nil, fmt.Errorf("prompt form: %w", err)
 		}
 	}

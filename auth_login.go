@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type authLoginCmd struct {
@@ -33,7 +34,7 @@ func (cmd *authLoginCmd) Run(
 	ctx context.Context,
 	stash secret.Stash,
 	log *log.Logger,
-	globals *globalOptions,
+	view ui.View,
 	f forge.Forge,
 ) error {
 	if _, err := f.LoadAuthenticationToken(stash); err == nil && !cmd.Refresh {
@@ -41,7 +42,7 @@ func (cmd *authLoginCmd) Run(
 		return fmt.Errorf("%s: already logged in", f.ID())
 	}
 
-	secret, err := f.AuthenticationFlow(ctx)
+	secret, err := f.AuthenticationFlow(ctx, view)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchOntoCmd struct {
@@ -40,8 +41,8 @@ func (*branchOntoCmd) Help() string {
 	`)
 }
 
-func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	}
 
 	if cmd.Onto == "" {
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
 		}
 
@@ -78,7 +79,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving %s onto another branch", cmd.Branch),
-		}).Run(ctx, repo, store)
+		}).Run(ctx, view, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
@@ -97,7 +98,7 @@ func (cmd *branchOntoCmd) Run(ctx context.Context, log *log.Logger, opts *global
 		if err := (&upstackOntoCmd{
 			Branch: above,
 			Onto:   branch.Base,
-		}).Run(ctx, log, opts); err != nil {
+		}).Run(ctx, log, view); err != nil {
 			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,
 				Command: []string{"branch", "onto", cmd.Onto},

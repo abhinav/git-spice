@@ -50,8 +50,8 @@ func (*branchSplitCmd) Help() string {
 	`)
 }
 
-func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 
 	// If len(cmd.At) == 0, run in interactive mode to build up cmd.At.
 	if len(cmd.At) == 0 {
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return fmt.Errorf("use --at to split non-interactively: %w", errNoPrompt)
 		}
 
@@ -111,7 +111,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			WithHEAD(cmd.Branch).
 			WithDescription("Select commits to split the branch at").
 			WithCommits(commits...)
-		if err := ui.Run(selectWidget); err != nil {
+		if err := ui.Run(view, selectWidget); err != nil {
 			return fmt.Errorf("prompt: %w", err)
 		}
 
@@ -152,7 +152,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			fields[i] = input
 		}
 
-		if err := ui.NewForm(fields...).Run(); err != nil {
+		if err := ui.Run(view, fields...); err != nil {
 			return fmt.Errorf("prompt: %w", err)
 		}
 
@@ -227,7 +227,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 
 	// If the branch being split had a Change associated with it,
 	// ask the user which branch to associate the Change with.
-	if branch.Change != nil && !opts.Prompt {
+	if branch.Change != nil && !ui.Interactive(view) {
 		log.Info("Branch has an associated CR. Leaving it assigned to the original branch.",
 			"cr", branch.Change.ChangeID())
 	} else if branch.Change != nil {
@@ -248,7 +248,7 @@ func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 				"Select which branch should take over the CR.").
 			WithValue(&changeBranch).
 			With(ui.ComparableOptions(cmd.Branch, branchNames...))
-		if err := ui.Run(prompt); err != nil {
+		if err := ui.Run(view, prompt); err != nil {
 			return fmt.Errorf("prompt: %w", err)
 		}
 

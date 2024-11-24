@@ -26,3 +26,4 @@ ignore:
   - internal/secret/secrettest
   - internal/stub
   - internal/termtest
+  - internal/ui/uitest

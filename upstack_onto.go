@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type upstackOntoCmd struct {
@@ -38,8 +39,8 @@ func (*upstackOntoCmd) Help() string {
 	`)
 }
 
-func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -64,7 +65,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 	}
 
 	if cmd.Onto == "" {
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
 		}
 
@@ -76,7 +77,7 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving the upstack of %s onto another branch", cmd.Branch),
-		}).Run(ctx, repo, store)
+		}).Run(ctx, view, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
@@ -105,5 +106,5 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 
 	return (&upstackRestackCmd{
 		SkipStart: true, // we've already moved the current branch
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 }

@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchFoldCmd struct {
@@ -26,8 +27,8 @@ func (*branchFoldCmd) Help() string {
 	`)
 }
 
-func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, opts *global
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(ctx, log, opts); err != nil {
+	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(ctx, log, view); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 

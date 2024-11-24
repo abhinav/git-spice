@@ -53,14 +53,13 @@ type branchLogCmd struct {
 type branchLogOptions struct {
 	Commits bool
 
-	Log     *log.Logger
-	Globals *globalOptions
+	Log *log.Logger
 }
 
-func (cmd *branchLogCmd) run(ctx context.Context, opts *branchLogOptions) (err error) {
+func (cmd *branchLogCmd) run(ctx context.Context, view ui.View, opts *branchLogOptions) (err error) {
 	log := opts.Log
 
-	repo, store, svc, err := openRepo(ctx, log, opts.Globals)
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}

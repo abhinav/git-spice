@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -89,6 +91,34 @@ func (l *List[T]) WithValue(value *T) *List[T] {
 // Value retrieevs the selected item's value.
 func (l *List[T]) Value() *T {
 	return l.value
+}
+
+// UnmarshalValue reads a value from the given unmarshal function.
+// It expects an index of the selected item, or the title of the selected item.
+func (l *List[T]) UnmarshalValue(unmarshal func(any) error) error {
+	var title string
+	if err := unmarshal(&title); err == nil {
+		for i, item := range l.items {
+			if item.Title == title {
+				*l.value = l.items[i].Value
+				return nil
+			}
+		}
+
+		return fmt.Errorf("item with title %q not found", title)
+	}
+
+	var idx int
+	if err := unmarshal(&idx); err != nil {
+		return err
+	}
+
+	if idx < 0 || idx >= len(l.items) {
+		return fmt.Errorf("index %d is out of bounds [0, %d]", idx, len(l.items)-1)
+	}
+
+	*l.value = l.items[idx].Value
+	return nil
 }
 
 // WithTitle sets the title of the [List].

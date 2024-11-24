@@ -33,14 +33,14 @@ func (*branchCheckoutCmd) Help() string {
 	`)
 }
 
-func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
 
 	if cmd.Branch == "" {
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return fmt.Errorf("cannot proceed without a branch name: %w", errNoPrompt)
 		}
 
@@ -58,7 +58,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 			Default:     currentBranch,
 			TrackedOnly: !cmd.Untracked,
 			Title:       "Select a branch to checkout",
-		}).Run(ctx, repo, store)
+		}).Run(ctx, view, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
@@ -71,7 +71,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 			case errors.As(err, &restackErr):
 				log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
 			case errors.Is(err, state.ErrNotExist):
-				if !opts.Prompt {
+				if !ui.Interactive(view) {
 					log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
 					break
 				}
@@ -81,14 +81,14 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, opts *gl
 				prompt := ui.NewConfirm().
 					WithValue(&track).
 					WithTitle("Do you want to track this branch now?")
-				if err := ui.Run(prompt); err != nil {
+				if err := ui.Run(view, prompt); err != nil {
 					return fmt.Errorf("prompt: %w", err)
 				}
 
 				if track {
 					err := (&branchTrackCmd{
 						Branch: cmd.Branch,
-					}).Run(ctx, log, opts)
+					}).Run(ctx, log, view)
 					if err != nil {
 						return fmt.Errorf("track branch: %w", err)
 					}

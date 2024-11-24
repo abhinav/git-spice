@@ -61,6 +61,11 @@ func (i *Input) WithValue(value *string) *Input {
 	return i
 }
 
+// UnmarshalValue reads a string value for the input field.
+func (i *Input) UnmarshalValue(unmarshal func(any) error) error {
+	return unmarshal(i.value)
+}
+
 // WithTitle sets the title of the input field.
 func (i *Input) WithTitle(title string) *Input {
 	i.title = title

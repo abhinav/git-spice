@@ -25,8 +25,8 @@ func (*upCmd) Help() string {
 	`)
 }
 
-func (cmd *upCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, _, svc, err := openRepo(ctx, log, opts)
+func (cmd *upCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, _, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ outer:
 			branch = aboves[0]
 		default:
 			desc := "There are multiple branches above the current branch."
-			if !opts.Prompt {
+			if !ui.Interactive(view) {
 				log.Error(desc)
 				return errNoPrompt
 			}
@@ -76,7 +76,7 @@ outer:
 				WithItems(items...).
 				WithTitle("Pick a branch").
 				WithDescription(desc)
-			if err := ui.Run(prompt); err != nil {
+			if err := ui.Run(view, prompt); err != nil {
 				return fmt.Errorf("a branch is required: %w", err)
 			}
 		}
@@ -87,5 +87,5 @@ outer:
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          branch,
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 }

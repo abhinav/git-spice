@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type downstackSubmitCmd struct {
@@ -30,9 +31,9 @@ func (cmd *downstackSubmitCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -59,12 +60,12 @@ func (cmd *downstackSubmitCmd) Run(
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 
-	session := newSubmitSession(repo, store, secretStash, opts, log)
+	session := newSubmitSession(repo, store, secretStash, view, log)
 	for _, downstack := range downstacks {
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        downstack,
-		}).run(ctx, session, repo, store, svc, log, opts)
+		}).run(ctx, session, repo, store, svc, log, view)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)
 		}

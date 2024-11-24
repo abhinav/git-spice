@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackSubmitCmd struct {
@@ -24,9 +25,9 @@ func (cmd *stackSubmitCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -44,7 +45,7 @@ func (cmd *stackSubmitCmd) Run(
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 
-	session := newSubmitSession(repo, store, secretStash, opts, log)
+	session := newSubmitSession(repo, store, secretStash, view, log)
 	for _, branch := range stack {
 		if branch == store.Trunk() {
 			continue
@@ -53,7 +54,7 @@ func (cmd *stackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        branch,
-		}).run(ctx, session, repo, store, svc, log, opts)
+		}).run(ctx, session, repo, store, svc, log, view)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", branch, err)
 		}
