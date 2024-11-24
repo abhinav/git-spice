@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/termtest"
+	"go.abhg.dev/gs/internal/ui"
 	"golang.org/x/oauth2"
 )
 
@@ -104,9 +105,10 @@ func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	view := &ui.FileView{W: io.Discard}
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
-		_, err := f.AuthenticationFlow(ctx)
+		_, err := f.AuthenticationFlow(ctx, view)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "already authenticated")
 		assert.Contains(t, logBuffer.String(), "Already authenticated")
@@ -200,6 +202,10 @@ func TestPATAuthenticator(t *testing.T) {
 	}()
 
 	term := midterm.NewAutoResizingTerminal()
+	view := &ui.TerminalView{
+		R: stdin,
+		W: term,
+	}
 
 	type result struct {
 		tok forge.AuthenticationToken
@@ -209,10 +215,7 @@ func TestPATAuthenticator(t *testing.T) {
 	go func() {
 		defer close(resultc)
 
-		got, err := (&PATAuthenticator{
-			Stdin:  stdin,
-			Stderr: term,
-		}).Authenticate(context.Background())
+		got, err := (&PATAuthenticator{}).Authenticate(context.Background(), view)
 		resultc <- result{got, err}
 	}()
 
@@ -301,12 +304,11 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 	tok, err := (&DeviceFlowAuthenticator{
 		ClientID: "client-id",
 		Scopes:   []string{"scope"},
-		Stderr:   io.Discard,
 		Endpoint: oauth2.Endpoint{
 			DeviceAuthURL: srv.URL + "/oauth/authorize_device",
 			TokenURL:      srv.URL + "/oauth/token",
 		},
-	}).Authenticate(context.Background())
+	}).Authenticate(context.Background(), &ui.FileView{W: io.Discard})
 	require.NoError(t, err)
 
 	assert.Equal(t, &AuthenticationToken{

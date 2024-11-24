@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -109,7 +107,7 @@ func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
 // AuthenticationFlow prompts the user to authenticate with GitLab.
 // This rejects the request if the user is already authenticated
 // with a GITLAB_TOKEN environment variable.
-func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationToken, error) {
+func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.AuthenticationToken, error) {
 	// Already authenticated with GITLAB_TOKEN.
 	// If the user tries to authenticate again, we should error.
 	if f.Options.Token != "" {
@@ -126,16 +124,14 @@ func (f *Forge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationTok
 		return nil, fmt.Errorf("get OAuth endpoint: %w", err)
 	}
 
-	auth, err := selectAuthenticator(authenticatorOptions{
+	auth, err := selectAuthenticator(view, authenticatorOptions{
 		Endpoint: oauthEndpoint,
-		Stdin:    os.Stdin,
-		Stderr:   os.Stderr,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
 	}
 
-	return auth.Authenticate(ctx)
+	return auth.Authenticate(ctx, view)
 }
 
 // SaveAuthenticationToken saves the given authentication token to the stash.
@@ -186,7 +182,7 @@ func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 }
 
 type authenticator interface {
-	Authenticate(context.Context) (*AuthenticationToken, error)
+	Authenticate(context.Context, ui.View) (*AuthenticationToken, error)
 }
 
 var _authenticationMethods = []struct {
@@ -201,7 +197,6 @@ var _authenticationMethods = []struct {
 			return &DeviceFlowAuthenticator{
 				ClientID: _oauthAppID,
 				Endpoint: a.Endpoint,
-				Stderr:   a.Stderr,
 				Scopes: []string{
 					"api",
 					"read_user",
@@ -214,10 +209,7 @@ var _authenticationMethods = []struct {
 		Title:       "Personal Access Token",
 		Description: patDesc,
 		Build: func(a authenticatorOptions) authenticator {
-			return &PATAuthenticator{
-				Stdin:  a.Stdin,
-				Stderr: a.Stderr,
-			}
+			return &PATAuthenticator{}
 		},
 	},
 	// TODO: GitLab CLI
@@ -227,11 +219,9 @@ var _authenticationMethods = []struct {
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
 	Endpoint oauth2.Endpoint // required
-	Stdin    io.Reader       // required
-	Stderr   io.Writer       // required
 }
 
-func selectAuthenticator(a authenticatorOptions) (authenticator, error) {
+func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
 	var methods []ui.ListItem[authenticator]
 	for _, m := range _authenticationMethods {
 		auth := m.Build(a)
@@ -249,7 +239,7 @@ func selectAuthenticator(a authenticatorOptions) (authenticator, error) {
 		WithTitle("Select an authentication method").
 		WithItems(methods...).
 		WithValue(&method)
-	err := ui.Run(field, ui.WithInput(a.Stdin), ui.WithOutput(a.Stderr))
+	err := ui.Run(view, field)
 	return method, err
 }
 
@@ -287,16 +277,13 @@ func urlStyle(focused bool) lipgloss.Style {
 // TODO: share authenticators with GitHub
 
 // PATAuthenticator implements PAT authentication for GitLab.
-type PATAuthenticator struct {
-	Stdin  io.Reader // required
-	Stderr io.Writer // required
-}
+type PATAuthenticator struct{}
 
 // Authenticate prompts the user for a Personal Access Token,
 // validates it, and returns the token if successful.
-func (a *PATAuthenticator) Authenticate(_ context.Context) (*AuthenticationToken, error) {
+func (a *PATAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
 	var token string
-	err := ui.Run(ui.NewInput().
+	err := ui.Run(view, ui.NewInput().
 		WithTitle("Enter Personal Access Token").
 		WithValidate(func(input string) error {
 			if strings.TrimSpace(input) == "" {
@@ -304,8 +291,6 @@ func (a *PATAuthenticator) Authenticate(_ context.Context) (*AuthenticationToken
 			}
 			return nil
 		}).WithValue(&token),
-		ui.WithInput(a.Stdin),
-		ui.WithOutput(a.Stderr),
 	)
 
 	// TODO: Should we validate the token by making a request?
@@ -326,12 +311,10 @@ type DeviceFlowAuthenticator struct {
 
 	// Scopes specifies the OAuth scopes to request.
 	Scopes []string
-
-	Stderr io.Writer // required
 }
 
 // Authenticate executes the OAuth authentication flow.
-func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (*AuthenticationToken, error) {
+func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
 	cfg := oauth2.Config{
 		ClientID:    a.ClientID,
 		Endpoint:    a.Endpoint,
@@ -349,10 +332,10 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context) (*Authentica
 	bullet := ui.NewStyle().PaddingLeft(2).Foreground(ui.Gray)
 	faint := ui.NewStyle().Faint(true)
 
-	fmt.Fprintf(a.Stderr, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
-	fmt.Fprintf(a.Stderr, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
-	fmt.Fprintln(a.Stderr, faint.Render("The code expires in a few minutes."))
-	fmt.Fprintln(a.Stderr, faint.Render("It will take a few seconds to verify after you enter it."))
+	fmt.Fprintf(view, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
+	fmt.Fprintf(view, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
+	fmt.Fprintln(view, faint.Render("The code expires in a few minutes."))
+	fmt.Fprintln(view, faint.Render("It will take a few seconds to verify after you enter it."))
 	// TODO: maybe open browser with flag opt-out
 
 	token, err := cfg.DeviceAccessToken(ctx, resp,
