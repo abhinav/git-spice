@@ -221,7 +221,7 @@ func TestSelectAuthenticator(t *testing.T) {
 	}, time.Second, 50*time.Millisecond)
 
 	// Go through all options, roll back around to the first, and select it
-	for range len(_authenticationMethods) {
+	for range _authenticationMethods {
 		_, _ = io.WriteString(stdinW, "\x1b[B") // Down arrow
 	}
 	_, _ = io.WriteString(stdinW, "\r") // Enter
