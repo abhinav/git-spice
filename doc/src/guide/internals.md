@@ -26,7 +26,7 @@ Information is stored in JSON files with roughly the following structure:
 
 ```tree
 repo            # repository-level information
-templates       # cached GitHub PR templates
+templates       # cached change templates
 rebase-continue # information about ongoing operations
 branches        # branch tracking information
     feat1

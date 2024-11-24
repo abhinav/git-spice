@@ -1,5 +1,5 @@
 ---
-title: Branch stacks
+title: Local stacks
 icon: octicons/git-branch-16
 description: >-
   Manage, navigate, and manipulate stacks of branches with git-spice.

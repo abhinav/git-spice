@@ -46,6 +46,7 @@ theme:
   features:
     - content.action.edit
     - content.code.copy
+    - content.tabs.link
     - content.tooltips
     - header.autohide
     - navigation.expand
@@ -68,6 +69,7 @@ plugins:
   - redirects:
       redirect_maps:
         'how-to.md': 'recipes.md'
+        'guide/pr.md': 'guide/cr.md'
   - search
   - social:
       enabled: !ENV [CI, false]
@@ -110,7 +112,7 @@ nav:
     - guide/index.md
     - guide/concepts.md
     - guide/branch.md
-    - guide/pr.md
+    - guide/cr.md
     - guide/limits.md
     - guide/internals.md
   - Setting up:

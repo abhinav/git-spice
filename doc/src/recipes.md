@@ -42,17 +42,17 @@ and then work on them, you can use the following to adjust the workflow:
     gs branch create my-branch --commit
     ```
 
-### Working with non-GitHub remotes
+### Working with unsupported remotes
 
 <!-- gs:version v0.6.0 -->
 
-If you're using a Git hosting service that is not GitHub
-(e.g. GitLab, Bitbucket, etc.),
+If you're using a Git hosting service that is not supported by git-spice
+(e.g. Bitbucket, SourceHut, etc.),
 you can use git-spice to manage your branches locally without any issues.
 However, when it comes to pushing branches to the remote,
 there are some options that can help your workflow.
 
-- Stop git-spice from trying to create GitHub Pull Requests
+- Stop git-spice from trying to submit changes to the service
   by setting $$spice.submit.publish$$ to false.
 
     ```bash

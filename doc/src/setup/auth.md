@@ -1,19 +1,23 @@
 ---
 icon: material/lock
 description: >-
-  Authenticate with GitHub to push and pull changes.
+  Authenticate with GitHub/GitLab to push and pull changes.
 ---
 
 # Authentication
 
 git-spice is offline-first.
 It does not require authentication for local stacking operations.
-However, once you want to push or pull changes to/from a GitHub repository,
-you will need to authenticate with GitHub.
+However, once you want to push or pull changes to/from a GitHub or GitLab repository,
+you will need to authenticate with the respective service.
 
 This page covers the authentication options for git-spice.
 
 ## Logging in
+
+```freeze language="ansi" float="right"
+--8<-- "captures/forge-prompt.txt"
+```
 
 To authenticate with GitHub, run:
 
@@ -21,7 +25,27 @@ To authenticate with GitHub, run:
 gs auth login
 ```
 
-This will present you with a list of authentication methods.
+If you run this outside a Git repository,
+it will present a list of services you can authenticate with.
+Inside a repository, it will automatically pick the service
+that the repository is hosted on.
+
+Following that, it will present you with a list of authentication methods.
+Each service may have different methods available.
+
+=== "GitHub"
+
+    - [OAuth](#oauth)
+    - [GitHub App](#github-app)
+    - [Personal Access Token](#personal-access-token)
+    - [GitHub CLI](#github-cli)
+    - [Environment variable](#environment-variable)
+
+=== "GitLab"
+
+    - [OAuth](#oauth)
+    - [Personal Access Token](#personal-access-token)
+    - [Environment variable](#environment-variable)
 
 See [Authentication methods](#authentication-methods) for details
 on what to expect from each method,
@@ -33,9 +57,11 @@ git-spice provides several ways to authenticate with GitHub.
 
 ### OAuth
 
+**Supported by** :simple-github: :simple-gitlab:
+
 With OAuth authentication, you will take the following steps:
 
-1. Authenticate yourself on github.com in your browser.
+1. Authenticate yourself on the service website in your browser.
 2. Authorize git-spice to act on your behalf on the **current device only**.
 
 ```freeze language="terminal"
@@ -47,13 +73,20 @@ The code expires in a few minutes.
 It will take a few seconds to verify after you enter it.
 ```
 
-Two options are available for OAuth:
+=== "GitHub"
 
-- **OAuth**: grants access to all repositories, public and private.
-- **OAuth: Public repositories only**:
-  grants access to public repositories only.
+    Additionally, on GitHub, two options are available for OAuth:
 
-For more granular control, use [GitHub App](#github-app) authentication.
+    - **OAuth**: grants access to all repositories, public and private.
+    - **OAuth: Public repositories only**:
+      grants access to public repositories only.
+
+    For more granular control, use [GitHub App](#github-app) authentication.
+
+=== "GitLab"
+
+    GitLab does not have a public-only option.
+    All OAuth tokens grant access to all repositories.
 
 !!! note
 
@@ -64,6 +97,8 @@ For more granular control, use [GitHub App](#github-app) authentication.
     use a [Personal Access Token](#personal-access-token).
 
 ### GitHub App
+
+**Supported by** :simple-github:
 
 With GitHub App authentication, you will take the following steps:
 
@@ -94,8 +129,10 @@ You **must** install the GitHub App to access repositories with git-spice.
 
 ### Personal Access Token
 
+**Supported by** :simple-github: :simple-gitlab:
+
 To use a Personal Access Token with git-spice,
-you will generate a Personal Access Token on GitHub
+you will generate a Personal Access Token on the website
 and enter it in the prompt.
 
 ```freeze language="terminal"
@@ -104,51 +141,67 @@ Select an authentication method: {red}Personal Access Token{reset}
 {green}Enter Personal Access Token{reset}:
 ```
 
-The token may be a classic token or a fine-grained token.
+=== "GitHub"
 
-=== "Classic token"
+    The token may be a classic token or a fine-grained token.
 
-    With classic tokens, you can grant access to all repositories,
-    or all public repositories only.
-    These tokens have the ability to never expire.
+    === "Classic token"
 
-      To use a classic token:
+        With classic tokens, you can grant access to all repositories,
+        or all public repositories only.
+        These tokens have the ability to never expire.
 
-      1. Go to <https://github.com/settings/tokens/new>.
-         This may ask you to re-authenticate.
-      2. In the token creation form:
+          To use a classic token:
 
-          - enter a descriptive note for the token
-          - pick an expiration window, or select "No expiration"
-          - select `repo` scope for full access to all repositories,
-            or `public_repo` for access to public repositories only
+          1. Go to <https://github.com/settings/tokens/new>.
+             This may ask you to re-authenticate.
+          2. In the token creation form:
 
-      3. Click "Generate token" and copy the token.
+              - enter a descriptive note for the token
+              - pick an expiration window, or select "No expiration"
+              - select `repo` scope for full access to all repositories,
+                or `public_repo` for access to public repositories only
 
-=== "Fine-grained token"
+          3. Click "Generate token" and copy the token.
 
-    With fine-grained tokens, you have more granular control over
-    repositories that you grant access to.
-    These token must always have an expiration date.
+    === "Fine-grained token"
 
-      To use a fine-grained token:
+        With fine-grained tokens, you have more granular control over
+        repositories that you grant access to.
+        These token must always have an expiration date.
 
-      1. Go to <https://github.com/settings/personal-access-tokens/new>.
-         This may ask you to re-authenticate.
-      2. In the token creation form:
+          To use a fine-grained token:
 
-          - pick a descriptive note for the token
-          - pick an expiration window
-          - in the *Repository access* section, select the repositories
-            you want to use git-spice with
-          - in the *Repository permissions* section,
-            grant **Read and write** access to **Pull requests** and **Contents**
+          1. Go to <https://github.com/settings/personal-access-tokens/new>.
+             This may ask you to re-authenticate.
+          2. In the token creation form:
 
-      3. Click "Generate token" and copy the token.
+              - pick a descriptive note for the token
+              - pick an expiration window
+              - in the *Repository access* section, select the repositories
+                you want to use git-spice with
+              - in the *Repository permissions* section,
+                grant **Read and write** access to **Pull requests** and **Contents**
+
+          3. Click "Generate token" and copy the token.
+
+=== "GitLab"
+
+    To use a Personal Access Token with GitLab:
+
+    1. Go to <https://gitlab.com/-/user_settings/personal_access_tokens>.
+    2. Select *Add new token*
+    3. In the token creation form:
+
+        - pick a descriptive name for the token
+        - pick an expiration date if needed
+        - select the `api` scope
 
 After you have a token, enter it into the prompt.
 
 ### GitHub CLI
+
+**Supported by** :simple-github:
 
 If you have the [GitHub CLI](https://cli.github.com/) installed and authenticated,
 you can select this as the authentication method.
@@ -156,12 +209,25 @@ you can select this as the authentication method.
 This requires no additional steps.
 We'll request a token from GitHub CLI as needed.
 
-### GITHUB_TOKEN
+### Environment variable
 
-If you have a `GITHUB_TOKEN` environment variable set,
-that takes precedence over all other authentication methods.
+**Supported by** :simple-github: :simple-gitlab:
 
-The $$gs auth login$$ operation will fail if you use this method.
+You can provide the authentication token as an environment variable.
+This is not recommended for most users.
+
+=== "GitHub"
+
+    Set the `GITHUB_TOKEN` environment variable to your token.
+
+=== "GitLab"
+
+    Set the `GITLAB_TOKEN` environment variable to your token.
+
+If you have the environment variable set,
+this takes precedence over all other authentication methods.
+
+The $$gs auth login$$ operation will always fail if you use this method.
 
 ## Picking an authentication method
 
@@ -169,8 +235,8 @@ The $$gs auth login$$ operation will fail if you use this method.
 have the permissions needed to install OAuth/GitHub Apps
 on all repositories that you want to use git-spice with.
 The two are equivalent in terms of user experience.
-Use GitHub App authentication if you don't want to give git-spice access
-to all your repositories.
+On GitHub, GitHub App authentication can be preferable
+if you don't want to give git-spice access to all your repositories.
 
 [GitHub CLI](#github-cli) is the most convenient method if you already have
 the GitHub CLI installed and authenticated.
@@ -184,7 +250,8 @@ It may be used even with repositories where you don't have permission to
 install OAuth/GitHub Apps.
 However, it requires manual token management, making it less convenient.
 
-[GITHUB_TOKEN](#github_token) is the least convenient and the least secure method.
+[Environment variable](#environment-variable) is the least convenient
+and the least secure method.
 It is intended only for CI/CD environments where you have no other choice.
 
 ## GitHub Enterprise
@@ -233,7 +300,7 @@ inform it of the instance URL, authenticate, and use git-spice as usual.
 
 ## Safety
 
-By default, git-spice stores your GitHub authentication token
+By default, git-spice stores your authentication token
 in a system-specific secure storage.
 On macOS, this is the system Keychain.
 On Linux, it uses the [Secret Service](https://specifications.freedesktop.org/secret-service/latest/),

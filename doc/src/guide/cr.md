@@ -1,24 +1,36 @@
 ---
-title: PR stacks
+title: Submitting stacks
 icon: octicons/git-pull-request-16
 description: >-
-  Create and update stacked pull requests from a stack of branches.
+  Create and update stacked change requests from a stack of branches.
 ---
 
-# Working with Pull Requests
+# Working with remote repositories
 
 !!! note
 
-    This page assumes you're using git-spice with GitHub.
-    If you're using a different Git hosting service,
-    you can still use git-spice, but some features may not be available.
+    This page assumes you are using one of the supported Git forges.
+    These are:
+
+    - :simple-github: **GitHub**
+    - :simple-gitlab: **GitLab** (<!-- gs:version unreleased -->)
+
+    If you're using a different service,
+    you can still use git-spice,
+    but some features may not be available.
 
     See:
 
-    - [:material-tooltip-check: Recipes > Working with non-GitHub remotes](../recipes.md#working-with-non-github-remotes)
+    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../recipes.md#working-with-unsupported-remotes)
     - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../faq.md#will-git-spice-add-support-for-other-git-hosting-services)
 
-## Submitting pull requests
+## Submitting change requests
+
+!!! info
+
+    git-spice uses the term *Change Request* to refer to submitted branches.
+    These corespond to Pull Requests on GitHub,
+    and to Merge Requests on GitLab.
 
 When your local changes are ready,
 use the following commands to submit your changes upstream:
@@ -33,10 +45,10 @@ use the following commands to submit your changes upstream:
   submits all branches in the stack
 
 Branch submission is an idempotent operation:
-pull requests will be created for branches that don't already have them,
+change requests will be created for branches that don't already have them,
 and updated for branches that do.
 
-For new pull requests, these commands will prompt you for PR information.
+For new change requests, these commands will prompt you for CR information.
 For example:
 
 ```freeze language="ansi"
@@ -52,11 +64,17 @@ For example:
 
 ### Navigation comments
 
-Pull Requests created by git-spice will include a navigation comment
+Change Requests created by git-spice will include a navigation comment
 at the top with a visual representation of the stack,
 and the position of the current branch in it.
 
-![Example of a stack navigation comment](../img/stack-comment.png)
+=== "GitHub"
+
+    ![Example of a stack navigation comment on GitHub](../img/stack-comment.png)
+
+=== "GitLab"
+
+    ![Example of a stack navigation comment on GitLab](../img/stack-comment-glab.png)
 
 This behavior may be changed with the $$spice.submit.navigationComment$$
 configuration key.
@@ -86,7 +104,7 @@ you may also specify title and body directly.
 
 !!! info "Setting draft status non-interactively"
 
-    Pull requests may be marked as draft or ready for review
+    Change requests may be marked as draft or ready for review
     non-interactively with the `--draft` and `--no-draft` flags.
 
     By default, the submit commands will leave
@@ -123,35 +141,52 @@ This will update the trunk branch (e.g. `main`)
 with the latest changes from the upstream repository,
 and delete any local branches whose PRs have been merged.
 
-## Importing pull requests
+## Importing open CRs
 
-You can import an existing PR into git-spice
+You can import an existing open CR into git-spice
 by checking it out locally, tracking the branch with git-spice,
 and re-submitting it.
 
-For example, if you have the GitHub CLI installed:
+For example:
 
-```freeze language="terminal"
-{gray}# Check out the PR locally{reset}
-{green}${reset} gh pr checkout 359
+=== "GitHub"
 
-{gray}# Track it with git-spice{reset}
-{green}${reset} gs branch track
+    ```freeze language="terminal"
+    {gray}# Check out the PR locally{reset}
+    {green}${reset} gh pr checkout 359
 
-{gray}# Re-submit it{reset}
-{green}${reset} gs branch submit
-{green}INF{reset} comment-recovery: Found existing CR #359
-{green}INF{reset} CR #359 is up-to-date: https://github.com/abhinav/git-spice/pull/359
-```
+    {gray}# Track it with git-spice{reset}
+    {green}${reset} gs branch track
+
+    {gray}# Re-submit it{reset}
+    {green}${reset} gs branch submit
+    {green}INF{reset} comment-recovery: Found existing CR #359
+    {green}INF{reset} CR #359 is up-to-date: https://github.com/abhinav/git-spice/pull/359
+    ```
+
+=== "GitLab"
+
+    ```freeze language="terminal"
+    {gray}# Check out the MR locally{reset}
+    {green}${reset} glab mr checkout 8
+
+    {gray}# Track it with git-spice{reset}
+    {green}${reset} gs branch track
+
+    {gray}# Re-submit it{reset}
+    {green}${reset} gs branch submit
+    {green}INF{reset} reticulating-splines: Found existing CR !8
+    {green}INF{reset} CR !8 is up-to-date: https://gitlab.com/abg/test-repo/-/merge_requests/8
+    ```
 
 !!! important
 
     For this to work, the following MUST all be true:
 
-    - The PR is pushed to a branch in the upstream repository
+    - The CR is pushed to a branch in the upstream repository
     - The local branch name exactly matches the upstream branch name
 
-This will work even for PRs that were not created by git-spice,
+This will work even for CRs that were not created by git-spice,
 or authored by someone else, as long as the above conditions are met.
 
 In <!-- gs:version v0.5.0 --> or newer,
