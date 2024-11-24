@@ -1,5 +1,3 @@
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-06-23T10:00:12Z'
 
@@ -18,8 +16,9 @@ gs cc -m 'Add feature3'
 gs ll -a
 cmp stderr $WORK/golden/before.txt
 
-with-term $WORK/input/prompt.txt -- gs branch split
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch split
+cmp $WORK/robot.actual $WORK/robot.golden
 
 gs ll -a
 cmp stderr $WORK/golden/after.txt
@@ -44,53 +43,23 @@ main
 ┏━┻□ feature1
 ┃    a3a4c59 Add feature1 (now)
 main
--- input/prompt.txt --
-# Select the commits
-await Select commits
-snapshot init
-feed \r\r
-await
-snapshot selected
-feed \r
-
-clear
-
-# Pick branch names
-await Add feature1
-snapshot branch1
-clear
-feed feature1\r
-await Add feature2
-snapshot branch2
-feed feature2\r
-
--- golden/prompt.txt --
-### init ###
-Select commits:
-▶   a3a4c59 Add feature1 (now)
-    0c7ed55 Add feature2 (now)
-  ■ 1b17c72 Add feature3 (now) [features]
-  Done
-Select commits to split the branch at
-### selected ###
-Select commits:
-  □ a3a4c59 Add feature1 (now)
-  □ 0c7ed55 Add feature2 (now)
-  ■ 1b17c72 Add feature3 (now) [features]
-▶ Done
-Select commits to split the branch at
-### branch1 ###
-Select commits:
-  □ a3a4c59 Add feature1 (now)
-  □ 0c7ed55 Add feature2 (now)
-  ■ 1b17c72 Add feature3 (now) [features]
-Branch name:
-  □ a3a4c59 Add feature1 (now)
-### branch2 ###
-Select commits:
-  □ a3a4c59 Add feature1 (now)
-  □ 0c7ed55 Add feature2 (now)
-  ■ 1b17c72 Add feature3 (now) [features]
-Branch name: feature1
-Branch name:
-  □ 0c7ed55 Add feature2 (now)
+-- robot.golden --
+===
+> Select commits: 
+> ▶   a3a4c59 Add feature1 (now)
+>     0c7ed55 Add feature2 (now)
+>   ■ 1b17c72 Add feature3 (now) [features]
+>   Done
+> Select commits to split the branch at
+[
+  "a3a4c59",
+  "0c7ed55"
+]
+===
+> Branch name:  
+>   □ a3a4c59 Add feature1 (now)
+"feature1"
+===
+> Branch name:  
+>   □ 0c7ed55 Add feature2 (now)
+"feature2"

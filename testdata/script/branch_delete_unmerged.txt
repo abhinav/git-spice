@@ -1,7 +1,5 @@
 # --force is needed to delete an unmerged branch.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 
@@ -26,24 +24,17 @@ git rev-parse --verify foo
 stdout 'd844dc8b311d27c74fee35f8501171610124ee7a'
 
 # delete with a prompt
-with-term -final exit $WORK/input/prompt.txt -- gs branch delete foo
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch delete foo
+cmp $WORK/robot.actual $WORK/robot.golden
 
 # doesn't exist anymore
 ! git rev-parse --verify foo
 
 -- repo/foo.txt --
 whatever
--- input/prompt.txt --
-await Delete foo anyway?
-snapshot prompt
-feed Y
--- golden/prompt.txt --
-### prompt ###
-WRN foo (d844dc8) is not reachable from HEAD
-Delete foo anyway?: [y/N]
-foo has not been merged into HEAD. This may result in data loss.
-### exit ###
-WRN foo (d844dc8) is not reachable from HEAD
-Delete foo anyway?: [Y/n]
-INF foo: deleted (was d844dc8)
+-- robot.golden --
+===
+> Delete foo anyway?: [y/N]
+> foo has not been merged into HEAD. This may result in data loss.
+true
