@@ -60,12 +60,11 @@ type TerminalView struct {
 
 var _ InteractiveView = (*TerminalView)(nil)
 
-func (iv *TerminalView) Write(p []byte) (int, error) {
-	return iv.W.Write(p)
+func (tv *TerminalView) Write(p []byte) (int, error) {
+	return tv.W.Write(p)
 }
 
 // Prompt prompts the user for input with the given interactive fields.
-func (iv *TerminalView) Prompt(fields ...Field) error {
-	// TODO: replace top-level Run with View argument.
-	return NewForm(fields...).Run(WithInput(iv.R), WithOutput(iv.W))
+func (tv *TerminalView) Prompt(fields ...Field) error {
+	return NewForm(fields...).Run(tv)
 }

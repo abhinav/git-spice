@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackRestackCmd struct{}
@@ -20,8 +21,8 @@ func (*stackRestackCmd) Help() string {
 	`)
 }
 
-func (*stackRestackCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (*stackRestackCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}

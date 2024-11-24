@@ -35,8 +35,8 @@ func (*branchRenameCmd) Help() string {
 	`)
 }
 
-func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) (err error) {
-	repo, _, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
+	repo, _, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 				return nil
 			})
 
-		if err := ui.Run(prompt); err != nil {
+		if err := ui.Run(view, prompt); err != nil {
 			return fmt.Errorf("prompt: %w", err)
 		}
 	}

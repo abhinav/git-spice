@@ -17,6 +17,7 @@ import (
 
 	forge "go.abhg.dev/gs/internal/forge"
 	secret "go.abhg.dev/gs/internal/secret"
+	ui "go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -45,18 +46,18 @@ func (m *MockForge) EXPECT() *MockForgeMockRecorder {
 }
 
 // AuthenticationFlow mocks base method.
-func (m *MockForge) AuthenticationFlow(ctx context.Context) (forge.AuthenticationToken, error) {
+func (m *MockForge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.AuthenticationToken, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthenticationFlow", ctx)
+	ret := m.ctrl.Call(m, "AuthenticationFlow", ctx, view)
 	ret0, _ := ret[0].(forge.AuthenticationToken)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AuthenticationFlow indicates an expected call of AuthenticationFlow.
-func (mr *MockForgeMockRecorder) AuthenticationFlow(ctx any) *MockForgeAuthenticationFlowCall {
+func (mr *MockForgeMockRecorder) AuthenticationFlow(ctx, view any) *MockForgeAuthenticationFlowCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthenticationFlow", reflect.TypeOf((*MockForge)(nil).AuthenticationFlow), ctx)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthenticationFlow", reflect.TypeOf((*MockForge)(nil).AuthenticationFlow), ctx, view)
 	return &MockForgeAuthenticationFlowCall{Call: call}
 }
 
@@ -72,13 +73,13 @@ func (c *MockForgeAuthenticationFlowCall) Return(arg0 forge.AuthenticationToken,
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeAuthenticationFlowCall) Do(f func(context.Context) (forge.AuthenticationToken, error)) *MockForgeAuthenticationFlowCall {
+func (c *MockForgeAuthenticationFlowCall) Do(f func(context.Context, ui.View) (forge.AuthenticationToken, error)) *MockForgeAuthenticationFlowCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeAuthenticationFlowCall) DoAndReturn(f func(context.Context) (forge.AuthenticationToken, error)) *MockForgeAuthenticationFlowCall {
+func (c *MockForgeAuthenticationFlowCall) DoAndReturn(f func(context.Context, ui.View) (forge.AuthenticationToken, error)) *MockForgeAuthenticationFlowCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

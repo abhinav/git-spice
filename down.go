@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type downCmd struct {
@@ -23,8 +24,8 @@ func (*downCmd) Help() string {
 	`)
 }
 
-func (cmd *downCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *downCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -69,5 +70,5 @@ outer:
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          below,
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 }

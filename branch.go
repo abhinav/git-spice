@@ -52,7 +52,12 @@ type branchPrompt struct {
 	Description string
 }
 
-func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *state.Store) (string, error) {
+func (p *branchPrompt) Run(
+	ctx context.Context,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+) (string, error) {
 	disabled := func(git.LocalBranch) bool { return false }
 	if p.Disabled != nil {
 		disabled = p.Disabled
@@ -112,7 +117,7 @@ func (p *branchPrompt) Run(ctx context.Context, repo *git.Repository, store *sta
 		WithValue(&value).
 		WithItems(items...).
 		WithDescription(p.Description)
-	if err := ui.Run(prompt); err != nil {
+	if err := ui.Run(view, prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)
 	}
 

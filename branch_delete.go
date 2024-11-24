@@ -31,8 +31,8 @@ func (*branchDeleteCmd) Help() string {
 	`)
 }
 
-func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
-	repo, store, svc, err := openRepo(ctx, log, opts)
+func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
+	repo, store, svc, err := openRepo(ctx, log, view)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 	if len(cmd.Branches) == 0 {
 		// If a branch name is not given, prompt for one;
 		// assuming we're in interactive mode.
-		if !opts.Prompt {
+		if !ui.Interactive(view) {
 			return fmt.Errorf("cannot proceed without branch name: %w", errNoPrompt)
 		}
 
@@ -55,7 +55,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 			},
 			Default: currentBranch,
 			Title:   "Select a branch to delete",
-		}).Run(ctx, repo, store)
+		}).Run(ctx, view, repo, store)
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
@@ -247,13 +247,13 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, opts *glob
 		// If the branch exists, and is not reachable from HEAD,
 		// git will refuse to delete it.
 		// If we can prompt, ask the user to upgrade to a forceful deletion.
-		if exists && !force && opts.Prompt && !repo.IsAncestor(ctx, head, "HEAD") {
+		if exists && !force && ui.Interactive(view) && !repo.IsAncestor(ctx, head, "HEAD") {
 			log.Warnf("%v (%v) is not reachable from HEAD", branch, head.Short())
 			prompt := ui.NewConfirm().
 				WithTitlef("Delete %v anyway?", branch).
 				WithDescriptionf("%v has not been merged into HEAD. This may result in data loss.", branch).
 				WithValue(&force)
-			if err := ui.Run(prompt); err != nil {
+			if err := ui.Run(view, prompt); err != nil {
 				return fmt.Errorf("run prompt: %w", err)
 			}
 		}

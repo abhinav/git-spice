@@ -45,7 +45,7 @@ func (*repoInitCmd) Help() string {
 	`)
 }
 
-func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *globalOptions) error {
+func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -55,7 +55,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 
 	guesser := spice.Guesser{
 		Select: func(op spice.GuessOp, opts []string, selected string) (string, error) {
-			if !globalOpts.Prompt {
+			if !ui.Interactive(view) {
 				return "", errNoPrompt
 			}
 
@@ -77,7 +77,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, globalOpts *gl
 				With(ui.ComparableOptions(selected, opts...)).
 				WithTitle(msg).
 				WithDescription(desc)
-			if err := ui.Run(prompt); err != nil {
+			if err := ui.Run(view, prompt); err != nil {
 				return "", err
 			}
 
@@ -135,7 +135,7 @@ func newRepoStorage(repo storage.GitRepository, log *log.Logger) *storage.DB {
 	}))
 }
 
-func openRepo(ctx context.Context, log *log.Logger, opts *globalOptions) (
+func openRepo(ctx context.Context, log *log.Logger, view ui.View) (
 	*git.Repository, *state.Store, *spice.Service, error,
 ) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
@@ -145,7 +145,7 @@ func openRepo(ctx context.Context, log *log.Logger, opts *globalOptions) (
 		return nil, nil, nil, fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log, opts)
+	store, err := ensureStore(ctx, repo, log, view)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("open store: %w", err)
 	}
@@ -163,7 +163,7 @@ func ensureStore(
 	ctx context.Context,
 	repo storage.GitRepository,
 	log *log.Logger,
-	opts *globalOptions,
+	view ui.View,
 ) (*state.Store, error) {
 	db := newRepoStorage(repo, log)
 	store, err := state.OpenStore(ctx, db, log)
@@ -173,7 +173,7 @@ func ensureStore(
 
 	if errors.Is(err, state.ErrUninitialized) {
 		log.Info("Repository not initialized. Initializing.")
-		if err := (&repoInitCmd{}).Run(ctx, log, opts); err != nil {
+		if err := (&repoInitCmd{}).Run(ctx, log, view); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}
 
@@ -189,7 +189,7 @@ func ensureRemote(
 	repo spice.GitRepository,
 	store *state.Store,
 	log *log.Logger,
-	globals *globalOptions,
+	view ui.View,
 ) (string, error) {
 	remote, err := store.Remote()
 	if err == nil {
@@ -205,7 +205,7 @@ func ensureRemote(
 	log.Warn("No remote was specified at init time")
 	remote, err = (&spice.Guesser{
 		Select: func(_ spice.GuessOp, opts []string, selected string) (string, error) {
-			if !globals.Prompt {
+			if !ui.Interactive(view) {
 				return "", errNoPrompt
 			}
 
@@ -215,7 +215,7 @@ func ensureRemote(
 				With(ui.ComparableOptions(selected, opts...)).
 				WithTitle("Please select a remote").
 				WithDescription("Changes will be pushed to this remote")
-			if err := ui.Run(prompt); err != nil {
+			if err := ui.Run(view, prompt); err != nil {
 				return "", err
 			}
 

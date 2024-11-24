@@ -6,13 +6,14 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type trunkCmd struct {
 	checkoutOptions
 }
 
-func (cmd *trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *trunkCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -20,7 +21,7 @@ func (cmd *trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptio
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log, opts)
+	store, err := ensureStore(ctx, repo, log, view)
 	if err != nil {
 		return err
 	}
@@ -29,5 +30,5 @@ func (cmd *trunkCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptio
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          trunk,
-	}).Run(ctx, log, opts)
+	}).Run(ctx, log, view)
 }

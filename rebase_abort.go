@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type rebaseAbortCmd struct{}
@@ -26,7 +27,7 @@ func (*rebaseAbortCmd) Help() string {
 	`)
 }
 
-func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, opts *globalOptions) error {
+func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -34,7 +35,7 @@ func (cmd *rebaseAbortCmd) Run(ctx context.Context, log *log.Logger, opts *globa
 		return fmt.Errorf("open repository: %w", err)
 	}
 
-	store, err := ensureStore(ctx, repo, log, opts)
+	store, err := ensureStore(ctx, repo, log, view)
 	if err != nil {
 		return err
 	}
