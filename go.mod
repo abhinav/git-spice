@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.0
-	github.com/xanzy/go-gitlab v0.113.0
+	github.com/xanzy/go-gitlab v0.114.0
 	github.com/zalando/go-keyring v0.2.6
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/requiredfield v0.3.0
