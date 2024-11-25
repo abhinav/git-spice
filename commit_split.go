@@ -12,7 +12,8 @@ import (
 )
 
 type commitSplitCmd struct {
-	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	Message  string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	NoVerify bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
 func (*commitSplitCmd) Help() string {
@@ -69,7 +70,10 @@ func (cmd *commitSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.Vie
 		return fmt.Errorf("select hunks: %w", err)
 	}
 
-	if err := repo.Commit(ctx, git.CommitRequest{Message: cmd.Message}); err != nil {
+	if err := repo.Commit(ctx, git.CommitRequest{
+		Message:  cmd.Message,
+		NoVerify: cmd.NoVerify,
+	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 
@@ -81,7 +85,10 @@ func (cmd *commitSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.Vie
 
 	// Commit will move HEAD to the new commit,
 	// updating branch ref if necessary.
-	if err := repo.Commit(ctx, git.CommitRequest{ReuseMessage: head.String()}); err != nil {
+	if err := repo.Commit(ctx, git.CommitRequest{
+		ReuseMessage: head.String(),
+		NoVerify:     cmd.NoVerify,
+	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 

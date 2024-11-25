@@ -547,6 +547,7 @@ target (A) to the specified branch:
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
 * `-m`, `--message=MSG`: Commit message
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
 **Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit)
@@ -778,6 +779,7 @@ followed by 'gs upstack restack'.
 * `-a`, `--all`: Stage all changes before committing.
 * `--fixup=STRING`: Create a fixup commit.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 ### gs commit amend
 
@@ -797,6 +799,7 @@ followed by 'gs upstack restack'.
 * `-a`, `--all`: Stage all changes before committing.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-edit`: Don't edit the commit message
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 ### gs commit split
 
@@ -813,6 +816,7 @@ Branches upstack are restacked as needed.
 **Flags**
 
 * `-m`, `--message=MSG`: Use the given message as the commit message.
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 ## Rebase
 

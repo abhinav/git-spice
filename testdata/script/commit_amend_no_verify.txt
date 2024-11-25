@@ -1,0 +1,52 @@
+# Commit amend with --no-verify.
+
+as 'Test <test@example.com>'
+at '2024-05-23T19:23:24Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+git add feature1.txt
+gs cc -a -m 'Add feature'
+
+cp $WORK/extra/pre-commit .git/hooks/pre-commit
+chmod 700 .git/hooks/pre-commit
+
+git add feature2.txt
+
+! gs ca -m 'Add feature 1 and feature 2'
+stderr 'exit status 1'
+
+gs ca -m 'Add feature 1 and feature 2' --no-verify
+
+# verify the output
+git log
+cmp stdout $WORK/golden/log.1.txt
+
+-- repo/feature1.txt --
+Contents of feature 1.
+
+-- repo/feature2.txt --
+Contents of feature 2.
+
+-- extra/pre-commit --
+exit 1
+
+-- golden/log.1.txt --
+commit 97daa3e151f2efd07538fb32e5a8d941816ab39b
+Author: Test <test@example.com>
+Date:   Thu May 23 19:23:24 2024 +0000
+
+    Add feature 1 and feature 2
+
+commit 63c927d63e16e46e0f55c14031bdf4cf9a159a56
+Author: Test <test@example.com>
+Date:   Thu May 23 19:23:24 2024 +0000
+
+    Initial commit
