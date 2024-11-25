@@ -126,6 +126,7 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
 		Endpoint: oauthEndpoint,
+		ClientID: f.Options.ClientID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -176,6 +177,13 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 	return &tok, nil
 }
 
+func (a *authenticatorOptions) oauth2ClientID() string {
+	if a.ClientID != "" {
+		return a.ClientID
+	}
+	return _oauthAppID
+}
+
 // ClearAuthenticationToken removes the authentication token from the stash.
 func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 	return stash.DeleteSecret(f.URL(), "token")
@@ -195,7 +203,7 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				ClientID: _oauthAppID,
+				ClientID: a.oauth2ClientID(),
 				Endpoint: a.Endpoint,
 				Scopes:   []string{"api"},
 			}
@@ -215,6 +223,8 @@ var _authenticationMethods = []struct {
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
 	Endpoint oauth2.Endpoint // required
+
+	ClientID string // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
