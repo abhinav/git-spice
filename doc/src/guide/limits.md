@@ -23,10 +23,12 @@ specifically the ability to push new branches.
 
 ## Squash-merges restack the upstack
 
-If a Change Request is squash-merged into the trunk branch,
+On GitHub, when a Pull Request is squash-merged into the trunk branch,
 all commits in that PR are replaced with a single commit with a different hash.
+Similarly on GitLab, when fast-forward merges are enabled, and commits are squashed,
+the commits in the MR are replaced with a single commit with a different hash.
 
-The branches upstack from that PR are not aware of this new commit,
+The branches upstack from that CR are not aware of this new commit,
 still referring to the old, unsquashed history of the branch.
 GitHub and GitLab do not yet know to reconcile this new commit with the upstack branches,
 even though the contents are the same.
@@ -81,7 +83,7 @@ arrow " restack" ljust from Y.s to Z.n
 ```
 
 As a result of this, when a branch is squash-merged into the trunk branch,
-branches upstack from it need to be restacked, and all their PRs updated.
+branches upstack from it need to be restacked, and all their CRs updated.
 
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->
