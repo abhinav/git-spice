@@ -16,10 +16,10 @@ import (
 // MRComment implements [forge.ChangeCommentID].
 type MRComment struct {
 	// Number is the ID of the note.
-	Number int `json:"number"`
+	Number int `json:"number"` // required
 
 	// MRNumber is the ID of the MR the note is on.
-	MRNumber int `json:"mr_number"`
+	MRNumber int `json:"mr_number"` // required
 }
 
 var _ forge.ChangeCommentID = (*MRComment)(nil)
@@ -76,6 +76,10 @@ func (r *Repository) UpdateChangeComment(
 	noteOptions := gitlab.UpdateMergeRequestNoteOptions{
 		Body: &markdown,
 	}
+
+	r.log.Debug("Updating comment",
+		"id", mrComment.Number,
+		"mr", mrComment.MRNumber)
 	_, _, err := r.client.Notes.UpdateMergeRequestNote(
 		r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
 		gitlab.WithContext(ctx),
@@ -83,8 +87,6 @@ func (r *Repository) UpdateChangeComment(
 	if err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
-
-	r.log.Debug("Updated comment", "id", mrComment.Number) // TODO URL?
 
 	return nil
 }
@@ -147,6 +149,8 @@ func (r *Repository) ListChangeComments(
 		}
 	}
 
+	mrNumber := mustMR(id).Number
+
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
 		notesOptions := gitlab.ListMergeRequestNotesOptions{
 			Sort: gitlab.Ptr("asc"),
@@ -157,7 +161,7 @@ func (r *Repository) ListChangeComments(
 
 		for pageNum := 1; true; pageNum++ {
 			notes, response, err := r.client.Notes.ListMergeRequestNotes(
-				r.repoID, mustMR(id).Number, &notesOptions,
+				r.repoID, mrNumber, &notesOptions,
 				gitlab.WithContext(ctx),
 			)
 			if err != nil {
@@ -179,7 +183,8 @@ func (r *Repository) ListChangeComments(
 
 				item := &forge.ListChangeCommentItem{
 					ID: &MRComment{
-						Number: note.ID,
+						Number:   note.ID,
+						MRNumber: mrNumber,
 					},
 					Body: note.Body,
 				}

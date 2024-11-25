@@ -18,8 +18,14 @@ func TestMRMetadata(t *testing.T) {
 	assert.Equal(t, &MR{Number: 42}, md.ChangeID())
 	assert.Nil(t, md.NavigationCommentID())
 
-	md.SetNavigationCommentID(&MRComment{Number: 123})
-	assert.Equal(t, &MRComment{Number: 123}, md.NavigationCommentID())
+	md.SetNavigationCommentID(&MRComment{
+		Number:   123,
+		MRNumber: 42,
+	})
+	assert.Equal(t, &MRComment{
+		Number:   123,
+		MRNumber: 42,
+	}, md.NavigationCommentID())
 }
 
 func TestMustMR(t *testing.T) {
