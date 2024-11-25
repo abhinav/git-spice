@@ -45,6 +45,8 @@ jobs:
         include:
           # On Linux, also test against specific versions built from source.
           - {os: ubuntu-latest, git-version: "2.38.0"}
+          # On Windows, run without coverage.
+          - {os: windows-latest, no-cover: true}
 
     steps:
     - uses: actions/checkout@v4
@@ -96,11 +98,12 @@ jobs:
         git --version
 
     - name: Test
-      run: make cover
+      run: make ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
       shell: bash
 
     - name: Upload coverage
       uses: codecov/codecov-action@v5.0.7
+      if: ${{ matrix.no-cover != true }}
       with:
         files: ./cover.out
         token: ${{ secrets.CODECOV_TOKEN }}
