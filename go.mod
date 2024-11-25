@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.4.0
 	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10
 	github.com/charmbracelet/bubbles v0.20.0
-	github.com/charmbracelet/bubbletea v1.2.2
+	github.com/charmbracelet/bubbletea v1.2.3
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.0
 	github.com/cli/browser v1.3.0
@@ -16,7 +16,7 @@ require (
 	github.com/rogpeppe/go-internal v1.13.1
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.0
 	github.com/zalando/go-keyring v0.2.6
