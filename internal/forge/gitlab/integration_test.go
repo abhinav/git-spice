@@ -449,7 +449,8 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 	assert.Equal(t, []*forge.ListChangeCommentItem{
 		{
 			ID: &gitlab.MRComment{
-				Number: 2225710594,
+				Number:   2225710594,
+				MRNumber: 4,
 			},
 			Body: "This change is part of the following stack:\n\n" +
 				"- !4 ◀\n\n" +
