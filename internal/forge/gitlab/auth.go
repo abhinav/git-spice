@@ -197,11 +197,7 @@ var _authenticationMethods = []struct {
 			return &DeviceFlowAuthenticator{
 				ClientID: _oauthAppID,
 				Endpoint: a.Endpoint,
-				Scopes: []string{
-					"api",
-					"read_user",
-					"write_repository",
-				},
+				Scopes:   []string{"api"},
 			}
 		},
 	},
