@@ -31,6 +31,10 @@ type Options struct {
 	// Token is a fixed token used to authenticate with GitLab.
 	// This may be used to skip the login flow.
 	Token string `name:"gitlab-token" hidden:"" env:"GITLAB_TOKEN" help:"GitLab API token"`
+
+	// ClientID is the OAuth client ID for GitLab OAuth device flow.
+	// This should be used if the GitLab instance is Self Managed.
+	ClientID string `name:"gitlab-oauth-client-id" hidden:"" config:"forge.gitlab.oauth.clientID" help:"GitLab OAuth client ID"`
 }
 
 // Forge builds a GitLab Forge.

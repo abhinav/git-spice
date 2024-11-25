@@ -12,7 +12,7 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl)
+**Configuration**: [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid)
 
 ## Shell
 
@@ -130,7 +130,7 @@ and untrack all branches.
 ### gs repo sync
 
 ```
-gs repo (r) sync (s)
+gs repo (r) sync (s) [flags]
 ```
 
 Pull latest changes from the remote
@@ -141,6 +141,10 @@ will be deleted after syncing.
 The repository must have a remote associated for syncing.
 A prompt will ask for one if the repository
 was not initialized with a remote.
+
+**Flags**
+
+* `--restack`: Restack the current stack after syncing
 
 ## Log
 

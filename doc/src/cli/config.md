@@ -76,6 +76,14 @@ See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 URL of the GitLab instance used for GitLab requests.
 Defaults to `$GITLAB_URL` if set, or `https://gitlab.com` otherwise.
 
+### spice.forge.gitlab.oauth.clientID
+
+<!-- gs:version unreleased -->
+
+Client ID for OAuth authentication with GitLab.
+Default to git-spice's built-in Client ID in https://gitlab.com. 
+It should be set to a custom value if you are running your own GitLab Self-Managed instance.
+
 ### spice.log.all
 
 Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,
