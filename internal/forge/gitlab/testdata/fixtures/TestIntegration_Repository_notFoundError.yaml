@@ -1,0 +1,38 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        transfer_encoding: []
+        trailer: {}
+        host: gitlab.com
+        remote_addr: ""
+        request_uri: ""
+        body: ""
+        form: {}
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/abg%2Fdoes-not-exist-repo
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        transfer_encoding: []
+        trailer: {}
+        content_length: 35
+        uncompressed: false
+        body: '{"message":"404 Project Not Found"}'
+        headers:
+            Content-Length:
+                - "35"
+            Content-Type:
+                - application/json
+        status: 404 Not Found
+        code: 404
+        duration: 483.869917ms

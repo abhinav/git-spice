@@ -1,4 +1,4 @@
-package github_test
+package gitlab_test
 
 import (
 	"bytes"
@@ -13,23 +13,21 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	gogitlab "github.com/xanzy/go-gitlab"
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/graphqlutil"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/ioutil"
 	"go.abhg.dev/gs/internal/logtest"
-	"golang.org/x/oauth2"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
 
-// This file tests basic, end-to-end interactions with the GitHub API
+// This file tests basic, end-to-end interactions with the GitLab API
 // using recorded fixtures.
 
 var (
@@ -40,37 +38,30 @@ var (
 // To avoid looking this up for every test that needs the repo ID,
 // we'll just hardcode it here.
 var (
-	_gitSpiceRepoID = githubv4.ID("R_kgDOJ2BQKg")
-	_testRepoID     = githubv4.ID("R_kgDOMVd0xg")
+	_testRepoID = gogitlab.Ptr(64779801)
 )
 
 func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	t.Cleanup(func() {
 		if t.Failed() {
 			t.Logf("To update the test fixtures, run:")
-			t.Logf("    GITHUB_TOKEN=$token go test -update -run '^%s$'", t.Name())
+			t.Logf("    GITLAB_TOKEN=$token go test -update -run '^%s$'", t.Name())
 		}
 	})
 
 	return httptest.NewTransportRecorder(t, name, httptest.TransportRecorderOptions{
 		Update: _update,
 		WrapRealTransport: func(t testing.TB, transport http.RoundTripper) http.RoundTripper {
-			githubToken := os.Getenv("GITHUB_TOKEN")
-			require.NotEmpty(t, githubToken,
-				"$GITHUB_TOKEN must be set in record mode")
+			gitlabToken := os.Getenv("GITLAB_TOKEN")
+			require.NotEmpty(t, gitlabToken,
+				"$GITLAB_TOKEN must be set in record mode")
 
-			return &oauth2.Transport{
-				Base: transport,
-				Source: oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: githubToken,
-				}),
-			}
+			return transport
 		},
-		// GraphQL requests will all have the same method and URL.
-		// We'll need to match the body instead.
+
 		Matcher: func(r *http.Request, i cassette.Request) bool {
 			if r.Body == nil || r.Body == http.NoBody {
-				return cassette.DefaultMatcher(r, i)
+				return r.Method == i.Method && r.URL.String() == i.URL
 			}
 
 			reqBody, err := io.ReadAll(r.Body)
@@ -85,74 +76,85 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	})
 }
 
-func newGitHubClient(
+func newGitLabClient(
 	httpClient *http.Client,
-) *githubv4.Client {
-	httpClient.Transport = graphqlutil.WrapTransport(httpClient.Transport)
-	return githubv4.NewClient(httpClient)
+) *gitlab.GitlabClient {
+	tok, exists := os.LookupEnv("GITLAB_TOKEN")
+	var token string
+	if !exists {
+		token = "token"
+	} else {
+		token = tok
+	}
+	client, _ := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
+	return &gitlab.GitlabClient{
+		MergeRequests:    client.MergeRequests,
+		Notes:            client.Notes,
+		ProjectTemplates: client.ProjectTemplates,
+		Projects:         client.Projects,
+		Users:            client.Users,
+	}
 }
 
 func TestIntegration_Repository(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, nil)
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, nil)
 	require.NoError(t, err)
 }
 
 func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		change, err := repo.FindChangeByID(ctx, &github.PR{Number: 141})
+		change, err := repo.FindChangeByID(ctx, &gitlab.MR{Number: 2})
 		require.NoError(t, err)
 
 		assert.Equal(t, &forge.FindChangeItem{
-			ID: &github.PR{
-				Number: 141,
-				GQLID:  "PR_kwDOJ2BQKs5xNT-u",
+			ID: &gitlab.MR{
+				Number: 2,
 			},
-			URL:      "https://github.com/abhinav/git-spice/pull/141",
-			Subject:  "branch submit: Heal from external PR submissions",
+			URL:      "https://gitlab.com/abg/test-repo/-/merge_requests/2",
+			Subject:  "foo",
 			State:    forge.ChangeMerged,
 			BaseName: "main",
-			HeadHash: "df0289d83ffae816105947875db01c992224913d",
+			HeadHash: "12750c0228ffa8973637dfeee5b07e97e49c5fbe",
 			Draft:    false,
 		}, change)
 	})
 
 	t.Run("not-found", func(t *testing.T) {
-		_, err := repo.FindChangeByID(ctx, &github.PR{Number: 999})
+		_, err := repo.FindChangeByID(ctx, &gitlab.MR{Number: 999})
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "Could not resolve")
+		assert.ErrorContains(t, err, "404 Not Found")
 	})
 }
 
 func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		changes, err := repo.FindChangesByBranch(ctx, "gh-graphql", forge.FindChangesOptions{})
+		changes, err := repo.FindChangesByBranch(ctx, "branch-name-test-TMmz0MkH", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []*forge.FindChangeItem{
 			{
-				ID: &github.PR{
-					Number: 144,
-					GQLID:  "PR_kwDOJ2BQKs5xNeqO",
+				ID: &gitlab.MR{
+					Number: 3,
 				},
-				URL:      "https://github.com/abhinav/git-spice/pull/144",
+				URL:      "https://gitlab.com/abg/test-repo/-/merge_requests/3",
+				Subject:  "branch name test",
 				State:    forge.ChangeMerged,
-				Subject:  "GitHub: Use GraphQL API",
 				BaseName: "main",
-				HeadHash: "5d74cecfe3cb066044d129232229e07f5d04e194",
+				HeadHash: "8c33013dc1ff6e5bc86d5e5400a227aabb9a77f6",
 				Draft:    false,
 			},
 		}, changes)
@@ -168,19 +170,17 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	merged, err := repo.ChangesAreMerged(ctx, []forge.ChangeID{
-		&github.PR{Number: 196, GQLID: "PR_kwDOJ2BQKs5ylEYu"}, // merged
-		&github.PR{Number: 387, GQLID: "PR_kwDOJ2BQKs56wX01"}, // open (not merged)
-		&github.PR{Number: 144, GQLID: "PR_kwDOJ2BQKs5xNeqO"}, // merged
-		// Explicit GQL ID means we don't need to be in the same repo.
-		&github.PR{Number: 4, GQLID: githubv4.ID("PR_kwDOMVd0xs51N_9r")}, // closed (not merged)
+		&gitlab.MR{Number: 2}, // merged
+		&gitlab.MR{Number: 4}, // open (not merged)
+		&gitlab.MR{Number: 3}, // merged
 	})
 	require.NoError(t, err)
-	assert.Equal(t, []bool{true, false, true, false}, merged)
+	assert.Equal(t, []bool{true, false, true}, merged)
 }
 
 func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
@@ -188,8 +188,8 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 
 	t.Run("absent", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
-		ghc := newGitHubClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+		ghc := newGitLabClient(rec.GetDefaultClient())
+		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
@@ -199,16 +199,16 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 
 	t.Run("present", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
-		ghc := newGitHubClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, new(github.Forge), "golang", "go", logtest.New(t), ghc, nil)
+		ghc := newGitLabClient(rec.GetDefaultClient())
+		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "gitlab-org", "cli", logtest.New(t), ghc, nil)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
 		require.NoError(t, err)
-		require.Len(t, templates, 1)
+		require.Len(t, templates, 2)
 
 		template := templates[0]
-		assert.Equal(t, "PULL_REQUEST_TEMPLATE", template.Filename)
+		assert.Equal(t, "Default", template.Filename)
 		assert.NotEmpty(t, template.Body)
 	})
 }
@@ -217,25 +217,23 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	ctx := context.Background()
 
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID)
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
-		md, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 196})
+		md, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 3})
 		require.NoError(t, err)
 
-		assert.Equal(t, &github.PR{
-			Number: 196,
-			GQLID:  "PR_kwDOJ2BQKs5ylEYu",
+		assert.Equal(t, &gitlab.MR{
+			Number: 3,
 		}, md.ChangeID())
-		assert.Equal(t, "github", md.ForgeID())
+		assert.Equal(t, "gitlab", md.ForgeID())
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 10000})
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "get pull request ID")
+		_, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 10000})
+		require.Nil(t, err)
 	})
 }
 
@@ -259,7 +257,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		t.Logf("Cloning test-repo...")
 		repoDir := t.TempDir()
-		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
 		cmd.Stdout = output
 		cmd.Stdout = output
 		require.NoError(t, cmd.Run(), "failed to clone test-repo")
@@ -308,9 +306,9 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	}
 
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -392,18 +390,17 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 func TestIntegration_Repository_comments(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
 	commentBody := fixturetest.New(_fixtures, "comment", func() string {
 		return randomString(32)
 	}).Get(t)
-	commentID, err := repo.PostChangeComment(ctx, &github.PR{
+	commentID, err := repo.PostChangeComment(ctx, &gitlab.MR{
 		Number: 4,
-		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
 	}, commentBody)
 	require.NoError(t, err, "could not post comment")
 	t.Cleanup(func() {
@@ -426,14 +423,13 @@ func TestIntegration_Repository_comments(t *testing.T) {
 }
 
 func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
-	const _prGQLID = "PR_kwDOJ2BQKs55Hpxz" // https://github.com/abhinav/git-spice/pull/356
-	prID := &github.PR{Number: 356, GQLID: githubv4.ID(_prGQLID)}
+	prID := &gitlab.MR{Number: 4}
 
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "git-spice", logtest.New(t), ghc, _gitSpiceRepoID,
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -441,7 +437,7 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 		CanUpdate: true,
 		BodyMatchesAll: []*regexp.Regexp{
 			regexp.MustCompile(`(?m)^This change is part of the following stack:$`),
-			regexp.MustCompile(`- #356`),
+			regexp.MustCompile(`- !4`),
 		},
 	}
 	var items []*forge.ListChangeCommentItem
@@ -452,32 +448,31 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 
 	assert.Equal(t, []*forge.ListChangeCommentItem{
 		{
-			ID: &github.PRComment{
-				GQLID: githubv4.ID("IC_kwDOJ2BQKs6JXKfO"),
-				URL:   "https://github.com/abhinav/git-spice/pull/356#issuecomment-2304550862",
+			ID: &gitlab.MRComment{
+				Number: 2225710594,
 			},
 			Body: "This change is part of the following stack:\n\n" +
-				"- #356 ◀\n\n" +
-				"<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>\n",
+				"- !4 ◀\n\n" +
+				"<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>\n" +
+				"<!-- gs:navigation comment -->",
 		},
 	}, items)
 }
 
 func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 	const TotalComments = 10
-	github.SetListChangeCommentsPageSize(t, 3)
+	gitlab.SetListChangeCommentsPageSize(t, 3)
 
-	// https://github.com/abhinav/test-repo/pull/4
-	prID := &github.PR{
-		Number: 4,
-		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
+	// https://gitlab.com/abg/test-repo/-/merge_requests/7
+	prID := &gitlab.MR{
+		Number: 7,
 	}
 
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "test-repo", logtest.New(t), ghc, _testRepoID,
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -522,18 +517,10 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
-	client.Transport = graphqlutil.WrapTransport(client.Transport)
-	ghc := newGitHubClient(client)
-	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "does-not-exist-repo", logtest.New(t), ghc, nil)
+	ghc := newGitLabClient(client)
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", logtest.New(t), ghc, nil)
 	require.Error(t, err)
-	assert.ErrorIs(t, err, graphqlutil.ErrNotFound)
-
-	var gqlError *graphqlutil.Error
-	if assert.ErrorAs(t, err, &gqlError) {
-		assert.Equal(t, "NOT_FOUND", gqlError.Type)
-		assert.Equal(t, []any{"repository"}, gqlError.Path)
-		assert.Contains(t, gqlError.Message, "abhinav/does-not-exist-repo")
-	}
+	assert.ErrorContains(t, err, "404 Not Found")
 }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
