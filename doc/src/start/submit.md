@@ -40,7 +40,7 @@ git-spice refers to these as *Change Requests* (CRs).
         To do this, if you have the GitHub or GitLab CLI installed,
         run the following inside your experimental repository:
 
-        === "GitHub"
+        === "<!-- gs:github -->"
 
             ```bash
             gh repo create gs-playground \
@@ -52,7 +52,7 @@ git-spice refers to these as *Change Requests* (CRs).
             If you don't have the GitHub CLI installed,
             go to <https://github.com/new> and follow the instructions there.
 
-        === "GitLab"
+        === "<!-- gs:gitlab -->"
 
             ```bash
             glab repo create gs-playground --public

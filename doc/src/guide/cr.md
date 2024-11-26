@@ -12,8 +12,8 @@ description: >-
     This page assumes you are using one of the supported Git forges.
     These are:
 
-    - :simple-github: **GitHub**
-    - :simple-gitlab: **GitLab** (<!-- gs:version unreleased -->)
+    - <!-- gs:github -->
+    - <!-- gs:gitlab --> (<!-- gs:version unreleased -->)
 
     If you're using a different service,
     you can still use git-spice,
@@ -68,11 +68,11 @@ Change Requests created by git-spice will include a navigation comment
 at the top with a visual representation of the stack,
 and the position of the current branch in it.
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     ![Example of a stack navigation comment on GitHub](../img/stack-comment.png)
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     ![Example of a stack navigation comment on GitLab](../img/stack-comment-glab.png)
 
@@ -149,7 +149,7 @@ and re-submitting it.
 
 For example:
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     ```freeze language="terminal"
     {gray}# Check out the PR locally{reset}
@@ -164,7 +164,7 @@ For example:
     {green}INF{reset} CR #359 is up-to-date: https://github.com/abhinav/git-spice/pull/359
     ```
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     ```freeze language="terminal"
     {gray}# Check out the MR locally{reset}

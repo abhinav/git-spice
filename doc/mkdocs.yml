@@ -75,8 +75,10 @@ plugins:
       enabled: !ENV [CI, false]
 
 hooks:
+  - hooks/replace.py
   - hooks/cliref.py
   - hooks/released.py
+  - hooks/badge.py
   - hooks/footer.py
   - hooks/freeze.py
   - hooks/listing.py

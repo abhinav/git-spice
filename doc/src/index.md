@@ -15,9 +15,8 @@ description: >-
 git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them, and create
-:simple-github: *GitHub Pull Requests* or
-:simple-gitlab: *GitLab Merge Requests* (<!-- gs:version unreleased -->)
- from them.
+<!-- gs:github --> *Pull Requests* or
+<!-- gs:gitlab --> *Merge Requests* from them.
 
 It works with Git instead of trying to replace Git.
 Introduce it in small places in your existing workflow
@@ -79,7 +78,7 @@ $ gs repo sync
     you can keep your stack in sync with the trunk branch,
     automatically rebase dependent branches, and more.
 
--   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md) (:simple-github:{ title="GitHub" } :simple-gitlab:{ title="GitLab" })
+-   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md) <!-- gs:github --> <!-- gs:gitlab -->
 
     ---
 

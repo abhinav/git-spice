@@ -42,18 +42,18 @@ Take the following steps to authenticate with a service:
 
 Each supported service supports different authentication methods.
 
-- [OAuth](#oauth): :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
-- [GitHub App](#github-app): :simple-github:{title="GitHub"}
-- [Personal Access Token](#personal-access-token): :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
-- [Service CLI](#service-cli): :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
-- [Environment variable](#environment-variable): :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
+- [OAuth](#oauth): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+- [GitHub App](#github-app): <!-- gs:badge:github -->
+- [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+- [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+- [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 
 Read on for more details on each method,
 or skip on to [Pick an authentication method](#picking-an-authentication-method).
 
 ### OAuth
 
-**Supported by** :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 
 With OAuth authentication, you will take the following steps:
 
@@ -69,7 +69,7 @@ The code expires in a few minutes.
 It will take a few seconds to verify after you enter it.
 ```
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     On GitHub, OAuth is available in two flavors:
 
@@ -89,7 +89,7 @@ It will take a few seconds to verify after you enter it.
         If that is not an option,
         use a [Personal Access Token](#personal-access-token).
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     For Self-Hosted GitLab instances,
     an administrator will need to set up a git-spice OAuth App.
@@ -100,7 +100,7 @@ It will take a few seconds to verify after you enter it.
 
 ### GitHub App
 
-**Supported by** :simple-github:{title="GitHub"}
+**Supported by** <!-- gs:badge:github -->
 
 With GitHub App authentication, you will take the following steps:
 
@@ -131,7 +131,7 @@ You **must** install the GitHub App to access repositories with git-spice.
 
 ### Personal Access Token
 
-**Supported by** :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 
 To use a Personal Access Token with git-spice,
 you will generate a Personal Access Token on the website
@@ -143,7 +143,7 @@ Select an authentication method: {red}Personal Access Token{reset}
 {green}Enter Personal Access Token{reset}:
 ```
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     The token may be a classic token or a fine-grained token.
 
@@ -187,7 +187,7 @@ Select an authentication method: {red}Personal Access Token{reset}
 
           3. Click "Generate token" and copy the token.
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     To use a Personal Access Token with GitLab:
 
@@ -203,12 +203,12 @@ After you have a token, enter it into the prompt.
 
 ### Service CLI
 
-**Supported by** :simple-github:{title="GitHub"} :simple-gitlab:{title="GitLab"}
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 
 If you have the GitHub or GitLab CLIs installed and authenticated,
 you can get authentication tokens for git-spice from them.
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     1. Install the [GitHub CLI](https://github.com/cli/cli#installation)
     2. Authenticate it:
@@ -217,7 +217,7 @@ you can get authentication tokens for git-spice from them.
         {green}${reset} gh auth login
         ```
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     1. Install the [GitLab CLI](https://gitlab.com/gitlab-org/cli#installation).
     2. Authenticate it:
@@ -231,17 +231,17 @@ git-spice will request a token from the CLI as needed.
 
 ### Environment variable
 
-**Supported by** :simple-github: :simple-gitlab:
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 
 You can provide the authentication token as an environment variable.
 This is not recommended as a primary authentication method,
 but it can be useful in CI/CD environments.
 
-=== "GitHub"
+=== "<!-- gs:github -->"
 
     Set the `GITHUB_TOKEN` environment variable to your token.
 
-=== "GitLab"
+=== "<!-- gs:gitlab -->"
 
     Set the `GITLAB_TOKEN` environment variable to your token.
 
