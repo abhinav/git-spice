@@ -77,7 +77,7 @@ func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, re
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	glc, err := newGitLabClient(f.URL(), token.(*AuthenticationToken))
+	glc, err := newGitLabClient(ctx, f.URL(), token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

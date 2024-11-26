@@ -1,9 +1,11 @@
 package gitlab
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/xanzy/go-gitlab"
+	"go.abhg.dev/gs/internal/must"
 )
 
 type gitlabClient struct {
@@ -14,20 +16,31 @@ type gitlabClient struct {
 	Users            usersService
 }
 
-func newGitLabClient(baseURL string, tok *AuthenticationToken) (*gitlabClient, error) {
+func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationToken) (*gitlabClient, error) {
 	var newClient func(string, ...gitlab.ClientOptionFunc) (*gitlab.Client, error)
+	accessToken := tok.AccessToken
 	switch tok.AuthType {
 	case AuthTypePAT:
 		newClient = gitlab.NewClient
-	case AuthTypeOAuth2:
-		newClient = gitlab.NewOAuthClient
 	case AuthTypeGitLabCLI:
+		// For GitLab CLI, AccessToken will be empty.
+		token, err := newGitLabCLI("").Token(ctx, tok.Hostname)
+		if err != nil {
+			return nil, fmt.Errorf("get token from GitLab CLI: %w", err)
+		}
+
+		accessToken = token
+		fallthrough
+	case AuthTypeOAuth2:
 		newClient = gitlab.NewOAuthClient
 	default:
 		return nil, fmt.Errorf("unknown auth type: %d", tok.AuthType)
 	}
 
-	client, err := newClient(tok.AccessToken, gitlab.WithBaseURL(baseURL))
+	must.NotBeBlankf(accessToken,
+		"access token must be set for auth type: %v", tok.AuthType)
+
+	client, err := newClient(accessToken, gitlab.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, err
 	}

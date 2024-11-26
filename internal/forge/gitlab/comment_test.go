@@ -163,7 +163,7 @@ func TestListChangeComments(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			client, _ := newGitLabClient(srv.URL, &AuthenticationToken{
+			client, _ := newGitLabClient(context.Background(), srv.URL, &AuthenticationToken{
 				AuthType:    AuthTypePAT,
 				AccessToken: "token",
 			})
