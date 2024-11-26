@@ -31,17 +31,17 @@ keeping them up-to-date and in sync with each other.
 
 - [The stacking workflow](https://www.stacking.dev/)
 
-## Where is the GitHub authentication token stored?
+## Where is the authentication token stored?
 
 git-spice stores the GitHub authentication in a system-specific secure storage.
 See [Authentication > Safety](setup/auth.md#safety) for details.
 
-## Why doesn't git-spice create one PR per commit?
+## Why doesn't git-spice create one CR per commit?
 
 With tooling like this, there are two options:
 each commit is an atomic unit of work, or each branch is.
 While the former might be more in line with Git's original philosophy,
-the latter is more practical for most teams with GitHub-based workflows.
+the latter is more practical for most teams with GitHub or GitLab-based workflows.
 
 With a PR per commit, when a PR gets review feedback,
 you must amend that commit with fixes and force-push.
@@ -52,7 +52,7 @@ However, with a PR per branch, you can keep the original changes separate
 from follow-up fixes, even if the branch is force-pushed.
 This makes it easier for PR reviewers to work through the changes.
 
-And with GitHub squash-merges, you can still get a clean history
+And with squash-merges, you can still get a clean history
 consisting of atomic, revertible commits on the trunk branch.
 
 ## How does git-spice interact with `rebase.updateRefs`?

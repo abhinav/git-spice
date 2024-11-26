@@ -1,11 +1,15 @@
 package gitlab
 
 import (
+	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -24,11 +28,17 @@ type AuthenticationToken struct {
 	forge.AuthenticationToken
 
 	// AuthType specifies the kind of authentication method used.
-	// This c
+	//
+	// If AuthTypeGitLabCLI, AccessToken is not used.
 	AuthType AuthType `json:"auth_type,omitempty"` // required
 
 	// AccessToken is the GitLab access token.
-	AccessToken string `json:"access_token,omitempty"` // required
+	AccessToken string `json:"access_token,omitempty"`
+
+	// Hostname is the hostname of the GitLab instance.
+	//
+	// Used only for AuthTypeGitLabCLI.
+	Hostname string `json:"hostname,omitempty"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
@@ -42,6 +52,9 @@ const (
 
 	// AuthTypeOAuth2 states that OAuth2 authentication was used.
 	AuthTypeOAuth2
+
+	// AuthTypeGitLabCLI states that GitLab CLI authentication was used.
+	AuthTypeGitLabCLI
 
 	// AuthTypeEnvironmentVariable states
 	// that the token was set via an environment variable.
@@ -57,8 +70,10 @@ func (a AuthType) MarshalText() ([]byte, error) {
 		return []byte("pat"), nil
 	case AuthTypeOAuth2:
 		return []byte("oauth2"), nil
+	case AuthTypeGitLabCLI:
+		return []byte("gitlab-cli"), nil
 	case AuthTypeEnvironmentVariable:
-		return nil, fmt.Errorf("should never save AuthTypeEnvironmentVariable")
+		return nil, errors.New("should never save AuthTypeEnvironmentVariable")
 	default:
 		return nil, fmt.Errorf("unknown auth type: %d", a)
 	}
@@ -71,6 +86,8 @@ func (a *AuthType) UnmarshalText(b []byte) error {
 		*a = AuthTypePAT
 	case "oauth2":
 		*a = AuthTypeOAuth2
+	case "gitlab-cli":
+		*a = AuthTypeGitLabCLI
 	default:
 		return fmt.Errorf("unknown auth type: %q", b)
 	}
@@ -84,6 +101,8 @@ func (a AuthType) String() string {
 		return "Personal Access Token"
 	case AuthTypeOAuth2:
 		return "OAuth2"
+	case AuthTypeGitLabCLI:
+		return "GitLab CLI"
 	case AuthTypeEnvironmentVariable:
 		return "Environment Variable"
 	default:
@@ -124,8 +143,15 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 		return nil, fmt.Errorf("get OAuth endpoint: %w", err)
 	}
 
+	hostname, err := urlHostname(f.URL())
+	if err != nil {
+		return nil, fmt.Errorf("get hostname: %w", err)
+	}
+
 	auth, err := selectAuthenticator(view, authenticatorOptions{
 		Endpoint: oauthEndpoint,
+		ClientID: f.Options.ClientID,
+		Hostname: hostname,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -141,6 +167,27 @@ func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.Authenticati
 		// If the user has set GITLAB_TOKEN,
 		// we should not save it to the stash.
 		return nil
+	}
+
+	// Validate before saving:
+	switch ght.AuthType {
+	case AuthTypePAT, AuthTypeOAuth2:
+		if ght.AccessToken == "" {
+			return errors.New("access token is required")
+		}
+	case AuthTypeGitLabCLI:
+		if ght.Hostname == "" {
+			return errors.New("hostname is required")
+		}
+		if ght.AccessToken != "" {
+			return errors.New("access token must not be set for GitLab CLI")
+		}
+
+	case AuthTypeEnvironmentVariable:
+		return errors.New("should never save AuthTypeEnvironmentVariable")
+
+	default:
+		return fmt.Errorf("unknown auth type: %d", ght.AuthType)
 	}
 
 	bs, err := json.Marshal(ght)
@@ -176,6 +223,13 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 	return &tok, nil
 }
 
+func (a *authenticatorOptions) oauth2ClientID() string {
+	if a.ClientID != "" {
+		return a.ClientID
+	}
+	return _oauthAppID
+}
+
 // ClearAuthenticationToken removes the authentication token from the stash.
 func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
 	return stash.DeleteSecret(f.URL(), "token")
@@ -195,7 +249,7 @@ var _authenticationMethods = []struct {
 		Description: oauthDesc,
 		Build: func(a authenticatorOptions) authenticator {
 			return &DeviceFlowAuthenticator{
-				ClientID: _oauthAppID,
+				ClientID: a.oauth2ClientID(),
 				Endpoint: a.Endpoint,
 				Scopes:   []string{"api"},
 			}
@@ -208,13 +262,31 @@ var _authenticationMethods = []struct {
 			return &PATAuthenticator{}
 		},
 	},
-	// TODO: GitLab CLI
+	{
+		Title:       "GitLab CLI",
+		Description: glDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			// Offer this option only if the user
+			// has the GitLab CLI installed.
+			glExe, err := exec.LookPath("glab")
+			if err != nil {
+				return nil
+			}
+
+			return &CLIAuthenticator{
+				CLI:      newGitLabCLI(glExe),
+				Hostname: a.Hostname,
+			}
+		},
+	},
 }
 
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
 	Endpoint oauth2.Endpoint // required
+	ClientID string          // required
+	Hostname string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -260,6 +332,14 @@ func patDesc(focused bool) string {
 		urlStyle(focused).Render("https://gitlab.com/-/user_settings/personal_access_tokens"),
 		scopeStyle.Render("api"),
 	)
+}
+
+func glDesc(focused bool) string {
+	return text.Dedentf(`
+	Re-use an existing GitLab CLI (%[1]s) session.
+	You must be logged into glab with 'glab auth login' for this to work.
+	You can use this if you're just experimenting and don't want to set up a token yet.
+	`, urlStyle(focused).Render("https://gitlab.com/gitlab-org/cli"))
 }
 
 func urlStyle(focused bool) lipgloss.Style {
@@ -344,4 +424,102 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View
 		AccessToken: token.AccessToken,
 		AuthType:    AuthTypeOAuth2,
 	}, nil
+}
+
+// CLIAuthenticator implements GitLab CLI authentication flow.
+// This doesn't do anything special besides checking if the user is logged in.
+type CLIAuthenticator struct {
+	CLI      gitlabCLI // required
+	Hostname string    // required
+}
+
+// Authenticate checks if the user is authenticated with GitHub CLI.
+// The returned AuthenticationToken is saved to the stash.
+func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
+	ok, err := a.CLI.Status(ctx, a.Hostname)
+	if err != nil {
+		return nil, fmt.Errorf("check glab status: %w", err)
+	}
+	if !ok {
+		return nil, errors.New("glab is not authenticated")
+	}
+
+	return &AuthenticationToken{
+		AuthType: AuthTypeGitLabCLI,
+		Hostname: a.Hostname,
+	}, nil
+}
+
+type gitlabCLI interface {
+	Status(context.Context, string) (bool, error)
+	Token(context.Context, string) (string, error)
+}
+
+type glabCLI struct {
+	GL     string                // path to the glab executable
+	runCmd func(*exec.Cmd) error // for testing
+}
+
+func newGitLabCLI(gl string) *glabCLI {
+	gl = cmp.Or(gl, "glab")
+	return &glabCLI{
+		GL:     gl,
+		runCmd: (*exec.Cmd).Run,
+	}
+}
+
+// Status reports whether the user is authenticated with GitLab CLI.
+func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error) {
+	// This command exits with non-zero status if not authenticated.
+	cmd := exec.CommandContext(ctx, gc.GL, "auth", "status", "--hostname", host)
+	if err := gc.runCmd(cmd); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("gl auth status: %w", err)
+	}
+	return true, nil
+}
+
+var _tokenRe = regexp.MustCompile(`(?m)^\W+Token:\s+(\w+)\s*$`)
+
+// Token returns the authentication token from the GitLab CLI.
+func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
+	// Token is printed to stderr on its own line in the form:
+	//    ✓ Token: 1234567890abcdef
+	var stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, gc.GL,
+		"auth", "status", "--hostname", host, "--show-token")
+	cmd.Stderr = &stderr
+	if err := gc.runCmd(cmd); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return "", errors.Join(
+				errors.New("glab is not authenticated"),
+				fmt.Errorf("stderr: %s", stderr.String()),
+			)
+		}
+
+		return "", fmt.Errorf("gl auth status: %w", err)
+	}
+
+	matches := _tokenRe.FindSubmatch(stderr.Bytes())
+	if len(matches) < 2 {
+		return "", errors.Join(
+			errors.New("token not found in glab output"),
+			fmt.Errorf("stderr: %s", stderr.String()),
+		)
+	}
+
+	return string(matches[1]), nil
+}
+
+func urlHostname(urlstr string) (string, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return "", fmt.Errorf("parse URL: %w", err)
+	}
+	return u.Hostname(), nil
 }

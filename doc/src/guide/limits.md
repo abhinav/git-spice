@@ -3,18 +3,18 @@ icon: octicons/stop-16
 title: Limitations
 description: >-
   Usage constraints and limitations when using git-spice
-  to interact with GitHub.
+  to interact with GitHub or GitLab.
 ---
 
-git-spice's handling of GitHub Pull Requests is limited
-by what's possible with GitHub and its handling of Git commits.
+Usage of git-spice with GitHub and GitLab runs into limitations
+of what is possible on those platforms, and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
 
 ## Write access required
 
 When a branch `F` is stacked on another branch `B`,
-and you want to create stacked Pull Requests from them,
-the PR for `F` will be created against `B`.
+and you want to submit Change Requests for both,
+the CR for `F` will be created against `B`.
 To do this, git-spice needs to push both branches to the same repository.
 
 Therefore, to use git-spice to stack PRs,
@@ -23,12 +23,14 @@ specifically the ability to push new branches.
 
 ## Squash-merges restack the upstack
 
-If a Pull Request is squash-merged into the trunk branch,
+On GitHub, when a Pull Request is squash-merged into the trunk branch,
 all commits in that PR are replaced with a single commit with a different hash.
+Similarly on GitLab, when fast-forward merges are enabled, and commits are squashed,
+the commits in the MR are replaced with a single commit with a different hash.
 
-The branches upstack from that PR are not aware of this new commit,
+The branches upstack from that CR are not aware of this new commit,
 still referring to the old, unsquashed history of the branch.
-GitHub does not yet know to reconcile this new commit with the upstack branches,
+GitHub and GitLab do not yet know to reconcile this new commit with the upstack branches,
 even though the contents are the same.
 
 ```pikchr
@@ -81,14 +83,14 @@ arrow " restack" ljust from Y.s to Z.n
 ```
 
 As a result of this, when a branch is squash-merged into the trunk branch,
-branches upstack from it need to be restacked, and all their PRs updated.
+branches upstack from it need to be restacked, and all their CRs updated.
 
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->
 
 ## Base branch change may dismiss approvals
 
-Some GitHub repositories are configured to dismiss prior approvals of PRs
+Some remote repositories are configured to dismiss prior approvals of PRs
 when the base branch of that PR is changed.
 There is no workaround to this except to reconfigure the repository
 as this setting is fundamentally incompatible with a PR stacking workflow.

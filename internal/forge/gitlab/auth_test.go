@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -69,6 +70,44 @@ func TestAuthSaveAndLoad(t *testing.T) {
 		_, err := f.LoadAuthenticationToken(&stash)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, secret.ErrNotFound)
+	})
+
+	t.Run("NoAccessToken", func(t *testing.T) {
+		t.Run("PAT", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypePAT,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token is required")
+		})
+
+		t.Run("OAuth2", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypeOAuth2,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token is required")
+		})
+	})
+
+	t.Run("CLI", func(t *testing.T) {
+		t.Run("MissingHostname", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypeGitLabCLI,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "hostname is required")
+		})
+
+		t.Run("UnexpectedAccessToken", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AccessToken: "access-token",
+				Hostname:    "example.com",
+				AuthType:    AuthTypeGitLabCLI,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token must not be set")
+		})
 	})
 
 	require.NoError(t, f.SaveAuthenticationToken(&stash, &AuthenticationToken{
@@ -145,7 +184,7 @@ func TestLoadAuthenticationToken_badJSON(t *testing.T) {
 }
 
 func TestAuthType(t *testing.T) {
-	for _, typ := range []AuthType{AuthTypePAT, AuthTypeOAuth2} {
+	for _, typ := range []AuthType{AuthTypePAT, AuthTypeOAuth2, AuthTypeGitLabCLI} {
 		t.Run(typ.String(), func(t *testing.T) {
 			t.Run("JSONRoundTrip", func(t *testing.T) {
 				bs, err := json.Marshal(typ)
@@ -182,6 +221,7 @@ func TestAuthType(t *testing.T) {
 		}{
 			{AuthTypePAT, "Personal Access Token"},
 			{AuthTypeOAuth2, "OAuth2"},
+			{AuthTypeGitLabCLI, "GitLab CLI"},
 			{AuthTypeEnvironmentVariable, "Environment Variable"},
 			{AuthType(42), "AuthType(42)"},
 		}
@@ -242,6 +282,80 @@ func TestPATAuthenticator(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out")
 	}
+}
+
+func TestGLabCLI(t *testing.T) {
+	glCLI := newGitLabCLI("false") // don't run real CLI
+
+	// False will fail.
+	t.Run("Status/Error", func(t *testing.T) {
+		ok, err := glCLI.Status(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Token/Error", func(t *testing.T) {
+		_, err := glCLI.Token(context.Background(), "example.com")
+		require.Error(t, err)
+	})
+
+	t.Run("Status/Okay", func(t *testing.T) {
+		glCLI.runCmd = func(*exec.Cmd) error { return nil }
+
+		ok, err := glCLI.Status(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("Token/Okay", func(t *testing.T) {
+		glCLI.runCmd = func(cmd *exec.Cmd) error {
+			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Token: 1234567890abcdef\n")
+			return nil
+		}
+
+		token, err := glCLI.Token(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.Equal(t, "1234567890abcdef", token)
+	})
+
+	t.Run("Token/NoToken", func(t *testing.T) {
+		glCLI.runCmd = func(cmd *exec.Cmd) error {
+			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+			return nil
+		}
+
+		_, err := glCLI.Token(context.Background(), "example.com")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "token not found")
+	})
+}
+
+func TestURLHostname(t *testing.T) {
+	tests := []struct {
+		give string
+		want string
+	}{
+		{"https://gitlab.com", "gitlab.com"},
+		{"https://gitlab.example.com/api", "gitlab.example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			got, err := urlHostname(tt.give)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+
+	t.Run("BadURL", func(t *testing.T) {
+		_, err := urlHostname("://")
+		require.Error(t, err)
+	})
 }
 
 func TestDeviceFlowAuthenticator(t *testing.T) {
@@ -315,4 +429,65 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 		AccessToken: "my-token",
 		AuthType:    AuthTypeOAuth2,
 	}, tok)
+}
+
+func TestCLIAuthenticator(t *testing.T) {
+	var (
+		statusOk  bool
+		statusErr error
+	)
+
+	auth := &CLIAuthenticator{
+		Hostname: "example.com",
+		CLI: gitlabCLIStub{
+			StatusF: func(context.Context, string) (bool, error) {
+				return statusOk, statusErr
+			},
+		},
+	}
+
+	ctx := context.Background()
+	view := &ui.FileView{W: io.Discard}
+
+	t.Run("Success", func(t *testing.T) {
+		statusOk, statusErr = true, nil
+
+		tok, err := auth.Authenticate(ctx, view)
+		require.NoError(t, err)
+		assert.Equal(t, &AuthenticationToken{
+			AuthType: AuthTypeGitLabCLI,
+			Hostname: "example.com",
+		}, tok)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		statusOk, statusErr = false, nil
+
+		_, err := auth.Authenticate(ctx, view)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "not authenticated")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		statusOk, statusErr = false, assert.AnError
+
+		_, err := auth.Authenticate(ctx, view)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+	})
+}
+
+type gitlabCLIStub struct {
+	TokenF  func(context.Context, string) (string, error)
+	StatusF func(context.Context, string) (bool, error)
+}
+
+var _ gitlabCLI = gitlabCLIStub{}
+
+func (g gitlabCLIStub) Token(ctx context.Context, hostname string) (string, error) {
+	return g.TokenF(ctx, hostname)
+}
+
+func (g gitlabCLIStub) Status(ctx context.Context, hostname string) (bool, error) {
+	return g.StatusF(ctx, hostname)
 }

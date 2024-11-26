@@ -14,8 +14,9 @@ description: >-
 
 git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
-conveniently modify and rebase them,
-and create GitHub Pull Requests from them.
+conveniently modify and rebase them, and create
+<!-- gs:github --> *Pull Requests* or
+<!-- gs:gitlab --> *Merge Requests* from them.
 
 It works with Git instead of trying to replace Git.
 Introduce it in small places in your existing workflow
@@ -68,7 +69,7 @@ $ gs repo sync
 
 <div class="grid cards" markdown>
 
--   [:octicons-git-branch-16:{ .lg .middle } __Branch management__](guide/branch.md)
+-   [:octicons-git-branch-16:{ .lg .middle } __Manage local branches__](guide/branch.md)
 
     ---
 
@@ -77,19 +78,18 @@ $ gs repo sync
     you can keep your stack in sync with the trunk branch,
     automatically rebase dependent branches, and more.
 
--   [:octicons-git-pull-request-16:{ .lg .middle } __Pull Request Management__](guide/pr.md)
+-   [:octicons-git-pull-request-16:{ .lg .middle } __Submit change requests__](guide/cr.md) <!-- gs:github --> <!-- gs:gitlab -->
 
     ---
 
-    Create GitHub Pull Requests from your stack with a single command.
-    git-spice can create
-    [a PR for the current branch](cli/reference.md#gs-branch-submit),
-    [PRs for the entire stack](cli/reference.md#gs-stack-submit), or
+    Submit branches in your stack with a single command.
+    git-spice can submit
+    [the current branch](cli/reference.md#gs-branch-submit),
+    [the entire stack](cli/reference.md#gs-stack-submit), or
     [parts of](cli/reference.md#gs-upstack-submit)
     [the stack](cli/reference.md#gs-downstack-submit).
-    If a branch already has a PR, git-spice will update it.
-    If a PR is merged,
-    git-spice will automatically restack branches that depend on it.
+    If a branch has already been submitted, git-spice will update the submission.
+    If it has been merged, git-spice will automatically restack branches that depend on it.
 
 -   [:material-stairs:{ .lg .middle } __Incremental improvements__](start/stack.md)
 
@@ -105,7 +105,7 @@ $ gs repo sync
     ---
 
     git-spice operates entirely locally.
-    It talks directly to Git, and when you ask for it, to GitHub.
+    It talks directly to Git, and when you ask for it, to GitHub/GitLab.
     All state is stored locally in your Git repository.
     A network connection is not required, except when pushing or pulling.
 

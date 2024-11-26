@@ -31,6 +31,10 @@ type Options struct {
 	// Token is a fixed token used to authenticate with GitLab.
 	// This may be used to skip the login flow.
 	Token string `name:"gitlab-token" hidden:"" env:"GITLAB_TOKEN" help:"GitLab API token"`
+
+	// ClientID is the OAuth client ID for GitLab OAuth device flow.
+	// This should be used if the GitLab instance is Self Managed.
+	ClientID string `name:"gitlab-oauth-client-id" hidden:"" env:"GITLAB_OAUTH_CLIENT_ID" config:"forge.gitlab.oauth.clientID" help:"GitLab OAuth client ID"`
 }
 
 // Forge builds a GitLab Forge.
@@ -73,7 +77,7 @@ func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, re
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	glc, err := newGitLabClient(f.URL(), token.(*AuthenticationToken))
+	glc, err := newGitLabClient(ctx, f.URL(), token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

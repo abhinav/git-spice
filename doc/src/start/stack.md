@@ -153,4 +153,4 @@ Time to modify a branch in the middle of the stack.
 
 - [ ] Use $$gs commit create$$ to combine the commit and restack steps
 - [ ] Explore different flags of $$gs branch create$$
-- [ ] [Create your first stacked pull requests](submit.md)
+- [ ] [Create your first stacked CRs](submit.md)
