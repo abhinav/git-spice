@@ -274,7 +274,7 @@ var _authenticationMethods = []struct {
 			}
 
 			return &CLIAuthenticator{
-				GitLab:   newGitLabCLI(glExe),
+				CLI:      newGitLabCLI(glExe),
 				Hostname: a.Hostname,
 			}
 		},
@@ -429,14 +429,14 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View
 // CLIAuthenticator implements GitLab CLI authentication flow.
 // This doesn't do anything special besides checking if the user is logged in.
 type CLIAuthenticator struct {
-	GitLab   gitLabCLI // required
+	CLI      gitlabCLI // required
 	Hostname string    // required
 }
 
 // Authenticate checks if the user is authenticated with GitHub CLI.
 // The returned AuthenticationToken is saved to the stash.
 func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
-	ok, err := a.GitLab.Status(ctx, a.Hostname)
+	ok, err := a.CLI.Status(ctx, a.Hostname)
 	if err != nil {
 		return nil, fmt.Errorf("check glab status: %w", err)
 	}
@@ -450,7 +450,7 @@ func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*Authen
 	}, nil
 }
 
-type gitLabCLI interface {
+type gitlabCLI interface {
 	Status(context.Context, string) (bool, error)
 	Token(context.Context, string) (string, error)
 }

@@ -72,6 +72,44 @@ func TestAuthSaveAndLoad(t *testing.T) {
 		assert.ErrorIs(t, err, secret.ErrNotFound)
 	})
 
+	t.Run("NoAccessToken", func(t *testing.T) {
+		t.Run("PAT", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypePAT,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token is required")
+		})
+
+		t.Run("OAuth2", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypeOAuth2,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token is required")
+		})
+	})
+
+	t.Run("CLI", func(t *testing.T) {
+		t.Run("MissingHostname", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AuthType: AuthTypeGitLabCLI,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "hostname is required")
+		})
+
+		t.Run("UnexpectedAccessToken", func(t *testing.T) {
+			err := f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+				AccessToken: "access-token",
+				Hostname:    "example.com",
+				AuthType:    AuthTypeGitLabCLI,
+			})
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "access token must not be set")
+		})
+	})
+
 	require.NoError(t, f.SaveAuthenticationToken(&stash, &AuthenticationToken{
 		AccessToken: "token",
 		AuthType:    AuthTypePAT,
@@ -146,7 +184,7 @@ func TestLoadAuthenticationToken_badJSON(t *testing.T) {
 }
 
 func TestAuthType(t *testing.T) {
-	for _, typ := range []AuthType{AuthTypePAT, AuthTypeOAuth2} {
+	for _, typ := range []AuthType{AuthTypePAT, AuthTypeOAuth2, AuthTypeGitLabCLI} {
 		t.Run(typ.String(), func(t *testing.T) {
 			t.Run("JSONRoundTrip", func(t *testing.T) {
 				bs, err := json.Marshal(typ)
@@ -183,6 +221,7 @@ func TestAuthType(t *testing.T) {
 		}{
 			{AuthTypePAT, "Personal Access Token"},
 			{AuthTypeOAuth2, "OAuth2"},
+			{AuthTypeGitLabCLI, "GitLab CLI"},
 			{AuthTypeEnvironmentVariable, "Environment Variable"},
 			{AuthType(42), "AuthType(42)"},
 		}
@@ -390,4 +429,65 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 		AccessToken: "my-token",
 		AuthType:    AuthTypeOAuth2,
 	}, tok)
+}
+
+func TestCLIAuthenticator(t *testing.T) {
+	var (
+		statusOk  bool
+		statusErr error
+	)
+
+	auth := &CLIAuthenticator{
+		Hostname: "example.com",
+		CLI: gitlabCLIStub{
+			StatusF: func(context.Context, string) (bool, error) {
+				return statusOk, statusErr
+			},
+		},
+	}
+
+	ctx := context.Background()
+	view := &ui.FileView{W: io.Discard}
+
+	t.Run("Success", func(t *testing.T) {
+		statusOk, statusErr = true, nil
+
+		tok, err := auth.Authenticate(ctx, view)
+		require.NoError(t, err)
+		assert.Equal(t, &AuthenticationToken{
+			AuthType: AuthTypeGitLabCLI,
+			Hostname: "example.com",
+		}, tok)
+	})
+
+	t.Run("Unauthenticated", func(t *testing.T) {
+		statusOk, statusErr = false, nil
+
+		_, err := auth.Authenticate(ctx, view)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "not authenticated")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		statusOk, statusErr = false, assert.AnError
+
+		_, err := auth.Authenticate(ctx, view)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, assert.AnError)
+	})
+}
+
+type gitlabCLIStub struct {
+	TokenF  func(context.Context, string) (string, error)
+	StatusF func(context.Context, string) (bool, error)
+}
+
+var _ gitlabCLI = gitlabCLIStub{}
+
+func (g gitlabCLIStub) Token(ctx context.Context, hostname string) (string, error) {
+	return g.TokenF(ctx, hostname)
+}
+
+func (g gitlabCLIStub) Status(ctx context.Context, hostname string) (bool, error) {
+	return g.StatusF(ctx, hostname)
 }
