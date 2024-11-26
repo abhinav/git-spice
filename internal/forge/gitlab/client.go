@@ -21,6 +21,8 @@ func newGitLabClient(baseURL string, tok *AuthenticationToken) (*gitlabClient, e
 		newClient = gitlab.NewClient
 	case AuthTypeOAuth2:
 		newClient = gitlab.NewOAuthClient
+	case AuthTypeGitLabCLI:
+		newClient = gitlab.NewOAuthClient
 	default:
 		return nil, fmt.Errorf("unknown auth type: %d", tok.AuthType)
 	}
