@@ -76,13 +76,20 @@ See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 URL of the GitLab instance used for GitLab requests.
 Defaults to `$GITLAB_URL` if set, or `https://gitlab.com` otherwise.
 
+See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
+
 ### spice.forge.gitlab.oauth.clientID
 
 <!-- gs:version unreleased -->
 
 Client ID for OAuth authentication with GitLab.
-Default to git-spice's built-in Client ID in https://gitlab.com. 
-It should be set to a custom value if you are running your own GitLab Self-Managed instance.
+
+Defaults to git-spice's built-in Client ID (valid only for https://gitlab.com)
+or `$GITLAB_OAUTH_CLIENT_ID` if set.
+
+For Self-Hosted GitLab instances, you must set this value to a custom Client ID.
+
+See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
 ### spice.log.all
 
