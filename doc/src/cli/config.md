@@ -71,7 +71,7 @@ See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
 ### spice.forge.gitlab.url
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.9.0 -->
 
 URL of the GitLab instance used for GitLab requests.
 Defaults to `$GITLAB_URL` if set, or `https://gitlab.com` otherwise.
@@ -80,7 +80,7 @@ See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
 ### spice.forge.gitlab.oauth.clientID
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.9.0 -->
 
 Client ID for OAuth authentication with GitLab.
 

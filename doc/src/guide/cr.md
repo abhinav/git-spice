@@ -13,7 +13,7 @@ description: >-
     These are:
 
     - <!-- gs:github -->
-    - <!-- gs:gitlab --> (<!-- gs:version unreleased -->)
+    - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
 
     If you're using a different service,
     you can still use git-spice,
