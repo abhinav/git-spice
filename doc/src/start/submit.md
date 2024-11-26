@@ -1,8 +1,8 @@
 ---
-title: Your first stacked PRs
+title: Your first stacked CRs
 icon: material/slide
 description: >-
-  Turn a stack of branches into Pull Requests.
+  Turn a stack of branches into Change Requests.
   Update them all in one go.
 prev_page: stack.md
 next_page: ../guide/index.md
@@ -11,7 +11,8 @@ next_page: ../guide/index.md
 # Your first stacked Pull Requests
 
 This page will walk you through creating and updating
-GitHub Pull Requests with git-spice.
+*GitHub Pull Requests* or *GitLab Merge Requests* with git-spice.
+git-spice refers to these as *Change Requests* (CRs).
 
 ## Prerequisites
 
@@ -28,7 +29,7 @@ GitHub Pull Requests with git-spice.
       text "feat2"
       ```
 
-- [x] Set up a GitHub repository.
+- [x] Set up a GitHub or GitLab repository.
 
     ??? info "Optional: Create an experimental repository"
 
@@ -36,20 +37,31 @@ GitHub Pull Requests with git-spice.
         you may want to create a new repository on GitHub
         to experiment with instead of using a real project.
 
-        To do this, if you have the GitHub CLI installed,
+        To do this, if you have the GitHub or GitLab CLI installed,
         run the following inside your experimental repository:
 
-        ```bash
-        gh repo create gs-playground \
-          --public \
-          --source=$(pwd) \
-          --push
-        ```
+        === "<!-- gs:github -->"
 
-        If you don't have the GitHub CLI installed,
-        go to <https://github.com/new> and follow the instructions there.
+            ```bash
+            gh repo create gs-playground \
+              --public \
+              --source=$(pwd) \
+              --push
+            ```
 
-## Create a Pull Request
+            If you don't have the GitHub CLI installed,
+            go to <https://github.com/new> and follow the instructions there.
+
+        === "<!-- gs:gitlab -->"
+
+            ```bash
+            glab repo create gs-playground --public
+            ```
+
+            If you don't have the GitLab CLI installed,
+            go to <https://gitlab.com/projects/new> and follow the instructions there.
+
+## Create a Change Request
 
 1. Check out `feat1`.
 
@@ -71,7 +83,7 @@ GitHub Pull Requests with git-spice.
         gs bco feat1
         ```
 
-2. Submit a PR.
+2. Submit the change.
 
     === "gs"
 
@@ -85,7 +97,7 @@ GitHub Pull Requests with git-spice.
         gs bs
         ```
 
-3. Follow the prompts on-screen to create the PR.
+3. Follow the prompts on-screen to create the CR.
    For example:
 
    ```freeze language="ansi"
@@ -100,20 +112,20 @@ GitHub Pull Requests with git-spice.
     gs up
     ```
 
-2. Submit a PR.
+2. Submit a CR.
 
     ```bash
     gs branch submit
     ```
 
-3. Follow the prompts on-screen to create the PR.
+3. Follow the prompts on-screen to create the CR.
 
-The new PR will now be stacked on top of the previous one:
-GitHub will show `feat1` as the base branch for the PR.
+The new CR will now be stacked on top of the previous one:
+the remote will show `feat1` as the base branch for the CR.
 
 ## Modify mid-stack
 
-Modify the `feat1` branch and update the PR.
+Modify the `feat1` branch and update the CR.
 
 1. Check out `feat1`.
 
@@ -145,19 +157,19 @@ Modify the `feat1` branch and update the PR.
         This will commit to the current branch,
         and rebase the upstack branches on top of the new commit.
 
-3. Update all PRs in the stack.
+3. Update all CRs in the stack.
 
     ```bash
     gs stack submit
     ```
 
-This will push to both PRs in the stack.
+This will push to both CRs in the stack.
 If one of the branches was not submitted yet,
-it will prompt you to create a PR for it.
+it will prompt you to create a CR for it.
 
-## Merge a PR
+## Merge a CR
 
-1. Open up the Pull Request for `feat1` on GitHub
+1. Open up the CR for `feat1` in your browser
    and merge it into `main`.
 
 2. Run the following command to sync the stack with the trunk:
@@ -169,7 +181,7 @@ it will prompt you to create a PR for it.
     This will delete `feat1` locally,
     and rebase `feat2` on top of `main`.
 
-3. Submit the PR for `feat2` to update the pull request
+3. Submit the CR for `feat2` to update the pull request
    if necessary.
 
     ```bash
@@ -180,8 +192,8 @@ it will prompt you to create a PR for it.
 
 **This section covered:**
 
-- [x] $$gs branch submit$$ creates or updates a PR for the current branch.
-- [x] $$gs stack submit$$ creates or updates PRs for the entire stack.
+- [x] $$gs branch submit$$ creates or updates a CR for the current branch.
+- [x] $$gs stack submit$$ creates or updates CRs for the entire stack.
 - [x] $$gs repo sync$$ syncs the stack with the trunk branch,
       deletes merged branches, and rebases the remaining branches.
 

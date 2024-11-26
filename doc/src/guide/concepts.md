@@ -82,6 +82,15 @@ text "Sibling" with s at F.n
     This is "main" or "master" in most repositories.
     Trunk is the only branch that does not have a base branch.
 
+**Change Request**
+:   Change Request refers to a single merge-able unit of work
+    submitted to GitHub or GitLab.
+    Each Change Request corresponds to a branch.
+    On GitHub, these are called Pull Requests,
+    and on GitLab, they are called Merge Requests.
+    Since git-spice supports both platforms,
+    the term Change Request is used to refer to both.
+
 **Stack**
 :   A stack is a collection of branches stacked on top of each other
     in a way that each branch except the trunk has a base branch.

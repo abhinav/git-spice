@@ -34,7 +34,7 @@ type Options struct {
 
 	// ClientID is the OAuth client ID for GitLab OAuth device flow.
 	// This should be used if the GitLab instance is Self Managed.
-	ClientID string `name:"gitlab-oauth-client-id" hidden:"" config:"forge.gitlab.oauth.clientID" help:"GitLab OAuth client ID"`
+	ClientID string `name:"gitlab-oauth-client-id" hidden:"" env:"GITLAB_OAUTH_CLIENT_ID" config:"forge.gitlab.oauth.clientID" help:"GitLab OAuth client ID"`
 }
 
 // Forge builds a GitLab Forge.
