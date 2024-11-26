@@ -1,3 +1,0 @@
-kind: Added
-body: 'repo sync: Add a --restack flag to automatically restack the current stack after syncing.'
-time: 2024-11-23T22:52:28.1537634Z

@@ -12,7 +12,7 @@ However, once you want to push or pull changes to/from a remote repository,
 you will need to authenticate with the respective service.
 
 This page covers methods to authenticate git-spice with GitHub and GitLab.
-Note that GitLab support requires at least version <!-- gs:version unreleased -->.
+Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
 
 ## Logging in
 
