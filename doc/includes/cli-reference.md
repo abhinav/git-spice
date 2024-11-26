@@ -130,7 +130,7 @@ and untrack all branches.
 ### gs repo sync
 
 ```
-gs repo (r) sync (s)
+gs repo (r) sync (s) [flags]
 ```
 
 Pull latest changes from the remote
@@ -141,6 +141,10 @@ will be deleted after syncing.
 The repository must have a remote associated for syncing.
 A prompt will ask for one if the repository
 was not initialized with a remote.
+
+**Flags**
+
+* `--restack`: Restack the current stack after syncing
 
 ## Log
 
