@@ -507,7 +507,10 @@ func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
 
 	matches := _tokenRe.FindSubmatch(stderr.Bytes())
 	if len(matches) < 2 {
-		return "", errors.New("token not found in glab output")
+		return "", errors.Join(
+			errors.New("token not found in glab output"),
+			fmt.Errorf("stderr: %s", stderr.String()),
+		)
 	}
 
 	return string(matches[1]), nil

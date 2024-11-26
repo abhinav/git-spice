@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -242,6 +243,80 @@ func TestPATAuthenticator(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("timed out")
 	}
+}
+
+func TestGLabCLI(t *testing.T) {
+	glCLI := newGitLabCLI("false") // don't run real CLI
+
+	// False will fail.
+	t.Run("Status/Error", func(t *testing.T) {
+		ok, err := glCLI.Status(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.False(t, ok)
+	})
+
+	t.Run("Token/Error", func(t *testing.T) {
+		_, err := glCLI.Token(context.Background(), "example.com")
+		require.Error(t, err)
+	})
+
+	t.Run("Status/Okay", func(t *testing.T) {
+		glCLI.runCmd = func(*exec.Cmd) error { return nil }
+
+		ok, err := glCLI.Status(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.True(t, ok)
+	})
+
+	t.Run("Token/Okay", func(t *testing.T) {
+		glCLI.runCmd = func(cmd *exec.Cmd) error {
+			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Token: 1234567890abcdef\n")
+			return nil
+		}
+
+		token, err := glCLI.Token(context.Background(), "example.com")
+		require.NoError(t, err)
+		assert.Equal(t, "1234567890abcdef", token)
+	})
+
+	t.Run("Token/NoToken", func(t *testing.T) {
+		glCLI.runCmd = func(cmd *exec.Cmd) error {
+			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+			return nil
+		}
+
+		_, err := glCLI.Token(context.Background(), "example.com")
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "token not found")
+	})
+}
+
+func TestURLHostname(t *testing.T) {
+	tests := []struct {
+		give string
+		want string
+	}{
+		{"https://gitlab.com", "gitlab.com"},
+		{"https://gitlab.example.com/api", "gitlab.example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			got, err := urlHostname(tt.give)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+
+	t.Run("BadURL", func(t *testing.T) {
+		_, err := urlHostname("://")
+		require.Error(t, err)
+	})
 }
 
 func TestDeviceFlowAuthenticator(t *testing.T) {
