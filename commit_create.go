@@ -13,6 +13,7 @@ import (
 
 type commitCreateCmd struct {
 	All     bool   `short:"a" help:"Stage all changes before committing."`
+	Fixup   string `help:"Create a fixup commit."`
 	Message string `short:"m" help:"Use the given message as the commit message."`
 }
 
@@ -36,6 +37,7 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	if err := repo.Commit(ctx, git.CommitRequest{
 		Message: cmd.Message,
 		All:     cmd.All,
+		Fixup:   cmd.Fixup,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

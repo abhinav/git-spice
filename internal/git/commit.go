@@ -120,6 +120,9 @@ type CommitRequest struct {
 
 	// AllowEmpty allows a commit with no changes.
 	AllowEmpty bool
+
+	// Create a new commit which "fixes up" the commit at the given commitish.
+	Fixup string
 }
 
 // Commit runs the 'git commit' command,
@@ -143,6 +146,9 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.ReuseMessage != "" {
 		args = append(args, "-C", req.ReuseMessage)
+	}
+	if req.Fixup != "" {
+		args = append(args, "--fixup", req.Fixup)
 	}
 
 	err := r.gitCmd(ctx, args...).

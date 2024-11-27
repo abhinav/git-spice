@@ -1,0 +1,60 @@
+# Commit create usage with --fixup option.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# create a couple commits
+git add foo.txt
+gs cc -m 'Add foo'
+mv $WORK/extra/bar.txt bar.txt
+git add bar.txt
+gs cc -m 'Add bar'
+mv $WORK/extra/new_foo.txt foo.txt
+gs cc -a --fixup :/foo
+
+# verify the output
+git log
+cmp stdout $WORK/golden/log.1.txt
+
+-- repo/foo.txt --
+Contents of foo.
+
+-- extra/new_foo.txt --
+New contents of foo.
+
+-- extra/bar.txt --
+Contents of bar.txt
+
+-- golden/log.1.txt --
+commit 09309bfe664697b2e69d883ccd6ab7cbef505d0d
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    fixup! Add foo
+
+commit 6295ed5efe1d126f9b26c33d699b971e15589a0b
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Add bar
+
+commit 91582344149997d5a513acf7b4d56a03452e23cd
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Add foo
+
+commit 9bad92b764fe1d56cb99b394f373a71cdefd8e86
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Initial commit

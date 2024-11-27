@@ -776,6 +776,7 @@ followed by 'gs upstack restack'.
 **Flags**
 
 * `-a`, `--all`: Stage all changes before committing.
+* `--fixup=STRING`: Create a fixup commit.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
 
 ### gs commit amend
