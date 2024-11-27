@@ -190,12 +190,14 @@ func (cmd *branchSubmitCmd) run(
 	// Similarly, if the branch's base has a different name upstream,
 	// use that name instead.
 	upstreamBase := branch.Base
+	baseWasSubmitted := true
 	if branch.Base != store.Trunk() {
 		baseBranch, err := svc.LookupBranch(ctx, branch.Base)
 		if err != nil {
 			return fmt.Errorf("lookup base branch: %w", err)
 		}
 		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
+		baseWasSubmitted = baseBranch.Change != nil
 	}
 
 	var existingChange *forge.FindChangeItem
@@ -343,6 +345,13 @@ func (cmd *branchSubmitCmd) run(
 
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
+		// If we're definitely creating a new CR,
+		// make sure that the branch's base has been submitted.
+		if !baseWasSubmitted {
+			log.Warnf("%v: submit may fail: base %v has not been submitted",
+				cmd.Branch, upstreamBase)
+		}
+
 		if upstreamBranch == "" {
 			unique, err := svc.UnusedBranchName(ctx, remote, cmd.Branch)
 			if err != nil {

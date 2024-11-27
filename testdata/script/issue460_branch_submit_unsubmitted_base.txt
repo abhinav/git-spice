@@ -1,0 +1,35 @@
+# branch submit presents a good message when the base branch for a CR
+# hasn't been submitted yet.
+#
+# https://github.com/abhinav/git-spice/issues/460
+
+as 'Test <test@example.com>'
+at '2024-11-26T19:20:21Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# set up main -> feat1 -> feat2
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+
+# attempt to submit feat2
+! gs branch submit --fill
+stderr 'feat2: submit may fail: base feat1 has not been submitted'
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
