@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 
+	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/ioutil"
 )
 
 type submitChangeRequest struct {
@@ -36,6 +39,17 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Reject requests where head or base haven't been pushed yet.
+	ctx := r.Context()
+	if !sh.branchRefExists(ctx, owner, repo, data.Base) {
+		http.Error(w, "base branch does not exist", http.StatusBadRequest)
+		return
+	}
+	if !sh.branchRefExists(ctx, owner, repo, data.Head) {
+		http.Error(w, "head branch does not exist", http.StatusBadRequest)
 		return
 	}
 
@@ -86,4 +100,15 @@ func (f *forgeRepository) SubmitChange(ctx context.Context, r forge.SubmitChange
 		ID:  ChangeID(res.Number),
 		URL: res.URL,
 	}, nil
+}
+
+func (sh *ShamHub) branchRefExists(ctx context.Context, owner, repo, branch string) bool {
+	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+	defer flush()
+
+	cmd := exec.CommandContext(ctx, sh.gitExe,
+		"show-ref", "--verify", "--quiet", "refs/heads/"+branch)
+	cmd.Dir = sh.repoDir(owner, repo)
+	cmd.Stderr = logw
+	return cmd.Run() == nil
 }
