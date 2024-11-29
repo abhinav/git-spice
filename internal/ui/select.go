@@ -113,7 +113,17 @@ func (s *Select[T]) Value() T {
 
 // UnmarshalValue unmarshals the value of the select field
 // using the provided unmarshal function.
+//
+// It accepts one of the following types:
+//
+//   - bool: if the value is true, accept the field
+//   - string: pick the option with a matching label
 func (s *Select[T]) UnmarshalValue(unmarshal func(any) error) error {
+	if ok := new(bool); unmarshal(ok) == nil && *ok {
+		// Leave the field as is.
+		return nil
+	}
+
 	var selectLabel string
 	if err := unmarshal(&selectLabel); err != nil {
 		return err

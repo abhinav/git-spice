@@ -1,8 +1,6 @@
 # branch submit should not truncate a long body.
 # https://github.com/abhinav/git-spice/issues/90
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-05-23T20:06:32Z'
 
@@ -30,8 +28,9 @@ git log -n1 --format=%B
 cmp stdout $WORK/input/commit-msg
 
 # submit the branch
-with-term $WORK/input/prompt.txt -- gs branch submit
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit
+cmp $WORK/robot.actual $WORK/robot.golden
 
 shamhub dump changes
 stdout 'End of message.'
@@ -58,22 +57,16 @@ no sea takimata sanctus est Lorem ipsum dolor sit amet.
 
 End of message.
 
--- input/prompt.txt --
-await Title:
-snapshot initial
-feed \t
-await Body:
-feed \t
-await Draft:
-snapshot last
-feed \r
-
--- golden/prompt.txt --
-### initial ###
-Title: Add feature
-Short summary of the change
-### last ###
-Title: Add feature
-Body: Press [e] to open mockedit or [enter/tab] to skip
-Draft: [y/N]
-Mark the change as a draft?
+-- robot.golden --
+===
+> Title: Add feature 
+> Short summary of the change
+"Add feature"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false

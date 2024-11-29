@@ -144,7 +144,22 @@ func (b *BranchTreeSelect) WithValue(value *string) *BranchTreeSelect {
 
 // UnmarshalValue unmarshals the value of the field
 // using the given unmarshal function.
+//
+// It accepts one of the following types:
+//
+//   - bool: if true, the current selection is accepted
+//   - string: the name of the selected branch (must be a known branch)
 func (b *BranchTreeSelect) UnmarshalValue(unmarshal func(interface{}) error) error {
+	if ok := new(bool); unmarshal(ok) == nil && *ok {
+		if b.focused >= 0 && b.focused < len(b.selectable) {
+			*b.value = b.all[b.selectable[b.focused]].Branch
+			b.accepted = true
+			return nil
+		}
+
+		return fmt.Errorf("no branch selected")
+	}
+
 	var got string
 	if err := unmarshal(&got); err != nil {
 		return err

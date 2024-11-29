@@ -1,8 +1,6 @@
 # branch split supports reassigning submitted CRs
 # to a different branch.
 
-[!unix] skip # pending https://github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-10-26T17:30:31Z'
 
@@ -34,8 +32,10 @@ cmp stderr $WORK/golden/ll-before.txt
 gs bs --fill
 
 # splitting the branch prompts for reassignment
-with-term -final exit $WORK/input/prompt.txt -- gs branch split --at HEAD~2:feat1 --at HEAD^:feat2
-cmp stdout $WORK/golden/prompt.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch split --at HEAD~2:feat1 --at HEAD^:feat2
+cmp $WORK/robot.actual $WORK/robot.golden
+cmp stderr $WORK/stderr.golden
 
 gs ll -a
 cmp stderr $WORK/golden/ll-split.txt
@@ -71,32 +71,18 @@ new feat 1
 ┃   f9c1263 feat2 (now)
 ┃   1578492 feat1 (now)
 main
--- input/prompt.txt --
-await Assign CR #1 to branch
-snapshot init
-feed feat1
-await
-snapshot search
-feed \r
--- golden/prompt.txt --
-### init ###
-Assign CR #1 to branch:
-
-  feat1
-  feat2
-▶ features
-
-Branch being split has an open CR assigned to it.
-Select which branch should take over the CR.
-### search ###
-Assign CR #1 to branch:
-
-▶ feat1
-
-Branch being split has an open CR assigned to it.
-Select which branch should take over the CR.
-### exit ###
-Assign CR #1 to branch: feat1
+-- robot.golden --
+===
+> Assign CR #1 to branch: 
+>
+>   feat1
+>   feat2
+> ▶ features
+>
+> Branch being split has an open CR assigned to it.
+> Select which branch should take over the CR.
+"feat1"
+-- stderr.golden --
 INF features: Upstream branch 'features' transferred to 'feat1'
 WRN features: If you push this branch with 'git push' instead of 'gs branch submit',
 WRN features: remember to use a different upstream branch name with the command:
