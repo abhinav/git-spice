@@ -32,7 +32,7 @@ stdout 94ce19e
 # amend the feature 1 commit
 mv $WORK/extra/feature1-part2.txt feature1-part2.txt
 git add feature1-part2.txt
-gs commit amend -n
+gs commit amend --no-edit
 
 git rev-parse HEAD
 stdout 95044b5
@@ -40,7 +40,7 @@ git rebase --continue
 
 # amend the feature 2 commit with -a flag
 mv $WORK/extra/new-feature2.txt feature2.txt
-gs commit amend -a -n
+gs commit amend -a --no-edit
 
 git rev-parse HEAD
 stdout ad5037b

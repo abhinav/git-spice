@@ -796,7 +796,7 @@ followed by 'gs upstack restack'.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
-* `-n`, `--no-edit`: Don't edit the commit message
+* `--no-edit`: Don't edit the commit message
 
 ### gs commit split
 
