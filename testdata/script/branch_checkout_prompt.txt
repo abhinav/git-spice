@@ -1,8 +1,6 @@
 # branch checkout with lots of branches
 # and no argument prompts for branch name.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-03-30T14:59:32Z'
 
@@ -31,27 +29,29 @@ git commit -m 'Add qux'
 git checkout -b quux main
 git merge -m 'Merge many' foo bar baz qux
 
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
 # showing only tracked branches
 gs trunk
-with-term -rows 8 -cols 50 $WORK/input/tracked.txt -- gs branch checkout
-cmp stdout $WORK/golden/prompt-tracked.txt
+gs branch checkout
 git branch --show-current
 stdout 'bar'
 
 # showing all branches
 gs trunk
-with-term -rows 8 -cols 50 $WORK/input/all.txt -- gs branch checkout -u
-cmp stdout $WORK/golden/prompt-all.txt
+gs branch checkout -u
 git branch --show-current
 stdout 'baz'
 
 # showing all branches via config
 gs branch untrack baz
 gs trunk
-with-term -rows 8 -cols 50 $WORK/input/all.txt -- gs branch checkout -u
-cmp stdout $WORK/golden/prompt-all.txt
+git config spice.branchCheckout.showUntracked true
+gs branch checkout
 git branch --show-current
 stdout 'baz'
+
+cmp $WORK/robot.actual $WORK/robot.golden
 
 -- repo/foo.txt --
 whatever
@@ -65,55 +65,34 @@ whatever
 -- repo/qux.txt --
 whatever
 
--- input/tracked.txt --
-await Select a branch
-snapshot init
-feed ba
-await
-snapshot after
-feed \r
-
--- input/all.txt --
-await Select a branch
-snapshot init
-feed ba
-await
-snapshot after-ba
-feed \x1b[B
-await
-snapshot select
-feed z\r
-await Do you want to track
-snapshot track
-feed \r
-
--- golden/prompt-tracked.txt --
-### init ###
-Select a branch to checkout:
-┏━□ bar
-┣━□ foo
-main ◀
-### after ###
-Select a branch to checkout:
-bar ◀
--- golden/prompt-all.txt --
-### init ###
-Select a branch to checkout:
-baz
-┏━□ bar
-┣━□ foo
-main ◀
-quux
-qux
-### after-ba ###
-Select a branch to checkout:
-baz
-bar ◀
-### select ###
-Select a branch to checkout:
-baz ◀
-bar
-### track ###
-Select a branch to checkout: baz
-WRN baz: branch not tracked
-Do you want to track this branch now?: [Y/n]
+-- robot.golden --
+===
+> Select a branch to checkout: 
+> ┏━□ bar
+> ┣━□ foo
+> main ◀
+"bar"
+===
+> Select a branch to checkout: 
+> baz
+> ┏━□ bar
+> ┣━□ foo
+> main ◀
+> quux
+> qux
+"baz"
+===
+> Do you want to track this branch now?: [Y/n]
+true
+===
+> Select a branch to checkout: 
+> baz
+> ┏━□ bar
+> ┣━□ foo
+> main ◀
+> quux
+> qux
+"baz"
+===
+> Do you want to track this branch now?: [Y/n]
+true

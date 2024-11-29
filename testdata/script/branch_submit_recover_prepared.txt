@@ -1,8 +1,6 @@
 # 'branch submit' can recover previously entered commit metadata
 # if a submission attempt fails.
 
-[!unix] skip # pending github.com/creack/pty/pull/155
-
 as 'Test <test@example.com>'
 at '2024-07-03T05:07:09Z'
 
@@ -29,11 +27,11 @@ mkdir .git/hooks
 cp $WORK/hooks/pre-push .git/hooks/pre-push
 chmod 755 .git/hooks/pre-push
 
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
 # submit; should fail
-env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/pr-body-first.txt
-! with-term -final exit $WORK/input/prompt-first.txt -- gs branch submit
-stdout 'Add feature1 to do things'
-stdout 'failed to push'
+! gs branch submit
+stderr 'failed to push'
 
 # verify nothing submitted
 shamhub dump changes
@@ -42,11 +40,9 @@ stdout '\[\]'
 # fix the hook, try again
 rm .git/hooks/pre-push
 mkdir $WORK/got
-env EDITOR=mockedit MOCKEDIT_GIVE= MOCKEDIT_RECORD=$WORK/got/pr-body.txt
-with-term -cols 80 -final exit $WORK/input/prompt.txt -- gs branch submit
-cmpenv stdout $WORK/golden/submit.txt
+gs branch submit
 
-cmp $WORK/got/pr-body.txt $WORK/golden/pr-body.txt
+cmp $WORK/robot.actual $WORK/robot.golden
 
 -- repo/feature1.txt --
 Contents of feature1
@@ -56,46 +52,35 @@ Contents of feature1
 
 exit 1
 
--- input/pr-body-first.txt --
-This adds feature1.
-Feature1 does a thing.
-It is very well tested.
--- input/prompt-first.txt --
-await Add feature
-feed  to do things\r
-await Body
-feed e
-await Draft
-feed \r
-
--- input/prompt.txt --
-await Recover previously filled
-snapshot recover
-feed \r
-await Add feature
-snapshot title
-feed \r
-await Body
-feed e
-await Draft
-feed \r
-
--- golden/submit.txt --
-### recover ###
-Recover previously filled information?: [Y/n]
-We found previously filled information for this branch.
-Would you like to recover and edit it?
-### title ###
-Recover previously filled information?: [Y/n]
-Title: Add feature1 to do things
-Short summary of the change
-### exit ###
-Recover previously filled information?: [Y/n]
-Title: Add feature1 to do things
-Body: Press [e] to open mockedit or [enter/tab] to skip
-Draft: [y/N]
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
--- golden/pr-body.txt --
-This adds feature1.
-Feature1 does a thing.
-It is very well tested.
+-- robot.golden --
+===
+> Title: Add feature1 
+> Short summary of the change
+"Add feature1 to do things"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+"This adds feature1.\nFeature1 does a thing.\nIt is very well tested.\n"
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
+===
+> Recover previously filled information?: [Y/n]
+> We found previously filled information for this branch.
+> Would you like to recover and edit it?
+true
+===
+> Title: Add feature1 to do things 
+> Short summary of the change
+true
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{
+  "want": "This adds feature1.\nFeature1 does a thing.\nIt is very well tested.\n"
+}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false

@@ -62,7 +62,13 @@ func (i *Input) WithValue(value *string) *Input {
 }
 
 // UnmarshalValue reads a string value for the input field.
+// Optionally, the input may be a boolean true to accept
+// the input as is.
 func (i *Input) UnmarshalValue(unmarshal func(any) error) error {
+	if ok := new(bool); unmarshal(ok) == nil && *ok {
+		return nil
+	}
+
 	return unmarshal(i.value)
 }
 
