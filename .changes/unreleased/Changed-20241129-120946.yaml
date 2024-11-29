@@ -1,0 +1,3 @@
+kind: Changed
+body: 'commit amend: Deprecate ''-n'' form of ''--no-edit''. This will be removed in a future version.'
+time: 2024-11-29T12:09:46.681512-08:00
