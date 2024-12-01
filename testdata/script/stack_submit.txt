@@ -211,8 +211,9 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
   body: |
     This change is part of the following stack:
 
-    - #2 ◀
-        - #3
+    - #1
+        - #2 ◀
+            - #3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
@@ -220,8 +221,9 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
   body: |
     This change is part of the following stack:
 
-    - #2
-        - #3 ◀
+    - #1
+        - #2
+            - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
