@@ -13,7 +13,9 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-type rebaseContinueCmd struct{}
+type rebaseContinueCmd struct {
+	Edit bool `default:"true" negatable:"" config:"rebaseContinue.edit" help:"Whehter to open an editor to edit the commit message."`
+}
 
 func (*rebaseContinueCmd) Help() string {
 	return text.Dedent(`
@@ -26,6 +28,10 @@ func (*rebaseContinueCmd) Help() string {
 
 		The command can be used in place of 'git rebase --continue'
 		even if a git-spice operation is not currently in progress.
+
+		Use the --no-edit flag to continue without opening an editor.
+		Make --no-edit the default by setting 'spice.rebaseContinue.edit' to false
+		and use --edit to override it.
 	`)
 }
 
@@ -52,6 +58,10 @@ func (cmd *rebaseContinueCmd) Run(
 			return fmt.Errorf("get rebase state: %w", err)
 		}
 		return errors.New("no rebase in progress")
+	}
+
+	if !cmd.Edit {
+		repo = repo.WithEditor("true")
 	}
 
 	// Finish the ongoing rebase.

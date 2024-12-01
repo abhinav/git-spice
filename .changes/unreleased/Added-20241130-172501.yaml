@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  rebase continue:
+  Add `--[no-]edit` flag to skip opening an editor when continuing a rebase,
+  or opt into it if the new `spice.rebaseContinue.edit` configuration is `true`.
+time: 2024-11-30T17:25:01.584724-08:00
