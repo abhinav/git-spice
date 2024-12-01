@@ -181,8 +181,9 @@ func updateNavigationComments(
 
 		idxByBranch[b.Name] = len(nodes)
 		nodes = append(nodes, &stackedChange{
-			Change: b.Change.ChangeID(),
-			Base:   -1,
+			Change:         b.Change.ChangeID(),
+			Base:           -1,
+			MergedBranches: b.MergedBranches,
 		})
 		infos = append(infos, branchInfo{
 			Branch: b.Name,
@@ -358,6 +359,8 @@ type stackedChange struct {
 
 	Base   int // -1 = no base CR
 	Aboves []int
+
+	MergedBranches []string
 }
 
 const (
@@ -372,6 +375,14 @@ const (
 var _navCommentRegexes = []*regexp.Regexp{
 	regexp.MustCompile(`(?m)^\Q` + _commentHeader + `\E$`),
 	regexp.MustCompile(`(?m)^\Q` + _commentMarker + `\E$`),
+}
+
+func writeMergedChanges(node *stackedChange, sb *strings.Builder, indent int) int {
+	for _, mb := range node.MergedBranches {
+		sb.WriteString(fmt.Sprintf("%s- %v\n", strings.Repeat(" ", indent), mb))
+		indent++
+	}
+	return indent
 }
 
 func generateStackNavigationComment(
@@ -403,7 +414,7 @@ func generateStackNavigationComment(
 		visited[i] = true
 		return true
 	}
-
+	isCurrentBasedOnBase := false
 	// Write the downstacks, not including the current node.
 	// This will change the indent level.
 	// The downstacks leading up to the current branch are always linear.
@@ -414,11 +425,22 @@ func generateStackNavigationComment(
 			downstacks = append(downstacks, base)
 		}
 
+		if len(downstacks) > 0 {
+			base := downstacks[len(downstacks)-1]
+			indent = writeMergedChanges(nodes[base], &sb, indent)
+		} else {
+			isCurrentBasedOnBase = true
+		}
+
 		// Reverse order to print from base to current.
 		for i := len(downstacks) - 1; i >= 0; i-- {
 			write(downstacks[i], indent)
 			indent++
 		}
+	}
+
+	if isCurrentBasedOnBase {
+		indent = writeMergedChanges(nodes[current], &sb, indent)
 	}
 
 	// For the upstacks, we'll need to traverse the graph
