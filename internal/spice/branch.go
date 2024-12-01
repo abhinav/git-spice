@@ -76,6 +76,12 @@ type LookupBranchResponse struct {
 
 	// Head is the commit at the head of the branch.
 	Head git.Hash
+
+	// MergedBranches is a list of branches that were previously merged into trunk.
+	//
+	// This is used to correctly display the history of the branch.
+	// TODO: use forge.ChangeID instead
+	MergedBranches []string
 }
 
 // DeletedBranchError is returned when a branch was deleted out of band.
@@ -116,6 +122,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 			BaseHash:       resp.BaseHash,
 			UpstreamBranch: resp.UpstreamBranch,
 			Head:           head,
+			MergedBranches: resp.MergedBranches,
 		}
 
 		if resp.ChangeMetadata != nil {
@@ -340,6 +347,10 @@ type LoadBranchItem struct {
 	// UpstreamBranch is the name under which this branch
 	// was pushed to the upstream repository.
 	UpstreamBranch string
+
+	// MergedBranches contains information about any branches,
+	// which this one was based on, that have already been merged into trunk.
+	MergedBranches []string
 }
 
 // LoadBranches loads all tracked branches
@@ -376,6 +387,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 			BaseHash:       resp.BaseHash,
 			UpstreamBranch: resp.UpstreamBranch,
 			Change:         resp.Change,
+			MergedBranches: resp.MergedBranches,
 		})
 	}
 

@@ -64,9 +64,10 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 }
 
 type branchState struct {
-	Base     branchStateBase      `json:"base"`
-	Upstream *branchUpstreamState `json:"upstream,omitempty"`
-	Change   *branchChangeState   `json:"change,omitempty"`
+	Base           branchStateBase      `json:"base"`
+	Upstream       *branchUpstreamState `json:"upstream,omitempty"`
+	Change         *branchChangeState   `json:"change,omitempty"`
+	MergedBranches []string             `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -98,6 +99,9 @@ type LookupResponse struct {
 	// UpstreamBranch is the name of the upstream branch
 	// or an empty string if the branch is not tracking an upstream branch.
 	UpstreamBranch string
+
+	// MergedBranches holds information about branches that were previously merged into trunk
+	MergedBranches []string
 }
 
 // LookupBranch returns information about a tracked branch.
@@ -109,8 +113,9 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 	}
 
 	res := &LookupResponse{
-		Base:     state.Base.Name,
-		BaseHash: git.Hash(state.Base.Hash),
+		Base:           state.Base.Name,
+		BaseHash:       git.Hash(state.Base.Hash),
+		MergedBranches: state.MergedBranches,
 	}
 
 	if change := state.Change; change != nil {
@@ -220,6 +225,9 @@ type UpsertRequest struct {
 	// UpstreamBranch is the name of the upstream branch to track.
 	// Leave nil to leave it unchanged, or set to an empty string to clear it.
 	UpstreamBranch *string
+
+	// MergedBranches is a list of branches that were previously merged into this branch.
+	MergedBranches []string
 }
 
 // Upsert adds or updates information about a branch.
@@ -296,6 +304,10 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 				Branch: *req.UpstreamBranch,
 			}
 		}
+	}
+
+	if len(req.MergedBranches) > 0 {
+		state.MergedBranches = req.MergedBranches
 	}
 
 	tx.states[req.Name] = state
