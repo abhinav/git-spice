@@ -110,6 +110,7 @@ type Repository struct {
 
 	log  *log.Logger
 	exec execer
+	cfg  extraConfig
 }
 
 func newRepository(root, gitDir string, log *log.Logger, exec execer) *Repository {
@@ -124,5 +125,25 @@ func newRepository(root, gitDir string, log *log.Logger, exec execer) *Repositor
 // gitCmd returns a gitCmd that will run
 // with the repository's root as the working directory.
 func (r *Repository) gitCmd(ctx context.Context, args ...string) *gitCmd {
+	args = append(r.cfg.Args(), args...)
 	return newGitCmd(ctx, r.log, args...).Dir(r.root)
+}
+
+// WithEditor returns a copy of the repository
+// that will use the given editor when running git commands.
+func (r *Repository) WithEditor(editor string) *Repository {
+	newR := *r
+	newR.cfg.Editor = editor
+	return &newR
+}
+
+type extraConfig struct {
+	Editor string // core.editor
+}
+
+func (ec extraConfig) Args() (args []string) {
+	if ec.Editor != "" {
+		args = append(args, "-c", "core.editor="+ec.Editor)
+	}
+	return args
 }

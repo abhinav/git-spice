@@ -819,7 +819,7 @@ Branches upstack are restacked as needed.
 ### gs rebase continue
 
 ```
-gs rebase (rb) continue (c)
+gs rebase (rb) continue (c) [flags]
 ```
 
 Continue an interrupted operation
@@ -833,6 +833,16 @@ you can resolve the conflict and run 'gs rebase continue'
 
 The command can be used in place of 'git rebase --continue'
 even if a git-spice operation is not currently in progress.
+
+Use the --no-edit flag to continue without opening an editor.
+Make --no-edit the default by setting 'spice.rebaseContinue.edit' to false
+and use --edit to override it.
+
+**Flags**
+
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whehter to open an editor to edit the commit message.
+
+**Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
 
 ### gs rebase abort
 
