@@ -339,6 +339,15 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 			}
 		}
 
+		entries = update.Apply(entries)
+		if len(entries) == 0 {
+			// If the directory is empty, we don't need to create a tree.
+			// We can just delete the directory.
+			parent, base := pathSplit(dir)
+			ensureUpdate(parent).Delete(base)
+			continue
+		}
+
 		newHash, err := r.MakeTree(ctx, update.Apply(entries))
 		if err != nil {
 			return ZeroHash, fmt.Errorf("make tree: %w", err)
