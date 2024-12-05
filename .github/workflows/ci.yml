@@ -13,6 +13,7 @@ concurrency:
 
 env:
   GOLANGCI_LINT_VERSION: v1.62.0
+  GOTESTSUM_FORMAT: github-actions
 
 jobs:
 
