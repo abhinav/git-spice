@@ -32,7 +32,7 @@ func BeEqualf[T comparable](a, b T, format string, args ...any) {
 }
 
 // BeEmptyMapf panics if m is not an empty map.
-func BeEmptyMapf[K comparable, V any](m map[K]V, format string, args ...any) {
+func BeEmptyMapf[Map ~map[K]V, K comparable, V any](m Map, format string, args ...any) {
 	if len(m) != 0 {
 		panicErrorf("%v\ngot: %v", fmt.Errorf(format, args...), m)
 	}
@@ -47,15 +47,14 @@ func NotBeEqualf[T comparable](a, b T, format string, args ...any) {
 }
 
 // NotBeBlankf panics if s is empty or contains only whitespace.
-func NotBeBlankf(s string, format string, args ...any) {
-	s = strings.TrimSpace(s)
-	if len(s) == 0 {
+func NotBeBlankf[Str ~string](s Str, format string, args ...any) {
+	if len(strings.TrimSpace(string(s))) == 0 {
 		panicErrorf(format, args...)
 	}
 }
 
 // NotBeEmptyf panics if es is an empty slice.
-func NotBeEmptyf[T any](es []T, format string, args ...any) {
+func NotBeEmptyf[S ~[]T, T any](es S, format string, args ...any) {
 	if len(es) == 0 {
 		panicErrorf(format, args...)
 	}
@@ -69,7 +68,7 @@ func NotBeNilf(v any, format string, args ...any) {
 }
 
 // NotContainf panics if e is in es.
-func NotContainf[T comparable](es []T, e T, format string, args ...any) {
+func NotContainf[S ~[]T, T comparable](es S, e T, format string, args ...any) {
 	for _, x := range es {
 		if x == e {
 			panicErrorf(format, args...)
