@@ -379,7 +379,7 @@ var _navCommentRegexes = []*regexp.Regexp{
 
 func writeMergedChanges(node *stackedChange, sb *strings.Builder, indent int) int {
 	for _, mb := range node.MergedBranches {
-		sb.WriteString(fmt.Sprintf("%s- %v\n", strings.Repeat(" ", indent), mb))
+		fmt.Fprintf(sb, "%s- %v\n", strings.Repeat(" ", indent), mb)
 		indent++
 	}
 	return indent
