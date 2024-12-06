@@ -176,7 +176,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 	}
 
-	// record the branch history for each branch
+	// Mapping of branch name to list of change IDs that it depends on
+	// that have already been merged.
 	allBranchHistory := make(map[string][]string)
 
 	// For each branch under consideration,
@@ -204,7 +205,9 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 		for _, above := range aboves {
 			// Propagate the merged branches from the current branch to all branches above it.
-			newHistory := append(info.MergedBranches, info.ChangeID) //nolint:gocritic
+			var newHistory []string
+			newHistory = append(newHistory, info.MergedBranches...) // merged downstack of the current branch
+			newHistory = append(newHistory, info.ChangeID)          // current branch
 			newHistory = append(newHistory, allBranchHistory[above]...)
 			allBranchHistory[above] = newHistory
 			if _, ok := branchesToDelete[above]; ok {
