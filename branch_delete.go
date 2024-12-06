@@ -69,10 +69,10 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		Tracked bool
 		Base    string // base branch (may be unset if untracked)
 
-		Head           git.Hash // head hash (set only if exists)
-		Exists         bool
-		ChangeID       string
-		MergedBranches []string
+		Head            git.Hash // head hash (set only if exists)
+		Exists          bool
+		ChangeID        string
+		MergedDownstack []string
 	}
 
 	// name to branch info
@@ -80,7 +80,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	for _, branch := range cmd.Branches {
 		base := store.Trunk()
 		tracked, exists := true, true
-		var mergedBranches []string
+		var mergedDownstack []string
 		var changeID string
 
 		var head git.Hash
@@ -99,7 +99,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		} else {
 			head = b.Head
 			base = b.Base
-			mergedBranches = b.MergedBranches
+			mergedDownstack = b.MergedDownstack
 			// TODO
 			if change := b.Change; change != nil {
 				if branchChangeID := change.ChangeID(); branchChangeID != nil {
@@ -120,13 +120,13 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 
 		branchesToDelete[branch] = &branchInfo{
-			Name:           branch,
-			Head:           head,
-			Base:           base,
-			Tracked:        tracked,
-			Exists:         exists,
-			ChangeID:       changeID,
-			MergedBranches: mergedBranches,
+			Name:            branch,
+			Head:            head,
+			Base:            base,
+			Tracked:         tracked,
+			Exists:          exists,
+			ChangeID:        changeID,
+			MergedDownstack: mergedDownstack,
 		}
 	}
 
@@ -205,8 +205,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		for _, above := range aboves {
 			// Propagate the merged branches from the current branch to all branches above it.
 			var newHistory []string
-			newHistory = append(newHistory, info.MergedBranches...) // merged downstack of the current branch
-			newHistory = append(newHistory, info.ChangeID)          // current branch
+			newHistory = append(newHistory, info.MergedDownstack...) // merged downstack of the current branch
+			newHistory = append(newHistory, info.ChangeID)           // current branch
 			newHistory = append(newHistory, allBranchHistory[above]...)
 			allBranchHistory[above] = newHistory
 			if _, ok := branchesToDelete[above]; ok {
@@ -275,8 +275,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 
 		if err := branchTx.Upsert(ctx, state.UpsertRequest{
-			Name:           branchToUpdate,
-			MergedBranches: merged,
+			Name:            branchToUpdate,
+			MergedDownstack: merged,
 		}); err != nil {
 			return fmt.Errorf("update merged branches for %v: %w", branchToUpdate, err)
 		}

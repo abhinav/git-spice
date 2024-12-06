@@ -77,11 +77,13 @@ type LookupBranchResponse struct {
 	// Head is the commit at the head of the branch.
 	Head git.Hash
 
-	// MergedBranches is a list of branches that were previously merged into trunk.
+	// MergedDownstack is a list of branches that were previously
+	// downstack from this branch and have since been merged into trunk.
 	//
 	// This is used to correctly display the history of the branch.
+	//
 	// TODO: use forge.ChangeID instead
-	MergedBranches []string
+	MergedDownstack []string
 }
 
 // DeletedBranchError is returned when a branch was deleted out of band.
@@ -118,11 +120,11 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 	// !nil     | !nil   | Branch is not known to the repository
 	if storeErr == nil && gitErr == nil {
 		out := &LookupBranchResponse{
-			Base:           resp.Base,
-			BaseHash:       resp.BaseHash,
-			UpstreamBranch: resp.UpstreamBranch,
-			Head:           head,
-			MergedBranches: resp.MergedBranches,
+			Base:            resp.Base,
+			BaseHash:        resp.BaseHash,
+			UpstreamBranch:  resp.UpstreamBranch,
+			Head:            head,
+			MergedDownstack: resp.MergedDownstack,
 		}
 
 		if resp.ChangeMetadata != nil {
@@ -348,9 +350,9 @@ type LoadBranchItem struct {
 	// was pushed to the upstream repository.
 	UpstreamBranch string
 
-	// MergedBranches contains information about any branches,
+	// MergedDownstack contains information about any branches,
 	// which this one was based on, that have already been merged into trunk.
-	MergedBranches []string
+	MergedDownstack []string
 }
 
 // LoadBranches loads all tracked branches
@@ -381,13 +383,13 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		}
 
 		items = append(items, LoadBranchItem{
-			Name:           name,
-			Head:           resp.Head,
-			Base:           resp.Base,
-			BaseHash:       resp.BaseHash,
-			UpstreamBranch: resp.UpstreamBranch,
-			Change:         resp.Change,
-			MergedBranches: resp.MergedBranches,
+			Name:            name,
+			Head:            resp.Head,
+			Base:            resp.Base,
+			BaseHash:        resp.BaseHash,
+			UpstreamBranch:  resp.UpstreamBranch,
+			Change:          resp.Change,
+			MergedDownstack: resp.MergedDownstack,
 		})
 	}
 

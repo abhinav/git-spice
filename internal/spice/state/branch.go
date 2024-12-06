@@ -64,10 +64,11 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 }
 
 type branchState struct {
-	Base           branchStateBase      `json:"base"`
-	Upstream       *branchUpstreamState `json:"upstream,omitempty"`
-	Change         *branchChangeState   `json:"change,omitempty"`
-	MergedBranches []string             `json:"merged,omitempty"`
+	Base     branchStateBase      `json:"base"`
+	Upstream *branchUpstreamState `json:"upstream,omitempty"`
+	Change   *branchChangeState   `json:"change,omitempty"`
+
+	MergedDownstack []string `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -100,8 +101,14 @@ type LookupResponse struct {
 	// or an empty string if the branch is not tracking an upstream branch.
 	UpstreamBranch string
 
-	// MergedBranches holds information about branches that were previously merged into trunk
-	MergedBranches []string
+	// MergedDownstack holds information about branches
+	// that were previously downstack from this branch
+	// that have since been merged into trunk.
+	//
+	// MergedDownstack is in the order that the branches were merged.
+	// For example, if the stack was main -> A -> B -> C,
+	// where C is this branch, MergedDownstack will be [A, B].
+	MergedDownstack []string
 }
 
 // LookupBranch returns information about a tracked branch.
@@ -113,9 +120,9 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 	}
 
 	res := &LookupResponse{
-		Base:           state.Base.Name,
-		BaseHash:       git.Hash(state.Base.Hash),
-		MergedBranches: state.MergedBranches,
+		Base:            state.Base.Name,
+		BaseHash:        git.Hash(state.Base.Hash),
+		MergedDownstack: state.MergedDownstack,
 	}
 
 	if change := state.Change; change != nil {
@@ -226,8 +233,9 @@ type UpsertRequest struct {
 	// Leave nil to leave it unchanged, or set to an empty string to clear it.
 	UpstreamBranch *string
 
-	// MergedBranches is a list of branches that were previously merged into this branch.
-	MergedBranches []string
+	// MergedDownstack is a list of branches that were previously
+	// downstack from this branch that have since been merged into trunk.
+	MergedDownstack []string
 }
 
 // Upsert adds or updates information about a branch.
@@ -306,8 +314,8 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		}
 	}
 
-	if len(req.MergedBranches) > 0 {
-		state.MergedBranches = req.MergedBranches
+	if len(req.MergedDownstack) > 0 {
+		state.MergedDownstack = req.MergedDownstack
 	}
 
 	tx.states[req.Name] = state

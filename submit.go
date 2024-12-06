@@ -181,9 +181,9 @@ func updateNavigationComments(
 
 		idxByBranch[b.Name] = len(nodes)
 		nodes = append(nodes, &stackedChange{
-			Change:         b.Change.ChangeID(),
-			Base:           -1,
-			MergedBranches: b.MergedBranches,
+			Change:          b.Change.ChangeID(),
+			Base:            -1,
+			MergedDownstack: b.MergedDownstack,
 		})
 		infos = append(infos, branchInfo{
 			Branch: b.Name,
@@ -360,7 +360,7 @@ type stackedChange struct {
 	Base   int // -1 = no base CR
 	Aboves []int
 
-	MergedBranches []string
+	MergedDownstack []string
 }
 
 const (
@@ -378,7 +378,7 @@ var _navCommentRegexes = []*regexp.Regexp{
 }
 
 func writeMergedChanges(node *stackedChange, sb *strings.Builder, indent int) int {
-	for _, mb := range node.MergedBranches {
+	for _, mb := range node.MergedDownstack {
 		fmt.Fprintf(sb, "%s- %v\n", strings.Repeat(" ", indent), mb)
 		indent++
 	}
