@@ -17,9 +17,8 @@ import (
 )
 
 type branchDeleteCmd struct {
-	Force                 bool     `help:"Force deletion of the branch"`
-	Branches              []string `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
-	KeepChangeIDsAsMerged bool     `help:"Keep the change IDs of the deleted branches as merged"`
+	Force    bool     `help:"Force deletion of the branch"`
+	Branches []string `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
 }
 
 func (*branchDeleteCmd) Help() string {

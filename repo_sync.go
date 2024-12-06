@@ -482,9 +482,8 @@ func (cmd *repoSyncCmd) deleteBranches(
 	}
 
 	err := (&branchDeleteCmd{
-		Branches:              branchNames,
-		Force:                 true,
-		KeepChangeIDsAsMerged: true,
+		Branches: branchNames,
+		Force:    true,
 	}).Run(ctx, log, view)
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)
