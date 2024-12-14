@@ -276,7 +276,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 		if err := branchTx.Upsert(ctx, state.UpsertRequest{
 			Name:            branchToUpdate,
-			MergedDownstack: merged,
+			MergedDownstack: &merged,
 		}); err != nil {
 			return fmt.Errorf("update merged branches for %v: %w", branchToUpdate, err)
 		}

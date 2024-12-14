@@ -235,7 +235,7 @@ type UpsertRequest struct {
 
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
-	MergedDownstack []string
+	MergedDownstack *[]string
 }
 
 // Upsert adds or updates information about a branch.
@@ -314,8 +314,8 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		}
 	}
 
-	if len(req.MergedDownstack) > 0 {
-		state.MergedDownstack = req.MergedDownstack
+	if req.MergedDownstack != nil {
+		state.MergedDownstack = *req.MergedDownstack
 	}
 
 	tx.states[req.Name] = state
