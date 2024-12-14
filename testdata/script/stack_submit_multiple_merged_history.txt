@@ -1,0 +1,235 @@
+# submit a stack of PRs with 'stack submit'.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# submit the entire stack from the middle.
+git checkout feature1
+gs stack submit --fill
+cmpenv stderr $WORK/golden/submit-log.txt
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/start.json
+
+shamhub dump comments
+cmp stdout $WORK/golden/start-comments.txt
+
+# Merge the bottom PR, sync, restack, and submit.
+shamhub merge alice/example 1
+shamhub merge alice/example 2
+gs rs
+stderr '#1 was merged'
+stderr '#2 was merged'
+gs sr   # stack restack
+gs ss   # stack submit
+stderr 'Updated #3'
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pr-1-merged.json
+
+shamhub dump comments
+cmp stdout $WORK/golden/pr-1-merged-comments.txt
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+
+-- golden/submit-log.txt --
+INF Created #1: $SHAMHUB_URL/alice/example/change/1
+INF Created #2: $SHAMHUB_URL/alice/example/change/2
+INF Created #3: $SHAMHUB_URL/alice/example/change/3
+-- golden/start.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    },
+    "base": {
+      "ref": "feature1",
+      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "63b2d337c8172c9f79aec9c760efc95e3c0c8472"
+    },
+    "base": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    }
+  }
+]
+
+-- golden/start-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/pr-1-merged.json --
+[
+  {
+    "number": 1,
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "ref": "feature1",
+      "sha": "3246bf23d6c5ee1069a9678a1cf02de608366cab"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
+    }
+  },
+  {
+    "number": 2,
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 2",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "ref": "feature2",
+      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+    },
+    "base": {
+      "ref": "feature1",
+      "sha": "3246bf23d6c5ee1069a9678a1cf02de608366cab"
+    }
+  },
+  {
+    "number": 3,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "head": {
+      "ref": "feature3",
+      "sha": "1ee6dd04d1495e0815e85f9e3edc3912f6c81c81"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
+    }
+  }
+]
+
+-- golden/pr-1-merged-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #2
+        - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/ls.txt --
+    ┏━□ feature3 (#3)
+  ┏━┻□ feature2 (#2)
+┏━┻■ feature1 (#1) ◀
+main
