@@ -161,24 +161,6 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
-- change: 4
-  body: |
-    This change is part of the following stack:
-
-    - #4 ◀
-        - #5
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
-- change: 5
-  body: |
-    This change is part of the following stack:
-
-    - #4
-        - #5 ◀
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
 -- golden/ls.txt --
     ┏━□ feature3 (#3)
   ┏━┻□ feature2 (#2)
