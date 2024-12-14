@@ -81,8 +81,6 @@ type LookupBranchResponse struct {
 	// downstack from this branch and have since been merged into trunk.
 	//
 	// This is used to correctly display the history of the branch.
-	//
-	// TODO: use forge.ChangeID instead
 	MergedDownstack []string
 }
 

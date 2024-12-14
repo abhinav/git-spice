@@ -100,7 +100,6 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 			head = b.Head
 			base = b.Base
 			mergedDownstack = b.MergedDownstack
-			// TODO
 			if change := b.Change; change != nil {
 				if branchChangeID := change.ChangeID(); branchChangeID != nil {
 					changeID = branchChangeID.String()
