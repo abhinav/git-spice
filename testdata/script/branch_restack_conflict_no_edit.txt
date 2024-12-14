@@ -1,0 +1,102 @@
+# 'rebase continue --no-edit' is able to continue from a conflict
+# without opening an editor.
+
+as 'Test <test@example.com>'
+at '2024-12-01T10:18:19Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# add main -> feat1
+gs trunk
+cp $WORK/extra/feat1.txt feat.txt
+git add feat.txt
+gs bc feat1 -m 'Add feature 1'
+
+# add main -> feat2
+gs trunk
+cp $WORK/extra/feat2.txt feat.txt
+git add feat.txt
+gs bc feat2 -m 'Add feature 2'
+
+# add main -> feat3
+gs trunk
+cp $WORK/extra/feat3.txt feat.txt
+git add feat.txt
+gs bc feat3 -m 'Add feature 3'
+
+# main: introduce a conflict
+gs trunk
+cp $WORK/extra/feat0.txt feat.txt
+git add feat.txt
+git commit -m 'Add feature 0'
+
+# Set editor to false to fail the test
+# if the editor is opened by any command
+env EDITOR=false
+
+# feat1: rebase continue --no-edit
+gs bco feat1
+! gs branch restack
+stderr 'There was a conflict'
+cp $WORK/extra/feat1.txt feat.txt
+git add feat.txt
+gs rebase continue --no-edit
+
+# feat1: verify resolved
+cmp feat.txt $WORK/extra/feat1.txt
+git status --porcelain
+! stdout '.' # no changes
+
+# Make --no-edit the default
+git config spice.rebaseContinue.edit false
+
+# feat2: rebase continue --no-edit is default
+gs bco feat2
+! gs branch restack
+stderr 'There was a conflict'
+cp $WORK/extra/feat2.txt feat.txt
+git add feat.txt
+gs rebase continue
+
+# feat2: verify resolved
+cmp feat.txt $WORK/extra/feat2.txt
+git status --porcelain
+! stdout '.' # no changes
+
+# feat3: rebase continue, --edit opt-in
+gs bco feat3
+! gs branch restack
+stderr 'There was a conflict'
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feat3-msg.txt MOCKEDIT_RECORD=$WORK/feat3-conflict-msg.txt
+cp $WORK/extra/feat3.txt feat.txt
+git add feat.txt
+gs rebase continue --edit
+grep 'pick 712f10b Add feature 3' $WORK/feat3-conflict-msg.txt
+
+git graph
+cmp stdout $WORK/golden/log.txt
+
+-- extra/feat0.txt --
+feature 0
+
+-- extra/feat1.txt --
+feature 1
+
+-- extra/feat2.txt --
+feature 2
+
+-- extra/feat3.txt --
+feature 3
+
+-- input/feat3-msg.txt --
+feat3: resolved
+
+-- golden/log.txt --
+* 200dbc4 (HEAD -> feat3) feat3: resolved
+* ccf2371 (main) Add feature 0
+* 585bc4c Initial commit

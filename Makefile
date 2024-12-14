@@ -16,7 +16,10 @@ TEST_FLAGS ?=
 GS = bin/gs
 MOCKGEN = bin/mockgen
 REQUIREDFIELD = bin/requiredfield
-TOOLS = $(MOCKGEN) $(GS)
+GOTESTSUM = bin/gotestsum
+TOOLS = $(MOCKGEN) $(GS) $(GOTESTSUM)
+
+GOTESTSUM_FORMAT ?= pkgname
 
 .PHONY: all
 all: build lint test
@@ -33,12 +36,12 @@ generate: $(TOOLS)
 	make -C doc generate
 
 .PHONY: test
-test:
-	go test $(TEST_FLAGS) ./...
+test: $(GOTESTSUM)
+	$(GOTESTSUM) --format=$(GOTESTSUM_FORMAT) -- $(TEST_FLAGS) ./...
 
 .PHONY: cover
-cover:
-	go test $(TEST_FLAGS) -coverprofile=cover.out -coverpkg=./... ./...
+cover: $(GOTESTSUM)
+	$(GOTESTSUM) --format=$(GOTESTSUM_FORMAT) -- $(TEST_FLAGS) -coverprofile=cover.out -coverpkg=./... ./...
 	go tool cover -html=cover.out -o cover.html
 
 .PHONY: tidy
@@ -79,3 +82,6 @@ $(MOCKGEN): go.mod
 
 $(REQUIREDFIELD): go.mod
 	go install go.abhg.dev/requiredfield/cmd/requiredfield
+
+$(GOTESTSUM): go.mod
+	go install gotest.tools/gotestsum

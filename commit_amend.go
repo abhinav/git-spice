@@ -15,7 +15,8 @@ type commitAmendCmd struct {
 	All     bool   `short:"a" help:"Stage all changes before committing."`
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 
-	NoEdit bool `help:"Don't edit the commit message"`
+	NoEdit   bool `help:"Don't edit the commit message"`
+	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 
 	// TODO:
 	// Remove this short form and put it on NoVerify.
@@ -45,10 +46,11 @@ func (cmd *commitAmendCmd) Run(ctx context.Context, log *log.Logger, view ui.Vie
 	}
 
 	if err := repo.Commit(ctx, git.CommitRequest{
-		Message: cmd.Message,
-		Amend:   true,
-		NoEdit:  cmd.NoEdit,
-		All:     cmd.All,
+		Message:  cmd.Message,
+		Amend:    true,
+		NoEdit:   cmd.NoEdit,
+		NoVerify: cmd.NoVerify,
+		All:      cmd.All,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

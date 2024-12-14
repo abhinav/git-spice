@@ -123,6 +123,9 @@ type CommitRequest struct {
 
 	// Create a new commit which "fixes up" the commit at the given commitish.
 	Fixup string
+
+	// NoVerify allows a commit with pre-commit and commit-msg hooks bypassed.
+	NoVerify bool
 }
 
 // Commit runs the 'git commit' command,
@@ -143,6 +146,9 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.AllowEmpty {
 		args = append(args, "--allow-empty")
+	}
+	if req.NoVerify {
+		args = append(args, "--no-verify")
 	}
 	if req.ReuseMessage != "" {
 		args = append(args, "-C", req.ReuseMessage)

@@ -13,6 +13,7 @@ concurrency:
 
 env:
   GOLANGCI_LINT_VERSION: v1.62.0
+  GOTESTSUM_FORMAT: github-actions
 
 jobs:
 
@@ -102,7 +103,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v5.0.7
+      uses: codecov/codecov-action@v5.1.1
       if: ${{ matrix.no-cover != true }}
       with:
         files: ./cover.out

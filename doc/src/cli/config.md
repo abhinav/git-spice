@@ -101,6 +101,20 @@ instead of showing just the current stack.
 - `true`
 - `false` (default)
 
+### spice.rebaseContinue.edit
+
+<!-- gs:version unreleased -->
+
+Whether $$gs rebase continue$$ should open an editor to modify the commit message
+when continuing after resolving a rebase conflict.
+
+If set to false, you can opt in to opening the editor with the `--edit` flag.
+
+**Accepted values:**
+
+- `true` (default)
+- `false`
+
 ### spice.submit.listTemplatesTimeout
 
 <!-- gs:version v0.8.0 -->

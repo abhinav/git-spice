@@ -22,6 +22,8 @@ type branchCreateCmd struct {
 	All     bool   `short:"a" help:"Automatically stage modified and deleted files"`
 	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
 
+	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+
 	Commit bool `negatable:"" default:"true" config:"branchCreate.commit" help:"Commit staged changes to the new branch, or create an empty commit"`
 }
 
@@ -282,6 +284,7 @@ func (cmd *branchCreateCmd) commit(
 	if err := repo.Commit(ctx, git.CommitRequest{
 		AllowEmpty: len(diff) == 0,
 		Message:    cmd.Message,
+		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
 	}); err != nil {
 		if err := repo.Checkout(ctx, baseName); err != nil {

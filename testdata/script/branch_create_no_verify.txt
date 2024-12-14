@@ -1,0 +1,44 @@
+# Branch create with --no-verify.
+
+as 'Test <test@example.com>'
+at '2024-07-02T20:18:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/extra/pre-commit .git/hooks/pre-commit
+chmod 700 .git/hooks/pre-commit
+
+git add feature.txt
+! gs branch create feature -m 'Add feature'
+stderr 'exit status 1'
+
+gs branch create feature -m 'Add feature' --no-verify
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+git diff HEAD^
+cmp stdout $WORK/golden/diff.txt
+
+-- repo/feature.txt --
+feature
+
+-- extra/pre-commit --
+exit 1
+
+-- golden/ll.txt --
+┏━■ feature ◀
+┃   5648694 Add feature (now)
+main
+-- golden/diff.txt --
+diff --git a/feature.txt b/feature.txt
+new file mode 100644
+index 0000000..d0f029a
+--- /dev/null
++++ b/feature.txt
+@@ -0,0 +1,2 @@
++feature
++

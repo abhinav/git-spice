@@ -169,4 +169,41 @@ func TestIntegrationUpdateTree(t *testing.T) {
 			{Mode: git.RegularMode, Type: git.BlobType, Name: "qux/quux/qu", Hash: emptyFile},
 		}, ents)
 	})
+
+	// empty directories are pruned from the tree.
+	t.Run("clear empty dirs", func(t *testing.T) {
+		deletedHash, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{
+			Tree:    newHash,
+			Deletes: []string{"qux/quux/qu"},
+		})
+		require.NoError(t, err)
+
+		ents, err := repo.ListTree(ctx, deletedHash, git.ListTreeOptions{})
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []git.TreeEntry{
+			{Mode: git.DirMode, Type: git.TreeType, Name: "bar", Hash: "94b2978d84f4cbb7449c092255b38a1e1b40da42"},
+			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
+		}, ents)
+
+		ents, err = repo.ListTree(ctx, deletedHash, git.ListTreeOptions{
+			Recurse: true,
+		})
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []git.TreeEntry{
+			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
+			{Mode: git.RegularMode, Type: git.BlobType, Name: "bar/baz", Hash: emptyFile},
+		}, ents)
+	})
+
+	t.Run("delete all files", func(t *testing.T) {
+		deletedHash, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{
+			Tree:    newHash,
+			Deletes: []string{"foo", "bar/baz", "qux/quux/qu"},
+		})
+		require.NoError(t, err)
+
+		ents, err := repo.ListTree(ctx, deletedHash, git.ListTreeOptions{})
+		require.NoError(t, err)
+		assert.Empty(t, ents)
+	})
 }

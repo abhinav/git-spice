@@ -1,0 +1,45 @@
+# Commit create with --no-verify.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+cp $WORK/extra/pre-commit .git/hooks/pre-commit
+chmod 700 .git/hooks/pre-commit
+
+git add foo.txt
+! gs cc -m 'Add foo'
+stderr 'exit status 1'
+
+gs cc -m 'Add foo' --no-verify
+
+# verify the output
+git log
+cmp stdout $WORK/golden/log.1.txt
+
+-- repo/foo.txt --
+Contents of foo.
+
+-- extra/pre-commit --
+exit 1
+
+-- golden/log.1.txt --
+commit 91582344149997d5a513acf7b4d56a03452e23cd
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Add foo
+
+commit 9bad92b764fe1d56cb99b394f373a71cdefd8e86
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Initial commit
