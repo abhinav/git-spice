@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
@@ -71,8 +73,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 		Head            git.Hash // head hash (set only if exists)
 		Exists          bool
-		ChangeID        string
-		MergedDownstack []string
+		ChangeIDJSON    json.RawMessage
+		MergedDownstack []json.RawMessage
 	}
 
 	// name to branch info
@@ -80,8 +82,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	for _, branch := range cmd.Branches {
 		base := store.Trunk()
 		tracked, exists := true, true
-		var mergedDownstack []string
-		var changeID string
+		var mergedDownstack []json.RawMessage
+		var changeIDJSON json.RawMessage
 
 		var head git.Hash
 		if b, err := svc.LookupBranch(ctx, branch); err != nil {
@@ -101,8 +103,13 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 			base = b.Base
 			mergedDownstack = b.MergedDownstack
 			if change := b.Change; change != nil {
-				if branchChangeID := change.ChangeID(); branchChangeID != nil {
-					changeID = branchChangeID.String()
+				// TODO: should not need to look up forge here
+				// as it's guaranteed to be set.
+				if f, ok := forge.Lookup(change.ForgeID()); ok {
+					changeIDJSON, err = f.MarshalChangeID(change.ChangeID())
+					if err != nil {
+						return fmt.Errorf("marshal change ID: %w", err)
+					}
 				}
 			}
 			must.NotBeBlankf(base, "base branch for %v must be set", branch)
@@ -124,7 +131,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 			Base:            base,
 			Tracked:         tracked,
 			Exists:          exists,
-			ChangeID:        changeID,
+			ChangeIDJSON:    changeIDJSON,
 			MergedDownstack: mergedDownstack,
 		}
 	}
@@ -176,7 +183,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 	// Mapping of branch name to list of change IDs that it depends on
 	// that have already been merged.
-	allBranchHistory := make(map[string][]string)
+	allBranchHistory := make(map[string][]json.RawMessage)
 
 	// For each branch under consideration,
 	// if it's a tracked branch, update the upstacks from it
@@ -203,9 +210,9 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 		for _, above := range aboves {
 			// Propagate the merged branches from the current branch to all branches above it.
-			var newHistory []string
+			var newHistory []json.RawMessage
 			newHistory = append(newHistory, info.MergedDownstack...) // merged downstack of the current branch
-			newHistory = append(newHistory, info.ChangeID)           // current branch
+			newHistory = append(newHistory, info.ChangeIDJSON)       // current branch
 			newHistory = append(newHistory, allBranchHistory[above]...)
 			allBranchHistory[above] = newHistory
 			if _, ok := branchesToDelete[above]; ok {

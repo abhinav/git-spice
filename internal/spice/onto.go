@@ -2,6 +2,7 @@ package spice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
@@ -89,7 +90,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		}
 
 		// merge any existing branch history to the new history
-		merged := make([]string, 0,
+		merged := make([]json.RawMessage, 0,
 			len(stackBaseBranch.MergedDownstack)+len(branch.MergedDownstack))
 		merged = append(merged, stackBaseBranch.MergedDownstack...)
 		merged = append(merged, branch.MergedDownstack...)
@@ -101,7 +102,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 			return fmt.Errorf("update merged downstack: %w", err)
 		}
 
-		emptyHistory := []string{}
+		var emptyHistory []json.RawMessage
 		if err := branchTx.Upsert(ctx, state.UpsertRequest{
 			Name:            req.Branch,
 			MergedDownstack: &emptyHistory,

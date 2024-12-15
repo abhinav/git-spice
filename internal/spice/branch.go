@@ -81,7 +81,7 @@ type LookupBranchResponse struct {
 	// downstack from this branch and have since been merged into trunk.
 	//
 	// This is used to correctly display the history of the branch.
-	MergedDownstack []string
+	MergedDownstack []json.RawMessage
 }
 
 // DeletedBranchError is returned when a branch was deleted out of band.
@@ -350,7 +350,7 @@ type LoadBranchItem struct {
 
 	// MergedDownstack contains information about any branches,
 	// which this one was based on, that have already been merged into trunk.
-	MergedDownstack []string
+	MergedDownstack []json.RawMessage
 }
 
 // LoadBranches loads all tracked branches

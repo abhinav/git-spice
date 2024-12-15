@@ -68,7 +68,7 @@ type branchState struct {
 	Upstream *branchUpstreamState `json:"upstream,omitempty"`
 	Change   *branchChangeState   `json:"change,omitempty"`
 
-	MergedDownstack []string `json:"merged,omitempty"`
+	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -108,7 +108,7 @@ type LookupResponse struct {
 	// MergedDownstack is in the order that the branches were merged.
 	// For example, if the stack was main -> A -> B -> C,
 	// where C is this branch, MergedDownstack will be [A, B].
-	MergedDownstack []string
+	MergedDownstack []json.RawMessage
 }
 
 // LookupBranch returns information about a tracked branch.
@@ -235,7 +235,7 @@ type UpsertRequest struct {
 
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
-	MergedDownstack *[]string
+	MergedDownstack *[]json.RawMessage
 }
 
 // Upsert adds or updates information about a branch.

@@ -174,6 +174,7 @@ func updateNavigationComments(
 	idxByBranch := make(map[string]int) // branch -> index in nodes
 
 	// First pass: add nodes but don't connect.
+	f := remoteRepo.Forge()
 	for _, b := range trackedBranches {
 		if b.Change == nil {
 			continue
@@ -181,9 +182,8 @@ func updateNavigationComments(
 
 		idxByBranch[b.Name] = len(nodes)
 		nodes = append(nodes, &stackedChange{
-			Change:          b.Change.ChangeID(),
-			Base:            -1,
-			MergedDownstack: b.MergedDownstack,
+			Change: b.Change.ChangeID(),
+			Base:   -1,
 		})
 		infos = append(infos, branchInfo{
 			Branch: b.Name,
@@ -191,23 +191,62 @@ func updateNavigationComments(
 		})
 	}
 
-	// Second pass: connect Aboves.
+	// Second pass:
+	//
+	// - Add merged downstacks as separate nodes.
+	// - Connect Aboves if this is a base to another node.
 	for _, b := range trackedBranches {
 		nodeIdx, ok := idxByBranch[b.Name]
 		if !ok {
 			continue
 		}
 
-		baseIdx, ok := idxByBranch[b.Base]
-		if !ok {
-			continue
+		// Add nodes starting at the bottom.
+		// For each merged downstack branch:
+		//
+		//  - previous branch is the base (starting at trunk)
+		//  - current branch is added to Aboves of previous branch
+		lastDownstackIdx := -1
+		for _, crJSON := range b.MergedDownstack {
+			downstackCR, err := f.UnmarshalChangeID(crJSON)
+			if err != nil {
+				log.Warn("skiping invalid downstack change",
+					"branch", b.Name,
+					"change", string(crJSON),
+					"error", err,
+				)
+				continue
+			}
+
+			idx := len(nodes)
+			nodes = append(nodes, &stackedChange{
+				Change: downstackCR,
+				Base:   lastDownstackIdx,
+			})
+			// Inform previous node about this node.
+			if lastDownstackIdx != -1 {
+				nodes[lastDownstackIdx].Aboves = append(nodes[lastDownstackIdx].Aboves, idx)
+			}
+			lastDownstackIdx = idx
 		}
 
-		node := nodes[nodeIdx]
-		node.Base = baseIdx
+		// If this branch's base is known, it'll be in idxByBranch.
+		// Otherwise it's trunk (-1) or a merged downstack branch,
+		// in which case we'll use the last of those.
+		baseIdx := lastDownstackIdx
+		if idx, ok := idxByBranch[b.Base]; ok {
+			// Tracked base always takes precedence.
+			baseIdx = idx
+		}
 
-		base := nodes[baseIdx]
-		base.Aboves = append(base.Aboves, nodeIdx)
+		// If the base is a known node, connect it in both directions.
+		if baseIdx != -1 {
+			node := nodes[nodeIdx]
+			node.Base = baseIdx
+
+			base := nodes[baseIdx]
+			base.Aboves = append(base.Aboves, nodeIdx)
+		}
 	}
 
 	type (
@@ -359,8 +398,6 @@ type stackedChange struct {
 
 	Base   int // -1 = no base CR
 	Aboves []int
-
-	MergedDownstack []string
 }
 
 const (
@@ -375,14 +412,6 @@ const (
 var _navCommentRegexes = []*regexp.Regexp{
 	regexp.MustCompile(`(?m)^\Q` + _commentHeader + `\E$`),
 	regexp.MustCompile(`(?m)^\Q` + _commentMarker + `\E$`),
-}
-
-func writeMergedChanges(node *stackedChange, sb *strings.Builder, indent int) int {
-	for _, mb := range node.MergedDownstack {
-		fmt.Fprintf(sb, "%s- %v\n", strings.Repeat("    ", indent), mb)
-		indent++
-	}
-	return indent
 }
 
 func generateStackNavigationComment(
@@ -414,7 +443,7 @@ func generateStackNavigationComment(
 		visited[i] = true
 		return true
 	}
-	isCurrentBasedOnBase := false
+
 	// Write the downstacks, not including the current node.
 	// This will change the indent level.
 	// The downstacks leading up to the current branch are always linear.
@@ -425,22 +454,11 @@ func generateStackNavigationComment(
 			downstacks = append(downstacks, base)
 		}
 
-		if len(downstacks) > 0 {
-			base := downstacks[len(downstacks)-1]
-			indent = writeMergedChanges(nodes[base], &sb, indent)
-		} else {
-			isCurrentBasedOnBase = true
-		}
-
 		// Reverse order to print from base to current.
 		for i := len(downstacks) - 1; i >= 0; i-- {
 			write(downstacks[i], indent)
 			indent++
 		}
-	}
-
-	if isCurrentBasedOnBase {
-		indent = writeMergedChanges(nodes[current], &sb, indent)
 	}
 
 	// For the upstacks, we'll need to traverse the graph
