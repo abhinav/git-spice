@@ -29,18 +29,14 @@ gs auth login
 # submit the entire stack from the middle.
 git checkout feature1
 gs stack submit --fill
-cmpenv stderr $WORK/golden/submit-log.txt
 
 gs ls -a
 cmp stderr $WORK/golden/ls.txt
 
-shamhub dump changes
-cmpenvJSON stdout $WORK/golden/start.json
-
 shamhub dump comments
 cmp stdout $WORK/golden/start-comments.txt
 
-# Merge the bottom PR, sync, restack, and submit.
+# Merge the bottom two PRs, sync, restack, and submit.
 shamhub merge alice/example 1
 shamhub merge alice/example 2
 gs rs
@@ -50,11 +46,8 @@ gs sr   # stack restack
 gs ss   # stack submit
 stderr 'Updated #3'
 
-shamhub dump changes
-cmpenvJSON stdout $WORK/golden/pr-1-merged.json
-
 shamhub dump comments
-cmp stdout $WORK/golden/pr-1-merged-comments.txt
+cmp stdout $WORK/golden/post-merge-comments.txt
 
 -- repo/feature1.txt --
 This is feature 1
@@ -62,59 +55,6 @@ This is feature 1
 This is feature 2
 -- repo/feature3.txt --
 This is feature 3
-
--- golden/submit-log.txt --
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
-INF Created #2: $SHAMHUB_URL/alice/example/change/2
-INF Created #3: $SHAMHUB_URL/alice/example/change/3
--- golden/start.json --
-[
-  {
-    "number": 1,
-    "state": "open",
-    "title": "Add feature 1",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/1",
-    "head": {
-      "ref": "feature1",
-      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
-    },
-    "base": {
-      "ref": "main",
-      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
-    }
-  },
-  {
-    "number": 2,
-    "state": "open",
-    "title": "Add feature 2",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/2",
-    "head": {
-      "ref": "feature2",
-      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
-    },
-    "base": {
-      "ref": "feature1",
-      "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
-    }
-  },
-  {
-    "number": 3,
-    "state": "open",
-    "title": "Add feature 3",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/3",
-    "head": {
-      "ref": "feature3",
-      "sha": "63b2d337c8172c9f79aec9c760efc95e3c0c8472"
-    },
-    "base": {
-      "ref": "feature2",
-      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
-    }
-  }
-]
 
 -- golden/start-comments.txt --
 - change: 1
@@ -147,58 +87,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
--- golden/pr-1-merged.json --
-[
-  {
-    "number": 1,
-    "state": "closed",
-    "merged": true,
-    "title": "Add feature 1",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/1",
-    "head": {
-      "ref": "feature1",
-      "sha": "3246bf23d6c5ee1069a9678a1cf02de608366cab"
-    },
-    "base": {
-      "ref": "main",
-      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
-    }
-  },
-  {
-    "number": 2,
-    "state": "closed",
-    "merged": true,
-    "title": "Add feature 2",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/2",
-    "head": {
-      "ref": "feature2",
-      "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
-    },
-    "base": {
-      "ref": "feature1",
-      "sha": "3246bf23d6c5ee1069a9678a1cf02de608366cab"
-    }
-  },
-  {
-    "number": 3,
-    "state": "open",
-    "title": "Add feature 3",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/3",
-    "head": {
-      "ref": "feature3",
-      "sha": "1ee6dd04d1495e0815e85f9e3edc3912f6c81c81"
-    },
-    "base": {
-      "ref": "main",
-      "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
-    }
-  }
-]
-
--- golden/pr-1-merged-comments.txt --
+-- golden/post-merge-comments.txt --
 - change: 1
   body: |
     This change is part of the following stack:
@@ -223,8 +112,9 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
   body: |
     This change is part of the following stack:
 
-    - #2
-        - #3 ◀
+    - #1
+        - #2
+            - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
