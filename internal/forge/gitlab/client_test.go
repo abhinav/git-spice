@@ -1,6 +1,6 @@
 package gitlab
 
-import "github.com/xanzy/go-gitlab"
+import gitlab "gitlab.com/gitlab-org/api/client-go"
 
 var (
 	_ mergeRequestsService    = (*gitlab.MergeRequestsService)(nil)
