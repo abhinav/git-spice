@@ -3,7 +3,7 @@ package gitlab
 import (
 	"context"
 
-	"github.com/xanzy/go-gitlab"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
 )
 
