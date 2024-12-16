@@ -3,7 +3,7 @@ module go.abhg.dev/gs
 go 1.23
 
 require (
-	github.com/alecthomas/kong v1.5.0
+	github.com/alecthomas/kong v1.6.0
 	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
