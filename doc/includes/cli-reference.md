@@ -202,8 +202,12 @@ For new Change Requests, a prompt will allow filling metadata.
 Use --fill to populate title and body from the commit messages,
 and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
+
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
 Use --nav-comment=false to disable navigation comments in CRs,
 or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
@@ -217,6 +221,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `-u`, `--update-only`: Only update existing change requests, do not create new ones
 
 **Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
 
@@ -275,8 +280,12 @@ For new Change Requests, a prompt will allow filling metadata.
 Use --fill to populate title and body from the commit messages,
 and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
+
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
 Use --nav-comment=false to disable navigation comments in CRs,
 or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
@@ -290,6 +299,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
 **Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
@@ -368,8 +378,12 @@ For new Change Requests, a prompt will allow filling metadata.
 Use --fill to populate title and body from the commit messages,
 and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
+
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
 Use --nav-comment=false to disable navigation comments in CRs,
 or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
@@ -383,6 +397,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
 **Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
@@ -739,8 +754,11 @@ For updating Change Requests,
 use --draft/--no-draft to change its draft status.
 Without the flag, the draft status is not changed.
 
-Use --no-publish to push the branch without creating a Change
-Request.
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
 Use --nav-comment=false to disable navigation comments in CRs,
 or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 
@@ -753,6 +771,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit

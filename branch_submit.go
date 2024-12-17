@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -32,7 +33,8 @@ type submitOptions struct {
 
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
-	Force bool `help:"Force push, bypassing safety checks"`
+	Force      bool `help:"Force push, bypassing safety checks"`
+	UpdateOnly bool `short:"u" help:"Only update existing change requests, do not create new ones"`
 
 	// TODO: Other creation options e.g.:
 	// - assignees
@@ -47,8 +49,12 @@ For new Change Requests, a prompt will allow filling metadata.
 Use --fill to populate title and body from the commit messages,
 and --[no-]draft to set the draft status.
 Omitting the draft flag will leave the status unchanged of open CRs.
+
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
 Use --nav-comment=false to disable navigation comments in CRs,
 or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 `
@@ -79,8 +85,11 @@ func (*branchSubmitCmd) Help() string {
 		use --draft/--no-draft to change its draft status.
 		Without the flag, the draft status is not changed.
 
-		Use --no-publish to push the branch without creating a Change
-		Request.
+		Use --no-publish to push branches without creating CRs.
+		This has no effect if a branch already has an open CR.
+		Use --update-only to only update branches with existing CRs,
+		and skip those that would create new CRs.
+
 		Use --nav-comment=false to disable navigation comments in CRs,
 		or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
 	`)
@@ -153,8 +162,14 @@ func (cmd *branchSubmitCmd) run(
 		}
 	}
 
-	if !cmd.DryRun && cmd.Publish {
-		session.branches = append(session.branches, cmd.Branch)
+	// Various code paths down below should call this
+	// if the branch is being published as a CR (new or existing)
+	// so it should get a nav comment.
+	var _needsNavCommentOnce sync.Once
+	needsNavComment := func() {
+		_needsNavCommentOnce.Do(func() {
+			session.branches = append(session.branches, cmd.Branch)
+		})
 	}
 
 	commitHash, err := repo.PeelToCommit(ctx, cmd.Branch)
@@ -356,6 +371,14 @@ func (cmd *branchSubmitCmd) run(
 			upstreamBranch = unique
 		}
 
+		if cmd.UpdateOnly {
+			if !cmd.DryRun {
+				// TODO: config to disable this message?
+				log.Infof("%v: Skipping unsubmitted branch: --update-only", cmd.Branch)
+			}
+			return nil
+		}
+
 		if cmd.DryRun {
 			if cmd.Publish {
 				log.Infof("WOULD create a CR for %s", cmd.Branch)
@@ -367,6 +390,8 @@ func (cmd *branchSubmitCmd) run(
 
 		var prepared *preparedBranch
 		if cmd.Publish {
+			needsNavComment()
+
 			remoteRepo, err := session.RemoteRepo.Get(ctx)
 			if err != nil {
 				return fmt.Errorf("prepare publish: %w", err)
@@ -469,6 +494,7 @@ func (cmd *branchSubmitCmd) run(
 			log.Infof("Pushed %s", cmd.Branch)
 		}
 	} else {
+		needsNavComment()
 		must.NotBeBlankf(upstreamBranch, "upstream branch must be set if branch has a CR")
 
 		if !cmd.Publish {

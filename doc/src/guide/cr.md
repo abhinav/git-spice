@@ -135,6 +135,53 @@ if the operation could result in data loss.
 To override these safety checks
 and push to a branch anyway, use the `--force` flag.
 
+### Update existing CRs only
+
+<!-- gs:version unreleased -->
+
+All submit commands support the `--update-only` flag.
+If provided, the submission will update existing CRs in a stack,
+but not create new ones.
+
+
+This is most convenient with $$gs stack submit$$ and friends,
+allowing you to iterate on a local change that isn't ready for submission,
+while still being able to pull updates into downstack PRs
+that have already been submitted.
+
+??? example "Example workflow"
+
+    Suppose we're starting with a stack:
+
+        main -> bird (#1) -> fish (#2) -> goat
+
+    `bird` and `fish` have already been submitted, `goat` is in-progress.
+
+    ```freeze language="terminal"
+    {gray}# While working in goat, make a minor fixup to bird.{reset}
+    {yellow}[goat]{reset} {green}${reset} gs commit create -m {mag}'bird: preen a little'{reset}
+
+    {gray}# Pull that change into bird{reset}
+    {yellow}[goat]{reset} {green}${reset} gs branch checkout bird
+    {yellow}[bird]{reset} {green}${reset} git restore --source {cyan}$(gs top -n){reset} -- bird.go
+    {yellow}[bird]{reset} {green}${reset} gs commit create -a -m {mag}'preen a little'{reset}
+    {green}INF{reset} fish: restacked on bird
+    {green}INF{reset} goat: restacked on fish
+
+    {gray}# Update fish and bird in one command without submitting goat{reset}
+    {yellow}[bird]{reset} {green}${reset} gs stack submit --update-only
+    {green}INF{reset} bird: Updated #1
+    {green}INF{reset} goat: Updated #2
+    {green}INF{reset} goat: Skipping unsubmitted branch: --update-only
+    ```
+
+    !!! tip
+
+        The above example makes use of the `-n`/`--dry-run` flag
+        of the [stack navigation commands](branch.md#navigating-the-stack).
+        With this flag, the command prints the hash of the target branch
+        without checking it out.
+
 ## Syncing with upstream
 
 To sync with the upstream repository,
