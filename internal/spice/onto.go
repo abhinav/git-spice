@@ -2,7 +2,6 @@ package spice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
@@ -35,7 +34,6 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	}
 
 	var ontoHash git.Hash
-	stackBase := req.Branch
 	if req.Onto == s.store.Trunk() {
 		ontoHash, err = s.repo.PeelToCommit(ctx, req.Onto)
 		if err != nil {
@@ -48,19 +46,6 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 			return fmt.Errorf("lookup onto: %w", err)
 		}
 		ontoHash = onto.Head
-
-		// find the base of the stack
-		stackBase = req.Onto
-		for {
-			b, err := s.store.LookupBranch(ctx, stackBase)
-			if err != nil {
-				return fmt.Errorf("lookup branch: %w", err)
-			}
-			if b.Base == s.store.Trunk() {
-				break
-			}
-			stackBase = b.Base
-		}
 	}
 
 	branchTx := s.store.BeginBranchTx()
@@ -80,35 +65,6 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		Quiet:     true,
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
-	}
-
-	// propagate any downstack history to the bottom of the stack
-	if branch.MergedDownstack != nil && stackBase != req.Branch {
-		stackBaseBranch, err := s.store.LookupBranch(ctx, stackBase)
-		if err != nil {
-			return fmt.Errorf("lookup branch: %w", err)
-		}
-
-		// merge any existing branch history to the new history
-		merged := make([]json.RawMessage, 0,
-			len(stackBaseBranch.MergedDownstack)+len(branch.MergedDownstack))
-		merged = append(merged, stackBaseBranch.MergedDownstack...)
-		merged = append(merged, branch.MergedDownstack...)
-
-		if err := branchTx.Upsert(ctx, state.UpsertRequest{
-			Name:            stackBase,
-			MergedDownstack: &merged,
-		}); err != nil {
-			return fmt.Errorf("update merged downstack: %w", err)
-		}
-
-		var emptyHistory []json.RawMessage
-		if err := branchTx.Upsert(ctx, state.UpsertRequest{
-			Name:            req.Branch,
-			MergedDownstack: &emptyHistory,
-		}); err != nil {
-			return fmt.Errorf("update merged downstack: %w", err)
-		}
 	}
 
 	if err := branchTx.Commit(ctx, fmt.Sprintf("%v: onto %v", req.Branch, req.Onto)); err != nil {

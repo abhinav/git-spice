@@ -227,10 +227,9 @@ main
     This change is part of the following stack:
 
     - #1
-        - #4
-            - #2 ◀
-                - #3
-                - #5
+        - #2 ◀
+            - #3
+            - #5
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
@@ -239,9 +238,8 @@ main
     This change is part of the following stack:
 
     - #1
-        - #4
-            - #2
-                - #3 ◀
+        - #2
+            - #3 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
@@ -250,9 +248,8 @@ main
     This change is part of the following stack:
 
     - #1
-        - #4
-            - #2
-                - #5 ◀
+        - #2
+            - #5 ◀
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
