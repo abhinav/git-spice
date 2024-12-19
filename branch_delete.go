@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
@@ -69,8 +71,10 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		Tracked bool
 		Base    string // base branch (may be unset if untracked)
 
-		Head   git.Hash // head hash (set only if exists)
-		Exists bool
+		Head            git.Hash // head hash (set only if exists)
+		Exists          bool
+		ChangeIDJSON    json.RawMessage
+		MergedDownstack []json.RawMessage
 	}
 
 	// name to branch info
@@ -78,6 +82,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	for _, branch := range cmd.Branches {
 		base := store.Trunk()
 		tracked, exists := true, true
+		var mergedDownstack []json.RawMessage
+		var changeIDJSON json.RawMessage
 
 		var head git.Hash
 		if b, err := svc.LookupBranch(ctx, branch); err != nil {
@@ -95,6 +101,17 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		} else {
 			head = b.Head
 			base = b.Base
+			mergedDownstack = b.MergedDownstack
+			if change := b.Change; change != nil {
+				// TODO: should not need to look up forge here
+				// as it's guaranteed to be set.
+				if f, ok := forge.Lookup(change.ForgeID()); ok {
+					changeIDJSON, err = f.MarshalChangeID(change.ChangeID())
+					if err != nil {
+						return fmt.Errorf("marshal change ID: %w", err)
+					}
+				}
+			}
 			must.NotBeBlankf(base, "base branch for %v must be set", branch)
 			must.NotBeBlankf(head.String(), "head commit for %v must be set", branch)
 		}
@@ -109,11 +126,13 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 
 		branchesToDelete[branch] = &branchInfo{
-			Name:    branch,
-			Head:    head,
-			Base:    base,
-			Tracked: tracked,
-			Exists:  exists,
+			Name:            branch,
+			Head:            head,
+			Base:            base,
+			Tracked:         tracked,
+			Exists:          exists,
+			ChangeIDJSON:    changeIDJSON,
+			MergedDownstack: mergedDownstack,
 		}
 	}
 
@@ -162,6 +181,10 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 	}
 
+	// Mapping of branch name to list of change IDs that it depends on
+	// that have already been merged.
+	allBranchHistory := make(map[string][]json.RawMessage)
+
 	// For each branch under consideration,
 	// if it's a tracked branch, update the upstacks from it
 	// to point to its base, or the next branch downstack
@@ -186,6 +209,12 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 
 		for _, above := range aboves {
+			// Propagate the merged branches from the current branch to all branches above it.
+			var newHistory []json.RawMessage
+			newHistory = append(newHistory, info.MergedDownstack...) // merged downstack of the current branch
+			newHistory = append(newHistory, info.ChangeIDJSON)       // current branch
+			newHistory = append(newHistory, allBranchHistory[above]...)
+			allBranchHistory[above] = newHistory
 			if _, ok := branchesToDelete[above]; ok {
 				// This upstack is also being deleted. Skip.
 				continue
@@ -209,6 +238,8 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 			}
 			log.Infof("%v: moved upstack onto %v", above, base)
 		}
+
+		delete(allBranchHistory, branch)
 	}
 
 	if err := repo.Checkout(ctx, checkoutTarget); err != nil {
@@ -235,10 +266,31 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		visit(branch)
 	}
 
+	branchTx := store.BeginBranchTx()
+
+	for branchToUpdate, merged := range allBranchHistory {
+		if len(merged) == 0 {
+			continue
+		}
+		_, err := svc.LookupBranch(ctx, branchToUpdate)
+		if err != nil {
+			if errors.Is(err, state.ErrNotExist) {
+				return nil
+			}
+			return fmt.Errorf("lookup branch: %w", err)
+		}
+
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name:            branchToUpdate,
+			MergedDownstack: &merged,
+		}); err != nil {
+			return fmt.Errorf("update merged branches for %v: %w", branchToUpdate, err)
+		}
+	}
+
 	// deleteOrder is now in [base, ..., leaf] order. Reverse it.
 	slices.Reverse(deleteOrder)
 
-	branchTx := store.BeginBranchTx()
 	var untrackedNames []string
 	for _, b := range deleteOrder {
 		branch, head := b.Name, b.Head

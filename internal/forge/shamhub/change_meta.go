@@ -63,3 +63,17 @@ func (f *Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetad
 	}
 	return &md, nil
 }
+
+// MarshalChangeID marshals the given change ID to JSON.
+func (f *Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+	return json.Marshal(id.(ChangeID))
+}
+
+// UnmarshalChangeID unmarshals the given JSON data to change ID.
+func (f *Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+	var id ChangeID
+	if err := json.Unmarshal(data, &id); err != nil {
+		return nil, fmt.Errorf("unmarshal change ID: %w", err)
+	}
+	return id, nil
+}

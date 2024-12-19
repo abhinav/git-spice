@@ -68,6 +68,20 @@ func (*Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadat
 	return &md, nil
 }
 
+// MarshalChangeID serializes a MR into JSON.
+func (*Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+	return json.Marshal(mustMR(id))
+}
+
+// UnmarshalChangeID deserializes a MR from JSON.
+func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+	var id MR
+	if err := json.Unmarshal(data, &id); err != nil {
+		return nil, fmt.Errorf("unmarshal MR ID: %w", err)
+	}
+	return &id, nil
+}
+
 // MR uniquely identifies a Merge Request in GitLab.
 // It's a valid forge.ChangeID.
 type MR struct {

@@ -232,10 +232,11 @@ Closes the CR without merging.
 shamhub dump changes
 shamhub dump change <num>
 shamhub dump comments
+shamhub dump comments [num] ...
 ```
 
-Dumps information about all changes, a single change, or all comments
-to stdout.
+Dumps information about all changes, a single change,
+all comments, or comments for specific changes, respectively.
 
 #### shamhub register
 

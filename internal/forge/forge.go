@@ -91,6 +91,12 @@ type Forge interface {
 	// it's possible to define change templates in the repository.
 	ChangeTemplatePaths() []string
 
+	// MarshalChangeID serializes the given change ID into a valid JSON blob.
+	MarshalChangeID(ChangeID) (json.RawMessage, error)
+
+	// UnmarshalChangeID deserializes the given JSON blob into a change ID.
+	UnmarshalChangeID(json.RawMessage) (ChangeID, error)
+
 	// MarshalChangeMetadata serializes the given change metadata
 	// into a valid JSON blob.
 	MarshalChangeMetadata(ChangeMetadata) (json.RawMessage, error)
