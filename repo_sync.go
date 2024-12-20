@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"runtime"
 	"slices"
 	"sync"
@@ -11,8 +13,11 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/graph"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -217,7 +222,9 @@ func (cmd *repoSyncCmd) Run(
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = cmd.findForgeMergedBranches(ctx, log, repo, remoteRepo, candidates, view)
+		branchesToDelete, err = cmd.findForgeMergedBranches(
+			ctx, log, repo, store, svc, remoteRepo, candidates, view,
+		)
 		if err != nil {
 			return fmt.Errorf("find merged CRs: %w", err)
 		}
@@ -265,12 +272,18 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	ctx context.Context,
 	log *log.Logger,
 	repo *git.Repository,
+	store spice.Store,
+	svc *spice.Service,
 	remoteRepo forge.Repository,
 	knownBranches []spice.LoadBranchItem,
 	view ui.View,
 ) ([]branchDeletion, error) {
 	type submittedBranch struct {
-		Name   string
+		Name string
+
+		Base            string
+		MergedDownstack []json.RawMessage
+
 		Change forge.ChangeID
 		Merged bool
 
@@ -280,6 +293,9 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 
 	type trackedBranch struct {
 		Name string
+
+		Base            string
+		MergedDownstack []json.RawMessage
 
 		Change        forge.ChangeID
 		Merged        bool
@@ -314,9 +330,11 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 
 		if b.Change != nil {
 			b := &submittedBranch{
-				Name:           b.Name,
-				Change:         b.Change.ChangeID(),
-				UpstreamBranch: upstreamBranch,
+				Name:            b.Name,
+				Base:            b.Base,
+				Change:          b.Change.ChangeID(),
+				UpstreamBranch:  upstreamBranch,
+				MergedDownstack: b.MergedDownstack,
 			}
 			submittedBranches = append(submittedBranches, b)
 		} else {
@@ -325,8 +343,10 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 			// a remote tracking branch:
 			// either $remote/$UpstreamBranch or $remote/$branch exists.
 			b := &trackedBranch{
-				Name:           b.Name,
-				UpstreamBranch: upstreamBranch,
+				Name:            b.Name,
+				Base:            b.Base,
+				UpstreamBranch:  upstreamBranch,
+				MergedDownstack: b.MergedDownstack,
 			}
 			trackedBranches = append(trackedBranches, b)
 		}
@@ -400,17 +420,28 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	}
 	wg.Wait()
 
-	var branchesToDelete []branchDeletion
+	type mergedBranch struct {
+		Name            string
+		Base            string
+		UpstreamBranch  string
+		MergedDownstack []json.RawMessage
+		ChangeID        forge.ChangeID
+	}
+
+	mergedBranches := make(map[string]mergedBranch) // name -> branch
 	for _, branch := range submittedBranches {
 		if !branch.Merged {
 			continue
 		}
 
 		log.Infof("%v: %v was merged", branch.Name, branch.Change)
-		branchesToDelete = append(branchesToDelete, branchDeletion{
-			BranchName:   branch.Name,
-			UpstreamName: branch.UpstreamBranch,
-		})
+		mergedBranches[branch.Name] = mergedBranch{
+			Name:            branch.Name,
+			Base:            branch.Base,
+			UpstreamBranch:  branch.UpstreamBranch,
+			MergedDownstack: branch.MergedDownstack,
+			ChangeID:        branch.Change,
+		}
 	}
 
 	for _, branch := range trackedBranches {
@@ -418,12 +449,17 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 			continue
 		}
 
+		merged := mergedBranch{
+			Name:            branch.Name,
+			Base:            branch.Base,
+			UpstreamBranch:  branch.UpstreamBranch,
+			MergedDownstack: branch.MergedDownstack,
+			ChangeID:        branch.Change,
+		}
+
 		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
 			log.Infof("%v: %v was merged", branch.Name, branch.Change)
-			branchesToDelete = append(branchesToDelete, branchDeletion{
-				BranchName:   branch.Name,
-				UpstreamName: branch.UpstreamBranch,
-			})
+			mergedBranches[branch.Name] = merged
 			continue
 		}
 
@@ -449,11 +485,87 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		}
 
 		if shouldDelete {
-			branchesToDelete = append(branchesToDelete, branchDeletion{
-				BranchName:   branch.Name,
-				UpstreamName: branch.UpstreamBranch,
-			})
+			mergedBranches[branch.Name] = merged
 		}
+	}
+
+	if len(mergedBranches) == 0 {
+		return nil, nil
+	}
+
+	// Sort the merged branches in topological order: trunk to upstacks.
+	// This will be used to propagate merged branch information.
+	topoBranches := graph.Toposort(slices.Sorted(maps.Keys(mergedBranches)),
+		func(name string) (string, bool) {
+			base := mergedBranches[name].Base
+			// Ordering matters only if the base was also merged.
+			_, ok := mergedBranches[base]
+			return base, ok
+		})
+
+	// For each merged branch, bubble up merged downstacks
+	// to their direct upstacks.
+	//
+	// This is done in topological order (branches closer to trunk first)
+	// so that if two consecutive branches were merged,
+	// both changes are bubbled up.
+	mergedDownstacks := make(map[string][]json.RawMessage)
+	for _, name := range topoBranches {
+		branch, ok := mergedBranches[name]
+		must.Bef(ok, "topologically sorted branch %q must be merged", name)
+
+		aboves, err := svc.ListAbove(ctx, name)
+		if err != nil {
+			log.Warn("Unable to query merged branch's upstacks. Not propagating to merge history.",
+				"branch", name, "error", err)
+			continue
+		}
+
+		changeIDJSON, err := remoteRepo.Forge().MarshalChangeID(branch.ChangeID)
+		if err != nil {
+			log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
+				"branch", name, "changeID", branch.ChangeID, "error", err)
+			continue
+		}
+
+		for _, above := range aboves {
+			// MergedDownstack for the upstack of the branch being merged
+			// is the branch's own merged downstack and the branch itself.
+			var newHistory []json.RawMessage
+			newHistory = append(newHistory, mergedDownstacks[name]...)
+			newHistory = append(newHistory, changeIDJSON)
+			// Combine with anything else already in the merged downstack.
+			newHistory = append(newHistory, mergedDownstacks[above]...)
+			mergedDownstacks[above] = newHistory
+		}
+	}
+
+	// mergedDownstacks now contains the final merged downstack list
+	// for each of the upstack branches. Commit this information.
+	branchTx := store.BeginBranchTx()
+	for branch, history := range mergedDownstacks {
+		if _, ok := mergedBranches[branch]; ok {
+			history = nil // nuke history for merged branches
+		}
+		err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name:            branch,
+			MergedDownstack: &history,
+		})
+		if err != nil {
+			log.Warnf("%v: unable to update merged downstacks: %v", branch, err)
+		}
+		delete(mergedDownstacks, branch)
+	}
+	if err := branchTx.Commit(ctx, "sync: propagate merged branches"); err != nil {
+		log.Warn("Unable to propagated merged downstacks", "error", err)
+	}
+
+	branchesToDelete := make([]branchDeletion, 0, len(mergedBranches))
+	for _, branch := range mergedBranches {
+		branchesToDelete = append(branchesToDelete, branchDeletion{
+			BranchName:   branch.Name,
+			UpstreamName: branch.UpstreamBranch,
+		})
 	}
 
 	return branchesToDelete, nil
