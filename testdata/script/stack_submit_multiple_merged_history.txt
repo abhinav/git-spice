@@ -1,0 +1,125 @@
+# submit a stack of PRs with 'stack submit'.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# submit the entire stack from the middle.
+git checkout feature1
+gs stack submit --fill
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+shamhub dump comments
+cmp stdout $WORK/golden/start-comments.txt
+
+# Merge the bottom two PRs, sync, restack, and submit.
+shamhub merge alice/example 1
+shamhub merge alice/example 2
+gs rs
+stderr '#1 was merged'
+stderr '#2 was merged'
+gs sr   # stack restack
+gs ss   # stack submit
+stderr 'Updated #3'
+
+shamhub dump comments
+cmp stdout $WORK/golden/post-merge-comments.txt
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+
+-- golden/start-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/post-merge-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/ls.txt --
+    ┏━□ feature3 (#3)
+  ┏━┻□ feature2 (#2)
+┏━┻■ feature1 (#1) ◀
+main

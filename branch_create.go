@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -110,6 +111,11 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	var (
 		baseHash       git.Hash
 		restackOntoNew []string // branches to restack onto the new branch
+
+		// Downstack history for the new branch
+		// and for those restacked on top of it.
+		newMergedDownstack       *[]json.RawMessage
+		restackedMergedDownstack *[]json.RawMessage
 	)
 	if cmd.Below {
 		if cmd.Target == trunk {
@@ -128,6 +134,16 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		restackOntoNew = append(restackOntoNew, cmd.Target)
 		baseName = b.Base
 		baseHash = b.BaseHash
+
+		// If the branch is at the bottom of the stack
+		// and has a merged downstack history,
+		// transfer it to the new branch.
+		if len(b.MergedDownstack) > 0 {
+			newMergedDownstack = &b.MergedDownstack
+			restackedMergedDownstack = new([]json.RawMessage)
+		}
+
+		// TODO: Maybe this transfer should take place at submit time?
 	} else if cmd.Insert {
 		// If inserting, above the target branch,
 		// restack all its upstack branches on top of the new branch.
@@ -207,9 +223,10 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	// and rollback to the original branch and staged changes.
 	branchTx := store.BeginBranchTx()
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
-		Name:     cmd.Name,
-		Base:     baseName,
-		BaseHash: baseHash,
+		Name:            cmd.Name,
+		Base:            baseName,
+		BaseHash:        baseHash,
+		MergedDownstack: newMergedDownstack,
 	}); err != nil {
 		return fmt.Errorf("add branch %v with base %v: %w", cmd.Name, baseName, err)
 	}
@@ -220,8 +237,9 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		//
 		// We'll run a restack command after this to update the state.
 		if err := branchTx.Upsert(ctx, state.UpsertRequest{
-			Name: branch,
-			Base: cmd.Name,
+			Name:            branch,
+			Base:            cmd.Name,
+			MergedDownstack: restackedMergedDownstack,
 		}); err != nil {
 			return fmt.Errorf("update base branch of %v: %w", branch, err)
 		}

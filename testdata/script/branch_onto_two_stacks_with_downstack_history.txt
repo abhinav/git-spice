@@ -1,0 +1,255 @@
+# Tests how navigation comments behave
+# when a branch with a merged downstack
+# is restacked onto another branch with its own stack.
+
+as 'Test <test@example.com>'
+at '2024-06-22T12:24:34Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+# Now we have:
+#   main -> feature1 -> feature2 -> feature3
+exists feature1.txt feature2.txt feature3.txt
+gs ls -a
+cmp stderr $WORK/golden/ls-before-stack1.txt
+
+gs ss --fill   # stack submit
+
+shamhub dump comments
+cmp stdout $WORK/golden/submit-first-stack-comments.txt
+
+gs bco main
+git add stack2feature1.txt
+gs branch create stack2feature1 -m 'Add stack 2 feature 1'
+
+git add stack2feature2.txt
+gs branch create stack2feature2 -m 'Add stack 2 feature 2'
+
+# Now we have:
+#   main -> feature1 -> feature2 -> feature3
+#   main -> stack2feature1 -> stack2feature2
+exists stack2feature1.txt stack2feature2.txt
+gs ls -a
+cmp stderr $WORK/golden/ls-before-stack2.txt
+
+gs ss --fill   # stack submit
+
+shamhub dump comments 4 5
+cmp stdout $WORK/golden/submit-second-stack-comments.txt
+
+# Merge the bottom PRs (feature1 and stack2feature1),
+# sync everything, restack, and submit.
+gs trunk
+shamhub merge alice/example 1
+shamhub merge alice/example 4
+gs rs
+stderr '#1 was merged'
+stderr '#4 was merged'
+gs sr   # stack restack
+gs ss --fill   # stack submit
+
+shamhub dump comments 2 3 5
+cmp stdout $WORK/golden/bottom-prs-merged-comments.txt
+
+# transpose stack2feature2 onto feature2, turning it into:
+#  main -> feature2 -> {feature3, stack2feature2}
+gs bco stack2feature2
+gs branch onto feature2
+stderr 'stack2feature2: moved onto feature2'
+
+# restack everything and submit
+gs bco feature2
+gs sr
+gs ss
+
+# sanity check of the stack state
+gs ls -a
+cmp stderr $WORK/golden/ls-after.txt
+gs bco stack2feature2
+exists feature1.txt feature2.txt stack2feature1.txt stack2feature2.txt
+
+# verify comments on the PRs
+shamhub dump comments 2 3 5
+cmp stdout $WORK/golden/branch-onto-comments.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- repo/feature4.txt --
+Feature 4
+-- repo/stack2feature1.txt --
+Stack 2 feature 1
+-- repo/stack2feature2.txt --
+Stack 2 feature 2
+
+-- edit/give.txt --
+feature2
+feature3
+feature4
+
+-- edit/want.txt --
+feature4
+feature3
+feature2
+
+# Edit the order of branches by modifying the list above.
+# The branch at the bottom of the list will be merged into trunk first.
+# Branches above that will be stacked on top of it in the order they appear.
+# Branches deleted from the list will not be modified.
+#
+# Save and quit the editor to apply the changes.
+# Delete all lines in the editor to abort the operation.
+-- golden/ls-before-stack1.txt --
+    ┏━■ feature3 ◀
+  ┏━┻□ feature2
+┏━┻□ feature1
+main
+-- golden/ls-before-stack2.txt --
+    ┏━□ feature3 (#3)
+  ┏━┻□ feature2 (#2)
+┏━┻□ feature1 (#1)
+┃ ┏━■ stack2feature2 ◀
+┣━┻□ stack2feature1
+main
+-- golden/ls-after.txt --
+  ┏━□ feature3 (#3)
+  ┣━□ stack2feature2 (#5)
+┏━┻■ feature2 (#2) ◀
+main
+-- golden/submit-first-stack-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/submit-second-stack-comments.txt --
+- change: 4
+  body: |
+    This change is part of the following stack:
+
+    - #4 ◀
+        - #5
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #4
+        - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/bottom-prs-merged-comments.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #4
+        - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/branch-onto-comments.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+            - #5
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 5
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #5 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

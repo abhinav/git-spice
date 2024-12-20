@@ -67,6 +67,8 @@ type branchState struct {
 	Base     branchStateBase      `json:"base"`
 	Upstream *branchUpstreamState `json:"upstream,omitempty"`
 	Change   *branchChangeState   `json:"change,omitempty"`
+
+	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -98,6 +100,15 @@ type LookupResponse struct {
 	// UpstreamBranch is the name of the upstream branch
 	// or an empty string if the branch is not tracking an upstream branch.
 	UpstreamBranch string
+
+	// MergedDownstack holds information about branches
+	// that were previously downstack from this branch
+	// that have since been merged into trunk.
+	//
+	// MergedDownstack is in the order that the branches were merged.
+	// For example, if the stack was main -> A -> B -> C,
+	// where C is this branch, MergedDownstack will be [A, B].
+	MergedDownstack []json.RawMessage
 }
 
 // LookupBranch returns information about a tracked branch.
@@ -109,8 +120,9 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 	}
 
 	res := &LookupResponse{
-		Base:     state.Base.Name,
-		BaseHash: git.Hash(state.Base.Hash),
+		Base:            state.Base.Name,
+		BaseHash:        git.Hash(state.Base.Hash),
+		MergedDownstack: state.MergedDownstack,
 	}
 
 	if change := state.Change; change != nil {
@@ -220,6 +232,10 @@ type UpsertRequest struct {
 	// UpstreamBranch is the name of the upstream branch to track.
 	// Leave nil to leave it unchanged, or set to an empty string to clear it.
 	UpstreamBranch *string
+
+	// MergedDownstack is a list of branches that were previously
+	// downstack from this branch that have since been merged into trunk.
+	MergedDownstack *[]json.RawMessage
 }
 
 // Upsert adds or updates information about a branch.
@@ -296,6 +312,10 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 				Branch: *req.UpstreamBranch,
 			}
 		}
+	}
+
+	if req.MergedDownstack != nil {
+		state.MergedDownstack = *req.MergedDownstack
 	}
 
 	tx.states[req.Name] = state

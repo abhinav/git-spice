@@ -245,8 +245,21 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			give = changes
 
 		case "comments":
+			want := func(*ChangeComment) bool { return true }
 			if len(args) != 0 {
-				ts.Fatalf("usage: shamhub dump comments")
+				changeIDs := make(map[int]struct{})
+				for _, arg := range args {
+					n, err := strconv.Atoi(arg)
+					if err != nil {
+						ts.Fatalf("invalid change number: %s", err)
+					}
+					changeIDs[n] = struct{}{}
+				}
+
+				want = func(c *ChangeComment) bool {
+					_, ok := changeIDs[c.Change]
+					return ok
+				}
 			}
 
 			// Actual change comments have non-deterministic IDs.
@@ -264,6 +277,10 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 			var comments []changeComment
 			for _, c := range shamComments {
+				if !want(c) {
+					continue
+				}
+
 				comments = append(comments, changeComment{
 					Change: c.Change,
 					Body:   c.Body,

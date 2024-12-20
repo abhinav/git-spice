@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -44,17 +45,41 @@ func (s *Service) StackEdit(ctx context.Context, req *StackEditRequest) (*StackE
 	must.NotContainf(req.Stack, s.store.Trunk(), "cannot edit trunk")
 	must.NotBeBlankf(req.Editor, "editor is required")
 
+	// TODO: assert that req.Stack[0] has trunk as its base.
+	bottomName := req.Stack[0]
+	bottom, err := s.LookupBranch(ctx, req.Stack[0])
+	if err != nil {
+		return nil, fmt.Errorf("look up lowest branch (%q): %w", req.Stack[0], err)
+	}
+
 	branches, err := editStackFile(req.Editor, req.Stack)
 	if err != nil {
 		return nil, err
 	}
 
-	base := s.store.Trunk()
-	for _, branch := range branches {
-		if err := s.BranchOnto(ctx, &BranchOntoRequest{
+	base := bottom.Base
+	for idx, branch := range branches {
+		req := BranchOntoRequest{
 			Branch: branch,
 			Onto:   base,
-		}); err != nil {
+		}
+
+		if len(bottom.MergedDownstack) > 0 {
+			// If the bottom-most branch is changing,
+			// copy the merged downstack over to it.
+			if idx == 0 && branch != bottomName {
+				req.MergedDownstack = &bottom.MergedDownstack
+			}
+
+			// Also in that case, make sure to clear it
+			// from the new position of the original bottom branch.
+			if idx > 0 && branch == bottomName {
+				var newHistory []json.RawMessage
+				req.MergedDownstack = &newHistory
+			}
+		}
+
+		if err := s.BranchOnto(ctx, &req); err != nil {
 			return nil, fmt.Errorf("branch %v onto %v: %w", branch, base, err)
 		}
 		base = branch

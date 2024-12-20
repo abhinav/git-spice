@@ -1,0 +1,127 @@
+# 'branch create --below' on the bottom-most branch of a stack
+# with a merged downstack history transfers the history
+# to the new bottom-most branch.
+
+as 'Test <test@example.com>'
+at '2024-12-20T09:39:40Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# set up main -> feat1 -> feat2 -> feat3
+git add feat1.txt
+gs branch create feat1 -m 'Add feature 1'
+git add feat2.txt
+gs branch create feat2 -m 'Add feature 2'
+git add feat3.txt
+gs branch create feat3 -m 'Add feature 3'
+gs ss --fill
+
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+# Merge feat1 to give feat2 a merge history
+shamhub merge alice/example 1
+gs rs
+gs sr
+gs ss
+shamhub dump comments 2 3
+cmp stdout $WORK/golden/feat1-merged-comments.txt
+
+# Introduce feat4 below feat2
+gs bottom
+git add feat4.txt
+gs bc --below feat4 -m 'Add feature 4'
+gs ss --fill
+
+gs ls
+cmp stderr $WORK/golden/ls-after.txt
+
+shamhub dump comments 2 3 4
+cmp stdout $WORK/golden/final-comments.txt
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- repo/feat3.txt --
+feat 3
+-- repo/feat4.txt --
+feat 4
+-- golden/ls-before.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ls-after.txt --
+    ┏━□ feat3 (#3)
+  ┏━┻□ feat2 (#2)
+┏━┻■ feat4 (#4) ◀
+main
+-- golden/feat1-merged-comments.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/final-comments.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #4
+            - #2 ◀
+                - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #4
+            - #2
+                - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 4
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #4 ◀
+            - #2
+                - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

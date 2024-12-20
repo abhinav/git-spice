@@ -79,6 +79,16 @@ and the position of the current branch in it.
 This behavior may be changed with the $$spice.submit.navigationComment$$
 configuration key.
 
+
+!!! info "Stack history in navigation comments"
+
+    <!-- gs:version unreleased -->
+    When possible, git-spice will remember CRs as they're merged into trunk,
+    and continue to list them in navigation comments of branches
+    based on those changes.
+    However, it is unable to do this following complex stack manipulation
+    operations.
+
 ### Non-interactive submission
 
 Use the `--fill` flag (or `-c` since <!-- gs:version v0.3.0 -->)

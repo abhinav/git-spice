@@ -174,6 +174,7 @@ func updateNavigationComments(
 	idxByBranch := make(map[string]int) // branch -> index in nodes
 
 	// First pass: add nodes but don't connect.
+	f := remoteRepo.Forge()
 	for _, b := range trackedBranches {
 		if b.Change == nil {
 			continue
@@ -190,23 +191,62 @@ func updateNavigationComments(
 		})
 	}
 
-	// Second pass: connect Aboves.
+	// Second pass:
+	//
+	// - Add merged downstacks as separate nodes.
+	// - Connect Aboves if this is a base to another node.
 	for _, b := range trackedBranches {
 		nodeIdx, ok := idxByBranch[b.Name]
 		if !ok {
 			continue
 		}
 
-		baseIdx, ok := idxByBranch[b.Base]
-		if !ok {
-			continue
+		// Add nodes starting at the bottom.
+		// For each merged downstack branch:
+		//
+		//  - previous branch is the base (starting at trunk)
+		//  - current branch is added to Aboves of previous branch
+		lastDownstackIdx := -1
+		for _, crJSON := range b.MergedDownstack {
+			downstackCR, err := f.UnmarshalChangeID(crJSON)
+			if err != nil {
+				log.Warn("skiping invalid downstack change",
+					"branch", b.Name,
+					"change", string(crJSON),
+					"error", err,
+				)
+				continue
+			}
+
+			idx := len(nodes)
+			nodes = append(nodes, &stackedChange{
+				Change: downstackCR,
+				Base:   lastDownstackIdx,
+			})
+			// Inform previous node about this node.
+			if lastDownstackIdx != -1 {
+				nodes[lastDownstackIdx].Aboves = append(nodes[lastDownstackIdx].Aboves, idx)
+			}
+			lastDownstackIdx = idx
 		}
 
-		node := nodes[nodeIdx]
-		node.Base = baseIdx
+		// If this branch's base is known, it'll be in idxByBranch.
+		// Otherwise it's trunk (-1) or a merged downstack branch,
+		// in which case we'll use the last of those.
+		baseIdx := lastDownstackIdx
+		if idx, ok := idxByBranch[b.Base]; ok {
+			// Tracked base always takes precedence.
+			baseIdx = idx
+		}
 
-		base := nodes[baseIdx]
-		base.Aboves = append(base.Aboves, nodeIdx)
+		// If the base is a known node, connect it in both directions.
+		if baseIdx != -1 {
+			node := nodes[nodeIdx]
+			node.Base = baseIdx
+
+			base := nodes[baseIdx]
+			base.Aboves = append(base.Aboves, nodeIdx)
+		}
 	}
 
 	type (
