@@ -48,6 +48,28 @@ func TestMRString(t *testing.T) {
 	}).String())
 }
 
+func TestMRMarshal(t *testing.T) {
+	tests := []struct {
+		name string
+		give MR
+		want string
+	}{
+		{
+			name: "NumberOnly",
+			give: MR{Number: 42},
+			want: `{"number": 42}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := new(Forge).MarshalChangeID(&tt.give)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.want, string(got))
+		})
+	}
+}
+
 func TestMRUnmarshal(t *testing.T) {
 	tests := []struct {
 		name string
@@ -70,8 +92,7 @@ func TestMRUnmarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var pr MR
-			err := json.Unmarshal([]byte(tt.give), &pr)
+			pr, err := new(Forge).UnmarshalChangeID(json.RawMessage(tt.give))
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErr)
@@ -79,7 +100,7 @@ func TestMRUnmarshal(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, pr)
+			assert.Equal(t, &tt.want, pr)
 		})
 	}
 }
