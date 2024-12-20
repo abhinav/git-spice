@@ -75,6 +75,20 @@ func (*Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadat
 	return &md, nil
 }
 
+// MarshalChangeID serializes a PR into JSON.
+func (*Forge) MarshalChangeID(cid forge.ChangeID) (json.RawMessage, error) {
+	return json.Marshal(mustPR(cid))
+}
+
+// UnmarshalChangeID deserializes a PR from JSON.
+func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+	var pr PR
+	if err := json.Unmarshal(data, &pr); err != nil {
+		return nil, fmt.Errorf("unmarshal PR: %w", err)
+	}
+	return &pr, nil
+}
+
 // PR uniquely identifies a PR in a GitHub repository.
 // It's a valid forge.ChangeID.
 type PR struct {
