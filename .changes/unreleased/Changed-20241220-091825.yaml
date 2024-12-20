@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch delete: If multiple branches are provided, they will be deleted in a more predictable order.'
+time: 2024-12-20T09:18:25.243952-08:00

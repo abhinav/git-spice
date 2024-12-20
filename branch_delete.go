@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -162,11 +164,31 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 		}
 	}
 
+	// Branches may have relationships with each other.
+	// Sort them in topological order: [close to trunk, ..., further from trunk].
+	topoBranches := graph.Toposort(slices.Sorted(maps.Keys(branchesToDelete)),
+		func(branch string) (string, bool) {
+			info := branchesToDelete[branch]
+			// Branches affect each other's deletion order
+			// only if they're based on each other.
+			_, ok := branchesToDelete[info.Base]
+			return info.Base, ok
+		})
+
+	// Actual deletion will happen in the reverse of that order,
+	// deleting branches based on other branches first.
+	slices.Reverse(topoBranches)
+	deleteOrder := make([]*branchInfo, len(topoBranches))
+	for i, name := range topoBranches {
+		deleteOrder[i] = branchesToDelete[name]
+	}
+
 	// For each branch under consideration,
 	// if it's a tracked branch, update the upstacks from it
 	// to point to its base, or the next branch downstack
 	// if the base is also being deleted.
-	for branch, info := range branchesToDelete {
+	for _, info := range deleteOrder {
+		branch := info.Name
 		if !info.Tracked {
 			continue
 		}
@@ -214,29 +236,6 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	if err := repo.Checkout(ctx, checkoutTarget); err != nil {
 		return fmt.Errorf("checkout %v: %w", checkoutTarget, err)
 	}
-
-	// Remaining branches may have relationships with each other.
-	// We'll need to delete them in topological order: leaf to root.
-	var (
-		deleteOrder []*branchInfo
-		visit       func(string)
-	)
-	visit = func(branch string) {
-		info := branchesToDelete[branch]
-		if info == nil {
-			return // already visited or not in the list
-		}
-
-		visit(info.Base)
-		deleteOrder = append(deleteOrder, info)
-		delete(branchesToDelete, branch)
-	}
-	for branch := range branchesToDelete {
-		visit(branch)
-	}
-
-	// deleteOrder is now in [base, ..., leaf] order. Reverse it.
-	slices.Reverse(deleteOrder)
 
 	branchTx := store.BeginBranchTx()
 	var untrackedNames []string
