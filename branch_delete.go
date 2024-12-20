@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -163,38 +165,23 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	}
 
 	// Branches may have relationships with each other.
-	// Sort them in topological order: [trunk, ..., leaf].
-	var (
-		deleteOrder []*branchInfo
-		visit       func(string)
-	)
-	// TODO: delete this and use graph.Toposort
-	seen := make(map[string]struct{})
-	visit = func(branch string) {
-		if _, ok := seen[branch]; ok {
-			return
-		}
-		seen[branch] = struct{}{}
+	// Sort them in topological order: [close to trunk, ..., further from trunk].
+	topoBranches := graph.Toposort(slices.Sorted(maps.Keys(branchesToDelete)),
+		func(branch string) (string, bool) {
+			info := branchesToDelete[branch]
+			// Branches affect each other's deletion order
+			// only if they're based on each other.
+			_, ok := branchesToDelete[info.Base]
+			return info.Base, ok
+		})
 
-		info := branchesToDelete[branch]
-		if info == nil {
-			return
-		}
-
-		visit(info.Base)
-		deleteOrder = append(deleteOrder, info)
+	// Actual deletion will happen in the reverse of that order,
+	// deleting branches based on other branches first.
+	slices.Reverse(topoBranches)
+	deleteOrder := make([]*branchInfo, len(topoBranches))
+	for i, name := range topoBranches {
+		deleteOrder[i] = branchesToDelete[name]
 	}
-	for branch := range branchesToDelete {
-		visit(branch)
-	}
-	must.BeEqualf(len(branchesToDelete), len(deleteOrder),
-		"topological sort of branchesToDelete resulted in incorrect number of items")
-
-	// Deletion has to happen in reverse topological order:
-	// [leaf, ..., trunk].
-	//
-	// This way, branches based on other branches are deleted first.
-	slices.Reverse(deleteOrder)
 
 	// For each branch under consideration,
 	// if it's a tracked branch, update the upstacks from it
@@ -217,7 +204,7 @@ func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 
 		aboves, err := svc.ListAbove(ctx, branch)
 		if err != nil {
-			return fmt.Errorf("list branches above %v: %w", branch, err)
+			return fmt.Errorf("list above %v: %w", branch, err)
 		}
 
 		for _, above := range aboves {
