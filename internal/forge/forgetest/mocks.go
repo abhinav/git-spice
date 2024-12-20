@@ -275,6 +275,45 @@ func (c *MockForgeLoadAuthenticationTokenCall) DoAndReturn(f func(secret.Stash) 
 	return c
 }
 
+// MarshalChangeID mocks base method.
+func (m *MockForge) MarshalChangeID(arg0 forge.ChangeID) (json.RawMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarshalChangeID", arg0)
+	ret0, _ := ret[0].(json.RawMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarshalChangeID indicates an expected call of MarshalChangeID.
+func (mr *MockForgeMockRecorder) MarshalChangeID(arg0 any) *MockForgeMarshalChangeIDCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarshalChangeID", reflect.TypeOf((*MockForge)(nil).MarshalChangeID), arg0)
+	return &MockForgeMarshalChangeIDCall{Call: call}
+}
+
+// MockForgeMarshalChangeIDCall wrap *gomock.Call
+type MockForgeMarshalChangeIDCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockForgeMarshalChangeIDCall) Return(arg0 json.RawMessage, arg1 error) *MockForgeMarshalChangeIDCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockForgeMarshalChangeIDCall) Do(f func(forge.ChangeID) (json.RawMessage, error)) *MockForgeMarshalChangeIDCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockForgeMarshalChangeIDCall) DoAndReturn(f func(forge.ChangeID) (json.RawMessage, error)) *MockForgeMarshalChangeIDCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // MarshalChangeMetadata mocks base method.
 func (m *MockForge) MarshalChangeMetadata(arg0 forge.ChangeMetadata) (json.RawMessage, error) {
 	m.ctrl.T.Helper()
@@ -425,6 +464,45 @@ func (c *MockForgeSaveAuthenticationTokenCall) Do(f func(secret.Stash, forge.Aut
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockForgeSaveAuthenticationTokenCall) DoAndReturn(f func(secret.Stash, forge.AuthenticationToken) error) *MockForgeSaveAuthenticationTokenCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// UnmarshalChangeID mocks base method.
+func (m *MockForge) UnmarshalChangeID(arg0 json.RawMessage) (forge.ChangeID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnmarshalChangeID", arg0)
+	ret0, _ := ret[0].(forge.ChangeID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnmarshalChangeID indicates an expected call of UnmarshalChangeID.
+func (mr *MockForgeMockRecorder) UnmarshalChangeID(arg0 any) *MockForgeUnmarshalChangeIDCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnmarshalChangeID", reflect.TypeOf((*MockForge)(nil).UnmarshalChangeID), arg0)
+	return &MockForgeUnmarshalChangeIDCall{Call: call}
+}
+
+// MockForgeUnmarshalChangeIDCall wrap *gomock.Call
+type MockForgeUnmarshalChangeIDCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockForgeUnmarshalChangeIDCall) Return(arg0 forge.ChangeID, arg1 error) *MockForgeUnmarshalChangeIDCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockForgeUnmarshalChangeIDCall) Do(f func(json.RawMessage) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockForgeUnmarshalChangeIDCall) DoAndReturn(f func(json.RawMessage) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

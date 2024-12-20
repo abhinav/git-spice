@@ -30,6 +30,33 @@ func TestPRString(t *testing.T) {
 	}).String())
 }
 
+func TestPRMarshal(t *testing.T) {
+	tests := []struct {
+		name string
+		give PR
+		want string
+	}{
+		{
+			name: "NumberOnly",
+			give: PR{Number: 42},
+			want: `{"number": 42}`,
+		},
+		{
+			name: "NumberAndGQLID",
+			give: PR{Number: 42, GQLID: "foo"},
+			want: `{"number": 42, "gqlID": "foo"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := new(Forge).MarshalChangeID(&tt.give)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.want, string(got))
+		})
+	}
+}
+
 func TestPRUnmarshal(t *testing.T) {
 	tests := []struct {
 		name string
@@ -57,8 +84,7 @@ func TestPRUnmarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var pr PR
-			err := json.Unmarshal([]byte(tt.give), &pr)
+			pr, err := new(Forge).UnmarshalChangeID(json.RawMessage(tt.give))
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.wantErr)
@@ -66,7 +92,7 @@ func TestPRUnmarshal(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, pr)
+			assert.Equal(t, &tt.want, pr)
 		})
 	}
 }
