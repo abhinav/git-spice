@@ -2,6 +2,7 @@ package spice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
@@ -18,6 +19,9 @@ type BranchOntoRequest struct {
 	// Onto is the target branch to move the branch onto.
 	// Onto may be the trunk branch.
 	Onto string
+
+	// MergedDownstack for [Branch], if any.
+	MergedDownstack *[]json.RawMessage
 }
 
 // BranchOnto moves the commits of a branch onto a different base branch,
@@ -50,9 +54,10 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 
 	branchTx := s.store.BeginBranchTx()
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
-		Name:     req.Branch,
-		Base:     req.Onto,
-		BaseHash: ontoHash,
+		Name:            req.Branch,
+		Base:            req.Onto,
+		BaseHash:        ontoHash,
+		MergedDownstack: req.MergedDownstack,
 	}); err != nil {
 		return fmt.Errorf("set base of branch %s to %s: %w", req.Branch, req.Onto, err)
 	}
