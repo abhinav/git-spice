@@ -421,14 +421,14 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	wg.Wait()
 
 	type mergedBranch struct {
-		Name            string
-		Base            string
-		UpstreamBranch  string
-		MergedDownstack []json.RawMessage
-		ChangeID        forge.ChangeID
+		Name           string
+		Base           string
+		UpstreamBranch string
+		ChangeID       forge.ChangeID
 	}
 
 	mergedBranches := make(map[string]mergedBranch) // name -> branch
+	mergedDownstacks := make(map[string][]json.RawMessage)
 	for _, branch := range submittedBranches {
 		if !branch.Merged {
 			continue
@@ -436,12 +436,12 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 
 		log.Infof("%v: %v was merged", branch.Name, branch.Change)
 		mergedBranches[branch.Name] = mergedBranch{
-			Name:            branch.Name,
-			Base:            branch.Base,
-			UpstreamBranch:  branch.UpstreamBranch,
-			MergedDownstack: branch.MergedDownstack,
-			ChangeID:        branch.Change,
+			Name:           branch.Name,
+			Base:           branch.Base,
+			UpstreamBranch: branch.UpstreamBranch,
+			ChangeID:       branch.Change,
 		}
+		mergedDownstacks[branch.Name] = branch.MergedDownstack
 	}
 
 	for _, branch := range trackedBranches {
@@ -450,12 +450,12 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		}
 
 		merged := mergedBranch{
-			Name:            branch.Name,
-			Base:            branch.Base,
-			UpstreamBranch:  branch.UpstreamBranch,
-			MergedDownstack: branch.MergedDownstack,
-			ChangeID:        branch.Change,
+			Name:           branch.Name,
+			Base:           branch.Base,
+			UpstreamBranch: branch.UpstreamBranch,
+			ChangeID:       branch.Change,
 		}
+		mergedDownstacks[branch.Name] = branch.MergedDownstack
 
 		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
 			log.Infof("%v: %v was merged", branch.Name, branch.Change)
@@ -509,7 +509,6 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	// This is done in topological order (branches closer to trunk first)
 	// so that if two consecutive branches were merged,
 	// both changes are bubbled up.
-	mergedDownstacks := make(map[string][]json.RawMessage)
 	for _, name := range topoBranches {
 		branch, ok := mergedBranches[name]
 		must.Bef(ok, "topologically sorted branch %q must be merged", name)
@@ -535,6 +534,7 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 			newHistory = append(newHistory, mergedDownstacks[name]...)
 			newHistory = append(newHistory, changeIDJSON)
 			// Combine with anything else already in the merged downstack.
+			// (Normally this will be empty.)
 			newHistory = append(newHistory, mergedDownstacks[above]...)
 			mergedDownstacks[above] = newHistory
 		}
@@ -544,9 +544,11 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	// for each of the upstack branches. Commit this information.
 	branchTx := store.BeginBranchTx()
 	for branch, history := range mergedDownstacks {
-		if _, ok := mergedBranches[branch]; ok {
-			history = nil // nuke history for merged branches
-		}
+		// Note: Even branches that are getting merged
+		// (and will be deleted) are getting their history updated.
+		// This way, if [feat1 -> feat2] are both merged,
+		// but feat2 fails to be deleted because of any reason,
+		// it still remembers feat1.
 		err := branchTx.Upsert(ctx, state.UpsertRequest{
 			Name:            branch,
 			MergedDownstack: &history,
