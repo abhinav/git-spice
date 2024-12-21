@@ -10,7 +10,6 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchTrackCmd struct {
@@ -28,13 +27,15 @@ func (*branchTrackCmd) Help() string {
 	`)
 }
 
-func (cmd *branchTrackCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchTrackCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
+		var err error
 		cmd.Branch, err = repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)

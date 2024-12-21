@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchUntrackCmd struct {
@@ -27,13 +27,13 @@ func (*branchUntrackCmd) Help() string {
 	`)
 }
 
-func (cmd *branchUntrackCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, _, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchUntrackCmd) Run(
+	ctx context.Context,
+	repo *git.Repository,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
+		var err error
 		cmd.Branch, err = repo.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)

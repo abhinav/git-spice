@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
@@ -21,7 +19,6 @@ func (*authLogoutCmd) Help() string {
 }
 
 func (cmd *authLogoutCmd) Run(
-	ctx context.Context,
 	stash secret.Stash,
 	log *log.Logger,
 	f forge.Forge,

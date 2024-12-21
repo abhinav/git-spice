@@ -7,8 +7,10 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -34,12 +36,14 @@ func (*downstackEditCmd) Help() string {
 	`)
 }
 
-func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *downstackEditCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Editor == "" {
 		cmd.Editor = gitEditor(ctx, repo)
 	}
@@ -88,5 +92,5 @@ func (cmd *downstackEditCmd) Run(ctx context.Context, log *log.Logger, view ui.V
 
 	return (&branchCheckoutCmd{
 		Branch: res.Stack[len(res.Stack)-1],
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, view, repo, store, svc)
 }

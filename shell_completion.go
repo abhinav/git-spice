@@ -39,7 +39,7 @@ func (c *shellCompletionCmd) Help() string {
 	`)
 }
 
-func predictBranches(args komplete.Args) (predictions []string) {
+func predictBranches(_ komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -60,7 +60,7 @@ func predictBranches(args komplete.Args) (predictions []string) {
 	return predictions
 }
 
-func predictTrackedBranches(args komplete.Args) (predictions []string) {
+func predictTrackedBranches(_ komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -83,7 +83,7 @@ func predictTrackedBranches(args komplete.Args) (predictions []string) {
 	return branches
 }
 
-func predictRemotes(args komplete.Args) (predictions []string) {
+func predictRemotes(_ komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
@@ -128,7 +128,7 @@ func predictDirs(args komplete.Args) (predictions []string) {
 	return predictions
 }
 
-func predictForges(args komplete.Args) (predictions []string) {
+func predictForges(_ komplete.Args) (predictions []string) {
 	var ids []string
 	for f := range forge.All {
 		ids = append(ids, f.ID())

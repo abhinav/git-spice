@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -35,12 +36,12 @@ func (*branchRenameCmd) Help() string {
 	`)
 }
 
-func (cmd *branchRenameCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
-	repo, _, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchRenameCmd) Run(
+	ctx context.Context,
+	view ui.View,
+	repo *git.Repository,
+	svc *spice.Service,
+) (err error) {
 	oldName, newName := cmd.OldName, cmd.NewName
 	// For "gs branch rename <new>",
 	// we'll actually get oldName = <new> and newName = "".

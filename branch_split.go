@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -50,12 +51,14 @@ func (*branchSplitCmd) Help() string {
 	`)
 }
 
-func (cmd *branchSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchSplitCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) (err error) {
 	if cmd.Branch == "" {
 		cmd.Branch, err = repo.CurrentBranch(ctx)
 		if err != nil {

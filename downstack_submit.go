@@ -7,8 +7,11 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -32,12 +35,10 @@ func (cmd *downstackSubmitCmd) Run(
 	secretStash secret.Stash,
 	log *log.Logger,
 	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -65,7 +66,7 @@ func (cmd *downstackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        downstack,
-		}).run(ctx, session, repo, store, svc, log, view)
+		}).run(ctx, session, log, view, repo, store, svc)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", downstack, err)
 		}

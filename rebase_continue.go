@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -39,20 +40,10 @@ func (cmd *rebaseContinueCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
 	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
 	parser *kong.Kong,
 ) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, view)
-	if err != nil {
-		return err
-	}
-
 	if _, err := repo.RebaseState(ctx); err != nil {
 		if !errors.Is(err, git.ErrNoRebase) {
 			return fmt.Errorf("get rebase state: %w", err)

@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/fliptree"
 	"go.abhg.dev/gs/internal/ui/widget"
@@ -56,14 +57,14 @@ type branchLogOptions struct {
 	Log *log.Logger
 }
 
-func (cmd *branchLogCmd) run(ctx context.Context, view ui.View, opts *branchLogOptions) (err error) {
+func (cmd *branchLogCmd) run(
+	ctx context.Context,
+	opts *branchLogOptions,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) (err error) {
 	log := opts.Log
-
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		currentBranch = "" // may be detached

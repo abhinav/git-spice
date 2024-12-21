@@ -10,7 +10,6 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchCreateCmd struct {
@@ -81,15 +80,17 @@ func (*branchCreateCmd) Help() string {
 	`)
 }
 
-func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
+func (cmd *branchCreateCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) (err error) {
 	if cmd.Name == "" && !cmd.Commit {
 		return fmt.Errorf("a branch name is required with --no-commit")
 	}
 
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
 	trunk := store.Trunk()
 
 	if cmd.Target == "" {
@@ -272,7 +273,9 @@ func (cmd *branchCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	}
 
 	if cmd.Below || cmd.Insert {
-		return (&upstackRestackCmd{}).Run(ctx, log, view)
+		return (&upstackRestackCmd{}).Run(
+			ctx, log, repo, store, svc,
+		)
 	}
 
 	return nil

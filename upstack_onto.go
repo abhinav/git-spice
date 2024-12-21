@@ -39,12 +39,14 @@ func (*upstackOntoCmd) Help() string {
 	`)
 }
 
-func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *upstackOntoCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -106,5 +108,5 @@ func (cmd *upstackOntoCmd) Run(ctx context.Context, log *log.Logger, view ui.Vie
 
 	return (&upstackRestackCmd{
 		SkipStart: true, // we've already moved the current branch
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, repo, store, svc)
 }

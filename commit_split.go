@@ -7,8 +7,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type commitSplitCmd struct {
@@ -24,14 +25,13 @@ func (*commitSplitCmd) Help() string {
 	`)
 }
 
-func (cmd *commitSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) (err error) {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
+func (cmd *commitSplitCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) (err error) {
 	head, err := repo.Head(ctx)
 	if err != nil {
 		return fmt.Errorf("get HEAD: %w", err)
@@ -110,5 +110,5 @@ func (cmd *commitSplitCmd) Run(ctx context.Context, log *log.Logger, view ui.Vie
 	return (&upstackRestackCmd{
 		Branch:    currentBranch,
 		SkipStart: true,
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, repo, store, svc)
 }

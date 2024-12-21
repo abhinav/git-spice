@@ -10,7 +10,6 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchEditCmd struct{}
@@ -24,12 +23,13 @@ func (*branchEditCmd) Help() string {
 	`)
 }
 
-func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, _, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (*branchEditCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
@@ -59,5 +59,5 @@ func (*branchEditCmd) Run(ctx context.Context, log *log.Logger, view ui.View) er
 		})
 	}
 
-	return (&upstackRestackCmd{}).Run(ctx, log, view)
+	return (&upstackRestackCmd{}).Run(ctx, log, repo, store, svc)
 }

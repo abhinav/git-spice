@@ -1,0 +1,3 @@
+kind: Fixed
+body: Reduce repeated work between git-spice commands that invoke each other.
+time: 2024-12-21T15:16:00.059639-05:00

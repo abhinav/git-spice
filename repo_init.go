@@ -45,14 +45,12 @@ func (*repoInitCmd) Help() string {
 	`)
 }
 
-func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
+func (cmd *repoInitCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+) error {
 	guesser := spice.Guesser{
 		Select: func(op spice.GuessOp, opts []string, selected string) (string, error) {
 			if !ui.Interactive(view) {
@@ -86,6 +84,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) 
 	}
 
 	if cmd.Remote == "" {
+		var err error
 		cmd.Remote, err = guesser.GuessRemote(ctx, repo)
 		if err != nil {
 			return fmt.Errorf("guess remote: %w", err)
@@ -98,6 +97,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) 
 	}
 
 	if cmd.Trunk == "" {
+		var err error
 		cmd.Trunk, err = guesser.GuessTrunk(ctx, repo, cmd.Remote)
 		if err != nil {
 			return fmt.Errorf("guess trunk: %w", err)
@@ -105,7 +105,7 @@ func (cmd *repoInitCmd) Run(ctx context.Context, log *log.Logger, view ui.View) 
 	}
 	must.NotBeBlankf(cmd.Trunk, "trunk branch must have been set")
 
-	_, err = state.InitStore(ctx, state.InitStoreRequest{
+	_, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:     newRepoStorage(repo, log),
 		Trunk:  cmd.Trunk,
 		Remote: cmd.Remote,
@@ -135,25 +135,6 @@ func newRepoStorage(repo storage.GitRepository, log *log.Logger) *storage.DB {
 	}))
 }
 
-func openRepo(ctx context.Context, log *log.Logger, view ui.View) (
-	*git.Repository, *state.Store, *spice.Service, error,
-) {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("open repository: %w", err)
-	}
-
-	store, err := ensureStore(ctx, repo, log, view)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("open store: %w", err)
-	}
-
-	svc := spice.NewService(ctx, repo, store, log)
-	return repo, store, svc, nil
-}
-
 // ensureStore will open the spice data store in the provided Git repository,
 // initializing it with `gs repo init` if it hasn't already been initialized.
 //
@@ -161,7 +142,7 @@ func openRepo(ctx context.Context, log *log.Logger, view ui.View) (
 // by auto-initializing the repository at that time.
 func ensureStore(
 	ctx context.Context,
-	repo storage.GitRepository,
+	repo *git.Repository,
 	log *log.Logger,
 	view ui.View,
 ) (*state.Store, error) {
@@ -173,7 +154,7 @@ func ensureStore(
 
 	if errors.Is(err, state.ErrUninitialized) {
 		log.Info("Repository not initialized. Initializing.")
-		if err := (&repoInitCmd{}).Run(ctx, log, view); err != nil {
+		if err := (&repoInitCmd{}).Run(ctx, log, view, repo); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}
 
