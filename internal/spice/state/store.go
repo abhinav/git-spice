@@ -24,6 +24,8 @@ type DB interface {
 
 var _ DB = (*storage.DB)(nil)
 
+//go:generate mockgen -destination mocks_test.go -package state -typed . DB
+
 // Store implements storage for state tracked by gs.
 type Store struct {
 	db  DB
@@ -105,11 +107,23 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		}
 	}
 
-	info := repoInfo{
-		Trunk:  req.Trunk,
-		Remote: req.Remote,
+	update := storage.UpdateRequest{
+		Sets: []storage.SetRequest{
+			{
+				Key: _repoJSON,
+				Value: repoInfo{
+					Trunk:  req.Trunk,
+					Remote: req.Remote,
+				},
+			},
+			{
+				Key:   _versionFile,
+				Value: LatestVersion,
+			},
+		},
+		Message: "initialize store",
 	}
-	if err := db.Set(ctx, _repoJSON, info, "initialize store"); err != nil {
+	if err := db.Update(ctx, update); err != nil {
 		return nil, fmt.Errorf("put repo state: %w", err)
 	}
 
@@ -163,6 +177,10 @@ var ErrUninitialized = errors.New("store not initialized")
 func OpenStore(ctx context.Context, db DB, logger *log.Logger) (*Store, error) {
 	if logger == nil {
 		logger = log.New(io.Discard)
+	}
+
+	if err := checkVersion(ctx, db); err != nil {
+		return nil, fmt.Errorf("check store layout: %w", err)
 	}
 
 	var info repoInfo

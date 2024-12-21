@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  state: Track version of the state store layout in use.
+  This should be a no-op for users, but it guards against corruption
+  in case of future changes to the layout.
+time: 2024-12-20T19:46:31.685098-05:00
