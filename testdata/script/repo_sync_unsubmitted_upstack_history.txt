@@ -1,0 +1,71 @@
+# Merge history propagation when a branch is submitted and merged,
+# while its upstacks are still unsubmitted.
+
+as 'Test <test@example.com>'
+at '2024-12-21T12:24:48Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# set up main -> feat1 -> feat2
+git add feat1.txt
+gs branch create feat1 -m 'Add feature 1'
+git add feat2.txt
+gs branch create feat2 -m 'Add feature 2'
+
+# Submit and merge feat1
+gs bottom
+gs bs --fill
+stderr 'Created #1'
+shamhub merge alice/example 1
+gs rs
+gs sr
+
+# Submit feat2
+gs bco feat2
+gs ss --fill
+stderr 'Created #2'
+
+gs ls
+cmp stderr $WORK/golden/ls-after.txt
+
+shamhub dump comments
+cmp stdout $WORK/golden/final-comments.txt
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- golden/ls-after.txt --
+┏━■ feat2 (#2) ◀
+main
+-- golden/final-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
