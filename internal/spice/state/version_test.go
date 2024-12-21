@@ -13,7 +13,7 @@ import (
 func TestLoadVersion(t *testing.T) {
 	tests := []struct {
 		name  string
-		files map[string]string
+		files storage.MapBackend
 		want  Version
 	}{
 		{
@@ -22,15 +22,15 @@ func TestLoadVersion(t *testing.T) {
 		},
 		{
 			name: "ExplicitV1",
-			files: map[string]string{
-				"version": "1",
+			files: storage.MapBackend{
+				"version": []byte("1"),
 			},
 			want: VersionOne,
 		},
 		{
 			name: "FutureVersion",
-			files: map[string]string{
-				"version": "42",
+			files: storage.MapBackend{
+				"version": []byte("42"),
 			},
 			want: Version(42),
 		},
@@ -38,16 +38,7 @@ func TestLoadVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mem := storage.NewMemBackend()
-			mem.AddFiles(func(yield func(string, []byte) bool) {
-				for name, body := range tt.files {
-					if !yield(name, []byte(body)) {
-						return
-					}
-				}
-			})
-
-			db := storage.NewDB(mem)
+			db := storage.NewDB(tt.files)
 			got, err := loadVersion(context.Background(), db)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
@@ -58,20 +49,20 @@ func TestLoadVersion(t *testing.T) {
 func TestCheckVersion(t *testing.T) {
 	tests := []struct {
 		name  string
-		files map[string]string
+		files storage.MapBackend
 		err   bool
 	}{
 		{name: "ImplicitV1"},
 		{
 			name: "ExplicitV1",
-			files: map[string]string{
-				"version": "1",
+			files: storage.MapBackend{
+				"version": []byte("1"),
 			},
 		},
 		{
 			name: "UnsupportedVersion",
-			files: map[string]string{
-				"version": "500",
+			files: storage.MapBackend{
+				"version": []byte("500"),
 			},
 			err: true,
 		},
@@ -79,16 +70,7 @@ func TestCheckVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mem := storage.NewMemBackend()
-			mem.AddFiles(func(yield func(string, []byte) bool) {
-				for name, body := range tt.files {
-					if !yield(name, []byte(body)) {
-						return
-					}
-				}
-			})
-
-			db := storage.NewDB(mem)
+			db := storage.NewDB(tt.files)
 			err := checkVersion(context.Background(), db)
 			if tt.err {
 				require.Error(t, err)
