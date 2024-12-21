@@ -44,7 +44,7 @@ func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sh.mu.RLock()
-	merged := make([]bool, len(sh.changes))
+	merged := make([]bool, len(changeNumToIdx))
 	for _, c := range sh.changes {
 		if c.Owner == owner && c.Repo == repo {
 			idx, ok := changeNumToIdx[c.Number]
