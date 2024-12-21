@@ -3,7 +3,6 @@ package state_test
 import (
 	"context"
 	"encoding/json"
-	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,7 @@ import (
 
 func TestStore(t *testing.T) {
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 
 	_, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
@@ -128,10 +127,9 @@ func TestStore(t *testing.T) {
 
 func TestOpenStore_errors(t *testing.T) {
 	t.Run("VersionMismatch", func(t *testing.T) {
-		mem := storage.NewMemBackend()
-		mem.AddFiles(maps.All(map[string][]byte{
+		mem := storage.MapBackend{
 			"version": []byte("500"),
-		}))
+		}
 
 		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
 		require.Error(t, err)
@@ -140,17 +138,16 @@ func TestOpenStore_errors(t *testing.T) {
 	})
 
 	t.Run("NotInitialized", func(t *testing.T) {
-		mem := storage.NewMemBackend()
+		mem := make(storage.MapBackend)
 		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, state.ErrUninitialized)
 	})
 
 	t.Run("CorruptRepo/Unparseable", func(t *testing.T) {
-		mem := storage.NewMemBackend()
-		mem.AddFiles(maps.All(map[string][]byte{
+		mem := storage.MapBackend{
 			"repo": []byte(`{`),
-		}))
+		}
 
 		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
 		require.Error(t, err)
@@ -158,10 +155,9 @@ func TestOpenStore_errors(t *testing.T) {
 	})
 
 	t.Run("CorruptRepo/Incomplete", func(t *testing.T) {
-		mem := storage.NewMemBackend()
-		mem.AddFiles(maps.All(map[string][]byte{
+		mem := storage.MapBackend{
 			"repo": []byte(`{}`),
-		}))
+		}
 
 		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
 		require.Error(t, err)

@@ -124,7 +124,7 @@ func TestBranchStateUnmarshal(t *testing.T) {
 
 func TestBranchTxUpsertErrors(t *testing.T) {
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
@@ -232,7 +232,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 
 func TestBranchTxDelete(t *testing.T) {
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
@@ -299,7 +299,7 @@ func TestBranchTxDelete(t *testing.T) {
 
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
@@ -342,7 +342,7 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 
 func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
@@ -399,7 +399,7 @@ func testBranchStateUncorruptible(t *rapid.T) {
 
 	trunk := branchNameGen.Draw(t, "trunk")
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
 		Trunk: trunk,

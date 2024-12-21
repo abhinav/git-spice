@@ -116,7 +116,7 @@ func newMemoryStore(t *testing.T) *state.Store {
 	t.Helper()
 
 	ctx := context.Background()
-	db := storage.NewDB(storage.NewMemBackend())
+	db := storage.NewDB(make(storage.MapBackend))
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",

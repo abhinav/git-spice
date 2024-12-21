@@ -13,8 +13,8 @@ import (
 )
 
 func TestStorageBackend(t *testing.T) {
-	t.Run("Memory", func(t *testing.T) {
-		testStorageBackend(t, NewMemBackend())
+	t.Run("MapSync", func(t *testing.T) {
+		testStorageBackend(t, SyncBackend(make(MapBackend)))
 	})
 
 	t.Run("Git", func(t *testing.T) {
