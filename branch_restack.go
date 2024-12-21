@@ -10,7 +10,6 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchRestackCmd struct {
@@ -25,12 +24,12 @@ func (*branchRestackCmd) Help() string {
 	`)
 }
 
-func (cmd *branchRestackCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, _, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchRestackCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {

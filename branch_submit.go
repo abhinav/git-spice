@@ -100,14 +100,12 @@ func (cmd *branchSubmitCmd) Run(
 	secretStash secret.Stash,
 	log *log.Logger,
 	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
 	session := newSubmitSession(repo, store, secretStash, view, log)
-	if err := cmd.run(ctx, session, repo, store, svc, log, view); err != nil {
+	if err := cmd.run(ctx, session, log, view, repo, store, svc); err != nil {
 		return err
 	}
 
@@ -128,11 +126,11 @@ func (cmd *branchSubmitCmd) Run(
 func (cmd *branchSubmitCmd) run(
 	ctx context.Context,
 	session *submitSession,
+	log *log.Logger,
+	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
-	log *log.Logger,
-	view ui.View,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)

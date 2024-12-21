@@ -22,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/komplete"
 )
@@ -245,7 +246,7 @@ type mainCmd struct {
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }
 
-func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
+func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *log.Logger) error {
 	if cmd.Globals.Verbose {
 		logger.SetLevel(log.DebugLevel)
 	}
@@ -255,6 +256,35 @@ func (cmd *mainCmd) AfterApply(kctx *kong.Context, logger *log.Logger) error {
 		return fmt.Errorf("build view: %w", err)
 	}
 	kctx.BindTo(view, (*ui.View)(nil))
+
+	// TODO: bind interfaces, not values
+
+	err = kctx.BindToProvider(func() (*git.Repository, error) {
+		repo, err := git.Open(ctx, ".", git.OpenOptions{
+			Log: logger,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("open repository: %w", err)
+		}
+		return repo, nil
+	})
+	if err != nil {
+		return fmt.Errorf("bind git repository: %w", err)
+	}
+
+	err = kctx.BindToProvider(func(repo *git.Repository) (*state.Store, error) {
+		return ensureStore(ctx, repo, logger, view)
+	})
+	if err != nil {
+		return fmt.Errorf("bind state store: %w", err)
+	}
+
+	err = kctx.BindToProvider(func(repo *git.Repository, store *state.Store) (*spice.Service, error) {
+		return spice.NewService(ctx, repo, store, logger), nil
+	})
+	if err != nil {
+		return fmt.Errorf("bind spice service: %w", err)
+	}
 
 	return nil
 }

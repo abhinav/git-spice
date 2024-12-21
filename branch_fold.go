@@ -27,12 +27,14 @@ func (*branchFoldCmd) Help() string {
 	`)
 }
 
-func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchFoldCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
 		if err != nil {
@@ -103,7 +105,9 @@ func (cmd *branchFoldCmd) Run(ctx context.Context, log *log.Logger, view ui.View
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(ctx, log, view); err != nil {
+	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(
+		ctx, log, view, repo, store, svc,
+	); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 

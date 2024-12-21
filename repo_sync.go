@@ -43,12 +43,10 @@ func (cmd *repoSyncCmd) Run(
 	secretStash secret.Stash,
 	log *log.Logger,
 	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
 ) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
 	remote, err := ensureRemote(ctx, repo, store, log, view)
 	// TODO: move ensure remote to Service
 	if err != nil {
@@ -229,12 +227,14 @@ func (cmd *repoSyncCmd) Run(
 			return fmt.Errorf("find merged CRs: %w", err)
 		}
 	}
-	if err := cmd.deleteBranches(ctx, view, log, repo, remote, branchesToDelete); err != nil {
+	if err := cmd.deleteBranches(
+		ctx, view, log, remote, branchesToDelete, repo, store, svc,
+	); err != nil {
 		return err
 	}
 
 	if cmd.Restack {
-		return (&stackRestackCmd{}).Run(ctx, log, view)
+		return (&stackRestackCmd{}).Run(ctx, log, repo, store, svc)
 	}
 
 	return nil
@@ -582,9 +582,11 @@ func (cmd *repoSyncCmd) deleteBranches(
 	ctx context.Context,
 	view ui.View,
 	log *log.Logger,
-	repo *git.Repository,
 	remote string,
 	branchesToDelete []branchDeletion,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
 ) error {
 	if len(branchesToDelete) == 0 {
 		return nil
@@ -598,7 +600,7 @@ func (cmd *repoSyncCmd) deleteBranches(
 	err := (&branchDeleteCmd{
 		Branches: branchNames,
 		Force:    true,
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, view, repo, store, svc)
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)
 	}

@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -21,12 +24,14 @@ func (*bottomCmd) Help() string {
 	`)
 }
 
-func (cmd *bottomCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *bottomCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	current, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
@@ -45,5 +50,5 @@ func (cmd *bottomCmd) Run(ctx context.Context, log *log.Logger, view ui.View) er
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          bottom,
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, view, repo, store, svc)
 }

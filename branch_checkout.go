@@ -33,12 +33,14 @@ func (*branchCheckoutCmd) Help() string {
 	`)
 }
 
-func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchCheckoutCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Branch == "" {
 		if !ui.Interactive(view) {
 			return fmt.Errorf("cannot proceed without a branch name: %w", errNoPrompt)
@@ -88,7 +90,7 @@ func (cmd *branchCheckoutCmd) Run(ctx context.Context, log *log.Logger, view ui.
 				if track {
 					err := (&branchTrackCmd{
 						Branch: cmd.Branch,
-					}).Run(ctx, log, view)
+					}).Run(ctx, log, repo, store, svc)
 					if err != nil {
 						return fmt.Errorf("track branch: %w", err)
 					}

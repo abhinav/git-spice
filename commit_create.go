@@ -7,8 +7,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type commitCreateCmd struct {
@@ -27,14 +28,13 @@ func (*commitCreateCmd) Help() string {
 	`)
 }
 
-func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, err := git.Open(ctx, ".", git.OpenOptions{
-		Log: log,
-	})
-	if err != nil {
-		return fmt.Errorf("open repository: %w", err)
-	}
-
+func (cmd *commitCreateCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if err := repo.Commit(ctx, git.CommitRequest{
 		Message:  cmd.Message,
 		All:      cmd.All,
@@ -62,5 +62,5 @@ func (cmd *commitCreateCmd) Run(ctx context.Context, log *log.Logger, view ui.Vi
 	return (&upstackRestackCmd{
 		Branch:    currentBranch,
 		SkipStart: true,
-	}).Run(ctx, log, view)
+	}).Run(ctx, log, repo, store, svc)
 }

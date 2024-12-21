@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -17,7 +16,6 @@ func (*authStatusCmd) Help() string {
 }
 
 func (cmd *authStatusCmd) Run(
-	ctx context.Context,
 	stash secret.Stash,
 	log *log.Logger,
 	f forge.Forge,

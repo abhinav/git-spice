@@ -33,12 +33,14 @@ func (*branchDeleteCmd) Help() string {
 	`)
 }
 
-func (cmd *branchDeleteCmd) Run(ctx context.Context, log *log.Logger, view ui.View) error {
-	repo, store, svc, err := openRepo(ctx, log, view)
-	if err != nil {
-		return err
-	}
-
+func (cmd *branchDeleteCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if len(cmd.Branches) == 0 {
 		// If a branch name is not given, prompt for one;
 		// assuming we're in interactive mode.
