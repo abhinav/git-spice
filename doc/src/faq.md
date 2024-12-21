@@ -7,6 +7,12 @@ description: >-
 
 # Frequently Asked Questions
 
+![](img/logo.png){ align=right width=100px }
+
+## What's with the logo?
+
+> *[Xe] who controls the spice controls the universe*
+
 ## What is stacking?
 
 Stacking refers to the practice of creating interdependent branches
