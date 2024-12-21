@@ -1,0 +1,71 @@
+# various submit commands with the --update-only flag
+
+as 'Test <test@example.com>'
+at '2024-12-20T21:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# start with stack: main -> feat1 -> feat2
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+
+# submit: nothing to do
+gs ss --update-only --fill
+stderr 'feat1: Skipping unsubmitted branch'
+stderr 'feat2: Skipping unsubmitted branch'
+gs down
+gs bs --update-only --fill
+stderr 'feat1: Skipping unsubmitted branch'
+
+# submit feat1
+gs bco feat1
+gs bs --fill
+stderr 'Created #1'
+
+# modify both branches
+cp $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+gs cc -m 'update feat1'
+gs up
+cp $WORK/extra/feat2-new.txt feat2.txt
+git add feat2.txt
+gs cc -m 'update feat2'
+
+# submit: only feat1 is submitted
+gs downstack submit --update-only
+stderr 'Updated #1'
+stderr 'feat2: Skipping unsubmitted branch'
+
+gs ll
+cmp stderr $WORK/golden/ll-after.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- extra/feat1-new.txt --
+feature 1 new
+-- extra/feat2-new.txt --
+feature 2 new
+-- golden/ll-after.txt --
+  ┏━■ feat2 ◀
+  ┃   ec789dc update feat2 (now)
+  ┃   f76d5f5 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    f879555 update feat1 (now)
+┃    4ea4a27 feat1 (now)
+main
