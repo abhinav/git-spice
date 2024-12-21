@@ -3,6 +3,7 @@ package state_test
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,5 +123,48 @@ func TestStore(t *testing.T) {
 		assert.Equal(t, "main", res.Base)
 		assert.Equal(t, "abcdef", string(res.BaseHash))
 		assert.Equal(t, "remoteBranch", res.UpstreamBranch)
+	})
+}
+
+func TestOpenStore_errors(t *testing.T) {
+	t.Run("VersionMismatch", func(t *testing.T) {
+		mem := storage.NewMemBackend()
+		mem.AddFiles(maps.All(map[string][]byte{
+			"version": []byte("500"),
+		}))
+
+		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "check store layout:")
+		assert.ErrorAs(t, err, new(*state.VersionMismatchError))
+	})
+
+	t.Run("NotInitialized", func(t *testing.T) {
+		mem := storage.NewMemBackend()
+		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, state.ErrUninitialized)
+	})
+
+	t.Run("CorruptRepo/Unparseable", func(t *testing.T) {
+		mem := storage.NewMemBackend()
+		mem.AddFiles(maps.All(map[string][]byte{
+			"repo": []byte(`{`),
+		}))
+
+		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "get repo state:")
+	})
+
+	t.Run("CorruptRepo/Incomplete", func(t *testing.T) {
+		mem := storage.NewMemBackend()
+		mem.AddFiles(maps.All(map[string][]byte{
+			"repo": []byte(`{}`),
+		}))
+
+		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "corrupt state:")
 	})
 }

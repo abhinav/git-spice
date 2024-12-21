@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"iter"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -21,6 +23,17 @@ var _ Backend = (*MemBackend)(nil)
 func NewMemBackend() *MemBackend {
 	return &MemBackend{
 		items: make(map[string][]byte),
+	}
+}
+
+// AddFiles adds the given files to the memory backend,
+// overwriting similarly named files.
+func (m *MemBackend) AddFiles(files iter.Seq2[string, []byte]) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for name, body := range files {
+		m.items[name] = slices.Clone(body)
 	}
 }
 
