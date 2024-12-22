@@ -16,11 +16,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
-	"go.abhg.dev/gs/internal/termtest"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/uitest"
 	"golang.org/x/oauth2"
 )
 
@@ -189,17 +188,9 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 }
 
 func TestSelectAuthenticator(t *testing.T) {
-	stdin, stdinW := io.Pipe()
-	defer func() {
-		assert.NoError(t, stdinW.Close())
-		assert.NoError(t, stdin.Close())
-	}()
-
-	term := midterm.NewAutoResizingTerminal()
-	view := &ui.TerminalView{
-		R: stdin,
-		W: term,
-	}
+	view := uitest.NewEmulatorView(&uitest.EmulatorViewOptions{
+		Rows: 40,
+	})
 
 	type result struct {
 		auth authenticator
@@ -218,16 +209,16 @@ func TestSelectAuthenticator(t *testing.T) {
 	// TODO: Generalize termtest and use that here
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		assert.Contains(t,
-			termtest.Screen(term.Screen),
+			view.Screen(),
 			"Select an authentication method",
 		)
 	}, time.Second, 50*time.Millisecond)
 
 	// Go through all options, roll back around to the first, and select it
 	for range _authenticationMethods {
-		_, _ = io.WriteString(stdinW, "\x1b[B") // Down arrow
+		require.NoError(t, view.FeedKeys("\x1b[B")) // Down arrow
 	}
-	_, _ = io.WriteString(stdinW, "\r") // Enter
+	require.NoError(t, view.FeedKeys("\r")) // Enter
 
 	select {
 	case res, ok := <-resultc:
@@ -244,17 +235,7 @@ func TestSelectAuthenticator(t *testing.T) {
 }
 
 func TestPATAuthenticator(t *testing.T) {
-	stdin, stdinW := io.Pipe()
-	defer func() {
-		assert.NoError(t, stdinW.Close())
-		assert.NoError(t, stdin.Close())
-	}()
-
-	term := midterm.NewAutoResizingTerminal()
-	view := &ui.TerminalView{
-		R: stdin,
-		W: term,
-	}
+	view := uitest.NewEmulatorView(nil)
 
 	type result struct {
 		tok forge.AuthenticationToken
@@ -271,12 +252,12 @@ func TestPATAuthenticator(t *testing.T) {
 	// TODO: Generalize termtest and use that here
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		assert.Contains(t,
-			termtest.Screen(term.Screen),
+			view.Screen(),
 			"Enter Personal Access Token",
 		)
 	}, time.Second, 50*time.Millisecond)
 
-	_, _ = io.WriteString(stdinW, "token\r")
+	require.NoError(t, view.FeedKeys("token\r"))
 
 	select {
 	case res, ok := <-resultc:
