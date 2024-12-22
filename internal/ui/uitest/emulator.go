@@ -2,10 +2,11 @@ package uitest
 
 import (
 	"cmp"
+	"errors"
 	"io"
-	"strings"
 	"sync"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -13,9 +14,14 @@ import (
 // EmulatorView is a [ui.InteractiveView] that renders to an in-memory
 // terminal emulator, and allows interacting with it programmatically.
 type EmulatorView struct {
-	real  *ui.TerminalView
-	stdin io.WriteCloser
-	term  *lockedTerminal
+	logf func(string, ...any)
+
+	// TODO: v2
+	// renderer tea.Renderer
+
+	mu     sync.RWMutex
+	term   *midterm.Terminal
+	stdinW io.Writer // nil if not running a prompt
 }
 
 var _ ui.InteractiveView = (*EmulatorView)(nil)
@@ -29,6 +35,9 @@ type EmulatorViewOptions struct {
 	// NoAutoResize disables automatic resizing of the terminal
 	// as output is written to it.
 	NoAutoResize bool
+
+	// Log function to use, if any.
+	Logf func(string, ...any)
 }
 
 // NewEmulatorView creates a new [EmulatorView] with the given dimensions.
@@ -42,72 +51,78 @@ func NewEmulatorView(opts *EmulatorViewOptions) *EmulatorView {
 	)
 	term.AutoResizeX = !opts.NoAutoResize
 	term.AutoResizeY = !opts.NoAutoResize
-	lockedTerm := newLockedTerminal(term)
 
-	stdinR, stdinW := io.Pipe()
+	logf := opts.Logf
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
 
 	return &EmulatorView{
-		real: &ui.TerminalView{
-			R: stdinR,
-			W: lockedTerm,
-		},
-		term:  lockedTerm,
-		stdin: stdinW,
+		logf: logf,
+		term: term,
 	}
 }
 
 // Prompt prompts the user for input with the given interactive fields.
 func (e *EmulatorView) Prompt(fs ...ui.Field) error {
-	return e.real.Prompt(fs...)
+	stdinR, stdinW := io.Pipe()
+	defer func() {
+		_ = stdinR.Close()
+		e.mu.Lock()
+		e.stdinW = nil
+		e.mu.Unlock()
+	}()
+
+	e.mu.Lock()
+	w, h := e.term.Width, e.term.Height
+	e.stdinW = stdinW
+	e.mu.Unlock()
+
+	return ui.NewForm(fs...).Run(&ui.FormRunOptions{
+		Input:  stdinR,
+		Output: e,
+		// In-memory terminal emulator cannot be queried for size,
+		// so inject this manually.
+		SendMsg: tea.WindowSizeMsg{
+			Width:  w,
+			Height: h,
+		},
+		WithoutSignals: true,
+	})
 }
 
 // Write posts messages to the user.
 func (e *EmulatorView) Write(p []byte) (n int, err error) {
-	return e.real.Write(p)
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.term.Write(p)
 }
 
 // Close closes the EmulatorView and frees its resources.
 func (e *EmulatorView) Close() error {
-	return e.stdin.Close()
-}
-
-// Rows returns a list of rows in the terminal emulator.
-func (e *EmulatorView) Rows() []string {
-	return e.term.Rows()
-}
-
-// Screen returns a string representation of the terminal emulator.
-func (e *EmulatorView) Screen() string {
-	return e.term.Screen()
+	return nil // TODO: post EOT?
 }
 
 // FeedKeys feeds the given keys to the terminal emulator.
 func (e *EmulatorView) FeedKeys(keys string) error {
-	_, err := io.WriteString(e.stdin, keys)
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.stdinW == nil {
+		return errors.New("no prompt to fill")
+	}
+
+	_, err := io.WriteString(e.stdinW, keys)
 	return err
 }
 
-type lockedTerminal struct {
-	mu   sync.RWMutex
-	term *midterm.Terminal
-}
-
-func newLockedTerminal(term *midterm.Terminal) *lockedTerminal {
-	return &lockedTerminal{term: term}
-}
-
-func (l *lockedTerminal) Write(p []byte) (n int, err error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.term.Write(p)
-}
-
-func (l *lockedTerminal) Rows() []string {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+// Rows returns a list of rows in the terminal emulator.
+func (e *EmulatorView) Rows() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
 	var lines []string
-	for _, row := range l.term.Content {
+	for _, row := range e.term.Content {
 		row = trimRightWS(row)
 		lines = append(lines, string(row))
 	}
@@ -121,20 +136,6 @@ func (l *lockedTerminal) Rows() []string {
 	}
 
 	return lines
-}
-
-func (l *lockedTerminal) Screen() string {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-
-	var s strings.Builder
-	for _, row := range l.term.Content {
-		row = trimRightWS(row)
-		s.WriteString(string(row))
-		s.WriteRune('\n')
-	}
-
-	return strings.TrimRight(s.String(), "\n")
 }
 
 func trimRightWS(rs []rune) []rune {

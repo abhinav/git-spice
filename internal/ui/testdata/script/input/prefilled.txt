@@ -1,0 +1,22 @@
+init
+
+await Please answer
+snapshot
+cmp stdout prompt
+
+feed -r 3 <BS>
+feed bar
+await
+snapshot
+cmp stdout corrected
+
+feed <Enter>
+
+-- give --
+foo
+-- want --
+bar
+-- prompt --
+Please answer: foo
+-- corrected --
+Please answer: bar

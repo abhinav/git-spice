@@ -1,0 +1,91 @@
+init
+
+await Select an authentication method
+snapshot
+cmp stdout prompt
+
+# go through the list of options and roll back
+feed -r 3 <Down>
+await
+snapshot
+cmp stdout down
+
+feed -r 2 <Down>
+await
+snapshot
+cmp stdout prompt
+
+feed <Enter>
+
+-- want_type --
+*github.DeviceFlowAuthenticator
+-- prompt --
+Select an authentication method:
+▶ OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  OAuth: Public repositories only
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to public repositories.
+
+  GitHub App
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to repositories where the git-spice GitHub
+  App is installed explicitly.
+  Use https://github.com/apps/git-spice to install the App on repositories.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  Personal Access Token
+  Enter a classic or fine-grained Personal Access Token generated from
+  https://github.com/settings/tokens.
+  Classic tokens need at least one of the following scopes: repo or
+  public_repo.
+  Fine-grained tokens need read/write access to Repository Contents and Pull
+  requests.
+  You can use this method if you do not have the ability to install a GitHub
+  or OAuth App on your repositories.
+
+  GitHub CLI
+  Re-use an existing GitHub CLI (https://cli.github.com) session.
+  You must be logged into gh with 'gh auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+-- down --
+Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  OAuth: Public repositories only
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to public repositories.
+
+  GitHub App
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to repositories where the git-spice GitHub
+  App is installed explicitly.
+  Use https://github.com/apps/git-spice to install the App on repositories.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a classic or fine-grained Personal Access Token generated from
+  https://github.com/settings/tokens.
+  Classic tokens need at least one of the following scopes: repo or
+  public_repo.
+  Fine-grained tokens need read/write access to Repository Contents and Pull
+  requests.
+  You can use this method if you do not have the ability to install a GitHub
+  or OAuth App on your repositories.
+
+  GitHub CLI
+  Re-use an existing GitHub CLI (https://cli.github.com) session.
+  You must be logged into gh with 'gh auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.

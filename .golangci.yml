@@ -84,3 +84,5 @@ issues:
     - linters: [revive]
       text: 'empty-block: this block is empty, you can remove it'
 
+    - linters: [musttag]
+      path: _test.go$

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -31,8 +30,8 @@ import (
 // using recorded fixtures.
 
 var (
-	_update   = flag.Bool("update", false, "update test fixtures")
-	_fixtures = fixturetest.Config{Update: _update}
+	_update   = gitlab.UpdateFixtures
+	_fixtures = fixturetest.Config{Update: gitlab.UpdateFixtures}
 )
 
 // To avoid looking this up for every test that needs the repo ID,

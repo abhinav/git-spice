@@ -1,0 +1,46 @@
+init
+
+await Select a commit
+
+snapshot
+cmp stdout prompt
+
+feed <tab> <down>
+await
+snapshot
+cmp stdout selected
+
+feed <enter>
+
+-- commits --
+[
+  {
+    "shortHash": "abc",
+    "subject": "feat: add feature",
+    "authorDate": "2024-12-10T22:26:23Z"
+  },
+  {
+    "shortHash": "def",
+    "subject": "refac: unrelated change",
+    "authorDate": "2024-12-10T22:33:44Z"
+  },
+  {
+    "shortHash": "ghi",
+    "subject": "feat: add another feature",
+    "authorDate": "2024-12-10T22:45:44Z"
+  }
+]
+-- prompt --
+Select a commit:
+▶   abc feat: add feature (11 hours ago)
+    def refac: unrelated change (11 hours ago)
+  ■ ghi feat: add another feature (11 hours ago)
+  Done
+-- selected --
+Select a commit:
+  □ abc feat: add feature (11 hours ago)
+    def refac: unrelated change (11 hours ago)
+  ■ ghi feat: add another feature (11 hours ago)
+▶ Done
+-- want --
+["abc"]

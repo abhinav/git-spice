@@ -1,0 +1,22 @@
+init
+
+await Please answer
+snapshot
+cmp stdout prompt
+
+feed foo <Enter>
+await
+snapshot
+cmp stdout prompt_invalid
+
+feed bar <Enter>
+
+-- want --
+foobar
+-- invalid --
+foo
+-- prompt --
+Please answer:
+-- prompt_invalid --
+Please answer: foo
+invalid value

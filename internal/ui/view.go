@@ -66,5 +66,8 @@ func (tv *TerminalView) Write(p []byte) (int, error) {
 
 // Prompt prompts the user for input with the given interactive fields.
 func (tv *TerminalView) Prompt(fields ...Field) error {
-	return NewForm(fields...).Run(tv)
+	return NewForm(fields...).Run(&FormRunOptions{
+		Input:  tv.R,
+		Output: tv.W,
+	})
 }

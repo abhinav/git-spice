@@ -1,0 +1,45 @@
+init
+
+await Select a commit
+
+snapshot
+cmp stdout prompt
+
+feed <enter>
+await
+snapshot
+cmp stdout selected
+
+feed <enter>
+
+-- commits --
+[
+  {
+    "shortHash": "abcdef",
+    "subject": "feat: add feature",
+    "authorDate": "2024-12-10T22:26:23Z"
+  },
+  {
+    "shortHash": "ghijkl",
+    "subject": "refac: unrelated change",
+    "authorDate": "2024-12-10T22:33:44Z"
+  }
+]
+-- head --
+main
+-- desc --
+Select which commits to introduce splits at.
+-- want --
+["abcdef"]
+-- prompt --
+Select a commit:
+▶   abcdef feat: add feature (11 hours ago)
+  ■ ghijkl refac: unrelated change (11 hours ago) [main]
+  Done
+Select which commits to introduce splits at.
+-- selected --
+Select a commit:
+  □ abcdef feat: add feature (11 hours ago)
+  ■ ghijkl refac: unrelated change (11 hours ago) [main]
+▶ Done
+Select which commits to introduce splits at.

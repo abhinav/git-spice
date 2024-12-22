@@ -1,0 +1,71 @@
+init
+
+await Select something
+snapshot
+cmp stdout prompt
+
+feed -r 10 <down>
+await
+snapshot
+cmp stdout middle
+
+# wrap around
+feed -r 20 <up>
+await
+snapshot
+cmp stdout bottom
+
+feed foo
+await
+snapshot
+cmp stdout no_match
+
+feed -r 3 <BS>
+feed x <Enter>
+
+-- give --
+[
+  "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+  "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
+]
+-- want --
+"x"
+-- visible --
+4
+-- desc --
+Select something
+-- prompt --
+Pick a value:
+
+▶ a
+  b
+  c
+  d
+  ▼▼▼
+
+Select something
+-- middle --
+Pick a value:
+  ▲▲▲
+  h
+  i
+  j
+▶ k
+  ▼▼▼
+
+Select something
+-- bottom --
+Pick a value:
+  ▲▲▲
+▶ q
+  r
+  s
+  t
+  ▼▼▼
+
+Select something
+-- no_match --
+Pick a value:
+
+no matches for: foo
+Select something

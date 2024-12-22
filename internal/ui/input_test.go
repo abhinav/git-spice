@@ -1,7 +1,7 @@
 package ui_test
 
 import (
-	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -15,33 +15,40 @@ import (
 
 // Expected files:
 //
-//   - want: expected boolean value
-//   - give (optional): starting boolean value
+//   - want: expected string value
+//   - give (optional): starting string value
 //   - desc (optional): description of prompt
-func TestConfirm(t *testing.T) {
+//   - invalid (optional): value rejected as invalid
+func TestInput(t *testing.T) {
 	uitest.RunScripts(t,
 		func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-			var give bool
-			if _, err := os.Stat(ts.MkAbs("give")); err == nil {
-				require.NoError(t,
-					json.Unmarshal([]byte(ts.ReadFile("give")), &give),
-					"read 'give' file")
-			}
+			want := strings.TrimSpace(ts.ReadFile("want"))
 
-			var want bool
-			require.NoError(t,
-				json.Unmarshal([]byte(ts.ReadFile("want")), &want),
-				"read 'want' file")
+			var give string
+			if _, err := os.Stat(ts.MkAbs("give")); err == nil {
+				give = strings.TrimSpace(ts.ReadFile("give"))
+			}
 
 			var desc string
 			if _, err := os.Stat(ts.MkAbs("desc")); err == nil {
 				desc = strings.TrimSpace(ts.ReadFile("desc"))
 			}
 
+			var invalid string
+			if _, err := os.Stat(ts.MkAbs("invalid")); err == nil {
+				invalid = strings.TrimSpace(ts.ReadFile("invalid"))
+			}
+
 			got := give
-			widget := ui.NewConfirm().
-				WithTitle("Yes or no?").
+			widget := ui.NewInput().
+				WithTitle("Please answer").
 				WithValue(&got).
+				WithValidate(func(s string) error {
+					if s == invalid {
+						return errors.New("invalid value")
+					}
+					return nil
+				}).
 				WithDescription(desc)
 
 			require.NoError(t, ui.Run(view, widget))
@@ -50,6 +57,6 @@ func TestConfirm(t *testing.T) {
 		&uitest.RunScriptsOptions{
 			Update: *ui.UpdateFixtures,
 		},
-		"testdata/script/confirm",
+		"testdata/script/input",
 	)
 }

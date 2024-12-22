@@ -1,0 +1,48 @@
+# a base that isn't in the list of branches
+# cannot be selected.
+
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+# down 2 will roll back around
+feed <Down>
+await
+snapshot
+feed <Down>
+await
+snapshot
+cmp stdout prompt
+
+# filter to 'foo' is useless
+feed foo
+await
+snapshot
+cmp stdout filter
+
+feed -r 3 <BS>
+await
+snapshot
+cmp stdout prompt
+
+feed <Down> <Enter>
+
+-- branches --
+[
+  {"branch": "bar", "base": "foo"},
+  {"branch": "baz", "base": "bar"}
+]
+-- want --
+bar
+-- prompt --
+Select a branch:
+  ┏━■ baz ◀
+┏━┻□ bar
+foo
+-- filter --
+Select a branch:
+foo
+
+no available matches: foo

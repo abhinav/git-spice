@@ -1,0 +1,27 @@
+# several branches without a shared base
+
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed qu <Enter>
+
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "foo"},
+  {"branch": "bar"},
+  {"branch": "baz"},
+  {"branch": "qux"}
+]
+-- want --
+qux
+-- prompt --
+Select a branch:
+main ◀
+foo
+bar
+baz
+qux

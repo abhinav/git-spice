@@ -1,0 +1,47 @@
+init
+
+await Select an authentication method
+feed <Down>
+snapshot
+await
+snapshot
+cmp stdout select
+feed <Enter>
+
+await
+snapshot
+cmp stdout prompt
+
+feed secret
+await
+snapshot
+cmp stdout filled
+
+feed <Enter>
+
+-- want_token --
+secret
+-- select --
+Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a Personal Access Token generated from https://gitlab.com/-
+  /user_settings/personal_access_tokens.
+  The Personal Access Token need the following scope: api.
+
+  GitLab CLI
+  Re-use an existing GitLab CLI (https://gitlab.com/gitlab-org/cli) session.
+  You must be logged into glab with 'glab auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+-- prompt --
+Select an authentication method: Personal Access Token
+Enter Personal Access Token:
+-- filled --
+Select an authentication method: Personal Access Token
+Enter Personal Access Token: secret
