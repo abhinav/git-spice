@@ -14,11 +14,10 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/vito/midterm"
+	"go.abhg.dev/gs/internal/ui/uitest"
 )
 
 // WithTerm is an entry point for a command line program "with-term".
@@ -109,7 +108,7 @@ func WithTerm() (exitCode int) {
 	emu := newVT100Emulator(f, cmd,
 		int(size.Rows),
 		int(size.Cols),
-		!*fixed,
+		*fixed,
 		log.Printf,
 	)
 	defer func() {
@@ -252,31 +251,30 @@ func WithTerm() (exitCode int) {
 }
 
 type terminalEmulator struct {
-	mu   sync.Mutex
 	cmd  *exec.Cmd
 	pty  *os.File
 	logf func(string, ...any)
-
-	term *midterm.Terminal
+	emu  *uitest.EmulatorView
 }
 
 func newVT100Emulator(
 	f *os.File,
 	cmd *exec.Cmd,
 	rows, cols int,
-	autoResize bool,
+	noAutoResize bool,
 	logf func(string, ...any),
 ) *terminalEmulator {
 	if logf == nil {
 		logf = log.Printf
 	}
-	term := midterm.NewTerminal(rows, cols)
-	term.AutoResizeX = autoResize
-	term.AutoResizeY = autoResize
 	m := terminalEmulator{
-		pty:  f,
-		cmd:  cmd,
-		term: term,
+		pty: f,
+		cmd: cmd,
+		emu: uitest.NewEmulatorView(&uitest.EmulatorViewOptions{
+			Rows:         rows,
+			Cols:         cols,
+			NoAutoResize: noAutoResize,
+		}),
 		logf: logf,
 	}
 	go m.Start()
@@ -289,9 +287,7 @@ loop:
 	for {
 		n, err := m.pty.Read(buffer[0:])
 		if n > 0 {
-			m.mu.Lock()
-			_, writeErr := m.term.Write(buffer[:n])
-			m.mu.Unlock()
+			_, writeErr := m.emu.Write(buffer[:n])
 			if writeErr != nil {
 				m.logf("decode error: %v", writeErr)
 			}
@@ -334,8 +330,5 @@ func (m *terminalEmulator) FeedKeys(s string) error {
 }
 
 func (m *terminalEmulator) Snapshot() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	return Rows(m.term.Screen)
+	return m.emu.Rows()
 }

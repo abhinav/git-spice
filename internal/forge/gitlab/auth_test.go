@@ -15,11 +15,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
-	"go.abhg.dev/gs/internal/termtest"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/uitest"
 	"golang.org/x/oauth2"
 )
 
@@ -235,17 +234,7 @@ func TestAuthType(t *testing.T) {
 }
 
 func TestPATAuthenticator(t *testing.T) {
-	stdin, stdinW := io.Pipe()
-	defer func() {
-		assert.NoError(t, stdinW.Close())
-		assert.NoError(t, stdin.Close())
-	}()
-
-	term := midterm.NewAutoResizingTerminal()
-	view := &ui.TerminalView{
-		R: stdin,
-		W: term,
-	}
+	view := uitest.NewEmulatorView(nil)
 
 	type result struct {
 		tok forge.AuthenticationToken
@@ -262,12 +251,12 @@ func TestPATAuthenticator(t *testing.T) {
 	// TODO: Generalize termtest and use that here
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		assert.Contains(t,
-			termtest.Screen(term.Screen),
+			view.Screen(),
 			"Enter Personal Access Token",
 		)
 	}, time.Second, 50*time.Millisecond)
 
-	_, _ = io.WriteString(stdinW, "token\r")
+	require.NoError(t, view.FeedKeys("token\r"))
 
 	select {
 	case res, ok := <-resultc:
