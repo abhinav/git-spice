@@ -103,7 +103,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v5.1.1
+      uses: codecov/codecov-action@v5.1.2
       if: ${{ matrix.no-cover != true }}
       with:
         files: ./cover.out
