@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20241209060550-e505682deaca
+require github.com/charmbracelet/freeze v0.1.7-0.20241218192519-ead86fae6ca2
 
 require (
 	github.com/adrg/xdg v0.5.2 // indirect
@@ -19,11 +19,13 @@ require (
 	github.com/charmbracelet/lipgloss v0.13.1 // indirect
 	github.com/charmbracelet/log v0.4.0 // indirect
 	github.com/charmbracelet/x/ansi v0.4.0 // indirect
+	github.com/charmbracelet/x/conpty v0.1.0 // indirect
 	github.com/charmbracelet/x/errors v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240906161213-162f3037fef5 // indirect
-	github.com/charmbracelet/x/exp/term v0.0.0-20240403043919-dea9035a27d4 // indirect
-	github.com/charmbracelet/x/term v0.2.0 // indirect
-	github.com/creack/pty v1.1.23 // indirect
+	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/charmbracelet/x/termios v0.1.0 // indirect
+	github.com/charmbracelet/x/xpty v0.1.1 // indirect
+	github.com/creack/pty v1.1.24 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
