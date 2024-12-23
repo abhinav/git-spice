@@ -1,6 +1,6 @@
 module go.abhg.dev/gs
 
-go 1.23
+go 1.23.4
 
 require (
 	github.com/alecthomas/kong v1.6.0
@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.1-0.20241101194309-7fe66d746ac9
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.116.0
+	gitlab.com/gitlab-org/api/client-go v0.118.0
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/requiredfield v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
