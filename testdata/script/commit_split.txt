@@ -42,6 +42,7 @@ feature 3
 await feature1
 snapshot first
 feed y\r
+clear
 await feature2
 snapshot second
 feed q\r
