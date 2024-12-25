@@ -2,8 +2,6 @@
 package termtest
 
 import (
-	"bufio"
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,9 +9,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"slices"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/creack/pty"
@@ -34,22 +29,7 @@ import (
 //	feed Foo\r
 //	snapshot
 //
-// The following commands are supported.
-//
-//   - await [txt]:
-//     Wait up to 1 second for the given text to become visible on the screen.
-//     If [txt] is absent, wait until contents of the screen change
-//     compared to the last captured snapshot or last await empty.
-//   - clear:
-//     Ignore current screen contents when awaiting text.
-//   - snapshot [name]:
-//     Take a picture of the screen as it is right now, and print it to stdout.
-//     If name is provided, the output will include that as a header.
-//   - feed txt:
-//     Feed the given string into the terminal.
-//     Go string-style escape codes are permitted without quotes.
-//     Examples: \r, \x1b[B
-//
+// See [uitest.Script] for more details on the script format.
 // The following options may be provided before the script file.
 //
 //   - -cols int: terminal width (default 80)
@@ -75,18 +55,12 @@ func WithTerm() (exitCode int) {
 		return 1
 	}
 
-	instructions, args := args[0], args[1:]
-	instructionFile, err := os.Open(instructions)
+	scriptPath, args := args[0], args[1:]
+	script, err := os.ReadFile(scriptPath)
 	if err != nil {
 		log.Printf("cannot open instructions: %v", err)
 		return 1
 	}
-	defer func() {
-		if err := instructionFile.Close(); err != nil {
-			log.Printf("cannot close instructions: %v", err)
-			exitCode = 1
-		}
-	}()
 
 	if args[0] == "--" {
 		args = args[1:]
@@ -121,130 +95,19 @@ func WithTerm() (exitCode int) {
 			if len(*finalSnapshot) > 0 {
 				fmt.Printf("### %s ###\n", *finalSnapshot)
 			}
-			for _, line := range emu.Snapshot() {
+			for _, line := range emu.Rows() {
 				fmt.Println(line)
 			}
 		}
 	}()
 
-	var (
-		// lastSnapshot is the last snapshot taken.
-		lastSnapshot []string
-
-		// lastMatchPrefix holds the contents of the screen
-		// up to and including the last 'await txt' match.
-		awaitStripPrefix []string
-	)
-	scan := bufio.NewScanner(instructionFile)
-	for scan.Scan() {
-		line := bytes.TrimSpace(scan.Bytes())
-		if len(line) == 0 {
-			continue
-		}
-
-		cmd, rest, _ := strings.Cut(string(line), " ")
-		switch cmd {
-		case "clear":
-			awaitStripPrefix = emu.Snapshot()
-
-		case "await":
-			timeout := 3 * time.Second
-			start := time.Now()
-
-			var match func([]string) bool
-			switch {
-			case len(rest) > 0:
-				want := rest
-				match = func(snap []string) bool {
-					// Strip prefix if "clear" was called.
-					if len(awaitStripPrefix) > 0 && len(snap) >= len(awaitStripPrefix) {
-						for i := 0; i < len(awaitStripPrefix); i++ {
-							if snap[i] != awaitStripPrefix[i] {
-								awaitStripPrefix = nil
-								break
-							}
-						}
-
-						if len(awaitStripPrefix) > 0 {
-							snap = snap[len(awaitStripPrefix):]
-						}
-					}
-
-					for _, line := range snap {
-						if strings.Contains(line, want) {
-							return true
-						}
-					}
-					return false
-				}
-			case len(lastSnapshot) > 0:
-				want := lastSnapshot
-				lastSnapshot = nil
-				match = func(snap []string) bool {
-					return !slices.Equal(snap, want)
-				}
-
-			default:
-				log.Printf("await: argument is required if no snapshots were captured")
-				continue
-			}
-
-			var (
-				last    []string
-				matched bool
-			)
-			for time.Since(start) < timeout {
-				last = emu.Snapshot()
-				if match(last) {
-					matched = true
-					break
-				}
-				time.Sleep(50 * time.Millisecond)
-			}
-
-			if !matched {
-				if len(rest) > 0 {
-					log.Printf("await: %q not found", rest)
-					exitCode = 1
-				} else {
-					log.Printf("await: screen did not change")
-					exitCode = 1
-				}
-
-				log.Printf("### screen ###")
-				for _, line := range last {
-					log.Printf("%s", line)
-				}
-			}
-
-			// If 'await' was given without an argument,
-			// save the match as the last snapshot.
-			if len(rest) == 0 {
-				lastSnapshot = last
-			}
-
-		case "snapshot":
-			lastSnapshot = emu.Snapshot()
-			if len(rest) > 0 {
-				fmt.Printf("### %s ###\n", rest)
-			}
-			for _, line := range lastSnapshot {
-				fmt.Println(line)
-			}
-
-		case "feed":
-			s := strings.ReplaceAll(rest, `"`, `\"`)
-			s = `"` + s + `"`
-			keys, err := strconv.Unquote(s)
-			if err != nil {
-				log.Printf("cannot unquote: %v", rest)
-				return 1
-			}
-
-			if err := emu.FeedKeys(keys); err != nil {
-				log.Printf("error feeding keys: %v", err)
-			}
-		}
+	err = uitest.Script(emu, script, &uitest.ScriptOptions{
+		Logf:   log.Printf,
+		Output: os.Stdout,
+	})
+	if err != nil {
+		log.Printf("script error: %v", err)
+		return 1
 	}
 
 	return exitCode
@@ -329,6 +192,6 @@ func (m *terminalEmulator) FeedKeys(s string) error {
 	return err
 }
 
-func (m *terminalEmulator) Snapshot() []string {
+func (m *terminalEmulator) Rows() []string {
 	return m.emu.Rows()
 }
