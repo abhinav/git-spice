@@ -21,7 +21,7 @@ type EmulatorView struct {
 
 	mu     sync.RWMutex
 	term   *midterm.Terminal
-	stdinW io.Writer // nil if not running a prompt
+	stdinc chan string
 }
 
 var _ ui.InteractiveView = (*EmulatorView)(nil)
@@ -65,18 +65,27 @@ func NewEmulatorView(opts *EmulatorViewOptions) *EmulatorView {
 
 // Prompt prompts the user for input with the given interactive fields.
 func (e *EmulatorView) Prompt(fs ...ui.Field) error {
-	stdinR, stdinW := io.Pipe()
-	defer func() {
-		_ = stdinR.Close()
-		e.mu.Lock()
-		e.stdinW = nil
-		e.mu.Unlock()
+	stdinc := make(chan string, 1) // buffered to avoid blocking
+	stdinR, stdinW := io.Pipe()    // io.Pipe is blocking, so we need to buffer it
+	go func() {
+		for s := range stdinc {
+			_, _ = io.WriteString(stdinW, s)
+		}
 	}()
 
 	e.mu.Lock()
 	w, h := e.term.Width, e.term.Height
-	e.stdinW = stdinW
+	e.stdinc = stdinc
 	e.mu.Unlock()
+
+	defer func() {
+		e.mu.Lock()
+		e.stdinc = nil
+		e.mu.Unlock()
+
+		_ = stdinR.Close()
+		close(stdinc)
+	}()
 
 	return ui.NewForm(fs...).Run(&ui.FormRunOptions{
 		Input:  stdinR,
@@ -107,13 +116,12 @@ func (e *EmulatorView) Close() error {
 func (e *EmulatorView) FeedKeys(keys string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-
-	if e.stdinW == nil {
-		return errors.New("no prompt to fill")
+	if e.stdinc == nil {
+		return errors.New("no prompt to feed keys to")
 	}
 
-	_, err := io.WriteString(e.stdinW, keys)
-	return err
+	e.stdinc <- keys
+	return nil
 }
 
 // Rows returns a list of rows in the terminal emulator.
