@@ -1,0 +1,23 @@
+init
+
+await Please answer
+snapshot
+cmp stdout prompt
+
+feed foo
+await
+snapshot
+cmp stdout filled
+
+feed <Enter>
+
+-- want --
+foo
+-- desc --
+Need an input
+-- prompt --
+Please answer:
+Need an input
+-- filled --
+Please answer: foo
+Need an input

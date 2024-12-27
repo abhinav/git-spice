@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -140,15 +141,47 @@ func NewForm(fields ...Field) *Form {
 	}
 }
 
+// FormRunOptions specifies options for [Form.Run].
+type FormRunOptions struct {
+	// Input is the input source.
+	//
+	// Defaults to os.Stdin.
+	Input io.Reader
+
+	// Output is the destination to write to.
+	//
+	// Defaults to os.Stderr.
+	Output io.Writer
+
+	// SendMsg specifies a message that should be posted
+	// to the program at startup.
+	SendMsg tea.Msg
+
+	// WithoutSignals requests that the form not register signal handlers.
+	WithoutSignals bool
+}
+
 // Run runs the form and blocks until it's accepted or canceled.
 // It returns a combination of all errors returned by the fields.
-func (f *Form) Run(view *TerminalView) error {
-	teaOpts := []tea.ProgramOption{
-		tea.WithInput(view.R),
-		tea.WithOutput(view.W),
+func (f *Form) Run(opts *FormRunOptions) error {
+	opts = cmp.Or(opts, &FormRunOptions{})
+
+	var teaOpts []tea.ProgramOption
+	if i := opts.Input; i != nil {
+		teaOpts = append(teaOpts, tea.WithInput(i))
+	}
+	if o := opts.Output; o != nil {
+		teaOpts = append(teaOpts, tea.WithOutput(o))
+	}
+	if opts.WithoutSignals {
+		teaOpts = append(teaOpts, tea.WithoutSignals())
 	}
 
-	if _, err := tea.NewProgram(f, teaOpts...).Run(); err != nil {
+	prog := tea.NewProgram(f, teaOpts...)
+	if msg := opts.SendMsg; msg != nil {
+		go prog.Send(msg)
+	}
+	if _, err := prog.Run(); err != nil {
 		return err
 	}
 

@@ -1,0 +1,42 @@
+init
+
+await Select something
+snapshot
+cmp stdout prompt
+
+feed -r 2 <Down>
+await
+snapshot
+cmp stdout hover
+
+feed <Enter>
+
+-- give --
+[
+  "foo",
+  "bar",
+  "baz",
+  "qux"
+]
+-- want --
+"baz"
+-- desc --
+Select something
+-- prompt --
+Pick a value:
+
+▶ foo
+  bar
+  baz
+  qux
+
+Select something
+-- hover --
+Pick a value:
+
+  foo
+  bar
+▶ baz
+  qux
+
+Select something

@@ -1,0 +1,41 @@
+init
+
+await Pick one or more
+snapshot
+cmp stdout prompt
+
+feed <Down>
+feed -r 2 <Space>
+await
+snapshot
+cmp stdout picked
+
+feed <Down> <Enter>
+
+-- want --
+["bar", "baz"]
+-- give --
+[
+  "foo",
+  "bar",
+  "baz",
+  "qux"
+]
+-- desc --
+We have too many
+-- prompt --
+Pick one or more:
+▶ [ ] foo
+  [ ] bar
+  [ ] baz
+  [ ] qux
+  Done
+We have too many
+-- picked --
+Pick one or more:
+  [ ] foo
+  [X] bar
+  [X] baz
+▶ [ ] qux
+  Done
+We have too many

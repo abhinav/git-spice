@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -33,7 +32,7 @@ import (
 // using recorded fixtures.
 
 var (
-	_update   = flag.Bool("update", false, "update test fixtures")
+	_update   = github.UpdateFixtures
 	_fixtures = fixturetest.Config{Update: _update}
 )
 

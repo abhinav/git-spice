@@ -1,0 +1,13 @@
+init
+
+await Yes or no
+snapshot
+cmp stdout prompt
+feed n
+
+-- give --
+true
+-- want --
+false
+-- prompt --
+Yes or no?: [Y/n]

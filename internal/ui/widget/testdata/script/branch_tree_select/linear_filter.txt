@@ -1,0 +1,34 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed ba
+await
+snapshot
+cmp stdout filter
+
+feed <Up> <Enter>
+
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "foo", "base": "main"},
+  {"branch": "bar", "base": "foo"},
+  {"branch": "baz", "base": "bar"},
+  {"branch": "qux", "base": "baz"}
+]
+-- want --
+baz
+-- prompt --
+Select a branch:
+      ┏━■ qux ◀
+    ┏━┻□ baz
+  ┏━┻□ bar
+┏━┻□ foo
+main
+-- filter --
+Select a branch:
+┏━□ baz
+bar ◀

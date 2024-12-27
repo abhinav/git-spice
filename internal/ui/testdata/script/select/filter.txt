@@ -1,0 +1,49 @@
+init
+
+await Pick a value
+snapshot
+cmp stdout prompt
+
+feed ba
+await
+snapshot
+cmp stdout filtered
+
+feed r
+await
+snapshot
+cmp stdout wrong_filter
+
+# undo bad filter
+feed <BS>
+await
+snapshot
+cmp stdout filtered
+
+feed <Down> <Enter>
+
+-- give --
+[
+  "foo",
+  "bar",
+  "baz",
+  "qux"
+]
+-- want --
+"baz"
+-- prompt --
+Pick a value:
+
+▶ foo
+  bar
+  baz
+  qux
+-- filtered --
+Pick a value:
+
+▶ bar
+  baz
+-- wrong_filter --
+Pick a value:
+
+▶ bar

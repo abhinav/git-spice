@@ -239,6 +239,8 @@ type authenticator interface {
 	Authenticate(context.Context, ui.View) (*AuthenticationToken, error)
 }
 
+var _execLookPath = exec.LookPath
+
 var _authenticationMethods = []struct {
 	Title       string
 	Description func(focused bool) string
@@ -268,7 +270,7 @@ var _authenticationMethods = []struct {
 		Build: func(a authenticatorOptions) authenticator {
 			// Offer this option only if the user
 			// has the GitLab CLI installed.
-			glExe, err := exec.LookPath("glab")
+			glExe, err := _execLookPath("glab")
 			if err != nil {
 				return nil
 			}

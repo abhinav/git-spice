@@ -1,0 +1,81 @@
+init
+
+await Pick an item
+snapshot
+cmp stdout prompt
+
+feed <Down>
+await
+snapshot
+cmp stdout alt_desc
+
+feed <Down>
+await
+snapshot
+cmp stdout no_desc
+
+feed -r 3 <Down>
+await
+snapshot
+cmp stdout alt_desc
+
+feed <Enter>
+
+-- give --
+[
+  {
+    "value": "foo",
+    "desc": "no alternative description"
+  },
+  {
+    "value": "bar",
+    "desc": "This is a thing\nwith",
+    "focusedDesc": "This is a thing\nwith a multi-line description"
+  },
+  {
+    "value": "baz"
+  },
+  {
+    "value": "qux"
+  }
+]
+-- want --
+bar
+-- desc --
+We have multiple options
+-- prompt --
+Pick an item:
+▶ foo
+  no alternative description
+  bar
+  This is a thing
+  with
+  baz
+
+  qux
+
+We have multiple options
+-- alt_desc --
+Pick an item:
+  foo
+  no alternative description
+▶ bar
+  This is a thing
+  with a multi-line description
+  baz
+
+  qux
+
+We have multiple options
+-- no_desc --
+Pick an item:
+  foo
+  no alternative description
+  bar
+  This is a thing
+  with
+▶ baz
+
+  qux
+
+We have multiple options

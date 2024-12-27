@@ -9,16 +9,18 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os/exec"
+	"reflect"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
+	"go.abhg.dev/testing/stub"
 	"golang.org/x/oauth2"
 )
 
@@ -233,44 +235,40 @@ func TestAuthType(t *testing.T) {
 	})
 }
 
-func TestPATAuthenticator(t *testing.T) {
-	view := uitest.NewEmulatorView(nil)
+func TestSelectAuthenticator(t *testing.T) {
+	// Available authentication methods are affected by whether "glab"
+	// CLI is available.
+	stub.Func(&_execLookPath, "glab", nil)
 
-	type result struct {
-		tok forge.AuthenticationToken
-		err error
-	}
-	resultc := make(chan result, 1)
-	go func() {
-		defer close(resultc)
+	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
+		wantType := strings.TrimSpace(ts.ReadFile("want_type"))
 
-		got, err := (&PATAuthenticator{}).Authenticate(context.Background(), view)
-		resultc <- result{got, err}
-	}()
+		auth, err := selectAuthenticator(view, authenticatorOptions{
+			Endpoint: oauth2.Endpoint{},
+			ClientID: _oauthAppID,
+			Hostname: "https://gitlab.com",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, wantType, reflect.TypeOf(auth).String())
+	}, &uitest.RunScriptsOptions{
+		Update: *UpdateFixtures,
+	}, "testdata/auth/select_oauth.txt")
+}
 
-	// TODO: Generalize termtest and use that here
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		assert.Contains(t,
-			view.Screen(),
-			"Enter Personal Access Token",
-		)
-	}, time.Second, 50*time.Millisecond)
+func TestAuthenticationFlow_PAT(t *testing.T) {
+	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
+		wantToken := strings.TrimSpace(ts.ReadFile("want_token"))
 
-	require.NoError(t, view.FeedKeys("token\r"))
-
-	select {
-	case res, ok := <-resultc:
-		require.True(t, ok)
-		tok, err := res.tok, res.err
+		got, err := new(Forge).AuthenticationFlow(context.Background(), view)
 		require.NoError(t, err)
 
-		ght, ok := tok.(*AuthenticationToken)
-		require.True(t, ok, "want *gitlab.AuthenticationToken, got %T", tok)
-		assert.Equal(t, "token", ght.AccessToken)
-
-	case <-time.After(time.Second):
-		t.Fatal("timed out")
-	}
+		assert.Equal(t, &AuthenticationToken{
+			AuthType:    AuthTypePAT,
+			AccessToken: wantToken,
+		}, got)
+	}, &uitest.RunScriptsOptions{
+		Update: *UpdateFixtures,
+	}, "testdata/auth/pat.txt")
 }
 
 func TestGLabCLI(t *testing.T) {

@@ -1,0 +1,31 @@
+init
+
+await Pick an item
+snapshot
+cmp stdout prompt
+
+feed <Down> <Enter>
+
+-- give --
+[
+  {"value": "foo"},
+  {"value": "bar"},
+  {"value": "baz"},
+  {"value": "qux"},
+  {"value": "quux"}
+]
+-- selected --
+baz
+-- want --
+qux
+-- prompt --
+Pick an item:
+  foo
+
+  bar
+
+▶ baz
+
+  qux
+
+  quux

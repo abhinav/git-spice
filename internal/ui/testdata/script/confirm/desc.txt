@@ -1,0 +1,16 @@
+init
+
+await Yes or no
+snapshot
+cmp stdout prompt
+feed y
+
+-- give --
+false
+-- desc --
+Decide a thing.
+-- want --
+true
+-- prompt --
+Yes or no?: [y/N]
+Decide a thing.
