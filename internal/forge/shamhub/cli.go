@@ -136,6 +136,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		}
 
 		prune := flag.Bool("prune", false, "prune the branch after merging")
+		squash := flag.Bool("squash", false, "squash-merge the commit")
 		ts.Check(flag.Parse(args))
 		args = flag.Args()
 		if len(args) != 2 {
@@ -158,6 +159,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			Repo:         repo,
 			Number:       pr,
 			DeleteBranch: *prune,
+			Squash:       *squash,
 		}
 		if at := ts.Getenv("GIT_COMMITTER_DATE"); at != "" {
 			t, err := time.Parse(time.RFC3339, at)

@@ -105,7 +105,10 @@ type MergeChangeRequest struct {
 	// should be deleted after the merge.
 	DeleteBranch bool
 
-	// TODO: option to use squash commit
+	// Squash requests that the CR be merged
+	// as a single squashed commit with the PR subject/body
+	// instead of a merge commit.
+	Squash bool
 }
 
 // MergeChange merges an open change against this forge.
@@ -180,14 +183,22 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
 		defer flush()
 
-		msg := fmt.Sprintf("Merge change #%d", req.Number)
-		cmd := exec.Command(sh.gitExe,
-			"commit-tree",
-			"-p", sh.changes[changeIdx].Base,
-			"-p", sh.changes[changeIdx].Head,
-			"-m", msg,
-			tree,
-		)
+		change := sh.changes[changeIdx]
+
+		var msg string
+		args := []string{"commit-tree", "-p", change.Base}
+		if req.Squash {
+			msg = fmt.Sprintf("%s (#%d)\n\n%s",
+				change.Subject,
+				req.Number,
+				change.Body)
+		} else {
+			msg = fmt.Sprintf("Merge change #%d", req.Number)
+			args = append(args, "-p", change.Head)
+		}
+		args = append(args, "-m", msg, tree)
+
+		cmd := exec.Command(sh.gitExe, args...)
 		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
 		cmd.Stderr = logw
 		cmd.Env = append(os.Environ(), commitEnv...)
