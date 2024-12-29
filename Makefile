@@ -9,7 +9,6 @@ PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 #   for commands like go generate.
 export GOBIN = $(PROJECT_ROOT)/bin
 export PATH := $(GOBIN):$(PATH)
-export GOEXPERIMENT = rangefunc
 
 TEST_FLAGS ?=
 
