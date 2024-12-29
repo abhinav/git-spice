@@ -1,0 +1,99 @@
+# 'repo sync' handles squash-merged CRs correctly.
+
+as 'Test <test@example.com>'
+at '2024-12-28T18:14:15Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# put all three changes in one commit
+git add feat1.txt
+gs bc -m 'Add feature 1'
+git add feat2.txt
+gs cc -m 'Add feature 2'
+git add feat3.txt
+gs cc -m 'Add feature 3'
+
+# Submit
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit
+cmp $WORK/robot.actual $WORK/robot.golden
+stderr 'Created #'
+
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/pull.txt
+
+gs ll
+cmp stderr $WORK/golden/ll-before.txt
+
+shamhub merge --squash --prune alice/example 1
+gs repo sync
+stderr '#1 was merged'
+
+git log -n1 --pretty=%B
+cmp stdout $WORK/golden/final-commit-msg
+
+gs ll
+cmp stderr $WORK/golden/ll-after.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+
+-- robot.golden --
+===
+> Title: Add feature 1 
+> Short summary of the change
+"Add multiple features"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{"give": "Adds features 1, 2, and 3 in one PR."}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
+-- golden/pull.txt --
+{
+  "number": 1,
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "state": "open",
+  "title": "Add multiple features",
+  "body": "Adds features 1, 2, and 3 in one PR.",
+  "base": {
+    "ref": "main",
+    "sha": "e41b284d1e80e3acba627274a80d94129ebdf8fd"
+  },
+  "head": {
+    "ref": "add-feature-1",
+    "sha": "a9548da1d2feba06f2bba402eb77adf27a9266e7"
+  }
+}
+
+-- golden/ll-before.txt --
+┏━■ add-feature-1 (#1) ◀
+┃   a9548da Add feature 3 (now)
+┃   bcb3a72 Add feature 2 (now)
+┃   4be7a61 Add feature 1 (now)
+main
+-- golden/ll-after.txt --
+main ◀
+-- golden/final-commit-msg --
+Add multiple features (#1)
+
+Adds features 1, 2, and 3 in one PR.
+
