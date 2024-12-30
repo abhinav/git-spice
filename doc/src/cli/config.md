@@ -54,6 +54,21 @@ and use the `--commit` flag to commit changes when needed.
 - `true` (default)
 - `false`
 
+### spice.commitPick.edit
+
+<!-- gs:version unreleased -->
+
+Whether $$gs commit pick$$ should open an editor to modify commit messages
+of cherry-picked commits before committing them.
+
+If set to true, opt-out with the `--no-edit` flag.
+If set to false, opt-in with the `--edit` flag.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.
