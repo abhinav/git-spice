@@ -82,7 +82,7 @@ configuration key.
 
 !!! info "Stack history in navigation comments"
 
-    <!-- gs:version unreleased -->
+    <!-- gs:version v0.10.0 -->
     When possible, git-spice will remember CRs as they're merged into trunk,
     and continue to list them in navigation comments of branches
     based on those changes.
@@ -137,7 +137,7 @@ and push to a branch anyway, use the `--force` flag.
 
 ### Update existing CRs only
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.10.0 -->
 
 All submit commands support the `--update-only` flag.
 If provided, the submission will update existing CRs in a stack,

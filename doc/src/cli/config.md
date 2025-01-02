@@ -103,7 +103,7 @@ instead of showing just the current stack.
 
 ### spice.rebaseContinue.edit
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.10.0 -->
 
 Whether $$gs rebase continue$$ should open an editor to modify the commit message
 when continuing after resolving a rebase conflict.

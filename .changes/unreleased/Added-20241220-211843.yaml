@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: New `--update-only` flag tells submit commands to update open CRs but not create new ones.
-  Branches that would create new CRs are igonred.
-time: 2024-12-20T21:18:43.773073-05:00

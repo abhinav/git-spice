@@ -1,3 +1,0 @@
-kind: Added
-body: 'Add --no-verify flag to bypass pre-commit and commit-msg hooks to commands that create new commits.'
-time: 2024-12-01T11:57:58.209941-08:00

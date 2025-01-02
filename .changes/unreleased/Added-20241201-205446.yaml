@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Include merged changes in navigation comments
-  when restacking and resubmitting changes based on them.
-time: 2024-12-01T20:54:46.755566Z
