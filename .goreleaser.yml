@@ -68,6 +68,9 @@ brews:
     description: "A tool for stacking Git branches."
     license: "GPL-3.0-or-later"
     skip_upload: auto
+    install: |
+      bin.install "gs"
+      generate_completions_from_executable(bin/"gs", "shell", "completion")
     test: |
       system "#{bin}/gs --version"
 
