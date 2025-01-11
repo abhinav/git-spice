@@ -26,26 +26,64 @@ or built from source.
 
 ## Pre-built binary
 
-To install a **pre-built binary**, take the following steps:
+To install a **pre-built binary**, use one of the following methods:
 
-=== "Homebrew/Linuxbrew"
+### Homebrew/Linuxbrew
 
-    ```bash
-    brew install abhinav/tap/git-spice
-    ```
+git-spice is available in homebrew-core
+(the default formulae repository for Homebrew and Linuxbrew).
+Install git-spice with the following command:
 
-=== "AUR (ArchLinux)"
+```bash
+brew install git-spice
+```
 
-    ```bash
-    git clone https://aur.archlinux.org/git-spice-bin.git
-    cd git-spice-bin
-    makepkg -si
+You can also use my Homebrew Tap to install the latest release:
 
-    # Or, with an AUR helper like yay:
-    yay -S git-spice-bin
-    ```
+```bash
+brew install abhinav/tap/git-spice
+```
 
-Pre-built binaries for other platforms can be found on the
+### Binary installation tools
+
+#### ubi
+
+[ubi](https://github.com/houseabsolute/ubi) is a binary installation tool
+that is able to download pre-built binaries from GitHub Releases.
+
+If you use ubi, use the following command to install git-spice:
+
+```bash
+ubi --project abhinav/git-spice --exe gs
+```
+
+#### mise
+
+[mise](https://mise.jdx.dev) supports installing tools from various sources,
+and includes a ubi backend.
+
+If you use mise, use the following command to install git-spice:
+
+```bash
+mise use --global 'ubi:abhinav/git-spice[exe=gs]'
+```
+
+### AUR (ArchLinux)
+
+If you're using ArchLinux, install the 'git-spice-bin' package from the AUR:
+
+```bash
+git clone https://aur.archlinux.org/git-spice-bin.git
+cd git-spice-bin
+makepkg -si
+
+# Or, with an AUR helper like yay:
+yay -S git-spice-bin
+```
+
+### Manual download
+
+You can manually download the latest release of git-spice from the
 [GitHub Releases page](https://github.com/abhinav/git-spice/releases).
 
 ## Build from source
