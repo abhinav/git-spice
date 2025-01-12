@@ -24,19 +24,14 @@ jobs:
         with:
           lfs: true
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: jdx/mise-action@v2
         with:
-          go-version-file: go.mod
-
-      # This will handle installing Python and Python dependencies.
-      - name: Install uv
-        run: |
-          curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+          working_directory: doc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
-        run: make build
-        working-directory: doc
+        run: mise run doc:build --verbose
         env:
           CLOUDFLARE_ANALYTICS_TOKEN: ${{ secrets.CLOUDFLARE_ANALYTICS_TOKEN }}
           MAIN_BUILD: ${{ github.ref == 'refs/heads/main' }}

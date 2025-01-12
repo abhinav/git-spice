@@ -4,23 +4,46 @@ We welcome contributes to the project,
 but please discuss features or significant changes
 in an issue before starting work on them.
 
-## Tools
+## Setup
 
-The following tools are needed to work on this project:
+We use [mise](https://mise.jdx.dev) to manage tools dependencies
+and development tasks for the project.
 
-- [Go](https://go.dev/):
-  The project is written in Go, so you need the Go compiler.
-- [gofumpt](https://github.com/mvdan/gofumpt):
-  Go code formatter used by the project.
-  It's a stricter version of the standard `gofmt`.
-- [golangci-lint](https://golangci-lint.run/):
-  Bulk linter for Go code.
-- [Changie](https://changie.dev/):
-  We use Changie to manage the changelog.
-  You'll need this if you make user-facing changes.
-- [uv](https://docs.astral.sh/uv/):
-  We use uv to manage Python dependencies for documentation generation.
-  You'll need this to preview changes to the doc/ directory.
+If you already have mise set up, `cd` into this directory
+and you can begin working on the project.
+
+If you don't have mise set up, you may:
+
+- [Install and set it up](https://mise.jdx.dev/getting-started.html), or
+- Use the bootstrap script at `tools/bin/mise` to open a shell session
+  with mise and all tools installed.
+
+    ```bash
+    ./tools/bin/mise en
+    ```
+
+    This is a good option if you don't want to change your setup.
+    It will keep mise and all its state entirely within the project directory.
+
+### Tasks
+
+See available tasks with `mise tasks` in the project directory.
+
+Tasks you'll need to run regularly are:
+
+```
+# Build the project
+mise run build
+
+# Run linters
+mise run lint
+
+# Run all tests
+mise run test
+
+# Run a documentation server
+mise run doc:serve
+```
 
 ## Making contributions
 
@@ -36,21 +59,25 @@ Follow usual best practices for making changes:
 
 More specific guidelines follow:
 
-- For all *user-facing changes*, add a changelog entry with `changie new`.
-  If a change is not user-facing, add a note in the following format
-  to the PR description:
+- For all *user-facing changes*, add a changelog entry.
+  We use [Changie](https://changie.dev) for this.
+  Run `mise run changie new` to add a changelog entry.
+
+  If a change is not user-facing,
+  add a note in the following format to the PR description:
 
   ```
   [skip changelog]: reason why no changelog entry is needed
   ```
 
 - For *documentation website changes* (changes made to the doc/ directory),
-  install [`uv`](https://docs.astral.sh/uv/) and run `make serve`
+  run `mise run doc:serve` (or just `mise run serve` in the doc/ directory)
   to preview changes locally before submitting a pull request.
 
 - For *code changes*,
-  format all code with [gofumpt](https://github.com/mvdan/gofumpt),
-  and verify lint checks pass with `make lint`.
+  ensure generated code is up-to-date (`mise run generate`),
+  code is well-formatted (`mise run fmt`)
+  and all lint checks pass (`mise run lint`).
 
 ### Stacking changes
 
@@ -124,16 +151,16 @@ Markdown files and code comments.
 
 ## Testing
 
-We use standard Go testing.
+Use mise to run tests:
 
 ```sh
-go test ./...
+mise run test
 ```
 
-Use `make` to get a coverage report:
+If you need to see test coverage, run:
 
 ```sh
-make cover
+mise run cover
 ```
 
 ### Test scripts

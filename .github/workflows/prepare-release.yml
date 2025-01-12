@@ -22,35 +22,28 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Batch changes
-      uses: miniscruff/changie-action@v2
-      with:
-        args: batch ${{ inputs.version }}
-
-    - name: Merge changes
-      uses: miniscruff/changie-action@v2
-      with:
-        args: merge
-
-    - name: Get the latest version
-      id: latest
-      uses: miniscruff/changie-action@v2
-      with:
-        args: latest
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - id: run
+      run: |
+        changie batch ${{ inputs.version }}
+        changie merge
+        echo "latest=$(changie latest)" >> "$GITHUB_OUTPUT"
 
     - name: Update unreleased references in docs
       run: |
         grep -rlF '<!-- gs:version unreleased -->' doc/src |
           xargs perl -p -i -e \
-          's/<!-- gs:version unreleased -->/<!-- gs:version ${{ steps.latest.outputs.output }} -->/g'
+          's/<!-- gs:version unreleased -->/<!-- gs:version ${{ steps.run.outputs.latest }} -->/g'
 
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v7
       with:
-        title: Release ${{ steps.latest.outputs.output }}
-        branch: release/${{ steps.latest.outputs.output }}
+        title: Release ${{ steps.run.outputs.latest }}
+        branch: release/${{ steps.run.outputs.latest }}
         labels: prepare-release
-        commit-message: Release ${{ steps.latest.outputs.output }}
+        commit-message: Release ${{ steps.run.outputs.latest }}
         token: ${{ secrets.PAT }}
         body: ''

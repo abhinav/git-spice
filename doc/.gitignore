@@ -1,4 +1,4 @@
 /_site
 /.cache
-/bin
 __pycache__
+/.venv

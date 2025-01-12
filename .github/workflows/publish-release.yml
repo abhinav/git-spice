@@ -27,24 +27,15 @@ jobs:
         ref: ${{ inputs.ref }}
         token: ${{ secrets.PAT }}
 
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Query changie
-      if: inputs.version == ''
-      id: changie-latest
-      uses: miniscruff/changie-action@v2
-      with:
-        args: latest
     - name: Set version (changie)
       if: inputs.version == ''
-      run:
+      run: |
+        CHANGIE_VERSION=$(changie latest)
         echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
-      env:
-        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.output }}
-
     - name: Set version (input)
       if: inputs.version != ''
       run:
@@ -94,19 +85,15 @@ jobs:
       with:
         ref: ${{ inputs.ref }}
 
-    - name: Query changie
-      if: inputs.version == ''
-      id: changie-latest
-      uses: miniscruff/changie-action@v2
-      with:
-        args: latest
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Set version (changie)
       if: inputs.version == ''
-      run:
+      run: |
+        CHANGIE_VERSION=$(changie latest)
         echo "VERSION=${CHANGIE_VERSION#v}" >> "$GITHUB_ENV"
-      env:
-        CHANGIE_VERSION: ${{ steps.changie-latest.outputs.output }}
-
     - name: Set version (input)
       if: inputs.version != ''
       run:

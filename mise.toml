@@ -1,0 +1,104 @@
+[settings]
+experimental = true
+
+[env]
+GOTESTSUM_FORMAT = "pkgname"
+GOBIN = "{{ config_root }}/bin"
+PROJECT_ROOT = "{{ config_root }}"
+_.path = ["{{ config_root }}/bin"]
+
+[alias]
+# Specify sources for all tools so we can refer to them directly.
+requiredfield = "go:go.abhg.dev/requiredfield/cmd/requiredfield"
+golangci-lint = "ubi:golangci/golangci-lint"
+changie = "ubi:miniscruff/changie"
+
+[tools]
+# Self-explanatory.
+go = "latest"
+
+# Test runner with prettier output.
+gotestsum = "latest"
+
+# Stricter code formatting.
+gofumpt = "latest"
+
+# Check for required fields in structs.
+requiredfield = "0.3.0"
+
+# Collection of linters.
+golangci-lint = "latest"
+
+# Changelog manager.
+changie = "latest"
+
+[tasks.generate]
+depends = ["tools:*"]
+description = "Update generated code"
+run = [
+  "go generate -x ./...",
+  "(cd doc && mise run generate)",
+]
+
+[tasks.test]
+wait_for = ["generate"]
+description = "Run tests"
+run = "gotestsum -- ./..."
+
+[tasks.cover]
+wait_for = ["generate"]
+description = "Run tests with coverage"
+run = [
+  "gotestsum -- '-coverprofile=cover.out' '-coverpkg=./...' ./...",
+  "go tool cover '-html=cover.out' -o cover.html",
+]
+
+[tasks.tidy]
+run = "go mod tidy"
+description = "Update go.mod and go.sum files"
+
+[tasks.fmt]
+run = "gofumpt -w ."
+description = "Format all go files"
+
+[tasks.lint]
+depends = ["lint:*"]
+wait_for = ["generate"]
+description = "Run all lint checks"
+
+[tasks."lint:golangci-lint"]
+run = "golangci-lint run"
+description = "Run golangci-lint"
+
+[tasks."lint:requiredfield"]
+run = "go vet -vettool=$(command -v requiredfield) ./..."
+description = "Check for required fields"
+
+[tasks."lint:tidy"]
+run = "go mod tidy -diff"
+description = "Ensure go.mod and go.sum are up to date"
+
+[tasks.build]
+run = "go install go.abhg.dev/gs"
+wait_for = ["generate"]
+description = "Build the gs binary"
+
+# mockgen version is pinned in go.mod
+# so don't use mise's go backend.
+[tasks."tools:mockgen"]
+sources = ["go.mod"]
+outputs = ["bin/mockgen"]
+run = "go install go.uber.org/mock/mockgen"
+description = "Install mockgen"
+hide = true
+
+[tasks.changie]
+run = "changie"
+description = "Convenience alias to run changie"
+
+[tasks."doc:serve"]
+run = "cd doc && mise run serve"
+description = "Serve the documentation"
+
+[tasks."doc:build"]
+run = "cd doc && mise run build"

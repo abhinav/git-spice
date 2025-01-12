@@ -1,0 +1,61 @@
+[settings]
+experimental = true
+python.uv_venv_auto = true
+
+# This configuration adds a sub-configuration for the root mise.toml.
+# It adds tools needed to build and serve the documentation.
+#
+# It's not required to use this directly--the 'doc:*' targets in root
+# mise.toml will automatically run relevant tasks in this configuration.
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+# Directory to which executables are installed.
+_BIN_DIR = "{{ env.PROJECT_ROOT }}/bin"
+
+[tools]
+python = "3.12"
+uv = "latest"
+
+[tasks.build]
+depends = ["tools:*", "generate"]
+run = "uv run mkdocs build"
+description = "Build the documentation"
+
+[tasks.serve]
+depends = ["tools:*", "generate"]
+run = "uv run mkdocs serve"
+description = "Serve the documentation"
+
+[tasks.generate]
+run = '''
+# Generating the CLI reference.
+
+# Switch to the gs root directory for the 'go run' part,
+# and back to the doc directory for the 'dumpmd' part.
+go -C "{{ env.PROJECT_ROOT }}" run -tags dumpmd . -C "{{ config_root }}" \
+  dumpmd \
+  --ref includes/cli-reference.md \
+  --shorthands includes/cli-shorthands.md
+'''
+description = "Generate the CLI reference"
+
+[tasks."tools:pikchr"]
+sources = ["cmd/pikchr/pikchr.c"]
+outputs = ["{{ env._BIN_DIR }}/pikchr"]
+run = [
+  "mkdir -p {{ env._BIN_DIR }}",
+  "gcc -DPIKCHR_SHELL -o {{ env._BIN_DIR }}/pikchr cmd/pikchr/pikchr.c -lm",
+]
+description = "Build pikchr binary for diagrams"
+hide = true
+
+# Manual build because version is pinned in go.mod
+[tasks."tools:freeze"]
+sources = ["go.mod"]
+outputs = ["{{ env._BIN_DIR }}/freeze"]
+run = "go install github.com/charmbracelet/freeze"
+env.GOBIN = "{{ env._BIN_DIR }}"
+description = "Install freeze"
+hide = true

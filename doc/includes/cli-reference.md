@@ -12,7 +12,7 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid)
+**Configuration**: [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl)
 
 ## Shell
 
@@ -223,7 +223,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--force`: Force push, bypassing safety checks
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs stack restack
 
@@ -302,7 +302,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs upstack restack
 
@@ -400,7 +400,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment)
+**Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs downstack edit
 
@@ -776,7 +776,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout)
+**Configuration**: [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ## Commit
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -207,6 +208,7 @@ func (cmd cliDumper) dumpConfigFooter(node *kong.Node) {
 	cmd.print("**Configuration**:")
 	defer cmd.printf("\n\n")
 
+	sort.Strings(configKeys)
 	for i, key := range configKeys {
 		key := "spice." + key
 		id := strings.ToLower(strings.ReplaceAll(key, ".", ""))

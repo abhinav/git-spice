@@ -25,10 +25,10 @@ jobs:
       with:
         token: ${{ secrets.PAT }}  # for push
 
-    - name: Batch changes
-      uses: miniscruff/changie-action@v2
-      with:
-        args: merge
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - run: changie merge
 
     - name: Push changes
       uses: stefanzweifel/git-auto-commit-action@v5

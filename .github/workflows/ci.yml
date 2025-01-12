@@ -11,10 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  GOLANGCI_LINT_VERSION: v1.62.0
-  GOTESTSUM_FORMAT: github-actions
-
 jobs:
 
   lint:
@@ -23,17 +19,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: Check out repository
-    - uses: actions/setup-go@v5
-      name: Set up Go
-      with:
-        go-version-file: go.mod
-    - uses: golangci/golangci-lint-action@v6
-      name: Install golangci-lint
-      with:
-        version: ${{ env.GOLANGCI_LINT_VERSION }}
-        args: --help
-    - run: make lint
-      name: Lint
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - run: mise run lint
 
   test:
     runs-on: ${{ matrix.os }}
@@ -51,10 +40,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # TODO: extract into separate action
     - name: Determine Git cache directory
@@ -99,8 +87,10 @@ jobs:
         git --version
 
     - name: Test
-      run: make ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
+      run: mise run ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
       shell: bash
+      env:
+        GOTESTSUM_FORMAT: github-actions
 
     - name: Upload coverage
       uses: codecov/codecov-action@v5.1.2
