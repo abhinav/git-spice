@@ -3,7 +3,7 @@ module go.abhg.dev/gs
 go 1.23.4
 
 require (
-	github.com/alecthomas/kong v1.6.0
+	github.com/alecthomas/kong v1.6.1
 	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.2.4
@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.1-0.20241224155031-41aafc92c897
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.118.0
+	gitlab.com/gitlab-org/api/client-go v0.119.0
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/requiredfield v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
@@ -73,6 +73,6 @@ require (
 	golang.org/x/sys v0.27.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.8.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
 )
