@@ -2,12 +2,12 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20241218192519-ead86fae6ca2
+require github.com/charmbracelet/freeze v0.1.7-0.20250107053322-2d7c3981f8be
 
 require (
 	github.com/adrg/xdg v0.5.2 // indirect
-	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
-	github.com/alecthomas/kong v1.6.0 // indirect
+	github.com/alecthomas/chroma/v2 v2.15.0 // indirect
+	github.com/alecthomas/kong v1.6.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beevik/etree v1.4.1 // indirect
