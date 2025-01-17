@@ -1,0 +1,93 @@
+# Conflict with restacking remaining branches
+# after a base branch is merged
+# is properly handled by 'repo sync'
+
+as 'Test <test@example.com>'
+at '2025-01-17T05:06:07Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# setup: main -> feat1 -> feat2 -> feat3
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+git add feat3.txt
+gs bc feat3 -m 'Add feat3'
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+gs ll
+cmp stderr $WORK/golden/ll-before.txt
+
+shamhub merge -prune -squash alice/example 1
+
+# before syncing, introduce a conflict with feat2
+# by pushing a different change to the remote
+# from another clone
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+cmp feat1.txt ../repo/feat1.txt
+cp $WORK/extra/feat2-different.txt feat2.txt
+git add feat2.txt
+git commit -m 'add a different feat2'
+git push origin main
+
+cd ../repo
+gs bco feat2
+! gs repo sync
+stderr '#1 was merged'
+stderr 'There was a conflict while rebasing'
+
+cp $WORK/extra/feat2-resolved.txt feat2.txt
+git add feat2.txt
+env EDITOR=true
+gs rebase continue
+
+# verify state
+cmp feat2.txt $WORK/extra/feat2-resolved.txt
+gs stack restack
+gs bco feat3
+cmp feat2.txt $WORK/extra/feat2-resolved.txt
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after.txt
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- repo/feat3.txt --
+feat 3
+-- extra/feat2-different.txt --
+feat 2 different
+-- extra/feat2-resolved.txt --
+feat 2 slightly different
+-- golden/ll-before.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   5844149 Add feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    5ccaa46 Add feat2 (now)
+┏━┻□ feat1 (#1)
+┃    5016e56 Add feat1 (now)
+main
+-- golden/ll-after.txt --
+  ┏━■ feat3 (#3) ◀
+  ┃   fe1a376 Add feat3 (now)
+┏━┻□ feat2 (#2)
+┃    89ca0a7 Add feat2 (now)
+main
