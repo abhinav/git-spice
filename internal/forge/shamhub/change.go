@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/ioutil"
+	"go.abhg.dev/gs/internal/logutil"
 )
 
 // ListChanges reports all changes known to the forge.
@@ -136,7 +136,7 @@ type ChangeBranch struct {
 }
 
 func (sh *ShamHub) toChangeBranch(owner, repo, ref string) (*ChangeBranch, error) {
-	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+	logw, flush := logutil.Writer(sh.log, log.DebugLevel)
 	defer flush()
 
 	cmd := exec.Command(sh.gitExe, "rev-parse", ref)

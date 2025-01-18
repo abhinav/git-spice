@@ -1,16 +1,39 @@
-package logtest
+package logutil
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestLogger(t *testing.T) {
+func TestLogWriter(t *testing.T) {
+	var buf bytes.Buffer
+	logger := log.New(&buf)
+	writer, done := Writer(logger, log.InfoLevel)
+
+	_, err := fmt.Fprint(writer, "hello world")
+	require.NoError(t, err)
+	done()
+
+	assert.Equal(t, "INFO hello world\n", buf.String())
+}
+
+func TestLogWriter_nil(t *testing.T) {
+	writer, done := Writer(nil, log.InfoLevel)
+
+	_, err := fmt.Fprint(writer, "hello world")
+	require.NoError(t, err)
+	done()
+}
+
+func TestTestLogger(t *testing.T) {
 	var stub testOutputStub
-	logger := New(&stub)
+	logger := TestLogger(&stub)
 
 	logger.Infof("Hello, %s!", "world")
 	logger.Error("Sadness", "err", errors.New("oh no"))

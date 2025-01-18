@@ -10,7 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/ioutil"
+	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -27,7 +27,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 		return "", fmt.Errorf("create repository: %w", err)
 	}
 
-	logw, flush := ioutil.LogWriter(sh.log, log.DebugLevel)
+	logw, flush := logutil.Writer(sh.log, log.DebugLevel)
 	defer flush()
 
 	initCmd := exec.Command(sh.gitExe, "init", "--bare", "--initial-branch=main")

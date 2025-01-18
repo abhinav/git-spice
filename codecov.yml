@@ -21,7 +21,6 @@ ignore:
   - internal/forge/shamhub
   - internal/forge/forgetest
   - internal/git/gittest
-  - internal/logtest
   - internal/mockedit
   - internal/secret/secrettest
   - internal/termtest

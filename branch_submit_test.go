@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 )
 
 func TestBranchSubmit_listChangeTemplates(t *testing.T) {
 	t.Run("NoTimeout", func(t *testing.T) {
-		log := logtest.New(t)
+		log := logutil.TestLogger(t)
 		ctx := context.Background()
 		tmpl := &forge.ChangeTemplate{}
 		svc := &spiceTemplateServiceStub{
@@ -33,7 +33,7 @@ func TestBranchSubmit_listChangeTemplates(t *testing.T) {
 	})
 
 	t.Run("Timeout", func(t *testing.T) {
-		log := logtest.New(t)
+		log := logutil.TestLogger(t)
 		ctx := context.Background()
 
 		svc := &spiceTemplateServiceStub{

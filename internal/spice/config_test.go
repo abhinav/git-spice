@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -193,7 +193,7 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 			// Read configuration
 			ctx := context.Background()
 			gitCfg := git.NewConfig(git.ConfigOptions{
-				Log: logtest.New(t),
+				Log: logutil.TestLogger(t),
 				Dir: home,
 				Env: []string{
 					"HOME=" + home,
@@ -202,7 +202,7 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 				},
 			})
 			spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
-				Log: logtest.New(t),
+				Log: logutil.TestLogger(t),
 			})
 			require.NoError(t, err, "load configuration")
 

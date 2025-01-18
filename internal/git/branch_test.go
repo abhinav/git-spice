@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -45,7 +45,7 @@ func TestIntegrationBranches(t *testing.T) {
 
 	ctx := context.Background()
 	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
-		Log: logtest.New(t),
+		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
@@ -191,7 +191,7 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	ctx := context.Background()
 	repo, err := git.Open(ctx,
 		filepath.Join(fixture.Dir(), "repo"),
-		git.OpenOptions{Log: logtest.New(t)},
+		git.OpenOptions{Log: logutil.TestLogger(t)},
 	)
 	require.NoError(t, err)
 
@@ -245,7 +245,7 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 	ctx := context.Background()
 	repo, err := git.Open(ctx,
 		filepath.Join(fixture.Dir(), "clone"),
-		git.OpenOptions{Log: logtest.New(t)},
+		git.OpenOptions{Log: logutil.TestLogger(t)},
 	)
 	require.NoError(t, err)
 

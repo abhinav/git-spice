@@ -12,7 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -46,7 +46,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	t.Cleanup(shamhubServer.Close)
 
 	shamhubForge := &shamhub.Forge{
-		Log: logtest.New(t),
+		Log: logutil.TestLogger(t),
 		Options: shamhub.Options{
 			URL:    shamhubServer.URL,
 			APIURL: shamhubServer.URL,
@@ -70,7 +70,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(ctx, mockRepo, mockStore, logtest.New(t))
+		svc := NewService(ctx, mockRepo, mockStore, logutil.TestLogger(t))
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -138,7 +138,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(ctx, mockRepo, mockStore, logtest.New(t))
+		svc := NewService(ctx, mockRepo, mockStore, logutil.TestLogger(t))
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 

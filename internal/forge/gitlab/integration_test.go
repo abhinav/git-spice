@@ -20,8 +20,8 @@ import (
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
-	"go.abhg.dev/gs/internal/ioutil"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/io/ioutil"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
@@ -99,7 +99,7 @@ func TestIntegration_Repository(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, nil)
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, nil)
 	require.NoError(t, err)
 }
 
@@ -107,7 +107,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	merged, err := repo.ChangesAreMerged(ctx, []forge.ChangeID{
@@ -188,7 +188,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	t.Run("absent", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := newGitLabClient(rec.GetDefaultClient())
-		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
+		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
@@ -199,7 +199,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	t.Run("present", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := newGitLabClient(rec.GetDefaultClient())
-		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "gitlab-org", "cli", logtest.New(t), ghc, nil)
+		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "gitlab-org", "cli", logutil.TestLogger(t), ghc, nil)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
@@ -217,7 +217,7 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
@@ -252,7 +252,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
 
-		output := ioutil.TestOutputWriter(t, "[git] ")
+		output := ioutil.TestLogWriter(t, "[git] ")
 
 		t.Logf("Cloning test-repo...")
 		repoDir := t.TempDir()
@@ -263,7 +263,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		var err error
 		gitRepo, err = git.Open(ctx, repoDir, git.OpenOptions{
-			Log: logtest.New(t),
+			Log: logutil.TestLogger(t),
 		})
 		require.NoError(t, err, "failed to open git repo")
 
@@ -307,7 +307,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -391,7 +391,7 @@ func TestIntegration_Repository_comments(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -428,7 +428,7 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -472,7 +472,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", logtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -518,7 +518,7 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
 	ghc := newGitLabClient(client)
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", logtest.New(t), ghc, nil)
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", logutil.TestLogger(t), ghc, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "404 Not Found")
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 )
 
 // SetListChangeCommentsPageSize changes the page size
@@ -171,7 +171,7 @@ func TestListChangeComments(t *testing.T) {
 			repo, err := newRepository(
 				context.Background(), new(Forge),
 				"owner", "repo",
-				logtest.New(t),
+				logutil.TestLogger(t),
 				client,
 				&repoID,
 			)
