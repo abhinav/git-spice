@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
@@ -22,7 +22,7 @@ func TestStore(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	store, err := state.OpenStore(ctx, db, logtest.New(t))
+	store, err := state.OpenStore(ctx, db, logutil.TestLogger(t))
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {

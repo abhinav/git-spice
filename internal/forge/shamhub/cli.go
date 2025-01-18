@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/gs/internal/ioutil"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/io/ioutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,7 +58,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		t := scriptState.t
 		sh, err := New(Config{
-			Log: logtest.New(t),
+			Log: logutil.TestLogger(t),
 		})
 		if err != nil {
 			ts.Fatalf("create ShamHub: %s", err)
@@ -126,7 +126,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			ts.Fatalf("ShamHub not initialized")
 		}
 
-		logw, closeLogw := ioutil.LogfWriter(ts.Logf, "shamhub merge: ")
+		logw, closeLogw := ioutil.PrintfWriter(ts.Logf, "shamhub merge: ")
 		ts.Defer(closeLogw)
 
 		flag := flag.NewFlagSet("shamhub merge", flag.ContinueOnError)

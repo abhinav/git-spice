@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/ioutil"
+	"go.abhg.dev/gs/internal/logutil"
 )
 
 // execer controls actual execution of Git commands.
@@ -187,7 +187,7 @@ func stderrWriter(cmd string, logger *log.Logger) (w io.Writer, wrap func(error)
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
 		cmdLog := logger.WithPrefix(cmd)
-		w, flush := ioutil.LogWriter(cmdLog, log.DebugLevel)
+		w, flush := logutil.Writer(cmdLog, log.DebugLevel)
 		return w, func(err error) error {
 			flush()
 			return err

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logtest"
+	"go.abhg.dev/gs/internal/logutil"
 )
 
 func TestParseMode(t *testing.T) {
@@ -35,7 +35,7 @@ func TestIntegrationListTreeAbsent(t *testing.T) {
 
 	ctx := context.Background()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
-		Log: logtest.New(t),
+		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
@@ -48,7 +48,7 @@ func TestIntegrationMakeTree(t *testing.T) {
 
 	ctx := context.Background()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
-		Log: logtest.New(t),
+		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
@@ -94,7 +94,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 
 	ctx := context.Background()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
-		Log: logtest.New(t),
+		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
