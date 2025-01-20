@@ -127,8 +127,8 @@ github.com/vito/midterm v0.2.1-0.20241224155031-41aafc92c897/go.mod h1:WkbqZBIhH
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8ua9s=
 github.com/zalando/go-keyring v0.2.6/go.mod h1:2TCrxYrbUNYfNS/Kgy/LSrkSQzZ5UPVH85RwfczwvcI=
-gitlab.com/gitlab-org/api/client-go v0.119.0 h1:YBZyx9XUTtEDBBYtY36cZWz6JmT7om/8HPSk37IS95g=
-gitlab.com/gitlab-org/api/client-go v0.119.0/go.mod h1:ygHmS3AU3TpvK+AC6DYO1QuAxLlv6yxYK+/Votr/WFQ=
+gitlab.com/gitlab-org/api/client-go v0.120.0 h1:geCJjojDXxWVmUcTxPcOUCenAWElWB5dVfX3HJGeAMc=
+gitlab.com/gitlab-org/api/client-go v0.120.0/go.mod h1:ygHmS3AU3TpvK+AC6DYO1QuAxLlv6yxYK+/Votr/WFQ=
 go.abhg.dev/io/ioutil v0.1.0 h1:YGGMzh9HT52JYuVWbnr/E5GkYHbL3yRNDjcxFDaUHNk=
 go.abhg.dev/io/ioutil v0.1.0/go.mod h1:79IIyZVWxNZE8hBxMtubM8zJFPs+2NCqHYfWeH3X6hM=
 go.abhg.dev/komplete v0.1.0 h1:OE/uazFmWxrYYxttaKri9UpVr/i3J2Iv1vh21mYVom8=
