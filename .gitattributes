@@ -11,3 +11,7 @@
 
 # pgregory.net/rapid should be considered generated code to reduce noise.
 **/testdata/rapid/**/*.fail linguist-generated
+
+# mise files that don't need to be seen in diffs by default.
+mise.lock linguist-generated
+/bin/mise lingust-generated
