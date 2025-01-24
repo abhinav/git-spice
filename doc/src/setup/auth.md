@@ -291,22 +291,18 @@ inform it of the instance URL, authenticate, and use git-spice as usual.
     {green}${reset} git config {red}spice.forge.github.url{reset} {mag}https://github.example.com{reset}
     ```
 
-    The GitHub API is assumed to be at `/api` under the GitHub URL.
-    For example, if your GitHub Enterprise instance is at `https://github.example.com`,
-    the API is assumed to be at `https://github.example.com/api`.
-
-    If this is not the case, set the $$spice.forge.github.apiUrl$$ configuration option.
+    **Optionally**, also set the GitHub API URL
+    with the $$spice.forge.github.apiUrl$$ configuration option.
+    By default, the API URL is assumed to be at `/api` under the GitHub URL.
 
     ```freeze language="terminal"
     {green}${reset} git config {red}spice.forge.github.apiUrl{reset} {mag}https://github.example.com/api{reset}
     ```
 
-    These values may also be set with environment variables.
+    The GitHub API URL will typically end with `/api`, not `/api/v3` or similar.
 
-    ```freeze language="bash"
-    export GITHUB_URL=https://github.example.com
-    export GITHUB_API_URL=https://github.example.com/api
-    ```
+    Alternatively, these configuration options may also be set
+    with the `GITHUB_URL` and `GITHUB_API_URL` environment variables.
 
 === "<!-- gs:version v0.3.1 --> or older"
 
@@ -314,12 +310,12 @@ inform it of the instance URL, authenticate, and use git-spice as usual.
     to the address of your GitHub Enterprise instance
     and its API endpoint, respectively.
 
-    ```freeze language="bash"
-    export GITHUB_URL=https://github.example.com
-    export GITHUB_API_URL=https://github.example.com/api
-    ```
+    These must both be set for git-spice to work with GitHub Enterprise.
 
-    Both values must be set for git-spice to work with GitHub Enterprise.
+```freeze language="bash"
+export GITHUB_URL=https://github.example.com
+export GITHUB_API_URL=https://github.example.com/api
+```
 
 ### GitLab Self-Hosted
 
