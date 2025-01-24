@@ -10,8 +10,10 @@ import (
 func DefaultConfig() Config {
 	return Config{
 		"init.defaultBranch": "main",
-		"alias.graph":        "log --graph --decorate --oneline",
-		"core.autocrlf":      "false",
+		// Freeze what refs get decorated in the log output.
+		"log.excludeDecoration": "refs/remotes/*/HEAD",
+		"alias.graph":           "log --graph --decorate --oneline",
+		"core.autocrlf":         "false",
 	}
 }
 

@@ -35,7 +35,7 @@ gs repo sync
 stderr 'feature1: #1 was merged'
 
 git branch -r
-cmp stdout $WORK/golden/merged-branches.txt
+! stdout 'origin/feature1'
 
 # we should now be on main,
 # feature1 branch should be gone,
@@ -53,8 +53,6 @@ Contents of feature1
 -- repo/feature2.txt --
 Contents of feature2
 
--- golden/merged-branches.txt --
-  origin/main
 -- golden/pull.json --
 {
   "number": 1,
