@@ -75,7 +75,7 @@ INF Pushed feature1
 []
 -- golden/post-push.txt --
 * 9282351 (origin/feature1) feature1
-* a7a403e (HEAD -> main, origin/main, origin/HEAD) Initial commit
+* a7a403e (HEAD -> main, origin/main) Initial commit
 -- golden/post-publish.txt --
 [
   {

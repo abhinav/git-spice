@@ -74,13 +74,13 @@ feature 2
 * main
 -- golden/repo-sync-graph.txt --
 * b3ed169 (HEAD -> feat2, origin/feat2) feat2
-* 1993921 (origin/main, origin/HEAD, main) feat1
+* 1993921 (origin/main, main) feat1
 * 8b0535b Initial commit
 -- golden/repo-sync-ll.txt --
 ┏━■ feat2 ◀
 ┃   b3ed169 feat2 (now)
 main
 -- golden/repo-sync-graph-2.txt --
-* b3ed169 (HEAD -> main, origin/main, origin/HEAD) feat2
+* b3ed169 (HEAD -> main, origin/main) feat2
 * 1993921 feat1
 * 8b0535b Initial commit
