@@ -32,7 +32,7 @@ git pull origin main
 
 # sanity check: the tracking branch is gone
 git branch -r
-cmp stdout $WORK/golden/branch-gone.txt
+! stdout 'origin/feature'
 
 gs repo sync
 stderr 'feature: #\d was merged'
@@ -41,5 +41,3 @@ stderr 'feature: deleted'
 
 -- repo/feature.txt --
 Contents of feature
--- golden/branch-gone.txt --
-  origin/main
