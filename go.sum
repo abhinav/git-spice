@@ -2,8 +2,8 @@ al.essio.dev/pkg/shellescape v1.5.1 h1:86HrALUujYS/h+GtqoB26SBEdkWfmMI6FubjXlsXy
 al.essio.dev/pkg/shellescape v1.5.1/go.mod h1:6sIqp7X2P6mThCQ7twERpZTuigpr6KbZWtls1U8I890=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
-github.com/alecthomas/kong v1.6.1 h1:/7bVimARU3uxPD0hbryPE8qWrS3Oz3kPQoxA/H2NKG8=
-github.com/alecthomas/kong v1.6.1/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
+github.com/alecthomas/kong v1.7.0 h1:MnT8+5JxFDCvISeI6vgd/mFbAJwueJ/pqQNzZMsiqZE=
+github.com/alecthomas/kong v1.7.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
@@ -114,8 +114,8 @@ github.com/vito/midterm v0.2.1-0.20241224155031-41aafc92c897 h1:y4AWOi5pjOcLR0L0
 github.com/vito/midterm v0.2.1-0.20241224155031-41aafc92c897/go.mod h1:WkbqZBIhH4jfxXkE2bjhosM1BdF/dCp7sR4x9wQB6fA=
 github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8ua9s=
 github.com/zalando/go-keyring v0.2.6/go.mod h1:2TCrxYrbUNYfNS/Kgy/LSrkSQzZ5UPVH85RwfczwvcI=
-gitlab.com/gitlab-org/api/client-go v0.120.0 h1:geCJjojDXxWVmUcTxPcOUCenAWElWB5dVfX3HJGeAMc=
-gitlab.com/gitlab-org/api/client-go v0.120.0/go.mod h1:ygHmS3AU3TpvK+AC6DYO1QuAxLlv6yxYK+/Votr/WFQ=
+gitlab.com/gitlab-org/api/client-go v0.121.0 h1:tivRdXcu5d7sOB2aR2BhQkp16tMmESnfhYPYPZN03eo=
+gitlab.com/gitlab-org/api/client-go v0.121.0/go.mod h1:ygHmS3AU3TpvK+AC6DYO1QuAxLlv6yxYK+/Votr/WFQ=
 go.abhg.dev/io/ioutil v0.1.0 h1:YGGMzh9HT52JYuVWbnr/E5GkYHbL3yRNDjcxFDaUHNk=
 go.abhg.dev/io/ioutil v0.1.0/go.mod h1:79IIyZVWxNZE8hBxMtubM8zJFPs+2NCqHYfWeH3X6hM=
 go.abhg.dev/komplete v0.1.0 h1:OE/uazFmWxrYYxttaKri9UpVr/i3J2Iv1vh21mYVom8=
