@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/stacknav"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
@@ -400,6 +401,14 @@ type stackedChange struct {
 	Aboves []int
 }
 
+var _ stacknav.Node = (*stackedChange)(nil)
+
+func (s *stackedChange) BaseIdx() int { return s.Base }
+
+func (s *stackedChange) Value() string {
+	return s.Change.String()
+}
+
 const (
 	_commentHeader = "This change is part of the following stack:"
 	_commentFooter = "<sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>"
@@ -421,70 +430,14 @@ func generateStackNavigationComment(
 	var sb strings.Builder
 	sb.WriteString(_commentHeader)
 	sb.WriteString("\n\n")
-	write := func(nodeIdx, indent int) {
-		node := nodes[nodeIdx]
-		for range indent {
-			sb.WriteString("    ")
-		}
-		fmt.Fprintf(&sb, "- %v", node.Change)
-		if nodeIdx == current {
-			sb.WriteString(" ◀")
-		}
-		sb.WriteString("\n")
-	}
 
-	// The graph is a DAG, so we don't expect cycles.
-	// Guard against it anyway.
-	visited := make([]bool, len(nodes))
-	ok := func(i int) bool {
-		if i < 0 || i >= len(nodes) || visited[i] {
-			return false
-		}
-		visited[i] = true
-		return true
-	}
+	stacknav.Print(&sb, nodes, current)
 
-	// Write the downstacks, not including the current node.
-	// This will change the indent level.
-	// The downstacks leading up to the current branch are always linear.
-	var indent int
-	{
-		var downstacks []int
-		for base := nodes[current].Base; ok(base); base = nodes[base].Base {
-			downstacks = append(downstacks, base)
-		}
-
-		// Reverse order to print from base to current.
-		for i := len(downstacks) - 1; i >= 0; i-- {
-			write(downstacks[i], indent)
-			indent++
-		}
-	}
-
-	// For the upstacks, we'll need to traverse the graph
-	// and recursively write the upstacks.
-	// Indentation will increase for each subtree.
-	var visit func(int, int)
-	visit = func(nodeIdx, indent int) {
-		if !ok(nodeIdx) {
-			return
-		}
-
-		write(nodeIdx, indent)
-		for _, aboveIdx := range nodes[nodeIdx].Aboves {
-			visit(aboveIdx, indent+1)
-		}
-	}
-
-	// Current branch and its upstacks.
-	visit(current, indent)
 	sb.WriteString("\n")
-
 	sb.WriteString(_commentFooter)
-	sb.WriteString("\n")
 
+	sb.WriteString("\n")
 	sb.WriteString(_commentMarker)
 	sb.WriteString("\n")
-
 	return sb.String()
 }
