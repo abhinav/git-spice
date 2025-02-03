@@ -22,7 +22,7 @@ type branchCheckoutCmd struct {
 	checkoutOptions
 
 	Untracked bool   `short:"u" config:"branchCheckout.showUntracked" help:"Show untracked branches if one isn't supplied"`
-	Branch    string `arg:"" optional:"" help:"Name of the branch to delete" predictor:"branches"`
+	Branch    string `arg:"" optional:"" help:"Name of the branch to checkout" predictor:"branches"`
 }
 
 func (*branchCheckoutCmd) Help() string {

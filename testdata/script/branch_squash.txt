@@ -1,0 +1,47 @@
+# Squashing a branch into one commit with 'squash'
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo i
+
+# Create a branch with two commits
+git add feature1.txt
+gs branch create feature-1 -m 'First message in squashed branch'
+git add feature2.txt
+git commit -m 'Second message in squashed branch'
+
+# Create another branch
+git add feature3.txt
+gs branch create feature2 -m 'First message in rebased branch'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Go back to branch that will be squashed
+gs down
+gs branch squash
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/dirty.txt --
+Dirty
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- golden/graph-before.txt --
+* d805cb2 (HEAD -> feature2) First message in rebased branch
+* 0239007 (feature-1) Second message in squashed branch
+* 7ebfd80 First message in squashed branch
+* 9bad92b (main) Initial commit
+-- golden/graph.txt --
+* cbeb99e (feature2) First message in rebased branch
+* 6ca0ea8 (HEAD -> feature-1) First message in squashed branch
+* 9bad92b (main) Initial commit
