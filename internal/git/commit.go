@@ -109,6 +109,16 @@ type CommitRequest struct {
 	// as the commit message.
 	ReuseMessage string
 
+	// Template is the commit message template.
+	//
+	// If Message is empty, this fills the initial commit message
+	// when the user is editing the commit message.
+	//
+	// Note that if the user does not edit the message,
+	// the commit will be aborted.
+	// Therefore, do not use this as a default message.
+	Template string
+
 	// All stages all changes before committing.
 	All bool
 
@@ -137,6 +147,23 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.Message != "" {
 		args = append(args, "-m", req.Message)
+	}
+	if req.Template != "" {
+		f, err := os.CreateTemp("", "commit-template-")
+		if err != nil {
+			return fmt.Errorf("create temp file: %w", err)
+		}
+		defer func() { _ = os.Remove(f.Name()) }()
+
+		if _, err := f.WriteString(req.Template); err != nil {
+			return fmt.Errorf("write temp file: %w", err)
+		}
+
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("close temp file: %w", err)
+		}
+
+		args = append(args, "--template", f.Name())
 	}
 	if req.Amend {
 		args = append(args, "--amend")
