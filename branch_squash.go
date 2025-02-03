@@ -43,6 +43,10 @@ func (cmd *branchSquashCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
+	if branchName == store.Trunk() {
+		return fmt.Errorf("cannot squash the trunk branch")
+	}
+
 	branch, err := svc.LookupBranch(ctx, branchName)
 	if err != nil {
 		return fmt.Errorf("lookup branch %q: %w", branchName, err)
