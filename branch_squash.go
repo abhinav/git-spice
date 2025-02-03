@@ -117,6 +117,9 @@ func (cmd *branchSquashCmd) Run(
 	if err := repo.SetRef(ctx, git.SetRefRequest{
 		Ref:  "refs/heads/" + branchName,
 		Hash: headHash,
+		// Ensure that another tree didn't update the branch
+		// while we weren't looking.
+		OldHash: branch.Head,
 	}); err != nil {
 		return fmt.Errorf("update branch ref: %w", err)
 	}
