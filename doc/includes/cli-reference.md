@@ -653,6 +653,9 @@ Squash a branch into one commit
 Squash all commits in the current branch into a single commit
 and restack upstack branches.
 
+An editor will open to edit the commit message of the squashed commit.
+Use the -m/--message flag to specify a commit message without editing.
+
 **Flags**
 
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
