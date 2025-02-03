@@ -131,7 +131,8 @@ func (r *Repository) BranchExists(ctx context.Context, branch string) bool {
 }
 
 // DetachHead detaches the HEAD from the current branch
-// while staying at the same commit.
+// and points it to the specified commitish (if provided).
+// Otherwise, it stays at the current commit.
 func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
 	args := []string{"checkout", "--detach"}
 	if len(commitish) > 0 {

@@ -10,6 +10,7 @@
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
 | gs bs | [gs branch submit](/cli/reference.md#gs-branch-submit) |
 | gs bsp | [gs branch split](/cli/reference.md#gs-branch-split) |
+| gs bsq | [gs branch squash](/cli/reference.md#gs-branch-squash) |
 | gs btr | [gs branch track](/cli/reference.md#gs-branch-track) |
 | gs buntr | [gs branch untrack](/cli/reference.md#gs-branch-untrack) |
 | gs ca | [gs commit amend](/cli/reference.md#gs-commit-amend) |

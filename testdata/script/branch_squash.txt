@@ -1,0 +1,75 @@
+# Squashing a branch into one commit with 'squash'
+
+as 'Test <test@example.com>'
+at '2025-02-02T20:00:01Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch with two commits
+git add feature1.txt
+gs branch create feature1 -m 'First message in squashed branch'
+git add feature2.txt
+git commit -m 'Second message in squashed branch'
+
+# Create another branch
+git add feature3.txt
+gs branch create feature3 -m 'First message in rebased branch'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Go back to branch that will be squashed
+gs down
+
+mkdir $WORK/output
+env EDITOR=mockedit
+env MOCKEDIT_RECORD=$WORK/output/initial-msg.txt
+env MOCKEDIT_GIVE=$WORK/input/squashed-msg.txt
+gs branch squash
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+cmp $WORK/output/initial-msg.txt $WORK/golden/initial-msg.txt
+
+-- repo/dirty.txt --
+Dirty
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- golden/graph-before.txt --
+* a956270 (HEAD -> feature3) First message in rebased branch
+* adfd1b6 (feature1) Second message in squashed branch
+* 3143d6f First message in squashed branch
+* 2b5f0cb (main) Initial commit
+-- golden/graph.txt --
+* c012e99 (feature3) First message in rebased branch
+* 67f0d51 (HEAD -> feature1) Squashed commit message
+* 2b5f0cb (main) Initial commit
+-- input/squashed-msg.txt --
+Squashed commit message
+
+This contains features 1 and 2.
+-- golden/initial-msg.txt --
+The original commit messages were:
+
+Second message in squashed branch
+
+First message in squashed branch
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# HEAD detached from refs/heads/feature1
+# Changes to be committed:
+#	new file:   feature1.txt
+#	new file:   feature2.txt
+#
+# Untracked files:
+#	dirty.txt
+#

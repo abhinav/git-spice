@@ -1,0 +1,52 @@
+# Common errors with 'branch squash'.
+
+as 'Test <test@example.com>'
+at '2025-02-02T20:18:19Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+! gs branch squash
+stderr 'cannot squash the trunk branch'
+
+# feat1 -> feat2, with feat1 diverging
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+git add feat2-pt2.txt
+gs cc -m 'feat2 part 2'
+gs down
+git add feat1-pt2.txt
+git commit -m 'feat1 part 2'
+gs up
+
+# branch is not restacked
+! gs branch squash
+stderr 'branch feat2 needs to be restacked'
+gs stack restack  # fix it
+
+# abort the commit
+git diff --quiet # verify no changes
+git graph --branches
+cmp stdout $WORK/golden/abort-before.txt
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/empty.txt
+! gs branch squash
+stderr 'empty commit message'
+# must still be in the branch
+git graph --branches
+cmp stdout $WORK/golden/abort-before.txt
+
+-- repo/feat1.txt --
+-- repo/feat1-pt2.txt --
+-- repo/feat2.txt --
+-- repo/feat2-pt2.txt --
+-- input/empty.txt --
+-- golden/abort-before.txt --
+* 01fbf9b (HEAD -> feat2) feat2 part 2
+* 4b08080 feat2
+* 833ec52 (feat1) feat1 part 2
+* 48855c7 feat1
+* da2d8d1 (main) Initial commit

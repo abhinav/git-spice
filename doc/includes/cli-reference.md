@@ -484,7 +484,7 @@ Use -u/--untracked to show untracked branches in the prompt.
 
 **Arguments**
 
-* `branch`: Name of the branch to delete
+* `branch`: Name of the branch to checkout
 
 **Flags**
 
@@ -641,6 +641,25 @@ For example:
 
 * `--at=COMMIT:NAME,...`: Commits to split the branch at.
 * `--branch=NAME`: Branch to split commits of.
+
+### gs branch squash
+
+```
+gs branch (b) squash (sq) [flags]
+```
+
+Squash a branch into one commit
+
+Squash all commits in the current branch into a single commit
+and restack upstack branches.
+
+An editor will open to edit the commit message of the squashed commit.
+Use the -m/--message flag to specify a commit message without editing.
+
+**Flags**
+
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
+* `-m`, `--message=MSG`: Use the given message as the commit message.
 
 ### gs branch edit
 
