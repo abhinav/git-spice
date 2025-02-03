@@ -32,7 +32,7 @@ func (cmd *branchSquashCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
-) error {
+) (err error) {
 	branchName, err := repo.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
@@ -74,15 +74,24 @@ func (cmd *branchSquashCmd) Run(
 		commitTemplate = sb.String()
 	}
 
-	// Checkout the branch in detached mode
-	if err := (&branchCheckoutCmd{
-		Branch: branchName,
-		checkoutOptions: checkoutOptions{
-			Detach: true,
-		},
-	}).Run(ctx, log, view, repo, store, svc); err != nil {
-		return err
+	// Detach the HEAD so that we don't mess with the current branch
+	// until the operation is confirmed successful.
+	if err := repo.DetachHead(ctx, branchName); err != nil {
+		return fmt.Errorf("detach HEAD: %w", err)
 	}
+	var reattachedHead bool
+	defer func() {
+		// Reattach the HEAD to the original branch
+		// if we return early before the operation is complete.
+		if !reattachedHead {
+			if cerr := repo.Checkout(ctx, branchName); cerr != nil {
+				log.Error("could not check out original branch",
+					"branch", branchName,
+					"error", cerr)
+				err = errors.Join(err, cerr)
+			}
+		}
+	}()
 
 	// Reset the detached branch to the base commit
 	if err := repo.Reset(ctx, branch.BaseHash.String(), git.ResetOptions{Mode: git.ResetSoft}); err != nil {
@@ -106,13 +115,13 @@ func (cmd *branchSquashCmd) Run(
 		Ref:  "refs/heads/" + branchName,
 		Hash: headHash,
 	}); err != nil {
-		return err
+		return fmt.Errorf("update branch ref: %w", err)
 	}
 
-	// Check out the original branch
-	if err := repo.Checkout(ctx, branchName); err != nil {
-		return err
+	if cerr := repo.Checkout(ctx, branchName); cerr != nil {
+		return fmt.Errorf("checkout branch: %w", cerr)
 	}
+	reattachedHead = true
 
 	return (&upstackRestackCmd{}).Run(ctx, log, repo, store, svc)
 }
