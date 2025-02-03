@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
@@ -50,14 +51,27 @@ func (cmd *branchSquashCmd) Run(
 		return fmt.Errorf("verify restacked: %w", err)
 	}
 
-	commitMsg := cmd.Message
-
-	if commitMsg == "" {
+	// If no message was specified,
+	// combine the commit messages of all commits in the branch
+	// to form the initial commit message for the squashed commit.
+	var commitTemplate string
+	if cmd.Message == "" {
 		commitMessages, err := repo.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
 		if err != nil {
 			return fmt.Errorf("get commit messages: %w", err)
 		}
-		commitMsg = commitMessages[len(commitMessages)-1].String()
+
+		var sb strings.Builder
+		sb.WriteString("The original commit messages were:\n\n")
+		for i, msg := range commitMessages {
+			if i > 0 {
+				sb.WriteString("\n")
+			}
+
+			fmt.Fprintf(&sb, "%v\n", msg)
+		}
+
+		commitTemplate = sb.String()
 	}
 
 	// Checkout the branch in detached mode
@@ -75,9 +89,11 @@ func (cmd *branchSquashCmd) Run(
 		return err
 	}
 
-	// Commit the changes
-	if err := repo.Commit(ctx, git.CommitRequest{Message: commitMsg}); err != nil {
-		return err
+	if err := repo.Commit(ctx, git.CommitRequest{
+		Message:  cmd.Message,
+		Template: commitTemplate,
+	}); err != nil {
+		return fmt.Errorf("commit squashed changes: %w", err)
 	}
 
 	// Replace the HEAD ref of `branchName` with the new commit
