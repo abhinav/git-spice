@@ -655,6 +655,7 @@ and restack upstack branches.
 
 **Flags**
 
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 
 ### gs branch edit

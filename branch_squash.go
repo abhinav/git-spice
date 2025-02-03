@@ -15,6 +15,8 @@ import (
 )
 
 type branchSquashCmd struct {
+	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 }
 
@@ -105,6 +107,7 @@ func (cmd *branchSquashCmd) Run(
 	if err := repo.Commit(ctx, git.CommitRequest{
 		Message:  cmd.Message,
 		Template: commitTemplate,
+		NoVerify: cmd.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit squashed changes: %w", err)
 	}
