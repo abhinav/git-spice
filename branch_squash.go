@@ -93,9 +93,13 @@ func (cmd *branchSquashCmd) Run(
 		}
 	}()
 
-	// Reset the detached branch to the base commit
-	if err := repo.Reset(ctx, branch.BaseHash.String(), git.ResetOptions{Mode: git.ResetSoft}); err != nil {
-		return err
+	// Perform a soft reset to the base commit.
+	// The working tree and index will remain unchanged,
+	// so the contents of the head commit will be staged.
+	if err := repo.Reset(ctx, branch.BaseHash.String(), git.ResetOptions{
+		Mode: git.ResetSoft,
+	}); err != nil {
+		return fmt.Errorf("reset to base commit: %w", err)
 	}
 
 	if err := repo.Commit(ctx, git.CommitRequest{
@@ -105,10 +109,9 @@ func (cmd *branchSquashCmd) Run(
 		return fmt.Errorf("commit squashed changes: %w", err)
 	}
 
-	// Replace the HEAD ref of `branchName` with the new commit
 	headHash, err := repo.Head(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("get HEAD hash: %w", err)
 	}
 
 	if err := repo.SetRef(ctx, git.SetRefRequest{
