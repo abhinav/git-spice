@@ -273,9 +273,10 @@ text "gs upstack restack" mono with w at last.e
 
 ### Automatic restacking
 
-git-spice provides a handful of convenience commands
-for common commit-related tasks
-that will automatically restack upstack branches for you:
+git-spice provides several convenience commands
+that run common Git operations and automatically restack upstack branches.
+
+These include but are not limited to:
 
 - $$gs commit create$$ (or $$gs commit create|gs cc$$)
   commits changes to the current branch and restacks upstack branches
@@ -283,9 +284,6 @@ that will automatically restack upstack branches for you:
   amends the last commit and restacks upstack branches
 - $$gs commit split$$ (or $$gs commit split|gs csp$$)
   interactively splits the last commit into two and restacks upstack branches
-- $$gs branch edit$$ (or $$gs branch edit|gs be$$)
-  opens an interactive rebase of the commits in the current branch
-  and restacks upstack branches after the rebase completes successfully
 
 For example, the interaction above can be shortened to:
 
@@ -295,6 +293,60 @@ For example, the interaction above can be shortened to:
 {gray}# prepare your changes{reset}
 {green}${reset} gs commit create {gray}# or gs cc{reset}
 ```
+
+### Editing commits in a branch
+
+The $$gs branch edit$$ command starts a `git rebase --interactive`
+for the commits in the current branch.
+
+```freeze language="terminal" float="right"
+{green}${reset} gs branch edit
+```
+
+```
+pick c0d0855d feat: Add support for things
+pick 78c047c5 doc: Document something
+pick 4dbf01a5 fix: Fix a thing that was broken
+```
+
+Use the usual Git rebase commands to edit, reorder, squash, or split commits.
+
+After the rebase operation completes successfully,
+upstack branches will be restacked on top of the current branch.
+
+#### Handling rebase interruptions
+
+```freeze language="terminal" float="right"
+{green}${reset} gs rebase continue
+{green}${reset} gs rebase abort
+```
+
+If a rebase operation is interrupted due to a conflict,
+or because an `edit` or `break` instruction was used in the rebase script,
+git-spice will pause execution and let you resolve the issue.
+You may then:
+
+- Resolve the conflict, make any planned changes,
+  and run $$gs rebase continue$$ (`gs rbc` for short)
+  to let git-spice continue the rest of the operation; or
+- Run $$gs rebase abort$$ (`gs rba` for short) to abort the operation
+  and go back to the state before the rebase started.
+
+### Squashing commits in a branch
+
+<!-- gs:version unreleased -->
+
+```freeze language="terminal" float="right"
+{green}${reset} gs branch squash
+```
+
+$$gs branch squash$$ will squash all commits in the current branch
+and open an editor to let you write a commit message for the squashed commit.
+Use the `-m`/`--message` flag to provide a message without opening an editor.
+
+If you want to squash only a subset of commits in the branch,
+use $$gs branch edit$$ and add `squash` or `fixup` commands.
+
 
 ## Inserting into the stack
 
