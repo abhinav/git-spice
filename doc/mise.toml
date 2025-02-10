@@ -15,7 +15,7 @@ _.python.venv = { path = ".venv", create = true }
 _BIN_DIR = "{{ env.PROJECT_ROOT }}/bin"
 
 [tools]
-python = "3.13.1"
+python = "3.13.2"
 uv = "latest"
 
 [tasks.build]
