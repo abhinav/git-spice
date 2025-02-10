@@ -1,5 +1,5 @@
 [tools.python]
-version = "3.13.1"
+version = "3.13.2"
 backend = "core:python"
 
 [tools.uv]
