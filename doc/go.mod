@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.23
 
-require github.com/charmbracelet/freeze v0.1.7-0.20250130055052-3de0e50c89ba
+require github.com/charmbracelet/freeze v0.1.7-0.20250203054136-2c8cc4563916
 
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
@@ -23,8 +23,8 @@ require (
 	github.com/charmbracelet/x/errors v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240906161213-162f3037fef5 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/charmbracelet/x/termios v0.1.0 // indirect
-	github.com/charmbracelet/x/xpty v0.1.1 // indirect
+	github.com/charmbracelet/x/termios v0.1.1 // indirect
+	github.com/charmbracelet/x/xpty v0.1.2 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -44,6 +44,6 @@ require (
 	github.com/tetratelabs/wazero v1.8.0 // indirect
 	golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e // indirect
 	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 )
