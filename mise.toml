@@ -10,7 +10,7 @@ _.path = ["{{ config_root }}/bin"]
 [alias]
 # Specify sources for all tools so we can refer to them directly.
 requiredfield = "go:go.abhg.dev/requiredfield/cmd/requiredfield"
-golangci-lint = "ubi:golangci/golangci-lint"
+golangci-lint = "aqua:golangci/golangci-lint"
 changie = "ubi:miniscruff/changie"
 
 [tools]
@@ -24,7 +24,7 @@ gotestsum = "latest"
 gofumpt = "latest"
 
 # Check for required fields in structs.
-requiredfield = "0.3.0"
+requiredfield = "0.4.0"
 
 # Collection of linters.
 golangci-lint = "latest"
@@ -33,7 +33,7 @@ golangci-lint = "latest"
 changie = "latest"
 
 [tasks.generate]
-depends = ["tools:*"]
+depends = ["tools"]
 description = "Update generated code"
 run = [
   "go generate -x ./...",
@@ -83,13 +83,11 @@ run = "go install go.abhg.dev/gs"
 wait_for = ["generate"]
 description = "Build the gs binary"
 
-# mockgen version is pinned in go.mod
-# so don't use mise's go backend.
-[tasks."tools:mockgen"]
+[tasks.tools]
 sources = ["go.mod"]
-outputs = ["bin/mockgen"]
-run = "go install go.uber.org/mock/mockgen"
-description = "Install mockgen"
+outputs = { auto = true }
+run = "go install tool"
+description = "Install tools"
 hide = true
 
 [tasks.changie]

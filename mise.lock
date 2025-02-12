@@ -1,18 +1,17 @@
 [tools.changie]
-version = "1.21.0"
+version = "1.21.1"
 backend = "ubi:miniscruff/changie"
 
 [tools.changie.checksums]
-changie-linux-x86_64 = "sha256:716ab3092979c0320a66c1b4be468b2b5378c7c6cd8b2c4a305fdc5a14492a07"
-changie-macos-aarch64 = "sha256:704f4bec07dab6e4006870415a93724e4f8705b00a905981711f29a9be5463c3"
+changie-linux-x86_64 = "sha256:e4dd48b7a8bc5bb3070e6a12db70be8945ed44e01005c542455f74f276d4d1bd"
 
 [tools.go]
-version = "1.23.5"
+version = "1.24.0"
 backend = "core:go"
 
 [tools.go.checksums]
-"go1.23.5.darwin-arm64.tar.gz" = "sha256:047bfce4fbd0da6426bd30cd19716b35a466b1c15a45525ce65b9824acb33285"
-"go1.23.5.linux-amd64.tar.gz" = "sha256:cbcad4a6482107c7c7926df1608106c189417163428200ce357695cc7e01d091"
+"go1.24.0.darwin-arm64.tar.gz" = "sha256:fd9cfb5dd6c75a347cfc641a253f0db1cebaca16b0dd37965351c6184ba595e4"
+"go1.24.0.linux-amd64.tar.gz" = "sha256:dea9ca38a0b852a74e81c26134671af7c0fbe65d81b0dc1c5bfe22cf7d4c8858"
 
 [tools.gofumpt]
 version = "0.7.0"
@@ -23,12 +22,11 @@ gofumpt-linux-x86_64 = "sha256:6ff459c1dcae3b0b00844c1a5a4a5b0f547237d8a4f3624aa
 gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77aa354d6aa20b045a"
 
 [tools.golangci-lint]
-version = "1.63.4"
-backend = "ubi:golangci/golangci-lint"
+version = "1.64.2"
+backend = "aqua:golangci/golangci-lint"
 
 [tools.golangci-lint.checksums]
-golangci-lint-linux-x86_64 = "sha256:3af723fe4089f0849b3eb4724071373f2debf750a4d989dc9c6c9cdc3780310b"
-golangci-lint-macos-aarch64 = "sha256:30a3c6b51fbd8ea32af4dd142dff5f8c4d6112ec279370b13bc4b46caaffbca9"
+"golangci-lint-1.64.2-linux-amd64.tar.gz" = "sha256:a893e7c9211f70a0cb8c5121ab80d5b089109c23af6bc2923820ba8b42365072"
 
 [tools.gotestsum]
 version = "1.12.0"
@@ -39,5 +37,5 @@ backend = "aqua:gotestyourself/gotestsum"
 "gotestsum_1.12.0_linux_amd64.tar.gz" = "sha256:a50939fcfdfbc052bf97ff074c7fd8bcde1745be4a365d12d79311c293f12ae7"
 
 [tools.requiredfield]
-version = "0.3.0"
+version = "0.4.0"
 backend = "go:go.abhg.dev/requiredfield/cmd/requiredfield"
