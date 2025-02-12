@@ -158,6 +158,30 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 	cmd.println("```")
 	cmd.println()
 
+	if version := node.Tag.Get("released"); version != "" {
+		icon := ":material-tag:"
+		text := version
+		href := fmt.Sprintf("/changelog.md#%s", version)
+		if version == "unreleased" {
+			icon = ":material-tag-hidden:"
+			text = "Unreleased"
+			href = ""
+		}
+
+		cmd.printf(`<span class="mdx-badge">`)
+		cmd.printf(`<span class="mdx-badge__icon">`)
+		cmd.printf(`%s{ title="Released in version" }`, icon)
+		cmd.printf(`</span>`)
+		cmd.printf(`<span class="mdx-badge__text">`)
+		if href != "" {
+			cmd.printf("[%s](%s)", text, href)
+		} else {
+			cmd.printf("%s", text)
+		}
+		cmd.printf(`</span>`)
+		cmd.printf("\n\n")
+	}
+
 	if node.Help != "" {
 		cmd.println(node.Help)
 		cmd.println()

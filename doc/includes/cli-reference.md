@@ -648,6 +648,8 @@ For example:
 gs branch (b) squash (sq) [flags]
 ```
 
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
 Squash a branch into one commit
 
 Squash all commits in the current branch into a single commit
