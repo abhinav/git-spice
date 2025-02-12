@@ -8,3 +8,4 @@ backend = "aqua:astral-sh/uv"
 
 [tools.uv.checksums]
 "uv-aarch64-apple-darwin.tar.gz" = "sha256:654c3e010c9c53b024fa752d08b949e0f80f10ec4e3a1acea9437a1d127a1053"
+"uv-x86_64-unknown-linux-musl.tar.gz" = "sha256:7cc79871e5fcd2678474d756bfc32c6c3d28e136963dda10902c516fab67fa2d"

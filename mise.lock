@@ -2,6 +2,9 @@
 version = "1.21.1"
 backend = "ubi:miniscruff/changie"
 
+[tools.changie.checksums]
+changie-linux-x86_64 = "sha256:e4dd48b7a8bc5bb3070e6a12db70be8945ed44e01005c542455f74f276d4d1bd"
+
 [tools.go]
 version = "1.24.0"
 backend = "core:go"
@@ -21,6 +24,9 @@ gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77
 [tools.golangci-lint]
 version = "1.64.2"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint.checksums]
+"golangci-lint-1.64.2-linux-amd64.tar.gz" = "sha256:a893e7c9211f70a0cb8c5121ab80d5b089109c23af6bc2923820ba8b42365072"
 
 [tools.gotestsum]
 version = "1.12.0"
