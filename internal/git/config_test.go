@@ -2,7 +2,6 @@ package git
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"os/exec"
 	"path/filepath"
@@ -147,7 +146,7 @@ func TestConfigListRegexp(t *testing.T) {
 				exec: execer,
 			})
 
-			got, err := sliceutil.CollectErr(cfg.ListRegexp(context.Background(), "."))
+			got, err := sliceutil.CollectErr(cfg.ListRegexp(t.Context(), "."))
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -227,7 +226,7 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 				"GIT_CONFIG_NOSYSTEM=1",
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			log := logutil.TestLogger(t)
 			for _, set := range tt.sets {
 				args := append([]string{"config", "--global"}, set...)

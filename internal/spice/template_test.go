@@ -31,7 +31,7 @@ func TestListChangeTemplates(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Clone(ctx, upstream.Dir(), t.TempDir(), git.CloneOptions{
 		Log: logutil.TestLogger(t),
 	})
@@ -63,6 +63,7 @@ func TestListChangeTemplates(t *testing.T) {
 	assert.Equal(t, []*forge.ChangeTemplate{tmpl}, got)
 
 	t.Run("Cached", func(t *testing.T) {
+		ctx := t.Context()
 		_, cachedTemplates, err := store.LoadCachedTemplates(ctx)
 		require.NoError(t, err)
 		if assert.Len(t, cachedTemplates, 1) {
@@ -76,6 +77,7 @@ func TestListChangeTemplates(t *testing.T) {
 	})
 
 	t.Run("Timeout", func(t *testing.T) {
+		ctx := t.Context()
 		// Change the cache key to force a cache miss,
 		// and cause the forge to time out.
 		require.NoError(t, store.CacheTemplates(ctx, "different", []*state.CachedTemplate{
@@ -101,6 +103,7 @@ func TestListChangeTemplates(t *testing.T) {
 	})
 
 	t.Run("TimeoutNoCache", func(t *testing.T) {
+		ctx := t.Context()
 		require.NoError(t, store.CacheTemplates(ctx, "different", nil))
 
 		remoteRepo.EXPECT().
@@ -115,7 +118,7 @@ func TestListChangeTemplates(t *testing.T) {
 func newMemoryStore(t *testing.T) *state.Store {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,

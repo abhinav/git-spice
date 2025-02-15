@@ -144,11 +144,10 @@ func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 		Log: log.New(&logBuffer),
 	}
 
-	ctx := context.Background()
 	view := &ui.FileView{W: io.Discard}
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
-		_, err := f.AuthenticationFlow(ctx, view)
+		_, err := f.AuthenticationFlow(t.Context(), view)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "already authenticated")
 		assert.Contains(t, logBuffer.String(), "Already authenticated")
@@ -259,7 +258,7 @@ func TestAuthenticationFlow_PAT(t *testing.T) {
 	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
 		wantToken := strings.TrimSpace(ts.ReadFile("want_token"))
 
-		got, err := new(Forge).AuthenticationFlow(context.Background(), view)
+		got, err := new(Forge).AuthenticationFlow(t.Context(), view)
 		require.NoError(t, err)
 
 		assert.Equal(t, &AuthenticationToken{
@@ -276,20 +275,20 @@ func TestGLabCLI(t *testing.T) {
 
 	// False will fail.
 	t.Run("Status/Error", func(t *testing.T) {
-		ok, err := glCLI.Status(context.Background(), "example.com")
+		ok, err := glCLI.Status(t.Context(), "example.com")
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
 
 	t.Run("Token/Error", func(t *testing.T) {
-		_, err := glCLI.Token(context.Background(), "example.com")
+		_, err := glCLI.Token(t.Context(), "example.com")
 		require.Error(t, err)
 	})
 
 	t.Run("Status/Okay", func(t *testing.T) {
 		glCLI.runCmd = func(*exec.Cmd) error { return nil }
 
-		ok, err := glCLI.Status(context.Background(), "example.com")
+		ok, err := glCLI.Status(t.Context(), "example.com")
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
@@ -303,7 +302,7 @@ func TestGLabCLI(t *testing.T) {
 			return nil
 		}
 
-		token, err := glCLI.Token(context.Background(), "example.com")
+		token, err := glCLI.Token(t.Context(), "example.com")
 		require.NoError(t, err)
 		assert.Equal(t, "1234567890abcdef", token)
 	})
@@ -316,7 +315,7 @@ func TestGLabCLI(t *testing.T) {
 			return nil
 		}
 
-		_, err := glCLI.Token(context.Background(), "example.com")
+		_, err := glCLI.Token(t.Context(), "example.com")
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "token not found")
 	})
@@ -409,7 +408,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 			DeviceAuthURL: srv.URL + "/oauth/authorize_device",
 			TokenURL:      srv.URL + "/oauth/token",
 		},
-	}).Authenticate(context.Background(), &ui.FileView{W: io.Discard})
+	}).Authenticate(t.Context(), &ui.FileView{W: io.Discard})
 	require.NoError(t, err)
 
 	assert.Equal(t, &AuthenticationToken{
@@ -433,13 +432,12 @@ func TestCLIAuthenticator(t *testing.T) {
 		},
 	}
 
-	ctx := context.Background()
 	view := &ui.FileView{W: io.Discard}
 
 	t.Run("Success", func(t *testing.T) {
 		statusOk, statusErr = true, nil
 
-		tok, err := auth.Authenticate(ctx, view)
+		tok, err := auth.Authenticate(t.Context(), view)
 		require.NoError(t, err)
 		assert.Equal(t, &AuthenticationToken{
 			AuthType: AuthTypeGitLabCLI,
@@ -450,7 +448,7 @@ func TestCLIAuthenticator(t *testing.T) {
 	t.Run("Unauthenticated", func(t *testing.T) {
 		statusOk, statusErr = false, nil
 
-		_, err := auth.Authenticate(ctx, view)
+		_, err := auth.Authenticate(t.Context(), view)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "not authenticated")
 	})
@@ -458,7 +456,7 @@ func TestCLIAuthenticator(t *testing.T) {
 	t.Run("Error", func(t *testing.T) {
 		statusOk, statusErr = false, assert.AnError
 
-		_, err := auth.Authenticate(ctx, view)
+		_, err := auth.Authenticate(t.Context(), view)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, assert.AnError)
 	})

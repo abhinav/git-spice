@@ -1,7 +1,6 @@
 package github
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -128,7 +127,7 @@ func TestListChangeComments(t *testing.T) {
 			defer srv.Close()
 
 			repo, err := newRepository(
-				context.Background(), new(Forge),
+				t.Context(), new(Forge),
 				"owner", "repo",
 				logutil.TestLogger(t),
 				githubv4.NewEnterpriseClient(srv.URL, nil),
@@ -138,7 +137,7 @@ func TestListChangeComments(t *testing.T) {
 
 			prID := PR{Number: 1, GQLID: "prID"}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			var bodies []string
 			for comment, err := range repo.ListChangeComments(ctx, &prID, tt.opts) {
 				require.NoError(t, err)

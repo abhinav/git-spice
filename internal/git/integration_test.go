@@ -1,7 +1,6 @@
 package git_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -52,13 +51,14 @@ func TestIntegrationCommitListing(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
 		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
 	t.Run("ListCommitsDetails", func(t *testing.T) {
+		ctx := t.Context()
 		commits, err := repo.ListCommitsDetails(ctx, git.CommitRangeFrom("HEAD").Limit(2))
 		require.NoError(t, err)
 
@@ -84,6 +84,7 @@ func TestIntegrationCommitListing(t *testing.T) {
 	})
 
 	t.Run("CommitSubject", func(t *testing.T) {
+		ctx := t.Context()
 		subject, err := repo.CommitSubject(ctx, "HEAD")
 		require.NoError(t, err)
 		assert.Equal(t, "Add feature2", subject)
@@ -94,6 +95,7 @@ func TestIntegrationCommitListing(t *testing.T) {
 	})
 
 	t.Run("CommitMessageRange", func(t *testing.T) {
+		ctx := t.Context()
 		msgs, err := repo.CommitMessageRange(ctx, "HEAD", "HEAD~2")
 		require.NoError(t, err)
 

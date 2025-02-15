@@ -15,7 +15,7 @@ import (
 func TestBranchSubmit_listChangeTemplates(t *testing.T) {
 	t.Run("NoTimeout", func(t *testing.T) {
 		log := logutil.TestLogger(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		tmpl := &forge.ChangeTemplate{}
 		svc := &spiceTemplateServiceStub{
 			ListChangeTemplatesF: func(ctx context.Context, _ string, _ forge.Repository) ([]*forge.ChangeTemplate, error) {
@@ -34,7 +34,7 @@ func TestBranchSubmit_listChangeTemplates(t *testing.T) {
 
 	t.Run("Timeout", func(t *testing.T) {
 		log := logutil.TestLogger(t)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		svc := &spiceTemplateServiceStub{
 			ListChangeTemplatesF: func(ctx context.Context, _ string, _ forge.Repository) ([]*forge.ChangeTemplate, error) {

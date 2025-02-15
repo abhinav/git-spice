@@ -1,7 +1,6 @@
 package git
 
 import (
-	"context"
 	"errors"
 	"os/exec"
 	"testing"
@@ -59,7 +58,7 @@ func TestPullArgs(t *testing.T) {
 					return nil
 				})
 
-			ctx := context.Background()
+			ctx := t.Context()
 			err := repo.Pull(ctx, tt.give)
 			require.NoError(t, err)
 		})
@@ -69,10 +68,9 @@ func TestPullArgs(t *testing.T) {
 func TestPullErrors(t *testing.T) {
 	execer := NewMockExecer(gomock.NewController(t))
 	repo := NewTestRepository(t, "", execer)
-	ctx := context.Background()
 
 	t.Run("refspec without remote", func(t *testing.T) {
-		if err := repo.Pull(ctx, PullOptions{Refspec: "main"}); assert.Error(t, err) {
+		if err := repo.Pull(t.Context(), PullOptions{Refspec: "main"}); assert.Error(t, err) {
 			assert.ErrorContains(t, err, "refspec specified without remote")
 		}
 	})
@@ -83,7 +81,7 @@ func TestPullErrors(t *testing.T) {
 			Run(gomock.Any()).
 			Return(giveErr)
 
-		err := repo.Pull(ctx, PullOptions{})
+		err := repo.Pull(t.Context(), PullOptions{})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, giveErr)
 	})

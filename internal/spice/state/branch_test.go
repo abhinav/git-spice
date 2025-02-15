@@ -123,7 +123,7 @@ func TestBranchStateUnmarshal(t *testing.T) {
 }
 
 func TestBranchTxUpsertErrors(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
@@ -132,6 +132,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("MissingBranch", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Upsert(ctx, UpsertRequest{})
 		assert.ErrorContains(t, err, "branch name is required")
@@ -139,6 +140,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 
 	t.Run("TrunkNotAllowed", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Upsert(ctx, UpsertRequest{
 			Name: "main",
@@ -152,6 +154,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 
 	t.Run("NewBranchNoBase", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Upsert(ctx, UpsertRequest{
 			Name: "foo",
@@ -164,6 +167,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 
 	t.Run("NewBranchUnknownBase", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Upsert(ctx, UpsertRequest{
 			Name: "foo",
@@ -192,6 +196,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	}
 
 	t.Run("Cycle", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Upsert(ctx, UpsertRequest{
 			Name: "foo",
@@ -207,6 +212,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	})
 
 	t.Run("DeletedBase", func(t *testing.T) {
+		ctx := t.Context()
 		{
 			tx := store.BeginBranchTx()
 			require.NoError(t, tx.Upsert(ctx, UpsertRequest{
@@ -231,7 +237,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 }
 
 func TestBranchTxDelete(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
@@ -240,6 +246,7 @@ func TestBranchTxDelete(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("MissingBranch", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "")
 		assert.ErrorContains(t, err, "branch name is required")
@@ -247,6 +254,7 @@ func TestBranchTxDelete(t *testing.T) {
 	})
 
 	t.Run("TrunkNotAllowed", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "main")
 		assert.ErrorIs(t, err, ErrTrunk)
@@ -254,6 +262,7 @@ func TestBranchTxDelete(t *testing.T) {
 	})
 
 	t.Run("UnknownBranch", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "unknown")
 		assert.ErrorIs(t, err, ErrNotExist)
@@ -274,6 +283,7 @@ func TestBranchTxDelete(t *testing.T) {
 	}
 
 	t.Run("HasAboves", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "foo")
 		assert.ErrorContains(t, err, "needed by bar")
@@ -284,6 +294,7 @@ func TestBranchTxDelete(t *testing.T) {
 	})
 
 	t.Run("UpsertAndDelete", func(t *testing.T) {
+		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
 			Name: "baz",
@@ -298,7 +309,7 @@ func TestBranchTxDelete(t *testing.T) {
 }
 
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
@@ -341,7 +352,7 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 }
 
 func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
