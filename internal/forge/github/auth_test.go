@@ -2,7 +2,6 @@ package github
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -75,11 +74,10 @@ func TestAuthHasGitHubToken(t *testing.T) {
 		Log: log.New(&logBuffer),
 	}
 
-	ctx := context.Background()
 	view := &ui.FileView{W: io.Discard}
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
-		_, err := f.AuthenticationFlow(ctx, view)
+		_, err := f.AuthenticationFlow(t.Context(), view)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "already authenticated")
 		assert.Contains(t, logBuffer.String(), "Already authenticated")
@@ -181,7 +179,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 			DeviceAuthURL: srv.URL + "/device/code",
 			TokenURL:      srv.URL + "/oauth/access_token",
 		},
-	}).Authenticate(context.Background(), &ui.FileView{W: io.Discard})
+	}).Authenticate(t.Context(), &ui.FileView{W: io.Discard})
 	require.NoError(t, err)
 
 	assert.Equal(t, "my-token", tok.AccessToken)
@@ -207,7 +205,7 @@ func TestAuthenticationFlow_PAT(t *testing.T) {
 	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
 		wantToken := strings.TrimSpace(ts.ReadFile("want_token"))
 
-		got, err := new(Forge).AuthenticationFlow(context.Background(), view)
+		got, err := new(Forge).AuthenticationFlow(t.Context(), view)
 		require.NoError(t, err)
 
 		assert.Equal(t, &AuthenticationToken{
@@ -228,7 +226,7 @@ func TestAuthCLI(t *testing.T) {
 			runCmd: func(*exec.Cmd) error {
 				return nil
 			},
-		}).Authenticate(context.Background(), discardView)
+		}).Authenticate(t.Context(), discardView)
 		require.NoError(t, err)
 
 		f := Forge{
@@ -253,7 +251,7 @@ func TestAuthCLI(t *testing.T) {
 					Stderr: []byte("great sadness"),
 				}
 			},
-		}).Authenticate(context.Background(), discardView)
+		}).Authenticate(t.Context(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "not authenticated")
 		assert.ErrorContains(t, err, "great sadness")
@@ -265,7 +263,7 @@ func TestAuthCLI(t *testing.T) {
 			runCmd: func(*exec.Cmd) error {
 				return errors.New("gh not found")
 			},
-		}).Authenticate(context.Background(), discardView)
+		}).Authenticate(t.Context(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "gh not found")
 	})

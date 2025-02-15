@@ -1,7 +1,6 @@
 package spice
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,8 +35,6 @@ func TestGenerateBranchName(t *testing.T) {
 }
 
 func TestService_LookupBranch_changeAssociation(t *testing.T) {
-	ctx := context.Background()
-
 	// This test should not make real requests to the server,
 	// but we need a real URL to work with for matching.
 	shamhubServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +53,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 
 	// Without a remote set, the Service won't have a Forge connected.
 	t.Run("NoRemote", func(t *testing.T) {
+		ctx := t.Context()
 		mockCtrl := gomock.NewController(t)
 		mockRepo := NewMockGitRepository(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)
@@ -75,6 +73,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 		// We should still be able to resolve metadata
 		// for known forges.
 		t.Run("KnownForge", func(t *testing.T) {
+			ctx := t.Context()
 			mockStore.EXPECT().
 				LookupBranch(gomock.Any(), "feature").
 				Return(&state.LookupResponse{
@@ -94,6 +93,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 
 		// And should not fail for unknown forges.
 		t.Run("UnknownForge", func(t *testing.T) {
+			ctx := t.Context()
 			mockStore.EXPECT().
 				LookupBranch(gomock.Any(), "feature").
 				Return(&state.LookupResponse{
@@ -113,6 +113,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	})
 
 	t.Run("CorruptedMetadata", func(t *testing.T) {
+		ctx := t.Context()
 		mockCtrl := gomock.NewController(t)
 		mockRepo := NewMockGitRepository(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)

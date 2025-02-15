@@ -1,7 +1,6 @@
 package state_test
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 
 	_, err := state.InitStore(ctx, state.InitStoreRequest{
@@ -42,6 +41,7 @@ func TestStore(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("get", func(t *testing.T) {
+		ctx := t.Context()
 		res, err := store.LookupBranch(ctx, "foo")
 		require.NoError(t, err)
 
@@ -62,6 +62,7 @@ func TestStore(t *testing.T) {
 	}))
 
 	t.Run("overwrite", func(t *testing.T) {
+		ctx := t.Context()
 		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{
 				{
@@ -85,6 +86,7 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("name with slash", func(t *testing.T) {
+		ctx := t.Context()
 		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "bar/baz",
@@ -105,6 +107,7 @@ func TestStore(t *testing.T) {
 	})
 
 	t.Run("upstream branch", func(t *testing.T) {
+		ctx := t.Context()
 		upstream := "remoteBranch"
 		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
@@ -131,7 +134,7 @@ func TestOpenStore_errors(t *testing.T) {
 			"version": []byte("500"),
 		}
 
-		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "check store layout:")
 		assert.ErrorAs(t, err, new(*state.VersionMismatchError))
@@ -139,7 +142,7 @@ func TestOpenStore_errors(t *testing.T) {
 
 	t.Run("NotInitialized", func(t *testing.T) {
 		mem := make(storage.MapBackend)
-		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, state.ErrUninitialized)
 	})
@@ -149,7 +152,7 @@ func TestOpenStore_errors(t *testing.T) {
 			"repo": []byte(`{`),
 		}
 
-		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "get repo state:")
 	})
@@ -159,7 +162,7 @@ func TestOpenStore_errors(t *testing.T) {
 			"repo": []byte(`{}`),
 		}
 
-		_, err := state.OpenStore(context.Background(), storage.NewDB(mem), nil)
+		_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "corrupt state:")
 	})

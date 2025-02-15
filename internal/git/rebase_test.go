@@ -1,7 +1,6 @@
 package git_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,8 +45,7 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(fixture.Cleanup)
 
-	ctx := context.Background()
-	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
@@ -79,6 +77,7 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 
 	for _, tt := range noFuncTests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
 			defer func() {
 				assert.NoError(t, repo.RebaseAbort(ctx))
 			}()
@@ -131,8 +130,7 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
@@ -140,6 +138,7 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 	login(t, "user")
 
 	t.Run("noInterruptFunc", func(t *testing.T) {
+		ctx := t.Context()
 		defer func() {
 			assert.NoError(t, repo.RebaseAbort(ctx))
 		}()

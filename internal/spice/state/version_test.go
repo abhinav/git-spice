@@ -1,7 +1,6 @@
 package state
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +38,7 @@ func TestLoadVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := storage.NewDB(tt.files)
-			got, err := loadVersion(context.Background(), db)
+			got, err := loadVersion(t.Context(), db)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -71,7 +70,7 @@ func TestCheckVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := storage.NewDB(tt.files)
-			err := checkVersion(context.Background(), db)
+			err := checkVersion(t.Context(), db)
 			if tt.err {
 				require.Error(t, err)
 				assert.ErrorAs(t, err, new(*VersionMismatchError))
@@ -90,7 +89,7 @@ func TestCheckVersion_loadError(t *testing.T) {
 		Get(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(assert.AnError)
 
-	err := checkVersion(context.Background(), mockDB)
+	err := checkVersion(t.Context(), mockDB)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "load store version:")
 	assert.ErrorIs(t, err, assert.AnError)

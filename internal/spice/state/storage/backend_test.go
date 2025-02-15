@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"strconv"
 	"sync"
 	"testing"
@@ -18,7 +17,7 @@ func TestStorageBackend(t *testing.T) {
 	})
 
 	t.Run("Git", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 			Log: logutil.TestLogger(t),
 		})
@@ -35,7 +34,7 @@ func TestStorageBackend(t *testing.T) {
 }
 
 func testStorageBackend(t *testing.T, backend Backend) {
-	ctx := context.Background()
+	ctx := t.Context()
 	db := NewDB(backend)
 
 	t.Run("ClearEmpty", func(t *testing.T) {

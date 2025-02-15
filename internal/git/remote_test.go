@@ -1,7 +1,6 @@
 package git_test
 
 import (
-	"context"
 	"io"
 	"os/exec"
 	"sync"
@@ -17,7 +16,7 @@ import (
 func TestRepositoryListRemoteRefs(t *testing.T) {
 	mockExecer := git.NewMockExecer(gomock.NewController(t))
 	repo := git.NewTestRepository(t, "", mockExecer)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
@@ -58,7 +57,7 @@ func TestRepositoryListRemoteRefs(t *testing.T) {
 func TestRepositoryListRemoteRefsOptions(t *testing.T) {
 	mockExecer := git.NewMockExecer(gomock.NewController(t))
 	repo := git.NewTestRepository(t, "", mockExecer)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	var wg sync.WaitGroup
 	defer wg.Wait()

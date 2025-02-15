@@ -1,7 +1,6 @@
 package gitlab
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -163,13 +162,13 @@ func TestListChangeComments(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			client, _ := newGitLabClient(context.Background(), srv.URL, &AuthenticationToken{
+			client, _ := newGitLabClient(t.Context(), srv.URL, &AuthenticationToken{
 				AuthType:    AuthTypePAT,
 				AccessToken: "token",
 			})
 			repoID := 100
 			repo, err := newRepository(
-				context.Background(), new(Forge),
+				t.Context(), new(Forge),
 				"owner", "repo",
 				logutil.TestLogger(t),
 				client,
@@ -179,7 +178,7 @@ func TestListChangeComments(t *testing.T) {
 
 			mrID := MR{Number: 1}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			var bodies []string
 			for comment, err := range repo.ListChangeComments(ctx, &mrID, tt.opts) {
 				require.NoError(t, err)

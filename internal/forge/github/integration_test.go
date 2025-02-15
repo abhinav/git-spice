@@ -92,22 +92,20 @@ func newGitHubClient(
 }
 
 func TestIntegration_Repository(t *testing.T) {
-	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
-	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, nil)
+	_, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, nil)
 	require.NoError(t, err)
 }
 
 func TestIntegration_Repository_FindChangeByID(t *testing.T) {
-	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		change, err := repo.FindChangeByID(ctx, &github.PR{Number: 141})
+		change, err := repo.FindChangeByID(t.Context(), &github.PR{Number: 141})
 		require.NoError(t, err)
 
 		assert.Equal(t, &forge.FindChangeItem{
@@ -125,21 +123,20 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	})
 
 	t.Run("not-found", func(t *testing.T) {
-		_, err := repo.FindChangeByID(ctx, &github.PR{Number: 999})
+		_, err := repo.FindChangeByID(t.Context(), &github.PR{Number: 999})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "Could not resolve")
 	})
 }
 
 func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
-	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
-		changes, err := repo.FindChangesByBranch(ctx, "gh-graphql", forge.FindChangesOptions{})
+		changes, err := repo.FindChangesByBranch(t.Context(), "gh-graphql", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []*forge.FindChangeItem{
 			{
@@ -158,20 +155,19 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	})
 
 	t.Run("not-found", func(t *testing.T) {
-		changes, err := repo.FindChangesByBranch(ctx, "does-not-exist", forge.FindChangesOptions{})
+		changes, err := repo.FindChangesByBranch(t.Context(), "does-not-exist", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Empty(t, changes)
 	})
 }
 
 func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
-	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
-	merged, err := repo.ChangesAreMerged(ctx, []forge.ChangeID{
+	merged, err := repo.ChangesAreMerged(t.Context(), []forge.ChangeID{
 		&github.PR{Number: 196, GQLID: "PR_kwDOJ2BQKs5ylEYu"}, // merged
 		&github.PR{Number: 387, GQLID: "PR_kwDOJ2BQKs56wX01"}, // open (not merged)
 		&github.PR{Number: 144, GQLID: "PR_kwDOJ2BQKs5xNeqO"}, // merged
@@ -183,15 +179,13 @@ func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 }
 
 func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("absent", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := newGitHubClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
+		repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
 		require.NoError(t, err)
 
-		templates, err := repo.ListChangeTemplates(ctx)
+		templates, err := repo.ListChangeTemplates(t.Context())
 		require.NoError(t, err)
 		assert.Empty(t, templates)
 	})
@@ -199,10 +193,10 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	t.Run("present", func(t *testing.T) {
 		rec := newRecorder(t, t.Name())
 		ghc := newGitHubClient(rec.GetDefaultClient())
-		repo, err := github.NewRepository(ctx, new(github.Forge), "golang", "go", logutil.TestLogger(t), ghc, nil)
+		repo, err := github.NewRepository(t.Context(), new(github.Forge), "golang", "go", logutil.TestLogger(t), ghc, nil)
 		require.NoError(t, err)
 
-		templates, err := repo.ListChangeTemplates(ctx)
+		templates, err := repo.ListChangeTemplates(t.Context())
 		require.NoError(t, err)
 		require.Len(t, templates, 1)
 
@@ -213,15 +207,13 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 }
 
 func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
-	ctx := context.Background()
-
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
+	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", logutil.TestLogger(t), ghc, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
-		md, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 196})
+		md, err := repo.NewChangeMetadata(t.Context(), &github.PR{Number: 196})
 		require.NoError(t, err)
 
 		assert.Equal(t, &github.PR{
@@ -232,14 +224,13 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := repo.NewChangeMetadata(ctx, &github.PR{Number: 10000})
+		_, err := repo.NewChangeMetadata(t.Context(), &github.PR{Number: 10000})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "get pull request ID")
 	})
 }
 
 func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
-	ctx := context.Background()
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
 		return randomString(8)
 	})
@@ -262,6 +253,8 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		cmd.Stdout = output
 		cmd.Stdout = output
 		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		ctx := t.Context()
 
 		var err error
 		gitRepo, err = git.Open(ctx, repoDir, git.OpenOptions{
@@ -299,7 +292,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Cleanup(func() {
 			t.Logf("Deleting remote branch: %s", branchName)
 			assert.NoError(t,
-				gitRepo.Push(ctx, git.PushOptions{
+				gitRepo.Push(context.Background(), git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec(":" + branchName),
 				}), "error deleting branch")
@@ -309,11 +302,11 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
+		t.Context(), new(github.Forge), "abhinav", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
-	change, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject: branchName,
 		Body:    "Test PR",
 		Base:    "main",
@@ -331,7 +324,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Logf("Pushing new base: %s", newBase)
 		if *_update {
 			require.NoError(t,
-				gitRepo.Push(ctx, git.PushOptions{
+				gitRepo.Push(t.Context(), git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec("main:" + newBase),
 				}), "could not push base branch")
@@ -339,7 +332,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			t.Cleanup(func() {
 				t.Logf("Deleting remote branch: %s", newBase)
 				require.NoError(t,
-					gitRepo.Push(ctx, git.PushOptions{
+					gitRepo.Push(context.Background(), git.PushOptions{
 						Remote:  "origin",
 						Refspec: git.Refspec(":" + newBase),
 					}), "error deleting branch")
@@ -348,18 +341,18 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		t.Logf("Changing base to: %s", newBase)
 		require.NoError(t,
-			repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
 				Base: newBase,
 			}), "could not update base branch for PR")
 		t.Cleanup(func() {
 			t.Logf("Changing base back to: main")
 			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
 					Base: "main",
 				}), "error restoring base branch")
 		})
 
-		change, err := repo.FindChangeByID(ctx, changeID)
+		change, err := repo.FindChangeByID(t.Context(), changeID)
 		require.NoError(t, err, "could not find PR after changing base")
 
 		assert.Equal(t, newBase, change.BaseName,
@@ -370,37 +363,36 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Logf("Changing to draft")
 		draft := true
 		require.NoError(t,
-			repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
 				Draft: &draft,
 			}), "could not update draft status for PR")
 		t.Cleanup(func() {
 			t.Logf("Changing to ready for review")
 			draft = false
 			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
 					Draft: &draft,
 				}), "error restoring draft status")
 		})
 
-		change, err := repo.FindChangeByID(ctx, changeID)
+		change, err := repo.FindChangeByID(t.Context(), changeID)
 		require.NoError(t, err, "could not find PR after changing draft")
 		assert.True(t, change.Draft, "draft change did not take effect")
 	})
 }
 
 func TestIntegration_Repository_comments(t *testing.T) {
-	ctx := context.Background()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
-		ctx, new(github.Forge), "abhinav", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
+		t.Context(), new(github.Forge), "abhinav", "test-repo", logutil.TestLogger(t), ghc, _testRepoID,
 	)
 	require.NoError(t, err)
 
 	commentBody := fixturetest.New(_fixtures, "comment", func() string {
 		return randomString(32)
 	}).Get(t)
-	commentID, err := repo.PostChangeComment(ctx, &github.PR{
+	commentID, err := repo.PostChangeComment(t.Context(), &github.PR{
 		Number: 4,
 		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
 	}, commentBody)
@@ -409,7 +401,7 @@ func TestIntegration_Repository_comments(t *testing.T) {
 		t.Logf("Deleting comment: %s", commentID)
 
 		require.NoError(t,
-			repo.DeleteChangeComment(ctx, commentID),
+			repo.DeleteChangeComment(context.Background(), commentID),
 			"could not delete comment")
 	})
 
@@ -419,7 +411,7 @@ func TestIntegration_Repository_comments(t *testing.T) {
 		}).Get(t)
 
 		require.NoError(t,
-			repo.UpdateChangeComment(ctx, commentID, newCommentBody),
+			repo.UpdateChangeComment(t.Context(), commentID, newCommentBody),
 			"could not update comment")
 	})
 }
@@ -428,7 +420,7 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 	const _prGQLID = "PR_kwDOJ2BQKs55Hpxz" // https://github.com/abhinav/git-spice/pull/356
 	prID := &github.PR{Number: 356, GQLID: githubv4.ID(_prGQLID)}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
@@ -472,7 +464,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 		GQLID:  githubv4.ID("PR_kwDOMVd0xs51N_9r"),
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
@@ -490,6 +482,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 
 	var commentIDs []forge.ChangeCommentID
 	t.Cleanup(func() {
+		ctx := context.Background()
 		for _, commentID := range commentIDs {
 			t.Logf("Deleting comment: %s", commentID)
 
@@ -518,7 +511,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 }
 
 func TestIntegration_Repository_notFoundError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
 	client.Transport = graphqlutil.WrapTransport(client.Transport)

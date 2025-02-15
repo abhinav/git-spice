@@ -1,7 +1,6 @@
 package spice_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	reflect "reflect"
@@ -191,7 +190,7 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 			), "write configuration file")
 
 			// Read configuration
-			ctx := context.Background()
+			ctx := t.Context()
 			gitCfg := git.NewConfig(git.ConfigOptions{
 				Log: logutil.TestLogger(t),
 				Dir: home,

@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestGitBackendUpdateNoChanges(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: logutil.TestLogger(t),
 	})

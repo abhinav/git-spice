@@ -96,7 +96,7 @@ func newGitLabClient(
 }
 
 func TestIntegration_Repository(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, nil)
@@ -104,13 +104,14 @@ func TestIntegration_Repository(t *testing.T) {
 }
 
 func TestIntegration_Repository_FindChangeByID(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
+		ctx := t.Context()
 		change, err := repo.FindChangeByID(ctx, &gitlab.MR{Number: 2})
 		require.NoError(t, err)
 
@@ -128,6 +129,7 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	})
 
 	t.Run("not-found", func(t *testing.T) {
+		ctx := t.Context()
 		_, err := repo.FindChangeByID(ctx, &gitlab.MR{Number: 999})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "404 Not Found")
@@ -135,13 +137,14 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 }
 
 func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
+		ctx := t.Context()
 		changes, err := repo.FindChangesByBranch(ctx, "branch-name-test-TMmz0MkH", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []*forge.FindChangeItem{
@@ -160,6 +163,7 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	})
 
 	t.Run("not-found", func(t *testing.T) {
+		ctx := t.Context()
 		changes, err := repo.FindChangesByBranch(ctx, "does-not-exist", forge.FindChangesOptions{})
 		require.NoError(t, err)
 		assert.Empty(t, changes)
@@ -167,7 +171,7 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 }
 
 func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
@@ -183,9 +187,8 @@ func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
 }
 
 func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("absent", func(t *testing.T) {
+		ctx := t.Context()
 		rec := newRecorder(t, t.Name())
 		ghc := newGitLabClient(rec.GetDefaultClient())
 		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", logutil.TestLogger(t), ghc, _testRepoID)
@@ -197,6 +200,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	})
 
 	t.Run("present", func(t *testing.T) {
+		ctx := t.Context()
 		rec := newRecorder(t, t.Name())
 		ghc := newGitLabClient(rec.GetDefaultClient())
 		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "gitlab-org", "cli", logutil.TestLogger(t), ghc, nil)
@@ -213,7 +217,7 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 }
 
 func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
@@ -221,6 +225,7 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
+		ctx := t.Context()
 		md, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 3})
 		require.NoError(t, err)
 
@@ -231,13 +236,14 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
+		ctx := t.Context()
 		_, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 10000})
 		require.Nil(t, err)
 	})
 }
 
 func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
 		return randomString(8)
 	})
@@ -297,7 +303,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Cleanup(func() {
 			t.Logf("Deleting remote branch: %s", branchName)
 			assert.NoError(t,
-				gitRepo.Push(ctx, git.PushOptions{
+				gitRepo.Push(context.Background(), git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec(":" + branchName),
 				}), "error deleting branch")
@@ -321,6 +327,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	changeID := change.ID
 
 	t.Run("ChangeBase", func(t *testing.T) {
+		ctx := t.Context()
 		newBaseFixture := fixturetest.New(_fixtures, "new-base", func() string {
 			return randomString(8)
 		})
@@ -337,7 +344,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			t.Cleanup(func() {
 				t.Logf("Deleting remote branch: %s", newBase)
 				require.NoError(t,
-					gitRepo.Push(ctx, git.PushOptions{
+					gitRepo.Push(context.Background(), git.PushOptions{
 						Remote:  "origin",
 						Refspec: git.Refspec(":" + newBase),
 					}), "error deleting branch")
@@ -352,7 +359,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Cleanup(func() {
 			t.Logf("Changing base back to: main")
 			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
 					Base: "main",
 				}), "error restoring base branch")
 		})
@@ -365,6 +372,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	})
 
 	t.Run("ChangeDraft", func(t *testing.T) {
+		ctx := t.Context()
 		t.Logf("Changing to draft")
 		draft := true
 		require.NoError(t,
@@ -375,7 +383,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			t.Logf("Changing to ready for review")
 			draft = false
 			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
 					Draft: &draft,
 				}), "error restoring draft status")
 		})
@@ -387,7 +395,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 }
 
 func TestIntegration_Repository_comments(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
@@ -406,11 +414,12 @@ func TestIntegration_Repository_comments(t *testing.T) {
 		t.Logf("Deleting comment: %s", commentID)
 
 		require.NoError(t,
-			repo.DeleteChangeComment(ctx, commentID),
+			repo.DeleteChangeComment(context.Background(), commentID),
 			"could not delete comment")
 	})
 
 	t.Run("UpdateChangeComment", func(t *testing.T) {
+		ctx := t.Context()
 		newCommentBody := fixturetest.New(_fixtures, "new-comment", func() string {
 			return randomString(32)
 		}).Get(t)
@@ -424,7 +433,7 @@ func TestIntegration_Repository_comments(t *testing.T) {
 func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 	prID := &gitlab.MR{Number: 4}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
@@ -468,7 +477,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 		Number: 7,
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
@@ -490,7 +499,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 			t.Logf("Deleting comment: %s", commentID)
 
 			assert.NoError(t,
-				repo.DeleteChangeComment(ctx, commentID),
+				repo.DeleteChangeComment(context.Background(), commentID),
 				"could not delete comment")
 		}
 	})
@@ -514,7 +523,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 }
 
 func TestIntegration_Repository_notFoundError(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
 	ghc := newGitLabClient(client)

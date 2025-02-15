@@ -1,7 +1,6 @@
 package git_test
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -43,21 +42,20 @@ func TestIntegrationBranches(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: logutil.TestLogger(t),
 	})
 	require.NoError(t, err)
 
 	t.Run("CurrentBranch", func(t *testing.T) {
-		name, err := repo.CurrentBranch(ctx)
+		name, err := repo.CurrentBranch(t.Context())
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", name)
 	})
 
 	t.Run("ListBranches", func(t *testing.T) {
-		bs, err := repo.LocalBranches(ctx)
+		bs, err := repo.LocalBranches(t.Context())
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
@@ -70,15 +68,15 @@ func TestIntegrationBranches(t *testing.T) {
 	backToMain := func(t testing.TB) {
 		t.Helper()
 
-		assert.NoError(t, repo.Checkout(ctx, "main"))
+		assert.NoError(t, repo.Checkout(t.Context(), "main"))
 	}
 
 	t.Run("Checkout", func(t *testing.T) {
 		defer backToMain(t)
 
-		require.NoError(t, repo.Checkout(ctx, "feature1"))
+		require.NoError(t, repo.Checkout(t.Context(), "feature1"))
 
-		name, err := repo.CurrentBranch(ctx)
+		name, err := repo.CurrentBranch(t.Context())
 		require.NoError(t, err)
 
 		assert.Equal(t, "feature1", name)
@@ -87,19 +85,19 @@ func TestIntegrationBranches(t *testing.T) {
 	t.Run("DetachedHead", func(t *testing.T) {
 		defer backToMain(t)
 
-		require.NoError(t, repo.DetachHead(ctx, "main"))
+		require.NoError(t, repo.DetachHead(t.Context(), "main"))
 
-		_, err := repo.CurrentBranch(ctx)
+		_, err := repo.CurrentBranch(t.Context())
 		assert.ErrorIs(t, err, git.ErrDetachedHead)
 	})
 
 	t.Run("CreateBranch", func(t *testing.T) {
-		require.NoError(t, repo.CreateBranch(ctx, git.CreateBranchRequest{
+		require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
 			Name: "feature3",
 			Head: "main",
 		}))
 
-		bs, err := repo.LocalBranches(ctx)
+		bs, err := repo.LocalBranches(t.Context())
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -111,11 +109,11 @@ func TestIntegrationBranches(t *testing.T) {
 
 		t.Run("DeleteBranch", func(t *testing.T) {
 			require.NoError(t,
-				repo.DeleteBranch(ctx, "feature3", git.BranchDeleteOptions{
+				repo.DeleteBranch(t.Context(), "feature3", git.BranchDeleteOptions{
 					Force: true,
 				}))
 
-			bs, err := repo.LocalBranches(ctx)
+			bs, err := repo.LocalBranches(t.Context())
 			require.NoError(t, err)
 
 			assert.Equal(t, []git.LocalBranch{
@@ -127,17 +125,17 @@ func TestIntegrationBranches(t *testing.T) {
 	})
 
 	t.Run("RenameBranch", func(t *testing.T) {
-		require.NoError(t, repo.CreateBranch(ctx, git.CreateBranchRequest{
+		require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
 			Name: "feature3",
 			Head: "main",
 		}))
 
-		require.NoError(t, repo.RenameBranch(ctx, git.RenameBranchRequest{
+		require.NoError(t, repo.RenameBranch(t.Context(), git.RenameBranchRequest{
 			OldName: "feature3",
 			NewName: "feature4",
 		}))
 
-		bs, err := repo.LocalBranches(ctx)
+		bs, err := repo.LocalBranches(t.Context())
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -148,7 +146,7 @@ func TestIntegrationBranches(t *testing.T) {
 		}
 
 		require.NoError(t,
-			repo.DeleteBranch(ctx, "feature4", git.BranchDeleteOptions{
+			repo.DeleteBranch(t.Context(), "feature4", git.BranchDeleteOptions{
 				Force: true,
 			}))
 	})
@@ -188,7 +186,7 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Open(ctx,
 		filepath.Join(fixture.Dir(), "repo"),
 		git.OpenOptions{Log: logutil.TestLogger(t)},
@@ -242,46 +240,45 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	repo, err := git.Open(ctx,
+	repo, err := git.Open(t.Context(),
 		filepath.Join(fixture.Dir(), "clone"),
 		git.OpenOptions{Log: logutil.TestLogger(t)},
 	)
 	require.NoError(t, err)
 
 	t.Run("no upstream", func(t *testing.T) {
-		_, err := repo.BranchUpstream(ctx, "feature1")
+		_, err := repo.BranchUpstream(t.Context(), "feature1")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, git.ErrNotExist)
 	})
 
 	require.NoError(t,
-		repo.SetBranchUpstream(ctx, "feature1", "origin/feature1"))
+		repo.SetBranchUpstream(t.Context(), "feature1", "origin/feature1"))
 
 	t.Run("has upstream", func(t *testing.T) {
-		upstream, err := repo.BranchUpstream(ctx, "feature1")
+		upstream, err := repo.BranchUpstream(t.Context(), "feature1")
 		require.NoError(t, err)
 		assert.Equal(t, "origin/feature1", upstream)
 	})
 
 	t.Run("unset upstream", func(t *testing.T) {
 		require.NoError(t,
-			repo.SetBranchUpstream(ctx, "feature1", ""))
+			repo.SetBranchUpstream(t.Context(), "feature1", ""))
 
-		_, err := repo.BranchUpstream(ctx, "feature1")
+		_, err := repo.BranchUpstream(t.Context(), "feature1")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, git.ErrNotExist)
 	})
 
 	require.NoError(t,
-		repo.SetBranchUpstream(ctx, "feature1", "origin/feature1"))
+		repo.SetBranchUpstream(t.Context(), "feature1", "origin/feature1"))
 
 	t.Run("delete upstream", func(t *testing.T) {
 		require.NoError(t,
-			repo.DeleteBranch(ctx, "origin/feature1", git.BranchDeleteOptions{
+			repo.DeleteBranch(t.Context(), "origin/feature1", git.BranchDeleteOptions{
 				Remote: true,
 			}))
-		_, err := repo.BranchUpstream(ctx, "feature1")
+		_, err := repo.BranchUpstream(t.Context(), "feature1")
 		require.Error(t, err)
 		assert.ErrorIs(t, err, git.ErrNotExist)
 	})

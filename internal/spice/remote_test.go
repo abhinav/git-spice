@@ -1,7 +1,6 @@
 package spice
 
 import (
-	"context"
 	"iter"
 	"testing"
 
@@ -85,7 +84,7 @@ func TestUnusedBranchName(t *testing.T) {
 				lastCall = currCall
 			}
 
-			got, err := svc.UnusedBranchName(context.Background(), "origin", tt.branch)
+			got, err := svc.UnusedBranchName(t.Context(), "origin", tt.branch)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantBranch, got)
 		})
@@ -103,7 +102,7 @@ func TestUnusedBranchName_listError(t *testing.T) {
 			yield(git.RemoteRef{}, assert.AnError)
 		})
 
-	_, err := svc.UnusedBranchName(context.Background(), "origin", "feature")
+	_, err := svc.UnusedBranchName(t.Context(), "origin", "feature")
 	require.Error(t, err)
 	assert.ErrorIs(t, err, assert.AnError)
 }

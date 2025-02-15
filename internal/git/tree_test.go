@@ -2,7 +2,6 @@ package git_test
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,7 @@ func TestParseMode(t *testing.T) {
 func TestIntegrationListTreeAbsent(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: logutil.TestLogger(t),
 	})
@@ -46,7 +45,7 @@ func TestIntegrationListTreeAbsent(t *testing.T) {
 func TestIntegrationMakeTree(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: logutil.TestLogger(t),
 	})
@@ -70,6 +69,7 @@ func TestIntegrationMakeTree(t *testing.T) {
 	}, ents)
 
 	t.Run("subdir", func(t *testing.T) {
+		ctx := t.Context()
 		newDirHash, err := repo.MakeTree(ctx, []git.TreeEntry{
 			{Type: git.BlobType, Name: "baz", Hash: emptyFile},
 			{Type: git.TreeType, Name: "sub", Hash: dirHash},
@@ -92,7 +92,7 @@ func TestIntegrationMakeTree(t *testing.T) {
 func TestIntegrationUpdateTree(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: logutil.TestLogger(t),
 	})
@@ -131,6 +131,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	}, ents)
 
 	t.Run("overwrite", func(t *testing.T) {
+		ctx := t.Context()
 		newBlob, err := repo.WriteObject(ctx, git.BlobType, bytes.NewReader([]byte("hello")))
 		require.NoError(t, err)
 
@@ -154,6 +155,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
+		ctx := t.Context()
 		deletedHash, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree:    newHash,
 			Deletes: []string{"bar/baz"},
@@ -172,6 +174,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 
 	// empty directories are pruned from the tree.
 	t.Run("clear empty dirs", func(t *testing.T) {
+		ctx := t.Context()
 		deletedHash, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree:    newHash,
 			Deletes: []string{"qux/quux/qu"},
@@ -196,6 +199,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	})
 
 	t.Run("delete all files", func(t *testing.T) {
+		ctx := t.Context()
 		deletedHash, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{
 			Tree:    newHash,
 			Deletes: []string{"foo", "bar/baz", "qux/quux/qu"},
