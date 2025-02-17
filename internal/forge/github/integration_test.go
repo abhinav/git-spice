@@ -292,7 +292,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Cleanup(func() {
 			t.Logf("Deleting remote branch: %s", branchName)
 			assert.NoError(t,
-				gitRepo.Push(context.Background(), git.PushOptions{
+				gitRepo.Push(context.WithoutCancel(ctx), git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec(":" + branchName),
 				}), "error deleting branch")
@@ -331,8 +331,9 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 			t.Cleanup(func() {
 				t.Logf("Deleting remote branch: %s", newBase)
+				ctx := context.WithoutCancel(t.Context())
 				require.NoError(t,
-					gitRepo.Push(context.Background(), git.PushOptions{
+					gitRepo.Push(ctx, git.PushOptions{
 						Remote:  "origin",
 						Refspec: git.Refspec(":" + newBase),
 					}), "error deleting branch")
@@ -346,8 +347,9 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			}), "could not update base branch for PR")
 		t.Cleanup(func() {
 			t.Logf("Changing base back to: main")
+			ctx := context.WithoutCancel(t.Context())
 			require.NoError(t,
-				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
 					Base: "main",
 				}), "error restoring base branch")
 		})
@@ -367,10 +369,11 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 				Draft: &draft,
 			}), "could not update draft status for PR")
 		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
 			t.Logf("Changing to ready for review")
 			draft = false
 			require.NoError(t,
-				repo.EditChange(context.Background(), changeID, forge.EditChangeOptions{
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
 					Draft: &draft,
 				}), "error restoring draft status")
 		})
@@ -398,10 +401,11 @@ func TestIntegration_Repository_comments(t *testing.T) {
 	}, commentBody)
 	require.NoError(t, err, "could not post comment")
 	t.Cleanup(func() {
+		ctx := context.WithoutCancel(t.Context())
 		t.Logf("Deleting comment: %s", commentID)
 
 		require.NoError(t,
-			repo.DeleteChangeComment(context.Background(), commentID),
+			repo.DeleteChangeComment(ctx, commentID),
 			"could not delete comment")
 	})
 
@@ -482,7 +486,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 
 	var commentIDs []forge.ChangeCommentID
 	t.Cleanup(func() {
-		ctx := context.Background()
+		ctx := context.WithoutCancel(t.Context())
 		for _, commentID := range commentIDs {
 			t.Logf("Deleting comment: %s", commentID)
 

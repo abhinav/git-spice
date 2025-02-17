@@ -2,24 +2,15 @@ package fixturetest_test
 
 import (
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/fixturetest"
 )
 
 func TestFixture(t *testing.T) {
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-
-	dir := t.TempDir()
-	require.NoError(t, os.Chdir(dir))
-	t.Cleanup(func() {
-		assert.NoError(t, os.Chdir(cwd))
-	})
+	t.Chdir(t.TempDir())
 
 	cfg := fixturetest.Config{Update: new(bool)}
 	fixture := fixturetest.New(cfg, "number", rand.Int)
