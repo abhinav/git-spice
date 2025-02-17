@@ -21,6 +21,7 @@ linters:
     - gofumpt
     - nolintlint
     - revive
+    - usetesting
 
     # With Go 1.22 for loop semantics,
     # no need to copy loop variables.

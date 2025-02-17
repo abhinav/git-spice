@@ -22,11 +22,11 @@ gofumpt-linux-x86_64 = "sha256:6ff459c1dcae3b0b00844c1a5a4a5b0f547237d8a4f3624aa
 gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77aa354d6aa20b045a"
 
 [tools.golangci-lint]
-version = "1.64.2"
+version = "1.64.5"
 backend = "aqua:golangci/golangci-lint"
 
 [tools.golangci-lint.checksums]
-"golangci-lint-1.64.2-linux-amd64.tar.gz" = "sha256:a893e7c9211f70a0cb8c5121ab80d5b089109c23af6bc2923820ba8b42365072"
+"golangci-lint-1.64.5-linux-amd64.tar.gz" = "sha256:e6bd399a0479c5fd846dcf9f3990d20448b4f0d1e5027d82348eab9f80f7ac71"
 
 [tools.gotestsum]
 version = "1.12.0"
