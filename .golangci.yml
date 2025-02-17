@@ -59,7 +59,7 @@ linters-settings:
 
   govet:
     enable:
-      - niliness
+      - nilness
       - reflectvaluecompare
       - sortslice
       - unusedwrite
