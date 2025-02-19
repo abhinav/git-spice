@@ -490,9 +490,10 @@ Use -u/--untracked to show untracked branches in the prompt.
 
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
+* `-s`, `--sort=STRING` ([:material-wrench:{ .middle title="spice.branchCheckout.sort" }](/cli/config.md#spicebranchcheckoutsort)): Sort branches by the given field
 * `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
 
-**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked)
+**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.sort](/cli/config.md#spicebranchcheckoutsort)
 
 ### gs branch create
 
