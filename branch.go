@@ -51,6 +51,9 @@ type branchPrompt struct {
 
 	// Description specifies the description to display to the user.
 	Description string
+
+	// Sort optionally specifies a value for git branch --sort.
+	Sort string
 }
 
 func (p *branchPrompt) Run(
@@ -87,7 +90,9 @@ func (p *branchPrompt) Run(
 		}
 	}
 
-	localBranches, err := repo.LocalBranches(ctx)
+	localBranches, err := repo.LocalBranches(ctx, &git.LocalBranchesOptions{
+		Sort: p.Sort,
+	})
 	if err != nil {
 		return "", fmt.Errorf("list branches: %w", err)
 	}

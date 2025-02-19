@@ -94,7 +94,7 @@ func (cmd *repoSyncCmd) Run(
 			return fmt.Errorf("pull: %w", err)
 		}
 	} else {
-		localBranches, err := repo.LocalBranches(ctx)
+		localBranches, err := repo.LocalBranches(ctx, nil)
 		if err != nil {
 			return fmt.Errorf("list branches: %w", err)
 		}

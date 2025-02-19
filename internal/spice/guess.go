@@ -71,7 +71,7 @@ func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote str
 		}
 	}
 
-	localBranches, err := repo.LocalBranches(ctx)
+	localBranches, err := repo.LocalBranches(ctx, nil)
 	if err != nil {
 		return "", fmt.Errorf("list local branches: %w", err)
 	}

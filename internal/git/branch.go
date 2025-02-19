@@ -20,9 +20,26 @@ type LocalBranch struct {
 	CheckedOut bool
 }
 
+// LocalBranchesOptions specifies options for listing local branches.
+type LocalBranchesOptions struct {
+	// Sort specifies an optional value for git branch --sort.
+	Sort string
+}
+
 // LocalBranches lists local branches in the repository.
-func (r *Repository) LocalBranches(ctx context.Context) ([]LocalBranch, error) {
-	cmd := r.gitCmd(ctx, "branch")
+func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptions) ([]LocalBranch, error) {
+	var sort string
+	if opts != nil {
+		sort = opts.Sort
+	}
+
+	var cmd *gitCmd
+	if sort != "" {
+		cmd = r.gitCmd(ctx, "branch", "--sort="+sort)
+	} else {
+		cmd = r.gitCmd(ctx, "branch")
+	}
+
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("git branch: %w", err)
@@ -65,9 +82,11 @@ func (r *Repository) LocalBranches(ctx context.Context) ([]LocalBranch, error) {
 		return nil, fmt.Errorf("git branch: %w", err)
 	}
 
-	slices.SortFunc(branches, func(a, b LocalBranch) int {
-		return strings.Compare(a.Name, b.Name)
-	})
+	if sort == "" {
+		slices.SortFunc(branches, func(a, b LocalBranch) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+	}
 
 	return branches, nil
 }

@@ -146,18 +146,18 @@ func (mr *MockGitRepositoryMockRecorder) ListRemotes(ctx any) *gomock.Call {
 }
 
 // LocalBranches mocks base method.
-func (m *MockGitRepository) LocalBranches(ctx context.Context) ([]git.LocalBranch, error) {
+func (m *MockGitRepository) LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) ([]git.LocalBranch, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LocalBranches", ctx)
+	ret := m.ctrl.Call(m, "LocalBranches", ctx, opts)
 	ret0, _ := ret[0].([]git.LocalBranch)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LocalBranches indicates an expected call of LocalBranches.
-func (mr *MockGitRepositoryMockRecorder) LocalBranches(ctx any) *gomock.Call {
+func (mr *MockGitRepositoryMockRecorder) LocalBranches(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalBranches", reflect.TypeOf((*MockGitRepository)(nil).LocalBranches), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalBranches", reflect.TypeOf((*MockGitRepository)(nil).LocalBranches), ctx, opts)
 }
 
 // MergeBase mocks base method.

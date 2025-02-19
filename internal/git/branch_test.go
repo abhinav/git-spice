@@ -16,14 +16,17 @@ func TestIntegrationBranches(t *testing.T) {
 	t.Parallel()
 
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		at '2024-08-27T21:48:32Z'
 		git init
 		git add init.txt
 		git commit -m 'Initial commit'
 
+		at '2024-08-27T21:50:12Z'
 		git checkout -b feature1
 		git add feature1.txt
 		git commit -m 'Add feature1'
 
+		at '2024-08-27T21:52:12Z'
 		git checkout -b feature2
 		git add feature2.txt
 		git commit -m 'Add feature2'
@@ -55,13 +58,26 @@ func TestIntegrationBranches(t *testing.T) {
 	})
 
 	t.Run("ListBranches", func(t *testing.T) {
-		bs, err := repo.LocalBranches(t.Context())
+		bs, err := repo.LocalBranches(t.Context(), nil)
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
 			{Name: "feature1"},
 			{Name: "feature2"},
 			{Name: "main", CheckedOut: true},
+		}, bs)
+	})
+
+	t.Run("ListBranchesSorted", func(t *testing.T) {
+		bs, err := repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+			Sort: "committerdate",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, []git.LocalBranch{
+			{Name: "main", CheckedOut: true},
+			{Name: "feature1"},
+			{Name: "feature2"},
 		}, bs)
 	})
 
@@ -97,7 +113,7 @@ func TestIntegrationBranches(t *testing.T) {
 			Head: "main",
 		}))
 
-		bs, err := repo.LocalBranches(t.Context())
+		bs, err := repo.LocalBranches(t.Context(), nil)
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -113,7 +129,7 @@ func TestIntegrationBranches(t *testing.T) {
 					Force: true,
 				}))
 
-			bs, err := repo.LocalBranches(t.Context())
+			bs, err := repo.LocalBranches(t.Context(), nil)
 			require.NoError(t, err)
 
 			assert.Equal(t, []git.LocalBranch{
@@ -135,7 +151,7 @@ func TestIntegrationBranches(t *testing.T) {
 			NewName: "feature4",
 		}))
 
-		bs, err := repo.LocalBranches(t.Context())
+		bs, err := repo.LocalBranches(t.Context(), nil)
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -193,7 +209,7 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	bs, err := repo.LocalBranches(ctx)
+	bs, err := repo.LocalBranches(ctx, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, []git.LocalBranch{

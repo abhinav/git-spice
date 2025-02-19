@@ -43,6 +43,16 @@ This option controls whether untracked branches are shown in the prompt.
 - `true`
 - `false` (default)
 
+### spice.branchCheckout.sort
+
+<!-- gs:version unreleased -->
+
+When running $$gs branch checkout$$ without any arguments,
+git-spice presents a prompt to select a branch to checkout.
+This option controls whether branches are, by default,
+sorted by a given git field. It is git-spice's equivalent of
+[git's branch.sort](https://git-scm.com/docs/git-config#Documentation/git-config.txt-branchsort) parameter.
+
 ### spice.branchCreate.commit
 
 <!-- gs:version v0.5.0 -->
