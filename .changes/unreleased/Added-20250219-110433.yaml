@@ -1,0 +1,3 @@
+kind: Added
+body: 'branch checkout: Add `--sort` flag and corresponding `spice.branchCheckout.showUntracked` config to control branch sort order.'
+time: 2025-02-19T11:04:33.240268-08:00

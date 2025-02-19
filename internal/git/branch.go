@@ -28,18 +28,16 @@ type LocalBranchesOptions struct {
 
 // LocalBranches lists local branches in the repository.
 func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptions) ([]LocalBranch, error) {
-	var sort string
-	if opts != nil {
-		sort = opts.Sort
+	if opts == nil {
+		opts = &LocalBranchesOptions{}
 	}
 
-	var cmd *gitCmd
-	if sort != "" {
-		cmd = r.gitCmd(ctx, "branch", "--sort="+sort)
-	} else {
-		cmd = r.gitCmd(ctx, "branch")
+	args := []string{"branch"}
+	if opts.Sort != "" {
+		args = append(args, "--sort="+opts.Sort)
 	}
 
+	cmd := r.gitCmd(ctx, args...)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("git branch: %w", err)
@@ -82,7 +80,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 		return nil, fmt.Errorf("git branch: %w", err)
 	}
 
-	if sort == "" {
+	if opts.Sort == "" {
 		slices.SortFunc(branches, func(a, b LocalBranch) int {
 			return strings.Compare(a.Name, b.Name)
 		})
