@@ -100,3 +100,7 @@ description = "Serve the documentation"
 
 [tasks."doc:build"]
 run = "cd doc && mise run build"
+
+[tasks."release:prepare"]
+description = "Prepare a release for publishing"
+run = "go run ./tools/ci/prepare-release -version {{arg(name='version')}}"
