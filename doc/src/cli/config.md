@@ -49,9 +49,23 @@ This option controls whether untracked branches are shown in the prompt.
 
 When running $$gs branch checkout$$ without any arguments,
 git-spice presents a prompt to select a branch to checkout.
-This option controls whether branches are, by default,
-sorted by a given git field. It is git-spice's equivalent of
-[git's branch.sort](https://git-scm.com/docs/git-config#Documentation/git-config.txt-branchsort) parameter.
+
+This option controls the sort order of branches in the prompt.
+It is git-spice's equivalent of
+[git's branch.sort configuration](https://git-scm.com/docs/git-config#Documentation/git-config.txt-branchsort).
+
+Commonly used values are:
+
+- `committerdate`: sort by commit date
+- `refname`: sort by branch name (default)
+- `authordate`: sort by author date
+
+See [git-for-each-ref(1) field names](https://git-scm.com/docs/git-for-each-ref#_field_names)
+for a full list of available fields.
+
+Prefix a field name with `-` to sort in descending order.
+For example, use `-committerdate` to sort by commit date in descending order.
+
 
 ### spice.branchCreate.commit
 

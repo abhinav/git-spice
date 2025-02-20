@@ -30,7 +30,14 @@ func (*branchCheckoutCmd) Help() string {
 	return text.Dedent(`
 		A prompt will allow selecting between tracked branches.
 		Provide a branch name as an argument to skip the prompt.
+
 		Use -u/--untracked to show untracked branches in the prompt.
+
+		Use --sort=<field> to sort branches at the same level by the given field.
+		Commonly used field names include "refname", "commiterdate", "authordate", and more.
+		See git-for-each-ref(1) for a full list of valid fields.
+		Prefix the field name with "-" to sort in reverse order.
+		By default, branches are sorted by name.
 	`)
 }
 
