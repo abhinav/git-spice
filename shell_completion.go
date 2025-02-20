@@ -48,7 +48,7 @@ func predictBranches(_ komplete.Args) (predictions []string) {
 		return nil
 	}
 
-	branches, err := repo.LocalBranches(ctx)
+	branches, err := repo.LocalBranches(ctx, nil)
 	if err != nil {
 		return nil
 	}

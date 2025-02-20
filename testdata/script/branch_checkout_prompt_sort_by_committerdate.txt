@@ -1,0 +1,98 @@
+# branch checkout prompt supports sorting by committerdate.
+
+as 'Test <test@example.com>'
+at '2025-02-19T17:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A couple tracked branches, and a couple untracked.
+at '2025-02-19T17:05:00Z'
+git add aaa.txt
+gs bc aaa -m 'Add aaa'
+
+at '2025-02-19T17:10:00Z'
+git checkout -b ccc
+git add ccc.txt
+git commit -m 'Add ccc'
+
+gs trunk
+
+at '2025-02-19T17:15:00Z'
+git add bbb.txt
+gs bc bbb -m 'add bbb.txt'
+
+at '2025-02-19T17:20:00Z'
+git checkout -b ddd
+git add ddd.txt
+git commit -m 'Add ddd'
+
+at '2025-02-19T17:25:00Z'
+git checkout -b bcd main
+git merge -m 'Merge many' aaa bbb ccc ddd
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+# default sort order
+gs trunk
+gs branch checkout -u
+git branch --show-current
+stdout 'bbb'
+
+# sort by committerdate
+gs trunk
+gs branch checkout -u --sort=committerdate
+git branch --show-current
+stdout 'aaa'
+
+# sort by committerdate descending
+gs trunk
+gs branch checkout -u --sort=-committerdate
+git branch --show-current
+stdout 'bbb'
+
+
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- repo/aaa.txt --
+whatever
+
+-- repo/bbb.txt --
+whatever
+
+-- repo/ccc.txt --
+whatever
+
+-- repo/ddd.txt --
+whatever
+
+-- robot.golden --
+===
+> Select a branch to checkout: 
+> bcd
+> ccc
+> ddd
+> ┏━□ aaa
+> ┣━□ bbb
+> main ◀
+"bbb"
+===
+> Select a branch to checkout: 
+> ┏━□ aaa
+> ┣━□ bbb
+> main ◀
+> ccc
+> ddd
+> bcd
+"aaa"
+===
+> Select a branch to checkout: 
+> bcd
+> ddd
+> ccc
+> ┏━□ bbb
+> ┣━□ aaa
+> main ◀
+"bbb"

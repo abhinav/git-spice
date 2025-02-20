@@ -89,7 +89,7 @@ to stack changes with git-spice for a contribution:
 1. Set your fork as the upstream remote for git-spice.
 
     ```bash
-    gh repo fork --remote fork
+    gh repo fork --remote --remote-name fork
     gs repo init --remote fork
     ```
 

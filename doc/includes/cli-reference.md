@@ -480,7 +480,14 @@ Switch to a branch
 
 A prompt will allow selecting between tracked branches.
 Provide a branch name as an argument to skip the prompt.
+
 Use -u/--untracked to show untracked branches in the prompt.
+
+Use --sort=<field> to sort branches at the same level by the given field.
+Commonly used field names include "refname", "commiterdate", "authordate", and more.
+See git-for-each-ref(1) for a full list of valid fields.
+Prefix the field name with "-" to sort in reverse order.
+By default, branches are sorted by name.
 
 **Arguments**
 
@@ -490,9 +497,10 @@ Use -u/--untracked to show untracked branches in the prompt.
 
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
+* `--sort=STRING` ([:material-wrench:{ .middle title="spice.branchCheckout.sort" }](/cli/config.md#spicebranchcheckoutsort)): Sort branches by the given field
 * `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
 
-**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked)
+**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.sort](/cli/config.md#spicebranchcheckoutsort)
 
 ### gs branch create
 
