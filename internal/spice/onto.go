@@ -52,6 +52,51 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		ontoHash = onto.Head
 	}
 
+	// We're trying to move commits BaseHash..HEAD onto commit OntoHash.
+	//
+	// However, there's a possibility that BaseHash is reachable from OntoHash
+	// because the old base is also the base of onto,
+	// and we've already partially rebased and handled a conflict.
+	//
+	// For example, suppose we have:
+	//
+	//           C--D (Current)  (gs: base=OriginalBase)
+	//          /
+	//     o---X (OriginalBase)
+	//          \
+	//           A--B (NewBase)  (gs: base=OriginalBase)
+	//
+	// If we run 'gs branch onto NewBase' from Current,
+	// and there's a conflict, the user will resolve the rebase conflict,
+	// but the gs state will not yet be updated.
+	//
+	//     o---X (OriginalBase)
+	//          \
+	//           A--B (NewBase)       (gs: base=OriginalBase)
+	//               \
+	//                C--D (Current)  (gs: base=OriginalBase)
+	//
+	// At that point, 'gs rebase continue' will re-run the original command
+	// 'gs branch onto NewBase' from Current,
+	// except the commits it wants (OriginalBase..Current)
+	// now includes commits OriginalBase..NewBase,
+	// which will fail for obvious reasons.
+	//
+	// To catch this, if OriginalBase is reachable from NewBase,
+	// we'll change the commit range to NewBase..Current.
+	// This will turn the rebase into a no-op, but it'll correctly update state.
+	fromHash := branch.BaseHash
+	if s.repo.IsAncestor(ctx, fromHash, ontoHash) {
+		fromHash = ontoHash
+	}
+
+	s.log.Debug("Moving commits onto new base",
+		"branch", req.Branch,
+		"oldBase", branch.Base,
+		"newBase", req.Onto,
+		"commits", fromHash.Short()+".."+branch.Head.Short(),
+	)
+
 	branchTx := s.store.BeginBranchTx()
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
 		Name:            req.Branch,
@@ -64,10 +109,10 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 
 	if err := s.repo.Rebase(ctx, git.RebaseRequest{
 		Branch:    req.Branch,
-		Upstream:  branch.BaseHash.String(),
+		Upstream:  string(fromHash),
 		Onto:      ontoHash.String(),
 		Autostash: true,
-		Quiet:     true,
+		Quiet:     true, // TODO: if verbose, disable this
 	}); err != nil {
 		return fmt.Errorf("rebase: %w", err)
 	}

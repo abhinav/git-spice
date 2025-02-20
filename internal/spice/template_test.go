@@ -13,7 +13,6 @@ import (
 	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
-	"go.abhg.dev/gs/internal/spice/state/storage"
 	"go.abhg.dev/gs/internal/text"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -44,7 +43,7 @@ func TestListChangeTemplates(t *testing.T) {
 		Return([]string{"CHANGE_TEMPLATE.md"}).
 		AnyTimes()
 
-	store := newMemoryStore(t)
+	store := spice.NewMemoryStore(t)
 	svc := spice.NewTestService(repo, store, mockForge, logutil.TestLogger(t))
 
 	tmpl := &forge.ChangeTemplate{
@@ -113,19 +112,4 @@ func TestListChangeTemplates(t *testing.T) {
 		_, err := svc.ListChangeTemplates(ctx, "origin", remoteRepo)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
-}
-
-func newMemoryStore(t *testing.T) *state.Store {
-	t.Helper()
-
-	ctx := t.Context()
-	db := storage.NewDB(make(storage.MapBackend))
-	store, err := state.InitStore(ctx, state.InitStoreRequest{
-		DB:    db,
-		Trunk: "main",
-		Log:   logutil.TestLogger(t),
-	})
-	require.NoError(t, err)
-
-	return store
 }

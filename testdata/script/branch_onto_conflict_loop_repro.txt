@@ -1,0 +1,98 @@
+# Scenario: main -> a, and main -> b -> c.
+# b and c are moved on top of a one at a time instead of upstack restack.
+# All rebases cause conflicts.
+#
+# Should not result in a rebase loop.
+
+as 'Test <test@example.com>'
+at '2025-02-20T10:00:00Z'
+
+# set up
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# setup
+cp $WORK/extra/one.txt value.txt
+git add value.txt
+gs bc one -m 'Add one'
+gs trunk
+
+cp $WORK/extra/two.txt value.txt
+git add value.txt
+gs bc two -m 'Add two'
+
+cp $WORK/extra/three.txt value.txt
+git add value.txt
+gs bc three -m 'Add three'
+gs trunk
+
+# sanity check
+gs ll
+cmp stderr $WORK/golden/ll-before.txt
+
+# Move two on top of one.
+# That will first try to move three onto main
+# and fail.
+git checkout two
+! gs branch onto one
+stderr 'There was a conflict'
+stderr 'rebase of three interrupted'
+cp $WORK/extra/three.txt value.txt
+git add value.txt
+
+# Now, continue and this will attempt to rebase two and fail.
+! gs rbc --no-edit
+stderr 'There was a conflict'
+stderr 'rebase of two interrupted'
+cp $WORK/extra/two.txt value.txt
+git add value.txt
+
+gs rbc --no-edit
+gs ll -a
+cmp stderr $WORK/golden/ll-after-two-onto-one.txt
+
+# Now move three onto two.
+git checkout three
+! gs branch onto two
+stderr 'There was a conflict'
+stderr 'rebase of three interrupted'
+cp $WORK/extra/three.txt value.txt
+git add value.txt
+gs rbc --no-edit
+
+gs ll
+cmp stderr $WORK/golden/ll-after-three-onto-two.txt
+
+-- extra/one.txt --
+1
+-- extra/two.txt --
+2
+-- extra/three.txt --
+3
+-- golden/ll-before.txt --
+┏━□ one
+┃   1cd0ae2 Add one (now)
+┃ ┏━□ three
+┃ ┃   41de4ed Add three (now)
+┣━┻□ two
+┃    def1539 Add two (now)
+main ◀
+-- golden/ll-after-two-onto-one.txt --
+  ┏━■ two ◀
+  ┃   6f74174 Add two (now)
+┏━┻□ one
+┃    1cd0ae2 Add one (now)
+┣━□ three
+┃   dcd3b5d Add three (now)
+main
+-- golden/ll-after-three-onto-two.txt --
+    ┏━■ three ◀
+    ┃   6b39879 Add three (now)
+  ┏━┻□ two
+  ┃    6f74174 Add two (now)
+┏━┻□ one
+┃    1cd0ae2 Add one (now)
+main
