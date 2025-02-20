@@ -1,4 +1,4 @@
-name: Merge release changelog
+name: Update merged changelog
 
 # When a .changes/v*.md file is modified in a release PR,
 # we should update the root CHANGELOG.md.
