@@ -31,31 +31,6 @@ func (f *Fixture) Dir() string {
 // The fixture file is expected to be testscript file
 // that runs a series of git commands to set up a Git repository.
 func LoadFixtureFile(path string) (_ *Fixture, err error) {
-	script, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read script: %w", err)
-	}
-
-	return LoadFixtureScript(script)
-}
-
-// LoadFixtureScript loads a fixture from the testscript.
-// It has access to the following commands in addition to testscript defaults:
-//
-//   - [CmdGit]
-//   - [CmdAt]
-//   - [CmdAs]
-func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
-	// testscript.Params expects a directory with several test files in it.
-	tmpDir, err := os.MkdirTemp("", "gittest-fixture-")
-	if err != nil {
-		return nil, fmt.Errorf("create temp dir: %w", err)
-	}
-	tmpScript := filepath.Join(tmpDir, "test.txt")
-	if err := os.WriteFile(tmpScript, script, 0o644); err != nil {
-		return nil, fmt.Errorf("write script: %w", err)
-	}
-
 	defaultEnv := DefaultConfig().EnvMap()
 	defaultEnv["EDITOR"] = "false"
 	defaultEnv["GIT_AUTHOR_NAME"] = "Test"
@@ -75,7 +50,7 @@ func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
 		defer close(done)
 
 		testscript.RunT(&t, testscript.Params{
-			Dir: tmpDir,
+			Files: []string{path},
 			// Don't delete fixtureDir when this returns.
 			TestWork:           true,
 			RequireUniqueNames: true,
@@ -106,6 +81,30 @@ func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
 	}
 
 	return &Fixture{dir: fixtureDir}, nil
+}
+
+// LoadFixtureScript loads a fixture from the testscript.
+// It has access to the following commands in addition to testscript defaults:
+//
+//   - [CmdGit]
+//   - [CmdAt]
+//   - [CmdAs]
+func LoadFixtureScript(script []byte) (_ *Fixture, err error) {
+	// testscript.Params expects a directory with several test files in it.
+	tmpDir, err := os.MkdirTemp("", "gittest-fixture-")
+	if err != nil {
+		return nil, fmt.Errorf("create temp dir: %w", err)
+	}
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
+
+	tmpScript := filepath.Join(tmpDir, "test.txt")
+	if err := os.WriteFile(tmpScript, script, 0o644); err != nil {
+		return nil, fmt.Errorf("write script: %w", err)
+	}
+
+	return LoadFixtureFile(tmpScript)
 }
 
 // fakeT implements testscript.T so that we can run a testscript
