@@ -136,14 +136,6 @@ type CommitRequest struct {
 
 	// NoVerify allows a commit with pre-commit and commit-msg hooks bypassed.
 	NoVerify bool
-
-	// Author and Committer sign the commit.
-	// If Committer is nil, Author is used for both.
-	//
-	// If both are nil, the current user is used.
-	// Note that current user may not be available in all contexts.
-	// Prefer to set Author and Committer explicitly.
-	Author, Committer *Signature
 }
 
 // Commit runs the 'git commit' command,
@@ -192,15 +184,10 @@ func (r *Repository) Commit(ctx context.Context, req CommitRequest) error {
 		args = append(args, "--fixup", req.Fixup)
 	}
 
-	var env []string
-	env = req.Author.appendEnv("AUTHOR", env)
-	env = req.Committer.appendEnv("COMMITTER", env)
-
 	err := r.gitCmd(ctx, args...).
 		Stdin(os.Stdin).
 		Stdout(os.Stdout).
 		Stderr(os.Stderr).
-		AppendEnv(env...).
 		Run(r.exec)
 	if err != nil {
 		return fmt.Errorf("commit: %w", err)
