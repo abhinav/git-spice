@@ -28,7 +28,10 @@ import (
 	"go.abhg.dev/gs/internal/ui/uitest"
 )
 
-var _update = flag.Bool("update", false, "update golden files")
+var (
+	_update = flag.Bool("update", false, "update golden files")
+	_debug  = flag.Bool("debug", false, "enable debug logging")
+)
 
 func TestMain(m *testing.M) {
 	// Always override the secret stash with a memory stash
@@ -97,6 +100,10 @@ func TestScript(t *testing.T) {
 	defaultEnv["GIT_AUTHOR_EMAIL"] = "test@example.com"
 	defaultEnv["GIT_COMMITTER_NAME"] = "Test"
 	defaultEnv["GIT_COMMITTER_EMAIL"] = "test@example.com"
+
+	if *_debug {
+		defaultEnv["GIT_SPICE_VERBOSE"] = "true"
+	}
 
 	var shamhubCmd shamhub.Cmd
 
