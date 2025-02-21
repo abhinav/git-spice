@@ -20,8 +20,8 @@ type checkoutOptions struct {
 
 type branchCheckoutCmd struct {
 	checkoutOptions
+	BranchPromptConfig
 
-	Sort      string `config:"branchCheckout.sort" help:"Sort branches by the given field"`
 	Untracked bool   `short:"u" config:"branchCheckout.showUntracked" help:"Show untracked branches if one isn't supplied"`
 	Branch    string `arg:"" optional:"" help:"Name of the branch to checkout" predictor:"branches"`
 }
@@ -33,21 +33,22 @@ func (*branchCheckoutCmd) Help() string {
 
 		Use -u/--untracked to show untracked branches in the prompt.
 
-		Use --sort=<field> to sort branches at the same level by the given field.
-		Commonly used field names include "refname", "commiterdate", "authordate", and more.
-		See git-for-each-ref(1) for a full list of valid fields.
-		Prefix the field name with "-" to sort in reverse order.
+		Use the spice.branchPrompt.sort configuration option
+		to specify the sort order of branches in the prompt.
+		Commonly used field names include "refname", "commiterdate", etc.
 		By default, branches are sorted by name.
 	`)
 }
 
-func (cmd *branchCheckoutCmd) Run(
+// AfterApply runs after command line options have been parsed
+// but before the command is executed.
+//
+// We'll use this to fill in the branch name if it's missing.
+func (cmd *branchCheckoutCmd) AfterApply(
 	ctx context.Context,
-	log *log.Logger,
 	view ui.View,
 	repo *git.Repository,
-	store *state.Store,
-	svc *spice.Service,
+	branchPrompt *branchPrompter,
 ) error {
 	if cmd.Branch == "" {
 		if !ui.Interactive(view) {
@@ -61,20 +62,30 @@ func (cmd *branchCheckoutCmd) Run(
 			currentBranch = ""
 		}
 
-		cmd.Branch, err = (&branchPrompt{
+		cmd.Branch, err = branchPrompt.Prompt(ctx, &branchPromptRequest{
 			Disabled: func(b git.LocalBranch) bool {
 				return b.Name != currentBranch && b.CheckedOut
 			},
 			Default:     currentBranch,
-			Sort:        cmd.Sort,
 			TrackedOnly: !cmd.Untracked,
 			Title:       "Select a branch to checkout",
-		}).Run(ctx, view, repo, store)
+		})
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
 	}
 
+	return nil
+}
+
+func (cmd *branchCheckoutCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	if cmd.Branch != store.Trunk() {
 		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 			var restackErr *spice.BranchNeedsRestackError

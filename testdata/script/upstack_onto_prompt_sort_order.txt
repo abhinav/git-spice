@@ -1,0 +1,63 @@
+# branch onto supports the spice.branchPrompt.sort config.
+
+as 'Test <test@example.com>'
+at '2025-02-25T09:00:35Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+at '2025-02-25T09:10:00Z'
+gs trunk
+git add aaa.txt
+gs branch create aaa -m 'Add feature 1'
+
+at '2025-02-25T09:08:00Z'
+gs trunk
+git add ccc.txt
+gs branch create ccc -m 'Add feature 2'
+
+at '2025-02-25T09:06:00Z'
+gs trunk
+git add bbb.txt
+gs branch create bbb -m 'Add feature 3'
+
+# Now we have:
+#   main -> {aaa, bbb, ccc}
+# Alphabetical ordering is that, but timestamp ordering is {bbb, ccc, aaa}.
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+# Move bbb to be based on aaa
+git config spice.branchPrompt.sort 'committerdate'
+gs upstack onto
+
+git graph --branches
+cmp stdout $WORK/graph-after.golden
+
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- repo/aaa.txt --
+Feature 1
+-- repo/ccc.txt --
+Feature 2
+-- repo/bbb.txt --
+Feature 3
+-- robot.golden --
+===
+> Select a branch to move onto: 
+> ┏━□ bbb
+> ┣━□ ccc
+> ┣━□ aaa
+> main ◀
+>
+> Moving the upstack of bbb onto another branch
+"aaa"
+-- graph-after.golden --
+* 5646a25 (ccc) Add feature 2
+| * f062ab3 (HEAD -> bbb) Add feature 3
+| * d80c805 (aaa) Add feature 1
+|/  
+* 9778e0e (main) Initial commit

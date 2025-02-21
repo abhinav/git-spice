@@ -337,11 +337,6 @@ gs upstack (us) onto (o) [<onto>] [flags]
 Move a branch onto another branch
 
 The current branch and its upstack will move onto the new base.
-Use 'gs branch onto' to leave the branch's upstack alone.
-Use --branch to move a different branch than the current one.
-
-A prompt will allow selecting the new base.
-Provide the new base name as an argument to skip the prompt.
 
 For example, given the following stack with B checked out,
 'gs upstack onto main' will have the following effect:
@@ -353,6 +348,17 @@ For example, given the following stack with B checked out,
 	┌─┴ A                   ├── A
 	trunk                   trunk
 
+Use 'gs branch onto' to leave the branch's upstack alone.
+
+Use --branch to move a different branch than the current one.
+
+A prompt will allow selecting the new base.
+Use the spice.branchPrompt.sort configuration option
+to specify the sort order of branches in the prompt.
+Commonly used field names include "refname", "commiterdate", etc.
+By default, branches are sorted by name.
+Provide the new base name as an argument to skip the prompt.
+
 **Arguments**
 
 * `onto`: Destination branch
@@ -360,6 +366,8 @@ For example, given the following stack with B checked out,
 **Flags**
 
 * `--branch=NAME`: Branch to start at
+
+**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### gs downstack submit
 
@@ -483,10 +491,9 @@ Provide a branch name as an argument to skip the prompt.
 
 Use -u/--untracked to show untracked branches in the prompt.
 
-Use --sort=<field> to sort branches at the same level by the given field.
-Commonly used field names include "refname", "commiterdate", "authordate", and more.
-See git-for-each-ref(1) for a full list of valid fields.
-Prefix the field name with "-" to sort in reverse order.
+Use the spice.branchPrompt.sort configuration option
+to specify the sort order of branches in the prompt.
+Commonly used field names include "refname", "commiterdate", etc.
 By default, branches are sorted by name.
 
 **Arguments**
@@ -497,10 +504,9 @@ By default, branches are sorted by name.
 
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
-* `--sort=STRING` ([:material-wrench:{ .middle title="spice.branchCheckout.sort" }](/cli/config.md#spicebranchcheckoutsort)): Sort branches by the given field
 * `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
 
-**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.sort](/cli/config.md#spicebranchcheckoutsort)
+**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### gs branch create
 
@@ -588,6 +594,10 @@ Branches above the deleted branches are rebased onto
 the next branches available downstack.
 
 A prompt will allow selecting the target branch if none are provided.
+Use the spice.branchPrompt.sort configuration option
+to specify the sort order of branches in the prompt.
+Commonly used field names include "refname", "commiterdate", etc.
+By default, branches are sorted by name.
 
 **Arguments**
 
@@ -596,6 +606,8 @@ A prompt will allow selecting the target branch if none are provided.
 **Flags**
 
 * `--force`: Force deletion of the branch
+
+**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### gs branch fold
 
@@ -739,10 +751,6 @@ Move a branch onto another branch
 The commits of the current branch are transplanted onto another
 branch.
 Branches upstack are moved to point to its original base.
-Use --branch to move a different branch than the current one.
-
-A prompt will allow selecting the new base.
-Provide the new base name as an argument to skip the prompt.
 
 For example, given the following stack with B checked out,
 running 'gs branch onto main' will move B onto main
@@ -755,6 +763,15 @@ and leave C on top of A.
 	┌─┴ A                   ├─┴ A
 	trunk                   trunk
 
+Use --branch to move a different branch than the current one.
+
+A prompt will allow selecting the new base.
+Use the spice.branchPrompt.sort configuration option
+to specify the sort order of branches in the prompt.
+Commonly used field names include "refname", "commiterdate", etc.
+By default, branches are sorted by name.
+Provide the new base name as an argument to skip the prompt.
+
 **Arguments**
 
 * `onto`: Destination branch
@@ -762,6 +779,8 @@ and leave C on top of A.
 **Flags**
 
 * `--branch=NAME`: Branch to move
+
+**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### gs branch submit
 

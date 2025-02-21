@@ -1,4 +1,4 @@
-# branch checkout prompt supports sorting by committerdate.
+# branch checkout prompt supports sorting with spice.branchPrompt.sort.
 
 as 'Test <test@example.com>'
 at '2025-02-19T17:00:00Z'
@@ -43,13 +43,15 @@ stdout 'bbb'
 
 # sort by committerdate
 gs trunk
-gs branch checkout -u --sort=committerdate
+git config spice.branchPrompt.sort committerdate
+gs branch checkout -u
 git branch --show-current
 stdout 'aaa'
 
 # sort by committerdate descending
 gs trunk
-gs branch checkout -u --sort=-committerdate
+git config spice.branchPrompt.sort '-committerdate'
+gs branch checkout -u
 git branch --show-current
 stdout 'bbb'
 

@@ -14,6 +14,8 @@ import (
 )
 
 type branchOntoCmd struct {
+	BranchPromptConfig
+
 	Branch string `help:"Branch to move" placeholder:"NAME" predictor:"trackedBranches"`
 	Onto   string `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
 }
@@ -23,10 +25,6 @@ func (*branchOntoCmd) Help() string {
 		The commits of the current branch are transplanted onto another
 		branch.
 		Branches upstack are moved to point to its original base.
-		Use --branch to move a different branch than the current one.
-
-		A prompt will allow selecting the new base.
-		Provide the new base name as an argument to skip the prompt.
 
 		For example, given the following stack with B checked out,
 		running 'gs branch onto main' will move B onto main
@@ -38,16 +36,25 @@ func (*branchOntoCmd) Help() string {
 			  ┌─┴ B ◀               │ ┌── C
 			┌─┴ A                   ├─┴ A
 			trunk                   trunk
+
+		Use --branch to move a different branch than the current one.
+
+		A prompt will allow selecting the new base.
+		Use the spice.branchPrompt.sort configuration option
+		to specify the sort order of branches in the prompt.
+		Commonly used field names include "refname", "commiterdate", etc.
+		By default, branches are sorted by name.
+		Provide the new base name as an argument to skip the prompt.
 	`)
 }
 
-func (cmd *branchOntoCmd) Run(
+func (cmd *branchOntoCmd) AfterApply(
 	ctx context.Context,
-	log *log.Logger,
 	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	branchPrompt *branchPrompter,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -56,16 +63,9 @@ func (cmd *branchOntoCmd) Run(
 		}
 		cmd.Branch = currentBranch
 	}
+
 	if cmd.Branch == store.Trunk() {
 		return errors.New("cannot move trunk")
-	}
-
-	branch, err := svc.LookupBranch(ctx, cmd.Branch)
-	if err != nil {
-		if errors.Is(err, state.ErrNotExist) {
-			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
-		}
-		return fmt.Errorf("get branch: %w", err)
 	}
 
 	if cmd.Onto == "" {
@@ -73,7 +73,16 @@ func (cmd *branchOntoCmd) Run(
 			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
 		}
 
-		cmd.Onto, err = (&branchPrompt{
+		// TODO: cache between AfterApply and Run?
+		branch, err := svc.LookupBranch(ctx, cmd.Branch)
+		if err != nil {
+			if errors.Is(err, state.ErrNotExist) {
+				return fmt.Errorf("branch not tracked: %s", cmd.Branch)
+			}
+			return fmt.Errorf("get branch: %w", err)
+		}
+
+		cmd.Onto, err = branchPrompt.Prompt(ctx, &branchPromptRequest{
 			Disabled: func(b git.LocalBranch) bool {
 				return b.Name == cmd.Branch
 			},
@@ -81,10 +90,28 @@ func (cmd *branchOntoCmd) Run(
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving %s onto another branch", cmd.Branch),
-		}).Run(ctx, view, repo, store)
+		})
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (cmd *branchOntoCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
+	branch, err := svc.LookupBranch(ctx, cmd.Branch)
+	if err != nil {
+		if errors.Is(err, state.ErrNotExist) {
+			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
+		}
+		return fmt.Errorf("get branch: %w", err)
 	}
 
 	aboves, err := svc.ListAbove(ctx, cmd.Branch)
@@ -100,7 +127,7 @@ func (cmd *branchOntoCmd) Run(
 		if err := (&upstackOntoCmd{
 			Branch: above,
 			Onto:   branch.Base,
-		}).Run(ctx, log, view, repo, store, svc); err != nil {
+		}).Run(ctx, log, repo, store, svc); err != nil {
 			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,
 				Command: []string{"branch", "onto", cmd.Onto},

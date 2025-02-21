@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -33,9 +34,51 @@ type branchCmd struct {
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
 }
 
-// branchPrompt prompts a user to select a local branch
+// BranchPromptConfig defines configuration for the branch tree prompt
+// presented from commands that need the user to select a branch interactively.
+//
+// Embed this in commands that need to use the prompt
+// and a *branchPrompter will be injected into the Kong context.
+type BranchPromptConfig struct {
+	// Verbose names for flags to avoid conflicting with command flags.
+	//
+	// hidden:"" means that the CLI flag isn't intended to be used.
+	// Only the configuration.
+
+	BranchPromptSort string `hidden:"" config:"branchPrompt.sort" help:"Sort branches by the given field"`
+}
+
+// BeforeApply is called by Kong as part of parsing.
+// This is the earliest hook we can introduce the binding in.
+func (cfg *BranchPromptConfig) BeforeApply(kctx *kong.Context) error {
+	return kctx.BindToProvider(onceFunc(func(view ui.View, repo *git.Repository, store *state.Store) (*branchPrompter, error) {
+		return &branchPrompter{
+			sort:  cfg.BranchPromptSort,
+			view:  view,
+			repo:  repo,
+			store: store,
+		}, nil
+	}))
+}
+
+// branchPrompter presents the user with an interactive prompt
+// to select a branch from a list of local branches.
+//
+// Tracked branches are presented in a tree view.
+type branchPrompter struct {
+	// sort order for branches globally.
+	// Defaults to branch name if unset.
+	sort string
+
+	view  ui.View
+	repo  *git.Repository
+	store *state.Store
+}
+
+// branchPromptRequest defines parameters for the branch prompt
+// presented to the user to select a local branch
 // that may or may not be tracked by the store.
-type branchPrompt struct {
+type branchPromptRequest struct {
 	// Disabled specifies whether the given branch is selectable.
 	Disabled func(git.LocalBranch) bool
 
@@ -51,28 +94,20 @@ type branchPrompt struct {
 
 	// Description specifies the description to display to the user.
 	Description string
-
-	// Sort optionally specifies a value for git branch --sort.
-	Sort string
 }
 
-func (p *branchPrompt) Run(
-	ctx context.Context,
-	view ui.View,
-	repo *git.Repository,
-	store *state.Store,
-) (string, error) {
+func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (string, error) {
 	disabled := func(git.LocalBranch) bool { return false }
-	if p.Disabled != nil {
-		disabled = p.Disabled
+	if req.Disabled != nil {
+		disabled = req.Disabled
 		// TODO: allow disabled branches to specify a reason.
 		// Can be used to say "(checked out elsewhere)" or similar.
 	}
 
+	trunk := p.store.Trunk()
 	filter := func(git.LocalBranch) bool { return true }
-	if p.TrackedOnly {
-		trunk := store.Trunk()
-		tracked, err := store.ListBranches(ctx)
+	if req.TrackedOnly {
+		tracked, err := p.store.ListBranches(ctx)
 		if err != nil {
 			return "", fmt.Errorf("list tracked branches: %w", err)
 		}
@@ -90,17 +125,16 @@ func (p *branchPrompt) Run(
 		}
 	}
 
-	localBranches, err := repo.LocalBranches(ctx, &git.LocalBranchesOptions{
-		Sort: p.Sort,
+	localBranches, err := p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{
+		Sort: p.sort,
 	})
 	if err != nil {
 		return "", fmt.Errorf("list branches: %w", err)
 	}
 
-	trunk := store.Trunk()
 	bases := make(map[string]string) // branch -> base
 	for _, branch := range localBranches {
-		res, err := store.LookupBranch(ctx, branch.Name)
+		res, err := p.store.LookupBranch(ctx, branch.Name)
 		var base string
 		if err == nil {
 			base = res.Base
@@ -123,13 +157,13 @@ func (p *branchPrompt) Run(
 		})
 	}
 
-	value := p.Default
+	value := req.Default
 	prompt := widget.NewBranchTreeSelect().
-		WithTitle(p.Title).
+		WithTitle(req.Title).
 		WithValue(&value).
 		WithItems(items...).
-		WithDescription(p.Description)
-	if err := ui.Run(view, prompt); err != nil {
+		WithDescription(req.Description)
+	if err := ui.Run(p.view, prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)
 	}
 
