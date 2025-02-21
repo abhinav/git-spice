@@ -10,7 +10,7 @@ import (
 
 // ListRemotes returns a list of remotes for the repository.
 func (r *Repository) ListRemotes(ctx context.Context) ([]string, error) {
-	cmd := newGitCmd(ctx, r.log, "remote")
+	cmd := r.gitCmd(ctx, "remote")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("pipe stdout: %w", err)

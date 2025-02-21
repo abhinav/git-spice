@@ -118,7 +118,7 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 		args = append(args, req.Branch)
 	}
 
-	cmd := r.gitCmd(ctx, args...)
+	cmd := r.gitCmd(ctx, args...).LogPrefix("git rebase")
 	if req.Interactive {
 		cmd.Stdin(os.Stdin).Stdout(os.Stdout)
 	}
