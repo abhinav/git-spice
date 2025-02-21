@@ -40,10 +40,25 @@ func (realExecer) Start(cmd *exec.Cmd) error            { return cmd.Start() }
 func (realExecer) Wait(cmd *exec.Cmd) error             { return cmd.Wait() }
 func (realExecer) Kill(cmd *exec.Cmd) error             { return cmd.Process.Kill() }
 
+type extraConfig struct {
+	Editor string // core.editor
+}
+
+func (ec *extraConfig) Args() (args []string) {
+	if ec == nil {
+		return nil
+	}
+	if ec.Editor != "" {
+		args = append(args, "-c", "core.editor="+ec.Editor)
+	}
+	return args
+}
+
 // gitCmd provides a fluent API around exec.Cmd,
 // capable of capturing stderr into error objects if it's not being logged.
 type gitCmd struct {
 	cmd *exec.Cmd
+	log *log.Logger
 
 	// Wraps an error with stderr output.
 	wrap func(error) error
@@ -65,20 +80,34 @@ type gitCmd struct {
 //   - if the program is running in verbose mode,
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
-func newGitCmd(ctx context.Context, log *log.Logger, args ...string) *gitCmd {
-	name := "git"
-	if len(args) > 0 {
-		name += " " + args[0]
+func newGitCmd(ctx context.Context, log *log.Logger, cfg *extraConfig, args ...string) *gitCmd {
+	if log.GetPrefix() == "" {
+		name := "git"
+		if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+			name += " " + args[0]
+		}
+		log = log.WithPrefix(name)
+	} else {
+		log = log.With() // copy log to change prefix later
 	}
 
-	stderr, wrap := stderrWriter(name, log)
+	args = append(cfg.Args(), args...)
+	stderr, wrap := stderrWriter(log)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stderr = stderr
 
 	return &gitCmd{
 		cmd:  cmd,
+		log:  log,
 		wrap: wrap,
 	}
+}
+
+// LogPrefix changes the prefixed used for log messages from this command.
+// Defaults to "git $arg" where $arg is the first argument of the command.
+func (c *gitCmd) LogPrefix(s string) *gitCmd {
+	c.log.SetPrefix(s)
+	return c
 }
 
 // Dir sets the working directory for the command.
@@ -182,12 +211,11 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 // Returns an io.Writer that will record sterr for later use,
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
-func stderrWriter(cmd string, logger *log.Logger) (w io.Writer, wrap func(error) error) {
+func stderrWriter(logger *log.Logger) (w io.Writer, wrap func(error) error) {
 	if logger.GetLevel() <= log.DebugLevel {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		cmdLog := logger.WithPrefix(cmd)
-		w, flush := logutil.Writer(cmdLog, log.DebugLevel)
+		w, flush := logutil.Writer(logger, log.DebugLevel)
 		return w, func(err error) error {
 			flush()
 			return err

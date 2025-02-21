@@ -31,7 +31,7 @@ func Init(ctx context.Context, dir string, opts InitOptions) (*Repository, error
 		opts.Branch = "main"
 	}
 
-	initCmd := newGitCmd(ctx, opts.Log,
+	initCmd := newGitCmd(ctx, opts.Log, nil, /* extra */
 		"init",
 		"--initial-branch="+opts.Branch,
 	).Dir(dir)
@@ -63,7 +63,7 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.Log = log.New(io.Discard)
 	}
 
-	out, err := newGitCmd(ctx, opts.Log,
+	out, err := newGitCmd(ctx, opts.Log, nil, /* extra config */
 		"rev-parse",
 		"--show-toplevel",
 		"--absolute-git-dir",
@@ -94,7 +94,7 @@ func Clone(ctx context.Context, url, dir string, opts CloneOptions) (*Repository
 		opts.exec = _realExec
 	}
 
-	cloneCmd := newGitCmd(ctx, opts.Log, "clone", url, dir)
+	cloneCmd := newGitCmd(ctx, opts.Log, nil /* extraConfig */, "clone", url, dir)
 	if err := cloneCmd.Run(opts.exec); err != nil {
 		return nil, fmt.Errorf("git clone: %w", err)
 	}
@@ -125,8 +125,7 @@ func newRepository(root, gitDir string, log *log.Logger, exec execer) *Repositor
 // gitCmd returns a gitCmd that will run
 // with the repository's root as the working directory.
 func (r *Repository) gitCmd(ctx context.Context, args ...string) *gitCmd {
-	args = append(r.cfg.Args(), args...)
-	return newGitCmd(ctx, r.log, args...).Dir(r.root)
+	return newGitCmd(ctx, r.log, &r.cfg, args...).Dir(r.root)
 }
 
 // WithEditor returns a copy of the repository
@@ -135,15 +134,4 @@ func (r *Repository) WithEditor(editor string) *Repository {
 	newR := *r
 	newR.cfg.Editor = editor
 	return &newR
-}
-
-type extraConfig struct {
-	Editor string // core.editor
-}
-
-func (ec extraConfig) Args() (args []string) {
-	if ec.Editor != "" {
-		args = append(args, "-c", "core.editor="+ec.Editor)
-	}
-	return args
 }
