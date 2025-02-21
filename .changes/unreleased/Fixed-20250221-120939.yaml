@@ -1,0 +1,6 @@
+kind: Fixed
+body: >-
+  upstack onto:
+  When prompting for new base, do not allow selecting upstack branches,
+  as the operation will always be rejected to keep the graph acyclic.
+time: 2025-02-21T12:09:39.232259-08:00

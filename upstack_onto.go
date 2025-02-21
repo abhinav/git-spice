@@ -71,9 +71,20 @@ func (cmd *upstackOntoCmd) Run(
 			return fmt.Errorf("cannot proceed without a destination branch: %w", errNoPrompt)
 		}
 
+		upstacks, err := svc.ListUpstack(ctx, cmd.Branch)
+		if err != nil {
+			log.Warn("Error listing upstack branches", "branch", cmd.Branch, "error", err)
+			upstacks = []string{cmd.Branch}
+		}
+		upstackSet := make(map[string]struct{}, len(upstacks))
+		for _, b := range upstacks {
+			upstackSet[b] = struct{}{}
+		}
+
 		cmd.Onto, err = (&branchPrompt{
 			Disabled: func(b git.LocalBranch) bool {
-				return b.Name == cmd.Branch
+				_, isUpstack := upstackSet[b.Name]
+				return isUpstack
 			},
 			TrackedOnly: true,
 			Default:     branch.Base,
