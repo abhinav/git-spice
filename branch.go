@@ -97,12 +97,18 @@ func (p *branchPrompt) Run(
 		return "", fmt.Errorf("list branches: %w", err)
 	}
 
+	trunk := store.Trunk()
 	bases := make(map[string]string) // branch -> base
 	for _, branch := range localBranches {
 		res, err := store.LookupBranch(ctx, branch.Name)
+		var base string
 		if err == nil {
-			bases[branch.Name] = res.Base
+			base = res.Base
+		} else if branch.Name != trunk {
+			base = trunk
 		}
+
+		bases[branch.Name] = base
 	}
 
 	items := make([]widget.BranchTreeItem, 0, len(localBranches))

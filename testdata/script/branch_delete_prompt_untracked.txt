@@ -26,10 +26,10 @@ cmp stderr $WORK/stderr.golden
 -- robot.golden --
 ===
 > Select a branch to delete: 
-> a
-> b
-> c ◀
-> d
+> ┏━□ a
+> ┣━□ b
+> ┣━■ c ◀
+> ┣━□ d
 > main
 true
 -- stderr.golden --
