@@ -143,7 +143,7 @@ func (c *Config) Shorthands() []string {
 func (*Config) Validate(*kong.Application) error { return nil }
 
 // Resolve resolves the value for a flag from configuration.
-func (c *Config) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+func (c *Config) Resolve(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (interface{}, error) {
 	k := flag.Tag.Get(_configTag)
 	if k == "" {
 		return nil, nil

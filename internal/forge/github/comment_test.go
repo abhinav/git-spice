@@ -119,7 +119,7 @@ func TestListChangeComments(t *testing.T) {
 				},
 			}
 
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				enc := json.NewEncoder(w)
 				enc.SetIndent("", "  ")
 				assert.NoError(t, enc.Encode(response))

@@ -50,6 +50,7 @@ func newRepository(
 		log:    log,
 		client: client,
 		repoID: repoID,
+		forge:  forge,
 	}, nil
 }
 

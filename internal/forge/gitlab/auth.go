@@ -260,7 +260,7 @@ var _authenticationMethods = []struct {
 	{
 		Title:       "Personal Access Token",
 		Description: patDesc,
-		Build: func(a authenticatorOptions) authenticator {
+		Build: func(authenticatorOptions) authenticator {
 			return &PATAuthenticator{}
 		},
 	},
@@ -313,7 +313,7 @@ func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, e
 	return method, err
 }
 
-func oauthDesc(focused bool) string {
+func oauthDesc(bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will get access to all repositories: public and private.
@@ -359,7 +359,7 @@ type PATAuthenticator struct{}
 
 // Authenticate prompts the user for a Personal Access Token,
 // validates it, and returns the token if successful.
-func (a *PATAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+func (a *PATAuthenticator) Authenticate(_ context.Context, view ui.View) (*AuthenticationToken, error) {
 	var token string
 	err := ui.Run(view, ui.NewInput().
 		WithTitle("Enter Personal Access Token").

@@ -51,7 +51,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 }
 
 // OpenURL opens a repository hosted on the forge with the given remote URL.
-func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
+func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
 	must.NotBeBlankf(f.URL, "URL is required")
 	must.NotBeBlankf(f.APIURL, "API URL is required")
 

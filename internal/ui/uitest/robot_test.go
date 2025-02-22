@@ -131,7 +131,7 @@ func (f *fakeField) Err() error    { return nil }
 func (f *fakeField) Description() string { return "" }
 func (f *fakeField) Title() string       { return "" }
 
-func (f *fakeField) Update(msg tea.Msg) tea.Cmd { return nil }
+func (f *fakeField) Update(tea.Msg) tea.Cmd { return nil }
 
 func (f *fakeField) Render(w ui.Writer) {
 	_, _ = w.WriteString(f.View)
@@ -278,7 +278,7 @@ func FuzzRobotFile_Read(f *testing.F) {
 		"qux"
 	`)))
 
-	f.Fuzz(func(t *testing.T, data []byte) {
+	f.Fuzz(func(_ *testing.T, data []byte) {
 		var sf robotFixtureFile
 		_ = sf.Read(bytes.NewReader(data))
 		// Just make sure it doesn't panic or infinite loop.

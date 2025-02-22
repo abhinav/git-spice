@@ -14,7 +14,7 @@ import (
 
 func TestResponseError(t *testing.T) {
 	res, err := (&http.Client{
-		Transport: graphqlutil.WrapTransport(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		Transport: graphqlutil.WrapTransport(roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return nil, assert.AnError
 		})),
 	}).Get("http://example.com")
@@ -25,7 +25,7 @@ func TestResponseError(t *testing.T) {
 
 func TestReadError(t *testing.T) {
 	_, err := (&http.Client{
-		Transport: graphqlutil.WrapTransport(roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		Transport: graphqlutil.WrapTransport(roundTripFunc(func(*http.Request) (*http.Response, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(iotest.ErrReader(assert.AnError)),
@@ -37,7 +37,7 @@ func TestReadError(t *testing.T) {
 }
 
 func TestResponseStatusCode(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
@@ -56,7 +56,7 @@ func TestMalformedResponse(t *testing.T) {
 		"errors": [{"got as far as this but no further
 	}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, give)
 	}))
 	defer srv.Close()
@@ -187,7 +187,7 @@ func TestGraphQLResponse(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = io.WriteString(w, tt.body)
 			}))
 			defer srv.Close()

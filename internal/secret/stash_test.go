@@ -114,14 +114,14 @@ type brokenStash struct {
 	err error
 }
 
-func (b *brokenStash) SaveSecret(service, key, secret string) error {
+func (b *brokenStash) SaveSecret(string, string, string) error {
 	return b.err
 }
 
-func (b *brokenStash) LoadSecret(service, key string) (string, error) {
+func (b *brokenStash) LoadSecret(string, string) (string, error) {
 	return "", b.err
 }
 
-func (b *brokenStash) DeleteSecret(service, key string) error {
+func (b *brokenStash) DeleteSecret(string, string) error {
 	return b.err
 }

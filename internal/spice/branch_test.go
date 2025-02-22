@@ -37,7 +37,7 @@ func TestGenerateBranchName(t *testing.T) {
 func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	// This test should not make real requests to the server,
 	// but we need a real URL to work with for matching.
-	shamhubServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	shamhubServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		t.Errorf("Unexpected request: %s %s", r.Method, r.URL)
 	}))
 	t.Cleanup(shamhubServer.Close)
