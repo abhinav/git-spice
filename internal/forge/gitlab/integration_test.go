@@ -238,7 +238,7 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	t.Run("invalid", func(t *testing.T) {
 		ctx := t.Context()
 		_, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 10000})
-		require.Nil(t, err)
+		require.NoError(t, err)
 	})
 }
 

@@ -25,7 +25,7 @@ type notLoggedInError struct {
 }
 
 func (e *notLoggedInError) Error() string {
-	return fmt.Sprintf("not logged in to %s", e.Forge.ID())
+	return "not logged in to " + e.Forge.ID()
 }
 
 // Attempts to open the forge.Repository associated with the given Git remote.

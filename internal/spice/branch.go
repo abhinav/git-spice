@@ -610,7 +610,7 @@ func (s *Service) FindBottom(ctx context.Context, start string) (string, error) 
 	}
 
 	if len(downstacks) == 0 {
-		return "", fmt.Errorf("no downstack branches found")
+		return "", errors.New("no downstack branches found")
 	}
 
 	return downstacks[len(downstacks)-1], nil

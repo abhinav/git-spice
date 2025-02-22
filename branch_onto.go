@@ -57,7 +57,7 @@ func (cmd *branchOntoCmd) Run(
 		cmd.Branch = currentBranch
 	}
 	if cmd.Branch == store.Trunk() {
-		return fmt.Errorf("cannot move trunk")
+		return errors.New("cannot move trunk")
 	}
 
 	branch, err := svc.LookupBranch(ctx, cmd.Branch)

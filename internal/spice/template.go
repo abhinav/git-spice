@@ -3,6 +3,7 @@ package spice
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"maps"
@@ -52,7 +53,7 @@ func (s *Service) ListChangeTemplates(
 		_, _ = fmt.Fprintf(keyHash, "%s\n", h)
 	}
 
-	key := fmt.Sprintf("%x", keyHash.Sum(nil))
+	key := hex.EncodeToString(keyHash.Sum(nil))
 	cachedKey, cachedTemplates, err := s.store.LoadCachedTemplates(ctx)
 	if err == nil && key == cachedKey {
 		// If the cache key matches, return the cached templates.

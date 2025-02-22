@@ -150,7 +150,7 @@ func (r *Repository) handleRebaseError(ctx context.Context, err error) error {
 	if err != nil {
 		// Rebase probably failed for a different reason,
 		// so no need to log the state read failure verbosely.
-		r.log.Debug("Failed to read rebase state: %v", err)
+		r.log.Debug("Failed to read rebase state", "error", err)
 		return originalErr
 	}
 

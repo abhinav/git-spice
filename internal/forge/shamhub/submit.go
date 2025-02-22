@@ -81,18 +81,16 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (f *forgeRepository) SubmitChange(ctx context.Context, r forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
-	req := submitChangeRequest{
-		Subject: r.Subject,
-		Base:    r.Base,
-		Body:    r.Body,
-		Head:    r.Head,
-		Draft:   r.Draft,
-	}
-
-	u := f.apiURL.JoinPath(f.owner, f.repo, "changes")
+func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
+	u := r.apiURL.JoinPath(r.owner, r.repo, "changes")
 	var res submitChangeResponse
-	if err := f.client.Post(ctx, u.String(), req, &res); err != nil {
+	if err := r.client.Post(ctx, u.String(), submitChangeRequest{
+		Subject: req.Subject,
+		Base:    req.Base,
+		Body:    req.Body,
+		Head:    req.Head,
+		Draft:   req.Draft,
+	}, &res); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("submit change: %w", err)
 	}
 

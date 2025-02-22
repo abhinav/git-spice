@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -157,7 +158,7 @@ func (b *BranchTreeSelect) UnmarshalValue(unmarshal func(interface{}) error) err
 			return nil
 		}
 
-		return fmt.Errorf("no branch selected")
+		return errors.New("no branch selected")
 	}
 
 	var got string

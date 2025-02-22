@@ -100,4 +100,4 @@ type forgeRepository struct {
 
 var _ forge.Repository = (*forgeRepository)(nil)
 
-func (f *forgeRepository) Forge() forge.Forge { return f.forge }
+func (r *forgeRepository) Forge() forge.Forge { return r.forge }

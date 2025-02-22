@@ -28,9 +28,9 @@ func TestBranchSplit_Script(t *testing.T) {
 
 	uitest.RunScripts(t,
 		func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-			var input []CommitSummary
+			var commits []CommitSummary
 			require.NoError(t,
-				json.Unmarshal([]byte(ts.ReadFile("commits")), &input),
+				json.Unmarshal([]byte(ts.ReadFile("commits")), &commits),
 				"read 'commits' file")
 
 			var want []git.Hash
@@ -48,11 +48,6 @@ func TestBranchSplit_Script(t *testing.T) {
 				desc = strings.TrimSpace(ts.ReadFile("desc"))
 			}
 
-			commits := make([]CommitSummary, len(input))
-			for i, c := range input {
-				commits[i] = CommitSummary(c)
-			}
-
 			widget := NewBranchSplit().
 				WithTitle("Select a commit").
 				WithCommits(commits...).
@@ -63,7 +58,7 @@ func TestBranchSplit_Script(t *testing.T) {
 
 			var got []git.Hash
 			for _, idx := range widget.Selected() {
-				got = append(got, input[idx].ShortHash)
+				got = append(got, commits[idx].ShortHash)
 			}
 
 			assert.Equal(t, want, got)

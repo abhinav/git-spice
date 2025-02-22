@@ -55,7 +55,7 @@ func (*branchEditCmd) Run(
 			Err:     err,
 			Command: []string{"upstack", "restack"},
 			Branch:  currentBranch,
-			Message: fmt.Sprintf("interrupted: edit branch %s", currentBranch),
+			Message: "interrupted: edit branch " + currentBranch,
 		})
 	}
 

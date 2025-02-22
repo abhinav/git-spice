@@ -448,7 +448,7 @@ func (cmd *branchSubmitCmd) run(
 			UpstreamBranch: &upstreamBranch,
 		}
 		defer func() {
-			msg := fmt.Sprintf("branch submit %s", cmd.Branch)
+			msg := "branch submit " + cmd.Branch
 			tx := store.BeginBranchTx()
 			err := errors.Join(
 				tx.Upsert(ctx, upsert),

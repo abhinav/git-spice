@@ -67,7 +67,7 @@ func (cmd *branchSplitCmd) Run(
 	}
 
 	if cmd.Branch == store.Trunk() {
-		return fmt.Errorf("cannot split trunk")
+		return errors.New("cannot split trunk")
 	}
 
 	branch, err := svc.LookupBranch(ctx, cmd.Branch)

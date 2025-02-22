@@ -3,6 +3,7 @@ package shamhub
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func (sh *ShamHub) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	var buf [8]byte
 	_, _ = rand.Read(buf[:])
-	token := fmt.Sprintf("%x", buf[:])
+	token := hex.EncodeToString(buf[:])
 
 	sh.mu.Lock()
 	defer sh.mu.Unlock()

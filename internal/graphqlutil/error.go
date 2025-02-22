@@ -41,7 +41,7 @@ var _ http.RoundTripper = (*graphQLTransport)(nil)
 // with knowledge of GraphQL errors.
 //
 // The transport will now return errors that may be cast to
-// [ErrorList] or [Error] with errors.As.
+// [Errors] or [Error] with errors.As.
 func WrapTransport(t http.RoundTripper) http.RoundTripper {
 	if t == nil {
 		t = http.DefaultTransport
@@ -75,7 +75,7 @@ func (t *graphQLTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, nil
 	}
 
-	var gqlErrs ErrorList
+	var gqlErrs Errors
 	if err := json.Unmarshal([]byte(errs.Raw), &gqlErrs); err != nil {
 		// This isn't a valid GraphQL error.
 		// Return the original response.
@@ -88,10 +88,10 @@ func (t *graphQLTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return nil, gqlErrs
 }
 
-// ErrorList is a list of GraphQL errors.
-type ErrorList []*Error
+// Errors is a list of GraphQL errors.
+type Errors []*Error
 
-func (e ErrorList) Unwrap() []error {
+func (e Errors) Unwrap() []error {
 	errs := make([]error, len(e))
 	for i, err := range e {
 		errs[i] = err
@@ -99,7 +99,7 @@ func (e ErrorList) Unwrap() []error {
 	return errs
 }
 
-func (e ErrorList) Error() string {
+func (e Errors) Error() string {
 	var s strings.Builder
 	for i, err := range e {
 		if i > 0 {

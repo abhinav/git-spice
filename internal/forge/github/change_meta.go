@@ -46,14 +46,14 @@ func (m *PRMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
 }
 
 // NewChangeMetadata returns the metadata for a pull request.
-func (f *Repository) NewChangeMetadata(
+func (r *Repository) NewChangeMetadata(
 	ctx context.Context,
 	id forge.ChangeID,
 ) (forge.ChangeMetadata, error) {
 	pr := mustPR(id)
 
 	var err error
-	pr.GQLID, err = f.graphQLID(ctx, pr) // ensure GQL ID is set
+	pr.GQLID, err = r.graphQLID(ctx, pr) // ensure GQL ID is set
 	if err != nil {
 		return nil, fmt.Errorf("get pull request ID: %w", err)
 	}
@@ -138,7 +138,7 @@ func (id *PR) UnmarshalJSON(data []byte) error {
 
 // graphQLID returns the GraphQL ID of the change.
 // It will retrieve the ID from the GitHub API if it is not already set.
-func (f *Repository) graphQLID(ctx context.Context, gid *PR) (githubv4.ID, error) {
+func (r *Repository) graphQLID(ctx context.Context, gid *PR) (githubv4.ID, error) {
 	if gid.GQLID != "" && gid.GQLID != nil {
 		return gid.GQLID, nil
 	}
@@ -150,9 +150,9 @@ func (f *Repository) graphQLID(ctx context.Context, gid *PR) (githubv4.ID, error
 			} `graphql:"pullRequest(number: $number)"`
 		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
-	if err := f.client.Query(ctx, &q, map[string]any{
-		"owner":  githubv4.String(f.owner),
-		"repo":   githubv4.String(f.repo),
+	if err := r.client.Query(ctx, &q, map[string]any{
+		"owner":  githubv4.String(r.owner),
+		"repo":   githubv4.String(r.repo),
 		"number": githubv4.Int(gid.Number),
 	}); err != nil {
 		return nil, fmt.Errorf("get pull request ID: %w", err)

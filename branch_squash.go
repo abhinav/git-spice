@@ -42,7 +42,7 @@ func (cmd *branchSquashCmd) Run(
 	}
 
 	if branchName == store.Trunk() {
-		return fmt.Errorf("cannot squash the trunk branch")
+		return errors.New("cannot squash the trunk branch")
 	}
 
 	branch, err := svc.LookupBranch(ctx, branchName)

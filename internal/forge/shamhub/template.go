@@ -74,10 +74,10 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (f *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
-	u := f.apiURL.JoinPath(f.owner, f.repo, "change-template")
+func (r *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change-template")
 	var res changeTemplateResponse
-	if err := f.client.Get(ctx, u.String(), &res); err != nil {
+	if err := r.client.Get(ctx, u.String(), &res); err != nil {
 		return nil, fmt.Errorf("lookup change body template: %w", err)
 	}
 
