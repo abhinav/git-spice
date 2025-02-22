@@ -62,12 +62,11 @@ jobs:
     - name: Install Git
       shell: bash
       if: matrix.git-version != 'system'
-      run: |
-        go run ./tools/ci/install-git \
-        -debian                       \
-        -prefix "$GIT_CACHE_DIR"      \
-        -version "$GIT_VERSION"       \
-        -no-cache
+      run: >-
+        go run ./tools/ci/install-git
+        -debian
+        -prefix "$GIT_CACHE_DIR"
+        -version "$GIT_VERSION"
     - name: Report Git version
       shell: bash
       run:

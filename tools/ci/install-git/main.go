@@ -112,6 +112,8 @@ func run(log *log.Logger, req installRequest) error {
 		} else if info.Mode()&0o111 == 0 {
 			return fmt.Errorf("git not executable: %v", gitExe)
 		}
+	} else {
+		log.Printf("git %v already built at: %v", req.Version, gitExe)
 	}
 
 	github := &githubAction{
@@ -252,12 +254,18 @@ type progressWriter struct {
 	N int64
 	W io.Writer
 
-	written int
+	written    int
+	lastUpdate int
 }
 
 func (w *progressWriter) Write(bs []byte) (int, error) {
 	w.written += len(bs)
-	fmt.Fprintf(w.W, "\r%v / %v downloaded", w.written, w.N)
+	// We want to post updates at 1% increments.
+	// If it's been at least w.N/100 bytes since last update, post one.
+	if w.written-w.lastUpdate >= int(w.N)/100 {
+		fmt.Fprintf(w.W, "\r%v / %v downloaded", w.written, w.N)
+		w.lastUpdate = w.written
+	}
 	return len(bs), nil
 }
 
