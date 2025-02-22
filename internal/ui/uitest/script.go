@@ -86,6 +86,10 @@ func RunScripts(
 	// so that final form can also be seen.
 	setEmulator := SetupScript(&params)
 	params.Cmds["init"] = func(ts *testscript.TestScript, neg bool, args []string) {
+		if neg || len(args) > 0 {
+			ts.Fatalf("usage: init")
+		}
+
 		t := ts.Value(tKey{}).(testing.TB)
 
 		emu := NewEmulatorView(&EmulatorViewOptions{
@@ -183,7 +187,7 @@ func SetupScript(params *testscript.Params) (setEmulator func(*testscript.TestSc
 
 	// clear
 	params.Cmds["clear"] = func(ts *testscript.TestScript, neg bool, args []string) {
-		if neg {
+		if neg || len(args) > 0 {
 			ts.Fatalf("usage: clear")
 		}
 

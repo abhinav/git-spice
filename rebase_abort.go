@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type rebaseAbortCmd struct{}
@@ -30,8 +28,6 @@ func (*rebaseAbortCmd) Help() string {
 
 func (cmd *rebaseAbortCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
-	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
 ) error {

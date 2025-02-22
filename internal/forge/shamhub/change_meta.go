@@ -44,7 +44,7 @@ func (m *ChangeMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
 }
 
 // NewChangeMetadata returns the metadata for a change on a ShamHub server.
-func (f *forgeRepository) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
+func (f *forgeRepository) NewChangeMetadata(_ context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
 	return &ChangeMetadata{
 		Number: int(id.(ChangeID)),
 	}, nil

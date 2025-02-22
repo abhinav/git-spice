@@ -178,14 +178,14 @@ var _authenticationMethods = []struct {
 	{
 		Title:       "Personal Access Token",
 		Description: patDesc,
-		Build: func(a authenticatorOptions) authenticator {
+		Build: func(authenticatorOptions) authenticator {
 			return &PATAuthenticator{}
 		},
 	},
 	{
 		Title:       "GitHub CLI",
 		Description: ghDesc,
-		Build: func(a authenticatorOptions) authenticator {
+		Build: func(authenticatorOptions) authenticator {
 			// Offer this option only if the user
 			// has the GH CLI installed.
 			ghExe, err := exec.LookPath("gh")
@@ -226,7 +226,7 @@ func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, e
 	return method, err
 }
 
-func oauthDesc(focused bool) string {
+func oauthDesc(bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will get access to all repositories: public and private.
@@ -234,7 +234,7 @@ func oauthDesc(focused bool) string {
 	`)
 }
 
-func oauthPublicDesc(focused bool) string {
+func oauthPublicDesc(bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will only get access to public repositories.
@@ -336,7 +336,7 @@ type PATAuthenticator struct{}
 
 // Authenticate prompts the user for a Personal Access Token,
 // validates it, and returns the token if successful.
-func (a *PATAuthenticator) Authenticate(ctx context.Context, view ui.View) (*AuthenticationToken, error) {
+func (a *PATAuthenticator) Authenticate(_ context.Context, view ui.View) (*AuthenticationToken, error) {
 	var token string
 	err := ui.Run(view,
 		ui.NewInput().
@@ -362,7 +362,7 @@ type CLIAuthenticator struct {
 }
 
 // Authenticate checks if the user is authenticated with GitHub CLI.
-func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
+func (a *CLIAuthenticator) Authenticate(context.Context, ui.View) (*AuthenticationToken, error) {
 	runCmd := (*exec.Cmd).Run
 	if a.runCmd != nil {
 		runCmd = a.runCmd

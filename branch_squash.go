@@ -11,7 +11,6 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type branchSquashCmd struct {
@@ -33,7 +32,6 @@ func (*branchSquashCmd) Help() string {
 func (cmd *branchSquashCmd) Run(
 	ctx context.Context,
 	log *log.Logger,
-	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,

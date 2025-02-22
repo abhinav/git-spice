@@ -286,7 +286,7 @@ func (sh *ShamHub) handleListChangeComments(w http.ResponseWriter, r *http.Reque
 func (r *forgeRepository) ListChangeComments(
 	ctx context.Context,
 	id forge.ChangeID,
-	options *forge.ListChangeCommentsOptions,
+	_ *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	u := r.apiURL.JoinPath(r.owner, r.repo, "comments")
 	q := u.Query()
@@ -307,10 +307,12 @@ func (r *forgeRepository) ListChangeComments(
 			}
 
 			for _, item := range res.Items {
-				yield(&forge.ListChangeCommentItem{
+				if !yield(&forge.ListChangeCommentItem{
 					ID:   ChangeCommentID(item.ID),
 					Body: item.Body,
-				}, nil)
+				}, nil) {
+					return
+				}
 			}
 
 			if !res.HasMore {

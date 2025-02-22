@@ -87,7 +87,7 @@ func run(
 	const docUnreleased = "<!-- gs:version unreleased -->"
 	err = sedTree("doc/src",
 		strings.NewReplacer(docUnreleased, "<!-- gs:version "+version+" -->"),
-		func(path string, d fs.DirEntry) error {
+		func(path string, _ fs.DirEntry) error {
 			if !strings.HasSuffix(path, ".md") {
 				return errSkip
 			}

@@ -53,7 +53,7 @@ func TestMultiSelect(t *testing.T) {
 				desc = strings.TrimSpace(ts.ReadFile("desc"))
 			}
 
-			widget := ui.NewMultiSelect[string](func(w ui.Writer, i int, opt ui.MultiSelectOption[string]) {
+			widget := ui.NewMultiSelect(func(w ui.Writer, _ int, opt ui.MultiSelectOption[string]) {
 				if opt.Selected {
 					w.WriteString("[X] ")
 				} else {

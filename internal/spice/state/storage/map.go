@@ -16,7 +16,7 @@ type MapBackend map[string][]byte
 var _ Backend = (MapBackend)(nil)
 
 // Get retrieves a value from the store.
-func (m MapBackend) Get(ctx context.Context, key string, dst any) error {
+func (m MapBackend) Get(_ context.Context, key string, dst any) error {
 	v, ok := m[key]
 	if !ok {
 		return ErrNotExist
@@ -27,7 +27,7 @@ func (m MapBackend) Get(ctx context.Context, key string, dst any) error {
 
 // Update applies a batch of changes to the store.
 // MapBackend ignores the message associated with the update.
-func (m MapBackend) Update(ctx context.Context, req UpdateRequest) error {
+func (m MapBackend) Update(_ context.Context, req UpdateRequest) error {
 	for i, set := range req.Sets {
 		v, err := json.Marshal(set.Value)
 		if err != nil {
@@ -50,7 +50,7 @@ func (m MapBackend) Clear(context.Context, string) error {
 }
 
 // Keys returns a list of keys in the store.
-func (m MapBackend) Keys(ctx context.Context, dir string) ([]string, error) {
+func (m MapBackend) Keys(_ context.Context, dir string) ([]string, error) {
 	if dir != "" && !strings.HasSuffix(dir, "/") {
 		dir += "/"
 	}
