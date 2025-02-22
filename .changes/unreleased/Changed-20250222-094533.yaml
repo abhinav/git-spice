@@ -1,0 +1,3 @@
+kind: Changed
+body: '{branch checkout, branch delete}: In branch selection prompt, present untracked branches as being based on the trunk. '
+time: 2025-02-22T09:45:33.909981-05:00

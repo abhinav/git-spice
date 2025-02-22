@@ -71,28 +71,28 @@ whatever
 -- robot.golden --
 ===
 > Select a branch to checkout: 
-> bcd
-> ccc
-> ddd
 > ┏━□ aaa
 > ┣━□ bbb
+> ┣━□ bcd
+> ┣━□ ccc
+> ┣━□ ddd
 > main ◀
 "bbb"
 ===
 > Select a branch to checkout: 
 > ┏━□ aaa
+> ┣━□ ccc
 > ┣━□ bbb
+> ┣━□ ddd
+> ┣━□ bcd
 > main ◀
-> ccc
-> ddd
-> bcd
 "aaa"
 ===
 > Select a branch to checkout: 
-> bcd
-> ddd
-> ccc
-> ┏━□ bbb
+> ┏━□ bcd
+> ┣━□ ddd
+> ┣━□ bbb
+> ┣━□ ccc
 > ┣━□ aaa
 > main ◀
 "bbb"
