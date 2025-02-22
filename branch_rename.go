@@ -13,7 +13,7 @@ import (
 )
 
 type branchRenameCmd struct {
-	OldName string `arg:"" optional:"" help:"Old name of the branch"`
+	OldName string `arg:"" predictor:"branches" optional:"" help:"Old name of the branch"`
 	NewName string `arg:"" optional:"" help:"New name of the branch"`
 }
 
