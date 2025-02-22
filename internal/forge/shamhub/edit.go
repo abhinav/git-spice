@@ -71,7 +71,7 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (f *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
+func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
 	var req editChangeRequest
 	if opts.Base != "" {
 		req.Base = &opts.Base
@@ -81,9 +81,9 @@ func (f *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 	}
 
 	id := fid.(ChangeID)
-	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)))
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))
 	var res editChangeResponse
-	if err := f.client.Patch(ctx, u.String(), req, &res); err != nil {
+	if err := r.client.Patch(ctx, u.String(), req, &res); err != nil {
 		return fmt.Errorf("edit change: %w", err)
 	}
 

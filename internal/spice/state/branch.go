@@ -513,7 +513,7 @@ func (s *Store) updateBranches(ctx context.Context, req updateBranchesRequest) e
 	}
 
 	if req.Message == "" {
-		req.Message = fmt.Sprintf("update at %s", time.Now().Format(time.RFC3339))
+		req.Message = "update at " + time.Now().Format(time.RFC3339)
 	}
 
 	sets := make([]storage.SetRequest, len(req.Sets))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -63,7 +64,7 @@ func (cmd *branchRenameCmd) Run(
 			WithDescription(fmt.Sprintf("Renaming branch: %v", oldName)).
 			WithValidate(func(s string) error {
 				if strings.TrimSpace(s) == "" {
-					return fmt.Errorf("branch name cannot be empty")
+					return errors.New("branch name cannot be empty")
 				}
 				return nil
 			})

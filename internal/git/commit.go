@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -68,7 +69,7 @@ type CommitTreeRequest struct {
 // It returns the hash of the new commit.
 func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Hash, error) {
 	if req.Message == "" {
-		return ZeroHash, fmt.Errorf("empty commit message")
+		return ZeroHash, errors.New("empty commit message")
 	}
 	if req.Committer == nil {
 		req.Committer = req.Author

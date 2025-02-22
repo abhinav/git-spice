@@ -43,7 +43,7 @@ func (cmd *branchTrackCmd) Run(
 	}
 
 	if cmd.Branch == store.Trunk() {
-		return fmt.Errorf("cannot track trunk branch")
+		return errors.New("cannot track trunk branch")
 	}
 
 	if cmd.Base == "" {

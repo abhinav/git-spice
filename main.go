@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -43,7 +44,7 @@ var (
 	_browserLauncher browser.Launcher = new(browser.Browser)
 )
 
-var errNoPrompt = fmt.Errorf("not allowed to prompt for input")
+var errNoPrompt = errors.New("not allowed to prompt for input")
 
 var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
 

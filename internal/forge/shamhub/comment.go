@@ -41,7 +41,7 @@ type ChangeCommentID int
 var _ forge.ChangeCommentID = ChangeCommentID(0)
 
 func (id ChangeCommentID) String() string {
-	return fmt.Sprintf("%d", int(id))
+	return strconv.Itoa(int(id))
 }
 
 type shamComment struct {
@@ -105,7 +105,7 @@ func (sh *ShamHub) handlePostChangeComment(w http.ResponseWriter, r *http.Reques
 	sh.mu.Unlock()
 
 	res := postCommentResponse{
-		ID: int(comment.ID),
+		ID: comment.ID,
 	}
 
 	enc := json.NewEncoder(w)

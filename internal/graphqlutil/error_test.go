@@ -104,7 +104,7 @@ func TestGraphQLResponse(t *testing.T) {
 				graphqlutil.ErrNotFound,
 			},
 			wantErrorAs: []any{
-				new(graphqlutil.ErrorList),
+				new(graphqlutil.Errors),
 				new(*graphqlutil.Error),
 			},
 		},
@@ -127,7 +127,7 @@ func TestGraphQLResponse(t *testing.T) {
 				graphqlutil.ErrForbidden,
 			},
 			wantErrorAs: []any{
-				new(graphqlutil.ErrorList),
+				new(graphqlutil.Errors),
 				new(*graphqlutil.Error),
 			},
 		},
@@ -159,7 +159,7 @@ func TestGraphQLResponse(t *testing.T) {
 				graphqlutil.ErrNotFound,
 			},
 			wantErrorAs: []any{
-				new(graphqlutil.ErrorList),
+				new(graphqlutil.Errors),
 				new(*graphqlutil.Error),
 			},
 		},
@@ -179,7 +179,7 @@ func TestGraphQLResponse(t *testing.T) {
 				]
 			}`,
 			wantErrorAs: []any{
-				new(graphqlutil.ErrorList),
+				new(graphqlutil.Errors),
 				new(*graphqlutil.Error),
 			},
 		},

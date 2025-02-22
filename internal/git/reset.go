@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 
 	"go.abhg.dev/gs/internal/must"
 )
@@ -42,7 +43,7 @@ func (m ResetMode) String() string {
 	case ResetModeUnset:
 		return "unset"
 	default:
-		return fmt.Sprintf("%d", int(m))
+		return strconv.Itoa(int(m))
 	}
 }
 

@@ -34,12 +34,12 @@ func (c *PRComment) String() string {
 }
 
 // PostChangeComment posts a new comment on a PR.
-func (f *Repository) PostChangeComment(
+func (r *Repository) PostChangeComment(
 	ctx context.Context,
 	id forge.ChangeID,
 	markdown string,
 ) (forge.ChangeCommentID, error) {
-	gqlID, err := f.graphQLID(ctx, mustPR(id))
+	gqlID, err := r.graphQLID(ctx, mustPR(id))
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,12 @@ func (f *Repository) PostChangeComment(
 		Body:      githubv4.String(markdown),
 	}
 
-	if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
 
 	n := m.AddComment.CommentEdge.Node
-	f.log.Debug("Posted comment", "url", n.URL)
+	r.log.Debug("Posted comment", "url", n.URL)
 	return &PRComment{
 		GQLID: n.ID,
 		URL:   n.URL,
@@ -73,7 +73,7 @@ func (f *Repository) PostChangeComment(
 }
 
 // UpdateChangeComment updates the contents of an existing comment on a PR.
-func (f *Repository) UpdateChangeComment(
+func (r *Repository) UpdateChangeComment(
 	ctx context.Context,
 	id forge.ChangeCommentID,
 	markdown string,
@@ -93,16 +93,16 @@ func (f *Repository) UpdateChangeComment(
 		Body: githubv4.String(markdown),
 		ID:   gqlID,
 	}
-	if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
 
-	f.log.Debug("Updated comment", "url", cid.URL)
+	r.log.Debug("Updated comment", "url", cid.URL)
 	return nil
 }
 
 // DeleteChangeComment deletes an existing comment on a PR.
-func (f *Repository) DeleteChangeComment(
+func (r *Repository) DeleteChangeComment(
 	ctx context.Context,
 	id forge.ChangeCommentID,
 ) error {
@@ -118,7 +118,7 @@ func (f *Repository) DeleteChangeComment(
 	}
 
 	input := githubv4.DeleteIssueCommentInput{ID: gqlID}
-	if err := f.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
 
@@ -136,7 +136,7 @@ var _listChangeCommentsPageSize = 10 // var for testing
 
 // ListChangeComments lists comments on a PR,
 // optionally applying the given filtering options.
-func (f *Repository) ListChangeComments(
+func (r *Repository) ListChangeComments(
 	ctx context.Context,
 	id forge.ChangeID,
 	options *forge.ListChangeCommentsOptions,
@@ -169,7 +169,7 @@ func (f *Repository) ListChangeComments(
 		}
 	}
 
-	gqlID, err := f.graphQLID(ctx, mustPR(id))
+	gqlID, err := r.graphQLID(ctx, mustPR(id))
 	if err != nil {
 		return func(yield func(*forge.ListChangeCommentItem, error) bool) {
 			yield(nil, err)
@@ -199,7 +199,7 @@ func (f *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			if err := f.client.Query(ctx, &q, variables); err != nil {
+			if err := r.client.Query(ctx, &q, variables); err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
 				return
 			}

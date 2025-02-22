@@ -145,7 +145,7 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 
 	msg := req.Message
 	if msg == "" {
-		msg = fmt.Sprintf("interrupted: branch %s", req.Branch)
+		msg = "interrupted: branch " + req.Branch
 	}
 
 	if err := s.store.AppendContinuations(ctx, msg, state.Continuation{

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/log"
@@ -88,7 +89,7 @@ func (cmd *branchCreateCmd) Run(
 	svc *spice.Service,
 ) (err error) {
 	if cmd.Name == "" && !cmd.Commit {
-		return fmt.Errorf("a branch name is required with --no-commit")
+		return errors.New("a branch name is required with --no-commit")
 	}
 
 	trunk := store.Trunk()
@@ -265,7 +266,7 @@ func (cmd *branchCreateCmd) Run(
 	case cmd.Insert:
 		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, cmd.Target)
 	default:
-		msg = fmt.Sprintf("create branch %s", cmd.Name)
+		msg = "create branch " + cmd.Name
 	}
 
 	if err := branchTx.Commit(ctx, msg); err != nil {

@@ -15,26 +15,22 @@ linters:
     - unused
 
     # Non-default linters:
-    - errorlint
-    - forbidigo
-    - gocritic
-    - gofumpt
-    - nolintlint
-    - revive
-    - usetesting
-
-    # With Go 1.22 for loop semantics,
-    # no need to copy loop variables.
-    - copyloopvar
-
-    # Prefer "range N" over "x := 0; x < N; x++".
-    - intrange
-
-    # Require field tags for serialized structs.
-    - musttag
-
-    # Catch make([]T, N) used with append
-    - makezero
+    - copyloopvar # prefer Go 1.22 loop semantics
+    - errname     # standardized error naming
+    - errorlint   # Go 1.13 error wrapping
+    - forbidigo   # arbitrary rules
+    - gocritic    # general issues
+    - gofumpt     # formatting
+    - intrange    # prefer "range N" over "x := 0; x < N; x++".
+    - loggercheck # key-value pairs for structured logs
+    - makezero    # catch make([]T, N) used with append
+    - musttag     # serialized structs must be tagged
+    - nolintlint  # nolint rules
+    - perfsprint  # fmt.Sprintf alternatives
+    - revive      # style
+    - stylecheck  # style
+    - unconvert   # unnecessary type conversions
+    - usetesting  # prefer t.TempDir, t.Chdir, etc.
 
 linters-settings:
   errcheck:
@@ -56,6 +52,17 @@ linters-settings:
       - p: '^log\.(Debug|Info|Warn|Error|Fatal)f?$'
         pkg: github.com/charmbracelet/log
         msg: "Don't use the global logger; use a local logger instead."
+
+  loggercheck:
+    rules:
+      - (*github.com/charmbracelet/log.Logger).Debug
+      - (*github.com/charmbracelet/log.Logger).Error
+      - (*github.com/charmbracelet/log.Logger).Fatal
+      - (*github.com/charmbracelet/log.Logger).Info
+      - (*github.com/charmbracelet/log.Logger).Log
+      - (*github.com/charmbracelet/log.Logger).Print
+      - (*github.com/charmbracelet/log.Logger).Warn
+      - (*github.com/charmbracelet/log.Logger).With
 
   govet:
     enable:

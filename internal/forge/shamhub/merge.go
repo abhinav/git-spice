@@ -3,6 +3,7 @@ package shamhub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -74,17 +75,17 @@ func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (f *forgeRepository) ChangesAreMerged(ctx context.Context, fids []forge.ChangeID) ([]bool, error) {
+func (r *forgeRepository) ChangesAreMerged(ctx context.Context, fids []forge.ChangeID) ([]bool, error) {
 	ids := make([]ChangeID, len(fids))
 	for i, fid := range fids {
 		ids[i] = fid.(ChangeID)
 	}
 
-	u := f.apiURL.JoinPath(f.owner, f.repo, "change", "merged")
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", "merged")
 	req := areMergedRequest{IDs: ids}
 
 	var res areMergedResponse
-	if err := f.client.Post(ctx, u.String(), req, &res); err != nil {
+	if err := r.client.Post(ctx, u.String(), req, &res); err != nil {
 		return nil, fmt.Errorf("are merged: %w", err)
 	}
 	return res.Merged, nil
@@ -114,7 +115,7 @@ type MergeChangeRequest struct {
 // MergeChange merges an open change against this forge.
 func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	if req.Owner == "" || req.Repo == "" || req.Number == 0 {
-		return fmt.Errorf("owner, repo, and number are required")
+		return errors.New("owner, repo, and number are required")
 	}
 
 	if req.CommitterName == "" {
@@ -218,7 +219,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		logw, flush := logutil.Writer(sh.log, log.DebugLevel)
 		defer flush()
 
-		ref := fmt.Sprintf("refs/heads/%s", sh.changes[changeIdx].Base)
+		ref := "refs/heads/" + sh.changes[changeIdx].Base
 		cmd := exec.Command(sh.gitExe, "update-ref", ref, commit)
 		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
 		cmd.Stderr = logw

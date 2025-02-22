@@ -134,11 +134,11 @@ nextChange:
 	}
 }
 
-func (f *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID) (*forge.FindChangeItem, error) {
+func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID) (*forge.FindChangeItem, error) {
 	id := fid.(ChangeID)
-	u := f.apiURL.JoinPath(f.owner, f.repo, "change", strconv.Itoa(int(id)))
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))
 	var res Change
-	if err := f.client.Get(ctx, u.String(), &res); err != nil {
+	if err := r.client.Get(ctx, u.String(), &res); err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
@@ -165,12 +165,12 @@ func (f *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 	}, nil
 }
 
-func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
+func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
 	if opts.Limit == 0 {
 		opts.Limit = 10
 	}
 
-	u := f.apiURL.JoinPath(f.owner, f.repo, "changes", "by-branch", branch)
+	u := r.apiURL.JoinPath(r.owner, r.repo, "changes", "by-branch", branch)
 	q := u.Query()
 	q.Set("limit", strconv.Itoa(opts.Limit))
 	if opts.State == 0 {
@@ -181,7 +181,7 @@ func (f *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 	u.RawQuery = q.Encode()
 
 	var res []*Change
-	if err := f.client.Get(ctx, u.String(), &res); err != nil {
+	if err := r.client.Get(ctx, u.String(), &res); err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
 

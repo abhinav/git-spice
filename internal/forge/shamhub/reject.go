@@ -1,6 +1,7 @@
 package shamhub
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -13,7 +14,7 @@ type RejectChangeRequest struct {
 // RejectChange closes a CR without merging it.
 func (sh *ShamHub) RejectChange(req RejectChangeRequest) error {
 	if req.Owner == "" || req.Repo == "" || req.Number == 0 {
-		return fmt.Errorf("owner, repo, and number are required")
+		return errors.New("owner, repo, and number are required")
 	}
 	sh.mu.Lock()
 	defer sh.mu.Unlock()

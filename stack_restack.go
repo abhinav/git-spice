@@ -56,7 +56,7 @@ loop:
 					Err:     rebaseErr,
 					Command: []string{"stack", "restack"},
 					Branch:  currentBranch,
-					Message: fmt.Sprintf("interrupted: restack stack for %s", branch),
+					Message: "interrupted: restack stack for " + branch,
 				})
 			case errors.Is(err, spice.ErrAlreadyRestacked):
 				// Log the "does not need to be restacked" message

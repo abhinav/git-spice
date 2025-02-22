@@ -49,7 +49,7 @@ func (cmd *branchRestackCmd) Run(
 				Err:     rebaseErr,
 				Command: []string{"branch", "restack"},
 				Branch:  cmd.Branch,
-				Message: fmt.Sprintf("interrupted: restack branch %s", cmd.Branch),
+				Message: "interrupted: restack branch " + cmd.Branch,
 			})
 		case errors.Is(err, state.ErrNotExist):
 			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
