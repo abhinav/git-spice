@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"reflect"
 	"strconv"
+	"sync"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
@@ -259,7 +261,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 
 	// TODO: bind interfaces, not values
 
-	err = kctx.BindToProvider(func() (*git.Repository, error) {
+	err = kctx.BindToProvider(onceFunc(func() (*git.Repository, error) {
 		repo, err := git.Open(ctx, ".", git.OpenOptions{
 			Log: logger,
 		})
@@ -267,21 +269,21 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			return nil, fmt.Errorf("open repository: %w", err)
 		}
 		return repo, nil
-	})
+	}))
 	if err != nil {
 		return fmt.Errorf("bind git repository: %w", err)
 	}
 
-	err = kctx.BindToProvider(func(repo *git.Repository) (*state.Store, error) {
+	err = kctx.BindToProvider(onceFunc(func(repo *git.Repository) (*state.Store, error) {
 		return ensureStore(ctx, repo, logger, view)
-	})
+	}))
 	if err != nil {
 		return fmt.Errorf("bind state store: %w", err)
 	}
 
-	err = kctx.BindToProvider(func(repo *git.Repository, store *state.Store) (*spice.Service, error) {
+	err = kctx.BindToProvider(onceFunc(func(repo *git.Repository, store *state.Store) (*spice.Service, error) {
 		return spice.NewService(ctx, repo, store, logger), nil
-	})
+	}))
 	if err != nil {
 		return fmt.Errorf("bind spice service: %w", err)
 	}
@@ -297,4 +299,24 @@ var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.V
 		}, nil
 	}
 	return &ui.FileView{W: stderr}, nil
+}
+
+// onceFunc generates a copy of F that records its result after the first call
+// and reproduces it in all following calls.
+//
+// TODO: drop usage once https://github.com/alecthomas/kong/pull/501 is released.
+func onceFunc[F any](f F) F {
+	fv := reflect.ValueOf(f)
+	ft := fv.Type()
+
+	var (
+		once    sync.Once
+		outputs []reflect.Value
+	)
+	return reflect.MakeFunc(ft, func(inputs []reflect.Value) []reflect.Value {
+		once.Do(func() {
+			outputs = fv.Call(inputs)
+		})
+		return outputs
+	}).Interface().(F)
 }
