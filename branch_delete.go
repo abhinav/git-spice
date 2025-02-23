@@ -19,6 +19,8 @@ import (
 )
 
 type branchDeleteCmd struct {
+	BranchPromptConfig
+
 	Force    bool     `help:"Force deletion of the branch"`
 	Branches []string `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
 }
@@ -30,16 +32,19 @@ func (*branchDeleteCmd) Help() string {
 		the next branches available downstack.
 
 		A prompt will allow selecting the target branch if none are provided.
+		Use the spice.branchPrompt.sort configuration option
+		to specify the sort order of branches in the prompt.
+		Commonly used field names include "refname", "commiterdate", etc.
+		By default, branches are sorted by name.
 	`)
 }
 
-func (cmd *branchDeleteCmd) Run(
+func (cmd *branchDeleteCmd) AfterApply(
 	ctx context.Context,
-	log *log.Logger,
-	view ui.View,
 	repo *git.Repository,
+	view ui.View,
 	store *state.Store,
-	svc *spice.Service,
+	branchPrompt *branchPrompter,
 ) error {
 	if len(cmd.Branches) == 0 {
 		// If a branch name is not given, prompt for one;
@@ -53,20 +58,32 @@ func (cmd *branchDeleteCmd) Run(
 			currentBranch = ""
 		}
 
-		branch, err := (&branchPrompt{
+		branch, err := branchPrompt.Prompt(ctx, &branchPromptRequest{
 			Disabled: func(b git.LocalBranch) bool {
 				return b.Name == store.Trunk()
 			},
 			Default: currentBranch,
 			Title:   "Select a branch to delete",
-		}).Run(ctx, view, repo, store)
+		})
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)
 		}
 
 		cmd.Branches = []string{branch}
+
 	}
 
+	return nil
+}
+
+func (cmd *branchDeleteCmd) Run(
+	ctx context.Context,
+	log *log.Logger,
+	view ui.View,
+	repo *git.Repository,
+	store *state.Store,
+	svc *spice.Service,
+) error {
 	type branchInfo struct {
 		Name string
 

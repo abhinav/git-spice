@@ -1,0 +1,77 @@
+# branch delete prompt respects spice.branchPrompt.sort.
+
+as 'Test <test@example.com>'
+at '2025-02-23T09:15:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+
+# tracked: aaa
+at '2025-02-19T17:05:00Z'
+git add aaa.txt
+gs bc aaa -m 'Add aaa'
+
+# untracked: ccc
+at '2025-02-19T17:10:00Z'
+git checkout -b ccc
+git add ccc.txt
+git commit -m 'Add ccc'
+
+# tracked: bbb
+at '2025-02-19T17:15:00Z'
+gs trunk
+git add bbb.txt
+gs bc bbb -m 'add bbb.txt'
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+gs trunk
+git graph --branches
+cmp stdout $WORK/graph-before.golden
+
+# default sort order
+gs trunk
+gs branch delete --force
+git branch ccc 56fafeb  # add it back
+
+# sort by committerdate descending
+gs trunk
+git config spice.branchPrompt.sort -committerdate
+gs branch delete --force
+
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- repo/aaa.txt --
+whatever
+
+-- repo/bbb.txt --
+whatever
+
+-- repo/ccc.txt --
+whatever
+
+-- graph-before.golden --
+* d5fb182 (bbb) add bbb.txt
+| * 56fafeb (ccc) Add ccc
+| * 3290c95 (aaa) Add aaa
+|/  
+* faed779 (HEAD -> main) Initial commit
+-- robot.golden --
+===
+> Select a branch to delete: 
+> ┏━■ aaa ◀
+> ┣━□ bbb
+> ┣━□ ccc
+> main
+"ccc"
+===
+> Select a branch to delete: 
+> ┏━■ bbb ◀
+> ┣━□ ccc
+> ┣━□ aaa
+> main
+"bbb"

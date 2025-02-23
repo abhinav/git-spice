@@ -43,12 +43,13 @@ This option controls whether untracked branches are shown in the prompt.
 - `true`
 - `false` (default)
 
-### spice.branchCheckout.sort
+### spice.branchPrompt.sort
 
 <!-- gs:version unreleased -->
 
-When running $$gs branch checkout$$ without any arguments,
-git-spice presents a prompt to select a branch to checkout.
+Commands like $$gs branch checkout$$, $$gs branch onto$$, etc.,
+that require a branch name will present an interactive prompt
+to select the branch when one isn't provided.
 
 This option controls the sort order of branches in the prompt.
 It is git-spice's equivalent of
@@ -65,7 +66,6 @@ for a full list of available fields.
 
 Prefix a field name with `-` to sort in descending order.
 For example, use `-committerdate` to sort by commit date in descending order.
-
 
 ### spice.branchCreate.commit
 
