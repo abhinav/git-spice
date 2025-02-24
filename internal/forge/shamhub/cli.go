@@ -223,7 +223,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		// Historically, we've used JSON values.
 		// New commands should use YAML or something more human-readable.
-		encode := func(v interface{}) error {
+		encode := func(v any) error {
 			enc := json.NewEncoder(ts.Stdout())
 			enc.SetEscapeHTML(false)
 			enc.SetIndent("", "  ")
@@ -296,7 +296,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			})
 
 			give = comments
-			encode = func(v interface{}) error {
+			encode = func(v any) error {
 				enc := yaml.NewEncoder(ts.Stdout())
 				enc.SetIndent(2)
 				return enc.Encode(v)

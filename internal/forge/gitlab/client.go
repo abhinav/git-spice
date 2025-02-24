@@ -56,27 +56,27 @@ func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationTok
 // mergeRequestsService allows creating, listing, and fetching merge requests.
 type mergeRequestsService interface {
 	CreateMergeRequest(
-		pid interface{},
+		pid any,
 		opt *gitlab.CreateMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 
 	GetMergeRequest(
-		pid interface{},
+		pid any,
 		mergeRequest int,
 		opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 
 	UpdateMergeRequest(
-		pid interface{},
+		pid any,
 		mergeRequest int,
 		opt *gitlab.UpdateMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 
 	ListProjectMergeRequests(
-		pid interface{},
+		pid any,
 		opt *gitlab.ListProjectMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
@@ -86,14 +86,14 @@ type mergeRequestsService interface {
 // on merge requests.
 type notesService interface {
 	CreateMergeRequestNote(
-		pid interface{},
+		pid any,
 		mergeRequest int,
 		opt *gitlab.CreateMergeRequestNoteOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Note, *gitlab.Response, error)
 
 	UpdateMergeRequestNote(
-		pid interface{},
+		pid any,
 		mergeRequest int,
 		note int,
 		opt *gitlab.UpdateMergeRequestNoteOptions,
@@ -101,14 +101,14 @@ type notesService interface {
 	) (*gitlab.Note, *gitlab.Response, error)
 
 	ListMergeRequestNotes(
-		pid interface{},
+		pid any,
 		mergeRequest int,
 		opt *gitlab.ListMergeRequestNotesOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.Note, *gitlab.Response, error)
 
 	DeleteMergeRequestNote(
-		pid interface{},
+		pid any,
 		mergeRequest, note int,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Response, error)
@@ -117,7 +117,7 @@ type notesService interface {
 // projectsService allows listing and accessing projects.
 type projectsService interface {
 	GetProject(
-		pid interface{},
+		pid any,
 		opt *gitlab.GetProjectOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Project, *gitlab.Response, error)
@@ -126,14 +126,14 @@ type projectsService interface {
 // projectTemplatesService allows listing and accessing project templates.
 type projectTemplatesService interface {
 	ListTemplates(
-		pid interface{},
+		pid any,
 		templateType string,
 		opt *gitlab.ListProjectTemplatesOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.ProjectTemplate, *gitlab.Response, error)
 
 	GetProjectTemplate(
-		pid interface{},
+		pid any,
 		templateType string,
 		templateName string,
 		options ...gitlab.RequestOptionFunc,

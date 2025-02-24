@@ -7,7 +7,7 @@ import (
 )
 
 // Dedentf is a variant of [Dedent] that takes a format string.
-func Dedentf(format string, args ...interface{}) string {
+func Dedentf(format string, args ...any) string {
 	return Dedent(fmt.Sprintf(format, args...))
 }
 

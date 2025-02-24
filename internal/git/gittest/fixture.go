@@ -128,16 +128,16 @@ func (f *fakeT) FailNow() {
 	runtime.Goexit()
 }
 
-func (f *fakeT) Fatal(args ...interface{}) {
+func (f *fakeT) Fatal(args ...any) {
 	fmt.Fprintln(&f.msgs, fmt.Sprint(args...))
 	f.FailNow()
 }
 
-func (f *fakeT) Log(args ...interface{}) {
+func (f *fakeT) Log(args ...any) {
 	fmt.Fprintln(&f.msgs, fmt.Sprint(args...))
 }
 
-func (f *fakeT) Skip(args ...interface{}) {
+func (f *fakeT) Skip(args ...any) {
 	f.skipped = true
 	fmt.Fprintln(&f.msgs, fmt.Sprint(args...))
 	runtime.Goexit()

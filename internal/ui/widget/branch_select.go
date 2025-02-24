@@ -150,7 +150,7 @@ func (b *BranchTreeSelect) WithValue(value *string) *BranchTreeSelect {
 //
 //   - bool: if true, the current selection is accepted
 //   - string: the name of the selected branch (must be a known branch)
-func (b *BranchTreeSelect) UnmarshalValue(unmarshal func(interface{}) error) error {
+func (b *BranchTreeSelect) UnmarshalValue(unmarshal func(any) error) error {
 	if ok := new(bool); unmarshal(ok) == nil && *ok {
 		if b.focused >= 0 && b.focused < len(b.selectable) {
 			*b.value = b.all[b.selectable[b.focused]].Branch

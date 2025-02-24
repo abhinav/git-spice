@@ -104,13 +104,13 @@ func (c *Confirm) WithDescription(desc string) *Confirm {
 }
 
 // WithTitlef is a variant of WithTitle that accepts a format string.
-func (c *Confirm) WithTitlef(format string, args ...interface{}) *Confirm {
+func (c *Confirm) WithTitlef(format string, args ...any) *Confirm {
 	c.title = fmt.Sprintf(format, args...)
 	return c
 }
 
 // WithDescriptionf is a variant of WithDescription that accepts a format string.
-func (c *Confirm) WithDescriptionf(format string, args ...interface{}) *Confirm {
+func (c *Confirm) WithDescriptionf(format string, args ...any) *Confirm {
 	c.desc = fmt.Sprintf(format, args...)
 	return c
 }
