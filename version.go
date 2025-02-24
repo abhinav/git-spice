@@ -11,8 +11,19 @@ import (
 type versionFlag bool
 
 func (v versionFlag) BeforeReset(app *kong.Kong) error {
+	if err := new(versionCmd).Run(app); err != nil {
+		return err
+	}
+
+	app.Exit(0)
+	return nil
+}
+
+type versionCmd struct{}
+
+func (cmd *versionCmd) Run(app *kong.Kong) error {
 	fmt.Fprint(app.Stdout, "git-spice ", _version)
-	if report := generateBuildReport(); report != "" {
+	if report := _generateBuildReport(); report != "" {
 		fmt.Fprintf(app.Stdout, " (%s)", report)
 	}
 
@@ -22,12 +33,14 @@ func (v versionFlag) BeforeReset(app *kong.Kong) error {
 	fmt.Fprintln(app.Stdout, "This program comes with ABSOLUTELY NO WARRANTY")
 	fmt.Fprintln(app.Stdout, "This is free software, and you are welcome to redistribute it")
 	fmt.Fprintln(app.Stdout, "under certain conditions; see source for details.")
-	app.Exit(0)
+
 	return nil
 }
 
-var generateBuildReport = func() string {
-	info, ok := debug.ReadBuildInfo()
+var _debugReadBuildInfo = debug.ReadBuildInfo
+
+var _generateBuildReport = func() string {
+	info, ok := _debugReadBuildInfo()
 	if !ok {
 		return ""
 	}
