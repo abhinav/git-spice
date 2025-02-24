@@ -19,7 +19,7 @@ builds:
       - -trimpath
 
 archives:
-  - format: tar.gz
+  - formats: tar.gz
     # uname compatible archive name.
     name_template: >-
       {{- .ProjectName }}.
