@@ -245,6 +245,8 @@ type mainCmd struct {
 	Bottom bottomCmd `cmd:"" aliases:"D" group:"Navigation" help:"Move to the bottom of the stack"`
 	Trunk  trunkCmd  `cmd:"" group:"Navigation" help:"Move to the trunk branch"`
 
+	Version versionCmd `cmd:"" help:"Print version information and quit"`
+
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }

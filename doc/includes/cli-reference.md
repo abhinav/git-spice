@@ -1026,3 +1026,11 @@ Move to the trunk branch
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
 
+## gs version
+
+```
+gs version [flags]
+```
+
+Print version information and quit
+
