@@ -74,24 +74,24 @@ whatever
 "bar"
 ===
 > Select a branch to checkout: 
+> baz
 > ┏━□ bar
-> ┣━□ baz
 > ┣━□ foo
-> ┣━□ quux
-> ┣━□ qux
 > main ◀
+> quux
+> qux
 "baz"
 ===
 > Do you want to track this branch now?: [Y/n]
 true
 ===
 > Select a branch to checkout: 
+> baz
 > ┏━□ bar
-> ┣━□ baz
 > ┣━□ foo
-> ┣━□ quux
-> ┣━□ qux
 > main ◀
+> quux
+> qux
 "baz"
 ===
 > Do you want to track this branch now?: [Y/n]
