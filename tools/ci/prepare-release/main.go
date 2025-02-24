@@ -87,8 +87,8 @@ func run(
 	const docUnreleased = "<!-- gs:version unreleased -->"
 	err = sedTree("doc/src",
 		strings.NewReplacer(docUnreleased, "<!-- gs:version "+version+" -->"),
-		func(path string, _ fs.DirEntry) error {
-			if !strings.HasSuffix(path, ".md") {
+		func(path string, ent fs.DirEntry) error {
+			if !ent.IsDir() && !strings.HasSuffix(path, ".md") {
 				return errSkip
 			}
 			return nil
@@ -97,14 +97,17 @@ func run(
 		return fmt.Errorf("replace unreleased tags in doc/src: %w", err)
 	}
 
-	// Replace `release:"unreleased"` in any Go file
-	// with `release:"vX.Y.Z"`.
-	const goUnreleased = `release:"unreleased"`
+	// Replace `released:"unreleased"` in any Go file
+	// with `released:"vX.Y.Z"`.
+	const goUnreleased = `released:"unreleased"`
 	err = sedTree(".",
-		strings.NewReplacer(goUnreleased, fmt.Sprintf(`release:"%s"`, version)),
+		strings.NewReplacer(goUnreleased, fmt.Sprintf(`released:"%s"`, version)),
 		func(path string, d fs.DirEntry) error {
-			if d.IsDir() && path == "tools" {
-				return errSkip
+			if d.IsDir() {
+				if path == "tools" {
+					return errSkip
+				}
+				return nil
 			}
 
 			if !strings.HasSuffix(path, ".go") {

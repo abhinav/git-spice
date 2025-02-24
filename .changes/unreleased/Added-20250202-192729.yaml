@@ -1,3 +1,0 @@
-kind: Added
-body: 'branch squash: Squashes all commits in the current branch into a single commit and restacks the upstack branches.'
-time: 2025-02-02T19:27:29.806629-08:00

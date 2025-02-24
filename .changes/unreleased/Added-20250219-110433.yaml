@@ -1,6 +1,0 @@
-kind: Added
-body: >-
-  Add `spice.branchPrompt.sort` configuration option
-  to control sort order of branches in the branch selection prompt
-  used by 'branch checkout', 'branch onto', 'branch delete', and others.
-time: 2025-02-19T11:04:33.240268-08:00

@@ -668,7 +668,7 @@ For example:
 gs branch (b) squash (sq) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.11.0](/changelog.md#v0.11.0)</span>
 
 Squash a branch into one commit
 

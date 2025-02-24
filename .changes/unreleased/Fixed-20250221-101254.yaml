@@ -1,7 +1,0 @@
-kind: Fixed
-body: >-
-  branch onto:
-  Fix infinite rebase conflict loop that occurs when
-  a branch moved is onto another branch stacked on top of its original base,
-  and the operation encounters a rebase conflict.
-time: 2025-02-21T10:12:54.589495-08:00
