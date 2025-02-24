@@ -63,15 +63,15 @@ whatever
 -- robot.golden --
 ===
 > Select a branch to delete: 
-> ┏━■ aaa ◀
+> ccc ◀
+> ┏━□ aaa
 > ┣━□ bbb
-> ┣━□ ccc
 > main
 "ccc"
 ===
 > Select a branch to delete: 
 > ┏━■ bbb ◀
-> ┣━□ ccc
 > ┣━□ aaa
 > main
+> ccc
 "bbb"

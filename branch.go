@@ -135,14 +135,9 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 	bases := make(map[string]string) // branch -> base
 	for _, branch := range localBranches {
 		res, err := p.store.LookupBranch(ctx, branch.Name)
-		var base string
 		if err == nil {
-			base = res.Base
-		} else if branch.Name != trunk {
-			base = trunk
+			bases[branch.Name] = res.Base
 		}
-
-		bases[branch.Name] = base
 	}
 
 	items := make([]widget.BranchTreeItem, 0, len(localBranches))
