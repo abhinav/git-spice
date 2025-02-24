@@ -334,7 +334,7 @@ You may then:
 
 ### Squashing commits in a branch
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.11.0 -->
 
 ```freeze language="terminal" float="right"
 {green}${reset} gs branch squash

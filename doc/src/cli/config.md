@@ -45,7 +45,7 @@ This option controls whether untracked branches are shown in the prompt.
 
 ### spice.branchPrompt.sort
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.11.0 -->
 
 Commands like $$gs branch checkout$$, $$gs branch onto$$, etc.,
 that require a branch name will present an interactive prompt

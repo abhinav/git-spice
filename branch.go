@@ -22,7 +22,7 @@ type branchCmd struct {
 	Delete branchDeleteCmd `cmd:"" aliases:"d,rm" help:"Delete branches"`
 	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
 	Split  branchSplitCmd  `cmd:"" aliases:"sp" help:"Split a branch on commits"`
-	Squash branchSquashCmd `cmd:"" aliases:"sq" help:"Squash a branch into one commit" released:"unreleased"`
+	Squash branchSquashCmd `cmd:"" aliases:"sq" help:"Squash a branch into one commit" released:"v0.11.0"`
 
 	// Mutation
 	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the commits in a branch"`
