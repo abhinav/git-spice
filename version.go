@@ -19,9 +19,16 @@ func (v versionFlag) BeforeReset(app *kong.Kong) error {
 	return nil
 }
 
-type versionCmd struct{}
+type versionCmd struct {
+	Short bool `help:"Print only the version number."`
+}
 
 func (cmd *versionCmd) Run(app *kong.Kong) error {
+	if cmd.Short {
+		fmt.Fprintln(app.Stdout, _version)
+		return nil
+	}
+
 	fmt.Fprint(app.Stdout, "git-spice ", _version)
 	if report := _generateBuildReport(); report != "" {
 		fmt.Fprintf(app.Stdout, " (%s)", report)
