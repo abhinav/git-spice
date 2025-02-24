@@ -108,7 +108,7 @@ func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 }
 
 // Get retrieves a value from the store and decodes it into v.
-func (g *GitBackend) Get(ctx context.Context, key string, v interface{}) error {
+func (g *GitBackend) Get(ctx context.Context, key string, v any) error {
 	blobHash, err := g.repo.HashAt(ctx, g.ref, key)
 	if err != nil {
 		return ErrNotExist

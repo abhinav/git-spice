@@ -38,7 +38,7 @@ import (
 type TestingT interface {
 	Helper()
 	Name() string
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 	FailNow()
 }
 

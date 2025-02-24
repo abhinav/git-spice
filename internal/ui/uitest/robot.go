@@ -398,7 +398,7 @@ func (sf *robotFixture) Print(p *printer) {
 	p.WriteString("\n")
 
 	comment := strings.Trim(sf.Comment, "\n") // strip extraneous newlines
-	for _, cl := range strings.Split(comment, "\n") {
+	for cl := range strings.SplitSeq(comment, "\n") {
 		p.Write(_commentPrefix)
 		if len(cl) > 0 {
 			p.WriteString(" ")

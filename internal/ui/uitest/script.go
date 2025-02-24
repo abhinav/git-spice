@@ -404,7 +404,7 @@ func (s *scriptState) Await(want string) error {
 		match = func(snap []string) bool {
 			// Strip prefix if "clear" was called.
 			if len(s.awaitStripPrefix) > 0 && len(snap) >= len(s.awaitStripPrefix) {
-				for i := 0; i < len(s.awaitStripPrefix); i++ {
+				for i := range s.awaitStripPrefix {
 					if snap[i] != s.awaitStripPrefix[i] {
 						s.awaitStripPrefix = nil
 						break
