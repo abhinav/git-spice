@@ -19,47 +19,71 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-var _forgeRegistry sync.Map
-
-// All is an iterator that yields all registered forges.
-func All(yield func(Forge) bool) {
-	_forgeRegistry.Range(func(_, value any) bool {
-		return yield(value.(Forge))
-	})
+// Registry is a collection of known code forges.
+type Registry struct {
+	m sync.Map
 }
 
-// Register registers a forge with the given ID.
-// Returns a function to unregister the forge.
-func Register(f Forge) (unregister func()) {
-	id := f.ID()
-	_forgeRegistry.Store(id, f)
-	return func() {
-		_forgeRegistry.Delete(id)
+// All returns an iterator over items in the Forge
+// in an unspecified order.
+func (r *Registry) All() iter.Seq[Forge] {
+	return func(yield func(Forge) bool) {
+		r.m.Range(func(_, value any) bool {
+			return yield(value.(Forge))
+		})
 	}
 }
 
-// Lookup looks up a registered forge by its ID.
-func Lookup(id string) (Forge, bool) {
-	f, ok := _forgeRegistry.Load(id)
+// Register registers a Forge with the Registry.
+// The Forge may be unregistered by calling the returned function.
+func (r *Registry) Register(f Forge) (unregister func()) {
+	id := f.ID()
+	r.m.Store(id, f)
+	return func() {
+		r.m.Delete(id)
+	}
+}
+
+// Lookup searches for a registered Forge by ID.
+// It returns false if a forge with that ID is not known.
+func (r *Registry) Lookup(id string) (Forge, bool) {
+	f, ok := r.m.Load(id)
 	if !ok {
 		return nil, false
 	}
 	return f.(Forge), true
 }
 
+// DefaultRegistry is the global Registry.
+//
+// TODO: delete
+var DefaultRegistry = new(Registry)
+
+// All is an iterator that yields all registered forges.
+func All(yield func(Forge) bool) {
+	DefaultRegistry.All()(yield)
+}
+
+// Register registers a forge with the given ID.
+// Returns a function to unregister the forge.
+func Register(f Forge) (unregister func()) {
+	return DefaultRegistry.Register(f)
+}
+
+// Lookup looks up a registered forge by its ID.
+func Lookup(id string) (Forge, bool) {
+	return DefaultRegistry.Lookup(id)
+}
+
 // MatchForgeURL attempts to match the given remote URL with a registered forge.
 // Returns the matched forge and true if a match was found.
-func MatchForgeURL(remoteURL string) (forge Forge, ok bool) {
-	_forgeRegistry.Range(func(_, value any) (keepGoing bool) {
-		f := value.(Forge)
+func MatchForgeURL(r *Registry, remoteURL string) (forge Forge, ok bool) {
+	for f := range r.All() {
 		if f.MatchURL(remoteURL) {
-			forge = f
-			ok = true
-			return false
+			return f, true
 		}
-		return true
-	})
-	return forge, ok
+	}
+	return nil, false
 }
 
 // ErrUnsupportedURL indicates that the given remote URL

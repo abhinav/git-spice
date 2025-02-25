@@ -47,7 +47,7 @@ func openRemoteRepositorySilent(
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	f, ok := forge.MatchForgeURL(remoteURL)
+	f, ok := forge.MatchForgeURL(forge.DefaultRegistry, remoteURL)
 	if !ok {
 		return nil, &unsupportedForgeError{
 			Remote:    remote,

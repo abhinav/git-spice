@@ -10,14 +10,15 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	defer forge.Register(stubForge{
+	var registry forge.Registry
+	defer registry.Register(stubForge{
 		id:      "a",
 		baseURL: "https://example.com",
 	})()
 
 	t.Run("All", func(t *testing.T) {
 		var ok bool
-		for f := range forge.All {
+		for f := range registry.All() {
 			if f.ID() == "a" {
 				ok = true
 				break
@@ -27,23 +28,23 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("Lookup", func(t *testing.T) {
-		f, ok := forge.Lookup("a")
+		f, ok := registry.Lookup("a")
 		assert.True(t, ok, "forge not found")
 		assert.Equal(t, "a", f.ID(), "forge ID mismatch")
 
 		t.Run("NotFound", func(t *testing.T) {
-			_, ok := forge.Lookup("b")
+			_, ok := registry.Lookup("b")
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})
 
 	t.Run("MatchForgeURL", func(t *testing.T) {
-		f, ok := forge.MatchForgeURL("https://example.com/foo")
+		f, ok := forge.MatchForgeURL(&registry, "https://example.com/foo")
 		assert.True(t, ok, "forge not found")
 		assert.Equal(t, "a", f.ID(), "forge ID mismatch")
 
 		t.Run("NoMatch", func(t *testing.T) {
-			_, ok := forge.MatchForgeURL("https://example.org/foo")
+			_, ok := forge.MatchForgeURL(&registry, "https://example.org/foo")
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})
