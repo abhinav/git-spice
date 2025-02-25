@@ -128,11 +128,13 @@ func predictDirs(args komplete.Args) (predictions []string) {
 	return predictions
 }
 
-func predictForges(_ komplete.Args) (predictions []string) {
-	var ids []string
-	for f := range forge.All {
-		ids = append(ids, f.ID())
+func predictForges(forges *forge.Registry) func(komplete.Args) (predictions []string) {
+	return func(komplete.Args) (predictions []string) {
+		var ids []string
+		for f := range forges.All() {
+			ids = append(ids, f.ID())
+		}
+		sort.Strings(ids)
+		return ids
 	}
-	sort.Strings(ids)
-	return ids
 }

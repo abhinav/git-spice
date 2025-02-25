@@ -6,6 +6,7 @@ import (
 	"iter"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 )
@@ -88,24 +89,32 @@ var _ Store = (*state.Store)(nil)
 // It combines together lower level pieces like access to the git repository
 // and the spice state.
 type Service struct {
-	repo  GitRepository
-	store Store
-	log   *log.Logger
+	repo   GitRepository
+	store  Store
+	log    *log.Logger
+	forges *forge.Registry
 }
 
 // NewService builds a new service operating on the given repository and store.
-func NewService(repo GitRepository, store Store, log *log.Logger) *Service {
-	return newService(repo, store, log)
+func NewService(
+	repo GitRepository,
+	store Store,
+	forges *forge.Registry,
+	log *log.Logger,
+) *Service {
+	return newService(repo, store, forges, log)
 }
 
 func newService(
 	repo GitRepository,
 	store Store,
+	forges *forge.Registry,
 	log *log.Logger,
 ) *Service {
 	return &Service{
-		repo:  repo,
-		store: store,
-		log:   log,
+		repo:   repo,
+		store:  store,
+		log:    log,
+		forges: forges,
 	}
 }

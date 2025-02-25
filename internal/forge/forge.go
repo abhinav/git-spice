@@ -54,27 +54,6 @@ func (r *Registry) Lookup(id string) (Forge, bool) {
 	return f.(Forge), true
 }
 
-// DefaultRegistry is the global Registry.
-//
-// TODO: delete
-var DefaultRegistry = new(Registry)
-
-// All is an iterator that yields all registered forges.
-func All(yield func(Forge) bool) {
-	DefaultRegistry.All()(yield)
-}
-
-// Register registers a forge with the given ID.
-// Returns a function to unregister the forge.
-func Register(f Forge) (unregister func()) {
-	return DefaultRegistry.Register(f)
-}
-
-// Lookup looks up a registered forge by its ID.
-func Lookup(id string) (Forge, bool) {
-	return DefaultRegistry.Lookup(id)
-}
-
 // MatchForgeURL attempts to match the given remote URL with a registered forge.
 // Returns the matched forge and true if a match was found.
 func MatchForgeURL(r *Registry, remoteURL string) (forge Forge, ok bool) {

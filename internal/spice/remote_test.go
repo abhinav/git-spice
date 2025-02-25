@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/logutil"
 	gomock "go.uber.org/mock/gomock"
@@ -68,7 +69,7 @@ func TestUnusedBranchName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			repo := NewMockGitRepository(mockCtrl)
-			svc := NewTestService(repo, NewMockStore(mockCtrl), log)
+			svc := NewTestService(repo, NewMockStore(mockCtrl), new(forge.Registry), log)
 
 			var lastCall *gomock.Call
 			for _, call := range tt.calls {
@@ -94,7 +95,7 @@ func TestUnusedBranchName(t *testing.T) {
 func TestUnusedBranchName_listError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	repo := NewMockGitRepository(mockCtrl)
-	svc := NewTestService(repo, NewMockStore(mockCtrl), logutil.TestLogger(t))
+	svc := NewTestService(repo, NewMockStore(mockCtrl), new(forge.Registry), logutil.TestLogger(t))
 
 	repo.EXPECT().
 		ListRemoteRefs(gomock.Any(), "origin", gomock.Any()).

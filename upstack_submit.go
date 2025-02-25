@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
@@ -38,6 +39,7 @@ func (cmd *upstackSubmitCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -79,7 +81,7 @@ func (cmd *upstackSubmitCmd) Run(
 
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
-	session := newSubmitSession(repo, store, secretStash, view, log)
+	session := newSubmitSession(repo, store, secretStash, forges, view, log)
 	for _, b := range upstacks {
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,

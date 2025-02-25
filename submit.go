@@ -37,6 +37,7 @@ func newSubmitSession(
 	repo *git.Repository,
 	store *state.Store,
 	stash secret.Stash,
+	forges *forge.Registry,
 	view ui.View,
 	log *log.Logger,
 ) *submitSession {
@@ -51,7 +52,7 @@ func newSubmitSession(
 			return nil, err
 		}
 
-		return openRemoteRepository(ctx, log, stash, repo, remote)
+		return openRemoteRepository(ctx, log, stash, forges, repo, remote)
 	}
 	return &s
 }

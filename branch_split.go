@@ -58,6 +58,7 @@ func (cmd *branchSplitCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) (err error) {
 	if cmd.Branch == "" {
 		cmd.Branch, err = repo.CurrentBranch(ctx)
@@ -261,6 +262,7 @@ func (cmd *branchSplitCmd) Run(
 			transfer, err := prepareChangeMetadataTransfer(
 				ctx,
 				log,
+				forges,
 				repo,
 				store,
 				cmd.Branch,
@@ -303,6 +305,7 @@ func (cmd *branchSplitCmd) Run(
 func prepareChangeMetadataTransfer(
 	ctx context.Context,
 	log *log.Logger,
+	forges *forge.Registry,
 	repo *git.Repository,
 	store *state.Store,
 	fromBranch, toBranch string,
@@ -311,7 +314,7 @@ func prepareChangeMetadataTransfer(
 	tx *state.BranchTx,
 ) (transfer func(), _ error) {
 	forgeID := meta.ForgeID()
-	f, ok := forge.Lookup(forgeID)
+	f, ok := forges.Lookup(forgeID)
 	if !ok {
 		return nil, fmt.Errorf("unknown forge: %v", forgeID)
 	}

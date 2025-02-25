@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
@@ -38,6 +39,7 @@ func (cmd *downstackSubmitCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := repo.CurrentBranch(ctx)
@@ -61,7 +63,7 @@ func (cmd *downstackSubmitCmd) Run(
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 
-	session := newSubmitSession(repo, store, secretStash, view, log)
+	session := newSubmitSession(repo, store, secretStash, forges, view, log)
 	for _, downstack := range downstacks {
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,

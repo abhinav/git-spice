@@ -49,7 +49,9 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			APIURL: shamhubServer.URL,
 		},
 	}
-	t.Cleanup(forge.Register(shamhubForge))
+
+	var forgeReg forge.Registry
+	forgeReg.Register(shamhubForge)
 
 	// Without a remote set, the Service won't have a Forge connected.
 	t.Run("NoRemote", func(t *testing.T) {
@@ -67,7 +69,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(mockRepo, mockStore, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, &forgeReg, logutil.TestLogger(t))
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -131,7 +133,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(mockRepo, mockStore, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, &forgeReg, logutil.TestLogger(t))
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 

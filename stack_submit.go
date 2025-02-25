@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
@@ -32,6 +33,7 @@ func (cmd *stackSubmitCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) error {
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
@@ -46,7 +48,7 @@ func (cmd *stackSubmitCmd) Run(
 	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 
-	session := newSubmitSession(repo, store, secretStash, view, log)
+	session := newSubmitSession(repo, store, secretStash, forges, view, log)
 	for _, branch := range stack {
 		if branch == store.Trunk() {
 			continue
