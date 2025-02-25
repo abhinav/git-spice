@@ -53,7 +53,6 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 
 	// Without a remote set, the Service won't have a Forge connected.
 	t.Run("NoRemote", func(t *testing.T) {
-		ctx := t.Context()
 		mockCtrl := gomock.NewController(t)
 		mockRepo := NewMockGitRepository(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)
@@ -68,7 +67,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(ctx, mockRepo, mockStore, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, logutil.TestLogger(t))
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -118,13 +117,6 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 		mockRepo := NewMockGitRepository(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)
 
-		mockStore.EXPECT().
-			Remote().
-			Return("origin", nil)
-		mockRepo.EXPECT().
-			RemoteURL(gomock.Any(), "origin").
-			Return(shamhubServer.URL+"/foo", nil)
-
 		mockRepo.EXPECT().
 			PeelToCommit(gomock.Any(), "feature").
 			Return(git.Hash("def123"), nil).
@@ -139,7 +131,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(ctx, mockRepo, mockStore, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, logutil.TestLogger(t))
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 
