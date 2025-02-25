@@ -5,8 +5,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -17,16 +15,9 @@ import (
 func NewTestService(
 	repo GitRepository,
 	store Store,
-	forge forge.Forge,
 	log *log.Logger,
 ) *Service {
-	if forge == nil {
-		forge = &shamhub.Forge{
-			Log: log,
-		}
-	}
-
-	return newService(repo, store, forge, log)
+	return newService(repo, store, log)
 }
 
 // NewMemoryStore builds gs state storage

@@ -6,7 +6,6 @@ import (
 	"iter"
 
 	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice/state"
 )
@@ -91,35 +90,22 @@ var _ Store = (*state.Store)(nil)
 type Service struct {
 	repo  GitRepository
 	store Store
-	forge forge.Forge
 	log   *log.Logger
 }
 
 // NewService builds a new service operating on the given repository and store.
-func NewService(ctx context.Context, repo GitRepository, store Store, log *log.Logger) *Service {
-	var forg forge.Forge
-	if remote, err := store.Remote(); err == nil {
-		remoteURL, err := repo.RemoteURL(ctx, remote)
-		if err == nil {
-			if f, ok := forge.MatchForgeURL(remoteURL); ok {
-				forg = f
-			}
-		}
-	}
-
-	return newService(repo, store, forg, log)
+func NewService(repo GitRepository, store Store, log *log.Logger) *Service {
+	return newService(repo, store, log)
 }
 
 func newService(
 	repo GitRepository,
 	store Store,
-	forge forge.Forge,
 	log *log.Logger,
 ) *Service {
 	return &Service{
 		repo:  repo,
 		store: store,
-		forge: forge,
 		log:   log,
 	}
 }

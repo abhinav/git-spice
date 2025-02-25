@@ -285,7 +285,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	}
 
 	err = kctx.BindToProvider(onceFunc(func(repo *git.Repository, store *state.Store) (*spice.Service, error) {
-		return spice.NewService(ctx, repo, store, logger), nil
+		return spice.NewService(repo, store, logger), nil
 	}))
 	if err != nil {
 		return fmt.Errorf("bind spice service: %w", err)

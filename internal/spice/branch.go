@@ -126,21 +126,11 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 		}
 
 		if resp.ChangeMetadata != nil {
-			f := s.forge
-
-			// It's super unliely that the branch has this metadata
-			// but no forge is available to deserialize it,
-			// but we'll handle it defensively anyway.
-			//
-			// The forge ID can also mismatch if, when we support
-			// multiple forges, someone changes migrates their code
-			// to a different forge after submitting a PR.
-			if f == nil || f.ID() != resp.ChangeForge {
-				// See if we can get the forge from the registry.
-				f, _ = forge.Lookup(resp.ChangeForge)
-			}
-
-			if f != nil {
+			// TODO: This is ick. Service should have a Registry.
+			if f, ok := forge.Lookup(resp.ChangeForge); !ok {
+				s.log.Warn("Ignoring unknown forge requested in change metadata",
+					"forge", resp.ChangeForge)
+			} else {
 				md, err := f.UnmarshalChangeMetadata(resp.ChangeMetadata)
 				if err != nil {
 					s.log.Warn("Corrupt change metadata associated with branch",
