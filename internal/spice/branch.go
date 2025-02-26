@@ -127,7 +127,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 
 		if resp.ChangeMetadata != nil {
 			// TODO: This is ick. Service should have a Registry.
-			if f, ok := forge.Lookup(resp.ChangeForge); !ok {
+			if f, ok := s.forges.Lookup(resp.ChangeForge); !ok {
 				s.log.Warn("Ignoring unknown forge requested in change metadata",
 					"forge", resp.ChangeForge)
 			} else {
@@ -260,7 +260,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		changeMetadata json.RawMessage
 	)
 	if md := oldBranch.Change; md != nil {
-		if f, ok := forge.Lookup(md.ForgeID()); ok {
+		if f, ok := s.forges.Lookup(md.ForgeID()); ok {
 			changeForge = f.ID()
 			changeMetadata, err = f.MarshalChangeMetadata(md)
 			if err != nil {

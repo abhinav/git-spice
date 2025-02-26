@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/browser/browsertest"
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/mockedit"
@@ -74,7 +73,7 @@ func TestMain(m *testing.M) {
 				}
 			}
 
-			forge.Register(&shamhub.Forge{Log: logger})
+			_extraForges = append(_extraForges, &shamhub.Forge{Log: logger})
 			main()
 			return 0
 		},

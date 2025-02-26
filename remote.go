@@ -39,6 +39,7 @@ func (e *notLoggedInError) Error() string {
 func openRemoteRepositorySilent(
 	ctx context.Context,
 	stash secret.Stash,
+	forges *forge.Registry,
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.Repository, error) {
@@ -47,7 +48,7 @@ func openRemoteRepositorySilent(
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	f, ok := forge.MatchForgeURL(forge.DefaultRegistry, remoteURL)
+	f, ok := forge.MatchForgeURL(forges, remoteURL)
 	if !ok {
 		return nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -70,10 +71,11 @@ func openRemoteRepository(
 	ctx context.Context,
 	log *log.Logger,
 	stash secret.Stash,
+	forges *forge.Registry,
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.Repository, error) {
-	forgeRepo, err := openRemoteRepositorySilent(ctx, stash, gitRepo, remote)
+	forgeRepo, err := openRemoteRepositorySilent(ctx, stash, forges, gitRepo, remote)
 
 	var (
 		unsupportedErr *unsupportedForgeError

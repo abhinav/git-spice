@@ -42,6 +42,9 @@ var (
 
 	// _browserLauncher opens URLs in the user's configured browser.
 	_browserLauncher browser.Launcher = new(browser.Browser)
+
+	// Forges to registry into main at startup besides the defaults.
+	_extraForges []forge.Forge
 )
 
 var errNoPrompt = errors.New("not allowed to prompt for input")
@@ -54,8 +57,12 @@ func main() {
 	})
 
 	// Register supported forges.
-	forge.Register(&github.Forge{Log: logger})
-	forge.Register(&gitlab.Forge{Log: logger})
+	var forges forge.Registry
+	forges.Register(&github.Forge{Log: logger})
+	forges.Register(&gitlab.Forge{Log: logger})
+	for _, f := range _extraForges {
+		forges.Register(f)
+	}
 
 	styles := log.DefaultStyles()
 	styles.Levels[log.DebugLevel] = ui.NewStyle().SetString("DBG").Bold(true)
@@ -113,7 +120,7 @@ func main() {
 
 	// Forges may register additional command line flags
 	// by implementing CLIPlugin.
-	for f := range forge.All {
+	for f := range forges.All() {
 		if plugin := f.CLIPlugin(); plugin != nil {
 			cmd.Plugins = append(cmd.Plugins, plugin)
 		}
@@ -124,7 +131,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger),
+		kong.Bind(logger, &forges),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
@@ -184,7 +191,7 @@ func main() {
 		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
 		komplete.WithPredictor("remotes", komplete.PredictFunc(predictRemotes)),
 		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
-		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges)),
+		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges(&forges))),
 	)
 
 	args := os.Args[1:]
@@ -284,8 +291,12 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		return fmt.Errorf("bind state store: %w", err)
 	}
 
-	err = kctx.BindToProvider(onceFunc(func(repo *git.Repository, store *state.Store) (*spice.Service, error) {
-		return spice.NewService(repo, store, logger), nil
+	err = kctx.BindToProvider(onceFunc(func(
+		repo *git.Repository,
+		store *state.Store,
+		forges *forge.Registry,
+	) (*spice.Service, error) {
+		return spice.NewService(repo, store, forges, logger), nil
 	}))
 	if err != nil {
 		return fmt.Errorf("bind spice service: %w", err)

@@ -46,6 +46,7 @@ func (cmd *repoSyncCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) error {
 	remote, err := ensureRemote(ctx, repo, store, log, view)
 	// TODO: move ensure remote to Service
@@ -196,7 +197,7 @@ func (cmd *repoSyncCmd) Run(
 	}
 
 	var branchesToDelete []branchDeletion
-	if remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, repo, remote); err != nil {
+	if remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote); err != nil {
 		var unsupported *unsupportedForgeError
 		if !errors.As(err, &unsupported) {
 			return err

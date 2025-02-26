@@ -103,8 +103,9 @@ func (cmd *branchSubmitCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) error {
-	session := newSubmitSession(repo, store, secretStash, view, log)
+	session := newSubmitSession(repo, store, secretStash, forges, view, log)
 	if err := cmd.run(ctx, session, log, view, repo, store, svc); err != nil {
 		return err
 	}

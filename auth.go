@@ -29,9 +29,10 @@ func (c *authCmd) AfterApply(
 	ctx context.Context,
 	kctx *kong.Context,
 	log *log.Logger,
+	forges *forge.Registry,
 	view ui.View,
 ) error {
-	f, err := resolveForge(ctx, log, view, c.Forge)
+	f, err := resolveForge(ctx, forges, log, view, c.Forge)
 	if err != nil {
 		return err
 	}
@@ -45,12 +46,12 @@ func (c *authCmd) AfterApply(
 // repository's remote URL.
 // If the forge cannot be guessed, it will prompt the user to select one
 // if we're in interactive mode.
-func resolveForge(ctx context.Context, log *log.Logger, view ui.View, forgeID string) (forge.Forge, error) {
+func resolveForge(ctx context.Context, forges *forge.Registry, log *log.Logger, view ui.View, forgeID string) (forge.Forge, error) {
 	if forgeID != "" {
-		f, ok := forge.Lookup(forgeID)
+		f, ok := forges.Lookup(forgeID)
 		if !ok {
 			var available []string
-			for f := range forge.All {
+			for f := range forges.All() {
 				available = append(available, f.ID())
 			}
 			slices.Sort(available)
@@ -61,13 +62,13 @@ func resolveForge(ctx context.Context, log *log.Logger, view ui.View, forgeID st
 		return f, nil
 	}
 
-	f, err := guessCurrentForge(ctx, log)
+	f, err := guessCurrentForge(ctx, forges, log)
 	if err == nil {
 		return f, nil
 	}
 
 	var opts []ui.SelectOption[forge.Forge]
-	for f := range forge.All {
+	for f := range forges.All() {
 		opts = append(opts, ui.SelectOption[forge.Forge]{
 			Label: f.ID(),
 			Value: f,
@@ -97,7 +98,7 @@ func resolveForge(ctx context.Context, log *log.Logger, view ui.View, forgeID st
 
 // guessCurrentForge attempts to guess the current forge based on the
 // current directory.
-func guessCurrentForge(ctx context.Context, log *log.Logger) (forge.Forge, error) {
+func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Logger) (forge.Forge, error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
@@ -141,7 +142,7 @@ func guessCurrentForge(ctx context.Context, log *log.Logger) (forge.Forge, error
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	forge, ok := forge.MatchForgeURL(forge.DefaultRegistry, remoteURL)
+	forge, ok := forge.MatchForgeURL(forges, remoteURL)
 	if !ok {
 		return nil, fmt.Errorf("no forge found for %s", remoteURL)
 	}
