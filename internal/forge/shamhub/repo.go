@@ -1,7 +1,6 @@
 package shamhub
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/logutil"
-	"go.abhg.dev/gs/internal/must"
 )
 
 // NewRepository creates a new Git repository
@@ -47,37 +45,6 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 	}
 
 	return sh.gitServer.URL + "/" + owner + "/" + repo + ".git", nil
-}
-
-// OpenURL opens a repository hosted on the forge with the given remote URL.
-func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
-	must.NotBeBlankf(f.URL, "URL is required")
-	must.NotBeBlankf(f.APIURL, "API URL is required")
-
-	tok := token.(*AuthenticationToken).tok
-	client := f.jsonHTTPClient()
-	client.headers = map[string]string{
-		"Authentication-Token": tok,
-	}
-
-	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
-	}
-
-	apiURL, err := url.Parse(f.APIURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse API URL: %w", err)
-	}
-
-	return &forgeRepository{
-		forge:  f,
-		owner:  owner,
-		repo:   repo,
-		apiURL: apiURL,
-		log:    f.Log,
-		client: client,
-	}, nil
 }
 
 // forgeRepository is a repository hosted on a ShamHub server.

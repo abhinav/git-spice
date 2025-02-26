@@ -62,14 +62,15 @@ func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
 // This rejects the request if the user is already authenticated
 // with a GITHUB_TOKEN environment variable.
 func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.AuthenticationToken, error) {
+	log := f.logger()
 	// Already authenticated with GITHUB_TOKEN.
 	// If the user tries to authenticate again, we should error.
 	if f.Options.Token != "" {
 		// NB: alternatively, we can make this a no-op,
 		// and just omit saving it to the stash.
 		// Adjust based on user feedback.
-		f.Log.Error("Already authenticated with GITHUB_TOKEN.")
-		f.Log.Error("Unset GITHUB_TOKEN to login with a different method.")
+		log.Error("Already authenticated with GITHUB_TOKEN.")
+		log.Error("Unset GITHUB_TOKEN to login with a different method.")
 		return nil, errors.New("already authenticated")
 	}
 
