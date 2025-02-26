@@ -141,7 +141,7 @@ func guessCurrentForge(ctx context.Context, log *log.Logger) (forge.Forge, error
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	forge, ok := forge.MatchForgeURL(remoteURL)
+	forge, ok := forge.MatchForgeURL(forge.DefaultRegistry, remoteURL)
 	if !ok {
 		return nil, fmt.Errorf("no forge found for %s", remoteURL)
 	}
