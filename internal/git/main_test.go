@@ -1,7 +1,6 @@
 package git_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -9,8 +8,8 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(testscript.RunMain(m, map[string]func() int{
+	testscript.Main(m, map[string]func(){
 		// mockedit <input>:
 		"mockedit": mockedit.Main,
-	}))
+	})
 }

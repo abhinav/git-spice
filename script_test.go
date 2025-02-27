@@ -41,8 +41,8 @@ func TestMain(m *testing.M) {
 	// so tests don't accidentally open a browser.
 	_browserLauncher = new(browser.Noop)
 
-	os.Exit(testscript.RunMain(m, map[string]func() int{
-		"gs": func() int {
+	testscript.Main(m, map[string]func(){
+		"gs": func() {
 			logger := log.NewWithOptions(os.Stderr, log.Options{
 				Level: log.DebugLevel,
 			})
@@ -75,18 +75,17 @@ func TestMain(m *testing.M) {
 
 			_extraForges = append(_extraForges, &shamhub.Forge{Log: logger})
 			main()
-			return 0
 		},
 		"mockedit": mockedit.Main,
 		// "true" is a no-op command that always succeeds.
-		"true": func() int { return 0 },
+		"true": func() {},
 		// with-term file -- cmd [args ...]
 		//
 		// Runs the given command inside a terminal emulator,
 		// using the file to drive interactions with it.
 		// See [termtest.WithTerm] for supported commands.
 		"with-term": termtest.WithTerm,
-	}))
+	})
 }
 
 func TestScript(t *testing.T) {

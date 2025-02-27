@@ -36,7 +36,7 @@ import (
 // If MOCKEDIT_RECORD is set, it will also copy the contents of <file> into it.
 //
 // If both MOCKEDIT_GIVE and MOCKEDIT_RECORD are unset, mockedit will fail.
-func Main() (exitCode int) {
+func Main() {
 	log.SetFlags(0)
 	flag.Parse()
 
@@ -73,8 +73,6 @@ func Main() (exitCode int) {
 			log.Fatalf("write %s: %s", input, err)
 		}
 	}
-
-	return 0
 }
 
 // Handle controls the behavior of the mock editor.
