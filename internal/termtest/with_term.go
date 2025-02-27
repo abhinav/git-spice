@@ -37,7 +37,7 @@ import (
 //   - -fixed: don't auto-grow the terminal as output increases
 //   - -final <name>:
 //     print a final snapshot on exit to stdout with the given name.
-func WithTerm() (exitCode int) {
+func WithTerm() {
 	cols := flag.Int("cols", 80, "terminal width")
 	rows := flag.Int("rows", 40, "terminal height")
 	fixed := flag.Bool("fixed", false,
@@ -51,15 +51,13 @@ func WithTerm() (exitCode int) {
 
 	args := flag.Args()
 	if len(args) < 2 {
-		log.Println("usage: with-term file -- cmd [args ...]")
-		return 1
+		log.Fatal("usage: with-term file -- cmd [args ...]")
 	}
 
 	scriptPath, args := args[0], args[1:]
 	script, err := os.ReadFile(scriptPath)
 	if err != nil {
-		log.Printf("cannot open instructions: %v", err)
-		return 1
+		log.Fatalf("cannot open instructions: %v", err)
 	}
 
 	if args[0] == "--" {
@@ -75,42 +73,43 @@ func WithTerm() (exitCode int) {
 	}
 	f, err := pty.StartWithSize(cmd, size)
 	if err != nil {
-		log.Printf("cannot open pty: %v", err)
-		return 1
+		log.Fatalf("cannot open pty: %v", err)
 	}
 
-	emu := newVT100Emulator(f, cmd,
-		int(size.Rows),
-		int(size.Cols),
-		*fixed,
-		log.Printf,
-	)
-	defer func() {
-		if err := emu.Close(); err != nil {
-			log.Printf("%v: %v", cmd, err)
-			exitCode = 1
+	os.Exit(func() (exitCode int) {
+		emu := newVT100Emulator(f, cmd,
+			int(size.Rows),
+			int(size.Cols),
+			*fixed,
+			log.Printf,
+		)
+		defer func() {
+			if err := emu.Close(); err != nil {
+				log.Printf("%v: %v", cmd, err)
+				exitCode = 1
+			}
+
+			if *finalSnapshot != "" {
+				if len(*finalSnapshot) > 0 {
+					fmt.Printf("### %s ###\n", *finalSnapshot)
+				}
+				for _, line := range emu.Rows() {
+					fmt.Println(line)
+				}
+			}
+		}()
+
+		err = uitest.Script(emu, script, &uitest.ScriptOptions{
+			Logf:   log.Printf,
+			Output: os.Stdout,
+		})
+		if err != nil {
+			log.Printf("script error: %v", err)
+			return 1
 		}
 
-		if *finalSnapshot != "" {
-			if len(*finalSnapshot) > 0 {
-				fmt.Printf("### %s ###\n", *finalSnapshot)
-			}
-			for _, line := range emu.Rows() {
-				fmt.Println(line)
-			}
-		}
-	}()
-
-	err = uitest.Script(emu, script, &uitest.ScriptOptions{
-		Logf:   log.Printf,
-		Output: os.Stdout,
-	})
-	if err != nil {
-		log.Printf("script error: %v", err)
-		return 1
-	}
-
-	return exitCode
+		return exitCode
+	}())
 }
 
 type terminalEmulator struct {
