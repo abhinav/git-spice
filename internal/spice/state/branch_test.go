@@ -409,7 +409,7 @@ func testBranchStateUncorruptible(t *rapid.T) {
 	// 26 * 26 gives us plenty of branches to work with.
 
 	trunk := branchNameGen.Draw(t, "trunk")
-	ctx := context.Background()
+	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
 	store, err := InitStore(ctx, InitStoreRequest{
 		DB:    db,
