@@ -77,7 +77,7 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 
 func newGitLabClient(
 	httpClient *http.Client,
-) *gitlab.GitlabClient {
+) *gitlab.Client {
 	tok, exists := os.LookupEnv("GITLAB_TOKEN")
 	var token string
 	if !exists {
@@ -86,7 +86,7 @@ func newGitLabClient(
 		token = tok
 	}
 	client, _ := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
-	return &gitlab.GitlabClient{
+	return &gitlab.Client{
 		MergeRequests:    client.MergeRequests,
 		Notes:            client.Notes,
 		ProjectTemplates: client.ProjectTemplates,
