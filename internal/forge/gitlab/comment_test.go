@@ -24,16 +24,6 @@ func SetListChangeCommentsPageSize(t testing.TB, pageSize int) {
 	t.Cleanup(stub.Value(&_listChangeCommentsPageSize, pageSize))
 }
 
-type author struct {
-	ID        int    `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	State     string `json:"state"`
-	AvatarURL string `json:"avatar_url"`
-	WebURL    string `json:"web_url"`
-}
-
 func TestListChangeComments(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -89,12 +79,12 @@ func TestListChangeComments(t *testing.T) {
 				{
 					ID:     12,
 					Body:   "hello",
-					Author: author{ID: 2},
+					Author: gitlab.NoteAuthor{ID: 2},
 				},
 				{
 					ID:     13,
 					Body:   "world",
-					Author: author{ID: 1},
+					Author: gitlab.NoteAuthor{ID: 1},
 				},
 			},
 			opts: &forge.ListChangeCommentsOptions{
@@ -110,12 +100,12 @@ func TestListChangeComments(t *testing.T) {
 				{
 					ID:     12,
 					Body:   "hello",
-					Author: author{ID: 2},
+					Author: gitlab.NoteAuthor{ID: 2},
 				},
 				{
 					ID:     13,
 					Body:   "world",
-					Author: author{ID: 2},
+					Author: gitlab.NoteAuthor{ID: 2},
 				},
 			},
 			opts: &forge.ListChangeCommentsOptions{
@@ -131,12 +121,12 @@ func TestListChangeComments(t *testing.T) {
 				{
 					ID:     12,
 					Body:   "hello",
-					Author: author{ID: 2},
+					Author: gitlab.NoteAuthor{ID: 2},
 				},
 				{
 					ID:     13,
 					Body:   "world",
-					Author: author{ID: 2},
+					Author: gitlab.NoteAuthor{ID: 2},
 				},
 			},
 			opts: &forge.ListChangeCommentsOptions{
