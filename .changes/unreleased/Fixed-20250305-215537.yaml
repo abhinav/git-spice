@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'gitlab: Fix rejection of `GITLAB_TOKEN` environment variable for authentication.'
+time: 2025-03-05T21:55:37.669148-08:00

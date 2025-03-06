@@ -17,11 +17,12 @@ type gitlabClient struct {
 }
 
 func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationToken) (*gitlabClient, error) {
-	var newClient func(string, ...gitlab.ClientOptionFunc) (*gitlab.Client, error)
+	newClient := gitlab.NewClient
 	accessToken := tok.AccessToken
 	switch tok.AuthType {
-	case AuthTypePAT:
-		newClient = gitlab.NewClient
+	case AuthTypePAT, AuthTypeEnvironmentVariable:
+		// no need to change anything
+
 	case AuthTypeGitLabCLI:
 		// For GitLab CLI, AccessToken will be empty.
 		token, err := newGitLabCLI("").Token(ctx, tok.Hostname)
@@ -30,11 +31,11 @@ func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationTok
 		}
 
 		accessToken = token
-		fallthrough
+		fallthrough // also needs a different client constructor
+
 	case AuthTypeOAuth2:
+		// Needs a different client constructor.
 		newClient = gitlab.NewOAuthClient
-	default:
-		return nil, fmt.Errorf("unknown auth type: %d", tok.AuthType)
 	}
 
 	must.NotBeBlankf(accessToken,
