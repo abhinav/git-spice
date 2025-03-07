@@ -24,7 +24,7 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 	}
 
 	// create a map of MR IDs to MRs
-	mrMap := make(map[int]*gitlab.MergeRequest)
+	mrMap := make(map[int]*gitlab.BasicMergeRequest)
 	for _, mr := range mergeRequests {
 		mrMap[mr.IID] = mr
 	}

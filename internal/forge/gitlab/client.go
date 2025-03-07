@@ -80,7 +80,7 @@ type mergeRequestsService interface {
 		pid any,
 		opt *gitlab.ListProjectMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
-	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
+	) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error)
 }
 
 // notesService allows posting, listing, and fetching notes (comments)

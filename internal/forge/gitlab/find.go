@@ -9,7 +9,21 @@ import (
 	"go.abhg.dev/gs/internal/git"
 )
 
-func toFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem {
+func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.FindChangeItem {
+	return &forge.FindChangeItem{
+		ID: &MR{
+			Number: mr.IID,
+		},
+		URL:      mr.WebURL,
+		State:    forgeChangeState(mr.State),
+		Subject:  mr.Title,
+		BaseName: mr.TargetBranch,
+		HeadHash: git.Hash(mr.SHA),
+		Draft:    mr.Draft,
+	}
+}
+
+func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem {
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
@@ -78,7 +92,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 	changes := make([]*forge.FindChangeItem, len(requests))
 	for i, mr := range requests {
-		changes[i] = toFindChangeItem(mr)
+		changes[i] = basicMergeRequestToFindChangeItem(mr)
 	}
 
 	return changes, nil
@@ -94,5 +108,5 @@ func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*fo
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
-	return toFindChangeItem(mr), nil
+	return mergeRequestToFindChangeItem(mr), nil
 }
