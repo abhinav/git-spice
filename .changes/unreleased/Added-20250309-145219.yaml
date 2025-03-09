@@ -1,0 +1,3 @@
+kind: Added
+body: 'log: Add `spice.log.crFormat="id" | "url"` configuration.'
+time: 2025-03-09T14:52:19.652149-07:00

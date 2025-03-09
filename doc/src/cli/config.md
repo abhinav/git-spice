@@ -125,6 +125,16 @@ instead of showing just the current stack.
 - `true`
 - `false` (default)
 
+### spice.log.crFormat
+
+Whether $$gs log short$$ and $$gs log long$$ should show the CR URL or the ID next
+to any remote branches.
+
+**Accepted values:**
+
+- `"url"`: show the CR URL
+- `"id"`: (default) show the CR ID
+
 ### spice.rebaseContinue.edit
 
 <!-- gs:version v0.10.0 -->

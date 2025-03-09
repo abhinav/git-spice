@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -48,7 +49,8 @@ var (
 
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." default:"id"`
 }
 
 type branchLogOptions struct {
@@ -59,10 +61,12 @@ type branchLogOptions struct {
 
 func (cmd *branchLogCmd) run(
 	ctx context.Context,
+	secretStash secret.Stash,
 	opts *branchLogOptions,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) (err error) {
 	log := opts.Log
 	currentBranch, err := repo.CurrentBranch(ctx)
@@ -168,6 +172,19 @@ func (cmd *branchLogCmd) run(
 		return fliptree.DefaultNodeMarker
 	}
 
+	// Get the remote repo if we need to print CR URLs
+	var remoteRepo forge.Repository
+
+	if cmd.ChangeFormat == "url" {
+		remote, err := store.Remote()
+		if err == nil {
+			remoteRepo, err = openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote)
+			if err != nil {
+				return fmt.Errorf("could not open remote repository; URLs will not be shown: %w", err)
+			}
+		}
+	}
+
 	var s strings.Builder
 	err = fliptree.Write(&s, fliptree.Graph[*branchInfo]{
 		Roots:  []int{trunkIdx},
@@ -181,7 +198,15 @@ func (cmd *branchLogCmd) run(
 			}
 
 			if b.ChangeID != nil {
-				_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
+				if remoteRepo == nil {
+					_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
+				} else {
+					if changeInfo, err := remoteRepo.FindChangeByID(ctx, b.ChangeID); err == nil && changeInfo != nil {
+						_, _ = fmt.Fprintf(&o, " (%s)", changeInfo.URL)
+					} else {
+						_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
+					}
+				}
 			}
 
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
