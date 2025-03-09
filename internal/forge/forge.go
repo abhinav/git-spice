@@ -90,6 +90,16 @@ type Forge interface {
 	// This will only be called if MatchURL reports true.
 	OpenURL(ctx context.Context, tok AuthenticationToken, remoteURL string) (Repository, error)
 
+	// ChangeURL returns the web URL for the given change ID hosted on the forge,
+	// given the remote URL of the repository.
+	//
+	// TODO(abhinav): This is a hack to work around the fact
+	// that OpenURL requires authentication.
+	//
+	// An upcoming change will allow separating "parsing" the forge URL
+	// and "opening" the remote repository.
+	ChangeURL(remoteURL string, changeID ChangeID) (string, error)
+
 	// ChangeTemplatePaths reports the case-insensitive paths at which
 	// it's possible to define change templates in the repository.
 	ChangeTemplatePaths() []string
