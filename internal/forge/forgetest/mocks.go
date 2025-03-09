@@ -160,6 +160,45 @@ func (c *MockForgeChangeTemplatePathsCall) DoAndReturn(f func() []string) *MockF
 	return c
 }
 
+// ChangeURL mocks base method.
+func (m *MockForge) ChangeURL(remoteURL string, changeID forge.ChangeID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeURL", remoteURL, changeID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeURL indicates an expected call of ChangeURL.
+func (mr *MockForgeMockRecorder) ChangeURL(remoteURL, changeID any) *MockForgeChangeURLCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeURL", reflect.TypeOf((*MockForge)(nil).ChangeURL), remoteURL, changeID)
+	return &MockForgeChangeURLCall{Call: call}
+}
+
+// MockForgeChangeURLCall wrap *gomock.Call
+type MockForgeChangeURLCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockForgeChangeURLCall) Return(arg0 string, arg1 error) *MockForgeChangeURLCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockForgeChangeURLCall) Do(f func(string, forge.ChangeID) (string, error)) *MockForgeChangeURLCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockForgeChangeURLCall) DoAndReturn(f func(string, forge.ChangeID) (string, error)) *MockForgeChangeURLCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ClearAuthenticationToken mocks base method.
 func (m *MockForge) ClearAuthenticationToken(arg0 secret.Stash) error {
 	m.ctrl.T.Helper()

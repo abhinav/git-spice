@@ -87,6 +87,18 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 	return err == nil
 }
 
+// ChangeURL returns a URL to view a change on GitHub.
+// Returns an empty string if the URL is not a valid GitHub URL.
+func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
+	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+	}
+
+	pr := mustPR(id)
+	return fmt.Sprintf("%s/%s/%s/pull/%d", f.URL(), owner, repo, pr.Number), nil
+}
+
 // OpenURL opens a GitHub repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitHub URL.
 func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
