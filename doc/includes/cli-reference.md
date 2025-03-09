@@ -163,7 +163,6 @@ Use with the -a/--all flag to show all tracked branches.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
-* `--change-format="id"` ([:material-wrench:{ .middle title="spice.log.crFormat" }](/cli/config.md#spicelogcrformat)): Show URLs for branches with associated change requests.
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat)
 
@@ -182,7 +181,6 @@ Use with the -a/--all flag to show all tracked branches.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
-* `--change-format="id"` ([:material-wrench:{ .middle title="spice.log.crFormat" }](/cli/config.md#spicelogcrformat)): Show URLs for branches with associated change requests.
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat)
 

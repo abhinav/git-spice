@@ -50,7 +50,7 @@ var (
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
 	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
-	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." default:"id"`
+	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
 }
 
 type branchLogOptions struct {
