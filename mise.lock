@@ -11,6 +11,7 @@ backend = "core:go"
 
 [tools.go.checksums]
 "go1.24.1.darwin-arm64.tar.gz" = "sha256:295581b5619acc92f5106e5bcb05c51869337eb19742fdfa6c8346c18e78ff88"
+"go1.24.1.linux-amd64.tar.gz" = "sha256:cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073"
 
 [tools.gofumpt]
 version = "0.7.0"
@@ -23,6 +24,9 @@ gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77
 [tools.golangci-lint]
 version = "1.64.6"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint.checksums]
+"golangci-lint-1.64.6-linux-amd64.tar.gz" = "sha256:71e290acbacb7b3ba4f68f0540fb74dc180c4336ac8a6f3bdcd7fcc48b15148d"
 
 [tools.gotestsum]
 version = "1.12.0"
