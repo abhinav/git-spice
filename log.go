@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -48,7 +49,8 @@ var (
 
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
 }
 
 type branchLogOptions struct {
@@ -63,6 +65,7 @@ func (cmd *branchLogCmd) run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) (err error) {
 	log := opts.Log
 	currentBranch, err := repo.CurrentBranch(ctx)
@@ -75,11 +78,38 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("load branches: %w", err)
 	}
 
+	var remoteURL string
+	if cmd.ChangeFormat == "url" {
+		if remote, err := store.Remote(); err == nil {
+			remoteURL, err = repo.RemoteURL(ctx, remote)
+			if err != nil {
+				log.Warn("Could not get remote URL", "error", err)
+			}
+		}
+	}
+
+	// changeURL queries the forge for the URL of a change request.
+	changeURL := func(forgeID string, changeID forge.ChangeID) string {
+		f, ok := forges.Lookup(forgeID)
+		if !ok {
+			// Impossible but just in case.
+			return changeID.String()
+		}
+
+		url, err := f.ChangeURL(remoteURL, changeID)
+		if err != nil {
+			log.Warn("Could not determine URL for change %v: %v", changeID, err)
+			return changeID.String()
+		}
+
+		return url
+	}
+
 	type branchInfo struct {
-		Index    int
-		Name     string
-		Base     string
-		ChangeID forge.ChangeID
+		Index  int
+		Name   string
+		Base   string
+		Change forge.ChangeMetadata
 
 		Commits []git.CommitDetail
 		Aboves  []int
@@ -89,11 +119,9 @@ func (cmd *branchLogCmd) run(
 	infoIdxByName := make(map[string]int, len(allBranches))
 	for _, branch := range allBranches {
 		info := &branchInfo{
-			Name: branch.Name,
-			Base: branch.Base,
-		}
-		if branch.Change != nil {
-			info.ChangeID = branch.Change.ChangeID()
+			Name:   branch.Name,
+			Base:   branch.Base,
+			Change: branch.Change,
 		}
 
 		if opts.Commits {
@@ -180,8 +208,15 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_branchStyle.Render(b.Name))
 			}
 
-			if b.ChangeID != nil {
-				_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
+			if c := b.Change; c != nil {
+				switch cmd.ChangeFormat {
+				case "id", "":
+					_, _ = fmt.Fprintf(&o, " (%v)", c.ChangeID())
+				case "url":
+					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(c.ForgeID(), c.ChangeID()))
+				default:
+					must.Failf("unknown change format: %v", cmd.ChangeFormat)
+				}
 			}
 
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {

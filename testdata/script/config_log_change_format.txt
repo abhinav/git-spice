@@ -1,0 +1,57 @@
+# 'gs log' commands support listing the change URL instead of the change ID.
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a stack: feat1 -> feat2 -> feat3
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+gs bc feat3 -m 'feat3'
+
+# go back to feat1, and create feat4 and feat5
+gs bco feat1
+gs bc feat4 -m 'feat4'
+gs bc feat5 -m 'feat5'
+
+# submit the bottom-most branch
+gs bottom
+gs branch submit --fill
+gs branch checkout feat3
+
+git config spice.log.crFormat 'url'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-after-crformat-url.txt
+
+gs ll
+cmpenv stderr $WORK/golden/ll-after-crformat-url.txt
+
+-- golden/ls-after-crformat-url.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+main
+-- golden/ll-after-crformat-url.txt --
+    ┏━■ feat3 ◀
+    ┃   7b5eba4 feat3 (now)
+  ┏━┻□ feat2
+  ┃    562c8c6 feat2 (now)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┃    ecc906e feat1 (now)
+main

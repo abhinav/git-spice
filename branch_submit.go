@@ -323,7 +323,7 @@ func (cmd *branchSubmitCmd) run(
 			return fmt.Errorf("find change: %w", err)
 		}
 
-		// Consider the PR only if it's open.
+		// Consider the CR only if it's open.
 		if change.State == forge.ChangeOpen {
 			existingChange = change
 		} else {

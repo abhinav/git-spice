@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -28,8 +29,9 @@ func (cmd *logShortCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
+	forges *forge.Registry,
 ) (err error) {
 	return cmd.run(ctx, &branchLogOptions{
 		Log: log,
-	}, repo, store, svc)
+	}, repo, store, svc, forges)
 }
