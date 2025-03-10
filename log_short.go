@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -26,14 +25,13 @@ func (*logShortCmd) Help() string {
 
 func (cmd *logShortCmd) Run(
 	ctx context.Context,
-	secretStash secret.Stash,
 	log *log.Logger,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) (err error) {
-	return cmd.run(ctx, secretStash, &branchLogOptions{
+	return cmd.run(ctx, &branchLogOptions{
 		Log: log,
 	}, repo, store, svc, forges)
 }

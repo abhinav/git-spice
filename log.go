@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -61,7 +61,6 @@ type branchLogOptions struct {
 
 func (cmd *branchLogCmd) run(
 	ctx context.Context,
-	secretStash secret.Stash,
 	opts *branchLogOptions,
 	repo *git.Repository,
 	store *state.Store,
@@ -79,11 +78,38 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("load branches: %w", err)
 	}
 
+	var remoteURL string
+	if cmd.ChangeFormat == "url" {
+		if remote, err := store.Remote(); err == nil {
+			remoteURL, err = repo.RemoteURL(ctx, remote)
+			if err != nil {
+				log.Warn("Could not get remote URL", "error", err)
+			}
+		}
+	}
+
+	// changeURL queries the forge for the URL of a change request.
+	changeURL := func(forgeID string, changeID forge.ChangeID) string {
+		f, ok := forges.Lookup(forgeID)
+		if !ok {
+			// Impossible but just in case.
+			return changeID.String()
+		}
+
+		url, err := f.ChangeURL(remoteURL, changeID)
+		if err != nil {
+			log.Warn("Could not determine URL for change %v: %v", changeID, err)
+			return changeID.String()
+		}
+
+		return url
+	}
+
 	type branchInfo struct {
-		Index    int
-		Name     string
-		Base     string
-		ChangeID forge.ChangeID
+		Index  int
+		Name   string
+		Base   string
+		Change forge.ChangeMetadata
 
 		Commits []git.CommitDetail
 		Aboves  []int
@@ -93,11 +119,9 @@ func (cmd *branchLogCmd) run(
 	infoIdxByName := make(map[string]int, len(allBranches))
 	for _, branch := range allBranches {
 		info := &branchInfo{
-			Name: branch.Name,
-			Base: branch.Base,
-		}
-		if branch.Change != nil {
-			info.ChangeID = branch.Change.ChangeID()
+			Name:   branch.Name,
+			Base:   branch.Base,
+			Change: branch.Change,
 		}
 
 		if opts.Commits {
@@ -172,19 +196,6 @@ func (cmd *branchLogCmd) run(
 		return fliptree.DefaultNodeMarker
 	}
 
-	// Get the remote repo if we need to print CR URLs
-	var remoteRepo forge.Repository
-
-	if cmd.ChangeFormat == "url" {
-		remote, err := store.Remote()
-		if err == nil {
-			remoteRepo, err = openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote)
-			if err != nil {
-				return fmt.Errorf("could not open remote repository; URLs will not be shown: %w", err)
-			}
-		}
-	}
-
 	var s strings.Builder
 	err = fliptree.Write(&s, fliptree.Graph[*branchInfo]{
 		Roots:  []int{trunkIdx},
@@ -197,15 +208,14 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_branchStyle.Render(b.Name))
 			}
 
-			if b.ChangeID != nil {
-				if remoteRepo == nil {
-					_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
-				} else {
-					if changeInfo, err := remoteRepo.FindChangeByID(ctx, b.ChangeID); err == nil && changeInfo != nil {
-						_, _ = fmt.Fprintf(&o, " (%s)", changeInfo.URL)
-					} else {
-						_, _ = fmt.Fprintf(&o, " (%v)", b.ChangeID)
-					}
+			if c := b.Change; c != nil {
+				switch cmd.ChangeFormat {
+				case "id", "":
+					_, _ = fmt.Fprintf(&o, " (%v)", c.ChangeID())
+				case "url":
+					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(c.ForgeID(), c.ChangeID()))
+				default:
+					must.Failf("unknown change format: %v", cmd.ChangeFormat)
 				}
 			}
 
