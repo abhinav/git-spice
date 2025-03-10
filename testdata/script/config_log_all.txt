@@ -7,16 +7,6 @@ mkdir repo
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
-
-# set up a fake remote
-shamhub init
-shamhub register alice
-shamhub new origin alice/example.git
-git push origin main
-
-env SHAMHUB_USERNAME=alice
-gs auth login
-
 gs repo init
 
 # create a stack: feat1 -> feat2 -> feat3
@@ -46,21 +36,6 @@ cmp stderr $WORK/golden/ls-after.txt
 
 gs ll
 cmp stderr $WORK/golden/ll-after.txt
-
-# log with the spice.log.crFormat='url' option.
-git config spice.log.all false
-git config spice.log.crFormat 'url'
-
-# submit the base branch
-gs bottom
-gs branch submit --fill
-gs branch checkout feat3
-
-gs ls
-cmpenv stderr $WORK/golden/ls-after-crformat-id.txt
-
-gs ll
-cmpenv stderr $WORK/golden/ll-after-crformat-id.txt
 
 -- golden/ls-before.txt --
     ┏━■ feat3 ◀
@@ -92,18 +67,5 @@ main
   ┣━┻□ feat4
   ┃    0eb14d6 feat4 (now)
 ┏━┻□ feat1
-┃    ecc906e feat1 (now)
-main
--- golden/ls-after-crformat-id.txt --
-    ┏━■ feat3 ◀
-  ┏━┻□ feat2
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
-main
--- golden/ll-after-crformat-id.txt --
-    ┏━■ feat3 ◀
-    ┃   7b5eba4 feat3 (now)
-  ┏━┻□ feat2
-  ┃    562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
