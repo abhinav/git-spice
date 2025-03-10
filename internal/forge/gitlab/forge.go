@@ -65,6 +65,17 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 	return err == nil
 }
 
+// ChangeURL returns the URL for a Change hosted on GitLab.
+func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
+	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+	}
+
+	mr := mustMR(id)
+	return fmt.Sprintf("%s/%s/%s/-/merge_requests/%v", f.URL(), owner, repo, mr.Number), nil
+}
+
 // OpenURL opens a GitLab repository from a remote URL.
 // Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitLab URL.
 func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {

@@ -59,6 +59,32 @@ func (f *Forge) MatchURL(remoteURL string) bool {
 	return ok
 }
 
+// ChangeURL returns the URL at which the given change can be viewed.
+func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
+	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+	}
+
+	cr := id.(ChangeID)
+	return fmt.Sprintf("%s/%s/%s/changes/%v", f.URL, owner, repo, int(cr)), nil
+}
+
+func extractRepoInfo(forgeURL, remoteURL string) (owner, repo string, err error) {
+	tail, ok := strings.CutPrefix(remoteURL, forgeURL)
+	if !ok {
+		return "", "", fmt.Errorf("unrecognized host: %v", remoteURL)
+	}
+
+	tail = strings.TrimSuffix(strings.TrimPrefix(tail, "/"), ".git")
+	owner, repo, ok = strings.Cut(tail, "/")
+	if !ok {
+		return "", "", fmt.Errorf("no '/' found in %q", tail)
+	}
+
+	return owner, repo, nil
+}
+
 type jsonHTTPClient struct {
 	log     *log.Logger
 	headers map[string]string

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
@@ -61,15 +60,9 @@ func (f *Forge) OpenURL(_ context.Context, token forge.AuthenticationToken, remo
 		"Authentication-Token": tok,
 	}
 
-	tail, ok := strings.CutPrefix(remoteURL, f.URL)
-	if !ok {
-		return nil, forge.ErrUnsupportedURL
-	}
-
-	tail = strings.TrimSuffix(strings.TrimPrefix(tail, "/"), ".git")
-	owner, repo, ok := strings.Cut(tail, "/")
-	if !ok {
-		return nil, fmt.Errorf("%w: no '/' found in %q", forge.ErrUnsupportedURL, tail)
+	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
 	apiURL, err := url.Parse(f.APIURL)

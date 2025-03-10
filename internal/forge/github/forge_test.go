@@ -185,3 +185,18 @@ func TestExtractRepoInfoErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestChangeURL(t *testing.T) {
+	f := Forge{Options: Options{URL: DefaultURL}}
+
+	t.Run("Valid", func(t *testing.T) {
+		got, err := f.ChangeURL("https://github.com/example/repo.git", &PR{Number: 123})
+		require.NoError(t, err)
+		assert.Equal(t, "https://github.com/example/repo/pull/123", got)
+	})
+
+	t.Run("Invalid", func(t *testing.T) {
+		_, err := f.ChangeURL("https://notgithub.com/example/repo.git", &PR{Number: 123})
+		require.Error(t, err)
+	})
+}
