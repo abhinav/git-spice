@@ -127,6 +127,8 @@ instead of showing just the current stack.
 
 ### spice.log.crFormat
 
+<!-- gs:version unreleased -->
+
 Whether $$gs log short$$ and $$gs log long$$ should show the CR URL or the ID next
 to any remote branches.
 
