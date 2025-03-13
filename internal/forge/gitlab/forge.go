@@ -17,7 +17,8 @@ import (
 
 const (
 	// DefaultURL Default URLs for GitLab and its API.
-	DefaultURL = "https://gitlab.com"
+	DefaultURL    = "https://gitlab.com"
+	DefaultAPIURL = "https://gitlab.com"
 )
 
 // Options defines command line options for the GitLab Forge.
@@ -27,6 +28,10 @@ type Options struct {
 	// URL is the URL for GitLab.
 	// Override this for testing or if you use an on premise GitLab instance.
 	URL string `name:"gitlab-url" hidden:"" config:"forge.gitlab.url" env:"GITLAB_URL" help:"Base URL for GitLab web requests"`
+
+	// APIURL is the URL for GitLab's API.
+	// Override this for testing or if you use an on premise GitLab instance with non-standard port url.
+	APIURL string `name:"gitlab-api-url" hidden:"" config:"forge.gitlab.apiURL" env:"GITLAB_API_URL" help:"Base URL for GitLab API requests"`
 
 	// Token is a fixed token used to authenticate with GitLab.
 	// This may be used to skip the login flow.
@@ -51,6 +56,15 @@ var _ forge.Forge = (*Forge)(nil)
 // or the default URL if none is set.
 func (f *Forge) URL() string {
 	return cmp.Or(f.Options.URL, DefaultURL)
+}
+
+// APIURL returns the base API URL configured for the GitHub Forge
+// or the default URL if none is set.
+func (f *Forge) APIURL() string {
+	if f.Options.APIURL != "" {
+		return f.Options.APIURL
+	}
+	return DefaultAPIURL
 }
 
 // ID reports a unique key for this forge.
@@ -88,7 +102,7 @@ func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, re
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
-	glc, err := newGitLabClient(ctx, f.URL(), token.(*AuthenticationToken))
+	glc, err := newGitLabClient(ctx, f.APIURL(), token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}
