@@ -16,30 +16,36 @@ func TestURLs(t *testing.T) {
 		wantAPIURL string
 	}{
 		{
-			name:    "Default",
-			wantURL: DefaultURL,
+			name:       "Default",
+			wantURL:    DefaultURL,
+			wantAPIURL: DefaultURL,
 		},
 		{
-			name:    "ExplicitURL",
-			opts:    Options{URL: DefaultURL},
-			wantURL: DefaultURL,
+			name:       "ExplicitURL",
+			opts:       Options{URL: DefaultURL},
+			wantURL:    DefaultURL,
+			wantAPIURL: DefaultURL,
 		},
 		{
-			name:    "CustomURL",
-			opts:    Options{URL: "https://example.com"},
-			wantURL: "https://example.com",
+			name:       "CustomURL",
+			opts:       Options{URL: "https://example.com"},
+			wantURL:    "https://example.com",
+			wantAPIURL: "https://example.com",
 		},
 		{
 			name: "CustomBoth",
 			opts: Options{
-				URL: "https://example.com",
+				URL:    "https://example.com",
+				APIURL: "https://api.example.com",
 			},
-			wantURL: "https://example.com",
+			wantURL:    "https://example.com",
+			wantAPIURL: "https://api.example.com",
 		},
 		{
-			name:    "InvalidURL",
-			opts:    Options{URL: ":/"},
-			wantURL: ":/",
+			name:       "InvalidURL",
+			opts:       Options{URL: ":/"},
+			wantURL:    ":/",
+			wantAPIURL: ":/",
 		},
 	}
 
@@ -48,6 +54,7 @@ func TestURLs(t *testing.T) {
 			f := Forge{Options: tt.opts}
 
 			assert.Equal(t, tt.wantURL, f.URL())
+			assert.Equal(t, tt.wantAPIURL, f.APIURL())
 		})
 	}
 }

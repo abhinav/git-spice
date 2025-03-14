@@ -17,8 +17,7 @@ import (
 
 const (
 	// DefaultURL Default URLs for GitLab and its API.
-	DefaultURL    = "https://gitlab.com"
-	DefaultAPIURL = "https://gitlab.com"
+	DefaultURL = "https://gitlab.com"
 )
 
 // Options defines command line options for the GitLab Forge.
@@ -61,10 +60,7 @@ func (f *Forge) URL() string {
 // APIURL returns the base API URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) APIURL() string {
-	if f.Options.APIURL != "" {
-		return f.Options.APIURL
-	}
-	return DefaultAPIURL
+	return cmp.Or(f.Options.APIURL, f.URL())
 }
 
 // ID reports a unique key for this forge.
