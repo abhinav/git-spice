@@ -102,6 +102,15 @@ Defaults to `$GITLAB_URL` if set, or `https://gitlab.com` otherwise.
 
 See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
+### spice.forge.gitlab.apiUrl
+
+<!-- gs:version unreleased -->
+
+URL at which the GitLab API is available.
+Defaults to `$GITLAB_API_URL` if set, or the GitLab URL otherwise.
+
+See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
+
 ### spice.forge.gitlab.oauth.clientID
 
 <!-- gs:version v0.9.0 -->

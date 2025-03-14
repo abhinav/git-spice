@@ -326,10 +326,21 @@ set $$spice.forge.gitlab.url$$ to the address of your GitLab instance.
 {green}${reset} git config {red}spice.forge.gitlab.url{reset} {mag}https://gitlab.example.com{reset}
 ```
 
-This may also be set with the `GITLAB_URL` environment variable.
+<!-- gs:version unreleased -->
+*Optionally*, also set the GitLab API URL
+with the $$spice.forge.gitlab.apiUrl$$ configuration option.
+By default, the API URL is the same as the GitLab URL.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.gitlab.apiUrl{reset} {mag}https://gitlab.example.com/api/v4{reset}
+```
+
+Alternatively, set these configuration options
+with the `GITLAB_URL` and `GITLAB_API_URL` environment variables.
 
 ```freeze language="bash"
 export GITLAB_URL=https://gitlab.example.com
+export GITLAB_API_URL=https://gitlab-api.example.com
 ```
 
 #### OAuth with GitLab Self-Hosted
