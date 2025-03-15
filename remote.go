@@ -48,7 +48,7 @@ func openRemoteRepositorySilent(
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	f, ok := forge.MatchForgeURL(forges, remoteURL)
+	f, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
 	if !ok {
 		return nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -64,7 +64,7 @@ func openRemoteRepositorySilent(
 		return nil, fmt.Errorf("load authentication token: %w", err)
 	}
 
-	return f.OpenURL(ctx, tok, remoteURL)
+	return f.OpenRepository(ctx, tok, repoID)
 }
 
 func openRemoteRepository(

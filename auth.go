@@ -62,7 +62,7 @@ func resolveForge(ctx context.Context, forges *forge.Registry, log *log.Logger, 
 		return f, nil
 	}
 
-	f, err := guessCurrentForge(ctx, forges, log)
+	f, _, err := guessCurrentForge(ctx, forges, log)
 	if err == nil {
 		return f, nil
 	}
@@ -98,12 +98,12 @@ func resolveForge(ctx context.Context, forges *forge.Registry, log *log.Logger, 
 
 // guessCurrentForge attempts to guess the current forge based on the
 // current directory.
-func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Logger) (forge.Forge, error) {
+func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Logger) (forge.Forge, forge.RepositoryID, error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
 	if err != nil {
-		return nil, errors.New("not in a Git repository")
+		return nil, nil, errors.New("not in a Git repository")
 	}
 
 	// If the repository is already initialized with gs,
@@ -120,11 +120,11 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Log
 	if remote == "" {
 		remotes, err := repo.ListRemotes(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("list remotes: %w", err)
+			return nil, nil, fmt.Errorf("list remotes: %w", err)
 		}
 		switch len(remotes) {
 		case 0:
-			return nil, errors.New("no remote set for repository")
+			return nil, nil, errors.New("no remote set for repository")
 
 		case 1:
 			remote = remotes[0]
@@ -133,19 +133,19 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Log
 			// Repository not initialized with gs
 			// and has multiple remotes.
 			// We can't guess the forge in this case.
-			return nil, errors.New("multiple remotes found: initialize with gs first")
+			return nil, nil, errors.New("multiple remotes found: initialize with gs first")
 		}
 	}
 
 	remoteURL, err := repo.RemoteURL(ctx, remote)
 	if err != nil {
-		return nil, fmt.Errorf("get remote URL: %w", err)
+		return nil, nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	forge, ok := forge.MatchForgeURL(forges, remoteURL)
+	forge, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
 	if !ok {
-		return nil, fmt.Errorf("no forge found for %s", remoteURL)
+		return nil, nil, fmt.Errorf("no forge found for %s", remoteURL)
 	}
 
-	return forge, nil
+	return forge, repoID, nil
 }

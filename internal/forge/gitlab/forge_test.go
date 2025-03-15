@@ -187,16 +187,12 @@ func TestExtractRepoInfoErrors(t *testing.T) {
 }
 
 func TestChangeURL(t *testing.T) {
-	f := Forge{Options: Options{URL: "https://gitlab.com"}}
+	repoID := RepositoryID{
+		url:   DefaultURL,
+		owner: "example",
+		name:  "repo",
+	}
 
-	t.Run("Valid", func(t *testing.T) {
-		got, err := f.ChangeURL("https://gitlab.com/example/repo", &MR{Number: 42})
-		require.NoError(t, err)
-		assert.Equal(t, "https://gitlab.com/example/repo/-/merge_requests/42", got)
-	})
-
-	t.Run("Invalid", func(t *testing.T) {
-		_, err := f.ChangeURL("https://notgitlab.com/example/repo", &MR{Number: 42})
-		require.Error(t, err)
-	})
+	got := repoID.ChangeURL(&MR{Number: 42})
+	assert.Equal(t, "https://gitlab.com/example/repo/-/merge_requests/42", got)
 }

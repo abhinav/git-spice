@@ -78,38 +78,48 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("load branches: %w", err)
 	}
 
-	var remoteURL string
+	var repoID forge.RepositoryID
 	if cmd.ChangeFormat == "url" {
-		if remote, err := store.Remote(); err == nil {
-			remoteURL, err = repo.RemoteURL(ctx, remote)
+		err := func() error {
+			remote, err := store.Remote()
 			if err != nil {
-				log.Warn("Could not get remote URL", "error", err)
+				// No remote to match against. Not an error.
+				return nil
 			}
+
+			remoteURL, err := repo.RemoteURL(ctx, remote)
+			if err != nil {
+				return fmt.Errorf("get remote URL: %w", err)
+			}
+
+			var ok bool
+			_, repoID, ok = forge.MatchRemoteURL(forges, remoteURL)
+			if !ok {
+				return fmt.Errorf("no forge matches remote URL %q", remoteURL)
+			}
+
+			return nil
+		}()
+		if err != nil {
+			log.Warn("Could not find information about the remote", "error", err)
 		}
 	}
 
 	// changeURL queries the forge for the URL of a change request.
-	changeURL := func(forgeID string, changeID forge.ChangeID) string {
-		f, ok := forges.Lookup(forgeID)
-		if !ok {
-			// Impossible but just in case.
+	changeURL := func(changeID forge.ChangeID) string {
+		if repoID == nil {
+			// No forge to query against. Just return the change ID.
 			return changeID.String()
 		}
 
-		url, err := f.ChangeURL(remoteURL, changeID)
-		if err != nil {
-			log.Warn("Could not determine URL for change %v: %v", changeID, err)
-			return changeID.String()
-		}
-
-		return url
+		return repoID.ChangeURL(changeID)
 	}
 
 	type branchInfo struct {
-		Index  int
-		Name   string
-		Base   string
-		Change forge.ChangeMetadata
+		Index    int
+		Name     string
+		Base     string
+		ChangeID forge.ChangeID
 
 		Commits []git.CommitDetail
 		Aboves  []int
@@ -119,9 +129,12 @@ func (cmd *branchLogCmd) run(
 	infoIdxByName := make(map[string]int, len(allBranches))
 	for _, branch := range allBranches {
 		info := &branchInfo{
-			Name:   branch.Name,
-			Base:   branch.Base,
-			Change: branch.Change,
+			Name: branch.Name,
+			Base: branch.Base,
+		}
+
+		if branch.Change != nil {
+			info.ChangeID = branch.Change.ChangeID()
 		}
 
 		if opts.Commits {
@@ -208,12 +221,12 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_branchStyle.Render(b.Name))
 			}
 
-			if c := b.Change; c != nil {
+			if cid := b.ChangeID; cid != nil {
 				switch cmd.ChangeFormat {
 				case "id", "":
-					_, _ = fmt.Fprintf(&o, " (%v)", c.ChangeID())
+					_, _ = fmt.Fprintf(&o, " (%v)", cid)
 				case "url":
-					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(c.ForgeID(), c.ChangeID()))
+					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(cid))
 				default:
 					must.Failf("unknown change format: %v", cmd.ChangeFormat)
 				}
