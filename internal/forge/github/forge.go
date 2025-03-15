@@ -50,6 +50,13 @@ type Forge struct {
 
 var _ forge.Forge = (*Forge)(nil)
 
+func (f *Forge) logger() *log.Logger {
+	if f.Log == nil {
+		return log.New(io.Discard)
+	}
+	return f.Log
+}
+
 // URL returns the base URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) URL() string {
@@ -81,35 +88,24 @@ func (*Forge) ID() string { return "github" }
 // CLIPlugin returns the CLI plugin for the GitHub Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// MatchURL reports whether the given URL is a GitHub URL.
-func (f *Forge) MatchURL(remoteURL string) bool {
-	_, _, err := extractRepoInfo(f.URL(), remoteURL)
-	return err == nil
-}
-
-// ChangeURL returns a URL to view a change on GitHub.
-// Returns an empty string if the URL is not a valid GitHub URL.
-func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
-	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
-	}
-
-	pr := mustPR(id)
-	return fmt.Sprintf("%s/%s/%s/pull/%d", f.URL(), owner, repo, pr.Number), nil
-}
-
-// OpenURL opens a GitHub repository from a remote URL.
-// Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitHub URL.
-func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
-	if f.Log == nil {
-		f.Log = log.New(io.Discard)
-	}
-
+// ParseRemoteURL parses a GitHub remote URL and returns a [RepositoryID]
+// if the URL matches.
+func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
+
+	return &RepositoryID{
+		url:   f.URL(),
+		owner: owner,
+		name:  repo,
+	}, nil
+}
+
+// OpenRepository opens the GitHub repository that the given ID points to.
+func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
+	rid := mustRepositoryID(id)
 
 	tokenSource := tok.(*AuthenticationToken).tokenSource()
 	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
@@ -117,7 +113,35 @@ func (f *Forge) OpenURL(ctx context.Context, tok forge.AuthenticationToken, remo
 		return nil, fmt.Errorf("create GitHub client: %w", err)
 	}
 
-	return newRepository(ctx, f, owner, repo, f.Log, ghc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), ghc, nil)
+}
+
+// RepositoryID is a unique identifier for a GitHub repository.
+type RepositoryID struct {
+	url   string // required
+	owner string // required
+	name  string // required
+}
+
+var _ forge.RepositoryID = (*RepositoryID)(nil)
+
+func mustRepositoryID(id forge.RepositoryID) *RepositoryID {
+	if rid, ok := id.(*RepositoryID); ok {
+		return rid
+	}
+	panic(fmt.Sprintf("expected *RepositoryID, got %T", id))
+}
+
+// String returns a human-readable name for the repository ID.
+func (rid *RepositoryID) String() string {
+	return fmt.Sprintf("%s/%s", rid.owner, rid.name)
+}
+
+// ChangeURL returns a URL to view a change on GitHub.
+func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
+	owner, repo := rid.owner, rid.name
+	prNum := mustPR(id).Number
+	return fmt.Sprintf("%s/%s/%s/pull/%d", rid.url, owner, repo, prNum)
 }
 
 func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.TokenSource) (*githubv4.Client, error) {

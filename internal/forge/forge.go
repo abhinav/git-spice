@@ -54,51 +54,55 @@ func (r *Registry) Lookup(id string) (Forge, bool) {
 	return f.(Forge), true
 }
 
-// MatchForgeURL attempts to match the given remote URL with a registered forge.
-// Returns the matched forge and true if a match was found.
-func MatchForgeURL(r *Registry, remoteURL string) (forge Forge, ok bool) {
+// MatchRemoteURL attempts to match the given remote URL with a registered forge.
+// Returns the matched forge, and information about the matched repository.
+func MatchRemoteURL(r *Registry, remoteURL string) (forge Forge, rid RepositoryID, ok bool) {
 	for f := range r.All() {
-		if f.MatchURL(remoteURL) {
-			return f, true
+		rid, err := f.ParseRemoteURL(remoteURL)
+		if err == nil {
+			return f, rid, true
 		}
 	}
-	return nil, false
+	return nil, nil, false
 }
 
 // ErrUnsupportedURL indicates that the given remote URL
 // does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
 
 // Forge is a forge that hosts Git repositories.
 type Forge interface {
 	// ID reports a unique identifier for the forge, e.g. "github".
-	ID() string
+	ID() string // TODO: Rename to "slug" or "name" as that's more correct
 
 	// CLIPlugin returns a Kong plugin for this Forge.
+	//
+	// This will be installed into the application to provide
+	// additional Forge-specific flags or environment variable overrides.
+	//
 	// Return nil if the forge does not require any extra CLI flags.
 	CLIPlugin() any
-	// TODO: Perhaps some validation function for the flags?
 
-	// MatchURL reports whether the given remote URL is hosted on the forge.
-	MatchURL(remoteURL string) bool
+	// ParseRemoteURL extracts information about a Forge-hosted repository
+	// from the given remote URL, and returns a [RepositoryID] identifying it.
+	//
+	// Returns ErrUnsupportedURL if the remote URL does not match
+	// this forge.
+	//
+	// This operation should not make any network requests,
+	//
+	// For example, this would take "https://github.com/foo/bar.git"
+	// and return a GitHub RepositoryID for the repository "foo/bar".
+	ParseRemoteURL(remoteURL string) (RepositoryID, error)
 
-	// OpenURL opens a repository hosted on the Forge
-	// with the given remote URL.
-	//
-	// This will only be called if MatchURL reports true.
-	OpenURL(ctx context.Context, tok AuthenticationToken, remoteURL string) (Repository, error)
-
-	// ChangeURL returns the web URL for the given change ID hosted on the forge,
-	// given the remote URL of the repository.
-	//
-	// TODO(abhinav): This is a hack to work around the fact
-	// that OpenURL requires authentication.
-	//
-	// An upcoming change will allow separating "parsing" the forge URL
-	// and "opening" the remote repository.
-	ChangeURL(remoteURL string, changeID ChangeID) (string, error)
+	// OpenRepository opens the remote repository that the given ID points to.
+	OpenRepository(ctx context.Context, tok AuthenticationToken, repo RepositoryID) (Repository, error)
+	// TODO: For GitHub, to avoid looking up the GQLID for the repository
+	// every time, we need a layer of metadata that Open can provide
+	// that is persisted to the store alongside branch state,
+	// and used in follow-up Open calls to avoid looking it up again.
 
 	// ChangeTemplatePaths reports the case-insensitive paths at which
 	// it's possible to define change templates in the repository.
@@ -145,6 +149,20 @@ type Forge interface {
 // Implementations must embed this interface.
 type AuthenticationToken interface {
 	secret() // marker method
+}
+
+// RepositoryID is a unique identifier for a repository hosted on a Forge.
+//
+// It is cheap to calculate from the remote URL of the repository,
+// without performing any network requests.
+type RepositoryID interface {
+	// String reports a human-readable name for the repository,
+	// e.g. "foo/bar" for GitHub.
+	String() string
+
+	// ChangeURL returns the web URL for the given change ID hosted on the forge
+	// in this repository.
+	ChangeURL(changeID ChangeID) string
 }
 
 // Repository is a Git repository hosted on a forge.
