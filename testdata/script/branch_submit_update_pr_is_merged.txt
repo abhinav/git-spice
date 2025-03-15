@@ -57,11 +57,11 @@ Contents of feature 1
 New contents of feature 1
 
 -- golden/open.txt --
-┏━■ feat1 (#1) ◀
+┏━■ feat1 (#1) (pushed) ◀
 ┃   fabf34f feat1 (now)
 main
 -- golden/resubmit.txt --
-┏━■ feat1 (#2) ◀
+┏━■ feat1 (#2) (pushed) ◀
 ┃   514d04f Update feature 1 (now)
 main
 -- golden/changes.json --

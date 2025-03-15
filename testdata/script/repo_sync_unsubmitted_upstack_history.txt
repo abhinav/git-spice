@@ -49,7 +49,7 @@ feat 1
 -- repo/feat2.txt --
 feat 2
 -- golden/ls-after.txt --
-┏━■ feat2 (#2) ◀
+┏━■ feat2 (#2) (pushed) ◀
 main
 -- golden/final-comments.txt --
 - change: 1

@@ -77,7 +77,7 @@ feature 2
 * 1993921 (origin/main, main) feat1
 * 8b0535b Initial commit
 -- golden/repo-sync-ll.txt --
-┏━■ feat2 ◀
+┏━■ feat2 (pushed) ◀
 ┃   b3ed169 feat2 (now)
 main
 -- golden/repo-sync-graph-2.txt --

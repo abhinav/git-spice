@@ -130,16 +130,16 @@ feature2
 ┏━┻□ feature1
 main
 -- golden/ls-before-stack2.txt --
-    ┏━□ feature3 (#3)
-  ┏━┻□ feature2 (#2)
-┏━┻□ feature1 (#1)
+    ┏━□ feature3 (#3) (pushed)
+  ┏━┻□ feature2 (#2) (pushed)
+┏━┻□ feature1 (#1) (pushed)
 ┃ ┏━■ stack2feature2 ◀
 ┣━┻□ stack2feature1
 main
 -- golden/ls-after.txt --
-  ┏━□ feature3 (#3)
-  ┣━□ stack2feature2 (#5)
-┏━┻■ feature2 (#2) ◀
+  ┏━□ feature3 (#3) (pushed)
+  ┣━□ stack2feature2 (#5) (pushed)
+┏━┻■ feature2 (#2) (pushed) ◀
 main
 -- golden/submit-first-stack-comments.txt --
 - change: 1

@@ -78,11 +78,11 @@ feat 2 different
 -- extra/feat2-resolved.txt --
 feat 2 slightly different
 -- golden/ll-before.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━■ feat3 (#3) (pushed) ◀
     ┃   5844149 Add feat3 (now)
-  ┏━┻□ feat2 (#2)
+  ┏━┻□ feat2 (#2) (pushed)
   ┃    5ccaa46 Add feat2 (now)
-┏━┻□ feat1 (#1)
+┏━┻□ feat1 (#1) (pushed)
 ┃    5016e56 Add feat1 (now)
 main
 -- golden/ll-after.txt --

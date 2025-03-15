@@ -41,7 +41,7 @@ cmpenvJSON stdout $WORK/golden/pulls.json
 -- extra/feat1.txt --
 feature 1
 -- golden/ll.txt --
-┏━■ feat1 (#1) ◀
+┏━■ feat1 (#1) (pushed) ◀
 ┃   aa30b56 Add feature 1 (now)
 main
 -- golden/pulls.json --

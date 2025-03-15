@@ -44,7 +44,7 @@ feature 1
 feature 1 new
 
 -- golden/ll.txt --
-┏━■ feat1 (#1) ◀
+┏━■ feat1 (#1) (pushed) ◀
 ┃   b7f8335 update feature 1 (now)
 ┃   6731361 Add feature 1 (now)
 main

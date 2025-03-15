@@ -98,9 +98,9 @@ feature2
 ┏━┻□ feature1
 main
 -- golden/ls-after.txt --
-    ┏━□ feature2 (#2)
-  ┏━┻□ feature3 (#3)
-┏━┻□ feature4 (#4)
+    ┏━□ feature2 (#2) (pushed)
+  ┏━┻□ feature3 (#3) (pushed)
+┏━┻□ feature4 (#4) (pushed)
 main ◀
 -- golden/initial-comments.txt --
 - change: 1

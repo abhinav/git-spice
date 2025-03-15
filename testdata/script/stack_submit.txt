@@ -228,7 +228,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
 -- golden/ls.txt --
-    ┏━□ feature3 (#3)
-  ┏━┻□ feature2 (#2)
-┏━┻■ feature1 (#1) ◀
+    ┏━□ feature3 (#3) (pushed)
+  ┏━┻□ feature2 (#2) (pushed)
+┏━┻■ feature1 (#1) (pushed) ◀
 main

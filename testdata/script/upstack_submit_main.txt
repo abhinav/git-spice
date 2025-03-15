@@ -80,10 +80,10 @@ INF Created #4: $SHAMHUB_URL/alice/example/change/4
 ┏━┻□ feature1
 main
 -- golden/ls-after.txt --
-  ┏━□ feature2 (#2)
-  ┃ ┏━□ feature4 (#4)
-  ┣━┻□ feature3 (#3)
-┏━┻□ feature1 (#1)
+  ┏━□ feature2 (#2) (pushed)
+  ┃ ┏━□ feature4 (#4) (pushed)
+  ┣━┻□ feature3 (#3) (pushed)
+┏━┻□ feature1 (#1) (pushed)
 main ◀
 -- golden/changes.json --
 [

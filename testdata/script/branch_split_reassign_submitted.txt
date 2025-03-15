@@ -105,11 +105,11 @@ main
 ┃    1578492 feat1 (now)
 main
 -- golden/ll-final.txt --
-    ┏━□ features (#3)
+    ┏━□ features (#3) (pushed)
     ┃   d543265 feat3 (now)
-  ┏━┻□ feat2 (#2)
+  ┏━┻□ feat2 (#2) (pushed)
   ┃    4432c24 feat2 (now)
-┏━┻■ feat1 (#1) ◀
+┏━┻■ feat1 (#1) (pushed) ◀
 ┃    215a01b new feat 1 (now)
 ┃    1578492 feat1 (now)
 main
