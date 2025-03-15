@@ -41,6 +41,9 @@ var (
 				Foreground(ui.Gray).
 				SetString(" (needs restack)")
 
+	_pushedStyle = ui.NewStyle().
+			Foreground(ui.Green)
+
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
 			Bold(true).
@@ -51,6 +54,7 @@ var (
 type branchLogCmd struct {
 	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
 	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote."`
 }
 
 type branchLogOptions struct {
@@ -88,6 +92,13 @@ func (cmd *branchLogCmd) run(
 		}
 	}
 
+	// Get the remote for checking branch sync status
+	remote, err := store.Remote()
+	if err != nil {
+		log.Warn("Could not get remote", "error", err)
+		remote = ""
+	}
+
 	// changeURL queries the forge for the URL of a change request.
 	changeURL := func(forgeID string, changeID forge.ChangeID) string {
 		f, ok := forges.Lookup(forgeID)
@@ -113,6 +124,9 @@ func (cmd *branchLogCmd) run(
 
 		Commits []git.CommitDetail
 		Aboves  []int
+
+		// IsPushed indicates whether the branch is synced with its remote
+		IsPushed bool
 	}
 
 	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
@@ -122,6 +136,26 @@ func (cmd *branchLogCmd) run(
 			Name:   branch.Name,
 			Base:   branch.Base,
 			Change: branch.Change,
+		}
+
+		// Check if branch is synced with remote
+		if cmd.PushedFormat && remote != "" {
+			// Try to get the upstream branch name
+			upstream := ""
+			if branch.UpstreamBranch != "" {
+				upstream = remote + "/" + branch.UpstreamBranch
+			} else {
+				upstream = remote + "/" + branch.Name
+			}
+
+			// Check if the remote branch exists
+			remoteHash, err := repo.PeelToCommit(ctx, upstream)
+			if err == nil {
+				// Check if local and remote are the same
+				info.IsPushed = branch.Head == remoteHash
+
+				}
+			}
 		}
 
 		if opts.Commits {
@@ -216,6 +250,12 @@ func (cmd *branchLogCmd) run(
 					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(c.ForgeID(), c.ChangeID()))
 				default:
 					must.Failf("unknown change format: %v", cmd.ChangeFormat)
+				}
+			}
+
+			if cmd.PushedFormat {
+				if b.IsPushed {
+					o.WriteString(_pushedStyle.SetString(" (pushed)").String())
 				}
 			}
 

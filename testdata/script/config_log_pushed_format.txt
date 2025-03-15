@@ -1,0 +1,71 @@
+# log with log.pushedFormat config
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create a stack: feat1 -> feat2 -> feat3
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+gs bc feat3 -m 'feat3'
+
+# go back to feat1, and create feat4 and feat5
+gs bco feat1
+gs bc feat4 -m 'feat4'
+gs bc feat5 -m 'feat5'
+
+gs bco feat3
+
+# log without the spice.log.all option.
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+gs ll
+cmp stderr $WORK/golden/ll-before.txt
+
+# log with the spice.log.all option.
+git config spice.log.all true
+
+gs ls
+cmp stderr $WORK/golden/ls-after.txt
+
+gs ll
+cmp stderr $WORK/golden/ll-after.txt
+
+-- golden/ls-before.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/ll-before.txt --
+    ┏━■ feat3 ◀
+    ┃   7b5eba4 feat3 (now)
+  ┏━┻□ feat2
+  ┃    562c8c6 feat2 (now)
+┏━┻□ feat1
+┃    ecc906e feat1 (now)
+main
+-- golden/ls-after.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+  ┃ ┏━□ feat5
+  ┣━┻□ feat4
+┏━┻□ feat1
+main
+-- golden/ll-after.txt --
+    ┏━■ feat3 ◀
+    ┃   7b5eba4 feat3 (now)
+  ┏━┻□ feat2
+  ┃    562c8c6 feat2 (now)
+  ┃ ┏━□ feat5
+  ┃ ┃   874abc7 feat5 (now)
+  ┣━┻□ feat4
+  ┃    0eb14d6 feat4 (now)
+┏━┻□ feat1
+┃    ecc906e feat1 (now)
+main
