@@ -22,19 +22,15 @@ gofumpt-linux-x86_64 = "sha256:6ff459c1dcae3b0b00844c1a5a4a5b0f547237d8a4f3624aa
 gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77aa354d6aa20b045a"
 
 [tools.golangci-lint]
-version = "1.64.6"
+version = "1.64.7"
 backend = "aqua:golangci/golangci-lint"
 
-[tools.golangci-lint.checksums]
-"golangci-lint-1.64.6-linux-amd64.tar.gz" = "sha256:71e290acbacb7b3ba4f68f0540fb74dc180c4336ac8a6f3bdcd7fcc48b15148d"
-
 [tools.gotestsum]
-version = "1.12.0"
+version = "1.12.1"
 backend = "aqua:gotestyourself/gotestsum"
 
 [tools.gotestsum.checksums]
-"gotestsum_1.12.0_darwin_arm64.tar.gz" = "sha256:c5ffdc9054644c4db365de2197a12d21eff48b88a9ad20e3e0c29346802d0b41"
-"gotestsum_1.12.0_linux_amd64.tar.gz" = "sha256:a50939fcfdfbc052bf97ff074c7fd8bcde1745be4a365d12d79311c293f12ae7"
+"gotestsum_1.12.1_darwin_arm64.tar.gz" = "sha256:db1cc59e8c7dedbf2d8b1427b451e4445d4467207a99e534b5b6b6aca8ddb9ed"
 
 [tools.requiredfield]
 version = "0.4.0"
