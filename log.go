@@ -92,16 +92,6 @@ func (cmd *branchLogCmd) run(
 		}
 	}
 
-	var remote string
-
-	if cmd.PushedFormat {
-		// Get the remote for checking branch sync status
-		remote, err = store.Remote()
-		if err != nil {
-			remote = ""
-		}
-	}
-
 	// changeURL queries the forge for the URL of a change request.
 	changeURL := func(forgeID string, changeID forge.ChangeID) string {
 		f, ok := forges.Lookup(forgeID)
@@ -130,6 +120,15 @@ func (cmd *branchLogCmd) run(
 		Aboves  []int
 	}
 
+	// Get the remote name for checking branch sync status
+	var remote string
+
+	if cmd.PushedFormat {
+		if remote, err = store.Remote(); err != nil {
+			remote = ""
+		}
+	}
+
 	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
 	infoIdxByName := make(map[string]int, len(allBranches))
 	for _, branch := range allBranches {
@@ -139,12 +138,10 @@ func (cmd *branchLogCmd) run(
 			Change: branch.Change,
 		}
 
-		if cmd.PushedFormat && remote != "" {
-			if branch.UpstreamBranch != "" {
-				upstream := remote + "/" + branch.UpstreamBranch
-				if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
-					info.IsPushed = branch.Head == hash
-				}
+		if cmd.PushedFormat && remote != "" && branch.UpstreamBranch != "" {
+			upstream := remote + "/" + branch.UpstreamBranch
+			if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
+				info.IsPushed = branch.Head == hash
 			}
 		}
 
@@ -243,10 +240,8 @@ func (cmd *branchLogCmd) run(
 				}
 			}
 
-			if cmd.PushedFormat {
-				if b.IsPushed {
-					o.WriteString(_pushedStyle.SetString(" (pushed)").String())
-				}
+			if cmd.PushedFormat && b.IsPushed {
+				o.WriteString(_pushedStyle.SetString(" (pushed)").String())
 			}
 
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
