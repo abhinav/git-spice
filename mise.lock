@@ -25,12 +25,16 @@ gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77
 version = "1.64.7"
 backend = "aqua:golangci/golangci-lint"
 
+[tools.golangci-lint.checksums]
+"golangci-lint-1.64.7-linux-amd64.tar.gz" = "sha256:dada4095eab53f868f931840f04b99cb4be654e45f50d4d3b2832dc9ad3bede8"
+
 [tools.gotestsum]
 version = "1.12.1"
 backend = "aqua:gotestyourself/gotestsum"
 
 [tools.gotestsum.checksums]
 "gotestsum_1.12.1_darwin_arm64.tar.gz" = "sha256:db1cc59e8c7dedbf2d8b1427b451e4445d4467207a99e534b5b6b6aca8ddb9ed"
+"gotestsum_1.12.1_linux_amd64.tar.gz" = "sha256:488e645b87169935095980d89c133c9d9b246196ac25c70099614694c0fb6d39"
 
 [tools.requiredfield]
 version = "0.4.0"
