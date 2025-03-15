@@ -54,7 +54,7 @@ var (
 type branchLogCmd struct {
 	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
 	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
-	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote."`
+	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote." default:"true"`
 }
 
 type branchLogOptions struct {
@@ -92,11 +92,14 @@ func (cmd *branchLogCmd) run(
 		}
 	}
 
-	// Get the remote for checking branch sync status
-	remote, err := store.Remote()
-	if err != nil {
-		log.Warn("Could not get remote", "error", err)
-		remote = ""
+	var remote string
+
+	if cmd.PushedFormat {
+		// Get the remote for checking branch sync status
+		remote, err = store.Remote()
+		if err != nil {
+			remote = ""
+		}
 	}
 
 	// changeURL queries the forge for the URL of a change request.
@@ -117,16 +120,14 @@ func (cmd *branchLogCmd) run(
 	}
 
 	type branchInfo struct {
-		Index  int
-		Name   string
-		Base   string
-		Change forge.ChangeMetadata
+		Index    int
+		Name     string
+		Base     string
+		Change   forge.ChangeMetadata
+		IsPushed bool
 
 		Commits []git.CommitDetail
 		Aboves  []int
-
-		// IsPushed indicates whether the branch is synced with its remote
-		IsPushed bool
 	}
 
 	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
@@ -138,22 +139,11 @@ func (cmd *branchLogCmd) run(
 			Change: branch.Change,
 		}
 
-		// Check if branch is synced with remote
 		if cmd.PushedFormat && remote != "" {
-			// Try to get the upstream branch name
-			upstream := ""
 			if branch.UpstreamBranch != "" {
-				upstream = remote + "/" + branch.UpstreamBranch
-			} else {
-				upstream = remote + "/" + branch.Name
-			}
-
-			// Check if the remote branch exists
-			remoteHash, err := repo.PeelToCommit(ctx, upstream)
-			if err == nil {
-				// Check if local and remote are the same
-				info.IsPushed = branch.Head == remoteHash
-
+				upstream := remote + "/" + branch.UpstreamBranch
+				if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
+					info.IsPushed = branch.Head == hash
 				}
 			}
 		}
