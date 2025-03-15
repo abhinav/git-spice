@@ -26,6 +26,7 @@ version = "1.64.7"
 backend = "aqua:golangci/golangci-lint"
 
 [tools.golangci-lint.checksums]
+"golangci-lint-1.64.7-darwin-arm64.tar.gz" = "sha256:9ff4b40bd4c8cd199d010c0e96e424416c32827fce0fb7eedebb48294106623b"
 "golangci-lint-1.64.7-linux-amd64.tar.gz" = "sha256:dada4095eab53f868f931840f04b99cb4be654e45f50d4d3b2832dc9ad3bede8"
 
 [tools.gotestsum]
