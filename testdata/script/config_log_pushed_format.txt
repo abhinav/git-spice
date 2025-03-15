@@ -1,4 +1,4 @@
-# log with log.pushedFormat config
+# 'gs log' commands support the 'log.pushedFormat' config
 
 as 'Test <test@example.com>'
 at '2024-08-07T06:05:04Z'
@@ -7,6 +7,16 @@ mkdir repo
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
 gs repo init
 
 # create a stack: feat1 -> feat2 -> feat3
@@ -16,7 +26,7 @@ gs bc feat3 -m 'feat3'
 
 # go back to feat1 and submit it
 gs bco feat1
-gs branch submit
+gs branch submit --fill
 
 # log without the spice.log.pushedFormat option.
 git config spice.log.pushedFormat false
@@ -36,34 +46,28 @@ gs ll
 cmp stderr $WORK/golden/ll-pushed-format-true.txt
 
 -- golden/ls-pushed-format-false.txt --
-    ┏━■ feat3 ◀
+    ┏━□ feat3
   ┏━┻□ feat2
-┏━┻□ feat1
+┏━┻■ feat1 (#1) ◀
 main
 -- golden/ll-pushed-format-false.txt --
-    ┏━■ feat3 ◀
+    ┏━□ feat3
     ┃   7b5eba4 feat3 (now)
   ┏━┻□ feat2
   ┃    562c8c6 feat2 (now)
-┏━┻□ feat1
+┏━┻■ feat1 (#1) ◀
 ┃    ecc906e feat1 (now)
 main
 -- golden/ls-pushed-format-true.txt --
-    ┏━■ feat3 ◀
+    ┏━□ feat3
   ┏━┻□ feat2
-  ┃ ┏━□ feat5
-  ┣━┻□ feat4
-┏━┻□ feat1
+┏━┻■ feat1 (#1) (pushed) ◀
 main
 -- golden/ll-pushed-format-true.txt --
-    ┏━■ feat3 ◀
+    ┏━□ feat3
     ┃   7b5eba4 feat3 (now)
   ┏━┻□ feat2
   ┃    562c8c6 feat2 (now)
-  ┃ ┏━□ feat5
-  ┃ ┃   874abc7 feat5 (now)
-  ┣━┻□ feat4
-  ┃    0eb14d6 feat4 (now)
-┏━┻□ feat1
+┏━┻■ feat1 (#1) (pushed) ◀
 ┃    ecc906e feat1 (now)
 main
