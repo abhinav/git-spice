@@ -163,7 +163,6 @@ Use with the -a/--all flag to show all tracked branches.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
-* `--pushed-format` ([:material-wrench:{ .middle title="spice.log.pushedFormat" }](/cli/config.md#spicelogpushedformat)): Show indicator for branches that are synced with their remote.
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.pushedFormat](/cli/config.md#spicelogpushedformat)
 
@@ -182,7 +181,6 @@ Use with the -a/--all flag to show all tracked branches.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
-* `--pushed-format` ([:material-wrench:{ .middle title="spice.log.pushedFormat" }](/cli/config.md#spicelogpushedformat)): Show indicator for branches that are synced with their remote.
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.pushedFormat](/cli/config.md#spicelogpushedformat)
 
