@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding"
 	"errors"
 	"fmt"
 	"os"
@@ -42,10 +43,9 @@ var (
 				Foreground(ui.Gray).
 				SetString(" (needs restack)")
 
-	_needsPushStyle = ui.NewStyle().
-			Foreground(ui.Yellow).
-			Faint(true).
-			SetString(" (needs push)")
+	_pushStatusStyle = ui.NewStyle().
+				Foreground(ui.Yellow).
+				Faint(true)
 
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
@@ -57,9 +57,8 @@ var (
 type branchLogCmd struct {
 	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
 
-	ChangeFormat     string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
-	PushStatusFormat bool   `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
-	// TODO(abhinav): Add an option to set this to "aheadBehind" instead.
+	ChangeFormat     string           `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 }
 
 type branchLogOptions struct {
@@ -129,10 +128,15 @@ func (cmd *branchLogCmd) run(
 	}
 
 	type branchInfo struct {
-		Index     int
-		Name      string
-		Base      string
-		ChangeID  forge.ChangeID
+		Index    int
+		Name     string
+		Base     string
+		ChangeID forge.ChangeID
+
+		// Number of commits ahead of the base and behind the head.
+		Ahead, Behind int
+
+		// Whether the branch needs to be pushed to its upstream.
 		NeedsPush bool
 
 		Commits []git.CommitDetail
@@ -151,10 +155,13 @@ func (cmd *branchLogCmd) run(
 			info.ChangeID = branch.Change.ChangeID()
 		}
 
-		if cmd.PushStatusFormat && branch.UpstreamBranch != "" {
+		if cmd.PushStatusFormat.Enabled() && branch.UpstreamBranch != "" {
 			upstream := getRemote() + "/" + branch.UpstreamBranch
-			if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
-				info.NeedsPush = branch.Head != hash
+			ahead, behind, err := repo.CommitAheadBehind(ctx, upstream, string(branch.Head))
+			if err == nil {
+				info.Ahead = ahead
+				info.Behind = behind
+				info.NeedsPush = ahead > 0 || behind > 0
 			}
 		}
 
@@ -257,9 +264,7 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_needsRestackStyle.String())
 			}
 
-			if cmd.PushStatusFormat && b.NeedsPush {
-				o.WriteString(_needsPushStyle.String())
-			}
+			cmd.PushStatusFormat.FormatTo(&o, b.Ahead, b.Behind, b.NeedsPush)
 
 			if b.Name == currentBranch {
 				o.WriteString(" " + _markerStyle.String())
@@ -297,4 +302,76 @@ func (cmd *branchLogCmd) run(
 
 	_, err = fmt.Fprint(os.Stderr, s.String())
 	return err
+}
+
+// pushStatusFormat enumerates the possible values for the pushStatusFormat config.
+type pushStatusFormat int
+
+const (
+	pushStatusEnabled     pushStatusFormat = iota // "(needs push)"
+	pushStatusDisabled                            // show nothing
+	pushStatusAheadBehind                         // show number of commits ahead/behind
+)
+
+var _ encoding.TextUnmarshaler = (*pushStatusFormat)(nil)
+
+func (f *pushStatusFormat) UnmarshalText(bs []byte) error {
+	switch strings.ToLower(string(bs)) {
+	case "true", "1", "yes":
+		*f = pushStatusEnabled
+	case "false", "0", "no":
+		*f = pushStatusDisabled
+	case "aheadbehind":
+		*f = pushStatusAheadBehind
+	default:
+		return fmt.Errorf("invalid value %q: expected true, false, or aheadbehind", string(bs))
+	}
+	return nil
+}
+
+func (f pushStatusFormat) String() string {
+	switch f {
+	case pushStatusEnabled:
+		return "true"
+	case pushStatusDisabled:
+		return "false"
+	case pushStatusAheadBehind:
+		return "aheadBehind"
+	default:
+		return "unknown"
+	}
+}
+
+func (f pushStatusFormat) Enabled() bool {
+	return f == pushStatusEnabled || f == pushStatusAheadBehind
+}
+
+func (f pushStatusFormat) FormatTo(sb *strings.Builder, ahead, behind int, needsPush bool) {
+	switch f {
+	case pushStatusEnabled:
+		if needsPush {
+			sb.WriteString(_pushStatusStyle.Render(" (needs push)"))
+		}
+
+	case pushStatusAheadBehind:
+		if ahead == 0 && behind == 0 {
+			break
+		}
+
+		// TODO: Should we support changing these symbols?
+		var ab strings.Builder
+		ab.WriteString(" (")
+		if ahead > 0 {
+			_, _ = fmt.Fprintf(&ab, "⇡%d", ahead)
+		}
+		if behind > 0 {
+			_, _ = fmt.Fprintf(&ab, "⇣%d", behind)
+		}
+		ab.WriteString(")")
+
+		sb.WriteString(_pushStatusStyle.Render(ab.String()))
+
+	case pushStatusDisabled:
+		// do nothing
+	}
 }

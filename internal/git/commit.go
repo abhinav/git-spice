@@ -276,6 +276,31 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 	return bodies, nil
 }
 
+// CommitAheadBehind reports how many commits head is of upstream.
+// That is, for upstream...head,
+// it returns the number of commits in head that are not in upstream,
+// and the number of commits in upstream that are not in head.
+func (r *Repository) CommitAheadBehind(ctx context.Context, upstream, head string) (ahead, behind int, err error) {
+	// We'll use the command:
+	//	git rev-list --count --left-right upstream...head
+	// This gives output in the form:
+	//	<behind> TAB <ahead>
+	//
+	// Reminder that left is "behind" because that's the number of commits
+	// in upstream but not in head.
+	str, err := r.gitCmd(ctx, "rev-list", "--count", "--left-right", upstream+"..."+head, "--").OutputString(r.exec)
+	if err != nil {
+		return 0, 0, fmt.Errorf("rev-list: %w", err)
+	}
+	str = strings.TrimSpace(str)
+
+	if _, err := fmt.Sscanf(str, "%d\t%d", &behind, &ahead); err != nil {
+		return 0, 0, fmt.Errorf("parse %q: %w", str, err)
+	}
+
+	return ahead, behind, nil
+}
+
 func splitNullByte(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
