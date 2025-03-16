@@ -182,7 +182,7 @@ Use with the -a/--all flag to show all tracked branches.
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
 
-**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat)
+**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.pushedFormat](/cli/config.md#spicepushedformat)
 
 ## Stack
 
