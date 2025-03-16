@@ -253,12 +253,12 @@ func (cmd *branchLogCmd) run(
 				}
 			}
 
-			if cmd.PushedFormat && b.IsPushed {
-				o.WriteString(_pushedStyle.SetString(" (pushed)").String())
-			}
-
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
 				o.WriteString(_needsRestackStyle.String())
+			}
+
+			if cmd.PushedFormat && b.IsPushed {
+				o.WriteString(_pushedStyle.SetString(" (pushed)").String())
 			}
 
 			if b.Name == currentBranch {
