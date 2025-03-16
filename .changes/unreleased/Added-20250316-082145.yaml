@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  log: Add `spice.log.pushedFormat = (true | false)` to show whether a branch is
+  pushed to the remote. The default is `true`.
+time: 2025-03-16T08:21:45.085254-07:00
