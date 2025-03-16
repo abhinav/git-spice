@@ -7,14 +7,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRegister(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockForge(ctrl)
+	mockForge.EXPECT().ID().Return("a").AnyTimes()
+
+	mockHandle := forgetest.NewMockRepositoryID(ctrl)
+	mockForge.EXPECT().ParseRemoteURL(gomock.Any()).
+		DoAndReturn(func(url string) (forge.RepositoryID, error) {
+			if strings.HasPrefix(url, "https://example.com/") {
+				return mockHandle, nil
+			}
+
+			return nil, forge.ErrUnsupportedURL
+		}).AnyTimes()
+
 	var registry forge.Registry
-	defer registry.Register(stubForge{
-		id:      "a",
-		baseURL: "https://example.com",
-	})()
+	defer registry.Register(mockForge)()
 
 	t.Run("All", func(t *testing.T) {
 		var ok bool
@@ -39,30 +53,16 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("MatchForgeURL", func(t *testing.T) {
-		f, ok := forge.MatchForgeURL(&registry, "https://example.com/foo")
+		f, h, ok := forge.MatchRemoteURL(&registry, "https://example.com/foo")
 		assert.True(t, ok, "forge not found")
 		assert.Equal(t, "a", f.ID(), "forge ID mismatch")
+		assert.Same(t, mockHandle, h, "repository ID mismatch")
 
 		t.Run("NoMatch", func(t *testing.T) {
-			_, ok := forge.MatchForgeURL(&registry, "https://example.org/foo")
+			_, _, ok := forge.MatchRemoteURL(&registry, "https://example.org/foo")
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})
-}
-
-type stubForge struct {
-	forge.Forge
-
-	id      string
-	baseURL string
-}
-
-func (f stubForge) ID() string {
-	return f.id
-}
-
-func (f stubForge) MatchURL(remoteURL string) bool {
-	return strings.HasPrefix(remoteURL, f.baseURL+"/")
 }
 
 func TestChangeState(t *testing.T) {

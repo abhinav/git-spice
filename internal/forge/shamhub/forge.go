@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/must"
 )
 
 // Options defines CLI options for the ShamHub forge.
@@ -48,26 +50,71 @@ func (*Forge) ID() string { return "shamhub" }
 // CLIPlugin registers additional CLI flags for the ShamHub forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// MatchURL reports whether the given URL is a ShamHub URL.
-func (f *Forge) MatchURL(remoteURL string) bool {
+// ParseRemoteURL parses the given remote URL and returns a [RepositoryID]
+// for the repository if it matches the ShamHub URL.
+func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 	if f.URL == "" {
-		// ShamHub is not initialized.
-		return false
+		return nil, fmt.Errorf("%w: ShamHub is not initialized", forge.ErrUnsupportedURL)
 	}
 
-	_, ok := strings.CutPrefix(remoteURL, f.URL)
-	return ok
+	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+	}
+
+	return &RepositoryID{
+		url:   f.URL,
+		owner: owner,
+		repo:  repo,
+	}, nil
+}
+
+// OpenRepository opens the repository that this repository ID points to.
+func (f *Forge) OpenRepository(_ context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
+	must.NotBeBlankf(f.URL, "URL is required")
+	must.NotBeBlankf(f.APIURL, "API URL is required")
+
+	rid := id.(*RepositoryID)
+	tok := token.(*AuthenticationToken).tok
+	client := f.jsonHTTPClient()
+	client.headers = map[string]string{
+		"Authentication-Token": tok,
+	}
+
+	apiURL, err := url.Parse(f.APIURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse API URL: %w", err)
+	}
+
+	return &forgeRepository{
+		forge:  f,
+		owner:  rid.owner,
+		repo:   rid.repo,
+		apiURL: apiURL,
+		log:    f.Log,
+		client: client,
+	}, nil
+}
+
+// RepositoryID is a unique identifier for a ShamHub repository.
+type RepositoryID struct {
+	url   string // required
+	owner string // required
+	repo  string // required
+}
+
+var _ forge.RepositoryID = (*RepositoryID)(nil)
+
+// String returns a human-readable name for the repository ID.
+func (rid *RepositoryID) String() string {
+	return fmt.Sprintf("%s/%s", rid.owner, rid.repo)
 }
 
 // ChangeURL returns the URL at which the given change can be viewed.
-func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
-	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
-	}
-
+func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	cr := id.(ChangeID)
-	return fmt.Sprintf("%s/%s/%s/changes/%v", f.URL, owner, repo, int(cr)), nil
+
+	return fmt.Sprintf("%s/%s/%s/changes/%v", rid.url, rid.owner, rid.repo, int(cr))
 }
 
 func extractRepoInfo(forgeURL, remoteURL string) (owner, repo string, err error) {

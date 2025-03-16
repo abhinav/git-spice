@@ -51,6 +51,13 @@ type Forge struct {
 
 var _ forge.Forge = (*Forge)(nil)
 
+func (f *Forge) logger() *log.Logger {
+	if f.Log == nil {
+		return log.New(io.Discard)
+	}
+	return f.Log
+}
+
 // URL returns the base URL configured for the GitLab Forge
 // or the default URL if none is set.
 func (f *Forge) URL() string {
@@ -69,41 +76,62 @@ func (*Forge) ID() string { return "gitlab" }
 // CLIPlugin returns the CLI plugin for the GitLab Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// MatchURL reports whether the given URL is a GitLab URL.
-func (f *Forge) MatchURL(remoteURL string) bool {
-	_, _, err := extractRepoInfo(f.URL(), remoteURL)
-	return err == nil
-}
-
-// ChangeURL returns the URL for a Change hosted on GitLab.
-func (f *Forge) ChangeURL(remoteURL string, id forge.ChangeID) (string, error) {
-	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
-	if err != nil {
-		return "", fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
-	}
-
-	mr := mustMR(id)
-	return fmt.Sprintf("%s/%s/%s/-/merge_requests/%v", f.URL(), owner, repo, mr.Number), nil
-}
-
-// OpenURL opens a GitLab repository from a remote URL.
-// Returns [forge.ErrUnsupportedURL] if the URL is not a valid GitLab URL.
-func (f *Forge) OpenURL(ctx context.Context, token forge.AuthenticationToken, remoteURL string) (forge.Repository, error) {
-	if f.Log == nil {
-		f.Log = log.New(io.Discard)
-	}
-
+// ParseRemoteURL parses the given  remote URL and returns a [RepositoryID]
+// for the GitLab repository it points to.
+//
+// It returns [ErrUnsupportedURL] if the remote URL is not a valid GitLab URL.
+func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
+
+	return &RepositoryID{
+		url:   f.URL(),
+		owner: owner,
+		name:  repo,
+	}, nil
+}
+
+// OpenRepository opens the GitLab repository that the given ID points to.
+func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
+	rid := mustRepositoryID(id)
 
 	glc, err := newGitLabClient(ctx, f.APIURL(), token.(*AuthenticationToken))
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}
 
-	return newRepository(ctx, f, owner, repo, f.Log, glc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), glc, nil)
+}
+
+// RepositoryID is a unique identifier for a GitLab repository.
+type RepositoryID struct {
+	url   string // required
+	owner string // required
+	name  string // required
+}
+
+var _ forge.RepositoryID = (*RepositoryID)(nil)
+
+func mustRepositoryID(id forge.RepositoryID) *RepositoryID {
+	rid, ok := id.(*RepositoryID)
+	if ok {
+		return rid
+	}
+	panic(fmt.Sprintf("expected *RepositoryID, got %T", id))
+}
+
+// String returns a human-readable name for the repository ID.
+func (rid *RepositoryID) String() string {
+	return fmt.Sprintf("%s/%s", rid.owner, rid.name)
+}
+
+// ChangeURL returns the URL for a Change hosted on GitLab.
+func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
+	owner, repo := rid.owner, rid.name
+	mrNum := mustMR(id).Number
+	return fmt.Sprintf("%s/%s/%s/-/merge_requests/%v", rid.url, owner, repo, mrNum)
 }
 
 func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error) {
