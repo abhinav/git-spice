@@ -54,7 +54,7 @@ var (
 type branchLogCmd struct {
 	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
 	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
-	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote." default:"true"`
+	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote." hidden:"" default:"true"`
 }
 
 type branchLogOptions struct {
