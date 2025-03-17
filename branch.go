@@ -51,14 +51,18 @@ type BranchPromptConfig struct {
 // BeforeApply is called by Kong as part of parsing.
 // This is the earliest hook we can introduce the binding in.
 func (cfg *BranchPromptConfig) BeforeApply(kctx *kong.Context) error {
-	return kctx.BindToProvider(onceFunc(func(view ui.View, repo *git.Repository, store *state.Store) (*branchPrompter, error) {
+	return kctx.BindSingletonProvider(func(
+		view ui.View,
+		repo *git.Repository,
+		store *state.Store,
+	) (*branchPrompter, error) {
 		return &branchPrompter{
 			sort:  cfg.BranchPromptSort,
 			view:  view,
 			repo:  repo,
 			store: store,
 		}, nil
-	}))
+	})
 }
 
 // branchPrompter presents the user with an interactive prompt
