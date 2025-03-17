@@ -62,6 +62,14 @@ cmp stderr $WORK/golden/ls-feat2-enabled.txt
 gs ll
 cmp stderr $WORK/golden/ll-feat2-enabled.txt
 
+# Try with aheadBehind
+git config spice.log.pushStatusFormat aheadBehind
+
+gs ls
+cmp stderr $WORK/golden/ls-feat2-aheadBehind.txt
+gs ll
+cmp stderr $WORK/golden/ll-feat2-aheadBehind.txt
+
 -- repo/feat1.txt --
 feat1
 -- repo/feat2.txt --
@@ -110,6 +118,21 @@ main
     ┃   e00a44b update feat3 (now)
     ┃   61be7b8 feat3 (now)
   ┏━┻■ feat2 (#2) (needs push) ◀
+  ┃    b5b29cc update feat2 (now)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
+main
+-- golden/ls-feat2-aheadBehind.txt --
+    ┏━□ feat3 (#3) (needs restack) (⇡1)
+  ┏━┻■ feat2 (#2) (⇡1) ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-feat2-aheadBehind.txt --
+    ┏━□ feat3 (#3) (needs restack) (⇡1)
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻■ feat2 (#2) (⇡1) ◀
   ┃    b5b29cc update feat2 (now)
   ┃    92d90ce feat2 (now)
 ┏━┻□ feat1 (#1)

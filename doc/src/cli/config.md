@@ -157,6 +157,9 @@ whether the branch is in sync with its pushed counterpart.
 
 - `true` (default): show the push status
 - `false`: don't show the push status
+- `"aheadBehind"`:
+  show the number of outgoing and incoming commits in the form `⇡1⇣2`,
+  where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
 ### spice.rebaseContinue.edit
 
