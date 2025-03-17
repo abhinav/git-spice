@@ -126,14 +126,14 @@ feat4 part2
 ┃    fc49b37 feat1 (now)
 main ◀
 -- golden/ls.submit.txt --
-  ┏━□ feat1-part2 (#5) (pushed)
-  ┃ ┏━□ feat2-part2 (#6) (pushed)
-  ┃ ┃ ┏━□ feat3-part2 (#7) (pushed)
-  ┃ ┃ ┃ ┏━□ feat4-part2 (#8) (pushed)
-  ┃ ┃ ┣━┻□ feat4 (#4) (pushed)
-  ┃ ┣━┻□ feat3 (#3) (pushed)
-  ┣━┻□ feat2 (#2) (pushed)
-┏━┻□ feat1 (#1) (pushed)
+  ┏━□ feat1-part2 (#5)
+  ┃ ┏━□ feat2-part2 (#6)
+  ┃ ┃ ┏━□ feat3-part2 (#7)
+  ┃ ┃ ┃ ┏━□ feat4-part2 (#8)
+  ┃ ┃ ┣━┻□ feat4 (#4)
+  ┃ ┣━┻□ feat3 (#3)
+  ┣━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
 main ◀
 -- golden/graph.txt --
 * ab3dc43 (feat1-part2) feat1.part2

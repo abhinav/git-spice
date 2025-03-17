@@ -61,14 +61,14 @@ feat 3
 -- repo/feat4.txt --
 feat 4
 -- golden/ls-before.txt --
-    ┏━■ feat3 (#3) (pushed) ◀
-  ┏━┻□ feat2 (#2) (pushed)
-┏━┻□ feat1 (#1) (pushed)
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
 main
 -- golden/ls-after.txt --
-    ┏━□ feat3 (#3) (pushed)
-  ┏━┻□ feat2 (#2) (pushed)
-┏━┻■ feat4 (#4) (pushed) ◀
+    ┏━□ feat3 (#3)
+  ┏━┻□ feat2 (#2)
+┏━┻■ feat4 (#4) ◀
 main
 -- golden/feat1-merged-comments.txt --
 - change: 2

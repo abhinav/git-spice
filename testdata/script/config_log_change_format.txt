@@ -45,13 +45,13 @@ cmpenv stderr $WORK/golden/ll-after-crformat-url.txt
 -- golden/ls-after-crformat-url.txt --
     ┏━■ feat3 ◀
   ┏━┻□ feat2
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1) (pushed)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
 main
 -- golden/ll-after-crformat-url.txt --
     ┏━■ feat3 ◀
     ┃   7b5eba4 feat3 (now)
   ┏━┻□ feat2
   ┃    562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1) (pushed)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
 ┃    ecc906e feat1 (now)
 main

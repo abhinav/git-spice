@@ -98,11 +98,11 @@ feature 3
   }
 ]
 -- golden/ll-before.txt --
-    ┏━■ feat3 (#3) (pushed) ◀
+    ┏━■ feat3 (#3) ◀
     ┃   dc2b288 feat3 (now)
-  ┏━┻□ feat2 (#2) (pushed)
+  ┏━┻□ feat2 (#2)
   ┃    3a03742 feat2 (now)
-┏━┻□ feature (#1) (pushed)
+┏━┻□ feature (#1)
 ┃    3cf6945 feat1 (now)
 main
 -- golden/pulls-after.json --
@@ -154,10 +154,10 @@ main
   }
 ]
 -- golden/ll-after.txt --
-    ┏━□ feat3 (#3) (pushed)
+    ┏━□ feat3 (#3)
     ┃   dc2b288 feat3 (now)
-  ┏━┻□ feat2 (#2) (pushed)
+  ┏━┻□ feat2 (#2)
   ┃    3a03742 feat2 (now)
-┏━┻■ feat1 (#1) (pushed) ◀
+┏━┻■ feat1 (#1) ◀
 ┃    3cf6945 feat1 (now)
 main

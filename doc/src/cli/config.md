@@ -141,17 +141,22 @@ instead of showing just the current stack.
 Whether $$gs log short$$ and $$gs log long$$ should show the CR URL or the ID next
 to any remote branches.
 
-### spice.log.pushedFormat
-
-<!-- gs:version unreleased -->
-
-Whether $$gs log short$$ and $$gs log long$$ should show when a branch has been
-pushed to its remote repository.
-
 **Accepted values:**
 
 - `"url"`: show the CR URL
 - `"id"`: (default) show the CR ID
+
+### spice.log.pushStatusFormat
+
+<!-- gs:version unreleased -->
+
+Whether $$gs log short$$ and $$gs log long$$ should show
+whether the branch is in sync with its pushed counterpart.
+
+**Accepted values:**
+
+- `true` (default): show the push status
+- `false`: don't show the push status
 
 ### spice.rebaseContinue.edit
 

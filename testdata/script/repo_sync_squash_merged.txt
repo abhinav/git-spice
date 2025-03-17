@@ -85,7 +85,7 @@ false
 }
 
 -- golden/ll-before.txt --
-┏━■ add-feature-1 (#1) (pushed) ◀
+┏━■ add-feature-1 (#1) ◀
 ┃   a9548da Add feature 3 (now)
 ┃   bcb3a72 Add feature 2 (now)
 ┃   4be7a61 Add feature 1 (now)

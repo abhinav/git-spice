@@ -59,7 +59,7 @@ feature 1 v3
 -- golden/no-pulls.txt --
 []
 -- golden/log-long.txt --
-┏━■ feature1 (#1) (pushed) ◀
+┏━■ feature1 (#1) ◀
 ┃   5a09fe1 feature1 v3 (now)
 ┃   293742b feature1 (now)
 main

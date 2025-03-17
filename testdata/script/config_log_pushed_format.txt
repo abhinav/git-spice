@@ -61,13 +61,13 @@ main
 -- golden/ls-pushed-format-true.txt --
     ┏━□ feat3
   ┏━┻□ feat2
-┏━┻■ feat1 (#1) (pushed) ◀
+┏━┻■ feat1 (#1) ◀
 main
 -- golden/ll-pushed-format-true.txt --
     ┏━□ feat3
     ┃   7b5eba4 feat3 (now)
   ┏━┻□ feat2
   ┃    562c8c6 feat2 (now)
-┏━┻■ feat1 (#1) (pushed) ◀
+┏━┻■ feat1 (#1) ◀
 ┃    ecc906e feat1 (now)
 main

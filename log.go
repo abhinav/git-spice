@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
@@ -41,9 +42,10 @@ var (
 				Foreground(ui.Gray).
 				SetString(" (needs restack)")
 
-	_pushedStyle = ui.NewStyle().
+	_needsPushStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
-			Faint(true)
+			Faint(true).
+			SetString(" (needs push)")
 
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
@@ -53,9 +55,11 @@ var (
 
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
-	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
-	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
-	PushedFormat bool   `config:"log.pushedFormat" help:"Show indicator for branches that are synced with their remote." hidden:"" default:"true"`
+	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+
+	ChangeFormat     string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	PushStatusFormat bool   `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
+	// TODO(abhinav): Add an option to set this to "aheadBehind" instead.
 }
 
 type branchLogOptions struct {
@@ -83,14 +87,18 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("load branches: %w", err)
 	}
 
+	getRemote := sync.OnceValue(func() string {
+		remote, err := store.Remote()
+		if err != nil {
+			return ""
+		}
+		return remote
+	})
+
 	var repoID forge.RepositoryID
 	if cmd.ChangeFormat == "url" {
 		err := func() error {
-			remote, err := store.Remote()
-			if err != nil {
-				// No remote to match against. Not an error.
-				return nil
-			}
+			remote := getRemote()
 
 			remoteURL, err := repo.RemoteURL(ctx, remote)
 			if err != nil {
@@ -121,23 +129,14 @@ func (cmd *branchLogCmd) run(
 	}
 
 	type branchInfo struct {
-		Index    int
-		Name     string
-		Base     string
-		ChangeID forge.ChangeID
-		IsPushed bool
+		Index     int
+		Name      string
+		Base      string
+		ChangeID  forge.ChangeID
+		NeedsPush bool
 
 		Commits []git.CommitDetail
 		Aboves  []int
-	}
-
-	// Get the remote name for checking branch sync status
-	var remote string
-
-	if cmd.PushedFormat {
-		if remote, err = store.Remote(); err != nil {
-			remote = ""
-		}
 	}
 
 	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
@@ -152,10 +151,10 @@ func (cmd *branchLogCmd) run(
 			info.ChangeID = branch.Change.ChangeID()
 		}
 
-		if cmd.PushedFormat && remote != "" && branch.UpstreamBranch != "" {
-			upstream := remote + "/" + branch.UpstreamBranch
+		if cmd.PushStatusFormat && branch.UpstreamBranch != "" {
+			upstream := getRemote() + "/" + branch.UpstreamBranch
 			if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
-				info.IsPushed = branch.Head == hash
+				info.NeedsPush = branch.Head != hash
 			}
 		}
 
@@ -258,8 +257,8 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_needsRestackStyle.String())
 			}
 
-			if cmd.PushedFormat && b.IsPushed {
-				o.WriteString(_pushedStyle.SetString(" (pushed)").String())
+			if cmd.PushStatusFormat && b.NeedsPush {
+				o.WriteString(_needsPushStyle.String())
 			}
 
 			if b.Name == currentBranch {

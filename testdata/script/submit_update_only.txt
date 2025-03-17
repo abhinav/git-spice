@@ -65,7 +65,7 @@ feature 2 new
   ┏━■ feat2 ◀
   ┃   ec789dc update feat2 (now)
   ┃   f76d5f5 feat2 (now)
-┏━┻□ feat1 (#1) (pushed)
+┏━┻□ feat1 (#1)
 ┃    f879555 update feat1 (now)
 ┃    4ea4a27 feat1 (now)
 main
