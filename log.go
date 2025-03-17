@@ -42,7 +42,8 @@ var (
 				SetString(" (needs restack)")
 
 	_pushedStyle = ui.NewStyle().
-			Foreground(ui.Green)
+			Foreground(ui.Yellow).
+			Faint(true)
 
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
