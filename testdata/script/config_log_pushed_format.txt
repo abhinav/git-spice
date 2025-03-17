@@ -1,4 +1,4 @@
-# 'gs log' commands support the 'log.pushedFormat' config
+# 'gs log' commands support the 'log.pushStatusFormat' config.
 
 as 'Test <test@example.com>'
 at '2024-08-07T06:05:04Z'
@@ -19,55 +19,99 @@ gs auth login
 
 gs repo init
 
-# create a stack: feat1 -> feat2 -> feat3
+# create a stack and submit everything: feat1 -> feat2 -> feat3
+git add feat1.txt
 gs bc feat1 -m 'feat1'
+git add feat2.txt
 gs bc feat2 -m 'feat2'
+git add feat3.txt
 gs bc feat3 -m 'feat3'
 
-# go back to feat1 and submit it
-gs bco feat1
-gs branch submit --fill
+gs dss --fill
 
-# log without the spice.log.pushedFormat option.
-git config spice.log.pushedFormat false
+# Introduce a commit to feat3 to make it out-of-sync.
+cp $WORK/extra/feat3-new.txt feat3.txt
+git add feat3.txt
+gs cc -m 'update feat3'
+
+# pushStatusFormat is enabled by default.
 gs ls
-cmp stderr $WORK/golden/ls-pushed-format-false.txt
-
+cmp stderr $WORK/golden/ls-feat3-default.txt
 gs ll
-cmp stderr $WORK/golden/ll-pushed-format-false.txt
+cmp stderr $WORK/golden/ll-feat3-default.txt
 
-# log with the spice.log.pushedFormat option.
-git config spice.log.pushedFormat true
+# disable pushStatusFormat and try again.
+git config spice.log.pushStatusFormat false
+gs ls
+cmp stderr $WORK/golden/ls-feat3-disabled.txt
+gs ll
+cmp stderr $WORK/golden/ll-feat3-disabled.txt
+
+# Make feat2 and feat3 out-of-sync,
+# with feat3 also needing a restack.
+gs down
+cp $WORK/extra/feat2-new.txt feat2.txt
+git add feat2.txt
+git commit -m 'update feat2'
+
+# Explicitly enable the option.
+git config spice.log.pushStatusFormat true
 
 gs ls
-cmp stderr $WORK/golden/ls-pushed-format-true.txt
-
+cmp stderr $WORK/golden/ls-feat2-enabled.txt
 gs ll
-cmp stderr $WORK/golden/ll-pushed-format-true.txt
+cmp stderr $WORK/golden/ll-feat2-enabled.txt
 
--- golden/ls-pushed-format-false.txt --
-    ┏━□ feat3
-  ┏━┻□ feat2
-┏━┻■ feat1 (#1) ◀
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- extra/feat3-new.txt --
+feat3 new
+-- extra/feat2-new.txt --
+feat2 new
+-- golden/ls-feat3-default.txt --
+    ┏━■ feat3 (#3) (needs push) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
 main
--- golden/ll-pushed-format-false.txt --
-    ┏━□ feat3
-    ┃   7b5eba4 feat3 (now)
-  ┏━┻□ feat2
-  ┃    562c8c6 feat2 (now)
-┏━┻■ feat1 (#1) ◀
-┃    ecc906e feat1 (now)
+-- golden/ll-feat3-default.txt --
+    ┏━■ feat3 (#3) (needs push) ◀
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
 main
--- golden/ls-pushed-format-true.txt --
-    ┏━□ feat3
-  ┏━┻□ feat2
-┏━┻■ feat1 (#1) ◀
+-- golden/ls-feat3-disabled.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
 main
--- golden/ll-pushed-format-true.txt --
-    ┏━□ feat3
-    ┃   7b5eba4 feat3 (now)
-  ┏━┻□ feat2
-  ┃    562c8c6 feat2 (now)
-┏━┻■ feat1 (#1) ◀
-┃    ecc906e feat1 (now)
+-- golden/ll-feat3-disabled.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
+main
+-- golden/ls-feat2-enabled.txt --
+    ┏━□ feat3 (#3) (needs restack) (needs push)
+  ┏━┻■ feat2 (#2) (needs push) ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-feat2-enabled.txt --
+    ┏━□ feat3 (#3) (needs restack) (needs push)
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻■ feat2 (#2) (needs push) ◀
+  ┃    b5b29cc update feat2 (now)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
 main
