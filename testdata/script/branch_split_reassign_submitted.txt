@@ -92,7 +92,7 @@ WRN features: remember to use a different upstream branch name with the command:
     ┃   f460550 feat3 (now)
   ┏━┻□ feat2
   ┃    f9c1263 feat2 (now)
-┏━┻□ feat1 (#1)
+┏━┻□ feat1 (#1) (needs push)
 ┃    1578492 feat1 (now)
 main
 -- golden/ll-commit-feat1.txt --
@@ -100,7 +100,7 @@ main
     ┃   d543265 feat3 (now)
   ┏━┻□ feat2
   ┃    4432c24 feat2 (now)
-┏━┻■ feat1 (#1) ◀
+┏━┻■ feat1 (#1) (needs push) ◀
 ┃    215a01b new feat 1 (now)
 ┃    1578492 feat1 (now)
 main

@@ -146,6 +146,18 @@ to any remote branches.
 - `"url"`: show the CR URL
 - `"id"`: (default) show the CR ID
 
+### spice.log.pushStatusFormat
+
+<!-- gs:version unreleased -->
+
+Whether $$gs log short$$ and $$gs log long$$ should show
+whether the branch is in sync with its pushed counterpart.
+
+**Accepted values:**
+
+- `true` (default): show the push status
+- `false`: don't show the push status
+
 ### spice.rebaseContinue.edit
 
 <!-- gs:version v0.10.0 -->

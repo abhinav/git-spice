@@ -1,0 +1,117 @@
+# 'gs log' commands support the 'log.pushStatusFormat' config.
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a stack and submit everything: feat1 -> feat2 -> feat3
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+
+gs dss --fill
+
+# Introduce a commit to feat3 to make it out-of-sync.
+cp $WORK/extra/feat3-new.txt feat3.txt
+git add feat3.txt
+gs cc -m 'update feat3'
+
+# pushStatusFormat is enabled by default.
+gs ls
+cmp stderr $WORK/golden/ls-feat3-default.txt
+gs ll
+cmp stderr $WORK/golden/ll-feat3-default.txt
+
+# disable pushStatusFormat and try again.
+git config spice.log.pushStatusFormat false
+gs ls
+cmp stderr $WORK/golden/ls-feat3-disabled.txt
+gs ll
+cmp stderr $WORK/golden/ll-feat3-disabled.txt
+
+# Make feat2 and feat3 out-of-sync,
+# with feat3 also needing a restack.
+gs down
+cp $WORK/extra/feat2-new.txt feat2.txt
+git add feat2.txt
+git commit -m 'update feat2'
+
+# Explicitly enable the option.
+git config spice.log.pushStatusFormat true
+
+gs ls
+cmp stderr $WORK/golden/ls-feat2-enabled.txt
+gs ll
+cmp stderr $WORK/golden/ll-feat2-enabled.txt
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- extra/feat3-new.txt --
+feat3 new
+-- extra/feat2-new.txt --
+feat2 new
+-- golden/ls-feat3-default.txt --
+    ┏━■ feat3 (#3) (needs push) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-feat3-default.txt --
+    ┏━■ feat3 (#3) (needs push) ◀
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
+main
+-- golden/ls-feat3-disabled.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-feat3-disabled.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
+main
+-- golden/ls-feat2-enabled.txt --
+    ┏━□ feat3 (#3) (needs restack) (needs push)
+  ┏━┻■ feat2 (#2) (needs push) ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-feat2-enabled.txt --
+    ┏━□ feat3 (#3) (needs restack) (needs push)
+    ┃   e00a44b update feat3 (now)
+    ┃   61be7b8 feat3 (now)
+  ┏━┻■ feat2 (#2) (needs push) ◀
+  ┃    b5b29cc update feat2 (now)
+  ┃    92d90ce feat2 (now)
+┏━┻□ feat1 (#1)
+┃    8761af2 feat1 (now)
+main

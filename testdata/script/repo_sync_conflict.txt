@@ -86,8 +86,8 @@ feat 2 slightly different
 ┃    5016e56 Add feat1 (now)
 main
 -- golden/ll-after.txt --
-  ┏━■ feat3 (#3) ◀
+  ┏━■ feat3 (#3) (needs push) ◀
   ┃   fe1a376 Add feat3 (now)
-┏━┻□ feat2 (#2)
+┏━┻□ feat2 (#2) (needs push)
 ┃    89ca0a7 Add feat2 (now)
 main

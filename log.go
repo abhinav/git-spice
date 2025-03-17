@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
@@ -41,6 +42,11 @@ var (
 				Foreground(ui.Gray).
 				SetString(" (needs restack)")
 
+	_needsPushStyle = ui.NewStyle().
+			Foreground(ui.Yellow).
+			Faint(true).
+			SetString(" (needs push)")
+
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
 			Bold(true).
@@ -49,8 +55,11 @@ var (
 
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
-	All          bool   `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
-	ChangeFormat string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+
+	ChangeFormat     string `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	PushStatusFormat bool   `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
+	// TODO(abhinav): Add an option to set this to "aheadBehind" instead.
 }
 
 type branchLogOptions struct {
@@ -78,14 +87,18 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("load branches: %w", err)
 	}
 
+	getRemote := sync.OnceValue(func() string {
+		remote, err := store.Remote()
+		if err != nil {
+			return ""
+		}
+		return remote
+	})
+
 	var repoID forge.RepositoryID
 	if cmd.ChangeFormat == "url" {
 		err := func() error {
-			remote, err := store.Remote()
-			if err != nil {
-				// No remote to match against. Not an error.
-				return nil
-			}
+			remote := getRemote()
 
 			remoteURL, err := repo.RemoteURL(ctx, remote)
 			if err != nil {
@@ -116,10 +129,11 @@ func (cmd *branchLogCmd) run(
 	}
 
 	type branchInfo struct {
-		Index    int
-		Name     string
-		Base     string
-		ChangeID forge.ChangeID
+		Index     int
+		Name      string
+		Base      string
+		ChangeID  forge.ChangeID
+		NeedsPush bool
 
 		Commits []git.CommitDetail
 		Aboves  []int
@@ -135,6 +149,13 @@ func (cmd *branchLogCmd) run(
 
 		if branch.Change != nil {
 			info.ChangeID = branch.Change.ChangeID()
+		}
+
+		if cmd.PushStatusFormat && branch.UpstreamBranch != "" {
+			upstream := getRemote() + "/" + branch.UpstreamBranch
+			if hash, err := repo.PeelToCommit(ctx, upstream); err == nil {
+				info.NeedsPush = branch.Head != hash
+			}
 		}
 
 		if opts.Commits {
@@ -234,6 +255,10 @@ func (cmd *branchLogCmd) run(
 
 			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
 				o.WriteString(_needsRestackStyle.String())
+			}
+
+			if cmd.PushStatusFormat && b.NeedsPush {
+				o.WriteString(_needsPushStyle.String())
 			}
 
 			if b.Name == currentBranch {
