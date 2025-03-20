@@ -1,0 +1,50 @@
+# 'repo sync' from trunk, main branch checked out in another worktree.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+gs repo init --trunk=main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# start working on a feature
+git checkout -b feat1
+
+# check out trunk in another worktree
+git worktree add ../wt1 main
+
+# update the remote out of band
+cd ..
+shamhub clone alice/example.git fork
+cd fork
+cp $WORK/extra/feature1.txt .
+git add feature1.txt
+git commit -m 'Add feature1'
+git push origin main
+
+# sync the original repo
+cd ../repo
+gs repo sync
+stderr 'pulled 1 new commit'
+
+# not pulled into this worktree
+! exists feature1.txt
+
+# verify file was pulled in the other worktree
+cd ../wt1
+cmp feature1.txt $WORK/extra/feature1.txt
+
+-- extra/feature1.txt --
+Contents of feature1

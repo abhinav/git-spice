@@ -70,6 +70,21 @@ func (cmd *repoSyncCmd) Run(
 
 	// TODO: This is pretty messy. Refactor.
 
+	// Runs 'git pull' to update the trunk branch.
+	// Used if the repository's current branch is trunk.
+	pullTrunk := func() error {
+		opts := git.PullOptions{
+			Remote:    remote,
+			Rebase:    true,
+			Autostash: true,
+			Refspec:   git.Refspec(trunk),
+		}
+		if err := repo.Pull(ctx, opts); err != nil {
+			return fmt.Errorf("pull: %w", err)
+		}
+		return nil
+	}
+
 	// There's a mix of scenarios here:
 	//
 	// 1. Check out status:
@@ -85,14 +100,8 @@ func (cmd *repoSyncCmd) Run(
 		// Sync status doesn't matter,
 		// git pull --rebase will handle everything.
 		log.Debug("trunk is checked out: pulling changes")
-		opts := git.PullOptions{
-			Remote:    remote,
-			Rebase:    true,
-			Autostash: true,
-			Refspec:   git.Refspec(trunk),
-		}
-		if err := repo.Pull(ctx, opts); err != nil {
-			return fmt.Errorf("pull: %w", err)
+		if err := pullTrunk(); err != nil {
+			return fmt.Errorf("update trunk: %w", err)
 		}
 	} else {
 		localBranches, err := repo.LocalBranches(ctx, nil)
@@ -100,76 +109,80 @@ func (cmd *repoSyncCmd) Run(
 			return fmt.Errorf("list branches: %w", err)
 		}
 
-		// (1c): Trunk is not the current branch,
-		// but it is checked out in another worktree.
-		// Reject sync because we don't want to update the ref
-		// and mess up the other worktree.
-		trunkCheckedOut := slices.ContainsFunc(localBranches,
+		idx := slices.IndexFunc(localBranches,
 			func(b git.LocalBranch) bool {
 				return b.Name == trunk && b.Worktree != "" // checked out in another worktree
 			})
-		if trunkCheckedOut {
-			// TODO:
-			// restack should support working off $remote/$trunk
-			// so we can still git fetch
-			// and continue working on the branch
-			// without updating the local trunk ref.
-			return errors.New("trunk cannot be updated: " +
-				"it is checked out in another worktree")
-		}
-		// Rest of this block is (1b): Trunk is not the current branch.
-
-		trunkHash, err := repo.PeelToCommit(ctx, trunk)
-		if err != nil {
-			return fmt.Errorf("peel to trunk: %w", err)
-		}
-
-		remoteHash, err := repo.PeelToCommit(ctx, remote+"/"+trunk)
-		if err != nil {
-			return fmt.Errorf("resolve remote trunk: %w", err)
-		}
-
-		if repo.IsAncestor(ctx, trunkHash, remoteHash) {
-			// (2a): Trunk is at or behind the remote.
-			// Fetch and upate the local trunk ref.
-			log.Debug("trunk is at or behind remote: fetching changes")
-			opts := git.FetchOptions{
-				Remote: remote,
-				Refspecs: []git.Refspec{
-					git.Refspec(trunk + ":" + trunk),
-				},
+		if idx != -1 {
+			// (1c): Trunk is not the current branch,
+			// but it is checked out in another worktree.
+			// Re-run this command in that worktree.
+			worktree := localBranches[idx].Worktree
+			log.Debug("trunk is checked out in another worktree: syncing that worktree", "worktree", worktree)
+			if err := repo.SetWorktree(ctx, worktree); err != nil {
+				return fmt.Errorf("set worktree: %w", err)
 			}
-			if err := repo.Fetch(ctx, opts); err != nil {
-				return fmt.Errorf("fetch: %w", err)
+
+			if err := pullTrunk(); err != nil {
+				return fmt.Errorf("update trunk in worktree: %w", err)
 			}
 		} else {
-			// (2b): Trunk has unpushed local commits
-			// but also (1b) trunk is not checked out anywhere,
-			// so we can check out trunk and rebase.
-			log.Debug("trunk has unpushed commits: pulling from remote")
+			// (1b): Trunk is not the current branch,
+			// and it is not checked out in another worktree.
 
-			if err := repo.Checkout(ctx, trunk); err != nil {
-				return fmt.Errorf("checkout trunk: %w", err)
+			trunkHash, err := repo.PeelToCommit(ctx, trunk)
+			if err != nil {
+				return fmt.Errorf("peel to trunk: %w", err)
 			}
 
-			opts := git.PullOptions{
-				Remote:  remote,
-				Rebase:  true,
-				Refspec: git.Refspec(trunk),
-			}
-			if err := repo.Pull(ctx, opts); err != nil {
-				return fmt.Errorf("pull: %w", err)
+			remoteHash, err := repo.PeelToCommit(ctx, remote+"/"+trunk)
+			if err != nil {
+				return fmt.Errorf("resolve remote trunk: %w", err)
 			}
 
-			if err := repo.Checkout(ctx, "-"); err != nil {
-				return fmt.Errorf("checkout old branch: %w", err)
-			}
+			if repo.IsAncestor(ctx, trunkHash, remoteHash) {
+				// (2a): Trunk is at or behind the remote.
+				// Fetch and upate the local trunk ref.
+				log.Debug("trunk is at or behind remote: fetching changes")
+				opts := git.FetchOptions{
+					Remote: remote,
+					Refspecs: []git.Refspec{
+						git.Refspec(trunk + ":" + trunk),
+					},
+				}
+				if err := repo.Fetch(ctx, opts); err != nil {
+					return fmt.Errorf("fetch: %w", err)
+				}
+			} else {
+				// (2b): Trunk has unpushed local commits
+				// but also (1b) trunk is not checked out anywhere,
+				// so we can check out trunk and rebase.
+				log.Debug("trunk has unpushed commits: pulling from remote")
 
-			// TODO: With a recent enough git,
-			// we can attempt to replay those commits
-			// without checking out trunk.
-			// https://git-scm.com/docs/git-replay/2.44.0
+				if err := repo.Checkout(ctx, trunk); err != nil {
+					return fmt.Errorf("checkout trunk: %w", err)
+				}
+
+				opts := git.PullOptions{
+					Remote:  remote,
+					Rebase:  true,
+					Refspec: git.Refspec(trunk),
+				}
+				if err := repo.Pull(ctx, opts); err != nil {
+					return fmt.Errorf("pull: %w", err)
+				}
+
+				if err := repo.Checkout(ctx, "-"); err != nil {
+					return fmt.Errorf("checkout old branch: %w", err)
+				}
+
+				// TODO: With a recent enough git,
+				// we can attempt to replay those commits
+				// without checking out trunk.
+				// https://git-scm.com/docs/git-replay/2.44.0
+			}
 		}
+
 	}
 
 	trunkEndHash, err := repo.PeelToCommit(ctx, trunk)

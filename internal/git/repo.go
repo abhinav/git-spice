@@ -135,3 +135,19 @@ func (r *Repository) WithEditor(editor string) *Repository {
 	newR.cfg.Editor = editor
 	return &newR
 }
+
+// SetWorktree changes the worktree that this Repository is operating in.
+func (r *Repository) SetWorktree(ctx context.Context, dir string) error {
+	other, err := Open(ctx, dir, OpenOptions{
+		Log:  r.log,
+		exec: r.exec,
+	})
+	if err != nil {
+		return fmt.Errorf("open worktree: %w", err)
+	}
+
+	// Copy over any meaningful state.
+	r.root = other.root
+	r.gitDir = other.gitDir
+	return nil
+}
