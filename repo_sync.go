@@ -106,7 +106,7 @@ func (cmd *repoSyncCmd) Run(
 		// and mess up the other worktree.
 		trunkCheckedOut := slices.ContainsFunc(localBranches,
 			func(b git.LocalBranch) bool {
-				return b.Name == trunk && b.CheckedOut
+				return b.Name == trunk && b.Worktree != "" // checked out in another worktree
 			})
 		if trunkCheckedOut {
 			// TODO:

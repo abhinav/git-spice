@@ -15,9 +15,8 @@ type LocalBranch struct {
 	// Name is the name of the branch.
 	Name string
 
-	// CheckedOut indicates whether the branch is currently checked out
-	// in a worktree.
-	CheckedOut bool
+	// Worktree is the path at which this branch is checked out, if any.
+	Worktree string
 }
 
 // LocalBranchesOptions specifies options for listing local branches.
@@ -32,10 +31,13 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 		opts = &LocalBranchesOptions{}
 	}
 
-	args := []string{"branch"}
+	args := []string{
+		"for-each-ref", "--format=%(refname) %(worktreepath)",
+	}
 	if opts.Sort != "" {
 		args = append(args, "--sort="+opts.Sort)
 	}
+	args = append(args, "refs/heads/")
 
 	cmd := r.gitCmd(ctx, args...)
 	out, err := cmd.StdoutPipe()
@@ -55,21 +57,16 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 			continue
 		}
 
-		switch line[0] {
-		case '(':
-			continue // (HEAD detached at ...)
-		case '*', '+':
-			// Current or checked out in another worktree.
-			b := bytes.TrimSpace(line[1:])
-			branches = append(branches, LocalBranch{
-				Name:       string(b),
-				CheckedOut: true,
-			})
-		default:
-			branches = append(branches, LocalBranch{
-				Name: string(line),
-			})
+		refname, worktree, _ := bytes.Cut(line, []byte{' '})
+		branchName, ok := bytes.CutPrefix(refname, []byte("refs/heads/"))
+		if !ok {
+			continue
 		}
+
+		branches = append(branches, LocalBranch{
+			Name:     string(branchName),
+			Worktree: string(bytes.TrimSpace(worktree)),
+		})
 	}
 
 	if err := scan.Err(); err != nil {

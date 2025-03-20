@@ -64,7 +64,7 @@ func (cmd *branchCheckoutCmd) AfterApply(
 
 		cmd.Branch, err = branchPrompt.Prompt(ctx, &branchPromptRequest{
 			Disabled: func(b git.LocalBranch) bool {
-				return b.Name != currentBranch && b.CheckedOut
+				return b.Name != currentBranch && b.Worktree != ""
 			},
 			Default:     currentBranch,
 			TrackedOnly: !cmd.Untracked,

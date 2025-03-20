@@ -64,7 +64,7 @@ func TestIntegrationBranches(t *testing.T) {
 		assert.Equal(t, []git.LocalBranch{
 			{Name: "feature1"},
 			{Name: "feature2"},
-			{Name: "main", CheckedOut: true},
+			{Name: "main", Worktree: joinSlash(fixture.Dir())},
 		}, bs)
 	})
 
@@ -75,7 +75,7 @@ func TestIntegrationBranches(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
-			{Name: "main", CheckedOut: true},
+			{Name: "main", Worktree: joinSlash(fixture.Dir())},
 			{Name: "feature1"},
 			{Name: "feature2"},
 		}, bs)
@@ -119,7 +119,7 @@ func TestIntegrationBranches(t *testing.T) {
 				{Name: "feature1"},
 				{Name: "feature2"},
 				{Name: "feature3"},
-				{Name: "main", CheckedOut: true},
+				{Name: "main", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		}
 
@@ -135,7 +135,7 @@ func TestIntegrationBranches(t *testing.T) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
 				{Name: "feature2"},
-				{Name: "main", CheckedOut: true},
+				{Name: "main", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		})
 	})
@@ -157,7 +157,7 @@ func TestIntegrationBranches(t *testing.T) {
 				{Name: "feature1"},
 				{Name: "feature2"},
 				{Name: "feature4"},
-				{Name: "main", CheckedOut: true},
+				{Name: "main", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		}
 
@@ -213,9 +213,9 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, []git.LocalBranch{
-		{Name: "feature1", CheckedOut: true},
+		{Name: "feature1", Worktree: joinSlash(fixture.Dir(), "wt1")},
 		{Name: "feature2"},
-		{Name: "main", CheckedOut: true},
+		{Name: "main", Worktree: joinSlash(fixture.Dir(), "repo")},
 	}, bs)
 }
 
@@ -298,4 +298,11 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, git.ErrNotExist)
 	})
+}
+
+// joinSlash joins the given paths and converts it to slash-separated path.
+//
+// Use this when the result is always /-separated, e.g. for git paths.
+func joinSlash(paths ...string) string {
+	return filepath.ToSlash(filepath.Join(paths...))
 }
