@@ -1,14 +1,10 @@
-output:
-  # Make output more digestible with quickfix in vim.
-  sort-results: true
-  print-issued-lines: false
+version: "2"
 
 linters:
-  disable-all: true
+  default: none
   enable:
     # golangci-lint defaults:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
@@ -20,7 +16,6 @@ linters:
     - errorlint   # Go 1.13 error wrapping
     - forbidigo   # arbitrary rules
     - gocritic    # general issues
-    - gofumpt     # formatting
     - intrange    # prefer "range N" over "x := 0; x < N; x++".
     - loggercheck # key-value pairs for structured logs
     - makezero    # catch make([]T, N) used with append
@@ -28,64 +23,70 @@ linters:
     - nolintlint  # nolint rules
     - perfsprint  # fmt.Sprintf alternatives
     - revive      # style
-    - stylecheck  # style
     - unconvert   # unnecessary type conversions
     - usetesting  # prefer t.TempDir, t.Chdir, etc.
 
-linters-settings:
-  errcheck:
-    exclude-functions:
-      # Usually used in the same capacity as fmt.Print*.
-      - fmt.Fprint
-      - fmt.Fprintf
-      - fmt.Fprintln
+  settings:
 
-      # This is always a strings.Builder, and can't fail.
-      - (go.abhg.dev/gs/internal/ui.Writer).WriteString
-      - (go.abhg.dev/gs/internal/ui.Writer).Write
+    errcheck:
+      exclude-functions:
+        # Usually used in the same capacity as fmt.Print*.
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
 
-  forbidigo:
-    # Need to analyze types to match the exactly instead of just name.
-    analyze-types: true
-    forbid:
-      # Don't use charmbracelet/log's global logger.
-      - p: '^log\.(Debug|Info|Warn|Error|Fatal)f?$'
-        pkg: github.com/charmbracelet/log
-        msg: "Don't use the global logger; use a local logger instead."
+        # This is always a strings.Builder, and can't fail.
+        - (go.abhg.dev/gs/internal/ui.Writer).WriteString
+        - (go.abhg.dev/gs/internal/ui.Writer).Write
 
-  loggercheck:
+    forbidigo:
+      analyze-types: true
+      # Need to analyze types to match the exactly instead of just name.
+      forbid:
+        # Don't use charmbracelet/log's global logger.
+        - pattern: ^log\.(Debug|Info|Warn|Error|Fatal)f?$
+          pkg: github.com/charmbracelet/log
+          msg: Don't use the global logger; use a local logger instead.
+
+    govet:
+      enable:
+        - nilness
+        - reflectvaluecompare
+        - sortslice
+        - unusedwrite
+
+    loggercheck:
+      rules:
+        - (*github.com/charmbracelet/log.Logger).Debug
+        - (*github.com/charmbracelet/log.Logger).Error
+        - (*github.com/charmbracelet/log.Logger).Fatal
+        - (*github.com/charmbracelet/log.Logger).Info
+        - (*github.com/charmbracelet/log.Logger).Log
+        - (*github.com/charmbracelet/log.Logger).Print
+        - (*github.com/charmbracelet/log.Logger).Warn
+        - (*github.com/charmbracelet/log.Logger).With
+
+  exclusions:
+    generated: lax
     rules:
-      - (*github.com/charmbracelet/log.Logger).Debug
-      - (*github.com/charmbracelet/log.Logger).Error
-      - (*github.com/charmbracelet/log.Logger).Fatal
-      - (*github.com/charmbracelet/log.Logger).Info
-      - (*github.com/charmbracelet/log.Logger).Log
-      - (*github.com/charmbracelet/log.Logger).Print
-      - (*github.com/charmbracelet/log.Logger).Warn
-      - (*github.com/charmbracelet/log.Logger).With
 
-  govet:
-    enable:
-      - nilness
-      - reflectvaluecompare
-      - sortslice
-      - unusedwrite
+      # staticcheck already has smarter checks for empty blocks.
+      # revive's empty-block linter has false positives.
+      # For example, as of writing this, the following is not allowed.
+      #   for foo() { }
+      - linters: [revive]
+        text: 'empty-block: this block is empty, you can remove it'
+
+      - linters: [musttag]
+        path: _test.go$
+
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
 
 issues:
   # Print all issues reported by all linters.
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  # Don't ignore some of the issues that golangci-lint considers okay.
-  exclude-use-default: false
-
-  exclude-rules:
-    # staticcheck already has smarter checks for empty blocks.
-    # revive's empty-block linter has false positives.
-    # For example, as of writing this, the following is not allowed.
-    #   for foo() { }
-    - linters: [revive]
-      text: 'empty-block: this block is empty, you can remove it'
-
-    - linters: [musttag]
-      path: _test.go$
