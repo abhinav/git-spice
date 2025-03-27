@@ -868,6 +868,38 @@ followed by 'gs upstack restack'.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
+### gs commit pick
+
+```
+gs commit (c) pick (p) [<commit>] [flags]
+```
+
+Cherry-pick a commit
+
+Apply the changes introduced by a commit to the current branch
+and restack the upstack branches.
+
+If a commit is not specified, a prompt will allow picking
+from commits of upstack branches of the current branch.
+Use the --from option to pick a commit from a different branch
+or its upstack.
+
+By default, commit messages for cherry-picked commits will be used verbatim.
+Supply --edit to open an editor and change the commit message,
+or set the spice.commitPick.edit configuration option to true
+to always open an editor for cherry picks.
+
+**Arguments**
+
+* `commit`: Commit to cherry-pick
+
+**Flags**
+
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.commitPick.edit" }](/cli/config.md#spicecommitpickedit)): Whether to open an editor to edit the commit message.
+* `--from=NAME`: Branch whose upstack commits will be considered.
+
+**Configuration**: [spice.commitPick.edit](/cli/config.md#spicecommitpickedit)
+
 ### gs commit split
 
 ```
@@ -911,7 +943,7 @@ and use --edit to override it.
 
 **Flags**
 
-* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whehter to open an editor to edit the commit message.
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whether to open an editor to edit the commit message.
 
 **Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
 
