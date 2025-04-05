@@ -57,7 +57,13 @@ jobs:
         git --version
 
     - name: Test
-      run: mise run ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
+      run: >-  # join lines with spaces
+        mise run
+        ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
+        ${{ (matrix.os != 'windows-latest') && '--race' || '' }}
+      # NB:
+      # Windows tests are already slow.
+      # Run them without race detection to avoid slowing them further.
       shell: bash
       env:
         GOTESTSUM_FORMAT: github-actions
