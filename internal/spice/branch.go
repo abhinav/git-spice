@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -353,32 +355,62 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		return nil, fmt.Errorf("list branches: %w", err)
 	}
 
-	items := make([]LoadBranchItem, 0, len(names))
+	var (
+		wg sync.WaitGroup
 
-	// These will be used if we encounter any branches
-	// that have been deleted out of band.
-	deletedBranches := make(map[string]*DeletedBranchError)
-	for _, name := range names {
-		resp, err := s.LookupBranch(ctx, name)
-		if err != nil {
-			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
-				s.log.Infof("%v: removing...", delErr)
-				deletedBranches[name] = delErr
-				continue
+		mu sync.Mutex // guards items, errs, deletedBranches
+
+		errs  []error
+		items = make([]LoadBranchItem, 0, len(names))
+		// These will be used if we encounter any branches
+		// that have been deleted out of band.
+		deletedBranches = make(map[string]*DeletedBranchError)
+	)
+	namec := make(chan string)
+	for range runtime.GOMAXPROCS(0) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for name := range namec {
+				resp, err := s.LookupBranch(ctx, name)
+				if err != nil {
+					if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
+						s.log.Infof("%v: removing...", delErr)
+						mu.Lock()
+						deletedBranches[name] = delErr
+						mu.Unlock()
+						continue
+					}
+
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("get branch %v: %w", name, err))
+					mu.Unlock()
+				}
+
+				mu.Lock()
+				items = append(items, LoadBranchItem{
+					Name:            name,
+					Head:            resp.Head,
+					Base:            resp.Base,
+					BaseHash:        resp.BaseHash,
+					UpstreamBranch:  resp.UpstreamBranch,
+					Change:          resp.Change,
+					MergedDownstack: resp.MergedDownstack,
+				})
+				mu.Unlock()
 			}
+		}()
+	}
 
-			return nil, fmt.Errorf("get branch %v: %w", name, err)
-		}
+	for _, name := range names {
+		namec <- name
+	}
+	close(namec)
+	wg.Wait()
 
-		items = append(items, LoadBranchItem{
-			Name:            name,
-			Head:            resp.Head,
-			Base:            resp.Base,
-			BaseHash:        resp.BaseHash,
-			UpstreamBranch:  resp.UpstreamBranch,
-			Change:          resp.Change,
-			MergedDownstack: resp.MergedDownstack,
-		})
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 
 	slices.SortFunc(items, func(a, b LoadBranchItem) int {
