@@ -43,6 +43,8 @@ jobs:
     - uses: jdx/mise-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Go cache
+      uses: ./.github/actions/go-cache
 
     # TODO: extract into separate action
     - name: Determine Git cache directory

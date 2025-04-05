@@ -1,0 +1,26 @@
+# Run this action after mise-action to cache GOCACHE and GOMODCACHE.
+#
+# To use, add:
+#
+#   - name: Cache Go
+#     uses: ./.github/actions/go-cache
+
+name: Cache Go
+
+runs:
+  using: "composite"
+  steps:
+    - id: go-env
+      name: Determine Go cache paths
+      shell: bash
+      run: |
+        echo "GOCACHE=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+        echo "GOMODCACHE=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.go-env.outputs.GOCACHE }}
+          ${{ steps.go-env.outputs.GOMODCACHE }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.mod', '**/go.sum') }}
