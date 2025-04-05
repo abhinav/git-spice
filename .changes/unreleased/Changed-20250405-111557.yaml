@@ -1,0 +1,3 @@
+kind: Changed
+body: 'log: Fetch branch information in parallel to speed up the operation.'
+time: 2025-04-05T11:15:57.798965-07:00

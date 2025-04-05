@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -139,55 +140,82 @@ func (cmd *branchLogCmd) run(
 		// Whether the branch needs to be pushed to its upstream.
 		NeedsPush bool
 
+		// Whether the branch needs to be restacked.
+		NeedsRestack bool
+
 		Commits []git.CommitDetail
 		Aboves  []int
 	}
 
-	infos := make([]*branchInfo, 0, len(allBranches)+1) // +1 for trunk
+	var infoMu sync.Mutex
+	infos := make([]*branchInfo, len(allBranches)+1) // +1 for trunk
 	infoIdxByName := make(map[string]int, len(allBranches))
-	for _, branch := range allBranches {
-		info := &branchInfo{
-			Name: branch.Name,
-			Base: branch.Base,
-		}
 
-		if branch.Change != nil {
-			info.ChangeID = branch.Change.ChangeID()
-		}
+	idxc := make(chan int) // index in allBranches
+	var wg sync.WaitGroup
+	for range runtime.GOMAXPROCS(0) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-		if cmd.PushStatusFormat.Enabled() && branch.UpstreamBranch != "" {
-			upstream := getRemote() + "/" + branch.UpstreamBranch
-			ahead, behind, err := repo.CommitAheadBehind(ctx, upstream, string(branch.Head))
-			if err == nil {
-				info.Ahead = ahead
-				info.Behind = behind
-				info.NeedsPush = ahead > 0 || behind > 0
+			for idx := range idxc {
+				branch := allBranches[idx]
+				info := &branchInfo{
+					Name: branch.Name,
+					Base: branch.Base,
+				}
+
+				if branch.Change != nil {
+					info.ChangeID = branch.Change.ChangeID()
+				}
+
+				if cmd.PushStatusFormat.Enabled() && branch.UpstreamBranch != "" {
+					upstream := getRemote() + "/" + branch.UpstreamBranch
+					ahead, behind, err := repo.CommitAheadBehind(ctx, upstream, string(branch.Head))
+					if err == nil {
+						info.Ahead = ahead
+						info.Behind = behind
+						info.NeedsPush = ahead > 0 || behind > 0
+					}
+				}
+
+				if opts.Commits {
+					commits, err := repo.ListCommitsDetails(ctx,
+						git.CommitRangeFrom(branch.Head).
+							ExcludeFrom(branch.BaseHash).
+							FirstParent())
+					if err != nil {
+						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "err", err)
+						continue
+					}
+					info.Commits = commits
+				}
+
+				var restackErr *spice.BranchNeedsRestackError
+				if err := svc.VerifyRestacked(ctx, branch.Name); errors.As(err, &restackErr) {
+					info.NeedsRestack = true
+				}
+
+				infoMu.Lock()
+				info.Index = idx
+				infos[idx] = info
+				infoIdxByName[branch.Name] = idx
+				infoMu.Unlock()
 			}
-		}
-
-		if opts.Commits {
-			commits, err := repo.ListCommitsDetails(ctx,
-				git.CommitRangeFrom(branch.Head).
-					ExcludeFrom(branch.BaseHash).
-					FirstParent())
-			if err != nil {
-				log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "err", err)
-				continue
-			}
-			info.Commits = commits
-		}
-
-		idx := len(infos)
-		info.Index = idx
-		infos = append(infos, info)
-		infoIdxByName[branch.Name] = idx
+		}()
 	}
 
-	trunkIdx := len(infos)
-	infos = append(infos, &branchInfo{
+	for idx := range allBranches {
+		idxc <- idx
+	}
+	close(idxc)
+	wg.Wait()
+
+	trunkIdx := len(infos) - 1
+	infos[trunkIdx] = &branchInfo{
 		Index: trunkIdx,
 		Name:  store.Trunk(),
-	})
+	}
 	infoIdxByName[store.Trunk()] = trunkIdx
 
 	// Second pass: Connect the "aboves".
@@ -260,7 +288,7 @@ func (cmd *branchLogCmd) run(
 				}
 			}
 
-			if restackErr := new(spice.BranchNeedsRestackError); errors.As(svc.VerifyRestacked(ctx, b.Name), &restackErr) {
+			if b.NeedsRestack {
 				o.WriteString(_needsRestackStyle.String())
 			}
 
