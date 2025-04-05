@@ -17,6 +17,8 @@ jobs:
     - uses: jdx/mise-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Go cache
+      uses: ./.github/actions/go-cache
     - run: |
         mise run generate
     - uses: autofix-ci/action@551dded8c6cc8a1054039c8bc0b8b48c51dfc6ef
