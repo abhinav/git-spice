@@ -43,13 +43,13 @@ run = [
 [tasks.test]
 wait_for = ["generate"]
 description = "Run tests"
-run = "gotestsum -- ./..."
+run = "gotestsum -- -race={{flag(name='race')}} ./..."
 
 [tasks.cover]
 wait_for = ["generate"]
 description = "Run tests with coverage"
 run = [
-  "gotestsum -- '-coverprofile=cover.out' '-coverpkg=./...' ./...",
+  "gotestsum -- '-coverprofile=cover.out' '-coverpkg=./...' -race={{flag(name='race')}} ./...",
   "go tool cover '-html=cover.out' -o cover.html",
 ]
 
