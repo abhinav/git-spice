@@ -1,0 +1,45 @@
+# Install a specific version of git and cache it for future runs.
+#
+# To use, add:
+#
+#   - name: Install Git
+#     uses: ./.github/actions/install-git
+#     with:
+#       version: 2.39.1
+#
+# Must run after checkout and mise-action.
+
+name: Install Git
+
+inputs:
+  version:
+    description: 'The version of git to install.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Determine Git cache directory
+      id: env
+      shell: bash
+      run: |
+        echo "cache_dir=$HOME/.cache/git/$GIT_VERSION" >> "$GITHUB_OUTPUT"
+      env:
+        GIT_VERSION: ${{ inputs.version }}
+
+    - name: Restore cached Git
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.env.outputs.cache_dir }}
+        key: ${{ runner.os }}-git-${{ inputs.version }}
+
+    - name: Install Git
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: >-
+        go run ./tools/ci/install-git
+        -debian
+        -prefix "$GIT_CACHE_DIR"
+        -version "$GIT_VERSION"

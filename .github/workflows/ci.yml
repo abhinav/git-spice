@@ -46,29 +46,11 @@ jobs:
     - name: Go cache
       uses: ./.github/actions/go-cache
 
-    # TODO: extract into separate action
-    - name: Determine Git cache directory
-      shell: bash
-      if: matrix.git-version != 'system'
-      run: |
-        echo "GIT_VERSION=$GIT_VERSION" >> "$GITHUB_ENV"
-        echo "GIT_CACHE_DIR=$HOME/.cache/git/$GIT_VERSION" >> "$GITHUB_ENV"
-      env:
-        GIT_VERSION: ${{ matrix.git-version }}
-    - name: Fill Git cache
-      if: matrix.git-version != 'system'
-      uses: actions/cache@v4
-      with:
-        path: ${{ env.GIT_CACHE_DIR }}
-        key: ${{ runner.os }}-git-${{ matrix.git-version }}
     - name: Install Git
-      shell: bash
+      uses: ./.github/actions/install-git
       if: matrix.git-version != 'system'
-      run: >-
-        go run ./tools/ci/install-git
-        -debian
-        -prefix "$GIT_CACHE_DIR"
-        -version "$GIT_VERSION"
+      with:
+        version: ${{ matrix.git-version }}
     - name: Report Git version
       shell: bash
       run:
