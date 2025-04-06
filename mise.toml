@@ -79,7 +79,16 @@ run = "go mod tidy -diff"
 description = "Ensure go.mod and go.sum are up to date"
 
 [tasks.build]
-run = "go install go.abhg.dev/gs"
+usage = """
+flag "--pprof" help="Build with pofiling flags"
+"""
+run = """
+go install -tags="
+  {%- if flag(name='pprof') == 'true' -%}
+    profile
+  {%- endif -%}
+" go.abhg.dev/gs
+"""
 wait_for = ["generate"]
 description = "Build the gs binary"
 
