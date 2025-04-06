@@ -211,13 +211,23 @@ func main() {
 		logger.Fatalf("%v: %v", cmdName, err)
 	}
 
+	if err := cmd.Profile.Start(); err != nil {
+		logger.Error("Error creating trace file", "error", err)
+	}
+
 	if err := kctx.Run(builtinShorthands); err != nil {
 		logger.Fatalf("%v: %v", cmdName, err)
+	}
+
+	if err := cmd.Profile.Stop(); err != nil {
+		logger.Error("Error closing trace file", "error", err)
 	}
 }
 
 type mainCmd struct {
 	kong.Plugins
+
+	Profile ProfileFlags `embed:""`
 
 	// Global options that are never accessed directly by subcommands.
 	Globals struct {
