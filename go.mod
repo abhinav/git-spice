@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/alecthomas/kong v1.10.0
 	github.com/buildkite/shellwords v0.0.0-20180315110454-59467a9b8e10
-	github.com/charmbracelet/bubbles v0.20.0
+	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.1
@@ -24,7 +24,7 @@ require (
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/testing/stub v0.2.0
-	go.uber.org/mock v0.5.0
+	go.uber.org/mock v0.5.1
 	golang.org/x/oauth2 v0.29.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.2
 	gopkg.in/yaml.v3 v3.0.1
