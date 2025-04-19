@@ -18,11 +18,15 @@ version = "0.8.0"
 backend = "ubi:mvdan/gofumpt"
 
 [tools.gofumpt.checksums]
+gofumpt-linux-x86_64 = "sha256:11604bbaf7321abcc2fca2c6a37b7e9198bb1e76e5a86f297c07201e8ab1fda9"
 gofumpt-macos-aarch64 = "sha256:7e66e92b7a67d1d12839ab030fb7ae38e5e2273474af3762e67bc7fe9471fcd9"
 
 [tools.golangci-lint]
 version = "2.1.2"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint.checksums]
+"golangci-lint-2.1.2-linux-amd64.tar.gz" = "sha256:bc16fd1ef25bce2c600de0122600100ab26d6d75388cc5369c5bb916cb2b82e3"
 
 [tools.gotestsum]
 version = "1.12.1"
