@@ -14,19 +14,19 @@ backend = "core:go"
 "go1.24.2.linux-amd64.tar.gz" = "sha256:68097bd680839cbc9d464a0edce4f7c333975e27a90246890e9f1078c7e702ad"
 
 [tools.gofumpt]
-version = "0.7.0"
+version = "0.8.0"
 backend = "ubi:mvdan/gofumpt"
 
 [tools.gofumpt.checksums]
-gofumpt-linux-x86_64 = "sha256:6ff459c1dcae3b0b00844c1a5a4a5b0f547237d8a4f3624aaea8d424aeef24c6"
-gofumpt-macos-aarch64 = "sha256:08f23114760a090b090706d92b8c52b9875b9eb352d76c77aa354d6aa20b045a"
+gofumpt-linux-x86_64 = "sha256:11604bbaf7321abcc2fca2c6a37b7e9198bb1e76e5a86f297c07201e8ab1fda9"
+gofumpt-macos-aarch64 = "sha256:7e66e92b7a67d1d12839ab030fb7ae38e5e2273474af3762e67bc7fe9471fcd9"
 
 [tools.golangci-lint]
-version = "2.0.2"
+version = "2.1.2"
 backend = "aqua:golangci/golangci-lint"
 
 [tools.golangci-lint.checksums]
-"golangci-lint-2.0.2-linux-amd64.tar.gz" = "sha256:89cc8a7810dc63b9a37900da03e37c3601caf46d42265d774e0f1a5d883d53e2"
+"golangci-lint-2.1.2-linux-amd64.tar.gz" = "sha256:bc16fd1ef25bce2c600de0122600100ab26d6d75388cc5369c5bb916cb2b82e3"
 
 [tools.gotestsum]
 version = "1.12.1"
