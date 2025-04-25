@@ -1,0 +1,33 @@
+# Commit create with --allow-empty
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+gs cc -m 'Allow empty commit' --allow-empty
+
+# verify the output
+git log
+cmp stdout $WORK/golden/log.1.txt
+
+-- golden/log.1.txt --
+commit 0eab9a007f15066d7308788ce1ef8a664cc27d6a
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Allow empty commit
+
+commit 9bad92b764fe1d56cb99b394f373a71cdefd8e86
+Author: Test <test@example.com>
+Date:   Sat Mar 30 14:59:32 2024 +0000
+
+    Initial commit
