@@ -14,7 +14,7 @@ import (
 
 type commitCreateCmd struct {
 	All        bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty bool   `help:"Create a new commit without changing any files in the repository."`
+	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
 	Fixup      string `help:"Create a fixup commit."`
 	Message    string `short:"m" help:"Use the given message as the commit message."`
 	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`

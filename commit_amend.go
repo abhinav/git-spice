@@ -14,7 +14,7 @@ import (
 
 type commitAmendCmd struct {
 	All        bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty bool   `help:"Create a new commit without changing any files in the repository."`
+	AllowEmpty bool   `help:"Create a commit even if it contains no changes."`
 	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 
 	NoEdit   bool `help:"Don't edit the commit message"`
