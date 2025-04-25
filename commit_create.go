@@ -13,10 +13,11 @@ import (
 )
 
 type commitCreateCmd struct {
-	All      bool   `short:"a" help:"Stage all changes before committing."`
-	Fixup    string `help:"Create a fixup commit."`
-	Message  string `short:"m" help:"Use the given message as the commit message."`
-	NoVerify bool   `help:"Bypass pre-commit and commit-msg hooks."`
+	All        bool   `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
+	Fixup      string `help:"Create a fixup commit."`
+	Message    string `short:"m" help:"Use the given message as the commit message."`
+	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -36,10 +37,11 @@ func (cmd *commitCreateCmd) Run(
 	svc *spice.Service,
 ) error {
 	if err := repo.Commit(ctx, git.CommitRequest{
-		Message:  cmd.Message,
-		All:      cmd.All,
-		Fixup:    cmd.Fixup,
-		NoVerify: cmd.NoVerify,
+		Message:    cmd.Message,
+		All:        cmd.All,
+		AllowEmpty: cmd.AllowEmpty,
+		Fixup:      cmd.Fixup,
+		NoVerify:   cmd.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

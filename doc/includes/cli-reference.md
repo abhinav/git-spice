@@ -844,6 +844,7 @@ followed by 'gs upstack restack'.
 **Flags**
 
 * `-a`, `--all`: Stage all changes before committing.
+* `--allow-empty`: Create a new commit even if it contains no changes.
 * `--fixup=STRING`: Create a fixup commit.
 * `-m`, `--message=STRING`: Use the given message as the commit message.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
@@ -864,6 +865,7 @@ followed by 'gs upstack restack'.
 **Flags**
 
 * `-a`, `--all`: Stage all changes before committing.
+* `--allow-empty`: Create a commit even if it contains no changes.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
