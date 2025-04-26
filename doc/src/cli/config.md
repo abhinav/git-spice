@@ -104,7 +104,7 @@ See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
 ### spice.forge.gitlab.apiUrl
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.13.0 -->
 
 URL at which the GitLab API is available.
 Defaults to `$GITLAB_API_URL` if set, or the GitLab URL otherwise.
@@ -136,7 +136,7 @@ instead of showing just the current stack.
 
 ### spice.log.crFormat
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.13.0 -->
 
 Whether $$gs log short$$ and $$gs log long$$ should show the CR URL or the ID next
 to any remote branches.
@@ -148,7 +148,7 @@ to any remote branches.
 
 ### spice.log.pushStatusFormat
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.13.0 -->
 
 Whether $$gs log short$$ and $$gs log long$$ should show
 whether the branch is in sync with its pushed counterpart.

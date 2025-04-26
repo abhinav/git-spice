@@ -1,3 +1,0 @@
-kind: Added
-body: 'commit {create, amend}: Add --allow-empty flag to allow commits without any changes.'
-time: 2025-04-25T16:10:27.297298-07:00
