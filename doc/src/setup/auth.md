@@ -326,7 +326,7 @@ set $$spice.forge.gitlab.url$$ to the address of your GitLab instance.
 {green}${reset} git config {red}spice.forge.gitlab.url{reset} {mag}https://gitlab.example.com{reset}
 ```
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.13.0 -->
 *Optionally*, also set the GitLab API URL
 with the $$spice.forge.gitlab.apiUrl$$ configuration option.
 By default, the API URL is the same as the GitLab URL.

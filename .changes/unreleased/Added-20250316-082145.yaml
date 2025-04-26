@@ -1,6 +1,0 @@
-kind: Added
-body: >-
-  log: Add `spice.log.pushStatusFormat = (true | false | aheadBehind)`
-  to show whether a branch is out-of-sync with its remote,
-  and optionally, by how many commits. Defaults to `true`.
-time: 2025-03-16T08:21:45.085254-07:00

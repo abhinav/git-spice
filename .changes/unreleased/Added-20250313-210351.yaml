@@ -1,3 +1,0 @@
-kind: Added
-body: 'GitLab: Allow changing the API URL with the `spice.forge.gitlab.apiUrl` configuration option or the `GITLAB_API_URL` environment variable.'
-time: 2025-03-13T21:03:51.970829-07:00
