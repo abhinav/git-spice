@@ -43,3 +43,6 @@ runs:
         -debian
         -prefix "$GIT_CACHE_DIR"
         -version "$GIT_VERSION"
+      env:
+        GIT_VERSION: ${{ inputs.version }}
+        GIT_CACHE_DIR: ${{ steps.env.outputs.cache_dir }}
