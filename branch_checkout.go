@@ -22,6 +22,9 @@ type branchCheckoutCmd struct {
 	checkoutOptions
 	BranchPromptConfig
 
+	// Allow users to opt out of the "branch not tracked" prompt.
+	TrackUntrackedPrompt bool `config:"branchCheckout.trackUntrackedPrompt" hidden:"" default:"true" help:"Whether to prompt to track untracked branches when checked out."`
+
 	Untracked bool   `short:"u" config:"branchCheckout.showUntracked" help:"Show untracked branches if one isn't supplied"`
 	Branch    string `arg:"" optional:"" help:"Name of the branch to checkout" predictor:"branches"`
 }
@@ -93,7 +96,7 @@ func (cmd *branchCheckoutCmd) Run(
 			case errors.As(err, &restackErr):
 				log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
 			case errors.Is(err, state.ErrNotExist):
-				if !ui.Interactive(view) {
+				if !ui.Interactive(view) || !cmd.TrackUntrackedPrompt {
 					log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
 					break
 				}

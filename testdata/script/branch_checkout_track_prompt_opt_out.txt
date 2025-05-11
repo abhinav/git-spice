@@ -1,0 +1,28 @@
+# Checkout out an untracked branch with 'branch checkout'
+# does not prompt if the user opts out of the prompt.
+
+as 'Test <test@example.com>'
+at '2025-05-11T10:48:49Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+git add foo.txt
+git commit -m 'Add foo.txt'
+
+git checkout main
+
+git config spice.branchCheckout.trackUntrackedPrompt false
+
+# Enable interactive mode, but don't expect a prompt.
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch checkout feature
+cmp $WORK/robot.actual $WORK/robot.golden
+stderr 'branch not tracked'
+
+-- repo/foo.txt --
+whatever
+-- robot.golden --
