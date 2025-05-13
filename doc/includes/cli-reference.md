@@ -571,6 +571,7 @@ target (A) to the specified branch:
 
 **Flags**
 
+* `--prefix=""` ([:material-wrench:{ .middle title="spice.branchCreate.prefix" }](/cli/config.md#spicebranchcreateprefix)): Prepend a prefix to the name of the branch being created
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
@@ -579,7 +580,7 @@ target (A) to the specified branch:
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
-**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit)
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix)
 
 ### gs branch delete
 
