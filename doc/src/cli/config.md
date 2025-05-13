@@ -100,6 +100,18 @@ and use the `--commit` flag to commit changes when needed.
 - `true` (default)
 - `false`
 
+### spice.branchCreate.prefix
+
+<!-- gs:version v0.14.0 -->
+
+If set, the prefix will be prepended to the name of every branch created 
+with $$gs branch create$$.
+
+Commonly used values are:
+
+- `<name>/`: the committers name
+- `<username>/`: the committers username
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.
