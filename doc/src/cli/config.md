@@ -109,8 +109,8 @@ with $$gs branch create$$.
 
 Commonly used values are:
 
-- `<name>/`: the committers name
-- `<username>/`: the committers username
+- `<name>/`: the committer's name
+- `<username>/`: the committer's username
 
 ### spice.forge.github.apiUrl
 
