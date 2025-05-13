@@ -115,7 +115,7 @@ text "Sibling" with s at F.n
 
 
 **Restacking**
-:   Restacking is the process of moving a rebasing the contents of a branch
+:   Restacking is the process of rebasing the contents of a branch
     on top of its base branch, which it may have diverged from.
     This is done to keep the branch up-to-date with its base branch,
     and maintain a linear history.
