@@ -1,0 +1,25 @@
+# branch create with spice.branchCreate.prefix adds a prefix to the name.
+
+as 'Test <test@example.com>'
+at '2025-05-13T20:18:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git config spice.branchCreate.prefix 'myuser/'
+
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feature.txt --
+feature
+
+-- golden/ll.txt --
+┏━■ myuser/feature ◀
+┃   eb4b3b8 Add feature (now)
+main

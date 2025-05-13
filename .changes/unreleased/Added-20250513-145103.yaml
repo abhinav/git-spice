@@ -1,0 +1,4 @@
+kind: Added
+body: |
+  Add 'spice.branchCreate.prefix' configuration option to always add a configured prefix to new branches.
+time: 2025-05-13T14:51:03.004049282-07:00

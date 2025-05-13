@@ -13,7 +13,13 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
+type branchCreateConfig struct {
+	Prefix string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created" hidden:""`
+}
+
 type branchCreateCmd struct {
+	branchCreateConfig
+
 	Name string `arg:"" optional:"" help:"Name of the new branch"`
 
 	Insert bool   `help:"Restack the upstack of the target branch onto the new branch"`
@@ -217,6 +223,8 @@ func (cmd *branchCreateCmd) Run(
 		}
 	}
 
+	branchName := cmd.Prefix + cmd.Name
+
 	// Start the transaction and make sure it would work
 	// before actually creating the branch.
 	// This way, if the transaction would've failed anyway
@@ -225,12 +233,12 @@ func (cmd *branchCreateCmd) Run(
 	// and rollback to the original branch and staged changes.
 	branchTx := store.BeginBranchTx()
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
-		Name:            cmd.Name,
+		Name:            branchName,
 		Base:            baseName,
 		BaseHash:        baseHash,
 		MergedDownstack: newMergedDownstack,
 	}); err != nil {
-		return fmt.Errorf("add branch %v with base %v: %w", cmd.Name, baseName, err)
+		return fmt.Errorf("add branch %v with base %v: %w", branchName, baseName, err)
 	}
 
 	for _, branch := range restackOntoNew {
@@ -240,7 +248,7 @@ func (cmd *branchCreateCmd) Run(
 		// We'll run a restack command after this to update the state.
 		if err := branchTx.Upsert(ctx, state.UpsertRequest{
 			Name:            branch,
-			Base:            cmd.Name,
+			Base:            branchName,
 			MergedDownstack: restackedMergedDownstack,
 		}); err != nil {
 			return fmt.Errorf("update base branch of %v: %w", branch, err)
@@ -248,25 +256,25 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{
-		Name: cmd.Name,
+		Name: branchName,
 		Head: branchAt.String(),
 	}); err != nil {
 		return fmt.Errorf("create branch: %w", err)
 	}
 
 	branchCreated = true
-	if err := repo.Checkout(ctx, cmd.Name); err != nil {
+	if err := repo.Checkout(ctx, branchName); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
 	var msg string
 	switch {
 	case cmd.Below:
-		msg = fmt.Sprintf("insert branch %s below %s", cmd.Name, cmd.Target)
+		msg = fmt.Sprintf("insert branch %s below %s", branchName, cmd.Target)
 	case cmd.Insert:
-		msg = fmt.Sprintf("insert branch %s above %s", cmd.Name, cmd.Target)
+		msg = fmt.Sprintf("insert branch %s above %s", branchName, cmd.Target)
 	default:
-		msg = "create branch " + cmd.Name
+		msg = "create branch " + branchName
 	}
 
 	if err := branchTx.Commit(ctx, msg); err != nil {
