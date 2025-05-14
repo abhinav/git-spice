@@ -571,7 +571,6 @@ target (A) to the specified branch:
 
 **Flags**
 
-* `--prefix=""` ([:material-wrench:{ .middle title="spice.branchCreate.prefix" }](/cli/config.md#spicebranchcreateprefix)): Prepend a prefix to the name of the branch being created
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
