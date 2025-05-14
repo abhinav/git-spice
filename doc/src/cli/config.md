@@ -102,7 +102,7 @@ and use the `--commit` flag to commit changes when needed.
 
 ### spice.branchCreate.prefix
 
-<!-- gs:version v0.14.0 -->
+<!-- gs:version unreleased -->
 
 If set, the prefix will be prepended to the name of every branch created 
 with $$gs branch create$$.

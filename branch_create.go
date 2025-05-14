@@ -14,7 +14,7 @@ import (
 )
 
 type branchCreateConfig struct {
-	Prefix string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created"`
+	Prefix string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created" hidden:""`
 }
 
 type branchCreateCmd struct {
