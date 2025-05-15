@@ -24,7 +24,7 @@ gotestsum = "latest"
 gofumpt = "latest"
 
 # Check for required fields in structs.
-requiredfield = "0.4.0"
+requiredfield = "0.5.0"
 
 # Collection of linters.
 golangci-lint = "latest"
