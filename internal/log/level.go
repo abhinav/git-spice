@@ -1,0 +1,83 @@
+package log
+
+import "log/slog"
+
+// Level is a log level.
+type Level slog.Level
+
+var _ slog.Leveler = (Level)(0)
+
+// Supported log levels.
+const (
+	LevelTrace = Level(-8)
+	LevelDebug = Level(slog.LevelDebug)
+	LevelInfo  = Level(slog.LevelInfo)
+	LevelWarn  = Level(slog.LevelWarn)
+	LevelError = Level(slog.LevelError)
+	LevelFatal = Level(16)
+)
+
+// Levels is a list of all supported log levels.
+var Levels = []Level{
+	LevelTrace,
+	LevelDebug,
+	LevelInfo,
+	LevelWarn,
+	LevelError,
+	LevelFatal,
+}
+
+// String returns the string representation of the log level.
+func (l Level) String() string {
+	switch l {
+	case LevelTrace:
+		return "trace"
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	default:
+		return slog.Level(l).String()
+	}
+}
+
+// Level returns the level as a slog.Level.
+func (l Level) Level() slog.Level {
+	return slog.Level(l)
+}
+
+// ByLevel is a struct that contains fields for each log level.
+type ByLevel[T any] struct {
+	Trace T
+	Debug T
+	Info  T
+	Warn  T
+	Error T
+	Fatal T
+}
+
+// Get returns the value associated with the given log level.
+func (b *ByLevel[T]) Get(lvl Level) T {
+	switch lvl {
+	case LevelTrace:
+		return b.Trace
+	case LevelDebug:
+		return b.Debug
+	case LevelInfo:
+		return b.Info
+	case LevelWarn:
+		return b.Warn
+	case LevelError:
+		return b.Error
+	case LevelFatal:
+		return b.Fatal
+	default:
+		panic("invalid log level: " + lvl.String())
+	}
+}
