@@ -36,6 +36,9 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
+	r.log.Debug("Created pull request",
+		"pr", m.CreatePullRequest.PullRequest.Number,
+		"url", m.CreatePullRequest.PullRequest.URL.String())
 
 	return forge.SubmitChangeResult{
 		ID: &PR{

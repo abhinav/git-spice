@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // FetchOptions specifies parameters for the Fetch method.
@@ -25,6 +27,8 @@ func (r *Repository) Fetch(ctx context.Context, opts FetchOptions) error {
 	if opts.Remote == "" && len(opts.Refspecs) == 0 {
 		return errors.New("fetch: no remote or refspecs specified")
 	}
+
+	r.log.Debug("Fetching from remote", silog.NonZero("name", opts.Remote))
 
 	args := []string{"fetch"}
 	if opts.Remote != "" {

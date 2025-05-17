@@ -94,11 +94,15 @@ func (cmd *branchFoldCmd) Run(
 		}); err != nil {
 			return fmt.Errorf("set base of %v to %v: %w", above, b.Base, err)
 		}
+		log.Debug("Changing base branch of upstream",
+			"branch", above,
+			"newBase", b.Base)
 	}
 
 	if err := tx.Delete(ctx, cmd.Branch); err != nil {
 		return fmt.Errorf("delete branch %v from state: %w", cmd.Branch, err)
 	}
+	log.Debug("Removing branch from tracking", "branch", cmd.Branch)
 
 	if err := tx.Commit(ctx, fmt.Sprintf("folding %v into %v", cmd.Branch, b.Base)); err != nil {
 		return fmt.Errorf("update state: %w", err)

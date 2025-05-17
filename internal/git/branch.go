@@ -125,6 +125,8 @@ type CreateBranchRequest struct {
 // CreateBranch creates a new branch in the repository.
 // This operation fails if a branch with the same name already exists.
 func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) error {
+	r.log.Debug("Creating branch", "name", req.Name, "head", req.Head)
+
 	args := []string{"branch", req.Name}
 	if req.Force {
 		args = append(args, "--force")
@@ -148,6 +150,8 @@ func (r *Repository) BranchExists(ctx context.Context, branch string) bool {
 // and points it to the specified commitish (if provided).
 // Otherwise, it stays at the current commit.
 func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
+	r.log.Debug("Detaching HEAD", "commit", commitish)
+
 	args := []string{"checkout", "--detach"}
 	if len(commitish) > 0 {
 		args = append(args, commitish)
@@ -161,6 +165,8 @@ func (r *Repository) DetachHead(ctx context.Context, commitish string) error {
 // Checkout switches to the specified branch.
 // If the branch does not exist, it returns an error.
 func (r *Repository) Checkout(ctx context.Context, branch string) error {
+	r.log.Debug("Checking out branch", "name", branch)
+
 	if err := r.gitCmd(ctx, "checkout", branch).Run(r.exec); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
@@ -186,6 +192,8 @@ func (r *Repository) DeleteBranch(
 	branch string,
 	opts BranchDeleteOptions,
 ) error {
+	r.log.Debug("Deleting branch", "name", branch)
+
 	args := []string{"branch", "--delete"}
 	if opts.Force {
 		args = append(args, "--force")
@@ -212,6 +220,8 @@ type RenameBranchRequest struct {
 
 // RenameBranch renames a branch in the repository.
 func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) error {
+	r.log.Debug("Renaming branch", "old", req.OldName, "new", req.NewName)
+
 	args := []string{"branch", "--move", req.OldName, req.NewName}
 	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
 		return fmt.Errorf("git branch: %w", err)
@@ -246,8 +256,10 @@ func (r *Repository) SetBranchUpstream(
 ) error {
 	args := []string{"branch"}
 	if upstream == "" {
+		r.log.Debug("Unsetting branch upstream", "name", branch)
 		args = append(args, "--unset-upstream")
 	} else {
+		r.log.Debug("Setting branch upstream", "name", branch, "upstream", upstream)
 		args = append(args, "--set-upstream-to="+upstream)
 	}
 	args = append(args, branch)

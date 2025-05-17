@@ -22,7 +22,7 @@ git commit -m 'Add bar'
 
 # track bar with foo as base.
 gs branch track --base foo --verbose
-stderr 'bar: needs to be restacked'
+stderr 'branch is behind its base and needs to be restacked'
 
 gs branch restack
 stderr 'bar: restacked on foo'

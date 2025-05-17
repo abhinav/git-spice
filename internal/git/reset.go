@@ -91,6 +91,10 @@ func (r *Repository) Reset(ctx context.Context, commit string, opts ResetOptions
 		must.BeEqualf(opts.Mode, ResetModeUnset, "resetting paths requires mixed reset mode")
 		args = append(args, "--")
 		args = append(args, opts.Paths...)
+
+		r.log.Debug("Resetting paths", "commit", commit, "paths", opts.Paths)
+	} else {
+		r.log.Debug("Resetting repository", "commit", commit, "mode", opts.Mode)
 	}
 
 	cmd := r.gitCmd(ctx, args...)

@@ -125,13 +125,13 @@ const (
 	_authorEmail = "git-spice@localhost"
 )
 
-func newRepoStorage(repo storage.GitRepository, log *silog.Logger) *storage.DB {
+func newRepoStorage(repo *git.Repository, log *silog.Logger) *storage.DB {
 	return storage.NewDB(storage.NewGitBackend(storage.GitConfig{
-		Repo:        repo,
+		Repo:        repo.WithLogger(log.Downgrade()),
 		Ref:         _dataRef,
 		AuthorName:  _authorName,
 		AuthorEmail: _authorEmail,
-		Log:         log.Downgrade(),
+		Log:         log,
 	}))
 }
 

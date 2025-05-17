@@ -14,9 +14,10 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 	if cmputil.Zero(opts) {
 		return nil // nothing to do
 	}
+	pr := mustPR(fid)
 
 	// We don't know the GraphQL ID for the PR, so find it.
-	graphQLID, err := r.graphQLID(ctx, mustPR(fid))
+	graphQLID, err := r.graphQLID(ctx, pr)
 	if err != nil {
 		return fmt.Errorf("get pull request ID: %w", err)
 	}
@@ -38,13 +39,17 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
+		r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
 	}
 
 	// Draft status is a separate API call for some reason.
 	if opts.Draft != nil {
 		// And for some reason, it's a different mutation based on
 		// whether it's true or false.
-		var m, input any
+		var (
+			m, input any
+			logMsg   string
+		)
 		if *opts.Draft {
 			m = &struct {
 				ConvertPullRequestToDraft struct {
@@ -57,6 +62,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 			input = githubv4.ConvertPullRequestToDraftInput{
 				PullRequestID: graphQLID,
 			}
+			logMsg = "Converted PR to draft"
 		} else {
 			m = &struct {
 				MarkPullRequestReadyForReview struct {
@@ -69,11 +75,14 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 			input = githubv4.MarkPullRequestReadyForReviewInput{
 				PullRequestID: graphQLID,
 			}
+			logMsg = "Marked PR as ready for review"
 		}
 
 		if err := r.client.Mutate(ctx, m, input, nil); err != nil {
 			return fmt.Errorf("update draft status: %w", err)
 		}
+
+		r.log.Debug(logMsg, "pr", pr.Number)
 	}
 
 	return nil

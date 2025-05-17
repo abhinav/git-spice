@@ -3,6 +3,7 @@ package gitlab
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
@@ -21,15 +22,20 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	if cmputil.Zero(opts) {
 		return nil // nothing to do
 	}
+	mr := mustMR(id)
 
-	var updateOptions gitlab.UpdateMergeRequestOptions
+	var (
+		updateOptions gitlab.UpdateMergeRequestOptions
+		logUpdates    []slog.Attr
+	)
 	if opts.Base != "" {
 		updateOptions.TargetBranch = &opts.Base
+		logUpdates = append(logUpdates, slog.String("base", opts.Base))
 	}
 
 	if opts.Draft != nil {
 		mr, _, err := r.client.MergeRequests.GetMergeRequest(
-			r.repoID, mustMR(id).Number, nil,
+			r.repoID, mr.Number, nil,
 			gitlab.WithContext(ctx),
 		)
 		if err != nil {
@@ -46,14 +52,21 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 				updateOptions.Title = &title
 			}
 		}
+		logUpdates = append(logUpdates, slog.Bool("draft", *opts.Draft))
 	}
 
 	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
-		r.repoID, mustMR(id).Number, &updateOptions,
+		r.repoID, mr.Number, &updateOptions,
 		gitlab.WithContext(ctx),
 	)
 	if err != nil {
 		return fmt.Errorf("update draft status: %w", err)
+	}
+	if len(logUpdates) > 0 {
+		r.log.Debug("Updated merge request",
+			"mr", mr.Number,
+			"new", slog.GroupValue(logUpdates...),
+		)
 	}
 
 	return nil

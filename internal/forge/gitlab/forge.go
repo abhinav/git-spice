@@ -54,7 +54,7 @@ func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
 		return silog.Nop()
 	}
-	return f.Log
+	return f.Log.WithPrefix("gitlab")
 }
 
 // URL returns the base URL configured for the GitLab Forge

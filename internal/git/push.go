@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // PushOptions specifies options for the Push operation.
@@ -34,6 +38,11 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 		return errors.New("push: no remote or refspec specified")
 	}
 
+	r.log.Debug("Pushing to remote",
+		silog.NonZero("name", opts.Remote),
+		silog.NonZero("force", opts.Force),
+		silog.NonZero("lease", forceWithLease(opts.ForceWithLease)))
+
 	args := []string{"push"}
 	if lease := opts.ForceWithLease; lease != "" {
 		args = append(args, "--force-with-lease="+lease)
@@ -53,4 +62,22 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 	}
 
 	return nil
+}
+
+type forceWithLease string
+
+func (f forceWithLease) String() string {
+	return string(f)
+}
+
+func (f forceWithLease) LogValue() slog.Value {
+	ref, hash, ok := strings.Cut(string(f), ":")
+	if !ok {
+		return slog.StringValue(string(f))
+	}
+
+	return slog.GroupValue(
+		slog.String("ref", ref),
+		slog.String("hash", Hash(hash).Short()),
+	)
 }

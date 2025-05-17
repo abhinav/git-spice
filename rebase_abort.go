@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -29,6 +31,7 @@ func (*rebaseAbortCmd) Help() string {
 func (cmd *rebaseAbortCmd) Run(
 	ctx context.Context,
 	repo *git.Repository,
+	log *silog.Logger,
 	store *state.Store,
 ) error {
 	var wasRebasing bool
@@ -57,6 +60,12 @@ func (cmd *rebaseAbortCmd) Run(
 	// then this was a no-op, which this command should not be.
 	if len(conts) == 0 && !wasRebasing {
 		return errors.New("no operation to abort")
+	}
+
+	for _, cont := range conts {
+		log.Debug("Rebase aborted: will not run command",
+			"command", strings.Join(cont.Command, " "),
+			"branch", cont.Branch)
 	}
 
 	return nil

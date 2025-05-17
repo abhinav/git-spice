@@ -103,6 +103,7 @@ func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.Authenticati
 		return fmt.Errorf("marshal token: %w", err)
 	}
 
+	f.logger().Debug("Saving authentication token to local secret storage")
 	return stash.SaveSecret(f.URL(), "token", string(bs))
 }
 
@@ -131,6 +132,7 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 
 // ClearAuthenticationToken removes the authentication token from the stash.
 func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
+	f.logger().Debug("Clearing authentication token from local secret storage")
 	return stash.DeleteSecret(f.URL(), "token")
 }
 

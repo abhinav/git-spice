@@ -32,6 +32,9 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("create merge request: %w", err)
 	}
+	r.log.Debug("Created merge request",
+		"mr", request.IID,
+		"url", request.WebURL)
 
 	return forge.SubmitChangeResult{
 		ID: &MR{

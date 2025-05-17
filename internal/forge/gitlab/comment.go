@@ -46,11 +46,12 @@ func (r *Repository) PostChangeComment(
 	id forge.ChangeID,
 	markdown string,
 ) (forge.ChangeCommentID, error) {
+	mr := mustMR(id)
 	noteOptions := gitlab.CreateMergeRequestNoteOptions{
 		Body: &markdown,
 	}
 
-	mrNumber := mustMR(id).Number
+	mrNumber := mr.Number
 	note, _, err := r.client.Notes.CreateMergeRequestNote(
 		r.repoID, mrNumber, &noteOptions,
 		gitlab.WithContext(ctx),
@@ -59,7 +60,7 @@ func (r *Repository) PostChangeComment(
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
 
-	r.log.Debug("Posted comment", "id", note.ID)
+	r.log.Debug("Posted comment", "id", note.ID, "mr", mrNumber)
 	return &MRComment{
 		Number:   note.ID,
 		MRNumber: mrNumber,
@@ -77,9 +78,6 @@ func (r *Repository) UpdateChangeComment(
 		Body: &markdown,
 	}
 
-	r.log.Debug("Updating comment",
-		"id", mrComment.Number,
-		"mr", mrComment.MRNumber)
 	_, _, err := r.client.Notes.UpdateMergeRequestNote(
 		r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
 		gitlab.WithContext(ctx),
@@ -87,6 +85,9 @@ func (r *Repository) UpdateChangeComment(
 	if err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
+	r.log.Debug("Updated comment",
+		"id", mrComment.Number,
+		"mr", mrComment.MRNumber)
 
 	return nil
 }
@@ -107,6 +108,7 @@ func (r *Repository) DeleteChangeComment(
 	if err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
+	r.log.Debug("Deleted comment", "id", mrComment.Number, "mr", mrComment.MRNumber)
 
 	return nil
 }

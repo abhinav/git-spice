@@ -212,7 +212,7 @@ func updateNavigationComments(
 		for _, crJSON := range b.MergedDownstack {
 			downstackCR, err := f.UnmarshalChangeID(crJSON)
 			if err != nil {
-				log.Warn("skiping invalid downstack change",
+				log.Warn("Skiping invalid downstack change",
 					"branch", b.Name,
 					"change", string(crJSON),
 					"error", err,
@@ -348,7 +348,7 @@ func updateNavigationComments(
 		idx, ok := idxByBranch[branch]
 		if !ok {
 			// This should never happen.
-			log.Warnf("branch %q not found in tracked branches", branch)
+			log.Warn("Branch not found in tracked branches", "branch", branch)
 			continue
 		}
 

@@ -185,7 +185,7 @@ func (cmd *branchLogCmd) run(
 							ExcludeFrom(branch.BaseHash).
 							FirstParent())
 					if err != nil {
-						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "err", err)
+						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "error", err)
 						continue
 					}
 					info.Commits = commits
