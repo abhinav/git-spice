@@ -119,6 +119,29 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 	// !nil     | nil    | Branch is not tracked
 	// !nil     | !nil   | Branch is not known to the repository
 	if storeErr == nil && gitErr == nil {
+		// Special case:
+		// Branch exists and is tracked,
+		// and was previously pushed to a remote,
+		// but the remote branch reference has since been deleted.
+		if resp.UpstreamBranch != "" {
+			ok, err := s.verifyUpstreamBranchRef(ctx, name, resp.UpstreamBranch)
+			if err != nil {
+				s.log.Warn("Unable to verify upstream branch reference",
+					"branch", name,
+					"upstream", resp.UpstreamBranch,
+					"error", err)
+				resp.UpstreamBranch = ""
+			}
+			if !ok {
+				// Upstream branch reference has been deleted.
+				s.log.Debug("Upstream branch reference no longer valid",
+					"branch", name,
+					"upstream", resp.UpstreamBranch)
+
+				resp.UpstreamBranch = ""
+			}
+		}
+
 		out := &LookupBranchResponse{
 			Base:            resp.Base,
 			BaseHash:        resp.BaseHash,
@@ -180,6 +203,42 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 		fmt.Errorf("untracked branch %v: %w", name, storeErr),
 		fmt.Errorf("resolve head: %w", gitErr),
 	)
+}
+
+// verifyUpstreamBranchRef verifies that the upstream branch reference is
+// valid, and if not, it deletes that knowledge from the branch's state.
+//
+// That is, if $remote/$upstreamBranch does not exist,
+// $branch's local state will forget about the upstream branch,
+// but the branch will not be deleted.
+//
+// Returns true if the upstream branch reference is valid.l
+func (s *Service) verifyUpstreamBranchRef(ctx context.Context, branch, upstreamBranch string) (ok bool, err error) {
+	remote, err := s.store.Remote()
+	if err != nil {
+		return false, nil // no remote, no upstream branch
+	}
+
+	upstreamRef := remote + "/" + upstreamBranch
+	if _, err := s.repo.PeelToCommit(ctx, upstreamRef); err == nil {
+		return true, nil
+	}
+
+	tx := s.store.BeginBranchTx()
+	var empty string
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:           branch,
+		UpstreamBranch: &empty,
+	}); err != nil {
+		return false, fmt.Errorf("update branch %v: %w", branch, err)
+	}
+
+	msg := fmt.Sprintf("upstream %q deleted out of band", upstreamRef)
+	if err := tx.Commit(ctx, msg); err != nil {
+		return false, fmt.Errorf("commit state: %w", err)
+	}
+
+	return false, nil
 }
 
 // ForgetBranch stops tracking a branch,

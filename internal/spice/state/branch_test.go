@@ -1,131 +1,24 @@
-package state
+package state_test
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"maps"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 	"pgregory.net/rapid"
 )
 
-func TestBranchChangeStateUnmarshal(t *testing.T) {
-	tests := []struct {
-		name string
-		give string
-
-		want    *branchChangeState
-		wantErr string
-	}{
-		{
-			name: "Valid",
-			give: `{"github": {"number": 123}}`,
-			want: &branchChangeState{
-				Forge:  "github",
-				Change: json.RawMessage(`{"number": 123}`),
-			},
-		},
-		{
-			name:    "NotAnObject",
-			give:    `123`,
-			wantErr: "unmarshal change state",
-		},
-		{
-			name: "MultipleForges",
-			give: `{
-				"github": {"number": 123},
-				"gitlab": {"number": 456}
-			}`,
-			wantErr: "expected 1 forge key, got 2",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var got branchChangeState
-			err := json.Unmarshal([]byte(tt.give), &got)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.wantErr)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, &got)
-		})
-	}
-}
-
-func TestBranchStateUnmarshal(t *testing.T) {
-	tests := []struct {
-		name string
-		give string
-
-		want    *branchState
-		wantErr string
-	}{
-		{
-			name: "Simple",
-			give: `{
-				"base": {"name": "main", "hash": "abc123"},
-				"upstream": {"branch": "main"},
-				"change": {"github": {"number": 123}}
-			}`,
-			want: &branchState{
-				Base: branchStateBase{
-					Name: "main",
-					Hash: "abc123",
-				},
-				Upstream: &branchUpstreamState{
-					Branch: "main",
-				},
-				Change: &branchChangeState{
-					Forge:  "github",
-					Change: json.RawMessage(`{"number": 123}`),
-				},
-			},
-		},
-
-		{
-			name: "NoUpstream",
-			give: `{
-				"base": {"name": "main", "hash": "abc123"}
-			}`,
-			want: &branchState{
-				Base: branchStateBase{
-					Name: "main",
-					Hash: "abc123",
-				},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var got branchState
-			err := json.Unmarshal([]byte(tt.give), &got)
-
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.ErrorContains(t, err, tt.wantErr)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, &got)
-		})
-	}
-}
-
 func TestBranchTxUpsertErrors(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
-	store, err := InitStore(ctx, InitStoreRequest{
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
 	})
@@ -134,7 +27,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	t.Run("MissingBranch", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, UpsertRequest{})
+		err := tx.Upsert(ctx, state.UpsertRequest{})
 		assert.ErrorContains(t, err, "branch name is required")
 		require.NoError(t, tx.Commit(ctx, "no op"))
 	})
@@ -142,34 +35,34 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	t.Run("TrunkNotAllowed", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, UpsertRequest{
+		err := tx.Upsert(ctx, state.UpsertRequest{
 			Name: "main",
 			Base: "whatever",
 		})
-		assert.ErrorIs(t, err, ErrTrunk)
+		assert.ErrorIs(t, err, state.ErrTrunk)
 		require.NoError(t, tx.Commit(ctx, "no op"))
 
 		_, err = store.LookupBranch(ctx, "main")
-		require.ErrorIs(t, err, ErrNotExist)
+		require.ErrorIs(t, err, state.ErrNotExist)
 	})
 
 	t.Run("NewBranchNoBase", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, UpsertRequest{
+		err := tx.Upsert(ctx, state.UpsertRequest{
 			Name: "foo",
 		})
 		assert.ErrorContains(t, err, "new branch must have a base")
 		require.NoError(t, tx.Commit(ctx, "no op"))
 
 		_, err = store.LookupBranch(ctx, "foo")
-		require.ErrorIs(t, err, ErrNotExist)
+		require.ErrorIs(t, err, state.ErrNotExist)
 	})
 
 	t.Run("NewBranchUnknownBase", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, UpsertRequest{
+		err := tx.Upsert(ctx, state.UpsertRequest{
 			Name: "foo",
 			Base: "unknown",
 		})
@@ -178,17 +71,17 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 
 		_, err = store.LookupBranch(ctx, "foo")
 		require.Error(t, err)
-		require.ErrorIs(t, err, ErrNotExist)
+		require.ErrorIs(t, err, state.ErrNotExist)
 	})
 
 	// Add a couple branches to work with.
 	{
 		tx := store.BeginBranchTx()
-		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+		require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 			Name: "foo",
 			Base: "main",
 		}))
-		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+		require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 			Name: "bar",
 			Base: "foo",
 		}))
@@ -198,7 +91,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 	t.Run("Cycle", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		err := tx.Upsert(ctx, UpsertRequest{
+		err := tx.Upsert(ctx, state.UpsertRequest{
 			Name: "foo",
 			Base: "bar",
 		})
@@ -215,7 +108,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 		ctx := t.Context()
 		{
 			tx := store.BeginBranchTx()
-			require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+			require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 				Name: "baz",
 				Base: "main",
 			}))
@@ -224,7 +117,7 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 
 		tx := store.BeginBranchTx()
 		require.NoError(t, tx.Delete(ctx, "baz"))
-		err := tx.Upsert(ctx, UpsertRequest{
+		err := tx.Upsert(ctx, state.UpsertRequest{
 			Name: "qux",
 			Base: "baz",
 		})
@@ -232,14 +125,14 @@ func TestBranchTxUpsertErrors(t *testing.T) {
 		require.NoError(t, tx.Commit(ctx, "delete baz"))
 
 		_, err = store.LookupBranch(ctx, "baz")
-		require.ErrorIs(t, err, ErrNotExist)
+		require.ErrorIs(t, err, state.ErrNotExist)
 	})
 }
 
 func TestBranchTxDelete(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
-	store, err := InitStore(ctx, InitStoreRequest{
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
 	})
@@ -257,7 +150,7 @@ func TestBranchTxDelete(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "main")
-		assert.ErrorIs(t, err, ErrTrunk)
+		assert.ErrorIs(t, err, state.ErrTrunk)
 		require.NoError(t, tx.Commit(ctx, "no op"))
 	})
 
@@ -265,17 +158,17 @@ func TestBranchTxDelete(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
 		err := tx.Delete(ctx, "unknown")
-		assert.ErrorIs(t, err, ErrNotExist)
+		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
 	// Add a couple branches to work with.
 	{
 		tx := store.BeginBranchTx()
-		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+		require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 			Name: "foo",
 			Base: "main",
 		}))
-		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+		require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 			Name: "bar",
 			Base: "foo",
 		}))
@@ -296,7 +189,7 @@ func TestBranchTxDelete(t *testing.T) {
 	t.Run("UpsertAndDelete", func(t *testing.T) {
 		ctx := t.Context()
 		tx := store.BeginBranchTx()
-		require.NoError(t, tx.Upsert(ctx, UpsertRequest{
+		require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
 			Name: "baz",
 			Base: "main",
 		}))
@@ -304,21 +197,21 @@ func TestBranchTxDelete(t *testing.T) {
 		require.NoError(t, tx.Commit(ctx, "no op"))
 
 		_, err := store.LookupBranch(ctx, "baz")
-		require.ErrorIs(t, err, ErrNotExist)
+		require.ErrorIs(t, err, state.ErrNotExist)
 	})
 }
 
 func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
-	store, err := InitStore(ctx, InitStoreRequest{
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:           "foo",
 				Base:           "main",
@@ -334,12 +227,12 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 	assert.Equal(t, "github", foo.ChangeForge)
 	assert.JSONEq(t, `{"number": 123}`, string(foo.ChangeMetadata))
 
-	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:           "foo",
 				Base:           "main",
-				ChangeMetadata: Null,
+				ChangeMetadata: state.Null,
 			},
 		},
 		Message: "clear foo",
@@ -354,15 +247,15 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
-	store, err := InitStore(ctx, InitStoreRequest{
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
 	})
 	require.NoError(t, err)
 
 	upstream := "thing"
-	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:           "foo",
 				Base:           "main",
@@ -377,8 +270,8 @@ func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	assert.Equal(t, "thing", foo.UpstreamBranch)
 
 	var empty string
-	require.NoError(t, UpdateBranch(ctx, store, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name:           "foo",
 				Base:           "main",
@@ -411,7 +304,7 @@ func testBranchStateUncorruptible(t *rapid.T) {
 	trunk := branchNameGen.Draw(t, "trunk")
 	ctx := t.Context()
 	db := storage.NewDB(make(storage.MapBackend))
-	store, err := InitStore(ctx, InitStoreRequest{
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: trunk,
 	})
@@ -441,8 +334,8 @@ func testBranchStateUncorruptible(t *rapid.T) {
 type branchStateUncorruptible struct {
 	ctx context.Context
 
-	db    DB
-	store *Store
+	db    state.DB
+	store *state.Store
 	trunk string
 
 	knownBranches map[string]struct{}
@@ -465,7 +358,7 @@ func (sm *branchStateUncorruptible) Check(t *rapid.T) {
 
 	// Trunk must never be tracked.
 	_, err = sm.store.LookupBranch(sm.ctx, sm.trunk)
-	assert.ErrorIs(t, err, ErrNotExist)
+	assert.ErrorIs(t, err, state.ErrNotExist)
 
 	// Verify that there are no cycles in the branch graph
 	// and that all bases are either the trunk, or tracked.
@@ -494,9 +387,9 @@ func (sm *branchStateUncorruptible) checkBranch(t *rapid.T, name string) {
 	}
 }
 
-func (sm *branchStateUncorruptible) update(t *rapid.T, req *UpdateRequest) {
+func (sm *branchStateUncorruptible) update(t *rapid.T, req *statetest.UpdateRequest) {
 	t.Logf("try update: %v", req.Message)
-	if err := UpdateBranch(sm.ctx, sm.store, req); err != nil {
+	if err := statetest.UpdateBranch(sm.ctx, sm.store, req); err != nil {
 		for _, upsert := range req.Upserts {
 			t.Logf("failed to upsert branch: name=%v base=%v: %v", upsert.Name, upsert.Base, err)
 		}
@@ -519,7 +412,7 @@ func (sm *branchStateUncorruptible) update(t *rapid.T, req *UpdateRequest) {
 }
 
 func (sm *branchStateUncorruptible) DeleteOne(t *rapid.T) {
-	sm.update(t, &UpdateRequest{
+	sm.update(t, &statetest.UpdateRequest{
 		Deletes: []string{
 			sm.branchNameGen.Draw(t, "branchToDelete"),
 		},
@@ -542,8 +435,8 @@ func (sm *branchStateUncorruptible) DeleteOneTx(t *rapid.T) {
 }
 
 func (sm *branchStateUncorruptible) UpsertOne(t *rapid.T) {
-	sm.update(t, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	sm.update(t, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name: sm.branchNameGen.Draw(t, "branch"),
 				Base: sm.branchNameGen.Draw(t, "base"),
@@ -558,7 +451,7 @@ func (sm *branchStateUncorruptible) UpsertOneTx(t *rapid.T) {
 	base := sm.branchNameGen.Draw(t, "base")
 	tx := sm.store.BeginBranchTx()
 
-	if err := tx.Upsert(sm.ctx, UpsertRequest{
+	if err := tx.Upsert(sm.ctx, state.UpsertRequest{
 		Name: name,
 		Base: base,
 	}); err != nil {
@@ -572,9 +465,9 @@ func (sm *branchStateUncorruptible) UpsertOneTx(t *rapid.T) {
 }
 
 func (sm *branchStateUncorruptible) UpsertAndDeleteMany(t *rapid.T) {
-	sm.update(t, &UpdateRequest{
-		Upserts: rapid.SliceOf(rapid.Custom(func(t *rapid.T) UpsertRequest {
-			return UpsertRequest{
+	sm.update(t, &statetest.UpdateRequest{
+		Upserts: rapid.SliceOf(rapid.Custom(func(t *rapid.T) state.UpsertRequest {
+			return state.UpsertRequest{
 				Name: sm.branchNameGen.Draw(t, "branch"),
 				Base: sm.branchNameGen.Draw(t, "base"),
 			}
@@ -587,8 +480,8 @@ func (sm *branchStateUncorruptible) UpsertAndDeleteMany(t *rapid.T) {
 func (sm *branchStateUncorruptible) UpsertAndDeleteManyTx(t *rapid.T) {
 	operationGen := rapid.SampledFrom([]string{"upsert", "delete"})
 
-	upsertGen := rapid.Custom(func(t *rapid.T) UpsertRequest {
-		return UpsertRequest{
+	upsertGen := rapid.Custom(func(t *rapid.T) state.UpsertRequest {
+		return state.UpsertRequest{
 			Name: sm.branchNameGen.Draw(t, "branch"),
 			Base: sm.branchNameGen.Draw(t, "base"),
 		}
@@ -629,8 +522,8 @@ func (sm *branchStateUncorruptible) UpsertAlwaysSuccess(t *rapid.T) {
 		return !ok
 	})
 
-	sm.update(t, &UpdateRequest{
-		Upserts: []UpsertRequest{
+	sm.update(t, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
 			{
 				Name: newBranchGen.Draw(t, "branch"),
 				Base: sm.knownBranchGen.Draw(t, "base"),
@@ -646,7 +539,7 @@ func (sm *branchStateUncorruptible) ChangeTrunkToKnownBranchFails(t *rapid.T) {
 		t.Skip("new trunk is the same as the current trunk")
 	}
 
-	_, err := InitStore(sm.ctx, InitStoreRequest{
+	_, err := state.InitStore(sm.ctx, state.InitStoreRequest{
 		DB:    sm.db,
 		Trunk: newTrunk,
 	})
@@ -658,7 +551,7 @@ func (sm *branchStateUncorruptible) ChangeTrunk(t *rapid.T) {
 		return name != sm.trunk
 	}).Draw(t, "newTrunk")
 
-	store, err := InitStore(sm.ctx, InitStoreRequest{
+	store, err := state.InitStore(sm.ctx, state.InitStoreRequest{
 		DB:    sm.db,
 		Trunk: newTrunk,
 	})
@@ -670,38 +563,4 @@ func (sm *branchStateUncorruptible) ChangeTrunk(t *rapid.T) {
 	sm.store = store
 	sm.trunk = newTrunk
 	t.Logf("changed trunk to %q", newTrunk)
-}
-
-// UpdateRequest is a request to add, update, or delete information about branches.
-type UpdateRequest struct {
-	// Upserts are requests to add or update information about branches.
-	Upserts []UpsertRequest
-
-	// Deletes are requests to delete information about branches.
-	Deletes []string
-
-	// Message is a message specifying the reason for the update.
-	// This will be persisted in the Git commit message.
-	Message string
-}
-
-func UpdateBranch(ctx context.Context, s *Store, req *UpdateRequest) error {
-	tx := s.BeginBranchTx()
-	for idx, upsert := range req.Upserts {
-		if err := tx.Upsert(ctx, upsert); err != nil {
-			return fmt.Errorf("upsert [%d] %q: %w", idx, upsert.Name, err)
-		}
-	}
-
-	for idx, name := range req.Deletes {
-		if err := tx.Delete(ctx, name); err != nil {
-			return fmt.Errorf("delete [%d] %q: %w", idx, name, err)
-		}
-	}
-
-	if err := tx.Commit(ctx, req.Message); err != nil {
-		return fmt.Errorf("commit: %w", err)
-	}
-
-	return nil
 }
