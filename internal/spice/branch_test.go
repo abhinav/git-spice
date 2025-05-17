@@ -11,7 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -45,7 +45,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	t.Cleanup(shamhubServer.Close)
 
 	shamhubForge := &shamhub.Forge{
-		Log: logutil.TestLogger(t),
+		Log: logtest.New(t),
 		Options: shamhub.Options{
 			URL:    shamhubServer.URL,
 			APIURL: shamhubServer.URL,
@@ -71,7 +71,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(mockRepo, mockStore, &forgeReg, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, &forgeReg, logtest.New(t))
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -135,7 +135,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(mockRepo, mockStore, &forgeReg, logutil.TestLogger(t))
+		svc := NewService(mockRepo, mockStore, &forgeReg, logtest.New(t))
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 
@@ -151,7 +151,7 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		DB:     storage.NewDB(make(storage.MapBackend)),
 		Trunk:  "main",
 		Remote: "origin",
-		Log:    logutil.TestLogger(t),
+		Log:    logtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -184,7 +184,7 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		Return(git.Hash("def123"), nil).
 		AnyTimes()
 
-	svc := NewService(mockRepo, store, nil /* forges */, logutil.TestLogger(t))
+	svc := NewService(mockRepo, store, nil /* forges */, logtest.New(t))
 
 	t.Run("NoUpstream", func(t *testing.T) {
 		setUpstreamBranch("")

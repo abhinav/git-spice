@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // InsecureStash is a secrets stash that stores secrets in plain text.

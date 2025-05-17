@@ -10,7 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -32,7 +32,7 @@ func TestListChangeTemplates(t *testing.T) {
 
 	ctx := t.Context()
 	repo, err := git.Clone(ctx, upstream.Dir(), t.TempDir(), git.CloneOptions{
-		Log: logutil.TestLogger(t),
+		Log: logtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -44,7 +44,7 @@ func TestListChangeTemplates(t *testing.T) {
 		AnyTimes()
 
 	store := spice.NewMemoryStore(t)
-	svc := spice.NewTestService(repo, store, new(forge.Registry), logutil.TestLogger(t))
+	svc := spice.NewTestService(repo, store, new(forge.Registry), logtest.New(t))
 
 	tmpl := &forge.ChangeTemplate{
 		Filename: "CHANGE_TEMPLATE.md",

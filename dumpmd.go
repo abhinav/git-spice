@@ -295,7 +295,33 @@ func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 		cmd.printf(" ([:material-wrench:{ .middle title=%q }](/cli/config.md#%s))", key, anchor)
 	}
 
-	cmd.printf(": %s\n", flag.Help)
+	cmd.printf(": %s", flag.Help)
+
+	// If the flag specifies when it was released, include that too.
+	if version := flag.Tag.Get("released"); version != "" {
+		icon := ":material-tag:"
+		text := version
+		href := fmt.Sprintf("/changelog.md#%s", version)
+		if version == "unreleased" {
+			icon = ":material-tag-hidden:"
+			text = "Unreleased"
+			href = ""
+		}
+
+		cmd.printf(` <span class="mdx-badge">`)
+		cmd.printf(`<span class="mdx-badge__icon">`)
+		cmd.printf(`%s{ title="Released in version" }`, icon)
+		cmd.printf(`</span>`)
+		cmd.printf(`<span class="mdx-badge__text">`)
+		if href != "" {
+			cmd.printf("[%s](%s)", text, href)
+		} else {
+			cmd.printf("%s", text)
+		}
+		cmd.printf(`</span>`)
+	}
+
+	cmd.println()
 }
 
 func (cmd cliDumper) header(level int, text string) {

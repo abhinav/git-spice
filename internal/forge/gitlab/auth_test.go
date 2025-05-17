@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/log"
 	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
@@ -63,7 +63,7 @@ func TestForgeOAuth2Endpoint(t *testing.T) {
 func TestAuthSaveAndLoad(t *testing.T) {
 	var logBuffer bytes.Buffer
 	f := Forge{
-		Log: log.New(&logBuffer),
+		Log: log.New(&logBuffer, nil),
 	}
 
 	var stash secret.MemoryStash
@@ -141,7 +141,7 @@ func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 		Options: Options{
 			Token: "token",
 		},
-		Log: log.New(&logBuffer),
+		Log: log.New(&logBuffer, nil),
 	}
 
 	view := &ui.FileView{W: io.Discard}
@@ -172,7 +172,7 @@ func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 
 func TestLoadAuthenticationToken_badJSON(t *testing.T) {
 	f := Forge{
-		Log: log.New(io.Discard),
+		Log: log.Nop(),
 	}
 
 	var stash secret.MemoryStash

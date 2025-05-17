@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -53,7 +53,7 @@ func TestIntegrationCommitListing(t *testing.T) {
 
 	ctx := t.Context()
 	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
-		Log: logutil.TestLogger(t),
+		Log: logtest.New(t),
 	})
 	require.NoError(t, err)
 

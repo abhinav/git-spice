@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/log"
 	"github.com/rogpeppe/go-internal/diff"
 	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/require"
@@ -19,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/browser/browsertest"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/secret/secrettest"
@@ -43,8 +43,8 @@ func TestMain(m *testing.M) {
 
 	testscript.Main(m, map[string]func(){
 		"gs": func() {
-			logger := log.NewWithOptions(os.Stderr, log.Options{
-				Level: log.DebugLevel,
+			logger := log.New(os.Stderr, &log.Options{
+				Level: log.LevelDebug,
 			})
 
 			// If a secret server is configured, use it.

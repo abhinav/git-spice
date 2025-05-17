@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -127,8 +127,8 @@ func NewRobotView(fixtureFile string, opts *RobotViewOptions) (*RobotView, error
 	if logOutput == nil {
 		logOutput = io.Discard
 	}
-	logger := log.NewWithOptions(logOutput, log.Options{
-		Level: log.DebugLevel,
+	logger := log.New(logOutput, &log.Options{
+		Level: log.LevelDebug,
 	})
 
 	return &RobotView{

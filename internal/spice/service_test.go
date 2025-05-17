@@ -3,10 +3,10 @@ package spice
 import (
 	"testing"
 
-	"github.com/charmbracelet/log"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
@@ -33,7 +33,7 @@ func NewMemoryStore(t *testing.T) *state.Store {
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
-		Log:   logutil.TestLogger(t),
+		Log:   logtest.New(t),
 	})
 	require.NoError(t, err)
 

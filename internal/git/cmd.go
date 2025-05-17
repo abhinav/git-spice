@@ -14,8 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // execer controls actual execution of Git commands.
@@ -81,15 +80,13 @@ type gitCmd struct {
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
 func newGitCmd(ctx context.Context, log *log.Logger, cfg *extraConfig, args ...string) *gitCmd {
-	if log.GetPrefix() == "" {
-		name := "git"
-		if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-			name += " " + args[0]
-		}
-		log = log.WithPrefix(name)
-	} else {
-		log = log.With() // copy log to change prefix later
+	log = log.Clone()
+
+	prefix := "git"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		prefix += " " + args[0]
 	}
+	log.SetPrefix(prefix)
 
 	args = append(cfg.Args(), args...)
 	stderr, wrap := stderrWriter(log)
@@ -212,10 +209,10 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
 func stderrWriter(logger *log.Logger) (w io.Writer, wrap func(error) error) {
-	if logger.GetLevel() <= log.DebugLevel {
+	if logger.Level() <= log.LevelDebug {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		w, flush := logutil.Writer(logger, log.DebugLevel)
+		w, flush := log.Writer(logger, log.LevelDebug)
 		return w, func(err error) error {
 			flush()
 			return err

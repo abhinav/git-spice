@@ -3,10 +3,9 @@ package git
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // InitOptions configures the behavior of Init.
@@ -60,7 +59,7 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.exec = _realExec
 	}
 	if opts.Log == nil {
-		opts.Log = log.New(io.Discard)
+		opts.Log = log.Nop()
 	}
 
 	out, err := newGitCmd(ctx, opts.Log, nil, /* extra config */

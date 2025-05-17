@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/testing/stub"
 )
 
@@ -129,7 +129,7 @@ func TestListChangeComments(t *testing.T) {
 			repo, err := newRepository(
 				t.Context(), new(Forge),
 				"owner", "repo",
-				logutil.TestLogger(t),
+				logtest.New(t),
 				githubv4.NewEnterpriseClient(srv.URL, nil),
 				"repoID",
 			)

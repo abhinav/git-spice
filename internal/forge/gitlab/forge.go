@@ -6,13 +6,12 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/log"
 )
 
 const (
@@ -53,7 +52,7 @@ var _ forge.Forge = (*Forge)(nil)
 
 func (f *Forge) logger() *log.Logger {
 	if f.Log == nil {
-		return log.New(io.Discard)
+		return log.Nop()
 	}
 	return f.Log
 }

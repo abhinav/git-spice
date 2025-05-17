@@ -9,9 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
 )
 
 var _changeTemplatePaths = []string{
@@ -43,7 +42,7 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 
 	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
 	// that's the template to use.
-	logw, flush := logutil.Writer(sh.log, log.DebugLevel)
+	logw, flush := log.Writer(sh.log, log.LevelDebug)
 	defer flush()
 
 	templatePaths := make(map[string]struct{})

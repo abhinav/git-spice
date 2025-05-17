@@ -6,9 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // NewRepository creates a new Git repository
@@ -24,7 +23,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 		return "", fmt.Errorf("create repository: %w", err)
 	}
 
-	logw, flush := logutil.Writer(sh.log, log.DebugLevel)
+	logw, flush := log.Writer(sh.log, log.LevelDebug)
 	defer flush()
 
 	initCmd := exec.Command(sh.gitExe, "init", "--bare", "--initial-branch=main")

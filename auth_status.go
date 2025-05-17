@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
 )
 

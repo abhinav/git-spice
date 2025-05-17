@@ -7,9 +7,8 @@ import (
 	"net/http"
 	"os/exec"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
 )
 
 type submitChangeRequest struct {
@@ -101,7 +100,7 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 }
 
 func (sh *ShamHub) branchRefExists(ctx context.Context, owner, repo, branch string) bool {
-	logw, flush := logutil.Writer(sh.log, log.DebugLevel)
+	logw, flush := log.Writer(sh.log, log.LevelDebug)
 	defer flush()
 
 	cmd := exec.CommandContext(ctx, sh.gitExe,

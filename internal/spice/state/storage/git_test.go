@@ -6,13 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 )
 
 func TestGitBackendUpdateNoChanges(t *testing.T) {
 	ctx := t.Context()
 	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
-		Log: logutil.TestLogger(t),
+		Log: logtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -21,7 +21,7 @@ func TestGitBackendUpdateNoChanges(t *testing.T) {
 		Ref:         "refs/data",
 		AuthorName:  "Test Author",
 		AuthorEmail: "test@example.com",
-		Log:         logutil.TestLogger(t),
+		Log:         logtest.New(t),
 	})
 
 	db := NewDB(backend)

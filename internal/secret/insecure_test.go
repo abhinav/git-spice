@@ -7,14 +7,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 )
 
 func TestInsecureStashSaveEmptyDeletesFile(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "secrets.json")
 	stash := InsecureStash{
 		Path: file,
-		Log:  logutil.TestLogger(t),
+		Log:  logtest.New(t),
 	}
 
 	// Delete non-existent secret.
@@ -38,7 +38,7 @@ func TestInsecureCannotReadOrWrite(t *testing.T) {
 
 	stash := InsecureStash{
 		Path: file,
-		Log:  logutil.TestLogger(t),
+		Log:  logtest.New(t),
 	}
 
 	t.Run("Save", func(t *testing.T) {
