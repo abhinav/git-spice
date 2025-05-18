@@ -13,6 +13,8 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -138,5 +140,132 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Nil(t, resp.Change)
+	})
+}
+
+func TestService_LookupBranch_upstreamBranch(t *testing.T) {
+	ctx := t.Context()
+
+	// Use in-memory storage backend and real store.
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:     storage.NewDB(make(storage.MapBackend)),
+		Trunk:  "main",
+		Remote: "origin",
+		Log:    logutil.TestLogger(t),
+	})
+	require.NoError(t, err)
+
+	// Branch will always exist in the store for this test.
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{
+			Name:     "feature",
+			Base:     "main",
+			BaseHash: "abc123",
+		}},
+	}), "failed to add test branch to the store")
+
+	// setUpstreamBranch may be called from a function below
+	// to set or clear the upstream branch.
+	setUpstreamBranch := func(upstream string) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name:           "feature",
+				UpstreamBranch: &upstream,
+			}},
+		}))
+	}
+
+	mockCtrl := gomock.NewController(t)
+	mockRepo := NewMockGitRepository(mockCtrl)
+
+	// The branch exists in the repo.
+	mockRepo.EXPECT().
+		PeelToCommit(gomock.Any(), "feature").
+		Return(git.Hash("def123"), nil).
+		AnyTimes()
+
+	svc := NewService(mockRepo, store, nil /* forges */, logutil.TestLogger(t))
+
+	t.Run("NoUpstream", func(t *testing.T) {
+		setUpstreamBranch("")
+
+		// The branch exists, but has no upstream.
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "main", resp.Base)
+		assert.Equal(t, git.Hash("abc123"), resp.BaseHash)
+		assert.Empty(t, resp.UpstreamBranch)
+	})
+
+	t.Run("UpstreamExists", func(t *testing.T) {
+		setUpstreamBranch("feature")
+
+		// Upstream branch ref exists.
+		mockRepo.EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash("def123"), nil)
+
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "main", resp.Base)
+		assert.Equal(t, git.Hash("abc123"), resp.BaseHash)
+		assert.Equal(t, "feature", resp.UpstreamBranch)
+	})
+
+	t.Run("UpstreamRefDeleted", func(t *testing.T) {
+		setUpstreamBranch("feature")
+
+		// Upstream branch ref was deleted out of band.
+		mockRepo.EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash(""), git.ErrNotExist)
+
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "main", resp.Base)
+		assert.Equal(t, git.Hash("abc123"), resp.BaseHash)
+		assert.Empty(t, resp.UpstreamBranch,
+			"UpstreamBranch should be cleared if deleted out of band")
+
+		// Also verify that the store was updated.
+		lookup, err := store.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Empty(t, lookup.UpstreamBranch)
+	})
+
+	t.Run("UpstreamRefWithDifferentName", func(t *testing.T) {
+		setUpstreamBranch("user/feature")
+
+		// Upstream branch still exists.
+		mockRepo.EXPECT().
+			PeelToCommit(gomock.Any(), "origin/user/feature").
+			Return(git.Hash("def123"), nil)
+
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "main", resp.Base)
+		assert.Equal(t, git.Hash("abc123"), resp.BaseHash)
+		assert.Equal(t, "user/feature", resp.UpstreamBranch)
+	})
+
+	t.Run("UpstreamRefDeletedWithDifferentName", func(t *testing.T) {
+		setUpstreamBranch("user/feature")
+
+		// Upstream branch ref was deleted out of band.
+		mockRepo.EXPECT().
+			PeelToCommit(gomock.Any(), "origin/user/feature").
+			Return(git.Hash(""), git.ErrNotExist)
+
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "main", resp.Base)
+		assert.Equal(t, git.Hash("abc123"), resp.BaseHash)
+		assert.Empty(t, resp.UpstreamBranch,
+			"UpstreamBranch should be cleared if deleted out of band")
+
+		// Also verify that the store was updated.
+		lookup, err := store.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Empty(t, lookup.UpstreamBranch)
 	})
 }

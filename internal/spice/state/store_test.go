@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/logutil"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
@@ -29,7 +30,7 @@ func TestStore(t *testing.T) {
 		assert.ErrorIs(t, err, state.ErrNotExist)
 	})
 
-	err = state.UpdateBranch(ctx, store, &state.UpdateRequest{
+	err = statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
 			Name:           "foo",
 			Base:           "main",
@@ -51,7 +52,7 @@ func TestStore(t *testing.T) {
 		assert.JSONEq(t, `{"number": 42}`, string(res.ChangeMetadata))
 	})
 
-	require.NoError(t, state.UpdateBranch(ctx, store, &state.UpdateRequest{
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
 		Upserts: []state.UpsertRequest{{
 			Name:           "bar2",
 			Base:           "main",
@@ -63,7 +64,7 @@ func TestStore(t *testing.T) {
 
 	t.Run("overwrite", func(t *testing.T) {
 		ctx := t.Context()
-		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
+		err := statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
 			Upserts: []state.UpsertRequest{
 				{
 					Name:           "foo",
@@ -87,7 +88,7 @@ func TestStore(t *testing.T) {
 
 	t.Run("name with slash", func(t *testing.T) {
 		ctx := t.Context()
-		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
+		err := statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "bar/baz",
 				Base:           "main",
@@ -109,7 +110,7 @@ func TestStore(t *testing.T) {
 	t.Run("upstream branch", func(t *testing.T) {
 		ctx := t.Context()
 		upstream := "remoteBranch"
-		err := state.UpdateBranch(ctx, store, &state.UpdateRequest{
+		err := statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
 			Upserts: []state.UpsertRequest{{
 				Name:           "localBranch",
 				Base:           "main",
