@@ -1,0 +1,48 @@
+# 'branch submit --no-publish' followed by renaming the branch
+# and deleting the upstream branch ref should use the new branch name.
+
+as 'Test <test@example.com>'
+at '2025-05-17T17:58:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.txt
+gs bc -m 'add feature' feat
+gs bs --no-publish
+
+git graph
+cmp stdout $WORK/golden/graph-before.txt
+
+# verify no PRs
+shamhub dump changes
+stdout '^\[\]$'
+
+# rename the branch, delete the upstream ref
+gs branch rename feature
+git push origin :feat
+git branch --unset-upstream
+
+# push again
+gs bs --no-publish
+git graph
+cmp stdout $WORK/golden/graph-after.txt
+
+-- repo/feature.txt --
+feature
+-- golden/graph-before.txt --
+* 333a263 (HEAD -> feat, origin/feat) add feature
+* fc89e28 (origin/main, main) Initial commit
+-- golden/graph-after.txt --
+* 333a263 (HEAD -> feature, origin/feature) add feature
+* fc89e28 (origin/main, main) Initial commit
