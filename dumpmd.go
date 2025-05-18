@@ -280,6 +280,12 @@ func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 	}
 	cmd.printf("`")
 
+	// If the flag can be set with an environment variable,
+	// mention that here.
+	if env := flag.Tag.Get("env"); env != "" {
+		cmd.printf(", `$%s`", env)
+	}
+
 	// If the flag can also be set by configuration,
 	// add a link to /cli/config.md#<key>.
 	// This will ensure all configuration keys are documented.

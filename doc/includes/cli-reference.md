@@ -8,7 +8,7 @@ gs (git-spice) is a command line tool for stacking Git branches.
 
 * `-h`, `--help`: Show help for the command
 * `--version`: Print version information and quit
-* `-v`, `--verbose`: Enable verbose output
+* `-v`, `--verbose`, `$GIT_SPICE_VERBOSE`: Enable verbose output
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
