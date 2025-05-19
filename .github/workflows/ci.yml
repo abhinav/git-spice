@@ -69,7 +69,7 @@ jobs:
         GOTESTSUM_FORMAT: github-actions
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v5.4.2
+      uses: codecov/codecov-action@v5.4.3
       if: ${{ matrix.no-cover != true }}
       with:
         files: ./cover.out
