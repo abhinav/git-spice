@@ -1,0 +1,3 @@
+kind: Added
+body: Support CTRL+J/K to navigate selection UIs that accept text input, i.e branch selection.
+time: 2025-05-21T14:41:34.94713-07:00
