@@ -33,5 +33,5 @@ cmp stderr $WORK/stderr.golden
 > main
 true
 -- stderr.golden --
-INF branch is not tracked: deleting anyway branch=c
+INF branch is not tracked: deleting anyway  branch=c
 INF c: deleted (was 2848185)

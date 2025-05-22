@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/io/ioutil"
 	"gopkg.in/yaml.v3"
 )
@@ -58,7 +58,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 
 		t := scriptState.t
 		sh, err := New(Config{
-			Log: logutil.TestLogger(t),
+			Log: logtest.New(t),
 		})
 		if err != nil {
 			ts.Fatalf("create ShamHub: %s", err)

@@ -120,7 +120,7 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 
 	cmd := r.gitCmd(ctx, args...).LogPrefix("git rebase")
 	if req.Interactive {
-		cmd.Stdin(os.Stdin).Stdout(os.Stdout)
+		cmd.Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stderr)
 	}
 
 	if err := cmd.Run(r.exec); err != nil {

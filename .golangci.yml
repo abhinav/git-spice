@@ -14,7 +14,6 @@ linters:
     - copyloopvar # prefer Go 1.22 loop semantics
     - errname     # standardized error naming
     - errorlint   # Go 1.13 error wrapping
-    - forbidigo   # arbitrary rules
     - gocritic    # general issues
     - intrange    # prefer "range N" over "x := 0; x < N; x++".
     - loggercheck # key-value pairs for structured logs
@@ -39,15 +38,6 @@ linters:
         - (go.abhg.dev/gs/internal/ui.Writer).WriteString
         - (go.abhg.dev/gs/internal/ui.Writer).Write
 
-    forbidigo:
-      analyze-types: true
-      # Need to analyze types to match the exactly instead of just name.
-      forbid:
-        # Don't use charmbracelet/log's global logger.
-        - pattern: ^log\.(Debug|Info|Warn|Error|Fatal)f?$
-          pkg: github.com/charmbracelet/log
-          msg: Don't use the global logger; use a local logger instead.
-
     govet:
       enable:
         - nilness
@@ -57,14 +47,14 @@ linters:
 
     loggercheck:
       rules:
-        - (*github.com/charmbracelet/log.Logger).Debug
-        - (*github.com/charmbracelet/log.Logger).Error
-        - (*github.com/charmbracelet/log.Logger).Fatal
-        - (*github.com/charmbracelet/log.Logger).Info
-        - (*github.com/charmbracelet/log.Logger).Log
-        - (*github.com/charmbracelet/log.Logger).Print
-        - (*github.com/charmbracelet/log.Logger).Warn
-        - (*github.com/charmbracelet/log.Logger).With
+        - (*go.abhg.dev/gs/interanl/log.Logger).Trace
+        - (*go.abhg.dev/gs/interanl/log.Logger).Debug
+        - (*go.abhg.dev/gs/interanl/log.Logger).Info
+        - (*go.abhg.dev/gs/interanl/log.Logger).Warn
+        - (*go.abhg.dev/gs/interanl/log.Logger).Error
+        - (*go.abhg.dev/gs/interanl/log.Logger).Fatal
+        - (*go.abhg.dev/gs/interanl/log.Logger).Log
+        - (*go.abhg.dev/gs/interanl/log.Logger).With
 
   exclusions:
     generated: lax

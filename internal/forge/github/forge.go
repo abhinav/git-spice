@@ -6,14 +6,13 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/log"
 	"golang.org/x/oauth2"
 )
 
@@ -52,7 +51,7 @@ var _ forge.Forge = (*Forge)(nil)
 
 func (f *Forge) logger() *log.Logger {
 	if f.Log == nil {
-		return log.New(io.Discard)
+		return log.Nop()
 	}
 	return f.Log
 }

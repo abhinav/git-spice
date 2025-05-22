@@ -126,32 +126,12 @@ func TestLogger_formatting(t *testing.T) {
 		assertLines(t, "INF foo  foo=bar")
 	})
 
-	t.Run("Prefix", func(t *testing.T) {
-		log := log.Clone()
-		log.SetPrefix("prefix")
-
-		log.Info("foo")
-		assertLines(t, "INF prefix: foo")
-	})
-
 	t.Run("MultilineMessage", func(t *testing.T) {
 		log.Info("foo\nbar\nbaz")
 		assertLines(t,
 			"INF foo",
 			"INF bar",
 			"INF baz",
-		)
-	})
-
-	t.Run("MultilineMessageWithPrefix", func(t *testing.T) {
-		log := log.Clone()
-		log.SetPrefix("prefix")
-
-		log.Info("foo\nbar\nbaz")
-		assertLines(t,
-			"INF prefix: foo",
-			"INF prefix: bar",
-			"INF prefix: baz",
 		)
 	})
 

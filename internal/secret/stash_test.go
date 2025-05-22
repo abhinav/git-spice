@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zalando/go-keyring"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/secret"
 )
 
@@ -35,7 +35,7 @@ func TestStash(t *testing.T) {
 		file := filepath.Join(t.TempDir(), "secrets.json")
 		stash := secret.InsecureStash{
 			Path: file,
-			Log:  logutil.TestLogger(t),
+			Log:  logtest.New(t),
 		}
 		testStash(t, &stash)
 	})
@@ -44,7 +44,7 @@ func TestStash(t *testing.T) {
 		file := filepath.Join(t.TempDir(), "nested", "dir", "secrets.json")
 		stash := secret.InsecureStash{
 			Path: file,
-			Log:  logutil.TestLogger(t),
+			Log:  logtest.New(t),
 		}
 		testStash(t, &stash)
 	})

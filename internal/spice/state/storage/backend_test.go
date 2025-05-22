@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 )
 
 func TestStorageBackend(t *testing.T) {
@@ -19,7 +19,7 @@ func TestStorageBackend(t *testing.T) {
 	t.Run("Git", func(t *testing.T) {
 		ctx := t.Context()
 		repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
-			Log: logutil.TestLogger(t),
+			Log: logtest.New(t),
 		})
 		require.NoError(t, err)
 
@@ -28,7 +28,7 @@ func TestStorageBackend(t *testing.T) {
 			Ref:         "refs/heads/test",
 			AuthorName:  "Test",
 			AuthorEmail: "test@example.com",
-			Log:         logutil.TestLogger(t),
+			Log:         logtest.New(t),
 		}))
 	})
 }

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -56,7 +56,7 @@ type GitConfig struct {
 // in the given Git repository.
 func NewGitBackend(cfg GitConfig) *GitBackend {
 	if cfg.Log == nil {
-		cfg.Log = log.New(io.Discard)
+		cfg.Log = log.Nop()
 	}
 
 	return &GitBackend{

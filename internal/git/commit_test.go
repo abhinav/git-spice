@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -79,7 +79,7 @@ func TestCommitAheadBehind(t *testing.T) {
 	//   - feat4 is ahead and behind by 1 commit
 	ctx := t.Context()
 	fork, err := git.Open(ctx, filepath.Join(fixture.Dir(), "fork"), git.OpenOptions{
-		Log: logutil.TestLogger(t),
+		Log: logtest.New(t),
 	})
 	require.NoError(t, err)
 

@@ -12,8 +12,6 @@ import (
 	"strconv"
 
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/cli/shorthand"
@@ -21,6 +19,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -50,8 +49,8 @@ var errNoPrompt = errors.New("not allowed to prompt for input")
 var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
 
 func main() {
-	logger := log.NewWithOptions(os.Stderr, log.Options{
-		Level: log.InfoLevel,
+	logger := log.New(os.Stderr, &log.Options{
+		Level: log.LevelInfo,
 	})
 
 	// Register supported forges.
@@ -61,14 +60,6 @@ func main() {
 	for _, f := range _extraForges {
 		forges.Register(f)
 	}
-
-	styles := log.DefaultStyles()
-	styles.Levels[log.DebugLevel] = ui.NewStyle().SetString("DBG").Bold(true)
-	styles.Levels[log.InfoLevel] = ui.NewStyle().SetString("INF").Foreground(lipgloss.Color("10")).Bold(true) // green
-	styles.Levels[log.WarnLevel] = ui.NewStyle().SetString("WRN").Foreground(lipgloss.Color("11")).Bold(true) // yellow
-	styles.Levels[log.ErrorLevel] = ui.NewStyle().SetString("ERR").Foreground(lipgloss.Color("9")).Bold(true) // red
-	styles.Levels[log.FatalLevel] = ui.NewStyle().SetString("FTL").Foreground(lipgloss.Color("9")).Bold(true) // red
-	logger.SetStyles(styles)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -198,7 +189,7 @@ func main() {
 		// but then exit with a non-zero status code.
 		args = []string{"--help"}
 		parser.Exit = func(int) {
-			logger.Print("")
+			fmt.Fprintln(os.Stderr)
 			logger.Fatalf("%v: please provide a command", cmdName)
 		}
 	} else {
@@ -232,10 +223,13 @@ type mainCmd struct {
 	// Global options that are never accessed directly by subcommands.
 	Globals struct {
 		// Flags with built-in side effects.
-		Version versionFlag        `help:"Print version information and quit"`
-		Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
-		Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
-		Prompt  bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+		Version versionFlag `help:"Print version information and quit"`
+
+		Verbose   bool `name:"verbose" help:"Alias for --verbosity=1" env:"GIT_SPICE_VERBOSE"`
+		Verbosity int  `short:"v" type:"counter" help:"Set verbosity level (0-2)" env:"GIT_SPICE_VERBOSITY" released:"unreleased"`
+
+		Dir    kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
+		Prompt bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 	} `embed:"" group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
@@ -267,8 +261,14 @@ type mainCmd struct {
 }
 
 func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *log.Logger) error {
-	if cmd.Globals.Verbose {
-		logger.SetLevel(log.DebugLevel)
+	if cmd.Globals.Verbose && cmd.Globals.Verbosity == 0 {
+		cmd.Globals.Verbosity = 1
+	}
+
+	if cmd.Globals.Verbosity == 1 {
+		logger.SetLevel(log.LevelDebug)
+	} else if cmd.Globals.Verbosity >= 2 {
+		logger.SetLevel(log.LevelTrace)
 	}
 
 	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)

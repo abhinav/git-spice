@@ -5,11 +5,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"iter"
 	"strings"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // Config provides access to Git configuration in the current context.
@@ -45,7 +44,7 @@ func NewConfig(opts ConfigOptions) *Config {
 	}
 
 	if opts.Log == nil {
-		opts.Log = log.New(io.Discard)
+		opts.Log = log.Nop()
 	}
 
 	return &Config{

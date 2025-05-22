@@ -6,7 +6,6 @@ package shamhub
 
 import (
 	"fmt"
-	"io"
 	"net/http/cgi"
 	"net/http/httptest"
 	"os"
@@ -15,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // ShamHub is a fake GitHub-like Forge.
@@ -56,7 +55,7 @@ type Config struct {
 // The server should be closed with the Close method when done.
 func New(cfg Config) (*ShamHub, error) {
 	if cfg.Log == nil {
-		cfg.Log = log.New(io.Discard)
+		cfg.Log = log.Nop()
 	}
 
 	if cfg.Git == "" {

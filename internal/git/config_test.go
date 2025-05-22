@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.uber.org/mock/gomock"
 )
@@ -142,7 +142,7 @@ func TestConfigListRegexp(t *testing.T) {
 
 			cfg := NewConfig(ConfigOptions{
 				Dir:  t.TempDir(),
-				Log:  logutil.TestLogger(t),
+				Log:  logtest.New(t),
 				exec: execer,
 			})
 
@@ -227,7 +227,7 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 			}
 
 			ctx := t.Context()
-			log := logutil.TestLogger(t)
+			log := logtest.New(t)
 			for _, set := range tt.sets {
 				args := append([]string{"config", "--global"}, set...)
 				err := newGitCmd(ctx, log, nil /* extra config */, args...).

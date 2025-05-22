@@ -5,9 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 
-	"github.com/charmbracelet/log"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
@@ -66,7 +65,7 @@ type InitStoreRequest struct {
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	logger := req.Log
 	if logger == nil {
-		logger = log.New(io.Discard)
+		logger = log.Nop()
 	}
 
 	if req.Trunk == "" {
@@ -176,7 +175,7 @@ var ErrUninitialized = errors.New("store not initialized")
 // It returns [ErrUninitialized] if the repository is not initialized.
 func OpenStore(ctx context.Context, db DB, logger *log.Logger) (*Store, error) {
 	if logger == nil {
-		logger = log.New(io.Discard)
+		logger = log.Nop()
 	}
 
 	if err := checkVersion(ctx, db); err != nil {

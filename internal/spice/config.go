@@ -3,14 +3,13 @@ package spice
 import (
 	"context"
 	"fmt"
-	"io"
 	"iter"
 	"sort"
 
 	"github.com/alecthomas/kong"
 	"github.com/buildkite/shellwords"
-	"github.com/charmbracelet/log"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/log"
 )
 
 const (
@@ -74,7 +73,7 @@ type ConfigOptions struct {
 // LoadConfig loads configuration from the provided [GitConfig].
 func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*Config, error) {
 	if opts.Log == nil {
-		opts.Log = log.New(io.Discard)
+		opts.Log = log.Nop()
 	}
 
 	items := make(map[git.ConfigKey][]string)

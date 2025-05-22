@@ -86,7 +86,7 @@ main
 INF features: Upstream branch 'features' transferred to 'feat1'
 WRN features: If you push this branch with 'git push' instead of 'gs branch submit',
 WRN features: remember to use a different upstream branch name with the command:
-    git push -u origin features:<new name>
+WRN     git push -u origin features:<new name>
 -- golden/ll-split.txt --
     ┏━■ features ◀
     ┃   f460550 feat3 (now)

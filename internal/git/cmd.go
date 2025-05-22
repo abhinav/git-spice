@@ -14,8 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/charmbracelet/log"
-	"go.abhg.dev/gs/internal/logutil"
+	"go.abhg.dev/gs/internal/log"
 )
 
 // execer controls actual execution of Git commands.
@@ -58,7 +57,7 @@ func (ec *extraConfig) Args() (args []string) {
 // capable of capturing stderr into error objects if it's not being logged.
 type gitCmd struct {
 	cmd *exec.Cmd
-	log *log.Logger
+	log *prefixLogger
 
 	// Wraps an error with stderr output.
 	wrap func(error) error
@@ -81,24 +80,21 @@ type gitCmd struct {
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
 func newGitCmd(ctx context.Context, log *log.Logger, cfg *extraConfig, args ...string) *gitCmd {
-	if log.GetPrefix() == "" {
-		name := "git"
-		if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-			name += " " + args[0]
-		}
-		log = log.WithPrefix(name)
-	} else {
-		log = log.With() // copy log to change prefix later
+	prefix := "git"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		prefix += " " + args[0]
 	}
 
+	logger := &prefixLogger{Logger: log, prefix: prefix}
+
 	args = append(cfg.Args(), args...)
-	stderr, wrap := stderrWriter(log)
+	stderr, wrap := stderrWriter(logger)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stderr = stderr
 
 	return &gitCmd{
 		cmd:  cmd,
-		log:  log,
+		log:  logger,
 		wrap: wrap,
 	}
 }
@@ -211,11 +207,11 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 // Returns an io.Writer that will record sterr for later use,
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
-func stderrWriter(logger *log.Logger) (w io.Writer, wrap func(error) error) {
-	if logger.GetLevel() <= log.DebugLevel {
+func stderrWriter(logger *prefixLogger) (w io.Writer, wrap func(error) error) {
+	if logger.Level() <= log.LevelDebug {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		w, flush := logutil.Writer(logger, log.DebugLevel)
+		w, flush := log.Writer(logger, log.LevelDebug)
 		return w, func(err error) error {
 			flush()
 			return err
@@ -242,4 +238,23 @@ func stderrWriter(logger *log.Logger) (w io.Writer, wrap func(error) error) {
 
 		return errors.Join(err, fmt.Errorf("stderr:\n%s", stderr))
 	}
+}
+
+type prefixLogger struct {
+	*log.Logger
+
+	prefix string
+}
+
+var _ log.LeveledLogger = (*prefixLogger)(nil)
+
+func (pl *prefixLogger) SetPrefix(prefix string) {
+	pl.prefix = prefix
+}
+
+func (pl *prefixLogger) Log(level log.Level, msg string, kvs ...any) {
+	if pl.prefix != "" {
+		msg = pl.prefix + ": " + msg
+	}
+	pl.Logger.Log(level, msg, kvs...)
 }
