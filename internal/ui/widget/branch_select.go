@@ -28,11 +28,11 @@ type BranchSelectKeyMap struct {
 // DefaultBranchSelectKeyMap is the default key map for a [Select].
 var DefaultBranchSelectKeyMap = BranchSelectKeyMap{
 	Up: key.NewBinding(
-		key.WithKeys("up"),
+		key.WithKeys("up", "ctrl+k"),
 		key.WithHelp("up", "go up"),
 	),
 	Down: key.NewBinding(
-		key.WithKeys("down"),
+		key.WithKeys("down", "ctrl+j"),
 		key.WithHelp("down", "go down"),
 	),
 	Accept: key.NewBinding(
