@@ -120,15 +120,6 @@ func (l *Logger) SetLevel(lvl Level) {
 	l.lvl.Set(lvl.Level())
 }
 
-// SetPrefix specifies a prefix that will be added to all log messages.
-// A ": " separator will be added between the prefix and the message
-// automatically.
-//
-// Existing prefix (if any) is replaced.
-func (l *Logger) SetPrefix(prefix string) {
-	l.sl = slog.New(l.sl.Handler().(*logHandler).WithPrefix(prefix))
-}
-
 // WithGroup returns a copy of the logger with the given group name added.
 func (l *Logger) WithGroup(name string) *Logger {
 	newL := l.Clone()

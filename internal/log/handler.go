@@ -37,9 +37,6 @@ type logHandler struct {
 
 	// groups is the current group stack.
 	groups []string
-
-	// prefix is a prefix added to each log line.
-	prefix string
 }
 
 var _ slog.Handler = (*logHandler)(nil)
@@ -80,19 +77,8 @@ func (l *logHandler) Handle(_ context.Context, rec slog.Record) error {
 		bs = append(bs, lvlString...)
 		bs = append(bs, lvlDelim...)
 
-		var msg string
-		if l.prefix == "" {
-			msg = line
-		} else {
-			var sb strings.Builder
-			sb.WriteString(l.prefix)
-			sb.WriteString(l.style.PrefixDelimiter.Render())
-			sb.WriteString(line)
-			msg = sb.String()
-		}
-
-		msg = l.style.Messages.Get(Level(rec.Level)).Render(msg)
-		bs = append(bs, msg...)
+		line = l.style.Messages.Get(Level(rec.Level)).Render(line)
+		bs = append(bs, line...)
 	}
 
 	// First attribute after the message is separated by two spaces.
@@ -143,12 +129,6 @@ func (l *logHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 func (l *logHandler) WithGroup(name string) slog.Handler {
 	newL := *l
 	newL.groups = append(slices.Clone(l.groups), name)
-	return &newL
-}
-
-func (l *logHandler) WithPrefix(prefix string) slog.Handler {
-	newL := *l
-	newL.prefix = prefix
 	return &newL
 }
 

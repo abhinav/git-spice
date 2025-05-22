@@ -34,23 +34,9 @@ func TestGitCmd_logPrefix(t *testing.T) {
 		assert.Contains(t, logBuffer.String(), " git unknown-cmd: ")
 	})
 
-	t.Run("PriorPrefix", func(t *testing.T) {
-		defer logBuffer.Reset()
-
-		log := log.Clone()
-		log.SetPrefix("custom")
-		_ = newGitCmd(t.Context(), log, nil, "whatever").
-			Dir(t.TempDir()).
-			Run(_realExec)
-
-		assert.Contains(t, logBuffer.String(), " custom: ")
-	})
-
 	t.Run("LogPrefixAfterwards", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		log := log.Clone()
-		log.SetPrefix("custom")
 		_ = newGitCmd(t.Context(), log, nil, "whatever").
 			Dir(t.TempDir()).
 			LogPrefix("different").

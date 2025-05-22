@@ -19,7 +19,6 @@ func TestDefaultStyle(t *testing.T) {
 	style := log.DefaultStyle()
 
 	assertHasValue(t, style.KeyValueDelimiter, "KeyValueDelimiter")
-	assertHasValue(t, style.PrefixDelimiter, "PrefixDelimiter")
 	assertHasValue(t, style.MultilinePrefix, "MultilinePrefix")
 
 	for _, lvl := range log.Levels {
