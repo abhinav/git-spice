@@ -1,0 +1,27 @@
+# branch create generates a branch name
+# that respects the configured prefix,
+# and handles conflicts with existing branches.
+
+as 'Test <test@example.com>'
+at '2025-05-24T11:30:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.branchCreate.prefix 'myuser/'
+git branch myuser/add-feature
+
+git add feature.txt
+gs bc -m 'Add feature'
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feature.txt --
+This is a feature file.
+-- golden/ll.txt --
+┏━■ myuser/add-feature-2 ◀
+┃   702c658 Add feature (now)
+main

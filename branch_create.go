@@ -170,7 +170,10 @@ func (cmd *branchCreateCmd) Run(
 		}
 	}
 
-	var branchCreated bool // set only after CreateBranch
+	var (
+		branchCreated bool // set only after CreateBranch
+		generatedName bool // set if the branch name was generated
+	)
 	branchAt := baseHash
 	if cmd.Commit {
 		commitHash, restore, err := cmd.commit(ctx, repo, baseName, log)
@@ -208,20 +211,26 @@ func (cmd *branchCreateCmd) Run(
 				return fmt.Errorf("get commit subject: %w", err)
 			}
 
-			name := spice.GenerateBranchName(subject)
-			current := name
+			msgName := spice.GenerateBranchName(subject)
+			current := cmd.Prefix + msgName
 
 			// If the auto-generated branch name already exists,
 			// append a number to it until we find an unused name.
 			for num := 2; repo.BranchExists(ctx, current); num++ {
-				current = fmt.Sprintf("%s-%d", name, num)
+				current = fmt.Sprintf("%s%s-%d", cmd.Prefix, msgName, num)
 			}
 
 			cmd.Name = current
+			generatedName = true
+			log.Debug("Generated branch name", "name", cmd.Name)
 		}
 	}
 
-	branchName := cmd.Prefix + cmd.Name
+	branchName := cmd.Name
+	if !generatedName {
+		// Branch generation already took prefix into account.
+		branchName = cmd.Prefix + cmd.Name
+	}
 
 	// Start the transaction and make sure it would work
 	// before actually creating the branch.
