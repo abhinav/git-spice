@@ -34,10 +34,6 @@ func DefaultStyle() *Style {
 		},
 		Messages: ByLevel[lipgloss.Style]{
 			Debug: ui.NewStyle().Faint(true),
-			Info:  ui.NewStyle().Bold(true),
-			Warn:  ui.NewStyle().Bold(true),
-			Error: ui.NewStyle().Bold(true),
-			Fatal: ui.NewStyle().Bold(true),
 		},
 		Values: map[string]lipgloss.Style{
 			"error": ui.NewStyle().Foreground(lipgloss.Color("9")), // red
