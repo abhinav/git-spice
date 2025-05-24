@@ -131,7 +131,7 @@ func newRepoStorage(repo storage.GitRepository, log *silog.Logger) *storage.DB {
 		Ref:         _dataRef,
 		AuthorName:  _authorName,
 		AuthorEmail: _authorEmail,
-		Log:         log,
+		Log:         log.Downgrade(),
 	}))
 }
 
