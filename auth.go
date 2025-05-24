@@ -11,7 +11,7 @@ import (
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -28,7 +28,7 @@ type authCmd struct {
 func (c *authCmd) AfterApply(
 	ctx context.Context,
 	kctx *kong.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	forges *forge.Registry,
 	view ui.View,
 ) error {
@@ -46,7 +46,7 @@ func (c *authCmd) AfterApply(
 // repository's remote URL.
 // If the forge cannot be guessed, it will prompt the user to select one
 // if we're in interactive mode.
-func resolveForge(ctx context.Context, forges *forge.Registry, log *log.Logger, view ui.View, forgeID string) (forge.Forge, error) {
+func resolveForge(ctx context.Context, forges *forge.Registry, log *silog.Logger, view ui.View, forgeID string) (forge.Forge, error) {
 	if forgeID != "" {
 		f, ok := forges.Lookup(forgeID)
 		if !ok {
@@ -98,7 +98,7 @@ func resolveForge(ctx context.Context, forges *forge.Registry, log *log.Logger, 
 
 // guessCurrentForge attempts to guess the current forge based on the
 // current directory.
-func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *log.Logger) (forge.Forge, forge.RepositoryID, error) {
+func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.Logger) (forge.Forge, forge.RepositoryID, error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})

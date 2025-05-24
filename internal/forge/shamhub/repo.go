@@ -7,7 +7,7 @@ import (
 	"os/exec"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // NewRepository creates a new Git repository
@@ -23,7 +23,7 @@ func (sh *ShamHub) NewRepository(owner, repo string) (string, error) {
 		return "", fmt.Errorf("create repository: %w", err)
 	}
 
-	logw, flush := log.Writer(sh.log, log.LevelDebug)
+	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
 	initCmd := exec.Command(sh.gitExe, "init", "--bare", "--initial-branch=main")
@@ -53,7 +53,7 @@ type forgeRepository struct {
 	owner  string
 	repo   string
 	apiURL *url.URL
-	log    *log.Logger
+	log    *silog.Logger
 	client *jsonHTTPClient
 }
 

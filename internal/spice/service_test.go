@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
-	"go.abhg.dev/gs/internal/log/logtest"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
@@ -17,7 +17,7 @@ func NewTestService(
 	repo GitRepository,
 	store Store,
 	forgeReg *forge.Registry,
-	log *log.Logger,
+	log *silog.Logger,
 ) *Service {
 	return newService(repo, store, forgeReg, log)
 }
@@ -33,7 +33,7 @@ func NewMemoryStore(t *testing.T) *state.Store {
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
 		DB:    db,
 		Trunk: "main",
-		Log:   logtest.New(t),
+		Log:   silogtest.New(t),
 	})
 	require.NoError(t, err)
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -33,7 +33,7 @@ func (*authLoginCmd) Help() string {
 func (cmd *authLoginCmd) Run(
 	ctx context.Context,
 	stash secret.Stash,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	f forge.Forge,
 ) error {

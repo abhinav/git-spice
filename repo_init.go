@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -47,7 +47,7 @@ func (*repoInitCmd) Help() string {
 
 func (cmd *repoInitCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
 ) error {
@@ -125,7 +125,7 @@ const (
 	_authorEmail = "git-spice@localhost"
 )
 
-func newRepoStorage(repo storage.GitRepository, log *log.Logger) *storage.DB {
+func newRepoStorage(repo storage.GitRepository, log *silog.Logger) *storage.DB {
 	return storage.NewDB(storage.NewGitBackend(storage.GitConfig{
 		Repo:        repo,
 		Ref:         _dataRef,
@@ -143,7 +143,7 @@ func newRepoStorage(repo storage.GitRepository, log *log.Logger) *storage.DB {
 func ensureStore(
 	ctx context.Context,
 	repo *git.Repository,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 ) (*state.Store, error) {
 	db := newRepoStorage(repo, log)
@@ -169,7 +169,7 @@ func ensureRemote(
 	ctx context.Context,
 	repo spice.GitRepository,
 	store *state.Store,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 ) (string, error) {
 	remote, err := store.Remote()

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log/logtest"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
 func NewTestRepository(t testing.TB, dir string, execer execer) *Repository {
@@ -21,7 +21,7 @@ func NewTestRepository(t testing.TB, dir string, execer execer) *Repository {
 		}
 	}
 
-	return newRepository(dir, gitDir, logtest.New(t), execer)
+	return newRepository(dir, gitDir, silogtest.New(t), execer)
 }
 
 func TestExtraConfig_Args(t *testing.T) {

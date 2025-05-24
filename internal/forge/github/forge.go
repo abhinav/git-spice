@@ -12,7 +12,7 @@ import (
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"golang.org/x/oauth2"
 )
 
@@ -44,14 +44,14 @@ type Forge struct {
 	Options Options
 
 	// Log specifies the logger to use.
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 var _ forge.Forge = (*Forge)(nil)
 
-func (f *Forge) logger() *log.Logger {
+func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
-		return log.Nop()
+		return silog.Nop()
 	}
 	return f.Log
 }

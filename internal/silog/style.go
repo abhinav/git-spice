@@ -1,4 +1,4 @@
-package log
+package silog
 
 import (
 	"github.com/charmbracelet/lipgloss"

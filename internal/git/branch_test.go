@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/log"
-	"go.abhg.dev/gs/internal/log/logtest"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -48,7 +48,7 @@ func TestIntegrationBranches(t *testing.T) {
 	require.NoError(t, err)
 
 	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
-		Log: logtest.New(t),
+		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -207,7 +207,7 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	ctx := t.Context()
 	repo, err := git.Open(ctx,
 		filepath.Join(fixture.Dir(), "repo"),
-		git.OpenOptions{Log: logtest.New(t)},
+		git.OpenOptions{Log: silogtest.New(t)},
 	)
 	require.NoError(t, err)
 
@@ -260,7 +260,7 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 
 	repo, err := git.Open(t.Context(),
 		filepath.Join(fixture.Dir(), "clone"),
-		git.OpenOptions{Log: logtest.New(t)},
+		git.OpenOptions{Log: silogtest.New(t)},
 	)
 	require.NoError(t, err)
 
@@ -319,8 +319,8 @@ func TestBranchExists_doesNotLog(t *testing.T) {
 
 	var logBuffer bytes.Buffer
 	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
-		Log: log.New(&logBuffer, &log.Options{
-			Level: log.LevelDebug,
+		Log: silog.New(&logBuffer, &silog.Options{
+			Level: silog.LevelDebug,
 		}),
 	})
 	require.NoError(t, err)

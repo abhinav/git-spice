@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state/storage"
 )
 
@@ -28,7 +28,7 @@ var _ DB = (*storage.DB)(nil)
 // Store implements storage for state tracked by gs.
 type Store struct {
 	db  DB
-	log *log.Logger
+	log *silog.Logger
 
 	trunk  string
 	remote string
@@ -55,7 +55,7 @@ type InitStoreRequest struct {
 	Reset bool
 
 	// Log is the logger to use for logging.
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 // InitStore initializes the store in the given Git repository.
@@ -65,7 +65,7 @@ type InitStoreRequest struct {
 func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	logger := req.Log
 	if logger == nil {
-		logger = log.Nop()
+		logger = silog.Nop()
 	}
 
 	if req.Trunk == "" {
@@ -173,9 +173,9 @@ var ErrUninitialized = errors.New("store not initialized")
 // OpenStore opens the Store for the given Git repository.
 //
 // It returns [ErrUninitialized] if the repository is not initialized.
-func OpenStore(ctx context.Context, db DB, logger *log.Logger) (*Store, error) {
+func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error) {
 	if logger == nil {
-		logger = log.Nop()
+		logger = silog.Nop()
 	}
 
 	if err := checkVersion(ctx, db); err != nil {

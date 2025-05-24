@@ -13,9 +13,9 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -98,7 +98,7 @@ func (*branchSubmitCmd) Help() string {
 func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
@@ -127,7 +127,7 @@ func (cmd *branchSubmitCmd) Run(
 func (cmd *branchSubmitCmd) run(
 	ctx context.Context,
 	session *submitSession,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
@@ -578,7 +578,7 @@ type branchSubmitForm struct {
 	svc    *spice.Service
 	repo   *git.Repository
 	remote forge.Repository
-	log    *log.Logger
+	log    *silog.Logger
 
 	tmpl *forge.ChangeTemplate
 }
@@ -588,7 +588,7 @@ func newBranchSubmitForm(
 	svc *spice.Service,
 	repo *git.Repository,
 	remoteRepo forge.Repository,
-	log *log.Logger,
+	log *silog.Logger,
 ) *branchSubmitForm {
 	return &branchSubmitForm{
 		ctx:    ctx,
@@ -678,7 +678,7 @@ func (f *branchSubmitForm) draftField(draft *bool) ui.Field {
 // Fills change information in the branch submit command.
 func (cmd *branchSubmitCmd) preparePublish(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	svc *spice.Service,
 	store *state.Store,
@@ -835,7 +835,7 @@ type spiceTemplateService interface {
 
 func (cmd *branchSubmitCmd) listChangeTemplates(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	svc spiceTemplateService,
 	remoteName string,
 	remoteRepo forge.Repository,
@@ -870,7 +870,7 @@ type preparedBranch struct {
 
 	remoteRepo forge.Repository
 	store      *state.Store
-	log        *log.Logger
+	log        *silog.Logger
 }
 
 func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {

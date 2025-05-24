@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 type authStatusCmd struct{}
@@ -17,7 +17,7 @@ func (*authStatusCmd) Help() string {
 
 func (cmd *authStatusCmd) Run(
 	stash secret.Stash,
-	log *log.Logger,
+	log *silog.Logger,
 	f forge.Forge,
 ) error {
 	if _, err := f.LoadAuthenticationToken(stash); err != nil {

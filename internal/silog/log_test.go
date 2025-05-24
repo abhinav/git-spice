@@ -1,4 +1,4 @@
-package log_test
+package silog_test
 
 import (
 	"log/slog"
@@ -8,25 +8,25 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestNop(*testing.T) {
-	log := log.Nop(nil)
+	log := silog.Nop(nil)
 	log.Info("foo")
 }
 
 func TestLogger_changeLevel(t *testing.T) {
 	var buffer strings.Builder
-	logger := log.New(&buffer, nil)
+	logger := silog.New(&buffer, nil)
 
-	assert.Equal(t, log.LevelInfo, logger.Level(),
+	assert.Equal(t, silog.LevelInfo, logger.Level(),
 		"default level should be Info")
 
 	logger.Debug("foo")
 	assert.Empty(t, buffer.String())
 
-	logger.SetLevel(log.LevelDebug)
+	logger.SetLevel(silog.LevelDebug)
 
 	logger.Debug("foo")
 	assert.Equal(t, "DBG foo\n", buffer.String())
@@ -34,8 +34,8 @@ func TestLogger_changeLevel(t *testing.T) {
 
 func TestLogger_formatting(t *testing.T) {
 	var buffer strings.Builder
-	log := log.New(&buffer, &log.Options{
-		Level: log.LevelDebug,
+	log := silog.New(&buffer, &silog.Options{
+		Level: silog.LevelDebug,
 	})
 
 	assertLines := func(t *testing.T, lines ...string) bool {
@@ -307,7 +307,7 @@ func TestLogger_Fatal(t *testing.T) {
 	go func() {
 		defer close(done)
 
-		logger := log.New(&buffer, &log.Options{
+		logger := silog.New(&buffer, &silog.Options{
 			OnFatal: runtime.Goexit,
 		})
 
@@ -327,7 +327,7 @@ func TestLogger_Fatalf(t *testing.T) {
 	go func() {
 		defer close(done)
 
-		logger := log.New(&buffer, &log.Options{
+		logger := silog.New(&buffer, &silog.Options{
 			OnFatal: runtime.Goexit,
 		})
 
@@ -343,12 +343,12 @@ func TestLogger_Fatalf(t *testing.T) {
 func TestLogger_WithLevel(t *testing.T) {
 	var buffer strings.Builder
 
-	rootLogger := log.New(&buffer, nil)
+	rootLogger := silog.New(&buffer, nil)
 
 	rootLogger.Debug("foo")
 	assert.Empty(t, buffer.String())
 
-	debugLogger := rootLogger.WithLevel(log.LevelDebug)
+	debugLogger := rootLogger.WithLevel(silog.LevelDebug)
 	debugLogger.Debug("foo")
 	assert.Equal(t, "DBG foo\n", buffer.String())
 	buffer.Reset()

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 var _changeTemplatePaths = []string{
@@ -42,7 +42,7 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 
 	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
 	// that's the template to use.
-	logw, flush := log.Writer(sh.log, log.LevelDebug)
+	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
 	templatePaths := make(map[string]struct{})

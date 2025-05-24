@@ -2,8 +2,8 @@ package main
 
 import (
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -20,7 +20,7 @@ func (*authLogoutCmd) Help() string {
 
 func (cmd *authLogoutCmd) Run(
 	stash secret.Stash,
-	log *log.Logger,
+	log *silog.Logger,
 	f forge.Forge,
 ) error {
 	if err := f.ClearAuthenticationToken(stash); err != nil {

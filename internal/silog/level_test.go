@@ -1,23 +1,23 @@
-package log_test
+package silog_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestLevel_String(t *testing.T) {
 	tests := []struct {
-		level    log.Level
+		level    silog.Level
 		expected string
 	}{
-		{log.LevelDebug, "debug"},
-		{log.LevelInfo, "info"},
-		{log.LevelWarn, "warn"},
-		{log.LevelError, "error"},
-		{log.LevelFatal, "fatal"},
-		{log.Level(100), "ERROR+92"},
+		{silog.LevelDebug, "debug"},
+		{silog.LevelInfo, "info"},
+		{silog.LevelWarn, "warn"},
+		{silog.LevelError, "error"},
+		{silog.LevelFatal, "fatal"},
+		{silog.Level(100), "ERROR+92"},
 	}
 
 	for _, tt := range tests {
@@ -28,7 +28,7 @@ func TestLevel_String(t *testing.T) {
 }
 
 func TestByLevel_Get(t *testing.T) {
-	byLevel := log.ByLevel[string]{
+	byLevel := silog.ByLevel[string]{
 		Debug: "debug",
 		Info:  "info",
 		Warn:  "warn",
@@ -37,14 +37,14 @@ func TestByLevel_Get(t *testing.T) {
 	}
 
 	tests := []struct {
-		level log.Level
+		level silog.Level
 		want  string
 	}{
-		{log.LevelDebug, "debug"},
-		{log.LevelInfo, "info"},
-		{log.LevelWarn, "warn"},
-		{log.LevelError, "error"},
-		{log.LevelFatal, "fatal"},
+		{silog.LevelDebug, "debug"},
+		{silog.LevelInfo, "info"},
+		{silog.LevelWarn, "warn"},
+		{silog.LevelError, "error"},
+		{silog.LevelFatal, "fatal"},
 	}
 
 	for _, tt := range tests {
@@ -56,7 +56,7 @@ func TestByLevel_Get(t *testing.T) {
 
 	t.Run("unknown", func(t *testing.T) {
 		assert.Panics(t, func() {
-			byLevel.Get(log.Level(100))
+			byLevel.Get(silog.Level(100))
 		})
 	})
 }

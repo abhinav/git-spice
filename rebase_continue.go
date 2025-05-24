@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -37,7 +37,7 @@ func (*rebaseContinueCmd) Help() string {
 
 func (cmd *rebaseContinueCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	store *state.Store,
 	parser *kong.Kong,

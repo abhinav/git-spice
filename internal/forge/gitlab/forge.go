@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 const (
@@ -45,14 +45,14 @@ type Forge struct {
 	Options Options
 
 	// Log specifies the logger to use.
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 var _ forge.Forge = (*Forge)(nil)
 
-func (f *Forge) logger() *log.Logger {
+func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
-		return log.Nop()
+		return silog.Nop()
 	}
 	return f.Log
 }

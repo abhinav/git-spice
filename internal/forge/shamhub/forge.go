@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // Options defines CLI options for the ShamHub forge.
@@ -32,7 +32,7 @@ type Forge struct {
 	Options
 
 	// Log is the logger to use for logging.
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 var _ forge.Forge = (*Forge)(nil)
@@ -133,7 +133,7 @@ func extractRepoInfo(forgeURL, remoteURL string) (owner, repo string, err error)
 }
 
 type jsonHTTPClient struct {
-	log     *log.Logger
+	log     *silog.Logger
 	headers map[string]string
 	client  interface {
 		Do(*http.Request) (*http.Response, error)

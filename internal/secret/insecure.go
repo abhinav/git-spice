@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // InsecureStash is a secrets stash that stores secrets in plain text.
@@ -17,7 +17,7 @@ type InsecureStash struct {
 	Path string // required
 
 	// Log is the logger used by the stash.
-	Log *log.Logger // required
+	Log *silog.Logger // required
 }
 
 var _ Stash = (*InsecureStash)(nil)

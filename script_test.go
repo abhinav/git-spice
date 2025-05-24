@@ -18,10 +18,10 @@ import (
 	"go.abhg.dev/gs/internal/browser/browsertest"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/secret/secrettest"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/termtest"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
@@ -43,8 +43,8 @@ func TestMain(m *testing.M) {
 
 	testscript.Main(m, map[string]func(){
 		"gs": func() {
-			logger := log.New(os.Stderr, &log.Options{
-				Level: log.LevelDebug,
+			logger := silog.New(os.Stderr, &silog.Options{
+				Level: silog.LevelDebug,
 			})
 
 			// If a secret server is configured, use it.

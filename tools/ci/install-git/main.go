@@ -11,17 +11,19 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func main() {
-	log.SetFlags(0)
-	log.SetPrefix("install-git: ")
+	log := silog.New(os.Stderr, &silog.Options{
+		Level: silog.LevelDebug,
+	})
 
 	var req installRequest
 	flag.StringVar(&req.Prefix, "prefix", "", "Destination to install to")
@@ -35,8 +37,8 @@ func main() {
 		log.Fatalf("unexpected arguments: %v", flag.Args())
 	}
 
-	if err := run(log.Default(), req); err != nil {
-		log.Fatal(err)
+	if err := run(log, req); err != nil {
+		log.Fatalf("install-git: %v", err)
 	}
 }
 
@@ -77,7 +79,7 @@ var _gitBuildDependencies = []string{
 	"libssl-dev",
 }
 
-func run(log *log.Logger, req installRequest) error {
+func run(log *silog.Logger, req installRequest) error {
 	if err := req.Validate(); err != nil {
 		return err
 	}
@@ -101,7 +103,7 @@ func run(log *log.Logger, req installRequest) error {
 			return fmt.Errorf("download git: %w", err)
 		}
 		defer cleanup()
-		log.Printf("Extracted to: %v", srcDir)
+		log.Info("Extracted Git source", "path", srcDir)
 
 		if err := installGit(req.Prefix, srcDir); err != nil {
 			return fmt.Errorf("install git: %w", err)
@@ -113,11 +115,12 @@ func run(log *log.Logger, req installRequest) error {
 			return fmt.Errorf("git not executable: %v", gitExe)
 		}
 	} else {
-		log.Printf("git %v already built at: %v", req.Version, gitExe)
+		log.Info("Requested git version already built",
+			"version", req.Version, "path", gitExe)
 	}
 
 	github := &githubAction{
-		Log:      logWithPrefix(log, "github: "),
+		Log:      log.WithPrefix("github"),
 		PathFile: req.GithubPath,
 	}
 
@@ -128,7 +131,7 @@ func run(log *log.Logger, req installRequest) error {
 	return nil
 }
 
-func downloadGit(log *log.Logger, version string) (dir string, cleanup func(), err error) {
+func downloadGit(log *silog.Logger, version string) (dir string, cleanup func(), err error) {
 	dstPath, err := os.MkdirTemp("", "git-"+version+"-*")
 	if err != nil {
 		return "", nil, fmt.Errorf("create temp dir: %w", err)
@@ -148,7 +151,10 @@ func downloadGit(log *log.Logger, version string) (dir string, cleanup func(), e
 	defer func() { err = errors.Join(err, dstDir.Close()) }()
 
 	gitURL := fmt.Sprintf("https://mirrors.edge.kernel.org/pub/software/scm/git/git-%s.tar.gz", version)
-	log.Printf("Downloading Git %v from: %v", version, gitURL)
+	log.Info("Downloading Git",
+		"version", version,
+		"url", gitURL)
+
 	res, err := http.Get(gitURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("http get: %w", err)
@@ -159,7 +165,7 @@ func downloadGit(log *log.Logger, version string) (dir string, cleanup func(), e
 	if res.ContentLength > 0 {
 		progress := &progressWriter{
 			N: res.ContentLength,
-			W: log.Writer(),
+			W: os.Stderr,
 		}
 		defer progress.Finish()
 		resBody = io.TeeReader(resBody, progress)
@@ -186,7 +192,7 @@ func downloadGit(log *log.Logger, version string) (dir string, cleanup func(), e
 		// Strip it from the path.
 		_, name, ok := strings.Cut(hdr.Name, string(filepath.Separator))
 		if !ok {
-			log.Printf("WARN: Skipping unexpected root-level name: %v", hdr.Name)
+			log.Warnf("Skipping unexpected root-level name: %v", hdr.Name)
 			continue
 		}
 		if name == "" {
@@ -274,7 +280,7 @@ func (w *progressWriter) Finish() {
 }
 
 type githubAction struct {
-	Log      *log.Logger // required
+	Log      *silog.Logger // required
 	PathFile string
 }
 
@@ -289,13 +295,9 @@ func (a *githubAction) AddPath(path string) error {
 	}
 	defer func() { _ = f.Close() }()
 
-	a.Log.Printf("add path %q", path)
+	a.Log.Debugf("add path: %v", path)
 	_, err = fmt.Fprintf(f, "%s\n", path)
 	return err
-}
-
-func logWithPrefix(logger *log.Logger, prefix string) *log.Logger {
-	return log.New(logger.Writer(), prefix, logger.Flags())
 }
 
 func wrapExecError(err error) error {

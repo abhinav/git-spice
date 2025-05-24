@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -89,7 +89,7 @@ func (*branchCreateCmd) Help() string {
 
 func (cmd *branchCreateCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
@@ -306,7 +306,7 @@ func (cmd *branchCreateCmd) commit(
 	ctx context.Context,
 	repo *git.Repository,
 	baseName string,
-	log *log.Logger,
+	log *silog.Logger,
 ) (commitHash git.Hash, restore func() error, err error) {
 	// We'll need --allow-empty if there are no staged changes.
 	diff, err := repo.DiffIndex(ctx, "HEAD")

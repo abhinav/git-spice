@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 type areMergedRequest struct {
@@ -162,7 +162,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	//
 	// This requires at least Git 2.38.
 	tree, err := func() (string, error) {
-		logw, flush := log.Writer(sh.log, log.LevelDebug)
+		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 		defer flush()
 
 		cmd := exec.Command(sh.gitExe, "merge-tree", "--write-tree", sh.changes[changeIdx].Base, sh.changes[changeIdx].Head)
@@ -180,7 +180,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	commit, err := func() (string, error) {
-		logw, flush := log.Writer(sh.log, log.LevelDebug)
+		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 		defer flush()
 
 		change := sh.changes[changeIdx]
@@ -215,7 +215,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	// Update the ref to point to the new commit.
 	err = func() error {
-		logw, flush := log.Writer(sh.log, log.LevelDebug)
+		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 		defer flush()
 
 		ref := "refs/heads/" + sh.changes[changeIdx].Base
@@ -234,7 +234,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	if req.DeleteBranch {
 		err := func() error {
-			logw, flush := log.Writer(sh.log, log.LevelDebug)
+			logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 			defer flush()
 
 			cmd := exec.Command(sh.gitExe, "branch", "-D", sh.changes[changeIdx].Head)

@@ -9,8 +9,8 @@ import (
 	"io"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // GitRepository is the subset of the git.Repository API used by the state package.
@@ -38,7 +38,7 @@ type GitBackend struct {
 	repo GitRepository
 	ref  string
 	sig  git.Signature
-	log  *log.Logger
+	log  *silog.Logger
 }
 
 var _ Backend = (*GitBackend)(nil)
@@ -49,14 +49,14 @@ type GitConfig struct {
 	Ref                     string        // required
 	AuthorName, AuthorEmail string        // required
 
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 // NewGitBackend creates a new GitBackend that stores data
 // in the given Git repository.
 func NewGitBackend(cfg GitConfig) *GitBackend {
 	if cfg.Log == nil {
-		cfg.Log = log.Nop()
+		cfg.Log = silog.Nop()
 	}
 
 	return &GitBackend{

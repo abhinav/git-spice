@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/buildkite/shellwords"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 const (
@@ -67,13 +67,13 @@ type Config struct {
 type ConfigOptions struct {
 	// Log specifies the logger to use for logging.
 	// Defaults to no logging.
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 // LoadConfig loads configuration from the provided [GitConfig].
 func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*Config, error) {
 	if opts.Log == nil {
-		opts.Log = log.Nop()
+		opts.Log = silog.Nop()
 	}
 
 	items := make(map[git.ConfigKey][]string)

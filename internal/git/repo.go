@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // InitOptions configures the behavior of Init.
 type InitOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *log.Logger
+	Log *silog.Logger
 
 	// Branch is the name of the initial branch to create.
 	// Defaults to "main".
@@ -47,7 +47,7 @@ func Init(ctx context.Context, dir string, opts InitOptions) (*Repository, error
 // OpenOptions configures the behavior of Open.
 type OpenOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *log.Logger
+	Log *silog.Logger
 
 	exec execer
 }
@@ -59,7 +59,7 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.exec = _realExec
 	}
 	if opts.Log == nil {
-		opts.Log = log.Nop()
+		opts.Log = silog.Nop()
 	}
 
 	out, err := newGitCmd(ctx, opts.Log, nil, /* extra config */
@@ -82,7 +82,7 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 // CloneOptions configures the behavior of [Clone].
 type CloneOptions struct {
 	// Log specifies the logger to use for messages.
-	Log *log.Logger
+	Log *silog.Logger
 
 	exec execer
 }
@@ -107,12 +107,12 @@ type Repository struct {
 	root   string
 	gitDir string
 
-	log  *log.Logger
+	log  *silog.Logger
 	exec execer
 	cfg  extraConfig
 }
 
-func newRepository(root, gitDir string, log *log.Logger, exec execer) *Repository {
+func newRepository(root, gitDir string, log *silog.Logger, exec execer) *Repository {
 	return &Repository{
 		root:   root,
 		gitDir: gitDir,
