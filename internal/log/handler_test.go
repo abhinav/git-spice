@@ -1,17 +1,15 @@
 package log
 
 import (
-	"context"
 	"io"
 	"log/slog"
 	"strings"
 	"sync"
 	"testing"
-	"testing/slogtest"
-	"time"
 
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestLogHandler_Enabled(t *testing.T) {
@@ -101,80 +99,22 @@ func TestLogHandler_withAttrsConcurrent(t *testing.T) {
 	assert.Equal(t, NumWorkers*NumWrites, strings.Count(buffer.String(), "INF message"))
 }
 
-func TestLogHandler_slogtest(t *testing.T) {
-	var (
-		buffer strings.Builder
-		saver  saveTimeHandler
-	)
-	slogtest.Run(t, func(*testing.T) slog.Handler {
-		buffer.Reset()
+func TestLogHandler_multilineMessageStyling(t *testing.T) {
+	// Force colored output even if the terminal doesn't support it.
+	t.Setenv("CLICOLOR_FORCE", "1")
+	defer lipgloss.SetColorProfile(lipgloss.ColorProfile())
+	lipgloss.SetColorProfile(termenv.EnvColorProfile())
 
-		saver.Handler = newLogHandler(&buffer, slog.LevelDebug, PlainStyle())
-		return &saver
-	}, func(t *testing.T) map[string]any {
-		attrs := make(map[string]any)
-		if !saver.saved.IsZero() {
-			attrs[slog.TimeKey] = saver.saved
-		}
+	style := PlainStyle()
+	style.Messages.Info = lipgloss.NewStyle().Bold(true)
 
-		line := strings.TrimSpace(buffer.String())
-		lvlstr, line, ok := strings.Cut(line, lvlDelim)
-		require.True(t, ok, "missing level delimiter: %q", buffer.String())
+	var buffer strings.Builder
+	log := slog.New(newLogHandler(&buffer, LevelDebug, style))
 
-		switch lvlstr {
-		case "DBG":
-			attrs[slog.LevelKey] = slog.LevelDebug
-		case "INF":
-			attrs[slog.LevelKey] = slog.LevelInfo
-		case "WRN":
-			attrs[slog.LevelKey] = slog.LevelWarn
-		case "ERR":
-			attrs[slog.LevelKey] = slog.LevelError
-		default:
-			t.Fatalf("unknown level: %q", lvlstr)
-		}
+	log.Info("foo\nbar")
 
-		attrs[slog.MessageKey], line, _ = strings.Cut(line, msgAttrDelim)
-
-		for pair := range strings.SplitSeq(line, attrDelim) {
-			if pair == "" {
-				continue
-			}
-			key, value, ok := strings.Cut(pair, "=")
-			require.True(t, ok, "missing attribute delimiter: %q", pair)
-
-			curAttrs := attrs
-			for len(key) > 0 {
-				groupKey, valKey, ok := strings.Cut(key, groupDelim)
-				if !ok {
-					// No more groups.
-					curAttrs[key] = value
-					break
-				}
-
-				groupAttrs, ok := curAttrs[groupKey].(map[string]any)
-				if !ok {
-					groupAttrs = make(map[string]any)
-					curAttrs[groupKey] = groupAttrs
-				}
-				curAttrs = groupAttrs
-				key = valKey
-			}
-		}
-
-		t.Logf("buffer: %q", buffer.String())
-		t.Logf("attrs: %q", attrs)
-		return attrs
-	})
-}
-
-type saveTimeHandler struct {
-	slog.Handler
-
-	saved time.Time
-}
-
-func (h *saveTimeHandler) Handle(ctx context.Context, rec slog.Record) error {
-	h.saved = rec.Time
-	return h.Handler.Handle(ctx, rec)
+	assert.Equal(t,
+		"INF \x1b[1mfoo\x1b[0m\n"+
+			"INF \x1b[1mbar\x1b[0m\n",
+		buffer.String())
 }

@@ -135,6 +135,22 @@ func TestLogger_formatting(t *testing.T) {
 		)
 	})
 
+	t.Run("MultilineMessageWithLeadingSpaces", func(t *testing.T) {
+		var s strings.Builder
+		s.WriteString("foo\n")
+		s.WriteString("  bar\n")
+		s.WriteString("    baz\n")
+		s.WriteString("qux\n")
+		log.Info(s.String())
+
+		assertLines(t,
+			"INF foo",
+			"INF   bar",
+			"INF     baz",
+			"INF qux",
+		)
+	})
+
 	t.Run("WithAttrs", func(t *testing.T) {
 		log := log.With("k1", true, "k2", 2, "k3", 3.0, "k4", "foo")
 		log.Info("bar")
@@ -155,6 +171,17 @@ func TestLogger_formatting(t *testing.T) {
 		assertLines(t,
 			"INF bar",
 			"INF baz  k1=true k2=2 k3=3 k4=foo",
+		)
+	})
+
+	t.Run("MultilineMessageWithAttrsAndLeadingNewline", func(t *testing.T) {
+		log := log.With("k1", true, "k2", 2, "k3", 3.0, "k4", "foo")
+		log.Info("bar\nbaz\n")
+
+		assertLines(t,
+			"INF bar",
+			"INF baz",
+			"  k1=true k2=2 k3=3 k4=foo",
 		)
 	})
 
@@ -244,6 +271,16 @@ func TestLogger_formatting(t *testing.T) {
 			"    | baz",
 			"  a.b.c.e=qux",
 		)
+	})
+
+	t.Run("LeadingWhitespace", func(t *testing.T) {
+		log.Info(" foo")
+		assertLines(t, "INF  foo")
+	})
+
+	t.Run("TrailingWhitespace", func(t *testing.T) {
+		log.Info("foo ")
+		assertLines(t, "INF foo")
 	})
 }
 

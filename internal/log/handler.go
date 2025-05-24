@@ -77,8 +77,18 @@ func (l *logHandler) Handle(_ context.Context, rec slog.Record) error {
 		bs = append(bs, lvlString...)
 		bs = append(bs, lvlDelim...)
 
+		// line may end with \n.
+		// That should not be included in the rendering logic.
+		var trailingNewline bool
+		if line[len(line)-1] == '\n' {
+			trailingNewline = true
+			line = line[:len(line)-1]
+		}
 		line = l.style.Messages.Get(Level(rec.Level)).Render(line)
 		bs = append(bs, line...)
+		if trailingNewline {
+			bs = append(bs, '\n')
+		}
 	}
 
 	// First attribute after the message is separated by two spaces.
@@ -229,7 +239,7 @@ func (f *attrFormatter) FormatAttr(attr slog.Attr) {
 			if hasStyle {
 				f.buf = append(f.buf, valueStyle.Render(string(line))...)
 			} else {
-				f.buf = append(f.buf, line...) // includes \n already
+				f.buf = append(f.buf, line...)
 			}
 			f.buf = append(f.buf, '\n')
 		}
