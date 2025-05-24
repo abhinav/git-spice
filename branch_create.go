@@ -110,7 +110,7 @@ func (cmd *branchCreateCmd) Run(
 	// If a branch name was specified, verify it's unused.
 	// We do this before any changes to the working tree or index.
 	if cmd.Name != "" {
-		if _, err := repo.PeelToCommit(ctx, cmd.Name); err == nil {
+		if repo.BranchExists(ctx, cmd.Name) {
 			return fmt.Errorf("branch already exists: %v", cmd.Name)
 		}
 	}
@@ -213,10 +213,8 @@ func (cmd *branchCreateCmd) Run(
 
 			// If the auto-generated branch name already exists,
 			// append a number to it until we find an unused name.
-			_, err = repo.PeelToCommit(ctx, current)
-			for num := 2; err == nil; num++ {
+			for num := 2; repo.BranchExists(ctx, current); num++ {
 				current = fmt.Sprintf("%s-%d", name, num)
-				_, err = repo.PeelToCommit(ctx, current)
 			}
 
 			cmd.Name = current
