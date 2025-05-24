@@ -120,10 +120,35 @@ func (l *Logger) SetLevel(lvl Level) {
 	l.lvl.Set(lvl.Level())
 }
 
+// WithLevel returns a copy of this logger
+// that will log at the given level.
+func (l *Logger) WithLevel(lvl Level) *Logger {
+	if lvl == l.Level() {
+		return l
+	}
+
+	newL := l.Clone()
+	newL.lvl = new(slog.LevelVar)
+	newL.lvl.Set(lvl.Level())
+	newL.sl = slog.New(newL.sl.Handler().(*logHandler).WithLeveler(newL.lvl))
+	return newL
+}
+
 // WithGroup returns a copy of the logger with the given group name added.
 func (l *Logger) WithGroup(name string) *Logger {
 	newL := l.Clone()
 	newL.sl = newL.sl.WithGroup(name)
+	return newL
+}
+
+// WithPrefix returns a copy of the logger that will add the given prefix
+// to all log messages.
+// Any existing prefix will be replaced with the new one.
+// If the prefix is empty, an existing prefix will be removed.
+// If the prefix is non-empty, a ": " delimiter will be added.
+func (l *Logger) WithPrefix(prefix string) *Logger {
+	newL := l.Clone()
+	newL.sl = slog.New(newL.sl.Handler().(*logHandler).WithPrefix(prefix))
 	return newL
 }
 
