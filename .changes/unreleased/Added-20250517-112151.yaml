@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  Add a `--verbosity=N` option that accepts values between 0 and 2 (inclusive).
-  The short form `-v` may be supplied multiple times to increase verbosity.
-time: 2025-05-17T11:21:51.281021-07:00

@@ -1,3 +1,0 @@
-kind: Changed
-body: The `--verbose` flag is now an alias for `--verbosity=1`.
-time: 2025-05-21T19:48:58.482557-07:00

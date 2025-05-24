@@ -24,7 +24,6 @@ func DefaultStyle() *Style {
 		KeyValueDelimiter: ui.NewStyle().SetString("=").Faint(true),
 		MultilinePrefix:   ui.NewStyle().SetString("| ").Faint(true),
 		LevelLabels: ByLevel[lipgloss.Style]{
-			Trace: ui.NewStyle().SetString("TRC").Foreground(lipgloss.Color("8")),  // gray
 			Debug: ui.NewStyle().SetString("DBG"),                                  // default
 			Info:  ui.NewStyle().SetString("INF").Foreground(lipgloss.Color("10")), // green
 			Warn:  ui.NewStyle().SetString("WRN").Foreground(lipgloss.Color("11")), // yellow
@@ -32,7 +31,6 @@ func DefaultStyle() *Style {
 			Fatal: ui.NewStyle().SetString("FTL").Foreground(lipgloss.Color("9")),  // red
 		},
 		Messages: ByLevel[lipgloss.Style]{
-			Trace: ui.NewStyle().Foreground(lipgloss.Color("8")), // gray
 			Debug: ui.NewStyle().Faint(true),
 			Info:  ui.NewStyle().Bold(true),
 			Warn:  ui.NewStyle().Bold(true),
@@ -51,7 +49,6 @@ func PlainStyle() *Style {
 		KeyValueDelimiter: ui.NewStyle().SetString("="),
 		MultilinePrefix:   ui.NewStyle().SetString("  | "),
 		LevelLabels: ByLevel[lipgloss.Style]{
-			Trace: ui.NewStyle().SetString("TRC"),
 			Debug: ui.NewStyle().SetString("DBG"),
 			Info:  ui.NewStyle().SetString("INF"),
 			Warn:  ui.NewStyle().SetString("WRN"),

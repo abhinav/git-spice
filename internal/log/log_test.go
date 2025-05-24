@@ -35,7 +35,7 @@ func TestLogger_changeLevel(t *testing.T) {
 func TestLogger_formatting(t *testing.T) {
 	var buffer strings.Builder
 	log := log.New(&buffer, &log.Options{
-		Level: log.LevelTrace,
+		Level: log.LevelDebug,
 	})
 
 	assertLines := func(t *testing.T, lines ...string) bool {
@@ -59,7 +59,6 @@ func TestLogger_formatting(t *testing.T) {
 			logFn func(string, ...any)
 			want  string
 		}{
-			{"trace", log.Trace, "TRC hello"},
 			{"debug", log.Debug, "DBG hello"},
 			{"info", log.Info, "INF hello"},
 			{"warn", log.Warn, "WRN hello"},
@@ -80,7 +79,6 @@ func TestLogger_formatting(t *testing.T) {
 			logFn func(string, ...any)
 			want  string
 		}{
-			{"trace", log.Tracef, "TRC hello world"},
 			{"debug", log.Debugf, "DBG hello world"},
 			{"info", log.Infof, "INF hello world"},
 			{"warn", log.Warnf, "WRN hello world"},

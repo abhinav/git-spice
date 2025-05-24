@@ -20,21 +20,15 @@ func TestLogHandler_Enabled(t *testing.T) {
 		disabled []Level
 	}{
 		{
-			name:    "trace",
-			leveler: LevelTrace,
-			enabled: []Level{LevelTrace, LevelDebug, LevelInfo},
-		},
-		{
-			name:     "debug",
-			leveler:  LevelDebug,
-			enabled:  []Level{LevelDebug, LevelInfo},
-			disabled: []Level{LevelTrace},
+			name:    "debug",
+			leveler: LevelDebug,
+			enabled: []Level{LevelDebug, LevelInfo},
 		},
 		{
 			name:     "info",
 			leveler:  LevelInfo,
 			enabled:  []Level{LevelInfo, LevelWarn},
-			disabled: []Level{LevelDebug, LevelTrace},
+			disabled: []Level{LevelDebug},
 		},
 		{
 			name:     "warn",
