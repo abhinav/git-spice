@@ -281,7 +281,7 @@ func (cmd *branchDeleteCmd) Run(
 			if err := repo.DeleteBranch(ctx, branch, opts); err != nil {
 				// If the branch still exists,
 				// it's likely because it's not merged.
-				if _, peelErr := repo.PeelToCommit(ctx, branch); peelErr == nil {
+				if repo.BranchExists(ctx, branch) {
 					log.Error("git refused to delete the branch", "err", err)
 					log.Error("try re-running with --force")
 					return errors.New("branch not deleted")
