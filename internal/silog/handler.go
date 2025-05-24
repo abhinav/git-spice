@@ -80,9 +80,10 @@ func (l *logHandler) Handle(_ context.Context, rec slog.Record) error {
 		bs = append(bs, lvlString...)
 		bs = append(bs, lvlDelim...)
 
+		var msg bytes.Buffer
 		if l.prefix != "" {
-			bs = append(bs, l.prefix...)
-			bs = append(bs, l.style.PrefixDelimiter.Render()...)
+			msg.WriteString(l.prefix)
+			msg.WriteString(l.style.PrefixDelimiter.Render())
 		}
 
 		// line may end with \n.
@@ -92,7 +93,9 @@ func (l *logHandler) Handle(_ context.Context, rec slog.Record) error {
 			trailingNewline = true
 			line = line[:len(line)-1]
 		}
-		line = l.style.Messages.Get(Level(rec.Level)).Render(line)
+		msg.WriteString(line)
+
+		line = l.style.Messages.Get(Level(rec.Level)).Render(msg.String())
 		bs = append(bs, line...)
 		if trailingNewline {
 			bs = append(bs, '\n')
