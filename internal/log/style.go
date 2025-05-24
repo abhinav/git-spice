@@ -12,6 +12,7 @@ type Style struct {
 	KeyValueDelimiter lipgloss.Style          // required
 	LevelLabels       ByLevel[lipgloss.Style] // required
 	MultilinePrefix   lipgloss.Style          // required
+	PrefixDelimiter   lipgloss.Style          // required
 
 	Messages ByLevel[lipgloss.Style]
 	Values   map[string]lipgloss.Style
@@ -23,6 +24,7 @@ func DefaultStyle() *Style {
 		Key:               ui.NewStyle().Faint(true),
 		KeyValueDelimiter: ui.NewStyle().SetString("=").Faint(true),
 		MultilinePrefix:   ui.NewStyle().SetString("| ").Faint(true),
+		PrefixDelimiter:   ui.NewStyle().SetString(": "),
 		LevelLabels: ByLevel[lipgloss.Style]{
 			Trace: ui.NewStyle().SetString("TRC").Foreground(lipgloss.Color("8")),  // gray
 			Debug: ui.NewStyle().SetString("DBG"),                                  // default
@@ -50,6 +52,7 @@ func PlainStyle() *Style {
 	return &Style{
 		KeyValueDelimiter: ui.NewStyle().SetString("="),
 		MultilinePrefix:   ui.NewStyle().SetString("  | "),
+		PrefixDelimiter:   ui.NewStyle().SetString(": "),
 		LevelLabels: ByLevel[lipgloss.Style]{
 			Trace: ui.NewStyle().SetString("TRC"),
 			Debug: ui.NewStyle().SetString("DBG"),

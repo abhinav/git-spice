@@ -282,6 +282,24 @@ func TestLogger_formatting(t *testing.T) {
 		log.Info("foo ")
 		assertLines(t, "INF foo")
 	})
+
+	t.Run("Prefix", func(t *testing.T) {
+		log := log.WithPrefix("prefix")
+
+		log.Info("foo")
+		assertLines(t, "INF prefix: foo")
+	})
+
+	t.Run("MultilineMessageWithPrefix", func(t *testing.T) {
+		log := log.WithPrefix("prefix")
+
+		log.Info("foo\nbar\nbaz")
+		assertLines(t,
+			"INF prefix: foo",
+			"INF prefix: bar",
+			"INF prefix: baz",
+		)
+	})
 }
 
 func TestLogger_Fatal(t *testing.T) {
@@ -322,6 +340,23 @@ func TestLogger_Fatalf(t *testing.T) {
 	<-done
 
 	assert.Equal(t, "FTL foo bar\n", buffer.String())
+}
+
+func TestLogger_WithLevel(t *testing.T) {
+	var buffer strings.Builder
+
+	rootLogger := log.New(&buffer, nil)
+
+	rootLogger.Debug("foo")
+	assert.Empty(t, buffer.String())
+
+	debugLogger := rootLogger.WithLevel(log.LevelDebug)
+	debugLogger.Debug("foo")
+	assert.Equal(t, "DBG foo\n", buffer.String())
+	buffer.Reset()
+
+	rootLogger.Debug("foo")
+	assert.Empty(t, buffer.String())
 }
 
 type testStringer struct{ v string }

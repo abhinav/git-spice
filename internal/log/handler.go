@@ -37,6 +37,9 @@ type logHandler struct {
 
 	// groups is the current group stack.
 	groups []string
+
+	// prefix is the prefix to use for the logger.
+	prefix string
 }
 
 var _ slog.Handler = (*logHandler)(nil)
@@ -76,6 +79,11 @@ func (l *logHandler) Handle(_ context.Context, rec slog.Record) error {
 	for line := range strings.Lines(rec.Message) {
 		bs = append(bs, lvlString...)
 		bs = append(bs, lvlDelim...)
+
+		if l.prefix != "" {
+			bs = append(bs, l.prefix...)
+			bs = append(bs, l.style.PrefixDelimiter.Render()...)
+		}
 
 		// line may end with \n.
 		// That should not be included in the rendering logic.
@@ -139,6 +147,22 @@ func (l *logHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 func (l *logHandler) WithGroup(name string) slog.Handler {
 	newL := *l
 	newL.groups = append(slices.Clone(l.groups), name)
+	return &newL
+}
+
+// WithLeveler returns a new handler with the given leveler
+// but with the same attributes and groups as this handler.
+// It will write to the same output writer as this handler.
+func (l *logHandler) WithLeveler(lvl slog.Leveler) slog.Handler {
+	newL := *l
+	newL.lvl = lvl
+	return &newL
+}
+
+// WithPrefix returns a new handler with the given prefix
+func (l *logHandler) WithPrefix(prefix string) slog.Handler {
+	newL := *l
+	newL.prefix = prefix
 	return &newL
 }
 
