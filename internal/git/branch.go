@@ -140,7 +140,7 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 
 // BranchExists reports whether a branch with the given name exists.
 func (r *Repository) BranchExists(ctx context.Context, branch string) bool {
-	return r.gitCmd(ctx, "rev-parse", "--verify", "refs/heads/"+branch).
+	return r.gitCmd(ctx, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch).
 		Run(r.exec) == nil
 }
 

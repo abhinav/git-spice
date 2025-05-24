@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"bytes"
 	"path/filepath"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -298,6 +300,36 @@ func TestIntegrationRemoteBranches(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorIs(t, err, git.ErrNotExist)
 	})
+}
+
+// BranchExists must not log to stderr when branch does not exist.
+// It's a read operation.
+func TestBranchExists_doesNotLog(t *testing.T) {
+	t.Parallel()
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git add init.txt
+		git commit -m 'Initial commit'
+
+		-- init.txt --
+		Initial
+	`)))
+	require.NoError(t, err)
+
+	var logBuffer bytes.Buffer
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: log.New(&logBuffer, &log.Options{
+			Level: log.LevelDebug,
+		}),
+	})
+	require.NoError(t, err)
+
+	assert.True(t, repo.BranchExists(t.Context(), "main"))
+	assert.Empty(t, logBuffer.String())
+
+	assert.False(t, repo.BranchExists(t.Context(), "nonexistent"))
+	assert.Empty(t, logBuffer.String())
 }
 
 // joinSlash joins the given paths and converts it to slash-separated path.
