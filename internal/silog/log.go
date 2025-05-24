@@ -50,6 +50,8 @@ type Logger struct {
 	sl      *slog.Logger   // required
 	lvl     *slog.LevelVar // required
 	onFatal func()         // required
+
+	numDowngrades int // used for Downgrade
 }
 
 // Nop returns a no-op logger that discards all log messages.
@@ -154,6 +156,19 @@ func (l *Logger) WithPrefix(prefix string) *Logger {
 	return newL
 }
 
+// Downgrade returns a copy of the logger
+// that will downgrade all log messages
+// to the next lower level.
+//
+// For example, messages logged at LevelInfo
+// will be downgraded to LevelDebug,
+// Levels at the minimum level will be discarded.
+func (l *Logger) Downgrade() *Logger {
+	newL := l.Clone()
+	newL.numDowngrades++
+	return newL
+}
+
 // With returns a copy of the logger with the given attributes added.
 func (l *Logger) With(attrs ...any) *Logger {
 	if len(attrs) == 0 {
@@ -167,6 +182,9 @@ func (l *Logger) With(attrs ...any) *Logger {
 
 // Log logs a message at the given level with the given key-value pairs.
 func (l *Logger) Log(lvl Level, msg string, kvs ...any) {
+	if l.numDowngrades > 0 {
+		lvl = lvl.Dec(l.numDowngrades)
+	}
 	l.sl.Log(context.Background(), lvl.Level(), msg, kvs...)
 	if lvl >= LevelFatal {
 		l.onFatal()

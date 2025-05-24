@@ -27,6 +27,25 @@ func TestLevel_String(t *testing.T) {
 	}
 }
 
+func TestLevel_Dec(t *testing.T) {
+	tests := []struct {
+		give, want silog.Level
+	}{
+		{silog.LevelDebug, silog.Level(-8)},
+		{silog.LevelInfo, silog.LevelDebug},
+		{silog.LevelWarn, silog.LevelInfo},
+		{silog.LevelError, silog.LevelWarn},
+		{silog.LevelFatal, silog.LevelError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give.String(), func(t *testing.T) {
+			got := tt.give.Dec(1)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestByLevel_Get(t *testing.T) {
 	byLevel := silog.ByLevel[string]{
 		Debug: "debug",
