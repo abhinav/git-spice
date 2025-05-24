@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestGitCmd_logPrefix(t *testing.T) {
 	var logBuffer bytes.Buffer
-	log := log.New(&logBuffer, &log.Options{
-		Level: log.LevelDebug,
+	log := silog.New(&logBuffer, &silog.Options{
+		Level: silog.LevelDebug,
 	})
 
 	t.Run("DefaultPrefixNoCommand", func(t *testing.T) {

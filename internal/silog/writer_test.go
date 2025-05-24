@@ -1,4 +1,4 @@
-package log_test
+package silog_test
 
 import (
 	"bytes"
@@ -7,13 +7,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestLogWriter(t *testing.T) {
 	var buf bytes.Buffer
-	logger := log.New(&buf, nil)
-	writer, done := log.Writer(logger, log.LevelInfo)
+	logger := silog.New(&buf, nil)
+	writer, done := silog.Writer(logger, silog.LevelInfo)
 
 	_, err := fmt.Fprint(writer, "hello world")
 	require.NoError(t, err)
@@ -23,7 +23,7 @@ func TestLogWriter(t *testing.T) {
 }
 
 func TestLogWriter_nil(t *testing.T) {
-	writer, done := log.Writer(nil, log.LevelInfo)
+	writer, done := silog.Writer(nil, silog.LevelInfo)
 
 	_, err := fmt.Fprint(writer, "hello world")
 	require.NoError(t, err)

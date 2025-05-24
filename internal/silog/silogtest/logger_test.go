@@ -1,4 +1,4 @@
-package logtest_test
+package silogtest_test
 
 import (
 	"errors"
@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log/logtest"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
 func TestTestLogger(t *testing.T) {
 	var stub testOutputStub
-	logger := logtest.New(&stub)
+	logger := silogtest.New(&stub)
 
 	logger.Infof("Hello, %s!", "world")
 	logger.Error("Sadness", "error", errors.New("oh no"))

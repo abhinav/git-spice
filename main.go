@@ -19,8 +19,8 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -49,8 +49,8 @@ var errNoPrompt = errors.New("not allowed to prompt for input")
 var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
 
 func main() {
-	logger := log.New(os.Stderr, &log.Options{
-		Level: log.LevelInfo,
+	logger := silog.New(os.Stderr, &silog.Options{
+		Level: silog.LevelInfo,
 	})
 
 	// Register supported forges.
@@ -257,9 +257,9 @@ type mainCmd struct {
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }
 
-func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *log.Logger) error {
+func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *silog.Logger) error {
 	if cmd.Globals.Verbose {
-		logger.SetLevel(log.LevelDebug)
+		logger.SetLevel(silog.LevelDebug)
 	}
 
 	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)

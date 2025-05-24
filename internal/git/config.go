@@ -8,12 +8,12 @@ import (
 	"iter"
 	"strings"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // Config provides access to Git configuration in the current context.
 type Config struct {
-	log  *log.Logger
+	log  *silog.Logger
 	dir  string
 	env  []string
 	exec execer
@@ -31,7 +31,7 @@ type ConfigOptions struct {
 
 	// Log used for logging messages to the user.
 	// If nil, no messages are logged.
-	Log *log.Logger
+	Log *silog.Logger
 
 	exec execer
 }
@@ -44,7 +44,7 @@ func NewConfig(opts ConfigOptions) *Config {
 	}
 
 	if opts.Log == nil {
-		opts.Log = log.Nop()
+		opts.Log = silog.Nop()
 	}
 
 	return &Config{

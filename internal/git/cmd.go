@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // execer controls actual execution of Git commands.
@@ -79,7 +79,7 @@ type gitCmd struct {
 //   - if the program is running in verbose mode,
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
-func newGitCmd(ctx context.Context, log *log.Logger, cfg *extraConfig, args ...string) *gitCmd {
+func newGitCmd(ctx context.Context, log *silog.Logger, cfg *extraConfig, args ...string) *gitCmd {
 	prefix := "git"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		prefix += " " + args[0]
@@ -208,10 +208,10 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 // and a wrap function that will wrap an error with the recorded
 // stderr output.
 func stderrWriter(logger *prefixLogger) (w io.Writer, wrap func(error) error) {
-	if logger.Level() <= log.LevelDebug {
+	if logger.Level() <= silog.LevelDebug {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
-		w, flush := log.Writer(logger, log.LevelDebug)
+		w, flush := silog.Writer(logger, silog.LevelDebug)
 		return w, func(err error) error {
 			flush()
 			return err
@@ -241,18 +241,18 @@ func stderrWriter(logger *prefixLogger) (w io.Writer, wrap func(error) error) {
 }
 
 type prefixLogger struct {
-	*log.Logger
+	*silog.Logger
 
 	prefix string
 }
 
-var _ log.LeveledLogger = (*prefixLogger)(nil)
+var _ silog.LeveledLogger = (*prefixLogger)(nil)
 
 func (pl *prefixLogger) SetPrefix(prefix string) {
 	pl.prefix = prefix
 }
 
-func (pl *prefixLogger) Log(level log.Level, msg string, kvs ...any) {
+func (pl *prefixLogger) Log(level silog.Level, msg string, kvs ...any) {
 	if pl.prefix != "" {
 		msg = pl.prefix + ": " + msg
 	}

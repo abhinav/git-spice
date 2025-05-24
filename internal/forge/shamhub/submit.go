@@ -8,7 +8,7 @@ import (
 	"os/exec"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 type submitChangeRequest struct {
@@ -100,7 +100,7 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 }
 
 func (sh *ShamHub) branchRefExists(ctx context.Context, owner, repo, branch string) bool {
-	logw, flush := log.Writer(sh.log, log.LevelDebug)
+	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
 	cmd := exec.CommandContext(ctx, sh.gitExe,

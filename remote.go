@@ -7,8 +7,8 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 type unsupportedForgeError struct {
@@ -69,7 +69,7 @@ func openRemoteRepositorySilent(
 
 func openRemoteRepository(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	stash secret.Stash,
 	forges *forge.Registry,
 	gitRepo *git.Repository,

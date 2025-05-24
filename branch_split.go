@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -53,7 +53,7 @@ func (*branchSplitCmd) Help() string {
 
 func (cmd *branchSplitCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
@@ -304,7 +304,7 @@ func (cmd *branchSplitCmd) Run(
 
 func prepareChangeMetadataTransfer(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	forges *forge.Registry,
 	repo *git.Repository,
 	store *state.Store,

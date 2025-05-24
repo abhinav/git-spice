@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
-	"go.abhg.dev/gs/internal/log/logtest"
 	"go.abhg.dev/gs/internal/mockedit"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -46,7 +46,7 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 	t.Cleanup(fixture.Cleanup)
 
 	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
-		Log: logtest.New(t),
+		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -131,7 +131,7 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 	require.NoError(t, err)
 
 	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
-		Log: logtest.New(t),
+		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
 

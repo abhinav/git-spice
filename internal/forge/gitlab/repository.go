@@ -7,7 +7,7 @@ import (
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // Repository is a GitLab repository.
@@ -15,7 +15,7 @@ type Repository struct {
 	client *gitlabClient
 
 	owner, repo string
-	log         *log.Logger
+	log         *silog.Logger
 	forge       *Forge
 
 	repoID int
@@ -31,7 +31,7 @@ func newRepository(
 	ctx context.Context,
 	forge *Forge,
 	owner, repo string,
-	log *log.Logger,
+	log *silog.Logger,
 	client *gitlabClient,
 	repoID *int, // if nil, repository ID will be looked up
 ) (*Repository, error) {

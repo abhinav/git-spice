@@ -5,7 +5,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -25,7 +25,7 @@ func (*logShortCmd) Help() string {
 
 func (cmd *logShortCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,

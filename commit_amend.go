@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -36,7 +36,7 @@ func (*commitAmendCmd) Help() string {
 
 func (cmd *commitAmendCmd) Run(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,

@@ -7,7 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -91,7 +91,7 @@ var _ Store = (*state.Store)(nil)
 type Service struct {
 	repo   GitRepository
 	store  Store
-	log    *log.Logger
+	log    *silog.Logger
 	forges *forge.Registry
 }
 
@@ -100,7 +100,7 @@ func NewService(
 	repo GitRepository,
 	store Store,
 	forges *forge.Registry,
-	log *log.Logger,
+	log *silog.Logger,
 ) *Service {
 	return newService(repo, store, forges, log)
 }
@@ -109,7 +109,7 @@ func newService(
 	repo GitRepository,
 	store Store,
 	forges *forge.Registry,
-	log *log.Logger,
+	log *silog.Logger,
 ) *Service {
 	return &Service{
 		repo:   repo,

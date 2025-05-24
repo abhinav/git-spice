@@ -12,8 +12,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/stacknav"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -39,7 +39,7 @@ func newSubmitSession(
 	stash secret.Stash,
 	forges *forge.Registry,
 	view ui.View,
-	log *log.Logger,
+	log *silog.Logger,
 ) *submitSession {
 	var s submitSession
 	s.Remote.get = func(ctx context.Context) (string, error) {
@@ -140,7 +140,7 @@ func updateNavigationComments(
 	ctx context.Context,
 	store *state.Store,
 	svc *spice.Service,
-	log *log.Logger,
+	log *silog.Logger,
 	navComment navigationCommentWhen,
 	session *submitSession,
 ) error {

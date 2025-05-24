@@ -14,7 +14,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // ShamHub is a fake GitHub-like Forge.
@@ -26,7 +26,7 @@ import (
 // and one for the Git server implementing the Git HTTP protocol.
 // Note that the HTTP API provided by ShamHub is not the same as the GitHub API.
 type ShamHub struct {
-	log *log.Logger
+	log *silog.Logger
 
 	gitRoot string // destination for Git repos
 	gitExe  string // path to git binary
@@ -48,14 +48,14 @@ type Config struct {
 	// If not set, we'll look for it in the PATH.
 	Git string
 
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 // New creates a new ShamHub server and returns an ShamHub to control it.
 // The server should be closed with the Close method when done.
 func New(cfg Config) (*ShamHub, error) {
 	if cfg.Log == nil {
-		cfg.Log = log.Nop()
+		cfg.Log = silog.Nop()
 	}
 
 	if cfg.Git == "" {

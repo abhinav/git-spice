@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -75,7 +75,7 @@ var (
 type RobotView struct {
 	fixtureFile  string
 	positionFile string
-	logger       *log.Logger
+	logger       *silog.Logger
 	w, h         int
 
 	// outputBuffer holds non-prompt output until the next prompt.
@@ -127,8 +127,8 @@ func NewRobotView(fixtureFile string, opts *RobotViewOptions) (*RobotView, error
 	if logOutput == nil {
 		logOutput = io.Discard
 	}
-	logger := log.New(logOutput, &log.Options{
-		Level: log.LevelDebug,
+	logger := silog.New(logOutput, &silog.Options{
+		Level: silog.LevelDebug,
 	})
 
 	return &RobotView{

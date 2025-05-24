@@ -1,4 +1,4 @@
-package log_test
+package silog_test
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
-	"go.abhg.dev/gs/internal/log"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestDefaultStyle(t *testing.T) {
@@ -16,13 +16,13 @@ func TestDefaultStyle(t *testing.T) {
 		assert.NotEmpty(t, strings.TrimSpace(style.String()), msgArgs...)
 	}
 
-	style := log.DefaultStyle()
+	style := silog.DefaultStyle()
 
 	assertHasValue(t, style.KeyValueDelimiter, "KeyValueDelimiter")
 	assertHasValue(t, style.MultilinePrefix, "MultilinePrefix")
 	assertHasValue(t, style.PrefixDelimiter, "PrefixDelimiter")
 
-	for _, lvl := range log.Levels {
+	for _, lvl := range silog.Levels {
 		t.Run(lvl.String(), func(t *testing.T) {
 			assertHasValue(t, style.LevelLabels.Get(lvl), "LevelLabels.Get(%s)", lvl)
 		})

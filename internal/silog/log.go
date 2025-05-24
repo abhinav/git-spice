@@ -1,9 +1,11 @@
-// Package log wraps slog.Logger with support for:
+// Package silog implements a structured logger for CLI usage.
+// It's a wrapper around log/slog that provides:
 //
-//   - printf-style functions for each level
-//     to break out of structured logging when needed
-//   - trace and fatal levels
-package log
+//   - printf-style functions in addition to structured logging
+//   - additional log levels
+//   - message prefixing
+//   - differently leveled sub-loggers
+package silog
 
 import (
 	"cmp"

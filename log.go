@@ -13,8 +13,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -65,7 +65,7 @@ type branchLogCmd struct {
 type branchLogOptions struct {
 	Commits bool
 
-	Log *log.Logger
+	Log *silog.Logger
 }
 
 func (cmd *branchLogCmd) run(

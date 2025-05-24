@@ -13,9 +13,9 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
-	"go.abhg.dev/gs/internal/log"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -41,7 +41,7 @@ func (*repoSyncCmd) Help() string {
 func (cmd *repoSyncCmd) Run(
 	ctx context.Context,
 	secretStash secret.Stash,
-	log *log.Logger,
+	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
 	store *state.Store,
@@ -261,7 +261,7 @@ func (cmd *repoSyncCmd) Run(
 // Squash or rebase merges will need to be handled manually by the user.
 func (cmd *repoSyncCmd) findLocalMergedBranches(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	knownBranches []spice.LoadBranchItem,
 	trunkHash git.Hash,
@@ -284,7 +284,7 @@ func (cmd *repoSyncCmd) findLocalMergedBranches(
 
 func (cmd *repoSyncCmd) findForgeMergedBranches(
 	ctx context.Context,
-	log *log.Logger,
+	log *silog.Logger,
 	repo *git.Repository,
 	store spice.Store,
 	svc *spice.Service,
@@ -595,7 +595,7 @@ type branchDeletion struct {
 func (cmd *repoSyncCmd) deleteBranches(
 	ctx context.Context,
 	view ui.View,
-	log *log.Logger,
+	log *silog.Logger,
 	remote string,
 	branchesToDelete []branchDeletion,
 	repo *git.Repository,

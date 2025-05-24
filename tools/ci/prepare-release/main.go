@@ -17,15 +17,18 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func main() {
-	log.SetFlags(0)
+	log := silog.New(os.Stderr, &silog.Options{
+		Level: silog.LevelDebug,
+	})
 
 	var req prepareRequest
 	flag.StringVar(&req.Version, "version", "minor", "Version to prepare")
@@ -36,7 +39,7 @@ func main() {
 		log.Fatalf("prepare-release: unexpected arguments: %v", flag.Args())
 	}
 
-	if err := run(log.Default(), req); err != nil {
+	if err := run(log, req); err != nil {
 		log.Fatalf("prepare-release: %v", err)
 	}
 }
@@ -47,7 +50,7 @@ type prepareRequest struct {
 }
 
 func run(
-	log *log.Logger,
+	log *silog.Logger,
 	cmd prepareRequest,
 ) error {
 	if cmd.Version == "" {
@@ -55,7 +58,7 @@ func run(
 	}
 
 	changie := changieClient{
-		Log: logWithPrefix(log, "changie: "),
+		Log: log.WithPrefix("changie"),
 	}
 	if err := changie.Batch(cmd.Version); err != nil {
 		return fmt.Errorf("batch unreleased changes for %q: %w", cmd.Version, err)
@@ -70,12 +73,12 @@ func run(
 		return fmt.Errorf("get latest version: %w", err)
 	}
 
-	log.Printf("Preparing release for %q", version)
+	log.Info("Preparing release", "version", version)
 
 	// If running in a GitHub environment,
 	// also set the "latest" output for this task.
 	github := githubAction{
-		Log:        logWithPrefix(log, "github: "),
+		Log:        log.WithPrefix("github"),
 		OutputFile: cmd.GithubOutput,
 	}
 	if err := github.SetOutput("latest", version); err != nil {
@@ -123,29 +126,25 @@ func run(
 	return nil
 }
 
-func logWithPrefix(logger *log.Logger, prefix string) *log.Logger {
-	return log.New(logger.Writer(), prefix, logger.Flags())
-}
-
 type changieClient struct {
-	Log *log.Logger // required
+	Log *silog.Logger // required
 }
 
 func (c *changieClient) Batch(version string) error {
 	cmd := exec.Command("changie", "batch", version)
-	c.Log.Printf("%v", cmd.Args)
+	c.Log.Debugf("%v", cmd.Args)
 	return wrapExecError(cmd.Run())
 }
 
 func (c *changieClient) Merge() error {
 	cmd := exec.Command("changie", "merge")
-	c.Log.Printf("%v", cmd.Args)
+	c.Log.Debugf("%v", cmd.Args)
 	return wrapExecError(cmd.Run())
 }
 
 func (c *changieClient) Latest() (string, error) {
 	cmd := exec.Command("changie", "latest")
-	c.Log.Printf("%v", cmd.Args)
+	c.Log.Debugf("%v", cmd.Args)
 	output, err := cmd.Output()
 	return strings.TrimSpace(string(output)), wrapExecError(err)
 }
@@ -160,7 +159,7 @@ func wrapExecError(err error) error {
 }
 
 type githubAction struct {
-	Log        *log.Logger // required
+	Log        *silog.Logger // required
 	OutputFile string
 }
 
@@ -179,7 +178,7 @@ func (g *githubAction) SetOutput(name, value string) error {
 	}
 	defer func() { _ = f.Close() }()
 
-	g.Log.Printf("set output %q=%q", name, value)
+	g.Log.Debugf("set output %q=%q", name, value)
 	_, err = fmt.Fprintf(f, "%s=%s\n", name, value)
 	return err
 }
