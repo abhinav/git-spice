@@ -12,7 +12,6 @@ func TestLevel_String(t *testing.T) {
 		level    log.Level
 		expected string
 	}{
-		{log.LevelTrace, "trace"},
 		{log.LevelDebug, "debug"},
 		{log.LevelInfo, "info"},
 		{log.LevelWarn, "warn"},
@@ -30,7 +29,6 @@ func TestLevel_String(t *testing.T) {
 
 func TestByLevel_Get(t *testing.T) {
 	byLevel := log.ByLevel[string]{
-		Trace: "trace",
 		Debug: "debug",
 		Info:  "info",
 		Warn:  "warn",
@@ -42,7 +40,6 @@ func TestByLevel_Get(t *testing.T) {
 		level log.Level
 		want  string
 	}{
-		{log.LevelTrace, "trace"},
 		{log.LevelDebug, "debug"},
 		{log.LevelInfo, "info"},
 		{log.LevelWarn, "warn"},

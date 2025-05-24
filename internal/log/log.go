@@ -69,7 +69,7 @@ func New(w io.Writer, opts *Options) *Logger {
 		Level: LevelInfo,
 	})
 
-	must.Bef(opts.Level >= LevelTrace, "level must be >= LevelTrace, got %d", opts.Level)
+	must.Bef(opts.Level >= LevelDebug, "level must be >= LevelDebug, got %d", opts.Level)
 	must.Bef(opts.Level <= LevelError, "level must be <= LevelError, got %d", opts.Level)
 
 	if opts.Style == nil {
@@ -152,9 +152,6 @@ func (l *Logger) Logf(lvl Level, format string, args ...any) {
 	l.Log(lvl, fmt.Sprintf(format, args...))
 }
 
-// Trace posts a structured log message with the level [LevelTrace].
-func (l *Logger) Trace(msg string, kvs ...any) { l.Log(LevelTrace, msg, kvs...) }
-
 // Debug posts a structured log message with the level [LevelDebug].
 func (l *Logger) Debug(msg string, kvs ...any) { l.Log(LevelDebug, msg, kvs...) }
 
@@ -170,9 +167,6 @@ func (l *Logger) Error(msg string, kvs ...any) { l.Log(LevelError, msg, kvs...) 
 // Fatal posts a structured log message with the level [LevelFatal].
 // It also exits the program with a non-zero status code.
 func (l *Logger) Fatal(msg string, kvs ...any) { l.Log(LevelFatal, msg, kvs...) }
-
-// Tracef posts a printf-style log message with the level [LevelTrace].
-func (l *Logger) Tracef(format string, args ...any) { l.Logf(LevelTrace, format, args...) }
 
 // Debugf posts a printf-style log message with the level [LevelDebug].
 func (l *Logger) Debugf(format string, args ...any) { l.Logf(LevelDebug, format, args...) }

@@ -223,13 +223,10 @@ type mainCmd struct {
 	// Global options that are never accessed directly by subcommands.
 	Globals struct {
 		// Flags with built-in side effects.
-		Version versionFlag `help:"Print version information and quit"`
-
-		Verbose   bool `name:"verbose" help:"Alias for --verbosity=1" env:"GIT_SPICE_VERBOSE"`
-		Verbosity int  `short:"v" type:"counter" help:"Set verbosity level (0-2)" env:"GIT_SPICE_VERBOSITY" released:"unreleased"`
-
-		Dir    kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
-		Prompt bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+		Version versionFlag        `help:"Print version information and quit"`
+		Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
+		Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
+		Prompt  bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 	} `embed:"" group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
@@ -261,14 +258,8 @@ type mainCmd struct {
 }
 
 func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *log.Logger) error {
-	if cmd.Globals.Verbose && cmd.Globals.Verbosity == 0 {
-		cmd.Globals.Verbosity = 1
-	}
-
-	if cmd.Globals.Verbosity == 1 {
+	if cmd.Globals.Verbose {
 		logger.SetLevel(log.LevelDebug)
-	} else if cmd.Globals.Verbosity >= 2 {
-		logger.SetLevel(log.LevelTrace)
 	}
 
 	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)
