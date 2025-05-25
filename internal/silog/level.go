@@ -13,7 +13,7 @@ const (
 	LevelInfo  = Level(slog.LevelInfo)
 	LevelWarn  = Level(slog.LevelWarn)
 	LevelError = Level(slog.LevelError)
-	LevelFatal = Level(16)
+	LevelFatal = Level(slog.LevelError + 4)
 )
 
 // Levels is a list of all supported log levels.
@@ -46,6 +46,11 @@ func (l Level) String() string {
 // Level returns the level as a slog.Level.
 func (l Level) Level() slog.Level {
 	return slog.Level(l)
+}
+
+// Dec lowers the log level by N steps.
+func (l Level) Dec(n int) Level {
+	return l - Level(n*4)
 }
 
 // ByLevel is a struct that contains fields for each log level.

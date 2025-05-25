@@ -298,6 +298,24 @@ func TestLogger_formatting(t *testing.T) {
 			"INF prefix: baz",
 		)
 	})
+
+	t.Run("Downgrade", func(t *testing.T) {
+		downLog := log.Downgrade()
+
+		downLog.Debug("foo")
+		downLog.Info("bar")
+		downLog.Warn("baz")
+		downLog.Error("qux")
+
+		assertLines(t,
+			"DBG bar",
+			"INF baz",
+			"WRN qux")
+
+		log.Debug("quux")
+		assertLines(t,
+			"DBG quux")
+	})
 }
 
 func TestLogger_Fatal(t *testing.T) {
