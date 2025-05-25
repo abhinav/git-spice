@@ -11,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -60,7 +61,7 @@ func TestIntegrationBranches(t *testing.T) {
 	})
 
 	t.Run("ListBranches", func(t *testing.T) {
-		bs, err := repo.LocalBranches(t.Context(), nil)
+		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
@@ -71,9 +72,9 @@ func TestIntegrationBranches(t *testing.T) {
 	})
 
 	t.Run("ListBranchesSorted", func(t *testing.T) {
-		bs, err := repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
 			Sort: "committerdate",
-		})
+		}))
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
@@ -115,7 +116,7 @@ func TestIntegrationBranches(t *testing.T) {
 			Head: "main",
 		}))
 
-		bs, err := repo.LocalBranches(t.Context(), nil)
+		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -131,7 +132,7 @@ func TestIntegrationBranches(t *testing.T) {
 					Force: true,
 				}))
 
-			bs, err := repo.LocalBranches(t.Context(), nil)
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 			require.NoError(t, err)
 
 			assert.Equal(t, []git.LocalBranch{
@@ -153,7 +154,7 @@ func TestIntegrationBranches(t *testing.T) {
 			NewName: "feature4",
 		}))
 
-		bs, err := repo.LocalBranches(t.Context(), nil)
+		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
 				{Name: "feature1"},
@@ -211,7 +212,7 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	bs, err := repo.LocalBranches(ctx, nil)
+	bs, err := sliceutil.CollectErr(repo.LocalBranches(ctx, nil))
 	require.NoError(t, err)
 
 	assert.Equal(t, []git.LocalBranch{

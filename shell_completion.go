@@ -10,6 +10,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/komplete"
@@ -48,7 +49,7 @@ func predictBranches(_ komplete.Args) (predictions []string) {
 		return nil
 	}
 
-	branches, err := repo.LocalBranches(ctx, nil)
+	branches, err := sliceutil.CollectErr(repo.LocalBranches(ctx, nil))
 	if err != nil {
 		return nil
 	}

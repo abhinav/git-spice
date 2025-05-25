@@ -5,11 +5,13 @@
 package git
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"os"
 	"os/exec"
 	"strings"
@@ -202,6 +204,68 @@ func (c *gitCmd) OutputString(exec execer) (string, error) {
 	out, err := c.Output(exec)
 	out, _ = bytes.CutSuffix(out, []byte{'\n'})
 	return string(out), err
+}
+
+// ScanLines runs the command and returns its stdout as an iterator
+// of lines, where each line is a byte slice.
+//
+// See [Scan] for more details.
+func (c *gitCmd) ScanLines(exec execer) iter.Seq2[[]byte, error] {
+	return c.Scan(exec, bufio.ScanLines)
+}
+
+// Scan runs the command and returns its stdout as an iterator
+// of byte slices, split by the given bufio.SplitFunc.
+//
+// The byte slice is re-used between iterations,
+// so the caller must not retain references to it.
+// The byte slice does not include the trailing delimiter.
+//
+// If the iteration is stopped early, the command is killed.
+//
+// If the command exits with a non-zero exit code,
+// the iterator will yield an error and end the iteration.
+func (c *gitCmd) Scan(exec execer, split bufio.SplitFunc) iter.Seq2[[]byte, error] {
+	return func(yield func([]byte, error) bool) {
+		out, err := c.StdoutPipe()
+		if err != nil {
+			yield(nil, fmt.Errorf("pipe stdout: %w", err))
+			return
+		}
+
+		if err := c.Start(exec); err != nil {
+			yield(nil, fmt.Errorf("start: %w", err))
+			return
+		}
+
+		var finished bool
+		defer func() {
+			if !finished {
+				_ = c.Kill(exec)
+			}
+		}()
+
+		scanner := bufio.NewScanner(out)
+		scanner.Split(split)
+		for scanner.Scan() {
+			if !yield(scanner.Bytes(), nil) {
+				return
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			yield(nil, fmt.Errorf("scan: %w", err))
+			return
+		}
+
+		if err := c.Wait(exec); err != nil {
+			// If the command failed, wrap the error with stderr output.
+			yield(nil, fmt.Errorf("wait: %w", c.wrap(err)))
+			return
+		}
+
+		finished = true
+	}
 }
 
 // Returns an io.Writer that will record sterr for later use,

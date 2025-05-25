@@ -146,12 +146,11 @@ func (mr *MockGitRepositoryMockRecorder) ListRemotes(ctx any) *gomock.Call {
 }
 
 // LocalBranches mocks base method.
-func (m *MockGitRepository) LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) ([]git.LocalBranch, error) {
+func (m *MockGitRepository) LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error] {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LocalBranches", ctx, opts)
-	ret0, _ := ret[0].([]git.LocalBranch)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(iter.Seq2[git.LocalBranch, error])
+	return ret0
 }
 
 // LocalBranches indicates an expected call of LocalBranches.

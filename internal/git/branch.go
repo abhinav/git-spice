@@ -1,12 +1,11 @@
 package git
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"slices"
+	"iter"
 	"strings"
 )
 
@@ -25,8 +24,8 @@ type LocalBranchesOptions struct {
 	Sort string
 }
 
-// LocalBranches lists local branches in the repository.
-func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptions) ([]LocalBranch, error) {
+// LocalBranches returns an iterator over local branches in the repository.
+func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptions) iter.Seq2[LocalBranch, error] {
 	if opts == nil {
 		opts = &LocalBranchesOptions{}
 	}
@@ -39,51 +38,34 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 	}
 	args = append(args, "refs/heads/")
 
-	cmd := r.gitCmd(ctx, args...)
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("git branch: %w", err)
-	}
+	return func(yield func(LocalBranch, error) bool) {
+		cmd := r.gitCmd(ctx, args...)
+		for bs, err := range cmd.ScanLines(r.exec) {
+			if err != nil {
+				yield(LocalBranch{}, fmt.Errorf("git for-each-ref: %w", err))
+				return
+			}
 
-	if err := cmd.Start(r.exec); err != nil {
-		return nil, fmt.Errorf("start git branch: %w", err)
-	}
+			line := bytes.TrimSpace(bs)
+			if len(line) == 0 {
+				continue
+			}
 
-	var branches []LocalBranch
-	scan := bufio.NewScanner(out)
-	for scan.Scan() {
-		line := bytes.TrimSpace(scan.Bytes())
-		if len(line) == 0 {
-			continue
+			refname, worktree, _ := bytes.Cut(line, []byte{' '})
+			branchName, ok := bytes.CutPrefix(refname, []byte("refs/heads/"))
+			if !ok {
+				continue
+			}
+
+			localBranch := LocalBranch{
+				Name:     string(branchName),
+				Worktree: string(bytes.TrimSpace(worktree)),
+			}
+			if !yield(localBranch, nil) {
+				return
+			}
 		}
-
-		refname, worktree, _ := bytes.Cut(line, []byte{' '})
-		branchName, ok := bytes.CutPrefix(refname, []byte("refs/heads/"))
-		if !ok {
-			continue
-		}
-
-		branches = append(branches, LocalBranch{
-			Name:     string(branchName),
-			Worktree: string(bytes.TrimSpace(worktree)),
-		})
 	}
-
-	if err := scan.Err(); err != nil {
-		return nil, fmt.Errorf("read output: %w", err)
-	}
-
-	if err := cmd.Wait(r.exec); err != nil {
-		return nil, fmt.Errorf("git branch: %w", err)
-	}
-
-	if opts.Sort == "" {
-		slices.SortFunc(branches, func(a, b LocalBranch) int {
-			return strings.Compare(a.Name, b.Name)
-		})
-	}
-
-	return branches, nil
 }
 
 // ErrDetachedHead indicates that the repository is
