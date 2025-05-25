@@ -60,15 +60,6 @@ func (cmd *branchTrackCmd) Run(
 		log.Debugf("Looking for base branch in range: %v..%v",
 			trunkHash.Short(), branchHash.Short())
 
-		// Find all revisions between the current branch and the trunk branch
-		// and check if we know any branches at those revisions.
-		// If not, we'll use the trunk branch as the base.
-		revs, err := repo.ListCommits(ctx,
-			git.CommitRangeFrom(branchHash).ExcludeFrom(trunkHash))
-		if err != nil {
-			return fmt.Errorf("list commits: %w", err)
-		}
-
 		trackedBranches, err := store.ListBranches(ctx)
 		if err != nil {
 			return fmt.Errorf("list tracked branches: %w", err)
@@ -94,8 +85,17 @@ func (cmd *branchTrackCmd) Run(
 			return hash, nil
 		}
 
+		// Find all revisions between the current branch and the trunk branch
+		// and check if we know any branches at those revisions.
+		// If not, we'll use the trunk branch as the base.
+		revIter := repo.ListCommits(ctx,
+			git.CommitRangeFrom(branchHash).ExcludeFrom(trunkHash))
 	revLoop:
-		for _, rev := range revs {
+		for rev, err := range revIter {
+			if err != nil {
+				return fmt.Errorf("list commits: %w", err)
+			}
+
 			for branchIdx, branchName := range trackedBranches {
 				if branchName == cmd.Branch {
 					continue

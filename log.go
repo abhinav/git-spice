@@ -15,6 +15,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -180,10 +181,10 @@ func (cmd *branchLogCmd) run(
 				}
 
 				if opts.Commits {
-					commits, err := repo.ListCommitsDetails(ctx,
+					commits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx,
 						git.CommitRangeFrom(branch.Head).
 							ExcludeFrom(branch.BaseHash).
-							FirstParent())
+							FirstParent()))
 					if err != nil {
 						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "error", err)
 						continue

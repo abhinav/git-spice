@@ -11,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -78,10 +79,10 @@ func (cmd *branchSplitCmd) Run(
 
 	// Commits are in oldest-to-newest order,
 	// with last commit being branch head.
-	branchCommits, err := repo.ListCommitsDetails(ctx,
+	branchCommits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx,
 		git.CommitRangeFrom(branch.Head).
 			ExcludeFrom(branch.BaseHash).
-			Reverse())
+			Reverse()))
 	if err != nil {
 		return fmt.Errorf("list commits: %w", err)
 	}

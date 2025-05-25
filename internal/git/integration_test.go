@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -59,7 +60,7 @@ func TestIntegrationCommitListing(t *testing.T) {
 
 	t.Run("ListCommitsDetails", func(t *testing.T) {
 		ctx := t.Context()
-		commits, err := repo.ListCommitsDetails(ctx, git.CommitRangeFrom("HEAD").Limit(2))
+		commits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx, git.CommitRangeFrom("HEAD").Limit(2)))
 		require.NoError(t, err)
 
 		// Normalize to UTC
