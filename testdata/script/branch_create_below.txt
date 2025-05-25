@@ -10,7 +10,7 @@ gs repo init
 
 # Cannot insert below trunk.
 ! gs branch create --below foo -m 'this will not work'
-stderr 'cannot create a branch below trunk'
+stderr '--below cannot be used from main'
 
 git add foo.txt
 gs bc foo -m 'Add foo'

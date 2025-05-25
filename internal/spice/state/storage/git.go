@@ -239,7 +239,7 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 			OldHash: prevCommit,
 		}); err != nil {
 			updateErr = err
-			g.log.Warn("could not update ref: retrying", "err", err)
+			g.log.Warn("could not update ref: retrying", "error", err)
 			continue
 		}
 

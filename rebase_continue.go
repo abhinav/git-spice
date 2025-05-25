@@ -80,7 +80,9 @@ func (cmd *rebaseContinueCmd) Run(
 	}
 
 	for idx, cont := range conts {
-		log.Debugf("Got rebase continuation: %q (branch: %s)", cont.Command, cont.Branch)
+		log.Debug("Running post-rebase operation",
+			"command", strings.Join(cont.Command, " "),
+			"branch", cont.Branch)
 		if err := repo.Checkout(ctx, cont.Branch); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", cont.Branch, err)
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 )
 
 // ErrNotExist is returned when a Git object does not exist.
@@ -18,6 +19,11 @@ const ZeroHash Hash = "0000000000000000000000000000000000000000"
 
 func (h Hash) String() string {
 	return string(h)
+}
+
+// LogValue reports how the hash should be logged.
+func (h Hash) LogValue() slog.Value {
+	return slog.StringValue(h.Short())
 }
 
 // Short reports the short form of the hash.

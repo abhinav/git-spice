@@ -19,6 +19,7 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		} `graphql:"nodes(ids: $ids)"`
 	}
 
+	prs := make([]int, len(ids))
 	gqlIDs := make([]githubv4.ID, len(ids))
 	for i, id := range ids {
 		// Since before the first stable v0.1.0,
@@ -28,8 +29,10 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		// However, if a [PR] was constructed in-process
 		// and not from the data store, we need to resolve it,
 		// and that will make a network request.
+		pr := mustPR(id)
 		var err error
-		gqlIDs[i], err = r.graphQLID(ctx, mustPR(id))
+		prs[i] = pr.Number
+		gqlIDs[i], err = r.graphQLID(ctx, pr)
 		if err != nil {
 			return nil, fmt.Errorf("resolve ID %v: %w", id, err)
 		}

@@ -80,7 +80,7 @@ func (cmd *downstackEditCmd) Run(
 	})
 	if err != nil {
 		if errors.Is(err, spice.ErrStackEditAborted) {
-			log.Infof("downstack edit aborted")
+			log.Info("downstack edit aborted")
 			return nil
 		}
 

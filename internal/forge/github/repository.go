@@ -28,6 +28,7 @@ func newRepository(
 	client *githubv4.Client,
 	repoID githubv4.ID,
 ) (*Repository, error) {
+	log = log.With("repo", fmt.Sprintf("%s/%s", owner, repo))
 	if repoID == "" || repoID == nil {
 		var q struct {
 			Repository struct {

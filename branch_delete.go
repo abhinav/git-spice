@@ -105,10 +105,10 @@ func (cmd *branchDeleteCmd) Run(
 			if delErr := new(spice.DeletedBranchError); errors.As(err, &delErr) {
 				exists = false
 				base = delErr.Base
-				log.Info("branch has already been deleted", "branch", branch)
+				log.Info("Branch has already been deleted", "branch", branch)
 			} else if errors.Is(err, state.ErrNotExist) {
 				tracked = false
-				log.Debug("branch is not tracked", "error", err)
+				log.Debug("Branch is not tracked", "branch", branch)
 				log.Info("branch is not tracked: deleting anyway", "branch", branch)
 			} else {
 				return fmt.Errorf("lookup branch %v: %w", branch, err)
@@ -139,7 +139,7 @@ func (cmd *branchDeleteCmd) Run(
 	}
 
 	// upstack restack changes the current branch.
-	// checkoutTarget specifiest he branch we'll check out after deletion.
+	// checkoutTarget specifies the branch we'll check out after deletion.
 	// The logic for this is as follows:
 	//
 	//  - if in detached HEAD state, use the current commit
@@ -151,7 +151,8 @@ func (cmd *branchDeleteCmd) Run(
 	// TODO: Make an 'upstack restack' spice.Service method
 	// that won't leave us on the wrong branch.
 	var checkoutTarget string
-	if currentBranch, err := repo.CurrentBranch(ctx); err != nil {
+	currentBranch, err := repo.CurrentBranch(ctx)
+	if err != nil {
 		if !errors.Is(err, git.ErrDetachedHead) {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -180,6 +181,10 @@ func (cmd *branchDeleteCmd) Run(
 				// Use trunk.
 				checkoutTarget = store.Trunk()
 			}
+
+			// This is the only case where user's current HEAD is
+			// not checked out so worth logging.
+			log.Debugf("Will check out %v after deletion", checkoutTarget)
 		}
 	}
 
@@ -197,6 +202,9 @@ func (cmd *branchDeleteCmd) Run(
 	// Actual deletion will happen in the reverse of that order,
 	// deleting branches based on other branches first.
 	slices.Reverse(topoBranches)
+	if len(topoBranches) > 1 {
+		log.Debugf("Will delete branches in the order: %v", strings.Join(topoBranches, ", "))
+	}
 	deleteOrder := make([]*branchInfo, len(topoBranches))
 	for i, name := range topoBranches {
 		deleteOrder[i] = branchesToDelete[name]
@@ -232,6 +240,8 @@ func (cmd *branchDeleteCmd) Run(
 				continue
 			}
 
+			log.Debug("Changing upstack branch to a new base",
+				"branch", above, "base", base)
 			if err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
 				Branch: above,
 				Onto:   base,
@@ -282,14 +292,14 @@ func (cmd *branchDeleteCmd) Run(
 				// If the branch still exists,
 				// it's likely because it's not merged.
 				if repo.BranchExists(ctx, branch) {
-					log.Error("git refused to delete the branch", "err", err)
+					log.Error("git refused to delete the branch", "error", err)
 					log.Error("try re-running with --force")
 					return errors.New("branch not deleted")
 				}
 
 				// If the branch doesn't exist,
 				// it may already have been deleted.
-				log.Warn("branch may already have been deleted", "err", err)
+				log.Warn("branch may already have been deleted", "error", err)
 			}
 
 			log.Infof("%v: deleted (was %v)", branch, head.Short())

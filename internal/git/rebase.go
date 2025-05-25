@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // RebaseInterruptKind specifies the kind of rebase interruption.
@@ -117,6 +118,12 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 	if req.Branch != "" {
 		args = append(args, req.Branch)
 	}
+
+	r.log.Debug("Rebasing branch",
+		silog.NonZero("name", req.Branch),
+		silog.NonZero("onto", req.Onto),
+		silog.NonZero("upstream", req.Upstream),
+	)
 
 	cmd := r.gitCmd(ctx, args...).LogPrefix("git rebase")
 	if req.Interactive {

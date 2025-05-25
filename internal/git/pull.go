@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // PullOptions specifies options for the Pull operation.
@@ -20,6 +22,8 @@ func (r *Repository) Pull(ctx context.Context, opts PullOptions) error {
 	if opts.Refspec != "" && opts.Remote == "" {
 		return errors.New("refspec specified without remote")
 	}
+
+	r.log.Debug("Pulling from remote", silog.NonZero("name", opts.Remote))
 
 	args := []string{"pull"}
 	if opts.Rebase {

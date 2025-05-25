@@ -2,6 +2,8 @@ package git
 
 import (
 	"context"
+
+	"go.abhg.dev/gs/internal/silog"
 )
 
 // Refspec specifies which refs to fetch/submit for fetch/push operations.
@@ -34,6 +36,12 @@ type SetRefRequest struct {
 // It optionally allows verifying the current value of the ref
 // before updating it.
 func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
+	r.log.Debug("Updating Git ref",
+		"name", req.Ref,
+		"hash", req.Hash,
+		silog.NonZero("oldHash", req.OldHash),
+	)
+
 	// git update-ref <rev> <newvalue> [<oldvalue>]
 	args := []string{"update-ref", req.Ref, string(req.Hash)}
 	if req.OldHash != "" {

@@ -73,8 +73,13 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
 		forkPoint, err := s.repo.ForkPoint(ctx, b.Base, name)
 		if err == nil {
+			if upstream != forkPoint {
+				s.log.Debug("Recorded base hash is out of date. Restacking from fork point.",
+					"base", b.Base,
+					"branch", name,
+					"forkPoint", forkPoint)
+			}
 			upstream = forkPoint
-			s.log.Debugf("Using fork point %v as rebase base", upstream)
 		}
 	}
 
@@ -156,18 +161,20 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// Branch does not need to be restacked
 	// but the base hash stored in state may be out of date.
 	if b.BaseHash != baseHash {
+		s.log.Debug("Updating recorded base hash", "branch", name, "base", b.Base)
+
 		tx := s.store.BeginBranchTx()
 		if err := tx.Upsert(ctx, state.UpsertRequest{
 			Name:     name,
 			BaseHash: baseHash,
 		}); err != nil {
-			s.log.Warnf("failed to update state with new base hash: %v", err)
+			s.log.Warn("Failed to update recorded base hash", "error", err)
 			return nil
 		}
 
 		if err := tx.Commit(ctx, fmt.Sprintf("%v: branch was restacked externally", name)); err != nil {
 			// This isn't a critical error. Just log it.
-			s.log.Warnf("failed to update state with new base hash: %v", err)
+			s.log.Warn("Failed to update state", "error", err)
 		}
 	}
 

@@ -154,7 +154,9 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 	}); err != nil {
 		return fmt.Errorf("edit state: %w", err)
 	}
-	s.log.Debugf("Pushed rebase continuation: %q (branch %v)", req.Command, branch)
+	s.log.Debug("Pushed rebase continuation",
+		"command", strings.Join(req.Command, " "),
+		"branch", branch)
 
 	return rescuedErr
 }

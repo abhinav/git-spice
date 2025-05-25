@@ -56,7 +56,7 @@ func (cmd *commitSplitCmd) Run(
 			// Create an uncanceled context to perform the rollback.
 			ctx := context.WithoutCancel(ctx)
 
-			log.Warn("rolling back to previous commit", "commit", head)
+			log.Warn("Rolling back to previous commit", "commit", head)
 			err = errors.Join(err, repo.Reset(ctx, head.String(), git.ResetOptions{
 				Mode: git.ResetMixed,
 			}))
@@ -95,6 +95,7 @@ func (cmd *commitSplitCmd) Run(
 	if _, err := repo.RebaseState(ctx); err == nil {
 		// In the middle of a rebase.
 		// Don't restack upstack branches.
+		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}
 
@@ -102,6 +103,7 @@ func (cmd *commitSplitCmd) Run(
 	if err != nil {
 		// No restack needed if we're in a detached head state.
 		if errors.Is(err, git.ErrDetachedHead) {
+			log.Debug("HEAD is detached, skipping restack")
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)

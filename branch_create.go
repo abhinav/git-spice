@@ -117,8 +117,8 @@ func (cmd *branchCreateCmd) Run(
 
 	baseName := cmd.Target
 	var (
-		baseHash       git.Hash
-		restackOntoNew []string // branches to restack onto the new branch
+		baseHash     git.Hash
+		stackOntoNew []string // branches to stack onto the new branch
 
 		// Downstack history for the new branch
 		// and for those restacked on top of it.
@@ -127,7 +127,6 @@ func (cmd *branchCreateCmd) Run(
 	)
 	if cmd.Below {
 		if cmd.Target == trunk {
-			log.Error("--below: cannot create a branch below trunk")
 			return fmt.Errorf("--below cannot be used from %v", trunk)
 		}
 
@@ -139,7 +138,7 @@ func (cmd *branchCreateCmd) Run(
 		// If trying to insert below the target branch,
 		// we'll detach to *its* base branch,
 		// and restack the base branch onwards.
-		restackOntoNew = append(restackOntoNew, cmd.Target)
+		stackOntoNew = append(stackOntoNew, cmd.Target)
 		baseName = b.Base
 		baseHash = b.BaseHash
 
@@ -160,7 +159,7 @@ func (cmd *branchCreateCmd) Run(
 			return fmt.Errorf("list branches above %s: %w", cmd.Target, err)
 		}
 
-		restackOntoNew = append(restackOntoNew, aboves...)
+		stackOntoNew = append(stackOntoNew, aboves...)
 	}
 
 	if baseHash == "" || baseHash.IsZero() {
@@ -222,7 +221,8 @@ func (cmd *branchCreateCmd) Run(
 
 			cmd.Name = current
 			generatedName = true
-			log.Debug("Generated branch name", "name", cmd.Name)
+			log.Debug("Branch name generated from commit",
+				"name", cmd.Name, "commit", commitHash)
 		}
 	}
 
@@ -248,7 +248,7 @@ func (cmd *branchCreateCmd) Run(
 		return fmt.Errorf("add branch %v with base %v: %w", branchName, baseName, err)
 	}
 
-	for _, branch := range restackOntoNew {
+	for _, branch := range stackOntoNew {
 		// For --insert and --below, set the base branch of all affected
 		// branches to the newly created branch.
 		//
@@ -260,6 +260,7 @@ func (cmd *branchCreateCmd) Run(
 		}); err != nil {
 			return fmt.Errorf("update base branch of %v: %w", branch, err)
 		}
+		log.Debug("Changing branch base", "name", branch, "newBase", branchName)
 	}
 
 	if err := repo.CreateBranch(ctx, git.CreateBranchRequest{

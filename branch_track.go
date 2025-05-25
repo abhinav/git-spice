@@ -57,6 +57,9 @@ func (cmd *branchTrackCmd) Run(
 			return fmt.Errorf("peel to commit: %w", err)
 		}
 
+		log.Debugf("Looking for base branch in range: %v..%v",
+			trunkHash.Short(), branchHash.Short())
+
 		// Find all revisions between the current branch and the trunk branch
 		// and check if we know any branches at those revisions.
 		// If not, we'll use the trunk branch as the base.
@@ -114,7 +117,7 @@ func (cmd *branchTrackCmd) Run(
 			cmd.Base = store.Trunk()
 		}
 
-		log.Debugf("Detected base branch: %v", cmd.Base)
+		log.Infof("%v: using base branch: %v", cmd.Branch, cmd.Base)
 	}
 
 	baseHash, err := repo.PeelToCommit(ctx, cmd.Base)
@@ -141,9 +144,11 @@ func (cmd *branchTrackCmd) Run(
 	if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		if errors.As(err, &restackErr) {
-			log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
+			log.Infof("%v: branch is behind its base and needs to be restacked.", cmd.Branch)
+			log.Infof("%v: run 'gs branch restack --branch=%v' to restack it", cmd.Branch, cmd.Branch)
+		} else {
+			log.Warnf("%v: stack state verification failed: %v", cmd.Branch, err)
 		}
-		log.Warnf("error checking branch: %v", err)
 	}
 
 	return nil

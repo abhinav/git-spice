@@ -58,15 +58,14 @@ func (cmd *commitAmendCmd) Run(
 	}
 
 	if _, err := repo.RebaseState(ctx); err == nil {
-		// In the middle of a rebase.
-		// Don't restack upstack branches.
+		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}
 
 	currentBranch, err := repo.CurrentBranch(ctx)
 	if err != nil {
-		// No restack needed if we're in a detached head state.
 		if errors.Is(err, git.ErrDetachedHead) {
+			log.Debug("HEAD is detached, skipping restack")
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)

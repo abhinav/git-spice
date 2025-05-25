@@ -39,7 +39,8 @@ func (r *Repository) PostChangeComment(
 	id forge.ChangeID,
 	markdown string,
 ) (forge.ChangeCommentID, error) {
-	gqlID, err := r.graphQLID(ctx, mustPR(id))
+	pr := mustPR(id)
+	gqlID, err := r.graphQLID(ctx, pr)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +122,7 @@ func (r *Repository) DeleteChangeComment(
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
+	r.log.Debug("Deleted comment", "url", cid.URL)
 
 	return nil
 }

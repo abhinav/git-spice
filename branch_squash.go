@@ -92,7 +92,7 @@ func (cmd *branchSquashCmd) Run(
 		// if we return early before the operation is complete.
 		if !reattachedHead {
 			if cerr := repo.Checkout(ctx, branchName); cerr != nil {
-				log.Error("could not check out original branch",
+				log.Error("Could not check out original branch",
 					"branch", branchName,
 					"error", cerr)
 				err = errors.Join(err, cerr)

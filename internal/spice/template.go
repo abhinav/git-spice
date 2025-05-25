@@ -60,6 +60,8 @@ func (s *Service) ListChangeTemplates(
 		return cachedTemplatesToForge(cachedTemplates), nil
 	}
 
+	s.log.Debug("Cached templates are out-of-date. Updating.")
+
 	// Fetch templates from the forge.
 	ts, err := fr.ListChangeTemplates(ctx)
 	if err != nil {
@@ -81,7 +83,7 @@ func (s *Service) ListChangeTemplates(
 		}
 	}
 	if err := s.store.CacheTemplates(ctx, key, cached); err != nil {
-		s.log.Warn("Failed to cache templates", "err", err)
+		s.log.Warn("Failed to cache templates", "error", err)
 	}
 
 	return ts, nil

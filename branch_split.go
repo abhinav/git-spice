@@ -215,6 +215,9 @@ func (cmd *branchSplitCmd) Run(
 		}); err != nil {
 			return fmt.Errorf("add branch %v with base %v: %w", split.Name, base, err)
 		}
+		log.Debug("Updating tracked branch state",
+			"branch", split.Name,
+			"base", base+"@"+baseHash.String())
 	}
 
 	finalBase, finalBaseHash := branch.Base, branch.BaseHash
@@ -228,6 +231,9 @@ func (cmd *branchSplitCmd) Run(
 	}); err != nil {
 		return fmt.Errorf("update branch %v with base %v: %w", cmd.Branch, finalBase, err)
 	}
+	log.Debug("Updating tracked branch state",
+		"branch", cmd.Branch,
+		"base", finalBase+"@"+finalBaseHash.String())
 
 	// If the branch being split had a Change associated with it,
 	// ask the user which branch to associate the Change with.
@@ -354,6 +360,8 @@ func prepareChangeMetadataTransfer(
 	}); err != nil {
 		return nil, fmt.Errorf("set change metadata on %v: %w", toBranch, err)
 	}
+	log.Debug("Transferring submitted CR metadata between tracked branches",
+		"from", fromBranch, "to", toBranch)
 
 	return func() {
 		if err := repo.SetBranchUpstream(ctx, toBranch, remote+"/"+toUpstreamBranch); err != nil {

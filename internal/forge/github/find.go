@@ -113,10 +113,11 @@ func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*fo
 		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
+	pr := mustPR(id)
 	if err := r.client.Query(ctx, &q, map[string]any{
 		"owner":  githubv4.String(r.owner),
 		"repo":   githubv4.String(r.repo),
-		"number": githubv4.Int(mustPR(id).Number),
+		"number": githubv4.Int(pr.Number),
 	}); err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}

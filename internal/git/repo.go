@@ -30,6 +30,9 @@ func Init(ctx context.Context, dir string, opts InitOptions) (*Repository, error
 		opts.Branch = "main"
 	}
 
+	if opts.Log != nil {
+		opts.Log.Debug("Initializing repository", "path", dir)
+	}
 	initCmd := newGitCmd(ctx, opts.Log, nil, /* extra */
 		"init",
 		"--initial-branch="+opts.Branch,
@@ -93,6 +96,9 @@ func Clone(ctx context.Context, url, dir string, opts CloneOptions) (*Repository
 		opts.exec = _realExec
 	}
 
+	if opts.Log != nil {
+		opts.Log.Debug("Cloning repository", "url", url, "destination", dir)
+	}
 	cloneCmd := newGitCmd(ctx, opts.Log, nil /* extraConfig */, "clone", url, dir)
 	if err := cloneCmd.Run(opts.exec); err != nil {
 		return nil, fmt.Errorf("git clone: %w", err)
@@ -119,6 +125,14 @@ func newRepository(root, gitDir string, log *silog.Logger, exec execer) *Reposit
 		log:    log,
 		exec:   exec,
 	}
+}
+
+// WithLogger returns a copy of the repository
+// that will use the given logger.
+func (r *Repository) WithLogger(log *silog.Logger) *Repository {
+	newR := *r
+	newR.log = log
+	return &newR
 }
 
 // gitCmd returns a gitCmd that will run

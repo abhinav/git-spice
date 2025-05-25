@@ -161,7 +161,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 					s.log.Warn("Corrupt change metadata associated with branch",
 						"branch", name,
 						"metadata", string(resp.ChangeMetadata),
-						"err", err,
+						"error", err,
 					)
 				} else {
 					out.Change = md
@@ -283,6 +283,11 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 		}); err != nil {
 			return fmt.Errorf("change base of %v to %v: %w", candidate, branch.Base, err)
 		}
+		s.log.Debug("Updating upstack branch to new base",
+			"branch", candidate,
+			"newBase", branch.Base,
+		)
+
 	}
 
 	if err := branchTx.Delete(ctx, name); err != nil {
@@ -292,6 +297,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	if err := branchTx.Commit(ctx, fmt.Sprintf("untrack branch %q", name)); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
+	s.log.Debug("Stopped tracking", "branch", name)
 
 	return nil
 }
@@ -353,6 +359,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		}); err != nil {
 			return fmt.Errorf("update branch %v to point to %v: %w", above, newName, err)
 		}
+		s.log.Debug("Updating upstack branch to new name", "upstack", above)
 	}
 
 	// Delete the old branch.
@@ -372,6 +379,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 	if err := tx.Commit(ctx, fmt.Sprintf("rename %q to %q", oldName, newName)); err != nil {
 		return fmt.Errorf("update state: %w", err)
 	}
+	s.log.Debug("Renamed tracked name of branch", "old", oldName, "new", newName)
 
 	return nil
 }
@@ -525,12 +533,12 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	// Delete what we can, log the rest.
 	for name := range deletedBranches {
 		if err := tx.Delete(ctx, name); err != nil {
-			s.log.Warn("Unable to delete branch", "branch", name, "err", err)
+			s.log.Warn("Unable to delete branch", "branch", name, "error", err)
 		}
 	}
 
 	if err := tx.Commit(ctx, "clean up deleted branches"); err != nil {
-		s.log.Warn("Error cleaning up after deleted branched", "err", err)
+		s.log.Warn("Error cleaning up after deleted branched", "error", err)
 	}
 
 	return items, nil
@@ -634,7 +642,7 @@ func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, er
 	tx := s.store.BeginBranchTx()
 	defer func() {
 		if err := tx.Commit(ctx, "clean up deleted branches"); err != nil {
-			s.log.Warn("Error cleaning up after deleted branched", "err", err)
+			s.log.Warn("Error cleaning up after deleted branched", "error", err)
 		}
 	}()
 
