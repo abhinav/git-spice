@@ -2,6 +2,7 @@ package git
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"iter"
@@ -96,53 +97,28 @@ func (r *Repository) ListRemoteRefs(
 
 	return func(yield func(RemoteRef, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
-		out, err := cmd.StdoutPipe()
-		if err != nil {
-			yield(RemoteRef{}, fmt.Errorf("pipe stdout: %w", err))
-			return
-		}
 
-		if err := cmd.Start(r.exec); err != nil {
-			yield(RemoteRef{}, fmt.Errorf("start: %w", err))
-			return
-		}
-		var finished bool
-		defer func() {
-			if !finished {
-				_ = cmd.Kill(r.exec)
+		for bs, err := range cmd.ScanLines(r.exec) {
+			if err != nil {
+				yield(RemoteRef{}, fmt.Errorf("git ls-remote: %w", err))
+				return
 			}
-		}()
 
-		scanner := bufio.NewScanner(out)
-		for scanner.Scan() {
 			// Each line is in the form:
 			//
 			//	<hash> TAB <ref>
-			line := scanner.Text()
-			oid, ref, ok := strings.Cut(line, "\t")
+			oid, ref, ok := bytes.Cut(bs, []byte{'\t'})
 			if !ok {
-				r.log.Warn("Bad ls-remote output", "line", line, "error", "missing a tab")
+				r.log.Warn("Bad ls-remote output", "line", string(bs), "error", "missing a tab")
 				continue
 			}
 
 			if !yield(RemoteRef{
-				Name: ref,
+				Name: string(ref),
 				Hash: Hash(oid),
 			}, nil) {
 				return
 			}
 		}
-
-		if err := scanner.Err(); err != nil {
-			yield(RemoteRef{}, fmt.Errorf("scan: %w", err))
-			return
-		}
-
-		if err := cmd.Wait(r.exec); err != nil {
-			yield(RemoteRef{}, fmt.Errorf("git ls-remote: %w", err))
-			return
-		}
-
-		finished = true
 	}
 }

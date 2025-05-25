@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
@@ -129,11 +131,11 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		}
 	}
 
-	localBranches, err := p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{
+	localBranches, err := sliceutil.CollectErr(p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{
 		Sort: p.sort,
-	})
+	}))
 	if err != nil {
-		return "", fmt.Errorf("list branches: %w", err)
+		return "", fmt.Errorf("list local branches: %w", err)
 	}
 
 	bases := make(map[string]string) // branch -> base
@@ -153,6 +155,12 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 			Base:     bases[branch.Name],
 			Branch:   branch.Name,
 			Disabled: disabled(branch),
+		})
+	}
+	if p.sort == "" {
+		// If no sort order is specified, sort by branch name.
+		slices.SortFunc(items, func(a, b widget.BranchTreeItem) int {
+			return strings.Compare(a.Branch, b.Branch)
 		})
 	}
 

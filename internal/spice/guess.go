@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/sliceutil"
 )
 
 // GuessOp specifies the kind of guess operation
@@ -71,7 +72,7 @@ func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote str
 		}
 	}
 
-	localBranches, err := repo.LocalBranches(ctx, nil)
+	localBranches, err := sliceutil.CollectErr(repo.LocalBranches(ctx, nil))
 	if err != nil {
 		return "", fmt.Errorf("list local branches: %w", err)
 	}

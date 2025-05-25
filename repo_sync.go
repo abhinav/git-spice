@@ -104,21 +104,23 @@ func (cmd *repoSyncCmd) Run(
 			return fmt.Errorf("update trunk: %w", err)
 		}
 	} else {
-		localBranches, err := repo.LocalBranches(ctx, nil)
-		if err != nil {
-			return fmt.Errorf("list branches: %w", err)
+		var worktree string // non-empty if checked out in another worktree
+		for branch, err := range repo.LocalBranches(ctx, nil) {
+			if err != nil {
+				return fmt.Errorf("list branches: %w", err)
+			}
+
+			if branch.Name == trunk && branch.Worktree != "" {
+				worktree = branch.Worktree
+				break
+			}
 		}
 
-		idx := slices.IndexFunc(localBranches,
-			func(b git.LocalBranch) bool {
-				return b.Name == trunk && b.Worktree != "" // checked out in another worktree
-			})
-		if idx != -1 {
+		if worktree != "" {
 			// (1c): Trunk is not the current branch,
 			// but it is checked out in another worktree.
 			// Re-run this command in that worktree.
-			worktree := localBranches[idx].Worktree
-			log.Debug("trunk is checked out in another worktree: syncing that worktree", "worktree", worktree)
+			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", worktree)
 			if err := repo.SetWorktree(ctx, worktree); err != nil {
 				return fmt.Errorf("set worktree: %w", err)
 			}

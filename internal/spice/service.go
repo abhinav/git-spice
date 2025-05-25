@@ -33,8 +33,8 @@ type GitRepository interface {
 	// CurrentBranch returns the name of the current branch.
 	CurrentBranch(ctx context.Context) (string, error)
 
-	// LocalBranches returns a list of all local branches.
-	LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) ([]git.LocalBranch, error)
+	// LocalBranches returns an iterator over local branches
+	LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]
 
 	// RemoteDefaultBranch reports the default branch of the given remote.
 	RemoteDefaultBranch(ctx context.Context, remote string) (string, error)

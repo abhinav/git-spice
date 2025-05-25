@@ -1,11 +1,12 @@
 package git
 
 import (
-	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"iter"
+	"os/exec"
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
@@ -150,32 +151,22 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 			Dir(cfg.dir).
 			AppendEnv(cfg.env...)
 
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			yield(ConfigEntry{}, fmt.Errorf("stdout pipe: %w", err))
-			return
-		}
-
-		if err := cmd.Start(cfg.exec); err != nil {
-			yield(ConfigEntry{}, fmt.Errorf("start git-config: %w", err))
-			return
-		}
-
-		// Always wait for the command to finish when this returns.
-		// Ignore the error because git-config fails if there are no matches.
-		// It's not an error for us if there are no matches.
-		defer func() {
-			_ = cmd.Wait(cfg.exec)
-		}()
-
 		// With the --null flag, output is in the form:
 		//
 		//	key1\nvalue1\0
 		//	key2\nvalue2\0
-		scan := bufio.NewScanner(stdout)
-		scan.Split(scanNullDelimited)
-		for scan.Scan() {
-			entry := scan.Bytes()
+		for entry, err := range cmd.Scan(cfg.exec, scanNullDelimited) {
+			if err != nil {
+				// git-config fails with a non-zero exit code if there are no matches.
+				// That's not an error for us, so we ignore it.
+				if exitErr := new(exec.ExitError); errors.As(err, &exitErr) {
+					return
+				}
+
+				yield(ConfigEntry{}, fmt.Errorf("git config: %w", err))
+				return
+			}
+
 			key, value, ok := bytes.Cut(entry, _newline)
 			if !ok {
 				log.Warnf("skipping invalid entry: %q", entry)
@@ -188,11 +179,6 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 			}, nil) {
 				return
 			}
-		}
-
-		if err := scan.Err(); err != nil {
-			yield(ConfigEntry{}, fmt.Errorf("scan git-config output: %w", err))
-			return
 		}
 	}
 }
