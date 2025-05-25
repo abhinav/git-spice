@@ -1,12 +1,11 @@
 package git
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
+	"iter"
 	"path"
 	"slices"
 	"strconv"
@@ -65,19 +64,22 @@ type TreeEntry struct {
 }
 
 // MakeTree creates a new Git tree from the given entries.
+//
 // The tree will contain *only* the given entries and nothing else.
 // Entries must not contain slashes in their names;
 // this operation does not create subtrees.
-func (r *Repository) MakeTree(ctx context.Context, ents []TreeEntry) (_ Hash, err error) {
+//
+// Returns the hash of the new tree and the number of entries written.
+func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq2[TreeEntry, error]) (_ Hash, numEnts int, err error) {
 	var stdout bytes.Buffer
 	cmd := r.gitCmd(ctx, "mktree").Stdout(&stdout)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return ZeroHash, fmt.Errorf("pipe: %w", err)
+		return ZeroHash, numEnts, fmt.Errorf("pipe: %w", err)
 	}
 
 	if err := cmd.Start(r.exec); err != nil {
-		return ZeroHash, fmt.Errorf("start: %w", err)
+		return ZeroHash, numEnts, fmt.Errorf("start: %w", err)
 	}
 	defer func() {
 		if err != nil {
@@ -85,9 +87,13 @@ func (r *Repository) MakeTree(ctx context.Context, ents []TreeEntry) (_ Hash, er
 		}
 	}()
 
-	for _, ent := range ents {
+	for ent, err := range ents {
+		if err != nil {
+			return ZeroHash, numEnts, fmt.Errorf("read entry: %w", err)
+		}
+
 		if ent.Type == "" {
-			return ZeroHash, fmt.Errorf("type not set for %q", ent.Name)
+			return ZeroHash, numEnts, fmt.Errorf("type not set for %q", ent.Name)
 		}
 
 		if ent.Mode == ZeroMode {
@@ -97,31 +103,33 @@ func (r *Repository) MakeTree(ctx context.Context, ents []TreeEntry) (_ Hash, er
 			case TreeType:
 				ent.Mode = DirMode
 			default:
-				return ZeroHash, fmt.Errorf("mode not set for %q", ent.Name)
+				return ZeroHash, numEnts, fmt.Errorf("mode not set for %q", ent.Name)
 			}
 		}
 
 		if strings.Contains(ent.Name, "/") {
-			return ZeroHash, fmt.Errorf("name %q contains a slash", ent.Name)
+			return ZeroHash, numEnts, fmt.Errorf("name %q contains a slash", ent.Name)
 		}
 
 		// mktree expects input in the form:
 		//	<mode> SP <type> SP <hash> TAB <name> NL
 		_, err := fmt.Fprintf(stdin, "%s %s %s\t%s\n", ent.Mode, ent.Type, ent.Hash, ent.Name)
 		if err != nil {
-			return ZeroHash, fmt.Errorf("write: %w", err)
+			return ZeroHash, numEnts, fmt.Errorf("write: %w", err)
 		}
+
+		numEnts++
 	}
 
 	if err := stdin.Close(); err != nil {
-		return ZeroHash, fmt.Errorf("close: %w", err)
+		return ZeroHash, numEnts, fmt.Errorf("close: %w", err)
 	}
 
 	if err := cmd.Wait(r.exec); err != nil {
-		return ZeroHash, fmt.Errorf("wait: %w", err)
+		return ZeroHash, numEnts, fmt.Errorf("wait: %w", err)
 	}
 
-	return Hash(bytes.TrimSpace(stdout.Bytes())), nil
+	return Hash(bytes.TrimSpace(stdout.Bytes())), numEnts, nil
 }
 
 // ListTreeOptions specifies options for the ListTree operation.
@@ -142,7 +150,7 @@ func (r *Repository) ListTree(
 	ctx context.Context,
 	tree Hash,
 	opts ListTreeOptions,
-) (_ []TreeEntry, err error) {
+) iter.Seq2[TreeEntry, error] {
 	args := []string{
 		"ls-tree",
 		"--full-tree", // don't limit listing to the current working directory
@@ -152,63 +160,44 @@ func (r *Repository) ListTree(
 	}
 	args = append(args, tree.String())
 
-	cmd := r.gitCmd(ctx, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("pipe: %w", err)
-	}
+	return func(yield func(TreeEntry, error) bool) {
+		cmd := r.gitCmd(ctx, args...)
+		for line, err := range cmd.ScanLines(r.exec) {
+			if err != nil {
+				yield(TreeEntry{}, fmt.Errorf("git ls-tree: %w", err))
+				return
+			}
 
-	if err := cmd.Start(r.exec); err != nil {
-		return nil, fmt.Errorf("start: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			_ = cmd.Kill(r.exec)
-			_, _ = io.Copy(io.Discard, stdout)
+			// ls-tree output is in the form:
+			//	<mode> SP <type> SP <hash> TAB <name> NL
+			modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
+			if !ok {
+				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
+				continue
+			}
+
+			toks := bytes.SplitN(modeTypeHash, []byte{' '}, 3)
+			if len(toks) != 3 {
+				r.log.Warnf("ls-tree: skipping invalid line: %q", line)
+				continue
+			}
+
+			mode, err := ParseMode(string(toks[0]))
+			if err != nil {
+				r.log.Warnf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
+				continue
+			}
+
+			if !yield(TreeEntry{
+				Mode: mode,
+				Type: Type(toks[1]),
+				Hash: Hash(toks[2]),
+				Name: string(name),
+			}, nil) {
+				return
+			}
 		}
-	}()
-
-	scanner := bufio.NewScanner(stdout)
-	var ents []TreeEntry
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		// ls-tree output is in the form:
-		//	<mode> SP <type> SP <hash> TAB <name> NL
-		modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
-		if !ok {
-			r.log.Warnf("ls-tree: skipping invalid line: %q", line)
-			continue
-		}
-
-		toks := bytes.SplitN(modeTypeHash, []byte{' '}, 3)
-		if len(toks) != 3 {
-			r.log.Warnf("ls-tree: skipping invalid line: %q", line)
-			continue
-		}
-
-		mode, err := ParseMode(string(toks[0]))
-		if err != nil {
-			r.log.Warnf("ls-tree: skipping invalid mode: %q: %v", toks[0], err)
-			continue
-		}
-
-		ents = append(ents, TreeEntry{
-			Mode: mode,
-			Type: Type(toks[1]),
-			Hash: Hash(toks[2]),
-			Name: string(name),
-		})
 	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan: %w", err)
-	}
-
-	if err := cmd.Wait(r.exec); err != nil {
-		return nil, fmt.Errorf("git ls-tree: %w", err)
-	}
-
-	return ents, nil
 }
 
 // UpdateTreeRequest is a request to update an existing Git tree.
@@ -331,26 +320,24 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 			oldHash = ZeroHash
 		}
 
-		var entries []TreeEntry
+		var entries iter.Seq2[TreeEntry, error]
 		if oldHash != ZeroHash {
-			entries, err = r.ListTree(ctx, oldHash, ListTreeOptions{})
-			if err != nil {
-				return ZeroHash, fmt.Errorf("list %v (%v): %w", dir, oldHash, err)
-			}
+			entries = r.ListTree(ctx, oldHash, ListTreeOptions{})
+		} else {
+			entries = func(func(TreeEntry, error) bool) {}
 		}
-
 		entries = update.Apply(entries)
-		if len(entries) == 0 {
-			// If the directory is empty, we don't need to create a tree.
-			// We can just delete the directory.
+
+		newHash, numEnts, err := r.MakeTree(ctx, entries)
+		if err != nil {
+			return ZeroHash, fmt.Errorf("make tree: %w", err)
+		}
+		if numEnts == 0 {
+			// If the directory is empty, delete the directory
+			// from the parent.
 			parent, base := pathSplit(dir)
 			ensureUpdate(parent).Delete(base)
 			continue
-		}
-
-		newHash, err := r.MakeTree(ctx, update.Apply(entries))
-		if err != nil {
-			return ZeroHash, fmt.Errorf("make tree: %w", err)
 		}
 
 		// Update the parent directory with the new hash.
@@ -364,15 +351,14 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	// Process root directory separately.
-	var entries []TreeEntry
+	var entries iter.Seq2[TreeEntry, error]
 	if req.Tree != ZeroHash && req.Tree != "" {
-		entries, err = r.ListTree(ctx, req.Tree, ListTreeOptions{})
-		if err != nil {
-			return ZeroHash, fmt.Errorf("list root (%v): %w", req.Tree, err)
-		}
+		entries = r.ListTree(ctx, req.Tree, ListTreeOptions{})
+	} else {
+		entries = func(func(TreeEntry, error) bool) {}
 	}
 
-	rootHash, err := r.MakeTree(ctx, updates["."].Apply(entries))
+	rootHash, _, err := r.MakeTree(ctx, updates["."].Apply(entries))
 	if err != nil {
 		return ZeroHash, fmt.Errorf("make root tree: %w", err)
 	}
@@ -389,30 +375,41 @@ type directoryUpdate struct {
 	Deletes []string    // sorted
 }
 
-func (du *directoryUpdate) Apply(entries []TreeEntry) []TreeEntry {
+func (du *directoryUpdate) Apply(entries iter.Seq2[TreeEntry, error]) iter.Seq2[TreeEntry, error] {
 	if du == nil {
 		return entries
 	}
 
-	newEntries := entries[:0]
-	for _, ent := range entries {
-		if idx, ok := slices.BinarySearch(du.Deletes, ent.Name); ok {
-			du.Deletes = slices.Delete(du.Deletes, idx, idx+1)
-			continue
+	return func(yield func(TreeEntry, error) bool) {
+		for ent, err := range entries {
+			if err != nil {
+				yield(TreeEntry{}, err)
+				return
+			}
+
+			if idx, ok := slices.BinarySearch(du.Deletes, ent.Name); ok {
+				du.Deletes = slices.Delete(du.Deletes, idx, idx+1)
+				continue
+			}
+
+			if idx, ok := slices.BinarySearchFunc(du.Writes, ent.Name, entryByName); ok {
+				ent = du.Writes[idx]
+				du.Writes = slices.Delete(du.Writes, idx, idx+1)
+			}
+
+			if !yield(ent, nil) {
+				return
+			}
 		}
 
-		if idx, ok := slices.BinarySearchFunc(du.Writes, ent.Name, entryByName); ok {
-			ent = du.Writes[idx]
-			du.Writes = slices.Delete(du.Writes, idx, idx+1)
+		// If there are any more writes remaining,
+		// they are new entries.
+		for _, ent := range du.Writes {
+			if !yield(ent, nil) {
+				return
+			}
 		}
-
-		newEntries = append(newEntries, ent)
 	}
-
-	// If there are any more writes remaining,
-	// they are new entries.
-	newEntries = append(newEntries, du.Writes...)
-	return newEntries
 }
 
 func (du *directoryUpdate) Empty() bool {

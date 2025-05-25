@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
@@ -22,10 +23,10 @@ type GitRepository interface {
 	ReadObject(ctx context.Context, typ git.Type, hash git.Hash, dst io.Writer) error
 	WriteObject(ctx context.Context, typ git.Type, src io.Reader) (git.Hash, error)
 
-	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) ([]git.TreeEntry, error)
+	ListTree(ctx context.Context, tree git.Hash, opts git.ListTreeOptions) iter.Seq2[git.TreeEntry, error]
 	CommitTree(ctx context.Context, req git.CommitTreeRequest) (git.Hash, error)
 	UpdateTree(ctx context.Context, req git.UpdateTreeRequest) (git.Hash, error)
-	MakeTree(ctx context.Context, ents []git.TreeEntry) (git.Hash, error)
+	MakeTree(ctx context.Context, ents iter.Seq2[git.TreeEntry, error]) (git.Hash, int, error)
 
 	SetRef(ctx context.Context, req git.SetRefRequest) error
 }
@@ -88,15 +89,12 @@ func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 		return nil, fmt.Errorf("get tree hash: %w", err)
 	}
 
-	entries, err := g.repo.ListTree(ctx, treeHash, git.ListTreeOptions{
-		Recurse: true,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list tree: %w", err)
-	}
-
 	var keys []string
-	for _, ent := range entries {
+	for ent, err := range g.repo.ListTree(ctx, treeHash, git.ListTreeOptions{Recurse: true}) {
+		if err != nil {
+			return nil, fmt.Errorf("list tree: %w", err)
+		}
+
 		if ent.Type != git.BlobType {
 			continue
 		}
@@ -133,7 +131,7 @@ func (g *GitBackend) Clear(ctx context.Context, msg string) error {
 		prevCommit = "" // not initialized
 	}
 
-	tree, err := g.repo.MakeTree(ctx, nil /* empty tree */)
+	tree, _, err := g.repo.MakeTree(ctx, func(func(git.TreeEntry, error) bool) {})
 	if err != nil {
 		return fmt.Errorf("make tree: %w", err)
 	}
