@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 )
 
 func TestParseMode(t *testing.T) {
@@ -38,7 +39,7 @@ func TestIntegrationListTreeAbsent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = repo.ListTree(ctx, "abcdefgh", git.ListTreeOptions{})
+	_, err = sliceutil.CollectErr(repo.ListTree(ctx, "abcdefgh", git.ListTreeOptions{}))
 	require.Error(t, err)
 }
 
@@ -54,13 +55,14 @@ func TestIntegrationMakeTree(t *testing.T) {
 	emptyFile, err := repo.WriteObject(ctx, git.BlobType, bytes.NewReader(nil))
 	require.NoError(t, err)
 
-	dirHash, err := repo.MakeTree(ctx, []git.TreeEntry{
+	dirHash, numEnts, err := repo.MakeTree(ctx, sliceutil.All2[error]([]git.TreeEntry{
 		{Type: git.BlobType, Name: "foo", Hash: emptyFile},
 		{Type: git.BlobType, Name: "bar", Hash: emptyFile},
-	})
+	}))
 	require.NoError(t, err)
+	assert.Equal(t, 2, numEnts)
 
-	ents, err := repo.ListTree(ctx, dirHash, git.ListTreeOptions{})
+	ents, err := sliceutil.CollectErr(repo.ListTree(ctx, dirHash, git.ListTreeOptions{}))
 	require.NoError(t, err)
 
 	assert.ElementsMatch(t, []git.TreeEntry{
@@ -70,15 +72,16 @@ func TestIntegrationMakeTree(t *testing.T) {
 
 	t.Run("subdir", func(t *testing.T) {
 		ctx := t.Context()
-		newDirHash, err := repo.MakeTree(ctx, []git.TreeEntry{
+		newDirHash, numEnts, err := repo.MakeTree(ctx, sliceutil.All2[error]([]git.TreeEntry{
 			{Type: git.BlobType, Name: "baz", Hash: emptyFile},
 			{Type: git.TreeType, Name: "sub", Hash: dirHash},
-		})
+		}))
 		require.NoError(t, err)
+		assert.Equal(t, 2, numEnts)
 
-		ents, err := repo.ListTree(ctx, newDirHash, git.ListTreeOptions{
+		ents, err := sliceutil.CollectErr(repo.ListTree(ctx, newDirHash, git.ListTreeOptions{
 			Recurse: true,
-		})
+		}))
 		require.NoError(t, err)
 
 		assert.ElementsMatch(t, []git.TreeEntry{
@@ -101,8 +104,9 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	emptyFile, err := repo.WriteObject(ctx, git.BlobType, bytes.NewReader(nil))
 	require.NoError(t, err)
 
-	emptyTree, err := repo.MakeTree(ctx, nil)
+	emptyTree, numEnts, err := repo.MakeTree(ctx, sliceutil.Empty2[git.TreeEntry, error]())
 	require.NoError(t, err)
+	assert.Equal(t, 0, numEnts)
 
 	t.Run("no updates", func(t *testing.T) {
 		got, err := repo.UpdateTree(ctx, git.UpdateTreeRequest{Tree: emptyTree})
@@ -120,9 +124,9 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	ents, err := repo.ListTree(ctx, newHash, git.ListTreeOptions{
+	ents, err := sliceutil.CollectErr(repo.ListTree(ctx, newHash, git.ListTreeOptions{
 		Recurse: true,
-	})
+	}))
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []git.TreeEntry{
 		{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
@@ -143,9 +147,9 @@ func TestIntegrationUpdateTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ents, err := repo.ListTree(ctx, overwrittenHash, git.ListTreeOptions{
+		ents, err := sliceutil.CollectErr(repo.ListTree(ctx, overwrittenHash, git.ListTreeOptions{
 			Recurse: true,
-		})
+		}))
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []git.TreeEntry{
 			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: newBlob},
@@ -162,9 +166,9 @@ func TestIntegrationUpdateTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ents, err := repo.ListTree(ctx, deletedHash, git.ListTreeOptions{
+		ents, err := sliceutil.CollectErr(repo.ListTree(ctx, deletedHash, git.ListTreeOptions{
 			Recurse: true,
-		})
+		}))
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []git.TreeEntry{
 			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
@@ -181,16 +185,16 @@ func TestIntegrationUpdateTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ents, err := repo.ListTree(ctx, deletedHash, git.ListTreeOptions{})
+		ents, err := sliceutil.CollectErr(repo.ListTree(ctx, deletedHash, git.ListTreeOptions{}))
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []git.TreeEntry{
 			{Mode: git.DirMode, Type: git.TreeType, Name: "bar", Hash: "94b2978d84f4cbb7449c092255b38a1e1b40da42"},
 			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
 		}, ents)
 
-		ents, err = repo.ListTree(ctx, deletedHash, git.ListTreeOptions{
+		ents, err = sliceutil.CollectErr(repo.ListTree(ctx, deletedHash, git.ListTreeOptions{
 			Recurse: true,
-		})
+		}))
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []git.TreeEntry{
 			{Mode: git.RegularMode, Type: git.BlobType, Name: "foo", Hash: emptyFile},
@@ -206,7 +210,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		ents, err := repo.ListTree(ctx, deletedHash, git.ListTreeOptions{})
+		ents, err := sliceutil.CollectErr(repo.ListTree(ctx, deletedHash, git.ListTreeOptions{}))
 		require.NoError(t, err)
 		assert.Empty(t, ents)
 	})
