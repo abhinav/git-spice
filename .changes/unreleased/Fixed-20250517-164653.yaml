@@ -1,6 +1,0 @@
-kind: Fixed
-body: >-
-  If a remote branch reference (e.g. origin/feature)
-  is deleted after pushing to it with git-spice,
-  we will no longer hold onto the stale reference.
-time: 2025-05-17T16:46:53.993389-07:00
