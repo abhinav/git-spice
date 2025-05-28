@@ -45,7 +45,7 @@ This option controls whether untracked branches are shown in the prompt.
 
 ### spice.branchCheckout.trackUntrackedPrompt
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.14.0 -->
 
 If $$gs branch checkout$$ is used to checkout a branch that is not tracked,
 git-spice will present a prompt like the following to begin tracking it:
@@ -102,7 +102,7 @@ and use the `--commit` flag to commit changes when needed.
 
 ### spice.branchCreate.prefix
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.14.0 -->
 
 If set, the prefix will be prepended to the name of every branch created 
 with $$gs branch create$$.
