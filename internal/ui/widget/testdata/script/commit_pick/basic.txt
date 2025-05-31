@@ -1,0 +1,83 @@
+init
+
+await Select a commit
+snapshot
+cmp stdout prompt
+
+feed <Down>
+await
+snapshot
+cmp stdout commit_2
+
+feed -r 2 <Up>
+await
+snapshot
+cmp stdout commit_3
+
+feed <Enter>
+
+-- branches --
+[
+  {
+    "branch": "feat1",
+    "base": "main",
+    "commits": [
+      {
+	"shortHash": "abc",
+	"subject": "feat: add feature",
+	"authorDate": "2024-12-10T22:26:23Z"
+      },
+      {
+      	"shortHash": "def",
+      	"subject": "refac: unrelated change",
+      	"authorDate": "2024-12-10T22:33:44Z"
+      }
+    ]
+  },
+  {"branch": "main"},
+  {
+    "branch": "feat2",
+    "base": "feat1",
+    "commits": [
+      {
+      	"shortHash": "ghi",
+      	"subject": "feat: add another feature",
+      	"authorDate": "2024-12-10T22:45:44Z"
+      }
+    ]
+  }
+]
+-- want --
+def
+-- desc --
+Pick a commit to cherry-pick
+-- prompt --
+Select a commit:
+  ┏━□ feat2
+  ┃   ▶ ghi feat: add another feature (11 hours ago)
+┏━┻□ feat1
+┃      abc feat: add feature (11 hours ago)
+┃      def refac: unrelated change (11 hours ago)
+main
+
+Pick a commit to cherry-pick
+-- commit_2 --
+Select a commit:
+  ┏━□ feat2
+  ┃     ghi feat: add another feature (11 hours ago)
+┏━┻□ feat1
+┃    ▶ abc feat: add feature (11 hours ago)
+┃      def refac: unrelated change (11 hours ago)
+main
+
+Pick a commit to cherry-pick
+-- commit_3 --
+Select a commit:
+  ┏━□ feat2
+  ┃     ghi feat: add another feature (11 hours ago)
+┏━┻□ feat1
+┃      abc feat: add feature (11 hours ago)
+┃    ▶ def refac: unrelated change (11 hours ago)
+main
+
+Pick a commit to cherry-pick
