@@ -32,6 +32,14 @@ func (s CommitSummaryStyle) Faint(f bool) CommitSummaryStyle {
 	return s
 }
 
+// Bold returns a copy of the style with bold set to true on all fields.
+func (s CommitSummaryStyle) Bold(b bool) CommitSummaryStyle {
+	s.Hash = s.Hash.Bold(b)
+	s.Subject = s.Subject.Bold(b)
+	s.Time = s.Time.Bold(b)
+	return s
+}
+
 // DefaultCommitSummaryStyle is the default style
 // for rendering a CommitSummary.
 var DefaultCommitSummaryStyle = CommitSummaryStyle{
