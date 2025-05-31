@@ -1,0 +1,53 @@
+init
+
+await Select a commit
+snapshot
+cmp stdout prompt
+
+feed -r 2 <Down>
+feed <Enter>
+
+-- branches --
+[
+  {
+    "branch": "feat1",
+    "base": "main",
+    "commits": [
+      {
+      	"shortHash": "ghi",
+      	"subject": "feat: add feature",
+      	"authorDate": "2024-12-10T22:45:44Z"
+      }
+    ]
+  },
+  {"branch": "feat2", "base": "feat1"},
+  {
+    "branch": "feat3",
+    "base": "feat2",
+    "commits": [
+      {
+	"shortHash": "abc",
+	"subject": "feat: add another feature",
+	"authorDate": "2024-12-09T16:44:23Z"
+      },
+      {
+      	"shortHash": "def",
+      	"subject": "refac: unrelated change",
+      	"authorDate": "2024-12-10T16:52:44Z"
+      }
+    ]
+  }
+]
+
+-- want --
+ghi
+
+-- prompt --
+Select a commit:
+    ┏━□ feat3
+    ┃   ▶ abc feat: add another feature (1 day ago)
+    ┃     def refac: unrelated change (17 hours ago)
+  ┏━┻□ feat2
+┏━┻□ feat1
+┃      ghi feat: add feature (11 hours ago)
+main
