@@ -3,12 +3,11 @@ package shamhub
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"os/exec"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/silog"
 )
 
 type submitChangeRequest struct {
@@ -90,6 +89,13 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		Head:    req.Head,
 		Draft:   req.Draft,
 	}, &res); err != nil {
+		// Check if submit failed because base hasn't been pushed yet.
+		if exists, err := r.RefExists(ctx, "refs/heads/"+req.Base); err == nil && !exists {
+			return forge.SubmitChangeResult{}, errors.Join(forge.ErrUnsubmittedBase, err)
+		} else if err != nil {
+			r.log.Error("check base ref exists", "error", err)
+		}
+
 		return forge.SubmitChangeResult{}, fmt.Errorf("submit change: %w", err)
 	}
 
@@ -97,15 +103,4 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		ID:  ChangeID(res.Number),
 		URL: res.URL,
 	}, nil
-}
-
-func (sh *ShamHub) branchRefExists(ctx context.Context, owner, repo, branch string) bool {
-	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-	defer flush()
-
-	cmd := exec.CommandContext(ctx, sh.gitExe,
-		"show-ref", "--verify", "--quiet", "refs/heads/"+branch)
-	cmd.Dir = sh.repoDir(owner, repo)
-	cmd.Stderr = logw
-	return cmd.Run() == nil
 }

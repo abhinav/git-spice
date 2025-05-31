@@ -2,10 +2,12 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/graphqlutil"
 )
 
 // SubmitChange creates a new change in a repository.
@@ -34,6 +36,22 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	}
 
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		// If the base branch has not been pushed yet,
+		// the error is:
+		//   {
+		//      "type": "UNPROCESSABLE",
+		//      "path": "createPullRequest",
+		//      "message": "..., No commits between $base and $head, ..."
+		//   }
+		// String matching is not the best way to handle this,
+		// so if the error is unprocessable,
+		// we'll check if the repository has the base branch.
+		if errors.Is(err, graphqlutil.ErrUnprocessable) {
+			if exists, existsErr := r.RefExists(ctx, "refs/heads/"+req.Base); existsErr == nil && !exists {
+				return forge.SubmitChangeResult{}, errors.Join(forge.ErrUnsubmittedBase, err)
+			}
+		}
+
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
 	r.log.Debug("Created pull request",

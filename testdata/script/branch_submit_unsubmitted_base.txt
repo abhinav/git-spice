@@ -1,0 +1,37 @@
+# 'gs branch submit' when the base branch has not been submitted yet
+# reports a reasonable error message.
+#
+# https://github.com/abhinav/git-spice/issues/460
+# https://github.com/abhinav/git-spice/issues/686
+
+as 'Test <test@example.com>'
+at '2025-05-31T09:23:25Z'
+
+# setup repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# setup remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+
+git add feat2.txt
+gs bc -m 'Add feat2' feat2
+
+! gs branch submit --fill
+stderr 'feat2: cannot be submitted'
+stderr 'base branch "feat1" does not exist'
+stderr 'gs branch submit --branch=feat1'
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2

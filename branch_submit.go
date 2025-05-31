@@ -882,6 +882,14 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 		Draft:   b.draft,
 	})
 	if err != nil {
+		// If the branch could not be submitted because the base branch
+		// has not been pushed yet, provide a more user-friendly error.
+		if errors.Is(err, forge.ErrUnsubmittedBase) {
+			b.log.Errorf("%v: cannot be submitted because base branch %q does not exist in the remote.", b.Name, b.base)
+			b.log.Errorf("Try submitting the base branch first:")
+			b.log.Errorf("  gs branch submit --branch=%s", b.base)
+			return nil, "", fmt.Errorf("create change: %w", err)
+		}
 		return nil, "", fmt.Errorf("create change: %w", err)
 	}
 
