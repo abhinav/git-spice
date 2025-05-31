@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: If a GitHub PR cannot be submitted because the base branch hasn''t been pushed, present a more friendly error message.'
+time: 2025-05-31T09:33:58.473984-07:00

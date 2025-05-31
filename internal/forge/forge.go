@@ -165,11 +165,22 @@ type RepositoryID interface {
 	ChangeURL(changeID ChangeID) string
 }
 
+// ErrUnsubmittedBase indicates that a change cannot be submitted
+// because the base branch has not been pushed yet.
+var ErrUnsubmittedBase = errors.New("base branch has not been submitted yet")
+
 // Repository is a Git repository hosted on a forge.
 type Repository interface {
 	Forge() Forge
 
+	// SubmitChange creates a new change request in the repository.
+	//
+	// Special errors:
+	//
+	//  - ErrUnsubmittedBase indicates that the change cannot be submitted
+	//    because the base branch has not been pushed to the remote yet.
 	SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error)
+
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)

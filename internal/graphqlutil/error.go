@@ -18,8 +18,9 @@ import (
 // Common errors that may be returned by GraphQL APIs.
 // These may be matched with errors.Is.
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrForbidden = errors.New("forbidden")
+	ErrNotFound      = errors.New("not found")
+	ErrForbidden     = errors.New("forbidden")
+	ErrUnprocessable = errors.New("unprocessable")
 )
 
 // graphQLTransport wraps an HTTP transport
@@ -126,6 +127,8 @@ func (e *Error) Is(target error) bool {
 		return e.Type == "NOT_FOUND"
 	case ErrForbidden:
 		return e.Type == "FORBIDDEN"
+	case ErrUnprocessable:
+		return e.Type == "UNPROCESSABLE"
 	default:
 		return false
 	}
