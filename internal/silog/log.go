@@ -109,25 +109,35 @@ func New(w io.Writer, opts *Options) *Logger {
 // Clone returns a new logger with the same configuration
 // as the original logger.
 func (l *Logger) Clone() *Logger {
+	if l == nil {
+		return l
+	}
 	newL := *l
 	return &newL
 }
 
 // Level returns the current log level of the logger.
 func (l *Logger) Level() Level {
+	if l == nil {
+		return LevelFatal + 1
+	}
+
 	return Level(l.lvl.Level())
 }
 
 // SetLevel changes the log level of the logger
 // and all loggers cloned from it.
 func (l *Logger) SetLevel(lvl Level) {
+	if l == nil {
+		return
+	}
 	l.lvl.Set(lvl.Level())
 }
 
 // WithLevel returns a copy of this logger
 // that will log at the given level.
 func (l *Logger) WithLevel(lvl Level) *Logger {
-	if lvl == l.Level() {
+	if l == nil || lvl == l.Level() {
 		return l
 	}
 
@@ -140,6 +150,9 @@ func (l *Logger) WithLevel(lvl Level) *Logger {
 
 // WithGroup returns a copy of the logger with the given group name added.
 func (l *Logger) WithGroup(name string) *Logger {
+	if l == nil || name == "" {
+		return l
+	}
 	newL := l.Clone()
 	newL.sl = newL.sl.WithGroup(name)
 	return newL
@@ -151,6 +164,9 @@ func (l *Logger) WithGroup(name string) *Logger {
 // If the prefix is empty, an existing prefix will be removed.
 // If the prefix is non-empty, a ": " delimiter will be added.
 func (l *Logger) WithPrefix(prefix string) *Logger {
+	if l == nil {
+		return l
+	}
 	newL := l.Clone()
 	newL.sl = slog.New(newL.sl.Handler().(*logHandler).WithPrefix(prefix))
 	return newL
@@ -164,6 +180,9 @@ func (l *Logger) WithPrefix(prefix string) *Logger {
 // will be downgraded to LevelDebug,
 // Levels at the minimum level will be discarded.
 func (l *Logger) Downgrade() *Logger {
+	if l == nil {
+		return l
+	}
 	newL := l.Clone()
 	newL.numDowngrades++
 	return newL
@@ -171,7 +190,7 @@ func (l *Logger) Downgrade() *Logger {
 
 // With returns a copy of the logger with the given attributes added.
 func (l *Logger) With(attrs ...any) *Logger {
-	if len(attrs) == 0 {
+	if l == nil || len(attrs) == 0 {
 		return l
 	}
 
@@ -182,6 +201,13 @@ func (l *Logger) With(attrs ...any) *Logger {
 
 // Log logs a message at the given level with the given key-value pairs.
 func (l *Logger) Log(lvl Level, msg string, kvs ...any) {
+	if l == nil {
+		if lvl >= LevelFatal {
+			_osExit(1) // exit on fatal regardless
+		}
+		return
+	}
+
 	if l.numDowngrades > 0 {
 		lvl = lvl.Dec(l.numDowngrades)
 	}
@@ -229,4 +255,6 @@ func (l *Logger) Errorf(format string, args ...any) { l.Logf(LevelError, format,
 // It also exits the program with a non-zero status code.
 func (l *Logger) Fatalf(format string, args ...any) { l.Logf(LevelFatal, format, args...) }
 
-func exitOnFatal() { os.Exit(1) }
+var _osExit = os.Exit // for testing
+
+func exitOnFatal() { _osExit(1) }

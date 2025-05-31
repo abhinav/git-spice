@@ -375,6 +375,54 @@ func TestLogger_WithLevel(t *testing.T) {
 	assert.Empty(t, buffer.String())
 }
 
+func TestLogger_nilSafe(t *testing.T) {
+	var logger *silog.Logger
+
+	t.Run("Clone", func(*testing.T) {
+		_ = logger.Clone()
+	})
+
+	t.Run("Level", func(*testing.T) {
+		_ = logger.Level()
+	})
+
+	t.Run("SetLevel", func(*testing.T) {
+		logger.SetLevel(silog.LevelDebug)
+	})
+
+	t.Run("WithLevel", func(*testing.T) {
+		_ = logger.WithLevel(silog.LevelDebug)
+	})
+
+	t.Run("WithGroup", func(*testing.T) {
+		_ = logger.WithGroup("test")
+	})
+
+	t.Run("WithPrefix", func(*testing.T) {
+		_ = logger.WithPrefix("test")
+	})
+
+	t.Run("Downgrade", func(*testing.T) {
+		_ = logger.Downgrade()
+	})
+
+	t.Run("With", func(*testing.T) {
+		_ = logger.With("key", "value")
+	})
+
+	t.Run("Log", func(*testing.T) { logger.Log(silog.LevelInfo, "test") })
+	t.Run("Debug", func(*testing.T) { logger.Debug("test") })
+	t.Run("Info", func(*testing.T) { logger.Info("test") })
+	t.Run("Warn", func(*testing.T) { logger.Warn("test") })
+	t.Run("Error", func(*testing.T) { logger.Error("test") })
+
+	t.Run("Logf", func(*testing.T) { logger.Logf(silog.LevelInfo, "test %s", "message") })
+	t.Run("Debugf", func(*testing.T) { logger.Debugf("test %s", "message") })
+	t.Run("Infof", func(*testing.T) { logger.Infof("test %s", "message") })
+	t.Run("Warnf", func(*testing.T) { logger.Warnf("test %s", "message") })
+	t.Run("Errorf", func(*testing.T) { logger.Errorf("test %s", "message") })
+}
+
 type testStringer struct{ v string }
 
 func (s *testStringer) String() string { return s.v }
