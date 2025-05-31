@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -126,6 +127,7 @@ const (
 )
 
 func newRepoStorage(repo *git.Repository, log *silog.Logger) *storage.DB {
+	log = cmp.Or(log, silog.Nop())
 	return storage.NewDB(storage.NewGitBackend(storage.GitConfig{
 		Repo:        repo.WithLogger(log.Downgrade()),
 		Ref:         _dataRef,
