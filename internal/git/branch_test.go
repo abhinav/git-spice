@@ -48,13 +48,14 @@ func TestIntegrationBranches(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
+	repo := wt.Repository()
 
 	t.Run("CurrentBranch", func(t *testing.T) {
-		name, err := repo.CurrentBranch(t.Context())
+		name, err := wt.CurrentBranch(t.Context())
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", name)
@@ -87,15 +88,15 @@ func TestIntegrationBranches(t *testing.T) {
 	backToMain := func(t testing.TB) {
 		t.Helper()
 
-		assert.NoError(t, repo.Checkout(t.Context(), "main"))
+		assert.NoError(t, wt.Checkout(t.Context(), "main"))
 	}
 
 	t.Run("Checkout", func(t *testing.T) {
 		defer backToMain(t)
 
-		require.NoError(t, repo.Checkout(t.Context(), "feature1"))
+		require.NoError(t, wt.Checkout(t.Context(), "feature1"))
 
-		name, err := repo.CurrentBranch(t.Context())
+		name, err := wt.CurrentBranch(t.Context())
 		require.NoError(t, err)
 
 		assert.Equal(t, "feature1", name)
@@ -104,9 +105,9 @@ func TestIntegrationBranches(t *testing.T) {
 	t.Run("DetachedHead", func(t *testing.T) {
 		defer backToMain(t)
 
-		require.NoError(t, repo.DetachHead(t.Context(), "main"))
+		require.NoError(t, wt.DetachHead(t.Context(), "main"))
 
-		_, err := repo.CurrentBranch(t.Context())
+		_, err := wt.CurrentBranch(t.Context())
 		assert.ErrorIs(t, err, git.ErrDetachedHead)
 	})
 

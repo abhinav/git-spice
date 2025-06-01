@@ -31,10 +31,11 @@ func TestListChangeTemplates(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := t.Context()
-	repo, err := git.Clone(ctx, upstream.Dir(), t.TempDir(), git.CloneOptions{
+	wt, err := git.Clone(ctx, upstream.Dir(), t.TempDir(), git.CloneOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
+	repo := wt.Repository()
 
 	mockCtrl := gomock.NewController(t)
 	mockForge := forgetest.NewMockForge(mockCtrl)
@@ -44,7 +45,7 @@ func TestListChangeTemplates(t *testing.T) {
 		AnyTimes()
 
 	store := spice.NewMemoryStore(t)
-	svc := spice.NewTestService(repo, store, new(forge.Registry), silogtest.New(t))
+	svc := spice.NewTestService(repo, wt, store, new(forge.Registry), silogtest.New(t))
 
 	tmpl := &forge.ChangeTemplate{
 		Filename: "CHANGE_TEMPLATE.md",

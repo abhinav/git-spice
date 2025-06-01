@@ -57,12 +57,13 @@ func (cmd *branchSplitCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) (err error) {
 	if cmd.Branch == "" {
-		cmd.Branch, err = repo.CurrentBranch(ctx)
+		cmd.Branch, err = wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}

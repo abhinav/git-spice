@@ -147,7 +147,7 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 	log := cfg.log
 	args = append([]string{"config", "--null"}, args...)
 	return func(yield func(ConfigEntry, error) bool) {
-		cmd := newGitCmd(ctx, cfg.log, nil /* extraConfig */, args...).
+		cmd := newGitCmd(ctx, cfg.log, args...).
 			Dir(cfg.dir).
 			AppendEnv(cfg.env...)
 

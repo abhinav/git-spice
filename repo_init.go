@@ -51,6 +51,7 @@ func (cmd *repoInitCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 ) error {
 	guesser := spice.Guesser{
 		Select: func(op spice.GuessOp, opts []string, selected string) (string, error) {
@@ -99,7 +100,7 @@ func (cmd *repoInitCmd) Run(
 
 	if cmd.Trunk == "" {
 		var err error
-		cmd.Trunk, err = guesser.GuessTrunk(ctx, repo, cmd.Remote)
+		cmd.Trunk, err = guesser.GuessTrunk(ctx, repo, wt, cmd.Remote)
 		if err != nil {
 			return fmt.Errorf("guess trunk: %w", err)
 		}
@@ -145,6 +146,7 @@ func newRepoStorage(repo *git.Repository, log *silog.Logger) *storage.DB {
 func ensureStore(
 	ctx context.Context,
 	repo *git.Repository,
+	wt *git.Worktree,
 	log *silog.Logger,
 	view ui.View,
 ) (*state.Store, error) {
@@ -156,7 +158,7 @@ func ensureStore(
 
 	if errors.Is(err, state.ErrUninitialized) {
 		log.Info("Repository not initialized. Initializing.")
-		if err := (&repoInitCmd{}).Run(ctx, log, view, repo); err != nil {
+		if err := (&repoInitCmd{}).Run(ctx, log, view, repo, wt); err != nil {
 			return nil, fmt.Errorf("auto-initialize: %w", err)
 		}
 

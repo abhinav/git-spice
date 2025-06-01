@@ -59,6 +59,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 	t.Run("NoRemote", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		mockRepo := NewMockGitRepository(mockCtrl)
+		mockWT := NewMockGitWorktree(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)
 
 		mockStore.EXPECT().
@@ -71,7 +72,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(mockRepo, mockStore, &forgeReg, silogtest.New(t))
+		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t))
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -119,6 +120,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 		ctx := t.Context()
 		mockCtrl := gomock.NewController(t)
 		mockRepo := NewMockGitRepository(mockCtrl)
+		mockWT := NewMockGitWorktree(mockCtrl)
 		mockStore := NewMockStore(mockCtrl)
 
 		mockRepo.EXPECT().
@@ -135,7 +137,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(mockRepo, mockStore, &forgeReg, silogtest.New(t))
+		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t))
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 
@@ -177,6 +179,7 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	mockRepo := NewMockGitRepository(mockCtrl)
+	mockWT := NewMockGitWorktree(mockCtrl)
 
 	// The branch exists in the repo.
 	mockRepo.EXPECT().
@@ -184,7 +187,7 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		Return(git.Hash("def123"), nil).
 		AnyTimes()
 
-	svc := NewService(mockRepo, store, nil /* forges */, silogtest.New(t))
+	svc := NewService(mockRepo, mockWT, store, nil /* forges */, silogtest.New(t))
 
 	t.Run("NoUpstream", func(t *testing.T) {
 		setUpstreamBranch("")

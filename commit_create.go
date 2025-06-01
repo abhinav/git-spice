@@ -32,11 +32,11 @@ func (*commitCreateCmd) Help() string {
 func (cmd *commitCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:    cmd.Message,
 		All:        cmd.All,
 		AllowEmpty: cmd.AllowEmpty,
@@ -46,14 +46,14 @@ func (cmd *commitCreateCmd) Run(
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if _, err := repo.RebaseState(ctx); err == nil {
+	if _, err := wt.RebaseState(ctx); err == nil {
 		// In the middle of a rebase.
 		// Don't restack upstack branches.
 		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		// No restack needed if we're in a detached head state.
 		if errors.Is(err, git.ErrDetachedHead) {
@@ -66,5 +66,5 @@ func (cmd *commitCreateCmd) Run(
 	return (&upstackRestackCmd{
 		Branch:    currentBranch,
 		SkipStart: true,
-	}).Run(ctx, log, repo, store, svc)
+	}).Run(ctx, log, wt, store, svc)
 }

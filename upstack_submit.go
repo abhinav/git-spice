@@ -37,12 +37,13 @@ func (cmd *upstackSubmitCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -86,7 +87,7 @@ func (cmd *upstackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        b,
-		}).run(ctx, session, log, view, repo, store, svc)
+		}).run(ctx, session, log, view, repo, wt, store, svc)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", b, err)
 		}

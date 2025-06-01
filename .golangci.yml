@@ -47,14 +47,14 @@ linters:
 
     loggercheck:
       rules:
-        - (*go.abhg.dev/gs/interanl/log.Logger).Trace
-        - (*go.abhg.dev/gs/interanl/log.Logger).Debug
-        - (*go.abhg.dev/gs/interanl/log.Logger).Info
-        - (*go.abhg.dev/gs/interanl/log.Logger).Warn
-        - (*go.abhg.dev/gs/interanl/log.Logger).Error
-        - (*go.abhg.dev/gs/interanl/log.Logger).Fatal
-        - (*go.abhg.dev/gs/interanl/log.Logger).Log
-        - (*go.abhg.dev/gs/interanl/log.Logger).With
+        - (*go.abhg.dev/gs/internal/log.Logger).Trace
+        - (*go.abhg.dev/gs/internal/log.Logger).Debug
+        - (*go.abhg.dev/gs/internal/log.Logger).Info
+        - (*go.abhg.dev/gs/internal/log.Logger).Warn
+        - (*go.abhg.dev/gs/internal/log.Logger).Error
+        - (*go.abhg.dev/gs/internal/log.Logger).Fatal
+        - (*go.abhg.dev/gs/internal/log.Logger).Log
+        - (*go.abhg.dev/gs/internal/log.Logger).With
 
   exclusions:
     generated: lax

@@ -1,6 +1,7 @@
 package git
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -93,7 +94,7 @@ type RebaseRequest struct {
 // Rebase runs a git rebase operation with the specified parameters.
 // It returns [ErrRebaseInterrupted] or [ErrRebaseConflict] for known
 // rebase interruptions.
-func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
+func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) error {
 	args := []string{
 		// Never include advice on how to resolve merge conflicts.
 		// We'll do that ourselves.
@@ -119,33 +120,44 @@ func (r *Repository) Rebase(ctx context.Context, req RebaseRequest) error {
 		args = append(args, req.Branch)
 	}
 
-	r.log.Debug("Rebasing branch",
+	w.log.Debug("Rebasing branch",
 		silog.NonZero("name", req.Branch),
 		silog.NonZero("onto", req.Onto),
 		silog.NonZero("upstream", req.Upstream),
 	)
 
-	cmd := r.gitCmd(ctx, args...).LogPrefix("git rebase")
+	cmd := w.gitCmd(ctx, args...).LogPrefix("git rebase")
 	if req.Interactive {
 		cmd.Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stderr)
 	}
 
-	if err := cmd.Run(r.exec); err != nil {
-		return r.handleRebaseError(ctx, err)
+	if err := cmd.Run(w.exec); err != nil {
+		return w.handleRebaseError(ctx, err)
 	}
-	return r.handleRebaseFinish(ctx)
+	return w.handleRebaseFinish(ctx)
+}
+
+// RebaseContinueOptions holds options for the rebase operation.
+type RebaseContinueOptions struct {
+	// Editor specifies the editor to use for interactive rebases.
+	// If empty, the default editor will be used.
+	Editor string
 }
 
 // RebaseContinue continues an ongoing rebase operation.
-func (r *Repository) RebaseContinue(ctx context.Context) error {
-	cmd := r.gitCmd(ctx, "rebase", "--continue").Stdin(os.Stdin).Stdout(os.Stdout)
-	if err := cmd.Run(r.exec); err != nil {
-		return r.handleRebaseError(ctx, err)
+func (w *Worktree) RebaseContinue(ctx context.Context, opts *RebaseContinueOptions) error {
+	opts = cmp.Or(opts, &RebaseContinueOptions{})
+	cmd := w.gitCmd(ctx, "rebase", "--continue").Stdin(os.Stdin).Stdout(os.Stdout)
+	if opts.Editor != "" {
+		cmd.WithConfig(extraConfig{Editor: opts.Editor})
 	}
-	return r.handleRebaseFinish(ctx)
+	if err := cmd.Run(w.exec); err != nil {
+		return w.handleRebaseError(ctx, err)
+	}
+	return w.handleRebaseFinish(ctx)
 }
 
-func (r *Repository) handleRebaseError(ctx context.Context, err error) error {
+func (w *Worktree) handleRebaseError(ctx context.Context, err error) error {
 	originalErr := err
 	if exitErr := new(exec.ExitError); !errors.As(err, &exitErr) {
 		return fmt.Errorf("rebase: %w", err)
@@ -153,11 +165,11 @@ func (r *Repository) handleRebaseError(ctx context.Context, err error) error {
 
 	// If the rebase operation actually ran, but failed,
 	// we might be in the middle of a rebase operation.
-	state, err := r.RebaseState(ctx)
+	state, err := w.RebaseState(ctx)
 	if err != nil {
 		// Rebase probably failed for a different reason,
 		// so no need to log the state read failure verbosely.
-		r.log.Debug("Failed to read rebase state", "error", err)
+		w.log.Debug("Failed to read rebase state", "error", err)
 		return originalErr
 	}
 
@@ -168,10 +180,10 @@ func (r *Repository) handleRebaseError(ctx context.Context, err error) error {
 	}
 }
 
-func (r *Repository) handleRebaseFinish(ctx context.Context) error {
+func (w *Worktree) handleRebaseFinish(ctx context.Context) error {
 	// If we have rebase state after a successful return,
 	// this was a deliberate break or edit.
-	if state, err := r.RebaseState(ctx); err == nil {
+	if state, err := w.RebaseState(ctx); err == nil {
 		return &RebaseInterruptError{
 			Kind:  RebaseInterruptDeliberate,
 			State: state,
@@ -183,8 +195,8 @@ func (r *Repository) handleRebaseFinish(ctx context.Context) error {
 }
 
 // RebaseAbort aborts an ongoing rebase operation.
-func (r *Repository) RebaseAbort(ctx context.Context) error {
-	if err := r.gitCmd(ctx, "rebase", "--abort").Run(r.exec); err != nil {
+func (w *Worktree) RebaseAbort(ctx context.Context) error {
+	if err := w.gitCmd(ctx, "rebase", "--abort").Run(w.exec); err != nil {
 		return fmt.Errorf("rebase abort: %w", err)
 	}
 	return nil
@@ -235,7 +247,7 @@ var ErrNoRebase = errors.New("no rebase in progress")
 
 // RebaseState loads information about an ongoing rebase,
 // or [ErrNoRebase] if no rebase is in progress.
-func (r *Repository) RebaseState(context.Context) (*RebaseState, error) {
+func (w *Worktree) RebaseState(context.Context) (*RebaseState, error) {
 	// Rebase state is stored inside .git/rebase-merge or .git/rebase-apply
 	// depending on the backend in use.
 	// See https://github.com/git/git/blob/d8ab1d464d07baa30e5a180eb33b3f9aa5c93adf/wt-status.c#L1711.
@@ -246,7 +258,7 @@ func (r *Repository) RebaseState(context.Context) (*RebaseState, error) {
 	//
 	// There's no Git porcelain command to directly get this information.
 	for _, backend := range []RebaseBackend{RebaseBackendApply, RebaseBackendMerge} {
-		stateDir := filepath.Join(r.gitDir, backend.stateDir())
+		stateDir := filepath.Join(w.gitDir, backend.stateDir())
 		if _, err := os.Stat(stateDir); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue

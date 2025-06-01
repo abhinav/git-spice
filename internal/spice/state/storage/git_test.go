@@ -11,7 +11,7 @@ import (
 
 func TestGitBackendUpdateNoChanges(t *testing.T) {
 	ctx := t.Context()
-	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)

@@ -30,12 +30,12 @@ func (*rebaseAbortCmd) Help() string {
 
 func (cmd *rebaseAbortCmd) Run(
 	ctx context.Context,
-	repo *git.Repository,
+	wt *git.Worktree,
 	log *silog.Logger,
 	store *state.Store,
 ) error {
 	var wasRebasing bool
-	if _, err := repo.RebaseState(ctx); err != nil {
+	if _, err := wt.RebaseState(ctx); err != nil {
 		if !errors.Is(err, git.ErrNoRebase) {
 			return fmt.Errorf("get rebase state: %w", err)
 		}
@@ -45,7 +45,7 @@ func (cmd *rebaseAbortCmd) Run(
 		// to ensure we don't have any lingering state.
 	} else {
 		wasRebasing = true
-		if err := repo.RebaseAbort(ctx); err != nil {
+		if err := wt.RebaseAbort(ctx); err != nil {
 			return fmt.Errorf("abort rebase: %w", err)
 		}
 	}

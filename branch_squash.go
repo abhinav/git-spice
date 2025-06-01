@@ -33,10 +33,11 @@ func (cmd *branchSquashCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) (err error) {
-	branchName, err := repo.CurrentBranch(ctx)
+	branchName, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
@@ -83,7 +84,7 @@ func (cmd *branchSquashCmd) Run(
 
 	// Detach the HEAD so that we don't mess with the current branch
 	// until the operation is confirmed successful.
-	if err := repo.DetachHead(ctx, branchName); err != nil {
+	if err := wt.DetachHead(ctx, branchName); err != nil {
 		return fmt.Errorf("detach HEAD: %w", err)
 	}
 	var reattachedHead bool
@@ -91,7 +92,7 @@ func (cmd *branchSquashCmd) Run(
 		// Reattach the HEAD to the original branch
 		// if we return early before the operation is complete.
 		if !reattachedHead {
-			if cerr := repo.Checkout(ctx, branchName); cerr != nil {
+			if cerr := wt.Checkout(ctx, branchName); cerr != nil {
 				log.Error("Could not check out original branch",
 					"branch", branchName,
 					"error", cerr)
@@ -103,13 +104,13 @@ func (cmd *branchSquashCmd) Run(
 	// Perform a soft reset to the base commit.
 	// The working tree and index will remain unchanged,
 	// so the contents of the head commit will be staged.
-	if err := repo.Reset(ctx, branch.BaseHash.String(), git.ResetOptions{
+	if err := wt.Reset(ctx, branch.BaseHash.String(), git.ResetOptions{
 		Mode: git.ResetSoft,
 	}); err != nil {
 		return fmt.Errorf("reset to base commit: %w", err)
 	}
 
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:  cmd.Message,
 		Template: commitTemplate,
 		NoVerify: cmd.NoVerify,
@@ -117,7 +118,7 @@ func (cmd *branchSquashCmd) Run(
 		return fmt.Errorf("commit squashed changes: %w", err)
 	}
 
-	headHash, err := repo.Head(ctx)
+	headHash, err := wt.Head(ctx)
 	if err != nil {
 		return fmt.Errorf("get HEAD hash: %w", err)
 	}
@@ -132,10 +133,10 @@ func (cmd *branchSquashCmd) Run(
 		return fmt.Errorf("update branch ref: %w", err)
 	}
 
-	if cerr := repo.Checkout(ctx, branchName); cerr != nil {
+	if cerr := wt.Checkout(ctx, branchName); cerr != nil {
 		return fmt.Errorf("checkout branch: %w", cerr)
 	}
 	reattachedHead = true
 
-	return (&upstackRestackCmd{}).Run(ctx, log, repo, store, svc)
+	return (&upstackRestackCmd{}).Run(ctx, log, wt, store, svc)
 }

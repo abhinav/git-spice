@@ -41,7 +41,7 @@ func (*branchDeleteCmd) Help() string {
 
 func (cmd *branchDeleteCmd) AfterApply(
 	ctx context.Context,
-	repo *git.Repository,
+	wt *git.Worktree,
 	view ui.View,
 	store *state.Store,
 	branchPrompt *branchPrompter,
@@ -53,7 +53,7 @@ func (cmd *branchDeleteCmd) AfterApply(
 			return fmt.Errorf("cannot proceed without branch name: %w", errNoPrompt)
 		}
 
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			currentBranch = ""
 		}
@@ -81,6 +81,7 @@ func (cmd *branchDeleteCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -151,7 +152,7 @@ func (cmd *branchDeleteCmd) Run(
 	// TODO: Make an 'upstack restack' spice.Service method
 	// that won't leave us on the wrong branch.
 	var checkoutTarget string
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		if !errors.Is(err, git.ErrDetachedHead) {
 			return fmt.Errorf("get current branch: %w", err)
@@ -262,7 +263,7 @@ func (cmd *branchDeleteCmd) Run(
 		}
 	}
 
-	if err := repo.Checkout(ctx, checkoutTarget); err != nil {
+	if err := wt.Checkout(ctx, checkoutTarget); err != nil {
 		return fmt.Errorf("checkout %v: %w", checkoutTarget, err)
 	}
 

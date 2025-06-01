@@ -104,6 +104,14 @@ func Expect(t testing.TB) *Handle {
 	}
 }
 
+// ExpectNone is a convenience method to expect no edits
+// for the remainder of the test, or until the next Expect call.
+func ExpectNone(t testing.TB) {
+	t.Setenv("EDITOR", "mockedit")
+	t.Setenv("MOCKEDIT_RECORD", "")
+	t.Setenv("MOCKEDIT_GIVE", "")
+}
+
 // Give tells mockedit to write the given contents back
 // for the next edit operation.
 func (e *Handle) Give(contents string) *Handle {

@@ -34,7 +34,7 @@ func TestIntegrationListTreeAbsent(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestIntegrationMakeTree(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestIntegrationUpdateTree(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	repo, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)

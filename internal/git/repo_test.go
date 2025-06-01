@@ -10,7 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
-func NewTestRepository(t testing.TB, dir string, execer execer) *Repository {
+func NewFakeRepository(t testing.TB, dir string, execer execer) (*Repository, *Worktree) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
@@ -21,7 +21,9 @@ func NewTestRepository(t testing.TB, dir string, execer execer) *Repository {
 		}
 	}
 
-	return newRepository(dir, gitDir, silogtest.New(t), execer)
+	repo := newRepository(gitDir, silogtest.New(t), execer)
+	wt := newWorktree(gitDir, dir, repo, silogtest.New(t), execer)
+	return repo, wt
 }
 
 func TestExtraConfig_Args(t *testing.T) {

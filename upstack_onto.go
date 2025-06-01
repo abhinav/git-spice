@@ -51,13 +51,13 @@ func (cmd *upstackOntoCmd) AfterApply(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	branchPrompt *branchPrompter,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -111,7 +111,7 @@ func (cmd *upstackOntoCmd) AfterApply(
 func (cmd *upstackOntoCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -138,5 +138,5 @@ func (cmd *upstackOntoCmd) Run(
 
 	return (&upstackRestackCmd{
 		SkipStart: true, // we've already moved the current branch
-	}).Run(ctx, log, repo, store, svc)
+	}).Run(ctx, log, wt, store, svc)
 }

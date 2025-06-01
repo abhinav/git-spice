@@ -101,12 +101,13 @@ func (cmd *branchSubmitCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) error {
 	session := newSubmitSession(repo, store, secretStash, forges, view, log)
-	if err := cmd.run(ctx, session, log, view, repo, store, svc); err != nil {
+	if err := cmd.run(ctx, session, log, view, repo, wt, store, svc); err != nil {
 		return err
 	}
 
@@ -130,11 +131,12 @@ func (cmd *branchSubmitCmd) run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}

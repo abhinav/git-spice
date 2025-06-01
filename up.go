@@ -33,10 +33,11 @@ func (cmd *upCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
-	current, err := repo.CurrentBranch(ctx)
+	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch
 		return fmt.Errorf("get current branch: %w", err)
@@ -92,5 +93,5 @@ outer:
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          branch,
-	}).Run(ctx, log, view, repo, store, svc)
+	}).Run(ctx, log, view, repo, wt, store, svc)
 }

@@ -36,14 +36,14 @@ type FileStatus struct {
 // and returns the list of files that are different.
 //
 // The treeish argument can be any valid tree-ish reference.
-func (r *Repository) DiffIndex(ctx context.Context, treeish string) ([]FileStatus, error) {
-	cmd := r.gitCmd(ctx, "diff-index", "--cached", "--name-status", treeish)
+func (w *Worktree) DiffIndex(ctx context.Context, treeish string) ([]FileStatus, error) {
+	cmd := w.gitCmd(ctx, "diff-index", "--cached", "--name-status", treeish)
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("pipe: %w", err)
 	}
 
-	if err := cmd.Start(r.exec); err != nil {
+	if err := cmd.Start(w.exec); err != nil {
 		return nil, fmt.Errorf("start: %w", err)
 	}
 
@@ -57,7 +57,7 @@ func (r *Repository) DiffIndex(ctx context.Context, treeish string) ([]FileStatu
 
 		status, name, ok := bytes.Cut(bs, []byte{'\t'})
 		if !ok {
-			r.log.Warnf("invalid diff-index output: %s", bs)
+			w.log.Warnf("invalid diff-index output: %s", bs)
 			continue
 		}
 		files = append(files, FileStatus{
@@ -70,7 +70,7 @@ func (r *Repository) DiffIndex(ctx context.Context, treeish string) ([]FileStatu
 		return nil, fmt.Errorf("scan: %w", err)
 	}
 
-	if err := cmd.Wait(r.exec); err != nil {
+	if err := cmd.Wait(w.exec); err != nil {
 		return nil, fmt.Errorf("diff-index: %w", err)
 	}
 

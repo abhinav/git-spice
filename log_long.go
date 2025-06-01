@@ -27,6 +27,7 @@ func (cmd *logLongCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
@@ -34,5 +35,5 @@ func (cmd *logLongCmd) Run(
 	return cmd.run(ctx, &branchLogOptions{
 		Log:     log,
 		Commits: true,
-	}, repo, store, svc, forges)
+	}, repo, wt, store, svc, forges)
 }

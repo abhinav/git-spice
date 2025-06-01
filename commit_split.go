@@ -29,10 +29,11 @@ func (cmd *commitSplitCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) (err error) {
-	head, err := repo.Head(ctx)
+	head, err := wt.Head(ctx)
 	if err != nil {
 		return fmt.Errorf("get HEAD: %w", err)
 	}
@@ -42,7 +43,7 @@ func (cmd *commitSplitCmd) Run(
 		return fmt.Errorf("get HEAD^: %w", err)
 	}
 
-	if err := repo.Reset(ctx, parent.String(), git.ResetOptions{
+	if err := wt.Reset(ctx, parent.String(), git.ResetOptions{
 		Mode: git.ResetMixed, // don't touch the working tree
 	}); err != nil {
 		return fmt.Errorf("reset to HEAD^: %w", err)
@@ -57,7 +58,7 @@ func (cmd *commitSplitCmd) Run(
 			ctx := context.WithoutCancel(ctx)
 
 			log.Warn("Rolling back to previous commit", "commit", head)
-			err = errors.Join(err, repo.Reset(ctx, head.String(), git.ResetOptions{
+			err = errors.Join(err, wt.Reset(ctx, head.String(), git.ResetOptions{
 				Mode: git.ResetMixed,
 			}))
 		}
@@ -66,18 +67,18 @@ func (cmd *commitSplitCmd) Run(
 	log.Info("Select hunks to extract into a new commit")
 	// Can't use 'git add' here because reset will have unstaged
 	// new files, which 'git add' will ignore.
-	if err := repo.Reset(ctx, head.String(), git.ResetOptions{Patch: true}); err != nil {
+	if err := wt.Reset(ctx, head.String(), git.ResetOptions{Patch: true}); err != nil {
 		return fmt.Errorf("select hunks: %w", err)
 	}
 
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:  cmd.Message,
 		NoVerify: cmd.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if err := repo.Reset(ctx, head.String(), git.ResetOptions{
+	if err := wt.Reset(ctx, head.String(), git.ResetOptions{
 		Paths: []string{"."}, // reset index to remaining changes
 	}); err != nil {
 		return fmt.Errorf("select hunks: %w", err)
@@ -85,21 +86,21 @@ func (cmd *commitSplitCmd) Run(
 
 	// Commit will move HEAD to the new commit,
 	// updating branch ref if necessary.
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		ReuseMessage: head.String(),
 		NoVerify:     cmd.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if _, err := repo.RebaseState(ctx); err == nil {
+	if _, err := wt.RebaseState(ctx); err == nil {
 		// In the middle of a rebase.
 		// Don't restack upstack branches.
 		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		// No restack needed if we're in a detached head state.
 		if errors.Is(err, git.ErrDetachedHead) {
@@ -112,5 +113,5 @@ func (cmd *commitSplitCmd) Run(
 	return (&upstackRestackCmd{
 		Branch:    currentBranch,
 		SkipStart: true,
-	}).Run(ctx, log, repo, store, svc)
+	}).Run(ctx, log, wt, store, svc)
 }

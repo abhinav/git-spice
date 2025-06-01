@@ -15,11 +15,12 @@ import (
 // If forge is nil, it uses the ShamHub forge.
 func NewTestService(
 	repo GitRepository,
+	wt GitWorktree,
 	store Store,
 	forgeReg *forge.Registry,
 	log *silog.Logger,
 ) *Service {
-	return newService(repo, store, forgeReg, log)
+	return newService(repo, wt, store, forgeReg, log)
 }
 
 // NewMemoryStore builds gs state storage

@@ -14,6 +14,7 @@ import (
 	"iter"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
@@ -81,7 +82,7 @@ type gitCmd struct {
 //   - if the program is running in verbose mode,
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
-func newGitCmd(ctx context.Context, log *silog.Logger, cfg *extraConfig, args ...string) *gitCmd {
+func newGitCmd(ctx context.Context, log *silog.Logger, args ...string) *gitCmd {
 	prefix := "git"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		prefix += " " + args[0]
@@ -89,7 +90,6 @@ func newGitCmd(ctx context.Context, log *silog.Logger, cfg *extraConfig, args ..
 
 	logger := &prefixLogger{Logger: log, prefix: prefix}
 
-	args = append(cfg.Args(), args...)
 	stderr, wrap := stderrWriter(logger)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stderr = stderr
@@ -99,6 +99,14 @@ func newGitCmd(ctx context.Context, log *silog.Logger, cfg *extraConfig, args ..
 		log:  logger,
 		wrap: wrap,
 	}
+}
+
+func (c *gitCmd) WithConfig(cfg extraConfig) *gitCmd {
+	// cmd.Args[0] is git itself.
+	// Configuration parameters must be added before the command name,
+	// so we'll insert them at the beginning of the command arguments.
+	c.cmd.Args = slices.Insert(c.cmd.Args, 1, cfg.Args()...)
+	return c
 }
 
 // LogPrefix changes the prefixed used for log messages from this command.

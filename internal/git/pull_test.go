@@ -49,7 +49,7 @@ func TestPullArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockExecer := NewMockExecer(gomock.NewController(t))
-			repo := NewTestRepository(t, "", mockExecer)
+			_, wt := NewFakeRepository(t, "", mockExecer)
 
 			mockExecer.EXPECT().
 				Run(gomock.Any()).
@@ -59,7 +59,7 @@ func TestPullArgs(t *testing.T) {
 				})
 
 			ctx := t.Context()
-			err := repo.Pull(ctx, tt.give)
+			err := wt.Pull(ctx, tt.give)
 			require.NoError(t, err)
 		})
 	}
@@ -67,10 +67,10 @@ func TestPullArgs(t *testing.T) {
 
 func TestPullErrors(t *testing.T) {
 	execer := NewMockExecer(gomock.NewController(t))
-	repo := NewTestRepository(t, "", execer)
+	_, wt := NewFakeRepository(t, "", execer)
 
 	t.Run("refspec without remote", func(t *testing.T) {
-		if err := repo.Pull(t.Context(), PullOptions{Refspec: "main"}); assert.Error(t, err) {
+		if err := wt.Pull(t.Context(), PullOptions{Refspec: "main"}); assert.Error(t, err) {
 			assert.ErrorContains(t, err, "refspec specified without remote")
 		}
 	})
@@ -81,7 +81,7 @@ func TestPullErrors(t *testing.T) {
 			Run(gomock.Any()).
 			Return(giveErr)
 
-		err := repo.Pull(t.Context(), PullOptions{})
+		err := wt.Pull(t.Context(), PullOptions{})
 		require.Error(t, err)
 		assert.ErrorIs(t, err, giveErr)
 	})

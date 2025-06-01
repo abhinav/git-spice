@@ -44,6 +44,7 @@ func (cmd *repoSyncCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
@@ -54,7 +55,7 @@ func (cmd *repoSyncCmd) Run(
 		return err
 	}
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		if !errors.Is(err, git.ErrDetachedHead) {
 			return fmt.Errorf("get current branch: %w", err)
@@ -79,7 +80,7 @@ func (cmd *repoSyncCmd) Run(
 			Autostash: true,
 			Refspec:   git.Refspec(trunk),
 		}
-		if err := repo.Pull(ctx, opts); err != nil {
+		if err := wt.Pull(ctx, opts); err != nil {
 			return fmt.Errorf("pull: %w", err)
 		}
 		return nil
@@ -104,25 +105,26 @@ func (cmd *repoSyncCmd) Run(
 			return fmt.Errorf("update trunk: %w", err)
 		}
 	} else {
-		var worktree string // non-empty if checked out in another worktree
+		var worktreePath string // non-empty if checked out in another worktree
 		for branch, err := range repo.LocalBranches(ctx, nil) {
 			if err != nil {
 				return fmt.Errorf("list branches: %w", err)
 			}
 
 			if branch.Name == trunk && branch.Worktree != "" {
-				worktree = branch.Worktree
+				worktreePath = branch.Worktree
 				break
 			}
 		}
 
-		if worktree != "" {
+		if worktreePath != "" {
 			// (1c): Trunk is not the current branch,
 			// but it is checked out in another worktree.
 			// Re-run this command in that worktree.
-			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", worktree)
-			if err := repo.SetWorktree(ctx, worktree); err != nil {
-				return fmt.Errorf("set worktree: %w", err)
+			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", worktreePath)
+			wt, err = repo.OpenWorktree(ctx, worktreePath)
+			if err != nil {
+				return fmt.Errorf("open worktree %q: %w", worktreePath, err)
 			}
 
 			if err := pullTrunk(); err != nil {
@@ -161,7 +163,7 @@ func (cmd *repoSyncCmd) Run(
 				// so we can check out trunk and rebase.
 				log.Debug("trunk has unpushed commits: pulling from remote")
 
-				if err := repo.Checkout(ctx, trunk); err != nil {
+				if err := wt.Checkout(ctx, trunk); err != nil {
 					return fmt.Errorf("checkout trunk: %w", err)
 				}
 
@@ -170,11 +172,11 @@ func (cmd *repoSyncCmd) Run(
 					Rebase:  true,
 					Refspec: git.Refspec(trunk),
 				}
-				if err := repo.Pull(ctx, opts); err != nil {
+				if err := wt.Pull(ctx, opts); err != nil {
 					return fmt.Errorf("pull: %w", err)
 				}
 
-				if err := repo.Checkout(ctx, "-"); err != nil {
+				if err := wt.Checkout(ctx, "-"); err != nil {
 					return fmt.Errorf("checkout old branch: %w", err)
 				}
 
@@ -244,13 +246,13 @@ func (cmd *repoSyncCmd) Run(
 		}
 	}
 	if err := cmd.deleteBranches(
-		ctx, view, log, remote, branchesToDelete, repo, store, svc,
+		ctx, view, log, remote, branchesToDelete, repo, wt, store, svc,
 	); err != nil {
 		return err
 	}
 
 	if cmd.Restack {
-		return (&stackRestackCmd{}).Run(ctx, log, repo, store, svc)
+		return (&stackRestackCmd{}).Run(ctx, log, wt, store, svc)
 	}
 
 	return nil
@@ -601,6 +603,7 @@ func (cmd *repoSyncCmd) deleteBranches(
 	remote string,
 	branchesToDelete []branchDeletion,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -616,7 +619,7 @@ func (cmd *repoSyncCmd) deleteBranches(
 	err := (&branchDeleteCmd{
 		Branches: branchNames,
 		Force:    true,
-	}).Run(ctx, log, view, repo, store, svc)
+	}).Run(ctx, log, view, repo, wt, store, svc)
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)
 	}

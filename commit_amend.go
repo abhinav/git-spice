@@ -37,7 +37,7 @@ func (*commitAmendCmd) Help() string {
 func (cmd *commitAmendCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -46,7 +46,7 @@ func (cmd *commitAmendCmd) Run(
 		log.Warn("flag '-n' is deprecated; use '--no-edit' instead")
 	}
 
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:    cmd.Message,
 		AllowEmpty: cmd.AllowEmpty,
 		Amend:      true,
@@ -57,12 +57,12 @@ func (cmd *commitAmendCmd) Run(
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if _, err := repo.RebaseState(ctx); err == nil {
+	if _, err := wt.RebaseState(ctx); err == nil {
 		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}
 
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		if errors.Is(err, git.ErrDetachedHead) {
 			log.Debug("HEAD is detached, skipping restack")
@@ -74,5 +74,5 @@ func (cmd *commitAmendCmd) Run(
 	return (&upstackRestackCmd{
 		Branch:    currentBranch,
 		SkipStart: true,
-	}).Run(ctx, log, repo, store, svc)
+	}).Run(ctx, log, wt, store, svc)
 }
