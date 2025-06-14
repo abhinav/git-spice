@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'GitLab: CLI authentication now recognizes the new token format (`glab-XXXX`).'
+time: 2025-06-13T20:53:29.030783-07:00
