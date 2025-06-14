@@ -1,17 +1,13 @@
 [tools.changie]
-version = "1.21.1"
+version = "1.22.0"
 backend = "ubi:miniscruff/changie"
 
-[tools.changie.checksums]
-changie-linux-x86_64 = "sha256:e4dd48b7a8bc5bb3070e6a12db70be8945ed44e01005c542455f74f276d4d1bd"
-
 [tools.go]
-version = "1.24.3"
+version = "1.24.4"
 backend = "core:go"
 
 [tools.go.checksums]
-"go1.24.3.darwin-arm64.tar.gz" = "sha256:64a3fa22142f627e78fac3018ce3d4aeace68b743eff0afda8aae0411df5e4fb"
-"go1.24.3.linux-amd64.tar.gz" = "sha256:3333f6ea53afa971e9078895eaa4ac7204a8c6b5c68c10e6bc9a33e8e391bdd8"
+"go1.24.4.darwin-arm64.tar.gz" = "sha256:27973684b515eaf461065054e6b572d9390c05e69ba4a423076c160165336470"
 
 [tools.gofumpt]
 version = "0.8.0"
