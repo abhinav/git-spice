@@ -671,41 +671,41 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
-// ChangesAreMerged mocks base method.
-func (m *MockRepository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
+// ChangesStates mocks base method.
+func (m *MockRepository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeState, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangesAreMerged", ctx, ids)
-	ret0, _ := ret[0].([]bool)
+	ret := m.ctrl.Call(m, "ChangesStates", ctx, ids)
+	ret0, _ := ret[0].([]forge.ChangeState)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ChangesAreMerged indicates an expected call of ChangesAreMerged.
-func (mr *MockRepositoryMockRecorder) ChangesAreMerged(ctx, ids any) *MockRepositoryChangesAreMergedCall {
+// ChangesStates indicates an expected call of ChangesStates.
+func (mr *MockRepositoryMockRecorder) ChangesStates(ctx, ids any) *MockRepositoryChangesStatesCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesAreMerged", reflect.TypeOf((*MockRepository)(nil).ChangesAreMerged), ctx, ids)
-	return &MockRepositoryChangesAreMergedCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesStates", reflect.TypeOf((*MockRepository)(nil).ChangesStates), ctx, ids)
+	return &MockRepositoryChangesStatesCall{Call: call}
 }
 
-// MockRepositoryChangesAreMergedCall wrap *gomock.Call
-type MockRepositoryChangesAreMergedCall struct {
+// MockRepositoryChangesStatesCall wrap *gomock.Call
+type MockRepositoryChangesStatesCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockRepositoryChangesAreMergedCall) Return(arg0 []bool, arg1 error) *MockRepositoryChangesAreMergedCall {
+func (c *MockRepositoryChangesStatesCall) Return(arg0 []forge.ChangeState, arg1 error) *MockRepositoryChangesStatesCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRepositoryChangesAreMergedCall) Do(f func(context.Context, []forge.ChangeID) ([]bool, error)) *MockRepositoryChangesAreMergedCall {
+func (c *MockRepositoryChangesStatesCall) Do(f func(context.Context, []forge.ChangeID) ([]forge.ChangeState, error)) *MockRepositoryChangesStatesCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepositoryChangesAreMergedCall) DoAndReturn(f func(context.Context, []forge.ChangeID) ([]bool, error)) *MockRepositoryChangesAreMergedCall {
+func (c *MockRepositoryChangesStatesCall) DoAndReturn(f func(context.Context, []forge.ChangeID) ([]forge.ChangeState, error)) *MockRepositoryChangesStatesCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

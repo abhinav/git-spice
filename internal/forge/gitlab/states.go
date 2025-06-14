@@ -8,8 +8,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// ChangesAreMerged reports whether the given changes have been merged.
-func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID) ([]bool, error) {
+// ChangesStates retrieves the states of the given changes in bulk.
+func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeState, error) {
 	mrIDs := make([]int, len(ids))
 	for i, id := range ids {
 		mrIDs[i] = mustMR(id).Number
@@ -29,10 +29,20 @@ func (r *Repository) ChangesAreMerged(ctx context.Context, ids []forge.ChangeID)
 		mrMap[mr.IID] = mr
 	}
 
-	merged := make([]bool, len(mrIDs))
+	states := make([]forge.ChangeState, len(mrIDs))
 	for i, id := range mrIDs {
-		merged[i] = mrMap[id].State == "merged"
+		mr := mrMap[id]
+		switch mr.State {
+		case "opened":
+			states[i] = forge.ChangeOpen
+		case "merged":
+			states[i] = forge.ChangeMerged
+		case "closed":
+			states[i] = forge.ChangeClosed
+		default:
+			states[i] = forge.ChangeOpen // default to open for unknown states
+		}
 	}
 
-	return merged, nil
+	return states, nil
 }

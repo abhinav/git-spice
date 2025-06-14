@@ -6,15 +6,10 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 187
-        transfer_encoding: []
-        trailer: {}
+        content_length: 186
         host: api.github.com
-        remote_addr: ""
-        request_uri: ""
         body: |
-            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{merged}}}","variables":{"ids":["PR_kwDOJ2BQKs5ylEYu","PR_kwDOJ2BQKs56wX01","PR_kwDOJ2BQKs5xNeqO","PR_kwDOMVd0xs51N_9r"]}}
-        form: {}
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state}}}","variables":{"ids":["PR_kwDOJ2BQKs5ylEYu","PR_kwDOJ2BQKs6GYA47","PR_kwDOJ2BQKs5xNeqO","PR_kwDOMVd0xs51N_9r"]}}
         headers:
             Content-Type:
                 - application/json
@@ -24,14 +19,12 @@ interactions:
         proto: HTTP/2.0
         proto_major: 2
         proto_minor: 0
-        transfer_encoding: []
-        trailer: {}
         content_length: -1
         uncompressed: true
-        body: '{"data":{"nodes":[{"merged":true},{"merged":false},{"merged":true},{"merged":false}]}}'
+        body: '{"data":{"nodes":[{"state":"MERGED"},{"state":"OPEN"},{"state":"MERGED"},{"state":"CLOSED"}]}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 269.167291ms
+        duration: 484.343458ms

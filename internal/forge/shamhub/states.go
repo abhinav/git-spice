@@ -15,24 +15,24 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 )
 
-type areMergedRequest struct {
+type statesRequest struct {
 	IDs []ChangeID `json:"ids"`
 }
 
-type areMergedResponse struct {
-	Merged []bool `json:"merged"`
+type statesResponse struct {
+	States []string `json:"states"`
 }
 
-var _ = shamhubHandler("POST /{owner}/{repo}/change/merged", (*ShamHub).handleAreMerged)
+var _ = shamhubHandler("POST /{owner}/{repo}/change/states", (*ShamHub).handleStates)
 
-func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
+func (sh *ShamHub) handleStates(w http.ResponseWriter, r *http.Request) {
 	owner, repo := r.PathValue("owner"), r.PathValue("repo")
 	if owner == "" || repo == "" {
-		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
+		http.Error(w, "owner and repo are required", http.StatusBadRequest)
 		return
 	}
 
-	var req areMergedRequest
+	var req statesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -44,14 +44,21 @@ func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sh.mu.RLock()
-	merged := make([]bool, len(changeNumToIdx))
+	states := make([]string, len(changeNumToIdx))
 	for _, c := range sh.changes {
 		if c.Owner == owner && c.Repo == repo {
 			idx, ok := changeNumToIdx[c.Number]
 			if !ok {
 				continue
 			}
-			merged[idx] = c.State == shamChangeMerged
+			switch c.State {
+			case shamChangeOpen:
+				states[idx] = "open"
+			case shamChangeClosed:
+				states[idx] = "closed"
+			case shamChangeMerged:
+				states[idx] = "merged"
+			}
 			delete(changeNumToIdx, c.Number)
 
 			if len(changeNumToIdx) == 0 {
@@ -69,25 +76,40 @@ func (sh *ShamHub) handleAreMerged(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(areMergedResponse{Merged: merged}); err != nil {
+	if err := enc.Encode(statesResponse{States: states}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (r *forgeRepository) ChangesAreMerged(ctx context.Context, fids []forge.ChangeID) ([]bool, error) {
+func (r *forgeRepository) ChangesStates(ctx context.Context, fids []forge.ChangeID) ([]forge.ChangeState, error) {
 	ids := make([]ChangeID, len(fids))
 	for i, fid := range fids {
 		ids[i] = fid.(ChangeID)
 	}
 
-	u := r.apiURL.JoinPath(r.owner, r.repo, "change", "merged")
-	req := areMergedRequest{IDs: ids}
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", "states")
+	req := statesRequest{IDs: ids}
 
-	var res areMergedResponse
+	var res statesResponse
 	if err := r.client.Post(ctx, u.String(), req, &res); err != nil {
-		return nil, fmt.Errorf("are merged: %w", err)
+		return nil, fmt.Errorf("get states: %w", err)
 	}
-	return res.Merged, nil
+
+	states := make([]forge.ChangeState, len(res.States))
+	for i, state := range res.States {
+		switch state {
+		case "open":
+			states[i] = forge.ChangeOpen
+		case "closed":
+			states[i] = forge.ChangeClosed
+		case "merged":
+			states[i] = forge.ChangeMerged
+		default:
+			states[i] = forge.ChangeOpen // default to open for unknown states
+		}
+	}
+
+	return states, nil
 }
 
 // MergeChangeRequest is a request to merge an open change
