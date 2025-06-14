@@ -72,7 +72,7 @@ func (cmd *repoSyncCmd) Run(
 
 	// Runs 'git pull' to update the trunk branch.
 	// Used if the repository's current branch is trunk.
-	pullTrunk := func() error {
+	pullTrunk := func(wt *git.Worktree) error {
 		opts := git.PullOptions{
 			Remote:    remote,
 			Rebase:    true,
@@ -100,7 +100,7 @@ func (cmd *repoSyncCmd) Run(
 		// Sync status doesn't matter,
 		// git pull --rebase will handle everything.
 		log.Debug("trunk is checked out: pulling changes")
-		if err := pullTrunk(); err != nil {
+		if err := pullTrunk(wt); err != nil {
 			return fmt.Errorf("update trunk: %w", err)
 		}
 	} else {
@@ -121,12 +121,12 @@ func (cmd *repoSyncCmd) Run(
 			// but it is checked out in another worktree.
 			// Re-run this command in that worktree.
 			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", worktreePath)
-			wt, err = repo.OpenWorktree(ctx, worktreePath)
+			trunkWT, err := repo.OpenWorktree(ctx, worktreePath)
 			if err != nil {
 				return fmt.Errorf("open worktree %q: %w", worktreePath, err)
 			}
 
-			if err := pullTrunk(); err != nil {
+			if err := pullTrunk(trunkWT); err != nil {
 				return fmt.Errorf("update trunk in worktree: %w", err)
 			}
 		} else {
@@ -652,13 +652,33 @@ func (cmd *repoSyncCmd) deleteBranches(
 		return nil
 	}
 
-	branchNames := make([]string, len(branchesToDelete))
+	allBranchNames := make([]string, len(branchesToDelete))
+	upstreamByName := make(map[string]string, len(branchesToDelete))
 	for i, b := range branchesToDelete {
-		branchNames[i] = b.BranchName
+		allBranchNames[i] = b.BranchName
+		if b.UpstreamName != "" {
+			upstreamByName[b.BranchName] = b.UpstreamName
+		}
+	}
+
+	deleteBranchNames := make([]string, 0, len(branchesToDelete))
+	for branchInfo, err := range repo.LocalBranches(ctx, &git.LocalBranchesOptions{Patterns: allBranchNames}) {
+		if err != nil {
+			log.Warn("Failed to list branches", "error", err)
+			break
+		}
+
+		if branchInfo.Worktree != "" && branchInfo.Worktree != wt.RootDir() {
+			log.Warnf("%v: checked out in another worktree (%v), skipping deletion.", branchInfo.Name, branchInfo.Worktree)
+			log.Warn("Run 'gs branch delete' or run 'gs repo sync' again from that worktree to delete it.")
+			continue
+		}
+
+		deleteBranchNames = append(deleteBranchNames, branchInfo.Name)
 	}
 
 	err := (&branchDeleteCmd{
-		Branches: branchNames,
+		Branches: deleteBranchNames,
 		Force:    true,
 	}).Run(ctx, log, view, repo, wt, store, svc)
 	if err != nil {
@@ -667,8 +687,13 @@ func (cmd *repoSyncCmd) deleteBranches(
 
 	// Also delete the remote tracking branch for this branch
 	// if it still exists.
-	for _, branch := range branchesToDelete {
-		remoteBranch := remote + "/" + branch.UpstreamName
+	for _, branchName := range deleteBranchNames {
+		upstreamName, ok := upstreamByName[branchName]
+		if !ok {
+			continue // no upstream branch, nothing to delete
+		}
+
+		remoteBranch := remote + "/" + upstreamName
 		if _, err := repo.PeelToCommit(ctx, remoteBranch); err == nil {
 			if err := repo.DeleteBranch(ctx, remoteBranch, git.BranchDeleteOptions{
 				Remote: true,

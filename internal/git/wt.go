@@ -36,6 +36,11 @@ func (r *Worktree) gitCmd(ctx context.Context, args ...string) *gitCmd {
 	return newGitCmd(ctx, r.log, args...).Dir(r.rootDir)
 }
 
+// RootDir returns the absolute path to the root directory of the worktree.
+func (r *Worktree) RootDir() string {
+	return r.rootDir
+}
+
 // Repository returns the Git repository that this worktree belongs to.
 func (r *Worktree) Repository() *Repository {
 	return r.repo
