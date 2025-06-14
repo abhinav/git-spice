@@ -32,11 +32,12 @@ func (cmd *branchFoldCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -110,7 +111,7 @@ func (cmd *branchFoldCmd) Run(
 
 	// Check out base and delete the branch we are folding.
 	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(
-		ctx, log, view, repo, store, svc,
+		ctx, log, view, repo, wt, store, svc,
 	); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}

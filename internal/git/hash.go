@@ -46,11 +46,6 @@ func (h Hash) IsZero() bool {
 	return true
 }
 
-// Head reports the commit hash of HEAD.
-func (r *Repository) Head(ctx context.Context) (Hash, error) {
-	return r.PeelToCommit(ctx, "HEAD")
-}
-
 // PeelToCommit reports the commit hash of the provided commit-ish.
 // It returns [ErrNotExist] if the object does not exist.
 func (r *Repository) PeelToCommit(ctx context.Context, ref string) (Hash, error) {
@@ -96,14 +91,18 @@ func (r *Repository) IsAncestor(ctx context.Context, a, b Hash) bool {
 }
 
 func (r *Repository) revParse(ctx context.Context, ref string) (Hash, error) {
-	s, err := r.gitCmd(ctx, "rev-parse",
+	out, err := r.revParseCmd(ctx, ref).OutputString(r.exec)
+	if err != nil {
+		return "", ErrNotExist
+	}
+	return Hash(out), nil
+}
+
+func (r *Repository) revParseCmd(ctx context.Context, ref string) *gitCmd {
+	return r.gitCmd(ctx, "rev-parse",
 		"--verify",         // fail if the object does not exist
 		"--quiet",          // no output if object does not exist
 		"--end-of-options", // prevent ref from being treated as a flag
 		ref,
-	).OutputString(r.exec)
-	if err != nil {
-		return "", ErrNotExist
-	}
-	return Hash(s), err
+	)
 }

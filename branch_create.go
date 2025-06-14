@@ -91,6 +91,7 @@ func (cmd *branchCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) (err error) {
@@ -101,7 +102,7 @@ func (cmd *branchCreateCmd) Run(
 	trunk := store.Trunk()
 
 	if cmd.Target == "" {
-		cmd.Target, err = repo.CurrentBranch(ctx)
+		cmd.Target, err = wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -175,7 +176,7 @@ func (cmd *branchCreateCmd) Run(
 	)
 	branchAt := baseHash
 	if cmd.Commit {
-		commitHash, restore, err := cmd.commit(ctx, repo, baseName, log)
+		commitHash, restore, err := cmd.commit(ctx, wt, baseName, log)
 		if err != nil {
 			return err
 		}
@@ -271,7 +272,7 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	branchCreated = true
-	if err := repo.Checkout(ctx, branchName); err != nil {
+	if err := wt.Checkout(ctx, branchName); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
@@ -291,7 +292,7 @@ func (cmd *branchCreateCmd) Run(
 
 	if cmd.Below || cmd.Insert {
 		return (&upstackRestackCmd{}).Run(
-			ctx, log, repo, store, svc,
+			ctx, log, wt, store, svc,
 		)
 	}
 
@@ -305,33 +306,33 @@ func (cmd *branchCreateCmd) Run(
 // the repository to its original state if an error occurs.
 func (cmd *branchCreateCmd) commit(
 	ctx context.Context,
-	repo *git.Repository,
+	wt *git.Worktree,
 	baseName string,
 	log *silog.Logger,
 ) (commitHash git.Hash, restore func() error, err error) {
 	// We'll need --allow-empty if there are no staged changes.
-	diff, err := repo.DiffIndex(ctx, "HEAD")
+	diff, err := wt.DiffIndex(ctx, "HEAD")
 	if err != nil {
 		return "", nil, fmt.Errorf("diff index: %w", err)
 	}
 
-	if err := repo.DetachHead(ctx, baseName); err != nil {
+	if err := wt.DetachHead(ctx, baseName); err != nil {
 		return "", nil, fmt.Errorf("detach head: %w", err)
 	}
 
-	if err := repo.Commit(ctx, git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
 		AllowEmpty: len(diff) == 0,
 		Message:    cmd.Message,
 		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
 	}); err != nil {
-		if err := repo.Checkout(ctx, baseName); err != nil {
+		if err := wt.Checkout(ctx, baseName); err != nil {
 			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)
 		}
 		return "", nil, fmt.Errorf("commit: %w", err)
 	}
 
-	commitHash, err = repo.Head(ctx)
+	commitHash, err = wt.Head(ctx)
 	if err != nil {
 		return "", nil, fmt.Errorf("get commit hash: %w", err)
 	}
@@ -339,7 +340,7 @@ func (cmd *branchCreateCmd) commit(
 	return commitHash, func() error {
 		// Move HEAD to the state just before the commit
 		// while leaving the index and working tree as-is.
-		err := repo.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
+		err := wt.Reset(ctx, commitHash.String()+"^", git.ResetOptions{
 			Mode:  git.ResetSoft,
 			Quiet: true,
 		})
@@ -347,6 +348,6 @@ func (cmd *branchCreateCmd) commit(
 			return fmt.Errorf("reset to parent commit: %w", err)
 		}
 
-		return repo.Checkout(ctx, baseName)
+		return wt.Checkout(ctx, baseName)
 	}, nil
 }

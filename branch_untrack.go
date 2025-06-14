@@ -29,12 +29,12 @@ func (*branchUntrackCmd) Help() string {
 
 func (cmd *branchUntrackCmd) Run(
 	ctx context.Context,
-	repo *git.Repository,
+	wt *git.Worktree,
 	svc *spice.Service,
 ) error {
 	if cmd.Branch == "" {
 		var err error
-		cmd.Branch, err = repo.CurrentBranch(ctx)
+		cmd.Branch, err = wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}

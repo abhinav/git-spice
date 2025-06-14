@@ -31,11 +31,12 @@ func (cmd *stackSubmitCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) error {
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
@@ -57,7 +58,7 @@ func (cmd *stackSubmitCmd) Run(
 		err := (&branchSubmitCmd{
 			submitOptions: cmd.submitOptions,
 			Branch:        branch,
-		}).run(ctx, session, log, view, repo, store, svc)
+		}).run(ctx, session, log, view, repo, wt, store, svc)
 		if err != nil {
 			return fmt.Errorf("submit %v: %w", branch, err)
 		}

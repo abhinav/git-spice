@@ -24,11 +24,11 @@ func (*stackRestackCmd) Help() string {
 func (*stackRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
@@ -74,7 +74,7 @@ loop:
 	}
 
 	// On success, check out the original branch.
-	if err := repo.Checkout(ctx, currentBranch); err != nil {
+	if err := wt.Checkout(ctx, currentBranch); err != nil {
 		return fmt.Errorf("checkout branch %v: %w", currentBranch, err)
 	}
 

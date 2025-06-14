@@ -35,12 +35,12 @@ func (*upstackRestackCmd) Help() string {
 func (cmd *upstackRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -94,7 +94,7 @@ loop:
 	}
 
 	// On success, check out the original branch.
-	if err := repo.Checkout(ctx, cmd.Branch); err != nil {
+	if err := wt.Checkout(ctx, cmd.Branch); err != nil {
 		return fmt.Errorf("checkout branch %v: %w", cmd.Branch, err)
 	}
 

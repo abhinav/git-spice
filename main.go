@@ -269,39 +269,32 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	kctx.BindTo(view, (*ui.View)(nil))
 
 	// TODO: bind interfaces, not values
+	// TODO:
+	// introduce a type that defaults to the current branch
+	// so that commands that don't need worktree aren't forced to use it
+	// just to get the current branch name.
 
-	err = kctx.BindSingletonProvider(func() (*git.Repository, error) {
-		repo, err := git.Open(ctx, ".", git.OpenOptions{
-			Log: logger,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("open repository: %w", err)
-		}
-		return repo, nil
-	})
-	if err != nil {
-		return fmt.Errorf("bind git repository: %w", err)
-	}
-
-	err = kctx.BindSingletonProvider(func(repo *git.Repository) (*state.Store, error) {
-		return ensureStore(ctx, repo, logger, view)
-	})
-	if err != nil {
-		return fmt.Errorf("bind state store: %w", err)
-	}
-
-	err = kctx.BindSingletonProvider(func(
-		repo *git.Repository,
-		store *state.Store,
-		forges *forge.Registry,
-	) (*spice.Service, error) {
-		return spice.NewService(repo, store, forges, logger), nil
-	})
-	if err != nil {
-		return fmt.Errorf("bind spice service: %w", err)
-	}
-
-	return nil
+	return errors.Join(
+		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
+			return git.OpenWorktree(ctx, ".", git.OpenOptions{
+				Log: logger,
+			})
+		}),
+		kctx.BindSingletonProvider(func(wt *git.Worktree) (*git.Repository, error) {
+			return wt.Repository(), nil
+		}),
+		kctx.BindSingletonProvider(func(repo *git.Repository, wt *git.Worktree) (*state.Store, error) {
+			return ensureStore(ctx, repo, wt, logger, view)
+		}),
+		kctx.BindSingletonProvider(func(
+			repo *git.Repository,
+			wt *git.Worktree,
+			store *state.Store,
+			forges *forge.Registry,
+		) (*spice.Service, error) {
+			return spice.NewService(repo, wt, store, forges, logger), nil
+		}),
+	)
 }
 
 var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {

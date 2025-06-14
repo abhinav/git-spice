@@ -58,8 +58,8 @@ func (g *Guesser) GuessRemote(ctx context.Context, repo GitRepository) (string, 
 
 // GuessTrunk attempts to guess the name of the trunk branch of the repository.
 // If remote is non-empty, it should be the name of the remote for the repository.
-func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, remote string) (string, error) {
-	defaultTrunk, err := repo.CurrentBranch(ctx)
+func (g *Guesser) GuessTrunk(ctx context.Context, repo GitRepository, wt GitWorktree, remote string) (string, error) {
+	defaultTrunk, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return "", fmt.Errorf("determine current branch: %w", err)
 	}

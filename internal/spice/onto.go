@@ -107,7 +107,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		return fmt.Errorf("set base of branch %s to %s: %w", req.Branch, req.Onto, err)
 	}
 
-	if err := s.repo.Rebase(ctx, git.RebaseRequest{
+	if err := s.wt.Rebase(ctx, git.RebaseRequest{
 		Branch:    req.Branch,
 		Upstream:  string(fromHash),
 		Onto:      ontoHash.String(),

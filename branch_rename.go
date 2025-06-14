@@ -40,7 +40,7 @@ func (*branchRenameCmd) Help() string {
 func (cmd *branchRenameCmd) Run(
 	ctx context.Context,
 	view ui.View,
-	repo *git.Repository,
+	wt *git.Worktree,
 	svc *spice.Service,
 ) (err error) {
 	oldName, newName := cmd.OldName, cmd.NewName
@@ -51,7 +51,7 @@ func (cmd *branchRenameCmd) Run(
 	}
 
 	if oldName == "" {
-		oldName, err = repo.CurrentBranch(ctx)
+		oldName, err = wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}

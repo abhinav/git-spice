@@ -51,13 +51,13 @@ func (*branchOntoCmd) Help() string {
 func (cmd *branchOntoCmd) AfterApply(
 	ctx context.Context,
 	view ui.View,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	branchPrompt *branchPrompter,
 ) error {
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -102,7 +102,7 @@ func (cmd *branchOntoCmd) AfterApply(
 func (cmd *branchOntoCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -127,7 +127,7 @@ func (cmd *branchOntoCmd) Run(
 		if err := (&upstackOntoCmd{
 			Branch: above,
 			Onto:   branch.Base,
-		}).Run(ctx, log, repo, store, svc); err != nil {
+		}).Run(ctx, log, wt, store, svc); err != nil {
 			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,
 				Command: []string{"branch", "onto", cmd.Onto},
@@ -154,5 +154,5 @@ func (cmd *branchOntoCmd) Run(
 	}
 
 	log.Infof("%s: moved onto %s", cmd.Branch, cmd.Onto)
-	return repo.Checkout(ctx, cmd.Branch)
+	return wt.Checkout(ctx, cmd.Branch)
 }

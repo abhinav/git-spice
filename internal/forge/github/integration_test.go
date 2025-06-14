@@ -238,7 +238,10 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	branchName := branchFixture.Get(t)
 	t.Logf("Creating branch: %s", branchName)
 
-	var gitRepo *git.Repository // only when _update is true
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
 	if *_update {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
@@ -257,15 +260,16 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		ctx := t.Context()
 
 		var err error
-		gitRepo, err = git.Open(ctx, repoDir, git.OpenOptions{
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
 			Log: silogtest.New(t),
 		})
 		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
 
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
-		require.NoError(t, gitRepo.Checkout(ctx, branchName),
+		require.NoError(t, gitWork.Checkout(ctx, branchName),
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),
@@ -278,7 +282,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		cmd.Stdout = output
 		cmd.Stderr = output
 		require.NoError(t, cmd.Run(), "git add failed")
-		require.NoError(t, gitRepo.Commit(ctx, git.CommitRequest{
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
 			Message: "commit from test",
 		}), "could not commit changes")
 
@@ -396,7 +400,10 @@ func TestIntegration_Repository_SubmitChange_baseBranchDoesNotExist(t *testing.T
 	baseBranchName := baseBranchFixture.Get(t)
 	t.Logf("Creating branch %s with base branch %s", branchName, baseBranchName)
 
-	var gitRepo *git.Repository // only when _update is true
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
 	if *_update {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
@@ -415,15 +422,16 @@ func TestIntegration_Repository_SubmitChange_baseBranchDoesNotExist(t *testing.T
 		ctx := t.Context()
 
 		var err error
-		gitRepo, err = git.Open(ctx, repoDir, git.OpenOptions{
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
 			Log: silogtest.New(t),
 		})
 		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
 
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
-		require.NoError(t, gitRepo.Checkout(ctx, branchName),
+		require.NoError(t, gitWork.Checkout(ctx, branchName),
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),
@@ -436,7 +444,7 @@ func TestIntegration_Repository_SubmitChange_baseBranchDoesNotExist(t *testing.T
 		cmd.Stdout = output
 		cmd.Stderr = output
 		require.NoError(t, cmd.Run(), "git add failed")
-		require.NoError(t, gitRepo.Commit(ctx, git.CommitRequest{
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
 			Message: "commit from test",
 		}), "could not commit changes")
 

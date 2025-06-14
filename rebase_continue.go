@@ -38,23 +38,24 @@ func (*rebaseContinueCmd) Help() string {
 func (cmd *rebaseContinueCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	parser *kong.Kong,
 ) error {
-	if _, err := repo.RebaseState(ctx); err != nil {
+	if _, err := wt.RebaseState(ctx); err != nil {
 		if !errors.Is(err, git.ErrNoRebase) {
 			return fmt.Errorf("get rebase state: %w", err)
 		}
 		return errors.New("no rebase in progress")
 	}
 
+	var opts git.RebaseContinueOptions
 	if !cmd.Edit {
-		repo = repo.WithEditor("true")
+		opts.Editor = "true"
 	}
 
 	// Finish the ongoing rebase.
-	if err := repo.RebaseContinue(ctx); err != nil {
+	if err := wt.RebaseContinue(ctx, &opts); err != nil {
 		var rebaseErr *git.RebaseInterruptError
 		if errors.As(err, &rebaseErr) {
 			var msg strings.Builder
@@ -83,7 +84,7 @@ func (cmd *rebaseContinueCmd) Run(
 		log.Debug("Running post-rebase operation",
 			"command", strings.Join(cont.Command, " "),
 			"branch", cont.Branch)
-		if err := repo.Checkout(ctx, cont.Branch); err != nil {
+		if err := wt.Checkout(ctx, cont.Branch); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", cont.Branch, err)
 		}
 

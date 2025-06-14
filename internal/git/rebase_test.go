@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -45,7 +47,7 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(fixture.Cleanup)
 
-	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
@@ -79,12 +81,12 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			defer func() {
-				assert.NoError(t, repo.RebaseAbort(ctx))
+				assert.NoError(t, wt.RebaseAbort(ctx))
 			}()
 			mockedit.Expect(t).
 				GiveLines(tt.lines...)
 
-			err = repo.Rebase(ctx, git.RebaseRequest{
+			err = wt.Rebase(ctx, git.RebaseRequest{
 				Branch:      "feature",
 				Upstream:    "main",
 				Interactive: true,
@@ -130,7 +132,7 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 	`)))
 	require.NoError(t, err)
 
-	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
 		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
@@ -140,10 +142,10 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 	t.Run("noInterruptFunc", func(t *testing.T) {
 		ctx := t.Context()
 		defer func() {
-			assert.NoError(t, repo.RebaseAbort(ctx))
+			assert.NoError(t, wt.RebaseAbort(ctx))
 		}()
 
-		err = repo.Rebase(ctx, git.RebaseRequest{
+		err = wt.Rebase(ctx, git.RebaseRequest{
 			Branch:   "feature",
 			Upstream: "main",
 		})
@@ -154,6 +156,93 @@ func TestRebase_unexpectedInterrupt(t *testing.T) {
 		assert.Equal(t, &git.RebaseState{Branch: "feature"}, rebaseErr.State)
 		assert.Equal(t, git.RebaseInterruptConflict, rebaseErr.Kind)
 	})
+}
+
+func TestRebaseContinue_editor(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2024-05-21T20:30:40Z'
+
+		git init
+		git commit --allow-empty -m 'Initial commit'
+
+		git add foo.txt
+		git commit -m 'Add foo'
+
+		git checkout -b feature
+		git add bar.txt
+		git commit -m 'Add bar'
+
+		git checkout main
+		mv conflicting-bar.txt bar.txt
+		git add bar.txt
+		git commit -m 'Conflicting bar'
+
+		-- foo.txt --
+		Contents of foo
+
+		-- bar.txt --
+		Contents of bar
+
+		-- conflicting-bar.txt --
+		Different contents of foo
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	login(t, "foo")
+
+	mockedit.Expect(t).
+		GiveLines(
+			"pick cc51432 Add bar",
+			"break",
+			"pick 7dd9ddf Add baz",
+		)
+
+	err = wt.Rebase(t.Context(), git.RebaseRequest{
+		Branch:   "feature",
+		Upstream: "main",
+	})
+	require.Error(t, err)
+
+	var rebaseErr *git.RebaseInterruptError
+	require.ErrorAs(t, err, &rebaseErr)
+	assert.Equal(t, git.RebaseInterruptConflict, rebaseErr.Kind,
+		"rebase should be interrupted by a conflict")
+
+	// Fix the conflict.
+	require.NoError(t, os.WriteFile(
+		filepath.Join(fixture.Dir(), "bar.txt"),
+		[]byte("Merged contents of bar"), 0o644))
+
+	addCmd := exec.Command("git", "add", "bar.txt")
+	addCmd.Dir = fixture.Dir()
+	require.NoError(t, addCmd.Run(), "git add bar.txt should succeed")
+
+	mockedit.ExpectNone(t)
+	err = wt.RebaseContinue(t.Context(), &git.RebaseContinueOptions{
+		Editor: "true", // no edit
+	})
+	require.NoError(t, err, "rebase continue should use custom editor")
+
+	// Verify resolved file.
+	bs, err := os.ReadFile(filepath.Join(fixture.Dir(), "bar.txt"))
+	require.NoError(t, err, "reading bar.txt should succeed")
+	assert.Equal(t, "Merged contents of bar", string(bs), "bar.txt should contain merged contents")
+
+	// Verify commit message of resolved commit.
+	commits, err := sliceutil.CollectErr(
+		wt.Repository().ListCommitsDetails(t.Context(),
+			git.CommitRangeFrom("feature").ExcludeFrom("main")))
+	require.NoError(t, err)
+
+	if assert.Len(t, commits, 1, "should have one commit in feature branch") {
+		assert.Equal(t, "Add bar", commits[0].Subject, "original commit message should be preserved")
+	}
 }
 
 func login(t testing.TB, username string) (home string) {

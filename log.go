@@ -73,12 +73,13 @@ func (cmd *branchLogCmd) run(
 	ctx context.Context,
 	opts *branchLogOptions,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
 ) (err error) {
 	log := opts.Log
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		currentBranch = "" // may be detached
 	}

@@ -17,7 +17,7 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("DefaultPrefixNoCommand", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, nil, "--unknown-flag").
+		_ = newGitCmd(t.Context(), log, "--unknown-flag").
 			Dir(t.TempDir()).
 			Run(_realExec)
 
@@ -27,7 +27,7 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("DefaultPrefixCommand", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, nil, "unknown-cmd").
+		_ = newGitCmd(t.Context(), log, "unknown-cmd").
 			Dir(t.TempDir()).
 			Run(_realExec)
 
@@ -37,7 +37,7 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("LogPrefixAfterwards", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, nil, "whatever").
+		_ = newGitCmd(t.Context(), log, "whatever").
 			Dir(t.TempDir()).
 			LogPrefix("different").
 			Run(_realExec)

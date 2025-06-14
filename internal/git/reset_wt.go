@@ -64,7 +64,7 @@ type ResetOptions struct {
 
 // Reset resets the index and optionally the working tree
 // to the specified commit.
-func (r *Repository) Reset(ctx context.Context, commit string, opts ResetOptions) error {
+func (w *Worktree) Reset(ctx context.Context, commit string, opts ResetOptions) error {
 	args := []string{"reset"}
 	if opts.Quiet {
 		args = append(args, "--quiet")
@@ -92,17 +92,17 @@ func (r *Repository) Reset(ctx context.Context, commit string, opts ResetOptions
 		args = append(args, "--")
 		args = append(args, opts.Paths...)
 
-		r.log.Debug("Resetting paths", "commit", commit, "paths", opts.Paths)
+		w.log.Debug("Resetting paths", "commit", commit, "paths", opts.Paths)
 	} else {
-		r.log.Debug("Resetting repository", "commit", commit, "mode", opts.Mode)
+		w.log.Debug("Resetting repository", "commit", commit, "mode", opts.Mode)
 	}
 
-	cmd := r.gitCmd(ctx, args...)
+	cmd := w.gitCmd(ctx, args...)
 	if opts.Patch {
 		cmd.Stdin(os.Stdin)
 		cmd.Stdout(os.Stdout)
 	}
-	if err := cmd.Run(r.exec); err != nil {
+	if err := cmd.Run(w.exec); err != nil {
 		return fmt.Errorf("git reset: %w", err)
 	}
 

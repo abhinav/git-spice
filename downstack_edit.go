@@ -41,6 +41,7 @@ func (cmd *downstackEditCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -49,7 +50,7 @@ func (cmd *downstackEditCmd) Run(
 	}
 
 	if cmd.Branch == "" {
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
@@ -92,5 +93,5 @@ func (cmd *downstackEditCmd) Run(
 
 	return (&branchCheckoutCmd{
 		Branch: res.Stack[len(res.Stack)-1],
-	}).Run(ctx, log, view, repo, store, svc)
+	}).Run(ctx, log, view, repo, wt, store, svc)
 }

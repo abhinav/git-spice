@@ -19,6 +19,7 @@ func (cmd *trunkCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -26,5 +27,5 @@ func (cmd *trunkCmd) Run(
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          trunk,
-	}).Run(ctx, log, view, repo, store, svc)
+	}).Run(ctx, log, view, repo, wt, store, svc)
 }

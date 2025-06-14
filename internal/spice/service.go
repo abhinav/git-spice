@@ -11,7 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -destination=mock_service_test.go -package=spice . GitRepository,Store
+//go:generate mockgen -destination=mock_service_test.go -package=spice . GitRepository,GitWorktree,Store
 
 // GitRepository provides read/write access to the conents of a git repository.
 // It is a subset of the functionality provied by the git.Repository type.
@@ -30,9 +30,6 @@ type GitRepository interface {
 	// PeelToCommit returns the commit hash for the given commit-ish.
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 
-	// CurrentBranch returns the name of the current branch.
-	CurrentBranch(ctx context.Context) (string, error)
-
 	// LocalBranches returns an iterator over local branches
 	LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]
 
@@ -49,13 +46,22 @@ type GitRepository interface {
 		ctx context.Context, remote string, opts *git.ListRemoteRefsOptions,
 	) iter.Seq2[git.RemoteRef, error]
 
-	Rebase(context.Context, git.RebaseRequest) error
 	RenameBranch(context.Context, git.RenameBranchRequest) error
 	DeleteBranch(context.Context, string, git.BranchDeleteOptions) error
 	HashAt(context.Context, string, string) (git.Hash, error)
 }
 
-var _ GitRepository = (*git.Repository)(nil)
+// GitWorktree provides access to a Git worktree owned by a repository.
+type GitWorktree interface {
+	// CurrentBranch returns the name of the current branch.
+	CurrentBranch(ctx context.Context) (string, error)
+	Rebase(context.Context, git.RebaseRequest) error
+}
+
+var (
+	_ GitRepository = (*git.Repository)(nil)
+	_ GitWorktree   = (*git.Worktree)(nil)
+)
 
 // Store provides storage for gs.
 // It is a subset of the functionality provided by the state.Store type.
@@ -89,8 +95,9 @@ var _ Store = (*state.Store)(nil)
 // It combines together lower level pieces like access to the git repository
 // and the spice state.
 type Service struct {
-	repo   GitRepository
-	store  Store
+	repo   GitRepository // required
+	wt     GitWorktree   // required
+	store  Store         // required
 	log    *silog.Logger
 	forges *forge.Registry
 }
@@ -98,21 +105,24 @@ type Service struct {
 // NewService builds a new service operating on the given repository and store.
 func NewService(
 	repo GitRepository,
+	wt GitWorktree,
 	store Store,
 	forges *forge.Registry,
 	log *silog.Logger,
 ) *Service {
-	return newService(repo, store, forges, log)
+	return newService(repo, wt, store, forges, log)
 }
 
 func newService(
 	repo GitRepository,
+	wt GitWorktree,
 	store Store,
 	forges *forge.Registry,
 	log *silog.Logger,
 ) *Service {
 	return &Service{
 		repo:   repo,
+		wt:     wt,
 		store:  store,
 		log:    log,
 		forges: forges,

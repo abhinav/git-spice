@@ -26,11 +26,11 @@ func (*branchEditCmd) Help() string {
 func (*branchEditCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
-	currentBranch, err := repo.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
@@ -48,7 +48,7 @@ func (*branchEditCmd) Run(
 		Branch:      currentBranch,
 		Upstream:    b.Base,
 	}
-	if err := repo.Rebase(ctx, req); err != nil {
+	if err := wt.Rebase(ctx, req); err != nil {
 		// if the rebase is interrupted,
 		// recover with an 'upstack restack' later.
 		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
@@ -59,5 +59,5 @@ func (*branchEditCmd) Run(
 		})
 	}
 
-	return (&upstackRestackCmd{}).Run(ctx, log, repo, store, svc)
+	return (&upstackRestackCmd{}).Run(ctx, log, wt, store, svc)
 }

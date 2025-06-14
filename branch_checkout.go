@@ -50,7 +50,7 @@ func (*branchCheckoutCmd) Help() string {
 func (cmd *branchCheckoutCmd) AfterApply(
 	ctx context.Context,
 	view ui.View,
-	repo *git.Repository,
+	wt *git.Worktree,
 	branchPrompt *branchPrompter,
 ) error {
 	if cmd.Branch == "" {
@@ -60,7 +60,7 @@ func (cmd *branchCheckoutCmd) AfterApply(
 
 		// If a branch name is not provided,
 		// list branches besides the current branch and pick one.
-		currentBranch, err := repo.CurrentBranch(ctx)
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
 			currentBranch = ""
 		}
@@ -86,6 +86,7 @@ func (cmd *branchCheckoutCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
@@ -113,7 +114,7 @@ func (cmd *branchCheckoutCmd) Run(
 				if track {
 					err := (&branchTrackCmd{
 						Branch: cmd.Branch,
-					}).Run(ctx, log, repo, store, svc)
+					}).Run(ctx, log, repo, wt, store, svc)
 					if err != nil {
 						return fmt.Errorf("track branch: %w", err)
 					}
@@ -132,14 +133,14 @@ func (cmd *branchCheckoutCmd) Run(
 	}
 
 	if cmd.Detach {
-		if err := repo.DetachHead(ctx, cmd.Branch); err != nil {
+		if err := wt.DetachHead(ctx, cmd.Branch); err != nil {
 			return fmt.Errorf("detach HEAD: %w", err)
 		}
 
 		return nil
 	}
 
-	if err := repo.Checkout(ctx, cmd.Branch); err != nil {
+	if err := wt.Checkout(ctx, cmd.Branch); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 

@@ -83,7 +83,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		}
 	}
 
-	if err := s.repo.Rebase(ctx, git.RebaseRequest{
+	if err := s.wt.Rebase(ctx, git.RebaseRequest{
 		Onto:      baseHash.String(),
 		Upstream:  upstream.String(),
 		Branch:    name,

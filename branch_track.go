@@ -31,12 +31,13 @@ func (cmd *branchTrackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
+	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
 ) error {
 	if cmd.Branch == "" {
 		var err error
-		cmd.Branch, err = repo.CurrentBranch(ctx)
+		cmd.Branch, err = wt.CurrentBranch(ctx)
 		if err != nil {
 			return fmt.Errorf("get current branch: %w", err)
 		}
