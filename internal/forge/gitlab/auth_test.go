@@ -476,3 +476,47 @@ func (g gitlabCLIStub) Token(ctx context.Context, hostname string) (string, erro
 func (g gitlabCLIStub) Status(ctx context.Context, hostname string) (bool, error) {
 	return g.StatusF(ctx, hostname)
 }
+
+func TestCLITokenParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		give string
+		want string
+	}{
+		{
+			name: "Plain",
+			give: "  ✓ Token: 1234567890abcdef\n",
+			want: "1234567890abcdef",
+		},
+		{
+			name: "glabPrefix",
+			give: "  ✓ Token: glab-AAAAA\n",
+			want: "glab-AAAAA",
+		},
+		{
+			name: "Dashes",
+			give: "  ✓ Token: abc-def-ghi\n",
+			want: "abc-def-ghi",
+		},
+		{
+			name: "NoToken",
+			give: "  ✓ Token: \n",
+		},
+		{
+			name: "Unrelated",
+			give: "something else\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := _tokenRe.FindSubmatch([]byte(tt.give))
+			if len(tt.want) > 0 {
+				require.Len(t, m, 2)
+				assert.Equal(t, tt.want, string(m[1]))
+			} else {
+				assert.Len(t, m, 0)
+			}
+		})
+	}
+}
