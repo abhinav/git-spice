@@ -488,7 +488,7 @@ func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error)
 	return true, nil
 }
 
-var _tokenRe = regexp.MustCompile(`(?m)^\W+Token:\s+(\w+)\s*$`)
+var _tokenRe = regexp.MustCompile(`(?m)^\W+Token:\s+([\w\-]+)\s*$`)
 
 // Token returns the authentication token from the GitLab CLI.
 func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
