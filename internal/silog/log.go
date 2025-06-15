@@ -17,6 +17,8 @@ import (
 
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/log/silog"
 )
 
 // Options defines options for the logger.
@@ -39,7 +41,7 @@ type Options struct {
 	// Style is the style to use for the logger.
 	// If unset, the style will be picked based on whether
 	// the output is a terminal or not.
-	Style *Style // optional
+	Style *silog.Style // optional
 }
 
 // Logger is a logger that provided structured and printf-style logging.
@@ -50,8 +52,6 @@ type Logger struct {
 	sl      *slog.Logger   // required
 	lvl     *slog.LevelVar // required
 	onFatal func()         // required
-
-	numDowngrades int // used for Downgrade
 }
 
 // Nop returns a no-op logger that discards all log messages.
@@ -84,15 +84,33 @@ func New(w io.Writer, opts *Options) *Logger {
 		}
 
 		if isTTY {
-			opts.Style = DefaultStyle()
+			opts.Style = silog.DefaultStyle(ui.Renderer)
 		} else {
-			opts.Style = PlainStyle()
+			opts.Style = silog.PlainStyle(ui.Renderer)
 		}
+	}
+
+	// Ensure that fatal level has styling:
+	slogFatal := LevelFatal.Level()
+	if _, ok := opts.Style.LevelLabels[slogFatal]; !ok {
+		opts.Style.LevelLabels[slogFatal] = opts.Style.LevelLabels[slog.LevelError].SetString("FTL")
+	}
+	if _, ok := opts.Style.Messages[slogFatal]; !ok {
+		opts.Style.Messages[slogFatal] = opts.Style.Messages[slog.LevelError]
 	}
 
 	var lvl slog.LevelVar
 	lvl.Set(opts.Level.Level())
-	sl := slog.New(newLogHandler(w, &lvl, opts.Style))
+	sl := slog.New(silog.NewHandler(w, &silog.HandlerOptions{
+		Level: &lvl,
+		Style: opts.Style,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if len(groups) == 0 && a.Key == slog.TimeKey {
+				return slog.Attr{}
+			}
+			return a
+		},
+	}))
 
 	onFatal := opts.OnFatal
 	if onFatal == nil {
@@ -144,7 +162,7 @@ func (l *Logger) WithLevel(lvl Level) *Logger {
 	newL := l.Clone()
 	newL.lvl = new(slog.LevelVar)
 	newL.lvl.Set(lvl.Level())
-	newL.sl = slog.New(newL.sl.Handler().(*logHandler).WithLeveler(newL.lvl))
+	newL.sl = slog.New(newL.sl.Handler().(*silog.Handler).WithLevel(newL.lvl))
 	return newL
 }
 
@@ -168,7 +186,7 @@ func (l *Logger) WithPrefix(prefix string) *Logger {
 		return l
 	}
 	newL := l.Clone()
-	newL.sl = slog.New(newL.sl.Handler().(*logHandler).WithPrefix(prefix))
+	newL.sl = slog.New(newL.sl.Handler().(*silog.Handler).SetPrefix(prefix))
 	return newL
 }
 
@@ -184,7 +202,7 @@ func (l *Logger) Downgrade() *Logger {
 		return l
 	}
 	newL := l.Clone()
-	newL.numDowngrades++
+	newL.sl = slog.New(newL.sl.Handler().(*silog.Handler).WithLevelOffset(-4))
 	return newL
 }
 
@@ -208,9 +226,6 @@ func (l *Logger) Log(lvl Level, msg string, kvs ...any) {
 		return
 	}
 
-	if l.numDowngrades > 0 {
-		lvl = lvl.Dec(l.numDowngrades)
-	}
 	l.sl.Log(context.Background(), lvl.Level(), msg, kvs...)
 	if lvl >= LevelFatal {
 		l.onFatal()
