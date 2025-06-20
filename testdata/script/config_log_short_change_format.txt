@@ -1,0 +1,80 @@
+# 'gs log short' (ls) command supports logShort.crFormat option and fallback to log.crFormat.
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a simple stack: feat1 -> feat2
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+
+# submit the bottom-most branch
+gs bottom
+gs branch submit --fill
+gs branch checkout feat2
+
+# Test 1: Default behavior (should show ID)
+gs ls
+cmpenv stderr $WORK/golden/ls-default.txt
+
+# Test 2: Set logShort.crFormat to 'url'
+git config spice.logShort.crFormat 'url'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-logshort-url.txt
+
+# Test 3: Set logShort.crFormat to 'id' (explicit)
+git config spice.logShort.crFormat 'id'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-logshort-id.txt
+
+# Test 4: Fallback behavior - remove logShort.crFormat, set log.crFormat to 'url'
+git config --unset spice.logShort.crFormat
+git config spice.log.crFormat 'url'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-fallback-url.txt
+
+# Test 5: logShort.crFormat overrides log.crFormat
+git config spice.logShort.crFormat 'id'
+# spice.log.crFormat is still 'url' from previous test
+
+gs ls
+cmpenv stderr $WORK/golden/ls-override-id.txt
+
+-- golden/ls-default.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ls-logshort-url.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+main
+-- golden/ls-logshort-id.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ls-fallback-url.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+main
+-- golden/ls-override-id.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 (#1)
+main

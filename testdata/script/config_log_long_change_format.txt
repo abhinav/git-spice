@@ -1,0 +1,90 @@
+# 'gs log long' (ll) command supports logLong.crFormat option and fallback to log.crFormat.
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a simple stack: feat1 -> feat2
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+
+# submit the bottom-most branch
+gs bottom
+gs branch submit --fill
+gs branch checkout feat2
+
+# Test 1: Default behavior (should show ID)
+gs ll
+cmpenv stderr $WORK/golden/ll-default.txt
+
+# Test 2: Set logLong.crFormat to 'url'
+git config spice.logLong.crFormat 'url'
+
+gs ll
+cmpenv stderr $WORK/golden/ll-loglong-url.txt
+
+# Test 3: Set logLong.crFormat to 'id' (explicit)
+git config spice.logLong.crFormat 'id'
+
+gs ll
+cmpenv stderr $WORK/golden/ll-loglong-id.txt
+
+# Test 4: Fallback behavior - remove logLong.crFormat, set log.crFormat to 'url'
+git config --unset spice.logLong.crFormat
+git config spice.log.crFormat 'url'
+
+gs ll
+cmpenv stderr $WORK/golden/ll-fallback-url.txt
+
+# Test 5: logLong.crFormat overrides log.crFormat
+git config spice.logLong.crFormat 'id'
+# spice.log.crFormat is still 'url' from previous test
+
+gs ll
+cmpenv stderr $WORK/golden/ll-override-id.txt
+
+-- golden/ll-default.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ll-loglong-url.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ll-loglong-id.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ll-fallback-url.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ll-override-id.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    ecc906e feat1 (now)
+main

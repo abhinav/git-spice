@@ -29,12 +29,11 @@ backend = "aqua:golangci/golangci-lint"
 "golangci-lint-2.1.6-linux-amd64.tar.gz" = "sha256:e55e0eb515936c0fbd178bce504798a9bd2f0b191e5e357768b18fd5415ee541"
 
 [tools.gotestsum]
-version = "1.12.2"
+version = "1.12.3"
 backend = "aqua:gotestyourself/gotestsum"
 
 [tools.gotestsum.checksums]
-"gotestsum_1.12.2_darwin_arm64.tar.gz" = "sha256:062d33b93d5eb9a84083dc74286fa014be11b19e9e861424bf96136d682a5bbb"
-"gotestsum_1.12.2_linux_amd64.tar.gz" = "sha256:50818a05193c58e6f7ff29bc6306e464e5b84c59d7422e676bbe5070a99a9899"
+"gotestsum_1.12.3_darwin_arm64.tar.gz" = "sha256:a2cdc441a1355c8cfe35f4deaa0d6c8b73a9530f8c8d02e2c00fe4fae7aa5c45"
 
 [tools.requiredfield]
 version = "0.5.0"
