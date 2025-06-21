@@ -34,6 +34,7 @@ backend = "aqua:gotestyourself/gotestsum"
 
 [tools.gotestsum.checksums]
 "gotestsum_1.12.3_darwin_arm64.tar.gz" = "sha256:a2cdc441a1355c8cfe35f4deaa0d6c8b73a9530f8c8d02e2c00fe4fae7aa5c45"
+"gotestsum_1.12.3_linux_amd64.tar.gz" = "sha256:dd644e817b509fa8e216887ec93facdd85722d1b78f6a19149ee1bc9f59fca64"
 
 [tools.requiredfield]
 version = "0.5.0"
