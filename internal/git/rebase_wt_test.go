@@ -245,6 +245,137 @@ func TestRebaseContinue_editor(t *testing.T) {
 	}
 }
 
+func TestRebase_autostashConflict(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-06-21T09:27:19Z'
+
+		git init
+		git add base.txt
+		git commit -m 'Initial commit'
+
+		git checkout -b feature
+		git add feature.txt
+		git commit -m 'Add feature'
+
+		git checkout main
+		git add modified-base.txt
+		mv modified-base.txt base.txt
+		git add base.txt
+		git commit -m 'Modify base'
+
+		git checkout feature
+
+		-- base.txt --
+		Base content
+
+		-- feature.txt --
+		Feature content
+
+		-- modified-base.txt --
+		Modified base content that will conflict
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	login(t, "foo")
+
+	ctx := t.Context()
+
+	// Make changes to feature branch's base.txt
+	// that will conflict with main's base.txt.
+	conflictingContent := "Different content that conflicts"
+	require.NoError(t, os.WriteFile(
+		filepath.Join(fixture.Dir(), "base.txt"),
+		[]byte(conflictingContent), 0o644))
+
+	err = wt.Rebase(ctx, git.RebaseRequest{
+		Branch:    "feature",
+		Upstream:  "main",
+		Autostash: true,
+	})
+
+	require.Error(t, err)
+
+	assert.NotErrorAs(t, err, new(*git.RebaseInterruptError),
+		"rebase should not return RebaseInterruptError for autostash conflict")
+	assert.ErrorContains(t, err, "dirty changes could not be re-applied")
+
+	unmergedFiles, err := sliceutil.CollectErr(
+		wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"base.txt"}, unmergedFiles)
+}
+
+func TestRebase_autostashSuccess(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-06-21T09:27:19Z'
+
+		git init
+		git add base.txt
+		git commit -m 'Initial commit'
+
+		git checkout -b feature
+		git add feature.txt
+		git commit -m 'Add feature'
+
+		git checkout main
+		git add other.txt
+		git commit -m 'Add other file'
+
+		git checkout feature
+
+		-- base.txt --
+		Base content
+
+		-- feature.txt --
+		Feature content
+
+		-- other.txt --
+		Other content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	login(t, "foo")
+
+	ctx := t.Context()
+
+	// Create dirty changes that won't conflict
+	nonConflictingContent := "Modified base content"
+	require.NoError(t, os.WriteFile(
+		filepath.Join(fixture.Dir(), "base.txt"),
+		[]byte(nonConflictingContent), 0o644))
+
+	// Rebase with autostash should succeed
+	err = wt.Rebase(ctx, git.RebaseRequest{
+		Branch:    "feature",
+		Upstream:  "main",
+		Autostash: true,
+	})
+	require.NoError(t, err)
+
+	// Verify dirty changes were re-applied
+	content, err := os.ReadFile(filepath.Join(fixture.Dir(), "base.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, nonConflictingContent, string(content))
+
+	// Verify no unmerged files
+	unmergedFiles, err := sliceutil.CollectErr(
+		wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}))
+	require.NoError(t, err)
+	assert.Empty(t, unmergedFiles)
+}
+
 func login(t testing.TB, username string) (home string) {
 	require.NotEmpty(t, username, "username must not be empty")
 	require.NotContains(t, username, " ", "username must not contain spaces")
