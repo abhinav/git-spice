@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"maps"
 	"path"
 	"slices"
 	"strconv"
 	"strings"
 
-	"go.abhg.dev/gs/internal/maputil"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -295,8 +295,7 @@ func (r *Repository) UpdateTree(ctx context.Context, req UpdateTreeRequest) (_ H
 	}
 
 	// Sort the directories by depth, so we can process them in order.
-	dirs := maputil.Keys(affectedDirs)
-	slices.SortFunc(dirs, func(a, b string) int {
+	dirs := slices.SortedFunc(maps.Keys(affectedDirs), func(a, b string) int {
 		diff := strings.Count(b, "/") - strings.Count(a, "/")
 		if diff == 0 {
 			diff = strings.Compare(a, b)
