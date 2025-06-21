@@ -6,6 +6,7 @@ import (
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/must"
+	"golang.org/x/oauth2"
 )
 
 type gitlabClient struct {
@@ -17,11 +18,10 @@ type gitlabClient struct {
 }
 
 func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationToken) (*gitlabClient, error) {
-	newClient := gitlab.NewClient
-	accessToken := tok.AccessToken
+	var authSource gitlab.AuthSource
 	switch tok.AuthType {
 	case AuthTypePAT, AuthTypeEnvironmentVariable:
-		// no need to change anything
+		authSource = &patAuthSource{token: tok.AccessToken}
 
 	case AuthTypeGitLabCLI:
 		// For GitLab CLI, AccessToken will be empty.
@@ -30,18 +30,23 @@ func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationTok
 			return nil, fmt.Errorf("get token from GitLab CLI: %w", err)
 		}
 
-		accessToken = token
-		fallthrough // also needs a different client constructor
+		authSource = gitlab.OAuthTokenSource{
+			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
+		}
 
 	case AuthTypeOAuth2:
 		// Needs a different client constructor.
-		newClient = gitlab.NewOAuthClient
+		authSource = gitlab.OAuthTokenSource{
+			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
+				AccessToken: tok.AccessToken,
+			}),
+		}
 	}
 
-	must.NotBeBlankf(accessToken,
-		"access token must be set for auth type: %v", tok.AuthType)
+	must.NotBeNilf(authSource,
+		"No source for authentication type: %v", tok.AuthType)
 
-	client, err := newClient(accessToken, gitlab.WithBaseURL(baseURL))
+	client, err := gitlab.NewAuthSourceClient(authSource, gitlab.WithBaseURL(baseURL))
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +57,16 @@ func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationTok
 		Projects:         client.Projects,
 		Users:            client.Users,
 	}, nil
+}
+
+type patAuthSource struct{ token string }
+
+var _ gitlab.AuthSource = (*patAuthSource)(nil)
+
+func (p *patAuthSource) Init(context.Context, *gitlab.Client) error { return nil }
+
+func (p *patAuthSource) Header(context.Context) (key string, value string, err error) {
+	return "PRIVATE-TOKEN", p.token, nil
 }
 
 // mergeRequestsService allows creating, listing, and fetching merge requests.

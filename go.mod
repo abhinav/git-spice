@@ -19,14 +19,14 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.2
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.129.0
+	gitlab.com/gitlab-org/api/client-go v0.130.1
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/log/silog v0.1.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/oauth2 v0.30.0
-	gopkg.in/dnaeon/go-vcr.v4 v4.0.2
+	gopkg.in/dnaeon/go-vcr.v4 v4.0.3
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
 )
