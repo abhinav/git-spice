@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/maputil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -51,7 +50,7 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("unmarshal change state: %w", err)
 	}
 	if len(m) != 1 {
-		got := maputil.Keys(m)
+		got := slices.Sorted(maps.Keys(m))
 		return fmt.Errorf("expected 1 forge key, got %d: %v", len(got), got)
 	}
 
