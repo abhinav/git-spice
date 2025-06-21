@@ -34,6 +34,7 @@ type submitOptions struct {
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
 	Force      bool `help:"Force push, bypassing safety checks"`
+	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"unreleased"`
 	UpdateOnly bool `short:"u" help:"Only update existing change requests, do not create new ones"`
 
 	// TODO: Other creation options e.g.:
@@ -424,7 +425,8 @@ func (cmd *branchSubmitCmd) run(
 			Refspec: git.Refspec(
 				commitHash.String() + ":refs/heads/" + upstreamBranch,
 			),
-			Force: cmd.Force,
+			Force:    cmd.Force,
+			NoVerify: cmd.NoVerify,
 		}
 
 		// If we've already pushed this branch before,
@@ -535,7 +537,8 @@ func (cmd *branchSubmitCmd) run(
 				Refspec: git.Refspec(
 					commitHash.String() + ":refs/heads/" + upstreamBranch,
 				),
-				Force: cmd.Force,
+				Force:    cmd.Force,
+				NoVerify: cmd.NoVerify,
 			}
 			if !cmd.Force {
 				// Force push, but only if the ref is exactly

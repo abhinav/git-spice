@@ -30,6 +30,9 @@ type PushOptions struct {
 	// Refspec is the refspec to push.
 	// If empty, the current branch is pushed to the remote.
 	Refspec Refspec
+
+	// NoVerify indicates that pre-push hooks should be bypassed.
+	NoVerify bool
 }
 
 // Push pushes objects and refs to a remote repository.
@@ -49,6 +52,9 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 	}
 	if opts.Force {
 		args = append(args, "--force")
+	}
+	if opts.NoVerify {
+		args = append(args, "--no-verify")
 	}
 	if opts.Remote != "" {
 		args = append(args, opts.Remote)
