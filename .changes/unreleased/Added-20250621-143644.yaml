@@ -1,0 +1,4 @@
+kind: Added
+body: >-
+  submit: Add --no-verify flag to bypass pre-push hooks.
+time: 2025-06-21T14:36:44.957961-07:00

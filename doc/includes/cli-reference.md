@@ -221,6 +221,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 
 **Configuration**: [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
@@ -299,6 +300,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
@@ -405,6 +407,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--branch=NAME`: Branch to start at
 
@@ -819,6 +822,7 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
 * `-u`, `--update-only`: Only update existing change requests, do not create new ones
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request

@@ -1,0 +1,47 @@
+# 'gs branch submit --no-verify' bypasses pre-push hooks.
+
+as 'Test <test@example.com>'
+at '2025-06-21T12:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+# create a branch
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+# Install a pre-push hook that will fail
+mkdir -p .git/hooks
+cp $WORK/extra/pre-push .git/hooks/pre-push
+chmod 755 .git/hooks/pre-push
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# First try without --no-verify, should fail due to pre-push hook
+! gs branch submit --fill
+stderr 'pre-push hook failed'
+
+# Now try with --no-verify, should succeed
+gs branch submit --fill --no-verify
+stderr 'Created'
+
+# Verify the branch was actually pushed
+shamhub dump changes
+stdout 'feature1'
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/pre-push --
+#!/bin/sh
+echo "pre-push hook failed" >&2
+exit 1
