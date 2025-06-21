@@ -2,10 +2,8 @@
 package gittest
 
 import (
-	"bytes"
 	"fmt"
 	"net/mail"
-	"os/exec"
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
@@ -33,13 +31,9 @@ func CondGitVersion(wantStr string) (bool, error) {
 		return false, fmt.Errorf("parse wanted Git version: %w", err)
 	}
 
-	raw, err := exec.Command("git", "--version").Output()
+	got, err := CurrentVersion()
 	if err != nil {
 		return false, fmt.Errorf("get Git version: %w", err)
-	}
-	got, err := ParseVersion(string(bytes.TrimSpace(raw)))
-	if err != nil {
-		return false, fmt.Errorf("parse Git version output: %w", err)
 	}
 
 	return got.Compare(want) >= 0, nil
