@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
@@ -92,9 +93,8 @@ type RebaseRequest struct {
 }
 
 // Rebase runs a git rebase operation with the specified parameters.
-// It returns [ErrRebaseInterrupted] or [ErrRebaseConflict] for known
-// rebase interruptions.
-func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) error {
+// It returns [RebaseInterruptError] for known rebase interruptions,
+func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
 	args := []string{
 		// Never include advice on how to resolve merge conflicts.
 		// We'll do that ourselves.
@@ -109,6 +109,35 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) error {
 	}
 	if req.Autostash {
 		args = append(args, "--autostash")
+		// If autosquash is enabled,
+		// but the squash-pop failed,
+		// git still exits with a zero exit code.
+		// So we need to check if we're left with any unmerged files
+		// separately and fail the operation if so.
+		defer func() {
+			if err != nil {
+				return
+			}
+
+			var unmergedFiles []string
+			for path := range w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}) {
+				unmergedFiles = append(unmergedFiles, path)
+			}
+			if len(unmergedFiles) == 0 {
+				return
+			}
+			sort.Strings(unmergedFiles)
+
+			w.log.Error("Dirty changes in the worktree were stashed, but could not be re-applied.")
+			w.log.Error("The following files were left unmerged:")
+			for _, file := range unmergedFiles {
+				w.log.Error("  - " + file)
+			}
+			w.log.Error("Resolve the conflict and run 'git stash drop' to remove the stash entry.")
+			w.log.Error("Or change to a branch where the stash can apply, and run 'git stash pop'.")
+
+			err = fmt.Errorf("%v: dirty changes could not be re-applied", req.Branch)
+		}()
 	}
 	if req.Quiet {
 		args = append(args, "--quiet")

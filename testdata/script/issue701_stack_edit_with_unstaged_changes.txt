@@ -1,0 +1,110 @@
+# Editing the order of a stack with 'stack edit' with unstaged changes
+# that might conflict with reordering the stack.
+#
+# https://github.com/abhinav/git-spice/issues/701
+
+as 'Test <test@example.com>'
+at '2025-06-20T21:25:26Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat2.txt
+gs branch create feat2 -m 'Add feature 2'
+
+git add feat1.txt
+gs branch create feat1 -m 'Add feature 1'
+
+# Stage feat3 and make unstaged changes to feat2.
+git add feat3.txt
+mv $WORK/other/feat2-new.txt feat2.txt
+
+# Oops, realize that feat1 is above feat2.
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+# gs stack edit fails because of the conflict
+env MOCKEDIT_GIVE=$WORK/edit/give.txt MOCKEDIT_RECORD=$WORK/edit/got.txt
+! gs stack edit
+cmp stderr $WORK/golden/stack-edit-fail.txt
+cmp $WORK/edit/got.txt $WORK/edit/want.txt
+
+# Branch has been rebased but the internal state has not been updated.
+gs ll -a
+cmp stderr $WORK/golden/ls-after-fail.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-after-fail.txt
+# TODO: Ideally, we restore the old state but that's a bit tricky.
+# Perhaps we need to manage autostashing on our end.
+
+# Manually resolve the conflict and continue.
+# TODO: Ideally, we can handle this on our end.
+git rm feat2.txt
+gs bco feat2
+gs branch onto feat1
+git stash pop
+
+gs ll -a
+cmp stderr $WORK/golden/ls-after.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-after.txt
+
+grep 'modified' feat2.txt
+
+-- repo/feat1.txt --
+Feature 1
+-- repo/feat2.txt --
+Feature 2
+-- repo/feat3.txt --
+Feature 3
+-- other/feat2-new.txt --
+Feature 2 (modified)
+-- golden/ls-before.txt --
+  ┏━■ feat1 ◀
+┏━┻□ feat2
+main
+-- edit/give.txt --
+feat2
+feat1
+-- edit/want.txt --
+feat1
+feat2
+
+# Edit the order of branches by modifying the list above.
+# The branch at the bottom of the list will be merged into trunk first.
+# Branches above that will be stacked on top of it in the order they appear.
+# Branches deleted from the list will not be modified.
+#
+# Save and quit the editor to apply the changes.
+# Delete all lines in the editor to abort the operation.
+-- golden/stack-edit-fail.txt --
+ERR Dirty changes in the worktree were stashed, but could not be re-applied.
+ERR The following files were left unmerged:
+ERR   - feat2.txt
+ERR Resolve the conflict and run 'git stash drop' to remove the stash entry.
+ERR Or change to a branch where the stash can apply, and run 'git stash pop'.
+FTL gs: edit downstack: branch feat1 onto main: rebase: feat1: dirty changes could not be re-applied
+-- golden/ls-after-fail.txt --
+  ┏━■ feat1 (needs restack) ◀
+  ┃   94ce439 Add feature 1 (now)
+┏━┻□ feat2
+┃    d9e6a97 Add feature 2 (now)
+main
+-- golden/graph-after-fail.txt --
+* 94ce439 (HEAD -> feat1) Add feature 1
+| * d9e6a97 (feat2) Add feature 2
+|/  
+* 632b702 (main) Initial commit
+-- golden/ls-after.txt --
+  ┏━■ feat2 ◀
+  ┃   c709a8d Add feature 2 (now)
+┏━┻□ feat1
+┃    94ce439 Add feature 1 (now)
+main
+-- golden/graph-after.txt --
+* c709a8d (HEAD -> feat2) Add feature 2
+* 94ce439 (feat1) Add feature 1
+* 632b702 (main) Initial commit
