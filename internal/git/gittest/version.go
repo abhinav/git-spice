@@ -1,14 +1,43 @@
 package gittest
 
 import (
+	"bytes"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // Version is a Git version string.
 type Version struct {
 	Major, Minor, Patch int
+}
+
+// CurrentVersion returns the current Git version installed on the system.
+func CurrentVersion() (Version, error) {
+	raw, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return Version{}, fmt.Errorf("get Git version: %w", err)
+	}
+	version, err := ParseVersion(string(bytes.TrimSpace(raw)))
+	if err != nil {
+		return Version{}, fmt.Errorf("parse Git version output: %w", err)
+	}
+	return version, nil
+}
+
+// SkipUnlessVersionAtLeast skips the test unless the current Git version
+// is at least the specified version.
+func SkipUnlessVersionAtLeast(t testing.TB, want Version) {
+	got, err := CurrentVersion()
+	require.NoError(t, err, "get current Git version")
+
+	if got.Compare(want) < 0 {
+		t.Skipf("skipping test: Git version %v < %v", got, want)
+	}
 }
 
 // ParseVersion parses a Git version string.
