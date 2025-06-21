@@ -1,11 +1,11 @@
 [tools.python]
-version = "3.13.4"
+version = "3.13.5"
 backend = "core:python"
 
 [tools.uv]
-version = "0.5.30"
+version = "0.7.13"
 backend = "aqua:astral-sh/uv"
 
 [tools.uv.checksums]
-"uv-aarch64-apple-darwin.tar.gz" = "sha256:654c3e010c9c53b024fa752d08b949e0f80f10ec4e3a1acea9437a1d127a1053"
-"uv-x86_64-unknown-linux-musl.tar.gz" = "sha256:7cc79871e5fcd2678474d756bfc32c6c3d28e136963dda10902c516fab67fa2d"
+"uv-aarch64-apple-darwin.tar.gz" = "sha256:721f532b73171586574298d4311a91d5ea2c802ef4db3ebafc434239330090c6"
+"uv-x86_64-unknown-linux-musl.tar.gz" = "sha256:560bb64e060354e45138d7dd47c8dd48a4f7a349af5520d29cd3c704e79f286c"

@@ -1,0 +1,92 @@
+# Both 'gs log short' and 'gs log long' commands respect their specific options
+# and fall back to the general 'spice.log.crFormat' option when not set.
+
+as 'Test <test@example.com>'
+at '2024-08-07T06:05:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a simple stack: feat1 -> feat2
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+
+# submit the bottom-most branch
+gs bottom
+gs branch submit --fill
+gs branch checkout feat2
+
+# Test 1: Both commands should use general config fallback
+git config spice.log.crFormat 'url'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-general-url.txt
+
+gs ll
+cmpenv stderr $WORK/golden/ll-general-url.txt
+
+# Test 2: Set specific configs that override general config
+git config spice.logShort.crFormat 'id'
+git config spice.logLong.crFormat 'url'
+# spice.log.crFormat is still 'url' from above
+
+gs ls
+cmpenv stderr $WORK/golden/ls-specific-id.txt
+
+gs ll
+cmpenv stderr $WORK/golden/ll-specific-url.txt
+
+# Test 3: Remove specific configs, both should fall back to general
+git config --unset spice.logShort.crFormat
+git config --unset spice.logLong.crFormat
+git config spice.log.crFormat 'id'
+
+gs ls
+cmpenv stderr $WORK/golden/ls-fallback-id.txt
+
+gs ll
+cmpenv stderr $WORK/golden/ll-fallback-id.txt
+
+-- golden/ls-general-url.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+main
+-- golden/ll-general-url.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ls-specific-id.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-specific-url.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┃    ecc906e feat1 (now)
+main
+-- golden/ls-fallback-id.txt --
+  ┏━■ feat2 ◀
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-fallback-id.txt --
+  ┏━■ feat2 ◀
+  ┃   562c8c6 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    ecc906e feat1 (now)
+main

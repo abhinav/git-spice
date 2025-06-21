@@ -180,6 +180,30 @@ to any remote branches.
 - `"url"`: show the CR URL
 - `"id"`: (default) show the CR ID
 
+### spice.logShort.crFormat
+
+<!-- gs:version unreleased -->
+
+Override for $$gs log short$$ to control how change requests are displayed.
+If not set, falls back to `spice.log.crFormat`.
+
+**Accepted values:**
+
+- `"url"`: show the CR URL
+- `"id"`: show the CR ID
+
+### spice.logLong.crFormat
+
+<!-- gs:version unreleased -->
+
+Override for $$gs log long$$ to control how change requests are displayed.
+If not set, falls back to `spice.log.crFormat`.
+
+**Accepted values:**
+
+- `"url"`: show the CR URL
+- `"id"`: show the CR ID
+
 ### spice.log.pushStatusFormat
 
 <!-- gs:version v0.13.0 -->

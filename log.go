@@ -59,7 +59,10 @@ var (
 type branchLogCmd struct {
 	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
 
-	ChangeFormat     string           `config:"log.crFormat" help:"Show URLs for branches with associated change requests." hidden:"" default:"id" enum:"id,url"`
+	ChangeFormat      string  `config:"log.crFormat" hidden:"" default:"id" enum:"id,url"`
+	ChangeFormatShort *string `config:"logShort.crFormat" hidden:"" enum:"id,url"`
+	ChangeFormatLong  *string `config:"logLong.crFormat" hidden:"" enum:"id,url"`
+
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 }
 
@@ -97,8 +100,16 @@ func (cmd *branchLogCmd) run(
 		return remote
 	})
 
+	// Determine which ChangeFormat to use: prefer long/short-specific, then fallback to general.
+	changeFormat := cmd.ChangeFormat
+	if opts.Commits && cmd.ChangeFormatLong != nil {
+		changeFormat = *cmd.ChangeFormatLong
+	} else if !opts.Commits && cmd.ChangeFormatShort != nil {
+		changeFormat = *cmd.ChangeFormatShort
+	}
+
 	var repoID forge.RepositoryID
-	if cmd.ChangeFormat == "url" {
+	if changeFormat == "url" {
 		err := func() error {
 			remote := getRemote()
 
@@ -280,7 +291,7 @@ func (cmd *branchLogCmd) run(
 			}
 
 			if cid := b.ChangeID; cid != nil {
-				switch cmd.ChangeFormat {
+				switch changeFormat {
 				case "id", "":
 					_, _ = fmt.Fprintf(&o, " (%v)", cid)
 				case "url":
