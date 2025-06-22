@@ -129,11 +129,3 @@ func (e *Handle) GiveLines(lines ...string) *Handle {
 	}
 	return e.Give(s.String())
 }
-
-// Got reports the contents of the recorded file.
-// This must be called only after an edit operation.
-func (e *Handle) Got() string {
-	bs, err := os.ReadFile(e.record)
-	require.NoError(e.t, err)
-	return string(bs)
-}

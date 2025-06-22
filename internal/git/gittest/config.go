@@ -1,7 +1,6 @@
 package gittest
 
 import (
-	"sort"
 	"strconv"
 )
 
@@ -19,19 +18,6 @@ func DefaultConfig() Config {
 
 // Config is a set of Git configuration values.
 type Config map[string]string
-
-// Env generates a list of environment variable assignments that will have
-// the same effect as setting these configuration values in a Git repository.
-// This is suitable for passing to exec.Cmd.Env.
-func (c Config) Env() []string {
-	m := c.EnvMap()
-	env := make([]string, 0, len(m))
-	for k, v := range m {
-		env = append(env, k+"="+v)
-	}
-	sort.Strings(env)
-	return env
-}
 
 // EnvMap generates a map of environment variable assignments that will have
 // the same effect as setting these configuration values in a Git repository.
