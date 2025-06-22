@@ -68,14 +68,6 @@ type Editor struct {
 	Ext string
 }
 
-// DefaultEditor returns the default editor configuration.
-func DefaultEditor() Editor {
-	return Editor{
-		Command: os.Getenv("EDITOR"),
-		Ext:     "md",
-	}
-}
-
 // OpenEditor is a dialog that asks the user to press a key
 // to open an editor and write a message.
 type OpenEditor struct {
