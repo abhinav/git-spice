@@ -1,0 +1,57 @@
+# 'repo sync' prompts to close PRs that have been closed without merging.
+
+as 'Test <test@example.com>'
+at '2025-06-14T07:02:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+gs ss --fill
+
+gs ls -a
+cmp stderr $WORK/golden/open.txt
+
+# Close the PR server-side
+shamhub reject alice/example 1
+
+env ROBOT_INPUT=$WORK/golden/prompt.txt ROBOT_OUTPUT=$WORK/prompt.actual
+gs repo sync
+cmp $WORK/prompt.actual $WORK/golden/prompt.txt
+
+gs ls -a
+cmp stderr $WORK/golden/closed.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- golden/open.txt --
+  ┏━■ feature2 (#2) ◀
+┏━┻□ feature1 (#1)
+main
+-- golden/prompt.txt --
+===
+> Delete feature1?: [y/N]
+> #1 was closed but not merged.
+true
+-- golden/closed.txt --
+┏━■ feature2 (#2) (needs push) ◀
+main

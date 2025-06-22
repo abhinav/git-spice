@@ -170,20 +170,26 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	})
 }
 
-func TestIntegration_Repository_ChangesAreMerged(t *testing.T) {
+func TestIntegration_Repository_ChangesStates(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
 	require.NoError(t, err)
 
-	merged, err := repo.ChangesAreMerged(ctx, []forge.ChangeID{
-		&gitlab.MR{Number: 2}, // merged
-		&gitlab.MR{Number: 4}, // open (not merged)
-		&gitlab.MR{Number: 3}, // merged
+	states, err := repo.ChangesStates(ctx, []forge.ChangeID{
+		&gitlab.MR{Number: 2},  // merged
+		&gitlab.MR{Number: 4},  // open (not merged)
+		&gitlab.MR{Number: 3},  // merged
+		&gitlab.MR{Number: 12}, // closed
 	})
 	require.NoError(t, err)
-	assert.Equal(t, []bool{true, false, true}, merged)
+	assert.Equal(t, []forge.ChangeState{
+		forge.ChangeMerged,
+		forge.ChangeOpen,
+		forge.ChangeMerged,
+		forge.ChangeClosed,
+	}, states)
 }
 
 func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {

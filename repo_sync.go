@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"runtime"
-	"slices"
+	"sort"
 	"sync"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -238,11 +237,11 @@ func (cmd *repoSyncCmd) Run(
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = cmd.findForgeMergedBranches(
+		branchesToDelete, err = cmd.findForgeFinishedBranches(
 			ctx, log, repo, store, svc, remoteRepo, candidates, view,
 		)
 		if err != nil {
-			return fmt.Errorf("find merged CRs: %w", err)
+			return fmt.Errorf("find finished CRs: %w", err)
 		}
 	}
 	if err := cmd.deleteBranches(
@@ -286,7 +285,7 @@ func (cmd *repoSyncCmd) findLocalMergedBranches(
 	return branchesToDelete, nil
 }
 
-func (cmd *repoSyncCmd) findForgeMergedBranches(
+func (cmd *repoSyncCmd) findForgeFinishedBranches(
 	ctx context.Context,
 	log *silog.Logger,
 	repo *git.Repository,
@@ -303,7 +302,7 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		MergedDownstack []json.RawMessage
 
 		Change forge.ChangeID
-		Merged bool
+		State  forge.ChangeState
 
 		// Branch name pushed to the remote.
 		UpstreamBranch string
@@ -381,14 +380,14 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 				changeIDs[i] = b.Change
 			}
 
-			merged, err := remoteRepo.ChangesAreMerged(ctx, changeIDs)
+			states, err := remoteRepo.ChangesStates(ctx, changeIDs)
 			if err != nil {
 				log.Error("Failed to query CR status", "error", err)
 				return
 			}
 
-			for i, m := range merged {
-				submittedBranches[i].Merged = m
+			for i, state := range states {
+				submittedBranches[i].State = state
 			}
 		}()
 	}
@@ -438,28 +437,60 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	}
 	wg.Wait()
 
-	type mergedBranch struct {
+	type finishedBranch struct {
 		Name           string
 		Base           string
 		UpstreamBranch string
 		ChangeID       forge.ChangeID
+		Merged         bool // true if merged, false if closed
 	}
 
-	mergedBranches := make(map[string]mergedBranch) // name -> branch
+	finishedBranches := make(map[string]finishedBranch) // name -> branch
 	mergedDownstacks := make(map[string][]json.RawMessage)
 	for _, branch := range submittedBranches {
-		if !branch.Merged {
-			continue
-		}
+		switch branch.State {
+		case forge.ChangeOpen:
+			continue // not merged yet
 
-		log.Infof("%v: %v was merged", branch.Name, branch.Change)
-		mergedBranches[branch.Name] = mergedBranch{
-			Name:           branch.Name,
-			Base:           branch.Base,
-			UpstreamBranch: branch.UpstreamBranch,
-			ChangeID:       branch.Change,
+		case forge.ChangeClosed:
+			if !ui.Interactive(view) {
+				log.Warnf("%v: %v was closed but not merged.", branch.Name, branch.Change)
+				continue
+			}
+
+			var shouldDelete bool
+			prompt := ui.NewConfirm().
+				WithTitle(fmt.Sprintf("Delete %v?", branch.Name)).
+				WithDescription(fmt.Sprintf("%v was closed but not merged.", branch.Change)).
+				WithValue(&shouldDelete)
+			if err := ui.Run(view, prompt); err != nil {
+				log.Warn("Skipping branch", "branch", branch.Name, "error", err)
+				continue
+			}
+
+			if shouldDelete {
+				finishedBranches[branch.Name] = finishedBranch{
+					Name:           branch.Name,
+					Base:           branch.Base,
+					UpstreamBranch: branch.UpstreamBranch,
+					ChangeID:       branch.Change,
+					Merged:         false, // closed, not merged
+				}
+				// Note: Don't propagate mergedDownstacks for closed changes
+			}
+
+		case forge.ChangeMerged:
+			log.Infof("%v: %v was merged", branch.Name, branch.Change)
+			finishedBranches[branch.Name] = finishedBranch{
+				Name:           branch.Name,
+				Base:           branch.Base,
+				UpstreamBranch: branch.UpstreamBranch,
+				ChangeID:       branch.Change,
+				Merged:         true, // merged
+			}
+			mergedDownstacks[branch.Name] = branch.MergedDownstack
+
 		}
-		mergedDownstacks[branch.Name] = branch.MergedDownstack
 	}
 
 	for _, branch := range trackedBranches {
@@ -467,17 +498,18 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 			continue
 		}
 
-		merged := mergedBranch{
+		finished := finishedBranch{
 			Name:           branch.Name,
 			Base:           branch.Base,
 			UpstreamBranch: branch.UpstreamBranch,
 			ChangeID:       branch.Change,
+			Merged:         true, // merged
 		}
 		mergedDownstacks[branch.Name] = branch.MergedDownstack
 
 		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
 			log.Infof("%v: %v was merged", branch.Name, branch.Change)
-			mergedBranches[branch.Name] = merged
+			finishedBranches[branch.Name] = finished
 			continue
 		}
 
@@ -503,22 +535,30 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		}
 
 		if shouldDelete {
-			mergedBranches[branch.Name] = merged
+			finishedBranches[branch.Name] = finished
 		}
 	}
 
-	if len(mergedBranches) == 0 {
+	if len(finishedBranches) == 0 {
 		return nil, nil
 	}
 
 	// Sort the merged branches in topological order: trunk to upstacks.
 	// This will be used to propagate merged branch information.
-	topoBranches := graph.Toposort(slices.Sorted(maps.Keys(mergedBranches)),
+	mergedBranchNames := make([]string, 0, len(finishedBranches))
+	for name, branch := range finishedBranches {
+		// Only consider merged branches for propagation, not closed ones.
+		if branch.Merged {
+			mergedBranchNames = append(mergedBranchNames, name)
+		}
+	}
+	sort.Strings(mergedBranchNames)
+	topoBranches := graph.Toposort(mergedBranchNames,
 		func(name string) (string, bool) {
-			base := mergedBranches[name].Base
+			base := finishedBranches[name].Base
 			// Ordering matters only if the base was also merged.
-			_, ok := mergedBranches[base]
-			return base, ok
+			baseBranch, ok := finishedBranches[base]
+			return base, ok && baseBranch.Merged
 		})
 
 	// For each merged branch, bubble up merged downstacks
@@ -528,8 +568,9 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 	// so that if two consecutive branches were merged,
 	// both changes are bubbled up.
 	for _, name := range topoBranches {
-		branch, ok := mergedBranches[name]
-		must.Bef(ok, "topologically sorted branch %q must be merged", name)
+		branch, ok := finishedBranches[name]
+		must.Bef(ok, "topologically sorted branch %q must be finished", name)
+		must.Bef(branch.Merged, "topologically sorted branch %q must be merged", name)
 
 		aboves, err := svc.ListAbove(ctx, name)
 		if err != nil {
@@ -580,8 +621,8 @@ func (cmd *repoSyncCmd) findForgeMergedBranches(
 		log.Warn("Unable to propagated merged downstacks", "error", err)
 	}
 
-	branchesToDelete := make([]branchDeletion, 0, len(mergedBranches))
-	for _, branch := range mergedBranches {
+	branchesToDelete := make([]branchDeletion, 0, len(finishedBranches))
+	for _, branch := range finishedBranches {
 		branchesToDelete = append(branchesToDelete, branchDeletion{
 			BranchName:   branch.Name,
 			UpstreamName: branch.UpstreamBranch,

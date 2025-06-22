@@ -184,7 +184,7 @@ type Repository interface {
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
-	ChangesAreMerged(ctx context.Context, ids []ChangeID) ([]bool, error)
+	ChangesStates(ctx context.Context, ids []ChangeID) ([]ChangeState, error)
 
 	// Post and update comments on changes.
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
@@ -376,6 +376,20 @@ func (s ChangeState) String() string {
 		return "unknown"
 	}
 	return string(b)
+}
+
+// GoString returns a Go-syntax representation of the change state.
+func (s ChangeState) GoString() string {
+	switch s {
+	case ChangeOpen:
+		return "ChangeOpen"
+	case ChangeMerged:
+		return "ChangeMerged"
+	case ChangeClosed:
+		return "ChangeClosed"
+	default:
+		return fmt.Sprintf("ChangeState(%d)", int(s))
+	}
 }
 
 // MarshalText serialize the change state to text.
