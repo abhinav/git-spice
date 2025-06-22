@@ -1,6 +1,6 @@
 # 'branch create' over an untracked branch
-# requires that the branch is first tracked.
-
+# requires that the branch is first tracked,
+# and it does so _before_ the user writes the commit message.
 
 as 'Test <test@example.com>'
 at '2024-09-19T05:06:07Z'
@@ -15,7 +15,8 @@ git add feat1.txt
 git commit -m 'Add feature 1'
 
 git add feat2.txt
-! gs bc feat2 -m 'Add feature 2'
+! gs bc feat2
+cmp stderr $WORK/golden/create-feat2-error.txt
 
 git graph --branches
 cmp stdout $WORK/golden/branch-graph.txt
@@ -27,6 +28,8 @@ cmp stdout $WORK/golden/status.txt
 feature 1
 -- repo/feat2.txt --
 feature 2
+-- golden/create-feat2-error.txt --
+FTL gs: branch not tracked: feat1
 -- golden/branch-graph.txt --
 * b6be74c (HEAD -> feat1) Add feature 1
 * 7cee8ef (main) Initial commit

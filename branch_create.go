@@ -163,10 +163,27 @@ func (cmd *branchCreateCmd) Run(
 		stackOntoNew = append(stackOntoNew, aboves...)
 	}
 
+	// If baseHash is unset, we may not have verified
+	// that the base branch is actually tracked.
+	// This will also verify that.
 	if baseHash == "" || baseHash.IsZero() {
-		baseHash, err = repo.PeelToCommit(ctx, baseName)
-		if err != nil {
-			return fmt.Errorf("resolve %v: %w", baseName, err)
+		if store.Trunk() == baseName {
+			baseHash, err = repo.PeelToCommit(ctx, baseName)
+			if err != nil {
+				return fmt.Errorf("resolve %v: %w", baseName, err)
+			}
+		} else {
+			baseInfo, err := svc.LookupBranch(ctx, baseName)
+			if err != nil {
+				if errors.Is(err, git.ErrNotExist) {
+					return fmt.Errorf("branch does not exist: %v", baseName)
+				}
+				if errors.Is(err, state.ErrNotExist) {
+					return fmt.Errorf("branch not tracked: %v", baseName)
+				}
+				return fmt.Errorf("lookup branch %v: %w", baseName, err)
+			}
+			baseHash = baseInfo.Head
 		}
 	}
 
