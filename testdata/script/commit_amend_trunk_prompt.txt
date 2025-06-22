@@ -1,0 +1,77 @@
+# commit amend on trunk branch should offer to create a branch instead.
+
+as 'Test <test@example.com>'
+at '2025-06-22T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Make a commit on trunk to amend
+git add foo.txt
+git commit -m 'Add foo.txt'
+
+# Non-interactive mode warns but proceeds
+mv foo-1.txt foo.txt
+git add foo.txt
+gs commit amend -m 'Amended without prompt' --no-prompt
+cmp stderr $WORK/golden/no-prompt.txt
+git diff --quiet  # ensure no diff
+git log --oneline -1 --pretty=format:'%s'
+stdout 'Amended without prompt'
+
+# Interactive mode should prompt for confirmation.
+env ROBOT_INPUT=$WORK/golden/robot.txt ROBOT_OUTPUT=$WORK/robot.actual
+
+# First prompt, we'll answer yes and proceed.
+mv foo-2.txt foo.txt
+git add foo.txt
+gs commit amend -m 'Amended with prompt'
+git diff --quiet  # ensure no diff
+git log --oneline -1 --pretty=format:'%s'
+stdout 'Amended with prompt'
+
+# Second prompt, we'll answer no and get a new branch instead.
+# This should work even if the branchPrefix config is set.
+git config spice.branchCreate.prefix 'feature/'
+mv foo-3.txt foo.txt
+git add foo.txt
+gs commit amend -m 'Committed on new branch'
+
+cmp $WORK/robot.actual $WORK/golden/robot.txt
+
+git branch --show-current
+stdout 'feature/my-new-branch'
+
+-- repo/foo.txt --
+0
+-- repo/foo-1.txt --
+1
+-- repo/foo-2.txt --
+2
+-- repo/foo-3.txt --
+3
+-- golden/no-prompt.txt --
+WRN You are about to amend a commit on the trunk branch (main).
+-- golden/robot.txt --
+===
+> Do you want to amend a commit on trunk?: 
+> ▶ Yes                                                                         
+>   Amend the commit on trunk                                                    
+>   No                                                                          
+>   Create a branch and commit there instead                                    
+> You are about to amend a commit on the trunk branch (main). This is usually not what you want to do.
+"Yes"
+===
+> Do you want to amend a commit on trunk?: 
+> ▶ Yes                                                                         
+>   Amend the commit on trunk                                                    
+>   No                                                                          
+>   Create a branch and commit there instead                                    
+> You are about to amend a commit on the trunk branch (main). This is usually not what you want to do.
+"No"
+===
+> Branch name:  
+> What do you want to call the new branch?
+"my-new-branch"

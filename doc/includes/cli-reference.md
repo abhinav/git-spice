@@ -874,6 +874,8 @@ followed by 'gs upstack restack'.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
+**Configuration**: [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix)
+
 ### gs commit split
 
 ```

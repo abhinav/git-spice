@@ -10,9 +10,12 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 type commitAmendCmd struct {
+	branchCreateConfig // TODO: find a way to avoid this
+
 	All        bool   `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty bool   `help:"Create a commit even if it contains no changes."`
 	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
@@ -37,6 +40,8 @@ func (*commitAmendCmd) Help() string {
 func (cmd *commitAmendCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
+	view ui.View,
+	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
@@ -44,6 +49,74 @@ func (cmd *commitAmendCmd) Run(
 	if cmd.NoEditDeprecated {
 		cmd.NoEdit = true
 		log.Warn("flag '-n' is deprecated; use '--no-edit' instead")
+	}
+
+	var detachedHead bool
+	currentBranch, err := wt.CurrentBranch(ctx)
+	if err != nil {
+		if !errors.Is(err, git.ErrDetachedHead) {
+			return fmt.Errorf("get current branch: %w", err)
+		}
+		detachedHead = true
+		currentBranch = ""
+	}
+
+	if currentBranch == store.Trunk() {
+		if !ui.Interactive(view) {
+			log.Warnf("You are about to amend a commit on the trunk branch (%v).", store.Trunk())
+		} else {
+			var (
+				amendOnTrunk bool
+				branchName   string
+			)
+			fields := []ui.Field{
+				ui.NewList[bool]().
+					WithTitle("Do you want to amend a commit on trunk?").
+					WithDescription(fmt.Sprintf("You are about to amend a commit on the trunk branch (%v). "+
+						"This is usually not what you want to do.", store.Trunk())).
+					WithItems(
+						ui.ListItem[bool]{
+							Title: "Yes",
+							Description: func(bool) string {
+								return "Amend the commit on trunk"
+							},
+							Value: true,
+						},
+						ui.ListItem[bool]{
+							Title: "No",
+							Description: func(bool) string {
+								return "Create a branch and commit there instead"
+							},
+							Value: false,
+						},
+					).
+					WithValue(&amendOnTrunk),
+				ui.Defer(func() ui.Field {
+					if amendOnTrunk {
+						return nil
+					}
+
+					return ui.NewInput().
+						WithTitle("Branch name").
+						WithDescription("What do you want to call the new branch?").
+						WithValue(&branchName)
+				}),
+			}
+			if err := ui.Run(view, fields...); err != nil {
+				return fmt.Errorf("run prompt: %w", err)
+			}
+			if !amendOnTrunk {
+				// TODO: shared commitOptions struct?
+				return (&branchCreateCmd{
+					branchCreateConfig: cmd.branchCreateConfig,
+					Name:               branchName,
+					All:                cmd.All,
+					NoVerify:           cmd.NoVerify,
+					Message:            cmd.Message,
+					Commit:             true,
+				}).Run(ctx, log, repo, wt, store, svc)
+			}
+		}
 	}
 
 	if err := wt.Commit(ctx, git.CommitRequest{
@@ -62,13 +135,9 @@ func (cmd *commitAmendCmd) Run(
 		return nil
 	}
 
-	currentBranch, err := wt.CurrentBranch(ctx)
-	if err != nil {
-		if errors.Is(err, git.ErrDetachedHead) {
-			log.Debug("HEAD is detached, skipping restack")
-			return nil
-		}
-		return fmt.Errorf("get current branch: %w", err)
+	if detachedHead {
+		log.Debug("HEAD is detached, skipping restack")
+		return nil
 	}
 
 	return (&upstackRestackCmd{
