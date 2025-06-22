@@ -103,7 +103,7 @@ func (e *DeletedBranchError) Error() string {
 
 // LookupBranch returns information about a branch tracked by gs.
 //
-// It returns [git.ErrNotExist] if the branch is nt known to the repository,
+// It returns [git.ErrNotExist] if the branch is not known to the repository,
 // [state.ErrNotExist] if the branch is not tracked,
 // or a [DeletedBranchError] if the branch is tracked, but was deleted out of band.
 func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchResponse, error) {
