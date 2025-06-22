@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  commit amend:
+  To prevent mistakes, when 'gs commit amend' is called from the trunk branch,
+  confirm user intent, providing an option to create a new branch instead.
+time: 2025-06-22T15:24:32.431866-07:00
