@@ -119,6 +119,58 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
+	// Check if we're in the middle of a rebase with unmerged paths
+	var rebasing bool
+	if _, err := wt.RebaseState(ctx); err == nil {
+		rebasing = true
+
+		// If we're in the middle of a rebase,
+		// and there are unmerged paths,
+		// what the user likely wants is 'git add' and 'gs rebase continue'.
+		//
+		// (If there are no unmerged paths, amending is fine.)
+		var numUnmerged int
+		for _, err := range wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}) {
+			if err == nil {
+				numUnmerged++
+			}
+		}
+
+		if numUnmerged > 0 {
+			if !ui.Interactive(view) {
+				log.Warnf("You are in the middle of a rebase with unmerged paths.")
+				log.Warnf(`You probably want resolve the conflicts and run "git add", then "gs rebase continue" instead.`)
+			} else {
+				var continueAmend bool
+				fields := []ui.Field{
+					ui.NewList[bool]().
+						WithTitle("Do you want to amend the commit?").
+						WithDescription("You are in the middle of a rebase with unmerged paths.\n"+
+							"You might want to resolve the conflicts and run 'git add', then 'gs rebase continue' instead.").
+						WithItems(
+							ui.ListItem[bool]{
+								Title:       "Yes",
+								Description: func(bool) string { return "Continue with commit amend" },
+								Value:       true,
+							},
+							ui.ListItem[bool]{
+								Title:       "No",
+								Description: func(bool) string { return "Abort the operation" },
+								Value:       false,
+							},
+						).
+						WithValue(&continueAmend),
+				}
+				if err := ui.Run(view, fields...); err != nil {
+					return fmt.Errorf("run prompt: %w", err)
+				}
+				if !continueAmend {
+					return errors.New("operation aborted")
+				}
+			}
+		}
+	}
+
 	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:    cmd.Message,
 		AllowEmpty: cmd.AllowEmpty,
@@ -130,7 +182,7 @@ func (cmd *commitAmendCmd) Run(
 		return fmt.Errorf("commit: %w", err)
 	}
 
-	if _, err := wt.RebaseState(ctx); err == nil {
+	if rebasing {
 		log.Debug("A rebase is in progress, skipping restack")
 		return nil
 	}

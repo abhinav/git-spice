@@ -1,6 +1,7 @@
 kind: Changed
 body: >-
   commit amend:
-  To prevent mistakes, when 'gs commit amend' is called from the trunk branch,
-  confirm user intent, providing an option to create a new branch instead.
+  Confirm user intent when called from the trunk branch,
+  providing an option to create a new branch instead.
+  This prevents accidental changes to the trunk branch.
 time: 2025-06-22T15:24:32.431866-07:00

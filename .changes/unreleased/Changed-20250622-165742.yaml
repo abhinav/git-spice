@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  commit amend:
+  Confirm user intent when called during a rebase operation with unresolved conflicts.
+  This prevents accidental amendments that could complicate the rebase process.
+time: 2025-06-22T16:57:42.741195-07:00
