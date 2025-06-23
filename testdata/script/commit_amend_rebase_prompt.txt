@@ -13,7 +13,7 @@ git add conflict.txt
 gs branch create feature -m 'Add conflict.txt with content A'
 
 gs trunk
-cp conflict-main.txt conflict.txt
+mv conflict-main.txt conflict.txt
 git add conflict.txt
 git commit -m 'Add conflict.txt with content B'
 
@@ -23,13 +23,25 @@ gs bco feature
 # Interactive mode should prompt with suggestion to run 'git add'
 env ROBOT_INPUT=$WORK/golden/robot.txt ROBOT_OUTPUT=$WORK/robot.actual
 
-! gs commit amend -m 'Another amend attempt'
+! gs commit amend --no-edit -a -m 'Another amend attempt'
 cmp $WORK/robot.actual $WORK/golden/robot.txt
+
+git status --porcelain
+cmp stdout $WORK/golden/status-conflicted.txt
+
+cp $WORK/other/conflict-resolved.txt conflict.txt
+git add conflict.txt
+gs rebase continue --no-edit
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-rebase.txt
 
 -- repo/conflict.txt --
 Content A
 -- repo/conflict-main.txt --
 Content B
+-- other/conflict-resolved.txt --
+Content A and B
 -- golden/robot.txt --
 ===
 > Do you want to amend the commit?: 
@@ -40,3 +52,9 @@ Content B
 > You are in the middle of a rebase with unmerged paths.
 > You might want to resolve the conflicts and run 'git add', then 'gs rebase continue' instead.
 "No"
+-- golden/status-conflicted.txt --
+AA conflict.txt
+-- golden/graph-after-rebase.txt --
+* f8fc3c9 (HEAD -> feature) Add conflict.txt with content A
+* 2f55407 (main) Add conflict.txt with content B
+* f8331be Initial commit
