@@ -1,3 +1,0 @@
-kind: Changed
-body: 'repo sync: If a CR is closed without being merged, sync will now offer to delete their branches as well.'
-time: 2025-06-22T14:06:01.542119-07:00
