@@ -1,0 +1,42 @@
+# commit amend during rebase with unmerged paths should suggest 'git add'
+
+as 'Test <test@example.com>'
+at '2025-06-22T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a conflict scenario.
+git add conflict.txt
+gs branch create feature -m 'Add conflict.txt with content A'
+
+gs trunk
+cp conflict-main.txt conflict.txt
+git add conflict.txt
+git commit -m 'Add conflict.txt with content B'
+
+gs bco feature
+! gs branch restack
+
+# Interactive mode should prompt with suggestion to run 'git add'
+env ROBOT_INPUT=$WORK/golden/robot.txt ROBOT_OUTPUT=$WORK/robot.actual
+
+! gs commit amend -m 'Another amend attempt'
+cmp $WORK/robot.actual $WORK/golden/robot.txt
+
+-- repo/conflict.txt --
+Content A
+-- repo/conflict-main.txt --
+Content B
+-- golden/robot.txt --
+===
+> Do you want to amend the commit?: 
+> ▶ Yes                                                                         
+>   Continue with commit amend                                                   
+>   No                                                                          
+>   Abort the operation                                                         
+> You are in the middle of a rebase with unmerged paths.
+> You might want to resolve the conflicts and run 'git add', then 'gs rebase continue' instead.
+"No"
