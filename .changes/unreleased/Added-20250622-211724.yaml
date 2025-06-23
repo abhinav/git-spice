@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  log long: Add `spice.logLong.crFormat` configuration option.
-  This takes precedence over `spice.log.crFormat` for `gs log long`/`gs ll`.
-time: 2025-06-20T21:17:23.549145-07:00

@@ -34,7 +34,7 @@ type submitOptions struct {
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
 	Force      bool `help:"Force push, bypassing safety checks"`
-	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"unreleased"`
+	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
 	UpdateOnly bool `short:"u" help:"Only update existing change requests, do not create new ones"`
 
 	// TODO: Other creation options e.g.:

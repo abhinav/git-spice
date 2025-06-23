@@ -182,7 +182,7 @@ to any remote branches.
 
 ### spice.logShort.crFormat
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.15.0 -->
 
 Override for $$gs log short$$ to control how change requests are displayed.
 If not set, falls back to `spice.log.crFormat`.
@@ -194,7 +194,7 @@ If not set, falls back to `spice.log.crFormat`.
 
 ### spice.logLong.crFormat
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.15.0 -->
 
 Override for $$gs log long$$ to control how change requests are displayed.
 If not set, falls back to `spice.log.crFormat`.
