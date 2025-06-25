@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"sort"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/buildkite/shellwords"
@@ -61,6 +63,11 @@ type Config struct {
 	// shorthands is a map from shorthand to the list of arguments
 	// that that it expands to.
 	shorthands map[string][]string
+
+	// shellCommands is a map from shorthand to shell command.
+	// These will be run with 'sh -c',
+	// allowing shorthands to call any shell command.
+	shellCommands map[string]string
 }
 
 // ConfigOptions specifies options for the [Config].
@@ -78,6 +85,7 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 
 	items := make(map[git.ConfigKey][]string)
 	shorthands := make(map[string][]string)
+	shellCommands := make(map[string]string)
 
 	for entry, err := range cfg.ListRegexp(ctx, `^`+_configSection+`\.`) {
 		if err != nil {
@@ -97,6 +105,14 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 		// defines a shorthand.
 		if subsection == _shorthandSubsection {
 			short := name
+
+			// "!foo" is used for shell commands.
+			if cmd, ok := strings.CutPrefix(entry.Value, "!"); ok {
+				shellCommands[short] = cmd
+				continue
+			}
+
+			// Normal shorthands are split into arguments.
 			longform, err := shellwords.SplitPosix(entry.Value)
 			if err != nil {
 				opts.Log.Warn("skipping shorthand with invalid value",
@@ -115,8 +131,9 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	}
 
 	return &Config{
-		items:      items,
-		shorthands: shorthands,
+		items:         items,
+		shorthands:    shorthands,
+		shellCommands: shellCommands,
 	}, nil
 }
 
@@ -127,14 +144,16 @@ func (c *Config) ExpandShorthand(name string) ([]string, bool) {
 	return args, ok
 }
 
+// ShellCommand returns a custom shell command, if defined.
+// Returns false if the command is not defined.
+func (c *Config) ShellCommand(name string) (string, bool) {
+	cmd, ok := c.shellCommands[name]
+	return cmd, ok
+}
+
 // Shorthands returns a sorted list of all defined shorthands.
 func (c *Config) Shorthands() []string {
-	shorthands := make([]string, 0, len(c.shorthands))
-	for short := range c.shorthands {
-		shorthands = append(shorthands, short)
-	}
-	sort.Strings(shorthands)
-	return shorthands
+	return slices.Sorted(maps.Keys(c.shorthands))
 }
 
 // Validate checks if the configuration is valid for the given application.

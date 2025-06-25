@@ -1,0 +1,44 @@
+# Test prevention of infinite loops in shorthand command expansion.
+# Verifies that shell commands that recursively call gs don't cause infinite loops.
+
+as 'Test <test@example.com>'
+at '2025-06-25T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Test case 1: Shell command that calls gs directly should fail with depth limit
+# This would cause infinite recursion without proper protection.
+git config spice.shorthand.infinite-loop '!gs infinite-loop'
+
+# Try to run the infinite loop command - it should fail gracefully
+# with a depth limit exceeded error
+! gs infinite-loop
+stderr 'shell command recursion depth limit exceeded \(10\)'
+
+# Test case 2: More complex scenario with indirect recursion
+# where one command calls another that eventually calls back to the first.
+git config spice.shorthand.cmd1 '!gs cmd2'
+git config spice.shorthand.cmd2 '!gs cmd1'
+
+! gs cmd1
+stderr 'shell command recursion depth limit exceeded \(10\)'
+
+# Test case 3: Shell command that calls gs with different arguments should work
+# This is a legitimate use case that should not be blocked.
+git config spice.shorthand.current-branch '!git rev-parse --abbrev-ref HEAD'
+git config spice.shorthand.show-current '!gs current-branch'
+
+gs show-current
+stdout 'main'
+
+# Test case 4: Ensure regular shorthand expansion still works for non-recursive cases
+git config spice.shorthand.brc 'branch create'
+
+# This should work normally since it doesn't involve shell commands
+gs brc test-branch -m 'Create test branch'
+git branch --list test-branch
+stdout 'test-branch'

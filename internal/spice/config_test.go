@@ -240,3 +240,105 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_ShellCommand(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		give   string
+		want   string
+	}{
+		{
+			name:   "Empty",
+			config: "",
+			give:   "foo",
+		},
+		{
+			name: "SingleCommand",
+			config: text.Dedent(`
+				[spice.shorthand]
+				foo = !echo hello
+			`),
+			give: "foo",
+			want: "echo hello",
+		},
+		{
+			name: "MultipleCommands",
+			config: text.Dedent(`
+				[spice.shorthand]
+				foo = !echo hello
+				bar = !ls -la
+				baz = !git status
+			`),
+			give: "bar",
+			want: "ls -la",
+		},
+		{
+			name: "CommandNotFound",
+			config: text.Dedent(`
+				[spice.shorthand]
+				foo = !echo hello
+			`),
+			give: "bar",
+		},
+		{
+			name: "MixedShorthandsAndCommands",
+			config: text.Dedent(`
+				[spice.shorthand]
+				can = commit amend --no-edit
+				foo = !echo hello
+				wip = commit create -m "wip"
+				bar = !ls -la
+			`),
+			give: "foo",
+			want: "echo hello",
+		},
+		{
+			name: "ComplexShellCommand",
+			config: text.Dedent(`
+				[spice.shorthand]
+				deploy = !git push origin main && echo Deployed
+			`),
+			give: "deploy",
+			want: `git push origin main && echo Deployed`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Set up
+			home := t.TempDir()
+			require.NoError(t, os.WriteFile(
+				filepath.Join(home, ".gitconfig"),
+				[]byte(tt.config),
+				0o600,
+			), "write configuration file")
+
+			// Read configuration
+			ctx := t.Context()
+			gitCfg := git.NewConfig(git.ConfigOptions{
+				Log: silogtest.New(t),
+				Dir: home,
+				Env: []string{
+					"HOME=" + home,
+					"USER=testuser",
+					"GIT_CONFIG_NOSYSTEM=1",
+				},
+			})
+			spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+				Log: silogtest.New(t),
+			})
+			require.NoError(t, err, "load configuration")
+
+			gotCmd, ok := spicecfg.ShellCommand(tt.give)
+			if tt.want == "" {
+				require.False(t, ok, "ShellCommand(%q) unexpectedly found", tt.give)
+			} else {
+				require.True(t, ok, "ShellCommand(%q)", tt.give)
+				assert.Equal(t, tt.want, gotCmd, "ShellCommand(%q) command", tt.give)
+			}
+		})
+	}
+}

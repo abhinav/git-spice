@@ -90,3 +90,44 @@ both will be expanded.
 {green}${reset} git config --global spice.shorthand.bb bco
 {gray}# bb will expand to bco, which will expand to "branch checkout"{reset}
 ```
+
+### Shell command aliases
+
+<!-- gs:version unreleased -->
+
+In addition to git-spice command shorthands,
+you can define aliases that execute arbitrary shell commands
+by prefixing the command with `!`.
+
+    spice.shorthand.<short> = !<shell-command>
+
+Shell command aliases run the specified command in a shell
+and pass any additional arguments to the command as `$1`, `$2`, etc.
+If you want to pass all arguments through to the command,
+add `"$@"` to the end of the command alias.
+
+You can use shell command aliases to create custom helpers
+on top of git-spice commands, and invoke them through the `gs` command.
+
+For example:
+
+```freeze language="terminal"
+{gray}# Shell alias that accepts arguments.{reset}
+{green}${reset} git config spice.shorthand.ls-commits \
+    {mag}'!git log --oneline -n "${1:-1}"'{reset}
+{green}${reset} gs ls-commits 3
+abc1234 Latest commit
+def5678 Second commit
+ghi9012 First commit
+
+{gray}# Shell alias that consumes all arguments.{reset}
+{green}${reset} git config spice.shorthand.from-up \
+    {mag}'!git checkout -p $(gs up -n) -- "$@"'{reset}
+{green}${reset} gs from-up -- file1.txt path/to/file2.txt
+```
+
+!!! tip "Argument handling"
+
+    Shell command aliases receive arguments as positional parameters (`$1`, `$2`, etc.).
+    You can use shell parameter expansion like `"${1:-default}"`
+    to provide default values when no arguments are given.
