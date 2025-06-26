@@ -1,0 +1,62 @@
+# 'branch restack' with worktrees: main in wt1, feature in wt2, conflict resolution with 'gs rbc'
+
+as 'Test <test@example.com>'
+at '2025-06-26T21:28:29Z'
+
+# setup main repository (this will be wt1)
+cd wt1
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create feature branch
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+gs trunk
+
+# create worktree wt2 for feature branch
+git worktree add ../wt2 feature
+
+# now change the main branch in wt1
+gs trunk
+cp $WORK/extra/init.main.txt init.txt
+git add init.txt
+git commit -m 'Change init on main'
+
+# go to wt2 (feature worktree) and attempt restack
+cd ../wt2
+git branch --show-current
+stdout 'feature'
+
+# restack the feature branch from wt2 (this will conflict)
+! gs branch restack
+stderr 'There was a conflict while rebasing'
+
+# resolve the conflict
+cp $WORK/extra/init.resolved.txt init.txt
+git add init.txt
+env EDITOR=true
+gs rbc
+
+# verify state in wt2
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- wt1/init.txt --
+initial init
+
+-- extra/init.main.txt --
+changed init on main
+
+-- extra/init.feature.txt --
+feature's init
+
+-- extra/init.resolved.txt --
+resolved init content
+
+-- golden/graph.txt --
+* b05ac5a (HEAD -> feature) feature
+* e6e3766 (main) Change init on main
+* 26ee912 Initial commit
