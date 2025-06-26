@@ -91,12 +91,12 @@ func OpenWorktree(ctx context.Context, dir string, opts OpenOptions) (*Worktree,
 	if !ok {
 		return nil, fmt.Errorf("unexpected output from git rev-parse: %q", out)
 	}
-	gitDir, repoGitDir, ok := strings.Cut(out, "\n")
+	gitCommonDir, gitDir, ok := strings.Cut(out, "\n")
 	if !ok {
 		return nil, fmt.Errorf("unexpected output from git rev-parse: %q", out)
 	}
 
-	repo := newRepository(repoGitDir, opts.Log, opts.exec)
+	repo := newRepository(gitCommonDir, opts.Log, opts.exec)
 	wt := newWorktree(gitDir, rootDir, repo, opts.Log, opts.exec)
 	return wt, nil
 }
