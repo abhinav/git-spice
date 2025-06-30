@@ -3,7 +3,7 @@ module go.abhg.dev/gs
 go 1.24.4
 
 require (
-	github.com/alecthomas/kong v1.11.0
+	github.com/alecthomas/kong v1.12.0
 	github.com/buildkite/shellwords v1.0.0
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
@@ -26,7 +26,7 @@ require (
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/oauth2 v0.30.0
-	gopkg.in/dnaeon/go-vcr.v4 v4.0.3
+	gopkg.in/dnaeon/go-vcr.v4 v4.0.4
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
 )
