@@ -3,7 +3,7 @@ module go.abhg.dev/gs
 go 1.24.4
 
 require (
-	github.com/alecthomas/kong v1.11.0
+	github.com/alecthomas/kong v1.12.0
 	github.com/buildkite/shellwords v1.0.0
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
@@ -19,14 +19,14 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.2
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.130.1
+	gitlab.com/gitlab-org/api/client-go v0.132.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
 	go.abhg.dev/log/silog v0.1.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.5.2
 	golang.org/x/oauth2 v0.30.0
-	gopkg.in/dnaeon/go-vcr.v4 v4.0.3
+	gopkg.in/dnaeon/go-vcr.v4 v4.0.4
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
 )
@@ -49,7 +49,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect

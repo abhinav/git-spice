@@ -2,8 +2,8 @@ al.essio.dev/pkg/shellescape v1.5.1 h1:86HrALUujYS/h+GtqoB26SBEdkWfmMI6FubjXlsXy
 al.essio.dev/pkg/shellescape v1.5.1/go.mod h1:6sIqp7X2P6mThCQ7twERpZTuigpr6KbZWtls1U8I890=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
-github.com/alecthomas/kong v1.11.0 h1:y++1gI7jf8O7G7l4LZo5ASFhrhJvzc+WgF/arranEmM=
-github.com/alecthomas/kong v1.11.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
+github.com/alecthomas/kong v1.12.0 h1:oKd/0fHSdajj5PfGDd3ScvEvpVJf9mT2mb5r9xYadYM=
+github.com/alecthomas/kong v1.12.0/go.mod h1:p2vqieVMeTAnaC83txKtXe8FLke2X07aruPWXyMPQrU=
 github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc=
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
@@ -61,8 +61,8 @@ github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9n
 github.com/hashicorp/go-cleanhttp v0.5.2/go.mod h1:kO/YDlP8L1346E6Sodw+PrpBSV4/SoxCXGY6BqNFT48=
 github.com/hashicorp/go-hclog v1.6.3 h1:Qr2kF+eVWjTiYmU7Y31tYlP1h0q/X3Nl3tPGdaB11/k=
 github.com/hashicorp/go-hclog v1.6.3/go.mod h1:W4Qnvbt70Wk/zYJryRzDRU/4r0kIg0PVHBcfoyhpF5M=
-github.com/hashicorp/go-retryablehttp v0.7.7 h1:C8hUCYzor8PIfXHa4UrZkU4VvK8o9ISHxT2Q8+VepXU=
-github.com/hashicorp/go-retryablehttp v0.7.7/go.mod h1:pkQpWZeYWskR+D1tR2O5OcBFOxfA7DoAO6xtkuQnHTk=
+github.com/hashicorp/go-retryablehttp v0.7.8 h1:ylXZWnqa7Lhqpk0L1P1LzDtGcCR0rPVUrx/c8Unxc48=
+github.com/hashicorp/go-retryablehttp v0.7.8/go.mod h1:rjiScheydd+CxvumBsIrFKlx3iS0jrZ7LvzFGFmuKbw=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
@@ -116,8 +116,8 @@ github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavM
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e/go.mod h1:RbqR21r5mrJuqunuUZ/Dhy/avygyECGrLceyNeo4LiM=
 github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8ua9s=
 github.com/zalando/go-keyring v0.2.6/go.mod h1:2TCrxYrbUNYfNS/Kgy/LSrkSQzZ5UPVH85RwfczwvcI=
-gitlab.com/gitlab-org/api/client-go v0.130.1 h1:1xF5C5Zq3sFeNg3PzS2z63oqrxifne3n/OnbI7nptRc=
-gitlab.com/gitlab-org/api/client-go v0.130.1/go.mod h1:ZhSxLAWadqP6J9lMh40IAZOlOxBLPRh7yFOXR/bMJWM=
+gitlab.com/gitlab-org/api/client-go v0.132.0 h1:6W4VAmbWVbjUEoQiybPAn6bMP5v0Ga9jeTJaRtc7zfI=
+gitlab.com/gitlab-org/api/client-go v0.132.0/go.mod h1:U83AmpPrAir8NH31T/BstwZcJzS/nGZptOXtGjPZrbI=
 go.abhg.dev/io/ioutil v0.1.0 h1:YGGMzh9HT52JYuVWbnr/E5GkYHbL3yRNDjcxFDaUHNk=
 go.abhg.dev/io/ioutil v0.1.0/go.mod h1:79IIyZVWxNZE8hBxMtubM8zJFPs+2NCqHYfWeH3X6hM=
 go.abhg.dev/komplete v0.1.0 h1:OE/uazFmWxrYYxttaKri9UpVr/i3J2Iv1vh21mYVom8=
@@ -149,8 +149,8 @@ golang.org/x/tools v0.26.0/go.mod h1:TPVVj70c7JJ3WCazhD8OdXcZg/og+b9+tH/KxylGwH0
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/dnaeon/go-vcr.v4 v4.0.3 h1:rlSB7VRNGo90rqbNWA3+/3iftkjLEvcf3bhkAULqE0o=
-gopkg.in/dnaeon/go-vcr.v4 v4.0.3/go.mod h1:65yxh9goQVrudqofKtHA4JNFWd6XZRkWfKN4YpMx7KI=
+gopkg.in/dnaeon/go-vcr.v4 v4.0.4 h1:UNc8d1Ya2otEOU3DoUgnSLp0tXvBNE0FuFe86Nnzcbw=
+gopkg.in/dnaeon/go-vcr.v4 v4.0.4/go.mod h1:65yxh9goQVrudqofKtHA4JNFWd6XZRkWfKN4YpMx7KI=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 pgregory.net/rapid v1.2.0 h1:keKAYRcjm+e1F0oAuU5F5+YPAWcyxNNRK2wud503Gnk=
