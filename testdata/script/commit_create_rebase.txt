@@ -56,10 +56,10 @@ Contents of feature 3.
 * 94ce19e (feature1) Add feature 1
 * 63c927d (main) Initial commit
 -- input/rebase-todo.txt --
-pick 94ce19e Add feature 1
+pick 94ce19e # Add feature 1
 break
-pick 556ae49 Add feature 2
-pick 4041fd7 Add feature 3
+pick 556ae49 # Add feature 2
+pick 4041fd7 # Add feature 3
 
 -- extra/feature1-part2.txt --
 Part 2 of feature 1.
