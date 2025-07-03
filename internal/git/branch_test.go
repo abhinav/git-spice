@@ -170,6 +170,73 @@ func TestIntegrationBranches(t *testing.T) {
 				Force: true,
 			}))
 	})
+
+	t.Run("ListBranchesWithPatterns", func(t *testing.T) {
+		for _, branch := range []string{"feature/branch1", "feature/branch2", "bugfix/test", "release-1.0"} {
+			require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
+				Name: branch,
+				Head: "main",
+			}))
+
+			defer func() {
+				assert.NoError(t, repo.DeleteBranch(
+					t.Context(), branch, git.BranchDeleteOptions{Force: true}),
+				)
+			}()
+		}
+
+		t.Run("LiteralBranchName", func(t *testing.T) {
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+				Patterns: []string{"main"},
+			}))
+			require.NoError(t, err)
+			assert.Equal(t, []git.LocalBranch{
+				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+			}, bs)
+		})
+
+		t.Run("PrefixPattern", func(t *testing.T) {
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature/"},
+			}))
+			require.NoError(t, err)
+			assert.Equal(t, []git.LocalBranch{
+				{Name: "feature/branch1"},
+				{Name: "feature/branch2"},
+			}, bs)
+		})
+
+		t.Run("GlobPattern", func(t *testing.T) {
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature*"},
+			}))
+			require.NoError(t, err)
+			assert.Equal(t, []git.LocalBranch{
+				{Name: "feature1"},
+				{Name: "feature2"},
+			}, bs)
+		})
+
+		t.Run("MultiplePatterns", func(t *testing.T) {
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+				Patterns: []string{"main", "feature/"},
+			}))
+			require.NoError(t, err)
+			assert.Equal(t, []git.LocalBranch{
+				{Name: "feature/branch1"},
+				{Name: "feature/branch2"},
+				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+			}, bs)
+		})
+
+		t.Run("NoMatches", func(t *testing.T) {
+			bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), &git.LocalBranchesOptions{
+				Patterns: []string{"nonexistent"},
+			}))
+			require.NoError(t, err)
+			assert.Empty(t, bs)
+		})
+	})
 }
 
 func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
