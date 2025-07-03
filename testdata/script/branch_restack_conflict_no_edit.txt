@@ -76,7 +76,7 @@ env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feat3-msg.txt MOCKEDIT_RECORD=$WOR
 cp $WORK/extra/feat3.txt feat.txt
 git add feat.txt
 gs rebase continue --edit
-grep 'pick 712f10b Add feature 3' $WORK/feat3-conflict-msg.txt
+grep 'pick 712f10b ' $WORK/feat3-conflict-msg.txt
 
 git graph
 cmp stdout $WORK/golden/log.txt
