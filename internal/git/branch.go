@@ -20,6 +20,20 @@ type LocalBranch struct {
 type LocalBranchesOptions struct {
 	// Sort specifies an optional value for git branch --sort.
 	Sort string
+
+	// Patterns is a list of patterns to filter branches.
+	// If specified, only branches matching at least one of the patterns
+	// will be returned.
+	//
+	// Patterns may be:
+	//
+	//   - literal branch names, e.g. "main", will be matched exactly
+	//   - branch prefixes ending in '/', e.g. "feature/",
+	//     will match branches that start with "feature/"
+	//   - glob patterns, e.g. 'foo*',
+	//     will return branches that match the glob pattern
+	//     in the same '/'-section.
+	Patterns []string
 }
 
 // LocalBranches returns an iterator over local branches in the repository.
@@ -34,7 +48,13 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 	if opts.Sort != "" {
 		args = append(args, "--sort="+opts.Sort)
 	}
-	args = append(args, "refs/heads/")
+	if len(opts.Patterns) > 0 {
+		for _, pattern := range opts.Patterns {
+			args = append(args, "refs/heads/"+pattern)
+		}
+	} else {
+		args = append(args, "refs/heads/")
+	}
 
 	return func(yield func(LocalBranch, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
