@@ -233,6 +233,39 @@ If set to false, you can opt in to opening the editor with the `--edit` flag.
 - `true` (default)
 - `false`
 
+### spice.submit.draft
+
+<!-- gs:version unreleased -->
+
+Default value for the `--draft`/`--no-draft` flag when creating new change
+requests with $$gs branch submit$$ and friends.
+
+```freeze language="terminal" float="right"
+{green}${reset} git config {red}spice.submit.draft{reset} {mag}true{reset}
+{green}${reset} gs branch submit{reset}
+{gray}# ...{reset}
+{green}Draft{reset}: [{mag}Y{reset}/{mag}n{reset}]
+{gray}Mark the change as a draft?{reset}
+
+{green}${reset} git config {red}spice.submit.draft{reset} {mag}false{reset}
+{green}${reset} gs branch submit{reset}
+{gray}# ...{reset}
+{green}Draft{reset}: [{mag}y{reset}/{mag}N{reset}]
+{gray}Mark the change as a draft?{reset}
+```
+
+This option affects both interactive and non-interactive modes:
+
+- In *non-interactive mode*, setting this value to true
+  will cause git-spice to assume `--draft` when creating new change requests.
+- In *interactive mode*, this value is used as the default for the prompt
+  asking whether to create the change request as a draft.
+
+**Accepted values:**
+
+- `true`: create CRs as drafts by default
+- `false` (default): create CRs as ready for review by default
+
 ### spice.submit.listTemplatesTimeout
 
 <!-- gs:version v0.8.0 -->
