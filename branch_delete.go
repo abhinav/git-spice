@@ -143,15 +143,20 @@ func (cmd *branchDeleteCmd) Run(
 	// checkoutTarget specifies the branch we'll check out after deletion.
 	// The logic for this is as follows:
 	//
-	//  - if in detached HEAD state, use the current commit
+	//  - if in detached HEAD state, use the same commit
 	//  - if the current branch is not being deleted, use that
 	//  - if the current branch is being deleted,
-	//     - if there are multiple branches, use trunk
 	//     - if there is only one branch, use its base
+	//     - if there are multiple branches, use trunk
+	//     - if the above is not possible because target is checked out in another worktree,
+	//       detach HEAD to that commit
 	//
 	// TODO: Make an 'upstack restack' spice.Service method
 	// that won't leave us on the wrong branch.
-	var checkoutTarget string
+	var (
+		checkoutTarget   string
+		checkoutDetached bool
+	)
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		if !errors.Is(err, git.ErrDetachedHead) {
@@ -171,6 +176,10 @@ func (cmd *branchDeleteCmd) Run(
 		// Current branch is being deleted.
 		// If there are multiple branches, use trunk.
 		if slices.Contains(cmd.Branches, currentBranch) {
+			// TODO: a better behavior here would be
+			// to switch to the next available upstack branch,
+			// or trunk if there are no upstack branches.
+
 			// If current branch is being deleted,
 			// pick a different branch to check out.
 			if len(branchesToDelete) == 1 {
@@ -181,6 +190,16 @@ func (cmd *branchDeleteCmd) Run(
 				// Multiple branches are being deleted.
 				// Use trunk.
 				checkoutTarget = store.Trunk()
+			}
+
+			for branch, err := range repo.LocalBranches(ctx, &git.LocalBranchesOptions{Patterns: []string{checkoutTarget}}) {
+				if err == nil && branch.Worktree != "" {
+					// Guaranteed not to be current worktree
+					// because we've already filtered for that.
+					checkoutDetached = true
+					log.Warnf("%v: checked out in another worktree (%v), will detach HEAD", checkoutTarget, branch.Worktree)
+					log.Warnf("Use 'gs branch checkout' to pick a branch and exit detached state")
+				}
 			}
 
 			// This is the only case where user's current HEAD is
@@ -263,7 +282,11 @@ func (cmd *branchDeleteCmd) Run(
 		}
 	}
 
-	if err := wt.Checkout(ctx, checkoutTarget); err != nil {
+	checkoutFn := wt.Checkout
+	if checkoutDetached {
+		checkoutFn = wt.DetachHead
+	}
+	if err := checkoutFn(ctx, checkoutTarget); err != nil {
 		return fmt.Errorf("checkout %v: %w", checkoutTarget, err)
 	}
 
