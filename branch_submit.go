@@ -37,6 +37,12 @@ type submitOptions struct {
 	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
 	UpdateOnly bool `short:"u" help:"Only update existing change requests, do not create new ones"`
 
+	// DraftDefault is used to set the default draft value
+	// when creating new Change Requests.
+	//
+	// --draft/--no-draft will override this value.
+	DraftDefault bool `config:"submit.draft" hidden:"" default:"false"`
+
 	// TODO: Other creation options e.g.:
 	// - assignees
 	// - labels
@@ -764,7 +770,8 @@ func (cmd *branchSubmitCmd) preparePublish(
 	// Don't mess with draft setting if we're not prompting
 	// and the user didn't explicitly set it.
 	if ui.Interactive(view) && cmd.Draft == nil {
-		cmd.Draft = new(bool)
+		draftDefault := cmd.DraftDefault
+		cmd.Draft = &draftDefault
 		fields = append(fields, form.draftField(cmd.Draft))
 	}
 
@@ -814,7 +821,7 @@ func (cmd *branchSubmitCmd) preparePublish(
 		Body:    cmd.Body,
 	}
 
-	var draft bool
+	draft := cmd.DraftDefault
 	if cmd.Draft != nil {
 		draft = *cmd.Draft
 	}

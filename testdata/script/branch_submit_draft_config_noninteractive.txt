@@ -1,0 +1,114 @@
+# Test spice.submit.draft configuration with non-interactive submit
+# Tests behavior when spice.submit.draft is set to true
+
+as 'Test <test@example.com>'
+at '2025-07-05T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Set spice.submit.draft to true
+git config spice.submit.draft true
+
+# Test case 1: non-interactive submit without any flags
+# should create draft PR due to config
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/draft-default.json
+
+# Test case 2: non-interactive submit with --no-draft flag
+# should override config and create non-draft PR
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+gs branch submit --fill --no-draft
+stderr 'Created #'
+
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/draft-override.json
+
+# Test case 3: non-interactive submit with --draft flag
+# should be explicitly draft (redundant with config but explicit)
+git add feature3.txt
+gs bc -m 'Add feature3' feature3
+gs branch submit --fill --draft
+stderr 'Created #'
+
+shamhub dump change 3
+cmpenvJSON stdout $WORK/golden/draft-explicit.json
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- repo/feature3.txt --
+Contents of feature3
+
+-- golden/draft-default.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature1",
+  "draft": true,
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "ref": "feature1",
+    "sha": "dbcf2133e568c7abf343166d32aefb2ecd3ec8be"
+  },
+  "base": {
+    "ref": "main",
+    "sha": "3bcbc80b165d8b4bb7fe792b7ca9effc713b32a5"
+  }
+}
+
+-- golden/draft-override.json --
+{
+  "number": 2,
+  "state": "open",
+  "title": "Add feature2",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "head": {
+    "ref": "feature2",
+    "sha": "ca0588e9603d29d74b9c81b8536be941e9a868f4"
+  },
+  "base": {
+    "ref": "feature1",
+    "sha": "dbcf2133e568c7abf343166d32aefb2ecd3ec8be"
+  }
+}
+
+-- golden/draft-explicit.json --
+{
+  "number": 3,
+  "state": "open",
+  "title": "Add feature3",
+  "draft": true,
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/3",
+  "head": {
+    "ref": "feature3",
+    "sha": "ae33cf76131b929e42f9e86d80f03aba22aea1b7"
+  },
+  "base": {
+    "ref": "feature2",
+    "sha": "ca0588e9603d29d74b9c81b8536be941e9a868f4"
+  }
+}
