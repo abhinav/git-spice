@@ -1,0 +1,90 @@
+# stack submit with --web=created opens browser only for new CRs in stack
+
+as 'Test <test@example.com>'
+at '2025-07-06T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack with 3 branches
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+git add feat2.txt
+gs bc -m 'Add feat2' feat2
+git add feat3.txt
+gs bc -m 'Add feat3' feat3
+
+# submit the entire stack with --web=created - should open browser for all 3 new CRs
+gs trunk
+gs stack submit --fill --web=created
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/3 $WORK/browser.txt
+
+# make changes to feat1 and feat3
+git checkout feat1
+cp $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+gs cc -m 'Update feat1'
+
+git checkout feat3
+cp $WORK/extra/feat3-new.txt feat3.txt
+git add feat3.txt
+gs cc -m 'Update feat3'
+
+# submit the stack again with --web=created - should NOT open browser (all existing CRs)
+gs trunk
+gs stack submit --fill --web=created
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/3 $WORK/browser.txt
+
+# add a new branch to the stack
+git checkout feat3
+git add feat4.txt
+gs bc -m 'Add feat4' feat4
+
+# submit the stack with --web=created - should open browser only for new CR (feat4)
+gs trunk
+gs stack submit --fill --web=created
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/3 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/4 $WORK/browser.txt
+
+# submit the stack with --web=true - should open browser for all CRs
+gs stack submit --fill --web=true
+grep -count=2 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=2 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+grep -count=2 $SHAMHUB_URL/alice/example/change/3 $WORK/browser.txt
+grep -count=2 $SHAMHUB_URL/alice/example/change/4 $WORK/browser.txt
+
+-- repo/feat1.txt --
+This is feature 1
+
+-- extra/feat1-new.txt --
+This is updated feature 1
+
+-- repo/feat2.txt --
+This is feature 2
+
+-- repo/feat3.txt --
+This is feature 3
+
+-- extra/feat3-new.txt --
+This is updated feature 3
+
+-- repo/feat4.txt --
+This is feature 4

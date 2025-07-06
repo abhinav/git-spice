@@ -218,7 +218,8 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
-* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--no-web`: Alias for --web=false.
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
@@ -297,7 +298,8 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
-* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--no-web`: Alias for --web=false.
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
@@ -404,7 +406,8 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
-* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--no-web`: Alias for --web=false.
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
@@ -819,7 +822,8 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `-c`, `--fill`: Fill in the change title and body from the commit messages
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
-* `-w`, `--[no-]web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--no-web`: Alias for --web=false.
 * `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>

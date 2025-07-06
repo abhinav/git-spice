@@ -1,0 +1,56 @@
+# branch submit with --web and --no-web flags override default behavior
+
+as 'Test <test@example.com>'
+at '2025-07-06T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch and submit it - should NOT open browser (default behavior)
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+! exists $WORK/browser.txt
+
+# submit with --web flag - should open browser (flag overrides default)
+gs branch submit --web
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# submit with --web=created flag - should NOT open browser (updating existing CR)
+cp $WORK/extra/feature1-last.txt feature1.txt
+git add feature1.txt
+gs cc -m 'Last update to feature1'
+gs branch submit --web=created
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# create new branch with --web=created flag - should open browser (new CR)
+git checkout main
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+gs branch submit --fill --web=created
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-new.txt --
+New contents of feature1
+
+-- extra/feature1-last.txt --
+Last contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2

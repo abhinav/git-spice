@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
@@ -27,9 +28,10 @@ type submitOptions struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
 	Fill   bool `short:"c" help:"Fill in the change title and body from the commit messages"`
 	// TODO: Default to Fill if --no-prompt?
-	Draft   *bool `negatable:"" help:"Whether to mark change requests as drafts"`
-	Publish bool  `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
-	Web     bool  `short:"w" negatable:"" config:"submit.web" help:"Open submitted changes in a web browser"`
+	Draft   *bool         `negatable:"" help:"Whether to mark change requests as drafts"`
+	Publish bool          `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
+	Web     submitOpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
+	NoWeb   bool          `help:"Alias for --web=false."`
 
 	NavigationComment navigationCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 
@@ -350,8 +352,11 @@ func (cmd *branchSubmitCmd) run(
 		}
 	}
 
+	if cmd.NoWeb {
+		cmd.Web = submitOpenWebNo
+	}
 	var openURL string
-	if cmd.Web && !cmd.DryRun {
+	if !cmd.DryRun && cmd.Web.shouldOpen(existingChange == nil /* new CR */) {
 		defer func() {
 			if openURL == "" {
 				return
@@ -912,3 +917,64 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 	b.log.Infof("Created %v: %s", result.ID, result.URL)
 	return result.ID, result.URL, nil
 }
+
+// submitOpenWeb defines options for the --web flag.
+type submitOpenWeb int
+
+const (
+	// Don't open CRs in a browser.
+	submitOpenWebNo submitOpenWeb = iota
+
+	// Open all CRs in a browser.
+	submitOpenWebYes
+
+	// Only open CRs that were just created in a browser.
+	submitOpenWebCreated
+)
+
+func (w *submitOpenWeb) shouldOpen(created bool) bool {
+	switch *w {
+	case submitOpenWebYes:
+		return true
+	case submitOpenWebCreated:
+		return created
+	case submitOpenWebNo:
+		return false
+	default:
+		panic("unknown submitOpenWeb value")
+	}
+}
+
+func (w *submitOpenWeb) Decode(ctx *kong.DecodeContext) error {
+	token := ctx.Scan.Peek()
+	switch token.Type {
+	case kong.EOLToken:
+		// "--web" is equivalent to "--web=true".
+		*w = submitOpenWebYes
+		return nil
+
+	case kong.FlagValueToken, kong.ShortFlagTailToken:
+		token, err := ctx.Scan.PopValue("web")
+		if err != nil {
+			return err
+		}
+
+		switch token.String() {
+		case "true", "yes", "1":
+			*w = submitOpenWebYes
+		case "false", "no", "0":
+			*w = submitOpenWebNo
+		case "created":
+			*w = submitOpenWebCreated
+		default:
+			return errors.New("must be one of: 'true', 'false', 'created'")
+		}
+
+	default:
+		// Treat "--web foo" as if "foo" is a different argument.
+		*w = submitOpenWebYes
+	}
+	return nil
+}
+
+func (w submitOpenWeb) IsBool() bool { return true }
