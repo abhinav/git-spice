@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  submit: The --web flag and the spice.submit.web configuration option
+  may now be set to 'created' to only open new CRs in a browser.
+  Updates to existing CRs will not be opened in a browser.
+time: 2025-07-06T15:24:14.921298-07:00

@@ -1,0 +1,61 @@
+# branch submit with spice.submit.web='created' only opens browser for new CRs
+
+as 'Test <test@example.com>'
+at '2025-07-06T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git config spice.submit.web created
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env BROWSER_RECORDER_FILE=$WORK/browser.txt
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch and submit it - should open browser for new CR
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+gs branch submit --fill
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# update the CR - should NOT open browser (not a new CR)
+cp $WORK/extra/feature1-new.txt feature1.txt
+git add feature1.txt
+gs cc -m 'Update feature1'
+gs branch submit --fill
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+
+# create another branch and submit the stack - should open browser for new CR
+git checkout main
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+gs stack submit --fill
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+
+# update second CR - should NOT open browser
+cp $WORK/extra/feature2-new.txt feature2.txt
+git add feature2.txt
+gs cc -m 'Update feature2'
+gs stack submit --fill
+grep -count=1 $SHAMHUB_URL/alice/example/change/1 $WORK/browser.txt
+grep -count=1 $SHAMHUB_URL/alice/example/change/2 $WORK/browser.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-new.txt --
+New contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- extra/feature2-new.txt --
+New contents of feature2

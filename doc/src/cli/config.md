@@ -322,7 +322,12 @@ on a case-by-case basis.
 Whether submission commands ($$gs branch submit$$ and friends)
 should open a web browser with submitted CRs.
 
+<!-- gs:version unreleased --> If set to `created`,
+git-spice will open the web browser only for newly created CRs,
+and not for existing ones that were updated.
+
 **Accepted values:**
 
 - `true`
 - `false` (default)
+- `created` (<!-- gs:version unreleased -->)
