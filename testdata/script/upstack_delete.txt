@@ -1,0 +1,88 @@
+# Test upstack delete command - deletes all branches above current branch
+
+as 'Test <test@example.com>'
+at '2025-07-06T15:30:00Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Test 1: Error when running on trunk branch
+gs bco main
+! gs upstack delete --force
+stderr 'this command cannot be run against the trunk branch'
+
+# Test 2: Force flag requirement when not interactive
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+gs bco feature1
+! gs upstack delete
+stderr 'use --force to confirm deletion'
+
+# Test 3: Interactive confirmation prompt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.output
+gs upstack delete
+cmp $WORK/robot.output $WORK/robot.golden
+
+# After deletion, should still be on feature1
+git branch --show-current
+stdout 'feature1'
+
+# Verify upstack branches are deleted, but feature1 remains
+gs ls -a
+cmp stderr $WORK/golden/ls-after-interactive.txt
+
+# Test 4: Force flag works without prompting
+env ROBOT_INPUT= ROBOT_OUTPUT=
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+
+git add feature4.txt
+gs branch create feature4 -m 'Add feature 4'
+
+gs bco feature3
+gs upstack delete --force
+
+# Should still be on feature3
+git branch --show-current
+stdout 'feature3'
+
+# Verify only feature4 was deleted, feature3 remains
+gs ls -a
+cmp stderr $WORK/golden/ls-final.txt
+
+# Test 5: No upstack branches to delete
+gs upstack delete --force
+stderr 'no upstack branches to delete'
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- repo/feature4.txt --
+Feature 4
+-- repo/feature5.txt --
+Feature 5
+-- repo/unmerged.txt --
+Unmerged change
+
+-- golden/ls-after-interactive.txt --
+┏━■ feature1 ◀
+main
+-- golden/ls-final.txt --
+  ┏━■ feature3 ◀
+┏━┻□ feature1
+main
+-- robot.golden --
+===
+> Delete 1 upstack branches: [y/N]
+> Confirm all these branches should be deleted.
+true
