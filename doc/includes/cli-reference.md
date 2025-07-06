@@ -263,6 +263,28 @@ Branches that are deleted from the list will be ignored.
 * `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch whose stack we're editing. Defaults to current branch.
 
+### gs stack delete
+
+```
+gs stack (s) delete (d) [flags]
+```
+
+Delete all branches in a stack
+
+Deletes all branches in the current branch's stack.
+This includes both upstack and downstack branches.
+
+The deleted branches and their commits are removed from the stack.
+This is a convenient way to clean up completed or abandoned
+feature stacks.
+
+As this is a destructive operation,
+you must use the --force flag to confirm deletion.
+
+**Flags**
+
+* `--force`: Force deletion of the branches
+
 ### gs upstack submit
 
 ```
