@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: Pre-push hooks should run in the same worktree as the submit command.'
+time: 2025-07-07T19:08:35.745297-07:00

@@ -36,12 +36,12 @@ type PushOptions struct {
 }
 
 // Push pushes objects and refs to a remote repository.
-func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
+func (w *Worktree) Push(ctx context.Context, opts PushOptions) error {
 	if opts.Remote == "" && opts.Refspec == "" {
 		return errors.New("push: no remote or refspec specified")
 	}
 
-	r.log.Debug("Pushing to remote",
+	w.log.Debug("Pushing to remote",
 		silog.NonZero("name", opts.Remote),
 		silog.NonZero("force", opts.Force),
 		silog.NonZero("lease", forceWithLease(opts.ForceWithLease)))
@@ -63,7 +63,7 @@ func (r *Repository) Push(ctx context.Context, opts PushOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
 

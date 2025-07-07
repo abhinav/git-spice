@@ -1,0 +1,53 @@
+# Test for issue #725: pre-push hooks should work correctly with worktrees
+# The hook checks for file existence in the worktree, not just the main checkout
+
+as 'Test User <test@example.com>'
+at 2025-01-15T10:00:00Z
+
+mkdir repo
+cd repo
+git init
+git add required.txt
+git commit -m 'initial commit'
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a pre-push hook that checks for file existence in worktree
+cp $WORK/extra/pre-push .git/hooks/pre-push
+exec chmod +x .git/hooks/pre-push
+
+# Create a new branch and commit
+git add feature.txt
+gs branch create feature1 -m 'Add feature1'
+
+# Remove the required file to simulate the issue
+git rm required.txt
+gs commit create -m 'remove required file'
+
+# submit should fail because the required file is missing
+! gs branch submit --fill
+stderr 'required.txt not found in worktree'
+
+# Restore the required file and submit again
+git revert HEAD --no-edit
+gs branch submit --fill
+
+-- repo/required.txt --
+This file is required by the pre-push hook.
+-- repo/feature.txt --
+This is a feature file.
+-- extra/pre-push --
+#!/bin/bash
+
+# Pre-push hook that checks for file existence in worktree.
+# This hook will always fail if the required file is not found.
+
+[ -f "required.txt" ] || {
+    echo "Error: required.txt not found in worktree" >&2
+    exit 1
+}
