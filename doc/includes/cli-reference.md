@@ -269,6 +269,8 @@ Branches that are deleted from the list will be ignored.
 gs stack (s) delete (d) [flags]
 ```
 
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
 Delete all branches in a stack
 
 Deletes all branches in the current branch's stack.
