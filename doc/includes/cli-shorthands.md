@@ -27,6 +27,7 @@
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
+| gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |

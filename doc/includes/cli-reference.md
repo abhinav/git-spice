@@ -373,6 +373,30 @@ Provide the new base name as an argument to skip the prompt.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
+### gs upstack delete
+
+```
+gs upstack (us) delete (d) [flags]
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
+Delete all branches above the current branch
+
+Deletes all branches above the current branch in the stack,
+not including the current branch.
+The current branch remains unchanged.
+
+This is a convenient way to clean up abandoned or completed
+parts of a feature stack.
+
+As this is a destructive operation,
+you must use the --force flag to confirm deletion.
+
+**Flags**
+
+* `--force`: Force deletion of the branches
+
 ### gs downstack submit
 
 ```
