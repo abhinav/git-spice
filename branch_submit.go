@@ -451,7 +451,7 @@ func (cmd *branchSubmitCmd) run(
 			}
 		}
 
-		err = repo.Push(ctx, pushOpts)
+		err = wt.Push(ctx, pushOpts)
 		if err != nil {
 			return fmt.Errorf("push branch: %w", err)
 		}
@@ -560,7 +560,7 @@ func (cmd *branchSubmitCmd) run(
 				}
 			}
 
-			if err := repo.Push(ctx, pushOpts); err != nil {
+			if err := wt.Push(ctx, pushOpts); err != nil {
 				log.Error("Push failed. Branch may have been updated by someone else. Try with --force.")
 				return fmt.Errorf("push branch: %w", err)
 			}

@@ -305,7 +305,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		t.Logf("Pushing to origin")
 		require.NoError(t,
-			gitRepo.Push(ctx, git.PushOptions{
+			gitWork.Push(ctx, git.PushOptions{
 				Remote:  "origin",
 				Refspec: git.Refspec(branchName),
 			}), "error pushing branch")
@@ -314,7 +314,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 			ctx := context.WithoutCancel(t.Context())
 			t.Logf("Deleting remote branch: %s", branchName)
 			assert.NoError(t,
-				gitRepo.Push(ctx, git.PushOptions{
+				gitWork.Push(ctx, git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec(":" + branchName),
 				}), "error deleting branch")
@@ -347,7 +347,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Logf("Pushing new base: %s", newBase)
 		if *_update {
 			require.NoError(t,
-				gitRepo.Push(ctx, git.PushOptions{
+				gitWork.Push(ctx, git.PushOptions{
 					Remote:  "origin",
 					Refspec: git.Refspec("main:" + newBase),
 				}), "could not push base branch")
@@ -356,7 +356,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 				ctx := context.WithoutCancel(t.Context())
 				t.Logf("Deleting remote branch: %s", newBase)
 				require.NoError(t,
-					gitRepo.Push(ctx, git.PushOptions{
+					gitWork.Push(ctx, git.PushOptions{
 						Remote:  "origin",
 						Refspec: git.Refspec(":" + newBase),
 					}), "error deleting branch")
