@@ -69,11 +69,11 @@ func TestPushOptions_NoVerify(t *testing.T) {
 					return nil
 				})
 
-			repo := &Repository{
+			wt := &Worktree{
 				exec: mockExecer,
 			}
 
-			err := repo.Push(t.Context(), tt.opts)
+			err := wt.Push(t.Context(), tt.opts)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantCmd, gotCmd)
 		})
