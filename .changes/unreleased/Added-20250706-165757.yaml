@@ -1,0 +1,4 @@
+kind: Added
+body: >-
+  New 'stack delete' deletes all branches in the current branch's stack.
+time: 2025-07-06T16:57:57.80202-07:00
