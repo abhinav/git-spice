@@ -1,0 +1,47 @@
+# Test repo restack when branches are already restacked
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+
+gs repo init
+
+# Create some branches
+git add feat1.txt
+gs branch create feat1 -m 'feat1 commit'
+
+git add feat2.txt
+gs branch create feat2 -m 'feat2 commit'
+
+git add feat3.txt
+gs branch create feat3 -m 'feat3 commit'
+
+# Branches are already in good state - no restacking needed
+gs repo restack
+stderr 'feat1: branch does not need to be restacked'
+stderr 'feat2: branch does not need to be restacked'
+stderr 'feat3: branch does not need to be restacked'
+
+# Now create a commit on trunk and restack one branch manually
+gs branch checkout main
+git commit --allow-empty -m 'New trunk commit'
+
+# Restack just feat1 manually
+gs branch checkout feat1
+gs branch restack
+
+# Now when we run repo restack, only feat2 and feat3 should be restacked
+gs repo restack
+stderr 'feat1: branch does not need to be restacked'
+stderr 'feat2: restacked on feat1'
+stderr 'feat3: restacked on feat2'
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3

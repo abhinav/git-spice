@@ -1,0 +1,37 @@
+# Test repo restack edge cases
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+
+gs repo init
+
+# Test case 1: No tracked branches
+gs repo restack
+stderr 'no tracked branches found'
+
+# Test case 2: Single branch
+git add single.txt
+gs branch create single -m 'single commit'
+
+gs branch checkout main
+git commit --allow-empty -m 'trunk commit'
+
+gs repo restack
+stderr 'single: restacked on main'
+
+# Test case 3: Branch that is already on trunk (doesn't need restacking)
+git add already-good.txt
+gs branch create already-good -m 'already good commit'
+
+gs repo restack
+stderr 'already-good: branch does not need to be restacked'
+stderr 'single: branch does not need to be restacked'
+
+-- repo/single.txt --
+single feature
+-- repo/already-good.txt --
+already good feature

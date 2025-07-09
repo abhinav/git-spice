@@ -1,0 +1,56 @@
+# Test repo restack with conflict resolution
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+git add file.txt
+git commit -m 'Add file.txt'
+
+gs repo init
+
+# Create a branch that will conflict
+cp $WORK/other/feat1.txt file.txt
+git add file.txt
+gs branch create feat1 -m 'Modify file.txt in feat1'
+
+# Change trunk to require rebase
+gs branch checkout main
+cp $WORK/other/trunk-change.txt file.txt
+git add file.txt
+git commit -m 'Modify file.txt in trunk'
+
+# Now restack should cause a conflict
+! gs repo restack
+stderr 'rebase of feat1 interrupted by a conflict'
+
+# Check that we're in the rescue state
+git status --porcelain
+cmp stdout $WORK/golden/status_conflict.txt
+
+# Resolve the conflict
+cp ../other/resolved.txt file.txt
+git add file.txt
+gs rebase continue --no-edit
+
+# Command should have been automatically resumed
+git graph --branches
+cmp stdout $WORK/golden/graph_resolved.txt
+
+-- repo/file.txt --
+original content
+-- other/feat1.txt --
+feat1 content
+-- other/trunk-change.txt --
+trunk content
+-- other/resolved.txt --
+resolved content
+-- golden/status_conflict.txt --
+UU file.txt
+-- golden/graph_resolved.txt --
+* 29ec9b8 (feat1) Modify file.txt in feat1
+* 0e4c253 (HEAD -> main) Modify file.txt in trunk
+* c782ce9 Add file.txt
+* 91af7b5 Initial commit

@@ -23,6 +23,7 @@
 | gs rba | [gs rebase abort](/cli/reference.md#gs-rebase-abort) |
 | gs rbc | [gs rebase continue](/cli/reference.md#gs-rebase-continue) |
 | gs ri | [gs repo init](/cli/reference.md#gs-repo-init) |
+| gs rr | [gs repo restack](/cli/reference.md#gs-repo-restack) |
 | gs rs | [gs repo sync](/cli/reference.md#gs-repo-sync) |
 | gs sd | [gs stack delete](/cli/reference.md#gs-stack-delete) |
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |

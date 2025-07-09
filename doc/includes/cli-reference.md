@@ -146,6 +146,19 @@ was not initialized with a remote.
 
 * `--restack`: Restack the current stack after syncing
 
+### gs repo restack
+
+```
+gs repo (r) restack (r)
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
+Restack all tracked branches
+
+All tracked branches in the repository are rebased on top of their
+respective bases in dependency order, ensuring a linear history.
+
 ## Log
 
 ### gs log short

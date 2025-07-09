@@ -1,0 +1,72 @@
+# Complex repo restack with multiple independent branches and dependencies
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+
+gs repo init
+
+# Create first branch stack: feat1 -> feat1-ext
+git add feat1.txt
+gs branch create feat1 -m 'feat1 commit'
+
+git add feat1-ext.txt
+gs branch create feat1-ext -m 'feat1 extension commit'
+
+# Create second independent branch stack: feat2 -> feat2-ext
+gs branch checkout main
+git add feat2.txt
+gs branch create feat2 -m 'feat2 commit'
+
+git add feat2-ext.txt
+gs branch create feat2-ext -m 'feat2 extension commit'
+
+# Create third independent branch
+gs branch checkout main
+git add feat3.txt
+gs branch create feat3 -m 'feat3 commit'
+
+# Create a complex dependency: feat4 depends on feat1
+gs branch checkout feat1
+git add feat4.txt
+gs branch create feat4 -m 'feat4 commit'
+
+# Create a new commit on trunk to make all branches need restacking
+gs branch checkout main
+git commit --allow-empty -m 'New trunk commit'
+
+# Now restack all branches - they should be restacked in topological order
+gs repo restack
+
+# Verify all branches are restacked properly
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat1-ext.txt --
+feature 1 extension
+-- repo/feat2.txt --
+feature 2
+-- repo/feat2-ext.txt --
+feature 2 extension
+-- repo/feat3.txt --
+feature 3
+-- repo/feat4.txt --
+feature 4
+-- golden/graph.txt --
+* 7e864e4 (feat1-ext) feat1 extension commit
+| * 28c4da2 (feat2-ext) feat2 extension commit
+| * cd0a730 (feat2) feat2 commit
+| | * f27266a (feat3) feat3 commit
+| |/  
+| | * 8e2531c (feat4) feat4 commit
+| |/  
+|/|   
+* | c1f17f5 (feat1) feat1 commit
+|/  
+* 8e9b73c (HEAD -> main) New trunk commit
+* 91af7b5 Initial commit
