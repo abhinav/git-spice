@@ -1,0 +1,3 @@
+kind: Added
+body: New 'repo restack' command restacks all tracked branches
+time: 2025-07-08T20:12:39.290928-07:00

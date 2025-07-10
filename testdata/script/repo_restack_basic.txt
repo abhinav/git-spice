@@ -1,0 +1,40 @@
+# Basic repo restack functionality with simple linear dependencies
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+
+gs repo init
+git add feat1.txt
+gs branch create feat1 -m 'feat1 commit'
+git add feat2.txt
+gs branch create feat2 -m 'feat2 commit'
+git add feat3.txt
+gs branch create feat3 -m 'feat3 commit'
+
+# Create a new commit on trunk to make branches need restacking
+gs branch checkout main
+git commit --allow-empty -m 'New trunk commit'
+
+# Now restack all branches
+gs repo restack
+
+# Verify all branches are restacked
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+-- golden/graph.txt --
+* f634ce2 (feat3) feat3 commit
+* f5121c8 (feat2) feat2 commit
+* c1f17f5 (feat1) feat1 commit
+* 8e9b73c (HEAD -> main) New trunk commit
+* 91af7b5 Initial commit
