@@ -1,0 +1,76 @@
+# Reproduces issue #731: ref update warnings during git rebase --update-refs
+# https://github.com/abhinav/git-spice/issues/731
+
+at 2025-07-09T20:00:29Z
+as 'Test User <test@example.com>'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch stack A -> B -> C -> D
+git add featA.txt
+gs bc featA -m 'commit A'
+git add featB.txt
+gs bc featB -m 'commit B'
+git add featC.txt
+gs bc featC -m 'commit C'
+git add featD.txt
+gs bc featD -m 'commit D'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-before.txt
+
+# Go back to A and add a new commit.
+gs bottom
+cp $WORK/extra/featA-new.txt featA.txt
+git add featA.txt
+git commit -m 'additional commit in A'
+
+# Trigger the rebase with --update-refs.
+# This should update all intermediate branches automatically.
+gs top
+git rebase featA --update-refs
+
+# Verify the final state
+gs ll -a
+cmp stderr $WORK/golden/ll-after.txt
+
+-- repo/featA.txt --
+change A
+
+-- repo/featB.txt --
+change B
+
+-- repo/featC.txt --
+change C
+
+-- repo/featD.txt --
+change D
+
+-- extra/featA-new.txt --
+change A
+additional change in A
+
+-- golden/ll-before.txt --
+      ┏━■ featD ◀
+      ┃   dab4857 commit D (now)
+    ┏━┻□ featC
+    ┃    f56fce0 commit C (now)
+  ┏━┻□ featB
+  ┃    e6addcd commit B (now)
+┏━┻□ featA
+┃    eb56755 commit A (now)
+main
+-- golden/ll-after.txt --
+      ┏━■ featD ◀
+      ┃   285a1b7 commit D (now)
+    ┏━┻□ featC
+    ┃    f21feba commit C (now)
+  ┏━┻□ featB
+  ┃    29fe805 commit B (now)
+┏━┻□ featA
+┃    25c3f92 additional commit in A (now)
+┃    eb56755 commit A (now)
+main
