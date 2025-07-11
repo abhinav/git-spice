@@ -1,0 +1,88 @@
+# branch fold trunk protection should warn and prompt when folding onto trunk.
+
+as 'Test <test@example.com>'
+at '2024-12-19T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# Verify the stack structure
+gs ls -a
+cmp stderr $WORK/golden/ls-before.txt
+
+# --- Abort in interactive mode (No) ---
+
+# Try to fold feature1 onto main, answer No
+gs d
+env ROBOT_INPUT=$WORK/golden/robot-no.txt ROBOT_OUTPUT=$WORK/robot.actual
+! gs branch fold --branch feature1
+stderr 'operation aborted'
+gs ls -a
+cmp stderr $WORK/golden/ls-after-abort.txt
+
+# --- Proceed in interactive mode (Yes) ---
+
+# Fold feature1 onto main, answer Yes
+env ROBOT_INPUT=$WORK/golden/robot-yes.txt ROBOT_OUTPUT=$WORK/robot.actual
+gs branch fold --branch feature1
+gs ls -a
+cmp stderr $WORK/golden/ls-after-feature1-folded.txt
+
+# --- Proceed in non-interactive mode ---
+
+# Fold feature2 onto main
+gs u  # must be on feature2 to fold it onto main
+gs branch fold --branch feature2 --no-prompt
+cmp stderr $WORK/golden/non-interactive-warning.txt
+gs ls -a
+cmp stderr $WORK/golden/ls-after-feature2-folded.txt
+
+-- repo/feature1.txt --
+Feature 1 content
+
+-- repo/feature2.txt --
+Feature 2 content
+
+-- golden/ls-before.txt --
+  ┏━■ feature2 ◀
+┏━┻□ feature1
+main
+-- golden/robot-no.txt --
+===
+> Fold branch onto trunk?: [y/N]
+> You are about to fold branch feature1 onto the trunk branch (main). This is usually not what you want to do.
+false
+===
+> Fold branch onto trunk?: [y/N]
+> You are about to fold branch feature2 onto the trunk branch (main). This is usually not what you want to do.
+false
+
+-- golden/ls-after-abort.txt --
+  ┏━□ feature2
+┏━┻■ feature1 ◀
+main
+-- golden/robot-yes.txt --
+===
+> Fold branch onto trunk?: [y/N]
+> You are about to fold branch feature1 onto the trunk branch (main). This is usually not what you want to do.
+true
+===
+> Fold branch onto trunk?: [y/N]
+> You are about to fold branch feature2 onto the trunk branch (main). This is usually not what you want to do.
+true
+
+-- golden/ls-after-feature1-folded.txt --
+┏━□ feature2
+main ◀
+-- golden/non-interactive-warning.txt --
+INF Branch feature2 has been folded into main
+-- golden/ls-after-feature2-folded.txt --
+main ◀
