@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"sync"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
@@ -40,6 +41,7 @@ type GitBackend struct {
 	ref  string
 	sig  git.Signature
 	log  *silog.Logger
+	mu   sync.RWMutex
 }
 
 var _ Backend = (*GitBackend)(nil)
@@ -73,6 +75,9 @@ func NewGitBackend(cfg GitConfig) *GitBackend {
 
 // Keys lists the keys in the store in the given directory.
 func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	var (
 		treeHash git.Hash
 		err      error
@@ -107,6 +112,9 @@ func (g *GitBackend) Keys(ctx context.Context, dir string) ([]string, error) {
 
 // Get retrieves a value from the store and decodes it into v.
 func (g *GitBackend) Get(ctx context.Context, key string, v any) error {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
 	blobHash, err := g.repo.HashAt(ctx, g.ref, key)
 	if err != nil {
 		return ErrNotExist
@@ -126,6 +134,9 @@ func (g *GitBackend) Get(ctx context.Context, key string, v any) error {
 
 // Clear removes all keys from the store.
 func (g *GitBackend) Clear(ctx context.Context, msg string) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	prevCommit, err := g.repo.PeelToCommit(ctx, g.ref)
 	if err != nil {
 		prevCommit = "" // not initialized
@@ -162,6 +173,9 @@ func (g *GitBackend) Clear(ctx context.Context, msg string) error {
 
 // Update applies a batch of changes to the store.
 func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	setBlobs := make([]git.Hash, len(req.Sets))
 	for i, set := range req.Sets {
 		must.NotBeBlankf(set.Key, "key must not be blank")

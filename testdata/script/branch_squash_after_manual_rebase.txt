@@ -1,0 +1,76 @@
+# Test squash after manual rebase uses correct base hash
+
+as 'Test <test@example.com>'
+at '2025-07-12T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add main-change.txt
+git commit -m 'main change'
+
+# Create feat1 branch with 3 commits stacked on main
+git add feature1.txt
+gs branch create feat1 -m 'Add feature1 first commit'
+git add feature2.txt
+git commit -m 'Add feature1 second commit'
+git add feature3.txt
+git commit -m 'Add feature1 third commit'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before-main-change.txt
+
+# Go back to main and change HEAD significantly
+git checkout main
+git reset --hard HEAD~
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-main-change.txt
+
+# Now feat1 needs to be restacked, but we'll do it manually
+git checkout feat1
+git rebase --onto main cb2e344 feat1
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-manual-rebase.txt
+
+# Now run 'gs branch squash' with a commit message
+gs branch squash -m 'Squashed feat1 into single commit'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-squash.txt
+
+# feat1 must not have main-change
+# because that commit was removed.
+git checkout feat1
+! exists main-change.txt
+
+-- repo/feature1.txt --
+Feature 1 content
+-- repo/feature2.txt --
+Feature 2 content
+-- repo/feature3.txt --
+Feature 3 content
+-- repo/main-change.txt --
+Main change content
+-- golden/graph-before-main-change.txt --
+* 2179516 (HEAD -> feat1) Add feature1 third commit
+* 3e313fc Add feature1 second commit
+* 0ddeaa0 Add feature1 first commit
+* cb2e344 (main) main change
+* a17206f Initial commit
+-- golden/graph-after-main-change.txt --
+* 2179516 (feat1) Add feature1 third commit
+* 3e313fc Add feature1 second commit
+* 0ddeaa0 Add feature1 first commit
+* cb2e344 main change
+* a17206f (HEAD -> main) Initial commit
+-- golden/graph-after-manual-rebase.txt --
+* b288894 (HEAD -> feat1) Add feature1 third commit
+* 5b8dc68 Add feature1 second commit
+* 1c7b5e0 Add feature1 first commit
+* a17206f (main) Initial commit
+-- golden/graph-after-squash.txt --
+* d36334c (HEAD -> feat1) Squashed feat1 into single commit
+* a17206f (main) Initial commit

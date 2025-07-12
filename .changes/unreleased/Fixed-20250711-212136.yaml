@@ -1,0 +1,3 @@
+kind: Fixed
+body: Fix concurrent updates to git-spice's state causing "cannot lock ref" warnings.
+time: 2025-07-11T21:21:36.546923-07:00
