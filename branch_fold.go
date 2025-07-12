@@ -61,6 +61,26 @@ func (cmd *branchFoldCmd) Run(
 		return fmt.Errorf("get branch: %w", err)
 	}
 
+	// Check if we're about to fold onto the trunk branch
+	if b.Base == store.Trunk() {
+		if !ui.Interactive(view) {
+			log.Warnf("You are about to fold branch %v onto the trunk branch (%v).", cmd.Branch, store.Trunk())
+		} else {
+			var proceed bool
+			prompt := ui.NewConfirm().
+				WithTitlef("Fold branch onto trunk?").
+				WithDescriptionf("You are about to fold branch %v onto the trunk branch (%v). "+
+					"This is usually not what you want to do.", cmd.Branch, store.Trunk()).
+				WithValue(&proceed)
+			if err := ui.Run(view, prompt); err != nil {
+				return fmt.Errorf("run prompt: %w", err)
+			}
+			if !proceed {
+				return errors.New("operation aborted")
+			}
+		}
+	}
+
 	// Merge base into current branch using a fast-forward.
 	// To do this without checking out the base, we can use a local fetch
 	// and fetch the feature branch "into" the base branch.
