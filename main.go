@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
+	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
@@ -47,7 +48,7 @@ var (
 	_extraForges []forge.Forge
 )
 
-var errNoPrompt = errors.New("not allowed to prompt for input")
+var errNoPrompt = ui.ErrPrompt
 
 var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
 
@@ -362,6 +363,30 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree: wt,
 				Track:    trackHandler,
 				Service:  svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			store *state.Store,
+			wt *git.Worktree,
+			svc *spice.Service,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+		) (SubmitHandler, error) {
+			return &submit.Handler{
+				Log:        log,
+				View:       view,
+				Repository: wt.Repository(),
+				Worktree:   wt,
+				Store:      store,
+				Service:    svc,
+				Browser:    _browserLauncher,
+				FindRemote: func(ctx context.Context) (string, error) {
+					return ensureRemote(ctx, wt.Repository(), store, log, view)
+				},
+				OpenRemoteRepository: func(ctx context.Context, remote string) (forge.Repository, error) {
+					return openRemoteRepository(ctx, log, secretStash, forges, wt.Repository(), remote)
+				},
 			}, nil
 		}),
 	)

@@ -1,4 +1,4 @@
-package main
+package submit
 
 import (
 	"context"
@@ -11,111 +11,54 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/stacknav"
-	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
-	"go.abhg.dev/gs/internal/ui"
 )
 
-// submitSession is a single session of submitting branches.
-// This provides the ability to share state between
-// the multiple 'branch submit' invocations made by
-// 'stack submit', 'upstack submit', and 'downstack submit'.
-type submitSession struct {
-	// Branches that have been submitted (created or updated)
-	// in this session.
-	branches []string
-
-	// Values that are memoized across multiple branch submits.
-	Remote     memoizedValue[string]
-	RemoteRepo memoizedValue[forge.Repository]
-}
-
-func newSubmitSession(
-	repo *git.Repository,
-	store *state.Store,
-	stash secret.Stash,
-	forges *forge.Registry,
-	view ui.View,
-	log *silog.Logger,
-) *submitSession {
-	var s submitSession
-	s.Remote.get = func(ctx context.Context) (string, error) {
-		return ensureRemote(ctx, repo, store, log, view)
-	}
-
-	s.RemoteRepo.get = func(ctx context.Context) (forge.Repository, error) {
-		remote, err := s.Remote.Get(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		return openRemoteRepository(ctx, log, stash, forges, repo, remote)
-	}
-	return &s
-}
-
-// This whole type is a bit of a hack.
-// We should have better plumbing and retention of information
-// between the submits.
-// Maybe newSubmitSession should handle opening remote repo.
-type memoizedValue[A any] struct {
-	once sync.Once
-
-	val A
-	err error
-	get func(context.Context) (A, error)
-}
-
-func (m *memoizedValue[A]) Get(ctx context.Context) (_ A, err error) {
-	m.once.Do(func() { m.val, m.err = m.get(ctx) })
-	return m.val, m.err
-}
-
-// navigationCommentWhen specifies when a navigation comment should be posted
+// NavCommentWhen specifies when a navigation comment should be posted
 // (or updated if it already exists).
-type navigationCommentWhen int
+type NavCommentWhen int
 
 const (
-	// navigationCommentAlways always posts a navigation comment.
+	// NavCommentAlways always posts a navigation comment.
 	// This is the default.
-	navigationCommentAlways navigationCommentWhen = iota
+	NavCommentAlways NavCommentWhen = iota
 
-	// navigationCommentNever disables posting navigation comments.
+	// NavCommentNever disables posting navigation comments.
 	// If an existing comment is found, it is left as is.
-	navigationCommentNever
+	NavCommentNever
 
-	// navigationCommentOnMultiple posts a navigation comment
+	// NavCommentOnMultiple posts a navigation comment
 	// only if there are multiple branches in the stack
 	// that the current branch is part of.
-	navigationCommentOnMultiple
+	NavCommentOnMultiple
 )
 
-var _ encoding.TextUnmarshaler = (*navigationCommentWhen)(nil)
+var _ encoding.TextUnmarshaler = (*NavCommentWhen)(nil)
 
-func (f *navigationCommentWhen) UnmarshalText(bs []byte) error {
+// UnmarshalText decodes a NavCommentWhen from text.
+// It supports "true", "false", and "multiple" values.
+func (f *NavCommentWhen) UnmarshalText(bs []byte) error {
 	switch string(bs) {
 	case "true", "1", "yes":
-		*f = navigationCommentAlways
+		*f = NavCommentAlways
 	case "false", "0", "no":
-		*f = navigationCommentNever
+		*f = NavCommentNever
 	case "multiple":
-		*f = navigationCommentOnMultiple
+		*f = NavCommentOnMultiple
 	default:
 		return fmt.Errorf("invalid value %q: expected true, false, or multiple", bs)
 	}
 	return nil
 }
 
-func (f navigationCommentWhen) String() string {
+func (f NavCommentWhen) String() string {
 	switch f {
-	case navigationCommentAlways:
+	case NavCommentAlways:
 		return "true"
-	case navigationCommentNever:
+	case NavCommentNever:
 		return "false"
-	case navigationCommentOnMultiple:
+	case NavCommentOnMultiple:
 		return "multiple"
 	default:
 		return "unknown"
@@ -138,24 +81,24 @@ func (f navigationCommentWhen) String() string {
 // we'll need to also update the store to record the comment ID for later.
 func updateNavigationComments(
 	ctx context.Context,
-	store *state.Store,
-	svc *spice.Service,
+	store Store,
+	svc Service,
 	log *silog.Logger,
-	navComment navigationCommentWhen,
-	session *submitSession,
+	navComment NavCommentWhen,
+	submittedBranches []string,
+	getRemoteRepo func(context.Context) (forge.Repository, error),
 ) error {
-	submittedBranches := session.branches
 	if len(submittedBranches) == 0 {
 		return nil
 	}
 
-	remoteRepo, err := session.RemoteRepo.Get(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve remote repository: %w", err)
+	if navComment == NavCommentNever {
+		return nil // nothing to do
 	}
 
-	if navComment == navigationCommentNever {
-		return nil // nothing to do
+	remoteRepo, err := getRemoteRepo(ctx)
+	if err != nil {
+		return fmt.Errorf("get remote repository: %w", err)
 	}
 
 	// Look up branch graph once, and share between all syncs.
@@ -355,7 +298,7 @@ func updateNavigationComments(
 		// If we're only posting on multiple,
 		// we'll need to check if the branch is part of a stack
 		// that has at least one other branch.
-		if navComment == navigationCommentOnMultiple {
+		if navComment == NavCommentOnMultiple {
 			if len(nodes[idx].Aboves) == 0 && nodes[idx].Base == -1 {
 				continue
 			}

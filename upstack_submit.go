@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type upstackSubmitCmd struct {
@@ -33,14 +31,11 @@ func (*upstackSubmitCmd) Help() string {
 
 func (cmd *upstackSubmitCmd) Run(
 	ctx context.Context,
-	secretStash secret.Stash,
 	log *silog.Logger,
-	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	forges *forge.Registry,
+	submitHandler SubmitHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -80,29 +75,10 @@ func (cmd *upstackSubmitCmd) Run(
 		upstacks = upstacks[1:]
 	}
 
-	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
-	session := newSubmitSession(repo, store, secretStash, forges, view, log)
-	for _, b := range upstacks {
-		err := (&branchSubmitCmd{
-			submitOptions: cmd.submitOptions,
-			Branch:        b,
-		}).run(ctx, session, log, view, repo, wt, store, svc)
-		if err != nil {
-			return fmt.Errorf("submit %v: %w", b, err)
-		}
-	}
 
-	if cmd.DryRun {
-		return nil
-	}
-
-	return updateNavigationComments(
-		ctx,
-		store,
-		svc,
-		log,
-		cmd.NavigationComment,
-		session,
-	)
+	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+		Branches: upstacks,
+		Options:  &cmd.Options,
+	})
 }

@@ -6,15 +6,12 @@ import (
 	"fmt"
 	"slices"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/secret"
-	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type downstackSubmitCmd struct {
@@ -33,14 +30,10 @@ func (*downstackSubmitCmd) Help() string {
 
 func (cmd *downstackSubmitCmd) Run(
 	ctx context.Context,
-	secretStash secret.Stash,
-	log *silog.Logger,
-	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	forges *forge.Registry,
+	submitHandler SubmitHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -61,30 +54,10 @@ func (cmd *downstackSubmitCmd) Run(
 	must.NotBeEmptyf(downstacks, "downstack cannot be empty")
 	slices.Reverse(downstacks)
 
-	// TODO: generalize into a service-level method
 	// TODO: separate preparation of the stack from submission
 
-	session := newSubmitSession(repo, store, secretStash, forges, view, log)
-	for _, downstack := range downstacks {
-		err := (&branchSubmitCmd{
-			submitOptions: cmd.submitOptions,
-			Branch:        downstack,
-		}).run(ctx, session, log, view, repo, wt, store, svc)
-		if err != nil {
-			return fmt.Errorf("submit %v: %w", downstack, err)
-		}
-	}
-
-	if cmd.DryRun {
-		return nil
-	}
-
-	return updateNavigationComments(
-		ctx,
-		store,
-		svc,
-		log,
-		cmd.NavigationComment,
-		session,
-	)
+	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+		Branches: downstacks,
+		Options:  &cmd.Options,
+	})
 }
