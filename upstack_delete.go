@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -35,10 +36,10 @@ func (cmd *upstackDeleteCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	handler DeleteHandler,
 ) error {
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -83,8 +84,8 @@ func (cmd *upstackDeleteCmd) Run(
 		return errors.New("use --force to confirm deletion")
 	}
 
-	return (&branchDeleteCmd{
+	return handler.DeleteBranches(ctx, &delete.Request{
 		Branches: upstack,
-		Force:    true,
-	}).Run(ctx, log, view, repo, wt, store, svc)
+		Force:    cmd.Force,
+	})
 }
