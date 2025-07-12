@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type upCmd struct {
-	checkoutOptions
+	checkout.Options
 
 	N int `arg:"" optional:"" help:"Number of branches to move up." default:"1"`
 }
@@ -33,9 +33,8 @@ func (cmd *upCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
-	trackHandler TrackHandler,
+	checkoutHandler CheckoutHandler,
 ) error {
 	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -90,8 +89,8 @@ outer:
 		current = branch
 	}
 
-	return (&branchCheckoutCmd{
-		checkoutOptions: cmd.checkoutOptions,
-		Branch:          branch,
-	}).Run(ctx, log, view, wt, store, svc, trackHandler)
+	return checkoutHandler.CheckoutBranch(ctx, &checkout.Request{
+		Branch:  branch,
+		Options: &cmd.Options,
+	})
 }

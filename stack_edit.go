@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackEditCmd struct {
@@ -39,12 +39,11 @@ func (*stackEditCmd) Help() string {
 func (cmd *stackEditCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	view ui.View,
 	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	trackHandler TrackHandler,
+	checkoutHandler CheckoutHandler,
 ) error {
 	if cmd.Editor == "" {
 		cmd.Editor = gitEditor(ctx, repo)
@@ -97,7 +96,5 @@ func (cmd *stackEditCmd) Run(
 		return fmt.Errorf("edit downstack: %w", err)
 	}
 
-	return (&branchCheckoutCmd{
-		Branch: cmd.Branch,
-	}).Run(ctx, log, view, wt, store, svc, trackHandler)
+	return checkoutHandler.CheckoutBranch(ctx, &checkout.Request{Branch: cmd.Branch})
 }

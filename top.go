@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type topCmd struct {
-	checkoutOptions
+	checkout.Options
 }
 
 func (*topCmd) Help() string {
@@ -32,9 +32,8 @@ func (cmd *topCmd) Run(
 	log *silog.Logger,
 	view ui.View,
 	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
-	trackHandler TrackHandler,
+	checkoutHandler CheckoutHandler,
 ) error {
 	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -81,8 +80,8 @@ func (cmd *topCmd) Run(
 		return nil
 	}
 
-	return (&branchCheckoutCmd{
-		checkoutOptions: cmd.checkoutOptions,
-		Branch:          branch,
-	}).Run(ctx, log, view, wt, store, svc, trackHandler)
+	return checkoutHandler.CheckoutBranch(ctx, &checkout.Request{
+		Branch:  branch,
+		Options: &cmd.Options,
+	})
 }

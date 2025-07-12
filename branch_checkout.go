@@ -2,25 +2,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
 
-type checkoutOptions struct {
-	DryRun bool `short:"n" xor:"detach-or-dry-run" help:"Print the target branch without checking it out"`
-	Detach bool `xor:"detach-or-dry-run" help:"Detach HEAD after checking out"`
-}
-
 type branchCheckoutCmd struct {
-	checkoutOptions
+	checkout.Options
 	BranchPromptConfig
 
 	// Allow users to opt out of the "branch not tracked" prompt.
@@ -82,68 +74,36 @@ func (cmd *branchCheckoutCmd) AfterApply(
 	return nil
 }
 
+// CheckoutHandler allows checking out branches.
+type CheckoutHandler interface {
+	CheckoutBranch(ctx context.Context, req *checkout.Request) error
+}
+
 func (cmd *branchCheckoutCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
-	trackHandler TrackHandler,
+	handler CheckoutHandler,
 ) error {
-	if cmd.Branch != store.Trunk() {
-		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
-			var restackErr *spice.BranchNeedsRestackError
-			switch {
-			case errors.As(err, &restackErr):
-				log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", cmd.Branch, cmd.Branch)
-			case errors.Is(err, state.ErrNotExist):
-				if !ui.Interactive(view) || !cmd.TrackUntrackedPrompt {
-					log.Warnf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
-					break
-				}
-
-				log.Warnf("%v: branch not tracked", cmd.Branch)
-				shouldTrack := true
-				prompt := ui.NewConfirm().
-					WithValue(&shouldTrack).
-					WithTitle("Do you want to track this branch now?")
-				if err := ui.Run(view, prompt); err != nil {
-					return fmt.Errorf("prompt: %w", err)
-				}
-
-				if shouldTrack {
-					err := trackHandler.AddBranch(ctx, &track.AddBranchRequest{
-						Branch: cmd.Branch,
-					})
-					if err != nil {
-						return fmt.Errorf("track branch: %w", err)
-					}
-				}
-			case errors.Is(err, git.ErrNotExist):
-				return fmt.Errorf("branch %q does not exist", cmd.Branch)
-			default:
-				log.Warnf("error checking branch: %v", err)
+	return handler.CheckoutBranch(ctx, &checkout.Request{
+		Branch:  cmd.Branch,
+		Options: &cmd.Options,
+		ShouldTrack: func(branch string) (bool, error) {
+			if !ui.Interactive(view) || !cmd.TrackUntrackedPrompt {
+				log.Warnf("%v: branch not tracked: run 'gs branch track'", branch)
+				return false, nil
 			}
-		}
-	}
 
-	if cmd.DryRun {
-		fmt.Println(cmd.Branch)
-		return nil
-	}
+			log.Warnf("%v: branch not tracked", branch)
+			shouldTrack := true
+			prompt := ui.NewConfirm().
+				WithValue(&shouldTrack).
+				WithTitle("Do you want to track this branch now?")
+			if err := ui.Run(view, prompt); err != nil {
+				return false, fmt.Errorf("prompt: %w", err)
+			}
 
-	if cmd.Detach {
-		if err := wt.DetachHead(ctx, cmd.Branch); err != nil {
-			return fmt.Errorf("detach HEAD: %w", err)
-		}
-
-		return nil
-	}
-
-	if err := wt.Checkout(ctx, cmd.Branch); err != nil {
-		return fmt.Errorf("checkout branch: %w", err)
-	}
-
-	return nil
+			return shouldTrack, nil
+		},
+	})
 }
