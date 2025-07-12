@@ -44,6 +44,7 @@ func (cmd *stackEditCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	if cmd.Editor == "" {
 		cmd.Editor = gitEditor(ctx, repo)
@@ -98,5 +99,5 @@ func (cmd *stackEditCmd) Run(
 
 	return (&branchCheckoutCmd{
 		Branch: cmd.Branch,
-	}).Run(ctx, log, view, repo, wt, store, svc)
+	}).Run(ctx, log, view, wt, store, svc, trackHandler)
 }

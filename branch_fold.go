@@ -35,6 +35,7 @@ func (cmd *branchFoldCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -131,7 +132,7 @@ func (cmd *branchFoldCmd) Run(
 
 	// Check out base and delete the branch we are folding.
 	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(
-		ctx, log, view, repo, wt, store, svc,
+		ctx, log, view, wt, store, svc, trackHandler,
 	); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}

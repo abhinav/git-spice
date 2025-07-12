@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -85,10 +86,10 @@ func (cmd *branchCheckoutCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	if cmd.Branch != store.Trunk() {
 		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
@@ -103,18 +104,18 @@ func (cmd *branchCheckoutCmd) Run(
 				}
 
 				log.Warnf("%v: branch not tracked", cmd.Branch)
-				track := true
+				shouldTrack := true
 				prompt := ui.NewConfirm().
-					WithValue(&track).
+					WithValue(&shouldTrack).
 					WithTitle("Do you want to track this branch now?")
 				if err := ui.Run(view, prompt); err != nil {
 					return fmt.Errorf("prompt: %w", err)
 				}
 
-				if track {
-					err := (&branchTrackCmd{
+				if shouldTrack {
+					err := trackHandler.AddBranch(ctx, &track.AddBranchRequest{
 						Branch: cmd.Branch,
-					}).Run(ctx, log, repo, wt, store, svc)
+					})
 					if err != nil {
 						return fmt.Errorf("track branch: %w", err)
 					}

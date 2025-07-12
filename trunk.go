@@ -18,14 +18,14 @@ func (cmd *trunkCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	trunk := store.Trunk()
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          trunk,
-	}).Run(ctx, log, view, repo, wt, store, svc)
+	}).Run(ctx, log, view, wt, store, svc, trackHandler)
 }
