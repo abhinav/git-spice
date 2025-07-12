@@ -1,13 +1,14 @@
 init
 
 await Select an authentication method
-feed <Down>
 snapshot
+
+feed <Down>
 await
 snapshot
 cmp stdout select
-feed <Enter>
 
+feed <Enter>
 await
 snapshot
 cmp stdout prompt
