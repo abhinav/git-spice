@@ -31,10 +31,10 @@ func (cmd *downCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -76,5 +76,5 @@ outer:
 	return (&branchCheckoutCmd{
 		checkoutOptions: cmd.checkoutOptions,
 		Branch:          below,
-	}).Run(ctx, log, view, repo, wt, store, svc)
+	}).Run(ctx, log, view, wt, store, svc, trackHandler)
 }

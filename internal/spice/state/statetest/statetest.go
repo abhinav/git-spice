@@ -3,11 +3,39 @@
 package statetest
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"testing"
 
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/storage"
 )
+
+// NewMemoryStore creates a new, fully initialized in-memory state store.
+//
+// Returns a function that will reset the store to its initial state
+// so that it can be reused across tests.
+func NewMemoryStore(t testing.TB, trunk, remote string, log *silog.Logger) *state.Store {
+	db := storage.NewDB(storage.SyncBackend(make(storage.MapBackend)))
+
+	if log == nil {
+		log = silogtest.New(t)
+	}
+
+	store, err := state.InitStore(t.Context(), state.InitStoreRequest{
+		DB:     db,
+		Trunk:  cmp.Or(trunk, "main"),
+		Remote: remote,
+		Log:    log,
+	})
+	if err != nil {
+		t.Fatalf("failed to initialize store: %v", err)
+	}
+	return store
+}
 
 // UpdateRequest is a request to add, update, or delete information about branches.
 type UpdateRequest struct {

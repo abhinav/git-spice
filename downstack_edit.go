@@ -44,6 +44,7 @@ func (cmd *downstackEditCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	trackHandler TrackHandler,
 ) error {
 	if cmd.Editor == "" {
 		cmd.Editor = gitEditor(ctx, repo)
@@ -93,5 +94,5 @@ func (cmd *downstackEditCmd) Run(
 
 	return (&branchCheckoutCmd{
 		Branch: res.Stack[len(res.Stack)-1],
-	}).Run(ctx, log, view, repo, wt, store, svc)
+	}).Run(ctx, log, view, wt, store, svc, trackHandler)
 }

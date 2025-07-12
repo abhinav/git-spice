@@ -20,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -332,6 +333,19 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			forges *forge.Registry,
 		) (*spice.Service, error) {
 			return spice.NewService(repo, wt, store, forges, logger), nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			repo *git.Repository,
+			store *state.Store,
+			svc *spice.Service,
+		) (TrackHandler, error) {
+			return &track.Handler{
+				Log:        log,
+				Repository: repo,
+				Store:      store,
+				Service:    svc,
+			}, nil
 		}),
 	)
 }
