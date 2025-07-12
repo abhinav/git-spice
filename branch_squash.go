@@ -46,17 +46,17 @@ func (cmd *branchSquashCmd) Run(
 		return errors.New("cannot squash the trunk branch")
 	}
 
-	branch, err := svc.LookupBranch(ctx, branchName)
-	if err != nil {
-		return fmt.Errorf("lookup branch %q: %w", branchName, err)
-	}
-
 	if err := svc.VerifyRestacked(ctx, branchName); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		if errors.As(err, &restackErr) {
 			return fmt.Errorf("branch %v needs to be restacked before it can be squashed", branchName)
 		}
 		return fmt.Errorf("verify restacked: %w", err)
+	}
+
+	branch, err := svc.LookupBranch(ctx, branchName)
+	if err != nil {
+		return fmt.Errorf("lookup branch %q: %w", branchName, err)
 	}
 
 	// If no message was specified,
