@@ -6,15 +6,14 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type bottomCmd struct {
-	checkoutOptions
+	checkout.Options
 }
 
 func (*bottomCmd) Help() string {
@@ -26,12 +25,10 @@ func (*bottomCmd) Help() string {
 
 func (cmd *bottomCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	view ui.View,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	trackHandler TrackHandler,
+	checkoutHandler CheckoutHandler,
 ) error {
 	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -48,8 +45,8 @@ func (cmd *bottomCmd) Run(
 		return fmt.Errorf("find bottom: %w", err)
 	}
 
-	return (&branchCheckoutCmd{
-		checkoutOptions: cmd.checkoutOptions,
-		Branch:          bottom,
-	}).Run(ctx, log, view, wt, store, svc, trackHandler)
+	return checkoutHandler.CheckoutBranch(ctx, &checkout.Request{
+		Branch:  bottom,
+		Options: &cmd.Options,
+	})
 }

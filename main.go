@@ -20,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
@@ -345,6 +346,22 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Repository: repo,
 				Store:      store,
 				Service:    svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			store *state.Store,
+			wt *git.Worktree,
+			svc *spice.Service,
+			trackHandler TrackHandler,
+		) (CheckoutHandler, error) {
+			return &checkout.Handler{
+				Stdout:   kctx.Stdout,
+				Log:      log,
+				Store:    store,
+				Worktree: wt,
+				Track:    trackHandler,
+				Service:  svc,
 			}, nil
 		}),
 	)

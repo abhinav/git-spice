@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -35,7 +36,7 @@ func (cmd *branchFoldCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	trackHandler TrackHandler,
+	checkoutHandler CheckoutHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -131,9 +132,7 @@ func (cmd *branchFoldCmd) Run(
 	}
 
 	// Check out base and delete the branch we are folding.
-	if err := (&branchCheckoutCmd{Branch: b.Base}).Run(
-		ctx, log, view, wt, store, svc, trackHandler,
-	); err != nil {
+	if err := checkoutHandler.CheckoutBranch(ctx, &checkout.Request{Branch: b.Base}); err != nil {
 		return fmt.Errorf("checkout base: %w", err)
 	}
 
