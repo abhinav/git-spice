@@ -117,6 +117,18 @@ func (cmd *repoInitCmd) Run(
 		return fmt.Errorf("initialize storage: %w", err)
 	}
 
+	// If trunk is behind upstream, warn the user.
+	trunkHash, err1 := repo.PeelToCommit(ctx, cmd.Trunk)
+	upstreamHash, err2 := repo.PeelToCommit(ctx, cmd.Remote+"/"+cmd.Trunk)
+	if err := errors.Join(err1, err2); err == nil {
+		count, err := repo.CountCommits(ctx,
+			git.CommitRangeFrom(upstreamHash).ExcludeFrom(trunkHash))
+		if err == nil && count > 0 {
+			log.Warnf("%v is behind upstream by %d commits", cmd.Trunk, count)
+			log.Warnf("Please run 'gs repo sync' before other git-spice commands.")
+		}
+	}
+
 	log.Info("Initialized repository", "trunk", cmd.Trunk)
 	return nil
 }

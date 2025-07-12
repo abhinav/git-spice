@@ -1,0 +1,6 @@
+kind: Changed
+body: |
+  repo init: Warn when trunk is behind upstream at initialization time.
+  This should catch issues where local branches are rebased
+  on top of an outdated trunk.
+time: 2025-07-12T09:16:44.724231-07:00

@@ -1,0 +1,23 @@
+# Test repo init warns when trunk is behind upstream.
+
+as 'Test <test@example.com>'
+at '2025-07-12T14:00:00Z'
+
+# Set up an upstream repository
+mkdir upstream
+cd upstream
+git init -b main
+git commit --allow-empty -m 'Initial commit'
+git commit --allow-empty -m 'Second commit'
+git commit --allow-empty -m 'Third commit'
+
+# Clone and create a local repository that's behind
+cd $WORK
+git clone upstream repo
+cd repo
+git reset --hard HEAD~2
+
+# Initialize repository - should warn about being behind
+gs repo init
+stderr 'main is behind upstream by 2 commits'
+stderr 'Please run ''gs repo sync'' before other git-spice commands.'
