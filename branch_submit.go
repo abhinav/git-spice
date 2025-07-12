@@ -156,11 +156,6 @@ func (cmd *branchSubmitCmd) run(
 		return errors.New("cannot submit trunk")
 	}
 
-	branch, err := svc.LookupBranch(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("lookup branch: %w", err)
-	}
-
 	// Refuse to submit if the branch is not restacked.
 	if !cmd.Force {
 		if err := svc.VerifyRestacked(ctx, cmd.Branch); err != nil {
@@ -170,6 +165,11 @@ func (cmd *branchSubmitCmd) run(
 			log.Errorf("Or, try again with --force to submit anyway.")
 			return errors.New("refusing to submit outdated branch")
 		}
+	}
+
+	branch, err := svc.LookupBranch(ctx, cmd.Branch)
+	if err != nil {
+		return fmt.Errorf("lookup branch: %w", err)
 	}
 
 	// Various code paths down below should call this
