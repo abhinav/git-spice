@@ -87,7 +87,7 @@ func (cmd *branchLogCmd) run(
 		currentBranch = "" // may be detached
 	}
 
-	allBranches, err := svc.LoadBranches(ctx)
+	allBranches, err := store.ListBranches(ctx)
 	if err != nil {
 		return fmt.Errorf("load branches: %w", err)
 	}
@@ -172,12 +172,30 @@ func (cmd *branchLogCmd) run(
 			defer wg.Done()
 
 			for idx := range idxc {
-				branch := allBranches[idx]
+				branchName := allBranches[idx]
 				info := &branchInfo{
-					Name: branch.Name,
-					Base: branch.Base,
+					Name: branchName,
 				}
 
+				// Check restack status /before/ looking up
+				// the branch in git because VerifyRestacked
+				// might update the branch's base hash
+				// if the branch was manually restacked.
+				//
+				// TODO: This is a hack.
+				// The isn't a good abstraction.
+				var restackErr *spice.BranchNeedsRestackError
+				if err := svc.VerifyRestacked(ctx, branchName); errors.As(err, &restackErr) {
+					info.NeedsRestack = true
+				}
+
+				branch, err := svc.LookupBranch(ctx, branchName)
+				if err != nil {
+					log.Warn("Could not lookup branch", "branch", branchName, "error", err)
+					continue
+				}
+
+				info.Base = branch.Base
 				if branch.Change != nil {
 					info.ChangeID = branch.Change.ChangeID()
 				}
@@ -198,21 +216,16 @@ func (cmd *branchLogCmd) run(
 							ExcludeFrom(branch.BaseHash).
 							FirstParent()))
 					if err != nil {
-						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "error", err)
+						log.Warn("Could not list commits for branch. Skipping.", "branch", branchName, "error", err)
 						continue
 					}
 					info.Commits = commits
 				}
 
-				var restackErr *spice.BranchNeedsRestackError
-				if err := svc.VerifyRestacked(ctx, branch.Name); errors.As(err, &restackErr) {
-					info.NeedsRestack = true
-				}
-
 				infoMu.Lock()
 				info.Index = idx
 				infos[idx] = info
-				infoIdxByName[branch.Name] = idx
+				infoIdxByName[branchName] = idx
 				infoMu.Unlock()
 			}
 		}()
