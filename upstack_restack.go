@@ -2,19 +2,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type upstackRestackCmd struct {
-	Branch    string `help:"Branch to restack the upstack of" placeholder:"NAME" predictor:"trackedBranches"`
-	SkipStart bool   `help:"Do not restack the starting branch"`
+	restack.UpstackOptions
+
+	Branch string `help:"Branch to restack the upstack of" placeholder:"NAME" predictor:"trackedBranches"`
 }
 
 func (*upstackRestackCmd) Help() string {
@@ -32,13 +30,12 @@ func (*upstackRestackCmd) Help() string {
 	`)
 }
 
-func (cmd *upstackRestackCmd) Run(
-	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
-) error {
+// RestackHandler implements high level restack operations.
+type RestackHandler interface {
+	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+}
+
+func (cmd *upstackRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
@@ -46,57 +43,9 @@ func (cmd *upstackRestackCmd) Run(
 		}
 		cmd.Branch = currentBranch
 	}
-
-	upstacks, err := svc.ListUpstack(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("get upstack branches: %w", err)
-	}
-	if cmd.SkipStart && len(upstacks) > 0 && upstacks[0] == cmd.Branch {
-		upstacks = upstacks[1:]
-		if len(upstacks) == 0 {
-			return nil
-		}
-	}
-
-loop:
-	for _, upstack := range upstacks {
-		// Trunk never needs to be restacked.
-		if upstack == store.Trunk() {
-			continue loop
-		}
-
-		res, err := svc.Restack(ctx, upstack)
-		if err != nil {
-			var rebaseErr *git.RebaseInterruptError
-			switch {
-			case errors.As(err, &rebaseErr):
-				// If the rebase is interrupted by a conflict,
-				// we'll resume by re-running this command.
-				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-					Err:     rebaseErr,
-					Command: []string{"upstack", "restack"},
-					Branch:  cmd.Branch,
-					Message: fmt.Sprintf("interrupted: restack upstack of %v", cmd.Branch),
-				})
-			case errors.Is(err, spice.ErrAlreadyRestacked):
-				// Log the "does not need to be restacked" message
-				// only for branches that are not the base branch.
-				if upstack != cmd.Branch {
-					log.Infof("%v: branch does not need to be restacked.", upstack)
-				}
-				continue loop
-			default:
-				return fmt.Errorf("restack branch: %w", err)
-			}
-		}
-
-		log.Infof("%v: restacked on %v", upstack, res.Base)
-	}
-
-	// On success, check out the original branch.
-	if err := wt.Checkout(ctx, cmd.Branch); err != nil {
-		return fmt.Errorf("checkout branch %v: %w", cmd.Branch, err)
-	}
-
 	return nil
+}
+
+func (cmd *upstackRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
+	return handler.RestackUpstack(ctx, cmd.Branch, &cmd.UpstackOptions)
 }

@@ -32,18 +32,18 @@ func newWorktree(gitDir, rootDir string, repo *Repository, log *silog.Logger, ex
 	}
 }
 
-func (r *Worktree) gitCmd(ctx context.Context, args ...string) *gitCmd {
-	return newGitCmd(ctx, r.log, args...).Dir(r.rootDir)
+func (w *Worktree) gitCmd(ctx context.Context, args ...string) *gitCmd {
+	return newGitCmd(ctx, w.log, args...).Dir(w.rootDir)
 }
 
 // RootDir returns the absolute path to the root directory of the worktree.
-func (r *Worktree) RootDir() string {
-	return r.rootDir
+func (w *Worktree) RootDir() string {
+	return w.rootDir
 }
 
 // Repository returns the Git repository that this worktree belongs to.
-func (r *Worktree) Repository() *Repository {
-	return r.repo
+func (w *Worktree) Repository() *Repository {
+	return w.repo
 }
 
 // OpenWorktree opens a worktree of this repository at the given directory.

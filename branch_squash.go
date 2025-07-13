@@ -36,6 +36,7 @@ func (cmd *branchSquashCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) (err error) {
 	branchName, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -138,5 +139,5 @@ func (cmd *branchSquashCmd) Run(
 	}
 	reattachedHead = true
 
-	return (&upstackRestackCmd{}).Run(ctx, log, wt, store, svc)
+	return restackHandler.RestackUpstack(ctx, branchName, nil)
 }

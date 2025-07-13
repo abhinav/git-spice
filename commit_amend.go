@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -45,6 +46,7 @@ func (cmd *commitAmendCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) error {
 	if cmd.NoEditDeprecated {
 		cmd.NoEdit = true
@@ -114,7 +116,7 @@ func (cmd *commitAmendCmd) Run(
 					NoVerify:           cmd.NoVerify,
 					Message:            cmd.Message,
 					Commit:             true,
-				}).Run(ctx, log, repo, wt, store, svc)
+				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
 			}
 		}
 	}
@@ -192,8 +194,7 @@ func (cmd *commitAmendCmd) Run(
 		return nil
 	}
 
-	return (&upstackRestackCmd{
-		Branch:    currentBranch,
+	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
 		SkipStart: true,
-	}).Run(ctx, log, wt, store, svc)
+	})
 }

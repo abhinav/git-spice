@@ -103,8 +103,8 @@ func (cmd *branchOntoCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) error {
 	branch, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
@@ -127,7 +127,7 @@ func (cmd *branchOntoCmd) Run(
 		if err := (&upstackOntoCmd{
 			Branch: above,
 			Onto:   branch.Base,
-		}).Run(ctx, log, wt, store, svc); err != nil {
+		}).Run(ctx, log, svc, restackHandler); err != nil {
 			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,
 				Command: []string{"branch", "onto", cmd.Onto},

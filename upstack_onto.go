@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -111,9 +112,8 @@ func (cmd *upstackOntoCmd) AfterApply(
 func (cmd *upstackOntoCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
-	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) error {
 	// Implementation note:
 	// This is a pretty straightforward operation despite the large scope.
@@ -136,7 +136,7 @@ func (cmd *upstackOntoCmd) Run(
 	}
 	log.Infof("%v: moved upstack onto %v", cmd.Branch, cmd.Onto)
 
-	return (&upstackRestackCmd{
-		SkipStart: true, // we've already moved the current branch
-	}).Run(ctx, log, wt, store, svc)
+	return restackHandler.RestackUpstack(ctx, cmd.Branch, &restack.UpstackOptions{
+		SkipStart: true,
+	})
 }

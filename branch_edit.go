@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -25,10 +24,9 @@ func (*branchEditCmd) Help() string {
 
 func (*branchEditCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
 	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) error {
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -59,5 +57,5 @@ func (*branchEditCmd) Run(
 		})
 	}
 
-	return (&upstackRestackCmd{}).Run(ctx, log, wt, store, svc)
+	return restackHandler.RestackUpstack(ctx, currentBranch, nil)
 }
