@@ -1,4 +1,4 @@
-package main
+package submit
 
 import (
 	"strings"
@@ -123,29 +123,29 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 func TestNavigationCommentWhen_StringMarshal(t *testing.T) {
 	tests := []struct {
 		give string
-		want navigationCommentWhen
+		want NavCommentWhen
 		str  string
 	}{
 		{
 			give: "true",
-			want: navigationCommentAlways,
+			want: NavCommentAlways,
 			str:  "true",
 		},
 		{
 			give: "false",
-			want: navigationCommentNever,
+			want: NavCommentNever,
 			str:  "false",
 		},
 		{
 			give: "multiple",
-			want: navigationCommentOnMultiple,
+			want: NavCommentOnMultiple,
 			str:  "multiple",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
-			var got navigationCommentWhen
+			var got NavCommentWhen
 			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.give, got.String())
@@ -153,9 +153,9 @@ func TestNavigationCommentWhen_StringMarshal(t *testing.T) {
 	}
 
 	t.Run("unknown", func(t *testing.T) {
-		var f navigationCommentWhen
+		var f NavCommentWhen
 		require.Error(t, f.UnmarshalText([]byte("unknown")))
-		assert.Equal(t, "unknown", navigationCommentWhen(42).String())
+		assert.Equal(t, "unknown", NavCommentWhen(42).String())
 	})
 }
 

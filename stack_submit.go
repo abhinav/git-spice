@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/secret"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
-	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackSubmitCmd struct {
@@ -27,14 +24,10 @@ func (*stackSubmitCmd) Help() string {
 
 func (cmd *stackSubmitCmd) Run(
 	ctx context.Context,
-	secretStash secret.Stash,
-	log *silog.Logger,
-	view ui.View,
-	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	forges *forge.Registry,
+	submitHandler SubmitHandler,
 ) error {
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
@@ -45,35 +38,18 @@ func (cmd *stackSubmitCmd) Run(
 	if err != nil {
 		return fmt.Errorf("list stack: %w", err)
 	}
-
-	// TODO: generalize into a service-level method
-	// TODO: separate preparation of the stack from submission
-
-	session := newSubmitSession(repo, store, secretStash, forges, view, log)
+	toSubmit := stack[:0]
 	for _, branch := range stack {
 		if branch == store.Trunk() {
 			continue
 		}
-
-		err := (&branchSubmitCmd{
-			submitOptions: cmd.submitOptions,
-			Branch:        branch,
-		}).run(ctx, session, log, view, repo, wt, store, svc)
-		if err != nil {
-			return fmt.Errorf("submit %v: %w", branch, err)
-		}
+		toSubmit = append(toSubmit, branch)
 	}
 
-	if cmd.DryRun {
-		return nil
-	}
+	// TODO: separate preparation of the stack from submission
 
-	return updateNavigationComments(
-		ctx,
-		store,
-		svc,
-		log,
-		cmd.NavigationComment,
-		session,
-	)
+	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+		Branches: toSubmit,
+		Options:  &cmd.Options,
+	})
 }
