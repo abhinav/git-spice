@@ -22,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
@@ -388,6 +389,19 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				OpenRemoteRepository: func(ctx context.Context, remote string) (forge.Repository, error) {
 					return openRemoteRepository(ctx, log, secretStash, forges, wt.Repository(), remote)
 				},
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			worktree *git.Worktree,
+			store *state.Store,
+			svc *spice.Service,
+		) (RestackHandler, error) {
+			return &restack.Handler{
+				Log:      log,
+				Worktree: worktree,
+				Store:    store,
+				Service:  svc,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

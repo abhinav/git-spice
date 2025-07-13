@@ -6,9 +6,8 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -30,8 +29,7 @@ func (cmd *commitSplitCmd) Run(
 	log *silog.Logger,
 	repo *git.Repository,
 	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
+	restackHandler RestackHandler,
 ) (err error) {
 	head, err := wt.Head(ctx)
 	if err != nil {
@@ -110,8 +108,7 @@ func (cmd *commitSplitCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	return (&upstackRestackCmd{
-		Branch:    currentBranch,
+	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
 		SkipStart: true,
-	}).Run(ctx, log, wt, store, svc)
+	})
 }

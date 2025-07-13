@@ -94,6 +94,7 @@ func (cmd *branchCreateCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	restackHandler RestackHandler,
 ) (err error) {
 	if cmd.Name == "" && !cmd.Commit {
 		return errors.New("a branch name is required with --no-commit")
@@ -308,9 +309,7 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	if cmd.Below || cmd.Insert {
-		return (&upstackRestackCmd{}).Run(
-			ctx, log, wt, store, svc,
-		)
+		return restackHandler.RestackUpstack(ctx, branchName, nil)
 	}
 
 	return nil

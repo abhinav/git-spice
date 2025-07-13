@@ -366,8 +366,8 @@ all managed branches will be restacked.
 
 **Flags**
 
-* `--branch=NAME`: Branch to restack the upstack of
 * `--skip-start`: Do not restack the starting branch
+* `--branch=NAME`: Branch to restack the upstack of
 
 ### gs upstack onto
 
