@@ -24,6 +24,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
@@ -417,6 +418,46 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			repo *git.Repository,
+			wt *git.Worktree,
+			store *state.Store,
+			svc *spice.Service,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			deleteHandler DeleteHandler,
+			restackHandler RestackHandler,
+		) (SyncHandler, error) {
+			remote, err := ensureRemote(ctx, repo, store, log, view)
+			// TODO: move ensure remote to Service
+			if err != nil {
+				return nil, err
+			}
+
+			remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote)
+			if err != nil {
+				var unsupported *unsupportedForgeError
+				if !errors.As(err, &unsupported) {
+					return nil, err
+				}
+				remoteRepo = nil
+			}
+
+			return &sync.Handler{
+				Log:              log,
+				View:             view,
+				Repository:       repo,
+				Worktree:         wt,
+				Store:            store,
+				Service:          svc,
+				Delete:           deleteHandler,
+				Restack:          restackHandler,
+				Remote:           remote,
+				RemoteRepository: remoteRepo,
 			}, nil
 		}),
 	)
