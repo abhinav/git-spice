@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
+	branchdel "go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
@@ -47,6 +48,7 @@ func (cmd *repoSyncCmd) Run(
 	store *state.Store,
 	svc *spice.Service,
 	forges *forge.Registry,
+	deleteHandler DeleteHandler,
 ) error {
 	remote, err := ensureRemote(ctx, repo, store, log, view)
 	// TODO: move ensure remote to Service
@@ -245,7 +247,7 @@ func (cmd *repoSyncCmd) Run(
 		}
 	}
 	if err := cmd.deleteBranches(
-		ctx, view, log, remote, branchesToDelete, repo, wt, store, svc,
+		ctx, log, remote, branchesToDelete, repo, wt, deleteHandler,
 	); err != nil {
 		return err
 	}
@@ -639,14 +641,12 @@ type branchDeletion struct {
 
 func (cmd *repoSyncCmd) deleteBranches(
 	ctx context.Context,
-	view ui.View,
 	log *silog.Logger,
 	remote string,
 	branchesToDelete []branchDeletion,
 	repo *git.Repository,
 	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
+	deleteHandler DeleteHandler,
 ) error {
 	if len(branchesToDelete) == 0 {
 		return nil
@@ -677,10 +677,10 @@ func (cmd *repoSyncCmd) deleteBranches(
 		deleteBranchNames = append(deleteBranchNames, branchInfo.Name)
 	}
 
-	err := (&branchDeleteCmd{
+	err := deleteHandler.DeleteBranches(ctx, &branchdel.Request{
 		Branches: deleteBranchNames,
 		Force:    true,
-	}).Run(ctx, log, view, repo, wt, store, svc)
+	})
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)
 	}
