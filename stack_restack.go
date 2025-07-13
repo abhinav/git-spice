@@ -2,81 +2,36 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
-type stackRestackCmd struct{}
+type stackRestackCmd struct {
+	Branch string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+}
 
 func (*stackRestackCmd) Help() string {
 	return text.Dedent(`
 		All branches in the current stack are rebased on top of their
 		respective bases, ensuring a linear history.
+
+		Use --branch to rebase the stack of a different branch.
 	`)
 }
 
-func (*stackRestackCmd) Run(
-	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
-) error {
-	currentBranch, err := wt.CurrentBranch(ctx)
-	if err != nil {
-		return fmt.Errorf("get current branch: %w", err)
-	}
-
-	stack, err := svc.ListStack(ctx, currentBranch)
-	if err != nil {
-		return fmt.Errorf("list stack: %w", err)
-	}
-
-loop:
-	for _, branch := range stack {
-		// Trunk never needs to be restacked.
-		if branch == store.Trunk() {
-			continue loop
-		}
-
-		res, err := svc.Restack(ctx, branch)
+func (cmd *stackRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
+	if cmd.Branch == "" {
+		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
-			var rebaseErr *git.RebaseInterruptError
-			switch {
-			case errors.As(err, &rebaseErr):
-				// If the rebase is interrupted by a conflict,
-				// we'll resume by re-running this command.
-				return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-					Err:     rebaseErr,
-					Command: []string{"stack", "restack"},
-					Branch:  currentBranch,
-					Message: "interrupted: restack stack for " + branch,
-				})
-			case errors.Is(err, spice.ErrAlreadyRestacked):
-				// Log the "does not need to be restacked" message
-				// only for branches that are not the current branch.
-				if branch != currentBranch {
-					log.Infof("%v: branch does not need to be restacked.", branch)
-				}
-				continue loop
-			default:
-				return fmt.Errorf("restack branch: %w", err)
-			}
+			return fmt.Errorf("get current branch: %w", err)
 		}
-
-		log.Infof("%v: restacked on %v", branch, res.Base)
+		cmd.Branch = currentBranch
 	}
-
-	// On success, check out the original branch.
-	if err := wt.Checkout(ctx, currentBranch); err != nil {
-		return fmt.Errorf("checkout branch %v: %w", currentBranch, err)
-	}
-
 	return nil
+}
+
+func (cmd *stackRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
+	return handler.RestackStack(ctx, cmd.Branch)
 }

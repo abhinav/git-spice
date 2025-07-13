@@ -49,6 +49,7 @@ func (cmd *repoSyncCmd) Run(
 	svc *spice.Service,
 	forges *forge.Registry,
 	deleteHandler DeleteHandler,
+	restackHandler RestackHandler,
 ) error {
 	remote, err := ensureRemote(ctx, repo, store, log, view)
 	// TODO: move ensure remote to Service
@@ -253,7 +254,16 @@ func (cmd *repoSyncCmd) Run(
 	}
 
 	if cmd.Restack {
-		return (&stackRestackCmd{}).Run(ctx, log, wt, store, svc)
+		// current branch may have changed after deletion
+		// of merged branches.
+		currentBranch, err := wt.CurrentBranch(ctx)
+		if err != nil {
+			log.Warn("Failed to get current branch, skipping restack", "error", err)
+		} else {
+			// TODO: if the merged branch leaves us on trunk
+			// --restack will end up restacking all known branches.
+			return restackHandler.RestackStack(ctx, currentBranch)
+		}
 	}
 
 	return nil

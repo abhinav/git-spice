@@ -21,6 +21,7 @@ type Store interface {
 // Service is a subset of the spice.Service interface.
 type Service interface {
 	ListUpstack(ctx context.Context, branch string) ([]string, error)
+	ListStack(ctx context.Context, branch string) ([]string, error)
 	Restack(ctx context.Context, name string) (*spice.RestackResponse, error)
 	RebaseRescue(ctx context.Context, req spice.RebaseRescueRequest) error
 }
