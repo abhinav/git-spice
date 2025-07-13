@@ -1,0 +1,3 @@
+kind: Added
+body: 'stack restack: Add --branch flag to restack the stack of a different branch.'
+time: 2025-07-13T10:18:39.260341-07:00

@@ -243,13 +243,19 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 ### gs stack restack
 
 ```
-gs stack (s) restack (r)
+gs stack (s) restack (r) [flags]
 ```
 
 Restack a stack
 
 All branches in the current stack are rebased on top of their
 respective bases, ensuring a linear history.
+
+Use --branch to rebase the stack of a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to restack the stack of
 
 ### gs stack edit
 
