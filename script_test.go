@@ -1,3 +1,5 @@
+//go:build script
+
 package main
 
 import (
@@ -30,6 +32,9 @@ import (
 var (
 	_update = flag.Bool("update", false, "update golden files")
 	_debug  = flag.Bool("debug", false, "enable debug logging")
+
+	_shardIndex = flag.Int("shard-index", 0, "index of the test shard to run")
+	_shardCount = flag.Int("shard-count", 1, "total number of test shards")
 )
 
 func TestMain(m *testing.M) {
@@ -105,8 +110,36 @@ func TestScript(t *testing.T) {
 
 	var shamhubCmd shamhub.Cmd
 
+	scriptDir := filepath.Join("testdata", "script")
+	if *_shardCount > 1 {
+		// If we're running in sharded mode,
+		// copy a subset of the test scripts
+		// into a temporary directory based on the shard index.
+
+		scripts, err := filepath.Glob(filepath.Join(scriptDir, "*.txt"))
+		require.NoError(t, err)
+
+		shardScriptDir := t.TempDir()
+		for i, script := range scripts {
+			if i%*_shardCount != *_shardIndex {
+				// This script does not belong to this shard.
+				continue
+			}
+
+			t.Logf("Selected script: %s", script)
+
+			bs, err := os.ReadFile(script)
+			require.NoError(t, err)
+			dst := filepath.Join(shardScriptDir, filepath.Base(script))
+			require.NoError(t, os.WriteFile(dst, bs, 0o644))
+		}
+
+		t.Logf("Using shard script directory: %s", shardScriptDir)
+		scriptDir = shardScriptDir
+	}
+
 	testscript.Run(t, testscript.Params{
-		Dir:                filepath.Join("testdata", "script"),
+		Dir:                scriptDir,
 		UpdateScripts:      *_update,
 		RequireUniqueNames: true,
 		Setup: func(e *testscript.Env) error {
