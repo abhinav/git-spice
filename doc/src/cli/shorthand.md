@@ -22,7 +22,8 @@ Usage: gs branch (b) create (c) [<name>] [flags]
 
 The shorthand for a command is the bits in parentheses joined together.
 For example, the shorthand for $$gs branch create$$ above is `gs bc`.
-Another example:
+
+As another example, the shorthand for $$gs branch checkout$$ is `gs bco`.
 
 ```freeze language="terminal"
 {green}${reset} gs branch checkout --help
@@ -31,7 +32,25 @@ Usage: gs branch (b) checkout (co) [<branch>] [flags]
 {gray}# ...{reset}
 ```
 
-The shorthand for $$gs branch checkout$$ is `gs bco`.
+Some commands have multiple aliases, but there's always only one shorthand.
+For example, $$gs branch delete$$ has two aliases: `d` and `rm`.
+
+```freeze language="terminal"
+{green}${reset} gs branch delete --help
+Usage: gs branch (b) delete (d,rm) [<branches> ...] [flags]
+
+{gray}# ...{reset}
+```
+
+So valid ways to invoke the command are:
+
+```freeze language="terminal"
+{green}${reset} gs bd
+{green}${reset} gs b d
+{green}${reset} gs b rm
+{green}${reset} gs branch rm
+{green}${reset} gs branch delete
+```
 
 !!! question "When to use built-in shorthands?"
 
