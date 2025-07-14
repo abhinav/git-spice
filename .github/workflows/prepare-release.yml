@@ -23,8 +23,8 @@ jobs:
       uses: actions/checkout@v4
 
     - uses: jdx/mise-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
     - id: run
       run: |
         mise run release:prepare ${{ inputs.version }}
