@@ -6,6 +6,7 @@
 #     uses: ./.github/actions/go-cache
 
 name: Cache Go
+description: Caches Go build artifacts to speed up subsequent builds.
 
 runs:
   using: "composite"
