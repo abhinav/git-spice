@@ -1,5 +1,6 @@
 /bin
 /dist
+/cover
 cover.out
 cover.html
 /.idea

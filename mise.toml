@@ -41,17 +41,54 @@ run = [
 ]
 
 [tasks.test]
-wait_for = ["generate"]
-description = "Run tests"
-run = "gotestsum -- -race={{flag(name='race')}} ./..."
+depends = ["test:*"]
 
-[tasks.cover]
+[tasks."test:default"]
 wait_for = ["generate"]
-description = "Run tests with coverage"
-run = [
-  "gotestsum -- '-coverprofile=cover.out' '-coverpkg=./...' -race={{flag(name='race')}} ./...",
-  "go tool cover '-html=cover.out' -o cover.html",
-]
+description = "Run default tests"
+run = "gotestsum -- ./... -race={{flag(name='race')}}"
+
+[tasks."test:script"]
+wait_for = ["generate"]
+description = "Run script tests"
+run = """
+gotestsum -- {# -#}
+  -tags=script {# enable script tests -#}
+  -run '^TestScript$' {# run only script tests -#}
+  -race={{flag(name='race')}} {# race detection -#}
+  -shard-index={{option(name='shard-index', default='0')}} {# shard index -#}
+  -shard-count={{option(name='shard-count', default='1')}} {# shard count -#}
+"""
+
+[tasks."_cover_report"]
+run = "go tool cover -html=cover.out -o cover.html"
+
+[tasks."cover:default"]
+wait_for = ["generate"]
+depends_post = ["_cover_report"]
+description = "Run default tests with coverage"
+run = """
+gotestsum -- {# -#}
+  ./... {# run all tests -#}
+  -race={{flag(name='race')}} {# race detection -#}
+  -coverpkg=./... {# cover all packages -#}
+  -coverprofile=cover.out {# -#}
+"""
+
+[tasks."cover:script"]
+wait_for = ["generate"]
+depends_post = ["_cover_report"]
+description = "Run script tests with coverage"
+run = """
+gotestsum -- {# -#}
+  -tags=script {# enable script tests -#}
+  -run '^TestScript$' {# run only script tests -#}
+  -race={{flag(name='race')}} {# race detection -#}
+  -coverpkg=./... {# cover all packages -#}
+  -coverprofile=cover.out {# -#}
+  -shard-index={{option(name='shard-index', default='0')}} {# shard index -#}
+  -shard-count={{option(name='shard-count', default='1')}} {# shard count -#}
+"""
 
 [tasks.tidy]
 run = "go mod tidy"

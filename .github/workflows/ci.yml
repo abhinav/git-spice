@@ -24,19 +24,42 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - run: mise run lint
 
-  test:
-    runs-on: ${{ matrix.os }}
-    name: Test (${{ matrix.os}}, Git ${{ matrix.git-version }})
+  test-matrix:
+    name: Generate test matrix
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      name: Check out repository
+    - uses: jdx/mise-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Go cache
+      uses: ./.github/actions/go-cache
+    - name: Generate test matrix
+      id: generate
+      run: echo "matrix=$(go run ./tools/ci/test-matrix)" >> "$GITHUB_OUTPUT"
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
 
+  test:
+    needs: [test-matrix]
     strategy:
-      matrix:
-        os: ["ubuntu-latest", "windows-latest"]
-        git-version: ["system"]
-        include:
-          # On Linux, also test against specific versions built from source.
-          - {os: ubuntu-latest, git-version: "2.38.0"}
-          # On Windows, run without coverage.
-          - {os: windows-latest, no-cover: true}
+      fail-fast: true
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
+    # Schema of matrix:
+    #   name: string
+    #   os: ubuntu-latest | windows-latest
+    #   git-version: system | 2.38.0 | ...
+    #   suite: default | script
+    #   race: bool
+    #   cover: bool
+    #
+    # If suite is 'script', then:
+    #  shard-index: int
+    #  shard-count: int
+
+    runs-on: ${{ matrix.os }}
+    name: Test / ${{ matrix.name }}
 
     steps:
     - uses: actions/checkout@v4
@@ -56,11 +79,13 @@ jobs:
       run:
         git --version
 
+    # TODO: can probably generate the exact test command in the matrix
     - name: Test
+      if: ${{ matrix.suite == 'default' }}
       run: >-  # join lines with spaces
         mise run
-        ${{ (matrix.no-cover == true) && 'test' || 'cover' }}
-        ${{ (matrix.os != 'windows-latest') && '--race' || '' }}
+        ${{ matrix.cover && 'cover:default' || 'test:default' }}
+        ${{ matrix.race && '--race' || '' }}
       # NB:
       # Windows tests are already slow.
       # Run them without race detection to avoid slowing them further.
@@ -68,9 +93,21 @@ jobs:
       env:
         GOTESTSUM_FORMAT: github-actions
 
+    - name: Script tests
+      if: ${{ matrix.suite == 'script' }}
+      run: |
+        mise run \
+          ${{ matrix.cover && 'cover:script' || 'test:script' }} \
+          ${{ matrix.race && '--race' || '' }} \
+          --shard-index "${{ matrix.shard-index || '0' }}" \
+          --shard-count "${{ matrix.shard-count || '1' }}"
+      shell: bash
+      env:
+        GOTESTSUM_FORMAT: github-actions
+
     - name: Upload coverage
       uses: codecov/codecov-action@v5.4.3
-      if: ${{ matrix.no-cover != true }}
+      if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out
         token: ${{ secrets.CODECOV_TOKEN }}
