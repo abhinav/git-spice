@@ -28,8 +28,8 @@ jobs:
         token: ${{ secrets.PAT }}
 
     - uses: jdx/mise-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set version (changie)
       if: inputs.version == ''
@@ -86,8 +86,8 @@ jobs:
         ref: ${{ inputs.ref }}
 
     - uses: jdx/mise-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set version (changie)
       if: inputs.version == ''

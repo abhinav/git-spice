@@ -27,8 +27,7 @@ jobs:
       - uses: jdx/mise-action@v2
         with:
           working_directory: doc
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: mise run doc:build --verbose

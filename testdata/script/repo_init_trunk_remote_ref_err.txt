@@ -1,0 +1,19 @@
+# 'repo init' should fail when --trunk is a remote ref like origin/main
+
+as 'Test <test@example.com>'
+at '2025-07-14T12:00:00Z'
+
+# Set up a repository with a shamhub remote
+mkdir repo
+cd repo
+git init -b main
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+git push origin main
+
+# Try to initialize with a remote ref as trunk - should fail
+! gs repo init --trunk origin/main
+stderr 'Are you sure origin/main is a local branch?'
+stderr 'not a branch: origin/main'

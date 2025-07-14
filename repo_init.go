@@ -104,6 +104,10 @@ func (cmd *repoInitCmd) Run(
 		if err != nil {
 			return fmt.Errorf("guess trunk: %w", err)
 		}
+	} else if !repo.BranchExists(ctx, cmd.Trunk) {
+		// User-provided trunk must be a local branch.
+		log.Errorf("Are you sure %v is a local branch?", cmd.Trunk)
+		return fmt.Errorf("not a branch: %v", cmd.Trunk)
 	}
 	must.NotBeBlankf(cmd.Trunk, "trunk branch must have been set")
 
