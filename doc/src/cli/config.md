@@ -112,6 +112,20 @@ Commonly used values are:
 - `<name>/`: the committer's name
 - `<username>/`: the committer's username
 
+### spice.checkout.verbose
+
+<!-- gs:version unreleased -->
+
+Whether branch navigation commands
+($$gs up$$, $$gs down$$, $$gs top$$, $$gs bottom$$,
+$$gs trunk$$, $$gs branch checkout$$)
+should print a message when switching branches.
+
+**Accepted values:**
+
+- `true` (default)
+- `false`
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.

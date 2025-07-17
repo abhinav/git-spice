@@ -579,7 +579,7 @@ By default, branches are sorted by name.
 * `--detach`: Detach HEAD after checking out
 * `-u`, `--untracked` ([:material-wrench:{ .middle title="spice.branchCheckout.showUntracked" }](/cli/config.md#spicebranchcheckoutshowuntracked)): Show untracked branches if one isn't supplied
 
-**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.trackUntrackedPrompt](/cli/config.md#spicebranchcheckouttrackuntrackedprompt), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.trackUntrackedPrompt](/cli/config.md#spicebranchcheckouttrackuntrackedprompt), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort), [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
 ### gs branch create
 
@@ -1036,6 +1036,8 @@ Use the -n flag to print the branch without checking it out.
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
 
+**Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
+
 ### gs down
 
 ```
@@ -1058,6 +1060,8 @@ Use the -n flag to print the branch without checking it out.
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
 
+**Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
+
 ### gs top
 
 ```
@@ -1076,6 +1080,8 @@ Use the -n flag to print the branch without checking it out.
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
 
+**Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
+
 ### gs bottom
 
 ```
@@ -1092,6 +1098,8 @@ Use the -n flag to print the branch without checking it out.
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
 
+**Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
+
 ### gs trunk
 
 ```
@@ -1104,6 +1112,8 @@ Move to the trunk branch
 
 * `-n`, `--dry-run`: Print the target branch without checking it out
 * `--detach`: Detach HEAD after checking out
+
+**Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
 ## gs version
 
