@@ -6,12 +6,11 @@ backend = "ubi:miniscruff/changie"
 changie-linux-x86_64 = "sha256:890983e85d8126946c41428c87bc7c0fd6c45b2043fcbf28dfac33fc8db5ae01"
 
 [tools.go]
-version = "1.24.4"
+version = "1.24.5"
 backend = "core:go"
 
 [tools.go.checksums]
-"go1.24.4.darwin-arm64.tar.gz" = "sha256:27973684b515eaf461065054e6b572d9390c05e69ba4a423076c160165336470"
-"go1.24.4.linux-amd64.tar.gz" = "sha256:77e5da33bb72aeaef1ba4418b6fe511bc4d041873cbf82e5aa6318740df98717"
+"go1.24.5.darwin-arm64.tar.gz" = "sha256:92d30a678f306c327c544758f2d2fa5515aa60abe9dba4ca35fbf9b8bfc53212"
 
 [tools.gofumpt]
 version = "0.8.0"
@@ -22,11 +21,8 @@ gofumpt-linux-x86_64 = "sha256:11604bbaf7321abcc2fca2c6a37b7e9198bb1e76e5a86f297
 gofumpt-macos-aarch64 = "sha256:7e66e92b7a67d1d12839ab030fb7ae38e5e2273474af3762e67bc7fe9471fcd9"
 
 [tools.golangci-lint]
-version = "2.2.1"
+version = "2.2.2"
 backend = "aqua:golangci/golangci-lint"
-
-[tools.golangci-lint.checksums]
-"golangci-lint-2.2.1-linux-amd64.tar.gz" = "sha256:4098436776a4f4bbef25dcad93f56533003d085f9133e4c69ba3145973d211dc"
 
 [tools.gotestsum]
 version = "1.12.3"
@@ -36,6 +32,6 @@ backend = "aqua:gotestyourself/gotestsum"
 "gotestsum_1.12.3_darwin_arm64.tar.gz" = "sha256:a2cdc441a1355c8cfe35f4deaa0d6c8b73a9530f8c8d02e2c00fe4fae7aa5c45"
 "gotestsum_1.12.3_linux_amd64.tar.gz" = "sha256:dd644e817b509fa8e216887ec93facdd85722d1b78f6a19149ee1bc9f59fca64"
 
-[tools.requiredfield]
-version = "0.5.0"
-backend = "go:go.abhg.dev/requiredfield/cmd/requiredfield"
+[tools."ubi:abhinav/requiredfield"]
+version = "0.6.0"
+backend = "ubi:abhinav/requiredfield"

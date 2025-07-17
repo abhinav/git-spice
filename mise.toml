@@ -9,7 +9,6 @@ _.path = ["{{ config_root }}/bin"]
 
 [alias]
 # Specify sources for all tools so we can refer to them directly.
-requiredfield = "go:go.abhg.dev/requiredfield/cmd/requiredfield"
 golangci-lint = "aqua:golangci/golangci-lint"
 changie = "ubi:miniscruff/changie"
 
@@ -23,14 +22,13 @@ gotestsum = "latest"
 # Stricter code formatting.
 gofumpt = "latest"
 
-# Check for required fields in structs.
-requiredfield = "0.5.0"
-
 # Collection of linters.
 golangci-lint = "latest"
 
 # Changelog manager.
 changie = "latest"
+
+"ubi:abhinav/requiredfield" = "latest"
 
 [tasks.generate]
 depends = ["tools"]
