@@ -2,7 +2,7 @@
 experimental = true
 
 [env]
-GOTESTSUM_FORMAT = "pkgname"
+GOTESTSUM_FORMAT = "testname"
 GOBIN = "{{ config_root }}/bin"
 PROJECT_ROOT = "{{ config_root }}"
 _.path = ["{{ config_root }}/bin"]
