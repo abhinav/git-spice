@@ -11,6 +11,7 @@ backend = "core:go"
 
 [tools.go.checksums]
 "go1.24.5.darwin-arm64.tar.gz" = "sha256:92d30a678f306c327c544758f2d2fa5515aa60abe9dba4ca35fbf9b8bfc53212"
+"go1.24.5.linux-amd64.tar.gz" = "sha256:10ad9e86233e74c0f6590fe5426895de6bf388964210eac34a6d83f38918ecdc"
 
 [tools.gofumpt]
 version = "0.8.0"
@@ -24,6 +25,9 @@ gofumpt-macos-aarch64 = "sha256:7e66e92b7a67d1d12839ab030fb7ae38e5e2273474af3762
 version = "2.2.2"
 backend = "aqua:golangci/golangci-lint"
 
+[tools.golangci-lint.checksums]
+"golangci-lint-2.2.2-linux-amd64.tar.gz" = "sha256:c27fbde948a87d326feacd21df2f61a9c54dbd2e3bfa185c0a1cd6917a6f964f"
+
 [tools.gotestsum]
 version = "1.12.3"
 backend = "aqua:gotestyourself/gotestsum"
@@ -35,3 +39,6 @@ backend = "aqua:gotestyourself/gotestsum"
 [tools."ubi:abhinav/requiredfield"]
 version = "0.6.0"
 backend = "ubi:abhinav/requiredfield"
+
+[tools."ubi:abhinav/requiredfield".checksums]
+requiredfield-linux-x86_64 = "blake3:5b699cd4773292ee85b817a5ec77ee2fefc285c2e1a7222315b80ea5757af1e4"
