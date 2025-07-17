@@ -1,0 +1,5 @@
+kind: Added
+body: |
+  Add 'spice.checkout.verbose' configuration option
+  to report the branch name when checking out a branch.
+time: 2025-07-16T20:22:12.449527-07:00

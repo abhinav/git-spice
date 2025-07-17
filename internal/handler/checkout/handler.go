@@ -23,6 +23,8 @@ import (
 type Options struct {
 	DryRun bool `short:"n" xor:"detach-or-dry-run" help:"Print the target branch without checking it out"`
 	Detach bool `xor:"detach-or-dry-run" help:"Detach HEAD after checking out"`
+
+	Verbose bool `name:"checkout-verbose" hidden:"" default:"true" config:"checkout.verbose"`
 }
 
 // Store provides access to the git-spice state.
@@ -131,6 +133,10 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 
 	if err := h.Worktree.Checkout(ctx, branch); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
+	}
+
+	if opts.Verbose {
+		log.Infof("switched to branch: %s", branch)
 	}
 
 	return nil

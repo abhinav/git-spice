@@ -499,3 +499,89 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 		assert.ErrorIs(t, err, detachError)
 	})
 }
+
+func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
+	mockStore := NewMockStore(gomock.NewController(t))
+	mockStore.
+		EXPECT().
+		Trunk().
+		Return("main").
+		AnyTimes()
+
+	t.Run("VerboseTrue", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockWorktree := NewMockGitWorktree(ctrl)
+
+		var logBuffer bytes.Buffer
+		handler := &Handler{
+			Stdout:   io.Discard,
+			Log:      silog.New(&logBuffer, nil),
+			Store:    mockStore,
+			Worktree: mockWorktree,
+			Track:    NewMockTrackHandler(ctrl),
+			Service:  NewMockService(ctrl),
+		}
+
+		mockWorktree.
+			EXPECT().
+			Checkout(gomock.Any(), "main").
+			Return(nil)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch:  "main",
+			Options: &Options{Verbose: true},
+		})
+		assert.NoError(t, err)
+		assert.Contains(t, logBuffer.String(), "switched to branch: main")
+	})
+
+	t.Run("VerboseFalse", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockWorktree := NewMockGitWorktree(ctrl)
+
+		var logBuffer bytes.Buffer
+		handler := &Handler{
+			Stdout:   io.Discard,
+			Log:      silog.New(&logBuffer, nil),
+			Store:    mockStore,
+			Worktree: mockWorktree,
+			Track:    NewMockTrackHandler(ctrl),
+			Service:  NewMockService(ctrl),
+		}
+
+		mockWorktree.
+			EXPECT().
+			Checkout(gomock.Any(), "main").
+			Return(nil)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch:  "main",
+			Options: &Options{Verbose: false},
+		})
+		assert.NoError(t, err)
+		assert.NotContains(t, logBuffer.String(), "switched to branch")
+	})
+
+	t.Run("DryRunNoVerbose", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		var logBuffer bytes.Buffer
+		var stdout bytes.Buffer
+		handler := &Handler{
+			Stdout:   &stdout,
+			Log:      silog.New(&logBuffer, nil),
+			Store:    mockStore,
+			Worktree: NewMockGitWorktree(ctrl),
+			Track:    NewMockTrackHandler(ctrl),
+			Service:  NewMockService(ctrl),
+		}
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch:  "main",
+			Options: &Options{DryRun: true, Verbose: true},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "main\n", stdout.String())
+		assert.NotContains(t, logBuffer.String(), "switched to branch")
+	})
+}

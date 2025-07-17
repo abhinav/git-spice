@@ -1,0 +1,71 @@
+# Test checkout verbose messages with default and configured behaviors.
+
+as 'Test <test@example.com>'
+at '2025-07-17T21:28:29Z'
+
+# Setup repository
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a simple stack
+gs branch create feature1 -m 'Add feature1'
+gs branch create feature2 -m 'Add feature2'
+
+# Test 1: Default behavior - verbose should be true by default, showing messages
+gs top
+gs down
+stderr 'switched to branch: feature1'
+
+gs up
+stderr 'switched to branch: feature2'
+
+gs trunk
+stderr 'switched to branch: main'
+
+gs top
+stderr 'switched to branch: feature2'
+
+gs bottom
+stderr 'switched to branch: feature1'
+
+# Test 2: Explicitly set verbose to true
+git config spice.checkout.verbose true
+
+gs down
+stderr 'switched to branch: main'
+
+gs up
+stderr 'switched to branch: feature1'
+
+# Test 3: Opt out of verbose messages
+git config spice.checkout.verbose false
+
+gs up
+! stderr 'switched to branch'
+
+gs down
+! stderr 'switched to branch'
+
+gs top
+! stderr 'switched to branch'
+
+gs bottom
+! stderr 'switched to branch'
+
+gs trunk
+! stderr 'switched to branch'
+
+# Test 4: Dry run should not show checkout message (regardless of config)
+git config spice.checkout.verbose true
+
+gs bco feature1
+gs up -n
+stdout 'feature2'
+! stderr 'switched to branch'
+
+gs down -n
+stdout 'main'
+! stderr 'switched to branch'
