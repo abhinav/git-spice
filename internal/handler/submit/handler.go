@@ -5,6 +5,7 @@ package submit
 import (
 	"cmp"
 	"context"
+	"encoding"
 	"errors"
 	"fmt"
 	"slices"
@@ -132,7 +133,8 @@ type Options struct {
 	Publish bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
 	Web     OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
 
-	NavComment NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+	NavComment     NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+	NavCommentSync NavCommentSync `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
 
 	Force      bool `help:"Force push, bypassing safety checks"`
 	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
@@ -152,6 +154,49 @@ type Options struct {
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
+}
+
+// NavCommentSync specifies the scope of navigation comment updates.
+type NavCommentSync int
+
+const (
+	// NavCommentSyncBranch updates navigation comments
+	// only for branches that are being submitted.
+	//
+	// This is the default.
+	NavCommentSyncBranch NavCommentSync = iota
+
+	// NavCommentSyncDownstack updates navigation comments
+	// for all submitted branches and their downstack branches.
+	NavCommentSyncDownstack
+)
+
+var _ encoding.TextUnmarshaler = (*NavCommentSync)(nil)
+
+// String returns the string representation of the NavCommentSync.
+func (s NavCommentSync) String() string {
+	switch s {
+	case NavCommentSyncBranch:
+		return "branch"
+	case NavCommentSyncDownstack:
+		return "downstack"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes a NavCommentSync from text.
+// It supports "branch" and "downstack" values.
+func (s *NavCommentSync) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "branch":
+		*s = NavCommentSyncBranch
+	case "downstack":
+		*s = NavCommentSyncDownstack
+	default:
+		return fmt.Errorf("invalid value %q: expected branch or downstack", bs)
+	}
+	return nil
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -188,6 +233,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		ctx,
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
+		opts.NavCommentSync,
 		branchesToComment,
 		h.RemoteRepository,
 	)
@@ -231,6 +277,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		ctx,
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
+		opts.NavCommentSync,
 		[]string{req.Branch},
 		h.RemoteRepository,
 	)

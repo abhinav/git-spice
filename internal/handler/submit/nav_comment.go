@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding"
 	"fmt"
+	"maps"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -85,6 +87,7 @@ func updateNavigationComments(
 	svc Service,
 	log *silog.Logger,
 	navComment NavCommentWhen,
+	navCommentSync NavCommentSync,
 	submittedBranches []string,
 	getRemoteRepo func(context.Context) (forge.Repository, error),
 ) error {
@@ -119,7 +122,6 @@ func updateNavigationComments(
 	idxByBranch := make(map[string]int) // branch -> index in nodes
 
 	// First pass: add nodes but don't connect.
-	f := remoteRepo.Forge()
 	for _, b := range trackedBranches {
 		if b.Change == nil {
 			continue
@@ -153,7 +155,7 @@ func updateNavigationComments(
 		//  - current branch is added to Aboves of previous branch
 		lastDownstackIdx := -1
 		for _, crJSON := range b.MergedDownstack {
-			downstackCR, err := f.UnmarshalChangeID(crJSON)
+			downstackCR, err := remoteRepo.Forge().UnmarshalChangeID(crJSON)
 			if err != nil {
 				log.Warn("Skiping invalid downstack change",
 					"branch", b.Name,
@@ -194,6 +196,42 @@ func updateNavigationComments(
 		}
 	}
 
+	// Third pass:
+	// Compute list of branches to sync based on the navCommentSync.
+	var branchesToSync []int
+	switch navCommentSync {
+	case NavCommentSyncBranch:
+		// Only submitted branches get commented on.
+		for _, branch := range submittedBranches {
+			idx, ok := idxByBranch[branch]
+			if !ok {
+				continue
+			}
+			branchesToSync = append(branchesToSync, idx)
+		}
+
+	case NavCommentSyncDownstack:
+		// For each submitted branch,
+		// all downstack branches are also commented on.
+		updateBranches := make(map[int]struct{})
+		for _, branch := range submittedBranches {
+			nodeIdx, ok := idxByBranch[branch]
+			if !ok {
+				continue
+			}
+
+			updateBranches[nodeIdx] = struct{}{}
+
+			baseIdx := nodes[nodeIdx].Base
+			for baseIdx != -1 {
+				updateBranches[baseIdx] = struct{}{}
+				baseIdx = nodes[baseIdx].Base
+			}
+		}
+
+		branchesToSync = slices.Sorted(maps.Keys(updateBranches))
+	}
+
 	type (
 		postComment struct {
 			Branch string
@@ -217,7 +255,7 @@ func updateNavigationComments(
 		mu       sync.Mutex // guards branchTx
 		upserted []string
 	)
-	for range min(runtime.GOMAXPROCS(0), len(submittedBranches)) {
+	for range min(runtime.GOMAXPROCS(0), len(branchesToSync)) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -287,14 +325,7 @@ func updateNavigationComments(
 	}
 
 	// Concurrently post and update comments.
-	for _, branch := range submittedBranches {
-		idx, ok := idxByBranch[branch]
-		if !ok {
-			// This should never happen.
-			log.Warn("Branch not found in tracked branches", "branch", branch)
-			continue
-		}
-
+	for _, idx := range branchesToSync {
 		// If we're only posting on multiple,
 		// we'll need to check if the branch is part of a stack
 		// that has at least one other branch.
@@ -308,7 +339,7 @@ func updateNavigationComments(
 		commentBody := generateStackNavigationComment(nodes, idx)
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
-				Branch: branch,
+				Branch: info.Branch,
 				Meta:   info.Meta,
 				Change: info.Meta.ChangeID(),
 				Body:   commentBody,
