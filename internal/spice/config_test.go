@@ -342,3 +342,112 @@ func TestConfig_ShellCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegrationConfig_gitConfigReferences(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	tests := []struct {
+		name   string
+		config string
+		want   any
+	}{
+		{
+			name: "GitConfigReference",
+			config: text.Dedent(`
+				[core]
+				autocrlf = false
+				editor = vim
+				[spice]
+				level = hot
+			`),
+			want: struct {
+				AutoCRLF string `config:"@core.autocrlf"`
+				Editor   string `config:"@core.editor"`
+				Level    string `config:"level"`
+			}{
+				AutoCRLF: "false",
+				Editor:   "vim",
+				Level:    "hot",
+			},
+		},
+		{
+			name: "MixedReferences",
+			config: text.Dedent(`
+				[core]
+				autocrlf = true
+				safecrlf = warn
+				[spice]
+				string = foo
+				integer = 42
+			`),
+			want: struct {
+				AutoCRLF bool   `config:"@core.autocrlf"`
+				SafeCRLF string `config:"@core.safecrlf"`
+				String   string `config:"string"`
+				Integer  int    `config:"integer"`
+			}{
+				AutoCRLF: true,
+				SafeCRLF: "warn",
+				String:   "foo",
+				Integer:  42,
+			},
+		},
+		{
+			name: "GitConfigOnly",
+			config: text.Dedent(`
+				[core]
+				autocrlf = true
+				editor = emacs
+			`),
+			want: struct {
+				AutoCRLF   string `config:"@core.autocrlf"`
+				Editor     string `config:"@core.editor"`
+				SpiceValue string `config:"spiceValue"`
+			}{
+				AutoCRLF:   "true",
+				Editor:     "emacs",
+				SpiceValue: "",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			require.NoError(t, os.WriteFile(
+				filepath.Join(home, ".gitconfig"),
+				[]byte(tt.config),
+				0o600,
+			), "write configuration file")
+
+			ctx := t.Context()
+			gitCfg := git.NewConfig(git.ConfigOptions{
+				Log: silogtest.New(t),
+				Dir: home,
+				Env: []string{
+					"HOME=" + home,
+					"USER=testuser",
+					"GIT_CONFIG_NOSYSTEM=1",
+				},
+			})
+			spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+				Log: silogtest.New(t),
+			})
+			require.NoError(t, err, "load configuration")
+
+			gotptr := reflect.New(reflect.TypeOf(tt.want))
+			cli, err := kong.New(
+				gotptr.Interface(),
+				kong.Resolvers(spicecfg),
+			)
+			require.NoError(t, err, "create app")
+
+			_, err = cli.Parse([]string{})
+			require.NoError(t, err, "parse flags")
+			assert.Equal(t, tt.want, gotptr.Elem().Interface())
+		})
+	}
+}
