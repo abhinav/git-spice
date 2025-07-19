@@ -8,6 +8,8 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 )
 
+//go:generate mockgen -package restack -destination mocks_test.go . GitWorktree,Service
+
 // GitWorktree is a subet of the git.Worktree interface.
 type GitWorktree interface {
 	Checkout(ctx context.Context, branch string) error
