@@ -55,6 +55,21 @@ func (mr *MockGitWorktreeMockRecorder) Checkout(ctx, branch any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockGitWorktree)(nil).Checkout), ctx, branch)
 }
 
+// CurrentBranch mocks base method.
+func (m *MockGitWorktree) CurrentBranch(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CurrentBranch", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CurrentBranch indicates an expected call of CurrentBranch.
+func (mr *MockGitWorktreeMockRecorder) CurrentBranch(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitWorktree)(nil).CurrentBranch), ctx)
+}
+
 // MockService is a mock of Service interface.
 type MockService struct {
 	ctrl     *gomock.Controller
@@ -107,6 +122,21 @@ func (m *MockService) ListUpstack(ctx context.Context, branch string) ([]string,
 func (mr *MockServiceMockRecorder) ListUpstack(ctx, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUpstack", reflect.TypeOf((*MockService)(nil).ListUpstack), ctx, branch)
+}
+
+// LoadBranches mocks base method.
+func (m *MockService) LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadBranches", ctx)
+	ret0, _ := ret[0].([]spice.LoadBranchItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LoadBranches indicates an expected call of LoadBranches.
+func (mr *MockServiceMockRecorder) LoadBranches(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadBranches", reflect.TypeOf((*MockService)(nil).LoadBranches), ctx)
 }
 
 // RebaseRescue mocks base method.
