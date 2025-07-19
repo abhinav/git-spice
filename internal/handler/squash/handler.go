@@ -75,6 +75,8 @@ type Options struct {
 	// git.commentString is the prefix for comments in commit messages.
 	CommentPrefix string `hidden:"" config:"@core.commentString" default:"#"`
 
+	NoEdit bool `help:"Do not open an editor to edit the squashed commit message. Only applicable if --message is not used."`
+
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 }
 
@@ -109,7 +111,21 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 			return fmt.Errorf("get commit messages: %w", err)
 		}
 
-		commitTemplate = commitMessageTemplate(opts.CommentPrefix, commitMessages)
+		msg := commitMessageTemplate(
+			commitMessages,
+			opts.CommentPrefix,
+			!opts.NoEdit, // generate comments only if the message will be edited
+		)
+		if opts.NoEdit {
+			// If --no-edit is specified, use the combined commit messages
+			// as the commit message without opening an editor.
+			opts.Message = msg
+		} else {
+			// Otherwise, use the combined commit messages as a template
+			// for the commit message, which will be opened in an editor.
+			commitTemplate = msg
+		}
+
 	}
 
 	// Detach the HEAD so that we don't mess with the current branch
@@ -171,23 +187,38 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	return h.Restack.RestackUpstack(ctx, branchName, nil)
 }
 
-func commitMessageTemplate(commentPrefix string, commits []git.CommitMessage) string {
+func commitMessageTemplate(
+	commits []git.CommitMessage,
+	commentPrefix string,
+	comments bool,
+) string {
 	commentPrefix = cmp.Or(commentPrefix, "#")
 	var sb strings.Builder
+	commentf := func(format string, args ...any) {
+		if !comments {
+			return
+		}
+
+		fmt.Fprintf(&sb, "%s ", commentPrefix)
+		fmt.Fprintf(&sb, format, args...)
+		fmt.Fprintln(&sb)
+	}
+
 	switch len(commits) {
 	case 0:
-		fmt.Fprintln(&sb, commentPrefix, "No commits to squash.")
+		commentf("No commits to squash.")
 	case 1:
 		fmt.Fprintln(&sb, commits[0])
 	default:
 		// We want the earliest commit messages first.
 		slices.Reverse(commits)
-		fmt.Fprintf(&sb, "%s This is a combination of %d commits.\n", commentPrefix, len(commits))
+		commentf("This is a combination of %d commits.", len(commits))
 		for i, msg := range commits {
 			if i == 0 {
-				fmt.Fprintf(&sb, "%s This is the 1st commit message:\n\n", commentPrefix)
+				commentf("This is the 1st commit message:\n")
 			} else {
-				fmt.Fprintf(&sb, "\n%s This is the commit message #%d:\n\n", commentPrefix, i+1)
+				fmt.Fprintln(&sb)
+				commentf("This is the commit message #%d:\n", i+1)
 			}
 			fmt.Fprintln(&sb, msg)
 		}

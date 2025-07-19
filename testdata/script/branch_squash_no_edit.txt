@@ -1,0 +1,44 @@
+# Test branch squash with --no-edit flag
+
+as 'Test <test@example.com>'
+at '2025-07-19T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch with multiple commits
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+git commit -m 'Add feature 2'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Test --no-edit flag: should use combined commit messages without opening editor
+gs branch squash --no-edit
+git log -1 --pretty=format:'%B'
+cmp stdout $WORK/golden/squashed-msg.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- golden/graph-before.txt --
+* a912d4b (HEAD -> feature1) Add feature 2
+* 5c78712 Add feature 1
+* a042ef1 (main) Initial commit
+-- golden/squashed-log.txt --
+6a5b4c3 Add feature 2
+-- golden/squashed-msg.txt --
+Add feature 1
+
+Add feature 2
+-- golden/graph-after.txt --
+* e55dcb7 (HEAD -> feature1) Add feature 1
+* a042ef1 (main) Initial commit
