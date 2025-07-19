@@ -94,6 +94,21 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
+// ListDownstack mocks base method.
+func (m *MockService) ListDownstack(ctx context.Context, branch string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDownstack", ctx, branch)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDownstack indicates an expected call of ListDownstack.
+func (mr *MockServiceMockRecorder) ListDownstack(ctx, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDownstack", reflect.TypeOf((*MockService)(nil).ListDownstack), ctx, branch)
+}
+
 // ListStack mocks base method.
 func (m *MockService) ListStack(ctx context.Context, branch string) ([]string, error) {
 	m.ctrl.T.Helper()

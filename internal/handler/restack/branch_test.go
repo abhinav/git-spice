@@ -28,9 +28,14 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Restack(gomock.Any(), "feature").
 			Return(&spice.RestackResponse{Base: "main"}, nil)
 
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "feature").
+			Return(nil)
+
 		handler := &Handler{
 			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
+			Worktree: mockWorktree,
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
@@ -83,7 +88,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 		err := handler.RestackBranch(context.Background(), "untracked")
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "untracked branch")
-		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run 'gs branch track'")
+		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run 'gs branch track")
 	})
 
 	t.Run("AlreadyRestacked", func(t *testing.T) {
@@ -97,9 +102,14 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Restack(gomock.Any(), "already-restacked").
 			Return(nil, spice.ErrAlreadyRestacked)
 
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "already-restacked").
+			Return(nil)
+
 		handler := &Handler{
 			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
+			Worktree: mockWorktree,
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
