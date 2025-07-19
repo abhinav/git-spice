@@ -4,7 +4,7 @@ var (
 	_linuxConfig = testConfig{
 		OS:           "ubuntu-latest",
 		GitVersions:  []string{"system", "2.38.0"},
-		ScriptShards: 4,
+		ScriptShards: 3,
 		Race:         true,
 		Cover:        true,
 	}
