@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -24,12 +20,7 @@ func (*branchRestackCmd) Help() string {
 	`)
 }
 
-func (cmd *branchRestackCmd) Run(
-	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	svc *spice.Service,
-) error {
+func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
 		if err != nil {
@@ -37,30 +28,9 @@ func (cmd *branchRestackCmd) Run(
 		}
 		cmd.Branch = currentBranch
 	}
-
-	res, err := svc.Restack(ctx, cmd.Branch)
-	if err != nil {
-		var rebaseErr *git.RebaseInterruptError
-		switch {
-		case errors.As(err, &rebaseErr):
-			// If the rebase is interrupted by a conflict,
-			// we'll resume by re-running this command.
-			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-				Err:     rebaseErr,
-				Command: []string{"branch", "restack"},
-				Branch:  cmd.Branch,
-				Message: "interrupted: restack branch " + cmd.Branch,
-			})
-		case errors.Is(err, state.ErrNotExist):
-			log.Errorf("%v: branch not tracked: run 'gs branch track'", cmd.Branch)
-			return errors.New("untracked branch")
-		case errors.Is(err, spice.ErrAlreadyRestacked):
-			log.Infof("%v: branch does not need to be restacked.", cmd.Branch)
-			return nil
-		}
-		return fmt.Errorf("restack branch: %w", err)
-	}
-
-	log.Infof("%v: restacked on %v", cmd.Branch, res.Base)
 	return nil
+}
+
+func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
+	return handler.RestackBranch(ctx, cmd.Branch)
 }
