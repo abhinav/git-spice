@@ -52,10 +52,11 @@ description = "Run script tests"
 run = """
 gotestsum -- {# -#}
   -tags=script {# enable script tests -#}
-  -run '^TestScript$' {# run only script tests -#}
+  -run TestScript/{{option(name='run')}} {# run only script tests -#}
   -race={{flag(name='race')}} {# race detection -#}
   -shard-index={{option(name='shard-index', default='0')}} {# shard index -#}
   -shard-count={{option(name='shard-count', default='1')}} {# shard count -#}
+  -update={{flag(name='update')}} {# update expected results -#}
 """
 
 [tasks."_cover_report"]

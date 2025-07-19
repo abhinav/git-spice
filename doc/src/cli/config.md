@@ -312,6 +312,28 @@ should post or update a navigation comment to the CR.
 - `multiple`:
   post or update navigation comments only for stacks with at least two CRs
 
+### spice.submit.navigationCommentSync
+
+<!-- gs:version unreleased -->
+
+Controls which branches' navigation comments are synced (created or updated)
+when submitting branches.
+
+**Accepted values:**
+
+- `branch` (default): sync navigation comments only for the submitted branches
+- `downstack`: sync navigation comments for all downstack branches
+
+When set to `branch`, if a branch stacked on top of another branch
+is submitted with $$gs branch submit$$,
+only the navigation comment for the submitted branch will be updated.
+If both branches are submitted (e.g. with $$gs downstack submit$$),
+then both branches' navigation comments will be updated.
+
+When set to `downstack`, any time a branch is submitted,
+git-spice will update the navigation comment for that branch
+and all branches below it in the stack.
+
 ### spice.submit.publish
 
 <!-- gs:version v0.5.0 -->

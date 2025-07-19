@@ -1,0 +1,82 @@
+# Test submit.navigationCommentSync=downstack behavior
+# Navigation comments should be updated for all downstack branches when submitting one branch
+
+as 'Test <test@example.com>'
+at '2025-01-18T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack (main -> feature1 -> feature2 -> feature3)
+# but submit them separately, one at a time.
+# Because navigation comment update scope is set to downstack,
+# all branches in the stack will have a full view of the stack.
+
+git config --local spice.submit.navigationCommentSync downstack
+
+git add feature1.txt
+gs bc -m feature1
+gs bs --fill
+
+git add feature2.txt
+gs bc -m feature2
+gs bs --fill
+
+git add feature3.txt
+gs bc -m feature3
+gs bs --fill
+
+# Verify all navigation comments are present initially
+shamhub dump comments
+cmp stdout $WORK/golden/all-comments.txt
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- repo/feature3.txt --
+feature 3
+
+-- golden/all-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+        - #2
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+            - #3
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+- change: 3
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2
+            - #3 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

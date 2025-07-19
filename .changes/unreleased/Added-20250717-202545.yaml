@@ -1,0 +1,7 @@
+kind: Added
+body: >-
+  submit:
+  Add submit.navigationCommentSync configuration option
+  to control which branches' navigation comments are updated
+  when a change is submitted.
+time: 2025-07-17T20:25:45.74911-07:00

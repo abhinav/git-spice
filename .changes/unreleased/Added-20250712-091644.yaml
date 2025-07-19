@@ -1,5 +1,5 @@
 kind: Changed
-body: |
+body: >-
   repo init: Warn when trunk is behind upstream at initialization time.
   This should catch issues where local branches are rebased
   on top of an outdated trunk.

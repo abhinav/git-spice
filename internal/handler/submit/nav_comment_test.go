@@ -1,12 +1,398 @@
 package submit
 
 import (
+	"cmp"
+	"context"
+	"encoding/json"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/forge/shamhub"
+	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
+	gomock "go.uber.org/mock/gomock"
 )
+
+func TestUpdateNavigationComments(t *testing.T) {
+	type trackedBranch struct {
+		Name     string
+		Base     string // empty = trunk
+		ChangeID int    // 0 = unsubmitted
+	}
+
+	tests := []struct {
+		name            string
+		trackedBranches []trackedBranch
+		when            NavCommentWhen
+		sync            NavCommentSync
+
+		// branches from trackedBranches that were just submitted.
+		submit []string
+
+		wantComments map[int]string // change ID -> comment body (without header/footer/marker)
+	}{
+		{
+			name: "NoSubmittedBranches",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+			},
+			// no comments
+		},
+		{
+			name: "NavCommentNever",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+			},
+			when:   NavCommentNever,
+			submit: []string{"feat1"},
+			// no comments even if submitted
+		},
+		{
+			name: "SingleBranch",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+			},
+			submit: []string{"feat1"},
+			wantComments: map[int]string{
+				123: joinLines("- #123 ◀"),
+			},
+		},
+		{
+			name: "SingleBranch/OnMultiple",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+			},
+			when:   NavCommentOnMultiple,
+			submit: []string{"feat1"},
+			// no comment, as there's only one branch
+		},
+		{
+			name: "LinearStack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			submit: []string{"feat2"},
+			wantComments: map[int]string{
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+					"        - #125",
+				),
+			},
+		},
+		{
+			name: "LinearStack/SyncDownstack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat3"},
+			// topmost branch was submitted, so all get comments
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+					"        - #125",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+					"        - #125",
+				),
+				125: joinLines(
+					"- #123",
+					"    - #124",
+					"        - #125 ◀",
+				),
+			},
+		},
+		{
+			name: "MultipleSubmissions/SyncDownstack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", ChangeID: 125},
+				{Name: "feat4", Base: "feat3", ChangeID: 126},
+			},
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat2", "feat4"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+				),
+				125: joinLines(
+					"- #125 ◀",
+					"    - #126",
+				),
+				126: joinLines(
+					"- #125",
+					"    - #126 ◀",
+				),
+			},
+		},
+		{
+			name: "LinearStack/SyncDownstack/OnMultiple",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			when:   NavCommentOnMultiple,
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat2"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+					"        - #125",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+					"        - #125",
+				),
+			},
+		},
+		{
+			name: "NonLinearStack/SyncDownstack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat1", ChangeID: 125},
+				{Name: "feat4", Base: "feat2", ChangeID: 126},
+			},
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat3", "feat4"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+					"        - #126",
+					"    - #125",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+					"        - #126",
+				),
+				125: joinLines(
+					"- #123",
+					"    - #125 ◀",
+				),
+				126: joinLines(
+					"- #123",
+					"    - #124",
+					"        - #126 ◀",
+				),
+			},
+		},
+		{
+			name: "UnsubmittedBranches/SyncDownstack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 0}, // unsubmitted
+				{Name: "feat3", Base: "feat2", ChangeID: 124},
+			},
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat3"},
+			wantComments: map[int]string{
+				124: joinLines(
+					"- #124 ◀",
+				),
+			},
+		},
+		{
+			name: "MultipleSubmissions/SyncBranch",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", ChangeID: 125},
+			},
+			submit: []string{"feat1", "feat3"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+				),
+				125: joinLines(
+					"- #125 ◀",
+				),
+			},
+		},
+		{
+			name: "NonLinearStack/OnMultiple",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat1", ChangeID: 125},
+				{Name: "feat4", Base: "feat2", ChangeID: 126},
+			},
+			when:   NavCommentOnMultiple,
+			submit: []string{"feat1", "feat4"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+					"        - #126",
+					"    - #125",
+				),
+				126: joinLines(
+					"- #123",
+					"    - #124",
+					"        - #126 ◀",
+				),
+			},
+		},
+		{
+			name: "UnsubmittedBranches",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123},
+				{Name: "feat2", Base: "feat1", ChangeID: 0}, // unsubmitted
+				{Name: "feat3", Base: "feat2", ChangeID: 124},
+			},
+			submit: []string{"feat1"},
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			log := silogtest.New(t)
+			ctrl := gomock.NewController(t)
+			store := statetest.NewMemoryStore(t, "main", "origin", log)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				LoadBranches(gomock.Any()).
+				DoAndReturn(func(context.Context) ([]spice.LoadBranchItem, error) {
+					items := make([]spice.LoadBranchItem, len(tt.trackedBranches))
+					for i, b := range tt.trackedBranches {
+						item := spice.LoadBranchItem{
+							Name:           b.Name,
+							Base:           cmp.Or(b.Base, "main"),
+							Head:           "abcd1234",
+							BaseHash:       "efgh5678",
+							UpstreamBranch: b.Name,
+						}
+
+						if b.ChangeID > 0 {
+							item.Change = &shamhub.ChangeMetadata{
+								Number: b.ChangeID,
+							}
+						}
+
+						items[i] = item
+					}
+
+					return items, nil
+				}).
+				AnyTimes()
+
+			mockForge := forgetest.NewMockForge(ctrl)
+			mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
+			mockForge.EXPECT().
+				MarshalChangeMetadata(gomock.Any()).
+				DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+					md, ok := m.(*shamhub.ChangeMetadata)
+					require.True(t, ok, "unexpected change metadata type: %T", m)
+					return json.Marshal(md)
+				}).
+				AnyTimes()
+
+			mockRemoteRepo := forgetest.NewMockRepository(ctrl)
+			mockRemoteRepo.EXPECT().Forge().Return(mockForge).AnyTimes()
+
+			var (
+				mu               sync.Mutex
+				commentIDCounter atomic.Int64
+			)
+			comments := make(map[shamhub.ChangeCommentID]string)                   // comment ID => body
+			changeComments := make(map[shamhub.ChangeID][]shamhub.ChangeCommentID) // change => comments
+			mockRemoteRepo.EXPECT().
+				PostChangeComment(gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, cid forge.ChangeID, body string) (forge.ChangeCommentID, error) {
+					changeID, ok := cid.(shamhub.ChangeID)
+					require.True(t, ok, "unexpected change ID type: %T", cid)
+					commentID := shamhub.ChangeCommentID(commentIDCounter.Add(1))
+
+					mu.Lock()
+					comments[commentID] = body
+					changeComments[changeID] = append(changeComments[changeID], commentID)
+					mu.Unlock()
+					return commentID, nil
+				}).
+				AnyTimes()
+
+			mockRemoteRepo.EXPECT().
+				UpdateChangeComment(gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, ccid forge.ChangeCommentID, body string) error {
+					commentID, ok := ccid.(shamhub.ChangeCommentID)
+					require.True(t, ok, "unexpected change comment ID type: %T", ccid)
+					mu.Lock()
+					comments[commentID] = body
+					mu.Unlock()
+					return nil
+				}).
+				AnyTimes()
+
+			err := updateNavigationComments(
+				t.Context(),
+				store,
+				mockService,
+				log,
+				tt.when,
+				tt.sync,
+				tt.submit,
+				func(context.Context) (forge.Repository, error) {
+					return mockRemoteRepo, nil
+				},
+			)
+			require.NoError(t, err)
+
+			gotComments := make(map[int]string) // change => comments
+			for changeID, commentIDs := range changeComments {
+				if assert.Len(t, commentIDs, 1, "change %v doesn't have exactly one comment", changeID) {
+					body, ok := comments[commentIDs[0]]
+					if assert.True(t, ok, "comment %v on change %v has no body", commentIDs[0], changeID) {
+						// Strip header, footer, and marker to get just the navigation content
+						stripped := strings.TrimPrefix(body, _commentHeader+"\n\n")
+						stripped = strings.TrimSuffix(stripped, "\n"+_commentFooter+"\n"+_commentMarker+"\n")
+						gotComments[int(changeID)] = stripped
+					}
+				}
+			}
+
+			for changeID, wantComment := range tt.wantComments {
+				assert.Equal(t, gotComments[changeID], wantComment, "changeID=%d", changeID)
+				delete(gotComments, changeID)
+			}
+
+			for changeID, comment := range gotComments {
+				assert.Fail(t, "unexpected comment", "changeID=%d\ncomment=\n%v", changeID, comment)
+			}
+		})
+	}
+}
 
 func TestGenerateStackNavigationComment(t *testing.T) {
 	tests := []struct {
@@ -156,6 +542,65 @@ func TestNavigationCommentWhen_StringMarshal(t *testing.T) {
 		var f NavCommentWhen
 		require.Error(t, f.UnmarshalText([]byte("unknown")))
 		assert.Equal(t, "unknown", NavCommentWhen(42).String())
+	})
+}
+
+func TestNavCommentSync_UnmarshalText(t *testing.T) {
+	tests := []struct {
+		give string
+		want NavCommentSync
+	}{
+		{"branch", NavCommentSyncBranch},
+		{"downstack", NavCommentSyncDownstack},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			var got NavCommentSync
+			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.give, got.String())
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		var s NavCommentSync
+		require.Error(t, s.UnmarshalText([]byte("unknown")))
+		assert.Equal(t, "unknown", NavCommentSync(42).String())
+	})
+}
+
+func TestNavCommentSync_StringMarshal(t *testing.T) {
+	tests := []struct {
+		give string
+		want NavCommentSync
+		str  string
+	}{
+		{
+			give: "branch",
+			want: NavCommentSyncBranch,
+			str:  "branch",
+		},
+		{
+			give: "downstack",
+			want: NavCommentSyncDownstack,
+			str:  "downstack",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			var got NavCommentSync
+			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.give, got.String())
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		var s NavCommentSync
+		require.Error(t, s.UnmarshalText([]byte("unknown")))
+		assert.Equal(t, "unknown", NavCommentSync(42).String())
 	})
 }
 
