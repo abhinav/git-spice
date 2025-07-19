@@ -162,7 +162,12 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 		// e.g. [["user.name", "Alice"], ["user.email", "alice@example.com"]]
 		sets [][]string
 
+		// The regular expression patterns to search for in the configuration.
+		// If empty, tests single pattern behavior for backward compatibility.
+		patterns []string
+
 		// The regular expression to search for in the configuration.
+		// Used when patterns is empty for backward compatibility.
 		pattern string
 
 		want []ConfigEntry
@@ -213,6 +218,35 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 				{Key: "some.key", Value: "value1\nvalue2\nvalue3"},
 			},
 		},
+		{
+			name: "MultiplePatterns",
+			sets: [][]string{
+				{"user.name", "Alice"},
+				{"user.email", "alice@example.com"},
+				{"core.editor", "vim"},
+				{"core.autocrlf", "false"},
+			},
+			patterns: []string{`^user\.`, `^core\.`},
+			want: []ConfigEntry{
+				{Key: "user.name", Value: "Alice"},
+				{Key: "user.email", Value: "alice@example.com"},
+				{Key: "core.editor", Value: "vim"},
+				{Key: "core.autocrlf", Value: "false"},
+			},
+		},
+		{
+			name: "SinglePatternInArray",
+			sets: [][]string{
+				{"user.name", "Alice"},
+				{"user.email", "alice@example.com"},
+				{"core.editor", "vim"},
+			},
+			patterns: []string{`^user\.`},
+			want: []ConfigEntry{
+				{Key: "user.name", Value: "Alice"},
+				{Key: "user.email", Value: "alice@example.com"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -243,7 +277,13 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 				Log: log,
 			})
 
-			got, err := sliceutil.CollectErr(cfg.ListRegexp(ctx, tt.pattern))
+			var got []ConfigEntry
+			var err error
+			if len(tt.patterns) > 0 {
+				got, err = sliceutil.CollectErr(cfg.ListRegexp(ctx, tt.patterns...))
+			} else {
+				got, err = sliceutil.CollectErr(cfg.ListRegexp(ctx, tt.pattern))
+			}
 			require.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, got)
 		})

@@ -16,14 +16,16 @@ import (
 
 const (
 	_configTag           = "config"
-	_configSection       = "spice"
+	_spiceSection        = "spice"
 	_shorthandSubsection = "shorthand"
-	_configSectionPrefix = _configSection + "."
 )
+
+// _gitSections is a list of Git-owned sections that we read configuration from.
+var _gitSections = []string{"core"}
 
 // GitConfigLister provides access to git-config output.
 type GitConfigLister interface {
-	ListRegexp(context.Context, string) iter.Seq2[git.ConfigEntry, error]
+	ListRegexp(context.Context, ...string) iter.Seq2[git.ConfigEntry, error]
 }
 
 var _ GitConfigLister = (*git.Config)(nil)
@@ -55,6 +57,18 @@ var _ GitConfigLister = (*git.Config)(nil)
 // For slice fields, all values are combined.
 //
 // If a flag is passed on the CLI, it takes precedence over the configuration.
+//
+// Configuration keys that start with '@'
+// are references to regular Git configuration keys,
+// and are loaded ignoring the "spice." prefix.
+//
+// For example:
+//
+//	type someCmd struct {
+//		CommentString string `config:"@core.commentString"`
+//	}
+//
+// This will read the configuration key "core.commentString" from git-config.
 type Config struct {
 	// items is a map from configuration key (without the "spice." prefix)
 	// to list of values for that field.
@@ -87,15 +101,26 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	shorthands := make(map[string][]string)
 	shellCommands := make(map[string]string)
 
-	for entry, err := range cfg.ListRegexp(ctx, `^`+_configSection+`\.`) {
+	sectionNames := make(map[string]struct{})
+	sectionNames[_spiceSection] = struct{}{}
+	for _, section := range _gitSections {
+		sectionNames[section] = struct{}{}
+	}
+
+	configPatterns := make([]string, 0, len(sectionNames))
+	for section := range sectionNames {
+		configPatterns = append(configPatterns, "^"+section+`\.`)
+	}
+
+	for entry, err := range cfg.ListRegexp(ctx, configPatterns...) {
 		if err != nil {
 			return nil, fmt.Errorf("list configuration: %w", err)
 		}
 
 		key := entry.Key.Canonical()
 		section, subsection, name := key.Split()
-		if section != _configSection {
-			// Ignore keys that are not in the spice namespace.
+		if _, ok := sectionNames[section]; !ok {
+			// Ignore keys that are not in requested sections.
 			// This will never happen if git config --get-regexp
 			// behaves correctly, but it's easy to handle.
 			continue
@@ -103,7 +128,7 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 
 		// Special-case: Everything under "spice.shorthand.*"
 		// defines a shorthand.
-		if subsection == _shorthandSubsection {
+		if section == _spiceSection && subsection == _shorthandSubsection {
 			short := name
 
 			// "!foo" is used for shell commands.
@@ -167,7 +192,15 @@ func (c *Config) Resolve(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, e
 		return nil, nil
 	}
 
-	key := git.ConfigKey(_configSectionPrefix + k).Canonical()
+	var key git.ConfigKey
+	if gitKey, ok := strings.CutPrefix(k, "@"); ok {
+		key = git.ConfigKey(gitKey).Canonical()
+	} else {
+		// If the key does not start with '@',
+		// it is a spice configuration key.
+		key = git.ConfigKey(_spiceSection + "." + k).Canonical()
+	}
+
 	values := c.items[key]
 	switch len(values) {
 	case 0:

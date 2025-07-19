@@ -132,11 +132,12 @@ type ConfigEntry struct {
 	Value string
 }
 
-// ListRegexp lists all configuration entries that match the given pattern.
-// If pattern is empty, '.' is used to match all entries.
-func (cfg *Config) ListRegexp(ctx context.Context, pattern string) iter.Seq2[ConfigEntry, error] {
-	if pattern == "" {
-		pattern = "."
+// ListRegexp lists all configuration entries that match the given patterns.
+// If no patterns are provided, it lists all entries.
+func (cfg *Config) ListRegexp(ctx context.Context, patterns ...string) iter.Seq2[ConfigEntry, error] {
+	pattern := "."
+	if len(patterns) > 0 {
+		pattern = strings.Join(patterns, "|")
 	}
 	return cfg.list(ctx, "--get-regexp", pattern)
 }
