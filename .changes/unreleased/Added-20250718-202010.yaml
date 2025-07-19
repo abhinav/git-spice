@@ -1,0 +1,3 @@
+kind: Added
+body: 'branch squash: Add --no-edit flag to use generated commit message without opening an editor.'
+time: 2025-07-18T20:20:10.124517-07:00
