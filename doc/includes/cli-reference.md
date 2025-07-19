@@ -755,6 +755,7 @@ Use the -m/--message flag to specify a commit message without editing.
 
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
+* `--branch=NAME`: Branch to squash. Defaults to current branch.
 
 ### gs branch edit
 
