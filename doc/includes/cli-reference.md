@@ -754,7 +754,7 @@ Use the -m/--message flag to specify a commit message without editing.
 **Flags**
 
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
-* `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used.
+* `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--branch=NAME`: Branch to squash. Defaults to current branch.
 
