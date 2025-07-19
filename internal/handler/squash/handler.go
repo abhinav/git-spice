@@ -75,7 +75,7 @@ type Options struct {
 	// git.commentString is the prefix for comments in commit messages.
 	CommentPrefix string `hidden:"" config:"@core.commentString" default:"#"`
 
-	NoEdit bool `help:"Do not open an editor to edit the squashed commit message. Only applicable if --message is not used."`
+	NoEdit bool `released:"unreleased" help:"Do not open an editor to edit the squashed commit message. Only applicable if --message is not used."`
 
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 }
