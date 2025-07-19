@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
@@ -15,6 +16,9 @@ import (
 
 type branchSquashCmd struct {
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+
+	// git.commentString is the prefix for comments in commit messages.
+	CommentPrefix string `hidden:"" config:"@core.commentString" default:"#"`
 
 	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 }
@@ -71,13 +75,22 @@ func (cmd *branchSquashCmd) Run(
 		}
 
 		var sb strings.Builder
-		sb.WriteString("The original commit messages were:\n\n")
-		for i, msg := range commitMessages {
-			if i > 0 {
-				sb.WriteString("\n")
-			}
+		switch len(commitMessages) {
+		case 1:
+			fmt.Fprintln(&sb, commitMessages[0])
+		default:
+			// We want the earliest commit messages first.
+			slices.Reverse(commitMessages)
 
-			fmt.Fprintf(&sb, "%v\n", msg)
+			fmt.Fprintf(&sb, "%s This is a combination of %d commits.\n", cmd.CommentPrefix, len(commitMessages))
+			for i, msg := range commitMessages {
+				if i == 0 {
+					fmt.Fprintf(&sb, "%s This is the 1st commit message:\n\n", cmd.CommentPrefix)
+				} else {
+					fmt.Fprintf(&sb, "\n%s This is the commit message #%d:\n\n", cmd.CommentPrefix, i+1)
+				}
+				fmt.Fprintln(&sb, msg)
+			}
 		}
 
 		commitTemplate = sb.String()

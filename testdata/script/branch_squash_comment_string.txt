@@ -1,10 +1,11 @@
-# Squashing a branch into one commit with 'squash'
+# Squashing a branch into one commit with 'squash' when core.CommentString is ';'
 
 as 'Test <test@example.com>'
 at '2025-02-02T20:00:01Z'
 
 cd repo
 git init
+git config core.commentString ';'
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
@@ -56,23 +57,23 @@ Squashed commit message
 
 This contains features 1 and 2.
 -- golden/initial-msg.txt --
-# This is a combination of 2 commits.
-# This is the 1st commit message:
+; This is a combination of 2 commits.
+; This is the 1st commit message:
 
 First message in squashed branch
 
-# This is the commit message #2:
+; This is the commit message #2:
 
 Second message in squashed branch
 
-# Please enter the commit message for your changes. Lines starting
-# with '#' will be ignored, and an empty message aborts the commit.
-#
-# HEAD detached from refs/heads/feature1
-# Changes to be committed:
-#	new file:   feature1.txt
-#	new file:   feature2.txt
-#
-# Untracked files:
-#	dirty.txt
-#
+; Please enter the commit message for your changes. Lines starting
+; with ';' will be ignored, and an empty message aborts the commit.
+;
+; HEAD detached from refs/heads/feature1
+; Changes to be committed:
+;	new file:   feature1.txt
+;	new file:   feature2.txt
+;
+; Untracked files:
+;	dirty.txt
+;
