@@ -12,6 +12,7 @@ import (
 
 // GitWorktree is a subet of the git.Worktree interface.
 type GitWorktree interface {
+	CurrentBranch(ctx context.Context) (string, error)
 	Checkout(ctx context.Context, branch string) error
 }
 
@@ -22,6 +23,7 @@ type Store interface {
 
 // Service is a subset of the spice.Service interface.
 type Service interface {
+	LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error)
 	ListUpstack(ctx context.Context, branch string) ([]string, error)
 	ListStack(ctx context.Context, branch string) ([]string, error)
 	Restack(ctx context.Context, name string) (*spice.RestackResponse, error)
