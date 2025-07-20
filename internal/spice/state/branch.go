@@ -10,7 +10,6 @@ import (
 	"maps"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -149,10 +148,8 @@ func (s *Store) lookupBranchState(ctx context.Context, branch string) (*branchSt
 
 // ListBranches reports the names of all tracked branches.
 // The list is sorted in lexicographic order.
-func (s *Store) ListBranches(ctx context.Context) ([]string, error) {
-	branches, err := sliceutil.CollectErr(s.listBranches(ctx))
-	sort.Strings(branches)
-	return branches, err
+func (s *Store) ListBranches(ctx context.Context) iter.Seq2[string, error] {
+	return s.listBranches(ctx)
 }
 
 // listBranches returns the names of all branches in the store.

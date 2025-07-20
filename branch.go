@@ -113,7 +113,7 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 	trunk := p.store.Trunk()
 	filter := func(git.LocalBranch) bool { return true }
 	if req.TrackedOnly {
-		tracked, err := p.store.ListBranches(ctx)
+		tracked, err := sliceutil.CollectErr(p.store.ListBranches(ctx))
 		if err != nil {
 			return "", fmt.Errorf("list tracked branches: %w", err)
 		}

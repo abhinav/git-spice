@@ -76,10 +76,11 @@ func predictTrackedBranches(_ komplete.Args) (predictions []string) {
 		return nil // not initialized
 	}
 
-	branches, err := store.ListBranches(ctx)
+	branches, err := sliceutil.CollectErr(store.ListBranches(ctx))
 	if err != nil {
 		return nil
 	}
+	sort.Strings(branches)
 
 	return branches
 }

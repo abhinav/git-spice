@@ -10,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 )
@@ -30,7 +31,7 @@ type Store interface {
 	Trunk() string
 
 	// ListBranches lists all tracked branches.
-	ListBranches(ctx context.Context) ([]string, error)
+	ListBranches(ctx context.Context) iter.Seq2[string, error]
 
 	// BeginBranchTx begins a transaction for modifying branch state.
 	BeginBranchTx() *state.BranchTx
@@ -129,7 +130,7 @@ func guessBaseBranch(
 	repo GitRepository,
 	branch string,
 ) (string, error) {
-	trackedBranches, err := store.ListBranches(ctx)
+	trackedBranches, err := sliceutil.CollectErr(store.ListBranches(ctx))
 	if err != nil {
 		return "", fmt.Errorf("list tracked branches: %w", err)
 	}

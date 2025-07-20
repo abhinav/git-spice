@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 
@@ -87,10 +88,11 @@ func (cmd *branchLogCmd) run(
 		currentBranch = "" // may be detached
 	}
 
-	allBranches, err := store.ListBranches(ctx)
+	allBranches, err := sliceutil.CollectErr(store.ListBranches(ctx))
 	if err != nil {
 		return fmt.Errorf("load branches: %w", err)
 	}
+	sort.Strings(allBranches)
 
 	getRemote := sync.OnceValue(func() string {
 		remote, err := store.Remote()

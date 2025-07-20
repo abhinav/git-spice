@@ -256,13 +256,12 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 
 	// Similarly, this doesn't use ListAbove
 	// because we don't want the deleted branch to be removed yet.
-	branchNames, err := s.store.ListBranches(ctx)
-	if err != nil {
-		return fmt.Errorf("list branches: %w", err)
-	}
-
 	branchTx := s.store.BeginBranchTx()
-	for _, candidate := range branchNames {
+	for candidate, err := range s.store.ListBranches(ctx) {
+		if err != nil {
+			return fmt.Errorf("list branches: %w", err)
+		}
+
 		if candidate == name {
 			continue
 		}
@@ -417,18 +416,14 @@ type LoadBranchItem struct {
 //
 // The returned branches are sorted by name.
 func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
-	names, err := s.store.ListBranches(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list branches: %w", err)
-	}
-
 	var (
 		wg sync.WaitGroup
 
-		mu sync.Mutex // guards items, errs, deletedBranches
+		mu sync.Mutex
 
 		errs  []error
-		items = make([]LoadBranchItem, 0, len(names))
+		items []LoadBranchItem
+
 		// These will be used if we encounter any branches
 		// that have been deleted out of band.
 		deletedBranches = make(map[string]*DeletedBranchError)
@@ -470,7 +465,10 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 		}()
 	}
 
-	for _, name := range names {
+	for name, err := range s.store.ListBranches(ctx) {
+		if err != nil {
+			return nil, fmt.Errorf("list branches: %w", err)
+		}
 		namec <- name
 	}
 	close(namec)
