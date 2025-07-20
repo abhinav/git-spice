@@ -343,12 +343,11 @@ func (mr *MockStoreMockRecorder) CacheTemplates(arg0, arg1, arg2 any) *gomock.Ca
 }
 
 // ListBranches mocks base method.
-func (m *MockStore) ListBranches(ctx context.Context) ([]string, error) {
+func (m *MockStore) ListBranches(ctx context.Context) iter.Seq2[string, error] {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListBranches", ctx)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(iter.Seq2[string, error])
+	return ret0
 }
 
 // ListBranches indicates an expected call of ListBranches.

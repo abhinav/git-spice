@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/spice/state/storage"
@@ -347,7 +348,7 @@ type branchStateUncorruptible struct {
 func (sm *branchStateUncorruptible) Check(t *rapid.T) {
 	// Listed listedBranches must always match knownBranches.
 	knownBranches := slices.Sorted(maps.Keys(sm.knownBranches))
-	listedBranches, err := sm.store.ListBranches(sm.ctx)
+	listedBranches, err := sliceutil.CollectErr(sm.store.ListBranches(sm.ctx))
 	require.NoError(t, err)
 	slices.Sort(listedBranches)
 	if len(listedBranches) == 0 {

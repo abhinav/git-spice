@@ -80,7 +80,7 @@ type Store interface {
 
 	// ListBranches returns a list of all tracked branch names.
 	// This list never includes the trunk branch.
-	ListBranches(ctx context.Context) ([]string, error)
+	ListBranches(ctx context.Context) iter.Seq2[string, error]
 
 	AppendContinuations(context.Context, string, ...state.Continuation) error
 	TakeContinuations(context.Context, string) ([]state.Continuation, error)
