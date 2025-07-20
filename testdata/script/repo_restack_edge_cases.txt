@@ -11,7 +11,7 @@ gs repo init
 
 # Test case 1: No tracked branches
 gs repo restack
-stderr 'no tracked branches found'
+stderr 'no tracked branches'
 
 # Test case 2: Single branch
 git add single.txt

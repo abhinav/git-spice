@@ -1,0 +1,677 @@
+package restack
+
+import (
+	"bytes"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/spice/state/statetest"
+)
+
+func TestHandler_Restack(t *testing.T) {
+	t.Run("ScopeBranch", func(t *testing.T) {
+		t.Run("SuccessfulRestack", func(t *testing.T) {
+			var logBuffer bytes.Buffer
+			log := silog.New(&logBuffer, nil)
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 1, count)
+			assert.Contains(t, logBuffer.String(), "feature: restacked on main")
+		})
+
+		t.Run("TrunkBranch", func(t *testing.T) {
+			log := silog.Nop()
+			ctrl := gomock.NewController(t)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "main").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  NewMockService(ctrl),
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "main",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeBranch,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 0, count)
+		})
+	})
+
+	t.Run("ScopeUpstack", func(t *testing.T) {
+		t.Run("SuccessfulRestack", func(t *testing.T) {
+			var logBuffer bytes.Buffer
+			log := silog.New(&logBuffer, nil)
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListUpstack(gomock.Any(), "feature").
+				Return([]string{"feature", "feature2", "feature3"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature2").
+				Return(&spice.RestackResponse{Base: "feature"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature3").
+				Return(&spice.RestackResponse{Base: "feature2"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeUpstack,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 3, count)
+			assert.Contains(t, logBuffer.String(), "feature: restacked on main")
+			assert.Contains(t, logBuffer.String(), "feature2: restacked on feature")
+			assert.Contains(t, logBuffer.String(), "feature3: restacked on feature2")
+		})
+
+		t.Run("UpstackExclusiveOnly", func(t *testing.T) {
+			var logBuffer bytes.Buffer
+			log := silog.New(&logBuffer, nil)
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListUpstack(gomock.Any(), "feature").
+				Return([]string{"feature", "feature2", "feature3"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature2").
+				Return(&spice.RestackResponse{Base: "feature"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature3").
+				Return(&spice.RestackResponse{Base: "feature2"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeUpstackExclusive,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 2, count)
+			assert.NotContains(t, logBuffer.String(), "feature: restacked")
+			assert.Contains(t, logBuffer.String(), "feature2: restacked on feature")
+			assert.Contains(t, logBuffer.String(), "feature3: restacked on feature2")
+		})
+
+		t.Run("EmptyUpstack", func(t *testing.T) {
+			log := silog.Nop()
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListUpstack(gomock.Any(), "feature").
+				Return([]string{"feature"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeUpstack,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 1, count)
+		})
+	})
+
+	t.Run("ScopeDownstack", func(t *testing.T) {
+		t.Run("SuccessfulRestack", func(t *testing.T) {
+			var logBuffer bytes.Buffer
+			log := silog.New(&logBuffer, nil)
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListDownstack(gomock.Any(), "feature").
+				Return([]string{"feature", "base2", "base1"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "base1").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "base2").
+				Return(&spice.RestackResponse{Base: "base1"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "base2"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeDownstack,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 3, count)
+			assert.Contains(t, logBuffer.String(), "base1: restacked on main")
+			assert.Contains(t, logBuffer.String(), "base2: restacked on base1")
+			assert.Contains(t, logBuffer.String(), "feature: restacked on base2")
+		})
+
+		t.Run("EmptyDownstack", func(t *testing.T) {
+			log := silog.Nop()
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListDownstack(gomock.Any(), "feature").
+				Return([]string{"feature"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeDownstack,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 1, count)
+		})
+	})
+
+	t.Run("ScopeStack", func(t *testing.T) {
+		t.Run("SuccessfulRestack", func(t *testing.T) {
+			var logBuffer bytes.Buffer
+			log := silog.New(&logBuffer, nil)
+			ctrl := gomock.NewController(t)
+
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				ListDownstack(gomock.Any(), "feature").
+				Return([]string{"feature", "base2", "base1"}, nil)
+			mockService.EXPECT().
+				ListUpstack(gomock.Any(), "feature").
+				Return([]string{"feature", "feature2", "feature3"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "base1").
+				Return(&spice.RestackResponse{Base: "main"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "base2").
+				Return(&spice.RestackResponse{Base: "base1"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature").
+				Return(&spice.RestackResponse{Base: "base2"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature2").
+				Return(&spice.RestackResponse{Base: "feature"}, nil)
+			mockService.EXPECT().
+				Restack(gomock.Any(), "feature3").
+				Return(&spice.RestackResponse{Base: "feature2"}, nil)
+
+			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				Checkout(gomock.Any(), "feature").
+				Return(nil)
+
+			handler := &Handler{
+				Log:      log,
+				Worktree: mockWorktree,
+				Store:    statetest.NewMemoryStore(t, "main", "", log),
+				Service:  mockService,
+			}
+
+			count, err := handler.Restack(t.Context(), &Request{
+				Branch:          "feature",
+				ContinueCommand: []string{"false"},
+				Scope:           ScopeStack,
+			})
+
+			require.NoError(t, err)
+			assert.Equal(t, 5, count)
+			assert.Contains(t, logBuffer.String(), "base1: restacked on main")
+			assert.Contains(t, logBuffer.String(), "base2: restacked on base1")
+			assert.Contains(t, logBuffer.String(), "feature: restacked on base2")
+			assert.Contains(t, logBuffer.String(), "feature2: restacked on feature")
+			assert.Contains(t, logBuffer.String(), "feature3: restacked on feature2")
+		})
+	})
+
+	t.Run("AlreadyRestacked", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListUpstack(gomock.Any(), "feature").
+			Return([]string{"feature", "feature2"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, spice.ErrAlreadyRestacked)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature2").
+			Return(&spice.RestackResponse{Base: "feature"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "feature").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeUpstack,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, count)
+		assert.Contains(t, logBuffer.String(), "feature: branch does not need to be restacked")
+		assert.Contains(t, logBuffer.String(), "feature2: restacked on feature")
+	})
+
+	t.Run("RebaseInterrupt", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		rebaseErr := &git.RebaseInterruptError{
+			Kind: git.RebaseInterruptConflict,
+		}
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, rebaseErr)
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: NewMockGitWorktree(ctrl),
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
+}
+
+func TestHandler_Restack_trunk(t *testing.T) {
+	t.Run("ScopeStackFromTrunk", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListDownstack(gomock.Any(), "main").
+			Return([]string{"main"}, nil)
+		mockService.EXPECT().
+			ListUpstack(gomock.Any(), "main").
+			Return([]string{"main", "feature1", "feature2"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature1").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature2").
+			Return(&spice.RestackResponse{Base: "feature1"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "main").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "main",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeStack,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, count)
+		assert.NotContains(t, logBuffer.String(), "main: restacked")
+		assert.Contains(t, logBuffer.String(), "feature1: restacked on main")
+		assert.Contains(t, logBuffer.String(), "feature2: restacked on feature1")
+	})
+
+	t.Run("ScopeDownstackFromTrunk", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListDownstack(gomock.Any(), "main").
+			Return([]string{"main"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "main").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "main",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeDownstack,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
+
+	t.Run("ScopeUpstackFromTrunk", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListUpstack(gomock.Any(), "main").
+			Return([]string{"main", "feature1", "feature2"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature1").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature2").
+			Return(&spice.RestackResponse{Base: "feature1"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "main").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "main",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeUpstack,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 2, count)
+		assert.NotContains(t, logBuffer.String(), "main: restacked")
+		assert.Contains(t, logBuffer.String(), "feature1: restacked on main")
+		assert.Contains(t, logBuffer.String(), "feature2: restacked on feature1")
+	})
+}
+
+func TestHandler_Restack_errors(t *testing.T) {
+	t.Run("ListUpstack", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListUpstack(gomock.Any(), "feature").
+			Return(nil, errors.New("upstack error"))
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: NewMockGitWorktree(ctrl),
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeUpstack,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 0, count)
+		assert.ErrorContains(t, err, "list upstack")
+	})
+
+	t.Run("ListDownstackError", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			ListDownstack(gomock.Any(), "feature").
+			Return(nil, errors.New("downstack error"))
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: NewMockGitWorktree(ctrl),
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeDownstack,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 0, count)
+		assert.ErrorContains(t, err, "list downstack")
+	})
+
+	t.Run("UntrackedBranch", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "untracked").
+			Return(nil, state.ErrNotExist)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: NewMockGitWorktree(ctrl),
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "untracked",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 0, count)
+		assert.ErrorContains(t, err, "untracked branch")
+		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked")
+	})
+
+	t.Run("UnexpectedRestackError", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		unexpectedErr := errors.New("unexpected restack error")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, unexpectedErr)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: NewMockGitWorktree(ctrl),
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 0, count)
+		assert.ErrorContains(t, err, "restack branch \"feature\"")
+		assert.ErrorIs(t, err, unexpectedErr)
+	})
+
+	t.Run("CheckoutError", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		checkoutErr := errors.New("checkout failed")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "feature").
+			Return(checkoutErr)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+
+		require.Error(t, err)
+		assert.Equal(t, 0, count)
+		assert.ErrorContains(t, err, "checkout branch feature")
+		assert.ErrorIs(t, err, checkoutErr)
+	})
+}
