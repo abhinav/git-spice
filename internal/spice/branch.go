@@ -542,36 +542,16 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	return items, nil
 }
 
-func (s *Service) branchesByBase(ctx context.Context) (map[string][]string, error) {
-	branchesByBase := make(map[string][]string)
-	branches, err := s.LoadBranches(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, branch := range branches {
-		branchesByBase[branch.Base] = append(
-			branchesByBase[branch.Base], branch.Name,
-		)
-	}
-	return branchesByBase, nil
-}
-
 // ListAbove returns a list of branches that are immediately above the given branch.
 // These are branches that have the given branch as their base.
 // The slice is empty if there are no branches above the given branch.
 func (s *Service) ListAbove(ctx context.Context, base string) ([]string, error) {
-	var children []string
-	branches, err := s.LoadBranches(ctx)
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, err
-	}
-	for _, branch := range branches {
-		if branch.Base == base {
-			children = append(children, branch.Name)
-		}
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
 
-	return children, nil
+	return slices.Collect(graph.Aboves(base)), nil
 }
 
 // ListUpstack will list all branches that are upstack from the given branch,
@@ -581,50 +561,31 @@ func (s *Service) ListAbove(ctx context.Context, base string) ([]string, error) 
 // The returned slice is ordered by branch position in the upstack.
 // It is guaranteed that for i < j, branch[i] is not a parent of branch[j].
 func (s *Service) ListUpstack(ctx context.Context, start string) ([]string, error) {
-	branchesByBase, err := s.branchesByBase(ctx) // base -> [branches]
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
 
-	var upstacks []string
-	remaining := []string{start}
-	for len(remaining) > 0 {
-		current := remaining[0]
-		remaining = remaining[1:]
-		upstacks = append(upstacks, current)
-		remaining = append(remaining, branchesByBase[current]...)
+	upstacks := slices.Collect(graph.Upstack(start))
+	if len(upstacks) == 0 {
+		// Empty iterator means the branch is not tracked.
+		// TOOD: should we return an error here?
+		upstacks = []string{start}
 	}
 	must.NotBeEmptyf(upstacks, "there must be at least one branch")
 	must.BeEqualf(start, upstacks[0], "starting branch must be first upstack")
-
 	return upstacks, nil
 }
 
 // FindTop returns the topmost branches in each upstack chain
 // starting at the given branch.
 func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
-	branchesByBase, err := s.branchesByBase(ctx) // base -> [branches]
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
 
-	remaining := []string{start}
-	var tops []string
-	for len(remaining) > 0 {
-		var b string
-		b, remaining = remaining[0], remaining[1:]
-
-		aboves := branchesByBase[b]
-		if len(aboves) == 0 {
-			// There's nothing above this branch
-			// so it's a top-most branch.
-			tops = append(tops, b)
-		} else {
-			remaining = append(remaining, aboves...)
-		}
-	}
-	must.NotBeEmptyf(tops, "at least start branch (%v) must be in tops", start)
-	return tops, nil
+	return slices.Collect(graph.Tops(start)), nil
 }
 
 // ListDownstack lists all branches below the given branch
@@ -637,53 +598,17 @@ func (s *Service) FindTop(ctx context.Context, start string) ([]string, error) {
 // or because all branches are downstack from trunk have been deleted,
 // the returned slice will be nil.
 func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, error) {
-	tx := s.store.BeginBranchTx()
-	defer func() {
-		if err := tx.Commit(ctx, "clean up deleted branches"); err != nil {
-			s.log.Warn("Error cleaning up after deleted branched", "error", err)
-		}
-	}()
-
-	var (
-		downstacks []string
-		previous   string
-	)
-	current := start
-	for {
-		if current == s.store.Trunk() {
-			return downstacks, nil
-		}
-
-		b, err := s.LookupBranch(ctx, current)
-		if err != nil {
-			if delErr := new(DeletedBranchError); errors.As(err, &delErr) {
-				s.log.Infof("%v", delErr)
-				// If branch was deleted out of band,
-				// pretend it doesn't exist,
-				// and update state to point the upstack branch
-				// to the base of the deleted branch.
-				//
-				// Leave the branch state as-is in case
-				// there are other upstacks that need to be updated.
-				current = delErr.Base
-				if err := tx.Upsert(ctx, state.UpsertRequest{
-					Name: previous,
-					Base: current,
-				}); err != nil {
-					s.log.Warn("Could not update upstack of deleted branch",
-						"branch", previous,
-						"newBase", current,
-						"error", err,
-					)
-				}
-				continue
-			}
-			return nil, fmt.Errorf("lookup %v: %w", current, err)
-		}
-
-		downstacks = append(downstacks, current)
-		previous, current = current, b.Base
+	graph, err := s.BranchGraph(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
+
+	downstack := slices.Collect(graph.Downstack(start))
+	if len(downstack) == 0 {
+		return nil, nil // no downstack branches
+	}
+	must.BeEqualf(start, downstack[0], "starting branch must be first in downstack")
+	return downstack, nil
 }
 
 // FindBottom returns the bottom-most branch in the downstack chain
@@ -691,16 +616,16 @@ func (s *Service) ListDownstack(ctx context.Context, start string) ([]string, er
 //
 // Returns an error if no downstack branches are found.
 func (s *Service) FindBottom(ctx context.Context, start string) (string, error) {
-	downstacks, err := s.ListDownstack(ctx, start)
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("get downstack branches: %w", err)
+		return "", fmt.Errorf("get branch graph: %w", err)
 	}
 
-	if len(downstacks) == 0 {
-		return "", errors.New("no downstack branches found")
+	bottom := graph.Bottom(start)
+	if bottom == "" {
+		return "", fmt.Errorf("no downstack branches found for %q", start)
 	}
-
-	return downstacks[len(downstacks)-1], nil
+	return bottom, nil
 }
 
 // ListStack returns the full stack of branches that the given branch is in.
@@ -710,42 +635,16 @@ func (s *Service) FindBottom(ctx context.Context, start string) (string, error) 
 // The result is ordered by branch position in the stack
 // with the bottom-most branch as the first element.
 func (s *Service) ListStack(ctx context.Context, start string) ([]string, error) {
-	var downstacks []string
-	if start != s.store.Trunk() {
-		var err error
-		downstacks, err = s.ListDownstack(ctx, start)
-		if err != nil {
-			return nil, fmt.Errorf("get downstack branches: %w", err)
-		}
-
-		must.NotBeEmptyf(downstacks, "downstack branches must not be empty")
-		must.BeEqualf(start, downstacks[0], "current branch must be first downstack")
-		downstacks = downstacks[1:] // Remove current branch from list
-		slices.Reverse(downstacks)
-	}
-
-	upstacks, err := s.ListUpstack(ctx, start)
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("get upstack branches: %w", err)
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
-	must.NotBeEmptyf(upstacks, "upstack branches must not be empty")
-	must.BeEqualf(start, upstacks[0], "current branch must be first upstack")
 
-	stack := make([]string, 0, len(downstacks)+len(upstacks))
-	stack = append(stack, downstacks...)
-	stack = append(stack, upstacks...)
+	stack := slices.Collect(graph.Stack(start))
+	if len(stack) == 0 {
+		return []string{start}, nil
+	}
 	return stack, nil
-}
-
-// NonLinearStackError is returned when a stack is not linear.
-// This means that a branch has more than one upstack branch.
-type NonLinearStackError struct {
-	Branch string
-	Aboves []string
-}
-
-func (e *NonLinearStackError) Error() string {
-	return fmt.Sprintf("%v has %d branches above it", e.Branch, len(e.Aboves))
 }
 
 // ListStackLinear returns the full stack of branches that the given branch is in
@@ -755,39 +654,10 @@ func (e *NonLinearStackError) Error() string {
 // The returned slice is ordered by branch position in the stack
 // with the bottom-most branch as the first element.
 func (s *Service) ListStackLinear(ctx context.Context, start string) ([]string, error) {
-	var downstacks []string
-	if start != s.store.Trunk() {
-		var err error
-		downstacks, err = s.ListDownstack(ctx, start)
-		if err != nil {
-			return nil, fmt.Errorf("get downstack branches: %w", err)
-		}
-
-		must.NotBeEmptyf(downstacks, "downstack branches must not be empty")
-		must.BeEqualf(start, downstacks[0], "current branch must be first downstack")
-		downstacks = downstacks[1:] // Remove current branch from list
-		slices.Reverse(downstacks)
-	}
-
-	branchesByBase, err := s.branchesByBase(ctx) // base -> [branches]
+	graph, err := s.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get branch graph: %w", err)
 	}
 
-	upstacks := []string{start}
-	current := start
-	for aboves := branchesByBase[current]; len(aboves) > 0; {
-		if len(aboves) > 1 {
-			return nil, &NonLinearStackError{
-				Branch: current,
-				Aboves: aboves,
-			}
-		}
-
-		current = aboves[0]
-		upstacks = append(upstacks, current)
-		aboves = branchesByBase[current]
-	}
-
-	return slices.Concat(downstacks, upstacks), nil
+	return graph.StackLinear(start)
 }

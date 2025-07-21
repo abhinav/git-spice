@@ -128,3 +128,14 @@ func newService(
 		forges: forges,
 	}
 }
+
+// Trunk reports the name of the trunk branch.
+func (s *Service) Trunk() string {
+	return s.store.Trunk()
+}
+
+// BranchGraph builds a full view of the graph of branches in the repository.
+func (s *Service) BranchGraph(ctx context.Context, opts *BranchGraphOptions) (*BranchGraph, error) {
+	// TODO: cache branch graph based on hash of store contents
+	return NewBranchGraph(ctx, s, opts)
+}
