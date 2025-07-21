@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  restack: If a branch planned to be restacked is checked out in another worktree,
+  don't attempt to restack it or its upstacks.
+time: 2025-07-19T11:24:48.507438-07:00

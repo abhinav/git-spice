@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sync"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/iterutil"
@@ -23,7 +22,10 @@ import (
 type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
 	Checkout(ctx context.Context, branch string) error
+	RootDir() string
 }
+
+var _ GitWorktree = (*git.Worktree)(nil)
 
 // Store is a subset of the state.Store interface.
 type Store interface {
@@ -99,18 +101,16 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 
 	req.Scope = cmp.Or(req.Scope, ScopeBranch) // 0 = ScopeBranch
 
-	loadBranchGraph := sync.OnceValues(func() (*spice.BranchGraph, error) {
-		return h.Service.BranchGraph(ctx, nil)
+	branchGraph, err := h.Service.BranchGraph(ctx, &spice.BranchGraphOptions{
+		IncludeWorktrees: true,
 	})
+	if err != nil {
+		return 0, fmt.Errorf("load branch graph: %w", err)
+	}
 
 	var branchesToRestack []string // branches in restack order
 
 	if req.Scope&scopeDownstackExclusive != 0 {
-		branchGraph, err := loadBranchGraph()
-		if err != nil {
-			return 0, fmt.Errorf("load branch graph: %w", err)
-		}
-
 		// Downstack returns the branches in the order,
 		// [branch, downstack1, downstack2, ...],
 		// not including the trunk.
@@ -125,17 +125,18 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	}
 
 	if req.Scope&ScopeBranch != 0 {
-		if req.Branch != h.Store.Trunk() {
+		if req.Branch == h.Store.Trunk() {
+			// If we're explicitly only trying to restack trunk,
+			// fail the operation.
+			if req.Scope == ScopeBranch {
+				return 0, errors.New("trunk cannot be restacked")
+			}
+		} else {
 			branchesToRestack = append(branchesToRestack, req.Branch)
 		}
 	}
 
 	if req.Scope&ScopeUpstackExclusive != 0 {
-		branchGraph, err := loadBranchGraph()
-		if err != nil {
-			return 0, fmt.Errorf("load branch graph: %w", err)
-		}
-
 		// Upstacks returns the branches in the order,
 		// [branch, upstack1, upstack2, ...].
 		// That's restacking order, so we can use it directly
@@ -148,6 +149,43 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 			branchesToRestack = append(branchesToRestack, branch)
 		}
 	}
+
+	// If any of the branches to be restacked
+	// are checked out in another Git worktree,
+	// we cannot restack anything upstack from that branch.
+	//
+	// And since branchesToRestack is in the restack order,
+	// we can check if a prior skipped branch affects the current branch
+	// by just checking the base of the skipped branch.
+	currentWT := h.Worktree.RootDir()
+	skipped := make(map[string]struct{})
+	branchesToActuallyRestack := branchesToRestack[:0]
+	var requestBranchWT string // worktree of request.Branch
+	for _, branch := range branchesToRestack {
+		if info, ok := branchGraph.Lookup(branch); ok {
+			if _, baseSkipped := skipped[info.Base]; baseSkipped {
+				// Base branch not being restacked,
+				// so skip this as well.
+				h.Log.Warnf("%v: base branch %v was not restacked, skipping", branch, info.Base)
+				skipped[branch] = struct{}{}
+				continue
+			}
+		}
+
+		branchWT := branchGraph.Worktree(branch)
+		if req.Branch == branch {
+			requestBranchWT = branchWT
+		}
+		if branchWT != "" && branchWT != currentWT {
+			// Checked out in another worktree.
+			h.Log.Warnf("%v: checked out in another worktree (%v), skipping", branch, branchWT)
+			skipped[branch] = struct{}{}
+			continue
+		}
+
+		branchesToActuallyRestack = append(branchesToActuallyRestack, branch)
+	}
+	branchesToRestack = branchesToActuallyRestack
 
 	var restackCount int
 loop:
@@ -187,8 +225,12 @@ loop:
 		restackCount++
 	}
 
-	if err := h.Worktree.Checkout(ctx, req.Branch); err != nil {
-		return 0, fmt.Errorf("checkout branch %v: %w", req.Branch, err)
+	if requestBranchWT != "" && requestBranchWT != currentWT {
+		h.Log.Warnf("%v: checked out in another worktree (%v), not checking out here", req.Branch, requestBranchWT)
+	} else {
+		if err := h.Worktree.Checkout(ctx, req.Branch); err != nil {
+			return 0, fmt.Errorf("checkout branch %v: %w", req.Branch, err)
+		}
 	}
 
 	return restackCount, nil

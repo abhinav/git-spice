@@ -70,6 +70,20 @@ func (mr *MockGitWorktreeMockRecorder) CurrentBranch(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitWorktree)(nil).CurrentBranch), ctx)
 }
 
+// RootDir mocks base method.
+func (m *MockGitWorktree) RootDir() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RootDir")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// RootDir indicates an expected call of RootDir.
+func (mr *MockGitWorktreeMockRecorder) RootDir() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RootDir", reflect.TypeOf((*MockGitWorktree)(nil).RootDir))
+}
+
 // MockService is a mock of Service interface.
 type MockService struct {
 	ctrl     *gomock.Controller

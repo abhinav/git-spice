@@ -139,3 +139,31 @@ func (s *Service) BranchGraph(ctx context.Context, opts *BranchGraphOptions) (*B
 	// TODO: cache branch graph based on hash of store contents
 	return NewBranchGraph(ctx, s, opts)
 }
+
+// LookupWorktrees returns a map of branch names to worktree paths.
+func (s *Service) LookupWorktrees(ctx context.Context, branches []string) (map[string]string, error) {
+	want := make(map[string]struct{}, len(branches))
+	for _, b := range branches {
+		want[b] = struct{}{}
+	}
+
+	worktrees := make(map[string]string, len(branches))
+	for b, err := range s.repo.LocalBranches(ctx, nil) {
+		if err != nil {
+			return nil, err
+		}
+
+		if b.Worktree == "" {
+			continue
+		}
+
+		if _, ok := want[b.Name]; !ok {
+			// Not a branch we care about.
+			continue
+		}
+
+		worktrees[b.Name] = b.Worktree
+	}
+
+	return worktrees, nil
+}

@@ -1,0 +1,85 @@
+# 'stack restack' with a non-linear stack where a branch is checked out in another worktree.
+# Should skip the branch in the worktree and anything stacked on top of it.
+
+as 'Test <test@example.com>'
+at '2025-06-20T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a non-linear stack:
+# main -> feature1 -> feature2 -> feature3
+#              '----> feature4 -> feature5
+
+# Create first stack: feaure1-3
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+git add feature3.txt
+gs bc feature3 -m 'Add feature3'
+
+# Go back to feature1 and create 4-5
+gs bco feature1
+git add feature4.txt
+gs bc feature4 -m 'Add feature4'
+git add feature5.txt
+gs bc feature5 -m 'Add feature5'
+
+# Create a worktree for feature2.
+# This will block restacking of feature2 and feature3.
+git worktree add ../wt-feature2 feature2
+
+# Move main to require restacking.
+gs bco main
+git add main-change.txt
+git commit -m 'Change on main that requires restacking'
+
+# Restack the stack.
+gs bco feature1
+gs stack restack
+
+# Verify warnings about skipped branches
+stderr 'WRN feature2: checked out in another worktree \(.+/wt-feature2\), skipping'
+stderr 'WRN feature3: base branch feature2 was not restacked, skipping'
+
+# Verify that feature1, feature4, and feature5 were restacked
+# but feature2 and feature3 were not
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+# Verify we're still on feature1
+git branch --show-current
+stdout '^feature1$'
+
+-- repo/feature1.txt --
+feature1
+
+-- repo/feature2.txt --
+feature2
+
+-- repo/feature3.txt --
+feature3
+
+-- repo/feature4.txt --
+feature4
+
+-- repo/feature5.txt --
+feature5
+
+-- repo/main-change.txt --
+main change
+
+-- golden/branches.txt --
+* 056aa97 (feature3) Add feature3
+* 8a1ddca (feature2) Add feature2
+* 62d71a8 Add feature1
+| * c7b4892 (feature5) Add feature5
+| * 449b09d (feature4) Add feature4
+| * 0166554 (HEAD -> feature1) Add feature1
+| * 28f9688 (main) Change on main that requires restacking
+|/  
+* cb6d6c3 Initial commit

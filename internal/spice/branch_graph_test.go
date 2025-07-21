@@ -16,6 +16,8 @@ func TestBranchGraph(t *testing.T) {
 	//
 	//	main ---> feature1 --> {feature2, feature4}
 	//	      '-> feature3 --> feature5
+	feature1WT := t.TempDir()
+	feature5WT := t.TempDir()
 	graph, err := NewBranchGraph(t.Context(), &branchLoaderStub{
 		trunk: "main",
 		branches: []LoadBranchItem{
@@ -25,7 +27,11 @@ func TestBranchGraph(t *testing.T) {
 			{Name: "feature3", Base: "main"},
 			{Name: "feature5", Base: "feature3"},
 		},
-	}, nil)
+		worktrees: map[string]string{
+			"feature1": feature1WT,
+			"feature5": feature5WT,
+		},
+	}, &BranchGraphOptions{IncludeWorktrees: true})
 	require.NoError(t, err)
 
 	assert.Equal(t, "main", graph.Trunk())
@@ -208,6 +214,26 @@ func TestBranchGraph(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Worktree", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want string
+		}{
+			{"main", ""},
+			{"feature1", feature1WT},
+			{"feature5", feature5WT},
+			{"feature2", ""},
+			{"feature3", ""},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got := graph.Worktree(tt.name)
+				assert.Equal(t, tt.want, got)
+			})
+		}
+	})
 }
 
 func TestBranchGraphRapid(t *testing.T) {
@@ -338,8 +364,9 @@ func testBranchGraphRapid(t *rapid.T) {
 }
 
 type branchLoaderStub struct {
-	trunk    string
-	branches []LoadBranchItem
+	trunk     string
+	branches  []LoadBranchItem
+	worktrees map[string]string
 }
 
 var _ BranchLoader = (*branchLoaderStub)(nil)
@@ -350,4 +377,15 @@ func (s *branchLoaderStub) Trunk() string {
 
 func (s *branchLoaderStub) LoadBranches(_ context.Context) ([]LoadBranchItem, error) {
 	return slices.Clone(s.branches), nil
+}
+
+func (s *branchLoaderStub) LookupWorktrees(_ context.Context, branches []string) (map[string]string, error) {
+	wts := make(map[string]string)
+	for _, b := range branches {
+		wt := s.worktrees[b]
+		if wt != "" {
+			wts[b] = wt
+		}
+	}
+	return wts, nil
 }

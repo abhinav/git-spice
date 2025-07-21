@@ -1,6 +1,7 @@
 package spice
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"iter"
@@ -15,6 +16,8 @@ type BranchGraph struct {
 	branches []BranchGraphItem // all tracked branches
 	byName   map[string]int    // name -> index in branches
 	byBase   map[string][]int  // name -> [indices in branches]
+
+	worktrees []string // in same order as branches
 }
 
 // BranchGraphItem is a single item in the branch graph.
@@ -23,7 +26,11 @@ type BranchGraphItem = LoadBranchItem
 // TODO: maybe we kill LoadBranchItem?
 
 // BranchGraphOptions specifies options for the BranchGraph method.
-type BranchGraphOptions struct{}
+type BranchGraphOptions struct {
+	// IncludeWorktrees specifies whether to include worktrees
+	// for branches in the graph.
+	IncludeWorktrees bool
+}
 
 // BranchLoader is a source of branch information in the repository.
 type BranchLoader interface {
@@ -31,27 +38,49 @@ type BranchLoader interface {
 
 	// LoadBranches loads all branches in the repository.
 	LoadBranches(ctx context.Context) ([]LoadBranchItem, error)
+
+	// LookupWorktrees returns a map of branch names to their worktree paths.
+	LookupWorktrees(ctx context.Context, branches []string) (map[string]string, error)
 }
 
 // NewBranchGraph returns a full view of the graph of branches in the repository.
-func NewBranchGraph(ctx context.Context, loader BranchLoader, _ *BranchGraphOptions) (*BranchGraph, error) {
+func NewBranchGraph(ctx context.Context, loader BranchLoader, opts *BranchGraphOptions) (*BranchGraph, error) {
+	opts = cmp.Or(opts, &BranchGraphOptions{})
 	branches, err := loader.LoadBranches(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load branches: %w", err)
 	}
 
+	names := make([]string, len(branches))
 	byName := make(map[string]int, len(branches))
 	byBase := make(map[string][]int, len(branches))
 	for idx, branch := range branches {
+		names[idx] = branch.Name
 		byName[branch.Name] = idx
 		byBase[branch.Base] = append(byBase[branch.Base], idx)
 	}
 
+	worktrees := make([]string, len(branches))
+	if opts.IncludeWorktrees {
+		branchWorktrees, err := loader.LookupWorktrees(ctx, names)
+		if err != nil {
+			return nil, fmt.Errorf("lookup worktrees: %w", err)
+		}
+
+		for idx, branch := range branches {
+			wt := branchWorktrees[branch.Name]
+			if wt != "" {
+				worktrees[idx] = wt
+			}
+		}
+	}
+
 	return &BranchGraph{
-		trunk:    loader.Trunk(),
-		branches: branches,
-		byName:   byName,
-		byBase:   byBase,
+		trunk:     loader.Trunk(),
+		branches:  branches,
+		byName:    byName,
+		byBase:    byBase,
+		worktrees: worktrees,
 	}, nil
 }
 
@@ -75,6 +104,21 @@ func (g *BranchGraph) Lookup(name string) (item LoadBranchItem, ok bool) {
 		return item, false
 	}
 	return g.branches[idx], true
+}
+
+// Worktree returns the Git worktree where this branch is checked out.
+// An empty string is returned if the branch is not checked out anywhere,
+// or is not a tracked branch.
+//
+// If IncludeWorktrees was not enabled at graph construction time,
+// this will always return an empty string.
+func (g *BranchGraph) Worktree(name string) string {
+	// TODO: merge this into LoadBranchItem?
+	idx, ok := g.byName[name]
+	if !ok {
+		return ""
+	}
+	return g.worktrees[idx]
 }
 
 // Aboves returns branches directly above the given branch,
