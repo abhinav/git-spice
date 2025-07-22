@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
@@ -42,14 +43,15 @@ func (cmd *upCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
+	graph, err := svc.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("load branch graph: %w", err)
+	}
+
 	var branch string
 outer:
 	for range cmd.N {
-		aboves, err := svc.ListAbove(ctx, current)
-		if err != nil {
-			return fmt.Errorf("list branches above %v: %w", current, err)
-		}
-
+		aboves := slices.Collect(graph.Aboves(current))
 		switch len(aboves) {
 		case 0:
 			if branch != "" {

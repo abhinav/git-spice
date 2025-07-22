@@ -11,6 +11,177 @@ import (
 	"pgregory.net/rapid"
 )
 
+func TestBranchGraph(t *testing.T) {
+	// A branch graph with the following structure:
+	//
+	//	main ---> feature1 --> {feature2, feature4}
+	//	      '-> feature3 --> feature5
+	graph, err := NewBranchGraph(t.Context(), &branchLoaderStub{
+		trunk: "main",
+		branches: []LoadBranchItem{
+			{Name: "feature1", Base: "main"},
+			{Name: "feature2", Base: "feature1"},
+			{Name: "feature4", Base: "feature1"},
+			{Name: "feature3", Base: "main"},
+			{Name: "feature5", Base: "feature3"},
+		},
+	}, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, "main", graph.Trunk())
+
+	t.Run("Aboves", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want []string
+		}{
+			{name: "main", want: []string{"feature1", "feature3"}},
+			{name: "feature1", want: []string{"feature2", "feature4"}},
+			{name: "feature2"},
+			{name: "feature3", want: []string{"feature5"}},
+			{name: "feature5"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				aboves := slices.Collect(graph.Aboves(tt.name))
+				assert.Equal(t, tt.want, aboves)
+			})
+		}
+	})
+
+	t.Run("Upstack", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want []string
+		}{
+			{
+				name: "main",
+				want: []string{
+					"main",
+					"feature1", "feature3",
+					"feature2", "feature4",
+					"feature5",
+				},
+			},
+			{
+				name: "feature1",
+				want: []string{"feature1", "feature2", "feature4"},
+			},
+			{name: "feature3", want: []string{"feature3", "feature5"}},
+			{name: "feature2", want: []string{"feature2"}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				upstack := slices.Collect(graph.Upstack(tt.name))
+				assert.Equal(t, tt.want, upstack)
+			})
+		}
+	})
+
+	t.Run("Tops", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want []string
+		}{
+			{name: "main", want: []string{"feature2", "feature4", "feature5"}},
+			{name: "feature1", want: []string{"feature2", "feature4"}},
+			{name: "feature2", want: []string{"feature2"}},
+			{name: "feature3", want: []string{"feature5"}},
+			{name: "feature5", want: []string{"feature5"}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				tops := slices.Collect(graph.Tops(tt.name))
+				assert.Equal(t, tt.want, tops)
+			})
+		}
+	})
+
+	t.Run("Downstack", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want []string
+		}{
+			{name: "main"},
+			{name: "feature1", want: []string{"feature1"}},
+			{name: "feature2", want: []string{"feature2", "feature1"}},
+			{name: "feature3", want: []string{"feature3"}},
+			{name: "feature5", want: []string{"feature5", "feature3"}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				downstack := slices.Collect(graph.Downstack(tt.name))
+				assert.Equal(t, tt.want, downstack)
+			})
+		}
+	})
+
+	t.Run("Bottom", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want string
+		}{
+			{name: "main"},
+			{name: "feature1", want: "feature1"},
+			{name: "feature2", want: "feature1"},
+			{name: "feature3", want: "feature3"},
+			{name: "feature4", want: "feature1"},
+			{name: "feature5", want: "feature3"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bottom := graph.Bottom(tt.name)
+				assert.Equal(t, tt.want, bottom)
+			})
+		}
+	})
+
+	t.Run("Stack", func(t *testing.T) {
+		tests := []struct {
+			name string
+			want []string
+		}{
+			{
+				name: "main",
+				want: []string{
+					"main",
+					"feature1", "feature3",
+					"feature2", "feature4",
+					"feature5",
+				},
+			},
+			{
+				name: "feature1",
+				want: []string{"feature1", "feature2", "feature4"},
+			},
+			{
+				name: "feature2",
+				want: []string{"feature1", "feature2"},
+			},
+			{
+				name: "feature3",
+				want: []string{"feature3", "feature5"},
+			},
+			{
+				name: "feature5",
+				want: []string{"feature3", "feature5"},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				stack := slices.Collect(graph.Stack(tt.name))
+				assert.Equal(t, tt.want, stack)
+			})
+		}
+	})
+}
+
 func TestBranchGraphRapid(t *testing.T) {
 	rapid.Check(t, testBranchGraphRapid)
 }
