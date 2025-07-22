@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -30,10 +32,7 @@ type Store interface {
 
 // Service is a subset of the spice.Service interface.
 type Service interface {
-	LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error)
-	ListDownstack(ctx context.Context, branch string) ([]string, error)
-	ListUpstack(ctx context.Context, branch string) ([]string, error)
-	ListStack(ctx context.Context, branch string) ([]string, error)
+	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 	Restack(ctx context.Context, name string) (*spice.RestackResponse, error)
 	RebaseRescue(ctx context.Context, req spice.RebaseRescueRequest) error
 }
@@ -100,43 +99,54 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 
 	req.Scope = cmp.Or(req.Scope, ScopeBranch) // 0 = ScopeBranch
 
-	// branches to restack in order of restacking.
-	var branchesToRestack []string
+	loadBranchGraph := sync.OnceValues(func() (*spice.BranchGraph, error) {
+		return h.Service.BranchGraph(ctx, nil)
+	})
+
+	var branchesToRestack []string // branches in restack order
+
 	if req.Scope&scopeDownstackExclusive != 0 {
-		var err error
-		downstack, err := h.Service.ListDownstack(ctx, req.Branch)
+		branchGraph, err := loadBranchGraph()
 		if err != nil {
-			return 0, fmt.Errorf("list downstack: %w", err)
+			return 0, fmt.Errorf("load branch graph: %w", err)
 		}
 
-		// ListDownstack returns the branches in order,
+		// Downstack returns the branches in the order,
 		// [branch, downstack1, downstack2, ...],
 		// not including the trunk.
+		//
 		// Restacking order is the reverse of that.
+		downstack := slices.Collect(branchGraph.Downstack(req.Branch))
 		if len(downstack) > 0 && downstack[0] == req.Branch {
 			downstack = downstack[1:]
 		}
 		slices.Reverse(downstack)
 		branchesToRestack = append(branchesToRestack, downstack...)
 	}
+
 	if req.Scope&ScopeBranch != 0 {
 		if req.Branch != h.Store.Trunk() {
 			branchesToRestack = append(branchesToRestack, req.Branch)
 		}
 	}
+
 	if req.Scope&ScopeUpstackExclusive != 0 {
-		upstack, err := h.Service.ListUpstack(ctx, req.Branch)
+		branchGraph, err := loadBranchGraph()
 		if err != nil {
-			return 0, fmt.Errorf("list upstack: %w", err)
+			return 0, fmt.Errorf("load branch graph: %w", err)
 		}
 
-		// ListUpstack returns the branches in order,
+		// Upstacks returns the branches in the order,
 		// [branch, upstack1, upstack2, ...].
-		// That's restacking order, so we can use it directly.
-		if len(upstack) > 0 && upstack[0] == req.Branch {
-			upstack = upstack[1:]
+		// That's restacking order, so we can use it directly
+		// once we drop the first item (the branch itself).
+		for idx, branch := range iterutil.Enumerate(branchGraph.Upstack(req.Branch)) {
+			if idx == 0 && branch == req.Branch {
+				continue // skip the branch itself
+			}
+
+			branchesToRestack = append(branchesToRestack, branch)
 		}
-		branchesToRestack = append(branchesToRestack, upstack...)
 	}
 
 	var restackCount int
