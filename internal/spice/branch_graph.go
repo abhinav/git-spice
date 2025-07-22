@@ -66,6 +66,17 @@ func (g *BranchGraph) All() iter.Seq[LoadBranchItem] {
 	return slices.Values(g.branches)
 }
 
+// Lookup returns information about the given branch,
+// or false if the branch is not known to the graph.
+// trunk also results in a value of false.
+func (g *BranchGraph) Lookup(name string) (item LoadBranchItem, ok bool) {
+	idx, ok := g.byName[name]
+	if !ok {
+		return item, false
+	}
+	return g.branches[idx], true
+}
+
 // Aboves returns branches directly above the given branch,
 func (g *BranchGraph) Aboves(branch string) iter.Seq[string] {
 	return func(yield func(string) bool) {
