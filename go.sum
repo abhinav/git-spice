@@ -118,6 +118,8 @@ github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8u
 github.com/zalando/go-keyring v0.2.6/go.mod h1:2TCrxYrbUNYfNS/Kgy/LSrkSQzZ5UPVH85RwfczwvcI=
 gitlab.com/gitlab-org/api/client-go v0.134.0 h1:J4i6qPN5hRLsqatPxVbe9w2C0A3JEItyCQrzsP52S2k=
 gitlab.com/gitlab-org/api/client-go v0.134.0/go.mod h1:crkp9sCwMQ8gDwuMLgk11sDT336t6U3kESBT0BGsOBo=
+go.abhg.dev/container/ring v0.3.0 h1:sEYgxqyAsT2X1NkUEPQecR4WY7cZCbKZSGUsERhHyDI=
+go.abhg.dev/container/ring v0.3.0/go.mod h1:GoB+vof3ofHqP2h2S97aJkmrMLK/Dyn7UEupDTgfWV8=
 go.abhg.dev/io/ioutil v0.1.0 h1:YGGMzh9HT52JYuVWbnr/E5GkYHbL3yRNDjcxFDaUHNk=
 go.abhg.dev/io/ioutil v0.1.0/go.mod h1:79IIyZVWxNZE8hBxMtubM8zJFPs+2NCqHYfWeH3X6hM=
 go.abhg.dev/komplete v0.1.0 h1:OE/uazFmWxrYYxttaKri9UpVr/i3J2Iv1vh21mYVom8=
