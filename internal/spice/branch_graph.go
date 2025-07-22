@@ -12,10 +12,15 @@ import (
 // BranchGraph is a full view of the graph of branches in the repository.
 type BranchGraph struct {
 	trunk    string
-	branches []LoadBranchItem // all tracked branches
-	byName   map[string]int   // name -> index in branches
-	byBase   map[string][]int // name -> [indices in branches]
+	branches []BranchGraphItem // all tracked branches
+	byName   map[string]int    // name -> index in branches
+	byBase   map[string][]int  // name -> [indices in branches]
 }
+
+// BranchGraphItem is a single item in the branch graph.
+type BranchGraphItem = LoadBranchItem
+
+// TODO: maybe we kill LoadBranchItem?
 
 // BranchGraphOptions specifies options for the BranchGraph method.
 type BranchGraphOptions struct{}
@@ -48,6 +53,17 @@ func NewBranchGraph(ctx context.Context, loader BranchLoader, _ *BranchGraphOpti
 		byName:   byName,
 		byBase:   byBase,
 	}, nil
+}
+
+// Trunk reports the name of the trunk branch in the repository.
+func (g *BranchGraph) Trunk() string {
+	return g.trunk
+}
+
+// All returns an iterator over all branches in the graph
+// with detailed per-branch information.
+func (g *BranchGraph) All() iter.Seq[LoadBranchItem] {
+	return slices.Values(g.branches)
 }
 
 // Aboves returns branches directly above the given branch,
