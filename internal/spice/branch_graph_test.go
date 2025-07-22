@@ -30,6 +30,34 @@ func TestBranchGraph(t *testing.T) {
 
 	assert.Equal(t, "main", graph.Trunk())
 
+	t.Run("All", func(t *testing.T) {
+		var gotNames []string
+		for item := range graph.All() {
+			gotNames = append(gotNames, item.Name)
+		}
+		assert.ElementsMatch(t, []string{
+			"feature1", "feature2", "feature3", "feature4", "feature5",
+		}, gotNames)
+	})
+
+	t.Run("Lookup", func(t *testing.T) {
+		tests := []struct {
+			name string
+			ok   bool
+		}{
+			{"main", false},
+			{"feature1", true},
+			{"feature4", true},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				_, ok := graph.Lookup(tt.name)
+				assert.Equal(t, tt.ok, ok)
+			})
+		}
+	})
+
 	t.Run("Aboves", func(t *testing.T) {
 		tests := []struct {
 			name string
@@ -219,6 +247,28 @@ func testBranchGraphRapid(t *rapid.T) {
 	require.NoError(t, err)
 
 	t.Repeat(map[string]func(*rapid.T){
+		"All": func(t *rapid.T) {
+			var gotNames []string
+			for item := range graph.All() {
+				gotNames = append(gotNames, item.Name)
+			}
+
+			assert.NotContains(t, gotNames, trunk,
+				"trunk must not be listed as a tracked branch")
+			gotNames = append(gotNames, trunk)
+
+			assert.ElementsMatch(t, allBranches, gotNames)
+		},
+		"Lookup": func(t *rapid.T) {
+			branch := rapid.SampledFrom(allBranches).Draw(t, "branch")
+			got, ok := graph.Lookup(branch)
+			if branch == trunk {
+				assert.False(t, ok, "trunk should not be tracked")
+			} else {
+				assert.True(t, ok, "branch %q should be tracked", branch)
+				assert.Equal(t, branch, got.Name)
+			}
+		},
 		"Aboves": func(t *rapid.T) {
 			branch := rapid.SampledFrom(allBranches).Draw(t, "branch")
 			_ = slices.Collect(graph.Aboves(branch))
