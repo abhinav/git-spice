@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -156,7 +157,7 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 		//
 		//	key1\nvalue1\0
 		//	key2\nvalue2\0
-		for entry, err := range cmd.Scan(cfg.exec, scanNullDelimited) {
+		for entry, err := range cmd.Scan(cfg.exec, scanutil.SplitNull) {
 			if err != nil {
 				// git-config fails with a non-zero exit code if there are no matches.
 				// That's not an error for us, so we ignore it.
@@ -182,19 +183,4 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 			}
 		}
 	}
-}
-
-// scanNullDelimited is a bufio.SplitFunc that splits on null bytes.
-func scanNullDelimited(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.IndexByte(data, 0); i >= 0 {
-		return i + 1, data[:i], nil
-	}
-	if atEOF {
-		// No trailing null byte. Unlikely but easy to handle.
-		return len(data), data, nil
-	}
-	return 0, nil, nil // request more data
 }
