@@ -393,6 +393,165 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	})
 }
 
+func TestIntegration_Repository_SubmitEditChangeWithLabels(t *testing.T) {
+	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
+		return randomString(8)
+	})
+
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if *_update {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := ioutil.TestLogWriter(t, "[git] ")
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd.Stdout = output
+		cmd.Stdout = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		ctx := t.Context()
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchName,
+		}), "could not create branch: %s", branchName)
+		require.NoError(t, gitWork.Checkout(ctx, branchName),
+			"could not checkout branch: %s", branchName)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchName+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin")
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchName),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			t.Logf("Deleting remote branch: %s", branchName)
+			assert.NoError(t,
+				gitWork.Push(context.WithoutCancel(ctx), git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchName),
+				}), "error deleting branch")
+		})
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitHubClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: branchName,
+		Body:    "Test PR",
+		Base:    "main",
+		Head:    branchName,
+		Labels:  []string{"test-label", "another-label"},
+	})
+	require.NoError(t, err, "error creating PR")
+	changeID := change.ID
+
+	t.Run("ChangeBase", func(t *testing.T) {
+		newBaseFixture := fixturetest.New(_fixtures, "new-base", func() string {
+			return randomString(8)
+		})
+
+		newBase := newBaseFixture.Get(t)
+		t.Logf("Pushing new base: %s", newBase)
+		if *_update {
+			require.NoError(t,
+				gitWork.Push(t.Context(), git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec("main:" + newBase),
+				}), "could not push base branch")
+
+			t.Cleanup(func() {
+				t.Logf("Deleting remote branch: %s", newBase)
+				ctx := context.WithoutCancel(t.Context())
+				require.NoError(t,
+					gitWork.Push(ctx, git.PushOptions{
+						Remote:  "origin",
+						Refspec: git.Refspec(":" + newBase),
+					}), "error deleting branch")
+			})
+		}
+
+		t.Logf("Changing base to: %s", newBase)
+		require.NoError(t,
+			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
+				Base: newBase,
+			}), "could not update base branch for PR")
+		t.Cleanup(func() {
+			t.Logf("Changing base back to: main")
+			ctx := context.WithoutCancel(t.Context())
+			require.NoError(t,
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+					Base: "main",
+				}), "error restoring base branch")
+		})
+
+		change, err := repo.FindChangeByID(t.Context(), changeID)
+		require.NoError(t, err, "could not find PR after changing base")
+
+		assert.Equal(t, newBase, change.BaseName,
+			"base change did not take effect")
+	})
+
+	t.Run("ChangeDraft", func(t *testing.T) {
+		t.Logf("Changing to draft")
+		draft := true
+		require.NoError(t,
+			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
+				Draft: &draft,
+			}), "could not update draft status for PR")
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Changing to ready for review")
+			draft = false
+			require.NoError(t,
+				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
+					Draft: &draft,
+				}), "error restoring draft status")
+		})
+
+		change, err := repo.FindChangeByID(t.Context(), changeID)
+		require.NoError(t, err, "could not find PR after changing draft")
+		assert.True(t, change.Draft, "draft change did not take effect")
+	})
+}
+
 func TestIntegration_Repository_SubmitChange_baseBranchDoesNotExist(t *testing.T) {
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
 		return randomString(8)

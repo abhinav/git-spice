@@ -54,9 +54,15 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
+
 	r.log.Debug("Created pull request",
 		"pr", m.CreatePullRequest.PullRequest.Number,
 		"url", m.CreatePullRequest.PullRequest.URL.String())
+
+	err := r.addLabelsToPullRequest(ctx, req.Labels, m.CreatePullRequest.PullRequest.ID)
+	if err != nil {
+		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
+	}
 
 	return forge.SubmitChangeResult{
 		ID: &PR{
