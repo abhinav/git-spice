@@ -27,10 +27,18 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Build(t), nil)
+			mockService.EXPECT().
 				Restack(gomock.Any(), "feature").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
 
 			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
 			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
@@ -56,26 +64,29 @@ func TestHandler_Restack(t *testing.T) {
 			log := silog.Nop()
 			ctrl := gomock.NewController(t)
 
-			mockWorktree := NewMockGitWorktree(ctrl)
-			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "main").
-				Return(nil)
+			mockService := NewMockService(ctrl)
+			mockService.EXPECT().
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Build(t), nil)
 
+			mockWorktree := NewMockGitWorktree(ctrl)
 			handler := &Handler{
 				Log:      log,
 				Worktree: mockWorktree,
 				Store:    statetest.NewMemoryStore(t, "main", "", log),
-				Service:  NewMockService(ctrl),
+				Service:  mockService,
 			}
 
-			count, err := handler.Restack(t.Context(), &Request{
+			_, err := handler.Restack(t.Context(), &Request{
 				Branch:          "main",
 				ContinueCommand: []string{"false"},
 				Scope:           ScopeBranch,
 			})
 
-			require.NoError(t, err)
-			assert.Equal(t, 0, count)
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "trunk cannot be restacked")
 		})
 	})
 
@@ -105,6 +116,9 @@ func TestHandler_Restack(t *testing.T) {
 				Return(&spice.RestackResponse{Base: "feature2"}, nil)
 
 			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
 			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
@@ -151,6 +165,9 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockWorktree := NewMockGitWorktree(ctrl)
 			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
+			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
 
@@ -189,6 +206,9 @@ func TestHandler_Restack(t *testing.T) {
 				Return(&spice.RestackResponse{Base: "main"}, nil)
 
 			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
 			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
@@ -237,6 +257,9 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockWorktree := NewMockGitWorktree(ctrl)
 			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
+			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
 
@@ -275,6 +298,9 @@ func TestHandler_Restack(t *testing.T) {
 				Return(&spice.RestackResponse{Base: "main"}, nil)
 
 			mockWorktree := NewMockGitWorktree(ctrl)
+			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
 			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
@@ -331,6 +357,9 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockWorktree := NewMockGitWorktree(ctrl)
 			mockWorktree.EXPECT().
+				RootDir().
+				Return(t.TempDir())
+			mockWorktree.EXPECT().
 				Checkout(gomock.Any(), "feature").
 				Return(nil)
 
@@ -378,6 +407,9 @@ func TestHandler_Restack(t *testing.T) {
 
 		mockWorktree := NewMockGitWorktree(ctrl)
 		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
 			Checkout(gomock.Any(), "feature").
 			Return(nil)
 
@@ -410,15 +442,25 @@ func TestHandler_Restack(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
 			Restack(gomock.Any(), "feature").
 			Return(nil, rebaseErr)
 		mockService.EXPECT().
 			RebaseRescue(gomock.Any(), gomock.Any()).
 			Return(nil)
 
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
 		handler := &Handler{
 			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
+			Worktree: mockWorktree,
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
@@ -454,6 +496,9 @@ func TestHandler_Restack_trunk(t *testing.T) {
 			Return(&spice.RestackResponse{Base: "feature1"}, nil)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
 		mockWorktree.EXPECT().
 			Checkout(gomock.Any(), "main").
 			Return(nil)
@@ -491,6 +536,9 @@ func TestHandler_Restack_trunk(t *testing.T) {
 
 		mockWorktree := NewMockGitWorktree(ctrl)
 		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
 			Checkout(gomock.Any(), "main").
 			Return(nil)
 
@@ -501,14 +549,12 @@ func TestHandler_Restack_trunk(t *testing.T) {
 			Service:  mockService,
 		}
 
-		count, err := handler.Restack(t.Context(), &Request{
+		_, err := handler.Restack(t.Context(), &Request{
 			Branch:          "main",
 			ContinueCommand: []string{"false"},
 			Scope:           ScopeDownstack,
 		})
-
 		require.NoError(t, err)
-		assert.Equal(t, 0, count)
 	})
 
 	t.Run("ScopeUpstackFromTrunk", func(t *testing.T) {
@@ -532,6 +578,9 @@ func TestHandler_Restack_trunk(t *testing.T) {
 
 		mockWorktree := NewMockGitWorktree(ctrl)
 		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
 			Checkout(gomock.Any(), "main").
 			Return(nil)
 
@@ -553,6 +602,101 @@ func TestHandler_Restack_trunk(t *testing.T) {
 		assert.NotContains(t, logBuffer.String(), "main: restacked")
 		assert.Contains(t, logBuffer.String(), "feature1: restacked on main")
 		assert.Contains(t, logBuffer.String(), "feature2: restacked on feature1")
+	})
+}
+
+func TestHandler_Restack_skipCheckedOut(t *testing.T) {
+	t.Run("Branch", func(t *testing.T) {
+		// Branch-scoped restack operation,
+		// and branch is checked out in another worktree.
+
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		featureWorktree := t.TempDir()
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Worktree("feature", featureWorktree).
+				Build(t), nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+		require.NoError(t, err)
+		assert.Zero(t, count, "nothing should've been restacked")
+
+		assert.Regexp(t, `checked out in another worktree \(.*\), skipping`, logBuffer.String())
+		assert.Contains(t, logBuffer.String(), "not checking out here")
+	})
+
+	t.Run("Upstack", func(t *testing.T) {
+		// Upstack-scoped rebase,
+		// one of the upstack branches is
+		// checked out in another worktree.
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		feature2WT := t.TempDir()
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature1", "main").
+				Branch("feature2", "feature1").
+				Branch("feature3", "feature2").
+				Worktree("feature2", feature2WT).
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature1").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
+			Checkout(gomock.Any(), "feature1").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature1",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeUpstack,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 1, count, "feature1 must have been restacked")
+
+		assert.Contains(t, logBuffer.String(), "feature1: restacked on main")
+		assert.Regexp(t, `feature2: checked out in another worktree \(.*\), skipping`, logBuffer.String())
+		assert.Contains(t, logBuffer.String(), "feature3: base branch feature2 was not restacked")
 	})
 }
 
@@ -591,12 +735,20 @@ func TestHandler_Restack_errors(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").Build(t), nil)
+		mockService.EXPECT().
 			Restack(gomock.Any(), "untracked").
 			Return(nil, state.ErrNotExist)
 
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
 		handler := &Handler{
 			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
+			Worktree: mockWorktree,
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
@@ -621,12 +773,22 @@ func TestHandler_Restack_errors(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
 			Restack(gomock.Any(), "feature").
 			Return(nil, unexpectedErr)
 
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
 		handler := &Handler{
 			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
+			Worktree: mockWorktree,
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
@@ -651,10 +813,18 @@ func TestHandler_Restack_errors(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
 			Restack(gomock.Any(), "feature").
 			Return(&spice.RestackResponse{Base: "main"}, nil)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
 		mockWorktree.EXPECT().
 			Checkout(gomock.Any(), "feature").
 			Return(checkoutErr)
@@ -680,13 +850,15 @@ func TestHandler_Restack_errors(t *testing.T) {
 }
 
 type branchGraphBuilder struct {
-	trunk string
-	items []spice.BranchGraphItem
+	trunk     string
+	items     []spice.BranchGraphItem
+	worktrees map[string]string
 }
 
 func newBranchGraphBuilder(trunk string) *branchGraphBuilder {
 	return &branchGraphBuilder{
-		trunk: trunk,
+		trunk:     trunk,
+		worktrees: make(map[string]string),
 	}
 }
 
@@ -698,18 +870,25 @@ func (b *branchGraphBuilder) Branch(name, base string) *branchGraphBuilder {
 	return b
 }
 
+func (b *branchGraphBuilder) Worktree(branch, wt string) *branchGraphBuilder {
+	b.worktrees[branch] = wt
+	return b
+}
+
 func (b *branchGraphBuilder) Build(t testing.TB) *spice.BranchGraph {
 	graph, err := spice.NewBranchGraph(t.Context(), &branchLoaderStub{
-		trunk: b.trunk,
-		items: b.items,
-	}, nil)
+		trunk:     b.trunk,
+		items:     b.items,
+		worktrees: b.worktrees,
+	}, &spice.BranchGraphOptions{IncludeWorktrees: true})
 	require.NoError(t, err)
 	return graph
 }
 
 type branchLoaderStub struct {
-	trunk string
-	items []spice.LoadBranchItem
+	trunk     string
+	items     []spice.LoadBranchItem
+	worktrees map[string]string
 }
 
 var _ spice.BranchLoader = (*branchLoaderStub)(nil)
@@ -720,4 +899,15 @@ func (b *branchLoaderStub) Trunk() string {
 
 func (b *branchLoaderStub) LoadBranches(context.Context) ([]spice.LoadBranchItem, error) {
 	return slices.Clone(b.items), nil
+}
+
+func (b *branchLoaderStub) LookupWorktrees(_ context.Context, branches []string) (map[string]string, error) {
+	wts := make(map[string]string, len(branches))
+	for _, branch := range branches {
+		wt := b.worktrees[branch]
+		if wt != "" {
+			wts[branch] = wt
+		}
+	}
+	return wts, nil
 }
