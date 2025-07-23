@@ -125,14 +125,22 @@ func (e *BranchNeedsRestackError) Error() string {
 	return fmt.Sprintf("branch needs to be restacked on top of %v", e.Base)
 }
 
-// VerifyRestacked verifies that the branch is on top of its base branch.
-// This also updates the base branch hash if the hash is out of date,
+// VerifyRestacked is a version of CheckRestacked
+// that ignores the returned base branch hash.
+func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
+	_, err := s.CheckRestacked(ctx, name)
+	return err
+}
+
+// CheckRestacked verifies that the given branch is on top of its base branch.
+// It updates the base branch hash if the hash is out of date,
 // but the branch is restacked properly.
 //
-// It returns [ErrNeedsRestack] if the branch needs to be restacked,
+// It returns the actual hash of the base branch in case of succses,
+// [ErrNeedsRestack] if the branch needs to be restacked,
 // [state.ErrNotExist] if the branch is not tracked.
 // Any other error indicates a problem with checking the branch.
-func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
+func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git.Hash, err error) {
 	// A branch needs to be restacked if
 	// its merge base with its base branch
 	// is not its base branch's head.
@@ -140,19 +148,19 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 	// That is, the branch is not on top of its base branch's current head.
 	b, err := s.LookupBranch(ctx, name)
 	if err != nil {
-		return err
+		return git.ZeroHash, err
 	}
 
-	baseHash, err := s.repo.PeelToCommit(ctx, b.Base)
+	baseHash, err = s.repo.PeelToCommit(ctx, b.Base)
 	if err != nil {
 		if errors.Is(err, git.ErrNotExist) {
-			return fmt.Errorf("base branch %v does not exist", b.Base)
+			return git.ZeroHash, fmt.Errorf("base branch %v does not exist", b.Base)
 		}
-		return fmt.Errorf("find commit for %v: %w", b.Base, err)
+		return git.ZeroHash, fmt.Errorf("find commit for %v: %w", b.Base, err)
 	}
 
 	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
-		return &BranchNeedsRestackError{
+		return git.ZeroHash, &BranchNeedsRestackError{
 			Base:     b.Base,
 			BaseHash: baseHash,
 		}
@@ -169,7 +177,7 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 			BaseHash: baseHash,
 		}); err != nil {
 			s.log.Warn("Failed to update recorded base hash", "error", err)
-			return nil
+			return git.ZeroHash, nil
 		}
 
 		if err := tx.Commit(ctx, fmt.Sprintf("%v: branch was restacked externally", name)); err != nil {
@@ -178,5 +186,5 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 		}
 	}
 
-	return nil
+	return baseHash, nil
 }

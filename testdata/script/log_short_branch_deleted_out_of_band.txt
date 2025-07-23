@@ -1,0 +1,36 @@
+# gs ls after deleting a branch out of band
+# should print a log message but be no-op otherwise.
+
+as 'Test <test@example.com>'
+at '2025-07-22T21:25:04Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create a stack: feat1 -> feat2 -> feat3
+gs bc feat1 -m 'feat1'
+gs bc feat2 -m 'feat2'
+gs bc feat3 -m 'feat3'
+gs trunk
+
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+git branch -D feat3
+
+gs ls
+cmp stderr $WORK/golden/ls-after.txt
+
+-- golden/ls-before.txt --
+    ┏━□ feat3
+  ┏━┻□ feat2
+┏━┻□ feat1
+main ◀
+-- golden/ls-after.txt --
+INF tracked branch feat3 was deleted out of band: removing...
+  ┏━□ feat2
+┏━┻□ feat1
+main ◀

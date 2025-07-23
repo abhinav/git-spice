@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
@@ -88,11 +88,10 @@ func (cmd *branchLogCmd) run(
 		currentBranch = "" // may be detached
 	}
 
-	allBranches, err := sliceutil.CollectErr(store.ListBranches(ctx))
+	branchGraph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("load branches: %w", err)
+		return fmt.Errorf("load branch graph: %w", err)
 	}
-	sort.Strings(allBranches)
 
 	getRemote := sync.OnceValue(func() string {
 		remote, err := store.Remote()
@@ -144,7 +143,7 @@ func (cmd *branchLogCmd) run(
 	}
 
 	type branchInfo struct {
-		Index    int
+		Index    int // index in infos
 		Name     string
 		Base     string
 		ChangeID forge.ChangeID
@@ -163,21 +162,32 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var infoMu sync.Mutex
-	infos := make([]*branchInfo, len(allBranches)+1) // +1 for trunk
-	infoIdxByName := make(map[string]int, len(allBranches))
+	infos := make([]*branchInfo, branchGraph.Count()+1)        // +1 for trunk
+	infoIdxByName := make(map[string]int, branchGraph.Count()) // branch name => index in infos
 
-	idxc := make(chan int) // index in allBranches
+	type branchLogEntry struct {
+		Branch spice.BranchGraphItem
+		Index  int // index in infos to target
+	}
+
+	entryc := make(chan branchLogEntry)
 	var wg sync.WaitGroup
 	for range runtime.GOMAXPROCS(0) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
-			for idx := range idxc {
-				branchName := allBranches[idx]
+			for entry := range entryc {
+				branch := entry.Branch
 				info := &branchInfo{
-					Name: branchName,
+					Name: branch.Name,
 				}
+
+				// NB:
+				// DO NOT 'continue' from this loop
+				// as that will leave unfilled entries in infos,
+				// which will panic down below when consuming
+				// the result.
 
 				// Check restack status /before/ looking up
 				// the branch in git because VerifyRestacked
@@ -186,15 +196,18 @@ func (cmd *branchLogCmd) run(
 				//
 				// TODO: This is a hack.
 				// The isn't a good abstraction.
-				var restackErr *spice.BranchNeedsRestackError
-				if err := svc.VerifyRestacked(ctx, branchName); errors.As(err, &restackErr) {
-					info.NeedsRestack = true
-				}
-
-				branch, err := svc.LookupBranch(ctx, branchName)
+				baseHash, err := svc.CheckRestacked(ctx, branch.Name)
 				if err != nil {
-					log.Warn("Could not lookup branch", "branch", branchName, "error", err)
-					continue
+					var needsRestack *spice.BranchNeedsRestackError
+					if errors.As(err, &needsRestack) {
+						// if the branch needs to be restacked,
+						// use the base hash stored in state
+						// so that the log doesn't show duplicated commits.
+						info.NeedsRestack = true
+						baseHash = branch.BaseHash
+					} else {
+						baseHash = git.ZeroHash
+					}
 				}
 
 				info.Base = branch.Base
@@ -212,31 +225,34 @@ func (cmd *branchLogCmd) run(
 					}
 				}
 
-				if opts.Commits {
+				if opts.Commits && baseHash != git.ZeroHash {
 					commits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx,
 						git.CommitRangeFrom(branch.Head).
-							ExcludeFrom(branch.BaseHash).
+							ExcludeFrom(baseHash).
 							FirstParent()))
 					if err != nil {
-						log.Warn("Could not list commits for branch. Skipping.", "branch", branchName, "error", err)
-						continue
+						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "error", err)
+					} else {
+						info.Commits = commits
 					}
-					info.Commits = commits
 				}
 
 				infoMu.Lock()
-				info.Index = idx
-				infos[idx] = info
-				infoIdxByName[branchName] = idx
+				info.Index = entry.Index
+				infos[entry.Index] = info
+				infoIdxByName[branch.Name] = info.Index
 				infoMu.Unlock()
 			}
 		}()
 	}
 
-	for idx := range allBranches {
-		idxc <- idx
+	for index, branch := range iterutil.Enumerate(branchGraph.All()) {
+		entryc <- branchLogEntry{
+			Index:  index,
+			Branch: branch,
+		}
 	}
-	close(idxc)
+	close(entryc)
 	wg.Wait()
 
 	trunkIdx := len(infos) - 1
@@ -262,25 +278,15 @@ func (cmd *branchLogCmd) run(
 
 	isVisible := func(*branchInfo) bool { return true }
 	if !cmd.All && currentBranch != "" {
-		visible := make(map[int]struct{})
-		currentBranchIdx := infoIdxByName[currentBranch]
+		visible := make(map[string]struct{})
 
-		// Add the upstacks of the current branch to the visible set.
-		for unseen := []int{currentBranchIdx}; len(unseen) > 0; {
-			idx := unseen[len(unseen)-1]
-			unseen = unseen[:len(unseen)-1]
-
-			visible[idx] = struct{}{}
-			unseen = append(unseen, infos[idx].Aboves...)
-		}
-
-		// Add the downstack of the current branch to the visible set.
-		for idx, ok := currentBranchIdx, true; ok; idx, ok = infoIdxByName[infos[idx].Base] {
-			visible[idx] = struct{}{}
+		// Add the upstack and downstacks of the current branch to the visible set.
+		for branch := range branchGraph.Stack(currentBranch) {
+			visible[branch] = struct{}{}
 		}
 
 		isVisible = func(info *branchInfo) bool {
-			_, ok := visible[info.Index]
+			_, ok := visible[info.Name]
 			return ok
 		}
 	}

@@ -95,6 +95,12 @@ func (g *BranchGraph) All() iter.Seq[LoadBranchItem] {
 	return slices.Values(g.branches)
 }
 
+// Count reports the total number of tracked branches in the graph.
+// The count DOES NOT include trunk.
+func (g *BranchGraph) Count() int {
+	return len(g.branches)
+}
+
 // Lookup returns information about the given branch,
 // or false if the branch is not known to the graph.
 // trunk also results in a value of false.
