@@ -81,8 +81,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -97,8 +96,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
-    },
-    "labels": null
+    }
   },
   {
     "number": 3,
@@ -113,8 +111,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
-    },
-    "labels": null
+    }
   }
 ]
 
@@ -165,8 +162,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -181,8 +177,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
-    },
-    "labels": null
+    }
   },
   {
     "number": 3,
@@ -197,8 +192,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "base": {
       "ref": "feature2",
       "sha": "18e5a5208175cd409480c2ab89588877726c1d57"
-    },
-    "labels": null
+    }
   }
 ]
 

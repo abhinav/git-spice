@@ -65,8 +65,7 @@ feature 2
     "base": {
       "ref": "main",
       "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -81,8 +80,7 @@ feature 2
     "base": {
       "ref": "main",
       "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
-    },
-    "labels": null
+    }
   }
 ]
 

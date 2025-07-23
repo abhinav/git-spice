@@ -95,7 +95,7 @@ type Change struct {
 	Base *ChangeBranch `json:"base"`
 	Head *ChangeBranch `json:"head"`
 
-	Labels []string `json:"labels"`
+	Labels []string `json:"labels,omitempty"`
 }
 
 func (sh *ShamHub) toChange(c shamChange) (*Change, error) {

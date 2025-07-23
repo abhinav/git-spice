@@ -61,8 +61,7 @@ Contents of feature1
     "base": {
       "ref": "main",
       "sha": "66ae103f1e2d92ef05fa5730e77ff468801a57fa"
-    },
-    "labels": null
+    }
   }
 ]
 

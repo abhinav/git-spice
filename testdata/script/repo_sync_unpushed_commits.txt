@@ -63,8 +63,7 @@ Contents of feature2
   "base": {
     "ref": "main",
     "sha": "614e5f20a1e8cf2a4e552df1a817e92927dfffef"
-  },
-  "labels": null
+  }
 }
 
 -- golden/merged-log.txt --

@@ -74,8 +74,7 @@ feature 2
     "head": {
       "ref": "feature1",
       "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -90,7 +89,6 @@ feature 2
     "head": {
       "ref": "feature2",
       "sha": "bfe1a896f408b265d43552a2d450618a181e8f8b"
-    },
-    "labels": null
+    }
   }
 ]

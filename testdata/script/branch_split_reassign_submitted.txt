@@ -128,8 +128,7 @@ main
     "head": {
       "ref": "features",
       "sha": "215a01b45667f154f7d8cbc15ac81ceeba837124"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -144,8 +143,7 @@ main
     "head": {
       "ref": "feat2",
       "sha": "4432c24dc64b97751d795163fbb8c2c71b20dedd"
-    },
-    "labels": null
+    }
   },
   {
     "number": 3,
@@ -160,7 +158,6 @@ main
     "head": {
       "ref": "features-2",
       "sha": "d543265b0dc321aaae88c652f0d7937fc8fea257"
-    },
-    "labels": null
+    }
   }
 ]

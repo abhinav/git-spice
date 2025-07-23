@@ -80,8 +80,7 @@ main
     "head": {
       "ref": "feat1",
       "sha": "514d04f142ffe91be67967699e1ae61c6e5bcb51"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -96,7 +95,6 @@ main
     "head": {
       "ref": "feat1",
       "sha": "514d04f142ffe91be67967699e1ae61c6e5bcb51"
-    },
-    "labels": null
+    }
   }
 ]

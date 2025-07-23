@@ -1,3 +1,5 @@
+//go:build script
+
 package main
 
 import (
@@ -114,7 +116,7 @@ func TestScript(t *testing.T) {
 		// copy a subset of the test scripts
 		// into a temporary directory based on the shard index.
 
-		scripts, err := filepath.Glob(filepath.Join(scriptDir, "stack_submit_with_labels.txt"))
+		scripts, err := filepath.Glob(filepath.Join(scriptDir, "*.txt"))
 		require.NoError(t, err)
 
 		shardScriptDir := t.TempDir()

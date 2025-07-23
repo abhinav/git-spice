@@ -65,7 +65,6 @@ MOCKEDIT_GIVE=$WORK/input/pr-body.txt mockedit
     "head": {
       "ref": "feature",
       "sha": "8834aad8a5ba54b7bdd43774e11a8c99a0ff98e8"
-    },
-    "labels": null
+    }
   }
 ]

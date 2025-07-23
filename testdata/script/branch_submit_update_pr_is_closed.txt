@@ -74,8 +74,7 @@ main
     "head": {
       "ref": "feat1",
       "sha": "03fced68a13af09f59f08474c47452dd15f3042c"
-    },
-    "labels": null
+    }
   },
   {
     "number": 2,
@@ -90,7 +89,6 @@ main
     "head": {
       "ref": "feat1",
       "sha": "03fced68a13af09f59f08474c47452dd15f3042c"
-    },
-    "labels": null
+    }
   }
 ]
