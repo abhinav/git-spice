@@ -2,12 +2,13 @@ package git
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"go.abhg.dev/gs/internal/scanutil"
 )
 
 // Signature holds authorship information for a commit.
@@ -142,7 +143,7 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 	}
 
 	scanner := bufio.NewScanner(out)
-	scanner.Split(splitNullByte)
+	scanner.Split(scanutil.SplitNull)
 
 	var bodies []CommitMessage
 	for scanner.Scan() {
@@ -199,24 +200,4 @@ func (r *Repository) CommitAheadBehind(ctx context.Context, upstream, head strin
 	}
 
 	return ahead, behind, nil
-}
-
-func splitNullByte(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	if i := bytes.IndexByte(data, 0); i >= 0 {
-		// Have a null-byte separated section.
-		return i + 1, data[:i], nil
-	}
-
-	// No null-byte found, but end of input,
-	// so consume the rest as one section.
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	// Request more data.
-	return 0, nil, nil
 }
