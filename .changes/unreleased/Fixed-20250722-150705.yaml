@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'stack restack: Avoid double-loading state information to determine upstack/downstack branches.'
+time: 2025-07-22T15:07:05.944487-07:00

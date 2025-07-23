@@ -94,64 +94,19 @@ func (m *MockService) EXPECT() *MockServiceMockRecorder {
 	return m.recorder
 }
 
-// ListDownstack mocks base method.
-func (m *MockService) ListDownstack(ctx context.Context, branch string) ([]string, error) {
+// BranchGraph mocks base method.
+func (m *MockService) BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDownstack", ctx, branch)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "BranchGraph", ctx, opts)
+	ret0, _ := ret[0].(*spice.BranchGraph)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListDownstack indicates an expected call of ListDownstack.
-func (mr *MockServiceMockRecorder) ListDownstack(ctx, branch any) *gomock.Call {
+// BranchGraph indicates an expected call of BranchGraph.
+func (mr *MockServiceMockRecorder) BranchGraph(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDownstack", reflect.TypeOf((*MockService)(nil).ListDownstack), ctx, branch)
-}
-
-// ListStack mocks base method.
-func (m *MockService) ListStack(ctx context.Context, branch string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListStack", ctx, branch)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListStack indicates an expected call of ListStack.
-func (mr *MockServiceMockRecorder) ListStack(ctx, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStack", reflect.TypeOf((*MockService)(nil).ListStack), ctx, branch)
-}
-
-// ListUpstack mocks base method.
-func (m *MockService) ListUpstack(ctx context.Context, branch string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUpstack", ctx, branch)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListUpstack indicates an expected call of ListUpstack.
-func (mr *MockServiceMockRecorder) ListUpstack(ctx, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUpstack", reflect.TypeOf((*MockService)(nil).ListUpstack), ctx, branch)
-}
-
-// LoadBranches mocks base method.
-func (m *MockService) LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadBranches", ctx)
-	ret0, _ := ret[0].([]spice.LoadBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LoadBranches indicates an expected call of LoadBranches.
-func (mr *MockServiceMockRecorder) LoadBranches(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadBranches", reflect.TypeOf((*MockService)(nil).LoadBranches), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchGraph", reflect.TypeOf((*MockService)(nil).BranchGraph), ctx, opts)
 }
 
 // RebaseRescue mocks base method.

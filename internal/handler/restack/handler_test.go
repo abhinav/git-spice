@@ -2,7 +2,9 @@ package restack
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,8 +87,13 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListUpstack(gomock.Any(), "feature").
-				Return([]string{"feature", "feature2", "feature3"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Branch("feature2", "feature").
+					Branch("feature3", "feature2").
+					Build(t), nil)
+
 			mockService.EXPECT().
 				Restack(gomock.Any(), "feature").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -129,8 +136,12 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListUpstack(gomock.Any(), "feature").
-				Return([]string{"feature", "feature2", "feature3"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Branch("feature2", "feature").
+					Branch("feature3", "feature2").
+					Build(t), nil)
 			mockService.EXPECT().
 				Restack(gomock.Any(), "feature2").
 				Return(&spice.RestackResponse{Base: "feature"}, nil)
@@ -169,8 +180,10 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListUpstack(gomock.Any(), "feature").
-				Return([]string{"feature"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Build(t), nil)
 			mockService.EXPECT().
 				Restack(gomock.Any(), "feature").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -206,8 +219,12 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListDownstack(gomock.Any(), "feature").
-				Return([]string{"feature", "base2", "base1"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("base1", "main").
+					Branch("base2", "base1").
+					Branch("feature", "base2").
+					Build(t), nil)
 			mockService.EXPECT().
 				Restack(gomock.Any(), "base1").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -249,8 +266,10 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListDownstack(gomock.Any(), "feature").
-				Return([]string{"feature"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("feature", "main").
+					Build(t), nil)
 			mockService.EXPECT().
 				Restack(gomock.Any(), "feature").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -286,11 +305,14 @@ func TestHandler_Restack(t *testing.T) {
 
 			mockService := NewMockService(ctrl)
 			mockService.EXPECT().
-				ListDownstack(gomock.Any(), "feature").
-				Return([]string{"feature", "base2", "base1"}, nil)
-			mockService.EXPECT().
-				ListUpstack(gomock.Any(), "feature").
-				Return([]string{"feature", "feature2", "feature3"}, nil)
+				BranchGraph(gomock.Any(), gomock.Any()).
+				Return(newBranchGraphBuilder("main").
+					Branch("base1", "main").
+					Branch("base2", "base1").
+					Branch("feature", "base2").
+					Branch("feature2", "feature").
+					Branch("feature3", "feature2").
+					Build(t), nil)
 			mockService.EXPECT().
 				Restack(gomock.Any(), "base1").
 				Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -342,8 +364,11 @@ func TestHandler_Restack(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			ListUpstack(gomock.Any(), "feature").
-			Return([]string{"feature", "feature2"}, nil)
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Branch("feature2", "feature").
+				Build(t), nil)
 		mockService.EXPECT().
 			Restack(gomock.Any(), "feature").
 			Return(nil, spice.ErrAlreadyRestacked)
@@ -416,11 +441,11 @@ func TestHandler_Restack_trunk(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			ListDownstack(gomock.Any(), "main").
-			Return([]string{"main"}, nil)
-		mockService.EXPECT().
-			ListUpstack(gomock.Any(), "main").
-			Return([]string{"main", "feature1", "feature2"}, nil)
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature1", "main").
+				Branch("feature2", "feature1").
+				Build(t), nil)
 		mockService.EXPECT().
 			Restack(gomock.Any(), "feature1").
 			Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -459,8 +484,10 @@ func TestHandler_Restack_trunk(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			ListDownstack(gomock.Any(), "main").
-			Return([]string{"main"}, nil)
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature1", "main").
+				Build(t), nil)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
 		mockWorktree.EXPECT().
@@ -491,8 +518,11 @@ func TestHandler_Restack_trunk(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			ListUpstack(gomock.Any(), "main").
-			Return([]string{"main", "feature1", "feature2"}, nil)
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature1", "main").
+				Branch("feature2", "feature1").
+				Build(t), nil)
 		mockService.EXPECT().
 			Restack(gomock.Any(), "feature1").
 			Return(&spice.RestackResponse{Base: "main"}, nil)
@@ -527,14 +557,14 @@ func TestHandler_Restack_trunk(t *testing.T) {
 }
 
 func TestHandler_Restack_errors(t *testing.T) {
-	t.Run("ListUpstack", func(t *testing.T) {
+	t.Run("BranchGraph", func(t *testing.T) {
 		log := silog.Nop()
 		ctrl := gomock.NewController(t)
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			ListUpstack(gomock.Any(), "feature").
-			Return(nil, errors.New("upstack error"))
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("graph error"))
 
 		handler := &Handler{
 			Log:      log,
@@ -551,34 +581,7 @@ func TestHandler_Restack_errors(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Equal(t, 0, count)
-		assert.ErrorContains(t, err, "list upstack")
-	})
-
-	t.Run("ListDownstackError", func(t *testing.T) {
-		log := silog.Nop()
-		ctrl := gomock.NewController(t)
-
-		mockService := NewMockService(ctrl)
-		mockService.EXPECT().
-			ListDownstack(gomock.Any(), "feature").
-			Return(nil, errors.New("downstack error"))
-
-		handler := &Handler{
-			Log:      log,
-			Worktree: NewMockGitWorktree(ctrl),
-			Store:    statetest.NewMemoryStore(t, "main", "", log),
-			Service:  mockService,
-		}
-
-		count, err := handler.Restack(t.Context(), &Request{
-			Branch:          "feature",
-			ContinueCommand: []string{"false"},
-			Scope:           ScopeDownstack,
-		})
-
-		require.Error(t, err)
-		assert.Equal(t, 0, count)
-		assert.ErrorContains(t, err, "list downstack")
+		assert.ErrorContains(t, err, "load branch graph")
 	})
 
 	t.Run("UntrackedBranch", func(t *testing.T) {
@@ -674,4 +677,47 @@ func TestHandler_Restack_errors(t *testing.T) {
 		assert.ErrorContains(t, err, "checkout branch feature")
 		assert.ErrorIs(t, err, checkoutErr)
 	})
+}
+
+type branchGraphBuilder struct {
+	trunk string
+	items []spice.BranchGraphItem
+}
+
+func newBranchGraphBuilder(trunk string) *branchGraphBuilder {
+	return &branchGraphBuilder{
+		trunk: trunk,
+	}
+}
+
+func (b *branchGraphBuilder) Branch(name, base string) *branchGraphBuilder {
+	b.items = append(b.items, spice.BranchGraphItem{
+		Name: name,
+		Base: base,
+	})
+	return b
+}
+
+func (b *branchGraphBuilder) Build(t testing.TB) *spice.BranchGraph {
+	graph, err := spice.NewBranchGraph(t.Context(), &branchLoaderStub{
+		trunk: b.trunk,
+		items: b.items,
+	}, nil)
+	require.NoError(t, err)
+	return graph
+}
+
+type branchLoaderStub struct {
+	trunk string
+	items []spice.LoadBranchItem
+}
+
+var _ spice.BranchLoader = (*branchLoaderStub)(nil)
+
+func (b *branchLoaderStub) Trunk() string {
+	return b.trunk
+}
+
+func (b *branchLoaderStub) LoadBranches(context.Context) ([]spice.LoadBranchItem, error) {
+	return slices.Clone(b.items), nil
 }
