@@ -75,6 +75,9 @@ type shamChange struct {
 	// Name of the head branch.
 	// This is the branch that contains the changes to be merged.
 	Head string
+
+	// Labels are the labels associated with the change.
+	Labels []string
 }
 
 // Change is a change proposal against a repository.
@@ -91,6 +94,8 @@ type Change struct {
 
 	Base *ChangeBranch `json:"base"`
 	Head *ChangeBranch `json:"head"`
+
+	Labels []string `json:"labels"`
 }
 
 func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
@@ -112,6 +117,7 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 		Body:    c.Body,
 		Base:    base,
 		Head:    head,
+		Labels:  c.Labels,
 	}
 	switch c.State {
 	case shamChangeOpen:

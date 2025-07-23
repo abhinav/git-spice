@@ -109,7 +109,8 @@ true
   "base": {
     "ref": "main",
     "sha": "3bcbc80b165d8b4bb7fe792b7ca9effc713b32a5"
-  }
+  },
+  "labels": null
 }
 
 -- golden/draft-override.json --
@@ -126,7 +127,8 @@ true
   "base": {
     "ref": "feature1",
     "sha": "dbcf2133e568c7abf343166d32aefb2ecd3ec8be"
-  }
+  },
+  "labels": null
 }
 
 -- golden/draft-explicit.json --
@@ -144,5 +146,6 @@ true
   "base": {
     "ref": "feature2",
     "sha": "ca0588e9603d29d74b9c81b8536be941e9a868f4"
-  }
+  },
+  "labels": null
 }

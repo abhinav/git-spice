@@ -81,7 +81,8 @@ false
   "head": {
     "ref": "add-feature-1",
     "sha": "a9548da1d2feba06f2bba402eb77adf27a9266e7"
-  }
+  },
+  "labels": null
 }
 
 -- golden/ll-before.txt --

@@ -75,6 +75,7 @@ false
     "head": {
       "ref": "feature",
       "sha": "26a1011fd724f56ba25514e0b48e1f864f7b6118"
-    }
+    },
+    "labels": null
   }
 ]

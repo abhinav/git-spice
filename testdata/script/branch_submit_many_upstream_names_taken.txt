@@ -71,6 +71,7 @@ main
     "head": {
       "ref": "feature-10",
       "sha": "4af1d441e9ebd2a2abd75de1d969a90c3f25fb6f"
-    }
+    },
+    "labels": null
   }
 ]
