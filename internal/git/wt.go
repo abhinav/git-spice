@@ -7,6 +7,7 @@ import (
 	"iter"
 	"strings"
 
+	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -90,7 +91,7 @@ type WorktreeListItem struct {
 func (r *Repository) Worktrees(ctx context.Context) iter.Seq2[*WorktreeListItem, error] {
 	return func(yield func(*WorktreeListItem, error) bool) {
 		var item *WorktreeListItem
-		for line, err := range r.gitCmd(ctx, "worktree", "list", "--porcelain", "-z").Scan(r.exec, splitNullByte) {
+		for line, err := range r.gitCmd(ctx, "worktree", "list", "--porcelain", "-z").Scan(r.exec, scanutil.SplitNull) {
 			if err != nil {
 				yield(nil, fmt.Errorf("worktree list: %w", err))
 				return
