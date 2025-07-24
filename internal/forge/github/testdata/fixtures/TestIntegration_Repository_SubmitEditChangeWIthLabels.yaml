@@ -1,0 +1,343 @@
+---
+version: 2
+interactions:
+  - id: 0
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 251
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"khUwPziZ","title":"khUwPziZ","body":"Test PR"}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4"}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 1.048152459s
+  - id: 1
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 192
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){clientMutationId}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs51N_9r","baseRefName":"Fhr9q7Dn"}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"updatePullRequest":{"clientMutationId":null}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 783.330916ms
+  - id: 2
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 249
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"abhinav","repo":"test-repo"}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"Fhr9q7Dn","isDraft":false}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 198.527375ms
+  - id: 3
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 188
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){clientMutationId}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs51N_9r","baseRefName":"main"}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"updatePullRequest":{"clientMutationId":null}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 1.117120958s
+  - id: 4
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 182
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:ConvertPullRequestToDraftInput!){convertPullRequestToDraft(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs51N_9r"}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"convertPullRequestToDraft":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r"}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 304.767708ms
+  - id: 5
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 249
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"abhinav","repo":"test-repo"}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"main","isDraft":true}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 208.743792ms
+  - id: 6
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 190
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:MarkPullRequestReadyForReviewInput!){markPullRequestReadyForReview(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs51N_9r"}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"markPullRequestReadyForReview":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r"}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 455.369958ms
+  - id: 7
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 247
+      transfer_encoding: [ ]
+      trailer: { }
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"query($name:String!$owner:String!){repository(owner: $owner, name: $name){labels(first: 100){nodes{id,name}}}}","variables":{"name":"test-repo","owner":"abhinav"}}
+      form: { }
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: [ ]
+      trailer: { }
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"repository":{"labels":{"nodes":[{"id":"LA_kwDOMVd0xs7OAAGpzA","name":"test-label"}]}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 432.156789ms
+  - id: 8
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 267
+      transfer_encoding: [ ]
+      trailer: { }
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"another-label"}}}
+      form: { }
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: [ ]
+      trailer: { }
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs7OAAGpzB"}}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 387.654321ms
+  - id: 9
+    request:
+      proto: HTTP/1.1
+      proto_major: 1
+      proto_minor: 1
+      content_length: 215
+      transfer_encoding: []
+      trailer: {}
+      host: api.github.com
+      remote_addr: ""
+      request_uri: ""
+      body: |
+        {"query":"mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input: $input){clientMutationId}}","variables":{"input":{"labelableId":"PR_kwDOMVd0xs51N_9r","labelIds":["LA_kwDOMVd0xs7OAAGpzA","LA_kwDOMVd0xs7OAAGpzB"]}}}
+      form: {}
+      headers:
+        Content-Type:
+          - application/json
+      url: https://api.github.com/graphql
+      method: POST
+    response:
+      proto: HTTP/2.0
+      proto_major: 2
+      proto_minor: 0
+      transfer_encoding: []
+      trailer: {}
+      content_length: -1
+      uncompressed: true
+      body: '{"data":{"addLabelsToLabelable":{"clientMutationId":null}}}'
+      headers:
+        Content-Type:
+          - application/json; charset=utf-8
+      status: 200 OK
+      code: 200
+      duration: 340.123456ms

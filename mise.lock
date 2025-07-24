@@ -5,6 +5,9 @@ backend = "ubi:miniscruff/changie"
 [tools.changie.platforms.linux-x64-changie]
 checksum = "blake3:7dc46028e2b15dfb75ae95a3f066d03219598a51fbfd26b04b2e959e8291f25f"
 
+[tools.changie.platforms.macos-arm64-changie]
+checksum = "blake3:885b502cc820c59107fe0227dc4a7d74cfe4617535726b6685d09fc2ea9b2900"
+
 [tools.go]
 version = "1.24.5"
 backend = "core:go"
@@ -14,12 +17,20 @@ checksum = "sha256:10ad9e86233e74c0f6590fe5426895de6bf388964210eac34a6d83f38918e
 size = 78563580
 url = "https://dl.google.com/go/go1.24.5.linux-amd64.tar.gz"
 
+[tools.go.platforms.macos-arm64]
+checksum = "sha256:92d30a678f306c327c544758f2d2fa5515aa60abe9dba4ca35fbf9b8bfc53212"
+size = 76284834
+url = "https://dl.google.com/go/go1.24.5.darwin-arm64.tar.gz"
+
 [tools.gofumpt]
 version = "0.8.0"
 backend = "ubi:mvdan/gofumpt"
 
 [tools.gofumpt.platforms.linux-x64-gofumpt]
 checksum = "blake3:0222d8c61df3a852947a029076b284f84e9fe525b12530e57c1512267cc43609"
+
+[tools.gofumpt.platforms.macos-arm64-gofumpt]
+checksum = "blake3:99e80ff9eeae4c745504924ca2b110abb3102cc380cc4aa2b05a49e7e95ff528"
 
 [tools.golangci-lint]
 version = "2.2.2"
@@ -30,6 +41,11 @@ checksum = "sha256:c27fbde948a87d326feacd21df2f61a9c54dbd2e3bfa185c0a1cd6917a6f9
 size = 13980198
 url = "https://github.com/golangci/golangci-lint/releases/download/v2.2.2/golangci-lint-2.2.2-linux-amd64.tar.gz"
 
+[tools.golangci-lint.platforms.macos-arm64]
+checksum = "sha256:d84d94d042c0d495fd1746f3d18948a75de163b17a14e8de3ef840928dd2df74"
+size = 13585670
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.2.2/golangci-lint-2.2.2-darwin-arm64.tar.gz"
+
 [tools.gotestsum]
 version = "1.12.3"
 backend = "aqua:gotestyourself/gotestsum"
@@ -39,9 +55,17 @@ checksum = "sha256:dd644e817b509fa8e216887ec93facdd85722d1b78f6a19149ee1bc9f59fc
 size = 2470228
 url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.12.3/gotestsum_1.12.3_linux_amd64.tar.gz"
 
+[tools.gotestsum.platforms.macos-arm64]
+checksum = "sha256:a2cdc441a1355c8cfe35f4deaa0d6c8b73a9530f8c8d02e2c00fe4fae7aa5c45"
+size = 2363341
+url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.12.3/gotestsum_1.12.3_darwin_arm64.tar.gz"
+
 [tools."ubi:abhinav/requiredfield"]
 version = "0.6.0"
 backend = "ubi:abhinav/requiredfield"
 
 [tools."ubi:abhinav/requiredfield".platforms.linux-x64-requiredfield]
 checksum = "blake3:5b699cd4773292ee85b817a5ec77ee2fefc285c2e1a7222315b80ea5757af1e4"
+
+[tools."ubi:abhinav/requiredfield".platforms.macos-arm64-requiredfield]
+checksum = "blake3:3d065238d23222d077e630b391def5a4494b72f5bb9ff319aa1e1819731130a6"

@@ -91,7 +91,8 @@ New contents of feature2
     "base": {
       "ref": "main",
       "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
-    }
+    },
+    "labels": null
   },
   {
     "base": {
@@ -107,6 +108,7 @@ New contents of feature2
     "merged": true,
     "number": 2,
     "state": "closed",
-    "title": "Add feature2"
+    "title": "Add feature2",
+    "labels": null
   }
 ]

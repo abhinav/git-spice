@@ -99,7 +99,8 @@ feature 2
     "base": {
       "ref": "main",
       "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
-    }
+    },
+    "labels": null
   }
 ]
 
@@ -127,10 +128,11 @@ feature 2
     "base": {
       "ref": "main",
       "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
-    }
+    },
+    "labels": null
   },
   {
-  "base": {
+    "base": {
       "ref": "feature1",
       "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
     },
@@ -142,7 +144,8 @@ feature 2
     "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "number": 2,
     "state": "open",
-    "title": "Add feature2"
+    "title": "Add feature2",
+    "labels": null
   }
 ]
 

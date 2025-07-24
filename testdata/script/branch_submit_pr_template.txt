@@ -67,7 +67,8 @@ This is the starting commit message.
     "base": {
       "ref": "main",
       "sha": "d82f437b45089440ffaf5e3fa92b99d2d003f8e6"
-    }
+    },
+    "labels": null
   }
 ]
 

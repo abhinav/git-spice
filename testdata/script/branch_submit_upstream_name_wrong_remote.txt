@@ -59,6 +59,7 @@ main
     "head": {
       "ref": "feat1",
       "sha": "aa30b568f30e13394f834da24a76ca42e5bf9400"
-    }
+    },
+    "labels": null
   }
 ]

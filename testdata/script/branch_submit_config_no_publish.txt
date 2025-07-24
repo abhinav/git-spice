@@ -78,6 +78,7 @@ main
     "head": {
       "ref": "feature1",
       "sha": "5a09fe1c62b68c6aad1c811929ba69d591f3babb"
-    }
+    },
+    "labels": null
   }
 ]
