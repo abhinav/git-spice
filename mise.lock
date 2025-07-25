@@ -2,22 +2,46 @@
 version = "1.22.0"
 backend = "ubi:miniscruff/changie"
 
+[tools.changie.platforms.linux-x64-changie]
+checksum = "blake3:7dc46028e2b15dfb75ae95a3f066d03219598a51fbfd26b04b2e959e8291f25f"
+
 [tools.go]
 version = "1.24.5"
 backend = "core:go"
+
+[tools.go.platforms.linux-x64]
+checksum = "sha256:10ad9e86233e74c0f6590fe5426895de6bf388964210eac34a6d83f38918ecdc"
+size = 78563580
+url = "https://dl.google.com/go/go1.24.5.linux-amd64.tar.gz"
 
 [tools.gofumpt]
 version = "0.8.0"
 backend = "ubi:mvdan/gofumpt"
 
+[tools.gofumpt.platforms.linux-x64-gofumpt]
+checksum = "blake3:0222d8c61df3a852947a029076b284f84e9fe525b12530e57c1512267cc43609"
+
 [tools.golangci-lint]
 version = "2.2.2"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint.platforms.linux-x64]
+checksum = "sha256:c27fbde948a87d326feacd21df2f61a9c54dbd2e3bfa185c0a1cd6917a6f964f"
+size = 13980198
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.2.2/golangci-lint-2.2.2-linux-amd64.tar.gz"
 
 [tools.gotestsum]
 version = "1.12.3"
 backend = "aqua:gotestyourself/gotestsum"
 
+[tools.gotestsum.platforms.linux-x64]
+checksum = "sha256:dd644e817b509fa8e216887ec93facdd85722d1b78f6a19149ee1bc9f59fca64"
+size = 2470228
+url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.12.3/gotestsum_1.12.3_linux_amd64.tar.gz"
+
 [tools."ubi:abhinav/requiredfield"]
 version = "0.6.0"
 backend = "ubi:abhinav/requiredfield"
+
+[tools."ubi:abhinav/requiredfield".platforms.linux-x64-requiredfield]
+checksum = "blake3:5b699cd4773292ee85b817a5ec77ee2fefc285c2e1a7222315b80ea5757af1e4"
