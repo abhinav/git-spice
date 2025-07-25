@@ -367,3 +367,15 @@ and not for existing ones that were updated.
 - `true`
 - `false` (default)
 - `created` (<!-- gs:version unreleased -->)
+
+### spice.stackSubmit.updateOnly
+
+<!-- gs:version unreleased -->
+
+If set to true, $$gs stack submit$$ will only update existing branches.
+Branches which have not yet been submitted, will remain so.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)

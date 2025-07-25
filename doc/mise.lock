@@ -6,7 +6,5 @@ backend = "core:python"
 version = "0.7.13"
 backend = "aqua:astral-sh/uv"
 
-[tools.uv.platforms.linux-x64]
-checksum = "sha256:560bb64e060354e45138d7dd47c8dd48a4f7a349af5520d29cd3c704e79f286c"
-size = 17929515
-url = "https://github.com/astral-sh/uv/releases/download/0.7.13/uv-x86_64-unknown-linux-musl.tar.gz"
+[tools.uv.checksums]
+"uv-x86_64-unknown-linux-musl.tar.gz" = "sha256:560bb64e060354e45138d7dd47c8dd48a4f7a349af5520d29cd3c704e79f286c"
