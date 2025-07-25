@@ -1,0 +1,3 @@
+kind: Added
+body: Add 'spice.stackSubmit.updateOnly' configuration option so users can default to "UpdateOnly" behavior if they like.
+time: 2025-07-25T10:42:01.838061167-07:00

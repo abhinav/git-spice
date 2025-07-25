@@ -1,0 +1,42 @@
+# stack submit with spice.stackSubmit.updateOnly so only updated branches are submitted.
+
+as 'Test <test@example.com>'
+at '2025-07-25T09:18:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git config spice.stackSubmit.updateOnly true
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack with the first branch submitted
+git add feature.txt
+gs bc feature -m 'Add feature'
+gs bs
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+gs down
+git add feature-update.txt
+git commit --amend
+gs sr
+
+# run stack submit and ensure it only updates the first branch
+gs ss
+
+-- repo/feature.txt --
+feature
+
+-- repo/feature2.txt --
+feature2
+
+-- repo/feature-update.txt --
+feature update
