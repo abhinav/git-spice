@@ -158,6 +158,15 @@ func (r *Repository) createLabel(ctx context.Context, name string) (githubv4.ID,
 	}
 
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		if errors.Is(err, graphqlutil.ErrUnprocessable) {
+			// GitHub returns Unprocessable if the label already exists.
+			// If two concurrent requests try to create the same label,
+			// and one of them wins, we can use the ID from the other request.
+			r.log.Debug("Label might have been created by another request, querying", "name", name, "error", err)
+			if id, err := r.labelID(ctx, name); err == nil {
+				return id, nil
+			}
+		}
 		return "", fmt.Errorf("create label mutation: %w", err)
 	}
 
