@@ -2,16 +2,20 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"runtime"
+	"sync"
 
 	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/graphqlutil"
 )
 
 func (r *Repository) addLabelsToPullRequest(ctx context.Context, labels []string, prGraphQLID githubv4.ID) error {
 	if len(labels) == 0 {
 		return nil
 	}
-	labelIDs, err := r.getOrCreateLabelIDs(ctx, labels)
+	labelIDs, err := r.ensureLabels(ctx, labels)
 	if err != nil {
 		return fmt.Errorf("get label IDs: %w", err)
 	}
@@ -33,50 +37,108 @@ func (r *Repository) addLabelsToPullRequest(ctx context.Context, labels []string
 	return nil
 }
 
-func (r *Repository) getOrCreateLabelIDs(ctx context.Context, labelNames []string) ([]githubv4.ID, error) {
+func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]githubv4.ID, error) {
+	// TODO:
+	// cache label IDs in repo-level state to avoid querying every time.
 	if len(labelNames) == 0 {
 		return nil, nil
 	}
 
-	var query struct {
-		Repository struct {
-			Labels struct {
-				Nodes []struct {
-					ID   githubv4.ID     `graphql:"id"`
-					Name githubv4.String `graphql:"name"`
-				} `graphql:"nodes"`
-			} `graphql:"labels(first: 100)"` // I think 100 is a reasonable limit for labels
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
+	idxc := make(chan int)
+	var (
+		wg sync.WaitGroup
 
-	variables := map[string]interface{}{
-		"owner": githubv4.String(r.owner),
-		"name":  githubv4.String(r.repo),
-	}
+		mu   sync.Mutex // guards errs
+		errs []error
+	)
+	// TODO: Instead of a fan out search like this,
+	// we can dynamically construct a GraphQL query like so:
+	//
+	//     repository(owner: $owner, name: $name) {
+	//         _1: label(name: $label_1) { id }
+	//         _2: label(name: $label_2) { id }
+	//         ...
+	//      }
+	//
+	// One query instead of many.
+	labelIDs := make([]githubv4.ID, len(labelNames)) // pre-allocate to fill without locking
+	for range runtime.GOMAXPROCS(0) {
+		wg.Add(1)
+		go func() {
+			for idx := range idxc {
+				labelName := labelNames[idx]
 
-	if err := r.client.Query(ctx, &query, variables); err != nil {
-		return nil, fmt.Errorf("query labels: %w", err)
-	}
+				labelID, err := r.ensureLabel(ctx, labelName)
+				if err != nil {
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("ensure label %q: %w", labelName, err))
+					mu.Unlock()
+					continue
+				}
 
-	labelMap := make(map[string]githubv4.ID)
-	for _, label := range query.Repository.Labels.Nodes {
-		labelMap[string(label.Name)] = label.ID
-	}
-
-	var labelIDs []githubv4.ID
-	for _, name := range labelNames {
-		id, exists := labelMap[name]
-		if !exists {
-			var err error
-			id, err = r.createLabel(ctx, name)
-			if err != nil {
-				return nil, fmt.Errorf("create label %q: %w", name, err)
+				r.log.Debug("Resolved label ID", "name", labelName, "id", labelID)
+				labelIDs[idx] = labelID
 			}
-		}
-		labelIDs = append(labelIDs, id)
+		}()
+	}
+
+	for idx := range labelNames {
+		idxc <- idx
+	}
+	close(idxc)
+	wg.Wait()
+
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 
 	return labelIDs, nil
+}
+
+func (r *Repository) ensureLabel(ctx context.Context, labelName string) (githubv4.ID, error) {
+	labelID, err := r.labelID(ctx, labelName)
+	if err == nil {
+		return labelID, nil
+	}
+
+	if !errors.Is(err, errLabelDoesNotExist) {
+		return nil, fmt.Errorf("query label: %w", err)
+	}
+
+	r.log.Infof("Label does not exist, creating: %v", labelName)
+	labelID, err = r.createLabel(ctx, labelName)
+	if err != nil {
+		return "", fmt.Errorf("create label: %w", err)
+	}
+
+	return labelID, nil
+}
+
+var errLabelDoesNotExist = errors.New("label not found")
+
+func (r *Repository) labelID(ctx context.Context, name string) (githubv4.ID, error) {
+	var query struct {
+		Repository struct {
+			Label struct {
+				ID githubv4.ID `graphql:"id"`
+			} `graphql:"label(name: $label)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+
+	variables := map[string]any{
+		"owner": githubv4.String(r.owner),
+		"name":  githubv4.String(r.repo),
+		"label": githubv4.String(name),
+	}
+	if err := r.client.Query(ctx, &query, variables); err != nil {
+		return "", fmt.Errorf("query labels: %w", err)
+	}
+
+	if query.Repository.Label.ID == "" {
+		return "", errLabelDoesNotExist
+	}
+
+	return query.Repository.Label.ID, nil
 }
 
 func (r *Repository) createLabel(ctx context.Context, name string) (githubv4.ID, error) {
@@ -88,7 +150,7 @@ func (r *Repository) createLabel(ctx context.Context, name string) (githubv4.ID,
 		} `graphql:"createLabel(input: $input)"`
 	}
 
-	color := "EDEDED"
+	color := "EDEDED" // TODO: randomize this color
 	input := githubv4.CreateLabelInput{
 		RepositoryID: r.repoID,
 		Name:         githubv4.String(name),
