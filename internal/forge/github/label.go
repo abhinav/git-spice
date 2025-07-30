@@ -20,18 +20,20 @@ func (r *Repository) addLabelsToPullRequest(ctx context.Context, labels []string
 		return fmt.Errorf("get label IDs: %w", err)
 	}
 
-	var addLabelsM struct {
+	var m struct {
 		AddLabelsToLabelable struct {
 			Clientmutationid githubv4.String `graphql:"clientMutationId"`
 		} `graphql:"addLabelsToLabelable(input: $input)"`
 	}
 
-	labelsInput := githubv4.AddLabelsToLabelableInput{
+	// NB:
+	// addLabelsToLabelable ignores labels that are already present
+	// on the pull request, so we don't need to check for that.
+	input := githubv4.AddLabelsToLabelableInput{
 		LabelableID: prGraphQLID,
 		LabelIDs:    labelIDs,
 	}
-
-	if err := r.client.Mutate(ctx, &addLabelsM, labelsInput, nil); err != nil {
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("add labels to labelable: %w", err)
 	}
 	return nil
@@ -96,17 +98,17 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 }
 
 func (r *Repository) ensureLabel(ctx context.Context, labelName string) (githubv4.ID, error) {
-	labelID, err := r.labelID(ctx, labelName)
+	labelID, err := r.LabelID(ctx, labelName)
 	if err == nil {
 		return labelID, nil
 	}
 
-	if !errors.Is(err, errLabelDoesNotExist) {
+	if !errors.Is(err, ErrLabelNotFound) {
 		return nil, fmt.Errorf("query label: %w", err)
 	}
 
 	r.log.Infof("Label does not exist, creating: %v", labelName)
-	labelID, err = r.createLabel(ctx, labelName)
+	labelID, err = r.CreateLabel(ctx, labelName)
 	if err != nil {
 		return "", fmt.Errorf("create label: %w", err)
 	}
@@ -114,9 +116,13 @@ func (r *Repository) ensureLabel(ctx context.Context, labelName string) (githubv
 	return labelID, nil
 }
 
-var errLabelDoesNotExist = errors.New("label not found")
+// ErrLabelNotFound indicates that a label that we were expecting
+// was not found in the repository.
+var ErrLabelNotFound = errors.New("label not found")
 
-func (r *Repository) labelID(ctx context.Context, name string) (githubv4.ID, error) {
+// LabelID returns the ID of a label by its name.
+// It returns ErrLabelNotFound if the label does not exist.
+func (r *Repository) LabelID(ctx context.Context, name string) (githubv4.ID, error) {
 	var query struct {
 		Repository struct {
 			Label struct {
@@ -135,13 +141,15 @@ func (r *Repository) labelID(ctx context.Context, name string) (githubv4.ID, err
 	}
 
 	if query.Repository.Label.ID == "" {
-		return "", errLabelDoesNotExist
+		return "", ErrLabelNotFound
 	}
 
 	return query.Repository.Label.ID, nil
 }
 
-func (r *Repository) createLabel(ctx context.Context, name string) (githubv4.ID, error) {
+// CreateLabel creates a label in the repository with the given name
+// and returns its GraphQL ID.
+func (r *Repository) CreateLabel(ctx context.Context, name string) (githubv4.ID, error) {
 	var m struct {
 		CreateLabel struct {
 			Label struct {
@@ -163,7 +171,7 @@ func (r *Repository) createLabel(ctx context.Context, name string) (githubv4.ID,
 			// If two concurrent requests try to create the same label,
 			// and one of them wins, we can use the ID from the other request.
 			r.log.Debug("Label might have been created by another request, querying", "name", name, "error", err)
-			if id, err := r.labelID(ctx, name); err == nil {
+			if id, err := r.LabelID(ctx, name); err == nil {
 				return id, nil
 			}
 		}
