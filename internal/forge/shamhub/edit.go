@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
 )
 
 type editChangeRequest struct {
-	Base  *string `json:"base,omitempty"`
-	Draft *bool   `json:"draft,omitempty"`
+	Base   *string  `json:"base,omitempty"`
+	Draft  *bool    `json:"draft,omitempty"`
+	Labels []string `json:"labels,omitempty"`
 }
 
 type editChangeResponse struct{}
@@ -61,6 +63,15 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 	if d := data.Draft; d != nil {
 		sh.changes[changeIdx].Draft = *d
 	}
+	if len(data.Labels) > 0 {
+		labels := sh.changes[changeIdx].Labels
+		for _, label := range data.Labels {
+			if !slices.Contains(labels, label) {
+				labels = append(labels, label)
+			}
+		}
+		sh.changes[changeIdx].Labels = labels
+	}
 
 	res := editChangeResponse{} // empty for now
 
@@ -79,6 +90,7 @@ func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 	if opts.Draft != nil {
 		req.Draft = opts.Draft
 	}
+	req.Labels = opts.Labels
 
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))

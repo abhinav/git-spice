@@ -148,9 +148,11 @@ type Options struct {
 
 	// TODO: Other creation options e.g.:
 	// - assignees
-	// - labels
 	// - milestone
 	// - reviewers
+
+	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
+	ConfiguredLabels []string `name:"configured-labels" hidden:"" config:"submit.label"` // merged with Labels
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
@@ -209,6 +211,18 @@ type BatchRequest struct {
 // creating or updating change requests as needed.
 func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	opts := cmp.Or(req.Options, &Options{})
+	if len(opts.ConfiguredLabels) > 0 {
+		seen := make(map[string]struct{}, len(opts.Labels))
+		for _, label := range opts.Labels {
+			seen[label] = struct{}{}
+		}
+
+		for _, label := range opts.ConfiguredLabels {
+			if _, ok := seen[label]; !ok {
+				opts.Labels = append(opts.Labels, label)
+			}
+		}
+	}
 
 	var branchesToComment []string
 	for _, branch := range req.Branches {
@@ -718,8 +732,9 @@ func (h *Handler) submitBranch(
 
 		if len(updates) > 0 {
 			opts := forge.EditChangeOptions{
-				Base:  upstreamBase,
-				Draft: opts.Draft,
+				Base:   upstreamBase,
+				Draft:  opts.Draft,
+				Labels: opts.Labels,
 			}
 
 			// remoteRepo is guaranteed to be available at this point.
@@ -886,6 +901,7 @@ func (h *Handler) prepareBranch(
 		remoteRepo:     remoteRepo,
 		store:          h.Store,
 		log:            h.Log,
+		labels:         opts.Labels,
 	}, nil
 }
 
@@ -921,9 +937,10 @@ func listChangeTemplates(
 type preparedBranch struct {
 	state.PreparedBranch
 
-	head  string
-	base  string
-	draft bool
+	head   string
+	base   string
+	draft  bool
+	labels []string
 
 	remoteRepo forge.Repository
 	store      Store
@@ -937,6 +954,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 		Head:    b.head,
 		Base:    b.base,
 		Draft:   b.draft,
+		Labels:  b.labels,
 	})
 	if err != nil {
 		// If the branch could not be submitted because the base branch

@@ -130,7 +130,7 @@ feature 2
     }
   },
   {
-  "base": {
+    "base": {
       "ref": "feature1",
       "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
     },
