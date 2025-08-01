@@ -289,6 +289,9 @@ when using $$gs branch submit$$ and friends.
 
 The value must be a comma-separated list of labels.
 
+Labels specified with the `-l`/`--label` flags
+will be combined with the configured labels.
+
 ### spice.submit.listTemplatesTimeout
 
 <!-- gs:version v0.8.0 -->

@@ -151,7 +151,8 @@ type Options struct {
 	// - milestone
 	// - reviewers
 
-	Labels []string `name:"label" short:"l" config:"submit.label" help:"Add labels to the change request. Pass multiple times or separate with commas."`
+	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
+	ConfiguredLabels []string `name:"configured-labels" hidden:"" config:"submit.label"` // merged with Labels
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
@@ -210,6 +211,18 @@ type BatchRequest struct {
 // creating or updating change requests as needed.
 func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	opts := cmp.Or(req.Options, &Options{})
+	if len(opts.ConfiguredLabels) > 0 {
+		seen := make(map[string]struct{}, len(opts.Labels))
+		for _, label := range opts.Labels {
+			seen[label] = struct{}{}
+		}
+
+		for _, label := range opts.ConfiguredLabels {
+			if _, ok := seen[label]; !ok {
+				opts.Labels = append(opts.Labels, label)
+			}
+		}
+	}
 
 	var branchesToComment []string
 	for _, branch := range req.Branches {

@@ -26,6 +26,8 @@ gs branch create feature3 -m 'Add feature 3'
 env SHAMHUB_USERNAME=alice
 gs auth login
 
+git config spice.submit.label spice
+
 # submit the entire stack from the middle.
 git checkout feature1
 gs stack submit --fill --label label1 --label label2,label3
@@ -74,7 +76,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
     },
-    "labels": ["label1", "label2", "label3"]
+    "labels": ["label1", "label2", "label3", "spice"]
   },
   {
     "number": 2,
@@ -90,7 +92,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
     },
-    "labels": ["label1", "label2", "label3"]
+    "labels": ["label1", "label2", "label3", "spice"]
   },
   {
     "number": 3,
@@ -106,7 +108,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
     },
-    "labels": ["label1", "label2", "label3"]
+    "labels": ["label1", "label2", "label3", "spice"]
   }
 ]
 
@@ -127,7 +129,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     },
-    "labels": ["label1", "label2", "label3"]
+    "labels": ["label1", "label2", "label3", "spice"]
   },
   {
     "number": 2,
@@ -143,7 +145,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     },
-    "labels": ["label1", "label2", "label3", "label4"]
+    "labels": ["label1", "label2", "label3", "spice", "label4"]
   },
   {
     "number": 3,
@@ -159,7 +161,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature2",
       "sha": "18e5a5208175cd409480c2ab89588877726c1d57"
     },
-    "labels": ["label1", "label2", "label3", "label4"]
+    "labels": ["label1", "label2", "label3", "spice", "label4"]
   }
 ]
 
