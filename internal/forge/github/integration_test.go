@@ -393,7 +393,11 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	})
 }
 
-func TestIntegration_Repository_SubmitEditChangeWithLabels(t *testing.T) {
+func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
+	label1 := fixturetest.New(_fixtures, "label1", func() string { return randomString(8) }).Get(t)
+	label2 := fixturetest.New(_fixtures, "label2", func() string { return randomString(8) }).Get(t)
+	label3 := fixturetest.New(_fixtures, "label3", func() string { return randomString(8) }).Get(t)
+
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
 		return randomString(8)
 	})
@@ -473,82 +477,76 @@ func TestIntegration_Repository_SubmitEditChangeWithLabels(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	t.Cleanup(func() {
+		labels := []string{label1, label2, label3}
+		ctx := context.WithoutCancel(t.Context())
+		for _, label := range labels {
+			assert.NoError(t,
+				repo.DeleteLabel(ctx, label), "could not delete label: %s", label)
+		}
+	})
+
 	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
 		Subject: branchName,
 		Body:    "Test PR",
 		Base:    "main",
 		Head:    branchName,
-		Labels:  []string{"test-label", "another-label"},
+		Labels:  []string{label1},
 	})
 	require.NoError(t, err, "error creating PR")
 	changeID := change.ID
 
-	t.Run("ChangeBase", func(t *testing.T) {
-		newBaseFixture := fixturetest.New(_fixtures, "new-base", func() string {
-			return randomString(8)
-		})
-
-		newBase := newBaseFixture.Get(t)
-		t.Logf("Pushing new base: %s", newBase)
-		if *_update {
-			require.NoError(t,
-				gitWork.Push(t.Context(), git.PushOptions{
-					Remote:  "origin",
-					Refspec: git.Refspec("main:" + newBase),
-				}), "could not push base branch")
-
-			t.Cleanup(func() {
-				t.Logf("Deleting remote branch: %s", newBase)
-				ctx := context.WithoutCancel(t.Context())
-				require.NoError(t,
-					gitWork.Push(ctx, git.PushOptions{
-						Remote:  "origin",
-						Refspec: git.Refspec(":" + newBase),
-					}), "error deleting branch")
-			})
-		}
-
-		t.Logf("Changing base to: %s", newBase)
+	t.Run("AddNewLabel", func(t *testing.T) {
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Base: newBase,
-			}), "could not update base branch for PR")
-		t.Cleanup(func() {
-			t.Logf("Changing base back to: main")
-			ctx := context.WithoutCancel(t.Context())
-			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
-					Base: "main",
-				}), "error restoring base branch")
-		})
-
-		change, err := repo.FindChangeByID(t.Context(), changeID)
-		require.NoError(t, err, "could not find PR after changing base")
-
-		assert.Equal(t, newBase, change.BaseName,
-			"base change did not take effect")
+				Labels: []string{label2},
+			}), "could not add labels to PR")
 	})
 
-	t.Run("ChangeDraft", func(t *testing.T) {
-		t.Logf("Changing to draft")
-		draft := true
+	t.Run("AddExistingLabel", func(t *testing.T) {
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Draft: &draft,
-			}), "could not update draft status for PR")
-		t.Cleanup(func() {
-			ctx := context.WithoutCancel(t.Context())
-			t.Logf("Changing to ready for review")
-			draft = false
-			require.NoError(t,
-				repo.EditChange(ctx, changeID, forge.EditChangeOptions{
-					Draft: &draft,
-				}), "error restoring draft status")
-		})
+				Labels: []string{label2, label3},
+			}), "could not add existing label to PR")
+	})
+}
 
-		change, err := repo.FindChangeByID(t.Context(), changeID)
-		require.NoError(t, err, "could not find PR after changing draft")
-		assert.True(t, change.Draft, "draft change did not take effect")
+func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
+	label := fixturetest.New(_fixtures, "label1", func() string { return randomString(8) }).Get(t)
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitHubClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	t.Run("DoesNotExist", func(t *testing.T) {
+		_, err := repo.LabelID(t.Context(), label)
+		require.Error(t, err, "expected error for non-existent label")
+		assert.ErrorIs(t, err, github.ErrLabelNotFound)
+	})
+
+	id, err := repo.CreateLabel(t.Context(), label)
+	require.NoError(t, err, "could not create label")
+	t.Cleanup(func() {
+		t.Logf("Deleting label: %s", label)
+		ctx := context.WithoutCancel(t.Context())
+		assert.NoError(t,
+			repo.DeleteLabel(ctx, label), "could not delete label")
+	})
+
+	t.Run("LabelID", func(t *testing.T) {
+		gotID, err := repo.LabelID(t.Context(), label)
+		require.NoError(t, err, "could not get label ID")
+		assert.Equal(t, id, gotID, "label ID does not match")
+	})
+
+	t.Run("createIsIdempotent", func(t *testing.T) {
+		newID, err := repo.CreateLabel(t.Context(), label)
+		require.NoError(t, err, "could not create label again")
+
+		assert.Equal(t, id, newID, "label ID should be the same on idempotent create")
 	})
 }
 

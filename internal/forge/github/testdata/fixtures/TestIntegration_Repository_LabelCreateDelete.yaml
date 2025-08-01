@@ -1,0 +1,165 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 196
+        host: api.github.com
+        body: |
+            {"query":"query($label:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label(name: $label){id}}}","variables":{"label":"TDlGIr8m","name":"test-repo","owner":"abhinav"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"label":null}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 612.397125ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 175
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"TDlGIr8m"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACGrIpig"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 291.254625ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 196
+        host: api.github.com
+        body: |
+            {"query":"query($label:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label(name: $label){id}}}","variables":{"label":"TDlGIr8m","name":"test-repo","owner":"abhinav"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"label":{"id":"LA_kwDOMVd0xs8AAAACGrIpig"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 250.049625ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 175
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"TDlGIr8m"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createLabel":{"label":null}},"errors":[{"type":"UNPROCESSABLE","path":["createLabel"],"locations":[{"line":1,"column":36}],"message":"Name has already been taken"}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 250.362208ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 196
+        host: api.github.com
+        body: |
+            {"query":"query($label:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label(name: $label){id}}}","variables":{"label":"TDlGIr8m","name":"test-repo","owner":"abhinav"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"label":{"id":"LA_kwDOMVd0xs8AAAACGrIpig"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 255.193083ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 133
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:DeleteLabelInput!){deleteLabel(input: $input){clientMutationId}}","variables":{"input":{"id":"TDlGIr8m"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"deleteLabel":null},"errors":[{"type":"NOT_FOUND","path":["deleteLabel"],"locations":[{"line":1,"column":36}],"message":"Could not resolve to a node with the global id of ''TDlGIr8m''"}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 195.889666ms

@@ -67,6 +67,8 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 	for range runtime.GOMAXPROCS(0) {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
+
 			for idx := range idxc {
 				labelName := labelNames[idx]
 
@@ -140,11 +142,11 @@ func (r *Repository) LabelID(ctx context.Context, name string) (githubv4.ID, err
 		return "", fmt.Errorf("query labels: %w", err)
 	}
 
-	if query.Repository.Label.ID == "" {
+	id := query.Repository.Label.ID
+	if id == "" || id == nil {
 		return "", ErrLabelNotFound
 	}
-
-	return query.Repository.Label.ID, nil
+	return id, nil
 }
 
 // CreateLabel creates a label in the repository with the given name
@@ -179,4 +181,24 @@ func (r *Repository) CreateLabel(ctx context.Context, name string) (githubv4.ID,
 	}
 
 	return m.CreateLabel.Label.ID, nil
+}
+
+// DeleteLabel deletes a label from the repository by its ID.
+// Use CreateLabel or LabelID to get the ID of a label.
+// If the label does not exist, it returns nil error.
+func (r *Repository) DeleteLabel(ctx context.Context, labelID githubv4.ID) error {
+	var m struct {
+		DeleteLabel struct {
+			ClientMutationID githubv4.String `graphql:"clientMutationId"`
+		} `graphql:"deleteLabel(input: $input)"`
+	}
+
+	input := githubv4.DeleteLabelInput{ID: labelID}
+	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		if !errors.Is(err, graphqlutil.ErrNotFound) {
+			return fmt.Errorf("delete label mutation: %w", err)
+		}
+	}
+
+	return nil
 }
