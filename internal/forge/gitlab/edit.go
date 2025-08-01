@@ -19,7 +19,7 @@ var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) {
+	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 {
 		return nil // nothing to do
 	}
 
@@ -54,6 +54,10 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 			}
 		}
 		logUpdates = append(logUpdates, slog.Bool("draft", *opts.Draft))
+	}
+
+	if len(opts.Labels) > 0 {
+		updateOptions.AddLabels = (*gitlab.LabelOptions)(&opts.Labels)
 	}
 
 	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
