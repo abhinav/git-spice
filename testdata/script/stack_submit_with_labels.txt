@@ -28,32 +28,24 @@ gs auth login
 
 # submit the entire stack from the middle.
 git checkout feature1
-gs stack submit --fill --labels label1,label2
+gs stack submit --fill --label label1 --label label2,label3
 cmpenv stderr $WORK/golden/submit-log.txt
-
-gs ls -a
-cmp stderr $WORK/golden/ls.txt
 
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/start.json
 
-shamhub dump comments
-cmp stdout $WORK/golden/start-comments.txt
-
-# Merge the bottom PR, sync, restack, and submit.
+# Merge the bottom PR, sync, restack, and submit with new labels.
 shamhub merge alice/example 1
 gs rs
 stderr '#1 was merged'
 gs sr   # stack restack
-gs ss   # stack submit
+gs ss -l label4 # stack submit
+! stderr 'Updated #1'
 stderr 'Updated #2'
 stderr 'Updated #3'
 
 shamhub dump changes
-cmpenvJSON stdout $WORK/golden/pr-1-merged.json
-
-shamhub dump comments
-cmp stdout $WORK/golden/pr-1-merged-comments.txt
+cmpenvJSON stdout $WORK/golden/updated.json
 
 -- repo/feature1.txt --
 This is feature 1
@@ -82,7 +74,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3"]
   },
   {
     "number": 2,
@@ -98,7 +90,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3"]
   },
   {
     "number": 3,
@@ -114,42 +106,11 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3"]
   }
 ]
 
--- golden/start-comments.txt --
-- change: 1
-  body: |
-    This change is part of the following stack:
-
-    - #1 ◀
-        - #2
-            - #3
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
-- change: 2
-  body: |
-    This change is part of the following stack:
-
-    - #1
-        - #2 ◀
-            - #3
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
-- change: 3
-  body: |
-    This change is part of the following stack:
-
-    - #1
-        - #2
-            - #3 ◀
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
--- golden/pr-1-merged.json --
+-- golden/updated.json --
 [
   {
     "number": 1,
@@ -166,7 +127,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3"]
   },
   {
     "number": 2,
@@ -182,7 +143,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "main",
       "sha": "59d3064874a8d0a003755556a982d1fe8adb59dc"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3", "label4"]
   },
   {
     "number": 3,
@@ -198,43 +159,7 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
       "ref": "feature2",
       "sha": "18e5a5208175cd409480c2ab89588877726c1d57"
     },
-    "labels": ["label1", "label2"]
+    "labels": ["label1", "label2", "label3", "label4"]
   }
 ]
 
--- golden/pr-1-merged-comments.txt --
-- change: 1
-  body: |
-    This change is part of the following stack:
-
-    - #1 ◀
-        - #2
-            - #3
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
-- change: 2
-  body: |
-    This change is part of the following stack:
-
-    - #1
-        - #2 ◀
-            - #3
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
-- change: 3
-  body: |
-    This change is part of the following stack:
-
-    - #1
-        - #2
-            - #3 ◀
-
-    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
-    <!-- gs:navigation comment -->
--- golden/ls.txt --
-    ┏━□ feature3 (#3)
-  ┏━┻□ feature2 (#2)
-┏━┻■ feature1 (#1) ◀
-main

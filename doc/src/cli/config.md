@@ -280,6 +280,15 @@ This option affects both interactive and non-interactive modes:
 - `true`: create CRs as drafts by default
 - `false` (default): create CRs as ready for review by default
 
+### spice.submit.label
+
+<!-- gs:version unreleased -->
+
+Add the configured labels to all submitted and updated change requests
+when using $$gs branch submit$$ and friends.
+
+The value must be a comma-separated list of labels.
+
 ### spice.submit.listTemplatesTimeout
 
 <!-- gs:version v0.8.0 -->

@@ -151,7 +151,7 @@ type Options struct {
 	// - milestone
 	// - reviewers
 
-	Labels []string `name:"labels" short:"l" config:"submit.labels" help:"Add labels to the change request"`
+	Labels []string `name:"label" short:"l" config:"submit.label" help:"Add labels to the change request. Pass multiple times or separate with commas."`
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
