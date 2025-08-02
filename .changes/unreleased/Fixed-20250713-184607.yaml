@@ -1,3 +1,0 @@
-kind: Fixed
-body: repo init now validates that the trunk branch is a local branch
-time: 2025-07-13T18:46:07.569257-07:00

@@ -1,3 +1,0 @@
-kind: Changed
-body: 'branch fold: Confirm user intent when called from a branch based directly on the trunk branch. This prevents accidentally folding changes into trunk.'
-time: 2025-07-11T21:28:42.100124-07:00

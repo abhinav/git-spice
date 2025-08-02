@@ -1,6 +1,0 @@
-kind: Changed
-body: >-
-  branch squash: Use a commit message template similar to Git.
-  Specifically, information from git-spice is commented out
-  and commit messages are presented in oldest-to-newest order.
-time: 2025-07-18T19:09:50.750424-07:00

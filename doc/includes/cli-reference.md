@@ -152,7 +152,7 @@ was not initialized with a remote.
 gs repo (r) restack (r)
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
 Restack all tracked branches
 
@@ -236,9 +236,10 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
 * `--no-web`: Alias for --web=false.
 
-**Configuration**: [spice.stackSubmit.updateOnly](/cli/config.md#spicestacksubmitupdateonly), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.stackSubmit.updateOnly](/cli/config.md#spicestacksubmitupdateonly), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs stack restack
 
@@ -288,7 +289,7 @@ Branches that are deleted from the list will be ignored.
 gs stack (s) delete (d) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
 Delete all branches in a stack
 
@@ -346,10 +347,11 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs upstack restack
 
@@ -422,7 +424,7 @@ Provide the new base name as an argument to skip the prompt.
 gs upstack (us) delete (d) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
 Delete all branches above the current branch
 
@@ -478,10 +480,11 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### gs downstack edit
 
@@ -754,9 +757,9 @@ Use the -m/--message flag to specify a commit message without editing.
 **Flags**
 
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
-* `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 * `-m`, `--message=MSG`: Use the given message as the commit message.
-* `--branch=NAME`: Branch to squash. Defaults to current branch. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `--branch=NAME`: Branch to squash. Defaults to current branch. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
 ### gs branch edit
 
@@ -896,12 +899,13 @@ or --nav-comment=multiple to post those comments only if there are multiple CRs 
 * `--force`: Force push, bypassing safety checks
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
 * `--no-web`: Alias for --web=false.
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ## Commit
 

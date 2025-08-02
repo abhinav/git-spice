@@ -11,11 +11,12 @@ import (
 )
 
 type submitChangeRequest struct {
-	Subject string `json:"subject,omitempty"`
-	Body    string `json:"body,omitempty"`
-	Base    string `json:"base,omitempty"`
-	Head    string `json:"head,omitempty"`
-	Draft   bool   `json:"draft,omitempty"`
+	Subject string   `json:"subject,omitempty"`
+	Body    string   `json:"body,omitempty"`
+	Base    string   `json:"base,omitempty"`
+	Head    string   `json:"head,omitempty"`
+	Draft   bool     `json:"draft,omitempty"`
+	Labels  []string `json:"labels,omitempty"`
 }
 
 type submitChangeResponse struct {
@@ -63,6 +64,7 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 		Body:    data.Body,
 		Base:    data.Base,
 		Head:    data.Head,
+		Labels:  data.Labels,
 	}
 	sh.changes = append(sh.changes, change)
 	sh.mu.Unlock()
@@ -88,6 +90,7 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		Body:    req.Body,
 		Head:    req.Head,
 		Draft:   req.Draft,
+		Labels:  req.Labels,
 	}, &res); err != nil {
 		// Check if submit failed because base hasn't been pushed yet.
 		if exists, err := r.RefExists(ctx, "refs/heads/"+req.Base); err == nil && !exists {
