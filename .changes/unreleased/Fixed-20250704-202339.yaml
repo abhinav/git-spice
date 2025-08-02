@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'repo sync: Don''t fail if a merged branch is checked out in another worktree. Instead, log a message and skip it.'
-time: 2025-07-04T20:23:39.921172-07:00

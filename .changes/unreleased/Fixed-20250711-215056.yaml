@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch squash: Fix no-op commit left behind in some scenarios when ''branch squash'' is run after a manual rebase.'
-time: 2025-07-11T21:50:56.884734-07:00

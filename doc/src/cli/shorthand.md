@@ -112,7 +112,7 @@ both will be expanded.
 
 ### Shell command aliases
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.16.0 -->
 
 In addition to git-spice command shorthands,
 you can define aliases that execute arbitrary shell commands

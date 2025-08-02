@@ -12,7 +12,7 @@ import (
 type branchSquashCmd struct {
 	squash.Options
 
-	Branch string `released:"unreleased" help:"Branch to squash. Defaults to current branch." predictor:"trackedBranches" placeholder:"NAME"`
+	Branch string `released:"v0.16.0" help:"Branch to squash. Defaults to current branch." predictor:"trackedBranches" placeholder:"NAME"`
 }
 
 func (*branchSquashCmd) Help() string {
