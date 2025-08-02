@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch delete: Don''t fail if the branch to check out after deletion is checked out in another worktree. Instead, log a message and detach HEAD.'
-time: 2025-07-04T20:24:33.005465-07:00

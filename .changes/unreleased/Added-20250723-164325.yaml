@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Add -l/--label flag and accompanying spice.submit.label option
-  to add labels to created/updated CRs.
-time: 2025-07-23T16:43:25.552204+01:00

@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'up: Don''t re-load state repeatedly when going up >1 branches. This is >8x faster in degenerate cases.'
-time: 2025-07-22T10:21:17.543993-07:00

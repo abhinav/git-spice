@@ -114,7 +114,7 @@ Commonly used values are:
 
 ### spice.checkout.verbose
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.16.0 -->
 
 Whether branch navigation commands
 ($$gs up$$, $$gs down$$, $$gs top$$, $$gs bottom$$,
@@ -249,7 +249,7 @@ If set to false, you can opt in to opening the editor with the `--edit` flag.
 
 ### spice.submit.draft
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.16.0 -->
 
 Default value for the `--draft`/`--no-draft` flag when creating new change
 requests with $$gs branch submit$$ and friends.
@@ -282,7 +282,7 @@ This option affects both interactive and non-interactive modes:
 
 ### spice.submit.label
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.16.0 -->
 
 Add the configured labels to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
@@ -326,7 +326,7 @@ should post or update a navigation comment to the CR.
 
 ### spice.submit.navigationCommentSync
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.16.0 -->
 
 Controls which branches' navigation comments are synced (created or updated)
 when submitting branches.
@@ -370,7 +370,7 @@ on a case-by-case basis.
 Whether submission commands ($$gs branch submit$$ and friends)
 should open a web browser with submitted CRs.
 
-<!-- gs:version unreleased --> If set to `created`,
+<!-- gs:version v0.16.0 --> If set to `created`,
 git-spice will open the web browser only for newly created CRs,
 and not for existing ones that were updated.
 
@@ -378,4 +378,4 @@ and not for existing ones that were updated.
 
 - `true`
 - `false` (default)
-- `created` (<!-- gs:version unreleased -->)
+- `created` (<!-- gs:version v0.16.0 -->)
