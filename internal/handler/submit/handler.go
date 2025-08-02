@@ -136,9 +136,9 @@ type Options struct {
 	NavComment     NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 	NavCommentSync NavCommentSync `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
 
-	Force      bool `help:"Force push, bypassing safety checks"`
-	NoVerify   bool `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
-	UpdateOnly bool `short:"u" help:"Only update existing change requests, do not create new ones"`
+	Force      bool  `help:"Force push, bypassing safety checks"`
+	NoVerify   bool  `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
+	UpdateOnly *bool `short:"u" negatable:"" help:"Only update existing change requests, do not create new ones"`
 
 	// DraftDefault is used to set the default draft value
 	// when creating new Change Requests.
@@ -201,16 +201,24 @@ func (s *NavCommentSync) UnmarshalText(bs []byte) error {
 	return nil
 }
 
+// BatchOptions defines options
+// that are only available to batch submit operations.
+type BatchOptions struct {
+	UpdateOnlyDefault bool `config:"submit.updateOnly" hidden:"" default:"false"`
+}
+
 // BatchRequest is a request to submit one or more change requests.
 type BatchRequest struct {
-	Branches []string // required
-	Options  *Options
+	Branches     []string // required
+	Options      *Options
+	BatchOptions *BatchOptions // required
 }
 
 // SubmitBatch submits a batch of branches to a remote repository,
 // creating or updating change requests as needed.
 func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	opts := cmp.Or(req.Options, &Options{})
+
 	if len(opts.ConfiguredLabels) > 0 {
 		seen := make(map[string]struct{}, len(opts.Labels))
 		for _, label := range opts.Labels {
@@ -222,6 +230,13 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 				opts.Labels = append(opts.Labels, label)
 			}
 		}
+	}
+
+	batchOpts := cmp.Or(req.BatchOptions, &BatchOptions{})
+	if batchOpts.UpdateOnlyDefault && opts.UpdateOnly == nil {
+		// If the user didn't specify --update-only flag,
+		// use the default value from the config.
+		opts.UpdateOnly = &batchOpts.UpdateOnlyDefault
 	}
 
 	var branchesToComment []string
@@ -552,7 +567,7 @@ func (h *Handler) submitBranch(
 			upstreamBranch = unique
 		}
 
-		if opts.UpdateOnly {
+		if opts.UpdateOnly != nil && *opts.UpdateOnly {
 			if !opts.DryRun {
 				// TODO: config to disable this message?
 				log.Infof("%v: Skipping unsubmitted branch: --update-only", branchToSubmit)

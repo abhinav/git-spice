@@ -363,6 +363,23 @@ on a case-by-case basis.
 - `true` (default)
 - `false`
 
+### spice.submit.updateOnly
+
+<!-- gs:version unreleased -->
+
+Whether multi-branch submission commands ($$gs stack submit$$ and friends)
+should assume --update-only mode by default.
+
+If true, submit operations will only update existing branches by default.
+Use the --no-update-only flag to override this behavior.
+
+This option has no effect on $$gs branch submit$$,
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
+
 ### spice.submit.web
 
 <!-- gs:version v0.8.0 -->

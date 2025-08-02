@@ -13,6 +13,7 @@ import (
 
 type stackSubmitCmd struct {
 	submitOptions
+	submit.BatchOptions
 }
 
 func (*stackSubmitCmd) Help() string {
@@ -49,7 +50,8 @@ func (cmd *stackSubmitCmd) Run(
 	// TODO: separate preparation of the stack from submission
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
-		Branches: toSubmit,
-		Options:  &cmd.Options,
+		Branches:     toSubmit,
+		Options:      &cmd.Options,
+		BatchOptions: &cmd.BatchOptions,
 	})
 }
