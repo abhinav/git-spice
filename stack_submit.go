@@ -13,8 +13,7 @@ import (
 
 type stackSubmitCmd struct {
 	submitOptions
-
-	UpdateOnlyDefault bool `config:"stackSubmit.updateOnly" hidden:"" default:"false"`
+	submit.BatchOptions
 }
 
 func (*stackSubmitCmd) Help() string {
@@ -31,11 +30,6 @@ func (cmd *stackSubmitCmd) Run(
 	svc *spice.Service,
 	submitHandler SubmitHandler,
 ) error {
-	if cmd.UpdateOnly == nil {
-		updateOnlyDefault := cmd.UpdateOnlyDefault
-		cmd.UpdateOnly = &updateOnlyDefault
-	}
-
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
@@ -56,7 +50,8 @@ func (cmd *stackSubmitCmd) Run(
 	// TODO: separate preparation of the stack from submission
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
-		Branches: toSubmit,
-		Options:  &cmd.Options,
+		Branches:     toSubmit,
+		Options:      &cmd.Options,
+		BatchOptions: &cmd.BatchOptions,
 	})
 }

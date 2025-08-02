@@ -16,6 +16,7 @@ import (
 
 type downstackSubmitCmd struct {
 	submitOptions
+	submit.BatchOptions
 
 	Branch string `placeholder:"NAME" help:"Branch to start at" predictor:"trackedBranches"`
 }
@@ -57,7 +58,8 @@ func (cmd *downstackSubmitCmd) Run(
 	// TODO: separate preparation of the stack from submission
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
-		Branches: downstacks,
-		Options:  &cmd.Options,
+		Branches:     downstacks,
+		Options:      &cmd.Options,
+		BatchOptions: &cmd.BatchOptions,
 	})
 }

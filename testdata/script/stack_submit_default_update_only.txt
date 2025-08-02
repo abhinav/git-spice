@@ -7,7 +7,7 @@ at '2025-07-25T09:18:32Z'
 cd repo
 git init
 git commit --allow-empty -m 'Initial commit'
-git config spice.stackSubmit.updateOnly true
+git config spice.submit.updateOnly true
 
 # set up a fake GitHub remote
 shamhub init
@@ -18,19 +18,27 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-# create a stack with the first branch submitted
+# Can submit feature1 despite updateOnly being set
+# because submitOnly has no effect on 'gs branch submit'.
 git add feature.txt
 gs bc feature -m 'Add feature'
-gs bs
+gs bs --fill
+
+# Stack a second branch.
 git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
+
 gs down
 git add feature-update.txt
-git commit --amend
-gs sr
+gs cc -m 'Update feature'
 
-# run stack submit and ensure it only updates the first branch
+# Submit the stack; this should not submit feature2.
 gs ss
+stderr 'Updated #1'
+stderr 'feature2: Skipping'
+
+gs ls
+cmp stderr $WORK/golden/ls.txt
 
 -- repo/feature.txt --
 feature
@@ -40,3 +48,8 @@ feature2
 
 -- repo/feature-update.txt --
 feature update
+
+-- golden/ls.txt --
+  ┏━□ feature2
+┏━┻■ feature (#1) ◀
+main

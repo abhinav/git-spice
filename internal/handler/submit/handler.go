@@ -201,16 +201,24 @@ func (s *NavCommentSync) UnmarshalText(bs []byte) error {
 	return nil
 }
 
+// BatchOptions defines options
+// that are only available to batch submit operations.
+type BatchOptions struct {
+	UpdateOnlyDefault bool `config:"submit.updateOnly" hidden:"" default:"false"`
+}
+
 // BatchRequest is a request to submit one or more change requests.
 type BatchRequest struct {
-	Branches []string // required
-	Options  *Options
+	Branches     []string // required
+	Options      *Options
+	BatchOptions *BatchOptions // required
 }
 
 // SubmitBatch submits a batch of branches to a remote repository,
 // creating or updating change requests as needed.
 func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	opts := cmp.Or(req.Options, &Options{})
+
 	if len(opts.ConfiguredLabels) > 0 {
 		seen := make(map[string]struct{}, len(opts.Labels))
 		for _, label := range opts.Labels {
@@ -222,6 +230,13 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 				opts.Labels = append(opts.Labels, label)
 			}
 		}
+	}
+
+	batchOpts := cmp.Or(req.BatchOptions, &BatchOptions{})
+	if batchOpts.UpdateOnlyDefault && opts.UpdateOnly == nil {
+		// If the user didn't specify --update-only flag,
+		// use the default value from the config.
+		opts.UpdateOnly = &batchOpts.UpdateOnlyDefault
 	}
 
 	var branchesToComment []string
