@@ -312,6 +312,27 @@ WRN Could not list change templates error="list templates: Post \"https://api.gi
 
 Set to `0` to disable the timeout completely.
 
+### spice.submit.template
+
+<!-- gs:version unreleased -->
+
+Template to use when submitting a change request with $$gs branch submit$$,
+and multiple templates are available.
+If set, this template will be selected without prompting the user to pick one.
+
+The value should match the filename of one of the available templates
+(e.g., `PULL_REQUEST_TEMPLATE.md`).
+
+**Example:**
+
+```bash
+git config spice.submit.defaultTemplate "PULL_REQUEST_TEMPLATE.md"
+```
+
+When this is configured and multiple templates exist,
+git-spice will automatically use the specified template
+without prompting the user for selection.
+
 ### spice.submit.navigationComment
 
 Specifies whether CR submission commands ($$gs branch submit$$ and friends)

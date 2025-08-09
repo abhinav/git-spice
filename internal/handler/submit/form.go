@@ -18,6 +18,7 @@ type branchSubmitForm struct {
 	repo   GitRepository
 	remote forge.Repository
 	log    *silog.Logger
+	opts   *Options
 
 	tmpl *forge.ChangeTemplate
 }
@@ -28,6 +29,7 @@ func newBranchSubmitForm(
 	repo GitRepository,
 	remoteRepo forge.Repository,
 	log *silog.Logger,
+	opts *Options,
 ) *branchSubmitForm {
 	return &branchSubmitForm{
 		ctx:    ctx,
@@ -35,6 +37,7 @@ func newBranchSubmitForm(
 		log:    log,
 		repo:   repo,
 		remote: remoteRepo,
+		opts:   opts,
 	}
 }
 
@@ -63,6 +66,19 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 			return nil
 
 		default:
+			// Check if there's a default template configured
+			if f.opts != nil && f.opts.Template != "" {
+				wantTemplate := f.opts.Template
+				for _, tmpl := range templates {
+					if tmpl.Filename == wantTemplate {
+						f.tmpl = tmpl
+						return nil
+					}
+				}
+
+				f.log.Warnf("Template %q not found", wantTemplate)
+			}
+
 			opts := make([]ui.SelectOption[*forge.ChangeTemplate], len(templates))
 			for i, tmpl := range templates {
 				opts[i] = ui.SelectOption[*forge.ChangeTemplate]{

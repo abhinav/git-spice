@@ -1,0 +1,64 @@
+# 'branch submit' automatically selects default template when configured.
+
+as 'Test <test@example.com>'
+at '2025-06-20T21:28:29Z'
+
+# setup
+cd repo
+git init
+git add .shamhub CHANGE_TEMPLATE.md
+git commit -m 'Initial commit'
+
+# Configure default template
+git config spice.submit.template 'CHANGE_TEMPLATE.md'
+
+# set up a fake remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/feature-commit-msg
+gs bc feature
+
+mkdir $WORK/output
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch submit
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- repo/CHANGE_TEMPLATE.md --
+## Summary
+
+Explain the changes you made.
+
+-- repo/.shamhub/CHANGE_TEMPLATE.md --
+## Hidden Template
+
+This is the hidden template.
+
+-- repo/feature.txt --
+Feature content
+
+-- input/feature-commit-msg --
+Add feature
+
+This adds a feature implementation.
+
+-- robot.golden --
+===
+> Title: Add feature 
+> Short summary of the change
+"Add feature"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+{
+  "want": "This adds a feature implementation.\n\n## Summary\n\nExplain the changes you made.\n"
+}
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
