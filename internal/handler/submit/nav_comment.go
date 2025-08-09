@@ -224,7 +224,13 @@ func updateNavigationComments(
 
 			baseIdx := nodes[nodeIdx].Base
 			for baseIdx != -1 {
-				updateBranches[baseIdx] = struct{}{}
+				// Only add tracked branches
+				// that have corresponding infos entries.
+				// Merged downstack nodes don't have info
+				// and can't be commented on.
+				if baseIdx < len(infos) {
+					updateBranches[baseIdx] = struct{}{}
+				}
 				baseIdx = nodes[baseIdx].Base
 			}
 		}

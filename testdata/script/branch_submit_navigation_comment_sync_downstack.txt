@@ -40,6 +40,21 @@ gs bs --fill
 shamhub dump comments
 cmp stdout $WORK/golden/all-comments.txt
 
+# Merge a change and update.
+shamhub merge alice/example 1
+gs repo sync
+gs stack restack
+
+# Re-submit each branch
+gs bco feature2
+gs branch submit
+gs bco feature3
+gs branch submit
+
+# Comments are the same.
+shamhub dump comments
+cmp stdout $WORK/golden/all-comments.txt
+
 -- repo/feature1.txt --
 feature 1
 
