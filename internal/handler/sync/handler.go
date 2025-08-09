@@ -4,6 +4,7 @@ package sync
 import (
 	"cmp"
 	"context"
+	"encoding"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -89,11 +90,67 @@ type Handler struct {
 	RemoteRepository forge.Repository // optional
 }
 
+// ClosedChanges specifies how to handle closed Change Requests.
+type ClosedChanges int
+
+const (
+	// ClosedChangesAsk prompts the user whether to delete the branch.
+	// This is the default.
+	ClosedChangesAsk ClosedChanges = iota
+
+	// ClosedChangesIgnore ignores closed CRs without prompting
+	// and leaves the branch intact.
+	ClosedChangesIgnore
+)
+
+var (
+	_ encoding.TextUnmarshaler = (*ClosedChanges)(nil)
+	_ encoding.TextMarshaler   = (*ClosedChanges)(nil)
+)
+
+// UnmarshalText decodes a ClosedChanges from text.
+// It supports "ask" and "ignore" values.
+func (c *ClosedChanges) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "ask":
+		*c = ClosedChangesAsk
+	case "ignore":
+		*c = ClosedChangesIgnore
+	default:
+		return fmt.Errorf("invalid value %q: expected 'ask' or 'ignore'", bs)
+	}
+	return nil
+}
+
+// MarshalText encodes a ClosedChanges to text.
+func (c ClosedChanges) MarshalText() ([]byte, error) {
+	switch c {
+	case ClosedChangesAsk:
+		return []byte("ask"), nil
+	case ClosedChangesIgnore:
+		return []byte("ignore"), nil
+	default:
+		return nil, fmt.Errorf("invalid value: %d", int(c))
+	}
+}
+
+func (c ClosedChanges) String() string {
+	switch c {
+	case ClosedChangesAsk:
+		return "ask"
+	case ClosedChangesIgnore:
+		return "ignore"
+	default:
+		return fmt.Sprintf("ClosedChanges(%d)", int(c))
+	}
+}
+
 // TrunkOptions are options for the SyncTrunk command.
 type TrunkOptions struct {
 	// TODO: flag to not delete merged branches?
 
-	Restack bool `help:"Restack the current stack after syncing"`
+	Restack       bool          `help:"Restack the current stack after syncing"`
+	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests" hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,
@@ -287,7 +344,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = h.findForgeFinishedBranches(ctx, candidates)
+		branchesToDelete, err = h.findForgeFinishedBranches(ctx, candidates, opts.ClosedChanges)
 		if err != nil {
 			return fmt.Errorf("find finished CRs: %w", err)
 		}
@@ -342,6 +399,7 @@ func (h *Handler) findLocalMergedBranches(
 func (h *Handler) findForgeFinishedBranches(
 	ctx context.Context,
 	knownBranches []spice.LoadBranchItem,
+	closedChangeHandling ClosedChanges,
 ) ([]branchDeletion, error) {
 	type submittedBranch struct {
 		Name string
@@ -501,7 +559,10 @@ func (h *Handler) findForgeFinishedBranches(
 			continue // not merged yet
 
 		case forge.ChangeClosed:
-			if !ui.Interactive(h.View) {
+			if closedChangeHandling == ClosedChangesIgnore {
+				h.Log.Infof("%v: %v was closed but not merged, ignoring", branch.Name, branch.Change)
+				continue
+			} else if !ui.Interactive(h.View) {
 				h.Log.Warnf("%v: %v was closed but not merged.", branch.Name, branch.Change)
 				continue
 			}

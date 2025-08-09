@@ -401,6 +401,23 @@ This option has no effect on $$gs branch submit$$,
 - `true`
 - `false` (default)
 
+### spice.repoSync.closedChanges
+
+<!-- gs:version unreleased -->
+
+How to handle closed Change Requests that have not been merged
+when running $$gs repo sync$$.
+
+**Accepted values:**
+
+- `ask` (default): prompt the user whether to delete the branch
+- `ignore`: ignore closed CRs without prompting and leave the branch intact
+
+When set to `ignore`,
+$$gs repo sync$$ will skip closed CRs entirely
+and log an informational message about the closed CR being ignored.
+The branch will remain on the system.
+
 ### spice.submit.web
 
 <!-- gs:version v0.8.0 -->

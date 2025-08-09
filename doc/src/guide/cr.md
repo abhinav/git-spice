@@ -198,6 +198,21 @@ This will update the trunk branch (e.g. `main`)
 with the latest changes from the upstream repository,
 and delete any local branches whose PRs have been merged.
 
+### Handling closed Change Requests
+
+When running $$gs repo sync$$, if a Change Request was closed
+(but not merged), git-spice will detect this
+and offer you the choice of deleting that branch locally.
+
+If you prefer not to be prompted about closed CRs,
+you can set the configuration option to ignore them:
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.repoSync.closedChanges{reset} {mag}ignore{reset}
+```
+
+For more details, see the [configuration reference](../cli/config.md#spicereposyncclosedchanges).
+
 ## Importing open CRs
 
 You can import an existing open CR into git-spice

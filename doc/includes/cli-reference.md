@@ -146,6 +146,8 @@ was not initialized with a remote.
 
 * `--restack`: Restack the current stack after syncing
 
+**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges)
+
 ### gs repo restack
 
 ```

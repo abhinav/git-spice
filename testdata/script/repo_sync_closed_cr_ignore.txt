@@ -1,0 +1,75 @@
+# 'repo sync' ignores closed CRs when repoSync.closedChanges is set to 'ignore'.
+
+as 'Test <test@example.com>'
+at '2025-08-09T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+gs ss --fill
+
+gs ls -a
+cmp stderr $WORK/golden/open.txt
+
+# Close the PR server-side
+shamhub reject alice/example 1
+
+# Test 1: Ignore closed changes and repo sync.
+git config spice.repoSync.closedChanges ignore
+gs repo sync
+stderr 'feature1: #1 was closed but not merged, ignoring'
+
+# Branch still exists.
+gs ls -a
+cmp stderr $WORK/golden/ls-first-submit.txt
+
+# Test 2:
+# Same as above, but non-interactive mode.
+git add feature3.txt
+gs bc -m 'Add feature3' feature3
+gs bs --fill
+shamhub reject alice/example 3
+gs repo sync --no-prompt
+stderr 'feature1: #1 was closed but not merged, ignoring'
+stderr 'feature3: #3 was closed but not merged, ignoring'
+gs ls -a
+cmp stderr $WORK/golden/ls-second-submit.txt
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- repo/feature3.txt --
+Contents of feature3
+
+-- golden/open.txt --
+  ┏━■ feature2 (#2) ◀
+┏━┻□ feature1 (#1)
+main
+-- golden/ls-first-submit.txt --
+  ┏━■ feature2 (#2) ◀
+┏━┻□ feature1 (#1)
+main
+-- golden/ls-second-submit.txt --
+    ┏━■ feature3 (#3) ◀
+  ┏━┻□ feature2 (#2)
+┏━┻□ feature1 (#1)
+main
