@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix panic when the 'spice.submit.navigationCommentSync' configuration option is set to 'downstack', and one of the downstacks has already been merged.
-time: 2025-08-08T17:34:11.809985-07:00
