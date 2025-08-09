@@ -156,6 +156,11 @@ type Options struct {
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
+
+	// DefaultTemplate specifies the default template to use when multiple templates are available.
+	// If set, this template will be automatically selected instead of prompting the user.
+	// The value should match the filename of one of the available templates.
+	DefaultTemplate string `hidden:"" config:"submit.defaultTemplate" help:"Default template to use when multiple templates are available"`
 }
 
 // NavCommentSync specifies the scope of navigation comment updates.
@@ -821,7 +826,7 @@ func (h *Handler) prepareBranch(
 	}
 
 	var fields []ui.Field
-	form := newBranchSubmitForm(ctx, h.Service, h.Repository, remoteRepo, h.Log)
+	form := newBranchSubmitForm(ctx, h.Service, h.Repository, remoteRepo, h.Log, opts.Options)
 	if opts.Title == "" {
 		opts.Title = defaultTitle
 		fields = append(fields, form.titleField(&opts.Title))
