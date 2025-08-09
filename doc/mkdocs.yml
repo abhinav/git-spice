@@ -110,6 +110,8 @@ nav:
   - Get started:
     - start/index.md
     - start/install.md
+    - start/stack.md
+    - start/submit.md
   - User Guide:
     - guide/index.md
     - guide/concepts.md
@@ -129,11 +131,6 @@ nav:
   - Recipes: recipes.md
   - FAQ: faq.md
   - Changelog: changelog.md
-
-not_in_nav: |
-  # Listed manually
-  start/stack.md
-  start/submit.md
 
 watch:
   - includes

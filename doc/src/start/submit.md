@@ -8,7 +8,7 @@ prev_page: stack.md
 next_page: ../guide/index.md
 ---
 
-# Your first stacked Pull Requests
+# Your first stacked Change Requests
 
 This page will walk you through creating and updating
 *GitHub Pull Requests* or *GitLab Merge Requests* with git-spice.
