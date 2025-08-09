@@ -22,9 +22,10 @@ import (
 
 func TestUpdateNavigationComments(t *testing.T) {
 	type trackedBranch struct {
-		Name     string
-		Base     string // empty = trunk
-		ChangeID int    // 0 = unsubmitted
+		Name            string
+		Base            string // empty = trunk
+		ChangeID        int    // 0 = unsubmitted
+		MergedDownstack []int  // list of merged downstack change IDs
 	}
 
 	tests := []struct {
@@ -273,6 +274,42 @@ func TestUpdateNavigationComments(t *testing.T) {
 				),
 			},
 		},
+		{
+			// Regression test for https://github.com/abhinav/git-spice/issues/788
+			name: "MergedDownstack",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			sync:   NavCommentSyncDownstack,
+			submit: []string{"feat3"},
+			// This should not panic when accessing infos[idx]
+			// where idx corresponds to merged downstack nodes
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #100",
+					"    - #101",
+					"        - #123 ◀",
+					"            - #124",
+					"                - #125",
+				),
+				124: joinLines(
+					"- #100",
+					"    - #101",
+					"        - #123",
+					"            - #124 ◀",
+					"                - #125",
+				),
+				125: joinLines(
+					"- #100",
+					"    - #101",
+					"        - #123",
+					"            - #124",
+					"                - #125 ◀",
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -301,6 +338,14 @@ func TestUpdateNavigationComments(t *testing.T) {
 							}
 						}
 
+						// Add merged downstack entries if any
+						for _, mergedID := range b.MergedDownstack {
+							mergedMeta := &shamhub.ChangeMetadata{Number: mergedID}
+							mergedJSON, err := json.Marshal(mergedMeta)
+							require.NoError(t, err)
+							item.MergedDownstack = append(item.MergedDownstack, mergedJSON)
+						}
+
 						items[i] = item
 					}
 
@@ -316,6 +361,16 @@ func TestUpdateNavigationComments(t *testing.T) {
 					md, ok := m.(*shamhub.ChangeMetadata)
 					require.True(t, ok, "unexpected change metadata type: %T", m)
 					return json.Marshal(md)
+				}).
+				AnyTimes()
+			mockForge.EXPECT().
+				UnmarshalChangeID(gomock.Any()).
+				DoAndReturn(func(data json.RawMessage) (forge.ChangeID, error) {
+					var md shamhub.ChangeMetadata
+					if err := json.Unmarshal(data, &md); err != nil {
+						return nil, err
+					}
+					return shamhub.ChangeID(md.Number), nil
 				}).
 				AnyTimes()
 
