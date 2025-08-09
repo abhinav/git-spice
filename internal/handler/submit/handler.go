@@ -157,10 +157,10 @@ type Options struct {
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
 
-	// DefaultTemplate specifies the default template to use when multiple templates are available.
+	// Template specifies the template to use when multiple templates are available.
 	// If set, this template will be automatically selected instead of prompting the user.
 	// The value should match the filename of one of the available templates.
-	DefaultTemplate string `hidden:"" config:"submit.defaultTemplate" help:"Default template to use when multiple templates are available"`
+	Template string `hidden:"" config:"submit.template" help:"Default template to use when multiple templates are available"`
 }
 
 // NavCommentSync specifies the scope of navigation comment updates.

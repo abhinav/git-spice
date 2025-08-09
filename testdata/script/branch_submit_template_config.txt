@@ -10,7 +10,7 @@ git add .shamhub CHANGE_TEMPLATE.md
 git commit -m 'Initial commit'
 
 # Configure default template
-git config spice.submit.defaultTemplate 'CHANGE_TEMPLATE.md'
+git config spice.submit.template 'CHANGE_TEMPLATE.md'
 
 # set up a fake remote
 shamhub init

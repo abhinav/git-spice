@@ -1,5 +1,5 @@
 kind: Added
 body: >-
-  submit: Add 'spice.submit.defaultTemplate' configuration option
+  submit: Add 'spice.submit.template' configuration option
   to automatically select a template when multiple PR templates are available.
 time: 2025-08-08T19:19:33.742109-07:00

@@ -67,13 +67,16 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 
 		default:
 			// Check if there's a default template configured
-			if defaultTemplate := f.getDefaultTemplate(); defaultTemplate != "" {
+			if f.opts != nil && f.opts.Template != "" {
+				wantTemplate := f.opts.Template
 				for _, tmpl := range templates {
-					if tmpl.Filename == defaultTemplate {
+					if tmpl.Filename == wantTemplate {
 						f.tmpl = tmpl
 						return nil
 					}
 				}
+
+				f.log.Warnf("Template %q not found", wantTemplate)
 			}
 
 			opts := make([]ui.SelectOption[*forge.ChangeTemplate], len(templates))
@@ -91,13 +94,6 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 				WithDescription("Choose a template for the change body")
 		}
 	})
-}
-
-func (f *branchSubmitForm) getDefaultTemplate() string {
-	if f.opts != nil {
-		return f.opts.DefaultTemplate
-	}
-	return ""
 }
 
 func (f *branchSubmitForm) bodyField(body *string) ui.Field {
