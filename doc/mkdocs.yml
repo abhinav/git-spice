@@ -116,6 +116,7 @@ nav:
     - guide/branch.md
     - guide/cr.md
     - guide/limits.md
+    - guide/troubleshooting.md
     - guide/internals.md
   - Setting up:
     - setup/index.md
