@@ -16,7 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -destination mocks_test.go -package checkout -typed . GitWorktree,TrackHandler,Service,Store
+//go:generate mockgen -destination mocks_test.go -package checkout -typed . GitRepository,GitWorktree,TrackHandler,Service,Store
 
 // Options defines options for checking out a branch.
 // These turn into command line flags, so be mindful of what you add here.
@@ -31,6 +31,7 @@ type Options struct {
 type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
+	Remote() (string, error)
 }
 
 // GitWorktree allows changing which branch or commit
@@ -38,6 +39,14 @@ type Store interface {
 type GitWorktree interface {
 	DetachHead(ctx context.Context, commitish string) error
 	Checkout(ctx context.Context, branch string) error
+}
+
+// GitRepository provides access to the Git repository methods
+// that do not require a worktree.
+type GitRepository interface {
+	CreateBranch(ctx context.Context, req git.CreateBranchRequest) error
+	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
+	SetBranchUpstream(ctx context.Context, branch, upstream string) error
 }
 
 // TrackHandler allows tracking new branches with git-spice.
@@ -53,12 +62,13 @@ type Service interface {
 
 // Handler provides a central place for handling checkout operations.
 type Handler struct {
-	Stdout   io.Writer     // required
-	Log      *silog.Logger // required
-	Store    Store         // required
-	Worktree GitWorktree   // required
-	Track    TrackHandler  // required
-	Service  Service       // required
+	Stdout     io.Writer     // required
+	Log        *silog.Logger // required
+	Store      Store         // required
+	Repository GitRepository // required
+	Worktree   GitWorktree   // required
+	Track      TrackHandler  // required
+	Service    Service       // required
 }
 
 // Request is a request to checkout a branch.
@@ -93,9 +103,42 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 		if err := h.Service.VerifyRestacked(ctx, branch); err != nil {
 			var restackErr *spice.BranchNeedsRestackError
 			switch {
-			case errors.As(err, &restackErr):
+			case errors.As(err, &restackErr): // needs to be restacked
 				log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", branch, branch)
-			case errors.Is(err, state.ErrNotExist):
+
+			case errors.Is(err, git.ErrNotExist): // does not exist
+				// Branch name might be a reference to a remote branch.
+				// Try to recover by checking if the branch exists in the remote.
+				var recovered bool
+				if remote, err := h.Store.Remote(); err == nil {
+					upstreamBranch := fmt.Sprintf("%s/%s", remote, branch)
+					if upstreamHead, err := h.Repository.PeelToCommit(ctx, upstreamBranch); err == nil {
+						h.Log.Infof("%v: found remote branch %v, checking out", branch, upstreamBranch)
+
+						createReq := git.CreateBranchRequest{
+							Name: branch,
+							Head: string(upstreamHead),
+						}
+						if err := h.Repository.CreateBranch(ctx, createReq); err != nil {
+							return fmt.Errorf("create branch from remote %q: %w", upstreamBranch, err)
+						}
+
+						if err := h.Repository.SetBranchUpstream(ctx, branch, upstreamBranch); err != nil {
+							// Non-fatal error; just log it.
+							log.Error("Error setting upstream for branch",
+								"name", branch, "upstream", upstreamBranch, "error", err)
+						}
+
+						recovered = true
+					}
+				}
+
+				if !recovered {
+					return fmt.Errorf("branch %q does not exist", branch)
+				}
+				fallthrough // we just created the branch so it's not tracked
+
+			case errors.Is(err, state.ErrNotExist): // exists but not tracked
 				shouldTrack, err := req.ShouldTrack(branch)
 				if err != nil {
 					return fmt.Errorf("check if branch should be tracked: %w", err)
@@ -109,8 +152,7 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 						log.Warn("Error tracking branch", "branch", branch, "error", err)
 					}
 				}
-			case errors.Is(err, git.ErrNotExist):
-				return fmt.Errorf("branch %q does not exist", branch)
+
 			default:
 				log.Warn("Unable to check if branch is restacked",
 					"branch", branch, "error", err)

@@ -1,0 +1,74 @@
+# 'gs branch checkout' can check out a remote branch similarly to 'git checkout'.
+
+as 'Test User <test@example.com>'
+at '2025-08-10T13:54:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat1.txt
+gs bc -m 'Add feature 1' feat1
+
+git add feat2.txt
+gs bc -m 'Add feature 2' feat2
+
+gs trunk
+
+cd ..
+git clone repo fork
+cd fork
+gs repo init
+
+# verify feature branch does not exist
+! git rev-parse --verify --quiet refs/heads/feat1
+! git rev-parse --verify --quiet refs/heads/feat2
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+# Test 1:
+# Check out a remote branch and track it.
+gs branch checkout feat1
+
+# Branch is tracked and checked out.
+gs ls
+cmp stderr $WORK/golden/ls-feat1.txt
+
+# Remote tracking branch is origin/feat1.
+git rev-parse --abbrev-ref @{upstream}
+stdout 'origin/feat1'
+
+# Test 2:
+# Check out another remote branch but don't track it.
+gs branch checkout feat2
+
+# Branch is checked out but not tracked.
+gs ls
+cmp stderr $WORK/golden/ls-feat2.txt
+
+# Remote tracking branch is origin/feat2.
+git rev-parse --abbrev-ref @{upstream}
+stdout 'origin/feat2'
+
+# Test: non-existent branch still fails
+! gs branch checkout no-such-branch
+
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- robot.golden --
+===
+> Do you want to track this branch now?: [Y/n]
+true
+===
+> Do you want to track this branch now?: [Y/n]
+false
+-- golden/ls-feat1.txt --
+┏━■ feat1 ◀
+main
+-- golden/ls-feat2.txt --
+main

@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  branch checkout: Allow checkout out remote branches by name.
+  This will create a local branch and allow git-spice to start tracking it.
+time: 2025-08-10T14:13:55.623235-07:00
