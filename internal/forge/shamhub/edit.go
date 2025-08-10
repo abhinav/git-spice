@@ -47,7 +47,7 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 
 	changeIdx := -1
 	for idx, change := range sh.changes {
-		if change.Owner == owner && change.Repo == repo && change.Number == num {
+		if change.Base.Owner == owner && change.Base.Repo == repo && change.Number == num {
 			changeIdx = idx
 			break
 		}
@@ -58,7 +58,7 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if b := data.Base; b != nil {
-		sh.changes[changeIdx].Base = *b
+		sh.changes[changeIdx].Base.Name = *b
 	}
 	if d := data.Draft; d != nil {
 		sh.changes[changeIdx].Draft = *d

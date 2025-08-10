@@ -50,11 +50,29 @@ const (
 	shamChangeMerged
 )
 
+// shamBranch is a branch in a ShamHub-tracked repository.
+type shamBranch struct {
+	// Owner of the repository.
+	Owner string
+
+	// Repo is the name of the repository
+	// under the owner's namespace.
+	Repo string
+
+	// Name is the name of the branch.
+	Name string
+}
+
+func (b *shamBranch) RepoID() repoID {
+	return repoID{Owner: b.Owner, Name: b.Repo}
+}
+
+func (b *shamBranch) String() string {
+	return fmt.Sprintf("%s/%s:%s", b.Owner, b.Repo, b.Name)
+}
+
 // shamChange is the internal representation of a [Change].
 type shamChange struct {
-	Owner string
-	Repo  string
-
 	// State is the current state of the change.
 	// It can be open, closed, or merged.
 	State shamChangeState
@@ -69,12 +87,9 @@ type shamChange struct {
 	Subject string
 	Body    string
 
-	// Name of the base branch.
-	Base string
-
-	// Name of the head branch.
-	// This is the branch that contains the changes to be merged.
-	Head string
+	// Base and Head branches for the change.
+	// Head will merge into Base.
+	Base, Head *shamBranch
 
 	// Labels are the labels associated with the change.
 	Labels []string
@@ -82,36 +97,61 @@ type shamChange struct {
 
 // Change is a change proposal against a repository.
 type Change struct {
-	Number int    `json:"number"`
-	URL    string `json:"html_url"`
+	// Number is the unique identifier of the change
+	// under the Base repository.
+	Number int `json:"number"`
 
-	Draft  bool   `json:"draft,omitempty"`
-	State  string `json:"state"`
-	Merged bool   `json:"merged,omitempty"`
+	// URL is the URL to the change proposal on the ShamHub server.
+	URL string `json:"html_url"`
 
+	// Draft indicates that the change is not yet ready to be reviewed.
+	Draft bool `json:"draft,omitempty"`
+
+	// State is the current state of the change.
+	// It may be "open" or "closed".
+	State string `json:"state"`
+
+	// Merged indicates that the change has been merged.
+	Merged bool `json:"merged,omitempty"`
+
+	// Historical note:
+	// Merged is not just another State
+	// because this was originally modeled after GitHub's V3 API.
+
+	// Subject is the title of the change proposal.
 	Subject string `json:"title"`
-	Body    string `json:"body"`
 
+	// Body is the description of the change proposal.
+	Body string `json:"body"`
+
+	// Base is the branch into which the change will be merged.
 	Base *ChangeBranch `json:"base"`
+
+	// Head is the branch that contains the changes to be merged.
+	// It is the source of the change proposal.
 	Head *ChangeBranch `json:"head"`
 
+	// Labels are the labels associated with the change.
 	Labels []string `json:"labels,omitempty"`
 }
 
+// toChange converts an internal shamChange
+// into a public Change.
 func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
-	base, err := sh.toChangeBranch(c.Owner, c.Repo, c.Base)
+	base, err := sh.toChangeBranch(c.Base)
 	if err != nil {
 		return nil, fmt.Errorf("base branch: %w", err)
 	}
 
-	head, err := sh.toChangeBranch(c.Owner, c.Repo, c.Head)
+	// Determine head repository
+	head, err := sh.toChangeBranch(c.Head)
 	if err != nil {
 		return nil, fmt.Errorf("head branch: %w", err)
 	}
 
 	change := &Change{
 		Number:  c.Number,
-		URL:     sh.changeURL(c.Owner, c.Repo, c.Number),
+		URL:     sh.changeURL(c.Base.Owner, c.Base.Repo, c.Number),
 		Draft:   c.Draft,
 		Subject: c.Subject,
 		Body:    c.Body,
@@ -136,24 +176,31 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 
 // ChangeBranch is a branch in a change proposal.
 type ChangeBranch struct {
+	// Repo is the repository in which the branch exists.
+	Repo repoID `json:"repository"`
+
+	// Name is the name of the branch.
 	Name string `json:"ref"`
+
+	// Hash is the SHA of the branch in the repository.
 	Hash string `json:"sha"`
 }
 
-func (sh *ShamHub) toChangeBranch(owner, repo, ref string) (*ChangeBranch, error) {
+func (sh *ShamHub) toChangeBranch(b *shamBranch) (*ChangeBranch, error) {
 	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
-	cmd := exec.Command(sh.gitExe, "rev-parse", ref)
-	cmd.Dir = sh.repoDir(owner, repo)
+	cmd := exec.Command(sh.gitExe, "rev-parse", b.Name)
+	cmd.Dir = sh.repoDir(b.Owner, b.Repo)
 	cmd.Stderr = logw
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("get SHA for %v/%v:%v: %w", owner, repo, ref, err)
+		return nil, fmt.Errorf("get SHA for %v/%v:%v: %w", b.Owner, b.Repo, b.Name, err)
 	}
 
 	return &ChangeBranch{
-		Name: ref,
+		Repo: b.RepoID(),
+		Name: b.Name,
 		Hash: strings.TrimSpace(string(out)),
 	}, nil
 }

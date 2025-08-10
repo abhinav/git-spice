@@ -35,7 +35,7 @@ func (sh *ShamHub) handleGetChange(w http.ResponseWriter, r *http.Request) {
 		found bool
 	)
 	for _, c := range sh.changes {
-		if c.Owner == owner && c.Repo == repo && c.Number == num {
+		if c.Base.Owner == owner && c.Base.Repo == repo && c.Number == num {
 			got = c
 			found = true
 			break
@@ -56,7 +56,7 @@ func (sh *ShamHub) handleGetChange(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(change); err != nil {
+	if err := enc.Encode(change); err != nil { //nolint:musttag
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -79,9 +79,9 @@ func (sh *ShamHub) handleFindChangesByBranch(w http.ResponseWriter, r *http.Requ
 	}
 
 	filters := []func(shamChange) bool{
-		func(c shamChange) bool { return c.Owner == owner },
-		func(c shamChange) bool { return c.Repo == repo },
-		func(c shamChange) bool { return c.Head == branch },
+		func(c shamChange) bool { return c.Base.Owner == owner },
+		func(c shamChange) bool { return c.Base.Repo == repo },
+		func(c shamChange) bool { return c.Head.Name == branch },
 	}
 
 	if state := r.FormValue("state"); state != "" && state != "all" {
@@ -129,7 +129,7 @@ nextChange:
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(changes); err != nil {
+	if err := enc.Encode(changes); err != nil { //nolint:musttag
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

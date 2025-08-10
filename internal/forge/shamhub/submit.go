@@ -6,17 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 )
 
 type submitChangeRequest struct {
-	Subject string   `json:"subject,omitempty"`
-	Body    string   `json:"body,omitempty"`
-	Base    string   `json:"base,omitempty"`
-	Head    string   `json:"head,omitempty"`
-	Draft   bool     `json:"draft,omitempty"`
-	Labels  []string `json:"labels,omitempty"`
+	Subject  string   `json:"subject,omitempty"`
+	Body     string   `json:"body,omitempty"`
+	Base     string   `json:"base,omitempty"`
+	Head     string   `json:"head,omitempty"`
+	HeadRepo string   `json:"head_repo,omitempty"` // Format: "owner/repo", if different from target
+	Draft    bool     `json:"draft,omitempty"`
+	Labels   []string `json:"labels,omitempty"`
 }
 
 type submitChangeResponse struct {
@@ -47,7 +49,18 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "base branch does not exist", http.StatusBadRequest)
 		return
 	}
-	if !sh.branchRefExists(ctx, owner, repo, data.Head) {
+
+	// Check head branch - might be in a different repository (fork)
+	headOwner, headRepo := owner, repo
+	if data.HeadRepo != "" {
+		var ok bool
+		headOwner, headRepo, ok = strings.Cut(data.HeadRepo, "/")
+		if !ok {
+			http.Error(w, "invalid head_repo format, expected 'owner/repo'", http.StatusBadRequest)
+			return
+		}
+	}
+	if !sh.branchRefExists(ctx, headOwner, headRepo, data.Head) {
 		http.Error(w, "head branch does not exist", http.StatusBadRequest)
 		return
 	}
@@ -57,13 +70,11 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 		// We'll just use a global counter for the change number for now.
 		// We can scope it by owner/repo if needed.
 		Number:  len(sh.changes) + 1,
-		Owner:   owner,
-		Repo:    repo,
 		Draft:   data.Draft,
 		Subject: data.Subject,
 		Body:    data.Body,
-		Base:    data.Base,
-		Head:    data.Head,
+		Base:    &shamBranch{Owner: owner, Repo: repo, Name: data.Base},
+		Head:    &shamBranch{Owner: headOwner, Repo: headRepo, Name: data.Head},
 		Labels:  data.Labels,
 	}
 	sh.changes = append(sh.changes, change)
@@ -83,15 +94,21 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 
 func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
 	u := r.apiURL.JoinPath(r.owner, r.repo, "changes")
-	var res submitChangeResponse
-	if err := r.client.Post(ctx, u.String(), submitChangeRequest{
+
+	submitReq := submitChangeRequest{
 		Subject: req.Subject,
 		Base:    req.Base,
 		Body:    req.Body,
 		Head:    req.Head,
 		Draft:   req.Draft,
 		Labels:  req.Labels,
-	}, &res); err != nil {
+	}
+
+	// For now, fork functionality is handled at the ShamHub server level
+	// Future enhancement: detect if head branch is from a fork
+
+	var res submitChangeResponse
+	if err := r.client.Post(ctx, u.String(), submitReq, &res); err != nil {
 		// Check if submit failed because base hasn't been pushed yet.
 		if exists, err := r.RefExists(ctx, "refs/heads/"+req.Base); err == nil && !exists {
 			return forge.SubmitChangeResult{}, errors.Join(forge.ErrUnsubmittedBase, err)

@@ -121,6 +121,26 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 			ts.Fatalf("git clone: %s", err)
 		}
 
+	case "fork":
+		if len(args) != 2 {
+			ts.Fatalf("usage: shamhub fork <owner/repo> <fork-owner>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, forkOwner := args[0], args[1]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+
+		if _, err := sh.ForkRepository(owner, repo, forkOwner); err != nil {
+			ts.Fatalf("fork repository: %s", err)
+		}
+
+		ts.Logf("Forked %s/%s to %s", owner, repo, sh.RepoURL(forkOwner, repo))
+
 	case "merge":
 		if sh == nil {
 			ts.Fatalf("ShamHub not initialized")
