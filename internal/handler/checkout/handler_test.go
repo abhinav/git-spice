@@ -29,12 +29,13 @@ func TestHandler_CheckoutBranch_Trunk(t *testing.T) {
 		mockWorktree := NewMockGitWorktree(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		mockWorktree.
@@ -53,12 +54,13 @@ func TestHandler_CheckoutBranch_Trunk(t *testing.T) {
 
 		var stdout bytes.Buffer
 		handler := &Handler{
-			Stdout:   &stdout,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: NewMockGitWorktree(ctrl),
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     &stdout,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -74,12 +76,13 @@ func TestHandler_CheckoutBranch_Trunk(t *testing.T) {
 		mockWorktree := NewMockGitWorktree(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		mockWorktree.
@@ -109,12 +112,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
@@ -140,12 +144,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 
 		var stdout bytes.Buffer
 		handler := &Handler{
-			Stdout:   &stdout,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    mockTrack,
-			Service:  mockService,
+			Stdout:     &stdout,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      mockTrack,
+			Service:    mockService,
 		}
 
 		mockService.
@@ -169,12 +174,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
@@ -200,12 +206,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 
 		var logBuffer bytes.Buffer
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
@@ -235,12 +242,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    mockTrack,
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      mockTrack,
+			Service:    mockService,
 		}
 
 		mockService.
@@ -273,12 +281,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
@@ -301,18 +310,208 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: NewMockGitWorktree(ctrl),
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
 			EXPECT().
 			VerifyRestacked(gomock.Any(), "feature").
 			Return(git.ErrNotExist)
+		mockStore.
+			EXPECT().
+			Remote().
+			Return("", git.ErrNotExist)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch: "feature",
+		})
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, `branch "feature" does not exist`)
+	})
+
+	t.Run("RemoteBranchExists", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockRepo := NewMockGitRepository(ctrl)
+		mockService := NewMockService(ctrl)
+		mockWorktree := NewMockGitWorktree(ctrl)
+
+		var logBuffer bytes.Buffer
+		handler := &Handler{
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
+		}
+
+		mockService.
+			EXPECT().
+			VerifyRestacked(gomock.Any(), "feature").
+			Return(git.ErrNotExist)
+		mockStore.
+			EXPECT().
+			Remote().
+			Return("origin", nil)
+		mockRepo.
+			EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash("abc123"), nil)
+		mockRepo.
+			EXPECT().
+			CreateBranch(gomock.Any(), git.CreateBranchRequest{
+				Name: "feature",
+				Head: "abc123",
+			}).
+			Return(nil)
+		mockRepo.
+			EXPECT().
+			SetBranchUpstream(gomock.Any(), "feature", "origin/feature").
+			Return(nil)
+		mockWorktree.
+			EXPECT().
+			Checkout(gomock.Any(), "feature").
+			Return(nil)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch: "feature",
+		})
+		assert.NoError(t, err)
+		assert.Contains(t, logBuffer.String(), "found remote branch origin/feature")
+	})
+
+	t.Run("RemoteBranchExistsNoUpstream", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockRepo := NewMockGitRepository(ctrl)
+		mockService := NewMockService(ctrl)
+		mockWorktree := NewMockGitWorktree(ctrl)
+
+		var logBuffer bytes.Buffer
+		handler := &Handler{
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
+		}
+
+		upstreamError := errors.New("upstream error")
+		mockService.
+			EXPECT().
+			VerifyRestacked(gomock.Any(), "feature").
+			Return(git.ErrNotExist)
+		mockStore.
+			EXPECT().
+			Remote().
+			Return("origin", nil)
+		mockRepo.
+			EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash("abc123"), nil)
+		mockRepo.
+			EXPECT().
+			CreateBranch(gomock.Any(), git.CreateBranchRequest{
+				Name: "feature",
+				Head: "abc123",
+			}).
+			Return(nil)
+		mockRepo.
+			EXPECT().
+			SetBranchUpstream(gomock.Any(), "feature", "origin/feature").
+			Return(upstreamError)
+		mockWorktree.
+			EXPECT().
+			Checkout(gomock.Any(), "feature").
+			Return(nil)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch: "feature",
+		})
+		assert.NoError(t, err)
+		assert.Contains(t, logBuffer.String(), "found remote branch origin/feature")
+		assert.Contains(t, logBuffer.String(), "Error setting upstream")
+	})
+
+	t.Run("RemoteBranchCreateFails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockRepo := NewMockGitRepository(ctrl)
+		mockService := NewMockService(ctrl)
+
+		handler := &Handler{
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
+		}
+
+		createError := errors.New("create branch failed")
+		mockService.
+			EXPECT().
+			VerifyRestacked(gomock.Any(), "feature").
+			Return(git.ErrNotExist)
+		mockStore.
+			EXPECT().
+			Remote().
+			Return("origin", nil)
+		mockRepo.
+			EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash("abc123"), nil)
+		mockRepo.
+			EXPECT().
+			CreateBranch(gomock.Any(), git.CreateBranchRequest{
+				Name: "feature",
+				Head: "abc123",
+			}).
+			Return(createError)
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch: "feature",
+		})
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "create branch from remote")
+		assert.ErrorIs(t, err, createError)
+	})
+
+	t.Run("RemoteBranchNotFound", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockRepo := NewMockGitRepository(ctrl)
+		mockService := NewMockService(ctrl)
+
+		handler := &Handler{
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
+		}
+
+		mockService.
+			EXPECT().
+			VerifyRestacked(gomock.Any(), "feature").
+			Return(git.ErrNotExist)
+		mockStore.
+			EXPECT().
+			Remote().
+			Return("origin", nil)
+		mockRepo.
+			EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash(""), git.ErrNotExist)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
 			Branch: "feature",
@@ -328,12 +527,13 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 
 		var logBuffer bytes.Buffer
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		unknownError := errors.New("some other error")
@@ -367,12 +567,13 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: NewMockGitWorktree(ctrl),
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		mockService.
@@ -400,12 +601,13 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 
 		var logBuffer bytes.Buffer
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    mockTrack,
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      mockTrack,
+			Service:    mockService,
 		}
 
 		trackError := errors.New("track error")
@@ -440,12 +642,13 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		checkoutError := errors.New("checkout error")
@@ -472,12 +675,13 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 		mockService := NewMockService(ctrl)
 
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.Nop(),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  mockService,
+			Stdout:     io.Discard,
+			Log:        silog.Nop(),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    mockService,
 		}
 
 		detachError := errors.New("detach error")
@@ -514,12 +718,13 @@ func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
 
 		var logBuffer bytes.Buffer
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		mockWorktree.
@@ -541,12 +746,13 @@ func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
 
 		var logBuffer bytes.Buffer
 		handler := &Handler{
-			Stdout:   io.Discard,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: mockWorktree,
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     io.Discard,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   mockWorktree,
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		mockWorktree.
@@ -568,12 +774,13 @@ func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
 		var logBuffer bytes.Buffer
 		var stdout bytes.Buffer
 		handler := &Handler{
-			Stdout:   &stdout,
-			Log:      silog.New(&logBuffer, nil),
-			Store:    mockStore,
-			Worktree: NewMockGitWorktree(ctrl),
-			Track:    NewMockTrackHandler(ctrl),
-			Service:  NewMockService(ctrl),
+			Stdout:     &stdout,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
 
 		err := handler.CheckoutBranch(t.Context(), &Request{

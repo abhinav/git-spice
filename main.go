@@ -356,17 +356,19 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
 			store *state.Store,
+			repo *git.Repository,
 			wt *git.Worktree,
 			svc *spice.Service,
 			trackHandler TrackHandler,
 		) (CheckoutHandler, error) {
 			return &checkout.Handler{
-				Stdout:   kctx.Stdout,
-				Log:      log,
-				Store:    store,
-				Worktree: wt,
-				Track:    trackHandler,
-				Service:  svc,
+				Stdout:     kctx.Stdout,
+				Log:        log,
+				Store:      store,
+				Repository: repo,
+				Worktree:   wt,
+				Track:      trackHandler,
+				Service:    svc,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
