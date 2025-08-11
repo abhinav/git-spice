@@ -22,8 +22,17 @@ type editChangeResponse struct{
 }
 ```
 
+Request fields can use struct tags to specify how values are extracted:
+
+- `path:"name"` - extract from URL path (always required)
+- `form:"name"` or `query:"name"` - extract from form data (optional unless tagged with `,required`)
+- `json:"name"` - extract from JSON body
+
+See shamhubRESTHandler for details on tags.
+
 Determine the HTTP handler pattern that will handle the request.
-This must contain any identifying information that isn't in the request.
+Any `path:".."` tags in the request struct
+must be present in the pattern.
 
 ```
 PATCH /{owner}/{repo}/change/{number}
@@ -32,21 +41,28 @@ PATCH /{owner}/{repo}/change/{number}
 Implement the handler on the `*ShamHub` struct.
 
 ```go
-func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
+func (sh *ShamHub) handleEditChange(ctx context.Context, req *editChangeRequest) (*editChangeResponse, error) {
     // ...
+
+    // Return httpError for specific status codes.
+    if !found {
+        return nil, notFoundErrorf("change %s/%s#%d not found", owner, repo, num)
+    }
+
+    return &editChangeResponse{}, nil
 }
 ```
 
 Register the handler by adding the following line next to the definition:
 
 ```go
-var _ = shamhubHandler(pattern, (*ShamHub).handerName)
+var _ = shamhubRESTHandler(pattern, (*ShamHub).handlerName)
 ```
 
 For example:
 
 ```go
-var _ = shamhubHandler("PATCH /{owner}/{repo}/change/{number}", (*ShamHub).handleEditChange)
+var _ = shamhubRESTHandler("PATCH /{owner}/{repo}/change/{number}", (*ShamHub).handleEditChange)
 ```
 
 ## Adding forge-level functionality

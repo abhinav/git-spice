@@ -2,9 +2,7 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os/exec"
 	"slices"
 	"strings"
@@ -24,7 +22,12 @@ func (f *Forge) ChangeTemplatePaths() []string {
 	return slices.Clone(_changeTemplatePaths)
 }
 
-var _ = shamhubHandler("GET /{owner}/{repo}/change-template", (*ShamHub).handleChangeTemplate)
+type changeTemplateRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+}
+
+var _ = shamhubRESTHandler("GET /{owner}/{repo}/change-template", (*ShamHub).handleChangeTemplate)
 
 type changeTemplateResponse []*changeTemplate
 
@@ -33,12 +36,8 @@ type changeTemplate struct {
 	Body     string `json:"body,omitempty"`
 }
 
-func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner, and repo are required", http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
+	owner, repo := req.Owner, req.Repo
 
 	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
 	// that's the template to use.
@@ -66,11 +65,7 @@ func (sh *ShamHub) handleChangeTemplate(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return res, nil
 }
 
 func (r *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {

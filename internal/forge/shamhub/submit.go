@@ -2,16 +2,17 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 )
 
 type submitChangeRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
 	Subject  string   `json:"subject,omitempty"`
 	Body     string   `json:"body,omitempty"`
 	Base     string   `json:"base,omitempty"`
@@ -26,43 +27,27 @@ type submitChangeResponse struct {
 	URL    string `json:"url,omitempty"`
 }
 
-var _ = shamhubHandler("POST /{owner}/{repo}/changes", (*ShamHub).handleSubmitChange)
+var _ = shamhubRESTHandler("POST /{owner}/{repo}/changes", (*ShamHub).handleSubmitChange)
 
-func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner and repo are required", http.StatusBadRequest)
-		return
-	}
-
-	var data submitChangeRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequest) (*submitChangeResponse, error) {
+	owner, repo := req.Owner, req.Repo
 
 	// Reject requests where head or base haven't been pushed yet.
-	ctx := r.Context()
-	if !sh.branchRefExists(ctx, owner, repo, data.Base) {
-		http.Error(w, "base branch does not exist", http.StatusBadRequest)
-		return
+	if !sh.branchRefExists(ctx, owner, repo, req.Base) {
+		return nil, badRequestErrorf("base branch does not exist")
 	}
 
 	// Check head branch - might be in a different repository (fork)
 	headOwner, headRepo := owner, repo
-	if data.HeadRepo != "" {
+	if req.HeadRepo != "" {
 		var ok bool
-		headOwner, headRepo, ok = strings.Cut(data.HeadRepo, "/")
+		headOwner, headRepo, ok = strings.Cut(req.HeadRepo, "/")
 		if !ok {
-			http.Error(w, "invalid head_repo format, expected 'owner/repo'", http.StatusBadRequest)
-			return
+			return nil, badRequestErrorf("invalid head_repo format, expected 'owner/repo'")
 		}
 	}
-	if !sh.branchRefExists(ctx, headOwner, headRepo, data.Head) {
-		http.Error(w, "head branch does not exist", http.StatusBadRequest)
-		return
+	if !sh.branchRefExists(ctx, headOwner, headRepo, req.Head) {
+		return nil, badRequestErrorf("head branch does not exist")
 	}
 
 	sh.mu.Lock()
@@ -70,26 +55,20 @@ func (sh *ShamHub) handleSubmitChange(w http.ResponseWriter, r *http.Request) {
 		// We'll just use a global counter for the change number for now.
 		// We can scope it by owner/repo if needed.
 		Number:  len(sh.changes) + 1,
-		Draft:   data.Draft,
-		Subject: data.Subject,
-		Body:    data.Body,
-		Base:    &shamBranch{Owner: owner, Repo: repo, Name: data.Base},
-		Head:    &shamBranch{Owner: headOwner, Repo: headRepo, Name: data.Head},
-		Labels:  data.Labels,
+		Draft:   req.Draft,
+		Subject: req.Subject,
+		Body:    req.Body,
+		Base:    &shamBranch{Owner: owner, Repo: repo, Name: req.Base},
+		Head:    &shamBranch{Owner: headOwner, Repo: headRepo, Name: req.Head},
+		Labels:  req.Labels,
 	}
 	sh.changes = append(sh.changes, change)
 	sh.mu.Unlock()
 
-	res := submitChangeResponse{
+	return &submitChangeResponse{
 		Number: change.Number,
 		URL:    sh.changeURL(owner, repo, change.Number),
-	}
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	}, nil
 }
 
 func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {

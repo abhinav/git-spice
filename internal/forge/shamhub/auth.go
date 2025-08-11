@@ -4,10 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 
@@ -25,17 +23,9 @@ type loginResponse struct {
 	Token string `json:"token,omitempty"`
 }
 
-var _ = shamhubHandler("POST /login", (*ShamHub).handleLogin)
+var _ = shamhubRESTHandler("POST /login", (*ShamHub).handleLogin)
 
-func (sh *ShamHub) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var data loginRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+func (sh *ShamHub) handleLogin(_ context.Context, req *loginRequest) (*loginResponse, error) {
 	var buf [8]byte
 	_, _ = rand.Read(buf[:])
 	token := hex.EncodeToString(buf[:])
@@ -44,21 +34,15 @@ func (sh *ShamHub) handleLogin(w http.ResponseWriter, r *http.Request) {
 	defer sh.mu.Unlock()
 
 	for _, u := range sh.users {
-		if u.Username != data.Username {
+		if u.Username != req.Username {
 			continue
 		}
 
 		sh.tokens[token] = u.Username
-		res := loginResponse{Token: token}
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(res); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		return
+		return &loginResponse{Token: token}, nil
 	}
 
-	http.Error(w, "user not found", http.StatusNotFound)
+	return nil, notFoundErrorf("user %q not found", req.Username)
 }
 
 type shamUser struct {

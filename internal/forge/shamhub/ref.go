@@ -2,15 +2,16 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os/exec"
 
 	"go.abhg.dev/gs/internal/silog"
 )
 
 type refExistsRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
 	Ref string `json:"ref"`
 }
 
@@ -18,31 +19,14 @@ type refExistsResponse struct {
 	Exists bool `json:"exists"`
 }
 
-var _ = shamhubHandler("POST /{owner}/{repo}/ref/exists", (*ShamHub).handleRefExists)
+var _ = shamhubRESTHandler("POST /{owner}/{repo}/ref/exists", (*ShamHub).handleRefExists)
 
-func (sh *ShamHub) handleRefExists(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner and repo are required", http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handleRefExists(ctx context.Context, req *refExistsRequest) (*refExistsResponse, error) {
+	owner, repo := req.Owner, req.Repo
 
-	var data refExistsRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	exists := sh.refExists(ctx, owner, repo, req.Ref)
 
-	ctx := r.Context()
-	exists := sh.refExists(ctx, owner, repo, data.Ref)
-
-	resp := refExistsResponse{Exists: exists}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	return &refExistsResponse{Exists: exists}, nil
 }
 
 func (r *forgeRepository) RefExists(ctx context.Context, ref string) (bool, error) {

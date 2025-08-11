@@ -1,11 +1,10 @@
 package shamhub
 
 import (
+	"cmp"
 	"context"
-	"encoding/json"
 	"fmt"
 	"iter"
-	"net/http"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -51,12 +50,15 @@ type shamComment struct {
 }
 
 var (
-	_ = shamhubHandler("GET /{owner}/{repo}/comments", (*ShamHub).handleListChangeComments)
-	_ = shamhubHandler("POST /{owner}/{repo}/comments", (*ShamHub).handlePostChangeComment)
-	_ = shamhubHandler("PATCH /{owner}/{repo}/comments/{id}", (*ShamHub).handleUpdateChangeComment)
+	_ = shamhubRESTHandler("POST /{owner}/{repo}/comments", (*ShamHub).handlePostChangeComment)
+	_ = shamhubRESTHandler("PATCH /{owner}/{repo}/comments/{id}", (*ShamHub).handleUpdateChangeComment)
+	_ = shamhubRESTHandler("GET /{owner}/{repo}/comments", (*ShamHub).handleListChangeComments)
 )
 
 type postCommentRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
 	Change int    `json:"changeNumber,omitempty"`
 	Body   string `json:"body,omitempty"`
 }
@@ -65,25 +67,13 @@ type postCommentResponse struct {
 	ID int `json:"id,omitempty"`
 }
 
-func (sh *ShamHub) handlePostChangeComment(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner and repo are required", http.StatusBadRequest)
-		return
-	}
-
-	var data postCommentRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handlePostChangeComment(_ context.Context, req *postCommentRequest) (*postCommentResponse, error) {
+	owner, repo := req.Owner, req.Repo
 
 	sh.mu.RLock()
 	var found bool
 	for _, c := range sh.changes {
-		if c.Base.Owner == owner && c.Base.Repo == repo && c.Number == data.Change {
+		if c.Base.Owner == owner && c.Base.Repo == repo && c.Number == req.Change {
 			found = true
 			break
 		}
@@ -91,31 +81,28 @@ func (sh *ShamHub) handlePostChangeComment(w http.ResponseWriter, r *http.Reques
 	sh.mu.RUnlock()
 
 	if !found {
-		http.Error(w, "change not found", http.StatusNotFound)
-		return
+		return nil, notFoundErrorf("change %d not found in %s/%s", req.Change, owner, repo)
 	}
 
 	sh.mu.Lock()
 	comment := shamComment{
 		ID:     len(sh.comments) + 1,
-		Change: data.Change,
-		Body:   data.Body,
+		Change: req.Change,
+		Body:   req.Body,
 	}
 	sh.comments = append(sh.comments, comment)
 	sh.mu.Unlock()
 
-	res := postCommentResponse{
+	return &postCommentResponse{
 		ID: comment.ID,
-	}
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	}, nil
 }
 
 type updateCommentRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+	ID    int    `path:"id" json:"-"`
+
 	Body string `json:"body,omitempty"`
 }
 
@@ -123,48 +110,26 @@ type updateCommentResponse struct {
 	ID int `json:"id,omitempty"`
 }
 
-func (sh *ShamHub) handleUpdateChangeComment(w http.ResponseWriter, r *http.Request) {
-	owner, repo, idStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("id")
-	if owner == "" || repo == "" || idStr == "" {
-		http.Error(w, "owner, repo, and id are required", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var data updateCommentRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handleUpdateChangeComment(_ context.Context, req *updateCommentRequest) (*updateCommentResponse, error) {
+	// owner/repo not really used because comment IDs are globally unique.
+	id := req.ID
 
 	sh.mu.Lock()
 	var found bool
 	for i, c := range sh.comments {
 		if c.ID == id {
 			found = true
-			sh.comments[i].Body = data.Body
+			sh.comments[i].Body = req.Body
 			break
 		}
 	}
 	sh.mu.Unlock()
 
 	if !found {
-		http.Error(w, "comment not found", http.StatusNotFound)
-		return
+		return nil, notFoundErrorf("comment %d not found in %s/%s", id, req.Owner, req.Repo)
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(updateCommentResponse{ID: id}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return &updateCommentResponse{ID: id}, nil
 }
 
 func (r *forgeRepository) PostChangeComment(
@@ -202,6 +167,14 @@ func (r *forgeRepository) UpdateChangeComment(
 	return nil
 }
 
+type listChangeCommentsRequest struct {
+	Owner  string `path:"owner" json:"-"`
+	Repo   string `path:"repo" json:"-"`
+	Change int    `form:"change,required" json:"-"`
+	Offset int    `form:"offset" json:"-"`
+	Limit  int    `form:"limit" json:"-"`
+}
+
 type listChangeCommentsResponse struct {
 	Items   []listChangeCommentsItem `json:"items,omitempty"`
 	Offset  int                      `json:"offset,omitempty"`
@@ -213,42 +186,9 @@ type listChangeCommentsItem struct {
 	Body string `json:"body,omitempty"`
 }
 
-func (sh *ShamHub) handleListChangeComments(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner and repo are required", http.StatusBadRequest)
-		return
-	}
-
-	change, offsetstr, limitstr := r.FormValue("change"), r.FormValue("offset"), r.FormValue("limit")
-	if change == "" {
-		http.Error(w, "change is required", http.StatusBadRequest)
-		return
-	}
-
-	changeNum, err := strconv.Atoi(change)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	offset := 0
-	if offsetstr != "" {
-		offset, err = strconv.Atoi(offsetstr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
-
-	limit := 10
-	if limitstr != "" {
-		limit, err = strconv.Atoi(limitstr)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCommentsRequest) (*listChangeCommentsResponse, error) {
+	// owner/repo not really used because change numbers are globally unique.
+	changeNum, offset, limit := req.Change, req.Offset, cmp.Or(req.Limit, 10)
 
 	sh.mu.RLock()
 	var comments []shamComment
@@ -270,17 +210,11 @@ func (sh *ShamHub) handleListChangeComments(w http.ResponseWriter, r *http.Reque
 		})
 	}
 
-	res := listChangeCommentsResponse{
+	return &listChangeCommentsResponse{
 		Items:   items,
 		Offset:  offset + limit,
 		HasMore: offset+limit < len(comments),
-	}
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	}, nil
 }
 
 func (r *forgeRepository) ListChangeComments(
