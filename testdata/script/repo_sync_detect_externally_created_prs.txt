@@ -85,21 +85,37 @@ New contents of feature2
     "merged": true,
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "7bf98f4bf69e9ba74fdcfc42ac5b8b30dcccaf13"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
     }
   },
   {
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
     },
     "body": "",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "33f16530f499eb13bbe639deeed206df958c5b5a"
     },

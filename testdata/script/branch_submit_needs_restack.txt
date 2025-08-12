@@ -55,10 +55,18 @@ Contents of feature1
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "cfb6dc9b08f78ac8e9214faacc745a06fbb58e8d"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "66ae103f1e2d92ef05fa5730e77ff468801a57fa"
     }

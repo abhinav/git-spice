@@ -38,6 +38,7 @@ type ShamHub struct {
 	changes  []shamChange  // all changes
 	users    []shamUser    // all users
 	comments []shamComment // all comments
+	repos    []shamRepo    // all repositories
 
 	tokens map[string]string // token -> username
 }

@@ -46,7 +46,7 @@ func (sh *ShamHub) handleStates(w http.ResponseWriter, r *http.Request) {
 	sh.mu.RLock()
 	states := make([]string, len(changeNumToIdx))
 	for _, c := range sh.changes {
-		if c.Owner == owner && c.Repo == repo {
+		if c.Base.Owner == owner && c.Base.Repo == repo {
 			idx, ok := changeNumToIdx[c.Number]
 			if !ok {
 				continue
@@ -162,16 +162,44 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
-	var changeIdx int
-	for idx, change := range sh.changes {
-		if change.Owner == req.Owner && change.Repo == req.Repo && change.Number == req.Number {
+	changeIdx := -1
+	var change shamChange
+	for idx, c := range sh.changes {
+		if c.Base.Owner == req.Owner && c.Base.Repo == req.Repo && c.Number == req.Number {
 			changeIdx = idx
+			change = c
 			break
 		}
 	}
 
-	if sh.changes[changeIdx].State != shamChangeOpen {
-		return fmt.Errorf("change %d is not open", req.Number)
+	if changeIdx == -1 {
+		return fmt.Errorf("change %d (%v/%v) not found", req.Number, req.Owner, req.Repo)
+	}
+
+	if change.State != shamChangeOpen {
+		return fmt.Errorf("change %d (%v/%v) is not open", req.Number, req.Owner, req.Repo)
+	}
+
+	// Determine if this is a cross-fork merge by checking if the head branch
+	// exists in the target repository or needs to be fetched from a fork
+	targetRepoDir := sh.repoDir(req.Owner, req.Repo)
+
+	baseRef := change.Base
+	headRef := change.Head
+
+	// If head is in a different repository (fork), fetch it.
+	if headRef.Owner != req.Owner || headRef.Repo != req.Repo {
+		// Fetch the head branch from the fork
+		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
+		defer flush()
+
+		forkRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
+		fetchCmd := exec.Command(sh.gitExe, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name)
+		fetchCmd.Dir = targetRepoDir
+		fetchCmd.Stderr = logw
+		if err := fetchCmd.Run(); err != nil {
+			return fmt.Errorf("fetch from fork: %w", err)
+		}
 	}
 
 	// To do this without a worktree, we need to:
@@ -187,8 +215,8 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 		defer flush()
 
-		cmd := exec.Command(sh.gitExe, "merge-tree", "--write-tree", sh.changes[changeIdx].Base, sh.changes[changeIdx].Head)
-		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+		cmd := exec.Command(sh.gitExe, "merge-tree", "--write-tree", baseRef.Name, headRef.Name)
+		cmd.Dir = targetRepoDir
 		cmd.Stderr = logw
 		out, err := cmd.Output()
 		if err != nil {
@@ -208,7 +236,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		change := sh.changes[changeIdx]
 
 		var msg string
-		args := []string{"commit-tree", "-p", change.Base}
+		args := []string{"commit-tree", "-p", baseRef.Name}
 		if req.Squash {
 			msg = fmt.Sprintf("%s (#%d)\n\n%s",
 				change.Subject,
@@ -216,7 +244,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 				change.Body)
 		} else {
 			msg = fmt.Sprintf("Merge change #%d", req.Number)
-			args = append(args, "-p", change.Head)
+			args = append(args, "-p", headRef.Name)
 		}
 		args = append(args, "-m", msg, tree)
 
@@ -240,7 +268,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 		defer flush()
 
-		ref := "refs/heads/" + sh.changes[changeIdx].Base
+		ref := "refs/heads/" + sh.changes[changeIdx].Base.Name
 		cmd := exec.Command(sh.gitExe, "update-ref", ref, commit)
 		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
 		cmd.Stderr = logw
@@ -259,8 +287,8 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 			logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 			defer flush()
 
-			cmd := exec.Command(sh.gitExe, "branch", "-D", sh.changes[changeIdx].Head)
-			cmd.Dir = sh.repoDir(req.Owner, req.Repo)
+			cmd := exec.Command(sh.gitExe, "branch", "-D", change.Head.Name)
+			cmd.Dir = sh.repoDir(change.Head.Owner, change.Head.Repo)
 			cmd.Stderr = logw
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("delete branch: %w", err)

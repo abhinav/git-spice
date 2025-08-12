@@ -93,10 +93,18 @@ feature 2
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "854f3268c794eb5ec30439658dfb43ac494d9074"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
     }
@@ -121,21 +129,37 @@ feature 2
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "9df31764fb4252f719c92d53fae05a766f019a17"
     }
   },
   {
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "b805a8b9545d71929cc128fc81b0d86bb2def9ed"
     },
     "body": "",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "a81df03d4738f5277d0b122b1a4e053a4e2b236e"
     },

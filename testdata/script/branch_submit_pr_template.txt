@@ -61,10 +61,18 @@ This is the starting commit message.
     "body": "This adds a feature.\nThe feature does things.\nThis is the starting commit message.\n\n## Summary\n\nExplain the changes you made.\n\n## Testing\n\nExplain how these changes were tested.\n\n## Rollback Plan\n\nExplain how to revert these changes.\n",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "c1141486e1a748c35a2f550decde01586b9dd2ed"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "d82f437b45089440ffaf5e3fa92b99d2d003f8e6"
     }

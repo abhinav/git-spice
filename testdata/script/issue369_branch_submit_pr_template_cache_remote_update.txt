@@ -45,7 +45,7 @@ gs bc -m feature2
 gs branch submit --fill
 
 shamhub dump changes
-cmpenv stdout $WORK/golden/pulls.json
+cmpenvJSON stdout $WORK/golden/pulls.json
 
 -- repo/.shamhub/CHANGE_TEMPLATE.md --
 This is the first template.
@@ -69,11 +69,19 @@ feature 2
     "body": "\n\nThis is the first template.\n",
     "base": {
       "ref": "main",
-      "sha": "a272771860a18e5e7ee7ef971e749c27574826fd"
+      "sha": "a272771860a18e5e7ee7ef971e749c27574826fd",
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      }
     },
     "head": {
       "ref": "feature1",
-      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d"
+      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d",
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      }
     }
   },
   {
@@ -84,11 +92,19 @@ feature 2
     "body": "\n\nThis is the second template.\n",
     "base": {
       "ref": "feature1",
-      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d"
+      "sha": "68b4a07edfb5682221a0207c31de4a99c7dd0d3d",
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      }
     },
     "head": {
       "ref": "feature2",
-      "sha": "bfe1a896f408b265d43552a2d450618a181e8f8b"
+      "sha": "bfe1a896f408b265d43552a2d450618a181e8f8b",
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      }
     }
   }
 ]

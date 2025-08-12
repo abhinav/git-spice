@@ -53,10 +53,18 @@ main
     "title": "Add feature 1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "bb59b1128830316c4a7939f3c97d31579793376f"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat1",
       "sha": "aa30b568f30e13394f834da24a76ca42e5bf9400"
     }

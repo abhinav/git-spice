@@ -59,10 +59,18 @@ feature 2
     "body": "\n\nThis is the first template.\n",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "2cf8fafa7da354fa870d768c3aecb4999b876111"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
     }
@@ -74,10 +82,18 @@ feature 2
     "body": "\n\nThis is the second template.\n",
     "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "6402d80c89e1b6d620d9059e426b3f1b4f232041"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "ee2153c8901b20404f8bb610be7f6e60a6f39a0b"
     }

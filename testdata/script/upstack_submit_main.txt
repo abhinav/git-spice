@@ -94,10 +94,18 @@ main ◀
     "title": "Add feature 1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "eb08cced301c285d7984fd6db0033449e67c1e25"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
     }
@@ -109,10 +117,18 @@ main ◀
     "title": "Add feature 2",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "ba0a60390bf660907454bda9561bc4b92d4ec647"
     }
@@ -124,10 +140,18 @@ main ◀
     "title": "Add feature 3",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "3a936c15fd394c4a4632af68d0cbcec06865dfd4"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature3",
       "sha": "e1140adca0d49b855e1d102d884bcff9d5c693fe"
     }
@@ -139,10 +163,18 @@ main ◀
     "title": "Add feature 4",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature3",
       "sha": "e1140adca0d49b855e1d102d884bcff9d5c693fe"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature4",
       "sha": "3ca1010ea95ec9e8181ec804fef100a987102cd4"
     }

@@ -21,7 +21,7 @@ func (sh *ShamHub) RejectChange(req RejectChangeRequest) error {
 
 	var changeIdx int
 	for idx, change := range sh.changes {
-		if change.Owner == req.Owner && change.Repo == req.Repo && change.Number == req.Number {
+		if change.Base.Owner == req.Owner && change.Base.Repo == req.Repo && change.Number == req.Number {
 			changeIdx = idx
 			break
 		}

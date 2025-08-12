@@ -47,10 +47,18 @@ Part 2 of the feature
     "body": "Add feature\n\nAdd feature part 2",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "c1a2497e4115fcbfc275d36b754a8ed4ca1169e4"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
     }

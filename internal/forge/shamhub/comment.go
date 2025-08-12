@@ -83,7 +83,7 @@ func (sh *ShamHub) handlePostChangeComment(w http.ResponseWriter, r *http.Reques
 	sh.mu.RLock()
 	var found bool
 	for _, c := range sh.changes {
-		if c.Owner == owner && c.Repo == repo && c.Number == data.Change {
+		if c.Base.Owner == owner && c.Base.Repo == repo && c.Number == data.Change {
 			found = true
 			break
 		}

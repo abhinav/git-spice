@@ -55,10 +55,18 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
     }
@@ -70,10 +78,18 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
     }
@@ -85,10 +101,18 @@ INF Created #3: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature3",
       "sha": "7122de7820daae3550784fd205f9064bcd046cce"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
     }

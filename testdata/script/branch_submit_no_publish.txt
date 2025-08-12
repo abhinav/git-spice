@@ -85,10 +85,18 @@ INF Pushed feature1
     "title": "feature1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "a7a403e829a6c61398b10b89b33b650f8c12f8da"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "bb631d588b836e747e37dfa48232a6f7cf2aff9e"
     }
