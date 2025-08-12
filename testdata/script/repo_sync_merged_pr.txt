@@ -62,10 +62,18 @@ Contents of feature2
   "merged": true,
   "html_url": "$SHAMHUB_URL/alice/example/change/1",
   "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
     "ref": "feature1",
     "sha": "9f1c9af063d2363d6a1381581bfab2a25d12be4c"
   },
   "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
     "ref": "main",
     "sha": "614e5f20a1e8cf2a4e552df1a817e92927dfffef"
   }

@@ -169,6 +169,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		if !ok {
 			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
 		}
+		repo = strings.TrimSuffix(repo, ".git")
 		pr, err := strconv.Atoi(prStr)
 		if err != nil {
 			ts.Fatalf("invalid PR number: %s", err)

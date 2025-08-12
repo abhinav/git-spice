@@ -59,10 +59,18 @@ MOCKEDIT_GIVE=$WORK/input/pr-body.txt mockedit
     "title": "Add feature",
     "body": "This is the body of the PR.\nIt contains details about the change.\n\n",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "acab7ca3bb06c21544d59de8a41f06a7f5089e06"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "8834aad8a5ba54b7bdd43774e11a8c99a0ff98e8"
     }

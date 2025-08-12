@@ -88,10 +88,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "2fdb9dfd9a5835e3604dafa788044409473ffffd"
     }
@@ -104,10 +112,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "21283286a4dfbf7b8f4b0132ef3cf9a76704043e"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
     }
@@ -120,10 +136,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature3",
       "sha": "9d213feb71f5913a5bc20fab160efd973de93991"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "21283286a4dfbf7b8f4b0132ef3cf9a76704043e"
     }
@@ -141,10 +165,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "84f59e49b054bfd4e8d8a253fb9bd58de94be334"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "a6c91da75861301e73f0c8fd5585de39d27432b3"
     }
@@ -157,10 +189,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/2",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "bac8cbd7c69c0a6d78d2ae4c1df7077f02d3577b"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "a6c91da75861301e73f0c8fd5585de39d27432b3"
     }
@@ -173,10 +213,18 @@ INF CR #3 is up-to-date: $SHAMHUB_URL/alice/example/change/3
     "body": "",
     "html_url": "$SHAMHUB_URL/alice/example/change/3",
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature3",
       "sha": "2ee6f663a29ecdcdda29aeace47dede1db4f7a4d"
     },
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature2",
       "sha": "bac8cbd7c69c0a6d78d2ae4c1df7077f02d3577b"
     }

@@ -75,10 +75,18 @@ false
   "title": "Add multiple features",
   "body": "Adds features 1, 2, and 3 in one PR.",
   "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
     "ref": "main",
     "sha": "e41b284d1e80e3acba627274a80d94129ebdf8fd"
   },
   "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
     "ref": "add-feature-1",
     "sha": "a9548da1d2feba06f2bba402eb77adf27a9266e7"
   }

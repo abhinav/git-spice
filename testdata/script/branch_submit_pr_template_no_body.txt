@@ -69,10 +69,18 @@ false
     "title": "Add feature",
     "body": "## Summary\n\nDetails\n\n## Test plan\n\nExplain\n\nIssue:\n",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "4020e221d672d4c2865f31dad27c42438f491f56"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "26a1011fd724f56ba25514e0b48e1f864f7b6118"
     }

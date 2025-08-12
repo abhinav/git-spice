@@ -65,10 +65,18 @@ main
     "title": "add feature",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "27316d3a0e4f2410c3b0215fb5153bfe5b4e2b9a"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature-10",
       "sha": "4af1d441e9ebd2a2abd75de1d969a90c3f25fb6f"
     }

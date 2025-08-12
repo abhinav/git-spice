@@ -42,7 +42,10 @@ func (sh *ShamHub) ForkRepository(owner, repo, forkOwner string) (string, error)
 	return sh.newRepository(forkOwner, repo, &repoID{Owner: owner, Name: repo})
 }
 
-type repoID struct{ Owner, Name string }
+type repoID struct {
+	Owner string `json:"owner"`
+	Name  string `json:"name"`
+}
 
 // newRepository creates a new Git repository, optionally as a fork.
 func (sh *ShamHub) newRepository(owner, repo string, forkOf *repoID) (string, error) {

@@ -58,10 +58,18 @@ feature 3
     "title": "feat1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "c445405317004b13d3068a427db716dae6664429"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "3cf69453c8843285b64929602d476f9e8021b4f5"
     }
@@ -73,10 +81,18 @@ feature 3
     "title": "feat2",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "3cf69453c8843285b64929602d476f9e8021b4f5"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat2",
       "sha": "3a0374269031eff114a8ab4ab23d25ec33674972"
     }
@@ -88,10 +104,18 @@ feature 3
     "title": "feat3",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat2",
       "sha": "3a0374269031eff114a8ab4ab23d25ec33674972"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat3",
       "sha": "dc2b288e577cd1aaeaaf02ae3e14267e08908f54"
     }
@@ -114,10 +138,18 @@ main
     "title": "feat1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "c445405317004b13d3068a427db716dae6664429"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "3cf69453c8843285b64929602d476f9e8021b4f5"
     }
@@ -129,10 +161,18 @@ main
     "title": "feat2",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature",
       "sha": "3cf69453c8843285b64929602d476f9e8021b4f5"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat2",
       "sha": "3a0374269031eff114a8ab4ab23d25ec33674972"
     }
@@ -144,10 +184,18 @@ main
     "title": "feat3",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat2",
       "sha": "3a0374269031eff114a8ab4ab23d25ec33674972"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat3",
       "sha": "dc2b288e577cd1aaeaaf02ae3e14267e08908f54"
     }

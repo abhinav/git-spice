@@ -56,7 +56,7 @@ func (sh *ShamHub) handleGetChange(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(change); err != nil { //nolint:musttag
+	if err := enc.Encode(change); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -129,7 +129,7 @@ nextChange:
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	if err := enc.Encode(changes); err != nil { //nolint:musttag
+	if err := enc.Encode(changes); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

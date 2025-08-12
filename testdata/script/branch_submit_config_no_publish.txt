@@ -72,10 +72,18 @@ main
     "title": "feature1",
     "body": "feature1\n\nfeature1 v3",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "b709fee62def5240cbbf662a05fdad097ab30e20"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feature1",
       "sha": "5a09fe1c62b68c6aad1c811929ba69d591f3babb"
     }

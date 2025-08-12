@@ -173,11 +173,11 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	if changeIdx == -1 {
-		return fmt.Errorf("change %d not found", req.Number)
+		return fmt.Errorf("change %d (%v/%v) not found", req.Number, req.Owner, req.Repo)
 	}
 
 	if change.State != shamChangeOpen {
-		return fmt.Errorf("change %d is not open", req.Number)
+		return fmt.Errorf("change %d (%v/%v) is not open", req.Number, req.Owner, req.Repo)
 	}
 
 	// Determine if this is a cross-fork merge by checking if the head branch

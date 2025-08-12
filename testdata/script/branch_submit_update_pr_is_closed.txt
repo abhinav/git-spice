@@ -68,10 +68,18 @@ main
     "title": "feat1",
     "body": "",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "c649f748239dea65932c853775c6121d7cc79029"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat1",
       "sha": "03fced68a13af09f59f08474c47452dd15f3042c"
     }
@@ -83,10 +91,18 @@ main
     "title": "feat1",
     "body": "feat1\n\nUpdate feature 1",
     "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "main",
       "sha": "c649f748239dea65932c853775c6121d7cc79029"
     },
     "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
       "ref": "feat1",
       "sha": "03fced68a13af09f59f08474c47452dd15f3042c"
     }
