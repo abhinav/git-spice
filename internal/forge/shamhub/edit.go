@@ -2,9 +2,7 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"slices"
 	"strconv"
 
@@ -12,6 +10,10 @@ import (
 )
 
 type editChangeRequest struct {
+	Owner  string `path:"owner" json:"-"`
+	Repo   string `path:"repo" json:"-"`
+	Number int    `path:"number" json:"-"`
+
 	Base   *string  `json:"base,omitempty"`
 	Draft  *bool    `json:"draft,omitempty"`
 	Labels []string `json:"labels,omitempty"`
@@ -19,29 +21,10 @@ type editChangeRequest struct {
 
 type editChangeResponse struct{}
 
-var _ = shamhubHandler("PATCH /{owner}/{repo}/change/{number}", (*ShamHub).handleEditChange)
+var _ = shamhubRESTHandler("PATCH /{owner}/{repo}/change/{number}", (*ShamHub).handleEditChange)
 
-func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
-	owner, repo, numStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("number")
-	if owner == "" || repo == "" || numStr == "" {
-		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
-		return
-	}
-
-	num, err := strconv.Atoi(numStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var data editChangeRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+func (sh *ShamHub) handleEditChange(_ context.Context, req *editChangeRequest) (*editChangeResponse, error) {
+	owner, repo, num := req.Owner, req.Repo, req.Number
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
@@ -53,19 +36,18 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if changeIdx == -1 {
-		http.Error(w, "change not found", http.StatusNotFound)
-		return
+		return nil, notFoundErrorf("change %s/%s#%d not found", owner, repo, num)
 	}
 
-	if b := data.Base; b != nil {
+	if b := req.Base; b != nil {
 		sh.changes[changeIdx].Base.Name = *b
 	}
-	if d := data.Draft; d != nil {
+	if d := req.Draft; d != nil {
 		sh.changes[changeIdx].Draft = *d
 	}
-	if len(data.Labels) > 0 {
+	if len(req.Labels) > 0 {
 		labels := sh.changes[changeIdx].Labels
-		for _, label := range data.Labels {
+		for _, label := range req.Labels {
 			if !slices.Contains(labels, label) {
 				labels = append(labels, label)
 			}
@@ -73,13 +55,7 @@ func (sh *ShamHub) handleEditChange(w http.ResponseWriter, r *http.Request) {
 		sh.changes[changeIdx].Labels = labels
 	}
 
-	res := editChangeResponse{} // empty for now
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return &editChangeResponse{}, nil // empty for now
 }
 
 func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {

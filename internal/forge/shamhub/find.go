@@ -1,10 +1,9 @@
 package shamhub
 
 import (
+	"cmp"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -12,23 +11,18 @@ import (
 )
 
 var (
-	_ = shamhubHandler("GET /{owner}/{repo}/change/{number}", (*ShamHub).handleGetChange)
-	_ = shamhubHandler("GET /{owner}/{repo}/changes/by-branch/{branch}", (*ShamHub).handleFindChangesByBranch)
+	_ = shamhubRESTHandler("GET /{owner}/{repo}/change/{number}", (*ShamHub).handleGetChange)
+	_ = shamhubRESTHandler("GET /{owner}/{repo}/changes/by-branch/{branch}", (*ShamHub).handleFindChangesByBranch)
 )
 
-func (sh *ShamHub) handleGetChange(w http.ResponseWriter, r *http.Request) {
-	owner, repo, numStr := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("number")
-	if owner == "" || repo == "" || numStr == "" {
-		http.Error(w, "owner, repo, and number are required", http.StatusBadRequest)
-		return
-	}
+type getChangeRequest struct {
+	Owner  string `path:"owner" json:"-"`
+	Repo   string `path:"repo" json:"-"`
+	Number int    `path:"number" json:"-"`
+}
 
-	num, err := strconv.Atoi(numStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
+func (sh *ShamHub) handleGetChange(_ context.Context, req *getChangeRequest) (*Change, error) {
+	owner, repo, num := req.Owner, req.Repo, req.Number
 	sh.mu.RLock()
 	var (
 		got   shamChange
@@ -44,47 +38,32 @@ func (sh *ShamHub) handleGetChange(w http.ResponseWriter, r *http.Request) {
 	sh.mu.RUnlock()
 
 	if !found {
-		http.Error(w, "change not found", http.StatusNotFound)
-		return
+		return nil, notFoundErrorf("change %s/%s#%d not found", owner, repo, num)
 	}
 
-	change, err := sh.toChange(got)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(change); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return sh.toChange(got)
 }
 
-func (sh *ShamHub) handleFindChangesByBranch(w http.ResponseWriter, r *http.Request) {
-	owner, repo, branch := r.PathValue("owner"), r.PathValue("repo"), r.PathValue("branch")
-	if owner == "" || repo == "" || branch == "" {
-		http.Error(w, "owner, repo, and branch are required", http.StatusBadRequest)
-		return
-	}
+type findChangesByBranchRequest struct {
+	Owner  string `path:"owner" json:"-"`
+	Repo   string `path:"repo" json:"-"`
+	Branch string `path:"branch" json:"-"`
 
-	limit := 10
-	if l := r.FormValue("limit"); l != "" {
-		var err error
-		limit, err = strconv.Atoi(l)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+	Limit int    `form:"limit" json:"-"`
+	State string `form:"state" json:"-"`
+}
 
+func (sh *ShamHub) handleFindChangesByBranch(_ context.Context, req *findChangesByBranchRequest) ([]*Change, error) {
+	owner, repo, branch := req.Owner, req.Repo, req.Branch
+
+	limit := cmp.Or(req.Limit, 10) // default limit is 10
 	filters := []func(shamChange) bool{
 		func(c shamChange) bool { return c.Base.Owner == owner },
 		func(c shamChange) bool { return c.Base.Repo == repo },
 		func(c shamChange) bool { return c.Head.Name == branch },
 	}
 
-	if state := r.FormValue("state"); state != "" && state != "all" {
+	if state := req.State; state != "" && state != "all" {
 		var s shamChangeState
 		switch state {
 		case "open":
@@ -120,18 +99,13 @@ nextChange:
 	for i, c := range got {
 		change, err := sh.toChange(c)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return nil, fmt.Errorf("convert shamChange to Change: %w", err)
 		}
 
 		changes[i] = change
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(changes); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return changes, nil
 }
 
 func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID) (*forge.FindChangeItem, error) {

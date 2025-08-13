@@ -2,10 +2,8 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,6 +14,9 @@ import (
 )
 
 type statesRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
 	IDs []ChangeID `json:"ids"`
 }
 
@@ -23,20 +24,10 @@ type statesResponse struct {
 	States []string `json:"states"`
 }
 
-var _ = shamhubHandler("POST /{owner}/{repo}/change/states", (*ShamHub).handleStates)
+var _ = shamhubRESTHandler("POST /{owner}/{repo}/change/states", (*ShamHub).handleStates)
 
-func (sh *ShamHub) handleStates(w http.ResponseWriter, r *http.Request) {
-	owner, repo := r.PathValue("owner"), r.PathValue("repo")
-	if owner == "" || repo == "" {
-		http.Error(w, "owner and repo are required", http.StatusBadRequest)
-		return
-	}
-
-	var req statesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+func (sh *ShamHub) handleStates(_ context.Context, req *statesRequest) (*statesResponse, error) {
+	owner, repo := req.Owner, req.Repo
 
 	changeNumToIdx := make(map[int]int, len(req.IDs))
 	for i, id := range req.IDs {
@@ -69,16 +60,10 @@ func (sh *ShamHub) handleStates(w http.ResponseWriter, r *http.Request) {
 	sh.mu.RUnlock()
 
 	if len(changeNumToIdx) > 0 {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "changes not found: %v", changeNumToIdx)
-		return
+		return nil, notFoundErrorf("changes not found: %v", changeNumToIdx)
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(statesResponse{States: states}); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	return &statesResponse{States: states}, nil
 }
 
 func (r *forgeRepository) ChangesStates(ctx context.Context, fids []forge.ChangeID) ([]forge.ChangeState, error) {
