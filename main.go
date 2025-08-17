@@ -23,6 +23,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
@@ -438,6 +439,24 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Store:      store,
 				Service:    svc,
 				Restack:    restackHandler,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			repo *git.Repository,
+			store *state.Store,
+			svc *spice.Service,
+			forges *forge.Registry,
+		) (SplitHandler, error) {
+			return &split.Handler{
+				Log:            log,
+				View:           view,
+				Repository:     repo,
+				Store:          store,
+				Service:        svc,
+				FindForge:      forges.Lookup,
+				HighlightStyle: _highlightStyle,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
