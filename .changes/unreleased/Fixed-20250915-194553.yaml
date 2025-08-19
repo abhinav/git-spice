@@ -1,0 +1,6 @@
+kind: Fixed
+body: >-
+  repo restack: Autostash dirty changes in the working tree before the operation.
+  Previously, the changes wouldn't be stashed until checking out the first branch,
+  an operation which might fail because of other conflicts.
+time: 2025-09-15T19:45:53.329986-07:00
