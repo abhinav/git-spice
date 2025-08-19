@@ -90,7 +90,7 @@ func newGitCmd(ctx context.Context, log *silog.Logger, args ...string) *gitCmd {
 
 	logger := &prefixLogger{Logger: log, prefix: prefix}
 
-	stderr, wrap := stderrWriter(logger)
+	stderr, wrap := outputLogWriter("stderr", logger)
 	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Stderr = stderr
 
@@ -125,6 +125,18 @@ func (c *gitCmd) Dir(dir string) *gitCmd {
 // Stdout sets the writer for the command's stdout.
 func (c *gitCmd) Stdout(w io.Writer) *gitCmd {
 	c.cmd.Stdout = w
+	return c
+}
+
+// CaptureStdout captures stdout of the command and similarly to stderr,
+// either logs it or surfaces it in the error.
+func (c *gitCmd) CaptureStdout() *gitCmd {
+	stdout, wrap := outputLogWriter("stdout", c.log)
+	c.cmd.Stdout = stdout
+	oldWrap := c.wrap
+	c.wrap = func(err error) error {
+		return wrap(oldWrap(err))
+	}
 	return c
 }
 
@@ -276,10 +288,9 @@ func (c *gitCmd) Scan(exec execer, split bufio.SplitFunc) iter.Seq2[[]byte, erro
 	}
 }
 
-// Returns an io.Writer that will record sterr for later use,
-// and a wrap function that will wrap an error with the recorded
-// stderr output.
-func stderrWriter(logger *prefixLogger) (w io.Writer, wrap func(error) error) {
+// Returns an io.Writer that will record an output stream for later use,
+// and a wrap function that will wrap an error with the recorded output.
+func outputLogWriter(name string, logger *prefixLogger) (w io.Writer, wrap func(error) error) {
 	if logger.Level() <= silog.LevelDebug {
 		// If logging is enabled, return an io.Writer
 		// that writes to the logger.
@@ -303,12 +314,12 @@ func stderrWriter(logger *prefixLogger) (w io.Writer, wrap func(error) error) {
 		//
 		// err != nil guarantees that the operation has finished
 		// because the command has exited with an error.
-		stderr := bytes.TrimSpace(buf.Bytes())
-		if len(stderr) == 0 {
+		output := bytes.TrimSpace(buf.Bytes())
+		if len(output) == 0 {
 			return err
 		}
 
-		return errors.Join(err, fmt.Errorf("stderr:\n%s", stderr))
+		return errors.Join(err, fmt.Errorf("%s:\n%s", name, output))
 	}
 }
 

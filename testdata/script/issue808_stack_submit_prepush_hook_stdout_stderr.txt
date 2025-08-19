@@ -1,0 +1,48 @@
+# pre-push hook failure should surface messages from both stdout and stderr.
+# https://github.com/abhinav/git-spice/issues/808
+
+as 'Test User <test@example.com>'
+at 2025-08-19T12:00:00Z
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# feature1 -> feature2
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+
+# Pre-push hook that prints to both stdout and stderr.
+mkdir -p .git/hooks
+cp $WORK/extra/pre-push .git/hooks/pre-push
+chmod 755 .git/hooks/pre-push
+
+! gs stack submit --fill
+
+# The error should contain both the stdout and stderr messages from the hook
+stderr 'Error from stderr: Hook validation failed'
+stderr 'Info from stdout: Running pre-push validation'
+
+-- repo/feature1.txt --
+This is feature 1
+
+-- repo/feature2.txt --
+This is feature 2
+
+-- extra/pre-push --
+#!/bin/sh
+# This hook outputs to both stdout and stderr before failing
+echo "Info from stdout: Running pre-push validation"
+echo "Error from stderr: Hook validation failed" >&2
+exit 1
