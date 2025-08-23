@@ -53,11 +53,8 @@ size = 2363341
 url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.12.3/gotestsum_1.12.3_darwin_arm64.tar.gz"
 
 [tools."ubi:abhinav/requiredfield"]
-version = "0.6.1"
+version = "0.7.0"
 backend = "ubi:abhinav/requiredfield"
 
-[tools."ubi:abhinav/requiredfield".platforms.linux-x64-requiredfield]
-checksum = "blake3:1026c3ee1ce4ca8981e6f13cdaccf5ab291ccc9e94845841cc20392aab3d6f18"
-
 [tools."ubi:abhinav/requiredfield".platforms.macos-arm64-requiredfield]
-checksum = "blake3:c50ffd9a35ba3e9591c66a4f3159d975a90b973d11c3282861b82096728c649a"
+checksum = "blake3:6323736125a83dbc06f0998a27e0adfda715b743737bf028d55d85e8a25334a4"

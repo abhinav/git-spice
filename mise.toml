@@ -28,7 +28,7 @@ golangci-lint = "latest"
 # Changelog manager.
 changie = "latest"
 
-"ubi:abhinav/requiredfield" = "latest"
+"ubi:abhinav/requiredfield" = "0.7.0"
 
 [tasks.generate]
 depends = ["tools"]
