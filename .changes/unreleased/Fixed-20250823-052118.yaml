@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: If a pre-push hook fails, surface messages printed to stdout in the error.'
+time: 2025-08-23T05:21:18.251284-07:00

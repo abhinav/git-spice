@@ -63,7 +63,8 @@ func (w *Worktree) Push(ctx context.Context, opts PushOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
+	cmd := w.gitCmd(ctx, args...).CaptureStdout()
+	if err := cmd.Run(w.exec); err != nil {
 		return fmt.Errorf("push: %w", err)
 	}
 
