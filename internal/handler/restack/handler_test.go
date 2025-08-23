@@ -538,9 +538,6 @@ func TestHandler_Restack_trunk(t *testing.T) {
 		mockWorktree.EXPECT().
 			RootDir().
 			Return(t.TempDir())
-		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "main").
-			Return(nil)
 
 		handler := &Handler{
 			Log:      log,

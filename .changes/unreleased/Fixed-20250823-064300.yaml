@@ -1,0 +1,7 @@
+kind: Fixed
+body: >-
+  restack:
+  Fix issue where restack opreations would leave the target branch
+  checked out instead of the previously checked out branch,
+  even when no restack operations were performed.
+time: 2025-08-23T06:43:00.323065-07:00

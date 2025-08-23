@@ -1,0 +1,39 @@
+# Test that restack stays on current branch when nothing needs restacking
+
+as 'Test User <test@example.com>'
+at 2025-08-23T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+
+gs repo init
+
+# Create some branches that are already properly stacked
+git add feat1.txt
+gs branch create feat1 -m 'feat1 commit'
+
+git add feat2.txt
+gs branch create feat2 -m 'feat2 commit'
+
+# restack from feat2 should remain on feat2.
+gs repo restack
+git branch --show-current
+stdout 'feat2'
+
+# upstack restack of feat1 from feat2 should remain on feat2.
+gs upstack restack --branch feat1
+git branch --show-current
+stdout 'feat2'
+
+# Test:
+# restack from untracked branch should remain on untracked branch.
+git checkout -b untracked-branch
+gs repo restack
+git branch --show-current
+stdout 'untracked-branch'
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
