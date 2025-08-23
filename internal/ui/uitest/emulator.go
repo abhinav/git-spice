@@ -3,7 +3,9 @@ package uitest
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -144,6 +146,15 @@ func (e *EmulatorView) Rows() []string {
 	}
 
 	return lines
+}
+
+// Snapshot returns the entire content of the terminal emulator as a string.
+func (e *EmulatorView) Snapshot() string {
+	var out strings.Builder
+	for _, row := range e.Rows() {
+		fmt.Fprintln(&out, row)
+	}
+	return strings.TrimRight(out.String(), " \t\n")
 }
 
 func trimRightWS(rs []rune) []rune {

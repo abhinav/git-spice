@@ -10,10 +10,10 @@ import (
 	"net/url"
 	"os/exec"
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/rogpeppe/go-internal/testscript"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/secret"
@@ -187,34 +187,144 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 }
 
 func TestSelectAuthenticator(t *testing.T) {
-	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-		wantType := strings.TrimSpace(ts.ReadFile("want_type"))
-
+	drv := uitest.Drive(t, func(view ui.InteractiveView) {
 		auth, err := selectAuthenticator(view, authenticatorOptions{
 			Endpoint: oauth2.Endpoint{},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, wantType, reflect.TypeOf(auth).String())
-	}, &uitest.RunScriptsOptions{
-		Update: *UpdateFixtures,
-		Rows:   80,
-	}, "testdata/auth/select")
+		assert.True(t, reflect.TypeFor[*DeviceFlowAuthenticator]() == reflect.TypeOf(auth),
+			"unexpected authenticator type: %T", auth)
+	}, nil)
+
+	drv.PressN(tea.KeyDown, 3)
+	autogold.Expect(`Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  OAuth: Public repositories only
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to public repositories.
+
+  GitHub App
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to repositories where the git-spice GitHub
+  App is installed explicitly.
+  Use https://github.com/apps/git-spice to install the App on repositories.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a classic or fine-grained Personal Access Token generated from
+  https://github.com/settings/tokens.
+  Classic tokens need at least one of the following scopes: repo or
+  public_repo.
+  Fine-grained tokens need read/write access to Repository Contents and Pull
+  requests.
+  You can use this method if you do not have the ability to install a GitHub
+  or OAuth App on your repositories.
+
+  GitHub CLI
+  Re-use an existing GitHub CLI (https://cli.github.com) session.
+  You must be logged into gh with 'gh auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+
+	// Wrap around to "OAuth".
+	drv.PressN(tea.KeyDown, 2)
+	autogold.Expect(`Select an authentication method:
+▶ OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  OAuth: Public repositories only
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to public repositories.
+
+  GitHub App
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to repositories where the git-spice GitHub
+  App is installed explicitly.
+  Use https://github.com/apps/git-spice to install the App on repositories.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  Personal Access Token
+  Enter a classic or fine-grained Personal Access Token generated from
+  https://github.com/settings/tokens.
+  Classic tokens need at least one of the following scopes: repo or
+  public_repo.
+  Fine-grained tokens need read/write access to Repository Contents and Pull
+  requests.
+  You can use this method if you do not have the ability to install a GitHub
+  or OAuth App on your repositories.
+
+  GitHub CLI
+  Re-use an existing GitHub CLI (https://cli.github.com) session.
+  You must be logged into gh with 'gh auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+
+	drv.Press(tea.KeyEnter) // select "OAuth"
 }
 
 func TestAuthenticationFlow_PAT(t *testing.T) {
-	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-		wantToken := strings.TrimSpace(ts.ReadFile("want_token"))
-
+	drv := uitest.Drive(t, func(view ui.InteractiveView) {
 		got, err := new(Forge).AuthenticationFlow(t.Context(), view)
 		require.NoError(t, err)
 
-		assert.Equal(t, &AuthenticationToken{
-			AccessToken: wantToken,
-		}, got)
-	}, &uitest.RunScriptsOptions{
-		Update: *UpdateFixtures,
-		Rows:   80,
-	}, "testdata/auth/pat.txt")
+		assert.Equal(t, &AuthenticationToken{AccessToken: "secret"}, got)
+	}, nil)
+
+	// Focus on "Personal Access Token".
+	drv.PressN(tea.KeyDown, 3)
+	autogold.Expect(`Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  OAuth: Public repositories only
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to public repositories.
+
+  GitHub App
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will only get access to repositories where the git-spice GitHub
+  App is installed explicitly.
+  Use https://github.com/apps/git-spice to install the App on repositories.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a classic or fine-grained Personal Access Token generated from
+  https://github.com/settings/tokens.
+  Classic tokens need at least one of the following scopes: repo or
+  public_repo.
+  Fine-grained tokens need read/write access to Repository Contents and Pull
+  requests.
+  You can use this method if you do not have the ability to install a GitHub
+  or OAuth App on your repositories.
+
+  GitHub CLI
+  Re-use an existing GitHub CLI (https://cli.github.com) session.
+  You must be logged into gh with 'gh auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+	drv.Press(tea.KeyEnter) // Select it.
+
+	// There should now be a prompt for the token.
+	autogold.Expect("Enter Personal Access Token:\n").Equal(t, drv.Snapshot())
+	drv.Type("secret")
+	drv.Press(tea.KeyEnter)
 }
 
 func TestAuthCLI(t *testing.T) {
