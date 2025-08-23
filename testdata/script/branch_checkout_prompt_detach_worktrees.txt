@@ -1,0 +1,50 @@
+# branch checkout --detach with prompt across worktrees.
+#
+# Verify that it's possible to checkout a branch in detached HEAD state
+# if it's already checked out in another worktree.
+#
+# https://github.com/abhinav/git-spice/issues/812
+
+as 'Test <test@example.com>'
+at '2025-08-23T14:30:00Z'
+
+# setup main repo
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create a feature branch with some commits
+git add feat1.txt
+gs bc feat1 -m 'Add feat1 feature'
+
+# get the commit hash of feat1
+git rev-parse HEAD
+cmp stdout $WORK/golden/feat1-hash.txt
+
+# create a second worktree
+git worktree add ../wt main
+
+# Attempt to checkout feat1 in detached HEAD state
+# from the other worktree.
+cd ../wt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch checkout --detach
+cmp $WORK/robot.actual $WORK/robot.golden
+
+# verify both worktrees are on the same commit hash
+git rev-parse HEAD
+cmp stdout $WORK/golden/feat1-hash.txt
+
+-- repo/feat1.txt --
+feature content
+
+-- golden/feat1-hash.txt --
+121498bab12f8ac31e38043ac0b475ccfdcf7769
+-- robot.golden --
+===
+> Select a branch to checkout: 
+> ┏━□ feat1
+> main ◀
+"feat1"
