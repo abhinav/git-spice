@@ -227,7 +227,7 @@ loop:
 
 	if requestBranchWT != "" && requestBranchWT != currentWT {
 		h.Log.Warnf("%v: checked out in another worktree (%v), not checking out here", req.Branch, requestBranchWT)
-	} else {
+	} else if restackCount > 0 {
 		if err := h.Worktree.Checkout(ctx, req.Branch); err != nil {
 			return 0, fmt.Errorf("checkout branch %v: %w", req.Branch, err)
 		}

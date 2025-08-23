@@ -139,9 +139,6 @@ func TestHandler_RestackBranch(t *testing.T) {
 		mockWorktree.EXPECT().
 			RootDir().
 			Return(t.TempDir())
-		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "already-restacked").
-			Return(nil)
 
 		handler := &Handler{
 			Log:      log,
