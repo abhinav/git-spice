@@ -60,6 +60,12 @@ func (cmd *branchCheckoutCmd) AfterApply(
 
 		cmd.Branch, err = branchPrompt.Prompt(ctx, &branchPromptRequest{
 			Disabled: func(b git.LocalBranch) bool {
+				// If detaching, allow selecting any branch,
+				// including the current branch
+				// or branches checked out elsewhere.
+				if cmd.Detach {
+					return false
+				}
 				return b.Name != currentBranch && b.Worktree != ""
 			},
 			Default:     currentBranch,
