@@ -9,6 +9,11 @@ checksum = "blake3:5c375c0c849a13e0aab777ba05f059bc9065e4554205e911ba15d51e8f0f2
 version = "1.25.0"
 backend = "core:go"
 
+[tools.go.platforms.linux-x64]
+checksum = "sha256:2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613"
+size = 59659213
+url = "https://dl.google.com/go/go1.25.0.linux-amd64.tar.gz"
+
 [tools.go.platforms.macos-arm64]
 checksum = "sha256:544932844156d8172f7a28f77f2ac9c15a23046698b6243f633b0a0b00c0749c"
 size = 57906112
@@ -28,6 +33,11 @@ checksum = "blake3:99e80ff9eeae4c745504924ca2b110abb3102cc380cc4aa2b05a49e7e95ff
 version = "2.4.0"
 backend = "aqua:golangci/golangci-lint"
 
+[tools.golangci-lint.platforms.linux-x64]
+checksum = "sha256:fae792524c04424c0ac369f5b8076f04b45cf29fc945a370e55d369a8dc11840"
+size = 14126779
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.4.0/golangci-lint-2.4.0-linux-amd64.tar.gz"
+
 [tools.gotestsum]
 version = "1.12.3"
 backend = "aqua:gotestyourself/gotestsum"
@@ -45,6 +55,9 @@ url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.12.3/got
 [tools."ubi:abhinav/requiredfield"]
 version = "0.6.1"
 backend = "ubi:abhinav/requiredfield"
+
+[tools."ubi:abhinav/requiredfield".platforms.linux-x64-requiredfield]
+checksum = "blake3:1026c3ee1ce4ca8981e6f13cdaccf5ab291ccc9e94845841cc20392aab3d6f18"
 
 [tools."ubi:abhinav/requiredfield".platforms.macos-arm64-requiredfield]
 checksum = "blake3:c50ffd9a35ba3e9591c66a4f3159d975a90b973d11c3282861b82096728c649a"
