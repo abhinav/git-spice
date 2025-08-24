@@ -10,10 +10,10 @@ import (
 	"net/url"
 	"os/exec"
 	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/rogpeppe/go-internal/testscript"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/secret"
@@ -239,35 +239,95 @@ func TestSelectAuthenticator(t *testing.T) {
 	// CLI is available.
 	stub.Func(&_execLookPath, "glab", nil)
 
-	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-		wantType := strings.TrimSpace(ts.ReadFile("want_type"))
-
+	drv := uitest.Drive(t, func(view ui.InteractiveView) {
 		auth, err := selectAuthenticator(view, authenticatorOptions{
 			Endpoint: oauth2.Endpoint{},
 			ClientID: _oauthAppID,
 			Hostname: "https://gitlab.com",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, wantType, reflect.TypeOf(auth).String())
-	}, &uitest.RunScriptsOptions{
-		Update: *UpdateFixtures,
-	}, "testdata/auth/select_oauth.txt")
+		assert.True(t, reflect.TypeFor[*DeviceFlowAuthenticator]() == reflect.TypeOf(auth),
+			"unexpected authenticator type: %T", auth)
+	}, nil)
+
+	drv.Press(tea.KeyDown)
+	autogold.Expect(`Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a Personal Access Token generated from https://gitlab.com/-
+  /user_settings/personal_access_tokens.
+  The Personal Access Token need the following scope: api.
+
+  GitLab CLI
+  Re-use an existing GitLab CLI (https://gitlab.com/gitlab-org/cli) session.
+  You must be logged into glab with 'glab auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+
+	// Wrap around to OAuth2.
+	drv.PressN(tea.KeyDown, 2)
+	autogold.Expect(`Select an authentication method:
+▶ OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+  Personal Access Token
+  Enter a Personal Access Token generated from https://gitlab.com/-
+  /user_settings/personal_access_tokens.
+  The Personal Access Token need the following scope: api.
+
+  GitLab CLI
+  Re-use an existing GitLab CLI (https://gitlab.com/gitlab-org/cli) session.
+  You must be logged into glab with 'glab auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+	drv.Press(tea.KeyEnter)
 }
 
 func TestAuthenticationFlow_PAT(t *testing.T) {
-	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-		wantToken := strings.TrimSpace(ts.ReadFile("want_token"))
-
+	drv := uitest.Drive(t, func(view ui.InteractiveView) {
 		got, err := new(Forge).AuthenticationFlow(t.Context(), view)
 		require.NoError(t, err)
 
 		assert.Equal(t, &AuthenticationToken{
 			AuthType:    AuthTypePAT,
-			AccessToken: wantToken,
+			AccessToken: "my-token",
 		}, got)
-	}, &uitest.RunScriptsOptions{
-		Update: *UpdateFixtures,
-	}, "testdata/auth/pat.txt")
+	}, nil)
+
+	drv.Press(tea.KeyDown) // select PAT
+	autogold.Expect(`Select an authentication method:
+  OAuth
+  Authorize git-spice to act on your behalf from this device only.
+  git-spice will get access to all repositories: public and private.
+  For private repositories, you will need to request installation from a
+  repository owner.
+
+▶ Personal Access Token
+  Enter a Personal Access Token generated from https://gitlab.com/-
+  /user_settings/personal_access_tokens.
+  The Personal Access Token need the following scope: api.
+
+  GitLab CLI
+  Re-use an existing GitLab CLI (https://gitlab.com/gitlab-org/cli) session.
+  You must be logged into glab with 'glab auth login' for this to work.
+  You can use this if you're just experimenting and don't want to set up a
+  token yet.
+`).Equal(t, drv.Snapshot())
+	drv.Press(tea.KeyEnter)
+
+	autogold.Expect("Enter Personal Access Token:\n").Equal(t, drv.Snapshot())
+	drv.Type("my-token")
+	drv.Press(tea.KeyEnter)
 }
 
 func TestGLabCLI(t *testing.T) {
