@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       name: Check out repository
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - run: mise run lint
@@ -30,7 +30,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       name: Check out repository
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
@@ -63,7 +63,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v5
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
