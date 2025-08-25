@@ -106,7 +106,7 @@ jobs:
         GOTESTSUM_FORMAT: github-actions
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v5.4.3
+      uses: codecov/codecov-action@v5.5.0
       if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out
