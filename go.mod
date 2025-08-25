@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.2
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.142.0
+	gitlab.com/gitlab-org/api/client-go v0.142.1
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
