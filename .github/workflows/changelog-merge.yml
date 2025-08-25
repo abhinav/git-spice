@@ -25,7 +25,7 @@ jobs:
       with:
         token: ${{ secrets.PAT }}  # for push
 
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - run: changie merge

@@ -27,7 +27,7 @@ jobs:
         ref: ${{ inputs.ref }}
         token: ${{ secrets.PAT }}
 
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,7 +85,7 @@ jobs:
       with:
         ref: ${{ inputs.ref }}
 
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
 

@@ -24,7 +24,7 @@ jobs:
         with:
           lfs: true
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v3
         with:
           working_directory: doc
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -36,7 +36,7 @@ jobs:
           MAIN_BUILD: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: doc/_site/
 

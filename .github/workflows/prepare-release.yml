@@ -22,7 +22,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v5
 
-    - uses: jdx/mise-action@v2
+    - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - id: run
