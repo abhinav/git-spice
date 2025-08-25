@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Add 'spice.submit.updateOnly' configuration option
-  to default to --update-only for upstack, downstack, and stack submit operations.
-time: 2025-07-25T10:42:01.838061167-07:00

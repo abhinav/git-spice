@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  repo sync: Add 'spice.repoSync.closedChanges' configuration option
-  to control how git-spice handles closed change requests.
-time: 2025-08-09T10:54:18.593124-07:00

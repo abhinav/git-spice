@@ -1,6 +1,0 @@
-kind: Changed
-body: >-
-  branch checkout:
-  With --detach, prompt now allows selecting any branch,
-  including those checked out in other worktrees.
-time: 2025-08-23T06:39:03.005085-07:00

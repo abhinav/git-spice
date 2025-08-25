@@ -314,7 +314,7 @@ Set to `0` to disable the timeout completely.
 
 ### spice.submit.template
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.17.0 -->
 
 Template to use when submitting a change request with $$gs branch submit$$,
 and multiple templates are available.
@@ -386,7 +386,7 @@ on a case-by-case basis.
 
 ### spice.submit.updateOnly
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.17.0 -->
 
 Whether multi-branch submission commands ($$gs stack submit$$ and friends)
 should assume --update-only mode by default.
@@ -403,7 +403,7 @@ This option has no effect on $$gs branch submit$$,
 
 ### spice.repoSync.closedChanges
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.17.0 -->
 
 How to handle closed Change Requests that have not been merged
 when running $$gs repo sync$$.
