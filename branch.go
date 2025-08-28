@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/sliceutil"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
@@ -57,12 +58,14 @@ func (cfg *BranchPromptConfig) BeforeApply(kctx *kong.Context) error {
 		view ui.View,
 		repo *git.Repository,
 		store *state.Store,
+		svc *spice.Service,
 	) (*branchPrompter, error) {
 		return &branchPrompter{
 			sort:  cfg.BranchPromptSort,
 			view:  view,
 			repo:  repo,
 			store: store,
+			svc:   svc,
 		}, nil
 	})
 }
@@ -79,6 +82,7 @@ type branchPrompter struct {
 	view  ui.View
 	repo  *git.Repository
 	store *state.Store
+	svc   *spice.Service
 }
 
 // branchPromptRequest defines parameters for the branch prompt
@@ -102,6 +106,8 @@ type branchPromptRequest struct {
 	Description string
 }
 
+// Prompt displays a searchable list of branches in the terminal
+// and returns the selected branch's name.
 func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (string, error) {
 	disabled := func(git.LocalBranch) bool { return false }
 	if req.Disabled != nil {
@@ -109,6 +115,9 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		// TODO: allow disabled branches to specify a reason.
 		// Can be used to say "(checked out elsewhere)" or similar.
 	}
+
+	// Create branch graph to get ChangeMetadata
+	branchGraph, _ := p.svc.BranchGraph(ctx, nil)
 
 	trunk := p.store.Trunk()
 	filter := func(git.LocalBranch) bool { return true }
@@ -138,11 +147,19 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		return "", fmt.Errorf("list local branches: %w", err)
 	}
 
-	bases := make(map[string]string) // branch -> base
+	bases := make(map[string]string)     // branch -> base
+	changeIDs := make(map[string]string) // branch -> change ID
 	for _, branch := range localBranches {
 		res, err := p.store.LookupBranch(ctx, branch.Name)
 		if err == nil {
 			bases[branch.Name] = res.Base
+		}
+		if branchGraph != nil {
+			if item, ok := branchGraph.Lookup(branch.Name); ok && item.Change != nil {
+				changeIDs[branch.Name] = item.Change.ChangeID().String()
+			}
+		} else {
+			changeIDs[branch.Name] = ""
 		}
 	}
 
@@ -155,6 +172,7 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 			Base:     bases[branch.Name],
 			Branch:   branch.Name,
 			Disabled: disabled(branch),
+			ChangeID: changeIDs[branch.Name],
 		})
 	}
 	if p.sort == "" {
