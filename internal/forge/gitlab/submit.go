@@ -19,6 +19,9 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		TargetBranch: &req.Base,
 		SourceBranch: &req.Head,
 	}
+	if r.removeSourceBranchOnMerge {
+		input.RemoveSourceBranch = gitlab.Ptr(true)
+	}
 	if req.Body != "" {
 		input.Description = &req.Body
 	}

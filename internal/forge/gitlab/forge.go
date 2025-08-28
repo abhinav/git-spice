@@ -38,6 +38,10 @@ type Options struct {
 	// ClientID is the OAuth client ID for GitLab OAuth device flow.
 	// This should be used if the GitLab instance is Self Managed.
 	ClientID string `name:"gitlab-oauth-client-id" hidden:"" env:"GITLAB_OAUTH_CLIENT_ID" config:"forge.gitlab.oauth.clientID" help:"GitLab OAuth client ID"`
+
+	// RemoveSourceBranch specifies whether a branch should be deleted
+	// after its Merge Request is merged.
+	RemoveSourceBranch bool `name:"gitlab-remove-source-branch" hidden:"" config:"forge.gitlab.removeSourceBranch" default:"true" help:"Remove source branch after merging a merge request"`
 }
 
 // Forge builds a GitLab Forge.
@@ -101,7 +105,9 @@ func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationTo
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}
 
-	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), glc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), glc, &repositoryOptions{
+		RemoveSourceBranchOnMerge: f.Options.RemoveSourceBranch,
+	})
 }
 
 // RepositoryID is a unique identifier for a GitLab repository.

@@ -162,7 +162,7 @@ func TestListChangeComments(t *testing.T) {
 				"owner", "repo",
 				silogtest.New(t),
 				client,
-				&repoID,
+				&repositoryOptions{RepositoryID: &repoID},
 			)
 			require.NoError(t, err)
 

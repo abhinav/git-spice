@@ -19,9 +19,7 @@ import (
 // [TransportRecorder].
 type TransportRecorderOptions struct {
 	// Update specifies whether the Recorder should update fixtures.
-	//
-	// If unset, we will assume false.
-	Update *bool
+	Update func() bool
 
 	// WrapRealTransport wraps the real HTTP transport
 	// with the given function.
@@ -53,7 +51,7 @@ func NewTransportRecorder(
 		return nil
 	}
 
-	if opts.Update != nil && *opts.Update {
+	if opts.Update != nil && opts.Update() {
 		mode = recorder.ModeRecordOnly
 		if opts.WrapRealTransport != nil {
 			realTransport = opts.WrapRealTransport(t, realTransport)

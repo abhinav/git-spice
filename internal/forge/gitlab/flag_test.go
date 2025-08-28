@@ -2,13 +2,12 @@ package gitlab
 
 import "flag"
 
-var UpdateFixtures *bool
+func UpdateFixtures() bool {
+	return flag.Lookup("update").Value.(flag.Getter).Get().(bool)
+}
 
 func init() {
-	if updateFlag := flag.Lookup("update"); updateFlag != nil {
-		value := updateFlag.Value.(flag.Getter).Get().(bool)
-		UpdateFixtures = &value
-	} else {
-		UpdateFixtures = flag.Bool("update", false, "update test fixtures")
+	if flag.Lookup("update") == nil {
+		flag.Bool("update", false, "update test fixtures")
 	}
 }

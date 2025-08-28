@@ -44,11 +44,10 @@ type TestingT interface {
 
 // Config configures the behavior of the fixture system.
 type Config struct {
-	// Update is a pointer to a value speciftying
-	// whether we're in update mode or read mode.
+	// Update reports whether we're in update more or read mode.
 	//
 	// This must not be nil.
-	Update *bool // required
+	Update func() bool // required
 }
 
 // Fixture is a value that is sourced from a function in update mode,
@@ -71,7 +70,7 @@ func (f Fixture[T]) Get(t TestingT) T {
 	t.Helper()
 
 	fpath := filepath.Join("testdata", t.Name(), f.name)
-	if *f.cfg.Update {
+	if f.cfg.Update() {
 		v := f.gen()
 
 		require.NoError(t, os.MkdirAll(filepath.Dir(fpath), 0o755))
