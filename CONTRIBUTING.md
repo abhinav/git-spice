@@ -41,6 +41,9 @@ mise run lint
 # Run all tests
 mise run test
 
+# Run a specific test (e.g. `auth_detect_forge.txt`)
+mise run test:script --run auth_detect_forge
+
 # Run a documentation server
 mise run doc:serve
 ```

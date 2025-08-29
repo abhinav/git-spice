@@ -1,0 +1,34 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed 12
+await
+snapshot
+cmp stdout filter
+
+feed 7 <Enter>
+
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "foo", "base": "main", "changeID": "#123"},
+  {"branch": "bar", "base": "foo", "changeID": "#127"},
+  {"branch": "baz", "base": "bar"},
+  {"branch": "qux", "base": "baz"}
+]
+-- prompt --
+Select a branch:
+      ┏━■ qux ◀
+    ┏━┻□ baz
+  ┏━┻□ bar (#127)
+┏━┻□ foo (#123)
+main
+-- filter --
+Select a branch:
+┏━■ bar (#127) ◀
+foo (#123)
+-- want --
+bar

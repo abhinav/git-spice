@@ -69,6 +69,10 @@ type BranchTreeItem struct {
 	// Branch is the name of the branch.
 	Branch string
 
+	// ChangeID is the optional change ID associated with this branch.
+	// It will be appended to the branch name.
+	ChangeID string
+
 	// Base is the name of the branch this branch is on top of.
 	// This will be used to create a tree view of branches.
 	// Branches with no base are considered root branches.
@@ -86,6 +90,13 @@ type branchInfo struct {
 	Aboves     []int // indexes of branches in 'all' with this as base
 	Highlights []int // indexes of runes in Branch name to highlight
 	Visible    bool  // whether this branch is visible
+}
+
+func (b *branchInfo) displayText() string {
+	if b.ChangeID != "" {
+		return fmt.Sprintf("%s (%s)", b.Branch, b.ChangeID)
+	}
+	return b.Branch
 }
 
 // BranchTreeSelect is a prompt that allows selecting a branch
@@ -379,7 +390,7 @@ func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
 	if len(b.filter) == 0 {
 		return true
 	}
-	matches := fuzzy.Find(string(b.filter), []string{bi.Branch})
+	matches := fuzzy.Find(string(b.filter), []string{bi.displayText()})
 	if len(matches) == 0 {
 		return false
 	}
@@ -463,7 +474,7 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 
 			var o strings.Builder
 			lastRuneIdx := 0
-			label := []rune(bi.Branch)
+			label := []rune(bi.displayText())
 			for _, runeIdx := range highlights {
 				o.WriteString(nameStyle.Render(string(label[lastRuneIdx:runeIdx])))
 				o.WriteString(highlightStyle.Render(string(label[runeIdx])))

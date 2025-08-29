@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/sliceutil"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
@@ -57,12 +57,14 @@ func (cfg *BranchPromptConfig) BeforeApply(kctx *kong.Context) error {
 		view ui.View,
 		repo *git.Repository,
 		store *state.Store,
+		svc *spice.Service,
 	) (*branchPrompter, error) {
 		return &branchPrompter{
 			sort:  cfg.BranchPromptSort,
 			view:  view,
 			repo:  repo,
 			store: store,
+			svc:   svc,
 		}, nil
 	})
 }
@@ -79,6 +81,7 @@ type branchPrompter struct {
 	view  ui.View
 	repo  *git.Repository
 	store *state.Store
+	svc   *spice.Service
 }
 
 // branchPromptRequest defines parameters for the branch prompt
@@ -102,6 +105,8 @@ type branchPromptRequest struct {
 	Description string
 }
 
+// Prompt displays a searchable list of branches in the terminal
+// and returns the selected branch's name.
 func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (string, error) {
 	disabled := func(git.LocalBranch) bool { return false }
 	if req.Disabled != nil {
@@ -110,15 +115,14 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		// Can be used to say "(checked out elsewhere)" or similar.
 	}
 
+	branchGraph, err := p.svc.BranchGraph(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("load branch graph: %w", err)
+	}
+
 	trunk := p.store.Trunk()
 	filter := func(git.LocalBranch) bool { return true }
 	if req.TrackedOnly {
-		tracked, err := sliceutil.CollectErr(p.store.ListBranches(ctx))
-		if err != nil {
-			return "", fmt.Errorf("list tracked branches: %w", err)
-		}
-		slices.Sort(tracked)
-
 		oldFilter := filter
 		filter = func(b git.LocalBranch) bool {
 			if b.Name == trunk {
@@ -126,36 +130,34 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 				return oldFilter(b)
 			}
 
-			_, ok := slices.BinarySearch(tracked, b.Name)
+			_, ok := branchGraph.Lookup(b.Name)
 			return ok && oldFilter(b)
 		}
 	}
 
-	localBranches, err := sliceutil.CollectErr(p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{
-		Sort: p.sort,
-	}))
-	if err != nil {
-		return "", fmt.Errorf("list local branches: %w", err)
-	}
-
-	bases := make(map[string]string) // branch -> base
-	for _, branch := range localBranches {
-		res, err := p.store.LookupBranch(ctx, branch.Name)
-		if err == nil {
-			bases[branch.Name] = res.Base
+	var items []widget.BranchTreeItem
+	for branch, err := range p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{Sort: p.sort}) {
+		if err != nil {
+			return "", fmt.Errorf("list local branches: %w", err)
 		}
-	}
 
-	items := make([]widget.BranchTreeItem, 0, len(localBranches))
-	for _, branch := range localBranches {
 		if !filter(branch) {
 			continue
 		}
-		items = append(items, widget.BranchTreeItem{
-			Base:     bases[branch.Name],
+
+		widgetItem := widget.BranchTreeItem{
 			Branch:   branch.Name,
 			Disabled: disabled(branch),
-		})
+		}
+
+		if graphItem, ok := branchGraph.Lookup(branch.Name); ok {
+			widgetItem.Base = graphItem.Base
+			if graphItem.Change != nil {
+				widgetItem.ChangeID = graphItem.Change.ChangeID().String()
+			}
+		}
+
+		items = append(items, widgetItem)
 	}
 	if p.sort == "" {
 		// If no sort order is specified, sort by branch name.
