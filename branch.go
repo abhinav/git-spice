@@ -8,7 +8,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -116,18 +115,14 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		// Can be used to say "(checked out elsewhere)" or similar.
 	}
 
-	// Create branch graph to get ChangeMetadata
-	branchGraph, _ := p.svc.BranchGraph(ctx, nil)
+	branchGraph, err := p.svc.BranchGraph(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("load branch graph: %w", err)
+	}
 
 	trunk := p.store.Trunk()
 	filter := func(git.LocalBranch) bool { return true }
 	if req.TrackedOnly {
-		tracked, err := sliceutil.CollectErr(p.store.ListBranches(ctx))
-		if err != nil {
-			return "", fmt.Errorf("list tracked branches: %w", err)
-		}
-		slices.Sort(tracked)
-
 		oldFilter := filter
 		filter = func(b git.LocalBranch) bool {
 			if b.Name == trunk {
@@ -135,45 +130,34 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 				return oldFilter(b)
 			}
 
-			_, ok := slices.BinarySearch(tracked, b.Name)
+			_, ok := branchGraph.Lookup(b.Name)
 			return ok && oldFilter(b)
 		}
 	}
 
-	localBranches, err := sliceutil.CollectErr(p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{
-		Sort: p.sort,
-	}))
-	if err != nil {
-		return "", fmt.Errorf("list local branches: %w", err)
-	}
-
-	bases := make(map[string]string)     // branch -> base
-	changeIDs := make(map[string]string) // branch -> change ID
-	for _, branch := range localBranches {
-		res, err := p.store.LookupBranch(ctx, branch.Name)
-		if err == nil {
-			bases[branch.Name] = res.Base
+	var items []widget.BranchTreeItem
+	for branch, err := range p.repo.LocalBranches(ctx, &git.LocalBranchesOptions{Sort: p.sort}) {
+		if err != nil {
+			return "", fmt.Errorf("list local branches: %w", err)
 		}
-		if branchGraph != nil {
-			if item, ok := branchGraph.Lookup(branch.Name); ok && item.Change != nil {
-				changeIDs[branch.Name] = item.Change.ChangeID().String()
-			}
-		} else {
-			changeIDs[branch.Name] = ""
-		}
-	}
 
-	items := make([]widget.BranchTreeItem, 0, len(localBranches))
-	for _, branch := range localBranches {
 		if !filter(branch) {
 			continue
 		}
-		items = append(items, widget.BranchTreeItem{
-			Base:     bases[branch.Name],
+
+		widgetItem := widget.BranchTreeItem{
 			Branch:   branch.Name,
 			Disabled: disabled(branch),
-			ChangeID: changeIDs[branch.Name],
-		})
+		}
+
+		if graphItem, ok := branchGraph.Lookup(branch.Name); ok {
+			widgetItem.Base = graphItem.Base
+			if graphItem.Change != nil {
+				widgetItem.ChangeID = graphItem.Change.ChangeID().String()
+			}
+		}
+
+		items = append(items, widgetItem)
 	}
 	if p.sort == "" {
 		// If no sort order is specified, sort by branch name.
