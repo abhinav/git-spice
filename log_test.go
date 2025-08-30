@@ -91,3 +91,61 @@ func TestPushStatusFormat(t *testing.T) {
 		})
 	})
 }
+
+func TestChangeFormat(t *testing.T) {
+	tests := []struct {
+		give    string
+		want    changeFormat
+		wantStr string
+	}{
+		{
+			give:    "id",
+			want:    changeFormatID,
+			wantStr: "id",
+		},
+		{
+			give:    "url",
+			want:    changeFormatURL,
+			wantStr: "url",
+		},
+		{
+			give:    "ID",
+			want:    changeFormatID,
+			wantStr: "id",
+		},
+		{
+			give:    "URL",
+			want:    changeFormatURL,
+			wantStr: "url",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			t.Run("Unmarshal", func(t *testing.T) {
+				var got changeFormat
+				err := got.UnmarshalText([]byte(tt.give))
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			})
+
+			t.Run("String", func(t *testing.T) {
+				got := tt.want.String()
+				assert.Equal(t, tt.wantStr, got)
+			})
+		})
+	}
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Run("Unmarshal", func(t *testing.T) {
+			var got changeFormat
+			err := got.UnmarshalText([]byte("invalid"))
+			require.Error(t, err)
+		})
+
+		t.Run("String", func(t *testing.T) {
+			got := changeFormat(999) // invalid value
+			assert.Equal(t, "changeFormat(999)", got.String())
+		})
+	})
+}
