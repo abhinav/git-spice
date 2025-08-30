@@ -430,9 +430,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	)
 	namec := make(chan string)
 	for range runtime.GOMAXPROCS(0) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			for name := range namec {
 				resp, err := s.LookupBranch(ctx, name)
@@ -462,7 +460,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 				})
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 
 	for name, err := range s.store.ListBranches(ctx) {

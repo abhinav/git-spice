@@ -24,15 +24,13 @@ func TestRepositoryListRemoteRefs(t *testing.T) {
 	mockExecer.EXPECT().
 		Start(gomock.Any()).
 		Do(func(cmd *exec.Cmd) error {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 
 				_, _ = io.WriteString(cmd.Stdout, "abc123\trefs/heads/main\n")
 				_, _ = io.WriteString(cmd.Stdout, "malformed entry is ignored\n")
 				_, _ = io.WriteString(cmd.Stdout, "def456\trefs/heads/feature\n")
 				assert.NoError(t, cmd.Stdout.(io.Closer).Close())
-			}()
+			})
 			return nil
 		})
 	mockExecer.EXPECT().
@@ -70,15 +68,13 @@ func TestRepositoryListRemoteRefsOptions(t *testing.T) {
 				"--heads", "origin", "refs/heads/feat*",
 			}, cmd.Args[1:])
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 
 				_, _ = io.WriteString(cmd.Stdout, "abc123\trefs/heads/feat1\n")
 				_, _ = io.WriteString(cmd.Stdout, "def456\trefs/heads/feat2\n")
 				_, _ = io.WriteString(cmd.Stdout, "ghi789\trefs/heads/feat3\n")
 				assert.NoError(t, cmd.Stdout.(io.Closer).Close())
-			}()
+			})
 			return nil
 		})
 	mockExecer.EXPECT().

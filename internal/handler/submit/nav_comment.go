@@ -262,9 +262,7 @@ func updateNavigationComments(
 		upserted []string
 	)
 	for range min(runtime.GOMAXPROCS(0), len(branchesToSync)) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 
 			postc := postc
 			updatec := updatec
@@ -327,7 +325,7 @@ func updateNavigationComments(
 					}
 				}
 			}
-		}()
+		})
 	}
 
 	// Concurrently post and update comments.
