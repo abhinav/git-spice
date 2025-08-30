@@ -287,7 +287,13 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	if req.Options.All {
 		branchesToLog = branchGraph.Names()
 	} else {
-		branchesToLog = branchGraph.Stack(req.Branch)
+		// If req.Branch is not tracked,
+		// we still want to list all branches.
+		if _, ok := branchGraph.Lookup(req.Branch); !ok {
+			branchesToLog = branchGraph.Names()
+		} else {
+			branchesToLog = branchGraph.Stack(req.Branch)
+		}
 	}
 	for branch := range branchesToLog {
 		entryc <- branchLogEntry{Name: branch}
