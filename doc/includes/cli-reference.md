@@ -12,7 +12,7 @@ gs (git-spice) is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl)
+**Configuration**: [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl)
 
 ## Shell
 

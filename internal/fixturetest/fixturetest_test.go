@@ -12,19 +12,21 @@ import (
 func TestFixture(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	cfg := fixturetest.Config{Update: new(bool)}
+	var giveUpdate bool
+
+	cfg := fixturetest.Config{Update: func() bool { return giveUpdate }}
 	fixture := fixturetest.New(cfg, "number", rand.Int)
 
 	// Initial generation.
-	*cfg.Update = true
+	giveUpdate = true
 	v1 := fixture.Get(t)
 
 	// Read from disk.
-	*cfg.Update = false
+	giveUpdate = false
 	assert.Equal(t, v1, fixture.Get(t))
 
 	// Update again.
-	*cfg.Update = true
+	giveUpdate = true
 	// At least one attempt out of N should succeed.
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
 		v2 := fixture.Get(collectTAdapter{t, "Update"})

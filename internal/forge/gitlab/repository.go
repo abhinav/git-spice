@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strconv"
@@ -23,9 +24,17 @@ type Repository struct {
 	// Information about the current user:
 	userID   int
 	userRole gitlab.AccessLevelValue
+
+	removeSourceBranchOnMerge bool
 }
 
 var _ forge.Repository = (*Repository)(nil)
+
+type repositoryOptions struct {
+	RepositoryID *int // if nil, repository ID will be looked up
+
+	RemoveSourceBranchOnMerge bool
+}
 
 func newRepository(
 	ctx context.Context,
@@ -33,8 +42,11 @@ func newRepository(
 	owner, repo string,
 	log *silog.Logger,
 	client *gitlabClient,
-	repoID *int, // if nil, repository ID will be looked up
+	opts *repositoryOptions,
 ) (*Repository, error) {
+	opts = cmp.Or(opts, &repositoryOptions{})
+	repoID := opts.RepositoryID
+
 	var projectIdentifier string
 	if repoID != nil {
 		projectIdentifier = strconv.Itoa(*repoID)
@@ -71,6 +83,8 @@ func newRepository(
 		userID:   user.ID,
 		userRole: accessLevel,
 		repoID:   project.ID,
+
+		removeSourceBranchOnMerge: opts.RemoveSourceBranchOnMerge,
 	}, nil
 }
 

@@ -172,6 +172,17 @@ For Self-Hosted GitLab instances, you must set this value to a custom Client ID.
 
 See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
+### spice.forge.gitlab.removeSourceBranch
+
+<!-- gs:unreleased -->
+
+Whether to remove the source branch when a Merge Request is merged.
+
+**Accepted values:**
+
+- `true` (default)
+- `false`
+
 ### spice.log.all
 
 Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,

@@ -107,7 +107,13 @@ func TestIntegration_Repository_FindChangeByID(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(
+		ctx,
+		new(gitlab.Forge),
+		"abg", "test-repo",
+		silogtest.New(t), ghc,
+		&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -140,7 +146,11 @@ func TestIntegration_Repository_FindChangesByBranch(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(
+		ctx,
+		new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc,
+		&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
 	require.NoError(t, err)
 
 	t.Run("found", func(t *testing.T) {
@@ -174,7 +184,12 @@ func TestIntegration_Repository_ChangesStates(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(
+		ctx,
+		new(gitlab.Forge),
+		"abg", "test-repo", silogtest.New(t), ghc,
+		&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
 	require.NoError(t, err)
 
 	states, err := repo.ChangesStates(ctx, []forge.ChangeID{
@@ -197,7 +212,11 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 		ctx := t.Context()
 		rec := newRecorder(t, t.Name())
 		ghc := newGitLabClient(rec.GetDefaultClient())
-		repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
+		repo, err := gitlab.NewRepository(
+			ctx, new(gitlab.Forge), "abg", "test-repo",
+			silogtest.New(t), ghc,
+			&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+		)
 		require.NoError(t, err)
 
 		templates, err := repo.ListChangeTemplates(ctx)
@@ -227,7 +246,12 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID)
+	repo, err := gitlab.NewRepository(
+		ctx,
+		new(gitlab.Forge), "abg", "test-repo",
+		silogtest.New(t), ghc,
+		&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
@@ -261,7 +285,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		gitRepo *git.Repository // only when _update is true
 		gitWork *git.Worktree
 	)
-	if *_update {
+	if gitlab.UpdateFixtures() {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
@@ -324,7 +348,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
 	)
 	require.NoError(t, err)
 
@@ -345,7 +369,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		newBase := newBaseFixture.Get(t)
 		t.Logf("Pushing new base: %s", newBase)
-		if *_update {
+		if gitlab.UpdateFixtures() {
 			require.NoError(t,
 				gitWork.Push(ctx, git.PushOptions{
 					Remote:  "origin",
@@ -424,7 +448,7 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 		gitRepo *git.Repository // only when _update is true
 		gitWork *git.Worktree
 	)
-	if *_update {
+	if gitlab.UpdateFixtures() {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
@@ -490,7 +514,7 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
 	)
 	require.NoError(t, err)
 
@@ -528,7 +552,7 @@ func TestIntegration_Repository_comments(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
 	)
 	require.NoError(t, err)
 
@@ -567,7 +591,7 @@ func TestIntegration_Repository_ListChangeComments_simple(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
 	)
 	require.NoError(t, err)
 
@@ -611,7 +635,7 @@ func TestIntegration_Repository_ListChangeComments_paginated(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitLabClient(rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
 	)
 	require.NoError(t, err)
 
@@ -661,6 +685,108 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", silogtest.New(t), ghc, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "404 Not Found")
+}
+
+func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
+	ctx := t.Context()
+	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
+		return randomString(8)
+	})
+
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if gitlab.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := ioutil.TestLogWriter(t, "[git] ")
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchName,
+		}), "could not create branch: %s", branchName)
+		require.NoError(t, gitWork.Checkout(ctx, branchName),
+			"could not checkout branch: %s", branchName)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchName+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin")
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchName),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Deleting remote branch: %s", branchName)
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchName),
+				}), "error deleting branch")
+		})
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc,
+		&gitlab.RepositoryOptions{
+			RepositoryID:              _testRepoID,
+			RemoveSourceBranchOnMerge: true,
+		},
+	)
+	require.NoError(t, err)
+
+	change, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: branchName,
+		Body:    "Test MR with RemoveSourceBranch option",
+		Base:    "main",
+		Head:    branchName,
+	})
+	require.NoError(t, err, "error creating MR")
+
+	mrID := change.ID.(*gitlab.MR)
+	mr, _, err := ghc.MergeRequests.GetMergeRequest(
+		*_testRepoID, mrID.Number, nil,
+		gogitlab.WithContext(ctx),
+	)
+	require.NoError(t, err, "error fetching created MR")
+	assert.True(t, mr.ForceRemoveSourceBranch,
+		"RemoveSourceBranch should be true on created MR")
 }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

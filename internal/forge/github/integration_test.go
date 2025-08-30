@@ -31,10 +31,7 @@ import (
 // This file tests basic, end-to-end interactions with the GitHub API
 // using recorded fixtures.
 
-var (
-	_update   = github.UpdateFixtures
-	_fixtures = fixturetest.Config{Update: _update}
-)
+var _fixtures = fixturetest.Config{Update: github.UpdateFixtures}
 
 // To avoid looking this up for every test that needs the repo ID,
 // we'll just hardcode it here.
@@ -52,7 +49,7 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	})
 
 	return httptest.NewTransportRecorder(t, name, httptest.TransportRecorderOptions{
-		Update: _update,
+		Update: github.UpdateFixtures,
 		WrapRealTransport: func(t testing.TB, transport http.RoundTripper) http.RoundTripper {
 			githubToken := os.Getenv("GITHUB_TOKEN")
 			require.NotEmpty(t, githubToken,
@@ -247,7 +244,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		gitRepo *git.Repository // only when _update is true
 		gitWork *git.Worktree
 	)
-	if *_update {
+	if github.UpdateFixtures() {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
@@ -331,7 +328,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 
 		newBase := newBaseFixture.Get(t)
 		t.Logf("Pushing new base: %s", newBase)
-		if *_update {
+		if github.UpdateFixtures() {
 			require.NoError(t,
 				gitWork.Push(t.Context(), git.PushOptions{
 					Remote:  "origin",
@@ -409,7 +406,7 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 		gitRepo *git.Repository // only when _update is true
 		gitWork *git.Worktree
 	)
-	if *_update {
+	if github.UpdateFixtures() {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
@@ -566,7 +563,7 @@ func TestIntegration_Repository_SubmitChange_baseBranchDoesNotExist(t *testing.T
 		gitRepo *git.Repository // only when _update is true
 		gitWork *git.Worktree
 	)
-	if *_update {
+	if github.UpdateFixtures() {
 		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
 		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
