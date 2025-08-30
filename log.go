@@ -80,9 +80,9 @@ type ListHandler interface {
 type branchLogCmd struct {
 	list.Options
 
-	ChangeFormat      string  `config:"log.crFormat" hidden:"" default:"id" enum:"id,url"`
-	ChangeFormatShort *string `config:"logShort.crFormat" hidden:"" enum:"id,url"`
-	ChangeFormatLong  *string `config:"logLong.crFormat" hidden:"" enum:"id,url"`
+	ChangeFormat      changeFormat  `config:"log.crFormat" hidden:"" default:"id"`
+	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
+	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 }
@@ -116,7 +116,7 @@ func (cmd *branchLogCmd) run(
 	} else if !opts.Commits && cmd.ChangeFormatShort != nil {
 		changeFormat = *cmd.ChangeFormatShort
 	}
-	if changeFormat == "url" {
+	if changeFormat == changeFormatURL {
 		req.Include |= list.IncludeChangeURL
 	}
 	if opts.Commits {
@@ -153,12 +153,12 @@ func (cmd *branchLogCmd) run(
 
 			if cid := b.ChangeID; cid != nil {
 				switch changeFormat {
-				case "id", "":
+				case changeFormatID:
 					_, _ = fmt.Fprintf(&o, " (%v)", cid)
-				case "url":
+				case changeFormatURL:
 					_, _ = fmt.Fprintf(&o, " (%s)", b.ChangeURL)
 				default:
-					must.Failf("unknown change format: %v", cmd.ChangeFormat)
+					must.Failf("unknown change format: %v", changeFormat)
 				}
 			}
 
@@ -271,5 +271,38 @@ func (f pushStatusFormat) FormatTo(sb *strings.Builder, ahead, behind int, needs
 
 	case pushStatusDisabled:
 		// do nothing
+	}
+}
+
+// changeFormat enumerates the possible values for the changeFormat config.
+type changeFormat int
+
+const (
+	changeFormatID  changeFormat = iota // "id"
+	changeFormatURL                     // "url"
+)
+
+var _ encoding.TextUnmarshaler = (*changeFormat)(nil)
+
+func (f *changeFormat) UnmarshalText(bs []byte) error {
+	switch strings.ToLower(string(bs)) {
+	case "id":
+		*f = changeFormatID
+	case "url":
+		*f = changeFormatURL
+	default:
+		return fmt.Errorf("invalid value %q: expected id or url", string(bs))
+	}
+	return nil
+}
+
+func (f changeFormat) String() string {
+	switch f {
+	case changeFormatID:
+		return "id"
+	case changeFormatURL:
+		return "url"
+	default:
+		return fmt.Sprintf("changeFormat(%d)", int(f))
 	}
 }
