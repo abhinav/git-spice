@@ -25,7 +25,6 @@ func TestRepositoryListRemoteRefs(t *testing.T) {
 		Start(gomock.Any()).
 		Do(func(cmd *exec.Cmd) error {
 			wg.Go(func() {
-
 				_, _ = io.WriteString(cmd.Stdout, "abc123\trefs/heads/main\n")
 				_, _ = io.WriteString(cmd.Stdout, "malformed entry is ignored\n")
 				_, _ = io.WriteString(cmd.Stdout, "def456\trefs/heads/feature\n")
@@ -69,7 +68,6 @@ func TestRepositoryListRemoteRefsOptions(t *testing.T) {
 			}, cmd.Args[1:])
 
 			wg.Go(func() {
-
 				_, _ = io.WriteString(cmd.Stdout, "abc123\trefs/heads/feat1\n")
 				_, _ = io.WriteString(cmd.Stdout, "def456\trefs/heads/feat2\n")
 				_, _ = io.WriteString(cmd.Stdout, "ghi789\trefs/heads/feat3\n")

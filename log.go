@@ -174,7 +174,6 @@ func (cmd *branchLogCmd) run(
 	var wg sync.WaitGroup
 	for range runtime.GOMAXPROCS(0) {
 		wg.Go(func() {
-
 			for entry := range entryc {
 				branch := entry.Branch
 				info := &branchInfo{

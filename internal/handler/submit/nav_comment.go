@@ -263,7 +263,6 @@ func updateNavigationComments(
 	)
 	for range min(runtime.GOMAXPROCS(0), len(branchesToSync)) {
 		wg.Go(func() {
-
 			postc := postc
 			updatec := updatec
 			for postc != nil || updatec != nil {

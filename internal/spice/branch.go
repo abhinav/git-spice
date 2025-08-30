@@ -431,7 +431,6 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 	namec := make(chan string)
 	for range runtime.GOMAXPROCS(0) {
 		wg.Go(func() {
-
 			for name := range namec {
 				resp, err := s.LookupBranch(ctx, name)
 				if err != nil {

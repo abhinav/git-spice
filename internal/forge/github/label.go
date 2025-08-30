@@ -66,7 +66,6 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 	labelIDs := make([]githubv4.ID, len(labelNames)) // pre-allocate to fill without locking
 	for range runtime.GOMAXPROCS(0) {
 		wg.Go(func() {
-
 			for idx := range idxc {
 				labelName := labelNames[idx]
 
