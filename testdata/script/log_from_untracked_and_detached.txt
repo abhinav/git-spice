@@ -1,0 +1,62 @@
+# Test that 'gs log long' and 'gs log short' list all tracked branches
+# when run from untracked branches and detached HEAD.
+
+as 'Test <test@example.com>'
+at '2025-08-30T10:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a stack of tracked branches: feat1 -> feat2 -> feat3
+gs bc feat1 -m 'Add feature 1'
+gs bc feat2 -m 'Add feature 2'
+gs bc feat3 -m 'Add feature 3'
+
+# Go back and create another stack: feat1 -> feat4 -> feat5
+gs bco feat1
+gs bc feat4 -m 'Add feature 4'
+gs bc feat5 -m 'Add feature 5'
+
+# Create an untracked branch
+git checkout -b untracked_branch main
+git add untracked.txt
+git commit -m 'Add untracked feature'
+
+# Test from untracked branch - should show all tracked branches
+gs log short
+cmp stderr $WORK/golden/log_short.txt
+gs log long
+cmp stderr $WORK/golden/log_long.txt
+
+# Test from detached HEAD - should show all tracked branches
+git checkout --detach main
+gs log short
+cmp stderr $WORK/golden/log_short.txt
+gs log long
+cmp stderr $WORK/golden/log_long.txt
+
+-- repo/untracked.txt --
+untracked content
+
+-- golden/log_short.txt --
+    ┏━□ feat3
+  ┏━┻□ feat2
+  ┃ ┏━□ feat5
+  ┣━┻□ feat4
+┏━┻□ feat1
+main
+-- golden/log_long.txt --
+    ┏━□ feat3
+    ┃   9276838 Add feature 3 (now)
+  ┏━┻□ feat2
+  ┃    588a367 Add feature 2 (now)
+  ┃ ┏━□ feat5
+  ┃ ┃   5b70527 Add feature 5 (now)
+  ┣━┻□ feat4
+  ┃    9037034 Add feature 4 (now)
+┏━┻□ feat1
+┃    f9bce04 Add feature 1 (now)
+main

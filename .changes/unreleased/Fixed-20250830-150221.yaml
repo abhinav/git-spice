@@ -1,0 +1,6 @@
+kind: Fixed
+body: >-
+  log: List all tracked branches
+  when run from an untracked branch or detached HEAD.
+  Previously, this behavior was undefined.
+time: 2025-08-30T15:02:21.640757-07:00
