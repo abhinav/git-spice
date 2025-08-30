@@ -3,11 +3,7 @@ package main
 import (
 	"context"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -25,14 +21,8 @@ func (*logShortCmd) Help() string {
 
 func (cmd *logShortCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	repo *git.Repository,
 	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
-	forges *forge.Registry,
+	listHandler ListHandler,
 ) (err error) {
-	return cmd.run(ctx, &branchLogOptions{
-		Log: log,
-	}, repo, wt, store, svc, forges)
+	return cmd.run(ctx, nil, wt, listHandler)
 }
