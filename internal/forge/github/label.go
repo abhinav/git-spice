@@ -65,10 +65,7 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 	// One query instead of many.
 	labelIDs := make([]githubv4.ID, len(labelNames)) // pre-allocate to fill without locking
 	for range runtime.GOMAXPROCS(0) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			for idx := range idxc {
 				labelName := labelNames[idx]
 
@@ -83,7 +80,7 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 				r.log.Debug("Resolved label ID", "name", labelName, "id", labelID)
 				labelIDs[idx] = labelID
 			}
-		}()
+		})
 	}
 
 	for idx := range labelNames {

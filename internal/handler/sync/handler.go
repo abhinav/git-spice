@@ -477,10 +477,7 @@ func (h *Handler) findForgeFinishedBranches(
 
 	var wg sync.WaitGroup
 	if len(submittedBranches) > 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			changeIDs := make([]forge.ChangeID, len(submittedBranches))
 			for i, b := range submittedBranches {
 				changeIDs[i] = b.Change
@@ -495,16 +492,13 @@ func (h *Handler) findForgeFinishedBranches(
 			for i, state := range states {
 				submittedBranches[i].State = state
 			}
-		}()
+		})
 	}
 
 	if len(trackedBranches) > 0 {
 		trackedch := make(chan *trackedBranch)
 		for range min(runtime.GOMAXPROCS(0), len(trackedBranches)) {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
+			wg.Go(func() {
 				for b := range trackedch {
 					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
 						Limit: 3,
@@ -533,7 +527,7 @@ func (h *Handler) findForgeFinishedBranches(
 					}
 
 				}
-			}()
+			})
 		}
 
 		for _, b := range trackedBranches {
