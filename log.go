@@ -173,10 +173,7 @@ func (cmd *branchLogCmd) run(
 	entryc := make(chan branchLogEntry)
 	var wg sync.WaitGroup
 	for range runtime.GOMAXPROCS(0) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			for entry := range entryc {
 				branch := entry.Branch
 				info := &branchInfo{
@@ -243,7 +240,7 @@ func (cmd *branchLogCmd) run(
 				infoIdxByName[branch.Name] = info.Index
 				infoMu.Unlock()
 			}
-		}()
+		})
 	}
 
 	for index, branch := range iterutil.Enumerate(branchGraph.All()) {
