@@ -71,4 +71,5 @@ false
 ┏━■ feat1 ◀
 main
 -- golden/ls-feat2.txt --
+┏━□ feat1
 main

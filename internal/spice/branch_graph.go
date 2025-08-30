@@ -95,6 +95,17 @@ func (g *BranchGraph) All() iter.Seq[LoadBranchItem] {
 	return slices.Values(g.branches)
 }
 
+// Names returns an iterator over the names of all branches in the graph.
+func (g *BranchGraph) Names() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for _, branch := range g.branches {
+			if !yield(branch.Name) {
+				return
+			}
+		}
+	}
+}
+
 // Count reports the total number of tracked branches in the graph.
 // The count DOES NOT include trunk.
 func (g *BranchGraph) Count() int {
