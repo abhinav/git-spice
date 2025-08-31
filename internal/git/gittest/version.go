@@ -1,9 +1,14 @@
 package gittest
 
 import (
+	"bytes"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // Version is a Git version string.
@@ -11,21 +16,52 @@ type Version struct {
 	Major, Minor, Patch int
 }
 
+// CurrentVersion returns the current Git version installed on the system.
+func CurrentVersion() (Version, error) {
+	raw, err := exec.Command("git", "--version").Output()
+	if err != nil {
+		return Version{}, fmt.Errorf("get Git version: %w", err)
+	}
+	version, err := ParseVersion(string(bytes.TrimSpace(raw)))
+	if err != nil {
+		return Version{}, fmt.Errorf("parse Git version output: %w", err)
+	}
+	return version, nil
+}
+
+// SkipUnlessVersionAtLeast skips the test unless the current Git version
+// is at least the specified version.
+func SkipUnlessVersionAtLeast(t testing.TB, want Version) {
+	got, err := CurrentVersion()
+	require.NoError(t, err, "get current Git version")
+
+	if got.Compare(want) < 0 {
+		t.Skipf("skipping test: Git version %v < %v", got, want)
+	}
+}
+
 // ParseVersion parses a Git version string.
 // This must be in one of the following formats:
 //
 //	git version X.Y.Z (...)
+//	git version X.Y.Z.windows.N
 //	git version X.Y.Z
 //	X.Y.Z
 //	X.Y
 //	X
 //
 // Where X, Y, and Z are integers.
+// Windows versions like "2.51.0.windows.1" are parsed as "2.51.0".
 func ParseVersion(orig string) (Version, error) {
 	s := orig
 	s = strings.TrimPrefix(s, "git version ")
 	if i := strings.Index(s, " "); i >= 0 {
 		s = s[:i] // "X.Y.Z (...)" => "X.Y.Z"
+	}
+
+	// Handle Windows versions: "2.51.0.windows.1" => "2.51.0"
+	if i := strings.Index(s, ".windows."); i >= 0 {
+		s = s[:i]
 	}
 
 	var (
