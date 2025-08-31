@@ -1,0 +1,67 @@
+# Test commit fixup error cases and rejections.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add init.txt
+gs cc -m 'Add init file'
+
+# main --> feature
+git add file1.txt
+gs bc -m 'Add file1' feature
+
+# Test: Experiment not enabled
+! gs commit fixup HEAD
+stderr 'Command is experimental'
+git config spice.experiment.commitFixup true
+
+# Test: No staged cahnges
+! gs commit fixup HEAD
+stderr 'no changes staged for commit'
+
+# Test: Invalid commit ref
+git add file2.txt
+! gs commit fixup invalid-ref
+stderr 'not a commit: "invalid-ref"'
+
+# Test: Commit not reachable from HEAD
+# main --> feature
+#      \--> sibling
+gs trunk
+git add file3.txt
+gs bc -m 'Add file3' sibling
+gs branch checkout feature
+git add file4.txt
+! gs commit fixup sibling
+stderr 'fixup commit must be an ancestor of HEAD'
+
+# Test: Commit below trunk
+! gs commit fixup main~
+stderr 'cannot fixup a commit that has been merged into trunk'
+
+# Test: Detached HEAD
+git checkout --detach HEAD
+! gs commit fixup HEAD
+stderr 'HEAD is detached; cannot fixup commit'
+
+-- repo/init.txt --
+main content
+
+-- repo/file1.txt --
+File1 content
+
+-- repo/file2.txt --
+File2 content
+
+-- repo/file3.txt --
+File3 content
+
+-- repo/file4.txt --
+File4 content

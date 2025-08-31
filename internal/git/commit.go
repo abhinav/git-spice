@@ -63,6 +63,9 @@ type CommitTreeRequest struct {
 	// Note that current user may not be available in all contexts.
 	// Prefer to set Author and Committer explicitly.
 	Author, Committer *Signature
+
+	// GPGSign indicates whether to GPG sign the commit.
+	GPGSign bool
 }
 
 // CommitTree creates a new commit with a given tree hash
@@ -81,6 +84,9 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 	args = append(args, "commit-tree")
 	for _, parent := range req.Parents {
 		args = append(args, "-p", parent.String())
+	}
+	if req.GPGSign {
+		args = append(args, "--gpg-sign")
 	}
 	args = append(args, req.Tree.String())
 

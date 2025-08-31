@@ -602,6 +602,8 @@ Use --no-commit to create the branch without committing.
 
 If a branch name is not provided,
 it will be generated from the commit message.
+If the 'spice.branchCreate.prefix' configuration option is set,
+branch names will be prefixed with its value.
 
 The new branch will use the current branch as its base.
 Use --target to specify a different base branch.
@@ -924,12 +926,24 @@ Branches upstack are restacked if necessary.
 Use this as a shortcut for 'git commit'
 followed by 'gs upstack restack'.
 
+An editor is opened to edit the commit message.
+Use the -m/--message option to specify the message
+without opening an editor.
+Git hooks are run unless the --no-verify flag is given.
+
+Use the -a/--all flag to stage all changes before committing.
+
+Use the --fixup flag to create a new commit that will be merged
+into another commit when run with 'git rebase --autosquash'.
+See also, the 'gs commit fixup' command, which is preferable
+when you want to apply changes to an older commit.
+
 **Flags**
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
-* `--fixup=STRING`: Create a fixup commit.
-* `-m`, `--message=STRING`: Use the given message as the commit message.
+* `--fixup=COMMIT`: Create a fixup commit. See also 'gs commit fixup'.
+* `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 ### gs commit amend
@@ -944,6 +958,18 @@ Staged changes are amended into the topmost commit.
 Branches upstack are restacked if necessary.
 Use this as a shortcut for 'git commit --amend'
 followed by 'gs upstack restack'.
+
+An editor is opened to edit the commit message,
+unless the --no-edit flag is given.
+Use the -m/--message option to specify the message
+on the command line.
+Git hooks are run unless the --no-verify flag is given.
+
+Use the -a/--all flag to stage all changes before committing.
+
+To prevent accidental amends on the trunk branch,
+a prompt will require confirmation when amending on trunk.
+The --no-prompt flag can be used to skip this prompt in scripts.
 
 **Flags**
 
@@ -971,6 +997,36 @@ Branches upstack are restacked as needed.
 
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
+
+### gs commit fixup
+
+```
+gs commit (c) fixup (f) [<commit>] [flags]
+```
+
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[commitFixup](/cli/experiments.md#commitfixup)</span></span>
+
+Fixup a commit below the current commit
+
+Apply staged uncommited changes to another commit
+down the stack, and restack the rest of the stack on top of it.
+
+If a commit is not specified, a prompt is shown to select one.
+If the commit is specified,
+it must be reachable from the current commit,
+(i.e. it must be down the stack).
+
+If it's not possible to apply the staged changes to the commit
+without causing a conflict, the command will fail.
+
+This command requires at least Git 2.45.
+
+**Arguments**
+
+* `commit`: The commit to fixup. Must be reachable from the HEAD commit.
+
+**Flags**
+
 
 ## Rebase
 

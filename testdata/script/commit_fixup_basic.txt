@@ -1,0 +1,66 @@
+# Basic commit fixup functionality.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create a feature branch with multiple commits
+git add file1.txt
+gs bc -m 'Add file1' feature
+git add file2.txt
+gs cc -m 'Add file2'
+
+# Test: fix up the first commit (Add file1)
+cp $WORK/extra/file1_updated.txt file1.txt
+git add file1.txt
+gs commit fixup HEAD~1
+cmp file1.txt $WORK/extra/file1_updated.txt
+
+# Verify
+git log --oneline
+cmp stdout $WORK/golden/log.txt
+
+git add file3.txt
+gs cc -m 'Add file3'
+
+# Test: fix up the HEAD commit (Add file3)
+cp $WORK/extra/file3_updated.txt file3.txt
+git add file3.txt
+gs commit fixup HEAD
+cmp file3.txt $WORK/extra/file3_updated.txt
+
+# Verify
+git log --oneline
+cmp stdout $WORK/golden/log_after_head_fixup.txt
+
+-- repo/file1.txt --
+Original file1 content
+
+-- repo/file2.txt --
+File2 content
+
+-- repo/file3.txt --
+Original file3 content
+
+-- extra/file1_updated.txt --
+Updated file1 content after fixup
+
+-- extra/file3_updated.txt --
+Updated file3 content after fixup
+
+-- golden/log.txt --
+74dd32c Add file2
+7d44fe8 Add file1
+7cd9101 Initial commit
+-- golden/log_after_head_fixup.txt --
+0318062 Add file3
+74dd32c Add file2
+7d44fe8 Add file1
+7cd9101 Initial commit

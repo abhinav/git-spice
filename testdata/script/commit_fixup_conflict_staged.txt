@@ -1,0 +1,69 @@
+# Staged changes conflict with target commit.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create initial commit with file
+git add conflict_file.txt
+gs bc -m 'Add conflict file' feature
+
+# Create second commit that modifies the file differently
+cp $WORK/extra/conflict_file_v2.txt conflict_file.txt
+git add conflict_file.txt
+gs cc -m 'Modify conflict file'
+
+git log --oneline
+cmp stdout $WORK/golden/log.txt
+
+# Stage changes that conflict with the first commit
+cp $WORK/extra/conflict_file_v3.txt conflict_file.txt
+git add conflict_file.txt
+
+# Try to fixup the first commit - should fail due to conflict
+! gs commit fixup HEAD~1
+cmp stderr $WORK/golden/fixup_stderr.txt
+# TODO: conflict handling - in future, this should provide better conflict resolution
+
+# Verify the working directory and staging area are unchanged
+git status --porcelain
+cmp stdout $WORK/golden/status.txt
+
+# Verify the original commits are still intact
+git log --oneline
+cmp stdout $WORK/golden/log.txt
+
+-- repo/conflict_file.txt --
+Original content
+line 2
+line 3
+
+-- extra/conflict_file_v2.txt --
+Modified content in commit 2
+line 2
+line 3
+
+-- extra/conflict_file_v3.txt --
+Conflicting staged content
+line 2
+line 3
+
+-- golden/fixup_stderr.txt --
+ERR Staged changes conflict with commit 257b793:
+ERR   Auto-merging conflict_file.txt
+ERR   CONFLICT (content): Merge conflict in conflict_file.txt
+ERR Try unstaging some changes and running the command again.
+FTL gs: merge conflict in files: conflict_file.txt
+-- golden/status.txt --
+M  conflict_file.txt
+-- golden/log.txt --
+34e36b2 Modify conflict file
+257b793 Add conflict file
+7cd9101 Initial commit

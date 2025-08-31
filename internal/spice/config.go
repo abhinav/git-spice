@@ -26,6 +26,7 @@ const (
 // that we read configuration from.
 var GitSections = []string{
 	"core",
+	"commit",
 }
 
 // GitConfigLister provides access to git-config output.
