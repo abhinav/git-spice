@@ -12,7 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-var gitMergeBaseVersion = gittest.Version{Major: 2, Minor: 40, Patch: 0}
+var gitMergeBaseVersion = gittest.Version{Major: 2, Minor: 45, Patch: 0}
 
 func TestRepository_MergeTree(t *testing.T) {
 	t.Parallel()

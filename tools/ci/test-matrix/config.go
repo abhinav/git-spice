@@ -3,7 +3,7 @@ package main
 var (
 	_linuxConfig = testConfig{
 		OS:           "ubuntu-latest",
-		GitVersions:  []string{"system", "2.38.0", "2.40.0"},
+		GitVersions:  []string{"system", "2.38.0", "2.45.0"},
 		ScriptShards: 2,
 		Race:         true,
 		Cover:        true,

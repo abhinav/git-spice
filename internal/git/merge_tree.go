@@ -30,8 +30,10 @@ type MergeTreeRequest struct {
 	// If provided, Branch1 and Branch2 can be any tree-ish values.
 	// The difference between this and Branch1 will be applied to Branch2.
 	//
-	// Use of this parameter requires Git 2.40 or later.
+	// Use of this parameter requires Git 2.45 or later.
 	MergeBase string
+	// NB: The parameter was added in 2.40,
+	// but support for tree-ish values was added in 2.45.
 }
 
 // MergeTreeConflictError is returned from the MergeTree operation
