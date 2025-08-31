@@ -1,0 +1,37 @@
+init
+
+await Select a commit
+snapshot
+cmp stdout prompt
+
+feed <Down> <Enter>
+
+-- want --
+abc
+-- give --
+def
+-- branches --
+[
+  {
+    "branch": "feat1",
+    "base": "main",
+    "commits": [
+      {
+	"shortHash": "abc",
+	"subject": "feat: add another feature",
+	"authorDate": "2024-12-09T16:44:23Z"
+      },
+      {
+      	"shortHash": "def",
+      	"subject": "refac: unrelated change",
+      	"authorDate": "2024-12-10T16:52:44Z"
+      }
+    ]
+  }
+]
+-- prompt --
+Select a commit:
+┏━□ feat1
+┃     abc feat: add another feature (1 day ago)
+┃   ▶ def refac: unrelated change (17 hours ago)
+main
