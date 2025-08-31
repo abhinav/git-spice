@@ -972,6 +972,33 @@ Branches upstack are restacked as needed.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
+### gs commit fixup
+
+```
+gs commit (c) fixup (f) [<commit>] [flags]
+```
+
+Fixup a commit below the current commit
+
+Apply staged uncommited changes to another commit
+down the stack, and restack the rest of the stack on top of it.
+
+If a commit is not specified, a prompt is shown to select one.
+If the commit is specified, it must be reachable from the current commit,
+(i.e. it must be down the stack).
+
+If it's not possible to apply the changes to the commit
+without causing a conflict, the command will fail.
+
+This command requires at least Git 2.45.
+
+**Arguments**
+
+* `commit`: The commit to fixup
+
+**Flags**
+
+
 ## Rebase
 
 ### gs rebase continue
