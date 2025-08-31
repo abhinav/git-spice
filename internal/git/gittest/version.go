@@ -44,17 +44,24 @@ func SkipUnlessVersionAtLeast(t testing.TB, want Version) {
 // This must be in one of the following formats:
 //
 //	git version X.Y.Z (...)
+//	git version X.Y.Z.windows.N
 //	git version X.Y.Z
 //	X.Y.Z
 //	X.Y
 //	X
 //
 // Where X, Y, and Z are integers.
+// Windows versions like "2.51.0.windows.1" are parsed as "2.51.0".
 func ParseVersion(orig string) (Version, error) {
 	s := orig
 	s = strings.TrimPrefix(s, "git version ")
 	if i := strings.Index(s, " "); i >= 0 {
 		s = s[:i] // "X.Y.Z (...)" => "X.Y.Z"
+	}
+
+	// Handle Windows versions: "2.51.0.windows.1" => "2.51.0"
+	if i := strings.Index(s, ".windows."); i >= 0 {
+		s = s[:i]
 	}
 
 	var (

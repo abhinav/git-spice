@@ -21,6 +21,30 @@ func TestParseVersion(t *testing.T) {
 			str:  "2.39.3",
 		},
 		{
+			name: "Windows",
+			give: "git version 2.51.0.windows.1",
+			want: Version{2, 51, 0},
+			str:  "2.51.0",
+		},
+		{
+			name: "WindowsOlder",
+			give: "git version 2.39.2.windows.1",
+			want: Version{2, 39, 2},
+			str:  "2.39.2",
+		},
+		{
+			name: "WindowsNewer",
+			give: "git version 2.60.1.windows.5",
+			want: Version{2, 60, 1},
+			str:  "2.60.1",
+		},
+		{
+			name: "WindowsJustVersion",
+			give: "2.45.2.windows.2",
+			want: Version{2, 45, 2},
+			str:  "2.45.2",
+		},
+		{
 			name: "NoCustom",
 			give: "git version 2.46.0",
 			want: Version{2, 46, 0},
@@ -60,6 +84,7 @@ func TestParseVersion(t *testing.T) {
 func FuzzParseVersion(f *testing.F) {
 	f.Add("git version 2.39.3 (Apple Git-128)")
 	f.Add("git version 2.46.0")
+	f.Add("git version 2.51.0.windows.1")
 	f.Add("2.39.3")
 	f.Add("2.39")
 	f.Add("2")
