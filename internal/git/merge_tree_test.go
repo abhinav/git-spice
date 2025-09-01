@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -347,4 +348,150 @@ func TestRepository_MergeTree(t *testing.T) {
 			buf.String(),
 			"file.txt should contain main+branch2 changes only")
 	})
+
+	t.Run("AutomergeNoConflict", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			at '2025-08-31T20:43:00Z'
+			git init
+			git add main.txt
+			git commit -m 'Initial commit'
+
+			git checkout -b above
+			mv $WORK/above.txt main.txt
+			git add main.txt
+			git commit -m 'Add above'
+
+			git checkout -b below main
+			mv $WORK/below.txt main.txt
+			git add main.txt
+			git commit -m 'Add below'
+
+			-- main.txt --
+			foo
+			bar
+			-- below.txt --
+			foo
+			baz
+			-- above.txt --
+			baz
+			foo
+			bar
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		treeHash, err := repo.MergeTree(ctx, git.MergeTreeRequest{
+			MergeBase: "main",
+			Branch1:   "below",
+			Branch2:   "above",
+		})
+		require.NoError(t, err)
+
+		blobHash, err := repo.HashAt(ctx, treeHash.String(), "main.txt")
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		err = repo.ReadObject(ctx, git.BlobType, blobHash, &buf)
+		require.NoError(t, err)
+
+		assert.Equal(t, "baz\nfoo\nbaz\n", buf.String())
+	})
+
+	t.Run("AutomergeWithConflict", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			at '2025-08-31T20:43:00Z'
+			git init
+			git add main.txt
+			git commit -m 'Initial commit'
+
+			git checkout -b above
+			mv $WORK/above.txt main.txt
+			git add main.txt
+			git commit -m 'Add above'
+
+			git checkout -b below main
+			mv $WORK/below.txt main.txt
+			git add main.txt
+			git commit -m 'Add below'
+
+			-- main.txt --
+			foo
+			bar
+			baz
+			-- below.txt --
+			foo
+			bar
+			-- above.txt --
+			foo
+			baz
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		req := git.MergeTreeRequest{
+			MergeBase: "main",
+			Branch1:   "below",
+			Branch2:   "above",
+		}
+		git.SetConflictStyle(&req, "merge")
+		treeHash, err := repo.MergeTree(ctx, req)
+		require.Error(t, err)
+
+		var conflictErr *git.MergeTreeConflictError
+		require.ErrorAs(t, err, &conflictErr)
+		assert.Equal(t, []string{"main.txt"}, conflictErr.Files)
+
+		// There should be both an automatic resolution
+		// and a blocking conflict.
+		typesToFiles := make(map[string]map[string]struct{}) // type -> set of files
+		for _, d := range conflictErr.Details {
+			for _, p := range d.Paths {
+				if typesToFiles[d.Type] == nil {
+					typesToFiles[d.Type] = make(map[string]struct{})
+				}
+				typesToFiles[d.Type][p] = struct{}{}
+			}
+		}
+
+		assert.Equal(t, map[string]map[string]struct{}{
+			"Auto-merging":        {"main.txt": {}},
+			"CONFLICT (contents)": {"main.txt": {}},
+		}, typesToFiles)
+
+		blobHash, err := repo.HashAt(ctx, treeHash.String(), "main.txt")
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		err = repo.ReadObject(ctx, git.BlobType, blobHash, &buf)
+		require.NoError(t, err)
+
+		assert.Equal(t, joinLines(
+			"foo",
+			"<<<<<<< below",
+			"bar",
+			"=======",
+			"baz",
+			">>>>>>> above",
+		), buf.String())
+	})
+}
+
+func joinLines(lines ...string) string {
+	return strings.Join(lines, "\n") + "\n"
 }

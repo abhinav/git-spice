@@ -34,18 +34,32 @@ type MergeTreeRequest struct {
 	MergeBase string
 	// NB: The parameter was added in 2.40,
 	// but support for tree-ish values was added in 2.45.
+
+	// Test-only option to control conflict marker style
+	// to get deterministic output even in tests that run in CI.
+	conflictStyle string
 }
 
 // MergeTreeConflictError is returned from the MergeTree operation
 // when a conflict is encountered.
 type MergeTreeConflictError struct {
-	Files   []string
+	// Files is the list of files that are in conflict.
+	//
+	// This is the authoritative list of conflicting files.
+	Files []string
+
+	// Details is a list of detailed messages about the conflicts,
+	// as well as conflicts that were resolved automatically
+	// (e.g. "Auto-merging <file>").
+	//
+	// Do not assume len(Details) == len(Files).
+	// Do not assume len(Details) > 0 means there are blocking conflicts.
 	Details []MergeTreeConflictDetails
 }
 
 func (e *MergeTreeConflictError) Error() string {
 	var msg strings.Builder
-	msg.WriteString("conflicting files: ")
+	msg.WriteString("conflicting files:")
 	for i, f := range e.Files {
 		if i > 0 {
 			msg.WriteString(",")
@@ -61,6 +75,8 @@ func (e *MergeTreeConflictError) Error() string {
 //
 // For conflicts, this method returns a [MergeTreeConflictError]
 // that reports information about the conflicting files.
+// If the conflicts were resolved automatically (e.g. "Auto-merging <file>"),
+// and there are no other blocking conflicts, this will NOT return an error.
 func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Hash, retErr error) {
 	// TODO: support multiple requests now that we're using stdin
 	args := []string{
@@ -80,6 +96,10 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 	_, _ = fmt.Fprintf(&stdin, "%v %v\n", req.Branch1, req.Branch2)
 
 	cmd := r.gitCmd(ctx, args...).StdinString(stdin.String())
+	if req.conflictStyle != "" {
+		cmd = cmd.WithConfig(extraConfig{MergeConflictStyle: req.conflictStyle})
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", fmt.Errorf("create stdout pipe: %w", err)
@@ -102,14 +122,13 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 		waitErr = fmt.Errorf("git merge-tree: %w", err)
 	}
 
-	output := outputs[0]
-	if len(output.ConflictFiles) == 0 && len(output.ConflictMessages) == 0 {
-		return output.TreeHash, waitErr
+	o := outputs[0]
+	if len(o.ConflictFiles) == 0 {
+		return o.TreeHash, waitErr
 	}
-
-	return output.TreeHash, errors.Join(&MergeTreeConflictError{
-		Files:   output.ConflictFiles,
-		Details: output.ConflictMessages,
+	return o.TreeHash, errors.Join(&MergeTreeConflictError{
+		Files:   o.ConflictFiles,
+		Details: o.ConflictMessages,
 	}, waitErr)
 }
 
@@ -199,6 +218,8 @@ func parseMergeTreeOutput(r io.Reader) (_ []*mergeTreeOutput, retErr error) {
 		// conflicted file info contains just the file names.
 		// Empty file name marks end of that section.
 		for scan.Scan() && len(scan.Bytes()) > 0 {
+			// TODO: Drop --name-only above
+			// and also parse mode, object, and stage of each file.
 			current.ConflictFiles = append(current.ConflictFiles, scan.Text())
 		}
 
