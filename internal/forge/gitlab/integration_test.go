@@ -21,7 +21,6 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
-	"go.abhg.dev/io/ioutil"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
@@ -291,7 +290,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
 
-		output := ioutil.TestLogWriter(t, "[git] ")
+		output := t.Output()
 
 		t.Logf("Cloning test-repo...")
 		repoDir := t.TempDir()
@@ -454,7 +453,7 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
 
-		output := ioutil.TestLogWriter(t, "[git] ")
+		output := t.Output()
 
 		ctx := t.Context()
 
@@ -706,7 +705,7 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
 		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
 
-		output := ioutil.TestLogWriter(t, "[git] ")
+		output := t.Output()
 
 		t.Logf("Cloning test-repo...")
 		repoDir := t.TempDir()

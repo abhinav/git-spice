@@ -2,13 +2,22 @@
 package silogtest
 
 import (
+	"io"
+
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/io/ioutil"
 )
 
+// T is a subset of the testing.TB interface.
+type T interface {
+	Helper()
+	Output() io.Writer
+}
+
 // New creates a new logger that writes to the given testing.TB.
-func New(t ioutil.TestLogger) *silog.Logger {
-	return silog.New(ioutil.TestLogWriter(t, ""), &silog.Options{
+func New(t T) *silog.Logger {
+	t.Helper()
+
+	return silog.New(t.Output(), &silog.Options{
 		Level: silog.LevelDebug,
 	})
 }
