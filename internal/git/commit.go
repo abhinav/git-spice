@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
+	"strconv"
 	"strings"
 	"time"
 
@@ -95,6 +97,141 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 	}
 
 	return Hash(out), nil
+}
+
+// CommitObject is a Git commit object.
+type CommitObject struct {
+	Hash    Hash
+	Tree    Hash
+	Parents []Hash
+
+	Author    Signature
+	Committer Signature
+
+	Subject string
+	Body    string
+}
+
+// Message returns the full commit message,
+// which is the subject followed by two newlines and the body (if any).
+func (c *CommitObject) Message() string {
+	var msg strings.Builder
+	msg.WriteString(c.Subject)
+	if c.Body != "" {
+		msg.WriteString("\n\n")
+		msg.WriteString(c.Body)
+	}
+	return msg.String()
+}
+
+// ReadCommit reads a commit object by a commit-ish string,
+// which may be a full or partial commit hash,
+func (r *Repository) ReadCommit(ctx context.Context, commitish string) (*CommitObject, error) {
+	const _nul = "\x00"
+
+	// git cat-file is probably more suitable here,
+	// but we'll just use git log -n1 --format=... for full control.
+	out, err := r.gitCmd(ctx,
+		"log", "-n1",
+		"--format="+
+			"%H%x00"+ // commit hash
+			"%T%x00"+ // tree hash
+			"%P%x00"+ // parent hashes (space-separated)
+
+			"%an%x00"+ // author name
+			"%ae%x00"+ // author email
+			"%aI%x00"+ // author date (ISO 8601 strict)
+
+			"%cn%x00"+ // committer name
+			"%ce%x00"+ // committer email
+			"%cI%x00"+ // committer date (ISO 8601 strict)
+
+			"%s%x00"+ // subject
+			"%b%x00", // body
+		commitish,
+	).OutputString(r.exec)
+	if err != nil {
+		return nil, fmt.Errorf("git show: %w", err)
+	}
+
+	next, done := iter.Pull(strings.SplitSeq(out, _nul))
+	defer done()
+
+	parseSignature := func() (Signature, error) {
+		name, ok := next()
+		if !ok {
+			return Signature{}, errors.New("no name")
+		}
+		email, ok := next()
+		if !ok {
+			return Signature{}, errors.New("no email")
+		}
+
+		timestr, ok := next()
+		if !ok {
+			return Signature{}, errors.New("no time")
+		}
+		t, err := time.Parse(time.RFC3339, timestr)
+		if err != nil {
+			return Signature{}, fmt.Errorf("parse time %q: %w", timestr, err)
+		}
+		return Signature{
+			Name:  name,
+			Email: email,
+			Time:  t,
+		}, nil
+	}
+
+	var obj CommitObject
+	err = func() error {
+		hash, ok := next()
+		if !ok {
+			return errors.New("no commit hash")
+		}
+		obj.Hash = Hash(hash)
+
+		tree, ok := next()
+		if !ok {
+			return errors.New("no tree hash")
+		}
+		obj.Tree = Hash(tree)
+
+		parents, ok := next()
+		if !ok {
+			return errors.New("no parent hashes")
+		}
+		if parents != "" {
+			// There may be zero parents (initial commit).
+			for parent := range strings.SplitSeq(parents, " ") {
+				obj.Parents = append(obj.Parents, Hash(parent))
+			}
+		}
+
+		obj.Author, err = parseSignature()
+		if err != nil {
+			return fmt.Errorf("parse author: %w", err)
+		}
+
+		obj.Committer, err = parseSignature()
+		if err != nil {
+			return fmt.Errorf("parse committer: %w", err)
+		}
+
+		obj.Subject, ok = next()
+		if !ok {
+			return errors.New("no subject")
+		}
+
+		obj.Body, _ = next()
+		return nil
+	}()
+	if err != nil {
+		r.log.Debug("Invalid commit object output",
+			"output", strconv.Quote(out),
+		)
+		return nil, fmt.Errorf("parse commit object: %w", err)
+	}
+	return &obj, nil
 }
 
 // CommitSubject returns the subject of a commit.
