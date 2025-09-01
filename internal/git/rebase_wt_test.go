@@ -17,6 +17,8 @@ import (
 )
 
 func TestRebase_deliberateInterrupt(t *testing.T) {
+	t.Setenv("GIT_EDITOR", "mockedit")
+
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 		as 'Test <test@example.com>'
 		at '2024-05-21T20:30:40Z'
@@ -35,6 +37,9 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 		git add baz.txt
 		git commit -m 'Add baz'
 
+		git log --oneline HEAD
+		cmp stdout $WORK/log.txt
+
 		-- foo.txt --
 		Contents of foo
 
@@ -43,6 +48,12 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 
 		-- baz.txt --
 		Contents of baz
+
+		-- log.txt --
+		d62d116 Add baz
+		cc51432 Add bar
+		44c553a Add foo
+		2fd1f57 Initial commit
 	`)))
 	require.NoError(t, err)
 	t.Cleanup(fixture.Cleanup)
@@ -56,28 +67,28 @@ func TestRebase_deliberateInterrupt(t *testing.T) {
 
 	// Test cases with no InterruptFunc.
 	// All must see RebseInterruptError.
-	noFuncTests := []struct {
+	tests := []struct {
 		name  string
 		lines []string
 	}{
 		{
 			name: "break",
 			lines: []string{
-				"pick cc51432 Add bar",
+				"pick cc51432 # Add bar",
 				"break",
-				"pick 7dd9ddf Add baz",
+				"pick d62d116 # Add baz",
 			},
 		},
 		{
 			name: "edit",
 			lines: []string{
-				"pick cc51432 Add bar",
-				"edit 7dd9ddf Add baz",
+				"pick cc51432 # Add bar",
+				"edit d62d116 # Add baz",
 			},
 		},
 	}
 
-	for _, tt := range noFuncTests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			defer func() {
