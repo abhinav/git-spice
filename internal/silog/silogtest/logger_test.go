@@ -1,8 +1,10 @@
 package silogtest_test
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,24 +21,16 @@ func TestTestLogger(t *testing.T) {
 	assert.Equal(t, []string{
 		"INF Hello, world!",
 		`ERR Sadness  error=oh no`,
-	}, stub.logs)
+		"",
+	}, strings.Split(stub.output.String(), "\n"))
 }
 
 type testOutputStub struct {
-	logs    []string
-	cleanup func()
+	output bytes.Buffer
 }
 
-func (t *testOutputStub) Logf(format string, args ...any) {
-	t.logs = append(t.logs, fmt.Sprintf(format, args...))
-}
+func (t *testOutputStub) Helper() {}
 
-func (t *testOutputStub) Cleanup(f func()) {
-	old := t.cleanup
-	t.cleanup = func() {
-		f()
-		if old != nil {
-			old()
-		}
-	}
+func (t *testOutputStub) Output() io.Writer {
+	return &t.output
 }
