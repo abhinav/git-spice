@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 
@@ -202,12 +203,96 @@ func TestRepository_MergeTree(t *testing.T) {
 		var conflictErr *git.MergeTreeConflictError
 		require.ErrorAs(t, err, &conflictErr)
 
-		assert.Equal(t, []string{"conflict.txt"}, conflictErr.Files)
+		assert.Equal(t, []string{"conflict.txt"}, slices.Collect(conflictErr.Filenames()))
 		conflictTypes := make([]string, 0, len(conflictErr.Details))
 		for _, d := range conflictErr.Details {
 			conflictTypes = append(conflictTypes, d.Type)
 		}
 		assert.Contains(t, conflictTypes, "CONFLICT (contents)")
+	})
+
+	t.Run("ConflictFileInfo", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			at '2025-06-21T00:00:00Z'
+			git init
+			git add main.txt
+			git commit -m 'Initial commit'
+
+			git checkout -b ours
+			cp $WORK/ours.txt main.txt
+			git add main.txt
+			git commit -m 'Ours change'
+
+			git checkout -b theirs main
+			cp $WORK/theirs.txt main.txt
+			git add main.txt
+			git commit -m 'Theirs change'
+
+			-- main.txt --
+			line1
+			line2
+			line3
+
+			-- ours.txt --
+			line1
+			ours-line2
+			line3
+
+			-- theirs.txt --
+			line1
+			theirs-line2
+			line3
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		_, err = repo.MergeTree(ctx, git.MergeTreeRequest{
+			Branch1: "ours",
+			Branch2: "theirs",
+		})
+		require.Error(t, err)
+
+		var conflictErr *git.MergeTreeConflictError
+		require.ErrorAs(t, err, &conflictErr)
+
+		// Find conflict files for each stage
+		var baseFile, oursFile, theirsFile *git.MergeTreeConflictFile
+		for i, f := range conflictErr.Files {
+			if f.Path != "main.txt" {
+				continue
+			}
+
+			assert.Equal(t, git.RegularMode, f.Mode)
+			switch f.Stage {
+			case git.ConflictStageBase:
+				baseFile = &conflictErr.Files[i]
+			case git.ConflictStageOurs:
+				oursFile = &conflictErr.Files[i]
+			case git.ConflictStageTheirs:
+				theirsFile = &conflictErr.Files[i]
+			}
+		}
+		require.NotNil(t, baseFile, "should have base version of conflicted file")
+		require.NotNil(t, oursFile, "should have ours version of conflicted file")
+		require.NotNil(t, theirsFile, "should have theirs version of conflicted file")
+
+		// Read and verify contents of each version
+		var baseBuf, oursBuf, theirsBuf bytes.Buffer
+		require.NoError(t, repo.ReadObject(ctx, git.BlobType, baseFile.Object, &baseBuf))
+		require.NoError(t, repo.ReadObject(ctx, git.BlobType, oursFile.Object, &oursBuf))
+		require.NoError(t, repo.ReadObject(ctx, git.BlobType, theirsFile.Object, &theirsBuf))
+
+		assert.Equal(t, "line1\nline2\nline3\n\n", baseBuf.String())
+		assert.Equal(t, "line1\nours-line2\nline3\n\n", oursBuf.String())
+		assert.Equal(t, "line1\ntheirs-line2\nline3\n", theirsBuf.String())
 	})
 
 	t.Run("MergeBaseTreeIsh", func(t *testing.T) {
@@ -455,7 +540,7 @@ func TestRepository_MergeTree(t *testing.T) {
 
 		var conflictErr *git.MergeTreeConflictError
 		require.ErrorAs(t, err, &conflictErr)
-		assert.Equal(t, []string{"main.txt"}, conflictErr.Files)
+		assert.Equal(t, []string{"main.txt"}, slices.Collect(conflictErr.Filenames()))
 
 		// There should be both an automatic resolution
 		// and a blocking conflict.

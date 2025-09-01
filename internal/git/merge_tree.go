@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"strconv"
 	"strings"
 
@@ -45,8 +46,9 @@ type MergeTreeRequest struct {
 type MergeTreeConflictError struct {
 	// Files is the list of files that are in conflict.
 	//
-	// This is the authoritative list of conflicting files.
-	Files []string
+	// There may be multiple entries for the same file
+	// representing different stages of the conflict.
+	Files []MergeTreeConflictFile
 
 	// Details is a list of detailed messages about the conflicts,
 	// as well as conflicts that were resolved automatically
@@ -57,15 +59,33 @@ type MergeTreeConflictError struct {
 	Details []MergeTreeConflictDetails
 }
 
+// Filenames returns a sequence of unique filenames that are in conflict.
+func (e *MergeTreeConflictError) Filenames() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		seen := make(map[string]struct{}, len(e.Files))
+		for _, f := range e.Files {
+			if _, ok := seen[f.Path]; ok {
+				continue
+			}
+			seen[f.Path] = struct{}{}
+			if !yield(f.Path) {
+				return
+			}
+		}
+	}
+}
+
 func (e *MergeTreeConflictError) Error() string {
 	var msg strings.Builder
 	msg.WriteString("conflicting files:")
-	for i, f := range e.Files {
+	var i int
+	for f := range e.Filenames() {
 		if i > 0 {
 			msg.WriteString(",")
 		}
 		msg.WriteString(" ")
 		msg.WriteString(f)
+		i++
 	}
 	return msg.String()
 }
@@ -83,7 +103,6 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 		"merge-tree",
 		"--write-tree", // other mode is deprecated
 		"--stdin",      // pass input on stdin
-		"--name-only",  // only mention conflicting file names instead of stages and objects
 		"-z",
 	}
 
@@ -148,8 +167,25 @@ type mergeTreeOutput struct {
 	//
 	TreeHash Hash
 
-	ConflictFiles    []string
+	ConflictFiles    []MergeTreeConflictFile
 	ConflictMessages []MergeTreeConflictDetails
+}
+
+// MergeTreeConflictFile represents a file that is in conflict.
+type MergeTreeConflictFile struct {
+	// Mode is the file mode of the conflicted file.
+	// This identifies directories, symlinks, etc.
+	Mode Mode
+
+	// Object is the hash of the object in the tree.
+	Object Hash
+
+	// Stage is the stage of the file in the conflict.
+	// This includes whether this is the base, ours, or theirs version.
+	Stage ConflictStage
+
+	// Path is the path of the conflicted file.
+	Path string
 }
 
 // MergeTreeConflictDetails represents an informational message about a conflict.
@@ -161,7 +197,7 @@ type MergeTreeConflictDetails struct {
 	// This is a stable string like
 	// "CONFLICT (rename/delete)", "CONFLICT (binary)", etc.
 	// This may be consumed programmatically.
-	Type string // TODO: don't surface Auto-merging to users
+	Type string
 
 	// Message is a detailed user-readable message explaining the conflict.
 	// This string is not stable and may change between Git versions.
@@ -212,15 +248,24 @@ func parseMergeTreeOutput(r io.Reader) (_ []*mergeTreeOutput, retErr error) {
 		}
 
 		// Otherwise, we expect two more sections:
+		//
 		//   <Conflicted file info>
 		//   <Informational messages>
-		// Because we use --name-only,
-		// conflicted file info contains just the file names.
-		// Empty file name marks end of that section.
+		//
+		// Conflicted file info is in the form:
+		//
+		//    <mode> <object> <stage>\t<filename> NUL
+		//
+		// Empty token marks end of that section.
 		for scan.Scan() && len(scan.Bytes()) > 0 {
-			// TODO: Drop --name-only above
-			// and also parse mode, object, and stage of each file.
-			current.ConflictFiles = append(current.ConflictFiles, scan.Text())
+			line := scan.Text()
+
+			conflictFile, err := parseMergeTreeConflictFile(line)
+			if err != nil {
+				return outputs, fmt.Errorf("invalid conflict file info: %q: %w", line, err)
+			}
+
+			current.ConflictFiles = append(current.ConflictFiles, conflictFile)
 		}
 
 		// Informational messages are in the form:
@@ -267,4 +312,86 @@ func parseMergeTreeOutput(r io.Reader) (_ []*mergeTreeOutput, retErr error) {
 	}
 
 	return outputs, nil
+}
+
+func parseMergeTreeConflictFile(line string) (MergeTreeConflictFile, error) {
+	modestr, rest, ok := strings.Cut(line, " ")
+	if !ok {
+		return MergeTreeConflictFile{}, errors.New("expected <mode>, got EOL")
+	}
+
+	mode, err := ParseMode(modestr)
+	if err != nil {
+		return MergeTreeConflictFile{}, fmt.Errorf("invalid mode %q: %w", modestr, err)
+	}
+
+	objectstr, rest, ok := strings.Cut(rest, " ")
+	if !ok {
+		return MergeTreeConflictFile{}, errors.New("expected <object>, got EOL")
+	}
+	object := Hash(objectstr)
+
+	stagestr, filename, ok := strings.Cut(rest, "\t")
+	if !ok {
+		return MergeTreeConflictFile{}, errors.New("expected <stage> and <filename>, got EOL")
+	}
+	stage, err := parseConflictStage(stagestr)
+	if err != nil {
+		return MergeTreeConflictFile{}, fmt.Errorf("invalid stage %q: %w", stage, err)
+	}
+
+	return MergeTreeConflictFile{
+		Mode:   mode,
+		Object: object,
+		Stage:  stage,
+		Path:   filename,
+	}, nil
+}
+
+// ConflictStage represents the stage of a file in a merge conflict.
+type ConflictStage int
+
+const (
+	// ConflictStageOk is a non-conflicted file.
+	ConflictStageOk ConflictStage = 0
+
+	// ConflictStageBase is the common ancestor version of the file.
+	ConflictStageBase ConflictStage = 1
+
+	// ConflictStageOurs is the version of the file from the current branch.
+	ConflictStageOurs ConflictStage = 2
+
+	// ConflictStageTheirs is the version of the file from the branch being merged in.
+	ConflictStageTheirs ConflictStage = 3
+)
+
+// parseConflictStage parses a string representation of a conflict stage.
+func parseConflictStage(s string) (ConflictStage, error) {
+	switch s {
+	case "0":
+		return ConflictStageOk, nil
+	case "1":
+		return ConflictStageBase, nil
+	case "2":
+		return ConflictStageOurs, nil
+	case "3":
+		return ConflictStageTheirs, nil
+	default:
+		return 0, fmt.Errorf("invalid conflict stage: %q", s)
+	}
+}
+
+func (s ConflictStage) String() string {
+	switch s {
+	case ConflictStageOk:
+		return "ok"
+	case ConflictStageBase:
+		return "base"
+	case ConflictStageOurs:
+		return "ours"
+	case ConflictStageTheirs:
+		return "theirs"
+	default:
+		return fmt.Sprintf("unknown(%d)", int(s))
+	}
 }
