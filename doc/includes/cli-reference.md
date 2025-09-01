@@ -971,10 +971,11 @@ from commits of upstack branches of the current branch.
 Use the --from option to pick a commit from a different branch
 or its upstack.
 
-By default, commit messages for cherry-picked commits will be used verbatim.
-Supply --edit to open an editor and change the commit message,
-or set the spice.commitPick.edit configuration option to true
-to always open an editor for cherry picks.
+This does not currently support cherry-picking merge commits,
+or commits that would cause a conflict with the current branch.
+This restriction may be lifted in the future.
+
+Requires Git 2.45 or newer.
 
 **Arguments**
 
@@ -982,10 +983,7 @@ to always open an editor for cherry picks.
 
 **Flags**
 
-* `--[no-]edit` ([:material-wrench:{ .middle title="spice.commitPick.edit" }](/cli/config.md#spicecommitpickedit)): Whether to open an editor to edit the commit message.
 * `--from=NAME`: Branch whose upstack commits will be considered.
-
-**Configuration**: [spice.commitPick.edit](/cli/config.md#spicecommitpickedit)
 
 ### gs commit split
 

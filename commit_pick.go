@@ -3,24 +3,26 @@ package main
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
-	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type commitPickCmd struct {
-	Commit string `arg:"" optional:"" help:"Commit to cherry-pick"`
-	// TODO: Support multiple commits similarly to git cherry-pick.
+	cherrypick.Options
 
-	Edit bool   `default:"false" negatable:"" config:"commitPick.edit" help:"Whether to open an editor to edit the commit message."`
-	From string `placeholder:"NAME" predictor:"trackedBranches" help:"Branch whose upstack commits will be considered."`
+	// TODO: Support multiple commits?
+
+	Commit string `arg:"" optional:"" help:"Commit to cherry-pick"`
+	From   string `placeholder:"NAME" predictor:"trackedBranches" help:"Branch whose upstack commits will be considered."`
 }
 
 func (*commitPickCmd) Help() string {
@@ -33,11 +35,16 @@ func (*commitPickCmd) Help() string {
 		Use the --from option to pick a commit from a different branch
 		or its upstack.
 
-		By default, commit messages for cherry-picked commits will be used verbatim.
-		Supply --edit to open an editor and change the commit message,
-		or set the spice.commitPick.edit configuration option to true
-		to always open an editor for cherry picks.
+		This does not currently support cherry-picking merge commits,
+		or commits that would cause a conflict with the current branch.
+		This restriction may be lifted in the future.
+
+		Requires Git 2.45 or newer.
 	`)
+}
+
+type CherryPickHandler interface {
+	CherryPickCommit(ctx context.Context, req *cherrypick.Request) error
 }
 
 func (cmd *commitPickCmd) Run(
@@ -46,16 +53,25 @@ func (cmd *commitPickCmd) Run(
 	view ui.View,
 	repo *git.Repository,
 	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
+	cherryPickHandler CherryPickHandler,
 ) (err error) {
+	branch, err := wt.CurrentBranch(ctx)
+	if err != nil {
+		if errors.Is(err, git.ErrDetachedHead) {
+			return errors.New("cannot cherry-pick onto detached HEAD")
+		}
+		return fmt.Errorf("determine current branch: %w", err)
+	}
+	cmd.From = cmp.Or(cmd.From, branch)
+
 	var commit git.Hash
 	if cmd.Commit == "" {
 		if !ui.Interactive(view) {
 			return fmt.Errorf("no commit specified: %w", errNoPrompt)
 		}
 
-		commit, err = cmd.commitPrompt(ctx, log, view, repo, wt, store, svc)
+		commit, err = cmd.commitPrompt(ctx, log, view, repo, svc, branch)
 		if err != nil {
 			return fmt.Errorf("prompt for commit: %w", err)
 		}
@@ -67,22 +83,11 @@ func (cmd *commitPickCmd) Run(
 	}
 
 	log.Debugf("Cherry-picking: %v", commit)
-	err = repo.CherryPick(ctx, git.CherryPickRequest{
-		Commits: []git.Hash{commit},
-		Edit:    cmd.Edit,
-		// If you selected an empty commit,
-		// you probably want to retain that.
-		// This still won't allow for no-op cherry-picks.
-		AllowEmpty: true,
+	return cherryPickHandler.CherryPickCommit(ctx, &cherrypick.Request{
+		Commit:  commit,
+		Branch:  branch,
+		Options: &cmd.Options,
 	})
-	if err != nil {
-		return fmt.Errorf("cherry-pick: %w", err)
-	}
-
-	// TODO: cherry-pick the commit
-	// TODO: handle --continue/--abort
-	// TODO: upstack restack
-	return nil
 }
 
 func (cmd *commitPickCmd) commitPrompt(
@@ -90,36 +95,26 @@ func (cmd *commitPickCmd) commitPrompt(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
-	wt *git.Worktree,
-	store *state.Store,
 	svc *spice.Service,
+	currentBranch string,
 ) (git.Hash, error) {
-	currentBranch, err := wt.CurrentBranch(ctx)
+	graph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
-		// TODO: allow for cherry-pick onto non-branch HEAD.
-		return "", fmt.Errorf("determine current branch: %w", err)
-	}
-	cmd.From = cmp.Or(cmd.From, currentBranch)
-
-	upstack, err := svc.ListUpstack(ctx, cmd.From)
-	if err != nil {
-		return "", fmt.Errorf("list upstack branches: %w", err)
+		return "", fmt.Errorf("load branch graph: %w", err)
 	}
 
 	var totalCommits int
-	branches := make([]widget.CommitPickBranch, 0, len(upstack))
 	shortToLongHash := make(map[git.Hash]git.Hash)
-	for _, name := range upstack {
-		if name == store.Trunk() {
+	var branches []widget.CommitPickBranch
+	for name := range graph.Upstack(cmd.From) {
+		if name == graph.Trunk() {
 			continue
 		}
 
 		// TODO: build commit list for each branch concurrently
-		b, err := svc.LookupBranch(ctx, name)
-		if err != nil {
-			log.Warn("Could not look up branch. Skipping.",
-				"branch", name, "error", err)
-			continue
+		b, ok := graph.Lookup(name)
+		if !ok {
+			continue // not really possible once past trunk
 		}
 
 		// If doing a --from=$other,
@@ -127,7 +122,6 @@ func (cmd *commitPickCmd) commitPrompt(
 		// we don't want to list commits for current branch,
 		// so add an empty entry for it.
 		if name == currentBranch {
-			// Don't list the current branch's commits.
 			branches = append(branches, widget.CommitPickBranch{
 				Branch: name,
 				Base:   b.Base,
@@ -135,6 +129,7 @@ func (cmd *commitPickCmd) commitPrompt(
 			continue
 		}
 
+		// TODO: parallel fetching?
 		commits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx,
 			git.CommitRangeFrom(b.Head).
 				ExcludeFrom(b.BaseHash).
