@@ -1,0 +1,6 @@
+kind: Removed
+body: >-
+  commit amend:
+  Delete -n flag that was deprecated in favor of --no-edit in v0.10.0 (2025-01-02).
+  If you need a short way to use this flag, try defining a custom shorthand.
+time: 2025-09-01T13:18:11.754979-07:00
