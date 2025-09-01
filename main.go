@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
+	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
@@ -457,6 +458,19 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Service:        svc,
 				FindForge:      forges.Lookup,
 				HighlightStyle: _highlightStyle,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			repo *git.Repository,
+			wt *git.Worktree,
+			restackHandler RestackHandler,
+		) (CherryPickHandler, error) {
+			return &cherrypick.Handler{
+				Log:        log,
+				Repository: repo,
+				Worktree:   wt,
+				Restack:    restackHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

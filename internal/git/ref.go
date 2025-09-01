@@ -29,6 +29,9 @@ type SetRefRequest struct {
 	// Set this to ZeroHash to ensure that a ref being created
 	// does not already exist.
 	OldHash Hash
+
+	// Reason is an optional reason for the ref update.
+	Reason string
 }
 
 // SetRef changes the value of a ref to a new hash.
@@ -43,7 +46,11 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	)
 
 	// git update-ref <rev> <newvalue> [<oldvalue>]
-	args := []string{"update-ref", req.Ref, string(req.Hash)}
+	args := []string{"update-ref"}
+	if req.Reason != "" {
+		args = append(args, "-m", req.Reason)
+	}
+	args = append(args, req.Ref, string(req.Hash))
 	if req.OldHash != "" {
 		args = append(args, string(req.OldHash))
 	}

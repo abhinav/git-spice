@@ -955,6 +955,36 @@ followed by 'gs upstack restack'.
 
 **Configuration**: [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix)
 
+### gs commit pick
+
+```
+gs commit (c) pick (p) [<commit>] [flags]
+```
+
+Cherry-pick a commit
+
+Apply the changes introduced by a commit to the current branch
+and restack the upstack branches.
+
+If a commit is not specified, a prompt will allow picking
+from commits of upstack branches of the current branch.
+Use the --from option to pick a commit from a different branch
+or its upstack.
+
+This does not currently support cherry-picking merge commits,
+or commits that would cause a conflict with the current branch.
+This restriction may be lifted in the future.
+
+Requires Git 2.45 or newer.
+
+**Arguments**
+
+* `commit`: Commit to cherry-pick
+
+**Flags**
+
+* `--from=NAME`: Branch whose upstack commits will be considered.
+
 ### gs commit split
 
 ```
@@ -998,7 +1028,7 @@ and use --edit to override it.
 
 **Flags**
 
-* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whehter to open an editor to edit the commit message.
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whether to open an editor to edit the commit message.
 
 **Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
 
