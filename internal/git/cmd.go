@@ -44,6 +44,8 @@ func (realExecer) Kill(cmd *exec.Cmd) error             { return cmd.Process.Kil
 
 type extraConfig struct {
 	Editor string // core.editor
+
+	MergeConflictStyle string // merge.conflictStyle
 }
 
 func (ec *extraConfig) Args() (args []string) {
@@ -52,6 +54,9 @@ func (ec *extraConfig) Args() (args []string) {
 	}
 	if ec.Editor != "" {
 		args = append(args, "-c", "core.editor="+ec.Editor)
+	}
+	if ec.MergeConflictStyle != "" {
+		args = append(args, "-c", "merge.conflictStyle="+ec.MergeConflictStyle)
 	}
 	return args
 }
