@@ -23,10 +23,6 @@ type commitAmendCmd struct {
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
-
-	// TODO:
-	// Remove this short form and put it on NoVerify.
-	NoEditDeprecated bool `hidden:"true" short:"n" help:"Don't edit the commit message"`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -48,11 +44,6 @@ func (cmd *commitAmendCmd) Run(
 	svc *spice.Service,
 	restackHandler RestackHandler,
 ) error {
-	if cmd.NoEditDeprecated {
-		cmd.NoEdit = true
-		log.Warn("flag '-n' is deprecated; use '--no-edit' instead")
-	}
-
 	var detachedHead bool
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
