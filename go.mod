@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/alecthomas/kong v1.12.1
-	github.com/buildkite/shellwords v1.0.0
+	github.com/buildkite/shellwords v1.0.1
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.6
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -16,11 +16,11 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/sahilm/fuzzy v0.1.1
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.2
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.142.1
+	gitlab.com/gitlab-org/api/client-go v0.142.5
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
