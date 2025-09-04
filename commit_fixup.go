@@ -14,6 +14,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget"
@@ -22,7 +23,7 @@ import (
 type commitFixupCmd struct {
 	fixup.Options
 
-	Commit string `arg:"" optional:"" help:"The commit to fixup"`
+	Commit string `arg:"" optional:"" help:"The commit to fixup. Must be reachable from the HEAD commit."`
 }
 
 func (cmd *commitFixupCmd) Help() string {
@@ -31,10 +32,12 @@ func (cmd *commitFixupCmd) Help() string {
 		down the stack, and restack the rest of the stack on top of it.
 
 		If a commit is not specified, a prompt is shown to select one.
-		If the commit is specified, it must be reachable from the current commit,
+
+		If the commit is specified,
+		it must be reachable from the current commit,
 		(i.e. it must be down the stack).
 
-		If it's not possible to apply the changes to the commit
+		If it's not possible to apply the staged changes to the commit
 		without causing a conflict, the command will fail.
 
 		This command requires at least Git 2.45.
@@ -50,6 +53,7 @@ func (cmd *commitFixupCmd) AfterApply(kctx *kong.Context) error {
 		log *silog.Logger,
 		repo *git.Repository,
 		wt *git.Worktree,
+		store *state.Store,
 		svc *spice.Service,
 		restackHandler RestackHandler,
 	) (FixupHandler, error) {
@@ -58,6 +62,7 @@ func (cmd *commitFixupCmd) AfterApply(kctx *kong.Context) error {
 			Worktree:   wt,
 			Repository: repo,
 			Service:    svc,
+			Store:      store,
 			Restack:    restackHandler,
 		}, nil
 	})
@@ -75,64 +80,67 @@ func (cmd *commitFixupCmd) Run(
 	// TODO: Should we do a Git version check here?
 	// git --version output is relatively stable.
 
-	// Branch to check out after a successful fixup operation.
-	// May be a detached HEAD.
-	var checkoutDetached bool
-	checkoutTarget, err := wt.CurrentBranch(ctx)
+	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
-		if !errors.Is(err, git.ErrDetachedHead) {
-			return fmt.Errorf("determine current branch: %w", err)
+		if errors.Is(err, git.ErrDetachedHead) {
+			// TODO: To support fixup from detached HEAD,
+			// we'll need to know what the rebased commit HEAD is.
+			return errors.New("HEAD is detached; cannot fixup commit")
 		}
-
-		head, err := wt.Head(ctx)
-		if err != nil {
-			return fmt.Errorf("get HEAD commit: %w", err)
-		}
-		checkoutDetached = true
-		checkoutTarget = head.String()
+		return fmt.Errorf("determine current branch: %w", err)
 	}
 	defer func() {
-		// If the operation was successful,
-		// check out the original branch again.
-		if retErr != nil {
-			return
-		}
-
-		checkoutFn := wt.Checkout
-		if checkoutDetached {
-			checkoutFn = wt.DetachHead
-		}
-		if err := checkoutFn(ctx, checkoutTarget); err != nil {
-			log.Error("Could not check out original branch after fixup", "branch", checkoutTarget, "error", err)
-			retErr = err
+		if retErr == nil {
+			if err := wt.Checkout(ctx, currentBranch); err != nil {
+				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
+			}
 		}
 	}()
 
-	// There must be staged changes to commit.
-	req := fixup.Request{
-		Options: &cmd.Options,
-		Commit:  "", // filled below
-	}
+	var (
+		commitHash   git.Hash
+		commitBranch string
+	)
 	if cmd.Commit != "" {
-		req.Commit, err = wt.PeelToCommit(ctx, cmd.Commit)
+		var err error
+		commitHash, err = wt.PeelToCommit(ctx, cmd.Commit)
 		if err != nil {
-			return fmt.Errorf("resolve commit %q: %w", cmd.Commit, err)
+			return fmt.Errorf("not a commit: %q: %w", cmd.Commit, err)
 		}
-		if string(req.Commit) != cmd.Commit {
-			log.Debug("Fixup commit resolved", "commit", req.Commit)
+		if string(commitHash) != cmd.Commit {
+			log.Debugf("Commit resolved: %v", commitHash)
 		}
 	} else {
 		if !ui.Interactive(view) {
 			return fmt.Errorf("no commit specified: %w", errNoPrompt)
 		}
 
-		req.Branch, req.Commit, err = cmd.commitPrompt(ctx, log, view, repo, wt, svc)
+		var err error
+		commitBranch, commitHash, err = cmd.commitPrompt(ctx, log, view, repo, svc, currentBranch)
 		if err != nil {
 			return fmt.Errorf("prompt for commit: %w", err)
 		}
 	}
-	must.NotBeBlankf(req.Commit, "commit hash not specified, nor set in prompt")
-	return handler.FixupCommit(ctx, &req)
+	must.NotBeBlankf(commitHash, "commit hash not specified, nor set in prompt")
+	req := &fixup.Request{
+		Options:      &cmd.Options,
+		CommitHash:   commitHash,
+		CommitBranch: commitBranch,
+		HeadBranch:   currentBranch,
+	}
+	if err := handler.FixupCommit(ctx, req); err != nil {
+		// If the fixup fails because of a rebase conflict,
+		// after the conflict is resolved and other operations done
+		// (e.g. restack), we want to return to the original branch.
+		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+			Err:     err,
+			Branch:  currentBranch,
+			Command: []string{"branch", "checkout", currentBranch},
+			Message: fmt.Sprintf("fixup commit %s", commitHash),
+		})
+	}
+
+	return nil
 }
 
 func (cmd *commitFixupCmd) commitPrompt(
@@ -140,18 +148,9 @@ func (cmd *commitFixupCmd) commitPrompt(
 	log *silog.Logger,
 	view ui.View,
 	repo *git.Repository,
-	wt *git.Worktree,
 	svc *spice.Service,
+	currentBranch string,
 ) (string, git.Hash, error) {
-	currentBranch, err := wt.CurrentBranch(ctx)
-	if err != nil {
-		if errors.Is(err, git.ErrDetachedHead) {
-			return "", "", errors.New("no commit specified and HEAD is detached; cannot prompt")
-		}
-
-		return "", "", fmt.Errorf("determine current branch: %w", err)
-	}
-
 	graph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("load branch graph: %w", err)
