@@ -14,8 +14,8 @@ import (
 type commitCreateCmd struct {
 	All        bool   `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
-	Fixup      string `help:"Create a fixup commit."`
-	Message    string `short:"m" help:"Use the given message as the commit message."`
+	Fixup      string `help:"Create a fixup commit. See also 'gs commit fixup'." placeholder:"COMMIT"`
+	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
@@ -25,6 +25,18 @@ func (*commitCreateCmd) Help() string {
 		Branches upstack are restacked if necessary.
 		Use this as a shortcut for 'git commit'
 		followed by 'gs upstack restack'.
+
+		An editor is opened to edit the commit message.
+		Use the -m/--message option to specify the message
+		without opening an editor.
+		Git hooks are run unless the --no-verify flag is given.
+
+		Use the -a/--all flag to stage all changes before committing.
+
+		Use the --fixup flag to create a new commit that will be merged
+		into another commit when run with 'git rebase --autosquash'.
+		See also, the 'gs commit fixup' command, which is preferable
+		when you want to apply changes to an older commit.
 	`)
 }
 

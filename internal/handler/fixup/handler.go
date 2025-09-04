@@ -7,14 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"runtime"
-	"sync"
-	"sync/atomic"
+	"slices"
+	"strings"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 )
 
 // RestackHandler is a subset of the restack.Handler interface.
@@ -39,6 +40,7 @@ type GitRepository interface {
 	IsAncestor(ctx context.Context, ancestor, descendant git.Hash) bool
 	MergeTree(ctx context.Context, req git.MergeTreeRequest) (git.Hash, error)
 	CommitTree(ctx context.Context, req git.CommitTreeRequest) (git.Hash, error)
+	PeelToCommit(ctx context.Context, rev string) (git.Hash, error)
 	ReadCommit(ctx context.Context, commitish string) (*git.CommitObject, error)
 	ListCommits(ctx context.Context, commits git.CommitRange) iter.Seq2[git.Hash, error]
 }
@@ -48,9 +50,17 @@ var _ GitRepository = (*git.Repository)(nil)
 // Service is a subset of the spice.Service interface.
 type Service interface {
 	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
+	RebaseRescue(ctx context.Context, req spice.RebaseRescueRequest) error
 }
 
 var _ Service = (*spice.Service)(nil)
+
+// Store is a subset of the spice.Store interface.
+type Store interface {
+	Trunk() string
+}
+
+var _ Store = (*state.Store)(nil)
 
 // Handler implements commit fixup operations.
 type Handler struct {
@@ -59,24 +69,29 @@ type Handler struct {
 	Worktree   GitWorktree    // required
 	Repository GitRepository  // required
 	Service    Service        // required
+	Store      Store          // required
 }
 
 // Options holds options for fixing up a commit.
 type Options struct {
 	// SignCommits indicates whether Git is configured to sign commits.
 	SignCommits bool `default:"false" hidden:"" config:"@commit.gpgsign"`
+
+	// TODO: -a/--all option?
 }
 
 // Request holds parameters for fixing up a commit.
 type Request struct {
-	// Commit is the commit to fixup with the staged changes.
-	Commit git.Hash // required
+	// CommitHash is the commit to fixup with the staged changes.
+	CommitHash git.Hash // required
 
-	// Branch is the branch that the commit belongs to.
-	// If unset, we'll determine this automatically.
-	//
-	// Provide this if it's known in advance to avoid wasted work.
-	Branch string
+	// CommitBranch is the branch that the commit belongs to.
+	// If unset, we'll determine this automatically
+	// by searching downstack branches.
+	CommitBranch string // optional
+
+	// HeadBranch is the current branch.
+	HeadBranch string // required
 
 	Options *Options // optional
 }
@@ -85,36 +100,56 @@ type Request struct {
 // downstack from the current branch.
 func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 	req.Options = cmp.Or(req.Options, &Options{})
-
-	// If a branch name is not provided,
-	// identify the branch that the commit belongs to.
-	//
-	// TODO: this is pretty expensive.
-	// Might be a good idea to allow a --branch flag.
-	if req.Branch == "" {
-		branch, err := h.findCommitBranch(ctx, req.Commit)
-		if err != nil {
-			return fmt.Errorf("find commit branch: %w", err)
-		}
-
-		h.Log.Debug("Identified commit branch", "branch", branch)
-		req.Branch = branch
-	}
-
-	targetCommit, err := h.Repository.ReadCommit(ctx, req.Commit.String())
-	if err != nil {
-		return fmt.Errorf("read target commit: %w", err)
-	}
+	must.Bef(req.CommitBranch != "" || req.HeadBranch != "",
+		"either CommitBranch or HeadBranch must be provided")
 
 	head, err := h.Worktree.Head(ctx)
 	if err != nil {
 		return fmt.Errorf("determine HEAD: %w", err)
 	}
 
+	// Target commit must be an ancestor of HEAD.
+	if !h.Repository.IsAncestor(ctx, req.CommitHash, head) {
+		h.Log.Errorf("Target commit (%v) is not reachable from HEAD (%v)", req.CommitHash, head)
+		return errors.New("fixup commit must be an ancestor of HEAD")
+	}
+
+	// But it must be more recent than trunk.
+	//
+	// TODO:
+	// Non-restack version of this command that works for detached HEAD
+	// would also support fixing up commits that are already in trunk.
+	if trunkHash, err := h.Repository.PeelToCommit(ctx, h.Store.Trunk()); err == nil {
+		if h.Repository.IsAncestor(ctx, req.CommitHash, trunkHash) {
+			h.Log.Errorf("Target commit (%v) is already in trunk (%v)", req.CommitHash, trunkHash)
+			return errors.New("cannot fixup a commit that has been merged into trunk")
+		}
+	}
+
+	// There must be something to commit.
 	if diff, err := h.Worktree.DiffIndex(ctx, head.String()); err != nil {
 		return fmt.Errorf("diff index: %w", err)
 	} else if len(diff) == 0 {
 		return errors.New("no changes staged for commit")
+	}
+
+	// If a branch name is not provided,
+	// identify the branch that the commit belongs to
+	// by searching downstack branches.
+	if req.CommitBranch == "" {
+		branch, err := h.findCommitBranch(ctx, req.HeadBranch, req.CommitHash)
+		if err != nil {
+			h.Log.Error("Unable to identify commit branch", "error", err)
+			return errors.New("try using the prompt to select a commit")
+		}
+
+		h.Log.Debug("Identified commit branch", "branch", branch)
+		req.CommitBranch = branch
+	}
+
+	targetCommit, err := h.Repository.ReadCommit(ctx, req.CommitHash.String())
+	if err != nil {
+		return fmt.Errorf("read target commit: %w", err)
 	}
 
 	plannedTree, err := h.Worktree.WriteIndexTree(ctx)
@@ -124,13 +159,23 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 
 	mergedTree, err := h.Repository.MergeTree(ctx, git.MergeTreeRequest{
 		Branch1:   plannedTree.String(),
-		Branch2:   req.Commit.String(),
+		Branch2:   req.CommitHash.String(),
 		MergeBase: head.String(),
 	})
 	if err != nil {
-		// TODO: figure out error message; this probably means conflict
-		h.Log.Error("Merging staged changes into target commit failed", "error", err)
-		return errors.New("staged changes cannot be applied to the target commit")
+		var conflictErr *git.MergeTreeConflictError
+		if !errors.As(err, &conflictErr) {
+			return fmt.Errorf("merge staged changes with commit: %w", err)
+		}
+
+		h.Log.Errorf("Staged changes conflict with commit %s:", req.CommitHash.Short())
+		for _, detail := range conflictErr.Details {
+			h.Log.Errorf("  %s", detail.Message)
+		}
+		h.Log.Error("Try unstaging some changes and running the command again.")
+
+		files := slices.Sorted(conflictErr.Filenames())
+		return fmt.Errorf("merge conflict in files: %v", strings.Join(files, ", "))
 	}
 
 	newCommit, err := h.Repository.CommitTree(ctx, git.CommitTreeRequest{
@@ -140,7 +185,8 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		GPGSign:   req.Options.SignCommits,
 		Author:    &targetCommit.Author,
 		Committer: &targetCommit.Committer,
-		// TODO: edit?
+		// TODO: support -e/--edit?
+		// TODO: does this run pre-commit hooks?
 	})
 	if err != nil {
 		return fmt.Errorf("commit staged changes to target commit: %w", err)
@@ -149,93 +195,65 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 	// TODO: for now we'll do this with a rebase.
 	// With git-replay or similar, we could do this without a rebase.
 	if err := h.Worktree.Rebase(ctx, git.RebaseRequest{
-		Branch:    req.Branch,
+		Branch:    req.CommitBranch,
 		Onto:      newCommit.String(),
-		Upstream:  req.Commit.String(),
+		Upstream:  req.CommitHash.String(),
 		Autostash: true,
 	}); err != nil {
+		// If the rebase is interrupted by a conflict,
+		// after it's resolved, just restack the upstack.
+		var rebaseErr *git.RebaseInterruptError
+		if errors.As(err, &rebaseErr) {
+			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     rebaseErr,
+				Command: []string{"upstack", "restack", "--skip-start"},
+				Branch:  req.CommitBranch,
+			})
+		}
+
 		return fmt.Errorf("rebase onto new commit: %w", err)
 	}
 
-	// TODO: check out original branch after restack
-	return h.Restack.RestackUpstack(ctx, req.Branch, &restack.UpstackOptions{
+	return h.Restack.RestackUpstack(ctx, req.CommitBranch, &restack.UpstackOptions{
 		SkipStart: true,
 	})
 }
 
 // findCommitBranch searches through known branches' commit ranges
 // to find one that contains the given commit.
-func (h *Handler) findCommitBranch(ctx context.Context, commit git.Hash) (string, error) {
+func (h *Handler) findCommitBranch(
+	ctx context.Context,
+	headBranch string,
+	wantCommit git.Hash,
+) (string, error) {
 	graph, err := h.Service.BranchGraph(ctx, nil)
 	if err != nil {
 		return "", fmt.Errorf("fetch branch graph: %w", err)
 	}
 
-	type workItem struct {
-		Branch string
-		Head   git.Hash
-		Base   git.Hash
-	}
-	workc := make(chan workItem)
+	for branch := range graph.Downstack(headBranch) {
+		item, ok := graph.Lookup(branch)
+		if !ok {
+			// This should never happen.
+			// Skip it if it does.
+			continue
+		}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	var (
-		wg     sync.WaitGroup
-		found  atomic.Bool
-		result string
-	)
-	wantCommit := commit
-	for range runtime.GOMAXPROCS(0) {
-		wg.Go(func() {
-			for work := range workc {
-				if found.Load() {
-					return
-				}
-
-				commitRange := git.CommitRangeFrom(work.Head).ExcludeFrom(work.Base)
-				for commit, err := range h.Repository.ListCommits(ctx, commitRange) {
-					if err != nil {
-						// Commands will be killed when
-						// the context is cancelled.
-						// No reason to log these.
-						continue
-					}
-
-					if commit == wantCommit {
-						if !found.Swap(true) {
-							result = work.Branch
-							cancel()
-						}
-					}
-				}
+		h.Log.Debug("Searching branch for commit",
+			"branch", branch, "range", item.BaseHash.Short()+".."+item.Head.Short())
+		commitRange := git.CommitRangeFrom(item.Head).ExcludeFrom(item.BaseHash)
+		for commit, err := range h.Repository.ListCommits(ctx, commitRange) {
+			if err != nil {
+				h.Log.Error("Error listing commits for branch. Skipping.",
+					"branch", branch, "error", err)
+				continue
 			}
-		})
-	}
 
-outer:
-	for branch := range graph.All() {
-		item := workItem{
-			Branch: branch.Name,
-			Head:   branch.Head,
-			Base:   branch.BaseHash,
-		}
-
-		select {
-		case workc <- item:
-
-		case <-ctx.Done():
-			// A worker already found the commit.
-			break outer
+			if commit == wantCommit {
+				return branch, nil
+			}
 		}
 	}
-	close(workc)
-	wg.Wait()
 
-	if result == "" {
-		return "", fmt.Errorf("commit not found in any tracked branch: %s", commit)
-	}
-
-	return result, nil
+	return "", fmt.Errorf("commit not found in any tracked branch: %s", wantCommit)
 }
