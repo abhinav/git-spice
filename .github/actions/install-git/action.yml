@@ -47,3 +47,11 @@ runs:
       env:
         GIT_VERSION: ${{ inputs.version }}
         GIT_CACHE_DIR: ${{ steps.env.outputs.cache_dir }}
+
+    # This step must run regardless of cache hit or miss.
+    - name: Add Git to PATH
+      shell: bash
+      run: |
+        echo "$GIT_CACHE_DIR/bin" >> "$GITHUB_PATH"
+      env:
+        GIT_CACHE_DIR: ${{ steps.env.outputs.cache_dir }}

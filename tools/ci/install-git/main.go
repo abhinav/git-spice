@@ -28,7 +28,6 @@ func main() {
 	var req installRequest
 	flag.StringVar(&req.Prefix, "prefix", "", "Destination to install to")
 	flag.StringVar(&req.Version, "version", "", "Version to install")
-	flag.StringVar(&req.GithubPath, "github-path", os.Getenv("GITHUB_PATH"), "Path to the GitHub Actions PATH file")
 	flag.BoolVar(&req.Debian, "debian", false, "Whether we're on a Debian-based system")
 	flag.BoolVar(&req.NoCache, "no-cache", false, "Whether to ignore the cached version")
 	flag.Parse()
@@ -52,11 +51,6 @@ type installRequest struct {
 	// Whether we're on a Debian-based system.
 	// Determines how to install build dependencies.
 	Debian bool
-
-	// GithubPath is the path to the GitHub Actions PATH file.
-	// Any paths written to this file will be added to the PATH
-	// for the action.
-	GithubPath string
 }
 
 func (r *installRequest) Validate() (err error) {
@@ -117,15 +111,6 @@ func run(log *silog.Logger, req installRequest) error {
 	} else {
 		log.Info("Requested git version already built",
 			"version", req.Version, "path", gitExe)
-	}
-
-	github := &githubAction{
-		Log:      log.WithPrefix("github"),
-		PathFile: req.GithubPath,
-	}
-
-	if err := github.AddPath(binDir); err != nil {
-		return fmt.Errorf("add path to GitHub Actions: %w", err)
 	}
 
 	return nil
@@ -277,27 +262,6 @@ func (w *progressWriter) Write(bs []byte) (int, error) {
 
 func (w *progressWriter) Finish() {
 	fmt.Fprintln(w.W)
-}
-
-type githubAction struct {
-	Log      *silog.Logger // required
-	PathFile string
-}
-
-func (a *githubAction) AddPath(path string) error {
-	if a.PathFile == "" {
-		return nil
-	}
-
-	f, err := os.OpenFile(a.PathFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-
-	a.Log.Debugf("add path: %v", path)
-	_, err = fmt.Fprintf(f, "%s\n", path)
-	return err
 }
 
 func wrapExecError(err error) error {
