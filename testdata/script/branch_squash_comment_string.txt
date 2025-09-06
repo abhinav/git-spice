@@ -1,5 +1,8 @@
 # Squashing a branch into one commit with 'squash' when core.CommentString is ';'
 
+# Config field added in git 2.45.0
+[!git:2.45.0] skip
+
 as 'Test <test@example.com>'
 at '2025-02-02T20:00:01Z'
 
