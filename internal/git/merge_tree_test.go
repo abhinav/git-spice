@@ -19,6 +19,8 @@ var gitMergeBaseVersion = gittest.Version{Major: 2, Minor: 45, Patch: 0}
 func TestRepository_MergeTree(t *testing.T) {
 	t.Parallel()
 
+	gittest.SkipUnlessVersionAtLeast(t, gitMergeBaseVersion)
+
 	t.Run("NoMergeBase", func(t *testing.T) {
 		t.Parallel()
 
@@ -26,6 +28,7 @@ func TestRepository_MergeTree(t *testing.T) {
 		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 			at '2025-06-21T00:00:00Z'
 			git init
+
 			git add file.txt
 			git commit -m 'Initial commit'
 
