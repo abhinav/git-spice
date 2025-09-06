@@ -44,6 +44,8 @@ func (*branchCreateCmd) Help() string {
 
 		If a branch name is not provided,
 		it will be generated from the commit message.
+		If the 'spice.branchCreate.prefix' configuration option is set,
+		branch names will be prefixed with its value.
 
 		The new branch will use the current branch as its base.
 		Use --target to specify a different base branch.
