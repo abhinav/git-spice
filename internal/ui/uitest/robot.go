@@ -184,7 +184,10 @@ fieldLoop:
 				Height: s.h,
 			}),
 		)
-		msgs := []tea.Msg{cmd()}
+		var msgs []tea.Msg
+		if cmd != nil {
+			msgs = append(msgs, cmd())
+		}
 		for len(msgs) > 0 {
 			var msg tea.Msg
 			msg, msgs = msgs[0], msgs[1:]
