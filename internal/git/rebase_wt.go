@@ -131,7 +131,7 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
 			w.log.Error("Dirty changes in the worktree were stashed, but could not be re-applied.")
 			w.log.Error("The following files were left unmerged:")
 			for _, file := range unmergedFiles {
-				w.log.Error("  - " + file)
+				w.log.Error("  - " + silog.MaybeQuote(file))
 			}
 			w.log.Error("Resolve the conflict and run 'git stash drop' to remove the stash entry.")
 			w.log.Error("Or change to a branch where the stash can apply, and run 'git stash pop'.")
