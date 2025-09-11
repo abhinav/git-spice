@@ -337,7 +337,7 @@ The value should match the filename of one of the available templates
 **Example:**
 
 ```bash
-git config spice.submit.defaultTemplate "PULL_REQUEST_TEMPLATE.md"
+git config spice.submit.template "PULL_REQUEST_TEMPLATE.md"
 ```
 
 When this is configured and multiple templates exist,
