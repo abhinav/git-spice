@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -100,4 +101,71 @@ func TestListFilesPaths_unmerged(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{"conflict.txt"}, paths)
 	})
+}
+
+func TestListFilesPaths_specialCharacters(t *testing.T) {
+	t.Parallel()
+
+	// Windows doesn't like files with some of these names.
+	// Skip this test on Windows.
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows")
+	}
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-06-21T09:27:19Z'
+
+		git init
+		mv just-blank.txt ' '
+		git add ' '
+		git add *.txt
+		git commit -m 'Add files with special characters'
+
+		-- just-blank.txt --
+		file with a name that's just " ".
+
+		-- file with spaces.txt --
+		Contents with spaces
+
+		-- file"quotes".txt --
+		Contents with double quotes
+
+		-- file'single'.txt --
+		Contents with single quotes
+
+		-- file (parens).txt --
+		Contents with parentheses
+
+		-- file[brackets].txt --
+		Contents with brackets
+
+		-- file&ampersand.txt --
+		Contents with ampersand
+
+		-- файл.txt --
+		Unicode content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	paths, err := sliceutil.CollectErr(wt.ListFilesPaths(t.Context(), nil))
+	require.NoError(t, err)
+
+	expected := []string{
+		"file with spaces.txt",
+		`file"quotes".txt`,
+		"file'single'.txt",
+		"file (parens).txt",
+		"file[brackets].txt",
+		"file&ampersand.txt",
+		"файл.txt",
+		" ",
+	}
+	assert.ElementsMatch(t, expected, paths)
 }
