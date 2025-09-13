@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  The new 'gs branch fixup' command allows committing staged changes
+  to a downstack commit, automatically rebasing the rest of the stack.
+  This is 'git commit --amend' for any commit in the stack.
+time: 2025-08-31T16:28:43.164851-07:00
