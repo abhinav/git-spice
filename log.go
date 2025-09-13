@@ -1,22 +1,20 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding"
-	"errors"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
-	"sync"
 
+	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/iterutil"
+	"go.abhg.dev/gs/internal/handler/list"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -27,6 +25,24 @@ import (
 type logCmd struct {
 	Short logShortCmd `cmd:"" aliases:"s" help:"List branches"`
 	Long  logLongCmd  `cmd:"" aliases:"l" help:"List branches and commits"`
+}
+
+func (*logCmd) AfterApply(kctx *kong.Context) error {
+	return kctx.BindToProvider(func(
+		log *silog.Logger,
+		repo *git.Repository,
+		store *state.Store,
+		svc *spice.Service,
+		forges *forge.Registry,
+	) (ListHandler, error) {
+		return &list.Handler{
+			Log:        log,
+			Repository: repo,
+			Store:      store,
+			Service:    svc,
+			Forges:     forges,
+		}, nil
+	})
 }
 
 var (
@@ -56,9 +72,13 @@ var (
 			SetString("◀")
 )
 
+type ListHandler interface {
+	ListBranches(context.Context, *list.BranchesRequest) (*list.BranchesResponse, error)
+}
+
 // branchLogCmd is the shared implementation of logShortCmd and logLongCmd.
 type branchLogCmd struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	list.Options
 
 	ChangeFormat      string  `config:"log.crFormat" hidden:"" default:"id" enum:"id,url"`
 	ChangeFormatShort *string `config:"logShort.crFormat" hidden:"" enum:"id,url"`
@@ -69,37 +89,25 @@ type branchLogCmd struct {
 
 type branchLogOptions struct {
 	Commits bool
-
-	Log *silog.Logger
 }
 
 func (cmd *branchLogCmd) run(
 	ctx context.Context,
 	opts *branchLogOptions,
-	repo *git.Repository,
 	wt *git.Worktree,
-	store *state.Store,
-	svc *spice.Service,
-	forges *forge.Registry,
+	listHandler ListHandler,
 ) (err error) {
-	log := opts.Log
+	opts = cmp.Or(opts, &branchLogOptions{})
+
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		currentBranch = "" // may be detached
 	}
 
-	branchGraph, err := svc.BranchGraph(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("load branch graph: %w", err)
+	req := list.BranchesRequest{
+		Branch:  currentBranch,
+		Options: &cmd.Options,
 	}
-
-	getRemote := sync.OnceValue(func() string {
-		remote, err := store.Remote()
-		if err != nil {
-			return ""
-		}
-		return remote
-	})
 
 	// Determine which ChangeFormat to use: prefer long/short-specific, then fallback to general.
 	changeFormat := cmd.ChangeFormat
@@ -108,191 +116,23 @@ func (cmd *branchLogCmd) run(
 	} else if !opts.Commits && cmd.ChangeFormatShort != nil {
 		changeFormat = *cmd.ChangeFormatShort
 	}
-
-	var repoID forge.RepositoryID
 	if changeFormat == "url" {
-		err := func() error {
-			remote := getRemote()
-
-			remoteURL, err := repo.RemoteURL(ctx, remote)
-			if err != nil {
-				return fmt.Errorf("get remote URL: %w", err)
-			}
-
-			var ok bool
-			_, repoID, ok = forge.MatchRemoteURL(forges, remoteURL)
-			if !ok {
-				return fmt.Errorf("no forge matches remote URL %q", remoteURL)
-			}
-
-			return nil
-		}()
-		if err != nil {
-			log.Warn("Could not find information about the remote", "error", err)
-		}
+		req.Include |= list.IncludeChangeURL
+	}
+	if opts.Commits {
+		req.Include |= list.IncludeCommits
+	}
+	if cmd.PushStatusFormat.Enabled() {
+		req.Include |= list.IncludePushStatus
 	}
 
-	// changeURL queries the forge for the URL of a change request.
-	changeURL := func(changeID forge.ChangeID) string {
-		if repoID == nil {
-			// No forge to query against. Just return the change ID.
-			return changeID.String()
-		}
-
-		return repoID.ChangeURL(changeID)
+	res, err := listHandler.ListBranches(ctx, &req)
+	if err != nil {
+		return fmt.Errorf("log branches: %w", err)
 	}
 
-	type branchInfo struct {
-		Index    int // index in infos
-		Name     string
-		Base     string
-		ChangeID forge.ChangeID
-
-		// Number of commits ahead of the base and behind the head.
-		Ahead, Behind int
-
-		// Whether the branch needs to be pushed to its upstream.
-		NeedsPush bool
-
-		// Whether the branch needs to be restacked.
-		NeedsRestack bool
-
-		Commits []git.CommitDetail
-		Aboves  []int
-	}
-
-	var infoMu sync.Mutex
-	infos := make([]*branchInfo, branchGraph.Count()+1)        // +1 for trunk
-	infoIdxByName := make(map[string]int, branchGraph.Count()) // branch name => index in infos
-
-	type branchLogEntry struct {
-		Branch spice.BranchGraphItem
-		Index  int // index in infos to target
-	}
-
-	entryc := make(chan branchLogEntry)
-	var wg sync.WaitGroup
-	for range runtime.GOMAXPROCS(0) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for entry := range entryc {
-				branch := entry.Branch
-				info := &branchInfo{
-					Name: branch.Name,
-				}
-
-				// NB:
-				// DO NOT 'continue' from this loop
-				// as that will leave unfilled entries in infos,
-				// which will panic down below when consuming
-				// the result.
-
-				// Check restack status /before/ looking up
-				// the branch in git because VerifyRestacked
-				// might update the branch's base hash
-				// if the branch was manually restacked.
-				//
-				// TODO: This is a hack.
-				// The isn't a good abstraction.
-				baseHash, err := svc.CheckRestacked(ctx, branch.Name)
-				if err != nil {
-					var needsRestack *spice.BranchNeedsRestackError
-					if errors.As(err, &needsRestack) {
-						// if the branch needs to be restacked,
-						// use the base hash stored in state
-						// so that the log doesn't show duplicated commits.
-						info.NeedsRestack = true
-						baseHash = branch.BaseHash
-					} else {
-						baseHash = git.ZeroHash
-					}
-				}
-
-				info.Base = branch.Base
-				if branch.Change != nil {
-					info.ChangeID = branch.Change.ChangeID()
-				}
-
-				if cmd.PushStatusFormat.Enabled() && branch.UpstreamBranch != "" {
-					upstream := getRemote() + "/" + branch.UpstreamBranch
-					ahead, behind, err := repo.CommitAheadBehind(ctx, upstream, string(branch.Head))
-					if err == nil {
-						info.Ahead = ahead
-						info.Behind = behind
-						info.NeedsPush = ahead > 0 || behind > 0
-					}
-				}
-
-				if opts.Commits && baseHash != git.ZeroHash {
-					commits, err := sliceutil.CollectErr(repo.ListCommitsDetails(ctx,
-						git.CommitRangeFrom(branch.Head).
-							ExcludeFrom(baseHash).
-							FirstParent()))
-					if err != nil {
-						log.Warn("Could not list commits for branch. Skipping.", "branch", branch.Name, "error", err)
-					} else {
-						info.Commits = commits
-					}
-				}
-
-				infoMu.Lock()
-				info.Index = entry.Index
-				infos[entry.Index] = info
-				infoIdxByName[branch.Name] = info.Index
-				infoMu.Unlock()
-			}
-		}()
-	}
-
-	for index, branch := range iterutil.Enumerate(branchGraph.All()) {
-		entryc <- branchLogEntry{
-			Index:  index,
-			Branch: branch,
-		}
-	}
-	close(entryc)
-	wg.Wait()
-
-	trunkIdx := len(infos) - 1
-	infos[trunkIdx] = &branchInfo{
-		Index: trunkIdx,
-		Name:  store.Trunk(),
-	}
-	infoIdxByName[store.Trunk()] = trunkIdx
-
-	// Second pass: Connect the "aboves".
-	for idx, branch := range infos {
-		if branch.Base == "" {
-			continue
-		}
-
-		baseIdx, ok := infoIdxByName[branch.Base]
-		if !ok {
-			continue
-		}
-
-		infos[baseIdx].Aboves = append(infos[baseIdx].Aboves, idx)
-	}
-
-	isVisible := func(*branchInfo) bool { return true }
-	if !cmd.All && currentBranch != "" {
-		visible := make(map[string]struct{})
-
-		// Add the upstack and downstacks of the current branch to the visible set.
-		for branch := range branchGraph.Stack(currentBranch) {
-			visible[branch] = struct{}{}
-		}
-
-		isVisible = func(info *branchInfo) bool {
-			_, ok := visible[info.Name]
-			return ok
-		}
-	}
-
-	treeStyle := fliptree.DefaultStyle[*branchInfo]()
-	treeStyle.NodeMarker = func(b *branchInfo) lipgloss.Style {
+	treeStyle := fliptree.DefaultStyle[*list.BranchItem]()
+	treeStyle.NodeMarker = func(b *list.BranchItem) lipgloss.Style {
 		if b.Name == currentBranch {
 			return fliptree.DefaultNodeMarker.SetString("■")
 		}
@@ -300,10 +140,10 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var s strings.Builder
-	err = fliptree.Write(&s, fliptree.Graph[*branchInfo]{
-		Roots:  []int{trunkIdx},
-		Values: infos,
-		View: func(b *branchInfo) string {
+	err = fliptree.Write(&s, fliptree.Graph[*list.BranchItem]{
+		Roots:  []int{res.TrunkIdx},
+		Values: res.Branches,
+		View: func(b *list.BranchItem) string {
 			var o strings.Builder
 			if b.Name == currentBranch {
 				o.WriteString(_currentBranchStyle.Render(b.Name))
@@ -316,7 +156,7 @@ func (cmd *branchLogCmd) run(
 				case "id", "":
 					_, _ = fmt.Fprintf(&o, " (%v)", cid)
 				case "url":
-					_, _ = fmt.Fprintf(&o, " (%s)", changeURL(cid))
+					_, _ = fmt.Fprintf(&o, " (%s)", b.ChangeURL)
 				default:
 					must.Failf("unknown change format: %v", cmd.ChangeFormat)
 				}
@@ -326,7 +166,9 @@ func (cmd *branchLogCmd) run(
 				o.WriteString(_needsRestackStyle.String())
 			}
 
-			cmd.PushStatusFormat.FormatTo(&o, b.Ahead, b.Behind, b.NeedsPush)
+			if s := b.PushStatus; s != nil {
+				cmd.PushStatusFormat.FormatTo(&o, s.Ahead, s.Behind, s.NeedsPush)
+			}
 
 			if b.Name == currentBranch {
 				o.WriteString(" " + _markerStyle.String())
@@ -348,16 +190,10 @@ func (cmd *branchLogCmd) run(
 
 			return o.String()
 		},
-		Edges: func(bi *branchInfo) []int {
-			aboves := make([]int, 0, len(bi.Aboves))
-			for _, above := range bi.Aboves {
-				if isVisible(infos[above]) {
-					aboves = append(aboves, above)
-				}
-			}
-			return aboves
+		Edges: func(bi *list.BranchItem) []int {
+			return bi.Aboves
 		},
-	}, fliptree.Options[*branchInfo]{Style: treeStyle})
+	}, fliptree.Options[*list.BranchItem]{Style: treeStyle})
 	if err != nil {
 		return fmt.Errorf("write tree: %w", err)
 	}

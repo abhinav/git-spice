@@ -1,8 +1,8 @@
-[tools.python]
+[[tools.python]]
 version = "3.13.5"
 backend = "core:python"
 
-[tools.uv]
+[[tools.uv]]
 version = "0.7.13"
 backend = "aqua:astral-sh/uv"
 
