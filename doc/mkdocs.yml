@@ -128,6 +128,7 @@ nav:
     - cli/index.md
     - cli/reference.md
     - cli/config.md
+    - cli/experiments.md
     - cli/shorthand.md
   - Recipes: recipes.md
   - FAQ: faq.md

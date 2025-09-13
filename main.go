@@ -15,6 +15,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/browser"
+	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/github"
@@ -131,6 +132,7 @@ func main() {
 		kong.Resolvers(spiceConfig),
 		kong.Bind(logger, &forges),
 		kong.BindTo(ctx, (*context.Context)(nil)),
+		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
 		kong.BindTo(secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
 			// Default to prompting only when the terminal is interactive.
@@ -264,6 +266,7 @@ func main() {
 
 type mainCmd struct {
 	kong.Plugins
+	experiment.Check
 
 	Profile ProfileFlags `embed:""`
 
