@@ -1,6 +1,0 @@
-kind: Fixed
-body: >-
-  log: When used without `--all`, query only requested branches internally.
-  This was wasted work and slowed the command down in repositories
-  with many branches.
-time: 2025-08-30T14:38:37.576813-07:00
