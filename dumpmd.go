@@ -158,7 +158,10 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 	cmd.println("```")
 	cmd.println()
 
+	// Badges all on one line:
+	var hasBadge bool
 	if version := node.Tag.Get("released"); version != "" {
+		hasBadge = true
 		icon := ":material-tag:"
 		text := version
 		href := fmt.Sprintf("/changelog.md#%s", version)
@@ -179,7 +182,26 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 			cmd.printf("%s", text)
 		}
 		cmd.printf(`</span>`)
-		cmd.printf("\n\n")
+		cmd.printf("</span>")
+	}
+	if experiment := node.Tag.Get("experiment"); experiment != "" {
+		hasBadge = true
+		icon := ":material-test-tube:"
+		text := experiment
+		href := fmt.Sprintf("/cli/experiments.md#%s", strings.ToLower(experiment))
+
+		cmd.printf(`<span class="mdx-badge mdx-badge--experiment">`)
+		cmd.printf(`<span class="mdx-badge__icon">`)
+		cmd.printf(`%s{ title="Experimental" }`, icon)
+		cmd.printf(`</span>`)
+		cmd.printf(`<span class="mdx-badge__text">`)
+		cmd.printf("[%s](%s)", text, href)
+		cmd.printf(`</span>`)
+		cmd.printf(`</span>`)
+	}
+	if hasBadge {
+		cmd.println()
+		cmd.println()
 	}
 
 	if node.Help != "" {

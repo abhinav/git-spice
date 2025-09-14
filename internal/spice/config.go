@@ -6,6 +6,7 @@ import (
 	"iter"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -15,13 +16,17 @@ import (
 )
 
 const (
-	_configTag           = "config"
-	_spiceSection        = "spice"
-	_shorthandSubsection = "shorthand"
+	_configTag            = "config"
+	_spiceSection         = "spice"
+	_shorthandSubsection  = "shorthand"
+	_experimentSubsection = "experiment"
 )
 
-// _gitSections is a list of Git-owned sections that we read configuration from.
-var _gitSections = []string{"core"}
+// GitSections is a list of Git-owned sections
+// that we read configuration from.
+var GitSections = []string{
+	"core",
+}
 
 // GitConfigLister provides access to git-config output.
 type GitConfigLister interface {
@@ -82,6 +87,9 @@ type Config struct {
 	// These will be run with 'sh -c',
 	// allowing shorthands to call any shell command.
 	shellCommands map[string]string
+
+	// experiments is a set of enabled experimental features.
+	experiments map[string]struct{}
 }
 
 // ConfigOptions specifies options for the [Config].
@@ -100,10 +108,11 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	items := make(map[git.ConfigKey][]string)
 	shorthands := make(map[string][]string)
 	shellCommands := make(map[string]string)
+	experiments := make(map[string]struct{})
 
 	sectionNames := make(map[string]struct{})
 	sectionNames[_spiceSection] = struct{}{}
-	for _, section := range _gitSections {
+	for _, section := range GitSections {
 		sectionNames[section] = struct{}{}
 	}
 
@@ -126,9 +135,9 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 			continue
 		}
 
-		// Special-case: Everything under "spice.shorthand.*"
-		// defines a shorthand.
-		if section == _spiceSection && subsection == _shorthandSubsection {
+		switch {
+		case section == _spiceSection && subsection == _shorthandSubsection:
+			// Everything under "spice.shorthand.*" defines a shorthand.
 			short := name
 
 			// "!foo" is used for shell commands.
@@ -149,17 +158,46 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 			}
 
 			shorthands[short] = longform
-			continue
-		}
 
-		items[key] = append(items[key], entry.Value)
+		case section == _spiceSection && subsection == _experimentSubsection:
+			// Everything under "spice.experiment.*"
+			// opts in or out of an experimental feature.
+
+			enable, err := strconv.ParseBool(entry.Value)
+			if err != nil {
+				opts.Log.Warn("Skipping experiment with invalid value",
+					"name", name,
+					"value", entry.Value,
+					"error", err,
+				)
+				continue
+			}
+
+			// Experiment names are case-insensitive.
+			experiment := strings.ToLower(name)
+			if enable {
+				experiments[experiment] = struct{}{}
+			} else {
+				delete(experiments, experiment)
+			}
+
+		default:
+			items[key] = append(items[key], entry.Value)
+		}
 	}
 
 	return &Config{
 		items:         items,
 		shorthands:    shorthands,
 		shellCommands: shellCommands,
+		experiments:   experiments,
 	}, nil
+}
+
+// ExperimentEnabled reports whether the given experimental feature is enabled.
+func (c *Config) ExperimentEnabled(name string) bool {
+	_, ok := c.experiments[strings.ToLower(name)]
+	return ok
 }
 
 // ExpandShorthand returns the long form of a custom shorthand command.

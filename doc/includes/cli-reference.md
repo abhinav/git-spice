@@ -154,7 +154,7 @@ was not initialized with a remote.
 gs repo (r) restack (r)
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
 
 Restack all tracked branches
 
@@ -291,7 +291,7 @@ Branches that are deleted from the list will be ignored.
 gs stack (s) delete (d) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
 
 Delete all branches in a stack
 
@@ -426,7 +426,7 @@ Provide the new base name as an argument to skip the prompt.
 gs upstack (us) delete (d) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
 
 Delete all branches above the current branch
 
@@ -746,7 +746,7 @@ For example:
 gs branch (b) squash (sq) [flags]
 ```
 
-<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.11.0](/changelog.md#v0.11.0)</span>
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.11.0](/changelog.md#v0.11.0)</span></span>
 
 Squash a branch into one commit
 
