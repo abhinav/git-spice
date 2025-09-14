@@ -1,0 +1,96 @@
+# 'branch split' to move branch HEAD down to a lower commit
+# also moves the associated CR.
+
+as 'Test <test@example.com>'
+at '2025-09-14T16:09:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature1.txt
+gs bc -m 'Add feature1' features
+git add feature2.txt
+gs cc -m 'Add feature2'
+git add feature3.txt
+gs cc -m 'Add feature3'
+
+gs bs --fill
+
+# Verify prior state
+gs ll -a
+cmp stderr $WORK/golden/before_split.txt
+
+# Split the branch, move "features" down to "feature1".
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch split
+cmp $WORK/robot.actual $WORK/robot.golden
+
+# Verify new state
+gs ll -a
+cmp stderr $WORK/golden/after_split.txt
+
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- repo/feature3.txt --
+feature3
+-- golden/before_split.txt --
+┏━■ features (#1) ◀
+┃   242e421 Add feature3 (now)
+┃   3c19fb9 Add feature2 (now)
+┃   569c763 Add feature1 (now)
+main
+-- golden/after_split.txt --
+    ┏━■ feature3 ◀
+    ┃   242e421 Add feature3 (now)
+  ┏━┻□ feature2
+  ┃    3c19fb9 Add feature2 (now)
+┏━┻□ features (#1) (needs push)
+┃    569c763 Add feature1 (now)
+main
+-- golden/current_branch.txt --
+feature3
+-- robot.golden --
+===
+> Select commits: 
+> ▶   569c763 Add feature1 (now)
+>     3c19fb9 Add feature2 (now)
+>   ■ 242e421 Add feature3 (now) [features]
+>   Done
+> Select commits to split the branch at
+[
+  "569c763",
+  "3c19fb9"
+]
+===
+> Branch name:  
+>   □ 569c763 Add feature1 (now)
+"features"
+===
+> Branch name:  
+>   □ 3c19fb9 Add feature2 (now)
+"feature2"
+===
+> Branch name:  
+>   ■ 242e421 Add feature3 (now) [features]
+"feature3"
+===
+> Assign CR #1 to branch: 
+>
+> ▶ features
+>   feature2
+>   feature3
+>
+> Branch being split has an open CR assigned to it.
+> Select which branch should take over the CR.
+"features"

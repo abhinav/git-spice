@@ -463,6 +463,14 @@ to one of the branches.
 --8<-- "captures/branch-split-reassociate.txt"
 ```
 
+<!-- gs:version unreleased -->
+When prompted for branch names during a split,
+you can reuse the original branch name for one of the intermediate commits.
+When you do this, the original branch will be reassigned to that commit,
+preserving its metadata (such as change requests),
+and you'll be prompted to provide a new name for the remaining HEAD commits.
+This gives you more control over which commits retain the original branch's identity.
+
 ### Splitting non-interactively
 
 ```freeze language="terminal" float="right"

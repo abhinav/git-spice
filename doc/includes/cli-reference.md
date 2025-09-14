@@ -737,6 +737,11 @@ For example:
 	# split at the previous commit
 	gs branch split --at HEAD^:newbranch
 
+When prompted for branch names, you can reuse the original branch
+name for one of the intermediate commits. When you do this, the
+original branch will be reassigned to that commit, and you'll be
+prompted to provide a name for the remaining HEAD commits.
+
 **Flags**
 
 * `--at=COMMIT:NAME,...`: Commits to split the branch at.

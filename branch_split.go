@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
@@ -42,35 +43,38 @@ func (*branchSplitCmd) Help() string {
 
 			# split at the previous commit
 			gs branch split --at HEAD^:newbranch
+
+		When prompted for branch names, you can reuse the original branch
+		name for one of the intermediate commits. When you do this, the
+		original branch will be reassigned to that commit, and you'll be
+		prompted to provide a name for the remaining HEAD commits.
 	`)
 }
 
 // SplitHandler is a subset of split.Handler.
 type SplitHandler interface {
-	SplitBranch(ctx context.Context, req *split.BranchRequest) error
+	SplitBranch(ctx context.Context, req *split.BranchRequest) (*split.BranchResult, error)
 }
 
 var _ SplitHandler = (*split.Handler)(nil)
-
-func (cmd *branchSplitCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
-	if cmd.Branch == "" {
-		branch, err := wt.CurrentBranch(ctx)
-		if err != nil {
-			return fmt.Errorf("get current branch: %w", err)
-		}
-		cmd.Branch = branch
-	}
-
-	return nil
-}
 
 func (cmd *branchSplitCmd) Run(
 	ctx context.Context,
 	view ui.View,
 	repo *git.Repository,
+	wt *git.Worktree,
 	splitHandler SplitHandler,
 ) error {
-	return splitHandler.SplitBranch(ctx, &split.BranchRequest{
+	currentBranch, err := wt.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if cmd.Branch == "" {
+		cmd.Branch = currentBranch
+	}
+
+	result, err := splitHandler.SplitBranch(ctx, &split.BranchRequest{
 		Branch:  cmd.Branch,
 		Options: &cmd.Options,
 		SelectCommits: func(ctx context.Context, branchCommits []git.CommitDetail) ([]split.Point, error) {
@@ -110,32 +114,53 @@ func (cmd *branchSplitCmd) Run(
 				selected[i] = branchCommits[idx]
 			}
 
-			fields := make([]ui.Field, len(selected))
+			// branchNames[i] is the name for selected[i]
 			branchNames := make([]string, len(selected))
-			for i, commit := range selected {
-				var desc strings.Builder
-				desc.WriteString("  □ ")
-				(&widget.CommitSummary{
-					ShortHash:  commit.ShortHash,
-					Subject:    commit.Subject,
-					AuthorDate: commit.AuthorDate,
-				}).Render(&desc, widget.DefaultCommitSummaryStyle)
 
-				input := ui.NewInput().
+			branchNameWidget := func(desc string, value *string) ui.Field {
+				return ui.NewInput().
 					WithTitle("Branch name").
-					WithDescription(desc.String()).
+					WithDescription(desc).
 					WithValidate(func(value string) error {
-						if strings.TrimSpace(value) == "" {
+						value = strings.TrimSpace(value)
+						if value == "" {
 							return errors.New("branch name cannot be empty")
 						}
-						if repo.BranchExists(ctx, value) {
+						if idx := slices.Index(branchNames, value); idx >= 0 {
+							return fmt.Errorf("name already used for commit: %v", selected[idx].ShortHash)
+						}
+						if value != cmd.Branch && repo.BranchExists(ctx, value) {
 							return fmt.Errorf("branch name already taken: %v", value)
 						}
 						return nil
 					}).
-					WithValue(&branchNames[i])
-				fields[i] = input
+					WithValue(value)
 			}
+
+			fields := make([]ui.Field, 0, len(selected)+1) // +1 for deferred HEAD field
+			for i, commit := range selected {
+				desc := cmd.commitDescription(commit, false /* head */)
+				input := branchNameWidget(desc, &branchNames[i])
+				fields = append(fields, input)
+			}
+
+			// New name for the commit at HEAD
+			// if the original branch is being moved.
+			// This is a deferred field so it will be added
+			// only if the original name is reused in the list
+			// above.
+			var headBranchName string
+			headCommit := branchCommits[len(branchCommits)-1]
+			fields = append(fields, ui.Defer(func() ui.Field {
+				if !slices.Contains(branchNames, cmd.Branch) {
+					// Original name not reused, no need to prompt
+					return nil
+				}
+
+				desc := cmd.commitDescription(headCommit, true /* head */) +
+					" [" + cmd.Branch + "]"
+				return branchNameWidget(desc, &headBranchName)
+			}))
 
 			if err := ui.Run(view, fields...); err != nil {
 				return nil, fmt.Errorf("prompt: %w", err)
@@ -145,11 +170,50 @@ func (cmd *branchSplitCmd) Run(
 			for i, commit := range selected {
 				splits = append(splits, split.Point{
 					Commit: commit.Hash.String(),
-					Name:   branchNames[i],
+					Name:   strings.TrimSpace(branchNames[i]),
+				})
+			}
+
+			// If a new name was selected for the HEAD commit,
+			// add that as a split too.
+			if headBranchName != "" {
+				splits = append(splits, split.Point{
+					Commit: headCommit.Hash.String(),
+					Name:   strings.TrimSpace(headBranchName),
 				})
 			}
 
 			return splits, nil
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	// If post-split, the topmost branch is not the current branch,
+	// (because the current branch was moved into a downstream position),
+	// checkout the new topmost branch.
+	if result.Top != currentBranch {
+		if err := wt.Checkout(ctx, result.Top); err != nil {
+			return fmt.Errorf("checkout branch %q: %w", result.Top, err)
+		}
+	}
+
+	return nil
+}
+
+func (cmd *branchSplitCmd) commitDescription(commit git.CommitDetail, head bool) string {
+	var desc strings.Builder
+	if head {
+		desc.WriteString("  ■ ")
+	} else {
+		desc.WriteString("  □ ")
+	}
+	(&widget.CommitSummary{
+		ShortHash:  commit.ShortHash,
+		Subject:    commit.Subject,
+		AuthorDate: commit.AuthorDate,
+	}).Render(&desc, widget.DefaultCommitSummaryStyle)
+
+	return desc.String()
 }
