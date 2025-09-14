@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/text"
 )
@@ -21,8 +22,9 @@ func (*logShortCmd) Help() string {
 
 func (cmd *logShortCmd) Run(
 	ctx context.Context,
+	kctx *kong.Context,
 	wt *git.Worktree,
 	listHandler ListHandler,
 ) (err error) {
-	return cmd.run(ctx, nil, wt, listHandler)
+	return cmd.run(ctx, kctx, nil, wt, listHandler)
 }
