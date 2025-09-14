@@ -47,6 +47,9 @@ def _validator(
 _widthRe = re.compile(r'width="(?P<width>[\d\.]+)"')
 _heightRe = re.compile(r'height="(?P<height>[\d\.]+)"')
 
+# freeze generates svg files which contain an XML declaration and DOCTYPE.
+# We need to strip them when embedding SVGs directly into HTML
+_prologRe = re.compile(r'^\ufeff?\s*(<\?xml[^>]*\?>\s*)?(<!DOCTYPE[^>]*>\s*)?', flags=re.IGNORECASE)
 
 _terminalReplacements = [
     ('\\x1b', '\x1b'),
@@ -105,6 +108,9 @@ def _formatter(
         with open(outfile, "r") as f:
             svg = f.read()
 
+    # remove XML/DOCTYPE for inline HTML embedding of SVG
+    svg = _prologRe.sub('', svg, count=1)
+
     width, height = None, None
     if m := _widthRe.search(svg):
         width = m.group("width")
@@ -116,7 +122,7 @@ def _formatter(
     # insert viewBox="0 0 width height" into the svg,
     # and drop the width and height attributes.
     svg = svg.replace(
-        '<svg', f'<svg viewBox="0 0 {width} {height}"', 1,
+        '<svg', f'<svg viewBox="0 0 {width} {height}" role="presentation" aria-hidden="true"', 1,
     )
     svg = svg.replace(f' width="{width}"', "", 1)
     svg = svg.replace(f' height="{height}"', "", 1)
@@ -134,4 +140,6 @@ def _formatter(
     if options["center"]:
         style += 'margin:0 auto;'
 
-    return f'<div style="{style}">{svg}</div>'
+    code_block = f'<pre class="visually-hidden"><code>{source}</code></pre>'
+
+    return f'<div style="{style}">{svg}{code_block}</div>'

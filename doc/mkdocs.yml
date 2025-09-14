@@ -73,6 +73,38 @@ plugins:
   - search
   - social:
       enabled: !ENV [CI, false]
+  - llmstxt:
+      full_output: llms-full.txt
+      sections:
+        Overview: 
+          - index.md
+        Get started:
+          - start/index.md
+          - start/install.md
+          - start/stack.md
+          - start/submit.md
+        User Guide:
+          - guide/index.md
+          - guide/concepts.md
+          - guide/branch.md
+          - guide/cr.md
+          - guide/limits.md
+          - guide/troubleshooting.md
+          - guide/internals.md
+        Setting up:
+          - setup/index.md
+          - setup/auth.md
+          - setup/shell.md
+        CLI:
+          - cli/index.md
+          - cli/reference.md
+          - cli/config.md
+          - cli/experiments.md
+          - cli/shorthand.md
+        Recipes:
+          - recipes.md
+        FAQ: 
+          - faq.md
 
 hooks:
   - hooks/replace.py
