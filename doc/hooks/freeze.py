@@ -76,10 +76,15 @@ def _formatter(
     # Convenience:
     # If language is terminal, we actually want "ansi",
     # but we want to transform escapes in the source.
+
+    plain_text_source = source
     if options["language"] == "terminal":
         options["language"] = "ansi"
         for pattern, replacement in _terminalReplacements:
             source = source.replace(pattern, replacement)
+            # For each replacement, make a second copy that does a no-op
+            # for a plain text version for use in the <code> block.
+            plain_text_source = plain_text_source.replace(pattern, '')
 
     with tempfile.TemporaryDirectory() as tmpdir:
         outfile = f"{tmpdir}/output.svg"
@@ -121,6 +126,9 @@ def _formatter(
 
     # insert viewBox="0 0 width height" into the svg,
     # and drop the width and height attributes.
+    #
+    # Also mark the svg as presentation, and hide it from screen readers.
+    # A plain text version of the source is provided in a <code> block below.
     svg = svg.replace(
         '<svg', f'<svg viewBox="0 0 {width} {height}" role="presentation" aria-hidden="true"', 1,
     )
@@ -140,6 +148,7 @@ def _formatter(
     if options["center"]:
         style += 'margin:0 auto;'
 
-    code_block = f'<pre class="visually-hidden"><code>{source}</code></pre>'
-
+    # This code block is not visually shown,
+    # but is available to screen readers.
+    code_block = f'<pre class="visually-hidden"><code>{plain_text_source}</code></pre>'
     return f'<div style="{style}">{svg}{code_block}</div>'
