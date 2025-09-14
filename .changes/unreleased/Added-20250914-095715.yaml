@@ -1,0 +1,3 @@
+kind: Added
+body: 'branch split: Allow reusing original branch name for intermediate commits during split'
+time: 2025-09-14T09:57:15.397904-07:00

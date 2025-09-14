@@ -22,12 +22,12 @@ import (
 
 // GitRepository provides treeless read/write access to the Git state.
 type GitRepository interface {
-	CreateBranch(ctx context.Context, req git.CreateBranchRequest) error
 	BranchExists(ctx context.Context, branch string) bool
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	SetBranchUpstream(ctx context.Context, branch, upstream string) error
 	BranchUpstream(ctx context.Context, branch string) (string, error)
 	ListCommitsDetails(ctx context.Context, commits git.CommitRange) iter.Seq2[git.CommitDetail, error]
+	SetRef(ctx context.Context, req git.SetRefRequest) error
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -97,6 +97,12 @@ func (b *Point) Decode(ctx *kong.DecodeContext) error {
 }
 
 // BranchRequest is a request to split a branch.
+//
+// The list of split points in the branch may be specified as options,
+// or via SelectCommits.
+// If a split point requests the original branch name,
+// then there MUST be another split point for the HEAD commit
+// (to take over the original branch name).
 type BranchRequest struct {
 	Branch  string   // required
 	Options *Options // optional, defaults to nil
@@ -106,18 +112,30 @@ type BranchRequest struct {
 	SelectCommits func(context.Context, []git.CommitDetail) ([]Point, error)
 }
 
+// BranchResult is the result of splitting a branch.
+type BranchResult struct {
+	// Top is the name of the branch assigned to the topmost commit
+	// after the split.
+	//
+	// This is normally the original branch name,
+	// but if the original branch was reassigned to a lower commit,
+	// this will be the name of the branch
+	// assigned to the original HEAD commit.
+	Top string
+}
+
 // SplitBranch splits a branch into two or more branches along commit boundaries.
-func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
+func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) (*BranchResult, error) {
 	branch, opts := req.Branch, req.Options
 	opts = cmp.Or(opts, &Options{})
 
 	if branch == h.Store.Trunk() {
-		return errors.New("cannot split trunk")
+		return nil, errors.New("cannot split trunk")
 	}
 
 	branchInfo, err := h.Service.LookupBranch(ctx, branch)
 	if err != nil {
-		return fmt.Errorf("lookup branch %q: %w", branch, err)
+		return nil, fmt.Errorf("lookup branch %q: %w", branch, err)
 	}
 
 	branchCommits, err := sliceutil.CollectErr(h.Repository.ListCommitsDetails(ctx,
@@ -125,7 +143,7 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 			ExcludeFrom(branchInfo.BaseHash).
 			Reverse()))
 	if err != nil {
-		return fmt.Errorf("list commits: %w", err)
+		return nil, fmt.Errorf("list commits: %w", err)
 	}
 
 	branchCommitHashes := make(map[git.Hash]struct{}, len(branchCommits))
@@ -136,34 +154,58 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 	if len(opts.At) == 0 {
 		newSplits, err := req.SelectCommits(ctx, branchCommits)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		opts.At = newSplits
-
 	}
 
 	commitHashes := make([]git.Hash, len(opts.At))
-	newTakenNames := make(map[string]int, len(opts.At))
+	newTakenNames := make(map[string]int, len(opts.At)) // name => index in opts.At
+	var originalNameReused, headCommitIncluded bool
+	var headBranchName string // name of branch assigned to HEAD commit
 	for i, split := range opts.At {
-		if h.Repository.BranchExists(ctx, split.Name) {
-			return fmt.Errorf("--at[%d]: branch already exists: %v", i, split.Name)
+		// TODO:
+		// A bit annoying that we have to repeat validation
+		// from the widget here. Refactor?
+		if otherIdx, ok := newTakenNames[split.Name]; ok {
+			return nil, fmt.Errorf("--at[%d]: branch name already taken by --at[%d]: %v", i, otherIdx, split.Name)
 		}
 
-		if otherIdx, ok := newTakenNames[split.Name]; ok {
-			return fmt.Errorf("--at[%d]: branch name already taken by --at[%d]: %v", i, otherIdx, split.Name)
+		if split.Name != branch && h.Repository.BranchExists(ctx, split.Name) {
+			return nil, fmt.Errorf("--at[%d]: branch already exists: %v", i, split.Name)
 		}
-		newTakenNames[split.Name] = i
 
 		commitHash, err := h.Repository.PeelToCommit(ctx, split.Commit)
 		if err != nil {
-			return fmt.Errorf("--at[%d]: resolve commit %q: %w", i, split.Commit, err)
+			return nil, fmt.Errorf("--at[%d]: resolve commit %q: %w", i, split.Commit, err)
 		}
 
 		if _, ok := branchCommitHashes[commitHash]; !ok {
-			return fmt.Errorf("--at[%d]: %v (%v) is not in range %v..%v", i,
+			return nil, fmt.Errorf("--at[%d]: %v (%v) is not in range %v..%v", i,
 				split.Commit, commitHash, branchInfo.Base, branch)
 		}
 		commitHashes[i] = commitHash
+
+		// Record whether the original branch is being moved
+		// and whether we have a new branch for HEAD for validation.
+		if split.Name == branch {
+			originalNameReused = true
+		} else if commitHash == branchInfo.Head {
+			headCommitIncluded = true
+			headBranchName = split.Name
+		}
+
+		newTakenNames[split.Name] = i
+	}
+
+	if originalNameReused && !headCommitIncluded {
+		oldHead := branchInfo.Head
+		newHead := commitHashes[newTakenNames[branch]]
+
+		h.Log.Errorf("%v: branch HEAD is being moved to %v, "+
+			"but a name for the original HEAD (%v) was not provided",
+			branch, newHead.Short(), oldHead.Short())
+		return nil, fmt.Errorf("a new name for HEAD (%v) is required", oldHead.Short())
 	}
 
 	branchTx := h.Store.BeginBranchTx()
@@ -178,37 +220,47 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 			Base:     base,
 			BaseHash: baseHash,
 		}); err != nil {
-			return fmt.Errorf("add branch %v with base %v: %w", split.Name, base, err)
+			return nil, fmt.Errorf("add branch %v with base %v: %w", split.Name, base, err)
 		}
 		h.Log.Debug("Updating tracked branch state",
 			"branch", split.Name,
 			"base", base+"@"+baseHash.String())
 	}
 
-	finalBase, finalBaseHash := branchInfo.Base, branchInfo.BaseHash
-	if len(opts.At) > 0 {
-		finalBase, finalBaseHash = opts.At[len(opts.At)-1].Name, commitHashes[len(opts.At)-1]
+	// If the original branch is being moved, its state update
+	// is covered above. Otherwise, we have to update it manually here.
+	if !originalNameReused {
+		finalBase, finalBaseHash := branchInfo.Base, branchInfo.BaseHash
+		if len(opts.At) > 0 {
+			finalBase, finalBaseHash = opts.At[len(opts.At)-1].Name, commitHashes[len(opts.At)-1]
+		}
+
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name:     branch,
+			Base:     finalBase,
+			BaseHash: finalBaseHash,
+		}); err != nil {
+			return nil, fmt.Errorf("update branch %v with base %v: %w", branch, finalBase, err)
+		}
+
+		h.Log.Debug("Updating tracked branch state",
+			"branch", branch,
+			"base", finalBase+"@"+finalBaseHash.String())
 	}
-	if err := branchTx.Upsert(ctx, state.UpsertRequest{
-		Name:     branch,
-		Base:     finalBase,
-		BaseHash: finalBaseHash,
-	}); err != nil {
-		return fmt.Errorf("update branch %v with base %v: %w", branch, finalBase, err)
-	}
-	h.Log.Debug("Updating tracked branch state",
-		"branch", branch,
-		"base", finalBase+"@"+finalBaseHash.String())
 
 	if branchInfo.Change != nil && !ui.Interactive(h.View) {
 		h.Log.Info("Branch has an associated CR. Leaving it assigned to the original branch.",
 			"cr", branchInfo.Change.ChangeID())
 	} else if branchInfo.Change != nil {
-		branchNames := make([]string, len(opts.At)+1)
-		for i, split := range opts.At {
-			branchNames[i] = split.Name
+		branchNames := make([]string, 0, len(opts.At)+1)
+		for _, split := range opts.At {
+			branchNames = append(branchNames, split.Name)
 		}
-		branchNames[len(branchNames)-1] = branch
+		if !originalNameReused {
+			// If original branch is being moved,
+			// it's already in the list.
+			branchNames = append(branchNames, branch)
+		}
 
 		var changeBranch string
 		prompt := ui.NewSelect[string]().
@@ -218,7 +270,7 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 			WithValue(&changeBranch).
 			With(ui.ComparableOptions(branch, branchNames...))
 		if err := ui.Run(h.View, prompt); err != nil {
-			return fmt.Errorf("prompt: %w", err)
+			return nil, fmt.Errorf("prompt: %w", err)
 		}
 
 		if changeBranch != branch {
@@ -231,7 +283,7 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 				branchTx,
 			)
 			if err != nil {
-				return fmt.Errorf("transfer CR %v to %v: %w", branchInfo.Change.ChangeID(), changeBranch, err)
+				return nil, fmt.Errorf("transfer CR %v to %v: %w", branchInfo.Change.ChangeID(), changeBranch, err)
 			}
 
 			defer func() {
@@ -243,19 +295,38 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) error {
 	}
 
 	for idx, split := range opts.At {
-		if err := h.Repository.CreateBranch(ctx, git.CreateBranchRequest{
-			Name: split.Name,
-			Head: commitHashes[idx].String(),
+		oldHash := git.ZeroHash
+		if split.Name == branch {
+			// If this is moving the original branch,
+			// ensure we don't clobber any changes
+			// that happened since we looked it up.
+			oldHash = branchInfo.Head
+		}
+
+		var reason string
+		if split.Name == branch {
+			reason = "gs: move branch head"
+		} else {
+			reason = "gs: create new branch"
+		}
+
+		if err := h.Repository.SetRef(ctx, git.SetRefRequest{
+			Ref:     "refs/heads/" + split.Name,
+			Hash:    commitHashes[idx],
+			OldHash: oldHash,
+			Reason:  reason,
 		}); err != nil {
-			return fmt.Errorf("create branch %q: %w", split.Name, err)
+			return nil, fmt.Errorf("update branch %q: %w", split.Name, err)
 		}
 	}
 
 	if err := branchTx.Commit(ctx, fmt.Sprintf("%v: split %d new branches", branch, len(opts.At))); err != nil {
-		return fmt.Errorf("update store: %w", err)
+		return nil, fmt.Errorf("update store: %w", err)
 	}
 
-	return nil
+	return &BranchResult{
+		Top: cmp.Or(headBranchName, branch),
+	}, nil
 }
 
 func (h *Handler) prepareChangeMetadataTransfer(
