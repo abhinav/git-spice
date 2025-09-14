@@ -63,6 +63,7 @@ _terminalReplacements = [
     ('{reset}', '\x1b[0;0m'),
 ]
 
+_ansiRegex = re.compile(r'\x1b\[[0-9;]*m')
 
 # run freeze --window --language=$language in a subprocess,
 # writing to a temporary file.
@@ -85,6 +86,9 @@ def _formatter(
             # For each replacement, make a second copy that does a no-op
             # for a plain text version for use in the <code> block.
             plain_text_source = plain_text_source.replace(pattern, '')
+    elif options["language"] == "ansi":
+        # Text that is already ANSI should be stripped as well.
+        plain_text_source = _ansiRegex.sub('', plain_text_source)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         outfile = f"{tmpdir}/output.svg"
