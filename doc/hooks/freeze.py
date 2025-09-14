@@ -47,6 +47,9 @@ def _validator(
 _widthRe = re.compile(r'width="(?P<width>[\d\.]+)"')
 _heightRe = re.compile(r'height="(?P<height>[\d\.]+)"')
 
+# freeze generates svg files which contain an XML declaration and DOCTYPE.
+# We need to strip them when embedding SVGs directly into HTML
+_prologRe = re.compile(r'^\ufeff?\s*(<\?xml[^>]*\?>\s*)?(<!DOCTYPE[^>]*>\s*)?', flags=re.IGNORECASE)
 
 _terminalReplacements = [
     ('\\x1b', '\x1b'),
@@ -60,6 +63,7 @@ _terminalReplacements = [
     ('{reset}', '\x1b[0;0m'),
 ]
 
+_ansiRegex = re.compile(r'\x1b\[[0-9;]*m')
 
 # run freeze --window --language=$language in a subprocess,
 # writing to a temporary file.
@@ -73,10 +77,18 @@ def _formatter(
     # Convenience:
     # If language is terminal, we actually want "ansi",
     # but we want to transform escapes in the source.
+
+    plain_text_source = source
     if options["language"] == "terminal":
         options["language"] = "ansi"
         for pattern, replacement in _terminalReplacements:
             source = source.replace(pattern, replacement)
+            # For each replacement, make a second copy that does a no-op
+            # for a plain text version for use in the <code> block.
+            plain_text_source = plain_text_source.replace(pattern, '')
+    elif options["language"] == "ansi":
+        # Text that is already ANSI should be stripped as well.
+        plain_text_source = _ansiRegex.sub('', plain_text_source)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         outfile = f"{tmpdir}/output.svg"
@@ -105,6 +117,9 @@ def _formatter(
         with open(outfile, "r") as f:
             svg = f.read()
 
+    # remove XML/DOCTYPE for inline HTML embedding of SVG
+    svg = _prologRe.sub('', svg, count=1)
+
     width, height = None, None
     if m := _widthRe.search(svg):
         width = m.group("width")
@@ -115,8 +130,11 @@ def _formatter(
 
     # insert viewBox="0 0 width height" into the svg,
     # and drop the width and height attributes.
+    #
+    # Also mark the svg as presentation, and hide it from screen readers.
+    # A plain text version of the source is provided in a <code> block below.
     svg = svg.replace(
-        '<svg', f'<svg viewBox="0 0 {width} {height}"', 1,
+        '<svg', f'<svg viewBox="0 0 {width} {height}" role="presentation" aria-hidden="true"', 1,
     )
     svg = svg.replace(f' width="{width}"', "", 1)
     svg = svg.replace(f' height="{height}"', "", 1)
@@ -134,4 +152,7 @@ def _formatter(
     if options["center"]:
         style += 'margin:0 auto;'
 
-    return f'<div style="{style}">{svg}</div>'
+    # This code block is not visually shown,
+    # but is available to screen readers.
+    code_block = f'<pre class="visually-hidden"><code>{plain_text_source}</code></pre>'
+    return f'<div style="{style}">{svg}{code_block}</div>'

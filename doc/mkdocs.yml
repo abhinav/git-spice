@@ -60,6 +60,35 @@ extra_css:
 exclude_docs: |
   img/README.md
 
+nav:
+  - Home: index.md
+  - Get started: &get-started
+    - start/index.md
+    - start/install.md
+    - start/stack.md
+    - start/submit.md
+  - User Guide: &user-guide
+    - guide/index.md
+    - guide/concepts.md
+    - guide/branch.md
+    - guide/cr.md
+    - guide/limits.md
+    - guide/troubleshooting.md
+    - guide/internals.md
+  - Setting up: &setup
+    - setup/index.md
+    - setup/auth.md
+    - setup/shell.md
+  - CLI: &cli
+    - cli/index.md
+    - cli/reference.md
+    - cli/config.md
+    - cli/experiments.md
+    - cli/shorthand.md
+  - Recipes: recipes.md
+  - FAQ: faq.md
+  - Changelog: changelog.md
+
 plugins:
   - markdown-exec
   - privacy:
@@ -73,6 +102,19 @@ plugins:
   - search
   - social:
       enabled: !ENV [CI, false]
+  - llmstxt:
+      full_output: llms-full.txt
+      sections:
+        Home:
+          - index.md
+        Get started: *get-started
+        User Guide: *user-guide
+        Setting up: *setup
+        CLI: *cli
+        Recipes:
+          - recipes.md
+        FAQ:
+          - faq.md
 
 hooks:
   - hooks/replace.py
@@ -104,35 +146,6 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - toc: {permalink: true}
-
-nav:
-  - Home: index.md
-  - Get started:
-    - start/index.md
-    - start/install.md
-    - start/stack.md
-    - start/submit.md
-  - User Guide:
-    - guide/index.md
-    - guide/concepts.md
-    - guide/branch.md
-    - guide/cr.md
-    - guide/limits.md
-    - guide/troubleshooting.md
-    - guide/internals.md
-  - Setting up:
-    - setup/index.md
-    - setup/auth.md
-    - setup/shell.md
-  - CLI:
-    - cli/index.md
-    - cli/reference.md
-    - cli/config.md
-    - cli/experiments.md
-    - cli/shorthand.md
-  - Recipes: recipes.md
-  - FAQ: faq.md
-  - Changelog: changelog.md
 
 watch:
   - includes
