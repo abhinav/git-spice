@@ -125,12 +125,7 @@ func (cmd *cliDumper) dump(app *kong.Application) {
 		cmd.println()
 	}
 
-	cmd.print("**Global flags**\n\n")
-	for _, flag := range app.Flags {
-		cmd.dumpFlag(flag)
-	}
-	cmd.println()
-
+	cmd.dumpFlags("Global flags", app.Flags)
 	cmd.dumpConfigFooter(app.Node)
 
 	for i, key := range groupKeys {
@@ -223,11 +218,7 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 	}
 	if len(node.Flags) > 0 {
 		// TODO: flag groups
-		cmd.print("**Flags**\n\n")
-		for _, flag := range node.Flags {
-			cmd.dumpFlag(flag)
-		}
-		cmd.println()
+		cmd.dumpFlags("Flags", node.Flags)
 	}
 
 	cmd.dumpConfigFooter(node)
@@ -270,11 +261,24 @@ func (cmd cliDumper) dumpArg(arg *kong.Positional) {
 	cmd.printf("* `%s`: %s\n", arg.Name, arg.Help)
 }
 
-func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
-	if flag.Hidden {
-		return
+func (cmd cliDumper) dumpFlags(header string, flags []*kong.Flag) {
+	var wroteHeader bool
+	for _, flag := range flags {
+		if flag.Hidden {
+			continue
+		}
+		if !wroteHeader {
+			cmd.printf("**%s**\n\n", header)
+			wroteHeader = true
+		}
+		cmd.dumpFlag(flag)
 	}
+	if wroteHeader {
+		cmd.println()
+	}
+}
 
+func (cmd cliDumper) dumpFlag(flag *kong.Flag) {
 	name := flag.Name
 
 	cmd.print("* ")
