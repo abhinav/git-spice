@@ -1,0 +1,105 @@
+# Test commit fixup with conflict during rebase on same branch.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# First three commits modify the same file
+# in a way where the first and the third commit look similar.
+git add shared_file.txt
+gs bc -m 'Add shared file' feature
+cp $WORK/extra/shared_file_v2.txt shared_file.txt
+git add shared_file.txt
+gs cc -m 'Modify shared file'
+cp $WORK/extra/shared_file_v3.txt shared_file.txt
+git add shared_file.txt
+gs cc -m 'Another change to shared file'
+
+# Also add a second feature branch on top
+# to ensure branches get restacked.
+git add feat2.txt
+gs bc -m 'Add feature 2' feat2
+gs down
+
+# Staged changes based on third commit
+# will apply cleanly to the first commit,
+# but conflict with the second commit.
+cp $WORK/extra/shared_file_fixup.txt shared_file.txt
+git add shared_file.txt
+! gs commit fixup HEAD~2
+stderr 'Could not apply'
+stderr 'Modify shared file'
+
+# Check that we're in a conflicted state
+git status --porcelain
+cmp stdout $WORK/golden/conflict_status.txt
+
+# Resolve the conflict
+cp $WORK/extra/shared_file_resolved.txt shared_file.txt
+git add shared_file.txt
+
+# This will fail again because there is another conflict
+# against the third commit.
+! gs rebase continue --no-edit
+stderr 'There are more conflicts to resolve'
+stderr 'Another change to shared file'
+
+cp $WORK/extra/shared_file_final.txt shared_file.txt
+git add shared_file.txt
+gs rebase continue --no-edit
+
+# Verify final state
+git graph --branches
+cmp stdout $WORK/golden/final_graph.txt
+
+# Verify the fixup was applied and conflicts resolved
+cmp shared_file.txt $WORK/extra/shared_file_final.txt
+
+-- repo/shared_file.txt --
+Original content
+unchanged line
+another line
+
+-- extra/shared_file_v2.txt --
+Modified by commit 2
+unchanged line
+another line
+
+-- extra/shared_file_v3.txt --
+Original content
+unchanged line
+changed by commit 3
+
+-- extra/shared_file_fixup.txt --
+Fixed original content
+unchanged line
+another line
+
+-- extra/shared_file_resolved.txt --
+Fixed original content
+unchanged line
+changed by commit 3
+
+-- extra/shared_file_final.txt --
+Fixed original content
+unchanged line
+another line
+
+-- repo/feat2.txt --
+feature 2
+
+-- golden/conflict_status.txt --
+UU shared_file.txt
+-- golden/final_graph.txt --
+* 6a8b850 (feat2) Add feature 2
+* 6045de2 (HEAD -> feature) Another change to shared file
+* ecf490e Modify shared file
+* a88f369 Add shared file
+* 7cd9101 (main) Initial commit

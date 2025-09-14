@@ -1,0 +1,83 @@
+# Test commit fixup on bottom commit of deep stack with full restack.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create a deep stack: 3 branches, each with multiple commits
+git add level1_file1.txt
+gs bc -m 'Level1 commit1' level1
+git add level1_file2.txt
+gs cc -m 'Level1 commit2'
+
+git add level2_file1.txt
+gs bc -m 'Level2 commit1' level2
+git add level2_file2.txt
+gs cc -m 'Level2 commit2'
+
+git add level3_file1.txt
+gs bc -m 'Level3 commit1' level3
+git add level3_file2.txt
+gs cc -m 'Level3 commit2'
+
+# Add an unstaged change
+cp $WORK/extra/dirty_expected.txt dirty_file.txt
+
+# Go to the top of the stack and stage changes to the bottom
+gs top
+cp $WORK/extra/level1_file1_fixed.txt level1_file1.txt
+git add level1_file1.txt
+
+# Fixup the bottom-most commit (first commit in level1 branch)
+gs commit fixup HEAD~5
+
+# Verify dirty working directory is preserved
+cmp dirty_file.txt $WORK/extra/dirty_expected.txt
+
+# Verify the complete stack was restacked correctly
+git graph --branches
+cmp stdout $WORK/golden/deep_stack_graph.txt
+
+# Verify the fixup was applied to the bottom commit
+gs branch checkout level1
+cmp level1_file1.txt $WORK/extra/level1_file1_fixed.txt
+
+-- repo/level1_file1.txt --
+Level1 file1 original
+
+-- repo/level1_file2.txt --
+Level1 file2 content
+
+-- repo/level2_file1.txt --
+Level2 file1 content
+
+-- repo/level2_file2.txt --
+Level2 file2 content
+
+-- repo/level3_file1.txt --
+Level3 file1 content
+
+-- repo/level3_file2.txt --
+Level3 file2 content
+
+-- extra/level1_file1_fixed.txt --
+Level1 file1 FIXED
+
+-- extra/dirty_expected.txt --
+dirty content
+
+-- golden/deep_stack_graph.txt --
+* 2474bb9 (HEAD -> level3) Level3 commit2
+* 0dcc541 Level3 commit1
+* e60b7c6 (level2) Level2 commit2
+* 605c42b Level2 commit1
+* 52c088e (level1) Level1 commit2
+* d8885e5 Level1 commit1
+* 7cd9101 (main) Initial commit

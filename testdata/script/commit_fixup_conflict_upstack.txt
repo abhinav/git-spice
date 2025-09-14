@@ -1,0 +1,96 @@
+# Test commit fixup with conflict during upstack restack.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# o (main)
+#  \
+#   o (feature1) Add base file
+#    \
+#     o (feature2) Add derived file
+#      \
+#       o (feature3) Modify base file (conflicts with feature1)
+git add base_file.txt
+gs bc -m 'Add base file' feature1
+git add derived_file.txt
+gs bc -m 'Add derived file' feature2
+cp $WORK/extra/base_file_modified.txt base_file.txt
+git add base_file.txt
+gs bc -m 'Modify base file' feature3
+
+# Go back to feature2 and stage changes to fixup into feature1
+gs bco feature2
+cp $WORK/extra/base_file_fixup.txt base_file.txt
+git add base_file.txt
+
+# Attempt fixup of feature1 - should succeed but fail during upstack restack
+! gs commit fixup HEAD~1
+stderr 'There was a conflict while rebasing'
+stderr 'gs rebase continue'
+stderr 'gs rebase abort'
+stderr 'Modify base file'
+
+# Check conflict status
+git status --porcelain
+cmp stdout $WORK/golden/upstack_conflict_status.txt
+
+# Resolve the conflict
+cp $WORK/extra/base_file_conflict_resolved.txt base_file.txt
+git add base_file.txt
+gs rebase continue --no-edit
+
+# Should be back at feature2 after resolution
+git branch --show-current
+stdout 'feature2'
+
+# Verify the fixup was applied in feature1
+gs branch checkout feature1
+cmp base_file.txt $WORK/extra/base_file_fixup.txt
+
+# Verify feature3 has the resolved conflict
+gs branch checkout feature3
+cmp base_file.txt $WORK/extra/base_file_conflict_resolved.txt
+
+# Verify the final state shows all branches properly restacked
+gs branch checkout feature2
+git graph --branches
+cmp stdout $WORK/golden/final_upstack_graph.txt
+
+-- repo/base_file.txt --
+Original base content
+shared line 1
+shared line 2
+
+-- repo/derived_file.txt --
+Derived file content
+
+-- extra/base_file_modified.txt --
+Modified base content in feature3
+shared line 1
+different line 2
+
+-- extra/base_file_fixup.txt --
+Fixed base content
+shared line 1
+shared line 2
+
+-- extra/base_file_conflict_resolved.txt --
+Fixed base content
+shared line 1
+different line 2
+
+-- golden/upstack_conflict_status.txt --
+UU base_file.txt
+-- golden/final_upstack_graph.txt --
+* a6268d3 (feature3) Modify base file
+* f880a32 (HEAD -> feature2) Add derived file
+* da1db66 (feature1) Add base file
+* 7cd9101 (main) Initial commit

@@ -31,6 +31,18 @@ func (*commitAmendCmd) Help() string {
 		Branches upstack are restacked if necessary.
 		Use this as a shortcut for 'git commit --amend'
 		followed by 'gs upstack restack'.
+
+		An editor is opened to edit the commit message,
+		unless the --no-edit flag is given.
+		Use the -m/--message option to specify the message
+		on the command line.
+		Git hooks are run unless the --no-verify flag is given.
+
+		Use the -a/--all flag to stage all changes before committing.
+
+		To prevent accidental amends on the trunk branch,
+		a prompt will require confirmation when amending on trunk.
+		The --no-prompt flag can be used to skip this prompt in scripts.
 	`)
 }
 

@@ -15,6 +15,7 @@
 | gs buntr | [gs branch untrack](/cli/reference.md#gs-branch-untrack) |
 | gs ca | [gs commit amend](/cli/reference.md#gs-commit-amend) |
 | gs cc | [gs commit create](/cli/reference.md#gs-commit-create) |
+| gs cf | [gs commit fixup](/cli/reference.md#gs-commit-fixup) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |

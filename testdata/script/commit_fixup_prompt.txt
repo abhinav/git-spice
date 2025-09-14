@@ -1,0 +1,81 @@
+# Test commit fixup interactive prompt for commit selection.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# feature 1
+git add file1.txt
+gs bc -m 'Add file1' feature1
+git add file1_extra.txt
+gs cc -m 'Update feature1'
+
+# feature 2
+git add file2.txt
+gs bc -m 'Add file2' feature2
+git add file2_extra.txt
+gs cc -m 'Update feature2'
+
+# feature 3
+git add file3.txt
+gs bc -m 'Add file3' feature3
+
+# Test: non-interactive mode fails without an argument
+git add file3_extra.txt
+env ROBOT_INPUT= ROBOT_OUTPUT=
+! gs commit fixup
+stderr 'no commit specified'
+
+# Test: Fixup the first commit
+cp $WORK/extra/file1_fixed.txt file1.txt
+git add file1.txt
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs commit fixup
+cmp $WORK/robot.actual $WORK/robot.golden
+
+# Verify
+cmp file1.txt $WORK/extra/file1_fixed.txt
+
+-- repo/file1.txt --
+Original file1
+
+-- repo/file1_extra.txt --
+Extra file1 content
+
+-- repo/file2.txt --
+Original file2
+
+-- repo/file2_extra.txt --
+Extra file2 content
+
+-- repo/file3.txt --
+Original file3
+
+-- repo/file3_extra.txt --
+Extra file3 content
+
+-- extra/file1_fixed.txt --
+Fixed file1 content
+
+-- robot.golden --
+===
+> Pick a commit: 
+>     ┏━□ feature3 
+>     ┃   ▶ f0e8dfd Add file3 (now)
+>   ┏━┻□ feature2 
+>   ┃      47d73f5 Update feature2 (now) 
+>   ┃      a467257 Add file2 (now)
+> ┏━┻□ feature1 
+> ┃      7e7351f Update feature1 (now) 
+> ┃      9fa53ba Add file1 (now)
+> main
+>
+> Staged changes will be applied to this commit.
+"9fa53ba"

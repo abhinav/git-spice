@@ -34,3 +34,13 @@ If you use an experimental feature,
 feel free to report issues and provide feedback about them.
 
 ## Available experiments
+
+### commitFixup
+
+**Added**: <!-- gs:version unreleased -->
+<!-- TODO: **Removed**: -->
+
+Enables the $$gs commit fixup$$ command.
+This command acts like `gs commit amend`,
+but is able to amend any commit in the current branch,
+or downstack from it -- except those that are already on main.
