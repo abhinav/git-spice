@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -93,6 +93,7 @@ type branchLogOptions struct {
 
 func (cmd *branchLogCmd) run(
 	ctx context.Context,
+	kctx *kong.Context,
 	opts *branchLogOptions,
 	wt *git.Worktree,
 	listHandler ListHandler,
@@ -108,8 +109,8 @@ func (cmd *branchLogCmd) run(
 		Branch:  currentBranch,
 		Options: &cmd.Options,
 	}
-
-	// Determine which ChangeFormat to use: prefer long/short-specific, then fallback to general.
+	// Determine which ChangeFormat to use:
+	// prefer long/short-specific, then fallback to general.
 	changeFormat := cmd.ChangeFormat
 	if opts.Commits && cmd.ChangeFormatLong != nil {
 		changeFormat = *cmd.ChangeFormatLong
@@ -131,6 +132,27 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("log branches: %w", err)
 	}
 
+	// TODO: JSON presenter
+	var presenter logPresenter = &graphLogPresenter{
+		Stderr:           kctx.Stderr,
+		ChangeFormat:     changeFormat,
+		PushStatusFormat: cmd.PushStatusFormat,
+	}
+
+	return presenter.Present(res, currentBranch)
+}
+
+type logPresenter interface {
+	Present(res *list.BranchesResponse, currentBranch string) error
+}
+
+type graphLogPresenter struct {
+	Stderr           io.Writer        // required
+	ChangeFormat     changeFormat     // required
+	PushStatusFormat pushStatusFormat // required
+}
+
+func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch string) error {
 	treeStyle := fliptree.DefaultStyle[*list.BranchItem]()
 	treeStyle.NodeMarker = func(b *list.BranchItem) lipgloss.Style {
 		if b.Name == currentBranch {
@@ -140,7 +162,7 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var s strings.Builder
-	err = fliptree.Write(&s, fliptree.Graph[*list.BranchItem]{
+	err := fliptree.Write(&s, fliptree.Graph[*list.BranchItem]{
 		Roots:  []int{res.TrunkIdx},
 		Values: res.Branches,
 		View: func(b *list.BranchItem) string {
@@ -152,13 +174,13 @@ func (cmd *branchLogCmd) run(
 			}
 
 			if cid := b.ChangeID; cid != nil {
-				switch changeFormat {
+				switch p.ChangeFormat {
 				case changeFormatID:
 					_, _ = fmt.Fprintf(&o, " (%v)", cid)
 				case changeFormatURL:
 					_, _ = fmt.Fprintf(&o, " (%s)", b.ChangeURL)
 				default:
-					must.Failf("unknown change format: %v", changeFormat)
+					must.Failf("unknown change format: %v", p.ChangeFormat)
 				}
 			}
 
@@ -167,7 +189,7 @@ func (cmd *branchLogCmd) run(
 			}
 
 			if s := b.PushStatus; s != nil {
-				cmd.PushStatusFormat.FormatTo(&o, s.Ahead, s.Behind, s.NeedsPush)
+				p.PushStatusFormat.FormatTo(&o, s.Ahead, s.Behind, s.NeedsPush)
 			}
 
 			if b.Name == currentBranch {
@@ -198,7 +220,7 @@ func (cmd *branchLogCmd) run(
 		return fmt.Errorf("write tree: %w", err)
 	}
 
-	_, err = fmt.Fprint(os.Stderr, s.String())
+	_, err = fmt.Fprint(p.Stderr, s.String())
 	return err
 }
 
