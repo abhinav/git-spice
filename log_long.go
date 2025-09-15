@@ -17,6 +17,9 @@ func (*logLongCmd) Help() string {
 		Only branches that are upstack and downstack from the current
 		branch are shown.
 		Use with the -a/--all flag to show all tracked branches.
+
+		With --json, prints output to stdout as a stream of JSON objects.
+		See https://abhinav.github.io/git-spice/cli/json/ for details.
 	`)
 }
 

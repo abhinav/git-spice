@@ -31,12 +31,22 @@ cmp stderr $WORK/golden/log_short.txt
 gs log long
 cmp stderr $WORK/golden/log_long.txt
 
+gs log short --json
+cmp stdout $WORK/golden/log_short.json
+gs log long --json
+cmp stdout $WORK/golden/log_long.json
+
 # Test from detached HEAD - should show all tracked branches
 git checkout --detach main
 gs log short
 cmp stderr $WORK/golden/log_short.txt
 gs log long
 cmp stderr $WORK/golden/log_long.txt
+
+gs log short --json
+cmp stdout $WORK/golden/log_short.json
+gs log long --json
+cmp stdout $WORK/golden/log_long.json
 
 -- repo/untracked.txt --
 untracked content
@@ -48,6 +58,20 @@ untracked content
   ┣━┻□ feat4
 ┏━┻□ feat1
 main
+-- golden/log_short.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"},{"name":"feat4"}]}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}]}
+{"name":"feat3","down":{"name":"feat2"}}
+{"name":"feat4","down":{"name":"feat1"},"ups":[{"name":"feat5"}]}
+{"name":"feat5","down":{"name":"feat4"}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/log_long.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"},{"name":"feat4"}],"commits":[{"sha":"f9bce0469ea5f4303526f583a14b1fcd55215287","subject":"Add feature 1"}]}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"588a367b33e9a611b32cf8509c07db18acc154fd","subject":"Add feature 2"}]}
+{"name":"feat3","down":{"name":"feat2"},"commits":[{"sha":"9276838f3a657fe62c14f02d26722767f847560c","subject":"Add feature 3"}]}
+{"name":"feat4","down":{"name":"feat1"},"ups":[{"name":"feat5"}],"commits":[{"sha":"9037034a0580345868972da0f43c4339b29460fe","subject":"Add feature 4"}]}
+{"name":"feat5","down":{"name":"feat4"},"commits":[{"sha":"5b70527eb6680668e05a29111c083ae23292c6e4","subject":"Add feature 5"}]}
+{"name":"main","ups":[{"name":"feat1"}]}
 -- golden/log_long.txt --
     ┏━□ feat3
     ┃   9276838 Add feature 3 (now)

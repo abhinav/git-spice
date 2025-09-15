@@ -26,6 +26,8 @@ stderr 'Created #'
 
 gs ls -a
 cmp stderr $WORK/golden/ls.txt
+gs ls -a --json
+cmpenv stdout $WORK/golden/ls.json
 
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/create.json
@@ -103,3 +105,6 @@ New contents of feature1
 -- golden/ls.txt --
 ┏━■ feature1 (#1) ◀
 main
+-- golden/ls.json --
+{"name":"feature1","current":true,"down":{"name":"main"},"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feature1"}]}
