@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"cmp"
 	"context"
 	"encoding"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -85,6 +88,8 @@ type branchLogCmd struct {
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
+
+	JSON bool `name:"json" released:"unreleased" help:"Write to stdout as a stream of JSON objects in an unspecified order"`
 }
 
 type branchLogOptions struct {
@@ -105,38 +110,53 @@ func (cmd *branchLogCmd) run(
 		currentBranch = "" // may be detached
 	}
 
+	var presenter logPresenter
+	var wantChangeURL, wantPushStatus bool
+	if cmd.JSON {
+		// JSON always wants all information.
+		wantChangeURL = true
+		wantPushStatus = true
+
+		presenter = &jsonLogPresenter{
+			Stdout: kctx.Stdout,
+		}
+	} else {
+		// Determine which ChangeFormat to use:
+		// prefer long/short-specific, then fallback to general.
+		changeFormat := cmd.ChangeFormat
+		if opts.Commits && cmd.ChangeFormatLong != nil {
+			changeFormat = *cmd.ChangeFormatLong
+		} else if !opts.Commits && cmd.ChangeFormatShort != nil {
+			changeFormat = *cmd.ChangeFormatShort
+		}
+
+		wantChangeURL = changeFormat == changeFormatURL
+		wantPushStatus = cmd.PushStatusFormat.Enabled()
+
+		presenter = &graphLogPresenter{
+			Stderr:           kctx.Stderr,
+			ChangeFormat:     changeFormat,
+			PushStatusFormat: cmd.PushStatusFormat,
+		}
+	}
+
 	req := list.BranchesRequest{
 		Branch:  currentBranch,
 		Options: &cmd.Options,
 	}
-	// Determine which ChangeFormat to use:
-	// prefer long/short-specific, then fallback to general.
-	changeFormat := cmd.ChangeFormat
-	if opts.Commits && cmd.ChangeFormatLong != nil {
-		changeFormat = *cmd.ChangeFormatLong
-	} else if !opts.Commits && cmd.ChangeFormatShort != nil {
-		changeFormat = *cmd.ChangeFormatShort
-	}
-	if changeFormat == changeFormatURL {
+	if wantChangeURL {
 		req.Include |= list.IncludeChangeURL
 	}
 	if opts.Commits {
 		req.Include |= list.IncludeCommits
 	}
-	if cmd.PushStatusFormat.Enabled() {
+	if wantPushStatus {
 		req.Include |= list.IncludePushStatus
 	}
 
 	res, err := listHandler.ListBranches(ctx, &req)
 	if err != nil {
 		return fmt.Errorf("log branches: %w", err)
-	}
-
-	// TODO: JSON presenter
-	var presenter logPresenter = &graphLogPresenter{
-		Stderr:           kctx.Stderr,
-		ChangeFormat:     changeFormat,
-		PushStatusFormat: cmd.PushStatusFormat,
 	}
 
 	return presenter.Present(res, currentBranch)
@@ -222,6 +242,154 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 
 	_, err = fmt.Fprint(p.Stderr, s.String())
 	return err
+}
+
+type jsonLogPresenter struct {
+	Stdout io.Writer // required
+}
+
+func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch string) (retErr error) {
+	bufw := bufio.NewWriter(p.Stdout)
+	defer func() {
+		retErr = errors.Join(retErr, bufw.Flush())
+	}()
+
+	enc := json.NewEncoder(bufw)
+	for _, branch := range res.Branches {
+		logBranch := jsonLogBranch{
+			Name:    branch.Name,
+			Current: branch.Name == currentBranch,
+		}
+
+		if branch.Base != "" {
+			logBranch.Down = &jsonLogDown{
+				Name:         branch.Base,
+				NeedsRestack: branch.NeedsRestack,
+			}
+		}
+
+		if len(branch.Aboves) > 0 {
+			ups := make([]jsonLogUp, 0, len(branch.Aboves))
+			for _, aboveIdx := range branch.Aboves {
+				ups = append(ups, jsonLogUp{
+					Name: res.Branches[aboveIdx].Name,
+				})
+			}
+			logBranch.Ups = ups
+		}
+
+		if len(branch.Commits) > 0 {
+			commits := make([]jsonLogCommit, 0, len(branch.Commits))
+			for _, commit := range branch.Commits {
+				commits = append(commits, jsonLogCommit{
+					SHA:     commit.Hash.String(),
+					Subject: commit.Subject,
+				})
+			}
+			logBranch.Commits = commits
+		}
+
+		if branch.ChangeID != nil {
+			logBranch.Change = &jsonLogChange{
+				ID:  branch.ChangeID.String(),
+				URL: branch.ChangeURL,
+			}
+		}
+
+		if status := branch.PushStatus; status != nil {
+			logBranch.Push = &jsonLogPushStatus{
+				Ahead:     status.Ahead,
+				Behind:    status.Behind,
+				NeedsPush: status.NeedsPush,
+			}
+		}
+
+		if err := enc.Encode(logBranch); err != nil {
+			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
+		}
+	}
+
+	return nil
+}
+
+type jsonLogBranch struct {
+	// Name of the branch.
+	Name string `json:"name"`
+
+	// Current is true if this branch is the current branch.
+	// This is false or omitted if this is not the current branch.
+	Current bool `json:"current,omitempty"`
+
+	// Down is the base branch onto which this branch is stacked.
+	// This is unset if this branch is trunk.
+	// 'gs down' from the current branch will check out this branch.
+	Down *jsonLogDown `json:"down,omitempty"`
+
+	// Ups is a list of branches that are stacked directly above this branch.
+	// 'gs up' from this branch will check out one of these branches.
+	Ups []jsonLogUp `json:"ups,omitempty"`
+
+	// Commits is a list of commits on this branch.
+	// These are not included unless invoked with 'gs log long'.
+	Commits []jsonLogCommit `json:"commits,omitempty"`
+
+	// Change is the associated change request, if any.
+	// This is unset if this branch has not been published.
+	Change *jsonLogChange `json:"change,omitempty"`
+
+	// Push indicates the push status of this branch,
+	// if the branch has been pushed to a remote.
+	// This is unset if the branch has not been pushed
+	// from git-spice's perspective.
+	Push *jsonLogPushStatus `json:"push,omitempty"`
+}
+
+type jsonLogDown struct {
+	// Name of the base branch.
+	Name string `json:"name"`
+
+	// NeedsRestack is true if the branch needs to be restacked
+	// onto its base branch.
+	NeedsRestack bool `json:"needsRestack,omitempty"`
+}
+
+type jsonLogUp struct {
+	// Name of the branch stacked directly above this branch.
+	Name string `json:"name"`
+}
+
+type jsonLogCommit struct {
+	// SHA is the full commit hash.
+	SHA string `json:"sha"`
+
+	// Subject is the commit subject line.
+	Subject string `json:"subject"`
+}
+
+type jsonLogChange struct {
+	// ID is the change ID of the associated change.
+	// For GitHub, this is the PR number.
+	// For GitLab, this is the MR IID.
+	ID string `json:"id"`
+
+	// URL is the web URL of the associated change.
+	URL string `json:"url"`
+}
+
+type jsonLogPushStatus struct {
+	// Ahead is the number of commits that this branch is ahead
+	// of its remote tracking branch.
+	Ahead int `json:"ahead"`
+
+	// Behind is the number of commits that this branch is behind
+	// its remote tracking branch.
+	Behind int `json:"behind"`
+
+	// NeedsPush is true if this branch is out of sync with its remote,
+	// and should be pushed.
+	//
+	// This will be false if Ahead and Behind are both zero.
+	NeedsPush bool `json:"needsPush,omitempty"`
 }
 
 // pushStatusFormat enumerates the possible values for the pushStatusFormat config.

@@ -85,6 +85,7 @@ nav:
     - cli/config.md
     - cli/experiments.md
     - cli/shorthand.md
+    - cli/json.md
   - Recipes: recipes.md
   - FAQ: faq.md
   - Changelog: changelog.md
