@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/list"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -32,18 +33,30 @@ type logCmd struct {
 
 func (*logCmd) AfterApply(kctx *kong.Context) error {
 	return kctx.BindToProvider(func(
+		ctx context.Context,
 		log *silog.Logger,
 		repo *git.Repository,
 		store *state.Store,
 		svc *spice.Service,
 		forges *forge.Registry,
+		secretStash secret.Stash,
 	) (ListHandler, error) {
+		// Try to open the remote repository silently (no prompts).
+		// If unsupported or unauthenticated, proceed without states.
+		var remoteRepo forge.Repository
+		if remote, err := store.Remote(); err == nil {
+			if rr, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote); err == nil {
+				remoteRepo = rr
+			}
+		}
+
 		return &list.Handler{
-			Log:        log,
-			Repository: repo,
-			Store:      store,
-			Service:    svc,
-			Forges:     forges,
+			Log:              log,
+			Repository:       repo,
+			Store:            store,
+			Service:          svc,
+			Forges:           forges,
+			RemoteRepository: remoteRepo,
 		}, nil
 	})
 }
@@ -73,7 +86,48 @@ var (
 			Foreground(ui.Yellow).
 			Bold(true).
 			SetString("◀")
+
+	// Change state indicator styles: colored filled circle.
+	_stateSymbol      = "◉"
+	_stateOpenStyle   = ui.NewStyle().Foreground(ui.Green).SetString(_stateSymbol)
+	_stateClosedStyle = ui.NewStyle().Foreground(ui.Gray).SetString(_stateSymbol)
+	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString(_stateSymbol)
 )
+
+// statusFormat controls how the change status indicator is rendered.
+//   - off: do not render change status
+//   - symbol: render a colored filled circle next to the change
+type statusFormat int
+
+const (
+	statusFormatOff statusFormat = iota
+	statusFormatSymbol
+)
+
+var _ encoding.TextUnmarshaler = (*statusFormat)(nil)
+
+func (f *statusFormat) UnmarshalText(bs []byte) error {
+	switch strings.ToLower(string(bs)) {
+	case "off", "false", "0", "no", "none", "disabled":
+		*f = statusFormatOff
+	case "on", "true", "1", "yes", "symbol", "◉":
+		*f = statusFormatSymbol
+	default:
+		return fmt.Errorf("invalid value %q: expected off or symbol", string(bs))
+	}
+	return nil
+}
+
+func (f statusFormat) String() string {
+	switch f {
+	case statusFormatOff:
+		return "off"
+	case statusFormatSymbol:
+		return "symbol"
+	default:
+		return fmt.Sprintf("statusFormat(%d)", int(f))
+	}
+}
 
 type ListHandler interface {
 	ListBranches(context.Context, *list.BranchesRequest) (*list.BranchesResponse, error)
@@ -86,6 +140,8 @@ type branchLogCmd struct {
 	ChangeFormat      changeFormat  `config:"log.crFormat" hidden:"" default:"id"`
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
+
+	StatusFormat statusFormat `name:"status" config:"log.statusFormat" help:"Show change status indicator (off|symbol)." default:"off"`
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
@@ -111,11 +167,12 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var presenter logPresenter
-	var wantChangeURL, wantPushStatus bool
+	var wantChangeURL, wantPushStatus, wantChangeState bool
 	if cmd.JSON {
 		// JSON always wants all information.
 		wantChangeURL = true
 		wantPushStatus = true
+		wantChangeState = true
 
 		presenter = &jsonLogPresenter{
 			Stdout: kctx.Stdout,
@@ -133,9 +190,14 @@ func (cmd *branchLogCmd) run(
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 
+		// Determine which StatusFormat to use from the single source.
+		statusFmt := cmd.StatusFormat
+		wantChangeState = statusFmt == statusFormatSymbol
+
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
+			StatusFormat:     statusFmt,
 			PushStatusFormat: cmd.PushStatusFormat,
 		}
 	}
@@ -146,6 +208,9 @@ func (cmd *branchLogCmd) run(
 	}
 	if wantChangeURL {
 		req.Include |= list.IncludeChangeURL
+	}
+	if wantChangeState {
+		req.Include |= list.IncludeChangeState
 	}
 	if opts.Commits {
 		req.Include |= list.IncludeCommits
@@ -169,6 +234,7 @@ type logPresenter interface {
 type graphLogPresenter struct {
 	Stderr           io.Writer        // required
 	ChangeFormat     changeFormat     // required
+	StatusFormat     statusFormat     // required
 	PushStatusFormat pushStatusFormat // required
 }
 
@@ -194,14 +260,35 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			}
 
 			if cid := b.ChangeID; cid != nil {
+				// Optional colored state indicator.
+				var stateMark string
+				if p.StatusFormat == statusFormatSymbol {
+					switch b.ChangeState {
+					case forge.ChangeOpen:
+						stateMark = _stateOpenStyle.String()
+					case forge.ChangeClosed:
+						stateMark = _stateClosedStyle.String()
+					case forge.ChangeMerged:
+						stateMark = _stateMergedStyle.String()
+					}
+				}
+
+				// Build CR text once, then append optional state symbol.
+				var crText string
 				switch p.ChangeFormat {
 				case changeFormatID:
-					_, _ = fmt.Fprintf(&o, " (%v)", cid)
+					crText = fmt.Sprintf("%v", cid)
 				case changeFormatURL:
-					_, _ = fmt.Fprintf(&o, " (%s)", b.ChangeURL)
+					crText = b.ChangeURL
 				default:
 					must.Failf("unknown change format: %v", p.ChangeFormat)
 				}
+				// Add state symbol if present.
+				suffix := ""
+				if stateMark != "" {
+					suffix = " " + stateMark
+				}
+				_, _ = fmt.Fprintf(&o, " (%s%s)", crText, suffix)
 			}
 
 			if b.NeedsRestack {
@@ -290,10 +377,14 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 		}
 
 		if branch.ChangeID != nil {
-			logBranch.Change = &jsonLogChange{
+			jc := &jsonLogChange{
 				ID:  branch.ChangeID.String(),
 				URL: branch.ChangeURL,
 			}
+			if branch.ChangeState != 0 {
+				jc.Status = branch.ChangeState.String()
+			}
+			logBranch.Change = jc
 		}
 
 		if status := branch.PushStatus; status != nil {
@@ -374,6 +465,9 @@ type jsonLogChange struct {
 
 	// URL is the web URL of the associated change.
 	URL string `json:"url"`
+
+	// Status is the current state of the change (open|closed|merged).
+	Status string `json:"status,omitempty"`
 }
 
 type jsonLogPushStatus struct {
