@@ -1,0 +1,75 @@
+# 'repo restack' when restack operation has conflicts
+# still restores autostashed changes.
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+git add file.txt other.txt
+git commit -m 'Add file.txt'
+gs repo init
+
+# Modify file.txt on feat1
+cp $WORK/other/feat1-file.txt file.txt
+git add file.txt
+gs branch create feat1 -m 'Modify file.txt in feat1'
+
+# Modify trunk so a restack is required
+gs trunk
+cp $WORK/other/trunk-change.txt file.txt
+git add file.txt
+git commit -m 'Modify file.txt in trunk'
+
+# Switch back to feat1 and add dirty changes
+gs bco feat1
+cp $WORK/extra/dirty-changes.txt other.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-before.txt
+
+# Restack should fail due to conflict
+! gs repo restack
+stderr 'rebase of feat1 interrupted by a conflict'
+
+# Verify that working tree is clean (dirty changes were stashed)
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status.txt
+
+# Resolve the conflict
+cp ../other/resolved.txt file.txt
+git add file.txt
+gs rebase continue --no-edit
+
+# After restack completes, verify original dirty changes are restored
+git status --porcelain
+cmp stdout $WORK/golden/dirty-after.txt
+cmp other.txt $WORK/extra/dirty-changes.txt
+
+# Verify branches are properly restacked
+git graph --branches
+cmp stdout $WORK/golden/graph-resolved.txt
+
+-- repo/file.txt --
+original content
+-- repo/other.txt --
+other file
+-- other/feat1-file.txt --
+feat1 content
+-- other/trunk-change.txt --
+trunk content
+-- other/resolved.txt --
+resolved content
+-- extra/dirty-changes.txt --
+dirty working tree changes
+-- golden/dirty-before.txt --
+ M other.txt
+-- golden/conflict-status.txt --
+UU file.txt
+-- golden/dirty-after.txt --
+ M other.txt
+-- golden/graph-resolved.txt --
+* d7faae9 (HEAD -> feat1) Modify file.txt in feat1
+* dc721d9 (main) Modify file.txt in trunk
+* 0e0af0a Add file.txt
+* 91af7b5 Initial commit

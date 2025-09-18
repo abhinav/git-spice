@@ -303,6 +303,8 @@ type mainCmd struct {
 
 	Version versionCmd `cmd:"" help:"Print version information and quit"`
 
+	Internal internalCmd `cmd:"" hidden:"" help:"For internal use only."`
+
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
 }

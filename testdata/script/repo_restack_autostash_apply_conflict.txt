@@ -1,0 +1,64 @@
+# 'repo restack' with dirty changes that are autostashed
+# but fail to apply after the restack.
+
+as 'Test User <test@example.com>'
+at 2025-06-20T21:28:29Z
+
+cd repo
+git init
+git commit -m 'Initial commit' --allow-empty
+gs repo init
+
+# create a feature branch
+git add feature.txt
+gs branch create feat1 -m 'feat1 commit'
+
+# make main diverge with a new commit
+gs trunk
+git add main.txt
+git commit -m 'Add main content'
+
+# Dirty changes in feat1 before restacking
+gs branch checkout feat1
+cp $WORK/extra/feature-main.txt main.txt
+git add main.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-status.txt
+
+# Now restack - this should stash, restack successfully,
+# but fail on stash apply
+! gs repo restack
+stderr 'Failed to apply autostashed changes'
+stderr 'Your changes are safe in the stash'
+stderr 'apply them with.*git stash pop'
+stderr 'drop them with.*git stash drop'
+
+# working tree should have conflict markers.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status.txt
+
+# restack operation itself succeeded
+git graph --branches
+cmp stdout $WORK/golden/graph-restacked.txt
+
+# There's an entry in the stash.
+git stash list
+stdout 'stash@\{0\}'
+
+# User can manually apply the stash with conflict resolution
+git stash drop
+
+-- repo/main.txt --
+main change
+-- repo/feature.txt --
+original feature
+-- extra/feature-main.txt --
+dirty changes on feature branch
+-- golden/dirty-status.txt --
+A  main.txt
+-- golden/graph-restacked.txt --
+* edda5cf (HEAD -> feat1) feat1 commit
+* be103e1 (main) Add main content
+* 91af7b5 Initial commit
+-- golden/conflict-status.txt --
+AA main.txt

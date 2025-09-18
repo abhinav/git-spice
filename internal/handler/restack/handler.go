@@ -162,6 +162,10 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	branchesToActuallyRestack := branchesToRestack[:0]
 	var requestBranchWT string // worktree of request.Branch
 	for _, branch := range branchesToRestack {
+		if branch == h.Store.Trunk() {
+			continue // skip restacking trunk branch
+		}
+
 		if info, ok := branchGraph.Lookup(branch); ok {
 			if _, baseSkipped := skipped[info.Base]; baseSkipped {
 				// Base branch not being restacked,
@@ -190,10 +194,6 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	var restackCount int
 loop:
 	for _, branch := range branchesToRestack {
-		if branch == h.Store.Trunk() {
-			continue loop // skip restacking trunk branch
-		}
-
 		res, err := h.Service.Restack(ctx, branch)
 		if err != nil {
 			var rebaseErr *git.RebaseInterruptError
