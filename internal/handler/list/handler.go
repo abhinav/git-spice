@@ -48,15 +48,15 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler implements the business logic for git-spice's log commands.
 type Handler struct {
-    Log        *silog.Logger   // required
-    Repository GitRepository   // required
-    Store      Store           // required
-    Service    Service         // required
-    Forges     *forge.Registry // required
+	Log        *silog.Logger   // required
+	Repository GitRepository   // required
+	Store      Store           // required
+	Service    Service         // required
+	Forges     *forge.Registry // required
 
-    // RemoteRepository is the opened forge repository for the current Git remote.
-    // If nil (unsupported remote or not logged in), change states are omitted.
-    RemoteRepository forge.Repository
+	// RemoteRepository is the opened forge repository for the current Git remote.
+	// If nil (unsupported remote or not logged in), change states are omitted.
+	RemoteRepository forge.Repository
 }
 
 // Options holds command line options for the log command.
@@ -77,13 +77,13 @@ const (
 	// IncludeChangeURL includes the URL for the associated change, if any.
 	IncludeChangeURL
 
-    // IncludePushStatus includes push status information for each branch
-    // (e.g. ahead/behind counts).
-    IncludePushStatus
+	// IncludePushStatus includes push status information for each branch
+	// (e.g. ahead/behind counts).
+	IncludePushStatus
 
-    // IncludeChangeState includes the current forge change state for
-    // branches that have an associated ChangeID.
-    IncludeChangeState
+	// IncludeChangeState includes the current forge change state for
+	// branches that have an associated ChangeID.
+	IncludeChangeState
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -119,11 +119,11 @@ type BranchItem struct {
 
 	Commits []git.CommitDetail // only if IncludeCommits is set
 
-    // ChangeID is the ID of the associated change, if any.
-    ChangeID   forge.ChangeID
-    ChangeURL  string      // only if IncludeChangeURL is set
-    ChangeState forge.ChangeState // populated if RemoteRepository is available
-    PushStatus *PushStatus // only if IncludePushStatus is set
+	// ChangeID is the ID of the associated change, if any.
+	ChangeID    forge.ChangeID
+	ChangeURL   string            // only if IncludeChangeURL is set
+	ChangeState forge.ChangeState // populated if RemoteRepository is available
+	PushStatus  *PushStatus       // only if IncludePushStatus is set
 
 	// NeedsRestack indicates whether this branch needs to be restacked
 	// on top of its base branch.
@@ -163,7 +163,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		return remote
 	})
 
-    var repoID forge.RepositoryID
+	var repoID forge.RepositoryID
 	if req.Include&IncludeChangeURL != 0 {
 		err := func() error {
 			remote := getRemote()
@@ -186,15 +186,15 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		}
 	}
 
-    // changeURL queries the forge for the URL of a change request.
-    changeURL := func(changeID forge.ChangeID) string {
-        if repoID == nil {
-            // No forge to query against. Just return the change ID.
-            return changeID.String()
-        }
+	// changeURL queries the forge for the URL of a change request.
+	changeURL := func(changeID forge.ChangeID) string {
+		if repoID == nil {
+			// No forge to query against. Just return the change ID.
+			return changeID.String()
+		}
 
-        return repoID.ChangeURL(changeID)
-    }
+		return repoID.ChangeURL(changeID)
+	}
 
 	var itemsMu sync.Mutex
 	items := make([]*BranchItem, 0, branchGraph.Count()+1)   // +1 for trunk
@@ -310,10 +310,10 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	close(entryc)
 	wg.Wait()
 
-    // Add trunk.
-    trunkItem := &BranchItem{Name: h.Store.Trunk()}
-    items = append(items, trunkItem)
-    itemByName[trunkItem.Name] = trunkItem
+	// Add trunk.
+	trunkItem := &BranchItem{Name: h.Store.Trunk()}
+	items = append(items, trunkItem)
+	itemByName[trunkItem.Name] = trunkItem
 
 	slices.SortFunc(items, func(a, b *BranchItem) int {
 		return strings.Compare(a.Name, b.Name)
@@ -335,31 +335,32 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		baseItem.Aboves = append(baseItem.Aboves, idx)
 	}
 
-    // If requested and possible, batch-resolve ChangeState for items with ChangeID.
-    if req.Include&IncludeChangeState != 0 && h.RemoteRepository != nil {
-        // Collect IDs in the same order as items for stable mapping.
-        idxs := make([]int, 0, len(items))
-        ids := make([]forge.ChangeID, 0, len(items))
-        for i, it := range items {
-            if it.ChangeID != nil {
-                idxs = append(idxs, i)
-                ids = append(ids, it.ChangeID)
-            }
-        }
-        if len(ids) > 0 {
-            states, err := h.RemoteRepository.ChangesStates(ctx, ids)
-            if err != nil {
-                h.Log.Warn("Could not retrieve change states", "error", err)
-            } else {
-                for j, idx := range idxs {
-                    items[idx].ChangeState = states[j]
-                }
-            }
-        }
-    }
+	// If requested and possible, batch-resolve ChangeState for items with ChangeID.
+	if req.Include&IncludeChangeState != 0 && h.RemoteRepository != nil {
+		// Collect IDs in the same order as items for stable mapping.
+		idxs := make([]int, 0, len(items))
+		ids := make([]forge.ChangeID, 0, len(items))
+		for i, it := range items {
+			if it.ChangeID != nil {
+				idxs = append(idxs, i)
+				ids = append(ids, it.ChangeID)
+			}
+		}
+		if len(ids) > 0 {
+			states, err := h.RemoteRepository.ChangesStates(ctx, ids)
+			// Handle error gracefully.
+			if err != nil {
+				h.Log.Warn("Could not retrieve change states", "error", err)
+			} else {
+				for j, idx := range idxs {
+					items[idx].ChangeState = states[j]
+				}
+			}
+		}
+	}
 
-    return &BranchesResponse{
-        TrunkIdx: trunkIdx,
-        Branches: items,
-    }, nil
+	return &BranchesResponse{
+		TrunkIdx: trunkIdx,
+		Branches: items,
+	}, nil
 }
