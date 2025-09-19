@@ -1,0 +1,58 @@
+# 'gs log' supports a status indicator controlled by --status/config.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create a stack and submit everything: feat1 -> feat2 -> feat3
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+
+gs stack submit --fill
+
+# status via config: symbol
+git config spice.log.statusFormat symbol
+gs ls
+cmp stderr $WORK/golden/ls-symbol.txt
+
+# status via config: off
+git config spice.log.statusFormat off
+gs ls
+cmp stderr $WORK/golden/ls-off.txt
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+
+-- golden/ls-symbol.txt --
+    ┏━■ feat3 (#3 ◉) ◀
+  ┏━┻□ feat2 (#2 ◉)
+┏━┻□ feat1 (#1 ◉)
+main
+-- golden/ls-off.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main

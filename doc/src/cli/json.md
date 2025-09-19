@@ -85,6 +85,11 @@ These objects take the following form:
 
     // URL at which the Change Request can be viewed.
     url: string,
+
+    // Current status of the Change Request.
+    // May be omitted if the remote forge is unsupported,
+    // authentication is missing, or the status could not be determined.
+    status?: "open" | "closed" | "merged",
   },
 
   // Push status of the branch.

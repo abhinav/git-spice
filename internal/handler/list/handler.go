@@ -53,6 +53,10 @@ type Handler struct {
 	Store      Store           // required
 	Service    Service         // required
 	Forges     *forge.Registry // required
+
+	// RemoteRepository is the opened forge repository for the current Git remote.
+	// If nil (unsupported remote or not logged in), change states are omitted.
+	RemoteRepository forge.Repository
 }
 
 // Options holds command line options for the log command.
@@ -76,6 +80,10 @@ const (
 	// IncludePushStatus includes push status information for each branch
 	// (e.g. ahead/behind counts).
 	IncludePushStatus
+
+	// IncludeChangeState includes the current forge change state for
+	// branches that have an associated ChangeID.
+	IncludeChangeState
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -112,9 +120,10 @@ type BranchItem struct {
 	Commits []git.CommitDetail // only if IncludeCommits is set
 
 	// ChangeID is the ID of the associated change, if any.
-	ChangeID   forge.ChangeID
-	ChangeURL  string      // only if IncludeChangeURL is set
-	PushStatus *PushStatus // only if IncludePushStatus is set
+	ChangeID    forge.ChangeID
+	ChangeURL   string            // only if IncludeChangeURL is set
+	ChangeState forge.ChangeState // populated if RemoteRepository is available
+	PushStatus  *PushStatus       // only if IncludePushStatus is set
 
 	// NeedsRestack indicates whether this branch needs to be restacked
 	// on top of its base branch.
@@ -324,6 +333,30 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		}
 
 		baseItem.Aboves = append(baseItem.Aboves, idx)
+	}
+
+	// If requested and possible, batch-resolve ChangeState for items with ChangeID.
+	if req.Include&IncludeChangeState != 0 && h.RemoteRepository != nil {
+		// Collect IDs in the same order as items for stable mapping.
+		idxs := make([]int, 0, len(items))
+		ids := make([]forge.ChangeID, 0, len(items))
+		for i, it := range items {
+			if it.ChangeID != nil {
+				idxs = append(idxs, i)
+				ids = append(ids, it.ChangeID)
+			}
+		}
+		if len(ids) > 0 {
+			states, err := h.RemoteRepository.ChangesStates(ctx, ids)
+			// Handle error gracefully.
+			if err != nil {
+				h.Log.Warn("Could not retrieve change states", "error", err)
+			} else {
+				for j, idx := range idxs {
+					items[idx].ChangeState = states[j]
+				}
+			}
+		}
 	}
 
 	return &BranchesResponse{

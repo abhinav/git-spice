@@ -244,6 +244,17 @@ whether the branch is in sync with its pushed counterpart.
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
+### spice.log.statusFormat
+
+Controls whether $$gs log short$$ and $$gs log long$$ display a change status
+indicator next to branches with an associated Change Request.
+
+**Accepted values:**
+
+- `off` (default): do not display status
+- `symbol`: show a colored filled circle `◉` indicating state
+  - green = open, gray = closed, magenta = merged
+
 ### spice.rebaseContinue.edit
 
 <!-- gs:version v0.10.0 -->
