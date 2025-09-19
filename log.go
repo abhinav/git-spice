@@ -141,7 +141,7 @@ type branchLogCmd struct {
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
-	StatusFormat statusFormat `name:"status" config:"log.statusFormat" help:"Show change status indicator (off|symbol)." default:"off"`
+	StatusFormat statusFormat `name:"status" config:"log.statusFormat" help:"Show change status indicator (off|symbol). Can be set by git.spice.log.statusFormat" default:"off"`
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
