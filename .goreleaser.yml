@@ -55,7 +55,7 @@ aurs:
       name: Abhinav Gupta
       email: mail@abhinavg.net
 
-brews:
+homebrew_casks:
   - repository:
       owner: abhinav
       name: homebrew-tap
@@ -68,11 +68,16 @@ brews:
     description: "A tool for stacking Git branches."
     license: "GPL-3.0-or-later"
     skip_upload: auto
-    install: |
-      bin.install "gs"
-      generate_completions_from_executable(bin/"gs", "shell", "completion")
-    test: |
-      system "#{bin}/gs --version"
+    conflicts:
+      - formula: git-spice
+      - formula: ghostscript
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/gs"]
+          end
+
 
 checksum:
   name_template: 'checksums.txt'
