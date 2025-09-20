@@ -222,6 +222,44 @@ func (c *MockGitWorktreeRebaseCall) DoAndReturn(f func(context.Context, git.Reba
 	return c
 }
 
+// Reset mocks base method.
+func (m *MockGitWorktree) Reset(ctx context.Context, commit string, opts git.ResetOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reset", ctx, commit, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Reset indicates an expected call of Reset.
+func (mr *MockGitWorktreeMockRecorder) Reset(ctx, commit, opts any) *MockGitWorktreeResetCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reset", reflect.TypeOf((*MockGitWorktree)(nil).Reset), ctx, commit, opts)
+	return &MockGitWorktreeResetCall{Call: call}
+}
+
+// MockGitWorktreeResetCall wrap *gomock.Call
+type MockGitWorktreeResetCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitWorktreeResetCall) Return(arg0 error) *MockGitWorktreeResetCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitWorktreeResetCall) Do(f func(context.Context, string, git.ResetOptions) error) *MockGitWorktreeResetCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitWorktreeResetCall) DoAndReturn(f func(context.Context, string, git.ResetOptions) error) *MockGitWorktreeResetCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // WriteIndexTree mocks base method.
 func (m *MockGitWorktree) WriteIndexTree(ctx context.Context) (git.Hash, error) {
 	m.ctrl.T.Helper()
