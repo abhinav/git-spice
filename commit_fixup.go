@@ -103,8 +103,8 @@ func (cmd *commitFixupCmd) Run(
 		//  - if the command exits with an error,
 		//    schedule an "internal autostash-pop" command
 		//    to be run when the rebase operation is finished.
-		if err := wt.Restore(ctx, &git.RestoreRequest{
-			PathSpecs: []string{"."},
+		if err := wt.CheckoutFiles(ctx, &git.CheckoutFilesRequest{
+			Pathspecs: []string{"."},
 		}); err != nil {
 			return fmt.Errorf("restore working tree before fixup: %w", err)
 		}
