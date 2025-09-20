@@ -87,7 +87,7 @@ func (*repoRestackCmd) Run(
 		return nil
 	}
 
-	if err := wt.Checkout(ctx, currentBranch); err != nil {
+	if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
 		return fmt.Errorf("checkout %v: %w", currentBranch, err)
 	}
 

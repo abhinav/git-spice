@@ -86,7 +86,7 @@ func TestForkWorkflow(t *testing.T) {
 
 	// Set up bob's feature2 branch.
 	{
-		require.NoError(t, bobWorktree.Checkout(ctx, "feature2"))
+		require.NoError(t, bobWorktree.CheckoutBranch(ctx, "feature2"))
 		require.NoError(t, os.WriteFile(
 			filepath.Join(bobWorkDir, "feature2.txt"),
 			[]byte("Bob's feature 2"), 0o644),

@@ -41,18 +41,18 @@ func (m *MockGitWorktree) EXPECT() *MockGitWorktreeMockRecorder {
 	return m.recorder
 }
 
-// Checkout mocks base method.
-func (m *MockGitWorktree) Checkout(ctx context.Context, branch string) error {
+// CheckoutBranch mocks base method.
+func (m *MockGitWorktree) CheckoutBranch(ctx context.Context, branch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Checkout", ctx, branch)
+	ret := m.ctrl.Call(m, "CheckoutBranch", ctx, branch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Checkout indicates an expected call of Checkout.
-func (mr *MockGitWorktreeMockRecorder) Checkout(ctx, branch any) *gomock.Call {
+// CheckoutBranch indicates an expected call of CheckoutBranch.
+func (mr *MockGitWorktreeMockRecorder) CheckoutBranch(ctx, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockGitWorktree)(nil).Checkout), ctx, branch)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckoutBranch", reflect.TypeOf((*MockGitWorktree)(nil).CheckoutBranch), ctx, branch)
 }
 
 // CurrentBranch mocks base method.

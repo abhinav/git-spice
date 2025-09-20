@@ -42,7 +42,7 @@ var _ GitRepository = (*git.Repository)(nil)
 type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
 	Pull(ctx context.Context, opts git.PullOptions) error
-	Checkout(ctx context.Context, name string) error
+	CheckoutBranch(ctx context.Context, name string) error
 	RootDir() string
 }
 
@@ -269,7 +269,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 				// so we can check out trunk and rebase.
 				log.Debug("trunk has unpushed commits: pulling from remote")
 
-				if err := h.Worktree.Checkout(ctx, trunk); err != nil {
+				if err := h.Worktree.CheckoutBranch(ctx, trunk); err != nil {
 					return fmt.Errorf("checkout trunk: %w", err)
 				}
 
@@ -282,7 +282,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 					return fmt.Errorf("pull: %w", err)
 				}
 
-				if err := h.Worktree.Checkout(ctx, "-"); err != nil {
+				if err := h.Worktree.CheckoutBranch(ctx, "-"); err != nil {
 					return fmt.Errorf("checkout old branch: %w", err)
 				}
 

@@ -309,7 +309,7 @@ func TestIntegration_Repository_SubmitEditChange(t *testing.T) {
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
-		require.NoError(t, gitWork.Checkout(ctx, branchName),
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),
@@ -474,7 +474,7 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
-		require.NoError(t, gitWork.Checkout(ctx, branchName),
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),
@@ -724,7 +724,7 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
 			Name: branchName,
 		}), "could not create branch: %s", branchName)
-		require.NoError(t, gitWork.Checkout(ctx, branchName),
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
 			"could not checkout branch: %s", branchName)
 		require.NoError(t, os.WriteFile(
 			filepath.Join(repoDir, branchName+".txt"),

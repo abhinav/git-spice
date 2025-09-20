@@ -292,7 +292,7 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	branchCreated = true
-	if err := wt.Checkout(ctx, branchName); err != nil {
+	if err := wt.CheckoutBranch(ctx, branchName); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 
@@ -344,7 +344,7 @@ func (cmd *branchCreateCmd) commit(
 		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
 	}); err != nil {
-		if err := wt.Checkout(ctx, baseName); err != nil {
+		if err := wt.CheckoutBranch(ctx, baseName); err != nil {
 			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)
 		}
 		return "", nil, fmt.Errorf("commit: %w", err)
@@ -366,6 +366,6 @@ func (cmd *branchCreateCmd) commit(
 			return fmt.Errorf("reset to parent commit: %w", err)
 		}
 
-		return wt.Checkout(ctx, baseName)
+		return wt.CheckoutBranch(ctx, baseName)
 	}, nil
 }

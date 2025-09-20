@@ -574,7 +574,7 @@ func TestFindCommitBranch(t *testing.T) {
 
 			for _, req := range tt.requests {
 				// Checkout the head branch to resolve HEAD references correctly
-				err = wt.Checkout(t.Context(), req.from)
+				err = wt.CheckoutBranch(t.Context(), req.from)
 				require.NoError(t, err)
 
 				giveHash, err := repo.PeelToCommit(t.Context(), req.give)

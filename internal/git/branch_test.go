@@ -88,13 +88,13 @@ func TestIntegrationBranches(t *testing.T) {
 	backToMain := func(t testing.TB) {
 		t.Helper()
 
-		assert.NoError(t, wt.Checkout(t.Context(), "main"))
+		assert.NoError(t, wt.CheckoutBranch(t.Context(), "main"))
 	}
 
 	t.Run("Checkout", func(t *testing.T) {
 		defer backToMain(t)
 
-		require.NoError(t, wt.Checkout(t.Context(), "feature1"))
+		require.NoError(t, wt.CheckoutBranch(t.Context(), "feature1"))
 
 		name, err := wt.CurrentBranch(t.Context())
 		require.NoError(t, err)

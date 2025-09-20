@@ -33,7 +33,7 @@ var _ GitRepository = (*git.Repository)(nil)
 // GitWorktree is a checkout of a Git repository.
 type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
-	Checkout(ctx context.Context, branch string) error
+	CheckoutBranch(ctx context.Context, branch string) error
 	DetachHead(ctx context.Context, commit string) error
 }
 
@@ -276,7 +276,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 		}
 	}
 
-	checkoutFn := h.Worktree.Checkout
+	checkoutFn := h.Worktree.CheckoutBranch
 	if checkoutDetached {
 		checkoutFn = h.Worktree.DetachHead
 	}

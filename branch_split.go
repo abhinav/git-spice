@@ -194,7 +194,7 @@ func (cmd *branchSplitCmd) Run(
 	// (because the current branch was moved into a downstream position),
 	// checkout the new topmost branch.
 	if result.Top != currentBranch {
-		if err := wt.Checkout(ctx, result.Top); err != nil {
+		if err := wt.CheckoutBranch(ctx, result.Top); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", result.Top, err)
 		}
 	}

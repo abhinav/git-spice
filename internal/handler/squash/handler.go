@@ -29,7 +29,7 @@ var _ GitRepository = (*git.Repository)(nil)
 // GitWorktree provides worktree-specific operations.
 type GitWorktree interface {
 	DetachHead(ctx context.Context, commitish string) error
-	Checkout(ctx context.Context, branch string) error
+	CheckoutBranch(ctx context.Context, branch string) error
 	Reset(ctx context.Context, commit string, opts git.ResetOptions) error
 	Commit(ctx context.Context, req git.CommitRequest) error
 	Head(ctx context.Context) (git.Hash, error)
@@ -138,7 +138,7 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 		// Reattach the HEAD to the original branch
 		// if we return early before the operation is complete.
 		if !reattachedHead {
-			if cerr := h.Worktree.Checkout(ctx, branchName); cerr != nil {
+			if cerr := h.Worktree.CheckoutBranch(ctx, branchName); cerr != nil {
 				h.Log.Error("Could not check out original branch",
 					"branch", branchName,
 					"error", cerr)
@@ -179,7 +179,7 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 		return fmt.Errorf("update branch ref: %w", err)
 	}
 
-	if cerr := h.Worktree.Checkout(ctx, branchName); cerr != nil {
+	if cerr := h.Worktree.CheckoutBranch(ctx, branchName); cerr != nil {
 		return fmt.Errorf("checkout branch: %w", cerr)
 	}
 	reattachedHead = true
