@@ -38,7 +38,7 @@ type Store interface {
 // is checked out in the current working tree.
 type GitWorktree interface {
 	DetachHead(ctx context.Context, commitish string) error
-	Checkout(ctx context.Context, branch string) error
+	CheckoutBranch(ctx context.Context, branch string) error
 }
 
 // GitRepository provides access to the Git repository methods
@@ -173,7 +173,7 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 		return nil
 	}
 
-	if err := h.Worktree.Checkout(ctx, branch); err != nil {
+	if err := h.Worktree.CheckoutBranch(ctx, branch); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
 	}
 

@@ -84,7 +84,7 @@ func (cmd *rebaseContinueCmd) Run(
 		log.Debug("Running post-rebase operation",
 			"command", strings.Join(cont.Command, " "),
 			"branch", cont.Branch)
-		if err := wt.Checkout(ctx, cont.Branch); err != nil {
+		if err := wt.CheckoutBranch(ctx, cont.Branch); err != nil {
 			return fmt.Errorf("checkout branch %q: %w", cont.Branch, err)
 		}
 

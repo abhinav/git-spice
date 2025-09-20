@@ -38,7 +38,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		handler := &Handler{

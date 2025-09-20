@@ -154,5 +154,5 @@ func (cmd *branchOntoCmd) Run(
 	}
 
 	log.Infof("%s: moved onto %s", cmd.Branch, cmd.Onto)
-	return wt.Checkout(ctx, cmd.Branch)
+	return wt.CheckoutBranch(ctx, cmd.Branch)
 }

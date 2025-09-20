@@ -44,9 +44,9 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 	return nil
 }
 
-// Checkout switches to the specified branch.
+// CheckoutBranch switches to the specified branch.
 // If the branch does not exist, it returns an error.
-func (w *Worktree) Checkout(ctx context.Context, branch string) error {
+func (w *Worktree) CheckoutBranch(ctx context.Context, branch string) error {
 	w.log.Debug("Checking out branch", "name", branch)
 
 	if err := w.gitCmd(ctx, "checkout", branch).Run(w.exec); err != nil {

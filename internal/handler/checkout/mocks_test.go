@@ -181,40 +181,40 @@ func (m *MockGitWorktree) EXPECT() *MockGitWorktreeMockRecorder {
 	return m.recorder
 }
 
-// Checkout mocks base method.
-func (m *MockGitWorktree) Checkout(ctx context.Context, branch string) error {
+// CheckoutBranch mocks base method.
+func (m *MockGitWorktree) CheckoutBranch(ctx context.Context, branch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Checkout", ctx, branch)
+	ret := m.ctrl.Call(m, "CheckoutBranch", ctx, branch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Checkout indicates an expected call of Checkout.
-func (mr *MockGitWorktreeMockRecorder) Checkout(ctx, branch any) *MockGitWorktreeCheckoutCall {
+// CheckoutBranch indicates an expected call of CheckoutBranch.
+func (mr *MockGitWorktreeMockRecorder) CheckoutBranch(ctx, branch any) *MockGitWorktreeCheckoutBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockGitWorktree)(nil).Checkout), ctx, branch)
-	return &MockGitWorktreeCheckoutCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckoutBranch", reflect.TypeOf((*MockGitWorktree)(nil).CheckoutBranch), ctx, branch)
+	return &MockGitWorktreeCheckoutBranchCall{Call: call}
 }
 
-// MockGitWorktreeCheckoutCall wrap *gomock.Call
-type MockGitWorktreeCheckoutCall struct {
+// MockGitWorktreeCheckoutBranchCall wrap *gomock.Call
+type MockGitWorktreeCheckoutBranchCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockGitWorktreeCheckoutCall) Return(arg0 error) *MockGitWorktreeCheckoutCall {
+func (c *MockGitWorktreeCheckoutBranchCall) Return(arg0 error) *MockGitWorktreeCheckoutBranchCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockGitWorktreeCheckoutCall) Do(f func(context.Context, string) error) *MockGitWorktreeCheckoutCall {
+func (c *MockGitWorktreeCheckoutBranchCall) Do(f func(context.Context, string) error) *MockGitWorktreeCheckoutBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockGitWorktreeCheckoutCall) DoAndReturn(f func(context.Context, string) error) *MockGitWorktreeCheckoutCall {
+func (c *MockGitWorktreeCheckoutBranchCall) DoAndReturn(f func(context.Context, string) error) *MockGitWorktreeCheckoutBranchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

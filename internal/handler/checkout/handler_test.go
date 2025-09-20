@@ -40,7 +40,7 @@ func TestHandler_CheckoutBranch_Trunk(t *testing.T) {
 
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "main").
+			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -127,7 +127,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(nil)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -224,7 +224,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			})
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -263,7 +263,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(nil)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -296,7 +296,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(state.ErrNotExist)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -377,7 +377,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(nil)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -430,7 +430,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(upstreamError)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -543,7 +543,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(unknownError)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -623,7 +623,7 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 			Return(trackError)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -658,7 +658,7 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 			Return(nil)
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(checkoutError)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -729,7 +729,7 @@ func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
 
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "main").
+			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
@@ -757,7 +757,7 @@ func TestHandler_CheckoutBranch_Verbose(t *testing.T) {
 
 		mockWorktree.
 			EXPECT().
-			Checkout(gomock.Any(), "main").
+			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{

@@ -93,7 +93,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Commit(t.Context(), gomock.Any()).
 			Return(commitErr)
 		mockWorktree.EXPECT().
-			Checkout(t.Context(), branchName).
+			CheckoutBranch(t.Context(), branchName).
 			Return(nil)
 
 		handler := &Handler{
@@ -160,7 +160,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Head(t.Context()).
 			Return(git.Hash("new123"), nil)
 		mockWorktree.EXPECT().
-			Checkout(t.Context(), branchName).
+			CheckoutBranch(t.Context(), branchName).
 			Return(nil)
 
 		mockRestack := NewMockRestackHandler(ctrl)
@@ -220,7 +220,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Head(t.Context()).
 			Return(git.Hash("new123"), nil)
 		mockWorktree.EXPECT().
-			Checkout(t.Context(), branchName).
+			CheckoutBranch(t.Context(), branchName).
 			Return(nil)
 
 		mockRestack := NewMockRestackHandler(ctrl)
@@ -292,7 +292,7 @@ func TestHandler_SquashBranch(t *testing.T) {
 			Head(t.Context()).
 			Return(git.Hash("new123"), nil)
 		mockWorktree.EXPECT().
-			Checkout(t.Context(), branchName).
+			CheckoutBranch(t.Context(), branchName).
 			Return(nil)
 
 		mockRestack := NewMockRestackHandler(ctrl)

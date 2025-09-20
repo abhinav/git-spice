@@ -128,7 +128,7 @@ func (cmd *commitFixupCmd) Run(
 
 	defer func() {
 		if retErr == nil {
-			if err := wt.Checkout(ctx, currentBranch); err != nil {
+			if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
 				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
 			}
 		}

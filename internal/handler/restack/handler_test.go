@@ -40,7 +40,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -120,7 +120,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -168,7 +168,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -210,7 +210,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -260,7 +260,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -302,7 +302,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -360,7 +360,7 @@ func TestHandler_Restack(t *testing.T) {
 				RootDir().
 				Return(t.TempDir())
 			mockWorktree.EXPECT().
-				Checkout(gomock.Any(), "feature").
+				CheckoutBranch(gomock.Any(), "feature").
 				Return(nil)
 
 			handler := &Handler{
@@ -410,7 +410,7 @@ func TestHandler_Restack(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(nil)
 
 		handler := &Handler{
@@ -500,7 +500,7 @@ func TestHandler_Restack_trunk(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "main").
+			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
 		handler := &Handler{
@@ -578,7 +578,7 @@ func TestHandler_Restack_trunk(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "main").
+			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
 		handler := &Handler{
@@ -673,7 +673,7 @@ func TestHandler_Restack_skipCheckedOut(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "feature1").
+			CheckoutBranch(gomock.Any(), "feature1").
 			Return(nil)
 
 		handler := &Handler{
@@ -823,7 +823,7 @@ func TestHandler_Restack_errors(t *testing.T) {
 			RootDir().
 			Return(t.TempDir())
 		mockWorktree.EXPECT().
-			Checkout(gomock.Any(), "feature").
+			CheckoutBranch(gomock.Any(), "feature").
 			Return(checkoutErr)
 
 		handler := &Handler{
