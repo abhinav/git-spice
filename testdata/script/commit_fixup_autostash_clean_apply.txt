@@ -1,0 +1,80 @@
+# Test commit fixup with autostash when dirty changes apply cleanly after returning to original branch.
+# See: https://github.com/abhinav/git-spice/discussions/867#discussioncomment-14465048
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-20T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create stack: main -> feat1 -> feat2
+# feat1 adds feat1.txt
+git add feat1.txt
+gs bc -m 'Add feat1.txt' feat1
+
+# feat2 adds feat2.txt
+git add feat2.txt
+gs bc -m 'Add feat2.txt' feat2
+
+# Verify initial stack
+git graph --branches
+cmp stdout $WORK/golden/initial_stack.txt
+
+# On feat2: modify both files
+# Stage changes to feat1.txt (for fixup)
+# Leave changes to feat2.txt unstaged (will cause conflict on feat1)
+cp $WORK/extra/feat1_fixup.txt feat1.txt
+git add feat1.txt
+cp $WORK/extra/feat2_dirty.txt feat2.txt
+
+# Verify dirty state before fixup
+git status --porcelain
+cmp stdout $WORK/golden/dirty_before_fixup.txt
+
+# Attempt fixup of feat1 commit
+# Should autostash, perform fixup, then restore changes cleanly on feat2
+gs commit fixup HEAD~1
+
+# Should be back on feat2
+git branch --show-current
+stdout 'feat2'
+
+# Verify fixup was applied to feat1 without switching branches
+git cat-file -p feat1:feat1.txt
+cmp stdout $WORK/extra/feat1_fixup.txt
+
+# Verify unstaged changes were restored and working state
+git status --porcelain
+cmp stdout $WORK/golden/dirty_after_fixup.txt
+cmp feat2.txt $WORK/extra/feat2_dirty.txt
+
+# Verify final stack structure
+git graph --branches
+cmp stdout $WORK/golden/final_stack.txt
+
+-- repo/feat1.txt --
+Original feat1 content
+-- repo/feat2.txt --
+Original feat2 content
+-- extra/feat1_fixup.txt --
+Fixed feat1 content
+-- extra/feat2_dirty.txt --
+Dirty changes to feat2
+-- golden/initial_stack.txt --
+* 242a7e5 (HEAD -> feat2) Add feat2.txt
+* 7846e3d (feat1) Add feat1.txt
+* 08bbcd9 (main) Initial commit
+-- golden/dirty_before_fixup.txt --
+M  feat1.txt
+ M feat2.txt
+-- golden/dirty_after_fixup.txt --
+ M feat2.txt
+-- golden/final_stack.txt --
+* 22a9ae4 (HEAD -> feat2) Add feat2.txt
+* 3d57c30 (feat1) Add feat1.txt
+* 08bbcd9 (main) Initial commit
