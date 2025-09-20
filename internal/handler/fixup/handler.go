@@ -31,6 +31,7 @@ type GitWorktree interface {
 	DiffIndex(ctx context.Context, treeish string) ([]git.FileStatus, error)
 	WriteIndexTree(ctx context.Context) (git.Hash, error)
 	Rebase(ctx context.Context, req git.RebaseRequest) (err error)
+	Reset(ctx context.Context, commit string, opts git.ResetOptions) error
 }
 
 var _ GitWorktree = (*git.Worktree)(nil)
@@ -188,13 +189,19 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		return fmt.Errorf("commit staged changes to target commit: %w", err)
 	}
 
+	// Clean up the working tree before rebasing.
+	// We just committed the staged changes,
+	// and any unstaged changes will have been autostashed by parent.
+	if err := h.Worktree.Reset(ctx, "HEAD", git.ResetOptions{Mode: git.ResetHard}); err != nil {
+		return fmt.Errorf("reset working tree to new commit: %w", err)
+	}
+
 	// TODO: for now we'll do this with a rebase.
 	// With git-replay or similar, we could do this without a rebase.
 	if err := h.Worktree.Rebase(ctx, git.RebaseRequest{
-		Branch:    req.TargetBranch,
-		Onto:      newCommit.String(),
-		Upstream:  req.TargetHash.String(),
-		Autostash: true,
+		Branch:   req.TargetBranch,
+		Onto:     newCommit.String(),
+		Upstream: req.TargetHash.String(),
 	}); err != nil {
 		// If the rebase is interrupted by a conflict,
 		// after it's resolved, just restack the upstack.

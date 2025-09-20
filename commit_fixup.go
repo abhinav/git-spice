@@ -85,6 +85,47 @@ func (cmd *commitFixupCmd) Run(
 		}
 		return fmt.Errorf("determine current branch: %w", err)
 	}
+
+	stashMsg := "git-spice: autostash before commit fixup"
+	if stashHash, err := wt.StashCreate(ctx, stashMsg); err != nil {
+		if !errors.Is(err, git.ErrNoChanges) {
+			return fmt.Errorf("stash changes: %w", err)
+		}
+		// No changes to stash, that's fine.
+	} else {
+		// We created a stash.
+		// We will restore the working tree to discard unstaged changes
+		// (keeping staged changes for the fixup),
+		// then one of the following:
+		//
+		//  - if the command exits with success,
+		//    we will pop the stash to restore the changes.
+		//  - if the command exits with an error,
+		//    schedule an "internal autostash-pop" command
+		//    to be run when the rebase operation is finished.
+		if err := wt.Restore(ctx, &git.RestoreRequest{
+			PathSpecs: []string{"."},
+		}); err != nil {
+			return fmt.Errorf("restore working tree before fixup: %w", err)
+		}
+
+		defer func() {
+			if retErr == nil {
+				retErr = (&internalAutostashPop{
+					Hash: stashHash.String(),
+				}).Run(ctx, log, wt)
+				return
+			}
+
+			retErr = svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     retErr,
+				Command: []string{"internal", "autostash-pop", stashHash.String()},
+				Branch:  currentBranch,
+				Message: fmt.Sprintf("interrupted: restore stashed changes %q", stashHash),
+			})
+		}()
+	}
+
 	defer func() {
 		if retErr == nil {
 			if err := wt.Checkout(ctx, currentBranch); err != nil {
