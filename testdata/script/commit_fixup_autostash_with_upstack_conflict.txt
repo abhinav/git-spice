@@ -1,0 +1,123 @@
+# Test commit fixup with autostash and upstack conflict requiring manual resolution.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2025-09-20T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create stack: main -> feat1 -> feat2 -> feat3
+# feat1 adds shared.txt and feat1.txt
+git add shared.txt feat1.txt
+gs bc -m 'Add shared and feat1 files' feat1
+
+# feat2 adds feat2.txt
+git add feat2.txt
+gs bc -m 'Add feat2.txt' feat2
+
+# feat3 modifies shared.txt and adds feat3.txt (creates future conflict)
+cp $WORK/extra/shared_modified.txt shared.txt
+git add shared.txt feat3.txt
+gs bc -m 'Modify shared.txt and add feat3.txt' feat3
+
+# Verify initial stack
+git graph --branches
+cmp stdout $WORK/golden/initial_stack.txt
+
+# Go back to feat2 and create conflicting changes
+gs bco feat2
+# Stage changes to shared.txt (for fixup into feat1)
+# Leave changes to feat2.txt unstaged (will cause conflict on feat3)
+cp $WORK/extra/shared_fixup.txt shared.txt
+git add shared.txt
+cp $WORK/extra/feat2_dirty.txt feat2.txt
+
+# Verify dirty state before fixup
+git status --porcelain
+cmp stdout $WORK/golden/dirty_before_fixup.txt
+
+# Attempt fixup of feat1 commit
+# Should autostash, perform fixup, but fail during upstack restack
+! gs commit fixup HEAD~1
+stderr 'There was a conflict while rebasing'
+stderr 'gs rebase continue'
+stderr 'gs rebase abort'
+stderr 'Modify shared.txt and add feat3.txt'
+
+# Check conflict status
+git status --porcelain
+cmp stdout $WORK/golden/upstack_conflict_status.txt
+
+# Resolve the conflict
+cp $WORK/extra/shared_conflict_resolved.txt shared.txt
+git add shared.txt
+gs rebase continue --no-edit
+
+# Should be back on feat2
+git branch --show-current
+stdout 'feat2'
+
+# Verify fixup was applied to feat1
+git cat-file -p feat1:shared.txt
+cmp stdout $WORK/extra/shared_fixup.txt
+
+# Verify feat3 has the resolved conflict
+git cat-file -p feat3:shared.txt
+cmp stdout $WORK/extra/shared_conflict_resolved.txt
+
+# Verify unstaged changes were restored
+git status --porcelain
+cmp stdout $WORK/golden/dirty_after_fixup.txt
+cmp feat2.txt $WORK/extra/feat2_dirty.txt
+
+# Verify final stack structure
+git graph --branches
+cmp stdout $WORK/golden/final_stack.txt
+
+-- repo/shared.txt --
+Original shared content
+line 1
+line 2
+-- repo/feat1.txt --
+feat1 content
+-- repo/feat2.txt --
+Original feat2 content
+-- repo/feat3.txt --
+feat3 content
+-- extra/shared_modified.txt --
+Modified shared content
+line 1
+different line 2
+-- extra/shared_fixup.txt --
+Fixed shared content
+line 1
+line 2
+-- extra/shared_conflict_resolved.txt --
+Fixed shared content
+line 1
+different line 2
+-- extra/feat2_dirty.txt --
+Dirty changes to feat2
+-- golden/initial_stack.txt --
+* de39174 (HEAD -> feat3) Modify shared.txt and add feat3.txt
+* 91cf256 (feat2) Add feat2.txt
+* cefe544 (feat1) Add shared and feat1 files
+* 08bbcd9 (main) Initial commit
+-- golden/dirty_before_fixup.txt --
+ M feat2.txt
+M  shared.txt
+-- golden/upstack_conflict_status.txt --
+A  feat3.txt
+UU shared.txt
+-- golden/dirty_after_fixup.txt --
+ M feat2.txt
+-- golden/final_stack.txt --
+* 7659d59 (feat3) Modify shared.txt and add feat3.txt
+* ad90258 (HEAD -> feat2) Add feat2.txt
+* 61a8c4e (feat1) Add shared and feat1 files
+* 08bbcd9 (main) Initial commit
