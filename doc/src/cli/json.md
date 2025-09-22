@@ -87,6 +87,7 @@ These objects take the following form:
     url: string,
 
     // Current status of the Change Request.
+    // Present only if '--status=true' (or 'spice.log.statusFormat=true').
     // May be omitted if the remote forge is unsupported,
     // authentication is missing, or the status could not be determined.
     status?: "open" | "closed" | "merged",

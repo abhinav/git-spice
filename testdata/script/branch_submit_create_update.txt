@@ -26,6 +26,7 @@ stderr 'Created #'
 
 gs ls -a
 cmp stderr $WORK/golden/ls.txt
+git config spice.log.statusFormat true
 gs ls -a --json
 cmpenv stdout $WORK/golden/ls.json
 

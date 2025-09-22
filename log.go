@@ -94,41 +94,6 @@ var (
 	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString(_stateSymbol)
 )
 
-// statusFormat controls how the change status indicator is rendered.
-//   - off: do not render change status
-//   - symbol: render a colored filled circle next to the change
-type statusFormat int
-
-const (
-	statusFormatOff statusFormat = iota
-	statusFormatSymbol
-)
-
-var _ encoding.TextUnmarshaler = (*statusFormat)(nil)
-
-func (f *statusFormat) UnmarshalText(bs []byte) error {
-	switch strings.ToLower(string(bs)) {
-	case "off", "false", "0", "no", "none", "disabled":
-		*f = statusFormatOff
-	case "on", "true", "1", "yes", "symbol", "◉":
-		*f = statusFormatSymbol
-	default:
-		return fmt.Errorf("invalid value %q: expected off or symbol", string(bs))
-	}
-	return nil
-}
-
-func (f statusFormat) String() string {
-	switch f {
-	case statusFormatOff:
-		return "off"
-	case statusFormatSymbol:
-		return "symbol"
-	default:
-		return fmt.Sprintf("statusFormat(%d)", int(f))
-	}
-}
-
 type ListHandler interface {
 	ListBranches(context.Context, *list.BranchesRequest) (*list.BranchesResponse, error)
 }
@@ -141,7 +106,7 @@ type branchLogCmd struct {
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
-	StatusFormat statusFormat `name:"status" config:"log.statusFormat" help:"Show change status indicator (off|symbol). Can be set by git.spice.log.statusFormat" default:"off"`
+	ShowStatus bool `name:"status" config:"log.statusFormat" help:"Show change status indicator (false|true). Can be set by git.spice.log.statusFormat" default:"false"`
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
@@ -169,10 +134,10 @@ func (cmd *branchLogCmd) run(
 	var presenter logPresenter
 	var wantChangeURL, wantPushStatus, wantChangeState bool
 	if cmd.JSON {
-		// JSON always wants all information.
+		// JSON always wants URLs and push status, but respects --status for change state.
 		wantChangeURL = true
 		wantPushStatus = true
-		wantChangeState = true
+		wantChangeState = cmd.ShowStatus
 
 		presenter = &jsonLogPresenter{
 			Stdout: kctx.Stdout,
@@ -190,14 +155,14 @@ func (cmd *branchLogCmd) run(
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 
-		// Determine which StatusFormat to use from the single source.
-		statusFmt := cmd.StatusFormat
-		wantChangeState = statusFmt == statusFormatSymbol
+		// Show status if enabled.
+		showStatus := cmd.ShowStatus
+		wantChangeState = showStatus
 
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
-			StatusFormat:     statusFmt,
+			StatusEnabled:    showStatus,
 			PushStatusFormat: cmd.PushStatusFormat,
 		}
 	}
@@ -234,7 +199,7 @@ type logPresenter interface {
 type graphLogPresenter struct {
 	Stderr           io.Writer        // required
 	ChangeFormat     changeFormat     // required
-	StatusFormat     statusFormat     // required
+	StatusEnabled    bool             // required
 	PushStatusFormat pushStatusFormat // required
 }
 
@@ -262,7 +227,7 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			if cid := b.ChangeID; cid != nil {
 				// Optional colored state indicator.
 				var stateMark string
-				if p.StatusFormat == statusFormatSymbol {
+				if p.StatusEnabled {
 					switch b.ChangeState {
 					case forge.ChangeOpen:
 						stateMark = _stateOpenStyle.String()

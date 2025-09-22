@@ -29,13 +29,13 @@ gs bc feat3 -m 'feat3'
 
 gs stack submit --fill
 
-# status via config: symbol
-git config spice.log.statusFormat symbol
+# status via config: true
+git config spice.log.statusFormat true
 gs ls
 cmp stderr $WORK/golden/ls-symbol.txt
 
-# status via config: off
-git config spice.log.statusFormat off
+# status via config: false
+git config spice.log.statusFormat false
 gs ls
 cmp stderr $WORK/golden/ls-off.txt
 

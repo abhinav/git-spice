@@ -251,8 +251,8 @@ indicator next to branches with an associated Change Request.
 
 **Accepted values:**
 
-- `off` (default): do not display status
-- `symbol`: show a colored filled circle `◉` indicating state
+- `false` (default): do not display status
+- `true`: show a colored filled circle `◉` indicating state
   - green = open, gray = closed, magenta = merged
 
 ### spice.rebaseContinue.edit
