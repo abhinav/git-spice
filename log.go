@@ -336,7 +336,14 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 				URL: branch.ChangeURL,
 			}
 			if branch.ChangeState != 0 {
-				jc.Status = branch.ChangeState.String()
+				switch branch.ChangeState {
+				case forge.ChangeOpen:
+					jc.Status = "open"
+				case forge.ChangeClosed:
+					jc.Status = "closed"
+				case forge.ChangeMerged:
+					jc.Status = "merged"
+				}
 			}
 			logBranch.Change = jc
 		}
