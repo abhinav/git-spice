@@ -33,30 +33,22 @@ type logCmd struct {
 
 func (*logCmd) AfterApply(kctx *kong.Context) error {
 	return kctx.BindToProvider(func(
-		ctx context.Context,
 		log *silog.Logger,
 		repo *git.Repository,
 		store *state.Store,
 		svc *spice.Service,
 		forges *forge.Registry,
-		secretStash secret.Stash,
+		stash secret.Stash,
 	) (ListHandler, error) {
-		// Try to open the remote repository silently (no prompts).
-		// If unsupported or unauthenticated, proceed without states.
-		var remoteRepo forge.Repository
-		if remote, err := store.Remote(); err == nil {
-			if rr, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote); err == nil {
-				remoteRepo = rr
-			}
-		}
-
 		return &list.Handler{
-			Log:              log,
-			Repository:       repo,
-			Store:            store,
-			Service:          svc,
-			Forges:           forges,
-			RemoteRepository: remoteRepo,
+			Log:        log,
+			Repository: repo,
+			Store:      store,
+			Service:    svc,
+			Forges:     forges,
+			OpenRemoteRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
+				return openForgeRepository(ctx, stash, f, repo)
+			},
 		}, nil
 	})
 }

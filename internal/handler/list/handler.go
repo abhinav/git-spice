@@ -54,9 +54,13 @@ type Handler struct {
 	Service    Service         // required
 	Forges     *forge.Registry // required
 
-	// RemoteRepository is the opened forge repository for the current Git remote.
-	// If nil (unsupported remote or not logged in), change states are omitted.
-	RemoteRepository forge.Repository
+	// OpenRemoteRepository opens the remote repository
+	// for the given remote URL.
+	OpenRemoteRepository func(
+		ctx context.Context,
+		f forge.Forge,
+		repo forge.RepositoryID,
+	) (forge.Repository, error) // required
 }
 
 // Options holds command line options for the log command.
@@ -84,6 +88,8 @@ const (
 	// IncludeChangeState includes the current forge change state for
 	// branches that have an associated ChangeID.
 	IncludeChangeState
+
+	needsRemoteID = IncludeChangeURL | IncludeChangeState
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -163,8 +169,11 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		return remote
 	})
 
-	var repoID forge.RepositoryID
-	if req.Include&IncludeChangeURL != 0 {
+	var (
+		remoteForge  forge.Forge
+		remoteRepoID forge.RepositoryID
+	)
+	if req.Include&needsRemoteID != 0 {
 		err := func() error {
 			remote := getRemote()
 
@@ -174,7 +183,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 			}
 
 			var ok bool
-			_, repoID, ok = forge.MatchRemoteURL(h.Forges, remoteURL)
+			remoteForge, remoteRepoID, ok = forge.MatchRemoteURL(h.Forges, remoteURL)
 			if !ok {
 				return fmt.Errorf("no forge matches remote URL %q", remoteURL)
 			}
@@ -188,12 +197,12 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 
 	// changeURL queries the forge for the URL of a change request.
 	changeURL := func(changeID forge.ChangeID) string {
-		if repoID == nil {
+		if remoteRepoID == nil {
 			// No forge to query against. Just return the change ID.
 			return changeID.String()
 		}
 
-		return repoID.ChangeURL(changeID)
+		return remoteRepoID.ChangeURL(changeID)
 	}
 
 	var itemsMu sync.Mutex
@@ -336,26 +345,11 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	// If requested and possible, batch-resolve ChangeState for items with ChangeID.
-	if req.Include&IncludeChangeState != 0 && h.RemoteRepository != nil {
-		// Collect IDs in the same order as items for stable mapping.
-		idxs := make([]int, 0, len(items))
-		ids := make([]forge.ChangeID, 0, len(items))
-		for i, it := range items {
-			if it.ChangeID != nil {
-				idxs = append(idxs, i)
-				ids = append(ids, it.ChangeID)
-			}
-		}
-		if len(ids) > 0 {
-			states, err := h.RemoteRepository.ChangesStates(ctx, ids)
-			// Handle error gracefully.
-			if err != nil {
-				h.Log.Warn("Could not retrieve change states", "error", err)
-			} else {
-				for j, idx := range idxs {
-					items[idx].ChangeState = states[j]
-				}
-			}
+	if req.Include&IncludeChangeState != 0 && remoteForge != nil {
+		// Try to load change states, but don't fail the whole operation
+		// if something goes wrong.
+		if err := h.loadChangeStates(ctx, remoteForge, remoteRepoID, items); err != nil {
+			log.Warn("Could not load change states", "error", err)
 		}
 	}
 
@@ -363,4 +357,42 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		TrunkIdx: trunkIdx,
 		Branches: items,
 	}, nil
+}
+
+func (h *Handler) loadChangeStates(
+	ctx context.Context,
+	remoteForge forge.Forge,
+	remoteRepoID forge.RepositoryID,
+	branches []*BranchItem,
+) error {
+	// Collect IDs in the same order as items for stable mapping.
+	branchesIdx := make([]int, 0, len(branches)) // index in items
+	changeIDs := make([]forge.ChangeID, 0, len(branches))
+	// For each changeIDs[i], branchesIdx[i] is the index in branches.
+	for i, b := range branches {
+		if b.ChangeID != nil {
+			branchesIdx = append(branchesIdx, i)
+			changeIDs = append(changeIDs, b.ChangeID)
+		}
+	}
+
+	if len(changeIDs) == 0 {
+		return nil
+	}
+
+	remoteRepo, err := h.OpenRemoteRepository(ctx, remoteForge, remoteRepoID)
+	if err != nil {
+		return fmt.Errorf("open remote repository: %w", err)
+	}
+
+	states, err := remoteRepo.ChangesStates(ctx, changeIDs)
+	if err != nil {
+		return fmt.Errorf("retrieve change states: %w", err)
+	}
+
+	for j, idx := range branchesIdx {
+		branches[idx].ChangeState = states[j]
+	}
+
+	return nil
 }
