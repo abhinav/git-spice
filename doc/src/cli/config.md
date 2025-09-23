@@ -229,6 +229,21 @@ If not set, falls back to `spice.log.crFormat`.
 - `"url"`: show the CR URL
 - `"id"`: show the CR ID
 
+### spice.log.crStatus
+
+<!-- gs:version unreleased -->
+
+Specifies whether $$gs log short$$ and $$gs log long$$
+should request and show the status of associated Change Requests.
+
+It is not recommended to set this option to true
+as it adds a network request for each 'gs log' operation.
+
+**Accepted values:**
+
+- `false` (default)
+- `true`
+
 ### spice.log.pushStatusFormat
 
 <!-- gs:version v0.13.0 -->
@@ -243,17 +258,6 @@ whether the branch is in sync with its pushed counterpart.
 - `"aheadBehind"`:
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
-
-### spice.log.statusFormat
-
-Controls whether $$gs log short$$ and $$gs log long$$ display a change status
-indicator next to branches with an associated Change Request.
-
-**Accepted values:**
-
-- `false` (default): do not display status
-- `true`: show a colored filled circle `◉` indicating state
-  - green = open, gray = closed, magenta = merged
 
 ### spice.rebaseContinue.edit
 

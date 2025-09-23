@@ -106,7 +106,8 @@ type branchLogCmd struct {
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
-	ShowStatus bool `name:"status" config:"log.statusFormat" help:"Show change status indicator (false|true). Can be set by git.spice.log.statusFormat" default:"false"`
+	CRStatus bool `name:"cr-status" short:"S" config:"log.crStatus" help:"Request and include information about the Change Request" default:"false"`
+	// TODO: When needed, add a crStatusFormat config to control presentation.
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
@@ -137,7 +138,7 @@ func (cmd *branchLogCmd) run(
 		// JSON always wants URLs and push status, but respects --status for change state.
 		wantChangeURL = true
 		wantPushStatus = true
-		wantChangeState = cmd.ShowStatus
+		wantChangeState = cmd.CRStatus
 
 		presenter = &jsonLogPresenter{
 			Stdout: kctx.Stdout,
@@ -154,15 +155,11 @@ func (cmd *branchLogCmd) run(
 
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
-
-		// Show status if enabled.
-		showStatus := cmd.ShowStatus
-		wantChangeState = showStatus
-
+		wantChangeState = cmd.CRStatus
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
-			StatusEnabled:    showStatus,
+			ShowCRStatus:     wantChangeState,
 			PushStatusFormat: cmd.PushStatusFormat,
 		}
 	}
@@ -199,7 +196,7 @@ type logPresenter interface {
 type graphLogPresenter struct {
 	Stderr           io.Writer        // required
 	ChangeFormat     changeFormat     // required
-	StatusEnabled    bool             // required
+	ShowCRStatus     bool             // required
 	PushStatusFormat pushStatusFormat // required
 }
 
@@ -227,7 +224,7 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			if cid := b.ChangeID; cid != nil {
 				// Optional colored state indicator.
 				var stateMark string
-				if p.StatusEnabled {
+				if p.ShowCRStatus {
 					switch b.ChangeState {
 					case forge.ChangeOpen:
 						stateMark = _stateOpenStyle.String()

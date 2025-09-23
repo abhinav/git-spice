@@ -1,3 +1,5 @@
 kind: Added
-body: Introduce Status Check to Log
+body: >-
+  log: Add -S/--cr-status flag to request the statuses of change requests
+  that have been published.
 time: 2025-09-18T16:03:14.215782-04:00
