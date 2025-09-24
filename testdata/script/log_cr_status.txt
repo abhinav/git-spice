@@ -1,0 +1,89 @@
+# 'gs log' supports a status indicator controlled by --cr-status/configuration.
+
+as 'Test <test@example.com>'
+at '2025-09-23T19:12:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create stack feat1 -> feat2 -> feat3 -> feat4
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+
+# submit feat1-3, leave feat4 unsubmitted
+gs bco feat3
+gs dss --fill
+
+# server-side, merge feat1, close feat3.
+shamhub merge alice/example 1
+shamhub reject alice/example 3
+
+# Test: no cr-status
+gs ls
+cmp stderr $WORK/golden/ls-without-status.txt
+gs ll
+cmp stderr $WORK/golden/ll-without-status.txt
+
+# Test: with CLI flag
+gs ls -S
+cmp stderr $WORK/golden/ls-with-status.txt
+gs ll -S
+cmp stderr $WORK/golden/ll-with-status.txt
+
+# Test: with config
+git config spice.log.crStatus true
+gs ls
+cmp stderr $WORK/golden/ls-with-status.txt
+gs ll
+cmp stderr $WORK/golden/ll-with-status.txt
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- repo/feat4.txt --
+feat4
+
+-- golden/ls-without-status.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-without-status.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   67480b6 feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    769cbf5 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    ed5e364 feat1 (now)
+main
+-- golden/ls-with-status.txt --
+    ┏━■ feat3 (#3 ◉) ◀
+  ┏━┻□ feat2 (#2 ◉)
+┏━┻□ feat1 (#1 ◉)
+main
+-- golden/ll-with-status.txt --
+    ┏━■ feat3 (#3 ◉) ◀
+    ┃   67480b6 feat3 (now)
+  ┏━┻□ feat2 (#2 ◉)
+  ┃    769cbf5 feat2 (now)
+┏━┻□ feat1 (#1 ◉)
+┃    ed5e364 feat1 (now)
+main
