@@ -98,7 +98,7 @@ type branchLogCmd struct {
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
 
-	CRStatus bool `name:"cr-status" short:"S" config:"log.crStatus" help:"Request and include information about the Change Request" default:"false"`
+	CRStatus bool `name:"cr-status" short:"S" config:"log.crStatus" help:"Request and include information about the Change Request" default:"false" negatable:""`
 	// TODO: When needed, add a crStatusFormat config to control presentation.
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
