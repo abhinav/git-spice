@@ -48,7 +48,7 @@ A couple highlights from this release:
 - log {long, short}: Add -S/--cr-status flag to request the statuses of change requests that have been published.
 ### Changed
 - branch split: Allow reusing original branch name for intermediate commits during split.
-- Homebrew Tap now publishes the package as a Cask. If you previously installed with 'brew install abhinav/tap/git-spice`, switch to the cask with `brew install --cask abhinav/tap/git-spice`. You can ignore this if you installed from homebrew-core (`brew install git-spice`).
+- Homebrew Tap now publishes the package as a Cask. If you previously installed with `brew install abhinav/tap/git-spice`, switch to the cask with `brew install --cask abhinav/tap/git-spice`. You can ignore this if you installed from homebrew-core (`brew install git-spice`).
 - gitlab: Submit Merge Requests with `remove_source_branch=true`. This will delete the source branch when the MR is merged. Opt out of this behavior with the `spice.forge.gitlab.removeSourceBranch` option.
 ### Removed
 - commit amend: Delete -n flag that was deprecated in favor of --no-edit in v0.10.0 (2025-01-02). If you need a short way to use this flag, try defining a custom shorthand.
