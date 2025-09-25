@@ -182,7 +182,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
-* `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
@@ -205,7 +205,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
-* `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 

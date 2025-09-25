@@ -26,7 +26,7 @@ and describes the structure of their JSON output.
 
 ### $$gs log long$$, $$gs log short$$
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.18.0 -->
 
 Writes a stream of JSON outputs to standard output,
 one per line, each representing a tracked branch.

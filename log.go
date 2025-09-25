@@ -101,7 +101,7 @@ type branchLogCmd struct {
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
-	JSON bool `name:"json" released:"unreleased" help:"Write to stdout as a stream of JSON objects in an unspecified order"`
+	JSON bool `name:"json" released:"v0.18.0" help:"Write to stdout as a stream of JSON objects in an unspecified order"`
 }
 
 type branchLogOptions struct {

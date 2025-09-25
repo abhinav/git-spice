@@ -1,7 +1,0 @@
-kind: Changed
-body: >-
-  gitlab:
-  Submit Merge Requests with `remove_source_branch=true`.
-  This will delete the source branch when the MR is merged.
-  Opt out of this behavior with the `spice.forge.gitlab.removeSourceBranch` option.
-time: 2025-08-29T21:37:25.235962-07:00

@@ -37,7 +37,7 @@ feel free to report issues and provide feedback about them.
 
 ### commitFixup
 
-**Added**: <!-- gs:version unreleased -->
+**Added**: <!-- gs:version v0.18.0 -->
 <!-- TODO: **Removed**: -->
 
 Enables the $$gs commit fixup$$ command.

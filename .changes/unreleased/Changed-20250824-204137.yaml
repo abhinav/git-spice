@@ -1,8 +1,0 @@
-kind: Changed
-body: >-
-  Homebrew Tap now publishes the package as a Cask.
-  If you previously installed with 'brew install abhinav/tap/git-spice`,
-  switch to the cask with `brew install --cask abhinav/tap/git-spice`.
-  You can ignore this if you installed from homebrew-core
-  (`brew install git-spice`).
-time: 2025-08-24T20:41:37.103982-07:00
