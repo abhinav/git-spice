@@ -79,11 +79,9 @@ var (
 			Bold(true).
 			SetString("◀")
 
-	// Change state indicator styles: colored filled circle.
-	_stateSymbol      = "◉"
-	_stateOpenStyle   = ui.NewStyle().Foreground(ui.Green).SetString(_stateSymbol)
-	_stateClosedStyle = ui.NewStyle().Foreground(ui.Gray).SetString(_stateSymbol)
-	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString(_stateSymbol)
+	_stateOpenStyle   = ui.NewStyle().Foreground(ui.Green).SetString("open")
+	_stateClosedStyle = ui.NewStyle().Foreground(ui.Gray).SetString("closed")
+	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString("merged")
 )
 
 type ListHandler interface {
@@ -214,35 +212,35 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			}
 
 			if cid := b.ChangeID; cid != nil {
-				// Optional colored state indicator.
-				var stateMark string
-				if p.ShowCRStatus {
-					switch b.ChangeState {
-					case forge.ChangeOpen:
-						stateMark = _stateOpenStyle.String()
-					case forge.ChangeClosed:
-						stateMark = _stateClosedStyle.String()
-					case forge.ChangeMerged:
-						stateMark = _stateMergedStyle.String()
-					}
-				}
-
-				// Build CR text once, then append optional state symbol.
-				var crText string
+				var crText strings.Builder
+				crText.WriteString(" (")
 				switch p.ChangeFormat {
 				case changeFormatID:
-					crText = fmt.Sprintf("%v", cid)
+					crText.WriteString(cid.String())
 				case changeFormatURL:
-					crText = b.ChangeURL
+					crText.WriteString(b.ChangeURL)
 				default:
 					must.Failf("unknown change format: %v", p.ChangeFormat)
 				}
-				// Add state symbol if present.
-				suffix := ""
-				if stateMark != "" {
-					suffix = " " + stateMark
+
+				var crStatus string
+				if p.ShowCRStatus {
+					switch b.ChangeState {
+					case forge.ChangeOpen:
+						crStatus = _stateOpenStyle.String()
+					case forge.ChangeClosed:
+						crStatus = _stateClosedStyle.String()
+					case forge.ChangeMerged:
+						crStatus = _stateMergedStyle.String()
+					}
 				}
-				_, _ = fmt.Fprintf(&o, " (%s%s)", crText, suffix)
+
+				if crStatus != "" {
+					crText.WriteString(" ")
+					crText.WriteString(crStatus)
+				}
+				crText.WriteString(")")
+				o.WriteString(crText.String())
 			}
 
 			if b.NeedsRestack {
