@@ -47,7 +47,7 @@ A couple highlights from this release:
   https://github.com/abhinav/git-spice/discussions/867.
 
 - We've addressed a long-standing limitation of `gs branch split`:
-  it was previously unable to move the branch do an intermediate commit.
+  it was previously unable to move the branch being split down to another commit.
   Suppose if the branch being split--say 'penguin'--has two commits:
   (a) Invent penguins, and (b) Refactor pangolin, and the branch head points to commit (b).
   Previously, `gs branch split` would not let you use the name 'penguin' for commit (a),
