@@ -56,6 +56,15 @@ func openRemoteRepositorySilent(
 		}
 	}
 
+	return openForgeRepository(ctx, stash, f, repoID)
+}
+
+func openForgeRepository(
+	ctx context.Context,
+	stash secret.Stash,
+	f forge.Forge,
+	repoID forge.RepositoryID,
+) (forge.Repository, error) {
 	tok, err := f.LoadAuthenticationToken(stash)
 	if err != nil {
 		if errors.Is(err, secret.ErrNotFound) {

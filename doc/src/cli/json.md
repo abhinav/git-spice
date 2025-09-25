@@ -85,6 +85,12 @@ These objects take the following form:
 
     // URL at which the Change Request can be viewed.
     url: string,
+
+    // Status of the Change Request.
+    // Present only if '--cr-status=true' (or 'spice.log.crStatus=true').
+    // May be omitted if the remote forge is unsupported,
+    // authentication is missing, or the status could not be determined.
+    status?: "open" | "closed" | "merged",
   },
 
   // Push status of the branch.

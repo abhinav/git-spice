@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/list"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -37,6 +38,7 @@ func (*logCmd) AfterApply(kctx *kong.Context) error {
 		store *state.Store,
 		svc *spice.Service,
 		forges *forge.Registry,
+		stash secret.Stash,
 	) (ListHandler, error) {
 		return &list.Handler{
 			Log:        log,
@@ -44,6 +46,9 @@ func (*logCmd) AfterApply(kctx *kong.Context) error {
 			Store:      store,
 			Service:    svc,
 			Forges:     forges,
+			OpenRemoteRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
+				return openForgeRepository(ctx, stash, f, repo)
+			},
 		}, nil
 	})
 }
@@ -73,6 +78,10 @@ var (
 			Foreground(ui.Yellow).
 			Bold(true).
 			SetString("◀")
+
+	_stateOpenStyle   = ui.NewStyle().Foreground(ui.Green).SetString("open")
+	_stateClosedStyle = ui.NewStyle().Foreground(ui.Gray).SetString("closed")
+	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString("merged")
 )
 
 type ListHandler interface {
@@ -86,6 +95,9 @@ type branchLogCmd struct {
 	ChangeFormat      changeFormat  `config:"log.crFormat" hidden:"" default:"id"`
 	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
 	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
+
+	CRStatus bool `name:"cr-status" short:"S" config:"log.crStatus" help:"Request and include information about the Change Request" default:"false" negatable:""`
+	// TODO: When needed, add a crStatusFormat config to control presentation.
 
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
 
@@ -111,11 +123,12 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var presenter logPresenter
-	var wantChangeURL, wantPushStatus bool
+	var wantChangeURL, wantPushStatus, wantChangeState bool
 	if cmd.JSON {
-		// JSON always wants all information.
+		// JSON always wants URLs and push status, but respects --status for change state.
 		wantChangeURL = true
 		wantPushStatus = true
+		wantChangeState = cmd.CRStatus
 
 		presenter = &jsonLogPresenter{
 			Stdout: kctx.Stdout,
@@ -132,10 +145,11 @@ func (cmd *branchLogCmd) run(
 
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
-
+		wantChangeState = cmd.CRStatus
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
+			ShowCRStatus:     wantChangeState,
 			PushStatusFormat: cmd.PushStatusFormat,
 		}
 	}
@@ -146,6 +160,9 @@ func (cmd *branchLogCmd) run(
 	}
 	if wantChangeURL {
 		req.Include |= list.IncludeChangeURL
+	}
+	if wantChangeState {
+		req.Include |= list.IncludeChangeState
 	}
 	if opts.Commits {
 		req.Include |= list.IncludeCommits
@@ -169,6 +186,7 @@ type logPresenter interface {
 type graphLogPresenter struct {
 	Stderr           io.Writer        // required
 	ChangeFormat     changeFormat     // required
+	ShowCRStatus     bool             // required
 	PushStatusFormat pushStatusFormat // required
 }
 
@@ -194,14 +212,35 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			}
 
 			if cid := b.ChangeID; cid != nil {
+				var crText strings.Builder
+				crText.WriteString(" (")
 				switch p.ChangeFormat {
 				case changeFormatID:
-					_, _ = fmt.Fprintf(&o, " (%v)", cid)
+					crText.WriteString(cid.String())
 				case changeFormatURL:
-					_, _ = fmt.Fprintf(&o, " (%s)", b.ChangeURL)
+					crText.WriteString(b.ChangeURL)
 				default:
 					must.Failf("unknown change format: %v", p.ChangeFormat)
 				}
+
+				var crStatus string
+				if p.ShowCRStatus {
+					switch b.ChangeState {
+					case forge.ChangeOpen:
+						crStatus = _stateOpenStyle.String()
+					case forge.ChangeClosed:
+						crStatus = _stateClosedStyle.String()
+					case forge.ChangeMerged:
+						crStatus = _stateMergedStyle.String()
+					}
+				}
+
+				if crStatus != "" {
+					crText.WriteString(" ")
+					crText.WriteString(crStatus)
+				}
+				crText.WriteString(")")
+				o.WriteString(crText.String())
 			}
 
 			if b.NeedsRestack {
@@ -290,10 +329,21 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 		}
 
 		if branch.ChangeID != nil {
-			logBranch.Change = &jsonLogChange{
+			jc := &jsonLogChange{
 				ID:  branch.ChangeID.String(),
 				URL: branch.ChangeURL,
 			}
+			if branch.ChangeState != 0 {
+				switch branch.ChangeState {
+				case forge.ChangeOpen:
+					jc.Status = "open"
+				case forge.ChangeClosed:
+					jc.Status = "closed"
+				case forge.ChangeMerged:
+					jc.Status = "merged"
+				}
+			}
+			logBranch.Change = jc
 		}
 
 		if status := branch.PushStatus; status != nil {
@@ -374,6 +424,9 @@ type jsonLogChange struct {
 
 	// URL is the web URL of the associated change.
 	URL string `json:"url"`
+
+	// Status is the current state of the change (open|closed|merged).
+	Status string `json:"status,omitempty"`
 }
 
 type jsonLogPushStatus struct {
