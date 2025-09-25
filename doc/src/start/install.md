@@ -41,7 +41,7 @@ brew install git-spice
 You can also use my Homebrew Tap to install the latest release:
 
 ```bash
-brew install abhinav/tap/git-spice
+brew install --cask abhinav/tap/git-spice
 ```
 
 ### Binary installation tools
