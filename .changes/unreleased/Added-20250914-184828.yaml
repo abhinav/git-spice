@@ -1,3 +1,0 @@
-kind: Added
-body: 'log {long, short}: Add --json flag. This prints information about tracked branches to stdout as a stream of JSON objects.'
-time: 2025-09-14T18:48:28.458846-07:00

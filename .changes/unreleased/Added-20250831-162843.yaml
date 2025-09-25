@@ -1,9 +1,0 @@
-kind: Added
-body: >-
-  New experimental 'gs branch fixup' command
-  that acts like 'git commit --amend' for any downstack commit.
-  It will commit staged changes to a specified downstack commit,
-  and automatically rebase the rest of the stack on top of it.
-  See <https://abhinav.github.io/git-spice/cli/experiments>
-  for instructions on enabling experimental features.
-time: 2025-08-31T16:28:43.164851-07:00

@@ -231,7 +231,7 @@ If not set, falls back to `spice.log.crFormat`.
 
 ### spice.log.crStatus
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.18.0 -->
 
 Specifies whether $$gs log short$$ and $$gs log long$$
 should request and show the status of associated Change Requests.

@@ -463,7 +463,7 @@ to one of the branches.
 --8<-- "captures/branch-split-reassociate.txt"
 ```
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.18.0 -->
 When prompted for branch names during a split,
 you can reuse the original branch name for one of the intermediate commits.
 When you do this, the original branch will be reassigned to that commit,
