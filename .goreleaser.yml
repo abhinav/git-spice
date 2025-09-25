@@ -68,9 +68,7 @@ homebrew_casks:
     description: "A tool for stacking Git branches."
     license: "GPL-3.0-or-later"
     skip_upload: auto
-    conflicts:
-      - formula: git-spice
-      - formula: ghostscript
+    binary: gs
     hooks:
       post:
         install: |
