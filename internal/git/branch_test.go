@@ -66,9 +66,9 @@ func TestIntegrationBranches(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
-			{Name: "feature1"},
-			{Name: "feature2"},
-			{Name: "main", Worktree: joinSlash(fixture.Dir())},
+			{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+			{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+			{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 		}, bs)
 	})
 
@@ -79,9 +79,9 @@ func TestIntegrationBranches(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, []git.LocalBranch{
-			{Name: "main", Worktree: joinSlash(fixture.Dir())},
-			{Name: "feature1"},
-			{Name: "feature2"},
+			{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
+			{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+			{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
 		}, bs)
 	})
 
@@ -120,10 +120,10 @@ func TestIntegrationBranches(t *testing.T) {
 		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature1"},
-				{Name: "feature2"},
-				{Name: "feature3"},
-				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+				{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+				{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+				{Name: "feature3", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		}
 
@@ -137,9 +137,9 @@ func TestIntegrationBranches(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature1"},
-				{Name: "feature2"},
-				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+				{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+				{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+				{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		})
 	})
@@ -158,10 +158,10 @@ func TestIntegrationBranches(t *testing.T) {
 		bs, err := sliceutil.CollectErr(repo.LocalBranches(t.Context(), nil))
 		if assert.NoError(t, err) {
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature1"},
-				{Name: "feature2"},
-				{Name: "feature4"},
-				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+				{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+				{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+				{Name: "feature4", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		}
 
@@ -191,7 +191,7 @@ func TestIntegrationBranches(t *testing.T) {
 			}))
 			require.NoError(t, err)
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+				{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		})
 
@@ -201,8 +201,8 @@ func TestIntegrationBranches(t *testing.T) {
 			}))
 			require.NoError(t, err)
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature/branch1"},
-				{Name: "feature/branch2"},
+				{Name: "feature/branch1", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "feature/branch2", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
 			}, bs)
 		})
 
@@ -212,8 +212,8 @@ func TestIntegrationBranches(t *testing.T) {
 			}))
 			require.NoError(t, err)
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature1"},
-				{Name: "feature2"},
+				{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e"},
+				{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
 			}, bs)
 		})
 
@@ -223,9 +223,9 @@ func TestIntegrationBranches(t *testing.T) {
 			}))
 			require.NoError(t, err)
 			assert.Equal(t, []git.LocalBranch{
-				{Name: "feature/branch1"},
-				{Name: "feature/branch2"},
-				{Name: "main", Worktree: joinSlash(fixture.Dir())},
+				{Name: "feature/branch1", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "feature/branch2", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62"},
+				{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir())},
 			}, bs)
 		})
 
@@ -245,14 +245,17 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 		cd repo
 
+		at '2024-08-27T21:48:32Z'
 		git init
 		git add init.txt
 		git commit -m 'Initial commit'
 
+		at '2024-08-27T21:50:12Z'
 		git checkout -b feature1
 		git add feature1.txt
 		git commit -m 'Add feature1'
 
+		at '2024-08-27T21:52:12Z'
 		git checkout -b feature2
 		git add feature2.txt
 		git commit -m 'Add feature2'
@@ -284,9 +287,9 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, []git.LocalBranch{
-		{Name: "feature1", Worktree: joinSlash(fixture.Dir(), "wt1")},
-		{Name: "feature2"},
-		{Name: "main", Worktree: joinSlash(fixture.Dir(), "repo")},
+		{Name: "feature1", Hash: "0a08a7c2b265465f4ae02291fad1d5723877a20e", Worktree: joinSlash(fixture.Dir(), "wt1")},
+		{Name: "feature2", Hash: "8ab6a1b8262f1f0d9af261e07381888148bdb092"},
+		{Name: "main", Hash: "a5fe281e95373c84144272b944ec2a1c2e82ed62", Worktree: joinSlash(fixture.Dir(), "repo")},
 	}, bs)
 }
 

@@ -12,6 +12,10 @@ type LocalBranch struct {
 	// Name is the name of the branch.
 	Name string
 
+	// Hash is the commit hash that the branch
+	// currently points to.
+	Hash Hash
+
 	// Worktree is the path at which this branch is checked out, if any.
 	Worktree string
 }
@@ -43,7 +47,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 	}
 
 	args := []string{
-		"for-each-ref", "--format=%(refname) %(worktreepath)",
+		"for-each-ref", "--format=%(refname) %(objectname) %(worktreepath)",
 	}
 	if opts.Sort != "" {
 		args = append(args, "--sort="+opts.Sort)
@@ -69,7 +73,12 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 				continue
 			}
 
-			refname, worktree, _ := bytes.Cut(line, []byte{' '})
+			refname, line, ok := bytes.Cut(line, []byte{' '})
+			if !ok {
+				continue
+			}
+			hash, worktree, _ := bytes.Cut(line, []byte{' '})
+
 			branchName, ok := bytes.CutPrefix(refname, []byte("refs/heads/"))
 			if !ok {
 				continue
@@ -77,6 +86,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 
 			localBranch := LocalBranch{
 				Name:     string(branchName),
+				Hash:     Hash(hash),
 				Worktree: string(bytes.TrimSpace(worktree)),
 			}
 			if !yield(localBranch, nil) {
