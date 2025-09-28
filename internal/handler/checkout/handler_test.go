@@ -257,7 +257,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Return(state.ErrNotExist)
 		mockTrack.
 			EXPECT().
-			AddBranch(gomock.Any(), &track.AddBranchRequest{
+			TrackBranch(gomock.Any(), &track.BranchRequest{
 				Branch: "feature",
 			}).
 			Return(nil)
@@ -617,7 +617,7 @@ func TestHandler_CheckoutBranch_EdgeCases(t *testing.T) {
 			Return(state.ErrNotExist)
 		mockTrack.
 			EXPECT().
-			AddBranch(gomock.Any(), &track.AddBranchRequest{
+			TrackBranch(gomock.Any(), &track.BranchRequest{
 				Branch: "feature",
 			}).
 			Return(trackError)
