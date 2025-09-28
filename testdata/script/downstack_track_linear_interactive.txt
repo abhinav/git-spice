@@ -1,0 +1,152 @@
+# 'gs downstack track' with a deep linear stack,
+# where we ignore a few branch candidates on the way.
+
+as 'Test <test@example.com>'
+at '2025-10-05T12:21:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feat1
+git add feat1.txt
+git commit -m 'Add feat1'
+
+git checkout -b feat2
+git add feat2.txt
+git commit -m 'Add feat2'
+
+git checkout -b feat3
+git add feat3.txt
+git commit -m 'Add feat3'
+
+git checkout -b feat4
+git add feat4.txt
+git commit -m 'Add feat4'
+
+git checkout -b feat5
+git add feat5.txt
+git commit -m 'Add feat5'
+
+git checkout -b feat6
+git add feat6.txt
+git commit -m 'Add feat6'
+
+git checkout -b feat7
+git add feat7.txt
+git commit -m 'Add feat7'
+
+git checkout -b feat8
+git add feat8.txt
+git commit -m 'Add feat8'
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.output
+gs downstack track
+cmp $WORK/robot.output $WORK/robot.golden
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+-- repo/feat4.txt --
+feature 4
+-- repo/feat5.txt --
+feature 5
+-- repo/feat6.txt --
+feature 6
+-- repo/feat7.txt --
+feature 7
+-- repo/feat8.txt --
+feature 8
+-- robot.golden --
+===
+> Track feat8 with base: 
+>
+> ▶ feat7
+>
+>   None of these
+>
+> Found branch feat7 at commit 72d250a downstack from feat8.
+> We can track it as the base for feat8, or skip it.
+"feat7"
+===
+> Track feat7 with base: 
+>
+> ▶ feat6
+>
+>   None of these
+>
+> Found branch feat6 at commit 67f3bad downstack from feat7.
+> We can track it as the base for feat7, or skip it.
+"None of these"
+===
+> Track feat7 with base: 
+>
+> ▶ feat5
+>
+>   None of these
+>
+> Found branch feat5 at commit 12f00ad downstack from feat7.
+> We can track it as the base for feat7, or skip it.
+"feat5"
+===
+> Track feat5 with base: 
+>
+> ▶ feat4
+>
+>   None of these
+>
+> Found branch feat4 at commit d7232bb downstack from feat5.
+> We can track it as the base for feat5, or skip it.
+"None of these"
+===
+> Track feat5 with base: 
+>
+> ▶ feat3
+>
+>   None of these
+>
+> Found branch feat3 at commit 787d612 downstack from feat5.
+> We can track it as the base for feat5, or skip it.
+"feat3"
+===
+> Track feat3 with base: 
+>
+> ▶ feat2
+>
+>   None of these
+>
+> Found branch feat2 at commit 524ca36 downstack from feat3.
+> We can track it as the base for feat3, or skip it.
+"None of these"
+===
+> Track feat3 with base: 
+>
+> ▶ feat1
+>
+>   None of these
+>
+> Found branch feat1 at commit 7b2492b downstack from feat3.
+> We can track it as the base for feat3, or skip it.
+"feat1"
+-- golden/ll.txt --
+        ┏━■ feat8 ◀
+        ┃   ed87235 Add feat8 (now)
+      ┏━┻□ feat7
+      ┃    72d250a Add feat7 (now)
+      ┃    67f3bad Add feat6 (now)
+    ┏━┻□ feat5
+    ┃    12f00ad Add feat5 (now)
+    ┃    d7232bb Add feat4 (now)
+  ┏━┻□ feat3
+  ┃    787d612 Add feat3 (now)
+  ┃    524ca36 Add feat2 (now)
+┏━┻□ feat1
+┃    7b2492b Add feat1 (now)
+main

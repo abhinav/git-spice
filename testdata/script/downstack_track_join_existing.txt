@@ -1,0 +1,65 @@
+# 'gs downstack track' is able to join an existing stack.
+
+as 'Test <test@example.com>'
+at '2025-09-27T14:30:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Set up existing tracked stack: main -> feat1 -> feat2
+git add feat1.txt
+gs branch create feat1 -m 'Add feat1'
+
+git add feat2.txt
+gs branch create feat2 -m 'Add feat2'
+
+# Create untracked branches based on feat2: feat3 -> feat4
+git checkout -b feat3
+git add feat3.txt
+git commit -m 'Add feat3'
+
+git checkout -b feat4
+git add feat4.txt
+git commit -m 'Add feat4'
+
+# Verify initial state
+gs ls
+cmp stderr $WORK/golden/before-ls.txt
+
+gs downstack track feat4
+gs ls -a
+cmp stderr $WORK/golden/after-ls.txt
+
+gs ll -a
+cmp stderr $WORK/golden/after-ll.txt
+
+-- repo/feat1.txt --
+Feature 1 content
+-- repo/feat2.txt --
+Feature 2 content
+-- repo/feat3.txt --
+Feature 3 content
+-- repo/feat4.txt --
+Feature 4 content
+-- golden/before-ls.txt --
+  ┏━□ feat2
+┏━┻□ feat1
+main
+-- golden/after-ls.txt --
+      ┏━■ feat4 ◀
+    ┏━┻□ feat3
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/after-ll.txt --
+      ┏━■ feat4 ◀
+      ┃   794d949 Add feat4 (now)
+    ┏━┻□ feat3
+    ┃    5c7162f Add feat3 (now)
+  ┏━┻□ feat2
+  ┃    f81ebba Add feat2 (now)
+┏━┻□ feat1
+┃    2655425 Add feat1 (now)
+main

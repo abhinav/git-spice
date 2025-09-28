@@ -80,6 +80,44 @@ func (c *MockGitRepositoryListCommitsCall) DoAndReturn(f func(context.Context, g
 	return c
 }
 
+// LocalBranches mocks base method.
+func (m *MockGitRepository) LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LocalBranches", ctx, opts)
+	ret0, _ := ret[0].(iter.Seq2[git.LocalBranch, error])
+	return ret0
+}
+
+// LocalBranches indicates an expected call of LocalBranches.
+func (mr *MockGitRepositoryMockRecorder) LocalBranches(ctx, opts any) *MockGitRepositoryLocalBranchesCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalBranches", reflect.TypeOf((*MockGitRepository)(nil).LocalBranches), ctx, opts)
+	return &MockGitRepositoryLocalBranchesCall{Call: call}
+}
+
+// MockGitRepositoryLocalBranchesCall wrap *gomock.Call
+type MockGitRepositoryLocalBranchesCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryLocalBranchesCall) Return(arg0 iter.Seq2[git.LocalBranch, error]) *MockGitRepositoryLocalBranchesCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryLocalBranchesCall) Do(f func(context.Context, *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]) *MockGitRepositoryLocalBranchesCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryLocalBranchesCall) DoAndReturn(f func(context.Context, *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]) *MockGitRepositoryLocalBranchesCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // PeelToCommit mocks base method.
 func (m *MockGitRepository) PeelToCommit(ctx context.Context, ref string) (git.Hash, error) {
 	m.ctrl.T.Helper()

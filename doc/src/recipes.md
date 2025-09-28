@@ -97,30 +97,69 @@ that were not created using git-spice.
 ### Track an existing stack
 
 If you have an existing, manually managed stack of branches,
-you can import it into git-spice with repeated use of $$gs branch track$$.
+you can import it into git-spice in one of two ways:
 
-**Steps:**
+=== "With $$gs downstack track$$ (recommended)"
 
-1. Check out the base branch and initialize git-spice.
+    <!-- gs:version unreleased -->
 
-    ```bash
-    git checkout main
-    gs repo init
-    ```
+    The fastest way to track an existing stack
+    is to use $$gs downstack track$$ from the topmost branch.
 
-2. Check out the first branch in the stack and track it.
+    **Steps:**
 
-    ```bash
-    git checkout feat1
-    gs branch track
-    ```
+    1. Check out the topmost branch.
 
-3. Repeat the previous step for each branch in the stack.
+        ```bash
+        git checkout feat3
+        ```
 
-    ```bash
-    git checkout feat2
-    gs branch track
-    # ... repeat until done ...
-    ```
+    2. Verify that the branches in the stack are reachable from each other
+      in the correct order.
+      You can use `git log --graph` or a visual tool for this.
 
-4. You may now use git-spice to manage the stack as usual.
+        ```bash
+        git log --oneline --graph
+        ```
+
+    3. Track the entire stack at once.
+
+        ```bash
+        gs downstack track
+        ```
+
+        This will look for branches down the commit history
+        and prompt you to track branches as it encounters them.
+
+    4. You may now use git-spice to manage the stack as usual.
+
+=== "With $$gs branch track$$ (manual)"
+
+    You can also track each branch individually
+    with repeated use of $$gs branch track$$.
+
+    **Steps:**
+
+    1. Check out the base branch and initialize git-spice.
+
+        ```bash
+        git checkout main
+        gs repo init
+        ```
+
+    2. Check out the first branch in the stack and track it.
+
+        ```bash
+        git checkout feat1
+        gs branch track
+        ```
+
+    3. Repeat the previous step for each branch in the stack.
+
+        ```bash
+        git checkout feat2
+        gs branch track
+        # ... repeat until done ...
+        ```
+
+    4. You may now use git-spice to manage the stack as usual.

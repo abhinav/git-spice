@@ -75,6 +75,34 @@ The $$gs branch track$$ command automatically guesses the base branch
 for the newly tracked branch.
 Use the `--base` option to set it manually.
 
+#### Tracking multiple branches at once
+
+<!-- gs:version unreleased -->
+
+If you manually created a stack of branches,
+you can track them all at once with $$gs downstack track$$.
+This command traverses the commit graph downwards from the current branch,
+identifying other branches that need to be tracked along the way.
+
+```freeze language="terminal"
+{green}${reset} gs downstack track
+Track fire with base: air
+Track air with base: earth
+Track earth with base:
+
+▶ {yellow}water{reset}
+
+  None of these
+```
+
+The above would be similar to running:
+
+```freeze language="terminal"
+{green}${reset} gs branch track {yellow}earth{reset} --base {cyan}water{reset}
+{green}${reset} gs branch track {yellow}air{reset}   --base {cyan}earth{reset}
+{green}${reset} gs branch track {yellow}fire{reset}  --base {cyan}air{reset}
+```
+
 ## Naming branches
 
 We advise picking descriptive names for branches.

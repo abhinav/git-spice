@@ -27,6 +27,7 @@ func (*branchTrackCmd) Help() string {
 // TrackHandler allows tracking branches.
 type TrackHandler interface {
 	TrackBranch(context.Context, *track.BranchRequest) error
+	TrackDownstack(context.Context, *track.DownstackRequest) error
 }
 
 var _ TrackHandler = (*track.Handler)(nil)

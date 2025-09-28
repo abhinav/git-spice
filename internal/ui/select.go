@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"unicode"
@@ -80,12 +81,16 @@ type Select[T any] struct {
 type SelectOption[T any] struct {
 	Label string
 	Value T
+
+	// Number of empty lines before this option.
+	PaddingAbove int
 }
 
 type selectOption[T any] struct {
-	Label      string // label to show for this option
-	Value      T      // value to set when selected
-	Highlights []int  // indexes of runes to highlight
+	Label        string // label to show for this option
+	Value        T      // value to set when selected
+	Highlights   []int  // indexes of runes to highlight
+	PaddingAbove int    // number of empty lines before this option
 }
 
 var _ Field = (*Select[int])(nil)
@@ -130,7 +135,7 @@ func (s *Select[T]) UnmarshalValue(unmarshal func(any) error) error {
 	}
 
 	for _, opt := range s.options {
-		if opt.Label == selectLabel {
+		if strings.TrimSpace(opt.Label) == strings.TrimSpace(selectLabel) {
 			*s.value = opt.Value
 			return nil
 		}
@@ -148,7 +153,7 @@ func (s *Select[T]) With(f func(*Select[T])) *Select[T] {
 // ComparableOptions creates a list of options from a list of comparable values
 // and sets the selected option.
 //
-// The defeault string representation of the value is used as the label.
+// The default string representation of the value is used as the label.
 func ComparableOptions[T comparable](selected T, opts ...T) func(*Select[T]) {
 	var selectedIdx int
 	options := make([]SelectOption[T], len(opts))
@@ -168,6 +173,37 @@ func ComparableOptions[T comparable](selected T, opts ...T) func(*Select[T]) {
 	}
 }
 
+// OptionalComparableOptions is like [ComparableOptions],
+// but it allows for the user to select "none" as an option.
+// nil represents the none option.
+// noneLabel is the label to use for the none option, defaulting to "None".
+// The none option is always presented last.
+func OptionalComparableOptions[T comparable](noneLabel string, selected *T, opts ...T) func(*Select[*T]) {
+	options := make([]SelectOption[*T], 0, len(opts)+1) // +1 for none option
+	selectedIdx := len(opts) - 1                        // default to none option
+	for idx, v := range opts {
+		if selected != nil && v == *selected {
+			selectedIdx = idx
+		}
+		label := fmt.Sprintf("%v", v)
+		options = append(options, SelectOption[*T]{
+			Label: label,
+			Value: &v,
+		})
+	}
+
+	options = append(options, SelectOption[*T]{
+		Label:        cmp.Or(noneLabel, "None"),
+		Value:        nil,
+		PaddingAbove: 1,
+	})
+
+	return func(s *Select[*T]) {
+		s.WithOptions(options...)
+		s.WithSelected(selectedIdx)
+	}
+}
+
 // WithOptions sets the available options for the select field.
 // The options will be presented in the order they are provided.
 // Existing options will be replaced.
@@ -176,8 +212,9 @@ func (s *Select[T]) WithOptions(opts ...SelectOption[T]) *Select[T] {
 	matched := make([]int, len(options))
 	for i, v := range opts {
 		options[i] = selectOption[T]{
-			Label: v.Label,
-			Value: v.Value,
+			Label:        v.Label,
+			Value:        v.Value,
+			PaddingAbove: v.PaddingAbove,
 		}
 		matched[i] = i
 	}
@@ -385,6 +422,12 @@ func (s *Select[T]) Render(out Writer) {
 
 	for matchIdx, optionIdx := range matched {
 		matchIdx += offset
+
+		// If there's padding above this option, add it now.
+		for range s.options[optionIdx].PaddingAbove {
+			out.WriteString("\n")
+		}
+
 		style := NewStyle()
 		if matchIdx == s.selected {
 			style = s.Style.Selected

@@ -1,0 +1,24 @@
+as 'Test <test@example.com>'
+at '2025-09-27T14:30:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Trunk cannot be tracked
+git checkout main
+! gs downstack track
+stderr 'cannot track trunk'
+
+# Branches that don't exist cannot be tracked
+! gs downstack track nonexistent
+stderr 'branch nonexistent does not exist'
+
+# Branches that are already tracked are no-ops.
+gs repo init --reset --trunk=main
+gs bc -m 'Add feat1' feat1
+gs branch track feat1
+gs downstack track
+stderr 'feat1: branch is already tracked'

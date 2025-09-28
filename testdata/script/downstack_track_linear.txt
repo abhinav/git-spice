@@ -1,0 +1,68 @@
+# 'gs downstack track' with a linear branch stack.
+
+as 'Test <test@example.com>'
+at '2025-09-28T16:18:20Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feat1
+git add feat1.txt
+git commit -m 'Add feat1'
+
+git checkout -b feat2
+git add feat2.txt
+git commit -m 'Add feat2'
+
+git checkout -b feat3
+git add feat3.txt
+git commit -m 'Add feat3'
+
+# Test 1: Track from current branch
+
+gs downstack track
+
+gs ls -a
+cmp stderr $WORK/golden/linear-ls-feat3.txt
+gs ll -a
+cmp stderr $WORK/golden/linear-ll-feat3.txt
+
+# Reset for next test.
+gs repo init --reset --trunk=main
+
+# Test 2: Track from another branch
+gs downstack track feat1
+
+gs ls -a
+cmp stderr $WORK/golden/linear-ls-feat1.txt
+gs ll -a
+cmp stderr $WORK/golden/linear-ll-feat1.txt
+
+-- repo/feat1.txt --
+Feature 1 content
+-- repo/feat2.txt --
+Feature 2 content
+-- repo/feat3.txt --
+Feature 3 content
+-- golden/linear-ls-feat3.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/linear-ll-feat3.txt --
+    ┏━■ feat3 ◀
+    ┃   dd76d28 Add feat3 (now)
+  ┏━┻□ feat2
+  ┃    302dc4b Add feat2 (now)
+┏━┻□ feat1
+┃    79bb101 Add feat1 (now)
+main
+-- golden/linear-ls-feat1.txt --
+┏━□ feat1
+main
+-- golden/linear-ll-feat1.txt --
+┏━□ feat1
+┃   79bb101 Add feat1 (now)
+main
