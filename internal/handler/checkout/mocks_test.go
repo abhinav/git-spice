@@ -281,40 +281,40 @@ func (m *MockTrackHandler) EXPECT() *MockTrackHandlerMockRecorder {
 	return m.recorder
 }
 
-// AddBranch mocks base method.
-func (m *MockTrackHandler) AddBranch(ctx context.Context, req *track.AddBranchRequest) error {
+// TrackBranch mocks base method.
+func (m *MockTrackHandler) TrackBranch(ctx context.Context, req *track.BranchRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddBranch", ctx, req)
+	ret := m.ctrl.Call(m, "TrackBranch", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// AddBranch indicates an expected call of AddBranch.
-func (mr *MockTrackHandlerMockRecorder) AddBranch(ctx, req any) *MockTrackHandlerAddBranchCall {
+// TrackBranch indicates an expected call of TrackBranch.
+func (mr *MockTrackHandlerMockRecorder) TrackBranch(ctx, req any) *MockTrackHandlerTrackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBranch", reflect.TypeOf((*MockTrackHandler)(nil).AddBranch), ctx, req)
-	return &MockTrackHandlerAddBranchCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrackBranch", reflect.TypeOf((*MockTrackHandler)(nil).TrackBranch), ctx, req)
+	return &MockTrackHandlerTrackBranchCall{Call: call}
 }
 
-// MockTrackHandlerAddBranchCall wrap *gomock.Call
-type MockTrackHandlerAddBranchCall struct {
+// MockTrackHandlerTrackBranchCall wrap *gomock.Call
+type MockTrackHandlerTrackBranchCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockTrackHandlerAddBranchCall) Return(arg0 error) *MockTrackHandlerAddBranchCall {
+func (c *MockTrackHandlerTrackBranchCall) Return(arg0 error) *MockTrackHandlerTrackBranchCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockTrackHandlerAddBranchCall) Do(f func(context.Context, *track.AddBranchRequest) error) *MockTrackHandlerAddBranchCall {
+func (c *MockTrackHandlerTrackBranchCall) Do(f func(context.Context, *track.BranchRequest) error) *MockTrackHandlerTrackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockTrackHandlerAddBranchCall) DoAndReturn(f func(context.Context, *track.AddBranchRequest) error) *MockTrackHandlerAddBranchCall {
+func (c *MockTrackHandlerTrackBranchCall) DoAndReturn(f func(context.Context, *track.BranchRequest) error) *MockTrackHandlerTrackBranchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -51,7 +51,7 @@ type GitRepository interface {
 
 // TrackHandler allows tracking new branches with git-spice.
 type TrackHandler interface {
-	AddBranch(ctx context.Context, req *track.AddBranchRequest) error
+	TrackBranch(ctx context.Context, req *track.BranchRequest) error
 }
 
 // Service provides access to the spice service methods
@@ -145,7 +145,7 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 				}
 
 				if shouldTrack {
-					err := h.Track.AddBranch(ctx, &track.AddBranchRequest{
+					err := h.Track.TrackBranch(ctx, &track.BranchRequest{
 						Branch: branch,
 					})
 					if err != nil {

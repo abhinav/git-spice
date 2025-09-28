@@ -26,8 +26,10 @@ func (*branchTrackCmd) Help() string {
 
 // TrackHandler allows tracking branches.
 type TrackHandler interface {
-	AddBranch(context.Context, *track.AddBranchRequest) error
+	TrackBranch(context.Context, *track.BranchRequest) error
 }
+
+var _ TrackHandler = (*track.Handler)(nil)
 
 func (cmd *branchTrackCmd) AfterApply(
 	ctx context.Context,
@@ -44,11 +46,8 @@ func (cmd *branchTrackCmd) AfterApply(
 	return nil
 }
 
-func (cmd *branchTrackCmd) Run(
-	ctx context.Context,
-	handler TrackHandler,
-) error {
-	return handler.AddBranch(ctx, &track.AddBranchRequest{
+func (cmd *branchTrackCmd) Run(ctx context.Context, handler TrackHandler) error {
+	return handler.TrackBranch(ctx, &track.BranchRequest{
 		Branch: cmd.Branch,
 		Base:   cmd.Base,
 	})

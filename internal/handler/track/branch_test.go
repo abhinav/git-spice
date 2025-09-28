@@ -18,7 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-func TestHandler_AddBranch(t *testing.T) {
+func TestHandler_TrackBranch(t *testing.T) {
 	t.Run("CannotTrackTrunk", func(t *testing.T) {
 		var logBuffer bytes.Buffer
 		log := silog.New(&logBuffer, nil)
@@ -32,7 +32,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    NewMockService(ctrl),
 		}
 
-		err := handler.AddBranch(t.Context(), &AddBranchRequest{
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
 			Branch: "main",
 		})
 		assert.Error(t, err)
@@ -74,7 +74,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    mockService,
 		}
 
-		err := handler.AddBranch(t.Context(), &AddBranchRequest{
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
 			Branch: "feature",
 			Base:   "develop",
 		})
@@ -104,7 +104,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    mockService,
 		}
 
-		err := handler.AddBranch(t.Context(), &AddBranchRequest{
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
 			Branch: "feature",
 		})
 		require.NoError(t, err)
@@ -151,7 +151,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    mockService,
 		}
 
-		err = handler.AddBranch(ctx, &AddBranchRequest{
+		err = handler.TrackBranch(ctx, &BranchRequest{
 			Branch: "new-feature",
 		})
 		require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    mockService,
 		}
 
-		err := handler.AddBranch(t.Context(), &AddBranchRequest{
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
 			Branch: "feature",
 			Base:   "main",
 		})
@@ -218,7 +218,7 @@ func TestHandler_AddBranch(t *testing.T) {
 			Service:    mockService,
 		}
 
-		err := handler.AddBranch(t.Context(), &AddBranchRequest{
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
 			Branch: "feature",
 			Base:   "main",
 		})
