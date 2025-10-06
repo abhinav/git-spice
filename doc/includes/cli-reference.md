@@ -627,6 +627,7 @@ If there are no staged changes, an empty commit will be created.
 Use -a/--all to automatically stage modified and deleted files,
 just like 'git commit -a'.
 Use --no-commit to create the branch without committing.
+-m/--message always implies --commit.
 
 If a branch name is not provided,
 it will be generated from the commit message.

@@ -41,6 +41,7 @@ func (*branchCreateCmd) Help() string {
 		Use -a/--all to automatically stage modified and deleted files,
 		just like 'git commit -a'.
 		Use --no-commit to create the branch without committing.
+		-m/--message always implies --commit.
 
 		If a branch name is not provided,
 		it will be generated from the commit message.
@@ -100,6 +101,11 @@ func (cmd *branchCreateCmd) Run(
 ) (err error) {
 	if cmd.Name == "" && !cmd.Commit {
 		return errors.New("a branch name is required with --no-commit")
+	}
+
+	// If a message is specified, automatically enable commits
+	if cmd.Message != "" {
+		cmd.Commit = true
 	}
 
 	trunk := store.Trunk()
