@@ -1,0 +1,39 @@
+# branch create with -m should automatically enable commits
+# even when commits are disabled by default via config.
+
+as 'Test <test@example.com>'
+at '2025-10-05T12:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# disable commits by default
+git config spice.branchCreate.commit false
+
+# using -m should automatically enable commits
+# even though commits are disabled
+git add foo.txt
+gs bc feat1 -m 'Add foo'
+
+# verify commit was created
+git status --porcelain
+! stdout .
+
+gs ll
+cmp stderr $WORK/golden/ll-feat1.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/foo.txt --
+foo
+
+-- golden/ll-feat1.txt --
+┏━■ feat1 ◀
+┃   aadd769 Add foo (now)
+main
+-- golden/graph.txt --
+* aadd769 (HEAD -> feat1) Add foo
+* b4e1d23 (main) Initial commit

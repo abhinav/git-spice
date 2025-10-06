@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch create: -m/--message now implies --commit'
+time: 2025-10-05T19:53:48.191031-07:00

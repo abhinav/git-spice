@@ -36,10 +36,11 @@ and then work on them, you can use the following to adjust the workflow:
     ```
 
 - If, for some branches, you do want to commit staged changes upon creation,
-  use the `--commit` flag.
+  use the `--commit` flag or `-m`/`--message` (which always implies `--commit`).
 
     ```bash
     gs branch create my-branch --commit
+    gs branch create my-branch -m "Commit message"
     ```
 
 ### Working with unsupported remotes
