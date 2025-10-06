@@ -1,0 +1,154 @@
+# branch submit should warn and prompt when submitting a branch with zero commits.
+
+as 'Test <test@example.com>'
+at '2025-10-05T14:30:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# setup remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a branch with zero commits
+gs branch create feature1 --no-commit
+
+# Verify we're on feature1 and it has no new commits
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# --- Abort in interactive mode (No) ---
+
+env ROBOT_INPUT=$WORK/golden/robot-no.txt ROBOT_OUTPUT=$WORK/robot-no.actual
+! gs branch submit --fill
+stderr 'operation aborted'
+cmp $WORK/robot-no.actual $WORK/golden/robot-no.txt
+
+# Verify no CR was created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/no-changes.json
+
+# --- Proceed in interactive mode (Yes) ---
+
+env ROBOT_INPUT=$WORK/golden/robot-yes.txt ROBOT_OUTPUT=$WORK/robot-yes.actual
+gs branch submit --fill
+stderr 'Created #1:'
+cmp $WORK/robot-yes.actual $WORK/golden/robot-yes.txt
+
+# Verify CR was created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes-after-yes.json
+
+# --- Create another empty branch for non-interactive test ---
+
+gs d  # go back to main
+gs branch create feature2 --no-commit
+
+env ROBOT_INPUT=
+env ROBOT_OUTPUT=
+gs branch submit --fill --no-prompt
+stderr 'WRN.*zero commits'
+stderr 'Created #2:'
+
+# Verify CR was created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes-after-no-prompt.json
+
+-- golden/graph-before.txt --
+* 31e6724 (HEAD -> feature1, origin/main, main) Initial commit
+-- golden/robot-no.txt --
+===
+> Submit branch with zero commits?: [y/N]
+> Branch feature1 has zero commits compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+false
+
+-- golden/robot-yes.txt --
+===
+> Submit branch with zero commits?: [y/N]
+> Branch feature1 has zero commits compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+true
+
+-- golden/no-changes.json --
+[]
+-- golden/changes-after-yes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    }
+  }
+]
+-- golden/changes-after-no-prompt.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "feature1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "feature2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    }
+  }
+]

@@ -795,19 +795,43 @@ func (h *Handler) prepareBranch(
 		return nil, fmt.Errorf("list commits: %w", err)
 	}
 	if len(msgs) == 0 {
-		return nil, errors.New("no commits to submit")
+		if !ui.Interactive(h.View) {
+			h.Log.Warnf("Branch %s has zero commits compared to its base (%s).", branchToSubmit, baseBranch)
+			h.Log.Warnf("Submitting it will create an empty change request.")
+		} else {
+			var submitZeroCommits bool
+			field := ui.NewConfirm().
+				WithTitle("Submit branch with zero commits?").
+				WithDescription(
+					fmt.Sprintf("Branch %s has zero commits compared to its base (%s). "+
+						"Submitting it will create an empty change request. "+
+						"This is usually not what you want to do.", branchToSubmit, baseBranch)).
+				WithValue(&submitZeroCommits)
+			if err := ui.Run(h.View, field); err != nil {
+				return nil, fmt.Errorf("run prompt: %w", err)
+			}
+			if !submitZeroCommits {
+				return nil, errors.New("operation aborted")
+			}
+		}
 	}
 
 	var (
 		defaultTitle string
 		defaultBody  strings.Builder
 	)
-	if len(msgs) == 1 {
+	switch len(msgs) {
+	case 0:
+		// No commits, use branch name as default title.
+		defaultTitle = branchToSubmit
+
+	case 1:
 		// If there's only one commit,
 		// just the body will be the default body.
 		defaultTitle = msgs[0].Subject
 		defaultBody.WriteString(msgs[0].Body)
-	} else {
+
+	default:
 		// Otherwise, we'll concatenate all the messages.
 		// The revisions are in reverse order,
 		// so we'll want to iterate in reverse.
