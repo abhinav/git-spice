@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 //go:generate mockgen -destination mocks_test.go -package track -typed . GitRepository,Service
@@ -17,6 +18,7 @@ import (
 type GitRepository interface {
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	ListCommits(ctx context.Context, commits git.CommitRange) iter.Seq2[git.Hash, error]
+	LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -48,6 +50,7 @@ var _ Service = (*spice.Service)(nil)
 // Handler implements the business logic for the 'track' commands.
 type Handler struct {
 	Log        *silog.Logger // required
+	View       ui.View       // required
 	Repository GitRepository // required
 	Store      Store         // required
 	Service    Service       // required

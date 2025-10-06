@@ -1,0 +1,81 @@
+# Downstack tracking where the same commit has multiple branches,
+# and we select one that is tracked, which should stop the prompting.
+
+as 'Test <test@example.com>'
+at '2025-09-27T14:30:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a stack with multiple candidates at various commits:
+#
+# main --> {feat1, feat1-wip} --> feat2 --> feat3
+#
+# Where feat1 is tracked.
+
+git add feat1.txt
+gs branch create feat1 -m 'Add feat1'
+git branch feat1-wip
+
+git checkout -b feat2
+git add feat2.txt
+git commit -m 'Add feat2'
+
+git checkout -b feat3
+git add feat3.txt
+git commit -m 'Add feat3'
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.output
+gs downstack track
+cmp $WORK/robot.output $WORK/robot.golden
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feat1.txt --
+Feature 1 content
+-- repo/feat2.txt --
+Feature 2 content
+-- repo/feat3.txt --
+Feature 3 content
+
+-- robot.golden --
+===
+> Track feat3 with base: 
+>
+> ▶ feat2
+>
+>   None of these
+>
+> Found branch feat2 at commit f81ebba downstack from feat3.
+> We can track it as the base for feat3, or skip it.
+"feat2"
+===
+> Track feat2 with base: 
+>
+> ▶ feat1
+>   feat1-wip
+>
+>   None of these
+>
+> Found branch feat1 at commit 2655425 downstack from feat2.
+> We can track it as the base for feat2, or skip it.
+"feat1"
+-- golden/ls.txt --
+    ┏━■ feat3 ◀
+  ┏━┻□ feat2
+┏━┻□ feat1
+main
+-- golden/ll.txt --
+    ┏━■ feat3 ◀
+    ┃   4daf884 Add feat3 (now)
+  ┏━┻□ feat2
+  ┃    f81ebba Add feat2 (now)
+┏━┻□ feat1
+┃    2655425 Add feat1 (now)
+main

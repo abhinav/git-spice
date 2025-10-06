@@ -19,6 +19,7 @@
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
+| gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |
 | gs ls | [gs log short](/cli/reference.md#gs-log-short) |
 | gs rba | [gs rebase abort](/cli/reference.md#gs-rebase-abort) |

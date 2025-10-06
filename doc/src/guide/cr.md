@@ -271,3 +271,22 @@ posted to the PR by git-spice, and update them if necessary.
 {green}INF{reset} comment-recovery: Found existing navigation comment: {gray}...{reset}
 ```
 
+### Importing stacks of CRs
+
+<!-- gs:version unreleased -->
+
+If you have a stack of related CRs to import,
+check out all the branches locally
+and use $$gs downstack track$$ to track them all at once.
+
+```freeze language="terminal"
+{gray}# Check out the PRs locally{reset}
+{green}${reset} gh pr checkout 359
+{green}${reset} gh pr checkout 360
+{green}${reset} gh pr checkout 361
+
+{gray}# Track the entire downstack{reset}
+{green}${reset} gs downstack track
+```
+
+See also [:material-tooltip-check: Recipes > Track an existing stack](../recipes.md#track-an-existing-stack).

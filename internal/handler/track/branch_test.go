@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	"go.abhg.dev/gs/internal/text"
+	"go.abhg.dev/gs/internal/ui"
 )
 
 func TestHandler_TrackBranch(t *testing.T) {
@@ -30,6 +31,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: NewMockGitRepository(ctrl),
 			Store:      store,
 			Service:    NewMockService(ctrl),
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -72,6 +74,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -102,6 +105,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -149,6 +153,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err = handler.TrackBranch(ctx, &BranchRequest{
@@ -184,6 +189,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -216,6 +222,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
+			View:       &ui.FileView{W: t.Output()},
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{

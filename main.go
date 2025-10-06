@@ -348,12 +348,14 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			view ui.View,
 			repo *git.Repository,
 			store *state.Store,
 			svc *spice.Service,
 		) (TrackHandler, error) {
 			return &track.Handler{
 				Log:        log,
+				View:       view,
 				Repository: repo,
 				Store:      store,
 				Service:    svc,

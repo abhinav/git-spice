@@ -454,6 +454,24 @@ you must use the --force flag to confirm deletion.
 
 * `--force`: Force deletion of the branches
 
+### gs downstack track
+
+```
+gs downstack (ds) track (tr) [<branch>]
+```
+
+Track all untracked branches below a branch
+
+Track all untracked branches in the downstack of a branch.
+
+Starting from the specified branch (or current branch),
+identify and track any untracked branches downstack from it,
+until reaching trunk or an already-tracked branch.
+
+**Arguments**
+
+* `branch`: Name of the branch to start tracking from
+
 ### gs downstack submit
 
 ```
