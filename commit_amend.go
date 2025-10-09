@@ -16,13 +16,12 @@ import (
 
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
+	commitOptions
 
-	All        bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty bool   `help:"Create a commit even if it contains no changes."`
-	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	All        bool `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty bool `help:"Create a commit even if it contains no changes."`
 
-	NoEdit   bool `help:"Don't edit the commit message"`
-	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+	NoEdit bool `help:"Don't edit the commit message"`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -176,14 +175,12 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
-	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:    cmd.Message,
+	if err := wt.Commit(ctx, cmd.commitRequest(&git.CommitRequest{
 		AllowEmpty: cmd.AllowEmpty,
 		Amend:      true,
 		NoEdit:     cmd.NoEdit,
-		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
-	}); err != nil {
+	})); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 
