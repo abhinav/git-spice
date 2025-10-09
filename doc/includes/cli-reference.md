@@ -974,11 +974,11 @@ when you want to apply changes to an older commit.
 
 **Flags**
 
+* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'gs commit fixup'.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
-* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 ### gs commit amend
 
@@ -1007,11 +1007,11 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 **Flags**
 
+* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-edit`: Don't edit the commit message
-* `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
 **Configuration**: [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix)
 
