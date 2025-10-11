@@ -12,11 +12,11 @@ import (
 )
 
 type commitCreateCmd struct {
-	commitOptions
-
 	All        bool   `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
 	Fixup      string `help:"Create a fixup commit. See also 'gs commit fixup'." placeholder:"COMMIT"`
+	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -46,11 +46,13 @@ func (cmd *commitCreateCmd) Run(
 	wt *git.Worktree,
 	restackHandler RestackHandler,
 ) error {
-	if err := wt.Commit(ctx, cmd.commitRequest(&git.CommitRequest{
+	if err := wt.Commit(ctx, git.CommitRequest{
+		Message:    cmd.Message,
 		All:        cmd.All,
 		AllowEmpty: cmd.AllowEmpty,
 		Fixup:      cmd.Fixup,
-	})); err != nil {
+		NoVerify:   cmd.NoVerify,
+	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 

@@ -12,7 +12,8 @@ import (
 )
 
 type commitSplitCmd struct {
-	commitOptions
+	Message  string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	NoVerify bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
 func (*commitSplitCmd) Help() string {
@@ -68,7 +69,10 @@ func (cmd *commitSplitCmd) Run(
 		return fmt.Errorf("select hunks: %w", err)
 	}
 
-	if err := wt.Commit(ctx, cmd.commitRequest(nil)); err != nil {
+	if err := wt.Commit(ctx, git.CommitRequest{
+		Message:  cmd.Message,
+		NoVerify: cmd.NoVerify,
+	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 
