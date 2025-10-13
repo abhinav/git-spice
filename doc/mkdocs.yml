@@ -86,8 +86,10 @@ nav:
     - cli/experiments.md
     - cli/shorthand.md
     - cli/json.md
-  - Recipes: recipes.md
-  - FAQ: faq.md
+  - Community: &community
+    - community/index.md
+    - community/faq.md
+    - community/recipes.md
   - Changelog: changelog.md
 
 plugins:
@@ -98,8 +100,10 @@ plugins:
       enabled: !ENV [MAIN_BUILD, false]
   - redirects:
       redirect_maps:
-        'how-to.md': 'recipes.md'
         'guide/pr.md': 'guide/cr.md'
+        'faq.md': 'community/faq.md'
+        'recipes.md': 'community/recipes.md'
+        'how-to.md': 'community/recipes.md'
   - search
   - social:
       enabled: !ENV [CI, false]
@@ -112,10 +116,7 @@ plugins:
         User Guide: *user-guide
         Setting up: *setup
         CLI: *cli
-        Recipes:
-          - recipes.md
-        FAQ:
-          - faq.md
+        Community: *community
 
 hooks:
   - hooks/replace.py
