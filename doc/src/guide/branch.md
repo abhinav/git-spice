@@ -49,7 +49,7 @@ if one was not provided with the `-m`/`--message` flag.
     If you prefer a workflow where you create branches first
     and then work on them,
     you can configure git-spice to never commit by default.
-    See [Create branches without committing](../recipes.md#create-branches-without-committing).
+    See [Create branches without committing](../community/recipes.md#create-branches-without-committing).
 
 ### Manual stacking
 

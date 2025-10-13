@@ -60,7 +60,7 @@ $ gs repo sync
     It allows chaining interdependent changes together,
     while still keeping the individual changes small and focused.
 
-    See also [:material-frequently-asked-questions: FAQ > What is stacking?](faq.md#what-is-stacking)
+    See also [:material-frequently-asked-questions: FAQ > What is stacking?](community/faq.md#what-is-stacking)
 
 [:material-run: Get started](start/index.md){ .md-button }
 [:material-compass: Learn more](guide/index.md){ .md-button }

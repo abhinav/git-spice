@@ -1,4 +1,5 @@
 ---
+title: FAQ
 icon: material/frequently-asked-questions
 description: >-
   Frequently asked questions about git-spice,
@@ -7,7 +8,7 @@ description: >-
 
 # Frequently Asked Questions
 
-![](img/logo.png){ align=right width=100px }
+![](../img/logo.png){ align=right width=100px }
 
 ## What's with the logo?
 
@@ -40,7 +41,7 @@ keeping them up-to-date and in sync with each other.
 ## Where is the authentication token stored?
 
 git-spice stores the GitHub authentication in a system-specific secure storage.
-See [Authentication > Safety](setup/auth.md#safety) for details.
+See [Authentication > Safety](../setup/auth.md#safety) for details.
 
 ## Why doesn't git-spice create one CR per commit?
 
@@ -80,18 +81,27 @@ and leave them as-is.
 
 ## Will git-spice add support for other Git hosting services?
 
-git-spice is designed with room for other Git hosting services.
-Most of the code is Git hosting service-agnostic,
-The internal abstractions isolate GitHub-specific functionality into the
-[`internal/forge/github` package](https://github.com/abhinav/git-spice/tree/340b95dd7028a2af6e34d041d7dd596d42ac61c9/internal/forge/github).
-It is possible to add support for other Git hosting services
-by implementing a similar integration satisfying the same interfaces.
-In fact, most integration tests for git-spice run against a local-only,
-fake Git service developed alongside the GitHub integration.
+As of writing this, git-spice supports GitHub and GitLab.
+It is specifically designed to support other forges;
+most of the code is forge-agnostic,
+with forge-specific code is isolated to their own directories inside
+[internal/forge/](https://github.com/abhinav/git-spice/tree/05280813ee113f09ee23529235a585a2388218da/internal/forge).
 
-While we do not have plans to work on new integrations at this time,
-we are willing to accept contributions that add such functionality.
-If you're serious about contributing a new integration,
-feel free to reach out to us on the issue tracker.
-We will be happy to provide guidance
+In fact,
+
+- git-spice's own integration tests run against a simulated forge
+  that acts similarly to GitHub and GitLab;
+- [GitLab support was added by an external contributor](https://github.com/abhinav/git-spice/pull/477)
+  without meaningful changes to the rest of the codebase
+
+Therefore we're confident that adding support for other forges is feasible.
+
+That said,
+we do not plan to implement support for additional forges ourselves.
+
+If you would like to see support for a specific forge,
+please [open an issue](https://github.com/abhinav/git-spice/issues) signaling your interest.
+If you have the time and inclination to contribute,
+mention that in the issue
+and we will be happy to provide guidance
 and work with you to get the contribution merged.
