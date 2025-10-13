@@ -90,6 +90,7 @@ nav:
     - community/index.md
     - community/faq.md
     - community/recipes.md
+    - community/integrations.md
   - Changelog: changelog.md
 
 plugins:
