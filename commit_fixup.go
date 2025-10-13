@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/fixup"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -72,6 +73,7 @@ func (cmd *commitFixupCmd) Run(
 	svc *spice.Service,
 	wt *git.Worktree,
 	handler FixupHandler,
+	autostashHandler AutostashHandler,
 ) (retErr error) {
 	// TODO: Should we do a Git version check here?
 	// git --version output is relatively stable.
@@ -86,44 +88,13 @@ func (cmd *commitFixupCmd) Run(
 		return fmt.Errorf("determine current branch: %w", err)
 	}
 
-	stashMsg := "git-spice: autostash before commit fixup"
-	if stashHash, err := wt.StashCreate(ctx, stashMsg); err != nil {
-		if !errors.Is(err, git.ErrNoChanges) {
-			return fmt.Errorf("stash changes: %w", err)
-		}
-		// No changes to stash, that's fine.
-	} else {
-		// We created a stash.
-		// We will restore the working tree to discard unstaged changes
-		// (keeping staged changes for the fixup),
-		// then one of the following:
-		//
-		//  - if the command exits with success,
-		//    we will pop the stash to restore the changes.
-		//  - if the command exits with an error,
-		//    schedule an "internal autostash-pop" command
-		//    to be run when the rebase operation is finished.
-		if err := wt.CheckoutFiles(ctx, &git.CheckoutFilesRequest{
-			Pathspecs: []string{"."},
-		}); err != nil {
-			return fmt.Errorf("restore working tree before fixup: %w", err)
-		}
-
-		defer func() {
-			if retErr == nil {
-				retErr = (&internalAutostashPop{
-					Hash: stashHash.String(),
-				}).Run(ctx, log, wt)
-				return
-			}
-
-			retErr = svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-				Err:     retErr,
-				Command: []string{"internal", "autostash-pop", stashHash.String()},
-				Branch:  currentBranch,
-				Message: fmt.Sprintf("interrupted: restore stashed changes %q", stashHash),
-			})
-		}()
+	cleanup, err := autostashHandler.BeginAutostash(ctx, &autostash.Options{
+		Message:   "git-spice: autostash before commit fixup",
+		ResetMode: autostash.ResetWorktree,
+		Branch:    currentBranch,
+	})
+	if err != nil {
+		return err
 	}
 
 	defer func() {
@@ -132,6 +103,7 @@ func (cmd *commitFixupCmd) Run(
 				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
 			}
 		}
+		cleanup(&retErr)
 	}()
 
 	var (

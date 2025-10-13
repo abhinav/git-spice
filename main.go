@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/restack"
@@ -348,6 +349,17 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			wt *git.Worktree,
+			svc *spice.Service,
+		) (AutostashHandler, error) {
+			return &autostash.Handler{
+				Log:      log,
+				Worktree: wt,
+				Service:  svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
 			view ui.View,
 			repo *git.Repository,
 			store *state.Store,
@@ -508,6 +520,13 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 	)
 }
+
+type AutostashHandler interface {
+	BeginAutostash(ctx context.Context, opts *autostash.Options) (func(*error), error)
+	RestoreAutostash(ctx context.Context, stashHash string) error
+}
+
+var _ AutostashHandler = (*autostash.Handler)(nil)
 
 var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {
 	if interactive {
