@@ -1,0 +1,121 @@
+# Test fork workflow:
+stack submit should only submit trunk-based branches.
+
+as 'Test <test@example.com>'
+at '2025-08-17T14:45:00Z'
+
+# Alice creates upstream repository
+mkdir -p alice/store
+cd alice/store
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub register alice
+shamhub register bob
+shamhub new upstream alice/store
+git push upstream main
+
+# Alice adds initial content
+cp $WORK/extra/base.txt readme.txt
+git add readme.txt
+git commit -m 'Add readme'
+git push upstream main
+
+# Bob forks the repository
+shamhub fork alice/store bob
+
+# Bob clones his fork and sets up upstream
+mkdir $WORK/bob
+shamhub clone bob/store $WORK/bob/store
+cd $WORK/bob
+git remote add upstream $SHAMHUB_URL/alice/store
+
+# Bob initializes gs with fork configuration
+gs repo init --remote=origin --upstream=upstream
+env SHAMHUB_USERNAME=bob
+gs auth login
+
+# Bob creates a stack: main -> feat1 -> feat2
+cp $WORK/extra/feat1.txt feat1.txt
+git add feat1.txt
+gs bc feat1 -m 'Add feature 1'
+
+cp $WORK/extra/feat2.txt feat2.txt
+git add feat2.txt
+gs bc feat2 -m 'Add feature 2'
+
+# And another: main -> feat3
+gs trunk
+cp $WORK/extra/feat3.txt feat3.txt
+git add feat3.txt
+gs bc feat3 -m 'Add feature 3'
+
+# Submit the stack - should only submit trunk-based branches
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# Verify only feat1 and feat3 got PRs.
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/stack-prs.json
+
+-- extra/base.txt --
+Base repository content
+-- extra/feat1.txt --
+Feature 1 implementation
+-- extra/feat2.txt --
+Feature 2 implementation
+-- extra/feat3.txt --
+Feature 3 implementation
+-- extra/feat1-addon.txt --
+Feature 1 addon - extends feature 1
+-- golden/stack-prs.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/store/change/1",
+    "head": {
+      "repository": {
+        "owner": "bob",
+        "name": "store"
+      },
+      "ref": "feat1",
+      "sha": "PLACEHOLDER"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "store"
+      },
+      "ref": "main",
+      "sha": "PLACEHOLDER"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "Add feature 3",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/store/change/2",
+    "head": {
+      "repository": {
+        "owner": "bob",
+        "name": "store"
+      },
+      "ref": "feat3",
+      "sha": "PLACEHOLDER"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "store"
+      },
+      "ref": "main",
+      "sha": "PLACEHOLDER"
+    }
+  }
+]
