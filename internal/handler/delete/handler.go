@@ -89,6 +89,18 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 	repo := h.Repository
 	log := h.Log
 
+	// Build a map of all branch worktree locations up front.
+	// This will be used to check both the checkout target and upstack branches.
+	branchWorktrees := make(map[string]string) // branch name -> worktree path
+	for branch, err := range repo.LocalBranches(ctx, nil) {
+		if err != nil {
+			return fmt.Errorf("list branches: %w", err)
+		}
+		if branch.Worktree != "" {
+			branchWorktrees[branch.Name] = branch.Worktree
+		}
+	}
+
 	// name to branch info
 	branchesToDelete := make(map[string]*branchInfo, len(req.Branches))
 	for _, branch := range req.Branches {
@@ -186,14 +198,12 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				checkoutTarget = h.Store.Trunk()
 			}
 
-			for branch, err := range repo.LocalBranches(ctx, &git.LocalBranchesOptions{Patterns: []string{checkoutTarget}}) {
-				if err == nil && branch.Worktree != "" {
-					// Guaranteed not to be current worktree
-					// because we've already filtered for that.
-					checkoutDetached = true
-					log.Warnf("%v: checked out in another worktree (%v), will detach HEAD", checkoutTarget, branch.Worktree)
-					log.Warnf("Use 'gs branch checkout' to pick a branch and exit detached state")
-				}
+			if worktreePath, ok := branchWorktrees[checkoutTarget]; ok {
+				// Guaranteed not to be current worktree
+				// because we've already filtered for that.
+				checkoutDetached = true
+				log.Warnf("%v: checked out in another worktree (%v), will detach HEAD", checkoutTarget, worktreePath)
+				log.Warnf("Use 'gs branch checkout' to pick a branch and exit detached state")
 			}
 
 			// This is the only case where user's current HEAD is
@@ -254,25 +264,77 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				continue
 			}
 
+			// Check if upstack branch is checked out in another worktree.
+			// If so, we can't rebase it because git will refuse to check it out.
+			// However, we still need to update the tracking metadata so that
+			// the branch being deleted is not recorded as its base.
+			inOtherWorktree := false
+			if worktreePath, inWorktree := branchWorktrees[above]; inWorktree {
+				// Branch is checked out in a worktree.
+				// We need to check if it's the current worktree or a different one.
+				// If we're not in detached HEAD and the branch matches current branch,
+				// it's the current worktree. Otherwise it's another worktree.
+				if currentBranch == "" || currentBranch != above {
+					// It's in another worktree
+					inOtherWorktree = true
+					log.Warnf("%v: checked out in another worktree (%v), updating tracking without rebase", above, worktreePath)
+					log.Warnf("Please rebase %v manually in its worktree onto %v", above, base)
+				}
+			}
+
 			log.Debug("Changing upstack branch to a new base",
 				"branch", above, "base", base)
-			if err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
-				Branch: above,
-				Onto:   base,
-			}); err != nil {
-				contCmd := []string{"branch", "delete"}
-				if req.Force {
-					contCmd = append(contCmd, "--force")
+
+			if inOtherWorktree {
+				// Update tracking metadata only, without rebasing.
+				// We need to get the hash of the new base.
+				var baseHash git.Hash
+				if base == h.Store.Trunk() {
+					baseHash, err = h.Repository.PeelToCommit(ctx, base)
+					if err != nil {
+						return fmt.Errorf("resolve trunk: %w", err)
+					}
+				} else {
+					baseInfo, err := h.Service.LookupBranch(ctx, base)
+					if err != nil {
+						return fmt.Errorf("lookup base %v: %w", base, err)
+					}
+					baseHash = baseInfo.Head
 				}
-				contCmd = append(contCmd, req.Branches...)
-				return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
-					Err:     err,
-					Command: contCmd,
-					Branch:  checkoutTarget,
-					Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
-				})
+
+				// Update only the tracking metadata.
+				metadataTx := h.Store.BeginBranchTx()
+				if err := metadataTx.Upsert(ctx, state.UpsertRequest{
+					Name:     above,
+					Base:     base,
+					BaseHash: baseHash,
+				}); err != nil {
+					return fmt.Errorf("update tracking for %v: %w", above, err)
+				}
+				if err := metadataTx.Commit(ctx, fmt.Sprintf("%v: update base to %v (no rebase)", above, base)); err != nil {
+					return fmt.Errorf("commit tracking update for %v: %w", above, err)
+				}
+				log.Infof("%v: tracking updated to base %v (rebase skipped)", above, base)
+			} else {
+				// Perform full rebase operation.
+				if err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
+					Branch: above,
+					Onto:   base,
+				}); err != nil {
+					contCmd := []string{"branch", "delete"}
+					if req.Force {
+						contCmd = append(contCmd, "--force")
+					}
+					contCmd = append(contCmd, req.Branches...)
+					return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
+						Err:     err,
+						Command: contCmd,
+						Branch:  checkoutTarget,
+						Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
+					})
+				}
+				log.Infof("%v: moved upstack onto %v", above, base)
 			}
-			log.Infof("%v: moved upstack onto %v", above, base)
 		}
 	}
 
