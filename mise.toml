@@ -64,7 +64,6 @@ run = """
 gotestsum
   {%- if flag(name='verbose') == 'true' %} --format=standard-verbose
   {%- endif %} -- {# -#}
-  -v={{option(name='verbose')}} {# verbose output -#}
   -tags=script {# enable script tests -#}
   -run TestScript/{{option(name='run')}} {# run only script tests -#}
   -race={{flag(name='race')}} {# race detection -#}
