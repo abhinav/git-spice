@@ -133,8 +133,9 @@ type Options struct {
 	Publish bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
 	Web     OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
 
-	NavComment     NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
-	NavCommentSync NavCommentSync `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
+	NavComment       NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+	NavCommentSync   NavCommentSync `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
+	NavCommentMarker string         `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
 
 	Force      bool  `help:"Force push, bypassing safety checks"`
 	NoVerify   bool  `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
@@ -268,6 +269,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
 		opts.NavCommentSync,
+		opts.NavCommentMarker,
 		branchesToComment,
 		h.RemoteRepository,
 	)
@@ -312,6 +314,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
 		opts.NavCommentSync,
+		opts.NavCommentMarker,
 		[]string{req.Branch},
 		h.RemoteRepository,
 	)

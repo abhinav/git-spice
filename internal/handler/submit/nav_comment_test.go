@@ -417,6 +417,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				log,
 				tt.when,
 				tt.sync,
+				"",
 				tt.submit,
 				func(context.Context) (forge.Repository, error) {
 					return mockRemoteRepo, nil
@@ -547,7 +548,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.want + "\n" +
 				_commentFooter + "\n" +
 				_commentMarker + "\n"
-			got := generateStackNavigationComment(tt.graph, tt.current)
+			got := generateStackNavigationComment(tt.graph, tt.current, "")
 			assert.Equal(t, want, got)
 
 			// Sanity check: All generated comments must match
@@ -559,6 +560,24 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 			})
 		})
 	}
+
+	t.Run("CustomMarker", func(t *testing.T) {
+		graph := []*stackedChange{
+			{Change: _changeID("123"), Base: -1},
+			{Change: _changeID("124"), Base: 0},
+		}
+		graph[0].Aboves = []int{1}
+
+		got := generateStackNavigationComment(graph, 1, "<-- you are here")
+		want := _commentHeader + "\n\n" +
+			joinLines(
+				"- #123",
+				"    - #124 <-- you are here",
+			) + "\n" +
+			_commentFooter + "\n" +
+			_commentMarker + "\n"
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestNavigationCommentWhen_StringMarshal(t *testing.T) {

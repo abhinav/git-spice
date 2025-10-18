@@ -393,6 +393,29 @@ When set to `downstack`, any time a branch is submitted,
 git-spice will update the navigation comment for that branch
 and all branches below it in the stack.
 
+### spice.submit.navigationCommentStyle.marker
+
+<!-- gs:version unreleased -->
+
+Specifies the marker to use for the current change in navigation comments.
+
+By default, git-spice uses `◀` to indicate the current change.
+This can be customized to any string.
+
+**Example:**
+
+```bash
+git config spice.submit.navigationCommentStyle.marker "<-- you are here"
+```
+
+This will render navigation comments like:
+
+```
+- #123
+    - #124 <-- you are here
+        - #125
+```
+
 ### spice.submit.publish
 
 <!-- gs:version v0.5.0 -->
