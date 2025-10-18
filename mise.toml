@@ -49,13 +49,27 @@ run = "gotestsum -- ./... -race={{flag(name='race')}}"
 [tasks."test:script"]
 wait_for = ["generate"]
 description = "Run script tests"
+usage = '''
+flag "-v --verbose" default="false" help="Enable verbose output"
+flag "--race" default="false" help="Enable data race detection"
+flag "--update" default="false" help="Update expected results"
+
+flag "--shard-index <shard_index>" default="0" help="Shard index to run"
+flag "--shard-count <shard_count>" default="1" help="Total number of shards"
+
+flag "--run <script>" help="Regex to select which script tests to run"
+complete "script" run="ls testdata/script/*.txt | cut -d/ -f3 | sed 's/.txt$//'"
+'''
 run = """
-gotestsum -- {# -#}
+gotestsum
+  {%- if flag(name='verbose') == 'true' %} --format=standard-verbose
+  {%- endif %} -- {# -#}
+  -v={{option(name='verbose')}} {# verbose output -#}
   -tags=script {# enable script tests -#}
   -run TestScript/{{option(name='run')}} {# run only script tests -#}
   -race={{flag(name='race')}} {# race detection -#}
-  -shard-index={{option(name='shard-index', default='0')}} {# shard index -#}
-  -shard-count={{option(name='shard-count', default='1')}} {# shard count -#}
+  -shard-index={{option(name='shard-index')}} {# shard index -#}
+  -shard-count={{option(name='shard-count')}} {# shard count -#}
   -update={{flag(name='update')}} {# update expected results -#}
 """
 
