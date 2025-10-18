@@ -29,11 +29,13 @@ cp $WORK/extra/feature0.txt .
 git add feature0.txt
 git commit -m 'Add feature0'
 
-gs upstack restack
-stderr 'feature1: restacked on main'
-stderr 'feature2: restacked on feature1'
-stderr 'feature3: restacked on feature2'
-stderr 'feature4: restacked on feature3'
+gs upstack restack --no-prompt
+stderr 'WRN Running ''gs upstack restack'' from trunk restacks all tracked branches.'
+stderr 'WRN Use ''gs repo restack'' to suppress this prompt.'
+stderr 'INF feature1: restacked on main'
+stderr 'INF feature2: restacked on feature1'
+stderr 'INF feature3: restacked on feature2'
+stderr 'INF feature4: restacked on feature3'
 
 # should still be on main
 git branch
