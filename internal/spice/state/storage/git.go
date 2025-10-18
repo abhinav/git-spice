@@ -148,9 +148,10 @@ func (g *GitBackend) Clear(ctx context.Context, msg string) error {
 	}
 
 	commitReq := git.CommitTreeRequest{
-		Tree:    tree,
-		Message: msg,
-		Author:  &g.sig,
+		Tree:      tree,
+		Message:   msg,
+		Author:    &g.sig,
+		Committer: &g.sig,
 	}
 	if prevCommit != "" {
 		commitReq.Parents = []git.Hash{prevCommit}
@@ -233,9 +234,10 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 		}
 
 		commitReq := git.CommitTreeRequest{
-			Tree:    newTree,
-			Message: req.Message,
-			Author:  &g.sig,
+			Tree:      newTree,
+			Message:   req.Message,
+			Author:    &g.sig,
+			Committer: &g.sig,
 		}
 		if prevCommit != "" {
 			commitReq.Parents = []git.Hash{prevCommit}

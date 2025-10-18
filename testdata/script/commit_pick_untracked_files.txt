@@ -1,0 +1,76 @@
+# Untracked files are preserved after cherry-pick.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Source branch with the commit to cherry-pick.
+git add source.txt
+gs branch create source -m 'Add source file'
+
+# Target branch that will pick the commit.
+gs trunk
+git add target.txt
+gs branch create target -m 'Add target file'
+
+# Test: Untracked files are left as-is
+
+# Add untracked files.
+cp $WORK/extra/untracked1.txt untracked1.txt
+cp $WORK/extra/untracked2.txt untracked2.txt
+
+git status --porcelain
+cmp stdout $WORK/golden/status-untracked-all.txt
+
+# Cherry-pick source.
+gs commit pick source
+exists source.txt
+
+# Verify untracked files are still present and untracked.
+git status --porcelain
+cmp stdout $WORK/golden/status-untracked-all.txt
+cmp untracked1.txt $WORK/extra/untracked1.txt
+cmp untracked2.txt $WORK/extra/untracked2.txt
+
+# Test: If the cherry-picked commit modifies an untracked file,
+# the operation rejects to avoid overwriting local changes.
+
+gs bco source
+git add untracked1.txt
+git commit -m 'Track untracked1.txt'
+
+# Bring a modified copy of untracked1.txt into the working copy.
+gs bco target
+cp $WORK/extra/untracked1-modified.txt untracked1.txt
+git status --porcelain
+cmp stdout $WORK/golden/status-untracked-all.txt
+
+# Cherry-pick the new commit from source.
+# This should fail because untracked1.txt would be overwritten.
+! gs commit pick source
+stderr 'Local changes would be overwritten by cherry-pick'
+stderr 'untracked1.txt'
+
+# The working copy is unchanged.
+cmp untracked1.txt $WORK/extra/untracked1-modified.txt
+
+-- repo/source.txt --
+Content from source branch
+-- repo/target.txt --
+Content from target branch
+-- extra/untracked1.txt --
+First untracked file content
+-- extra/untracked2.txt --
+Second untracked file content
+-- extra/untracked1-modified.txt --
+Modified first untracked file content
+-- golden/status-untracked-all.txt --
+?? untracked1.txt
+?? untracked2.txt

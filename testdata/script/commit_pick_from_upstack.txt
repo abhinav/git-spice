@@ -1,0 +1,50 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test cherry-picking a commit from an upstack branch
+# After cherry-pick, upstack branch should have one fewer commit
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create base branch
+git add base.txt
+gs branch create base -m 'Add base file'
+
+# Create upstack branch with two commits
+git add upstack1.txt
+gs branch create upstack -m 'Add first upstack file'
+
+git add upstack2.txt
+gs commit create -m 'Add second upstack file'
+
+# Switch to base branch and cherry-pick the first commit from upstack
+git checkout base
+
+# Cherry-pick the first commit from upstack (upstack~1)
+gs commit pick upstack~1
+
+# Verify the cherry-pick worked - first upstack file should exist
+exists upstack1.txt
+
+# Verify git history - upstack branch should still have both commits,
+# but base now has the cherry-picked commit
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/base.txt --
+Content from base branch
+-- repo/upstack1.txt --
+First upstack file content
+-- repo/upstack2.txt --
+Second upstack file content
+-- golden/graph.txt --
+* c3bc3b1 (upstack) Add second upstack file
+* 2b957ee (HEAD -> base) Add first upstack file
+* d087f8b Add base file
+* 852c1f1 (main) Initial commit

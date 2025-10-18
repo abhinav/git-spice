@@ -1,0 +1,44 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test that cherry-picking root commits is rejected
+
+cd repo
+git init
+git commit --allow-empty -m 'Root commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create a branch to cherry-pick from
+git checkout -b source
+git add source.txt
+git commit -m 'Add source file'
+
+# Create target branch
+git checkout main
+gs branch create target -m 'Create target branch'
+
+# Try to cherry-pick the root commit - should fail
+! gs commit pick main
+stderr 'root commit'
+
+# Verify no cherry-pick occurred
+git log --oneline -2
+cmp stdout $WORK/golden/log.txt
+
+# Verify git state unchanged
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/source.txt --
+Source file content
+-- golden/log.txt --
+222eaee Create target branch
+b3ab799 Root commit
+-- golden/graph.txt --
+* 6f302e9 (source) Add source file
+| * 222eaee (HEAD -> target) Create target branch
+|/  
+* b3ab799 (main) Root commit

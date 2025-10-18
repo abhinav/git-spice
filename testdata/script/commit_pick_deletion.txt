@@ -1,0 +1,50 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-10-11T16:19:22Z
+
+# Test cherry-picking a commit that deletes a file from the base commit
+# Setup: lower branch adds 2 files, upper branch adds 2 files then deletes one from lower
+# Action: lower cherry-picks upper's second commit (the deletion)
+# Expected: deletion is applied to lower branch
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create lower branch.
+git add lower1.txt lower2.txt
+gs branch create lower -m 'Add lower branch files'
+
+# Stack upper on top of lower,
+# with a deletion meant for lower.
+git add upper1.txt upper2.txt
+gs branch create upper -m 'Add upper files'
+git rm lower1.txt
+gs commit create -m 'Delete lower1'
+gs down
+
+gs commit pick upper
+! exists lower1.txt
+! git rev-parse --verify HEAD:lower1.txt
+git status --porcelain
+! stdout '.'
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/lower1.txt --
+Content from lower branch file 1
+-- repo/lower2.txt --
+Content from lower branch file 2
+-- repo/upper1.txt --
+Content from upper branch file 1
+-- repo/upper2.txt --
+Content from upper branch file 2
+-- golden/graph.txt --
+* 8243d05 (upper) Add upper files
+* 42c7b05 (HEAD -> lower) Delete lower1
+* cb0f65e Add lower branch files
+* 8097758 (main) Initial commit

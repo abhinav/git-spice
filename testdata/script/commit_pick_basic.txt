@@ -1,0 +1,48 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test basic cherry-pick functionality with explicit commit hash
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create first feature branch
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1 file'
+
+# Create second feature branch (separate from feature1)
+git checkout main
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2 file'
+
+# Cherry-pick the commit from feature1 onto feature2
+gs commit pick feature1
+
+# feature1 now exists on feature2.
+exists feature1.txt
+git branch --show-current
+stdout 'feature2'
+
+# Verify no uncommitted changes
+git status --porcelain
+! stdout '.'
+
+# Verify the git history
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+Content from feature1 branch
+-- repo/feature2.txt --
+Content from feature2 branch
+-- golden/graph.txt --
+* 5ac5b2b (feature1) Add feature1 file
+| * 0b3cf45 (HEAD -> feature2) Add feature1 file
+| * 4b22a13 Add feature2 file
+|/  
+* 852c1f1 (main) Initial commit

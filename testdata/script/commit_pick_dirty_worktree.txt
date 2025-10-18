@@ -1,0 +1,57 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test that dirty changes in working tree are preserved during cherry-pick
+# when non-conflicting (i.e. to unrelated files).
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create source branch with commit to cherry-pick
+git add source.txt
+gs branch create source -m 'Add source file'
+
+# Create target branch
+git checkout main
+git add target.txt dirty.txt
+gs branch create target -m 'Add target file'
+
+# Create dirty changes in working tree
+cp $WORK/extra/dirty-changes.txt dirty.txt
+
+# Verify dirty changes exist before cherry-pick
+git status --porcelain
+cmp stdout $WORK/golden/status-before.txt
+
+# Cherry-pick commit (dirty changes are to unrelated files, so should succeed)
+gs commit pick source
+
+# Verify cherry-pick worked
+exists source.txt
+
+# Verify dirty changes are still present
+git status --porcelain
+cmp stdout $WORK/golden/status-after.txt
+
+# Verify dirty file still exists
+cmp dirty.txt $WORK/extra/dirty-changes.txt
+
+-- repo/source.txt --
+Content from source branch
+-- repo/target.txt --
+Content from target branch
+-- repo/dirty.txt --
+Dirty
+-- extra/dirty-changes.txt --
+Dirty with changes
+-- golden/status-before.txt --
+ M dirty.txt
+-- golden/status-after.txt --
+ M dirty.txt
+-- golden/dirty-content.txt --
+Dirty changes in working tree

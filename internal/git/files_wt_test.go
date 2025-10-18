@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -168,4 +169,152 @@ func TestListFilesPaths_specialCharacters(t *testing.T) {
 		" ",
 	}
 	assert.ElementsMatch(t, expected, paths)
+}
+
+func TestWorktree_ListUntrackedFiles(t *testing.T) {
+	t.Parallel()
+
+	t.Run("HasUntrackedFiles", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			cd repo
+			git init
+			git add tracked.txt
+			git commit -m 'Initial commit'
+
+			# Create untracked files
+			cp $WORK/extra/untracked1.txt untracked1.txt
+			cp $WORK/extra/untracked2.txt untracked2.txt
+
+			-- repo/tracked.txt --
+			tracked content
+			-- extra/untracked1.txt --
+			untracked file 1
+			-- extra/untracked2.txt --
+			untracked file 2
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), filepath.Join(fixture.Dir(), "repo"), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(wt.ListUntrackedFiles(t.Context()))
+		require.NoError(t, err)
+
+		expected := []string{"untracked1.txt", "untracked2.txt"}
+		assert.ElementsMatch(t, expected, files)
+	})
+
+	t.Run("NoUntrackedFiles", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			cd repo
+			git init
+			git add file1.txt
+			git commit -m 'Initial commit'
+
+			-- repo/file1.txt --
+			content
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), filepath.Join(fixture.Dir(), "repo"), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(wt.ListUntrackedFiles(t.Context()))
+		require.NoError(t, err)
+		assert.Empty(t, files)
+	})
+
+	t.Run("ExcludesIgnoredFiles", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			cd repo
+			git init
+			git add .gitignore
+			git commit -m 'Add gitignore'
+
+			# Create untracked files
+			cp $WORK/extra/untracked.txt untracked.txt
+			cp $WORK/extra/ignored.txt ignored.log
+
+			-- repo/.gitignore --
+			*.log
+			-- extra/untracked.txt --
+			should be listed
+			-- extra/ignored.txt --
+			should be ignored
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), filepath.Join(fixture.Dir(), "repo"), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(wt.ListUntrackedFiles(t.Context()))
+		require.NoError(t, err)
+
+		expected := []string{"untracked.txt"}
+		assert.ElementsMatch(t, expected, files)
+	})
+
+	t.Run("StagedFilesNotUntracked", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			cd repo
+			git init
+			git add file1.txt
+			git commit -m 'Initial commit'
+
+			# Stage a new file
+			git add staged.txt
+
+			# Create an untracked file
+			cp $WORK/extra/untracked.txt untracked.txt
+
+			-- repo/file1.txt --
+			committed content
+			-- repo/staged.txt --
+			staged but not committed
+			-- extra/untracked.txt --
+			truly untracked
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), filepath.Join(fixture.Dir(), "repo"), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(wt.ListUntrackedFiles(t.Context()))
+		require.NoError(t, err)
+
+		expected := []string{"untracked.txt"}
+		assert.ElementsMatch(t, expected, files)
+	})
 }

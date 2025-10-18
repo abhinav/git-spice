@@ -1,0 +1,50 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+# Test cherry-picking empty commits (gs commit pick always allows empty)
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# Create source branch with file
+cp $WORK/extra/source.txt source.txt
+git add source.txt
+gs branch create source -m 'Add source file'
+
+# Create target branch from main with same file (cherry-pick will be empty)
+git checkout main
+cp $WORK/extra/source.txt source.txt
+git add source.txt
+gs branch create target -m 'Add same source file'
+
+# Cherry-pick from source - should succeed and create empty commit
+gs commit pick source
+
+# Verify git history
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+# Verify the cherry-picked commit is empty (no file changes)
+git show --name-only HEAD --patch
+cmp stdout $WORK/golden/show.txt
+
+-- extra/source.txt --
+Content that will be duplicated
+-- golden/show.txt --
+commit 085f4f7a863daaa8da6c87a02e8acc230a7382ca
+Author: Test User <test@example.com>
+Date:   Mon Sep 1 23:40:12 2025 +0000
+
+    Add source file
+-- golden/graph.txt --
+* dc0bdbd (source) Add source file
+| * 085f4f7 (HEAD -> target) Add source file
+| * 7c2110b Add same source file
+|/  
+* 852c1f1 (main) Initial commit

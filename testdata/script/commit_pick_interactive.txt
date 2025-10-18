@@ -1,0 +1,73 @@
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test User <test@example.com>'
+at 2025-09-01T23:40:12Z
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitPick true
+
+# create a stack: feat1-3
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+git add feat3.txt
+gs bc -m feat3
+
+# put a commit on top of feat3 meant for feat1.
+cp $WORK/extra/feat1-new.txt feat1.txt
+git add feat1.txt
+gs cc -m 'feature 1 adjustment'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Go back to feat1 and cherry-pick it.
+gs bco feat1
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.output
+gs commit pick
+cmp $WORK/robot.output $WORK/robot.golden
+
+# Verify new commit applied.
+cmp feat1.txt $WORK/extra/feat1-new.txt
+
+# Verify the git history
+git graph --branches
+cmp stdout $WORK/golden/graph-after.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+-- extra/feat1-new.txt --
+feature 1 adjustment
+-- golden/graph-before.txt --
+* f596d7f (HEAD -> feat3) feature 1 adjustment
+* 18a7878 feat3
+* 54bd7cc (feat2) feat2
+* e7d4833 (feat1) feat1
+* 852c1f1 (main) Initial commit
+-- robot.golden --
+===
+> Pick a commit: 
+>     ┏━□ feat3 
+>     ┃   ▶ f596d7f feature 1 adjustment (now) 
+>     ┃     18a7878 feat3 (now)
+>   ┏━┻□ feat2 
+>   ┃      54bd7cc feat2 (now)
+> ┏━┻□ feat1
+> main
+>
+> Selected commit will be cherry-picked into feat1
+"f596d7f"
+-- golden/graph-after.txt --
+* 8bf0369 (feat3) feat3
+* 8b6f9e4 (feat2) feat2
+* bb57ca2 (HEAD -> feat1) feature 1 adjustment
+* e7d4833 feat1
+* 852c1f1 (main) Initial commit
