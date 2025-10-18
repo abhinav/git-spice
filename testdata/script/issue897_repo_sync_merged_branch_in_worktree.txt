@@ -1,6 +1,8 @@
 # 'repo sync' when a downstack branch is merged but upstack branches are in worktrees.
 # This reproduces the original bug where repo sync would fail trying to rebase
 # upstack branches that are checked out in other worktrees.
+#
+# https://github.com/abhinav/git-spice/issues/897
 
 as 'Test <test@example.com>'
 at '2025-10-17T17:00:00Z'
@@ -43,21 +45,16 @@ git worktree add ../wt-feature2 feature2
 git worktree add ../wt-feature3 feature3
 
 # merge only feature1 (the downstack branch)
-cd ..
-shamhub clone alice/example.git fork
-cd fork
-
 shamhub merge alice/example.git 1
 
 # sync the original repo
 # This should delete feature1 and skip rebasing feature2 since it's in a worktree
-cd ../repo
 gs repo sync
 stderr 'feature1.*was merged'
 
 # feature2 should get a warning about being in a worktree
 # (feature3 doesn't need rebasing since feature2 wasn't rebased)
-stderr 'feature2: checked out in another worktree.*skipping automatic rebase'
+stderr 'feature2: checked out in another worktree.*skipping rebase'
 
 # feature1 should be deleted (merged and not in worktree)
 ! git rev-parse --verify feature1
@@ -77,10 +74,7 @@ stdout '^feature3$'
 
 # Now test the scenario where a merged branch itself is in a worktree
 # This tests the sync handler's worktree filtering during deletion
-cd ../fork
 shamhub merge alice/example.git 2
-
-cd ../repo
 gs repo sync
 stderr 'feature2.*was merged'
 

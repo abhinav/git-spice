@@ -1,0 +1,92 @@
+# When 'repo sync' attempts to delete the merged branch
+# it has to first rebase the upstack branches of the merged branch.
+# It should gracefully handle the case where an upstack branch
+# is checked out in another worktree.
+#
+# https://github.com/abhinav/git-spice/issues/897
+
+as 'Test <test@example.com>'
+at '2025-10-18T10:00:00Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a remote repository
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+gs repo init --trunk=main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack: main -> feat-1 -> feat-2
+git add feat1.txt
+gs bc feat-1 -m 'Add feat-1'
+git add feat2.txt
+gs bc feat-2 -m 'Add feat-2'
+gs stack submit --fill
+
+# Create a worktree for feat-2
+gs bco feat-1
+git worktree add ../feat-2 feat-2
+
+# Merge feat-1 on the remote and sync
+shamhub merge alice/example.git 1
+gs repo sync
+stderr 'feat-1: .* was merged'
+stderr 'feat-1: deleted'
+stderr 'feat-2: checked out in another worktree .*/feat-2., skipping rebase'
+
+# feat-1 was deleted and feat-2 still exists
+! git rev-parse --verify feat-1
+git rev-parse --verify feat-2
+
+# Current branch is main after feat-1 deletion.
+git branch --show-current
+stdout '^main$'
+
+# feat-2 needs to be restacked but its base is still main.
+gs ll -a
+cmp stdout $WORK/golden/ll-after-sync.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-after-sync.txt
+
+# Restack feat-2 as instructed.
+cd ../feat-2
+gs branch restack
+
+# feat-2 is now correctly stacked on top of main.
+cd ../repo
+gs ll -a
+cmp stdout $WORK/golden/ll-after-restack.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-after-restack.txt
+
+-- repo/feat1.txt --
+feat-1
+
+-- repo/feat2.txt --
+feat-2
+
+-- golden/ll-after-sync.txt --
+-- golden/graph-after-sync.txt --
+* 7e23316 (origin/feat-2, feat-2) Add feat-2
+| *   5cc8a83 (HEAD -> main, origin/main) Merge change #1
+| |\  
+| |/  
+|/|   
+* | 1f6ff6e Add feat-1
+|/  
+* c5c110d Initial commit
+-- golden/ll-after-restack.txt --
+-- golden/graph-after-restack.txt --
+* 19505d8 (feat-2) Add feat-2
+*   5cc8a83 (HEAD -> main, origin/main) Merge change #1
+|\  
+| * 1f6ff6e Add feat-1
+|/  
+* c5c110d Initial commit

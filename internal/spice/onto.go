@@ -22,6 +22,12 @@ type BranchOntoRequest struct {
 
 	// MergedDownstack for [Branch], if any.
 	MergedDownstack *[]json.RawMessage
+
+	// SkipRebase indicates that the branch's base should be updated,
+	// but no rebase should be performed.
+	// The old base hash is preserved to allow future restack operations
+	// to correctly rebase the branch.
+	SkipRebase bool
 }
 
 // BranchOnto moves the commits of a branch onto a different base branch,
@@ -98,23 +104,35 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	)
 
 	branchTx := s.store.BeginBranchTx()
+
+	// When SkipRebase is true, we update the base branch name
+	// but preserve the old base hash.
+	// This leaves the branch in a "needs restack" state
+	// that can be detected and corrected later.
+	baseHash := ontoHash
+	if req.SkipRebase {
+		baseHash = branch.BaseHash
+	}
+
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
 		Name:            req.Branch,
 		Base:            req.Onto,
-		BaseHash:        ontoHash,
+		BaseHash:        baseHash,
 		MergedDownstack: req.MergedDownstack,
 	}); err != nil {
 		return fmt.Errorf("set base of branch %s to %s: %w", req.Branch, req.Onto, err)
 	}
 
-	if err := s.wt.Rebase(ctx, git.RebaseRequest{
-		Branch:    req.Branch,
-		Upstream:  string(fromHash),
-		Onto:      ontoHash.String(),
-		Autostash: true,
-		Quiet:     true, // TODO: if verbose, disable this
-	}); err != nil {
-		return fmt.Errorf("rebase: %w", err)
+	if !req.SkipRebase {
+		if err := s.wt.Rebase(ctx, git.RebaseRequest{
+			Branch:    req.Branch,
+			Upstream:  string(fromHash),
+			Onto:      ontoHash.String(),
+			Autostash: true,
+			Quiet:     true, // TODO: if verbose, disable this
+		}); err != nil {
+			return fmt.Errorf("rebase: %w", err)
+		}
 	}
 
 	if err := branchTx.Commit(ctx, fmt.Sprintf("%v: onto %v", req.Branch, req.Onto)); err != nil {
