@@ -268,10 +268,12 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			// If so, we need to skip the rebase operation
 			// and leave the branch in a "needs restack" state.
 			var skipRebase bool
-			if worktreePath, ok := branchWorktrees[above]; ok {
-				skipRebase = true
-				log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
-				log.Warnf("%v: Run 'gs branch restack' from that worktree to complete the rebase", above)
+			if above != currentBranch {
+				if worktreePath, ok := branchWorktrees[above]; ok {
+					skipRebase = true
+					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
+					log.Warnf("%v: Run 'gs branch restack' from that worktree to complete the rebase", above)
+				}
 			}
 
 			log.Debug("Changing upstack branch to a new base",
