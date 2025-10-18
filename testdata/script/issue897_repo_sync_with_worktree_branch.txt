@@ -51,7 +51,7 @@ stdout '^main$'
 
 # feat-2 needs to be restacked but its base is still main.
 gs ll -a
-cmp stdout $WORK/golden/ll-after-sync.txt
+cmp stderr $WORK/golden/ll-after-sync.txt
 git graph --branches
 cmp stdout $WORK/golden/graph-after-sync.txt
 
@@ -62,7 +62,7 @@ gs branch restack
 # feat-2 is now correctly stacked on top of main.
 cd ../repo
 gs ll -a
-cmp stdout $WORK/golden/ll-after-restack.txt
+cmp stderr $WORK/golden/ll-after-restack.txt
 git graph --branches
 cmp stdout $WORK/golden/graph-after-restack.txt
 
@@ -73,6 +73,9 @@ feat-1
 feat-2
 
 -- golden/ll-after-sync.txt --
+┏━□ feat-2 (#2) (needs restack)
+┃   7e23316 Add feat-2 (now)
+main ◀
 -- golden/graph-after-sync.txt --
 * 7e23316 (origin/feat-2, feat-2) Add feat-2
 | *   5cc8a83 (HEAD -> main, origin/main) Merge change #1
@@ -83,6 +86,9 @@ feat-2
 |/  
 * c5c110d Initial commit
 -- golden/ll-after-restack.txt --
+┏━□ feat-2 (#2) (needs push)
+┃   19505d8 Add feat-2 (now)
+main ◀
 -- golden/graph-after-restack.txt --
 * 19505d8 (feat-2) Add feat-2
 *   5cc8a83 (HEAD -> main, origin/main) Merge change #1
