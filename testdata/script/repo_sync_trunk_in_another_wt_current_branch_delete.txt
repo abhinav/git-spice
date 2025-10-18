@@ -50,7 +50,7 @@ gs repo sync
 stderr 'INF main: pulled 3 new commit\(s\)'
 stderr 'INF feat1: #1 was merged'
 stderr 'WRN main: checked out in another worktree \(.+/wt1\), will detach HEAD'
-stderr 'WRN Use ''gs branch checkout'' to pick a branch and exit detached state'
+stderr 'WRN main: Use ''gs branch checkout'' to pick a branch and exit detached state'
 stderr 'INF feat1: deleted \(was [a-f0-9]+\)'
 
 -- repo/feat1.txt --
