@@ -203,7 +203,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				// because we've already filtered for that.
 				checkoutDetached = true
 				log.Warnf("%v: checked out in another worktree (%v), will detach HEAD", checkoutTarget, worktreePath)
-				log.Warnf("Use 'gs branch checkout' to pick a branch and exit detached state")
+				log.Warnf("%v: Use 'gs branch checkout' to pick a branch and exit detached state", checkoutTarget)
 			}
 
 			// This is the only case where user's current HEAD is
