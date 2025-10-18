@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  repo sync: Fix failure to delete merged branches after a sync operation
+  because an upstack branch of the merged branch is checked out in a worktree.
+time: 2025-10-18T10:17:06.323883-07:00

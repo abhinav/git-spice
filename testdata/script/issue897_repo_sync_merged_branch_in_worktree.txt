@@ -1,0 +1,94 @@
+# 'repo sync' when a downstack branch is merged but upstack branches are in worktrees.
+# This reproduces the original bug where repo sync would fail trying to rebase
+# upstack branches that are checked out in other worktrees.
+#
+# https://github.com/abhinav/git-spice/issues/897
+
+as 'Test <test@example.com>'
+at '2025-10-17T17:00:00Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+gs repo init --trunk=main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+gs branch submit --fill
+
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+gs branch submit --fill
+
+git add feature3.txt
+gs bc feature3 -m 'Add feature3'
+gs branch submit --fill
+
+# go back to main
+gs bco main
+
+# check out feature2 and feature3 in other worktrees
+# This simulates having upstack branches checked out elsewhere
+git worktree add ../wt-feature2 feature2
+git worktree add ../wt-feature3 feature3
+
+# merge only feature1 (the downstack branch)
+shamhub merge alice/example.git 1
+
+# sync the original repo
+# This should delete feature1 and skip rebasing feature2 since it's in a worktree
+gs repo sync
+stderr 'feature1.*was merged'
+
+# feature2 should get a warning about being in a worktree
+# (feature3 doesn't need rebasing since feature2 wasn't rebased)
+stderr 'feature2: checked out in another worktree.*skipping rebase'
+
+# feature1 should be deleted (merged and not in worktree)
+! git rev-parse --verify feature1
+
+# feature2 and feature3 should still exist (in worktrees, not yet merged)
+git rev-parse --verify feature2
+git rev-parse --verify feature3
+
+# verify branches are still accessible in their worktrees
+cd ../wt-feature2
+git branch --show-current
+stdout '^feature2$'
+
+cd ../wt-feature3
+git branch --show-current
+stdout '^feature3$'
+
+# Now test the scenario where a merged branch itself is in a worktree
+# This tests the sync handler's worktree filtering during deletion
+shamhub merge alice/example.git 2
+gs repo sync
+stderr 'feature2.*was merged'
+
+# feature2 should be skipped for deletion because it's in a worktree
+stderr 'feature2: checked out in another worktree.*skipping deletion'
+
+# feature2 should still exist (in worktree even though merged)
+git rev-parse --verify feature2
+
+-- repo/feature1.txt --
+feature1
+
+-- repo/feature2.txt --
+feature2
+
+-- repo/feature3.txt --
+feature3
