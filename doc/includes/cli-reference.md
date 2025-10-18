@@ -376,13 +376,11 @@ Restack a branch and its upstack
 The current branch and all branches above it
 are rebased on top of their respective bases,
 ensuring a linear history.
+
 Use --branch to start at a different branch.
+
 Use --skip-start to skip the starting branch,
 but still rebase all branches above it.
-
-The target branch defaults to the current branch.
-If run from the trunk branch,
-all managed branches will be restacked.
 
 **Flags**
 

@@ -1,0 +1,133 @@
+# 'stack restack' and 'upstack restack' from trunk
+# prompt for confirmation before proceeding.
+
+as 'Test <test@example.com>'
+at '2025-10-18T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up feature1 -> feature2 -> feature3
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+git add feature3.txt
+gs bc feature3 -m 'Add feature3'
+
+# make changes to require a restack
+gs trunk
+cp $WORK/extra/feature0.txt .
+git add feature0.txt
+git commit -m 'Add feature0'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Test 1: gs stack restack: User aborts the operation.
+env ROBOT_INPUT=$WORK/robot-stack-no.golden ROBOT_OUTPUT=$WORK/robot-stack-no.actual
+! gs stack restack
+cmp $WORK/robot-stack-no.actual $WORK/robot-stack-no.golden
+env ROBOT_INPUT=
+
+# no changes
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Test 2: gs upstack restack: User aborts the operation.
+env ROBOT_INPUT=$WORK/robot-upstack-no.golden ROBOT_OUTPUT=$WORK/robot-upstack-no.actual
+! gs upstack restack
+cmp $WORK/robot-upstack-no.actual $WORK/robot-upstack-no.golden
+env ROBOT_INPUT=
+
+# no changes
+git graph --branches
+cmp stdout $WORK/golden/graph-before.txt
+
+# Test 3: stack restack: user agrees to restack
+env ROBOT_INPUT=$WORK/robot-stack-yes.golden ROBOT_OUTPUT=$WORK/robot-stack-yes.actual
+gs stack restack
+stderr 'feature1: restacked on main'
+stderr 'feature2: restacked on feature1'
+stderr 'feature3: restacked on feature2'
+cmp $WORK/robot-stack-yes.actual $WORK/robot-stack-yes.golden
+env ROBOT_INPUT=
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-stack-restack.txt
+
+# Make another change on trunk for upstack restack.
+gs trunk
+cp $WORK/extra/feature0b.txt feature0.txt
+git add feature0.txt
+git commit -m 'Update feature0'
+
+# Test 4: upstack restack: user agrees to restack
+env ROBOT_INPUT=$WORK/robot-upstack-yes.golden ROBOT_OUTPUT=$WORK/robot-upstack-yes.actual
+gs stack restack
+stderr 'feature1: restacked on main'
+stderr 'feature2: restacked on feature1'
+stderr 'feature3: restacked on feature2'
+cmp $WORK/robot-upstack-yes.actual $WORK/robot-upstack-yes.golden
+env ROBOT_INPUT=
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-upstack-restack.txt
+
+-- repo/feature1.txt --
+foo
+-- repo/feature2.txt --
+bar
+-- repo/feature3.txt --
+baz
+-- extra/feature0.txt --
+quux
+-- extra/feature0b.txt --
+quux updated
+-- robot-stack-yes.golden --
+===
+> Restack all branches?: [Y/n]
+> Running 'gs stack restack' from trunk restacks all tracked branches.
+> Use 'gs repo restack' to suppress this prompt.
+true
+-- robot-stack-no.golden --
+===
+> Restack all branches?: [Y/n]
+> Running 'gs stack restack' from trunk restacks all tracked branches.
+> Use 'gs repo restack' to suppress this prompt.
+false
+-- robot-upstack-yes.golden --
+===
+> Restack all branches?: [Y/n]
+> Running 'gs stack restack' from trunk restacks all tracked branches.
+> Use 'gs repo restack' to suppress this prompt.
+true
+-- robot-upstack-no.golden --
+===
+> Restack all branches?: [Y/n]
+> Running 'gs upstack restack' from trunk restacks all tracked branches.
+> Use 'gs repo restack' to suppress this prompt.
+false
+-- golden/graph-before.txt --
+* 0a8abdd (feature3) Add feature3
+* 3666a4f (feature2) Add feature2
+* b845ef3 (feature1) Add feature1
+| * 6d2eee0 (HEAD -> main) Add feature0
+|/  
+* c269208 Initial commit
+-- golden/graph-after-stack-restack.txt --
+* e361be0 (feature3) Add feature3
+* 38ddc8b (feature2) Add feature2
+* 9a2f14e (feature1) Add feature1
+* 6d2eee0 (HEAD -> main) Add feature0
+* c269208 Initial commit
+-- golden/graph-after-upstack-restack.txt --
+* 38bf181 (feature3) Add feature3
+* b0cc571 (feature2) Add feature2
+* f64b0d2 (feature1) Add feature1
+* 9051342 (HEAD -> main) Update feature0
+* 6d2eee0 Add feature0
+* c269208 Initial commit
