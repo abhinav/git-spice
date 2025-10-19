@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -119,9 +121,30 @@ func (i *Input) WithDescription(desc string) *Input {
 	return i
 }
 
+const (
+	_scrollUpSymbol   = "▲"
+	_scrollDownSymbol = "▼"
+)
+
 // Description returns the description of the input field.
+// If there are options to choose from,
+// the description includes markers for scrolling.
 func (i *Input) Description() string {
-	return i.desc
+	if len(i.options) <= 1 {
+		return i.desc
+	}
+
+	var desc strings.Builder
+	desc.WriteString(i.desc)
+	desc.WriteString(" (")
+	if i.optionIdx == -1 || i.optionIdx > 0 {
+		desc.WriteString(_scrollUpSymbol)
+	}
+	if i.optionIdx == -1 || i.optionIdx < len(i.options)-1 {
+		desc.WriteString(_scrollDownSymbol)
+	}
+	desc.WriteString(" for other options)")
+	return desc.String()
 }
 
 // Err reports any errors encountered during the operation.

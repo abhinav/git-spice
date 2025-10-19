@@ -59,6 +59,7 @@ func (f *branchSubmitForm) titleFieldWithCommits(title *string, commits []git.Co
 	input := ui.NewInput().
 		WithValue(title).
 		WithTitle("Title").
+		WithDescription("Short summary of the change").
 		WithValidate(func(s string) error {
 			if strings.TrimSpace(s) == "" {
 				return errors.New("title cannot be blank")
@@ -72,10 +73,7 @@ func (f *branchSubmitForm) titleFieldWithCommits(title *string, commits []git.Co
 		for i := len(commits) - 1; i >= 0; i-- {
 			options[len(commits)-1-i] = commits[i].Subject
 		}
-		input = input.WithOptions(options).
-			WithDescription("Short summary of the change (use ↑/↓ to select from commits)")
-	} else {
-		input = input.WithDescription("Short summary of the change")
+		input = input.WithOptions(options)
 	}
 
 	return input
