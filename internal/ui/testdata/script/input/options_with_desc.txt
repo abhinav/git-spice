@@ -1,0 +1,41 @@
+init
+
+await Enter a thing
+snapshot
+cmp stdout prompt
+
+feed <Down>
+await
+snapshot
+cmp stdout first
+
+feed item
+await
+snapshot
+cmp stdout first_modified
+
+# Down after custom text starts over.
+feed <Down>
+await
+snapshot
+cmp stdout first
+
+feed <Enter>
+
+-- desc --
+Enter a thing
+-- prompt --
+Please answer:
+Enter a thing (▲▼ for other options)
+-- options --
+first
+second
+third
+-- first --
+Please answer: first
+Enter a thing (▼ for other options)
+-- first_modified --
+Please answer: firstitem
+Enter a thing (▲▼ for other options)
+-- want --
+first

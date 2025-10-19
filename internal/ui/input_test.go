@@ -19,6 +19,7 @@ import (
 //   - give (optional): starting string value
 //   - desc (optional): description of prompt
 //   - invalid (optional): value rejected as invalid
+//   - options (optional): newline-separated list of options
 func TestInput(t *testing.T) {
 	uitest.RunScripts(t,
 		func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
@@ -39,6 +40,14 @@ func TestInput(t *testing.T) {
 				invalid = strings.TrimSpace(ts.ReadFile("invalid"))
 			}
 
+			var options []string
+			if _, err := os.Stat(ts.MkAbs("options")); err == nil {
+				contents := strings.TrimSpace(ts.ReadFile("options"))
+				if contents != "" {
+					options = strings.Split(contents, "\n")
+				}
+			}
+
 			got := give
 			widget := ui.NewInput().
 				WithTitle("Please answer").
@@ -50,6 +59,10 @@ func TestInput(t *testing.T) {
 					return nil
 				}).
 				WithDescription(desc)
+
+			if len(options) > 0 {
+				widget = widget.WithOptions(options)
+			}
 
 			require.NoError(t, ui.Run(view, widget))
 			assert.Equal(t, want, got)

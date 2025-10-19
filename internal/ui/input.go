@@ -136,7 +136,10 @@ func (i *Input) Description() string {
 
 	var desc strings.Builder
 	desc.WriteString(i.desc)
-	desc.WriteString(" (")
+	if len(i.desc) > 0 {
+		desc.WriteString(" ")
+	}
+	desc.WriteString("(")
 	if i.optionIdx == -1 || i.optionIdx > 0 {
 		desc.WriteString(_scrollUpSymbol)
 	}
