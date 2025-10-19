@@ -856,7 +856,7 @@ func (h *Handler) prepareBranch(
 	form := newBranchSubmitForm(ctx, h.Service, h.Repository, remoteRepo, h.Log, opts.Options)
 	if opts.Title == "" {
 		opts.Title = defaultTitle
-		fields = append(fields, form.titleField(&opts.Title))
+		fields = append(fields, form.titleFieldWithCommits(&opts.Title, msgs))
 	}
 
 	if opts.Body == "" {

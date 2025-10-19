@@ -10,6 +10,8 @@ import (
 // InputKeyMap defines the key bindings for an input field.
 type InputKeyMap struct {
 	Accept key.Binding
+	Up     key.Binding
+	Down   key.Binding
 }
 
 // DefaultInputKeyMap is the default key map for an input field.
@@ -17,6 +19,14 @@ var DefaultInputKeyMap = InputKeyMap{
 	Accept: key.NewBinding(
 		key.WithKeys("enter", "tab"),
 		key.WithHelp("enter/tab", "accept"),
+	),
+	Up: key.NewBinding(
+		key.WithKeys("up"),
+		key.WithHelp("up", "previous option"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down"),
+		key.WithHelp("down", "next option"),
 	),
 }
 
@@ -35,8 +45,10 @@ type Input struct {
 	title string
 	desc  string
 
-	model textinput.Model
-	value *string
+	model   textinput.Model
+	value   *string
+	options []string
+	current int // current index in options, or -1 if custom value
 }
 
 var _ Field = (*Input)(nil)
@@ -47,10 +59,11 @@ func NewInput() *Input {
 	m.Prompt = "" // we have our own prompt
 	m.Cursor.SetMode(cursor.CursorStatic)
 	return &Input{
-		KeyMap: DefaultInputKeyMap,
-		Style:  DefaultInputStyle,
-		model:  m,
-		value:  new(string),
+		KeyMap:  DefaultInputKeyMap,
+		Style:   DefaultInputStyle,
+		model:   m,
+		value:   new(string),
+		current: -1,
 	}
 }
 
@@ -58,6 +71,13 @@ func NewInput() *Input {
 // If the value is non-empty, it will be used as the initial value.
 func (i *Input) WithValue(value *string) *Input {
 	i.value = value
+	return i
+}
+
+// WithOptions sets the list of options that can be cycled through with arrow keys.
+// The options are ordered from oldest to newest (chronologically).
+func (i *Input) WithOptions(options []string) *Input {
+	i.options = options
 	return i
 }
 
@@ -113,22 +133,81 @@ func (i *Input) WithValidate(f func(string) error) *Input {
 func (i *Input) Init() tea.Cmd {
 	i.model.SetValue(*i.value)
 	i.model.Err = nil
+
+	// Find the current index if the initial value matches one of the options
+	if len(i.options) > 0 {
+		for idx, opt := range i.options {
+			if opt == *i.value {
+				i.current = idx
+				break
+			}
+		}
+		// If no match found, current stays at -1 (custom value)
+	}
+
 	return i.model.Focus()
 }
 
 // Update handles a bubbletea event.
 func (i *Input) Update(msg tea.Msg) tea.Cmd {
-	if keyMsg, ok := msg.(tea.KeyMsg); ok && key.Matches(keyMsg, i.KeyMap.Accept) {
-		// Accept only if input is valid.
-		if err := i.model.Err; err == nil {
-			i.model.Blur()
-			return AcceptField
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch {
+		case key.Matches(keyMsg, i.KeyMap.Accept):
+			// Accept only if input is valid.
+			if err := i.model.Err; err == nil {
+				i.model.Blur()
+				return AcceptField
+			}
+			return nil
+
+		case key.Matches(keyMsg, i.KeyMap.Up):
+			// Cycle to previous option
+			if len(i.options) > 0 {
+				if i.current == -1 {
+					// Start from the newest (last) option
+					i.current = len(i.options) - 1
+				} else {
+					i.current--
+					if i.current < 0 {
+						i.current = len(i.options) - 1
+					}
+				}
+				i.model.SetValue(i.options[i.current])
+				i.model.CursorEnd()
+				*i.value = i.options[i.current]
+				return nil
+			}
+
+		case key.Matches(keyMsg, i.KeyMap.Down):
+			// Cycle to next option
+			if len(i.options) > 0 {
+				if i.current == -1 {
+					// Start from the oldest (first) option
+					i.current = 0
+				} else {
+					i.current++
+					if i.current >= len(i.options) {
+						i.current = 0
+					}
+				}
+				i.model.SetValue(i.options[i.current])
+				i.model.CursorEnd()
+				*i.value = i.options[i.current]
+				return nil
+			}
 		}
 	}
 
 	var cmd tea.Cmd
 	i.model, cmd = i.model.Update(msg)
-	*i.value = i.model.Value()
+	newValue := i.model.Value()
+
+	// If the user manually edited the text, mark as custom value
+	if newValue != *i.value && (i.current == -1 || newValue != i.options[i.current]) {
+		i.current = -1
+	}
+
+	*i.value = newValue
 	return cmd
 }
 
