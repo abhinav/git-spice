@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -41,8 +42,8 @@ func newBranchSubmitForm(
 	}
 }
 
-func (f *branchSubmitForm) titleField(title *string) ui.Field {
-	return ui.NewInput().
+func (f *branchSubmitForm) titleField(title *string, commits []git.CommitMessage) ui.Field {
+	input := ui.NewInput().
 		WithValue(title).
 		WithTitle("Title").
 		WithDescription("Short summary of the change").
@@ -52,6 +53,18 @@ func (f *branchSubmitForm) titleField(title *string) ui.Field {
 			}
 			return nil
 		})
+
+	if len(commits) > 1 {
+		// Put the commits in chronological order
+		// for the user to choose titles from.
+		options := make([]string, len(commits))
+		for i := len(commits) - 1; i >= 0; i-- {
+			options[len(commits)-1-i] = commits[i].Subject
+		}
+		input = input.WithOptions(options)
+	}
+
+	return input
 }
 
 func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.ChangeTemplate) ui.Field {

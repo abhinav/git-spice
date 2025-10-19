@@ -1,0 +1,25 @@
+init
+
+await Please answer
+snapshot
+cmp stdout prompt
+
+feed custom
+await
+snapshot
+cmp stdout custom_typed
+
+feed <Enter>
+
+-- want --
+custom
+-- options --
+first
+second
+third
+-- prompt --
+Please answer:
+(▲▼ for other options)
+-- custom_typed --
+Please answer: custom
+(▲▼ for other options)

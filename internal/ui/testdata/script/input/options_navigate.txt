@@ -1,0 +1,48 @@
+init
+
+await Please answer
+snapshot
+cmp stdout initial
+
+feed <Down>
+await
+snapshot
+cmp stdout second
+
+feed <Down>
+await
+snapshot
+cmp stdout third
+
+feed <Up>
+await
+snapshot
+cmp stdout second
+
+feed <Down> <Down>
+await
+snapshot
+cmp stdout first
+
+feed <Enter>
+
+-- want --
+first
+-- give --
+first
+-- options --
+first
+second
+third
+-- initial --
+Please answer: first
+(▼ for other options)
+-- first --
+Please answer: first
+(▼ for other options)
+-- second --
+Please answer: second
+(▲▼ for other options)
+-- third --
+Please answer: third
+(▲ for other options)

@@ -57,7 +57,7 @@ feature 3
 -- robot.golden --
 ===
 > Title: Add feature 1 
-> Short summary of the change
+> Short summary of the change (▼ for other options)
 "Add multiple features"
 ===
 > Body: Press [e] to open mockedit or [enter/tab] to skip
