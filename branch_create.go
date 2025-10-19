@@ -30,6 +30,7 @@ type branchCreateCmd struct {
 	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
 
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 
 	Commit bool `negatable:"" default:"true" config:"branchCreate.commit" help:"Commit staged changes to the new branch, or create an empty commit"`
 }
@@ -349,6 +350,7 @@ func (cmd *branchCreateCmd) commit(
 		Message:    cmd.Message,
 		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
+		Signoff:    cmd.Signoff,
 	}); err != nil {
 		if err := wt.CheckoutBranch(ctx, baseName); err != nil {
 			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)

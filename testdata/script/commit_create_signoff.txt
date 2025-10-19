@@ -1,0 +1,34 @@
+# Test that gs commit create --signoff adds Signed-off-by trailer
+
+as 'Test User <test@example.com>'
+at '2025-10-19T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a file and commit with signoff
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs commit create --signoff -m 'Add feature'
+
+# Verify the commit has Signed-off-by trailer
+git log -n1 --pretty=%B
+cmp stdout $WORK/golden/commit-message.txt
+
+# Verify the signoff is in the body
+git log -n1 --pretty=%b
+cmp stdout $WORK/golden/commit-body.txt
+
+-- extra/feature.txt --
+feature content
+-- golden/commit-message.txt --
+Add feature
+
+Signed-off-by: Test User <test@example.com>
+
+-- golden/commit-body.txt --
+Signed-off-by: Test User <test@example.com>
+

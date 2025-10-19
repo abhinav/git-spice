@@ -17,6 +17,7 @@ type commitCreateCmd struct {
 	Fixup      string `help:"Create a fixup commit. See also 'gs commit fixup'." placeholder:"COMMIT"`
 	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff    bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -52,6 +53,7 @@ func (cmd *commitCreateCmd) Run(
 		AllowEmpty: cmd.AllowEmpty,
 		Fixup:      cmd.Fixup,
 		NoVerify:   cmd.NoVerify,
+		Signoff:    cmd.Signoff,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

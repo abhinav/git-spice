@@ -104,13 +104,25 @@ and use the `--commit` flag to commit changes when needed.
 
 <!-- gs:version v0.14.0 -->
 
-If set, the prefix will be prepended to the name of every branch created 
+If set, the prefix will be prepended to the name of every branch created
 with $$gs branch create$$.
 
 Commonly used values are:
 
 - `<name>/`: the committer's name
 - `<username>/`: the committer's username
+
+### spice.commit.signoff
+
+<!-- gs:version unreleased -->
+
+Whether commit commands should add a `Signed-off-by` trailer
+to commit messages by default.
+
+**Accepted values:**
+
+- `true`
+- `false` (default)
 
 ### spice.checkout.verbose
 

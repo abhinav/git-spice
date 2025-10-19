@@ -1,0 +1,28 @@
+# Test that gs commit amend --signoff adds Signed-off-by trailer
+
+as 'Test User <test@example.com>'
+at '2025-10-19T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create initial commit without signoff
+gs branch create feature -m 'Add feature'
+
+# Make a change and amend with signoff
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs commit amend --signoff --no-edit
+
+# Verify the commit has Signed-off-by trailer
+git log -n1 --pretty=%b
+cmp stdout $WORK/golden/commit-body.txt
+
+-- extra/feature.txt --
+feature content
+-- golden/commit-body.txt --
+Signed-off-by: Test User <test@example.com>
+

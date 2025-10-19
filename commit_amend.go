@@ -23,6 +23,7 @@ type commitAmendCmd struct {
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -118,6 +119,7 @@ func (cmd *commitAmendCmd) Run(
 					All:                cmd.All,
 					NoVerify:           cmd.NoVerify,
 					Message:            cmd.Message,
+					Signoff:            cmd.Signoff,
 					Commit:             true,
 				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
 			}
@@ -183,6 +185,7 @@ func (cmd *commitAmendCmd) Run(
 		NoEdit:     cmd.NoEdit,
 		NoVerify:   cmd.NoVerify,
 		All:        cmd.All,
+		Signoff:    cmd.Signoff,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
