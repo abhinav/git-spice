@@ -395,7 +395,7 @@ and all branches below it in the stack.
 
 ### spice.submit.navigationCommentStyle.marker
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.19.0 -->
 
 Specifies the marker to use for the current change in navigation comments.
 

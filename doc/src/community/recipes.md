@@ -102,7 +102,7 @@ you can import it into git-spice in one of two ways:
 
 === "With $$gs downstack track$$ (recommended)"
 
-    <!-- gs:version unreleased -->
+    <!-- gs:version v0.19.0 -->
 
     The fastest way to track an existing stack
     is to use $$gs downstack track$$ from the topmost branch.

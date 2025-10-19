@@ -77,7 +77,7 @@ Use the `--base` option to set it manually.
 
 #### Tracking multiple branches at once
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.19.0 -->
 
 If you manually created a stack of branches,
 you can track them all at once with $$gs downstack track$$.

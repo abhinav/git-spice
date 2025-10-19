@@ -47,7 +47,7 @@ or downstack from it -- except those that are already on main.
 
 ### commitPick
 
-**Added**: <!-- gs:version unreleased -->
+**Added**: <!-- gs:version v0.19.0 -->
 <!-- TODO: **Removed**: -->
 
 Enables the $$gs commit pick$$ command.
