@@ -88,6 +88,7 @@ func updateNavigationComments(
 	log *silog.Logger,
 	navComment NavCommentWhen,
 	navCommentSync NavCommentSync,
+	navCommentMarker string,
 	submittedBranches []string,
 	getRemoteRepo func(context.Context) (forge.Repository, error),
 ) error {
@@ -339,7 +340,7 @@ func updateNavigationComments(
 		}
 
 		info := infos[idx]
-		commentBody := generateStackNavigationComment(nodes, idx)
+		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker)
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: info.Branch,
@@ -404,12 +405,17 @@ var _navCommentRegexes = []*regexp.Regexp{
 func generateStackNavigationComment(
 	nodes []*stackedChange,
 	current int,
+	marker string,
 ) string {
 	var sb strings.Builder
 	sb.WriteString(_commentHeader)
 	sb.WriteString("\n\n")
 
-	stacknav.Print(&sb, nodes, current)
+	var opts *stacknav.PrintOptions
+	if marker != "" {
+		opts = &stacknav.PrintOptions{Marker: marker}
+	}
+	stacknav.Print(&sb, nodes, current, opts)
 
 	sb.WriteString("\n")
 	sb.WriteString(_commentFooter)

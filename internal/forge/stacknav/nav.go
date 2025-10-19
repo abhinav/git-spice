@@ -15,6 +15,13 @@ const (
 	_indent = "    "
 )
 
+// PrintOptions customizes the behavior of Print.
+type PrintOptions struct {
+	// Marker is the marker to use for the current change.
+	// If empty, defaults to "◀".
+	Marker string
+}
+
 // Node is a single item in the stack navigation list.
 // It usually represents a change in the Forge.
 type Node interface {
@@ -44,8 +51,15 @@ type Node interface {
 // currentIdx is the index of the current node in the nodes list.
 // It will be marked with [Printer.Marker].
 //
+// opts can be used to customize the behavior of Print.
+// If opts is nil, default options are used.
+//
 // All Write errors are ignored. Use a Writer that doesn't fail.
-func Print[N Node](w io.Writer, nodes []N, currentIdx int) {
+func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
+	marker := _marker
+	if opts != nil && opts.Marker != "" {
+		marker = opts.Marker
+	}
 	// aboves[i] holds indexes of nodes that are above nodes[i].
 	aboves := make([][]int, len(nodes))
 	for idx, node := range nodes {
@@ -63,7 +77,7 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int) {
 
 		_, _ = fmt.Fprintf(w, "- %v", node.Value())
 		if nodeIdx == currentIdx {
-			_, _ = fmt.Fprintf(w, " %v", _marker)
+			_, _ = fmt.Fprintf(w, " %v", marker)
 		}
 
 		_, _ = io.WriteString(w, "\n")
