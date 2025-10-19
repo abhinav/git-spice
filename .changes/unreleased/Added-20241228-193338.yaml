@@ -1,8 +1,0 @@
-kind: Added
-body: >-
-  Add experimental 'gs commit pick' to cherry-pick a commit
-  and update upstack branches in one go.
-  Opt into it with `git config --global spice.experiment.commitPick true`.
-  The command presents an interactive prompt when invoked without any arguments.
-  ![demo of gs commit pick](https://media.githubusercontent.com/media/abhinav/git-spice/refs/heads/main/doc/tapes/20251018-commit-pick.gif)
-time: 2024-12-28T19:33:38.719477-06:00

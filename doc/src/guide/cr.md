@@ -273,7 +273,7 @@ posted to the PR by git-spice, and update them if necessary.
 
 ### Importing stacks of CRs
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.19.0 -->
 
 If you have a stack of related CRs to import,
 check out all the branches locally

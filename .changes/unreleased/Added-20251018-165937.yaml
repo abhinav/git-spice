@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  submit: Add `spice.submit.navigationCommentStyle.marker` configuration option
-  to customize the marker in navigation comments
-time: 2025-10-18T16:59:37.900306-07:00

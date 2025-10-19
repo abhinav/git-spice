@@ -1,6 +1,0 @@
-kind: Added
-body: >-
-  {stack, upstack} restack: prompt for confirmation when invoked from trunk
-  to prevent accidental full-repository restacking.
-  To do this without a prompt, prefer using the `gs repo restack` command instead.
-time: 2025-10-18T11:56:34.32969-07:00

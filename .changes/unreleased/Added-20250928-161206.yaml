@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  Add 'gs downstack track' command to track a manually created stack of branches in one go.
-  ![demo of gs downstack track](https://media.githubusercontent.com/media/abhinav/git-spice/refs/heads/main/doc/tapes/20251005-downstack-track.gif)
-time: 2025-09-28T16:12:06.780663-07:00
