@@ -45,10 +45,15 @@ type Input struct {
 	title string
 	desc  string
 
-	model   textinput.Model
-	value   *string
+	model textinput.Model
+	value *string
+
+	// options is the list of options for cycling through.
 	options []string
-	current int // current index in options, or -1 if custom value
+
+	// If scrolling through, optionIdx is the current index in options,
+	// or -1 if the user has entered a custom value.
+	optionIdx int
 }
 
 var _ Field = (*Input)(nil)
@@ -59,11 +64,11 @@ func NewInput() *Input {
 	m.Prompt = "" // we have our own prompt
 	m.Cursor.SetMode(cursor.CursorStatic)
 	return &Input{
-		KeyMap:  DefaultInputKeyMap,
-		Style:   DefaultInputStyle,
-		model:   m,
-		value:   new(string),
-		current: -1,
+		KeyMap:    DefaultInputKeyMap,
+		Style:     DefaultInputStyle,
+		model:     m,
+		value:     new(string),
+		optionIdx: -1,
 	}
 }
 
@@ -74,8 +79,13 @@ func (i *Input) WithValue(value *string) *Input {
 	return i
 }
 
-// WithOptions sets the list of options that can be cycled through with arrow keys.
-// The options are ordered from oldest to newest (chronologically).
+// WithOptions sets the list of options
+// that can be cycled through with arrow keys.
+// The options are cycled-through in order with wrap-around.
+// If the initial value from WithValue matches one of the options,
+// that option will be selected initially.
+// Otherwise, the input is considered a custom value,
+// and the first option will be selected when the user first presses down.
 func (i *Input) WithOptions(options []string) *Input {
 	i.options = options
 	return i
@@ -138,7 +148,7 @@ func (i *Input) Init() tea.Cmd {
 	if len(i.options) > 0 {
 		for idx, opt := range i.options {
 			if opt == *i.value {
-				i.current = idx
+				i.optionIdx = idx
 				break
 			}
 		}
@@ -160,41 +170,27 @@ func (i *Input) Update(msg tea.Msg) tea.Cmd {
 			}
 			return nil
 
-		case key.Matches(keyMsg, i.KeyMap.Up):
-			// Cycle to previous option
-			if len(i.options) > 0 {
-				if i.current == -1 {
-					// Start from the newest (last) option
-					i.current = len(i.options) - 1
-				} else {
-					i.current--
-					if i.current < 0 {
-						i.current = len(i.options) - 1
-					}
-				}
-				i.model.SetValue(i.options[i.current])
-				i.model.CursorEnd()
-				*i.value = i.options[i.current]
-				return nil
+		case key.Matches(keyMsg, i.KeyMap.Up) && len(i.options) > 0:
+			i.optionIdx--
+			if i.optionIdx < 0 {
+				i.optionIdx = len(i.options) - 1
 			}
 
-		case key.Matches(keyMsg, i.KeyMap.Down):
-			// Cycle to next option
-			if len(i.options) > 0 {
-				if i.current == -1 {
-					// Start from the oldest (first) option
-					i.current = 0
-				} else {
-					i.current++
-					if i.current >= len(i.options) {
-						i.current = 0
-					}
-				}
-				i.model.SetValue(i.options[i.current])
-				i.model.CursorEnd()
-				*i.value = i.options[i.current]
-				return nil
+			i.model.SetValue(i.options[i.optionIdx])
+			i.model.CursorEnd()
+			*i.value = i.options[i.optionIdx]
+			return nil
+
+		case key.Matches(keyMsg, i.KeyMap.Down) && len(i.options) > 0:
+			i.optionIdx++
+			if i.optionIdx >= len(i.options) {
+				i.optionIdx = 0
 			}
+
+			i.model.SetValue(i.options[i.optionIdx])
+			i.model.CursorEnd()
+			*i.value = i.options[i.optionIdx]
+			return nil
 		}
 	}
 
@@ -203,8 +199,9 @@ func (i *Input) Update(msg tea.Msg) tea.Cmd {
 	newValue := i.model.Value()
 
 	// If the user manually edited the text, mark as custom value
-	if newValue != *i.value && (i.current == -1 || newValue != i.options[i.current]) {
-		i.current = -1
+	// so that next up/down starts from the first option.
+	if i.optionIdx != -1 && newValue != i.options[i.optionIdx] {
+		i.optionIdx = -1
 	}
 
 	*i.value = newValue
