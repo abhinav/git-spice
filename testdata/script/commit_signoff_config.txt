@@ -1,0 +1,47 @@
+# Test that commit.signoff config enables signoff by default
+
+as 'Test User <test@example.com>'
+at '2025-10-19T21:28:29Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Set the commit.signoff config option
+git config spice.commit.signoff true
+
+# Test with gs commit create
+cp $WORK/extra/file1.txt file1.txt
+git add file1.txt
+gs commit create -m 'Add file1'
+
+git log -n1 --pretty=%b
+cmp stdout $WORK/golden/signoff.txt
+
+# Test with gs branch create
+cp $WORK/extra/file2.txt file2.txt
+git add file2.txt
+gs branch create feature --commit -m 'Add file2'
+
+git log -n1 --pretty=%b
+cmp stdout $WORK/golden/signoff.txt
+
+# Test with gs commit amend
+cp $WORK/extra/file3.txt file3.txt
+git add file3.txt
+gs commit amend --no-edit
+
+git log -n1 --pretty=%b
+cmp stdout $WORK/golden/signoff.txt
+
+-- extra/file1.txt --
+file1 content
+-- extra/file2.txt --
+file2 content
+-- extra/file3.txt --
+file3 content
+-- golden/signoff.txt --
+Signed-off-by: Test User <test@example.com>
+

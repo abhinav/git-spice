@@ -46,6 +46,9 @@ type CommitRequest struct {
 
 	// NoVerify allows a commit with pre-commit and commit-msg hooks bypassed.
 	NoVerify bool
+
+	// Signoff adds a Signed-off-by trailer to the commit message.
+	Signoff bool
 }
 
 // Commit runs the 'git commit' command,
@@ -92,6 +95,9 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.Fixup != "" {
 		args = append(args, "--fixup", req.Fixup)
+	}
+	if req.Signoff {
+		args = append(args, "--signoff")
 	}
 
 	err := w.gitCmd(ctx, args...).
