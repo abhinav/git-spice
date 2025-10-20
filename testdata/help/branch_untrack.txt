@@ -1,0 +1,19 @@
+Usage: gs branch (b) untrack (untr) [<branch>]
+
+Forget a tracked branch
+
+The current branch is deleted from git-spice's data store but not deleted from
+the repository. Branches upstack from it are not affected, and will use the next
+branch downstack as their new base.
+
+Provide a branch name as an argument to target a different branch.
+
+Arguments:
+  [<branch>]    Name of the branch to untrack. Defaults to current.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

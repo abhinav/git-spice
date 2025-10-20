@@ -1,0 +1,22 @@
+Usage: gs upstack (us) delete (d) [flags]
+
+Delete all branches above the current branch
+
+Deletes all branches above the current branch in the stack, not including the
+current branch. The current branch remains unchanged.
+
+This is a convenient way to clean up abandoned or completed parts of a feature
+stack.
+
+As this is a destructive operation, you must use the --force flag to confirm
+deletion.
+
+Flags:
+  --force    Force deletion of the branches
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

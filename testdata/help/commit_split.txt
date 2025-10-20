@@ -1,0 +1,17 @@
+Usage: gs commit (c) split (sp) [flags]
+
+Split the current commit
+
+Interactively select hunks from the current commit to split into new commits
+below it. Branches upstack are restacked as needed.
+
+Flags:
+  -m, --message=MSG    Use the given message as the commit message.
+      --no-verify      Bypass pre-commit and commit-msg hooks.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

@@ -54,15 +54,22 @@ gs auth login [flags]
 
 Log in to a service
 
-For GitHub, a prompt will allow selecting between
-OAuth, GitHub App, and Personal Access Token-based authentication.
+A prompt will allow selecting between available authentication methods.
+Available methods include:
+
+- OAuth: Web-based authentication flow
+- GitHub App (GitHub only): Authenticate using a GitHub App installation
+- Personal Access Token: Directly provide a personal access token
+- CLI: Use the GitHub or GitLab CLI tool for authentication (if installed)
+
 The differences between them are explained in the prompt.
 
-The authentication token is stored in a system-provided secure storage.
+The authentication token is stored in a system-provided
+secure storage if available.
 Use 'gs auth logout' to log out and delete the token from storage.
 
 Fails if already logged in.
-Use --refresh to force a refresh of the authentication token,
+Use --refresh to force a refresh of the authentication token
 or change the authentication method.
 
 **Flags**
@@ -87,10 +94,10 @@ gs auth logout [flags]
 
 Log out of a service
 
-The stored authentication information is deleted from secure storage.
+The stored authentication information is deleted.
 Use 'gs auth login' to log in again.
 
-No-op if not logged in.
+Does not do anything if not logged in.
 
 ## Repository
 
@@ -223,18 +230,27 @@ Change Requests are created or updated
 for all branches in the current stack.
 
 Use --dry-run to print what would be submitted without submitting it.
+
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages,
-and --[no-]draft to set the draft status.
-Omitting the draft flag will leave the status unchanged of open CRs.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
 
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+
 Use --update-only to only update branches with existing CRs,
 and skip those that would create new CRs.
 
 Use --nav-comment=false to disable navigation comments in CRs,
-or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -334,18 +350,27 @@ it must have already been submitted by a prior command.
 Use --branch to start at a different branch.
 
 Use --dry-run to print what would be submitted without submitting it.
+
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages,
-and --[no-]draft to set the draft status.
-Omitting the draft flag will leave the status unchanged of open CRs.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
 
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+
 Use --update-only to only update branches with existing CRs,
 and skip those that would create new CRs.
 
 Use --nav-comment=false to disable navigation comments in CRs,
-or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -397,6 +422,10 @@ Move a branch onto another branch
 
 The current branch and its upstack will move onto the new base.
 
+A prompt will allow selecting the new base for the branch.
+Provide an argument to skip the prompt.
+Use the --branch flag to target a different branch for the move.
+
 For example, given the following stack with B checked out,
 'gs upstack onto main' will have the following effect:
 
@@ -408,15 +437,6 @@ For example, given the following stack with B checked out,
 	trunk                   trunk
 
 Use 'gs branch onto' to leave the branch's upstack alone.
-
-Use --branch to move a different branch than the current one.
-
-A prompt will allow selecting the new base.
-Use the spice.branchPrompt.sort configuration option
-to specify the sort order of branches in the prompt.
-Commonly used field names include "refname", "commiterdate", etc.
-By default, branches are sorted by name.
-Provide the new base name as an argument to skip the prompt.
 
 **Arguments**
 
@@ -483,18 +503,27 @@ for the current branch and all branches below it until trunk.
 Use --branch to start at a different branch.
 
 Use --dry-run to print what would be submitted without submitting it.
+
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages,
-and --[no-]draft to set the draft status.
-Omitting the draft flag will leave the status unchanged of open CRs.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
 
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+
 Use --update-only to only update branches with existing CRs,
 and skip those that would create new CRs.
 
 Use --nav-comment=false to disable navigation comments in CRs,
-or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
 
 
 **Flags**
@@ -554,6 +583,9 @@ Use 'gs branch create' to automatically track new branches.
 The base is guessed by comparing against other tracked branches.
 Use --base to specify a base explicitly.
 
+Use 'gs downstack track' from the topmost branch
+to track a manully created stack of branches at once.
+
 **Arguments**
 
 * `branch`: Name of the branch to track
@@ -594,11 +626,9 @@ A prompt will allow selecting between tracked branches.
 Provide a branch name as an argument to skip the prompt.
 
 Use -u/--untracked to show untracked branches in the prompt.
-
-Use the spice.branchPrompt.sort configuration option
-to specify the sort order of branches in the prompt.
-Commonly used field names include "refname", "commiterdate", etc.
-By default, branches are sorted by name.
+Use --detach to detach HEAD to the commit of the selected branch.
+Use -n to print the selected branch name to stdout
+without checking it out.
 
 **Arguments**
 
@@ -700,14 +730,16 @@ gs branch (b) delete (d,rm) [<branches> ...] [flags]
 Delete branches
 
 The deleted branches and their commits are removed from the stack.
-Branches above the deleted branches are rebased onto
-the next branches available downstack.
+Branches above the deleted branches are first rebased onto
+the next branches available downstack,
+or onto trunk if there are no branches available below.
 
-A prompt will allow selecting the target branch if none are provided.
-Use the spice.branchPrompt.sort configuration option
-to specify the sort order of branches in the prompt.
-Commonly used field names include "refname", "commiterdate", etc.
-By default, branches are sorted by name.
+Without any arguments,
+a prompt will allow selecting the branch to delete.
+
+By default, if the branch to be deleted has unmerged changes,
+the deletion will be aborted.
+Use --force to delete the branch regardless of unmerged changes.
 
 **Arguments**
 
@@ -731,6 +763,7 @@ Commits from the current branch will be merged into its base
 and the current branch will be deleted.
 Branches above the folded branch will point
 to the next branch downstack.
+
 Use the --branch flag to target a different branch.
 
 **Flags**
@@ -745,13 +778,13 @@ gs branch (b) split (sp) [flags]
 
 Split a branch on commits
 
-Splits the current branch into two or more branches at specific
-commits, inserting the new branches into the stack
+Splits the current branch into two or more branches
+at specific commits,
+inserting the new branches into the stack
 at the positions of the commits.
 Use the --branch flag to specify a different branch to split.
 
-By default, the command will prompt for commits to introduce
-splits at.
+The command will prompt for commits to introduce splits at.
 Supply the --at flag one or more times to split a branch
 without a prompt.
 
@@ -767,10 +800,18 @@ For example:
 	# split at the previous commit
 	gs branch split --at HEAD^:newbranch
 
-When prompted for branch names, you can reuse the original branch
-name for one of the intermediate commits. When you do this, the
-original branch will be reassigned to that commit, and you'll be
-prompted to provide a name for the remaining HEAD commits.
+If the original branch is assigned to one of the splits,
+it is required to provide a new name for the commit at HEAD.
+Fo example, if we have branch A with three commits:
+
+	┌─ A
+	│  abcdef1 Commit 3 (HEAD)
+	│  bcdef12 Commit 2
+	│  cdef123 Commit 1
+	trunk
+
+A split at commit 2 using the branch name "A"
+would require a new name to be provided for commit 3.
 
 **Flags**
 
@@ -808,10 +849,12 @@ gs branch (b) edit (e)
 
 Edit the commits in a branch
 
-Starts an interactive rebase with only the commits
-in this branch.
-Following the rebase, branches upstack from this branch
-will be restacked.
+Starts an interactive rebase
+with only the commits
+from this branch.
+
+After the rebase,
+branches upstack from this branch will be restacked.
 
 ### gs branch rename
 
@@ -821,7 +864,7 @@ gs branch (b) rename (rn,mv) [<old-name> [<new-name>]]
 
 Rename a branch
 
-The following modes are supported:
+The following usage modes are supported:
 
 	# Rename <old> to <new>
 	gs branch rename <old> <new>
@@ -832,9 +875,12 @@ The following modes are supported:
 	# Rename current branch interactively
 	gs branch rename
 
-For branches renamed with 'git branch -m',
-use 'gs branch track' and 'gs branch untrack'
-to update the branch tracking.
+If a branch was renamed outside of 'gs',
+for example with 'git branch -m',
+the branch tracking information will be out of date.
+To fix this,
+untrack the old branch name with 'gs branch untrack <old>',
+and track the new branch name with 'gs branch track <new>'.
 
 **Arguments**
 
@@ -865,9 +911,16 @@ gs branch (b) onto (on) [<onto>] [flags]
 
 Move a branch onto another branch
 
-The commits of the current branch are transplanted onto another
-branch.
-Branches upstack are moved to point to its original base.
+Commits of the current branch
+are transplanted onto another branch
+while leaving the rest of the stack intact.
+That is, branches above the current branch
+are first rebased onto its original base,
+and then the current branch is moved onto the new base.
+
+A prompt will allow selecting the new base for the branch.
+Provide an argument to skip the prompt.
+Use the --branch flag to target a different branch for the move.
 
 For example, given the following stack with B checked out,
 running 'gs branch onto main' will move B onto main
@@ -880,14 +933,7 @@ and leave C on top of A.
 	┌─┴ A                   ├─┴ A
 	trunk                   trunk
 
-Use --branch to move a different branch than the current one.
-
-A prompt will allow selecting the new base.
-Use the spice.branchPrompt.sort configuration option
-to specify the sort order of branches in the prompt.
-Commonly used field names include "refname", "commiterdate", etc.
-By default, branches are sorted by name.
-Provide the new base name as an argument to skip the prompt.
+Use 'gs upstack onto' to also move the upstack branches.
 
 **Arguments**
 
@@ -914,18 +960,24 @@ Use the --branch flag to target a different branch.
 For new Change Requests, a prompt will allow filling metadata.
 Use the --title and --body flags to skip the prompt,
 or the --fill flag to use the commit message to fill them in.
-The --draft flag marks the change request as a draft.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
 For updating Change Requests,
-use --draft/--no-draft to change its draft status.
+use --[no-]draft to change its draft status.
 Without the flag, the draft status is not changed.
 
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+
 Use --update-only to only update branches with existing CRs,
 and skip those that would create new CRs.
 
 Use --nav-comment=false to disable navigation comments in CRs,
-or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
 
 **Flags**
 
@@ -994,10 +1046,13 @@ Amend the current commit
 
 Staged changes are amended into the topmost commit.
 Branches upstack are restacked if necessary.
-Use this as a shortcut for 'git commit --amend'
+This is a shortcut for 'git commit --amend'
 followed by 'gs upstack restack'.
 
-An editor is opened to edit the commit message,
+Use 'gs commit fixup' to amend commits
+that are further downstack.
+
+An editor is opened to edit the commit message
 unless the --no-edit flag is given.
 Use the -m/--message option to specify the message
 on the command line.
@@ -1224,7 +1279,11 @@ gs bottom (D) [flags]
 Move to the bottom of the stack
 
 Checks out the bottom-most branch in the current branch's stack.
-Use the -n flag to print the branch without checking it out.
+Does nothing if already on the bottom-most branch,
+and returns an error if on trunk.
+
+Use -n to print the branch name to stdout
+without checking it out.
 
 **Flags**
 

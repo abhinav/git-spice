@@ -1,0 +1,30 @@
+Usage: gs branch (b) rename (rn,mv) [<old-name> [<new-name>]]
+
+Rename a branch
+
+The following usage modes are supported:
+
+    # Rename <old> to <new>
+    gs branch rename <old> <new>
+
+    # Rename current branch to <new>
+    gs branch rename <new>
+
+    # Rename current branch interactively
+    gs branch rename
+
+If a branch was renamed outside of 'gs', for example with 'git branch -m',
+the branch tracking information will be out of date. To fix this, untrack the
+old branch name with 'gs branch untrack <old>', and track the new branch name
+with 'gs branch track <new>'.
+
+Arguments:
+  [<old-name>]    Old name of the branch
+  [<new-name>]    New name of the branch
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

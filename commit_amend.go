@@ -30,10 +30,13 @@ func (*commitAmendCmd) Help() string {
 	return text.Dedent(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
-		Use this as a shortcut for 'git commit --amend'
+		This is a shortcut for 'git commit --amend'
 		followed by 'gs upstack restack'.
 
-		An editor is opened to edit the commit message,
+		Use 'gs commit fixup' to amend commits
+		that are further downstack.
+
+		An editor is opened to edit the commit message
 		unless the --no-edit flag is given.
 		Use the -m/--message option to specify the message
 		on the command line.

@@ -1,0 +1,39 @@
+Usage: gs upstack (us) onto (o) [<onto>] [flags]
+
+Move a branch onto another branch
+
+The current branch and its upstack will move onto the new base.
+
+A prompt will allow selecting the new base for the branch. Provide an argument
+to skip the prompt. Use the --branch flag to target a different branch for the
+move.
+
+For example, given the following stack with B checked out, 'gs upstack onto
+main' will have the following effect:
+
+           gs upstack onto main
+
+        ┌── C                 ┌── C
+      ┌─┴ B ◀               ┌─┴ B ◀
+    ┌─┴ A                   ├── A
+    trunk                   trunk
+
+Use 'gs branch onto' to leave the branch's upstack alone.
+
+Arguments:
+  [<onto>]    Destination branch
+
+Flags:
+  --branch=NAME    Branch to start at
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.branchPrompt.sort    Sort branches by the given field. Common values
+                             include 'refname', 'commiterdate', etc. Defaults to
+                             branch name.

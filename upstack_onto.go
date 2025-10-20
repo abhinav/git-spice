@@ -25,6 +25,10 @@ func (*upstackOntoCmd) Help() string {
 	return text.Dedent(`
 		The current branch and its upstack will move onto the new base.
 
+		A prompt will allow selecting the new base for the branch.
+		Provide an argument to skip the prompt.
+		Use the --branch flag to target a different branch for the move.
+
 		For example, given the following stack with B checked out,
 		'gs upstack onto main' will have the following effect:
 
@@ -36,15 +40,6 @@ func (*upstackOntoCmd) Help() string {
 			trunk                   trunk
 
 		Use 'gs branch onto' to leave the branch's upstack alone.
-
-		Use --branch to move a different branch than the current one.
-
-		A prompt will allow selecting the new base.
-		Use the spice.branchPrompt.sort configuration option
-		to specify the sort order of branches in the prompt.
-		Commonly used field names include "refname", "commiterdate", etc.
-		By default, branches are sorted by name.
-		Provide the new base name as an argument to skip the prompt.
 	`)
 }
 

@@ -22,9 +22,16 @@ type branchOntoCmd struct {
 
 func (*branchOntoCmd) Help() string {
 	return text.Dedent(`
-		The commits of the current branch are transplanted onto another
-		branch.
-		Branches upstack are moved to point to its original base.
+		Commits of the current branch
+		are transplanted onto another branch
+		while leaving the rest of the stack intact.
+		That is, branches above the current branch
+		are first rebased onto its original base,
+		and then the current branch is moved onto the new base.
+
+		A prompt will allow selecting the new base for the branch.
+		Provide an argument to skip the prompt.
+		Use the --branch flag to target a different branch for the move.
 
 		For example, given the following stack with B checked out,
 		running 'gs branch onto main' will move B onto main
@@ -37,14 +44,7 @@ func (*branchOntoCmd) Help() string {
 			┌─┴ A                   ├─┴ A
 			trunk                   trunk
 
-		Use --branch to move a different branch than the current one.
-
-		A prompt will allow selecting the new base.
-		Use the spice.branchPrompt.sort configuration option
-		to specify the sort order of branches in the prompt.
-		Commonly used field names include "refname", "commiterdate", etc.
-		By default, branches are sorted by name.
-		Provide the new base name as an argument to skip the prompt.
+		Use 'gs upstack onto' to also move the upstack branches.
 	`)
 }
 

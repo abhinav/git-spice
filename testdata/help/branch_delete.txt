@@ -1,0 +1,30 @@
+Usage: gs branch (b) delete (d,rm) [<branches> ...] [flags]
+
+Delete branches
+
+The deleted branches and their commits are removed from the stack. Branches
+above the deleted branches are first rebased onto the next branches available
+downstack, or onto trunk if there are no branches available below.
+
+Without any arguments, a prompt will allow selecting the branch to delete.
+
+By default, if the branch to be deleted has unmerged changes, the deletion will
+be aborted. Use --force to delete the branch regardless of unmerged changes.
+
+Arguments:
+  [<branches> ...]    Names of the branches to delete
+
+Flags:
+  --force    Force deletion of the branch
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.branchPrompt.sort    Sort branches by the given field. Common values
+                             include 'refname', 'commiterdate', etc. Defaults to
+                             branch name.

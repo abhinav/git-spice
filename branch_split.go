@@ -22,13 +22,13 @@ type branchSplitCmd struct {
 
 func (*branchSplitCmd) Help() string {
 	return text.Dedent(`
-		Splits the current branch into two or more branches at specific
-		commits, inserting the new branches into the stack
+		Splits the current branch into two or more branches
+		at specific commits,
+		inserting the new branches into the stack
 		at the positions of the commits.
 		Use the --branch flag to specify a different branch to split.
 
-		By default, the command will prompt for commits to introduce
-		splits at.
+		The command will prompt for commits to introduce splits at.
 		Supply the --at flag one or more times to split a branch
 		without a prompt.
 
@@ -44,10 +44,18 @@ func (*branchSplitCmd) Help() string {
 			# split at the previous commit
 			gs branch split --at HEAD^:newbranch
 
-		When prompted for branch names, you can reuse the original branch
-		name for one of the intermediate commits. When you do this, the
-		original branch will be reassigned to that commit, and you'll be
-		prompted to provide a name for the remaining HEAD commits.
+		If the original branch is assigned to one of the splits,
+		it is required to provide a new name for the commit at HEAD.
+		Fo example, if we have branch A with three commits:
+
+			┌─ A
+			│  abcdef1 Commit 3 (HEAD)
+			│  bcdef12 Commit 2
+			│  cdef123 Commit 1
+			trunk
+
+		A split at commit 2 using the branch name "A"
+		would require a new name to be provided for commit 3.
 	`)
 }
 

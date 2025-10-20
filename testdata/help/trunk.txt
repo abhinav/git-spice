@@ -1,0 +1,17 @@
+Usage: gs trunk [flags]
+
+Move to the trunk branch
+
+Flags:
+  -n, --dry-run    Print the target branch without checking it out
+      --detach     Detach HEAD after checking out
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.checkout.verbose    Print information about the checked out branch.

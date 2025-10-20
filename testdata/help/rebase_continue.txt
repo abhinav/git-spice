@@ -1,0 +1,27 @@
+Usage: gs rebase (rb) continue (c) [flags]
+
+Continue an interrupted operation
+
+Continues an ongoing git-spice operation interrupted by a git rebase after
+all conflicts have been resolved. For example, if 'gs upstack restack' gets
+interrupted because a conflict arises during the rebase, you can resolve the
+conflict and run 'gs rebase continue' (or its shorthand 'gs rbc') to continue
+the operation.
+
+The command can be used in place of 'git rebase --continue' even if a git-spice
+operation is not currently in progress.
+
+Use the --no-edit flag to continue without opening an editor. Make --no-edit
+the default by setting 'spice.rebaseContinue.edit' to false and use --edit to
+override it.
+
+Flags:
+  --[no-]edit    Whether to open an editor to edit the commit message.
+                 (🔧 spice.rebaseContinue.edit)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

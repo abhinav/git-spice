@@ -141,40 +141,10 @@ func main() {
 			"defaultPrompt": strconv.FormatBool(isatty.IsTerminal(os.Stdin.Fd())),
 		},
 		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
-		kong.Help(func(options kong.HelpOptions, ctx *kong.Context) error {
-			if err := kong.DefaultHelpPrinter(options, ctx); err != nil {
-				return err
-			}
-
-			// For the help of the top-level command,
-			// print a note about shorthand aliases.
-			if len(ctx.Command()) == 0 {
-				_, _ = fmt.Fprintf(ctx.Stdout,
-					"\nAliases can be combined to form shorthands for commands. For example:\n"+
-						"  %[1]v bc => %[1]v branch create\n"+
-						"  %[1]v cc => %[1]v commit create\n",
-					cmdName,
-				)
-			}
-
-			return nil
-		}),
+		kong.Help(helpPrinter),
 	)
 	if err != nil {
 		panic(err)
-	}
-
-	// The default help flag text has a period at the end,
-	// which doesn't match the rest of our help text.
-	// Remove the period and place it in the same group
-	// as the other global flags.
-	if help := parser.Model.HelpFlag; help != nil {
-		help.Help = "Show help for the command"
-		help.Group = &kong.Group{
-			Key:   "globals",
-			Title: "Global Flags:",
-		}
 	}
 
 	builtinShorthands, err := shorthand.NewBuiltin(parser.Model)

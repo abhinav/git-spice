@@ -20,7 +20,7 @@ type branchRenameCmd struct {
 
 func (*branchRenameCmd) Help() string {
 	return text.Dedent(`
-		The following modes are supported:
+		The following usage modes are supported:
 
 			# Rename <old> to <new>
 			gs branch rename <old> <new>
@@ -31,9 +31,12 @@ func (*branchRenameCmd) Help() string {
 			# Rename current branch interactively
 			gs branch rename
 
-		For branches renamed with 'git branch -m',
-		use 'gs branch track' and 'gs branch untrack'
-		to update the branch tracking.
+		If a branch was renamed outside of 'gs',
+		for example with 'git branch -m',
+		the branch tracking information will be out of date.
+		To fix this,
+		untrack the old branch name with 'gs branch untrack <old>',
+		and track the new branch name with 'gs branch track <new>'.
 	`)
 }
 

@@ -1,0 +1,19 @@
+Usage: gs branch (b) fold (fo) [flags]
+
+Merge a branch into its base
+
+Commits from the current branch will be merged into its base and the current
+branch will be deleted. Branches above the folded branch will point to the next
+branch downstack.
+
+Use the --branch flag to target a different branch.
+
+Flags:
+  --branch=NAME    Name of the branch
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

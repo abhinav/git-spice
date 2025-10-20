@@ -19,7 +19,11 @@ type bottomCmd struct {
 func (*bottomCmd) Help() string {
 	return text.Dedent(`
 		Checks out the bottom-most branch in the current branch's stack.
-		Use the -n flag to print the branch without checking it out.
+		Does nothing if already on the bottom-most branch,
+		and returns an error if on trunk.
+
+		Use -n to print the branch name to stdout
+		without checking it out.
 	`)
 }
 

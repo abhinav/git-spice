@@ -146,7 +146,7 @@ type Options struct {
 	// when creating new Change Requests.
 	//
 	// --draft/--no-draft will override this value.
-	DraftDefault bool `config:"submit.draft" hidden:"" default:"false"`
+	DraftDefault bool `config:"submit.draft" help:"Default value for --draft when creating change requests." hidden:"" default:"false"`
 
 	// TODO: Other creation options e.g.:
 	// - assignees
@@ -154,7 +154,7 @@ type Options struct {
 	// - reviewers
 
 	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
-	ConfiguredLabels []string `name:"configured-labels" hidden:"" config:"submit.label"` // merged with Labels
+	ConfiguredLabels []string `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"` // merged with Labels
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
@@ -211,7 +211,7 @@ func (s *NavCommentSync) UnmarshalText(bs []byte) error {
 // BatchOptions defines options
 // that are only available to batch submit operations.
 type BatchOptions struct {
-	UpdateOnlyDefault bool `config:"submit.updateOnly" hidden:"" default:"false"`
+	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
 }
 
 // BatchRequest is a request to submit one or more change requests.

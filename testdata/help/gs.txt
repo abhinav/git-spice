@@ -1,0 +1,82 @@
+Usage: gs <command> [flags]
+
+gs (git-spice) is a command line tool for stacking Git branches.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Commands:
+  version    Print version information and quit
+
+Shell
+  shell completion    Generate shell completion script
+
+Authentication
+  auth login     Log in to a service
+  auth status    Show current login status
+  auth logout    Log out of a service
+
+Repository
+  repo (r) init (i)       Initialize a repository
+  repo (r) sync (s)       Pull latest changes from the remote
+  repo (r) restack (r)    Restack all tracked branches
+
+Log
+  log (l) short (s)    List branches
+  log (l) long (l)     List branches and commits
+
+Stack
+  stack (s) submit (s)         Submit a stack
+  stack (s) restack (r)        Restack a stack
+  stack (s) edit (e)           Edit the order of branches in a stack
+  stack (s) delete (d)         Delete all branches in a stack
+  upstack (us) submit (s)      Submit a branch and those above it
+  upstack (us) restack (r)     Restack a branch and its upstack
+  upstack (us) onto (o)        Move a branch onto another branch
+  upstack (us) delete (d)      Delete all branches above the current branch
+  downstack (ds) track (tr)    Track all untracked branches below a branch
+  downstack (ds) submit (s)    Submit a branch and those below it
+  downstack (ds) edit (e)      Edit the order of branches below a branch
+
+Branch
+  branch (b) track (tr)        Track a branch
+  branch (b) untrack (untr)    Forget a tracked branch
+  branch (b) checkout (co)     Switch to a branch
+  branch (b) create (c)        Create a new branch
+  branch (b) delete (d,rm)     Delete branches
+  branch (b) fold (fo)         Merge a branch into its base
+  branch (b) split (sp)        Split a branch on commits
+  branch (b) squash (sq)       Squash a branch into one commit
+  branch (b) edit (e)          Edit the commits in a branch
+  branch (b) rename (rn,mv)    Rename a branch
+  branch (b) restack (r)       Restack a branch
+  branch (b) onto (on)         Move a branch onto another branch
+  branch (b) submit (s)        Submit a branch
+
+Commit
+  commit (c) create (c)    Create a new commit
+  commit (c) amend (a)     Amend the current commit
+  commit (c) split (sp)    Split the current commit
+  commit (c) fixup (f)     Fixup a commit below the current commit
+  commit (c) pick (p)      Cherry-pick a commit
+
+Rebase
+  rebase (rb) continue (c)    Continue an interrupted operation
+  rebase (rb) abort (a)       Abort an operation
+
+Navigation
+  up (u)        Move up one branch
+  down (d)      Move down one branch
+  top (U)       Move to the top of the stack
+  bottom (D)    Move to the bottom of the stack
+  trunk         Move to the trunk branch
+
+Run "gs <command> --help" for more information on a command.
+
+Aliases can be combined to form shorthands for commands. For example:
+  gs bc => gs branch create
+  gs cc => gs commit create

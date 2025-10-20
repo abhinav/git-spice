@@ -47,7 +47,7 @@ type BranchPromptConfig struct {
 	// hidden:"" means that the CLI flag isn't intended to be used.
 	// Only the configuration.
 
-	BranchPromptSort string `hidden:"" config:"branchPrompt.sort" help:"Sort branches by the given field"`
+	BranchPromptSort string `hidden:"" config:"branchPrompt.sort" help:"Sort branches by the given field. Common values include 'refname', 'commiterdate', etc. Defaults to branch name."`
 }
 
 // BeforeApply is called by Kong as part of parsing.

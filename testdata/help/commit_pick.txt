@@ -1,0 +1,29 @@
+Usage: gs commit (c) pick (p) [<commit>] [flags]
+
+Cherry-pick a commit
+
+Apply the changes introduced by a commit to the current branch and restack the
+upstack branches.
+
+If a commit is not specified, a prompt will allow picking from commits of
+upstack branches of the current branch. Use the --from option to pick a commit
+from a different branch or its upstack.
+
+If it's not possible to cherry-pick the requested commit without causing a
+conflict, the command will fail. If the requested commit is a merge commit,
+the command will fail.
+
+This command requires at least Git 2.45.
+
+Arguments:
+  [<commit>]    Commit to cherry-pick
+
+Flags:
+  --from=NAME    Branch whose upstack commits will be considered.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

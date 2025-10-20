@@ -1,0 +1,18 @@
+Usage: gs stack (s) restack (r) [flags]
+
+Restack a stack
+
+All branches in the current stack are rebased on top of their respective bases,
+ensuring a linear history.
+
+Use --branch to rebase the stack of a different branch.
+
+Flags:
+  --branch=NAME    Branch to restack the stack of
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

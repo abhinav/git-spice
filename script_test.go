@@ -30,8 +30,7 @@ import (
 )
 
 var (
-	_update = flag.Bool("update", false, "update golden files")
-	_debug  = flag.Bool("debug", false, "enable debug logging")
+	_debug = flag.Bool("debug", false, "enable debug logging")
 
 	_shardIndex = flag.Int("shard-index", 0, "index of the test shard to run")
 	_shardCount = flag.Int("shard-count", 1, "total number of test shards")

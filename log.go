@@ -92,14 +92,14 @@ type ListHandler interface {
 type branchLogCmd struct {
 	list.Options
 
-	ChangeFormat      changeFormat  `config:"log.crFormat" hidden:"" default:"id"`
-	ChangeFormatShort *changeFormat `config:"logShort.crFormat" hidden:""`
-	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" hidden:""`
+	ChangeFormat      changeFormat  `config:"log.crFormat" help:"Format for displaying change request information. One of 'id' or 'url'." hidden:"" default:"id"`
+	ChangeFormatShort *changeFormat `config:"logShort.crFormat" help:"Format for displaying change request information in short log. One of 'id' or 'url', defaults to crFormat." hidden:""`
+	ChangeFormatLong  *changeFormat `config:"logLong.crFormat" help:"Format for displaying change request information in long log. One of 'id' or 'url', defaults to crFormat." hidden:""`
 
 	CRStatus bool `name:"cr-status" short:"S" config:"log.crStatus" help:"Request and include information about the Change Request" default:"false" negatable:""`
 	// TODO: When needed, add a crStatusFormat config to control presentation.
 
-	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes." hidden:"" default:"true"`
+	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes. One of 'true', 'false' and 'aheadbehind'." hidden:"" default:"true"`
 
 	JSON bool `name:"json" released:"v0.18.0" help:"Write to stdout as a stream of JSON objects in an unspecified order"`
 }

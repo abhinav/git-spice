@@ -1,0 +1,33 @@
+Usage: gs commit (c) create (c) [flags]
+
+Create a new commit
+
+Staged changes are committed to the current branch. Branches upstack are
+restacked if necessary. Use this as a shortcut for 'git commit' followed by 'gs
+upstack restack'.
+
+An editor is opened to edit the commit message. Use the -m/--message option
+to specify the message without opening an editor. Git hooks are run unless the
+--no-verify flag is given.
+
+Use the -a/--all flag to stage all changes before committing.
+
+Use the --fixup flag to create a new commit that will be merged into another
+commit when run with 'git rebase --autosquash'. See also, the 'gs commit fixup'
+command, which is preferable when you want to apply changes to an older commit.
+
+Flags:
+  -a, --all             Stage all changes before committing.
+      --allow-empty     Create a new commit even if it contains no changes.
+      --fixup=COMMIT    Create a fixup commit. See also 'gs commit fixup'.
+  -m, --message=MSG     Use the given message as the commit message.
+      --no-verify       Bypass pre-commit and commit-msg hooks.
+      --signoff         Add Signed-off-by trailer to the commit message (🔧
+                        spice.commit.signoff)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

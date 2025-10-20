@@ -1,0 +1,27 @@
+Usage: gs stack (s) edit (e) [flags]
+
+Edit the order of branches in a stack
+
+This operation requires a linear stack: no branch can have multiple branches
+above it.
+
+An editor opens with a list of branches in the current stack in-order, with the
+topmost branch at the top of the file, and the branch closest to the trunk at
+the bottom.
+
+Modifications to the list will be reflected in the stack when the editor is
+closed. If the file is cleared, no changes will be made. Branches that are
+deleted from the list will be ignored.
+
+Flags:
+  --editor=STRING    Editor to use for editing the downstack. Defaults to Git's
+                     default editor.
+  --branch=NAME      Branch whose stack we're editing. Defaults to current
+                     branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

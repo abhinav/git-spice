@@ -1,0 +1,24 @@
+Usage: gs downstack (ds) edit (e) [flags]
+
+Edit the order of branches below a branch
+
+An editor opens with a list of branches in-order, starting from the current
+branch until trunk. The current branch is at the top of the list. Use --branch
+to start at a different branch.
+
+Modifications to the list will be reflected in the stack when the editor is
+closed, and the topmost branch will be checked out. If the file is cleared, no
+changes will be made. Branches that are deleted from the list will be ignored.
+Branches that are upstack of the current branch will not be modified.
+
+Flags:
+  --editor=STRING    Editor to use for editing the downstack. Defaults to Git's
+                     default editor.
+  --branch=NAME      Branch to edit from. Defaults to current branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

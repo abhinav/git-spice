@@ -15,10 +15,12 @@ type branchEditCmd struct{}
 
 func (*branchEditCmd) Help() string {
 	return text.Dedent(`
-		Starts an interactive rebase with only the commits
-		in this branch.
-		Following the rebase, branches upstack from this branch
-		will be restacked.
+		Starts an interactive rebase
+		with only the commits
+		from this branch.
+
+		After the rebase,
+		branches upstack from this branch will be restacked.
 	`)
 }
 
