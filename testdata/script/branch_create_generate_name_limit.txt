@@ -1,0 +1,26 @@
+# branch create generates a branch name
+# that respects the configured length limit
+
+as 'Test <test@example.com>'
+at '2025-10-21T02:04:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git config spice.branchCreate.generatedBranchNameLimit 128
+
+git add feature.txt
+gs bc -m 'Add a very long and descriptive feature name'
+
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/feature.txt --
+This is a feature file.
+-- golden/ll.txt --
+┏━■ add-a-very-long-and-descriptive-feature-name ◀
+┃   72d6161 Add a very long and descriptive feature name (now)
+main
