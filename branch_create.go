@@ -15,7 +15,7 @@ import (
 
 type branchCreateConfig struct {
 	Prefix                   string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created" hidden:""`
-	GeneratedBranchNameLimit int    `default:32 config:"branchCreate.generatedBranchNameLimit" help:"Maximum length of auto-generated branch names (truncated at word boundaries)" hidden:""`
+	GeneratedBranchNameLimit int    `default:"32" config:"branchCreate.generatedBranchNameLimit" help:"Maximum length of auto-generated branch names (truncated at word boundaries)" hidden:""`
 }
 
 type branchCreateCmd struct {
