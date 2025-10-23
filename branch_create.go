@@ -14,7 +14,8 @@ import (
 )
 
 type branchCreateConfig struct {
-	Prefix string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created" hidden:""`
+	Prefix                   string `default:"" config:"branchCreate.prefix" help:"Prepend a prefix to the name of the branch being created" hidden:""`
+	GeneratedBranchNameLimit int    `default:"32" config:"branchCreate.generatedBranchNameLimit" help:"Maximum length of auto-generated branch names (truncated at word boundaries)" hidden:""`
 }
 
 type branchCreateCmd struct {
@@ -48,6 +49,8 @@ func (*branchCreateCmd) Help() string {
 		it will be generated from the commit message.
 		If the 'spice.branchCreate.prefix' configuration option is set,
 		branch names will be prefixed with its value.
+		If the 'spice.branchCreate.generatedBranchNameLimit' configuration option is set,
+		auto-generated branch names will be truncated to that length at word boundaries (defaults to 32).
 
 		The new branch will use the current branch as its base.
 		Use --target to specify a different base branch.
@@ -238,7 +241,7 @@ func (cmd *branchCreateCmd) Run(
 				return fmt.Errorf("get commit subject: %w", err)
 			}
 
-			msgName := spice.GenerateBranchName(subject)
+			msgName := spice.GenerateBranchName(subject, cmd.GeneratedBranchNameLimit)
 			current := cmd.Prefix + msgName
 
 			// If the auto-generated branch name already exists,

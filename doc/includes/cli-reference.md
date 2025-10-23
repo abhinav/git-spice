@@ -631,6 +631,8 @@ If a branch name is not provided,
 it will be generated from the commit message.
 If the 'spice.branchCreate.prefix' configuration option is set,
 branch names will be prefixed with its value.
+If the 'spice.branchCreate.generatedBranchNameLimit' configuration option is set,
+auto-generated branch names will be truncated to that length at word boundaries (defaults to 32).
 
 The new branch will use the current branch as its base.
 Use --target to specify a different base branch.
@@ -687,7 +689,7 @@ target (A) to the specified branch:
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
-**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
 ### gs branch delete
 
@@ -1016,7 +1018,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 
-**Configuration**: [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
 ### gs commit split
 

@@ -20,17 +20,19 @@ import (
 
 func TestGenerateBranchName(t *testing.T) {
 	tests := []struct {
-		give string
-		want string
+		give        string
+		lengthLimit int
+		want        string
 	}{
-		{"Hello, World!", "hello-world"},
-		{"Long message that should be truncated", "long-message-that-should-be"},
-		{"1234 5678", "1234-5678"},
+		{"Hello, World!", 32, "hello-world"},
+		{"Long message that should be truncated", 32, "long-message-that-should-be"},
+		{"Long message that should not be truncated", 64, "long-message-that-should-not-be-truncated"},
+		{"1234 5678", 32, "1234-5678"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
-			got := GenerateBranchName(tt.give)
+			got := GenerateBranchName(tt.give, tt.lengthLimit)
 			assert.Equal(t, tt.want, got)
 		})
 	}
