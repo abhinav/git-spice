@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  branch delete:
+  Fix prompt for unmerged branch deletion not respecting the "no" answer.
+time: 2025-10-25T14:29:41.038227-07:00

@@ -1,0 +1,36 @@
+# When declining the prompt to delete an unmerged branch,
+# the branch should not be deleted.
+#
+# https://github.com/abhinav/git-spice/issues/912
+
+as 'Test <test@example.com>'
+at '2025-10-25T10:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add foo.txt
+gs bc foo -m 'add foo.txt'
+
+git checkout main
+
+# Decline the prompt to delete the unmerged branch
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch delete foo
+cmp $WORK/robot.actual $WORK/robot.golden
+stderr 'foo: skipped deletion'
+
+# Branch should still exist
+git rev-parse --verify foo
+stdout '1b2aafed11ebc65ef2643881bf22015cf352790f'
+
+-- repo/foo.txt --
+whatever
+-- robot.golden --
+===
+> Delete foo anyway?: [y/N]
+> foo has not been merged into HEAD. This may result in data loss.
+false
