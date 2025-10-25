@@ -325,6 +325,12 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			if err := ui.Run(h.View, prompt); err != nil {
 				return fmt.Errorf("run prompt: %w", err)
 			}
+
+			// If the user declined the prompt, skip this branch.
+			if !force {
+				log.Infof("%v: skipped deletion", branch)
+				continue
+			}
 		}
 
 		if exists {
