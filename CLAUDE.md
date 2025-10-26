@@ -13,6 +13,7 @@
 | Run specific unit tests  | `go test ./path/to/package -run TestRegex`      |
 | Run all test scripts     | `mise run test:script` (use sparingly; slow)    |
 | Run specific test script | `mise run test:script --run $name`              |
+| Update test script       | `mise run test:script --run $name --update`     |
 | Add changelog entry      | `changie new --kind $kind --body $body`         |
 
 ## Overview
