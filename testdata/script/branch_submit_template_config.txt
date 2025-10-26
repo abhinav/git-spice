@@ -49,6 +49,10 @@ This adds a feature implementation.
 
 -- robot.golden --
 ===
+> Submit branch with no changes?: [y/N]
+> Branch feature has no changes compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+true
+===
 > Title: Add feature 
 > Short summary of the change
 "Add feature"
