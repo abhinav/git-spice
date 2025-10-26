@@ -28,6 +28,7 @@ import (
 // that is used by the submit handler.
 type GitRepository interface {
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
+	PeelToTree(ctx context.Context, ref string) (git.Hash, error)
 	BranchUpstream(ctx context.Context, branch string) (string, error)
 	SetBranchUpstream(ctx context.Context, branch string, upstream string) error
 	Var(ctx context.Context, name string) (string, error)
@@ -797,23 +798,34 @@ func (h *Handler) prepareBranch(
 	if err != nil {
 		return nil, fmt.Errorf("list commits: %w", err)
 	}
-	if len(msgs) == 0 {
+
+	// Check if the branch has the same tree as its base.
+	branchTree, err := h.Repository.PeelToTree(ctx, branchToSubmit)
+	if err != nil {
+		return nil, fmt.Errorf("get branch tree: %w", err)
+	}
+	baseTree, err := h.Repository.PeelToTree(ctx, baseBranch)
+	if err != nil {
+		return nil, fmt.Errorf("get base tree: %w", err)
+	}
+
+	if branchTree == baseTree {
 		if !ui.Interactive(h.View) {
-			h.Log.Warnf("Branch %s has zero commits compared to its base (%s).", branchToSubmit, baseBranch)
+			h.Log.Warnf("Branch %s has no changes compared to its base (%s).", branchToSubmit, baseBranch)
 			h.Log.Warnf("Submitting it will create an empty change request.")
 		} else {
-			var submitZeroCommits bool
+			var submitNoChanges bool
 			field := ui.NewConfirm().
-				WithTitle("Submit branch with zero commits?").
+				WithTitle("Submit branch with no changes?").
 				WithDescription(
-					fmt.Sprintf("Branch %s has zero commits compared to its base (%s). "+
+					fmt.Sprintf("Branch %s has no changes compared to its base (%s). "+
 						"Submitting it will create an empty change request. "+
 						"This is usually not what you want to do.", branchToSubmit, baseBranch)).
-				WithValue(&submitZeroCommits)
+				WithValue(&submitNoChanges)
 			if err := ui.Run(h.View, field); err != nil {
 				return nil, fmt.Errorf("run prompt: %w", err)
 			}
-			if !submitZeroCommits {
+			if !submitNoChanges {
 				return nil, errors.New("operation aborted")
 			}
 		}

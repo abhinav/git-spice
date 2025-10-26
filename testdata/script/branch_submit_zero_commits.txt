@@ -54,7 +54,7 @@ gs branch create feature2 --no-commit
 env ROBOT_INPUT=
 env ROBOT_OUTPUT=
 gs branch submit --fill --no-prompt
-stderr 'WRN.*zero commits'
+stderr 'WRN.*no changes'
 stderr 'Created #2:'
 
 # Verify CR was created
@@ -65,14 +65,14 @@ cmpenvJSON stdout $WORK/golden/changes-after-no-prompt.json
 * 31e6724 (HEAD -> feature1, origin/main, main) Initial commit
 -- golden/robot-no.txt --
 ===
-> Submit branch with zero commits?: [y/N]
-> Branch feature1 has zero commits compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+> Submit branch with no changes?: [y/N]
+> Branch feature1 has no changes compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
 false
 
 -- golden/robot-yes.txt --
 ===
-> Submit branch with zero commits?: [y/N]
-> Branch feature1 has zero commits compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+> Submit branch with no changes?: [y/N]
+> Branch feature1 has no changes compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
 true
 
 -- golden/no-changes.json --

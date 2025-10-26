@@ -1,0 +1,106 @@
+# branch submit should warn and prompt when submitting a branch with no changes
+# compared to the base branch, even if it has commits.
+
+as 'Test <test@example.com>'
+at '2025-10-05T14:30:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# setup remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# --- Test 1: Branch with empty commits (reject) ---
+
+# Create a branch with a couple empty commits
+gs branch create feature-empty --no-commit
+git commit --allow-empty -m 'Empty commit 1'
+git commit --allow-empty -m 'Empty commit 2'
+
+# Attempt to submit, rejecting the prompt
+env ROBOT_INPUT=$WORK/golden/robot-no.txt ROBOT_OUTPUT=$WORK/robot-no.actual
+! gs branch submit --fill
+stderr 'operation aborted'
+cmp $WORK/robot-no.actual $WORK/golden/robot-no.txt
+
+# Verify no CR was created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/no-changes.json
+
+# --- Test 2: Branch with reverted commit (accept) ---
+
+gs trunk
+gs branch create feature-reverted --no-commit
+
+# Create a commit with actual changes
+cp $WORK/extra/file.txt file.txt
+git add file.txt
+git commit -m 'Add file'
+
+# Revert the commit, resulting in no net changes
+git revert --no-edit HEAD
+
+# Verify the tree is the same as main
+git diff main..feature-reverted
+! stdout '.'
+
+# Attempt to submit, accepting the prompt
+env ROBOT_INPUT=$WORK/golden/robot-yes.txt ROBOT_OUTPUT=$WORK/robot-yes.actual
+gs branch submit --fill
+stderr 'Created #1:'
+cmp $WORK/robot-yes.actual $WORK/golden/robot-yes.txt
+
+# Verify CR was created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes-after-yes.json
+
+-- extra/file.txt --
+Hello World
+-- golden/robot-no.txt --
+===
+> Submit branch with no changes?: [y/N]
+> Branch feature-empty has no changes compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+false
+
+-- golden/robot-yes.txt --
+===
+> Submit branch with no changes?: [y/N]
+> Branch feature-reverted has no changes compared to its base (main). Submitting it will create an empty change request. This is usually not what you want to do.
+true
+
+-- golden/no-changes.json --
+[]
+-- golden/changes-after-yes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add file",
+    "body": "Add file\n\nRevert \"Add file\"\n\nThis reverts commit 28afdac05bf20564ebdd8b20f1c367b27ae7af4c.",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "31e6724a63c78ab42686a9bc34dadba301ba3f03"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature-reverted",
+      "sha": "8f86bc67ba4470e502ad5fca127d9e8793921277"
+    }
+  }
+]
