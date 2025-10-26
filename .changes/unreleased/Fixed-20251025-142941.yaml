@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch delete: Exit gracefully when user declines to delete an unmerged branch'
-time: 2025-10-25T14:29:41.038227-07:00
