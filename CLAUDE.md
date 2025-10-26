@@ -560,18 +560,3 @@ when the feature is released.
   This requires breaking lines at natural grammatical boundaries
   (such as after complete sentences, clauses, or list items),
   while remaining within the 80-character limit.
-
-# Common problems
-
-## command not found
-
-If any command above fails because the command is not found, run:
-
-```bash
-./tools/bin/mise trust
-./tools/bin/mise install
-eval "$(./tools/bin/mise env)"
-```
-
-The last command will configure the shell environment
-to make al tools available in the current terminal session.
