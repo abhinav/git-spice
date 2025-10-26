@@ -189,3 +189,83 @@ To release a new version, take the following steps:
    Feel free to edit it before merging if needed.
 3. Once the pull request has merged, trigger the
    [Publishh release workflow](https://github.com/abhinav/git-spice/actions/workflows/publish-release.yml).
+
+## Backporting changes
+
+(For maintainers only.)
+
+To backport a change to a previous release branch,
+take the following steps:
+
+1. Determine the series name.
+   This is the combination of the major and minor version numbers,
+   e.g. for version `v0.5.2`, the series name is `0.5`.
+
+   ```bash
+   SERIES=0.5
+   ```
+
+2. Ensure that a release series branch exists.
+   This is normally named `release/vX.Y.x`,
+   where `X.Y` is the series name determined above.
+
+    ```bash
+    BRANCH="release/v${SERIES}.x"
+    if git branch -r --list "origin/${BRANCH}" | grep -q .; then
+        echo "Release branch ${BRANCH} alrady exists."
+    else
+        echo "Release branch ${BRANCH} does not exist."
+        LATEST_TAG=$(git tag --list "v${SERIES}.*" --sort=-v:refname | head -n 1)
+        echo "Creating branch ${BRANCH} from latest tag ${LATEST_TAG}."
+        echo "Press Enter to continue."
+        read
+        git branch "${BRANCH}" "${LATEST_TAG}"
+        git push origin "${BRANCH}"
+    fi
+    ```
+
+3. Create a backport branch from the release branch.
+
+    ```bash
+    BACKPORT_BRANCH="backport-${SERIES}-$(date +%Y%m%d%H%M%S)"
+    git checkout -b "${BACKPORT_BRANCH}" "origin/${BRANCH}"
+    ```
+
+4. Cherry-pick the desired commits to backport.
+
+    ```bash
+    git cherry-pick <commit-hash-1> <commit-hash-2> ...
+    ```
+
+5. Prepare the changelog for the backport.
+
+   ```bash
+   changie batch patch && changie merge
+   git add .changes CHANGELOG.md
+   NEW_VERSION=$(changie latest)
+   git commit -m "Release ${NEW_VERSION}"
+   ```
+
+5. Submit a pull request from the backport branch
+   against the release branch, e.g.
+
+   ```bash
+   git push -u origin "${BACKPORT_BRANCH}"
+   gh pr create \
+     --base "${BRANCH}" \
+     --head "${BACKPORT_BRANCH}" \
+     --title "Release ${NEW_VERSION}"
+   ```
+
+6. Once the pull request is merged,
+   trigger the
+   [Publish release workflow](https://github.com/abhinav/git-spice/actions/workflows/publish-release.yml)
+   for the release branch to create a new release.
+
+7. Merge the release branch back to main.
+
+    ```bash
+    git checkout main
+    git merge "origin/${BRANCH}"
+    git push origin main
+    ```
