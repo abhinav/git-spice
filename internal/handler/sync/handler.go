@@ -502,27 +502,33 @@ func (h *Handler) findForgeFinishedBranches(
 				for b := range trackedch {
 					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
 						Limit: 3,
-						State: forge.ChangeMerged,
 					})
 					if err != nil {
 						h.Log.Error("Failed to list changes", "branch", b.Name, "error", err)
 						continue
 					}
 
+					var change *forge.FindChangeItem
 					for _, c := range changes {
-						if c.State != forge.ChangeMerged {
-							continue
+						if c.State == forge.ChangeOpen {
+							change = c
+							break
 						}
+						if c.State == forge.ChangeMerged && change == nil {
+							change = c
+						}
+					}
 
+					if change != nil {
 						localSHA, err := h.Repository.PeelToCommit(ctx, b.Name)
 						if err != nil {
 							h.Log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
 							continue
 						}
 
-						b.Merged = true
-						b.Change = c.ID
-						b.RemoteHeadSHA = c.HeadHash
+						b.Merged = change.State == forge.ChangeMerged
+						b.Change = change.ID
+						b.RemoteHeadSHA = change.HeadHash
 						b.LocalHeadSHA = localSHA
 					}
 
