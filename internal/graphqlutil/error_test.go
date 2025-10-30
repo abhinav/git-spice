@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"testing/iotest"
 
@@ -282,6 +283,43 @@ func TestErrorString(t *testing.T) {
 			assert.Equal(t, tt.want, tt.give.Error())
 		})
 	}
+}
+
+// This test triggers the data race where buffers are returned to the pool
+// while response bodies are still being read from them.
+func TestRoundTrip_concurrentReads(t *testing.T) {
+	const responseBody = `{"data":{"repository":{"id":"test"}}}`
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, responseBody)
+	}))
+	defer srv.Close()
+
+	transport := graphqlutil.WrapTransport(http.DefaultTransport)
+	client := &http.Client{Transport: transport}
+
+	// Spawn multiple concurrent requests and read their bodies concurrently.
+	// This triggers the race because:
+	// 1. RoundTrip returns the buffer to the pool immediately
+	// 2. The response body still references that buffer's bytes
+	// 3. Another concurrent request can grab the same buffer from the pool
+	// 4. Both goroutines access the same buffer simultaneously
+	const numRequests = 100
+	var wg sync.WaitGroup
+
+	for range numRequests {
+		wg.Go(func() {
+			res, err := client.Get(srv.URL)
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+
+			bs, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			assert.Equal(t, responseBody, string(bs))
+		})
+	}
+
+	wg.Wait()
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
