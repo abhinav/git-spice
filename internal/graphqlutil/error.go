@@ -51,19 +51,35 @@ func WrapTransport(t http.RoundTripper) http.RoundTripper {
 }
 
 // RoundTrip handles a single HTTP round trip.
-func (t *graphQLTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	res, err := t.t.RoundTrip(r)
+func (t *graphQLTransport) RoundTrip(r *http.Request) (res *http.Response, err error) {
+	res, err = t.t.RoundTrip(r)
 	if err != nil || res.StatusCode != http.StatusOK {
 		return res, err
 	}
 
 	buff := takeBuffer()
-	defer putBuffer(buff)
+	defer func() {
+		// If there was an error,
+		// we're not using the buffer in the response
+		// so return it to the pool now.
+		if err != nil {
+			putBuffer(buff)
+		}
+	}()
 
 	// Read the entire response body into a buffer.
 	_, readErr := io.Copy(buff, res.Body)
 	closeErr := res.Body.Close()
-	res.Body = io.NopCloser(bytes.NewReader(buff.Bytes()))
+	// As long as we return a nil error,
+	// we need to replace the response body
+	// so it can be read again.
+	//
+	// The pooledReadCloser will return the buffer to the pool
+	// when it's closed.
+	res.Body = &pooledReadCloser{
+		Reader: bytes.NewReader(buff.Bytes()),
+		buf:    buff,
+	}
 	if err := errors.Join(readErr, closeErr); err != nil {
 		return nil, err
 	}
@@ -150,6 +166,21 @@ func (e *Error) Error() string {
 	}
 	s.WriteString(e.Message)
 	return s.String()
+}
+
+// pooledReadCloser wraps a bytes.Reader with a buffer
+// that gets returned to the pool when Close is called.
+type pooledReadCloser struct {
+	*bytes.Reader
+	buf *bytes.Buffer
+}
+
+func (p *pooledReadCloser) Close() error {
+	if p.buf != nil {
+		putBuffer(p.buf)
+		p.buf = nil
+	}
+	return nil
 }
 
 var _bufferPool = sync.Pool{
