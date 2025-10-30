@@ -6,37 +6,24 @@ backend = "ubi:miniscruff/changie"
 checksum = "blake3:5c375c0c849a13e0aab777ba05f059bc9065e4554205e911ba15d51e8f0f2242"
 
 [[tools.go]]
-version = "1.25.2"
+version = "1.25.3"
 backend = "core:go"
 
-[tools.go.platforms.linux-x64]
-checksum = "sha256:d7fa7f8fbd16263aa2501d681b11f972a5fd8e811f7b10cb9b26d031a3d7454b"
-size = 59766306
-url = "https://dl.google.com/go/go1.25.2.linux-amd64.tar.gz"
-
 [tools.go.platforms.macos-arm64]
-checksum = "sha256:d1ade1b480e51b6269b6e65856c602aed047e1f0d32fffef7eebbd7faa8d7687"
-size = 58024236
-url = "https://dl.google.com/go/go1.25.2.darwin-arm64.tar.gz"
+checksum = "sha256:7c083e3d2c00debfeb2f77d9a4c00a1aac97113b89b9ccc42a90487af3437382"
+size = 58028114
+url = "https://dl.google.com/go/go1.25.3.darwin-arm64.tar.gz"
 
 [[tools.gofumpt]]
-version = "0.9.1"
+version = "0.9.2"
 backend = "ubi:mvdan/gofumpt"
 
-[tools.gofumpt.platforms.linux-x64-gofumpt]
-checksum = "blake3:7d3b4e3e621c8959b4de524ffcc6a5143b41ccb862c69f83cb2c65807280835a"
-
 [tools.gofumpt.platforms.macos-arm64-gofumpt]
-checksum = "blake3:fd034609f5f8d6d53ecdd8f747da5038f51a329a0ef27c5d65e094c2e4ccc7fd"
+checksum = "blake3:58afa2c8f89ef60ed81a84502504fe23518cd62e2ea708c918be1f7d562896e5"
 
 [[tools.golangci-lint]]
-version = "2.5.0"
+version = "2.6.0"
 backend = "aqua:golangci/golangci-lint"
-
-[tools.golangci-lint.platforms.linux-x64]
-checksum = "sha256:c77313a77e19b06123962c411d9943cc0d092bbec76b956104d18964e274902e"
-size = 14221503
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.5.0/golangci-lint-2.5.0-linux-amd64.tar.gz"
 
 [[tools.gotestsum]]
 version = "1.13.0"
