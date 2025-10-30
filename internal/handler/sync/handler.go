@@ -501,7 +501,7 @@ func (h *Handler) findForgeFinishedBranches(
 			wg.Go(func() {
 				for b := range trackedch {
 					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
-						Limit: 3,
+						Limit: 10,
 					})
 					if err != nil {
 						h.Log.Error("Failed to list changes", "branch", b.Name, "error", err)
