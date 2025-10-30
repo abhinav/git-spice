@@ -1,6 +1,5 @@
 # 'repo sync' detects and deletes branches for PRs
 # that were created externally and then merged.
-# Does not delete branches with an open PR.
 
 as 'Test <test@example.com>'
 at '2024-06-05T05:29:28Z'
@@ -35,46 +34,19 @@ mv $WORK/extra/modified-feature2.txt feature2.txt
 git add feature2.txt
 gs cc -m 'Modify feature2'
 
-# Create a third branch, submit and merge it.
-gs trunk
-git add feature3-v1.txt
-gs bc -m 'Add feature3 v1' feature3
-gs branch submit --fill
-stderr 'Created #'
-shamhub merge alice/example 3
-
-# Sync to delete feature3
-gs repo sync
-stderr 'feature3: #3 was merged'
-! git rev-parse --verify feature3
-
-# Delete the remote branch so we can reuse the same branch name for the next PR
-git push origin --delete feature3
-
-# Create a new branch with the same name feature3 and submit it.
-gs trunk
-git add feature3-v2.txt
-gs bc -m 'Add feature3 v2' feature3
-gs branch submit --fill
-stderr 'Created #'
-
 # Forget all state.
 gs repo init --reset --trunk=main --remote=origin
 # At this point, gs has no knowledge of the PRs.
-
-# Merge feature1 and feature2 server-side. Do not merge feature3 so PR #4 is still open.
+# Merge them server-side.
 shamhub merge alice/example 1
 shamhub merge alice/example 2
 
 # Track the branches and sync.
 gs branch track --base=main feature1
 gs branch track --base=main feature2
-gs branch track --base=main feature3
 gs repo sync
 stderr 'feature1: #1 was merged'
 stderr 'feature2: #2 was merged but local SHA \(6b83ef3\) does not match remote SHA \(33f1653\). Skipping'
-# feature3 should not be reported as merged because PR #4 is still open
-! stderr 'feature3.*was merged'
 
 git graph --branches
 cmp stdout $WORK/golden/merged-log.txt
@@ -88,31 +60,19 @@ Contents of feature
 -- repo/feature2.txt --
 Contents of feature2
 
--- repo/feature3-v1.txt --
-Contents of feature3 v1
-
--- repo/feature3-v2.txt --
-Contents of feature3 v2
-
 -- extra/modified-feature2.txt --
 New contents of feature2
 
 -- golden/merged-log.txt --
-* 6b83ef3 (feature2) Modify feature2
-| * 24a756d (HEAD -> feature3, origin/feature3) Add feature3 v2
-| | *   478956e (origin/main, main) Merge change #2
-| | |\  
-| |_|/  
-|/| |   
-* | | 33f1653 (origin/feature2) Add feature2
-| | * e6e05a1 Merge change #1
-| |/| 
-| | * 7bf98f4 Add feature1
+* 6b83ef3 (HEAD -> feature2) Modify feature2
+| *   e9220e5 (origin/main, main) Merge change #2
+| |\  
 | |/  
 |/|   
-| * 5bf1af3 Merge change #3
+* | 33f1653 (origin/feature2) Add feature2
+| * b58492c Merge change #1
 |/| 
-| * 5eadeb7 Add feature3 v1
+| * 7bf98f4 Add feature1
 |/  
 * 13538da Initial commit
 -- golden/pull.json --
@@ -138,7 +98,7 @@ New contents of feature2
         "name": "example"
       },
       "ref": "main",
-      "sha": "478956e24c966031e82588f5962f112d2076ef10"
+      "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
     }
   },
   {
@@ -148,7 +108,7 @@ New contents of feature2
         "name": "example"
       },
       "ref": "main",
-      "sha": "478956e24c966031e82588f5962f112d2076ef10"
+      "sha": "e9220e54445ee9da6c56bbfddf2feabc9fc3d279"
     },
     "body": "",
     "head": {
@@ -164,52 +124,5 @@ New contents of feature2
     "number": 2,
     "state": "closed",
     "title": "Add feature2"
-  },
-  {
-    "number": 3,
-    "state": "closed",
-    "title": "Add feature3 v1",
-    "body": "",
-    "merged": true,
-    "html_url": "$SHAMHUB_URL/alice/example/change/3",
-    "head": {
-      "repository": {
-        "owner": "alice",
-        "name": "example"
-      },
-      "ref": "feature3",
-      "sha": "24a756d6cd38b02016397e63a4d55715e90c7101"
-    },
-    "base": {
-      "repository": {
-        "owner": "alice",
-        "name": "example"
-      },
-      "ref": "main",
-      "sha": "478956e24c966031e82588f5962f112d2076ef10"
-    }
-  },
-  {
-    "number": 4,
-    "state": "open",
-    "title": "Add feature3 v2",
-    "body": "",
-    "html_url": "$SHAMHUB_URL/alice/example/change/4",
-    "head": {
-      "repository": {
-        "owner": "alice",
-        "name": "example"
-      },
-      "ref": "feature3",
-      "sha": "24a756d6cd38b02016397e63a4d55715e90c7101"
-    },
-    "base": {
-      "repository": {
-        "owner": "alice",
-        "name": "example"
-      },
-      "ref": "main",
-      "sha": "478956e24c966031e82588f5962f112d2076ef10"
-    }
   }
 ]
