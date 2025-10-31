@@ -1,0 +1,123 @@
+# 'repo sync' does not delete branches with open PRs
+# even if a PR for a branch with the same name has already merged.
+
+as 'Test <test@example.com>'
+at '2024-06-05T05:29:28Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a new branch, submit it, and merge it
+git add feature1-v1.txt
+gs bc -m 'Add feature1 v1' feature1
+gs branch submit --fill
+stderr 'Created #'
+# Merge the change and delete the remote branch
+shamhub merge alice/example 1
+git push origin --delete feature1
+
+# Sync to delete feature1
+gs repo sync
+stderr 'feature1: #1 was merged'
+! git rev-parse --verify feature1
+
+# Create a new branch with the same name feature1 and submit it.
+gs trunk
+git add feature1-v2.txt
+gs bc -m 'Add feature1 v2' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Forget all state.
+gs repo init --reset --trunk=main --remote=origin
+# At this point, gs has no knowledge of the PRs.
+
+# Track the branch and sync.
+gs branch track --base=main feature1
+gs repo sync
+# feature1 should not be reported as merged because PR #2 is still open
+! stderr 'feature1: #1 was merged'
+
+git graph --branches
+cmp stdout $WORK/golden/merged-log.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pull.json
+
+-- repo/feature1-v1.txt --
+Contents of feature1 v1
+
+-- repo/feature1-v2.txt --
+Contents of feature1 v2
+
+-- extra/modified-feature2.txt --
+New contents of feature2
+
+-- golden/merged-log.txt --
+* d7fb222 (HEAD -> feature1, origin/feature1) Add feature1 v2
+*   7d4de38 (origin/main, main) Merge change #1
+|\  
+| * 59fca0b Add feature1 v1
+|/  
+* 13538da Initial commit
+-- golden/pull.json --
+[
+  {
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "7d4de38b4aca2b76457c8bfb0d741dd042d5fdf5"
+    },
+    "body": "",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "d7fb2224bd84f58022bd8d8be21a360d0d14f083"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "merged": true,
+    "number": 1,
+    "state": "closed",
+    "title": "Add feature1 v1"
+  },
+  {
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "7d4de38b4aca2b76457c8bfb0d741dd042d5fdf5"
+    },
+    "body": "",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "d7fb2224bd84f58022bd8d8be21a360d0d14f083"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "number": 2,
+    "state": "open",
+    "title": "Add feature1 v2"
+  }
+]
