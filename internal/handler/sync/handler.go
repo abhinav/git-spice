@@ -150,7 +150,7 @@ type TrunkOptions struct {
 	// TODO: flag to not delete merged branches?
 
 	Restack       bool          `help:"Restack the current stack after syncing"`
-	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests" hidden:""`
+	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,

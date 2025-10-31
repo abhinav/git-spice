@@ -28,6 +28,14 @@ func (cmd *dumpMarkdownCmd) Run(app *kong.Kong, shorts *shorthand.BuiltinSource)
 	}
 	defer func() { _ = ref.Close() }()
 
+	if help := app.Model.HelpFlag; help != nil {
+		help.Help = "Show help for the command"
+		help.Group = &kong.Group{
+			Key:   "globals",
+			Title: "Global Flags:",
+		}
+	}
+
 	d := cliDumper{w: ref}
 	d.dump(app.Model)
 

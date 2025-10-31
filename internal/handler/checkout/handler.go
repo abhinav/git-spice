@@ -24,7 +24,7 @@ type Options struct {
 	DryRun bool `short:"n" xor:"detach-or-dry-run" help:"Print the target branch without checking it out"`
 	Detach bool `xor:"detach-or-dry-run" help:"Detach HEAD after checking out"`
 
-	Verbose bool `name:"checkout-verbose" hidden:"" default:"true" config:"checkout.verbose"`
+	Verbose bool `name:"checkout-verbose" help:"Print information about the checked out branch." hidden:"" default:"true" config:"checkout.verbose"`
 }
 
 // Store provides access to the git-spice state.

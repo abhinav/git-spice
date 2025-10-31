@@ -1,0 +1,22 @@
+Usage: gs upstack (us) restack (r) [flags]
+
+Restack a branch and its upstack
+
+The current branch and all branches above it are rebased on top of their
+respective bases, ensuring a linear history.
+
+Use --branch to start at a different branch.
+
+Use --skip-start to skip the starting branch, but still rebase all branches
+above it.
+
+Flags:
+  --skip-start     Do not restack the starting branch
+  --branch=NAME    Branch to restack the upstack of
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

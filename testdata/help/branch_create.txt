@@ -1,0 +1,83 @@
+Usage: gs branch (b) create (c) [<name>] [flags]
+
+Create a new branch
+
+Staged changes will be committed to the new branch. If there are no staged
+changes, an empty commit will be created. Use -a/--all to automatically stage
+modified and deleted files, just like 'git commit -a'. Use --no-commit to create
+the branch without committing. -m/--message always implies --commit.
+
+If a branch name is not provided, it will be generated from the
+commit message. If the 'spice.branchCreate.prefix' configuration
+option is set, branch names will be prefixed with its value. If the
+'spice.branchCreate.generatedBranchNameLimit' configuration option is set,
+auto-generated branch names will be truncated to that length at word boundaries
+(defaults to 32).
+
+The new branch will use the current branch as its base. Use --target to specify
+a different base branch.
+
+--insert will move the branches upstack from the target branch on top of the new
+branch. --below will create the new branch below the target branch.
+
+For example, given the following stack, with A checked out:
+
+        ┌── C
+      ┌─┴ B
+    ┌─┴ A ◀
+    trunk
+
+'gs branch create X' will have the following effects with different flags:
+
+             gs branch create X
+
+     default  │   --insert   │  --below
+    ──────────┼──────────────┼──────────
+      ┌── X   │        ┌── C │       ┌── C
+      │ ┌── C │      ┌─┴ B   │     ┌─┴ B
+      ├─┴ B   │    ┌─┴ X     │   ┌─┴ A
+    ┌─┴ A     │  ┌─┴ A       │ ┌─┴ X
+    trunk     │  trunk       │ trunk
+
+In all cases above, use of -t/--target flag will change the target (A) to the
+specified branch:
+
+         gs branch create X --target B
+
+     default  │   --insert   │  --below
+    ──────────┼──────────────┼────────────
+        ┌── X │        ┌── C │       ┌── C
+        ├── C │      ┌─┴ X   │     ┌─┴ B
+      ┌─┴ B   │    ┌─┴ B     │   ┌─┴ X
+    ┌─┴ A     │  ┌─┴ A       │ ┌─┴ A
+    trunk     │  trunk       │ trunk
+
+Arguments:
+  [<name>]    Name of the new branch
+
+Flags:
+      --insert           Restack the upstack of the target branch onto the new
+                         branch
+      --below            Place the branch below the target branch and restack
+                         its upstack
+  -t, --target=BRANCH    Branch to create the new branch above/below
+  -a, --all              Automatically stage modified and deleted files
+  -m, --message=MSG      Commit message
+      --no-verify        Bypass pre-commit and commit-msg hooks.
+      --signoff          Add Signed-off-by trailer to the commit message (🔧
+                         spice.commit.signoff)
+      --[no-]commit      Commit staged changes to the new branch, or create an
+                         empty commit (🔧 spice.branchCreate.commit)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.branchCreate.generatedBranchNameLimit
+                               Maximum length of auto-generated branch names
+                               (truncated at word boundaries). Defaults to 32.
+  spice.branchCreate.prefix    Always add a prefix to branch names.

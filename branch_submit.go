@@ -24,18 +24,27 @@ type submitOptions struct {
 
 const _submitHelp = `
 Use --dry-run to print what would be submitted without submitting it.
+
 For new Change Requests, a prompt will allow filling metadata.
-Use --fill to populate title and body from the commit messages,
-and --[no-]draft to set the draft status.
-Omitting the draft flag will leave the status unchanged of open CRs.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
 
 Use --no-publish to push branches without creating CRs.
 This has no effect if a branch already has an open CR.
+
 Use --update-only to only update branches with existing CRs,
 and skip those that would create new CRs.
 
 Use --nav-comment=false to disable navigation comments in CRs,
-or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
 `
 
 type branchSubmitCmd struct {
@@ -55,18 +64,24 @@ func (*branchSubmitCmd) Help() string {
 		For new Change Requests, a prompt will allow filling metadata.
 		Use the --title and --body flags to skip the prompt,
 		or the --fill flag to use the commit message to fill them in.
-		The --draft flag marks the change request as a draft.
+		The --[no-]draft flag marks the CR as draft or not.
+		Use the 'spice.submit.draft' configuration option
+		to mark new CRs as drafts (or not) by default,
+		skipping the prompt.
+
 		For updating Change Requests,
-		use --draft/--no-draft to change its draft status.
+		use --[no-]draft to change its draft status.
 		Without the flag, the draft status is not changed.
 
 		Use --no-publish to push branches without creating CRs.
 		This has no effect if a branch already has an open CR.
+
 		Use --update-only to only update branches with existing CRs,
 		and skip those that would create new CRs.
 
 		Use --nav-comment=false to disable navigation comments in CRs,
-		or --nav-comment=multiple to post those comments only if there are multiple CRs in the stack.
+		or --nav-comment=multiple to post those comments
+		only if there are multiple CRs in the stack.
 	`)
 }
 

@@ -1,0 +1,18 @@
+Usage: gs auth logout [flags]
+
+Log out of a service
+
+The stored authentication information is deleted. Use 'gs auth login' to log in
+again.
+
+Does not do anything if not logged in.
+
+Flags:
+  --forge=NAME    Name of the forge to log into
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

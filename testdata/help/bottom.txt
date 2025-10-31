@@ -1,0 +1,22 @@
+Usage: gs bottom (D) [flags]
+
+Move to the bottom of the stack
+
+Checks out the bottom-most branch in the current branch's stack. Does nothing if
+already on the bottom-most branch, and returns an error if on trunk.
+
+Use -n to print the branch name to stdout without checking it out.
+
+Flags:
+  -n, --dry-run    Print the target branch without checking it out
+      --detach     Detach HEAD after checking out
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.checkout.verbose    Print information about the checked out branch.

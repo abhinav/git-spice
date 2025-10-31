@@ -11,10 +11,10 @@ type authLogoutCmd struct{}
 
 func (*authLogoutCmd) Help() string {
 	return text.Dedent(`
-		The stored authentication information is deleted from secure storage.
+		The stored authentication information is deleted.
 		Use 'gs auth login' to log in again.
 
-		No-op if not logged in.
+		Does not do anything if not logged in.
 	`)
 }
 

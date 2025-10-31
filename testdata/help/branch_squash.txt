@@ -1,0 +1,23 @@
+Usage: gs branch (b) squash (sq) [flags]
+
+Squash a branch into one commit
+
+Squash all commits in the current branch into a single commit and restack
+upstack branches.
+
+An editor will open to edit the commit message of the squashed commit. Use the
+-m/--message flag to specify a commit message without editing.
+
+Flags:
+      --no-verify      Bypass pre-commit and commit-msg hooks.
+      --no-edit        Do not open an editor to edit the squashed commit
+                       message. Only applicable if --message is not used.
+  -m, --message=MSG    Use the given message as the commit message.
+      --branch=NAME    Branch to squash. Defaults to current branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

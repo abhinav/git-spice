@@ -1,0 +1,14 @@
+Usage: gs branch (b) edit (e)
+
+Edit the commits in a branch
+
+Starts an interactive rebase with only the commits from this branch.
+
+After the rebase, branches upstack from this branch will be restacked.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

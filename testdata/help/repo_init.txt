@@ -1,0 +1,28 @@
+Usage: gs repo (r) init (i) [flags]
+
+Initialize a repository
+
+A trunk branch is required. This is the branch that changes will be merged into.
+A prompt will ask for one if not provided with --trunk.
+
+Most branch stacking operations are local and do not require a network
+connection. For operations that push or pull commits, a remote is required.
+A prompt will ask for one during initialization if not provided with --remote.
+
+Re-run the command on an already initialized repository to change the trunk or
+remote. If the trunk branch is changed on re-initialization, existing branches
+stacked on the old trunk will be updated to point to the new trunk.
+
+Re-run with --reset to discard all stored information and untrack all branches.
+
+Flags:
+  --trunk=BRANCH    Name of the trunk branch
+  --remote=NAME     Name of the remote to push changes to
+  --reset           Forget all information about the repository
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

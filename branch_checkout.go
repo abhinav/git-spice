@@ -28,11 +28,9 @@ func (*branchCheckoutCmd) Help() string {
 		Provide a branch name as an argument to skip the prompt.
 
 		Use -u/--untracked to show untracked branches in the prompt.
-
-		Use the spice.branchPrompt.sort configuration option
-		to specify the sort order of branches in the prompt.
-		Commonly used field names include "refname", "commiterdate", etc.
-		By default, branches are sorted by name.
+		Use --detach to detach HEAD to the commit of the selected branch.
+		Use -n to print the selected branch name to stdout
+		without checking it out.
 	`)
 }
 

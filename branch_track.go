@@ -21,6 +21,9 @@ func (*branchTrackCmd) Help() string {
 
 		The base is guessed by comparing against other tracked branches.
 		Use --base to specify a base explicitly.
+
+		Use 'gs downstack track' from the topmost branch
+		to track a manully created stack of branches at once.
 	`)
 }
 

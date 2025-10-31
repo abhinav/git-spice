@@ -21,14 +21,16 @@ type branchDeleteCmd struct {
 func (*branchDeleteCmd) Help() string {
 	return text.Dedent(`
 		The deleted branches and their commits are removed from the stack.
-		Branches above the deleted branches are rebased onto
-		the next branches available downstack.
+		Branches above the deleted branches are first rebased onto
+		the next branches available downstack,
+		or onto trunk if there are no branches available below.
 
-		A prompt will allow selecting the target branch if none are provided.
-		Use the spice.branchPrompt.sort configuration option
-		to specify the sort order of branches in the prompt.
-		Commonly used field names include "refname", "commiterdate", etc.
-		By default, branches are sorted by name.
+		Without any arguments,
+		a prompt will allow selecting the branch to delete.
+
+		By default, if the branch to be deleted has unmerged changes,
+		the deletion will be aborted.
+		Use --force to delete the branch regardless of unmerged changes.
 	`)
 }
 

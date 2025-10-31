@@ -1,0 +1,13 @@
+Usage: gs version [flags]
+
+Print version information and quit
+
+Flags:
+  --short    Print only the version number.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

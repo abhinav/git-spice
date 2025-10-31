@@ -1,0 +1,19 @@
+Usage: gs downstack (ds) track (tr) [<branch>]
+
+Track all untracked branches below a branch
+
+Track all untracked branches in the downstack of a branch.
+
+Starting from the specified branch (or current branch), identify and track any
+untracked branches downstack from it, until reaching trunk or an already-tracked
+branch.
+
+Arguments:
+  [<branch>]    Name of the branch to start tracking from
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

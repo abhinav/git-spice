@@ -24,6 +24,7 @@ func (*branchFoldCmd) Help() string {
 		and the current branch will be deleted.
 		Branches above the folded branch will point
 		to the next branch downstack.
+
 		Use the --branch flag to target a different branch.
 	`)
 }

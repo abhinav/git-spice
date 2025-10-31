@@ -17,15 +17,22 @@ type authLoginCmd struct {
 
 func (*authLoginCmd) Help() string {
 	return text.Dedent(`
-		For GitHub, a prompt will allow selecting between
-		OAuth, GitHub App, and Personal Access Token-based authentication.
+		A prompt will allow selecting between available authentication methods.
+		Available methods include:
+
+		- OAuth: Web-based authentication flow
+		- GitHub App (GitHub only): Authenticate using a GitHub App installation
+		- Personal Access Token: Directly provide a personal access token
+		- CLI: Use the GitHub or GitLab CLI tool for authentication (if installed)
+
 		The differences between them are explained in the prompt.
 
-		The authentication token is stored in a system-provided secure storage.
+		The authentication token is stored in a system-provided
+		secure storage if available.
 		Use 'gs auth logout' to log out and delete the token from storage.
 
 		Fails if already logged in.
-		Use --refresh to force a refresh of the authentication token,
+		Use --refresh to force a refresh of the authentication token
 		or change the authentication method.
 	`)
 }
