@@ -58,6 +58,9 @@ Configuration (🔧):
   spice.submit.label         Default labels to add to change requests.
   spice.submit.listTemplatesTimeout
                              Timeout for listing CR templates
+  spice.submit.navigationComment.downstack
+                             Which downstack CRs to include in navigation
+                             comments. Must be one of: all, open.
   spice.submit.navigationCommentStyle.marker
                              Marker to use for the current change in navigation
                              comments. Defaults to '◀'.
