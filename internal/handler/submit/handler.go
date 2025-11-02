@@ -134,9 +134,10 @@ type Options struct {
 	Publish bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
 	Web     OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
 
-	NavComment       NavCommentWhen `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
-	NavCommentSync   NavCommentSync `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
-	NavCommentMarker string         `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
+	NavComment          NavCommentWhen      `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
+	NavCommentSync      NavCommentSync      `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
+	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" enum:"all,open" default:"all" hidden:"" help:"Which downstack CRs to include in navigation comments. Must be one of: all, open."`
+	NavCommentMarker    string              `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
 
 	Force      bool  `help:"Force push, bypassing safety checks"`
 	NoVerify   bool  `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
@@ -208,6 +209,49 @@ func (s *NavCommentSync) UnmarshalText(bs []byte) error {
 	return nil
 }
 
+// NavCommentDownstack specifies which downstack CRs
+// to include in navigation comments.
+type NavCommentDownstack int
+
+const (
+	// NavCommentDownstackAll includes all downstack CRs
+	// (both open and merged).
+	//
+	// This is the default.
+	NavCommentDownstackAll NavCommentDownstack = iota
+
+	// NavCommentDownstackOpen includes only open downstack CRs,
+	// excluding merged ones.
+	NavCommentDownstackOpen
+)
+
+var _ encoding.TextUnmarshaler = (*NavCommentDownstack)(nil)
+
+// String returns the string representation of the NavCommentDownstack.
+func (d NavCommentDownstack) String() string {
+	switch d {
+	case NavCommentDownstackAll:
+		return "all"
+	case NavCommentDownstackOpen:
+		return "open"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes NavCommentDownstack from text.
+func (d *NavCommentDownstack) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "all":
+		*d = NavCommentDownstackAll
+	case "open":
+		*d = NavCommentDownstackOpen
+	default:
+		return fmt.Errorf("invalid value %q: expected all or open", bs)
+	}
+	return nil
+}
+
 // BatchOptions defines options
 // that are only available to batch submit operations.
 type BatchOptions struct {
@@ -270,6 +314,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
 		opts.NavCommentSync,
+		opts.NavCommentDownstack,
 		opts.NavCommentMarker,
 		branchesToComment,
 		h.RemoteRepository,
@@ -315,6 +360,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
 		opts.NavCommentSync,
+		opts.NavCommentDownstack,
 		opts.NavCommentMarker,
 		[]string{req.Branch},
 		h.RemoteRepository,

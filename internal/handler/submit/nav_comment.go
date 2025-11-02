@@ -88,6 +88,7 @@ func updateNavigationComments(
 	log *silog.Logger,
 	navComment NavCommentWhen,
 	navCommentSync NavCommentSync,
+	navCommentDownstack NavCommentDownstack,
 	navCommentMarker string,
 	submittedBranches []string,
 	getRemoteRepo func(context.Context) (forge.Repository, error),
@@ -141,7 +142,7 @@ func updateNavigationComments(
 
 	// Second pass:
 	//
-	// - Add merged downstacks as separate nodes.
+	// - Add merged downstacks as separate nodes (if enabled).
 	// - Connect Aboves if this is a base to another node.
 	for _, b := range trackedBranches {
 		nodeIdx, ok := idxByBranch[b.Name]
@@ -154,28 +155,32 @@ func updateNavigationComments(
 		//
 		//  - previous branch is the base (starting at trunk)
 		//  - current branch is added to Aboves of previous branch
+		//
+		// Skip merged downstack branches if navCommentDownstack is Open.
 		lastDownstackIdx := -1
-		for _, crJSON := range b.MergedDownstack {
-			downstackCR, err := remoteRepo.Forge().UnmarshalChangeID(crJSON)
-			if err != nil {
-				log.Warn("Skiping invalid downstack change",
-					"branch", b.Name,
-					"change", string(crJSON),
-					"error", err,
-				)
-				continue
-			}
+		if navCommentDownstack == NavCommentDownstackAll {
+			for _, crJSON := range b.MergedDownstack {
+				downstackCR, err := remoteRepo.Forge().UnmarshalChangeID(crJSON)
+				if err != nil {
+					log.Warn("Skiping invalid downstack change",
+						"branch", b.Name,
+						"change", string(crJSON),
+						"error", err,
+					)
+					continue
+				}
 
-			idx := len(nodes)
-			nodes = append(nodes, &stackedChange{
-				Change: downstackCR,
-				Base:   lastDownstackIdx,
-			})
-			// Inform previous node about this node.
-			if lastDownstackIdx != -1 {
-				nodes[lastDownstackIdx].Aboves = append(nodes[lastDownstackIdx].Aboves, idx)
+				idx := len(nodes)
+				nodes = append(nodes, &stackedChange{
+					Change: downstackCR,
+					Base:   lastDownstackIdx,
+				})
+				// Inform previous node about this node.
+				if lastDownstackIdx != -1 {
+					nodes[lastDownstackIdx].Aboves = append(nodes[lastDownstackIdx].Aboves, idx)
+				}
+				lastDownstackIdx = idx
 			}
-			lastDownstackIdx = idx
 		}
 
 		// If this branch's base is known, it'll be in idxByBranch.
