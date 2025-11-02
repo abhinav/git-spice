@@ -33,6 +33,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 		trackedBranches []trackedBranch
 		when            NavCommentWhen
 		sync            NavCommentSync
+		downstack       NavCommentDownstack
 
 		// branches from trackedBranches that were just submitted.
 		submit []string
@@ -310,6 +311,35 @@ func TestUpdateNavigationComments(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "MergedDownstack/FilterOpen",
+			trackedBranches: []trackedBranch{
+				{Name: "feat1", ChangeID: 123, MergedDownstack: []int{100, 101}},
+				{Name: "feat2", Base: "feat1", ChangeID: 124},
+				{Name: "feat3", Base: "feat2", ChangeID: 125},
+			},
+			sync:      NavCommentSyncDownstack,
+			downstack: NavCommentDownstackOpen,
+			submit:    []string{"feat3"},
+			// Merged CRs (#100, #101) should not appear
+			wantComments: map[int]string{
+				123: joinLines(
+					"- #123 ◀",
+					"    - #124",
+					"        - #125",
+				),
+				124: joinLines(
+					"- #123",
+					"    - #124 ◀",
+					"        - #125",
+				),
+				125: joinLines(
+					"- #123",
+					"    - #124",
+					"        - #125 ◀",
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -417,6 +447,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				log,
 				tt.when,
 				tt.sync,
+				tt.downstack,
 				"",
 				tt.submit,
 				func(context.Context) (forge.Repository, error) {
@@ -675,6 +706,31 @@ func TestNavCommentSync_StringMarshal(t *testing.T) {
 		var s NavCommentSync
 		require.Error(t, s.UnmarshalText([]byte("unknown")))
 		assert.Equal(t, "unknown", NavCommentSync(42).String())
+	})
+}
+
+func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
+	tests := []struct {
+		give string
+		want NavCommentDownstack
+	}{
+		{"all", NavCommentDownstackAll},
+		{"open", NavCommentDownstackOpen},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.give, func(t *testing.T) {
+			var got NavCommentDownstack
+			require.NoError(t, got.UnmarshalText([]byte(tt.give)))
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.give, got.String())
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		var d NavCommentDownstack
+		require.Error(t, d.UnmarshalText([]byte("unknown")))
+		assert.Equal(t, "unknown", NavCommentDownstack(42).String())
 	})
 }
 

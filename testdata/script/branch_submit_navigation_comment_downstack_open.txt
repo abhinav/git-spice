@@ -1,0 +1,70 @@
+# Test that spice.submit.navigationComment.downstack=open
+# filters merged CRs from navigation comments.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+env SHAMHUB_USERNAME=alice
+gs auth login
+git push origin main
+
+git config spice.submit.navigationComment.downstack open
+
+# Create a stack of two branches.
+git add feat1.txt
+gs branch create -m 'Add feature 1' feat1
+gs bs --fill
+
+git add feat2.txt
+gs branch create -m 'Add feature 2' feat2
+gs bs --fill
+
+# feat2's navigation comment has feat1 because feat1 is still open.
+shamhub dump comments 2
+cmp stdout $WORK/golden/comments-before.txt
+
+# Merge feat1, restack feat2.
+shamhub merge alice/example 1
+gs repo sync
+gs branch restack
+gs bs
+
+# Now feat2's navigation comment should not show feat1 because it's merged.
+shamhub dump comments 2
+cmp stdout $WORK/golden/comments-after.txt
+
+-- repo/feat1.txt --
+feature 1
+
+-- repo/feat2.txt --
+feature 2
+
+-- golden/comments-before.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #1
+        - #2 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/comments-after.txt --
+- change: 2
+  body: |
+    This change is part of the following stack:
+
+    - #2 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->

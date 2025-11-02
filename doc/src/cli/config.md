@@ -438,6 +438,24 @@ This will render navigation comments like:
         - #125
 ```
 
+### spice.submit.navigationComment.downstack
+
+<!-- gs:version unreleased -->
+
+git-spice keeps track of stack associations between branches
+even after they are merged.
+Using this information, it generates stack navigation comments
+that show the full stack history of a branch,
+including merged downstack CRs.
+
+This configuration option controls which downstack CRs
+are included in navigation comments posted to CRs.
+
+**Accepted values:**
+
+- `all` (default): include all downstack CRs (both open and merged)
+- `open`: only include CRs open at the time of submission
+
 ### spice.submit.publish
 
 <!-- gs:version v0.5.0 -->
