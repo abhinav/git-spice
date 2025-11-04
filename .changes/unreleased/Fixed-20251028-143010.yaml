@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  Prevent `gs repo sync` from prompting to delete a branch
-  when both a merged and an open PR are present for it.
-time: 2025-10-28T14:30:10-07:00
