@@ -443,6 +443,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 					mu.Lock()
 					errs = append(errs, fmt.Errorf("get branch %v: %w", name, err))
 					mu.Unlock()
+					continue
 				}
 
 				mu.Lock()
