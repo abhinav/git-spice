@@ -274,3 +274,37 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		assert.Empty(t, lookup.UpstreamBranch)
 	})
 }
+
+// Regression test for https://github.com/abhinav/git-spice/issues/926
+func TestService_LoadBranches_lookupError_issue926(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(mockCtrl)
+
+	mockStore.EXPECT().
+		ListBranches(gomock.Any()).
+		Return(func(yield func(string, error) bool) {
+			yield("feature", nil)
+		})
+
+	mockStore.EXPECT().
+		LookupBranch(gomock.Any(), "feature").
+		Return(nil, assert.AnError)
+
+	mockRepo := NewMockGitRepository(mockCtrl)
+	mockRepo.EXPECT().
+		PeelToCommit(gomock.Any(), "feature").
+		Return(git.Hash("abc123"), nil)
+
+	svc := NewService(
+		mockRepo,
+		NewMockGitWorktree(mockCtrl),
+		mockStore,
+		nil,
+		silogtest.New(t),
+	)
+	ctx := t.Context()
+	assert.NotPanics(t, func() {
+		_, _ = svc.LoadBranches(ctx)
+	})
+}
