@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  Add 'spice.branchCreate.generatedBranchNameLimit' configuration option
-  to customize the length of generated branch names.
-time: 2025-10-23T07:00:41.856683-07:00

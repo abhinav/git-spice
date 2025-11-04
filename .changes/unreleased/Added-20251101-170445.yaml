@@ -1,5 +1,0 @@
-kind: Added
-body: >
-  submit: Add 'spice.submit.navigationComment.downstack' configuration option
-  to control whether merged CRs appear in stack navigation comments.
-time: 2025-11-01T17:04:45.135399-07:00

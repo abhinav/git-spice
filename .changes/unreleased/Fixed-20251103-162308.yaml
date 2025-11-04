@@ -1,3 +1,0 @@
-kind: Fixed
-body: Fix crash when information for a branch could not be loaded from Git
-time: 2025-11-03T16:23:08.7112-08:00

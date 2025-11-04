@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  Fix data race in reading GraphQL responses from GitHub
-  where buffers could be reused while response bodies were still being read.
-time: 2025-10-30T07:36:55.001974-07:00
