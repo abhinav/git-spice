@@ -186,7 +186,7 @@ func (l *Logger) WithPrefix(prefix string) *Logger {
 		return l
 	}
 	newL := l.Clone()
-	newL.sl = slog.New(newL.sl.Handler().(*silog.Handler).SetPrefix(prefix))
+	newL.sl = slog.New(newL.sl.Handler().(*silog.Handler).WithPrefix(prefix))
 	return newL
 }
 

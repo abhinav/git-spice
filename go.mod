@@ -24,7 +24,7 @@ require (
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
-	go.abhg.dev/log/silog v0.1.0
+	go.abhg.dev/log/silog v0.2.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/oauth2 v0.32.0
