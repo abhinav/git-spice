@@ -37,12 +37,10 @@ func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTe
 		if err != nil {
 			continue
 		}
-		if template.Content != "" {
-			out = append(out, &forge.ChangeTemplate{
-				Filename: template.Name,
-				Body:     template.Content,
-			})
-		}
+		out = append(out, &forge.ChangeTemplate{
+			Filename: template.Name,
+			Body:     template.Content,
+		})
 	}
 
 	return out, nil

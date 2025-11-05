@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  submit: Include empty CR templates in the list of available templates.
+  These were previously erroneously excluded.
+time: 2025-11-05T12:15:05.299478-08:00
