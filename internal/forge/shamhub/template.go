@@ -16,6 +16,8 @@ var _changeTemplatePaths = []string{
 	"CHANGE_TEMPLATE.md",
 }
 
+var _changeTemplateDir = ".shamhub/CHANGE_TEMPLATE"
+
 // ChangeTemplatePaths reports the case-insensitive paths at which
 // it's possible to define change templates in the repository.
 func (f *Forge) ChangeTemplatePaths() []string {
@@ -39,11 +41,43 @@ type changeTemplate struct {
 func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
 	owner, repo := req.Owner, req.Repo
 
-	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
-	// that's the template to use.
 	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
+	var res changeTemplateResponse
+
+	// Check for templates in .shamhub/CHANGE_TEMPLATE/ directory.
+	cmd := exec.Command(sh.gitExe, "ls-tree", "--name-only", "HEAD:"+_changeTemplateDir)
+	cmd.Dir = sh.repoDir(owner, repo)
+	cmd.Stderr = logw
+
+	if out, err := cmd.Output(); err == nil {
+		// Directory exists, list all .md files in it.
+		files := strings.Split(strings.TrimSpace(string(out)), "\n")
+		for _, file := range files {
+			if file == "" {
+				continue
+			}
+			if !strings.HasSuffix(file, ".md") {
+				continue
+			}
+
+			// Read the file content.
+			filePath := _changeTemplateDir + "/" + file
+			catCmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+filePath)
+			catCmd.Dir = sh.repoDir(owner, repo)
+			catCmd.Stderr = logw
+
+			if body, err := catCmd.Output(); err == nil {
+				res = append(res, &changeTemplate{
+					Filename: file,
+					Body:     strings.TrimSpace(string(body)) + "\n",
+				})
+			}
+		}
+	}
+
+	// Check for single file templates at well-known paths.
 	templatePaths := make(map[string]struct{})
 	for _, p := range _changeTemplatePaths {
 		templatePaths[p] = struct{}{}
@@ -51,7 +85,6 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 		templatePaths[strings.ToUpper(p)] = struct{}{}
 	}
 
-	var res changeTemplateResponse
 	for path := range templatePaths {
 		cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+path)
 		cmd.Dir = sh.repoDir(owner, repo)

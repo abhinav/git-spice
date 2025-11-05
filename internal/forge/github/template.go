@@ -41,12 +41,10 @@ func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTe
 
 	out := make([]*forge.ChangeTemplate, 0, len(q.Repository.PullRequestTemplates))
 	for _, t := range q.Repository.PullRequestTemplates {
-		if t.Body != "" {
-			out = append(out, &forge.ChangeTemplate{
-				Filename: string(t.Filename),
-				Body:     string(t.Body),
-			})
-		}
+		out = append(out, &forge.ChangeTemplate{
+			Filename: string(t.Filename),
+			Body:     string(t.Body),
+		})
 	}
 
 	return out, nil

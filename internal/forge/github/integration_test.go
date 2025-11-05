@@ -207,6 +207,125 @@ func TestIntegration_Repository_ListChangeTemplates(t *testing.T) {
 	})
 }
 
+// https://github.com/abhinav/git-spice/issues/931
+func TestIntegration_Repository_ListChangeTemplates_empty(t *testing.T) {
+	ctx := t.Context()
+
+	emptyTemplateFixture := fixturetest.New(_fixtures, "empty-template", func() string {
+		return randomString(8) + ".md"
+	})
+	nonEmptyTemplateFixture := fixturetest.New(_fixtures, "non-empty-template", func() string {
+		return randomString(8) + ".md"
+	})
+
+	emptyTemplateName := emptyTemplateFixture.Get(t)
+	nonEmptyTemplateName := nonEmptyTemplateFixture.Get(t)
+
+	var commitHash git.Hash
+	if github.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		gitWork, err := git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo := gitWork.Repository()
+
+		templateDir := filepath.Join(repoDir, ".github", "PULL_REQUEST_TEMPLATE")
+		require.NoError(t, os.MkdirAll(templateDir, 0o755), "could not create .github directory")
+
+		// Create empty template.
+		require.NoError(t, os.WriteFile(
+			filepath.Join(templateDir, emptyTemplateName),
+			nil,
+			0o644,
+		), "could not write empty template")
+
+		// Create non-empty template.
+		require.NoError(t, os.WriteFile(
+			filepath.Join(templateDir, nonEmptyTemplateName),
+			[]byte("This is a test PR template\n"),
+			0o644,
+		), "could not write non-empty template")
+
+		cmd = exec.Command("git", "add", filepath.Join(".github", "PULL_REQUEST_TEMPLATE"))
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "Add PR templates",
+		}), "could not commit templates")
+
+		commitHash, err = gitRepo.PeelToCommit(ctx, "HEAD")
+		require.NoError(t, err, "could not get commit hash")
+
+		t.Logf("Pushing templates to main")
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec("main"),
+			}), "error pushing templates")
+
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Reverting template commit")
+
+			cmd := exec.Command("git", "revert", "--no-edit", commitHash.String())
+			cmd.Dir = repoDir
+			cmd.Stdout = output
+			cmd.Stderr = output
+			assert.NoError(t, cmd.Run(), "could not revert commit")
+
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec("main"),
+				}), "error pushing revert")
+		})
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitHubClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		ctx, new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	templates, err := repo.ListChangeTemplates(ctx)
+	require.NoError(t, err)
+
+	// Find our test templates in the results.
+	var foundEmpty, foundNonEmpty bool
+	for _, template := range templates {
+		t.Logf("Found template: %s", template.Filename)
+		if template.Filename == emptyTemplateName {
+			foundEmpty = true
+			assert.Empty(t, template.Body, "empty template should have empty body")
+		}
+		if template.Filename == nonEmptyTemplateName {
+			foundNonEmpty = true
+			assert.NotEmpty(t, template.Body, "non-empty template should have non-empty body")
+		}
+	}
+
+	assert.True(t, foundEmpty, "empty template not found in results")
+	assert.True(t, foundNonEmpty, "non-empty template not found in results")
+}
+
 func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	ghc := newGitHubClient(rec.GetDefaultClient())
