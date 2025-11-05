@@ -319,6 +319,9 @@ Where:
   - Fixed: a bug fix
   - Security: a security fix
 - `$body` is a description of the change in passive voice.
+  - **IMPORTANT**: Describe the user-facing change,
+    not the internal implementation detail.
+    If there are no user-facing changes, do not add a changelog entry.
   - For component-specific changes,
     prefix the description with the component name,
     e.g., "submit: Add 'config.option' to enable feature".
