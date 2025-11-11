@@ -1,0 +1,48 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/934
+#
+# Verifies that 'gs bc -am "message"' generates a branch name automatically
+# even when branchCreate.commit is configured to false (--no-commit default).
+
+as 'Test <test@example.com>'
+at '2025-11-11T12:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Configure branchCreate.commit to false (--no-commit as default).
+git config --local spice.branchCreate.commit false
+
+# Create a file with changes to commit.
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+
+# Run 'gs bc -am "Add feature"' which should:
+# 1. Generate a branch name automatically (from commit message)
+# 2. Create the branch
+# 3. Create the commit
+gs bc -am 'Add feature'
+
+# Verify that a branch was created with an auto-generated name.
+# The branch name should be generated from the commit message.
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+# Verify that the commit was made with the correct message.
+git log --format='%s' -n 1
+cmp stdout $WORK/golden/commit-message.txt
+
+# Verify the file is committed and working tree is clean.
+git status --porcelain
+! stdout .
+
+-- repo/.git/.keep --
+-- extra/feature.txt --
+This is a new feature file.
+-- golden/ls.txt --
+◉ add-feature
+┃
+○ main
+-- golden/commit-message.txt --
+Add feature
