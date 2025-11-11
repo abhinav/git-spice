@@ -103,13 +103,13 @@ func (cmd *branchCreateCmd) Run(
 	svc *spice.Service,
 	restackHandler RestackHandler,
 ) (err error) {
-	if cmd.Name == "" && !cmd.Commit {
-		return errors.New("a branch name is required with --no-commit")
-	}
-
 	// If a message is specified, automatically enable commits
 	if cmd.Message != "" {
 		cmd.Commit = true
+	}
+
+	if cmd.Name == "" && !cmd.Commit {
+		return errors.New("a branch name is required with --no-commit")
 	}
 
 	trunk := store.Trunk()

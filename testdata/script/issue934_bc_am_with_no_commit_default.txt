@@ -41,8 +41,7 @@ git status --porcelain
 -- extra/feature.txt --
 This is a new feature file.
 -- golden/ls.txt --
-◉ add-feature
-┃
-○ main
+┏━■ add-feature ◀
+main
 -- golden/commit-message.txt --
 Add feature
