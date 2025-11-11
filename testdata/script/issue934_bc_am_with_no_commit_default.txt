@@ -14,14 +14,7 @@ gs repo init
 # Configure branchCreate.commit to false (--no-commit as default).
 git config --local spice.branchCreate.commit false
 
-# Create a file with changes to commit.
-cp $WORK/extra/feature.txt feature.txt
 git add feature.txt
-
-# Run 'gs bc -am "Add feature"' which should:
-# 1. Generate a branch name automatically (from commit message)
-# 2. Create the branch
-# 3. Create the commit
 gs bc -am 'Add feature'
 
 # Verify that a branch was created with an auto-generated name.
@@ -37,8 +30,7 @@ cmp stdout $WORK/golden/commit-message.txt
 git status --porcelain
 ! stdout .
 
--- repo/.git/.keep --
--- extra/feature.txt --
+-- repo/feature.txt --
 This is a new feature file.
 -- golden/ls.txt --
 ┏━■ add-feature ◀
