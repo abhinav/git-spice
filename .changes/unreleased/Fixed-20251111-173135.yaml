@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'branch create: ''-m'' flag now generates branch name automatically even when ''spice.branchCreate.commit'' is set to false'
-time: 2025-11-11T17:31:35.886582135Z
