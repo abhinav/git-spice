@@ -292,10 +292,13 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 
 	var branchesToComment []string
 	for _, branch := range req.Branches {
+		// Shallow copy the options because submitBranch may modify them.
+		opts := *opts
+
 		status, err := h.submitBranch(
 			ctx,
 			branch,
-			&submitOptions{Options: opts},
+			&submitOptions{Options: &opts},
 		)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
