@@ -1,0 +1,86 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/936
+# Interactive prompt wasn't asking about draft status for CRs after the first one.
+
+as 'Test <test@example.com>'
+at '2025-01-14T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feat1 -> feat2 -> feat3
+git add feat1.txt
+gs branch create feat1 -m 'Add feature 1'
+git add feat2.txt
+gs branch create feat2 -m 'Add feature 2'
+git add feat3.txt
+gs branch create feat3 -m 'Add feature 3'
+
+# submit the stack interactively
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs stack submit
+cmp $WORK/robot.actual $WORK/robot.golden
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+-- repo/feat1.txt --
+This is feature 1
+-- repo/feat2.txt --
+This is feature 2
+-- repo/feat3.txt --
+This is feature 3
+
+-- robot.golden --
+===
+> Title: Add feature 1 
+> Short summary of the change
+"Add feature 1"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+""
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
+===
+> Title: Add feature 2 
+> Short summary of the change
+"Add feature 2"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+""
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
+===
+> Title: Add feature 3 
+> Short summary of the change
+"Add feature 3"
+===
+> Body: Press [e] to open mockedit or [enter/tab] to skip
+> Open your editor to write a detailed description of the change
+""
+===
+> Draft: [y/N]
+> Mark the change as a draft?
+false
+
+-- golden/ls.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
