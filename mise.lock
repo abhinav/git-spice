@@ -9,6 +9,11 @@ checksum = "blake3:5c375c0c849a13e0aab777ba05f059bc9065e4554205e911ba15d51e8f0f2
 version = "1.25.4"
 backend = "core:go"
 
+[tools.go.platforms.linux-x64]
+checksum = "sha256:9fa5ffeda4170de60f67f3aa0f824e426421ba724c21e133c1e35d6159ca1bec"
+size = 59766394
+url = "https://dl.google.com/go/go1.25.4.linux-amd64.tar.gz"
+
 [tools.go.platforms.macos-arm64]
 checksum = "sha256:c1b04e74251fe1dfbc5382e73d0c6d96f49642d8aebb7ee10a7ecd4cae36ebd2"
 size = 58026727
@@ -27,6 +32,11 @@ checksum = "blake3:58afa2c8f89ef60ed81a84502504fe23518cd62e2ea708c918be1f7d56289
 [[tools.golangci-lint]]
 version = "2.6.2"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint.platforms.linux-x64]
+checksum = "sha256:499c864b5fd9841c4fa8e80b5e2be30f73f085cf186f1b111ff81a2783b7de12"
+size = 14406341
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.6.2/golangci-lint-2.6.2-linux-amd64.tar.gz"
 
 [[tools.gotestsum]]
 version = "1.13.0"
