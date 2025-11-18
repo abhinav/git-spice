@@ -21,8 +21,9 @@ type BranchSelectKeyMap struct {
 	Up   key.Binding // move up the list
 	Down key.Binding // move down the list
 
-	Accept key.Binding // accept the focused option
-	Delete key.Binding // delete the last character in the filter
+	Accept  key.Binding // accept the focused option
+	Delete  key.Binding // delete the last character in the filter
+	Discard key.Binding // discard the current selection
 }
 
 // DefaultBranchSelectKeyMap is the default key map for a [Select].
@@ -42,6 +43,10 @@ var DefaultBranchSelectKeyMap = BranchSelectKeyMap{
 	Delete: key.NewBinding(
 		key.WithKeys("backspace", "ctrl+h"),
 		key.WithHelp("backspace", "delete filter character"),
+	),
+	Discard: key.NewBinding(
+		key.WithKeys("ctrl+u"),
+		key.WithHelp("ctrl+u", "delete filter line"),
 	),
 }
 
@@ -305,6 +310,12 @@ func (b *BranchTreeSelect) Update(msg tea.Msg) tea.Cmd {
 	case key.Matches(keyMsg, b.KeyMap.Delete):
 		if len(b.filter) > 0 {
 			b.filter = b.filter[:len(b.filter)-1]
+			filterChanged = true
+		}
+
+	case key.Matches(keyMsg, b.KeyMap.Discard):
+		if len(b.filter) > 0 {
+			b.filter = b.filter[:0]
 			filterChanged = true
 		}
 
