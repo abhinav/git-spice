@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'submit: Fix draft prompt being skipped for branches after the first one when submitting a stack interactively'
-time: 2025-11-14T19:12:45.004898-08:00
