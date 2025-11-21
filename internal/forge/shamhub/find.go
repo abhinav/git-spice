@@ -12,7 +12,7 @@ import (
 
 var (
 	_ = shamhubRESTHandler("GET /{owner}/{repo}/change/{number}", (*ShamHub).handleGetChange)
-	_ = shamhubRESTHandler("GET /{owner}/{repo}/changes/by-branch/{branch}", (*ShamHub).handleFindChangesByBranch)
+	_ = shamhubRESTHandler("GET /{owner}/{repo}/changes/by-branch/{branch...}", (*ShamHub).handleFindChangesByBranch)
 )
 
 type getChangeRequest struct {
