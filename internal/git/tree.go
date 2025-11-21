@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/scanutil"
 )
 
 // Mode is the octal file mode of a Git tree entry.
@@ -72,7 +73,7 @@ type TreeEntry struct {
 // Returns the hash of the new tree and the number of entries written.
 func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq2[TreeEntry, error]) (_ Hash, numEnts int, err error) {
 	var stdout bytes.Buffer
-	cmd := r.gitCmd(ctx, "mktree").Stdout(&stdout)
+	cmd := r.gitCmd(ctx, "mktree", "-z").Stdout(&stdout)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return ZeroHash, numEnts, fmt.Errorf("pipe: %w", err)
@@ -111,9 +112,9 @@ func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq2[TreeEntry, err
 			return ZeroHash, numEnts, fmt.Errorf("name %q contains a slash", ent.Name)
 		}
 
-		// mktree expects input in the form:
-		//	<mode> SP <type> SP <hash> TAB <name> NL
-		_, err := fmt.Fprintf(stdin, "%s %s %s\t%s\n", ent.Mode, ent.Type, ent.Hash, ent.Name)
+		// mktree -z expects input in the form:
+		//	<mode> SP <type> SP <hash> TAB <name> NUL
+		_, err := fmt.Fprintf(stdin, "%s %s %s\t%s\x00", ent.Mode, ent.Type, ent.Hash, ent.Name)
 		if err != nil {
 			return ZeroHash, numEnts, fmt.Errorf("write: %w", err)
 		}
@@ -153,6 +154,7 @@ func (r *Repository) ListTree(
 ) iter.Seq2[TreeEntry, error] {
 	args := []string{
 		"ls-tree",
+		"-z",          // NUL-terminate entries for proper handling of special characters
 		"--full-tree", // don't limit listing to the current working directory
 	}
 	if opts.Recurse {
@@ -162,14 +164,14 @@ func (r *Repository) ListTree(
 
 	return func(yield func(TreeEntry, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
-		for line, err := range cmd.ScanLines(r.exec) {
+		for line, err := range cmd.Scan(r.exec, scanutil.SplitNull) {
 			if err != nil {
 				yield(TreeEntry{}, fmt.Errorf("git ls-tree: %w", err))
 				return
 			}
 
-			// ls-tree output is in the form:
-			//	<mode> SP <type> SP <hash> TAB <name> NL
+			// ls-tree -z output is in the form:
+			//	<mode> SP <type> SP <hash> TAB <name> NUL
 			modeTypeHash, name, ok := bytes.Cut(line, []byte{'\t'})
 			if !ok {
 				r.log.Warnf("ls-tree: skipping invalid line: %q", line)

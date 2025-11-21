@@ -186,3 +186,70 @@ func TestGitBackend_ConcurrentOperations(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "final_value", finalValue)
 }
+
+func TestGitBackend_SpecialCharacterKeys(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	backend := NewGitBackend(GitConfig{
+		Repo:        repo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	})
+
+	tests := []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{"Greek theta", "branches/feature/θ-theta", "theta-value"},
+		{"Unicode checkmark", "branches/feature/✅-checkmark", "checkmark-value"},
+		{"Combined emoji", "branches/feature/👨‍💻-developer", "developer-value"},
+		{"Accented character", "branches/feature/café", "cafe-value"},
+		{"Japanese characters", "branches/feature/日本語", "japanese-value"},
+	}
+
+	db := NewDB(backend)
+
+	// Store all values
+	for _, tt := range tests {
+		t.Run("Set/"+tt.name, func(t *testing.T) {
+			err := db.Set(ctx, tt.key, tt.value, "add "+tt.name)
+			require.NoError(t, err)
+		})
+	}
+
+	// Retrieve all values
+	for _, tt := range tests {
+		t.Run("Get/"+tt.name, func(t *testing.T) {
+			var got string
+			err := backend.Get(ctx, tt.key, &got)
+			require.NoError(t, err)
+			assert.Equal(t, tt.value, got)
+		})
+	}
+
+	// List keys and verify all special character keys are present
+	t.Run("Keys", func(t *testing.T) {
+		keys, err := backend.Keys(ctx, "branches")
+		require.NoError(t, err)
+
+		expectedKeys := []string{
+			"feature/θ-theta",
+			"feature/✅-checkmark",
+			"feature/👨‍💻-developer",
+			"feature/café",
+			"feature/日本語",
+		}
+
+		for _, expectedKey := range expectedKeys {
+			assert.Contains(t, keys, expectedKey,
+				"Keys list should contain %q", expectedKey)
+		}
+	})
+}

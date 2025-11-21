@@ -1,0 +1,203 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/944
+# Verifies that git-spice handles special characters in branch names correctly
+# across create, submit, merge, and restack operations.
+
+as 'Test User <test@example.com>'
+at '2025-11-20T10:00:00Z'
+
+# Setup repository with ShamHub
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create branches with special characters in their names.
+# Each branch needs a commit to be submittable.
+git add feat1.txt
+gs branch create feature/θ-theta -m 'Add theta feature'
+
+git add feat2.txt
+gs branch create feature/✅-checkmark -m 'Add checkmark feature'
+
+git add feat3.txt
+gs branch create feature/👨‍💻-developer -m 'Add developer feature'
+
+git add feat4.txt
+gs branch create feature/café -m 'Add café feature'
+
+git add feat5.txt
+gs branch create feature/日本語 -m 'Add Japanese feature'
+
+# List all branches to verify they were created correctly
+gs ls
+cmp stderr $WORK/golden/ls-after-create.txt
+
+# Submit all branches with --fill
+gs ss --fill
+
+# Verify the Change Requests were created
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes-after-submit.json
+
+# Merge one of the branches (the checkmark branch)
+shamhub merge -prune alice/example.git 2
+
+# Pull changes and restack
+gs rs
+gs stack restack
+
+# Verify branch state after restack
+gs ls
+cmp stderr $WORK/golden/ls-after-restack.txt
+
+-- repo/.git/.keep --
+-- repo/feat1.txt --
+Theta feature content
+-- repo/feat2.txt --
+Checkmark feature content
+-- repo/feat3.txt --
+Developer feature content
+-- repo/feat4.txt --
+Café feature content
+-- repo/feat5.txt --
+Japanese feature content
+-- golden/ls-after-create.txt --
+        ┏━■ feature/日本語 ◀
+      ┏━┻□ feature/café
+    ┏━┻□ feature/👨‍💻-developer
+  ┏━┻□ feature/✅-checkmark
+┏━┻□ feature/θ-theta
+main
+-- golden/changes-after-submit.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add theta feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "a6837378da04e30a36ee32fc247c9a5e270c3e27"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/θ-theta",
+      "sha": "524249e6422319aa565b82fd8413613b57fbb5a4"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add checkmark feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/θ-theta",
+      "sha": "524249e6422319aa565b82fd8413613b57fbb5a4"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/✅-checkmark",
+      "sha": "1b7d78c855586d858d67d36c4438df0d55d536a7"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Add developer feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/✅-checkmark",
+      "sha": "1b7d78c855586d858d67d36c4438df0d55d536a7"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/👨‍💻-developer",
+      "sha": "2c3b0b8c0c59ad9c4075fdfe7bef0eecf7114f31"
+    }
+  },
+  {
+    "number": 4,
+    "html_url": "$SHAMHUB_URL/alice/example/change/4",
+    "state": "open",
+    "title": "Add café feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/👨‍💻-developer",
+      "sha": "2c3b0b8c0c59ad9c4075fdfe7bef0eecf7114f31"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/café",
+      "sha": "b87681e38587010bd8b1b232acc51c6e73665628"
+    }
+  },
+  {
+    "number": 5,
+    "html_url": "$SHAMHUB_URL/alice/example/change/5",
+    "state": "open",
+    "title": "Add Japanese feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/café",
+      "sha": "b87681e38587010bd8b1b232acc51c6e73665628"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature/日本語",
+      "sha": "e1d8aefd88f7df635ebbfdbd629b0f313f1b159d"
+    }
+  }
+]
+
+-- golden/ls-after-restack.txt --
+      ┏━■ feature/日本語 (#5) (needs push) ◀
+    ┏━┻□ feature/café (#4) (needs push)
+  ┏━┻□ feature/👨‍💻-developer (#3) (needs push)
+┏━┻□ feature/θ-theta (#1)
+main
