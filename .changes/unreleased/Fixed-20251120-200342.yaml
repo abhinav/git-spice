@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  Correctly handle unicode in branch names across various commands.
-  These would previously be stored in state, but not be accessible.
-time: 2025-11-20T20:03:42.420684-08:00
