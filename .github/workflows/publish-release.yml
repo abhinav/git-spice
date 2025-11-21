@@ -13,12 +13,18 @@ on:
         description: Git ref to release from.
         required: true
         type: string
+      skip_publish:
+        description: Skip the publish step.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
   release:
+    name: Publish Release
     runs-on: ubuntu-latest
 
     steps:
@@ -56,6 +62,7 @@ jobs:
           | tee ${{ github.workspace }}-CHANGELOG.txt
 
     - name: Tag a release
+      if: inputs.skip_publish == false
       run: |
         git tag "$TAG"
         git push origin "$TAG"
@@ -63,6 +70,7 @@ jobs:
         TAG: v${{ env.VERSION }}
 
     - name: Release
+      if: inputs.skip_publish == false
       uses: goreleaser/goreleaser-action@v6
       with:
         distribution: goreleaser
@@ -109,7 +117,7 @@ jobs:
         fi
 
     - name: Update Homebrew Formula
-      uses: dawidd6/action-homebrew-bump-formula@v3.11.0
+      uses: dawidd6/action-homebrew-bump-formula@v6
       with:
         token: ${{ secrets.ROBOT_PAT }}
         user_name: Abhinav Gupta
