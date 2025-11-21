@@ -2,6 +2,9 @@ package git_test
 
 import (
 	"bytes"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -214,4 +217,131 @@ func TestIntegrationUpdateTree(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, ents)
 	})
+}
+
+func TestIntegrationListTree_specialCharsFromFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	dir := t.TempDir()
+	repo, _, err := git.Init(ctx, dir, git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	// Create actual files with special characters in their names
+	specialNames := []string{
+		"θ-theta",
+		"✅-checkmark",
+		"👨‍💻-developer",
+		"café",
+		"日本語",
+	}
+
+	// Create a subdirectory to hold the files
+	featureDir := filepath.Join(dir, "feature")
+	require.NoError(t, os.MkdirAll(featureDir, 0o755))
+
+	for _, name := range specialNames {
+		filePath := filepath.Join(featureDir, name)
+		require.NoError(t, os.WriteFile(filePath, []byte("content"), 0o644))
+	}
+
+	// Add files to git index and commit
+	addCmd := exec.Command("git", "add", "feature")
+	addCmd.Dir = dir
+	require.NoError(t, addCmd.Run())
+
+	commitCmd := exec.Command("git", "commit", "-m", "Add files with special characters")
+	commitCmd.Dir = dir
+	commitCmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+	require.NoError(t, commitCmd.Run())
+
+	// Get the commit hash
+	revParseCmd := exec.Command("git", "rev-parse", "HEAD")
+	revParseCmd.Dir = dir
+	commitHashBytes, err := revParseCmd.Output()
+	require.NoError(t, err)
+	commitHash := git.Hash(string(bytes.TrimSpace(commitHashBytes)))
+
+	// Get the tree from the commit
+	treeHash, err := repo.PeelToTree(ctx, commitHash.String())
+	require.NoError(t, err)
+
+	// List the tree recursively
+	ents, err := sliceutil.CollectErr(repo.ListTree(ctx, treeHash, git.ListTreeOptions{
+		Recurse: true,
+	}))
+	require.NoError(t, err)
+
+	// Extract names from the returned entries
+	var gotNames []string
+	for _, ent := range ents {
+		gotNames = append(gotNames, ent.Name)
+	}
+
+	// Build expected names with feature/ prefix
+	var expectedNames []string
+	for _, name := range specialNames {
+		expectedNames = append(expectedNames, "feature/"+name)
+	}
+
+	// Verify all special character names are returned exactly as they were created
+	assert.ElementsMatch(t, expectedNames, gotNames,
+		"ListTree should return file names with special characters exactly as they were created")
+}
+
+func TestIntegrationListTree_specialCharsFromMakeTree(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	emptyFile, err := repo.WriteObject(ctx, git.BlobType, bytes.NewReader(nil))
+	require.NoError(t, err)
+
+	// Create tree entries with special characters in their names
+	// (without slashes since MakeTree doesn't allow them in individual entry names)
+	specialNames := []string{
+		"θ-theta",
+		"✅-checkmark",
+		"👨‍💻-developer",
+		"café",
+		"日本語",
+	}
+
+	var entries []git.TreeEntry
+	for _, name := range specialNames {
+		entries = append(entries, git.TreeEntry{
+			Type: git.BlobType,
+			Name: name,
+			Hash: emptyFile,
+		})
+	}
+
+	treeHash, numEnts, err := repo.MakeTree(ctx, sliceutil.All2[error](entries))
+	require.NoError(t, err)
+	assert.Equal(t, len(specialNames), numEnts)
+
+	// List the tree and verify names match exactly
+	ents, err := sliceutil.CollectErr(repo.ListTree(ctx, treeHash, git.ListTreeOptions{}))
+	require.NoError(t, err)
+
+	// Extract names from the returned entries
+	var gotNames []string
+	for _, ent := range ents {
+		gotNames = append(gotNames, ent.Name)
+	}
+
+	// Verify all special character names are returned exactly as they were created
+	assert.ElementsMatch(t, specialNames, gotNames,
+		"ListTree should return names with special characters exactly as they were created")
 }

@@ -112,3 +112,75 @@ func TestIntegrationCommitListing(t *testing.T) {
 		}, msgs)
 	})
 }
+
+func TestIntegrationPeelToCommit_specialChars(t *testing.T) {
+	t.Parallel()
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-11-20T10:00:00Z'
+
+		git init
+		git commit --allow-empty -m 'Initial commit'
+
+		# Create branches with special characters
+		git checkout -b 'feature/θ-theta'
+		git add theta.txt
+		git commit -m 'Add theta feature'
+
+		git checkout -b 'feature/✅-checkmark'
+		git add checkmark.txt
+		git commit -m 'Add checkmark feature'
+
+		git checkout -b 'feature/👨‍💻-developer'
+		git add developer.txt
+		git commit -m 'Add developer feature'
+
+		git checkout -b 'feature/café'
+		git add cafe.txt
+		git commit -m 'Add café feature'
+
+		git checkout -b 'feature/日本語'
+		git add japanese.txt
+		git commit -m 'Add Japanese feature'
+
+		-- theta.txt --
+		Theta content
+		-- checkmark.txt --
+		Checkmark content
+		-- developer.txt --
+		Developer content
+		-- cafe.txt --
+		Café content
+		-- japanese.txt --
+		Japanese content
+	`)))
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	repo, err := git.Open(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		branch string
+	}{
+		{"Greek theta", "feature/θ-theta"},
+		{"Unicode checkmark", "feature/✅-checkmark"},
+		{"Combined emoji", "feature/👨‍💻-developer"},
+		{"Accented character", "feature/café"},
+		{"Japanese characters", "feature/日本語"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			hash, err := repo.PeelToCommit(ctx, tt.branch)
+			require.NoError(t, err)
+			assert.NotEmpty(t, hash)
+			assert.NotEqual(t, git.ZeroHash, hash)
+		})
+	}
+}
