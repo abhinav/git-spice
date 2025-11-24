@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       with:
         ref: ${{ inputs.ref }}
         token: ${{ secrets.PAT }}
@@ -89,7 +89,7 @@ jobs:
     needs: [release]
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         ref: ${{ inputs.ref }}
 
