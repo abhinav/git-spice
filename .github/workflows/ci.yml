@@ -16,7 +16,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       name: Check out repository
     - uses: jdx/mise-action@v3
       with:
@@ -27,7 +27,7 @@ jobs:
     name: Generate test matrix
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
       name: Check out repository
     - uses: jdx/mise-action@v3
       with:
@@ -61,7 +61,7 @@ jobs:
     name: Test / ${{ matrix.name }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: jdx/mise-action@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
