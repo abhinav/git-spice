@@ -109,3 +109,29 @@ func accessValueName(value gitlab.AccessLevelValue) string {
 	}
 	return strconv.Itoa(int(value))
 }
+
+// resolveReviewerIDs converts usernames to GitLab user IDs.
+func (r *Repository) resolveReviewerIDs(ctx context.Context, usernames []string) ([]int, error) {
+	if len(usernames) == 0 {
+		return nil, nil
+	}
+
+	reviewerIDs := make([]int, 0, len(usernames))
+	for _, username := range usernames {
+		users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
+			Username: &username,
+		}, gitlab.WithContext(ctx))
+		if err != nil {
+			return nil, fmt.Errorf("lookup user %q: %w", username, err)
+		}
+
+		if len(users) == 0 {
+			return nil, fmt.Errorf("user not found: %q", username)
+		}
+
+		reviewerIDs = append(reviewerIDs, users[0].ID)
+		r.log.Debug("Resolved reviewer ID", "username", username, "id", users[0].ID)
+	}
+
+	return reviewerIDs, nil
+}

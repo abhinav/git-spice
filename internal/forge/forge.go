@@ -2,9 +2,6 @@
 // and the underlying forge (e.g. GitHub, GitLab, Bitbucket).
 package forge
 
-// TODO: Rename this package to codeforge or something similar
-// so we can use "forge" in variable names more easily.
-
 import (
 	"context"
 	"encoding/json"
@@ -71,6 +68,10 @@ func MatchRemoteURL(r *Registry, remoteURL string) (forge Forge, rid RepositoryI
 var ErrUnsupportedURL = errors.New("unsupported URL")
 
 //go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+
+// TODO:
+// Forge should become a struct with multiple interfaces or funcctions
+// that it depends on in the underlying implementation.
 
 // Forge is a forge that hosts Git repositories.
 type Forge interface {
@@ -301,6 +302,9 @@ type SubmitChangeRequest struct {
 
 	// Labels are optional labels to apply to the change.
 	Labels []string
+
+	// Reviewers are optional reviewers to request reviews from.
+	Reviewers []string
 }
 
 // SubmitChangeResult is the result of creating a new change in a repository.
@@ -321,7 +325,13 @@ type EditChangeOptions struct {
 	// If unset, the draft status is not changed.
 	Draft *bool
 
+	// Labels are the labels to apply to the change.
+	// Existing labels associated with the change will not be modified.
 	Labels []string
+
+	// Reviewers are the reviewers to request reviews from.
+	// Existing reviewers associated with the change will not be modified.
+	Reviewers []string
 }
 
 // FindChangeItem is a single result from searching for changes in the
@@ -351,6 +361,10 @@ type FindChangeItem struct {
 
 	// Labels are the labels currently applied to the change.
 	Labels []string
+
+	// Reviewers are the usernames of users
+	// who have been requested to review the change.
+	Reviewers []string
 }
 
 // ChangeTemplate is a template for a new change proposal.

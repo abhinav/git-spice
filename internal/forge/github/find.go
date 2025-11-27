@@ -23,6 +23,16 @@ type findPRNode struct {
 			Name githubv4.String `graphql:"name"`
 		} `graphql:"nodes"`
 	} `graphql:"labels(first: 100)"`
+	ReviewRequests struct {
+		Nodes []struct {
+			// https://docs.github.com/en/graphql/reference/objects#requestedreviewer
+			RequestedReviewer struct {
+				Actor struct {
+					Login githubv4.String `graphql:"login"`
+				} `graphql:"... on Actor"`
+			} `graphql:"requestedReviewer"`
+		} `graphql:"nodes"`
+	} `graphql:"reviewRequests(first: 100)"`
 }
 
 func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
@@ -34,18 +44,27 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 		}
 	}
 
+	var reviewers []string
+	if len(n.ReviewRequests.Nodes) > 0 {
+		reviewers = make([]string, len(n.ReviewRequests.Nodes))
+		for i, node := range n.ReviewRequests.Nodes {
+			reviewers[i] = string(node.RequestedReviewer.Actor.Login)
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &PR{
 			Number: int(n.Number),
 			GQLID:  n.ID,
 		},
-		URL:      n.URL.String(),
-		State:    forgeChangeState(n.State),
-		Subject:  string(n.Title),
-		BaseName: string(n.BaseRefName),
-		HeadHash: git.Hash(n.HeadRefOid),
-		Draft:    bool(n.IsDraft),
-		Labels:   labels,
+		URL:       n.URL.String(),
+		State:     forgeChangeState(n.State),
+		Subject:   string(n.Title),
+		BaseName:  string(n.BaseRefName),
+		HeadHash:  git.Hash(n.HeadRefOid),
+		Draft:     bool(n.IsDraft),
+		Labels:    labels,
+		Reviewers: reviewers,
 	}
 }
 

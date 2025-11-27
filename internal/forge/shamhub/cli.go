@@ -152,7 +152,7 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		flag := flag.NewFlagSet("shamhub merge", flag.ContinueOnError)
 		flag.SetOutput(logw)
 		flag.Usage = func() {
-			fmt.Fprintln(logw, "usage: shamhub merge [-prune] <owner/repo> <pr>")
+			fmt.Fprintln(logw, "usage: shamhub merge [-prune] [-squash] <owner/repo> <pr>")
 		}
 
 		prune := flag.Bool("prune", false, "prune the branch after merging")

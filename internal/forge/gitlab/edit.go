@@ -19,7 +19,7 @@ var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 {
+	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 && len(opts.Reviewers) == 0 {
 		return nil // nothing to do
 	}
 
@@ -60,12 +60,21 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		updateOptions.AddLabels = (*gitlab.LabelOptions)(&opts.Labels)
 	}
 
+	if len(opts.Reviewers) > 0 {
+		reviewerIDs, err := r.resolveReviewerIDs(ctx, opts.Reviewers)
+		if err != nil {
+			return fmt.Errorf("resolve reviewer IDs: %w", err)
+		}
+		updateOptions.ReviewerIDs = &reviewerIDs
+		logUpdates = append(logUpdates, slog.Any("reviewers", opts.Reviewers))
+	}
+
 	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
 		r.repoID, mr.Number, &updateOptions,
 		gitlab.WithContext(ctx),
 	)
 	if err != nil {
-		return fmt.Errorf("update draft status: %w", err)
+		return fmt.Errorf("update merge request: %w", err)
 	}
 	if len(logUpdates) > 0 {
 		r.log.Debug("Updated merge request",

@@ -1,0 +1,237 @@
+---
+version: 2
+interactions:
+- id: 0
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 269
+    host: api.github.com
+    body: "{\"query\":\"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}\",\"variables\":{\"input\":{\"repositoryId\":\"R_kgDOMVd0xg\",\"baseRefName\":\"main\",\"headRefName\":\"mjTKCPmd\",\"title\":\"mjTKCPmd\",\"body\":\"Test PR without reviewers\"}}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"createPullRequest\":{\"pullRequest\":{\"id\":\"PR_kwDOMVd0xs6177e-\",\"number\":23,\"url\":\"https://github.com/abhinav/test-repo/pull/23\"}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 1.2415795s
+- id: 1
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 266
+    host: api.github.com
+    body: "{\"query\":\"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}\",\"variables\":{\"input\":{\"repositoryId\":\"R_kgDOMVd0xg\",\"baseRefName\":\"main\",\"headRefName\":\"T2aNl7RF\",\"title\":\"T2aNl7RF\",\"body\":\"Test PR with reviewers\"}}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"createPullRequest\":{\"pullRequest\":{\"id\":\"PR_kwDOMVd0xs6177fW\",\"number\":24,\"url\":\"https://github.com/abhinav/test-repo/pull/24\"}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 1.022038042s
+- id: 2
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 97
+    host: api.github.com
+    body: "{\"query\":\"query($login:String!){user(login: $login){id}}\",\"variables\":{\"login\":\"abhinav-robot\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"user\":{\"id\":\"U_kgDOCzNVWQ\"}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 211.413708ms
+- id: 3
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 201
+    host: api.github.com
+    body: "{\"query\":\"mutation($input:RequestReviewsInput!){requestReviews(input: $input){clientMutationId}}\",\"variables\":{\"input\":{\"pullRequestId\":\"PR_kwDOMVd0xs6177fW\",\"userIds\":[\"U_kgDOCzNVWQ\"],\"union\":true}}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"requestReviews\":{\"clientMutationId\":null}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 703.874875ms
+- id: 4
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 356
+    host: api.github.com
+    body: "{\"query\":\"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}}}}}\",\"variables\":{\"number\":23,\"owner\":\"abhinav\",\"repo\":\"test-repo\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"repository\":{\"pullRequest\":{\"id\":\"PR_kwDOMVd0xs6177e-\",\"number\":23,\"url\":\"https://github.com/abhinav/test-repo/pull/23\",\"title\":\"mjTKCPmd\",\"state\":\"OPEN\",\"headRefOid\":\"90706d61e9f37e34fbc2a6025fce678c21f80e36\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]},\"reviewRequests\":{\"nodes\":[]}}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 254.5145ms
+- id: 5
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 97
+    host: api.github.com
+    body: "{\"query\":\"query($login:String!){user(login: $login){id}}\",\"variables\":{\"login\":\"abhinav-robot\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"user\":{\"id\":\"U_kgDOCzNVWQ\"}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 282.598583ms
+- id: 6
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 201
+    host: api.github.com
+    body: "{\"query\":\"mutation($input:RequestReviewsInput!){requestReviews(input: $input){clientMutationId}}\",\"variables\":{\"input\":{\"pullRequestId\":\"PR_kwDOMVd0xs6177e-\",\"userIds\":[\"U_kgDOCzNVWQ\"],\"union\":true}}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"requestReviews\":{\"clientMutationId\":null}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 504.517292ms
+- id: 7
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 356
+    host: api.github.com
+    body: "{\"query\":\"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}}}}}\",\"variables\":{\"number\":23,\"owner\":\"abhinav\",\"repo\":\"test-repo\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"repository\":{\"pullRequest\":{\"id\":\"PR_kwDOMVd0xs6177e-\",\"number\":23,\"url\":\"https://github.com/abhinav/test-repo/pull/23\",\"title\":\"mjTKCPmd\",\"state\":\"OPEN\",\"headRefOid\":\"90706d61e9f37e34fbc2a6025fce678c21f80e36\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]},\"reviewRequests\":{\"nodes\":[{\"requestedReviewer\":{\"login\":\"abhinav-robot\"}}]}}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 342.989083ms
+- id: 8
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 356
+    host: api.github.com
+    body: "{\"query\":\"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}}}}}\",\"variables\":{\"number\":24,\"owner\":\"abhinav\",\"repo\":\"test-repo\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"repository\":{\"pullRequest\":{\"id\":\"PR_kwDOMVd0xs6177fW\",\"number\":24,\"url\":\"https://github.com/abhinav/test-repo/pull/24\",\"title\":\"T2aNl7RF\",\"state\":\"OPEN\",\"headRefOid\":\"1f30682766458fb27448d9269d38de3d5bd6e5c8\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]},\"reviewRequests\":{\"nodes\":[{\"requestedReviewer\":{\"login\":\"abhinav-robot\"}}]}}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 247.697291ms

@@ -340,6 +340,20 @@ The value must be a comma-separated list of labels.
 Labels specified with the `-l`/`--label` flags
 will be combined with the configured labels.
 
+### spice.submit.reviewers
+
+<!-- gs:version unreleased -->
+
+Add the configured reviewers to all submitted and updated change requests
+when using $$gs branch submit$$ and friends.
+
+The value must be a comma-separated list of reviewers.
+For GitHub, use usernames for individual reviewers
+or `org/team` format for team reviewers.
+
+Reviewers specified with the `--reviewers` flag
+will be combined with the configured reviewers.
+
 ### spice.submit.listTemplatesTimeout
 
 <!-- gs:version v0.8.0 -->

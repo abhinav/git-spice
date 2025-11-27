@@ -59,9 +59,16 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		"pr", m.CreatePullRequest.PullRequest.Number,
 		"url", m.CreatePullRequest.PullRequest.URL.String())
 
+	// TODO: combine the following into one mutation.
+
 	err := r.addLabelsToPullRequest(ctx, req.Labels, m.CreatePullRequest.PullRequest.ID)
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
+	}
+
+	err = r.addReviewersToPullRequest(ctx, req.Reviewers, m.CreatePullRequest.PullRequest.ID)
+	if err != nil {
+		return forge.SubmitChangeResult{}, fmt.Errorf("add reviewers to PR: %w", err)
 	}
 
 	return forge.SubmitChangeResult{
