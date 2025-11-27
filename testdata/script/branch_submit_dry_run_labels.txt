@@ -1,0 +1,43 @@
+# Verify that branch submit --dry-run reports only new labels
+# that would be added to an existing CR, not labels already present.
+
+as 'Test User <test@example.com>'
+at '2025-11-27T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Initialize ShamHub with a test repository
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git config spice.submit.label label1
+
+# Create and submit a branch with label1
+git add feature.txt
+gs branch create feature -m 'Add feature'
+gs branch submit --fill
+
+# Modify the branch to update.
+cp $WORK/extra/feature-modified.txt feature.txt
+git add -u
+gs cc -m 'Modify feature'
+
+# Try to submit with both label1 (existing) and label2 (new) in dry-run mode
+# The output should only report that label2 would be added, not label1
+gs branch submit --dry-run -l label2
+stderr 'WOULD update CR'
+stderr 'add labels: label2'
+! stderr 'add labels: label1'
+
+-- repo/feature.txt --
+feature
+-- extra/feature-modified.txt --
+feature modified

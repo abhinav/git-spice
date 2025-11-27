@@ -1,71 +1,55 @@
 ---
 version: 2
 interactions:
-    - id: 0
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 251
-        transfer_encoding: []
-        trailer: {}
-        host: api.github.com
-        remote_addr: ""
-        request_uri: ""
-        body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":141,"owner":"abhinav","repo":"git-spice"}}
-        form: {}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        transfer_encoding: []
-        trailer: {}
-        content_length: -1
-        uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOJ2BQKs5xNT-u","number":141,"url":"https://github.com/abhinav/git-spice/pull/141","title":"branch submit: Heal from external PR submissions","state":"MERGED","headRefOid":"df0289d83ffae816105947875db01c992224913d","baseRefName":"main","isDraft":false}}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 291.343334ms
-    - id: 1
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 251
-        transfer_encoding: []
-        trailer: {}
-        host: api.github.com
-        remote_addr: ""
-        request_uri: ""
-        body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":999,"owner":"abhinav","repo":"git-spice"}}
-        form: {}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        transfer_encoding: []
-        trailer: {}
-        content_length: -1
-        uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":null}},"errors":[{"type":"NOT_FOUND","path":["repository","pullRequest"],"locations":[{"line":1,"column":87}],"message":"Could not resolve to a PullRequest with the number of 999."}]}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 216.053833ms
+- id: 0
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 283
+    host: api.github.com
+    body: "{\"query\":\"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}}}}}\",\"variables\":{\"number\":141,\"owner\":\"abhinav\",\"repo\":\"git-spice\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"repository\":{\"pullRequest\":{\"id\":\"PR_kwDOJ2BQKs5xNT-u\",\"number\":141,\"url\":\"https://github.com/abhinav/git-spice/pull/141\",\"title\":\"branch submit: Heal from external PR submissions\",\"state\":\"MERGED\",\"headRefOid\":\"df0289d83ffae816105947875db01c992224913d\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]}}}}}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 375.8075ms
+- id: 1
+  request:
+    proto: HTTP/1.1
+    proto_major: 1
+    proto_minor: 1
+    content_length: 283
+    host: api.github.com
+    body: "{\"query\":\"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}}}}}\",\"variables\":{\"number\":999,\"owner\":\"abhinav\",\"repo\":\"git-spice\"}}\n"
+    headers:
+      Content-Type:
+      - application/json
+    url: https://api.github.com/graphql
+    method: POST
+  response:
+    proto: HTTP/2.0
+    proto_major: 2
+    proto_minor: 0
+    content_length: -1
+    uncompressed: true
+    body: "{\"data\":{\"repository\":{\"pullRequest\":null}},\"errors\":[{\"type\":\"NOT_FOUND\",\"path\":[\"repository\",\"pullRequest\"],\"locations\":[{\"line\":1,\"column\":87}],\"message\":\"Could not resolve to a PullRequest with the number of 999.\"}]}"
+    headers:
+      Content-Type:
+      - application/json; charset=utf-8
+    status: 200 OK
+    code: 200
+    duration: 231.492917ms
