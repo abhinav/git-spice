@@ -10,6 +10,11 @@ import (
 )
 
 func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.FindChangeItem {
+	labels := []string(mr.Labels)
+	if len(labels) == 0 {
+		labels = nil
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
@@ -20,10 +25,16 @@ func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.Find
 		BaseName: mr.TargetBranch,
 		HeadHash: git.Hash(mr.SHA),
 		Draft:    mr.Draft,
+		Labels:   labels,
 	}
 }
 
 func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem {
+	labels := []string(mr.Labels)
+	if len(labels) == 0 {
+		labels = nil
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
@@ -34,6 +45,7 @@ func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem
 		BaseName: mr.TargetBranch,
 		HeadHash: git.Hash(mr.SHA),
 		Draft:    mr.Draft,
+		Labels:   labels,
 	}
 }
 

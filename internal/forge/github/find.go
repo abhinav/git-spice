@@ -18,9 +18,22 @@ type findPRNode struct {
 	HeadRefOid  githubv4.GitObjectID      `graphql:"headRefOid"`
 	BaseRefName githubv4.String           `graphql:"baseRefName"`
 	IsDraft     githubv4.Boolean          `graphql:"isDraft"`
+	Labels      struct {
+		Nodes []struct {
+			Name githubv4.String `graphql:"name"`
+		} `graphql:"nodes"`
+	} `graphql:"labels(first: 100)"`
 }
 
 func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
+	var labels []string
+	if len(n.Labels.Nodes) > 0 {
+		labels = make([]string, len(n.Labels.Nodes))
+		for i, node := range n.Labels.Nodes {
+			labels[i] = string(node.Name)
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &PR{
 			Number: int(n.Number),
@@ -32,6 +45,7 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 		BaseName: string(n.BaseRefName),
 		HeadHash: git.Hash(n.HeadRefOid),
 		Draft:    bool(n.IsDraft),
+		Labels:   labels,
 	}
 }
 

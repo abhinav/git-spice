@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -764,6 +765,24 @@ func (h *Handler) submitBranch(
 		}
 		if opts.Draft != nil && pull.Draft != *opts.Draft {
 			updates = append(updates, "set draft to "+strconv.FormatBool(*opts.Draft))
+		}
+
+		// Check for labels that would be added.
+		if len(opts.Labels) > 0 {
+			existingLabelSet := make(map[string]struct{}, len(pull.Labels))
+			for _, label := range pull.Labels {
+				existingLabelSet[label] = struct{}{}
+			}
+			var labelsToAdd []string
+			for _, label := range opts.Labels {
+				if _, exists := existingLabelSet[label]; !exists {
+					labelsToAdd = append(labelsToAdd, label)
+				}
+			}
+			if len(labelsToAdd) > 0 {
+				sort.Strings(labelsToAdd)
+				updates = append(updates, "add labels: "+strings.Join(labelsToAdd, ", "))
+			}
 		}
 
 		if len(updates) == 0 {

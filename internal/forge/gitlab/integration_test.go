@@ -671,6 +671,114 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 	assert.ElementsMatch(t, []string{label1, label2, label3}, gotLabels)
 }
 
+func TestIntegration_Repository_FindChangeWithLabels(t *testing.T) {
+	label1 := fixturetest.New(_fixtures, "findChangeLabel1", func() string { return randomString(8) }).Get(t)
+	label2 := fixturetest.New(_fixtures, "findChangeLabel2", func() string { return randomString(8) }).Get(t)
+
+	branchFixture := fixturetest.New(_fixtures, "findChangeBranch", func() string {
+		return randomString(8)
+	})
+
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if gitlab.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		ctx := t.Context()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchName,
+		}), "could not create branch: %s", branchName)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
+			"could not checkout branch: %s", branchName)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchName+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin")
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchName),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Deleting remote branch: %s", branchName)
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchName),
+				}), "error deleting branch")
+		})
+	}
+
+	ctx := t.Context()
+	rec := newRecorder(t, t.Name())
+	glc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), glc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
+	require.NoError(t, err)
+
+	// Create a change with labels
+	change, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: branchName,
+		Body:    "Test MR with labels",
+		Base:    "main",
+		Head:    branchName,
+		Labels:  []string{label1, label2},
+	})
+	require.NoError(t, err, "error creating MR")
+	changeID := change.ID
+
+	// Find the change by ID and verify labels are present
+	foundChange, err := repo.FindChangeByID(ctx, changeID)
+	require.NoError(t, err, "error finding change by ID")
+	assert.ElementsMatch(t, []string{label1, label2}, foundChange.Labels)
+
+	// Find the change by branch and verify labels are present
+	foundChanges, err := repo.FindChangesByBranch(ctx, branchName, forge.FindChangesOptions{})
+	require.NoError(t, err, "error finding changes by branch")
+	require.Len(t, foundChanges, 1, "expected exactly one change")
+	assert.ElementsMatch(t, []string{label1, label2}, foundChanges[0].Labels)
+}
+
 func TestIntegration_Repository_comments(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())

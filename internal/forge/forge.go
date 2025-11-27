@@ -348,6 +348,9 @@ type FindChangeItem struct {
 
 	// Draft is true if the change is not yet ready to be reviewed.
 	Draft bool // required
+
+	// Labels are the labels currently applied to the change.
+	Labels []string
 }
 
 // ChangeTemplate is a template for a new change proposal.

@@ -626,6 +626,121 @@ func TestIntegration_Repository_SubmitEditChange_labels(t *testing.T) {
 	})
 }
 
+func TestIntegration_Repository_FindChangeWithLabels(t *testing.T) {
+	label1 := fixturetest.New(_fixtures, "findChangeLabel1", func() string { return randomString(8) }).Get(t)
+	label2 := fixturetest.New(_fixtures, "findChangeLabel2", func() string { return randomString(8) }).Get(t)
+
+	branchFixture := fixturetest.New(_fixtures, "findChangeBranch", func() string {
+		return randomString(8)
+	})
+
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if github.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		ctx := t.Context()
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchName,
+		}), "could not create branch: %s", branchName)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
+			"could not checkout branch: %s", branchName)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchName+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin")
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchName),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			t.Logf("Deleting remote branch: %s", branchName)
+			assert.NoError(t,
+				gitWork.Push(context.WithoutCancel(ctx), git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchName),
+				}), "error deleting branch")
+		})
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitHubClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		labels := []string{label1, label2}
+		ctx := context.WithoutCancel(t.Context())
+		for _, label := range labels {
+			assert.NoError(t,
+				repo.DeleteLabel(ctx, label), "could not delete label: %s", label)
+		}
+	})
+
+	// Create a change with labels
+	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: branchName,
+		Body:    "Test PR with labels",
+		Base:    "main",
+		Head:    branchName,
+		Labels:  []string{label1, label2},
+	})
+	require.NoError(t, err, "error creating PR")
+	changeID := change.ID
+
+	// Find the change by ID and verify labels are present
+	foundChange, err := repo.FindChangeByID(t.Context(), changeID)
+	require.NoError(t, err, "error finding change by ID")
+	assert.ElementsMatch(t, []string{label1, label2}, foundChange.Labels)
+
+	// Find the change by branch and verify labels are present
+	foundChanges, err := repo.FindChangesByBranch(t.Context(), branchName, forge.FindChangesOptions{})
+	require.NoError(t, err, "error finding changes by branch")
+	require.Len(t, foundChanges, 1, "expected exactly one change")
+	assert.ElementsMatch(t, []string{label1, label2}, foundChanges[0].Labels)
+}
+
 func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 	label := fixturetest.New(_fixtures, "label1", func() string { return randomString(8) }).Get(t)
 

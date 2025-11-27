@@ -128,6 +128,11 @@ func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		}
 	}
 
+	labels := res.Labels
+	if len(labels) == 0 {
+		labels = nil
+	}
+
 	return &forge.FindChangeItem{
 		ID:       ChangeID(res.Number),
 		URL:      res.URL,
@@ -136,6 +141,7 @@ func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		BaseName: res.Base.Name,
 		Draft:    res.Draft,
 		State:    state,
+		Labels:   labels,
 	}, nil
 }
 
@@ -173,6 +179,11 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 			}
 		}
 
+		labels := c.Labels
+		if len(labels) == 0 {
+			labels = nil
+		}
+
 		changes[i] = &forge.FindChangeItem{
 			ID:       ChangeID(c.Number),
 			URL:      c.URL,
@@ -181,6 +192,7 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 			HeadHash: git.Hash(c.Head.Hash),
 			BaseName: c.Base.Name,
 			Draft:    c.Draft,
+			Labels:   labels,
 		}
 	}
 	return changes, nil
