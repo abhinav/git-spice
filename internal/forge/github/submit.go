@@ -66,9 +66,12 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	err = r.addReviewersToPullRequest(ctx, req.Reviewers, m.CreatePullRequest.PullRequest.ID)
-	if err != nil {
+	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, m.CreatePullRequest.PullRequest.ID); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add reviewers to PR: %w", err)
+	}
+
+	if err := r.addAssigneesToPullRequest(ctx, req.Assignees, m.CreatePullRequest.PullRequest.ID); err != nil {
+		return forge.SubmitChangeResult{}, fmt.Errorf("add assignees to PR: %w", err)
 	}
 
 	return forge.SubmitChangeResult{

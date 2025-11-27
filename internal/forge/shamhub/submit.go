@@ -21,6 +21,7 @@ type submitChangeRequest struct {
 	Draft     bool     `json:"draft,omitempty"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
+	Assignees []string `json:"assignees,omitempty"`
 }
 
 type submitChangeResponse struct {
@@ -68,6 +69,20 @@ func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequ
 		}
 	}
 
+	// Validate that all assignees are registered users.
+	for _, assignee := range req.Assignees {
+		found := false
+		for _, u := range sh.users {
+			if u.Username == assignee {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, badRequestErrorf("assignee %q is not a registered user", assignee)
+		}
+	}
+
 	change := shamChange{
 		// We'll just use a global counter for the change number for now.
 		// We can scope it by owner/repo if needed.
@@ -79,6 +94,7 @@ func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequ
 		Head:               &shamBranch{Owner: headOwner, Repo: headRepo, Name: req.Head},
 		Labels:             req.Labels,
 		RequestedReviewers: req.Reviewers,
+		Assignees:          req.Assignees,
 	}
 	sh.changes = append(sh.changes, change)
 
@@ -99,6 +115,7 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		Draft:     req.Draft,
 		Labels:    req.Labels,
 		Reviewers: req.Reviewers,
+		Assignees: req.Assignees,
 	}
 
 	// For now, fork functionality is handled at the ShamHub server level

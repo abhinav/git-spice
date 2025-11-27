@@ -19,28 +19,52 @@ var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 && len(opts.Reviewers) == 0 {
+	if cmputil.Zero(opts.Base) &&
+		cmputil.Zero(opts.Draft) &&
+		len(opts.Labels) == 0 &&
+		len(opts.Reviewers) == 0 &&
+		len(opts.Assignees) == 0 {
 		return nil // nothing to do
 	}
 
-	mr := mustMR(id)
+	mrID := mustMR(id)
 
 	var (
 		updateOptions gitlab.UpdateMergeRequestOptions
 		logUpdates    []slog.Attr
+
+		mergeRequest *gitlab.MergeRequest
 	)
+
+	// Used if we need to fetch the current MR status.
+	getMergeRequest := func() (*gitlab.MergeRequest, error) {
+		if mergeRequest != nil {
+			return mergeRequest, nil
+		}
+
+		var err error
+		mergeRequest, _, err = r.client.MergeRequests.GetMergeRequest(
+			r.repoID, mrID.Number, nil,
+			gitlab.WithContext(ctx),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("get merge request for update: %w", err)
+		}
+
+		return mergeRequest, nil
+	}
 	if opts.Base != "" {
 		updateOptions.TargetBranch = &opts.Base
 		logUpdates = append(logUpdates, slog.String("base", opts.Base))
 	}
 
+	// TODO:
+	// As part of submit, we've likely already fetched this information.
+	// Cache it in memory.
 	if opts.Draft != nil {
-		mr, _, err := r.client.MergeRequests.GetMergeRequest(
-			r.repoID, mr.Number, nil,
-			gitlab.WithContext(ctx),
-		)
+		mr, err := getMergeRequest()
 		if err != nil {
-			return fmt.Errorf("get merge request for update: %w", err)
+			return err
 		}
 
 		if *opts.Draft {
@@ -61,6 +85,8 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	}
 
 	if len(opts.Reviewers) > 0 {
+		// TODO: de-dupe
+
 		reviewerIDs, err := r.resolveReviewerIDs(ctx, opts.Reviewers)
 		if err != nil {
 			return fmt.Errorf("resolve reviewer IDs: %w", err)
@@ -69,8 +95,30 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		logUpdates = append(logUpdates, slog.Any("reviewers", opts.Reviewers))
 	}
 
+	if len(opts.Assignees) > 0 {
+		assigneeIDs, err := r.assigneeIDs(ctx, opts.Assignees)
+		if err != nil {
+			return fmt.Errorf("resolve assignees: %w", err)
+		}
+
+		mr, err := getMergeRequest()
+		if err != nil {
+			return err
+		}
+
+		// Make this cleaner.
+		existing := make([]int, 0, len(mr.Assignees))
+		for _, assignee := range mr.Assignees {
+			existing = append(existing, assignee.ID)
+		}
+
+		merged := mergeAssigneeIDs(existing, assigneeIDs)
+		updateOptions.AssigneeIDs = &merged
+		logUpdates = append(logUpdates, slog.Any("assignees", merged))
+	}
+
 	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
-		r.repoID, mr.Number, &updateOptions,
+		r.repoID, mrID.Number, &updateOptions,
 		gitlab.WithContext(ctx),
 	)
 	if err != nil {
@@ -78,10 +126,35 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	}
 	if len(logUpdates) > 0 {
 		r.log.Debug("Updated merge request",
-			"mr", mr.Number,
+			"mr", mrID.Number,
 			"new", slog.GroupValue(logUpdates...),
 		)
 	}
 
 	return nil
+}
+
+func mergeAssigneeIDs(existing, assignees []int) []int {
+	if len(assignees) == 0 {
+		return existing
+	}
+
+	merged := make([]int, 0, len(existing)+len(assignees))
+	seen := make(map[int]struct{}, len(existing)+len(assignees))
+	for _, id := range existing {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		merged = append(merged, id)
+	}
+	for _, id := range assignees {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		merged = append(merged, id)
+	}
+
+	return merged
 }

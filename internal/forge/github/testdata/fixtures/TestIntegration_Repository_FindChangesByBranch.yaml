@@ -6,9 +6,9 @@ interactions:
     proto: HTTP/1.1
     proto_major: 1
     proto_minor: 1
-    content_length: 547
+    content_length: 583
     host: api.github.com
-    body: "{\"query\":\"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}}}}}}\",\"variables\":{\"branch\":\"gh-graphql\",\"limit\":10,\"owner\":\"abhinav\",\"repo\":\"git-spice\",\"states\":[\"OPEN\",\"CLOSED\",\"MERGED\"]}}\n"
+    body: "{\"query\":\"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}}\",\"variables\":{\"branch\":\"gh-graphql\",\"limit\":10,\"owner\":\"abhinav\",\"repo\":\"git-spice\",\"states\":[\"OPEN\",\"CLOSED\",\"MERGED\"]}}\n"
     headers:
       Content-Type:
       - application/json
@@ -20,21 +20,21 @@ interactions:
     proto_minor: 0
     content_length: -1
     uncompressed: true
-    body: "{\"data\":{\"repository\":{\"pullRequests\":{\"nodes\":[{\"id\":\"PR_kwDOJ2BQKs5xNeqO\",\"number\":144,\"url\":\"https://github.com/abhinav/git-spice/pull/144\",\"title\":\"GitHub: Use GraphQL API\",\"state\":\"MERGED\",\"headRefOid\":\"5d74cecfe3cb066044d129232229e07f5d04e194\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]},\"reviewRequests\":{\"nodes\":[]}}]}}}}"
+    body: "{\"data\":{\"repository\":{\"pullRequests\":{\"nodes\":[{\"id\":\"PR_kwDOJ2BQKs5xNeqO\",\"number\":144,\"url\":\"https://github.com/abhinav/git-spice/pull/144\",\"title\":\"GitHub: Use GraphQL API\",\"state\":\"MERGED\",\"headRefOid\":\"5d74cecfe3cb066044d129232229e07f5d04e194\",\"baseRefName\":\"main\",\"isDraft\":false,\"labels\":{\"nodes\":[]},\"reviewRequests\":{\"nodes\":[]},\"assignees\":{\"nodes\":[]}}]}}}}"
     headers:
       Content-Type:
       - application/json; charset=utf-8
     status: 200 OK
     code: 200
-    duration: 308.087875ms
+    duration: 301.692167ms
 - id: 1
   request:
     proto: HTTP/1.1
     proto_major: 1
     proto_minor: 1
-    content_length: 551
+    content_length: 587
     host: api.github.com
-    body: "{\"query\":\"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}}}}}}\",\"variables\":{\"branch\":\"does-not-exist\",\"limit\":10,\"owner\":\"abhinav\",\"repo\":\"git-spice\",\"states\":[\"OPEN\",\"CLOSED\",\"MERGED\"]}}\n"
+    body: "{\"query\":\"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}}\",\"variables\":{\"branch\":\"does-not-exist\",\"limit\":10,\"owner\":\"abhinav\",\"repo\":\"git-spice\",\"states\":[\"OPEN\",\"CLOSED\",\"MERGED\"]}}\n"
     headers:
       Content-Type:
       - application/json
@@ -52,4 +52,4 @@ interactions:
       - application/json; charset=utf-8
     status: 200 OK
     code: 200
-    duration: 283.615917ms
+    duration: 306.654ms

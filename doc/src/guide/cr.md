@@ -261,6 +261,30 @@ will be combined with configured reviewers.
 When updating existing change requests,
 new reviewers are added to any existing reviewers on the CR.
 
+## Assigning change requests
+
+<!-- gs:version unreleased -->
+
+You can assign change requests to specific users
+when submitting them with the `-a`/`--assign` flag.
+
+```freeze language="terminal"
+{green}${reset} gs branch submit --assign alice --assign bob
+{green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
+```
+
+You can also configure default assignees
+with the $$spice.submit.assignees$$ configuration option.
+Assignees specified with the `--assign` flag
+will be combined with configured assignees.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.submit.assignees{reset} {mag}'alice,bob'{reset}
+```
+
+When updating existing change requests,
+new assignees are added to any existing assignees on the CR.
+
 ## Importing open CRs
 
 You can import an existing open CR into git-spice

@@ -16,10 +16,7 @@ type submitOptions struct {
 	NoWeb bool `help:"Alias for --web=false."`
 
 	// TODO: Other creation options e.g.:
-	// - assignees
-	// - labels
 	// - milestone
-	// - reviewers
 }
 
 const _submitHelp = `

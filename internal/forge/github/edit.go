@@ -11,7 +11,11 @@ import (
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts.Base) && cmputil.Zero(opts.Draft) && len(opts.Labels) == 0 && len(opts.Reviewers) == 0 {
+	if cmputil.Zero(opts.Base) &&
+		cmputil.Zero(opts.Draft) &&
+		len(opts.Labels) == 0 &&
+		len(opts.Reviewers) == 0 &&
+		len(opts.Assignees) == 0 {
 		return nil // nothing to do
 	}
 	pr := mustPR(fid)
@@ -85,14 +89,20 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		r.log.Debug(logMsg, "pr", pr.Number)
 	}
 
-	err = r.addLabelsToPullRequest(ctx, opts.Labels, graphQLID)
-	if err != nil {
+	// TODO:
+	// perform in parallel, share resolved user IDs, etc.
+	// maybe even cache and persist resolved IDs in store.
+
+	if err := r.addLabelsToPullRequest(ctx, opts.Labels, graphQLID); err != nil {
 		return fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	err = r.addReviewersToPullRequest(ctx, opts.Reviewers, graphQLID)
-	if err != nil {
+	if err := r.addReviewersToPullRequest(ctx, opts.Reviewers, graphQLID); err != nil {
 		return fmt.Errorf("add reviewers to PR: %w", err)
+	}
+
+	if err := r.addAssigneesToPullRequest(ctx, opts.Assignees, graphQLID); err != nil {
+		return fmt.Errorf("add assignees to PR: %w", err)
 	}
 
 	return nil

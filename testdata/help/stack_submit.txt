@@ -46,6 +46,8 @@ Flags:
                                  times or separate with commas.
   -r, --reviewer=REVIEWER,...    Add reviewers to the change request. Pass
                                  multiple times or separate with commas.
+  -a, --assign=ASSIGNEE,...      Assign the change request to these users.
+                                 Pass multiple times or separate with commas.
       --no-web                   Alias for --web=false.
 
 Global Flags:
@@ -56,6 +58,7 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
+  spice.submit.assignees     Default assignees to add to change requests.
   spice.submit.draft         Default value for --draft when creating change
                              requests.
   spice.submit.label         Default labels to add to change requests.

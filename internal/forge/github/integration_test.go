@@ -1149,6 +1149,133 @@ func TestIntegration_Repository_FindChangeItem_WithReviewers(t *testing.T) {
 	})
 }
 
+func TestIntegration_Repository_FindChangeItem_WithAssignees(t *testing.T) {
+	branchFixture1 := fixturetest.New(_fixtures, "branch-no-assignees", func() string {
+		return randomString(8)
+	})
+	branchFixture2 := fixturetest.New(_fixtures, "branch-with-assignees", func() string {
+		return randomString(8)
+	})
+
+	branchNoAssignees := branchFixture1.Get(t)
+	branchWithAssignees := branchFixture2.Get(t)
+	t.Logf("Creating branches: %s, %s", branchNoAssignees, branchWithAssignees)
+
+	var gitWork *git.Worktree
+	if github.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "https://github.com/abhinav/test-repo", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		ctx := t.Context()
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo := gitWork.Repository()
+
+		branches := []string{branchNoAssignees, branchWithAssignees}
+		for _, branchName := range branches {
+			require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+				Name: branchName,
+			}), "could not create branch: %s", branchName)
+			require.NoError(t, gitWork.CheckoutBranch(ctx, branchName),
+				"could not checkout branch: %s", branchName)
+			require.NoError(t, os.WriteFile(
+				filepath.Join(repoDir, branchName+".txt"),
+				[]byte(randomString(32)),
+				0o644,
+			), "could not write file to branch")
+
+			cmd = exec.Command("git", "add", ".")
+			cmd.Dir = repoDir
+			cmd.Stdout = output
+			cmd.Stderr = output
+			require.NoError(t, cmd.Run(), "git add failed")
+			require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+				Message: "commit from test",
+			}), "could not commit changes")
+
+			t.Logf("Pushing to origin")
+			require.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(branchName),
+				}), "error pushing branch")
+
+			t.Cleanup(func() {
+				t.Logf("Deleting remote branch: %s", branchName)
+				assert.NoError(t,
+					gitWork.Push(context.WithoutCancel(ctx), git.PushOptions{
+						Remote:  "origin",
+						Refspec: git.Refspec(":" + branchName),
+					}), "error deleting branch")
+			})
+		}
+	}
+
+	rec := newRecorder(t, t.Name())
+	ghc := newGitHubClient(rec.GetDefaultClient())
+	repo, err := github.NewRepository(
+		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+	)
+	require.NoError(t, err)
+
+	// Create PR without assignees.
+	changeNoAssignees, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: branchNoAssignees,
+		Body:    "Test PR without assignees",
+		Base:    "main",
+		Head:    branchNoAssignees,
+	})
+	require.NoError(t, err, "error creating PR without assignees")
+
+	// Create PR with assignees.
+	changeWithAssignees, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject:   branchWithAssignees,
+		Body:      "Test PR with assignees",
+		Base:      "main",
+		Head:      branchWithAssignees,
+		Assignees: []string{"abhinav-robot"},
+	})
+	require.NoError(t, err, "error creating PR with assignees")
+
+	t.Run("NoAssignees", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeNoAssignees.ID)
+		require.NoError(t, err)
+		assert.Nil(t, change.Assignees)
+
+		t.Run("AddAssignees", func(t *testing.T) {
+			require.NoError(t,
+				repo.EditChange(t.Context(), changeNoAssignees.ID, forge.EditChangeOptions{
+					Assignees: []string{"abhinav-robot"},
+				}), "could not add assignees to PR")
+
+			change, err := repo.FindChangeByID(t.Context(), changeNoAssignees.ID)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"abhinav-robot"}, change.Assignees)
+		})
+	})
+
+	t.Run("WithAssignees", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeWithAssignees.ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"abhinav-robot"}, change.Assignees)
+	})
+}
+
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // randomString generates a random alphanumeric string of length n.
