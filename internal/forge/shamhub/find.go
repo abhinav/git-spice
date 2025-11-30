@@ -133,15 +133,21 @@ func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		labels = nil
 	}
 
+	reviewers := res.RequestedReviewers
+	if len(reviewers) == 0 {
+		reviewers = nil
+	}
+
 	return &forge.FindChangeItem{
-		ID:       ChangeID(res.Number),
-		URL:      res.URL,
-		Subject:  res.Subject,
-		HeadHash: git.Hash(res.Head.Hash),
-		BaseName: res.Base.Name,
-		Draft:    res.Draft,
-		State:    state,
-		Labels:   labels,
+		ID:        ChangeID(res.Number),
+		URL:       res.URL,
+		Subject:   res.Subject,
+		HeadHash:  git.Hash(res.Head.Hash),
+		BaseName:  res.Base.Name,
+		Draft:     res.Draft,
+		State:     state,
+		Labels:    labels,
+		Reviewers: reviewers,
 	}, nil
 }
 
@@ -184,15 +190,21 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 			labels = nil
 		}
 
+		reviewers := c.RequestedReviewers
+		if len(reviewers) == 0 {
+			reviewers = nil
+		}
+
 		changes[i] = &forge.FindChangeItem{
-			ID:       ChangeID(c.Number),
-			URL:      c.URL,
-			State:    state,
-			Subject:  c.Subject,
-			HeadHash: git.Hash(c.Head.Hash),
-			BaseName: c.Base.Name,
-			Draft:    c.Draft,
-			Labels:   labels,
+			ID:        ChangeID(c.Number),
+			URL:       c.URL,
+			State:     state,
+			Subject:   c.Subject,
+			HeadHash:  git.Hash(c.Head.Hash),
+			BaseName:  c.Base.Name,
+			Draft:     c.Draft,
+			Labels:    labels,
+			Reviewers: reviewers,
 		}
 	}
 	return changes, nil

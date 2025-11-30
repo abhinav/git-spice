@@ -213,6 +213,54 @@ you can set the configuration option to ignore them:
 
 For more details, see the [configuration reference](../cli/config.md#spicereposyncclosedchanges).
 
+## Adding labels
+
+<!-- gs:version v0.16.0 -->
+
+You can add labels to change requests when submitting them
+with the `-l`/`--label` flag.
+
+```freeze language="terminal"
+{green}${reset} gs branch submit --label bug --label urgent
+{green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
+```
+
+You can also configure default labels
+with the $$spice.submit.label$$ configuration option.
+Labels specified with the `--label` flag
+will be combined with configured labels.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.submit.label{reset} {mag}'needs-review'{reset}
+```
+
+When updating existing change requests,
+new labels are added to any existing labels on the CR.
+
+## Requesting reviews
+
+<!-- gs:version unreleased -->
+
+You can request reviews from specific users or teams
+when submitting change requests with the `-r`/`--reviewer` flag.
+
+```freeze language="terminal"
+{green}${reset} gs branch submit --reviewer alice --reviewer bob
+{green}INF{reset} Created #123: https://github.com/abhinav/git-spice/pull/123
+```
+
+You can also configure default reviewers
+with the $$spice.submit.reviewers$$ configuration option.
+Reviewers specified with the `--reviewer` flag
+will be combined with configured reviewers.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.submit.reviewers{reset} {mag}'alice,myorg/backend-team'{reset}
+```
+
+When updating existing change requests,
+new reviewers are added to any existing reviewers on the CR.
+
 ## Importing open CRs
 
 You can import an existing open CR into git-spice

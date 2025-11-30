@@ -3,6 +3,7 @@ package shamhub
 import (
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -93,6 +94,10 @@ type shamChange struct {
 
 	// Labels are the labels associated with the change.
 	Labels []string
+
+	// RequestedReviewers are the usernames of users
+	// from whom reviews have been requested.
+	RequestedReviewers []string
 }
 
 // Change is a change proposal against a repository.
@@ -133,6 +138,10 @@ type Change struct {
 
 	// Labels are the labels associated with the change.
 	Labels []string `json:"labels,omitempty"`
+
+	// RequestedReviewers are the usernames of users
+	// from whom reviews have been requested.
+	RequestedReviewers []string `json:"requested_reviewers,omitempty"`
 }
 
 // toChange converts an internal shamChange
@@ -149,15 +158,19 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 		return nil, fmt.Errorf("head branch: %w", err)
 	}
 
+	requestedReviewers := slices.Clone(c.RequestedReviewers)
+	slices.Sort(requestedReviewers)
+
 	change := &Change{
-		Number:  c.Number,
-		URL:     sh.changeURL(c.Base.Owner, c.Base.Repo, c.Number),
-		Draft:   c.Draft,
-		Subject: c.Subject,
-		Body:    c.Body,
-		Base:    base,
-		Head:    head,
-		Labels:  c.Labels,
+		Number:             c.Number,
+		URL:                sh.changeURL(c.Base.Owner, c.Base.Repo, c.Number),
+		Draft:              c.Draft,
+		Subject:            c.Subject,
+		Body:               c.Body,
+		Base:               base,
+		Head:               head,
+		Labels:             c.Labels,
+		RequestedReviewers: requestedReviewers,
 	}
 	switch c.State {
 	case shamChangeOpen:

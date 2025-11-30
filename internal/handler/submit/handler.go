@@ -158,6 +158,9 @@ type Options struct {
 	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
 	ConfiguredLabels []string `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"` // merged with Labels
 
+	Reviewers           []string `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"unreleased"`
+	ConfiguredReviewers []string `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"unreleased"` // merged with Reviewers
+
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
 
@@ -284,6 +287,19 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		}
 	}
 
+	if len(opts.ConfiguredReviewers) > 0 {
+		seen := make(map[string]struct{}, len(opts.Reviewers))
+		for _, reviewer := range opts.Reviewers {
+			seen[reviewer] = struct{}{}
+		}
+
+		for _, reviewer := range opts.ConfiguredReviewers {
+			if _, ok := seen[reviewer]; !ok {
+				opts.Reviewers = append(opts.Reviewers, reviewer)
+			}
+		}
+	}
+
 	batchOpts := cmp.Or(req.BatchOptions, &BatchOptions{})
 	if batchOpts.UpdateOnlyDefault && opts.UpdateOnly == nil {
 		// If the user didn't specify --update-only flag,
@@ -341,6 +357,19 @@ type Request struct {
 // creating or updating a change request as needed.
 func (h *Handler) Submit(ctx context.Context, req *Request) error {
 	opts := cmp.Or(req.Options, &Options{})
+
+	if len(opts.ConfiguredReviewers) > 0 {
+		seen := make(map[string]struct{}, len(opts.Reviewers))
+		for _, reviewer := range opts.Reviewers {
+			seen[reviewer] = struct{}{}
+		}
+
+		for _, reviewer := range opts.ConfiguredReviewers {
+			if _, ok := seen[reviewer]; !ok {
+				opts.Reviewers = append(opts.Reviewers, reviewer)
+			}
+		}
+	}
 	status, err := h.submitBranch(
 		ctx,
 		req.Branch,
@@ -785,6 +814,24 @@ func (h *Handler) submitBranch(
 			}
 		}
 
+		// Check for reviewers that would be added.
+		if len(opts.Reviewers) > 0 {
+			existingReviewerSet := make(map[string]struct{}, len(pull.Reviewers))
+			for _, reviewer := range pull.Reviewers {
+				existingReviewerSet[reviewer] = struct{}{}
+			}
+			var reviewersToAdd []string
+			for _, reviewer := range opts.Reviewers {
+				if _, exists := existingReviewerSet[reviewer]; !exists {
+					reviewersToAdd = append(reviewersToAdd, reviewer)
+				}
+			}
+			if len(reviewersToAdd) > 0 {
+				sort.Strings(reviewersToAdd)
+				updates = append(updates, "add reviewers: "+strings.Join(reviewersToAdd, ", "))
+			}
+		}
+
 		if len(updates) == 0 {
 			log.Infof("CR %v is up-to-date: %s", pull.ID, pull.URL)
 			return status, nil
@@ -824,9 +871,10 @@ func (h *Handler) submitBranch(
 
 		if len(updates) > 0 {
 			opts := forge.EditChangeOptions{
-				Base:   upstreamBase,
-				Draft:  opts.Draft,
-				Labels: opts.Labels,
+				Base:      upstreamBase,
+				Draft:     opts.Draft,
+				Labels:    opts.Labels,
+				Reviewers: opts.Reviewers,
 			}
 
 			// remoteRepo is guaranteed to be available at this point.
@@ -1029,6 +1077,7 @@ func (h *Handler) prepareBranch(
 		store:          h.Store,
 		log:            h.Log,
 		labels:         opts.Labels,
+		reviewers:      opts.Reviewers,
 	}, nil
 }
 
@@ -1064,10 +1113,11 @@ func listChangeTemplates(
 type preparedBranch struct {
 	state.PreparedBranch
 
-	head   string
-	base   string
-	draft  bool
-	labels []string
+	head      string
+	base      string
+	draft     bool
+	labels    []string
+	reviewers []string
 
 	remoteRepo forge.Repository
 	store      Store
@@ -1076,12 +1126,13 @@ type preparedBranch struct {
 
 func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
-		Subject: b.Subject,
-		Body:    b.Body,
-		Head:    b.head,
-		Base:    b.base,
-		Draft:   b.draft,
-		Labels:  b.labels,
+		Subject:   b.Subject,
+		Body:      b.Body,
+		Head:      b.head,
+		Base:      b.base,
+		Draft:     b.draft,
+		Labels:    b.labels,
+		Reviewers: b.reviewers,
 	})
 	if err != nil {
 		// If the branch could not be submitted because the base branch

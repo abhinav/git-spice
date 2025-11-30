@@ -15,17 +15,26 @@ func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.Find
 		labels = nil
 	}
 
+	var reviewers []string
+	if len(mr.Reviewers) > 0 {
+		reviewers = make([]string, len(mr.Reviewers))
+		for i, reviewer := range mr.Reviewers {
+			reviewers[i] = reviewer.Username
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
 		},
-		URL:      mr.WebURL,
-		State:    forgeChangeState(mr.State),
-		Subject:  mr.Title,
-		BaseName: mr.TargetBranch,
-		HeadHash: git.Hash(mr.SHA),
-		Draft:    mr.Draft,
-		Labels:   labels,
+		URL:       mr.WebURL,
+		State:     forgeChangeState(mr.State),
+		Subject:   mr.Title,
+		BaseName:  mr.TargetBranch,
+		HeadHash:  git.Hash(mr.SHA),
+		Draft:     mr.Draft,
+		Labels:    labels,
+		Reviewers: reviewers,
 	}
 }
 
@@ -35,17 +44,26 @@ func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem
 		labels = nil
 	}
 
+	var reviewers []string
+	if len(mr.Reviewers) > 0 {
+		reviewers = make([]string, len(mr.Reviewers))
+		for i, reviewer := range mr.Reviewers {
+			reviewers[i] = reviewer.Username
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
 		},
-		URL:      mr.WebURL,
-		State:    forgeChangeState(mr.State),
-		Subject:  mr.Title,
-		BaseName: mr.TargetBranch,
-		HeadHash: git.Hash(mr.SHA),
-		Draft:    mr.Draft,
-		Labels:   labels,
+		URL:       mr.WebURL,
+		State:     forgeChangeState(mr.State),
+		Subject:   mr.Title,
+		BaseName:  mr.TargetBranch,
+		HeadHash:  git.Hash(mr.SHA),
+		Draft:     mr.Draft,
+		Labels:    labels,
+		Reviewers: reviewers,
 	}
 }
 

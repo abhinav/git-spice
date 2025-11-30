@@ -25,28 +25,31 @@ Use --nav-comment=false to disable navigation comments in CRs, or
 the stack.
 
 Flags:
-  -n, --dry-run             Don't actually submit the stack
-  -c, --fill                Fill in the change title and body from the commit
-                            messages
-      --[no-]draft          Whether to mark change requests as drafts
-      --[no-]publish        Whether to create CRs for pushed branches. Defaults
-                            to true. (🔧 spice.submit.publish)
-  -w, --web                 Open submitted changes in a web browser. Accepts
-                            an optional argument: 'true', 'false', 'created'.
-                            (🔧 spice.submit.web)
-      --nav-comment=true    Whether to add a navigation comment to the change
-                            request. Must be one of: true, false, multiple.
-                            (🔧 spice.submit.navigationComment)
-      --force               Force push, bypassing safety checks
-      --no-verify           Bypass pre-push hooks when pushing to the remote.
-  -u, --[no-]update-only    Only update existing change requests, do not create
-                            new ones
-  -l, --label=LABEL,...     Add labels to the change request. Pass multiple
-                            times or separate with commas.
-      --no-web              Alias for --web=false.
-      --title=TITLE         Title of the change request
-      --body=BODY           Body of the change request
-      --branch=NAME         Branch to submit
+  -n, --dry-run                  Don't actually submit the stack
+  -c, --fill                     Fill in the change title and body from the
+                                 commit messages
+      --[no-]draft               Whether to mark change requests as drafts
+      --[no-]publish             Whether to create CRs for pushed branches.
+                                 Defaults to true. (🔧 spice.submit.publish)
+  -w, --web                      Open submitted changes in a web browser.
+                                 Accepts an optional argument: 'true', 'false',
+                                 'created'. (🔧 spice.submit.web)
+      --nav-comment=true         Whether to add a navigation comment to the
+                                 change request. Must be one of: true, false,
+                                 multiple. (🔧 spice.submit.navigationComment)
+      --force                    Force push, bypassing safety checks
+      --no-verify                Bypass pre-push hooks when pushing to the
+                                 remote.
+  -u, --[no-]update-only         Only update existing change requests, do not
+                                 create new ones
+  -l, --label=LABEL,...          Add labels to the change request. Pass multiple
+                                 times or separate with commas.
+  -r, --reviewer=REVIEWER,...    Add reviewers to the change request. Pass
+                                 multiple times or separate with commas.
+      --no-web                   Alias for --web=false.
+      --title=TITLE              Title of the change request
+      --body=BODY                Body of the change request
+      --branch=NAME              Branch to submit
 
 Global Flags:
   -h, --help           Show help for the command
@@ -56,19 +59,20 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
-  spice.submit.draft       Default value for --draft when creating change
-                           requests.
-  spice.submit.label       Default labels to add to change requests.
+  spice.submit.draft        Default value for --draft when creating change
+                            requests.
+  spice.submit.label        Default labels to add to change requests.
   spice.submit.listTemplatesTimeout
-                           Timeout for listing CR templates
+                            Timeout for listing CR templates
   spice.submit.navigationComment.downstack
-                           Which downstack CRs to include in navigation
-                           comments. Must be one of: all, open.
+                            Which downstack CRs to include in navigation
+                            comments. Must be one of: all, open.
   spice.submit.navigationCommentStyle.marker
-                           Marker to use for the current change in navigation
-                           comments. Defaults to '◀'.
+                            Marker to use for the current change in navigation
+                            comments. Defaults to '◀'.
   spice.submit.navigationCommentSync
-                           Which navigation comment to sync. Must be one of:
-                           branch, downstack.
-  spice.submit.template    Default template to use when multiple templates are
-                           available
+                            Which navigation comment to sync. Must be one of:
+                            branch, downstack.
+  spice.submit.reviewers    Default reviewers to add to change requests.
+  spice.submit.template     Default template to use when multiple templates are
+                            available

@@ -161,4 +161,9 @@ type usersService interface {
 	CurrentUser(
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.User, *gitlab.Response, error)
+
+	ListUsers(
+		opt *gitlab.ListUsersOptions,
+		options ...gitlab.RequestOptionFunc,
+	) ([]*gitlab.User, *gitlab.Response, error)
 }

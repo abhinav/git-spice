@@ -1,0 +1,171 @@
+# submit a branch with reviewers using 'branch submit'.
+# Tests various reviewer scenarios including errors, config, and updates.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+shamhub register bob
+shamhub register charlie
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Test 1: Submit with non-existent reviewer (should fail)
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+
+! gs branch submit --fill --reviewer bob --reviewer nonexistent
+stderr 'reviewer "nonexistent" is not a registered user'
+
+# Test 2: Submit with valid reviewers from flag
+gs branch submit --fill --reviewer bob --reviewer charlie
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/cr1.json
+
+# Test 3: Submit with reviewers from config
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+git config spice.submit.reviewers bob
+gs branch submit --fill
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/cr2.json
+
+# Test 4: Combine config and flag reviewers (with deduplication)
+# (config already has bob, flag adds bob and charlie)
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+gs branch submit --fill --reviewer charlie --reviewer bob
+shamhub dump change 3
+cmpenvJSON stdout $WORK/golden/cr3.json
+
+# Test 5: Update existing CR with new reviewer
+gs bco feature1
+git add update.txt
+gs commit create -m 'Update feature 1'
+shamhub register dave
+gs branch submit --fill --reviewer dave
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/cr1-final.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+-- repo/update.txt --
+Update to feature 1
+
+-- golden/cr1.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+  },
+  "requested_reviewers": ["bob", "charlie"]
+}
+
+-- golden/cr2.json --
+{
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "number": 2,
+  "requested_reviewers": ["bob"],
+  "state": "open",
+  "title": "Add feature 2",
+  "body": "",
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "8526d1a7195abb635f28bc93155b9155b76f3881"
+  }
+}
+
+-- golden/cr3.json --
+{
+  "number": 3,
+  "state": "open",
+  "title": "Add feature 3",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/3",
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature3",
+    "sha": "ae804529c72f72ec9ac8b0475e21c762b804862b"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "9806160f3b27dbff81e496260d26fc32f5ee5cf0"
+  },
+  "requested_reviewers": ["bob", "charlie"]
+}
+
+-- golden/cr1-final.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "17161e19480883ce2195b4b17a01e09b15eb4f06"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+  },
+  "requested_reviewers": ["bob", "charlie", "dave"]
+}

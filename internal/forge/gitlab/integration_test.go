@@ -779,6 +779,169 @@ func TestIntegration_Repository_FindChangeWithLabels(t *testing.T) {
 	assert.ElementsMatch(t, []string{label1, label2}, foundChanges[0].Labels)
 }
 
+func TestIntegration_Repository_FindChangeItem_WithReviewers(t *testing.T) {
+	branchFixture1 := fixturetest.New(_fixtures, "branch-no-reviewers", func() string {
+		return randomString(8)
+	})
+	branchFixture2 := fixturetest.New(_fixtures, "branch-with-reviewers", func() string {
+		return randomString(8)
+	})
+
+	branchNoReviewers := branchFixture1.Get(t)
+	branchWithReviewers := branchFixture2.Get(t)
+	t.Logf("Creating branches: %s, %s", branchNoReviewers, branchWithReviewers)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if gitlab.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		ctx := t.Context()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		// Create and push first branch (no reviewers).
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchNoReviewers,
+		}), "could not create branch: %s", branchNoReviewers)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchNoReviewers),
+			"could not checkout branch: %s", branchNoReviewers)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchNoReviewers+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin: %s", branchNoReviewers)
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchNoReviewers),
+			}), "error pushing branch")
+
+		// Create and push second branch (with reviewers).
+		require.NoError(t, gitWork.CheckoutBranch(ctx, "main"),
+			"could not checkout main branch")
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchWithReviewers,
+		}), "could not create branch: %s", branchWithReviewers)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchWithReviewers),
+			"could not checkout branch: %s", branchWithReviewers)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchWithReviewers+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin: %s", branchWithReviewers)
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchWithReviewers),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Deleting remote branches: %s, %s", branchNoReviewers, branchWithReviewers)
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchNoReviewers),
+				}), "error deleting branch")
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchWithReviewers),
+				}), "error deleting branch")
+		})
+	}
+
+	ctx := t.Context()
+	rec := newRecorder(t, t.Name())
+	glc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), glc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
+	require.NoError(t, err)
+
+	changeNoReviewers, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: branchNoReviewers,
+		Body:    "Test MR without reviewers",
+		Base:    "main",
+		Head:    branchNoReviewers,
+	})
+	require.NoError(t, err, "error creating MR without reviewers")
+
+	changeWithReviewers, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject:   branchWithReviewers,
+		Body:      "Test MR with reviewers",
+		Base:      "main",
+		Head:      branchWithReviewers,
+		Reviewers: []string{"abg"},
+	})
+	require.NoError(t, err, "error creating MR with reviewers")
+
+	t.Run("NoReviewers", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeNoReviewers.ID)
+		require.NoError(t, err)
+		assert.Empty(t, change.Reviewers)
+
+		t.Run("AddReviewers", func(t *testing.T) {
+			require.NoError(t,
+				repo.EditChange(t.Context(), changeNoReviewers.ID, forge.EditChangeOptions{
+					Reviewers: []string{"abg"},
+				}), "could not add reviewers to MR")
+
+			change, err := repo.FindChangeByID(t.Context(), changeNoReviewers.ID)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"abg"}, change.Reviewers)
+		})
+	})
+
+	t.Run("WithReviewers", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeWithReviewers.ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"abg"}, change.Reviewers)
+	})
+}
+
 func TestIntegration_Repository_comments(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())

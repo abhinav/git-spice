@@ -14,9 +14,10 @@ type editChangeRequest struct {
 	Repo   string `path:"repo" json:"-"`
 	Number int    `path:"number" json:"-"`
 
-	Base   *string  `json:"base,omitempty"`
-	Draft  *bool    `json:"draft,omitempty"`
-	Labels []string `json:"labels,omitempty"`
+	Base      *string  `json:"base,omitempty"`
+	Draft     *bool    `json:"draft,omitempty"`
+	Labels    []string `json:"labels,omitempty"`
+	Reviewers []string `json:"reviewers,omitempty"`
 }
 
 type editChangeResponse struct{}
@@ -54,6 +55,29 @@ func (sh *ShamHub) handleEditChange(_ context.Context, req *editChangeRequest) (
 		}
 		sh.changes[changeIdx].Labels = labels
 	}
+	if len(req.Reviewers) > 0 {
+		// Validate that all requested reviewers are registered users.
+		for _, reviewer := range req.Reviewers {
+			found := false
+			for _, u := range sh.users {
+				if u.Username == reviewer {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, badRequestErrorf("reviewer %q is not a registered user", reviewer)
+			}
+		}
+
+		reviewers := sh.changes[changeIdx].RequestedReviewers
+		for _, reviewer := range req.Reviewers {
+			if !slices.Contains(reviewers, reviewer) {
+				reviewers = append(reviewers, reviewer)
+			}
+		}
+		sh.changes[changeIdx].RequestedReviewers = reviewers
+	}
 
 	return &editChangeResponse{}, nil // empty for now
 }
@@ -67,6 +91,7 @@ func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 		req.Draft = opts.Draft
 	}
 	req.Labels = opts.Labels
+	req.Reviewers = opts.Reviewers
 
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))
