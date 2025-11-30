@@ -92,6 +92,7 @@ nav:
     - community/recipes.md
     - community/integrations.md
   - Changelog: changelog.md
+  - 🤍 Sponsor: https://github.com/sponsors/abhinav
 
 plugins:
   - markdown-exec
