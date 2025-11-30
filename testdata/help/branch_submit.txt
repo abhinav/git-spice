@@ -25,31 +25,31 @@ Use --nav-comment=false to disable navigation comments in CRs, or
 the stack.
 
 Flags:
-  -n, --dry-run                    Don't actually submit the stack
-  -c, --fill                       Fill in the change title and body from the
-                                   commit messages
-      --[no-]draft                 Whether to mark change requests as drafts
-      --[no-]publish               Whether to create CRs for pushed branches.
-                                   Defaults to true. (🔧 spice.submit.publish)
-  -w, --web                        Open submitted changes in a web browser.
-                                   Accepts an optional argument: 'true',
-                                   'false', 'created'. (🔧 spice.submit.web)
-      --nav-comment=true           Whether to add a navigation comment to the
-                                   change request. Must be one of: true, false,
-                                   multiple. (🔧 spice.submit.navigationComment)
-      --force                      Force push, bypassing safety checks
-      --no-verify                  Bypass pre-push hooks when pushing to the
-                                   remote.
-  -u, --[no-]update-only           Only update existing change requests,
-                                   do not create new ones
-  -l, --label=LABEL,...            Add labels to the change request. Pass
-                                   multiple times or separate with commas.
-      --reviewers=REVIEWERS,...    Add reviewers to the change request. Pass
-                                   multiple times or separate with commas.
-      --no-web                     Alias for --web=false.
-      --title=TITLE                Title of the change request
-      --body=BODY                  Body of the change request
-      --branch=NAME                Branch to submit
+  -n, --dry-run                  Don't actually submit the stack
+  -c, --fill                     Fill in the change title and body from the
+                                 commit messages
+      --[no-]draft               Whether to mark change requests as drafts
+      --[no-]publish             Whether to create CRs for pushed branches.
+                                 Defaults to true. (🔧 spice.submit.publish)
+  -w, --web                      Open submitted changes in a web browser.
+                                 Accepts an optional argument: 'true', 'false',
+                                 'created'. (🔧 spice.submit.web)
+      --nav-comment=true         Whether to add a navigation comment to the
+                                 change request. Must be one of: true, false,
+                                 multiple. (🔧 spice.submit.navigationComment)
+      --force                    Force push, bypassing safety checks
+      --no-verify                Bypass pre-push hooks when pushing to the
+                                 remote.
+  -u, --[no-]update-only         Only update existing change requests, do not
+                                 create new ones
+  -l, --label=LABEL,...          Add labels to the change request. Pass multiple
+                                 times or separate with commas.
+  -r, --reviewer=REVIEWER,...    Add reviewers to the change request. Pass
+                                 multiple times or separate with commas.
+      --no-web                   Alias for --web=false.
+      --title=TITLE              Title of the change request
+      --body=BODY                Body of the change request
+      --branch=NAME              Branch to submit
 
 Global Flags:
   -h, --help           Show help for the command

@@ -34,7 +34,7 @@ git config spice.submit.reviewers bob
 
 # submit the entire stack from the middle.
 gs bco feature2
-gs stack submit --fill --reviewers charlie
+gs stack submit --fill --reviewer charlie
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/start.json
 
@@ -44,7 +44,7 @@ shamhub merge alice/example 1
 gs rs
 stderr '#1 was merged'
 gs sr   # stack restack
-gs ss --fill --reviewers dave
+gs ss --fill --reviewer dave
 ! stderr 'Updated #1'
 stderr 'Updated #2'
 stderr 'Updated #3'

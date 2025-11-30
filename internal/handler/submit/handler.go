@@ -158,7 +158,7 @@ type Options struct {
 	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
 	ConfiguredLabels []string `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"` // merged with Labels
 
-	Reviewers           []string `name:"reviewers" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"unreleased"`
+	Reviewers           []string `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"unreleased"`
 	ConfiguredReviewers []string `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"unreleased"` // merged with Reviewers
 
 	// ListTemplatesTimeout controls the timeout for listing CR templates.

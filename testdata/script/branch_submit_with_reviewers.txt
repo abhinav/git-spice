@@ -24,11 +24,11 @@ gs auth login
 git add feature1.txt
 gs branch create feature1 -m 'Add feature 1'
 
-! gs branch submit --fill --reviewers bob --reviewers nonexistent
+! gs branch submit --fill --reviewer bob --reviewer nonexistent
 stderr 'reviewer "nonexistent" is not a registered user'
 
 # Test 2: Submit with valid reviewers from flag
-gs branch submit --fill --reviewers bob --reviewers charlie
+gs branch submit --fill --reviewer bob --reviewer charlie
 shamhub dump change 1
 cmpenvJSON stdout $WORK/golden/cr1.json
 
@@ -44,7 +44,7 @@ cmpenvJSON stdout $WORK/golden/cr2.json
 # (config already has bob, flag adds bob and charlie)
 git add feature3.txt
 gs branch create feature3 -m 'Add feature 3'
-gs branch submit --fill --reviewers charlie --reviewers bob
+gs branch submit --fill --reviewer charlie --reviewer bob
 shamhub dump change 3
 cmpenvJSON stdout $WORK/golden/cr3.json
 
@@ -53,7 +53,7 @@ gs bco feature1
 git add update.txt
 gs commit create -m 'Update feature 1'
 shamhub register dave
-gs branch submit --fill --reviewers dave
+gs branch submit --fill --reviewer dave
 shamhub dump change 1
 cmpenvJSON stdout $WORK/golden/cr1-final.json
 
