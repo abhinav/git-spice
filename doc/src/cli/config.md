@@ -196,7 +196,7 @@ See also [GitLab Self-Hosted](../setup/auth.md#gitlab-self-hosted).
 
 ### spice.forge.gitlab.removeSourceBranch
 
-<!-- gs:unreleased -->
+<!-- gs:version v0.18.0 -->
 
 Whether to remove the source branch when a Merge Request is merged.
 
