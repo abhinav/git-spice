@@ -135,8 +135,8 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	return nil
 }
 
-func mergeAssigneeIDs(existing []*gitlab.BasicUser, assignees []int) []int {
-	seen := make(map[int]struct{}, len(existing)+len(assignees))
+func mergeAssigneeIDs(existing []*gitlab.BasicUser, assignees []int64) []int64 {
+	seen := make(map[int64]struct{}, len(existing)+len(assignees))
 	for _, user := range existing {
 		seen[user.ID] = struct{}{}
 	}

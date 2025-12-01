@@ -156,7 +156,7 @@ func TestListChangeComments(t *testing.T) {
 				AuthType:    AuthTypePAT,
 				AccessToken: "token",
 			})
-			repoID := 100
+			repoID := int64(100)
 			repo, err := newRepository(
 				t.Context(), new(Forge),
 				"owner", "repo",
@@ -181,7 +181,7 @@ func TestListChangeComments(t *testing.T) {
 }
 
 func newProject(
-	id int,
+	id int64,
 	projectAccessLevel *gitlab.AccessLevelValue,
 	groupAccessLevel *gitlab.AccessLevelValue,
 ) gitlab.Project {

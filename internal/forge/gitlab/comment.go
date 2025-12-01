@@ -16,10 +16,10 @@ import (
 // MRComment implements [forge.ChangeCommentID].
 type MRComment struct {
 	// Number is the ID of the note.
-	Number int `json:"number"` // required
+	Number int64 `json:"number"` // required
 
 	// MRNumber is the ID of the MR the note is on.
-	MRNumber int `json:"mr_number"` // required
+	MRNumber int64 `json:"mr_number"` // required
 }
 
 var _ forge.ChangeCommentID = (*MRComment)(nil)
@@ -37,7 +37,7 @@ func mustMRComment(id forge.ChangeCommentID) *MRComment {
 }
 
 func (c *MRComment) String() string {
-	return strconv.Itoa(c.Number)
+	return strconv.FormatInt(c.Number, 10)
 }
 
 // PostChangeComment posts a new comment on an MR.
@@ -157,7 +157,7 @@ func (r *Repository) ListChangeComments(
 		notesOptions := gitlab.ListMergeRequestNotesOptions{
 			Sort: gitlab.Ptr("asc"),
 			ListOptions: gitlab.ListOptions{
-				PerPage: _listChangeCommentsPageSize,
+				PerPage: int64(_listChangeCommentsPageSize),
 			},
 		}
 

@@ -10,8 +10,8 @@ import (
 // assigneeIDs resolves assignee usernames to GitLab user IDs.
 // The returned slice may be shorter than the input
 // because duplicate usernames are automatically deduplicated.
-func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int, error) {
-	ids := make([]int, 0, len(assignees))
+func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int64, error) {
+	ids := make([]int64, 0, len(assignees))
 	seen := make(map[string]struct{}, len(assignees))
 	for _, assignee := range assignees {
 		if _, ok := seen[assignee]; ok {
@@ -28,7 +28,7 @@ func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int
 	return ids, nil
 }
 
-func (r *Repository) assigneeID(ctx context.Context, username string) (int, error) {
+func (r *Repository) assigneeID(ctx context.Context, username string) (int64, error) {
 	users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
 		Username: gitlab.Ptr(username),
 	}, gitlab.WithContext(ctx))

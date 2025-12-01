@@ -37,7 +37,7 @@ var (
 // To avoid looking this up for every test that needs the repo ID,
 // we'll just hardcode it here.
 var (
-	_testRepoID = gogitlab.Ptr(64779801)
+	_testRepoID = gogitlab.Ptr(int64(64779801))
 )
 
 func newRecorder(t *testing.T, name string) *recorder.Recorder {
