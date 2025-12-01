@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.3
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v0.161.1
+	gitlab.com/gitlab-org/api/client-go v1.3.0
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
@@ -71,13 +71,13 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
+	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
 )
 
