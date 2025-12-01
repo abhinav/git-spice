@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -57,28 +58,18 @@ func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequ
 
 	// Validate that all requested reviewers are registered users.
 	for _, reviewer := range req.Reviewers {
-		found := false
-		for _, u := range sh.users {
-			if u.Username == reviewer {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.ContainsFunc(sh.users, func(u shamUser) bool {
+			return u.Username == reviewer
+		}) {
 			return nil, badRequestErrorf("reviewer %q is not a registered user", reviewer)
 		}
 	}
 
 	// Validate that all assignees are registered users.
 	for _, assignee := range req.Assignees {
-		found := false
-		for _, u := range sh.users {
-			if u.Username == assignee {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.ContainsFunc(sh.users, func(u shamUser) bool {
+			return u.Username == assignee
+		}) {
 			return nil, badRequestErrorf("assignee %q is not a registered user", assignee)
 		}
 	}

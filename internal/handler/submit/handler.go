@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -173,23 +174,7 @@ type Options struct {
 }
 
 func mergeConfiguredValues(values []string, configured []string) []string {
-	if len(configured) == 0 {
-		return values
-	}
-
-	seen := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		seen[value] = struct{}{}
-	}
-
-	for _, value := range configured {
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		values = append(values, value)
-	}
-
-	return values
+	return slices.Collect(iterutil.Uniq(values, configured))
 }
 
 func mergeConfiguredOptions(opts *Options) {

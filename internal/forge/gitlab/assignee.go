@@ -2,12 +2,14 @@ package gitlab
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
+// assigneeIDs resolves assignee usernames to GitLab user IDs.
+// The returned slice may be shorter than the input
+// because duplicate usernames are automatically deduplicated.
 func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int, error) {
 	ids := make([]int, 0, len(assignees))
 	seen := make(map[string]struct{}, len(assignees))
@@ -27,10 +29,6 @@ func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int
 }
 
 func (r *Repository) assigneeID(ctx context.Context, username string) (int, error) {
-	if username == "" {
-		return 0, errors.New("assignee username is empty")
-	}
-
 	users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
 		Username: gitlab.Ptr(username),
 	}, gitlab.WithContext(ctx))

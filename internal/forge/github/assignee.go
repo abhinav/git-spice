@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
@@ -36,6 +35,9 @@ func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []
 	return nil
 }
 
+// assigneeIDs resolves assignee logins to GitHub user IDs.
+// The returned slice may be shorter than the input
+// because duplicate logins are automatically deduplicated.
 func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]githubv4.ID, error) {
 	ids := make([]githubv4.ID, 0, len(assignees))
 	seen := make(map[string]struct{}, len(assignees))
@@ -55,10 +57,6 @@ func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]git
 }
 
 func (r *Repository) assigneeID(ctx context.Context, login string) (githubv4.ID, error) {
-	if login == "" {
-		return "", errors.New("assignee login is empty")
-	}
-
 	var q struct {
 		User struct {
 			ID githubv4.ID `graphql:"id"`

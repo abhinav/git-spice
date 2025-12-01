@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"regexp"
+	"slices"
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/cmputil"
@@ -85,14 +87,19 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	}
 
 	if len(opts.Reviewers) > 0 {
-		// TODO: de-dupe
-
 		reviewerIDs, err := r.resolveReviewerIDs(ctx, opts.Reviewers)
 		if err != nil {
 			return fmt.Errorf("resolve reviewer IDs: %w", err)
 		}
-		updateOptions.ReviewerIDs = &reviewerIDs
-		logUpdates = append(logUpdates, slog.Any("reviewers", opts.Reviewers))
+
+		mr, err := getMergeRequest()
+		if err != nil {
+			return err
+		}
+
+		merged := mergeAssigneeIDs(mr.Reviewers, reviewerIDs)
+		updateOptions.ReviewerIDs = &merged
+		logUpdates = append(logUpdates, slog.Any("reviewers", merged))
 	}
 
 	if len(opts.Assignees) > 0 {
@@ -106,13 +113,7 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 			return err
 		}
 
-		// Make this cleaner.
-		existing := make([]int, 0, len(mr.Assignees))
-		for _, assignee := range mr.Assignees {
-			existing = append(existing, assignee.ID)
-		}
-
-		merged := mergeAssigneeIDs(existing, assigneeIDs)
+		merged := mergeAssigneeIDs(mr.Assignees, assigneeIDs)
 		updateOptions.AssigneeIDs = &merged
 		logUpdates = append(logUpdates, slog.Any("assignees", merged))
 	}
@@ -134,27 +135,13 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	return nil
 }
 
-func mergeAssigneeIDs(existing, assignees []int) []int {
-	if len(assignees) == 0 {
-		return existing
-	}
-
-	merged := make([]int, 0, len(existing)+len(assignees))
+func mergeAssigneeIDs(existing []*gitlab.BasicUser, assignees []int) []int {
 	seen := make(map[int]struct{}, len(existing)+len(assignees))
-	for _, id := range existing {
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		merged = append(merged, id)
+	for _, user := range existing {
+		seen[user.ID] = struct{}{}
 	}
 	for _, id := range assignees {
-		if _, ok := seen[id]; ok {
-			continue
-		}
 		seen[id] = struct{}{}
-		merged = append(merged, id)
 	}
-
-	return merged
+	return slices.Sorted(maps.Keys(seen))
 }
