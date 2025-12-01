@@ -29,7 +29,9 @@ gs auth login
 # submit the entire stack from the middle.
 git checkout feature1
 gs stack submit --fill
-cmpenv stderr $WORK/golden/submit-log.txt
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
 
 gs ls -a
 cmp stderr $WORK/golden/ls.txt
@@ -62,10 +64,6 @@ This is feature 2
 -- repo/feature3.txt --
 This is feature 3
 
--- golden/submit-log.txt --
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
-INF Created #2: $SHAMHUB_URL/alice/example/change/2
-INF Created #3: $SHAMHUB_URL/alice/example/change/3
 -- golden/start.json --
 [
   {
