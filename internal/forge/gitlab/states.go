@@ -10,7 +10,7 @@ import (
 
 // ChangesStates retrieves the states of the given changes in bulk.
 func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeState, error) {
-	mrIDs := make([]int, len(ids))
+	mrIDs := make([]int64, len(ids))
 	for i, id := range ids {
 		mrIDs[i] = mustMR(id).Number
 	}
@@ -24,7 +24,7 @@ func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([
 	}
 
 	// create a map of MR IDs to MRs
-	mrMap := make(map[int]*gitlab.BasicMergeRequest)
+	mrMap := make(map[int64]*gitlab.BasicMergeRequest)
 	for _, mr := range mergeRequests {
 		mrMap[mr.IID] = mr
 	}

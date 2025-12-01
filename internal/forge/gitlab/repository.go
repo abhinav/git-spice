@@ -19,10 +19,10 @@ type Repository struct {
 	log         *silog.Logger
 	forge       *Forge
 
-	repoID int
+	repoID int64
 
 	// Information about the current user:
-	userID   int
+	userID   int64
 	userRole gitlab.AccessLevelValue
 
 	removeSourceBranchOnMerge bool
@@ -31,7 +31,7 @@ type Repository struct {
 var _ forge.Repository = (*Repository)(nil)
 
 type repositoryOptions struct {
-	RepositoryID *int // if nil, repository ID will be looked up
+	RepositoryID *int64 // if nil, repository ID will be looked up
 
 	RemoveSourceBranchOnMerge bool
 }
@@ -49,7 +49,7 @@ func newRepository(
 
 	var projectIdentifier string
 	if repoID != nil {
-		projectIdentifier = strconv.Itoa(*repoID)
+		projectIdentifier = strconv.FormatInt(*repoID, 10)
 	} else {
 		projectIdentifier = owner + "/" + repo
 	}
@@ -111,12 +111,12 @@ func accessValueName(value gitlab.AccessLevelValue) string {
 }
 
 // resolveReviewerIDs converts usernames to GitLab user IDs.
-func (r *Repository) resolveReviewerIDs(ctx context.Context, usernames []string) ([]int, error) {
+func (r *Repository) resolveReviewerIDs(ctx context.Context, usernames []string) ([]int64, error) {
 	if len(usernames) == 0 {
 		return nil, nil
 	}
 
-	reviewerIDs := make([]int, 0, len(usernames))
+	reviewerIDs := make([]int64, 0, len(usernames))
 	for _, username := range usernames {
 		users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
 			Username: &username,

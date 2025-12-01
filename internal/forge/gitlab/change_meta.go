@@ -87,7 +87,7 @@ func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
 type MR struct {
 	// Number is the merge request number.
 	// This will always be set.
-	Number int `json:"number"` // required
+	Number int64 `json:"number"` // required
 }
 
 var _ forge.ChangeID = (*MR)(nil)

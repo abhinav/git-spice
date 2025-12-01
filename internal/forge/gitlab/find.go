@@ -123,7 +123,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		OrderBy:      gitlab.Ptr("updated_at"),
 		SourceBranch: gitlab.Ptr(branch),
 		ListOptions: gitlab.ListOptions{
-			PerPage: opts.Limit,
+			PerPage: int64(opts.Limit),
 		},
 	}
 

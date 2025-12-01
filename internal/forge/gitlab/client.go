@@ -79,14 +79,14 @@ type mergeRequestsService interface {
 
 	GetMergeRequest(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 
 	UpdateMergeRequest(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.UpdateMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
@@ -103,29 +103,29 @@ type mergeRequestsService interface {
 type notesService interface {
 	CreateMergeRequestNote(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.CreateMergeRequestNoteOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Note, *gitlab.Response, error)
 
 	UpdateMergeRequestNote(
 		pid any,
-		mergeRequest int,
-		note int,
+		mergeRequest int64,
+		note int64,
 		opt *gitlab.UpdateMergeRequestNoteOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Note, *gitlab.Response, error)
 
 	ListMergeRequestNotes(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.ListMergeRequestNotesOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.Note, *gitlab.Response, error)
 
 	DeleteMergeRequestNote(
 		pid any,
-		mergeRequest, note int,
+		mergeRequest, note int64,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.Response, error)
 }
