@@ -84,6 +84,74 @@ func TestEnumerate(t *testing.T) {
 	})
 }
 
+func TestUniq(t *testing.T) {
+	tests := []struct {
+		name string
+		give [][]string
+		want []string
+	}{
+		{
+			name: "SingleSliceNoDuplicates",
+			give: [][]string{{"foo", "bar", "baz"}},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			name: "SingleSliceWithDuplicates",
+			give: [][]string{{"foo", "bar", "foo", "baz", "bar"}},
+			want: []string{"foo", "bar", "baz"},
+		},
+		{
+			name: "MultipleSlicesNoDuplicates",
+			give: [][]string{{"a", "b"}, {"c", "d"}},
+			want: []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "MultipleSlicesWithDuplicatesAcrossSlices",
+			give: [][]string{{"a", "b", "c"}, {"b", "c", "d"}, {"c", "d", "e"}},
+			want: []string{"a", "b", "c", "d", "e"},
+		},
+		{
+			name: "MultipleSlicesWithDuplicatesWithinAndAcross",
+			give: [][]string{{"a", "b", "b", "c"}, {"b", "c", "d", "d"}, {"c", "d", "e"}},
+			want: []string{"a", "b", "c", "d", "e"},
+		},
+		{
+			name: "EmptySlicesMixed",
+			give: [][]string{{"a"}, {}, {"b", "a"}, {}},
+			want: []string{"a", "b"},
+		},
+		{
+			name: "PreserveOrder",
+			give: [][]string{{"z", "a", "m"}, {"a", "b", "z"}},
+			want: []string{"z", "a", "m", "b"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := slices.Collect(Uniq(tt.give...))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+
+	t.Run("EmptySlices", func(t *testing.T) {
+		got := slices.Collect(Uniq[string]())
+		assert.Empty(t, got)
+	})
+
+	t.Run("EarlyTermination", func(t *testing.T) {
+		var got []int
+		for val := range Uniq([]int{1, 2, 3, 4, 5}, []int{6, 7, 8}) {
+			got = append(got, val)
+			if val == 3 {
+				break
+			}
+		}
+		want := []int{1, 2, 3}
+		assert.Equal(t, want, got)
+	})
+}
+
 type indexed[T any] struct {
 	Index int
 	Value T

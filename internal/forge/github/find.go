@@ -33,6 +33,11 @@ type findPRNode struct {
 			} `graphql:"requestedReviewer"`
 		} `graphql:"nodes"`
 	} `graphql:"reviewRequests(first: 100)"`
+	Assignees struct {
+		Nodes []struct {
+			Login githubv4.String `graphql:"login"`
+		} `graphql:"nodes"`
+	} `graphql:"assignees(first: 100)"`
 }
 
 func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
@@ -52,6 +57,14 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 		}
 	}
 
+	var assignees []string
+	if len(n.Assignees.Nodes) > 0 {
+		assignees = make([]string, len(n.Assignees.Nodes))
+		for i, node := range n.Assignees.Nodes {
+			assignees[i] = string(node.Login)
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &PR{
 			Number: int(n.Number),
@@ -65,6 +78,7 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 		Draft:     bool(n.IsDraft),
 		Labels:    labels,
 		Reviewers: reviewers,
+		Assignees: assignees,
 	}
 }
 

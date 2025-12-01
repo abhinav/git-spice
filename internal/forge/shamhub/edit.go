@@ -18,6 +18,7 @@ type editChangeRequest struct {
 	Draft     *bool    `json:"draft,omitempty"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
+	Assignees []string `json:"assignees,omitempty"`
 }
 
 type editChangeResponse struct{}
@@ -79,6 +80,16 @@ func (sh *ShamHub) handleEditChange(_ context.Context, req *editChangeRequest) (
 		sh.changes[changeIdx].RequestedReviewers = reviewers
 	}
 
+	if len(req.Assignees) > 0 {
+		assignees := sh.changes[changeIdx].Assignees
+		for _, assignee := range req.Assignees {
+			if !slices.Contains(assignees, assignee) {
+				assignees = append(assignees, assignee)
+			}
+		}
+		sh.changes[changeIdx].Assignees = assignees
+	}
+
 	return &editChangeResponse{}, nil // empty for now
 }
 
@@ -92,6 +103,7 @@ func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 	}
 	req.Labels = opts.Labels
 	req.Reviewers = opts.Reviewers
+	req.Assignees = opts.Assignees
 
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))

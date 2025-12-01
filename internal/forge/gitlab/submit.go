@@ -31,6 +31,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	if len(req.Labels) > 0 {
 		input.Labels = (*gitlab.LabelOptions)(&req.Labels)
 	}
+
 	if len(req.Reviewers) > 0 {
 		reviewerIDs, err := r.resolveReviewerIDs(ctx, req.Reviewers)
 		if err != nil {
@@ -38,6 +39,15 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		}
 		input.ReviewerIDs = &reviewerIDs
 	}
+
+	if len(req.Assignees) > 0 {
+		assigneeIDs, err := r.assigneeIDs(ctx, req.Assignees)
+		if err != nil {
+			return forge.SubmitChangeResult{}, fmt.Errorf("resolve assignees: %w", err)
+		}
+		input.AssigneeIDs = &assigneeIDs
+	}
+
 	request, _, err := r.client.MergeRequests.CreateMergeRequest(
 		r.repoID, input,
 		gitlab.WithContext(ctx),

@@ -23,6 +23,14 @@ func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.Find
 		}
 	}
 
+	var assignees []string
+	if len(mr.Assignees) > 0 {
+		assignees = make([]string, len(mr.Assignees))
+		for i, assignee := range mr.Assignees {
+			assignees[i] = assignee.Username
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
@@ -35,6 +43,7 @@ func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.Find
 		Draft:     mr.Draft,
 		Labels:    labels,
 		Reviewers: reviewers,
+		Assignees: assignees,
 	}
 }
 
@@ -52,6 +61,14 @@ func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem
 		}
 	}
 
+	var assignees []string
+	if len(mr.Assignees) > 0 {
+		assignees = make([]string, len(mr.Assignees))
+		for i, assignee := range mr.Assignees {
+			assignees[i] = assignee.Username
+		}
+	}
+
 	return &forge.FindChangeItem{
 		ID: &MR{
 			Number: mr.IID,
@@ -64,6 +81,7 @@ func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem
 		Draft:     mr.Draft,
 		Labels:    labels,
 		Reviewers: reviewers,
+		Assignees: assignees,
 	}
 }
 

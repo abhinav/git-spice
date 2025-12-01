@@ -1082,6 +1082,169 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	assert.ErrorContains(t, err, "404 Not Found")
 }
 
+func TestIntegration_Repository_FindChangeItem_WithAssignees(t *testing.T) {
+	branchFixture1 := fixturetest.New(_fixtures, "branch-no-assignees", func() string {
+		return randomString(8)
+	})
+	branchFixture2 := fixturetest.New(_fixtures, "branch-with-assignees", func() string {
+		return randomString(8)
+	})
+
+	branchNoAssignees := branchFixture1.Get(t)
+	branchWithAssignees := branchFixture2.Get(t)
+	t.Logf("Creating branches: %s, %s", branchNoAssignees, branchWithAssignees)
+
+	var (
+		gitRepo *git.Repository // only when _update is true
+		gitWork *git.Worktree
+	)
+	if gitlab.UpdateFixtures() {
+		t.Setenv("GIT_AUTHOR_EMAIL", "bot@example.com")
+		t.Setenv("GIT_AUTHOR_NAME", "gs-test[bot]")
+		t.Setenv("GIT_COMMITTER_EMAIL", "bot@example.com")
+		t.Setenv("GIT_COMMITTER_NAME", "gs-test[bot]")
+
+		output := t.Output()
+
+		ctx := t.Context()
+
+		t.Logf("Cloning test-repo...")
+		repoDir := t.TempDir()
+		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "failed to clone test-repo")
+
+		var err error
+		gitWork, err = git.OpenWorktree(ctx, repoDir, git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err, "failed to open git repo")
+		gitRepo = gitWork.Repository()
+
+		// Create and push first branch (no assignees).
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchNoAssignees,
+		}), "could not create branch: %s", branchNoAssignees)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchNoAssignees),
+			"could not checkout branch: %s", branchNoAssignees)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchNoAssignees+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin: %s", branchNoAssignees)
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchNoAssignees),
+			}), "error pushing branch")
+
+		// Create and push second branch (with assignees).
+		require.NoError(t, gitWork.CheckoutBranch(ctx, "main"),
+			"could not checkout main branch")
+		require.NoError(t, gitRepo.CreateBranch(ctx, git.CreateBranchRequest{
+			Name: branchWithAssignees,
+		}), "could not create branch: %s", branchWithAssignees)
+		require.NoError(t, gitWork.CheckoutBranch(ctx, branchWithAssignees),
+			"could not checkout branch: %s", branchWithAssignees)
+		require.NoError(t, os.WriteFile(
+			filepath.Join(repoDir, branchWithAssignees+".txt"),
+			[]byte(randomString(32)),
+			0o644,
+		), "could not write file to branch")
+
+		cmd = exec.Command("git", "add", ".")
+		cmd.Dir = repoDir
+		cmd.Stdout = output
+		cmd.Stderr = output
+		require.NoError(t, cmd.Run(), "git add failed")
+		require.NoError(t, gitWork.Commit(ctx, git.CommitRequest{
+			Message: "commit from test",
+		}), "could not commit changes")
+
+		t.Logf("Pushing to origin: %s", branchWithAssignees)
+		require.NoError(t,
+			gitWork.Push(ctx, git.PushOptions{
+				Remote:  "origin",
+				Refspec: git.Refspec(branchWithAssignees),
+			}), "error pushing branch")
+
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			t.Logf("Deleting remote branches: %s, %s", branchNoAssignees, branchWithAssignees)
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchNoAssignees),
+				}), "error deleting branch")
+			assert.NoError(t,
+				gitWork.Push(ctx, git.PushOptions{
+					Remote:  "origin",
+					Refspec: git.Refspec(":" + branchWithAssignees),
+				}), "error deleting branch")
+		})
+	}
+
+	ctx := t.Context()
+	rec := newRecorder(t, t.Name())
+	glc := newGitLabClient(rec.GetDefaultClient())
+	repo, err := gitlab.NewRepository(
+		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), glc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+	)
+	require.NoError(t, err)
+
+	changeNoAssignees, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject: branchNoAssignees,
+		Body:    "Test MR without assignees",
+		Base:    "main",
+		Head:    branchNoAssignees,
+	})
+	require.NoError(t, err, "error creating MR without assignees")
+
+	changeWithAssignees, err := repo.SubmitChange(ctx, forge.SubmitChangeRequest{
+		Subject:   branchWithAssignees,
+		Body:      "Test MR with assignees",
+		Base:      "main",
+		Head:      branchWithAssignees,
+		Assignees: []string{"abg"},
+	})
+	require.NoError(t, err, "error creating MR with assignees")
+
+	t.Run("NoAssignees", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeNoAssignees.ID)
+		require.NoError(t, err)
+		assert.Empty(t, change.Assignees)
+
+		t.Run("AddAssignees", func(t *testing.T) {
+			require.NoError(t,
+				repo.EditChange(t.Context(), changeNoAssignees.ID, forge.EditChangeOptions{
+					Assignees: []string{"abg"},
+				}), "could not add assignees to MR")
+
+			change, err := repo.FindChangeByID(t.Context(), changeNoAssignees.ID)
+			require.NoError(t, err)
+			assert.Equal(t, []string{"abg"}, change.Assignees)
+		})
+	})
+
+	t.Run("WithAssignees", func(t *testing.T) {
+		change, err := repo.FindChangeByID(t.Context(), changeWithAssignees.ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"abg"}, change.Assignees)
+	})
+}
+
 func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 	ctx := t.Context()
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {

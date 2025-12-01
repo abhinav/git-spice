@@ -305,6 +305,9 @@ type SubmitChangeRequest struct {
 
 	// Reviewers are optional reviewers to request reviews from.
 	Reviewers []string
+
+	// Assignees are optional users to assign to the change.
+	Assignees []string
 }
 
 // SubmitChangeResult is the result of creating a new change in a repository.
@@ -332,6 +335,9 @@ type EditChangeOptions struct {
 	// Reviewers are the reviewers to request reviews from.
 	// Existing reviewers associated with the change will not be modified.
 	Reviewers []string
+
+	// Assignees are optional users to assign to the change.
+	Assignees []string
 }
 
 // FindChangeItem is a single result from searching for changes in the
@@ -365,6 +371,10 @@ type FindChangeItem struct {
 	// Reviewers are the usernames of users
 	// who have been requested to review the change.
 	Reviewers []string
+
+	// Assignees are the usernames of users
+	// who are assigned to the change.
+	Assignees []string
 }
 
 // ChangeTemplate is a template for a new change proposal.

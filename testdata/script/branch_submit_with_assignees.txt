@@ -1,0 +1,94 @@
+# Submit a single branch with assignees.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+shamhub register bob
+shamhub register charlie
+git push origin main
+
+# create a branch
+git add feature.txt
+gs branch create feature -m 'Add feature'
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git config spice.submit.assignees bob
+
+# Submit the branch with an additional assignee.
+gs branch submit --fill --assign charlie
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/submitted.json
+
+# Update the branch with a new assignee.
+gs branch submit --assign dave
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/updated.json
+
+-- repo/feature.txt --
+This is a feature
+-- golden/submitted.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "79b9cc53bc9d9c20db08dd3f9b3d969a06c9d049"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    },
+    "assignees": ["bob", "charlie"]
+  }
+]
+
+-- golden/updated.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Add feature",
+    "body": "",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "79b9cc53bc9d9c20db08dd3f9b3d969a06c9d049"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    },
+    "assignees": ["bob", "charlie", "dave"]
+  }
+]

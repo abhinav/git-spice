@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -151,7 +152,6 @@ type Options struct {
 	DraftDefault bool `config:"submit.draft" help:"Default value for --draft when creating change requests." hidden:"" default:"false"`
 
 	// TODO: Other creation options e.g.:
-	// - assignees
 	// - milestone
 	// - reviewers
 
@@ -161,6 +161,9 @@ type Options struct {
 	Reviewers           []string `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"unreleased"`
 	ConfiguredReviewers []string `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"unreleased"` // merged with Reviewers
 
+	Assignees           []string `short:"a" name:"assign" placeholder:"ASSIGNEE" help:"Assign the change request to these users. Pass multiple times or separate with commas." released:"unreleased"`
+	ConfiguredAssignees []string `name:"configured-assignees" help:"Default assignees to add to change requests." hidden:"" config:"submit.assignees" released:"unreleased"` // merged with Assignees
+
 	// ListTemplatesTimeout controls the timeout for listing CR templates.
 	ListTemplatesTimeout time.Duration `hidden:"" config:"submit.listTemplatesTimeout" help:"Timeout for listing CR templates" default:"1s"`
 
@@ -168,6 +171,16 @@ type Options struct {
 	// If set, this template will be automatically selected instead of prompting the user.
 	// The value should match the filename of one of the available templates.
 	Template string `hidden:"" config:"submit.template" help:"Default template to use when multiple templates are available"`
+}
+
+func mergeConfiguredValues(values []string, configured []string) []string {
+	return slices.Collect(iterutil.Uniq(values, configured))
+}
+
+func mergeConfiguredOptions(opts *Options) {
+	opts.Labels = mergeConfiguredValues(opts.Labels, opts.ConfiguredLabels)
+	opts.Reviewers = mergeConfiguredValues(opts.Reviewers, opts.ConfiguredReviewers)
+	opts.Assignees = mergeConfiguredValues(opts.Assignees, opts.ConfiguredAssignees)
 }
 
 // NavCommentSync specifies the scope of navigation comment updates.
@@ -273,32 +286,7 @@ type BatchRequest struct {
 // creating or updating change requests as needed.
 func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	opts := cmp.Or(req.Options, &Options{})
-
-	if len(opts.ConfiguredLabels) > 0 {
-		seen := make(map[string]struct{}, len(opts.Labels))
-		for _, label := range opts.Labels {
-			seen[label] = struct{}{}
-		}
-
-		for _, label := range opts.ConfiguredLabels {
-			if _, ok := seen[label]; !ok {
-				opts.Labels = append(opts.Labels, label)
-			}
-		}
-	}
-
-	if len(opts.ConfiguredReviewers) > 0 {
-		seen := make(map[string]struct{}, len(opts.Reviewers))
-		for _, reviewer := range opts.Reviewers {
-			seen[reviewer] = struct{}{}
-		}
-
-		for _, reviewer := range opts.ConfiguredReviewers {
-			if _, ok := seen[reviewer]; !ok {
-				opts.Reviewers = append(opts.Reviewers, reviewer)
-			}
-		}
-	}
+	mergeConfiguredOptions(opts)
 
 	batchOpts := cmp.Or(req.BatchOptions, &BatchOptions{})
 	if batchOpts.UpdateOnlyDefault && opts.UpdateOnly == nil {
@@ -357,19 +345,7 @@ type Request struct {
 // creating or updating a change request as needed.
 func (h *Handler) Submit(ctx context.Context, req *Request) error {
 	opts := cmp.Or(req.Options, &Options{})
-
-	if len(opts.ConfiguredReviewers) > 0 {
-		seen := make(map[string]struct{}, len(opts.Reviewers))
-		for _, reviewer := range opts.Reviewers {
-			seen[reviewer] = struct{}{}
-		}
-
-		for _, reviewer := range opts.ConfiguredReviewers {
-			if _, ok := seen[reviewer]; !ok {
-				opts.Reviewers = append(opts.Reviewers, reviewer)
-			}
-		}
-	}
+	mergeConfiguredOptions(opts)
 	status, err := h.submitBranch(
 		ctx,
 		req.Branch,
@@ -796,6 +772,24 @@ func (h *Handler) submitBranch(
 			updates = append(updates, "set draft to "+strconv.FormatBool(*opts.Draft))
 		}
 
+		if len(opts.Assignees) > 0 {
+			existingAssigneeSet := make(map[string]struct{}, len(pull.Assignees))
+			for _, assignee := range pull.Assignees {
+				existingAssigneeSet[assignee] = struct{}{}
+			}
+
+			var assigneesToAdd []string
+			for _, assignee := range opts.Assignees {
+				if _, exists := existingAssigneeSet[assignee]; !exists {
+					assigneesToAdd = append(assigneesToAdd, assignee)
+				}
+			}
+			if len(assigneesToAdd) > 0 {
+				sort.Strings(assigneesToAdd)
+				updates = append(updates, "add assignees: "+strings.Join(assigneesToAdd, ", "))
+			}
+		}
+
 		// Check for labels that would be added.
 		if len(opts.Labels) > 0 {
 			existingLabelSet := make(map[string]struct{}, len(pull.Labels))
@@ -875,6 +869,7 @@ func (h *Handler) submitBranch(
 				Draft:     opts.Draft,
 				Labels:    opts.Labels,
 				Reviewers: opts.Reviewers,
+				Assignees: opts.Assignees,
 			}
 
 			// remoteRepo is guaranteed to be available at this point.
@@ -1078,6 +1073,7 @@ func (h *Handler) prepareBranch(
 		log:            h.Log,
 		labels:         opts.Labels,
 		reviewers:      opts.Reviewers,
+		assignees:      opts.Assignees,
 	}, nil
 }
 
@@ -1118,6 +1114,7 @@ type preparedBranch struct {
 	draft     bool
 	labels    []string
 	reviewers []string
+	assignees []string
 
 	remoteRepo forge.Repository
 	store      Store
@@ -1133,6 +1130,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 		Draft:     b.draft,
 		Labels:    b.labels,
 		Reviewers: b.reviewers,
+		Assignees: b.assignees,
 	})
 	if err != nil {
 		// If the branch could not be submitted because the base branch

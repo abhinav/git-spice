@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -21,6 +22,7 @@ type submitChangeRequest struct {
 	Draft     bool     `json:"draft,omitempty"`
 	Labels    []string `json:"labels,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
+	Assignees []string `json:"assignees,omitempty"`
 }
 
 type submitChangeResponse struct {
@@ -56,15 +58,19 @@ func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequ
 
 	// Validate that all requested reviewers are registered users.
 	for _, reviewer := range req.Reviewers {
-		found := false
-		for _, u := range sh.users {
-			if u.Username == reviewer {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.ContainsFunc(sh.users, func(u shamUser) bool {
+			return u.Username == reviewer
+		}) {
 			return nil, badRequestErrorf("reviewer %q is not a registered user", reviewer)
+		}
+	}
+
+	// Validate that all assignees are registered users.
+	for _, assignee := range req.Assignees {
+		if !slices.ContainsFunc(sh.users, func(u shamUser) bool {
+			return u.Username == assignee
+		}) {
+			return nil, badRequestErrorf("assignee %q is not a registered user", assignee)
 		}
 	}
 
@@ -79,6 +85,7 @@ func (sh *ShamHub) handleSubmitChange(ctx context.Context, req *submitChangeRequ
 		Head:               &shamBranch{Owner: headOwner, Repo: headRepo, Name: req.Head},
 		Labels:             req.Labels,
 		RequestedReviewers: req.Reviewers,
+		Assignees:          req.Assignees,
 	}
 	sh.changes = append(sh.changes, change)
 
@@ -99,6 +106,7 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		Draft:     req.Draft,
 		Labels:    req.Labels,
 		Reviewers: req.Reviewers,
+		Assignees: req.Assignees,
 	}
 
 	// For now, fork functionality is handled at the ShamHub server level

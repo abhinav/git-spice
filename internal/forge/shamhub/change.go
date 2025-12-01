@@ -98,6 +98,9 @@ type shamChange struct {
 	// RequestedReviewers are the usernames of users
 	// from whom reviews have been requested.
 	RequestedReviewers []string
+
+	// Assignees are users assigned to the change.
+	Assignees []string
 }
 
 // Change is a change proposal against a repository.
@@ -142,6 +145,9 @@ type Change struct {
 	// RequestedReviewers are the usernames of users
 	// from whom reviews have been requested.
 	RequestedReviewers []string `json:"requested_reviewers,omitempty"`
+
+	// Assignees are users assigned to the change.
+	Assignees []string `json:"assignees,omitempty"`
 }
 
 // toChange converts an internal shamChange
@@ -161,6 +167,9 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 	requestedReviewers := slices.Clone(c.RequestedReviewers)
 	slices.Sort(requestedReviewers)
 
+	assignees := slices.Clone(c.Assignees)
+	slices.Sort(assignees)
+
 	change := &Change{
 		Number:             c.Number,
 		URL:                sh.changeURL(c.Base.Owner, c.Base.Repo, c.Number),
@@ -171,6 +180,7 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 		Head:               head,
 		Labels:             c.Labels,
 		RequestedReviewers: requestedReviewers,
+		Assignees:          assignees,
 	}
 	switch c.State {
 	case shamChangeOpen:
