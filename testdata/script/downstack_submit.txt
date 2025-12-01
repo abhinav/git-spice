@@ -28,7 +28,9 @@ gs branch create feature3 -m 'Add feature 3'
 
 # submit the stack
 gs downstack submit --fill
-cmpenv stderr $WORK/golden/submit-log.txt
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
 
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/pulls.json
@@ -42,10 +44,6 @@ This is feature 1
 This is feature 2
 -- repo/feature3.txt --
 
--- golden/submit-log.txt --
-INF Created #1: $SHAMHUB_URL/alice/example/change/1
-INF Created #2: $SHAMHUB_URL/alice/example/change/2
-INF Created #3: $SHAMHUB_URL/alice/example/change/3
 -- golden/pulls.json --
 [
   {
