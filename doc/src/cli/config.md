@@ -337,7 +337,7 @@ when using $$gs branch submit$$ and friends.
 
 The value must be a comma-separated list of usernames.
 
-Assignees specified with the `--assignees` flag
+Assignees specified with the `--assign` flag
 will be combined with the configured assignees.
 
 ### spice.submit.label
