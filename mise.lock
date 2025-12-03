@@ -1,13 +1,13 @@
 [[tools.changie]]
-version = "1.22.1"
+version = "1.24.0"
 backend = "ubi:miniscruff/changie"
-"platforms.linux-x64-changie" = { checksum = "blake3:5c375c0c849a13e0aab777ba05f059bc9065e4554205e911ba15d51e8f0f2242"}
+"platforms.linux-x64-changie" = { checksum = "blake3:8b63ce3ca2871dba4d3a50cea6b4fc8c8aad789a18fdb8c88fc8e6b3b26977cc"}
 
 [[tools.go]]
-version = "1.25.4"
+version = "1.25.5"
 backend = "core:go"
-"platforms.linux-x64" = { checksum = "sha256:9fa5ffeda4170de60f67f3aa0f824e426421ba724c21e133c1e35d6159ca1bec", url = "https://dl.google.com/go/go1.25.4.linux-amd64.tar.gz"}
-"platforms.macos-arm64" = { checksum = "sha256:c1b04e74251fe1dfbc5382e73d0c6d96f49642d8aebb7ee10a7ecd4cae36ebd2", url = "https://dl.google.com/go/go1.25.4.darwin-arm64.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:9e9b755d63b36acf30c12a9a3fc379243714c1c6d3dd72861da637f336ebb35b", url = "https://dl.google.com/go/go1.25.5.linux-amd64.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:bed8ebe824e3d3b27e8471d1307f803fc6ab8e1d0eb7a4ae196979bd9b801dd3", url = "https://dl.google.com/go/go1.25.5.darwin-arm64.tar.gz"}
 
 [[tools.gofumpt]]
 version = "0.9.2"
