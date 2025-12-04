@@ -1,6 +1,7 @@
 # Basic 'commit split' usage.
 
 [!unix] skip # pending github.com/creack/pty/pull/155
+[!git:2.52] skip # git add -p output is fixed to Git version
 
 as 'Test <test@example.com>'
 at '2024-07-08T05:04:32Z'
@@ -59,7 +60,7 @@ index 0000000..b30fa09
 @@ -0,0 +1,2 @@
 +feature 1
 +
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]?
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]?
 ### second ###
 INF Select hunks to extract into a new commit
 diff --git b/feature1.txt a/feature1.txt
@@ -70,7 +71,7 @@ index 0000000..b30fa09
 @@ -0,0 +1,2 @@
 +feature 1
 +
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? y
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]? y
 
 diff --git b/feature2.txt a/feature2.txt
 new file mode 100644
@@ -80,7 +81,7 @@ index 0000000..4357a3d
 @@ -0,0 +1,2 @@
 +feature 2
 +
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]?
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]?
 ### exit ###
 INF Select hunks to extract into a new commit
 diff --git b/feature1.txt a/feature1.txt
@@ -91,7 +92,7 @@ index 0000000..b30fa09
 @@ -0,0 +1,2 @@
 +feature 1
 +
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? y
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]? y
 
 diff --git b/feature2.txt a/feature2.txt
 new file mode 100644
@@ -101,7 +102,7 @@ index 0000000..4357a3d
 @@ -0,0 +1,2 @@
 +feature 2
 +
-(1/1) Apply addition to index [y,n,q,a,d,e,p,?]? q
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]? q
 
 [features 5c5b54e] Add feature 1
  1 file changed, 2 insertions(+)
