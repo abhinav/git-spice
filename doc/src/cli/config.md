@@ -330,7 +330,7 @@ This option affects both interactive and non-interactive modes:
 
 ### spice.submit.assignees
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.21.0 -->
 
 Assign the configured users to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
@@ -354,7 +354,7 @@ will be combined with the configured labels.
 
 ### spice.submit.reviewers
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.21.0 -->
 
 Add the configured reviewers to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
