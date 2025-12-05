@@ -8,6 +8,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -35,6 +36,7 @@ type GitRepository interface {
 	SetBranchUpstream(ctx context.Context, branch string, upstream string) error
 	Var(ctx context.Context, name string) (string, error)
 	CommitMessageRange(ctx context.Context, start string, stop string) ([]git.CommitMessage, error)
+	RemoteFetchRefspecs(ctx context.Context, remote string) ([]git.Refspec, error)
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -648,6 +650,49 @@ func (h *Handler) submitBranch(
 			return status, nil
 		}
 
+		// Sanity check:
+		// If we're going to push the branch,
+		// make sure that the fetch refspec will actually fetch it.
+		// Otherwise, we will push to origin/feature,
+		// but won't have a local refs/remotes/origin/feature
+		// to track it after a 'git fetch'.
+		if refspecs, err := h.Repository.RemoteFetchRefspecs(ctx, remote); err != nil {
+			log.Warn("Unable to verify remote's fetch refspecs",
+				"remote", remote,
+				"error", err)
+		} else {
+			wantMatch := "refs/heads/" + upstreamBranch
+			var hasMatch bool
+			for _, refspec := range refspecs {
+				if refspec.Matches(wantMatch) {
+					hasMatch = true
+					break
+				}
+			}
+
+			if !hasMatch && !opts.Force {
+				log.Errorf("Remote '%v' has refspecs:", remote)
+				for _, refspec := range refspecs {
+					log.Errorf("  - %v", refspec)
+				}
+				user := cmp.Or(os.Getenv("USER"), "yourname")
+				log.Errorf("None of these will fetch branch '%v' after pushing.", upstreamBranch)
+				log.Error("This will make follow up changes on them impossible.")
+				log.Error("To fix this, you can do one of the following:")
+				log.Errorf("1. Manually add a fetch refspec for just this branch:")
+				log.Errorf("       git config --add remote.%v.fetch +refs/heads/%v:refs/remotes/%v/%v",
+					remote, upstreamBranch, remote, upstreamBranch)
+				log.Errorf("2. Prefix all your branches with your username (e.g. '%v/%v'),", user, upstreamBranch)
+				log.Errorf("   and add a fetch refspec to fetch all branches under that prefix:")
+				log.Errorf("       git config --add remote.%v.fetch '+refs/heads/%v/*:refs/remotes/%v/%v/*'",
+					remote, user, remote, user)
+				log.Errorf("   You can configure git-spice to automatically add this prefix for future branches with:")
+				log.Errorf("       git config --global spice.branchCreate.prefix %v/", user)
+				log.Errorf("3. Use the --force flag to push anyway (not recommended).")
+				return status, errors.New("remote cannot fetch pushed branch")
+			}
+		}
+
 		var prepared *preparedBranch
 		if opts.Publish {
 			needsNavComment()
@@ -752,7 +797,14 @@ func (h *Handler) submitBranch(
 		}
 	} else {
 		needsNavComment()
-		must.NotBeBlankf(upstreamBranch, "upstream branch must be set if branch has a CR")
+		if upstreamBranch == "" {
+			log.Error("No upstream branch was found for branch %v with existing CR %v", branchToSubmit, existingChange.ID)
+			log.Error("We cannot update the CR without an upstream branch name.")
+			log.Error("To fix this, identify the correct upstream branch name and set it with, e.g.:")
+			log.Error("  git branch --set-upstream-to=<remote>/<branch> %v", branchToSubmit)
+			log.Error("Then, try again.")
+			return status, errors.New("upstream branch not set")
+		}
 
 		if !opts.Publish {
 			log.Warnf("Ignoring --no-publish: %s was already published: %s", branchToSubmit, existingChange.URL)

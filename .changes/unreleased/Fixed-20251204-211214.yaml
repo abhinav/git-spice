@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: Check if git configuration prevents pushed branches from being tracked, which could leave branches in a state where follow-up submits are not possible'
+time: 2025-12-04T21:12:14.799178-08:00

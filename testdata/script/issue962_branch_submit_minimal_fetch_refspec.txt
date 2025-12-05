@@ -1,0 +1,111 @@
+# https://github.com/abhinav/git-spice/issues/962
+#
+# When git is configured with a minimal fetch refspec
+# that doesn't include the pushed branch,
+# the upstream tracking fails to be set after push.
+# On the second submit, git-spice panics
+# because it expects upstream to be set if a CR exists.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:57:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Configure git with a minimal fetch refspec that only fetches main.
+# This simulates the condition where pushed branches don't get fetched back.
+git config --unset-all remote.origin.fetch
+git config --add remote.origin.fetch '+refs/heads/main:refs/remotes/origin/main'
+
+# create a new branch and submit it
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+# Submit fails because feature1 is not covered by the fetch refspec.
+! gs branch submit --fill
+cmp stderr $WORK/golden/refspec_does_not_match.txt
+
+# Test 1: Fix with --force
+gs branch submit --fill --force
+
+# Follow-up submit fails again because upstream is still not set.
+cp $WORK/extra/feature1-update.txt feature1.txt
+git add feature1.txt
+git commit -m 'update feature1'
+! gs branch submit
+cmp stderr $WORK/golden/no_upstream_set.txt
+
+# Test 2: Fix by adding a fetch refspec
+gs trunk
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+# Submit fails with a similar error.
+! gs branch submit --fill
+stderr 'None of these will fetch branch'
+stderr 'To fix this, you can do one of the following:'
+stderr 'git config --add'
+
+# Fix by adding a fetch refspec for feature* branches.
+git config --add remote.origin.fetch '+refs/heads/feature*:refs/remotes/origin/feature*'
+
+# Submit succeeds now.
+gs branch submit --fill
+
+# Follow-up submit also works.
+cp $WORK/extra/feature2-update.txt feature2.txt
+git add feature2.txt
+git commit -m 'update feature2'
+gs branch submit
+
+# With the new refspec, we can also submit feature1 updates now.
+git checkout feature1
+git fetch
+git branch --set-upstream-to=origin/feature1
+gs branch submit
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- extra/feature1-update.txt --
+New contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- extra/feature2-update.txt --
+Updated contents of feature2
+
+-- golden/refspec_does_not_match.txt --
+ERR Remote 'origin' has refspecs:
+ERR   - +refs/heads/main:refs/remotes/origin/main
+ERR None of these will fetch branch 'feature1' after pushing.
+ERR This will make follow up changes on them impossible.
+ERR To fix this, you can do one of the following:
+ERR 1. Manually add a fetch refspec for just this branch:
+ERR        git config --add remote.origin.fetch +refs/heads/feature1:refs/remotes/origin/feature1
+ERR 2. Prefix all your branches with your username (e.g. 'yourname/feature1'),
+ERR    and add a fetch refspec to fetch all branches under that prefix:
+ERR        git config --add remote.origin.fetch '+refs/heads/yourname/*:refs/remotes/origin/yourname/*'
+ERR    You can configure git-spice to automatically add this prefix for future branches with:
+ERR        git config --global spice.branchCreate.prefix yourname/
+ERR 3. Use the --force flag to push anyway (not recommended).
+FTL gs: submit branch feature1: remote cannot fetch pushed branch
+-- golden/no_upstream_set.txt --
+ERR No upstream branch was found for branch %v with existing CR %v  feature1=#1
+ERR We cannot update the CR without an upstream branch name.
+ERR To fix this, identify the correct upstream branch name and set it with, e.g.:
+ERR   git branch --set-upstream-to=<remote>/<branch> %v  !BADKEY=feature1
+ERR Then, try again.
+FTL gs: submit branch feature1: upstream branch not set

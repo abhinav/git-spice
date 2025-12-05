@@ -12,6 +12,198 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
+func TestRefspec_Matches(t *testing.T) {
+	tests := []struct {
+		name    string
+		refspec git.Refspec
+		ref     string
+		want    bool
+	}{
+		// Exact match cases
+		{
+			name:    "ExactMatch",
+			refspec: "refs/heads/main",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+		{
+			name:    "ExactMatchNoMatch",
+			refspec: "refs/heads/main",
+			ref:     "refs/heads/feature",
+			want:    false,
+		},
+		{
+			name:    "ExactMatchCaseSensitive",
+			refspec: "refs/heads/Main",
+			ref:     "refs/heads/main",
+			want:    false,
+		},
+
+		// Wildcard pattern cases - prefix only
+		{
+			name:    "WildcardPrefixMatch",
+			refspec: "refs/heads/*",
+			ref:     "refs/heads/feature",
+			want:    true,
+		},
+		{
+			name:    "WildcardPrefixMatchNested",
+			refspec: "refs/heads/*",
+			ref:     "refs/heads/feature/foo",
+			want:    true,
+		},
+		{
+			name:    "WildcardPrefixNoMatch",
+			refspec: "refs/heads/*",
+			ref:     "refs/tags/v1.0",
+			want:    false,
+		},
+		{
+			name:    "WildcardPrefixTooShort",
+			refspec: "refs/heads/*",
+			ref:     "refs/heads/",
+			want:    true, // empty suffix, so this matches
+		},
+
+		// Wildcard pattern cases - prefix and suffix
+		{
+			name:    "WildcardPrefixAndSuffixMatch",
+			refspec: "refs/heads/*/main",
+			ref:     "refs/heads/feature/main",
+			want:    true,
+		},
+		{
+			name:    "WildcardPrefixAndSuffixMatchLonger",
+			refspec: "refs/heads/*/main",
+			ref:     "refs/heads/team/feature/main",
+			want:    true,
+		},
+		{
+			name:    "WildcardPrefixAndSuffixNoMatch",
+			refspec: "refs/heads/*/main",
+			ref:     "refs/heads/feature/develop",
+			want:    false,
+		},
+		{
+			name:    "WildcardPrefixAndSuffixTooShort",
+			refspec: "refs/heads/*/main",
+			ref:     "refs/heads/main",
+			want:    false, // not long enough for prefix + suffix
+		},
+
+		// Wildcard at start
+		{
+			name:    "WildcardAtStartMatch",
+			refspec: "*/main",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+		{
+			name:    "WildcardAtStartNoMatch",
+			refspec: "*/main",
+			ref:     "refs/heads/feature",
+			want:    false,
+		},
+
+		// Refspec format handling - with '+' prefix
+		{
+			name:    "ForcePushPrefixExact",
+			refspec: "+refs/heads/main",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+		{
+			name:    "ForcePushPrefixWildcard",
+			refspec: "+refs/heads/*",
+			ref:     "refs/heads/feature",
+			want:    true,
+		},
+
+		// Refspec format handling - with destination
+		{
+			name:    "WithDestinationExact",
+			refspec: "refs/heads/main:refs/remotes/origin/main",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+		{
+			name:    "WithDestinationWildcard",
+			refspec: "refs/heads/*:refs/remotes/origin/*",
+			ref:     "refs/heads/feature",
+			want:    true,
+		},
+		{
+			name:    "WithDestinationNoMatch",
+			refspec: "refs/heads/main:refs/remotes/origin/main",
+			ref:     "refs/heads/feature",
+			want:    false,
+		},
+
+		// Refspec format handling - with both '+' and destination
+		{
+			name:    "ForcePushWithDestination",
+			refspec: "+refs/heads/*:refs/remotes/origin/*",
+			ref:     "refs/heads/feature",
+			want:    true,
+		},
+
+		// Real-world examples from Issue #962
+		{
+			name:    "Issue962MinimalRefspecMatch",
+			refspec: "+refs/heads/main:refs/remotes/origin/main",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+		{
+			name:    "Issue962MinimalRefspecNoMatch",
+			refspec: "+refs/heads/main:refs/remotes/origin/main",
+			ref:     "refs/heads/feature1",
+			want:    false,
+		},
+		{
+			name:    "Issue962StandardRefspec",
+			refspec: "+refs/heads/*:refs/remotes/origin/*",
+			ref:     "refs/heads/feature1",
+			want:    true,
+		},
+
+		// Edge cases
+		{
+			name:    "EmptyRefspec",
+			refspec: "",
+			ref:     "refs/heads/main",
+			want:    false,
+		},
+		{
+			name:    "EmptyRef",
+			refspec: "refs/heads/*",
+			ref:     "",
+			want:    false,
+		},
+		{
+			name:    "OnlyWildcard",
+			refspec: "*",
+			ref:     "anything",
+			want:    true,
+		},
+		{
+			name:    "OnlyWildcardWithColon",
+			refspec: "*:refs/remotes/origin/*",
+			ref:     "refs/heads/main",
+			want:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.refspec.Matches(tt.ref)
+			assert.Equal(t, tt.want, got,
+				"Refspec(%q).Matches(%q) = %v, want %v",
+				tt.refspec, tt.ref, got, tt.want)
+		})
+	}
+}
+
 func TestSetRef(t *testing.T) {
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 		as 'Test <test@example.com>'
