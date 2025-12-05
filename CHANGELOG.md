@@ -32,10 +32,6 @@ git config spice.submit.assignees $(whoami)
 - branch submit: Check if the Git configuration prevents pushed branches from being tracked, which would leave those branches in a state where follow-up submits are not possible.
 - branch submit: Fix panic when updating CRs that have no upstream branch configured.
 
----
-
-[Support git-spice development](https://github.com/sponsors/abhinav)
-
 ## <a name="v0.20.2">v0.20.2</a> - 2025-11-20
 ### Fixed
 - submit: Fix draft prompt being skipped for branches after the first one when submitting a stack interactively
