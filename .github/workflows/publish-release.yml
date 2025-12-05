@@ -58,8 +58,15 @@ jobs:
 
     - name: Extract changelog
       run: |
-        tail -n+2 .changes/v${{ env.VERSION }}.md \
-          | tee ${{ github.workspace }}-CHANGELOG.txt
+        {
+          tail -n+2 .changes/v${{ env.VERSION }}.md 
+
+          # Add sponsorship info
+          echo ""
+          echo "---"
+          echo ""
+          echo "[Support git-spice development](https://github.com/sponsors/abhinav)"
+        } > ${{ github.workspace }}-CHANGELOG.txt
 
     - name: Tag a release
       if: inputs.skip_publish == false
