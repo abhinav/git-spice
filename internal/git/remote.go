@@ -60,6 +60,32 @@ func (r *Repository) RemoteDefaultBranch(ctx context.Context, remote string) (st
 	return ref, nil
 }
 
+// RemoteFetchRefspecs returns the fetch refspecs for a remote.
+// That is, the refspecs used when fetching from the remote.
+// Example:
+//
+//	+refs/heads/*:refs/remotes/origin/*
+func (r *Repository) RemoteFetchRefspecs(ctx context.Context, remote string) ([]Refspec, error) {
+	output, err := r.gitCmd(
+		ctx, "config", "--get-all", "remote."+remote+".fetch").
+		OutputString(r.exec)
+	if err != nil {
+		return nil, fmt.Errorf("config get-all remote.%s.fetch: %w", remote, err)
+	}
+
+	var refspecs []Refspec
+	for line := range strings.SplitSeq(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		refspecs = append(refspecs, Refspec(line))
+	}
+
+	return refspecs, nil
+}
+
 // RemoteRef is a reference in a remote Git repository.
 type RemoteRef struct {
 	// Name is the full name of the reference.

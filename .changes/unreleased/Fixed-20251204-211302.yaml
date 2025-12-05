@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch submit: Fix panic when updating CRs that have no upstream branch configured'
+time: 2025-12-04T21:13:02.794912-08:00
