@@ -239,7 +239,7 @@ new labels are added to any existing labels on the CR.
 
 ## Requesting reviews
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.21.0 -->
 
 You can request reviews from specific users or teams
 when submitting change requests with the `-r`/`--reviewer` flag.
@@ -263,7 +263,7 @@ new reviewers are added to any existing reviewers on the CR.
 
 ## Assigning change requests
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.21.0 -->
 
 You can assign change requests to specific users
 when submitting them with the `-a`/`--assign` flag.

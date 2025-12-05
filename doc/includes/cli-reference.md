@@ -265,8 +265,8 @@ only if there are multiple CRs in the stack.
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
 * `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
-* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
-* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
@@ -387,8 +387,8 @@ only if there are multiple CRs in the stack.
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
 * `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
-* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
-* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
@@ -542,8 +542,8 @@ only if there are multiple CRs in the stack.
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
 * `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
-* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
-* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
@@ -997,8 +997,8 @@ only if there are multiple CRs in the stack.
 * `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
 * `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
 * `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
-* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
-* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 * `--title=TITLE`: Title of the change request
 * `--body=BODY`: Body of the change request

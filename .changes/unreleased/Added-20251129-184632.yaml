@@ -1,3 +1,0 @@
-kind: Added
-body: 'submit: Add --assign flag and ''spice.submit.assignees'' configuration option to assign CRs to users upon submission.'
-time: 2025-11-29T18:46:32.289707-08:00
