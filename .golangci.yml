@@ -24,6 +24,7 @@ linters:
     - revive      # style
     - unconvert   # unnecessary type conversions
     - usetesting  # prefer t.TempDir, t.Chdir, etc.
+    - modernize   # prefer modern Go constructs
 
   settings:
 
