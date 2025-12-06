@@ -6,8 +6,11 @@ backend = "ubi:miniscruff/changie"
 [[tools.go]]
 version = "1.25.5"
 backend = "core:go"
+"platforms.linux-arm64" = { checksum = "sha256:b00b694903d126c588c378e72d3545549935d3982635ba3f7a964c9fa23fe3b9", url = "https://dl.google.com/go/go1.25.5.linux-arm64.tar.gz"}
 "platforms.linux-x64" = { checksum = "sha256:9e9b755d63b36acf30c12a9a3fc379243714c1c6d3dd72861da637f336ebb35b", url = "https://dl.google.com/go/go1.25.5.linux-amd64.tar.gz"}
 "platforms.macos-arm64" = { checksum = "sha256:bed8ebe824e3d3b27e8471d1307f803fc6ab8e1d0eb7a4ae196979bd9b801dd3", url = "https://dl.google.com/go/go1.25.5.darwin-arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:b69d51bce599e5381a94ce15263ae644ec84667a5ce23d58dc2e63e2c12a9f56", url = "https://dl.google.com/go/go1.25.5.darwin-amd64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:ae756cce1cb80c819b4fe01b0353807178f532211b47f72d7fa77949de054ebb", url = "https://dl.google.com/go/go1.25.5.windows-amd64.zip"}
 
 [[tools.gofumpt]]
 version = "0.9.2"
@@ -16,15 +19,17 @@ backend = "ubi:mvdan/gofumpt"
 "platforms.macos-arm64-gofumpt" = { checksum = "blake3:58afa2c8f89ef60ed81a84502504fe23518cd62e2ea708c918be1f7d562896e5"}
 
 [[tools.golangci-lint]]
-version = "2.6.2"
+version = "2.7.1"
 backend = "aqua:golangci/golangci-lint"
-"platforms.linux-x64" = { checksum = "sha256:499c864b5fd9841c4fa8e80b5e2be30f73f085cf186f1b111ff81a2783b7de12", url = "https://github.com/golangci/golangci-lint/releases/download/v2.6.2/golangci-lint-2.6.2-linux-amd64.tar.gz"}
 
 [[tools.gotestsum]]
 version = "1.13.0"
 backend = "aqua:gotestyourself/gotestsum"
+"platforms.linux-arm64" = { checksum = "sha256:7644a4c5cd1bb978d56245aeab25a586ac5ac62adebed20a399548867c13499d", url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_arm64.tar.gz"}
 "platforms.linux-x64" = { checksum = "sha256:11ccddeaf708ef228889f9fe2f68291a75b27013ddfc3b18156e094f5f40e8ee", url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_amd64.tar.gz"}
 "platforms.macos-arm64" = { checksum = "sha256:509cb27aef747f48faf9bce424f59dcf79572c905204b990ee935bbfcc7fa0e9", url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_darwin_arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:99529350f4c7b780b1efc543ca0d9721b09f0a4228f0efa9281261f58fefa05a", url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_darwin_amd64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:fd5a6dc69e46a0970593e70d85a7e75f16714e9c61d6d72ccc324eb82df5bb8a", url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_windows_amd64.tar.gz"}
 
 [[tools."ubi:abhinav/requiredfield"]]
 version = "0.8.0"
