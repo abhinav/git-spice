@@ -1,0 +1,586 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":64779801,"description":null,"name":"test-repo","name_with_namespace":"Abhinav Gupta / test-repo","path":"test-repo","path_with_namespace":"abg/test-repo","created_at":"2024-11-23T16:35:46.252Z","default_branch":"main","tag_list":[],"topics":[],"ssh_url_to_repo":"git@gitlab.com:abg/test-repo.git","http_url_to_repo":"https://gitlab.com/abg/test-repo.git","web_url":"https://gitlab.com/abg/test-repo","readme_url":null,"forks_count":0,"avatar_url":null,"star_count":0,"last_activity_at":"2025-12-13T03:48:48.427Z","visibility":"public","namespace":{"id":1117393,"name":"Abhinav Gupta","path":"abg","kind":"user","full_path":"abg","parent_id":null,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"container_registry_image_prefix":"registry.gitlab.com/abg/test-repo","_links":{"self":"https://gitlab.com/api/v4/projects/64779801","merge_requests":"https://gitlab.com/api/v4/projects/64779801/merge_requests","repo_branches":"https://gitlab.com/api/v4/projects/64779801/repository/branches","labels":"https://gitlab.com/api/v4/projects/64779801/labels","events":"https://gitlab.com/api/v4/projects/64779801/events","members":"https://gitlab.com/api/v4/projects/64779801/members","cluster_agents":"https://gitlab.com/api/v4/projects/64779801/cluster_agents"},"marked_for_deletion_at":null,"marked_for_deletion_on":null,"packages_enabled":false,"empty_repo":false,"archived":false,"owner":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"resolve_outdated_diff_discussions":false,"container_expiration_policy":{"cadence":"1d","enabled":false,"keep_n":10,"older_than":"90d","name_regex":".*","name_regex_keep":null,"next_run_at":"2024-11-24T16:35:46.274Z"},"repository_object_format":"sha1","issues_enabled":false,"merge_requests_enabled":true,"wiki_enabled":false,"jobs_enabled":false,"snippets_enabled":false,"container_registry_enabled":false,"service_desk_enabled":true,"can_create_merge_request_in":true,"issues_access_level":"disabled","repository_access_level":"enabled","merge_requests_access_level":"enabled","forking_access_level":"enabled","wiki_access_level":"disabled","builds_access_level":"disabled","snippets_access_level":"disabled","pages_access_level":"disabled","analytics_access_level":"disabled","container_registry_access_level":"disabled","security_and_compliance_access_level":"disabled","releases_access_level":"disabled","environments_access_level":"disabled","feature_flags_access_level":"disabled","infrastructure_access_level":"disabled","monitor_access_level":"disabled","model_experiments_access_level":"disabled","model_registry_access_level":"disabled","package_registry_access_level":"disabled","emails_disabled":true,"emails_enabled":false,"show_diff_preview_in_email":false,"shared_runners_enabled":true,"lfs_enabled":false,"creator_id":930270,"import_url":null,"import_type":null,"import_status":"none","import_error":null,"description_html":"","updated_at":"2025-12-13T04:05:06.665Z","ci_default_git_depth":20,"ci_delete_pipelines_in_seconds":null,"ci_forward_deployment_enabled":true,"ci_forward_deployment_rollback_allowed":true,"ci_job_token_scope_enabled":false,"ci_separated_caches":true,"ci_allow_fork_pipelines_to_run_in_parent_project":true,"ci_id_token_sub_claim_components":["project_path","ref_type","ref"],"build_git_strategy":"fetch","keep_latest_artifact":true,"restrict_user_defined_variables":false,"ci_pipeline_variables_minimum_override_role":"developer","runner_token_expiration_interval":null,"group_runners_enabled":true,"resource_group_default_process_mode":"unordered","auto_cancel_pending_pipelines":"enabled","build_timeout":3600,"auto_devops_enabled":false,"auto_devops_deploy_strategy":"continuous","ci_push_repository_for_job_token_allowed":false,"runners_token":"GR1348941cpXSMHzfUhGHayaS5Bxv","ci_config_path":"","public_jobs":true,"shared_with_groups":[],"only_allow_merge_if_pipeline_succeeds":false,"allow_merge_on_skipped_pipeline":false,"request_access_enabled":true,"only_allow_merge_if_all_discussions_are_resolved":false,"remove_source_branch_after_merge":true,"printing_merge_request_link_enabled":true,"merge_method":"ff","merge_request_title_regex":null,"merge_request_title_regex_description":null,"squash_option":"default_on","enforce_auth_checks_on_uploads":true,"suggestion_commit_message":"","merge_commit_template":null,"squash_commit_template":null,"issue_branch_template":null,"warn_about_potentially_unwanted_characters":true,"autoclose_referenced_issues":true,"max_artifacts_size":null,"external_authorization_classification_label":"","requirements_enabled":false,"requirements_access_level":"enabled","security_and_compliance_enabled":false,"compliance_frameworks":[],"duo_remote_flows_enabled":true,"duo_foundational_flows_enabled":true,"web_based_commit_signing_enabled":false,"permissions":{"project_access":{"access_level":50,"notification_level":3},"group_access":null}}'
+        headers:
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 392.662625ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/user
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg","created_at":"2017-01-07T03:40:46.795Z","bio":"","location":"","linkedin":"","twitter":"","discord":"","website_url":"https://abhinavg.net","github":"","job_title":"","pronouns":"","organization":"","bot":false,"work_information":null,"local_time":null,"last_sign_in_at":"2025-11-30T03:19:36.826Z","confirmed_at":"2021-10-19T01:30:11.688Z","last_activity_on":"2025-12-13","email":"mail@abhinavg.net","theme_id":3,"color_scheme_id":2,"projects_limit":100000,"current_sign_in_at":"2025-12-10T23:05:22.499Z","identities":[{"provider":"github","extern_uid":"41730","saml_provider_id":null}],"can_create_group":true,"can_create_project":true,"two_factor_enabled":true,"external":false,"private_profile":false,"commit_email":"mail@abhinavg.net","preferred_language":"en","shared_runners_minutes_limit":null,"extra_shared_runners_minutes_limit":null,"scim_identities":[]}'
+        headers:
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 162.696917ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 115
+        host: gitlab.com
+        body: '{"title":"Testing BY4smsrK","description":"Test PR for comments","source_branch":"BY4smsrK","target_branch":"main"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1788
+        body: '{"id":440301340,"iid":45,"project_id":64779801,"title":"Testing BY4smsrK","description":"Test PR for comments","state":"opened","created_at":"2025-12-13T04:32:04.311Z","updated_at":"2025-12-13T04:32:04.311Z","merged_by":null,"merge_user":null,"merged_at":null,"closed_by":null,"closed_at":null,"target_branch":"main","source_branch":"BY4smsrK","user_notes_count":0,"upvotes":0,"downvotes":0,"author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"assignees":[],"assignee":null,"reviewers":[],"source_project_id":64779801,"target_project_id":64779801,"labels":[],"draft":false,"imported":false,"imported_from":"none","work_in_progress":false,"milestone":null,"merge_when_pipeline_succeeds":false,"merge_status":"checking","detailed_merge_status":"preparing","merge_after":null,"sha":"0d4e2db8c1067983c107a1907943f76c6a8ff8f2","merge_commit_sha":null,"squash_commit_sha":null,"discussion_locked":null,"should_remove_source_branch":null,"force_remove_source_branch":null,"prepared_at":null,"reference":"!45","references":{"short":"!45","relative":"!45","full":"abg/test-repo!45"},"web_url":"https://gitlab.com/abg/test-repo/-/merge_requests/45","time_stats":{"time_estimate":0,"total_time_spent":0,"human_time_estimate":null,"human_total_time_spent":null},"squash":true,"squash_on_merge":true,"task_completion_status":{"count":0,"completed_count":0},"has_conflicts":false,"blocking_discussions_resolved":true,"approvals_before_merge":null,"subscribed":true,"changes_count":null,"head_pipeline":null,"diff_refs":null,"merge_error":null,"user":{"can_merge":true}}'
+        headers:
+            Content-Length:
+                - "1788"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 754.814084ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"i6RyYCIzUrMK0AUp7JtUsKrwQBWYSP2o"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130225,"type":null,"body":"i6RyYCIzUrMK0AUp7JtUsKrwQBWYSP2o","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:04.896Z","updated_at":"2025-12-13T04:32:04.896Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 406.241666ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"3JWzKAvSdJJzs34sYCuu5LV42YvGZtzJ"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130230,"type":null,"body":"3JWzKAvSdJJzs34sYCuu5LV42YvGZtzJ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:05.465Z","updated_at":"2025-12-13T04:32:05.465Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 817.599625ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"nKhyLgyneiLkI7UNMKwUsQFU5RtSbyJa"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130237,"type":null,"body":"nKhyLgyneiLkI7UNMKwUsQFU5RtSbyJa","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.226Z","updated_at":"2025-12-13T04:32:06.226Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 593.314916ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"gr1HGoh6t1pERnIZEozOy4tkXhwNG5Gf"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130239,"type":null,"body":"gr1HGoh6t1pERnIZEozOy4tkXhwNG5Gf","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.666Z","updated_at":"2025-12-13T04:32:06.666Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 430.063ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"FnujljzQKdrCXKkdYaXMnOproHa92jUx"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130243,"type":null,"body":"FnujljzQKdrCXKkdYaXMnOproHa92jUx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.196Z","updated_at":"2025-12-13T04:32:07.196Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 612.907459ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"XjbuH8AOtfMuq7XR4iQFgNSxJBXm3QOw"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130246,"type":null,"body":"XjbuH8AOtfMuq7XR4iQFgNSxJBXm3QOw","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.756Z","updated_at":"2025-12-13T04:32:07.756Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 408.509917ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"cqcdpXtRFoc96BLnttfVfqYbD5gcsviZ"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130249,"type":null,"body":"cqcdpXtRFoc96BLnttfVfqYbD5gcsviZ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:08.129Z","updated_at":"2025-12-13T04:32:08.129Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 511.204208ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"DEjIbhUljPNgEh4tbv4rgcNOfoRgeOHH"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130260,"type":null,"body":"DEjIbhUljPNgEh4tbv4rgcNOfoRgeOHH","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:09.261Z","updated_at":"2025-12-13T04:32:09.261Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 1.434224958s
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"i2A4jGP4DGy6bPhQQxiEs5zhKUg7QBPL"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130264,"type":null,"body":"i2A4jGP4DGy6bPhQQxiEs5zhKUg7QBPL","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.097Z","updated_at":"2025-12-13T04:32:10.097Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 409.906916ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"XIQbedyaxteIPIuKIkxozvmRzAVBqChY"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 665
+        body: '{"id":2952130266,"type":null,"body":"XIQbedyaxteIPIuKIkxozvmRzAVBqChY","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.506Z","updated_at":"2025-12-13T04:32:10.506Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Length:
+                - "665"
+            Content-Type:
+                - application/json
+        status: 201 Created
+        code: 201
+        duration: 407.396833ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 43
+        host: gitlab.com
+        body: '{"body":"A5QlbRBtf8mgVWG5P7w7BZo3IcoavjQx"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes/2952130225
+        method: PUT
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"id":2952130225,"type":null,"body":"A5QlbRBtf8mgVWG5P7w7BZo3IcoavjQx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:04.896Z","updated_at":"2025-12-13T04:32:10.931Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}'
+        headers:
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 612.534291ms
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        form:
+            per_page:
+                - "3"
+            sort:
+                - asc
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes?per_page=3&sort=asc
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":2952130225,"type":null,"body":"A5QlbRBtf8mgVWG5P7w7BZo3IcoavjQx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:04.896Z","updated_at":"2025-12-13T04:32:10.931Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130230,"type":null,"body":"3JWzKAvSdJJzs34sYCuu5LV42YvGZtzJ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:05.465Z","updated_at":"2025-12-13T04:32:05.465Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130237,"type":null,"body":"nKhyLgyneiLkI7UNMKwUsQFU5RtSbyJa","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.226Z","updated_at":"2025-12-13T04:32:06.226Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}]'
+        headers:
+            Content-Type:
+                - application/json
+            X-Next-Page:
+                - "2"
+            X-Page:
+                - "1"
+            X-Total-Pages:
+                - "4"
+        status: 200 OK
+        code: 200
+        duration: 509.076416ms
+    - id: 15
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        form:
+            page:
+                - "2"
+            per_page:
+                - "3"
+            sort:
+                - asc
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes?page=2&per_page=3&sort=asc
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":2952130239,"type":null,"body":"gr1HGoh6t1pERnIZEozOy4tkXhwNG5Gf","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.666Z","updated_at":"2025-12-13T04:32:06.666Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130243,"type":null,"body":"FnujljzQKdrCXKkdYaXMnOproHa92jUx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.196Z","updated_at":"2025-12-13T04:32:07.196Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130246,"type":null,"body":"XjbuH8AOtfMuq7XR4iQFgNSxJBXm3QOw","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.756Z","updated_at":"2025-12-13T04:32:07.756Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}]'
+        headers:
+            Content-Type:
+                - application/json
+            X-Next-Page:
+                - "3"
+            X-Page:
+                - "2"
+            X-Total-Pages:
+                - "4"
+        status: 200 OK
+        code: 200
+        duration: 208.780875ms
+    - id: 16
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        form:
+            page:
+                - "3"
+            per_page:
+                - "3"
+            sort:
+                - asc
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes?page=3&per_page=3&sort=asc
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":2952130249,"type":null,"body":"cqcdpXtRFoc96BLnttfVfqYbD5gcsviZ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:08.129Z","updated_at":"2025-12-13T04:32:08.129Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130260,"type":null,"body":"DEjIbhUljPNgEh4tbv4rgcNOfoRgeOHH","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:09.261Z","updated_at":"2025-12-13T04:32:09.261Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130264,"type":null,"body":"i2A4jGP4DGy6bPhQQxiEs5zhKUg7QBPL","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.097Z","updated_at":"2025-12-13T04:32:10.097Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}]'
+        headers:
+            Content-Type:
+                - application/json
+            X-Next-Page:
+                - "4"
+            X-Page:
+                - "3"
+            X-Total-Pages:
+                - "4"
+        status: 200 OK
+        code: 200
+        duration: 508.086375ms
+    - id: 17
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        form:
+            page:
+                - "4"
+            per_page:
+                - "3"
+            sort:
+                - asc
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes?page=4&per_page=3&sort=asc
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":2952130266,"type":null,"body":"XIQbedyaxteIPIuKIkxozvmRzAVBqChY","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.506Z","updated_at":"2025-12-13T04:32:10.506Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}]'
+        headers:
+            Content-Type:
+                - application/json
+            X-Next-Page:
+                - ""
+            X-Page:
+                - "4"
+            X-Total-Pages:
+                - "4"
+        status: 200 OK
+        code: 200
+        duration: 305.426125ms
+    - id: 18
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: gitlab.com
+        form:
+            per_page:
+                - "20"
+            sort:
+                - asc
+        headers:
+            User-Agent:
+                - go-gitlab
+        url: https://gitlab.com/api/v4/projects/64779801/merge_requests/45/notes?per_page=20&sort=asc
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '[{"id":2952130225,"type":null,"body":"A5QlbRBtf8mgVWG5P7w7BZo3IcoavjQx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:04.896Z","updated_at":"2025-12-13T04:32:10.931Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130230,"type":null,"body":"3JWzKAvSdJJzs34sYCuu5LV42YvGZtzJ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:05.465Z","updated_at":"2025-12-13T04:32:05.465Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130237,"type":null,"body":"nKhyLgyneiLkI7UNMKwUsQFU5RtSbyJa","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.226Z","updated_at":"2025-12-13T04:32:06.226Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130239,"type":null,"body":"gr1HGoh6t1pERnIZEozOy4tkXhwNG5Gf","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:06.666Z","updated_at":"2025-12-13T04:32:06.666Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130243,"type":null,"body":"FnujljzQKdrCXKkdYaXMnOproHa92jUx","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.196Z","updated_at":"2025-12-13T04:32:07.196Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130246,"type":null,"body":"XjbuH8AOtfMuq7XR4iQFgNSxJBXm3QOw","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:07.756Z","updated_at":"2025-12-13T04:32:07.756Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130249,"type":null,"body":"cqcdpXtRFoc96BLnttfVfqYbD5gcsviZ","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:08.129Z","updated_at":"2025-12-13T04:32:08.129Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130260,"type":null,"body":"DEjIbhUljPNgEh4tbv4rgcNOfoRgeOHH","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:09.261Z","updated_at":"2025-12-13T04:32:09.261Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130264,"type":null,"body":"i2A4jGP4DGy6bPhQQxiEs5zhKUg7QBPL","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.097Z","updated_at":"2025-12-13T04:32:10.097Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}},{"id":2952130266,"type":null,"body":"XIQbedyaxteIPIuKIkxozvmRzAVBqChY","author":{"id":930270,"username":"abg","public_email":"","name":"Abhinav Gupta","state":"active","locked":false,"avatar_url":"https://secure.gravatar.com/avatar/e9a34bfd0e7f9ab63137b7653f656daaddbb65e84d3ef0852febd4c3e889a835?s=80\u0026d=identicon","web_url":"https://gitlab.com/abg"},"created_at":"2025-12-13T04:32:10.506Z","updated_at":"2025-12-13T04:32:10.506Z","system":false,"noteable_id":440301340,"noteable_type":"MergeRequest","project_id":64779801,"resolvable":false,"confidential":false,"internal":false,"imported":false,"imported_from":"none","noteable_iid":45,"commands_changes":{}}]'
+        headers:
+            Content-Type:
+                - application/json
+            X-Next-Page:
+                - ""
+            X-Page:
+                - "1"
+            X-Total-Pages:
+                - "1"
+        status: 200 OK
+        code: 200
+        duration: 306.466791ms

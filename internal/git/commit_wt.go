@@ -49,6 +49,9 @@ type CommitRequest struct {
 
 	// Signoff adds a Signed-off-by trailer to the commit message.
 	Signoff bool
+
+	// If set, the Author and/or Committer signatures are used for the commit.
+	Author, Committer *Signature
 }
 
 // Commit runs the 'git commit' command,
@@ -100,12 +103,18 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 		args = append(args, "--signoff")
 	}
 
-	err := w.gitCmd(ctx, args...).
+	cmd := w.gitCmd(ctx, args...).
 		Stdin(os.Stdin).
 		Stdout(os.Stdout).
-		Stderr(os.Stderr).
-		Run(w.exec)
-	if err != nil {
+		Stderr(os.Stderr)
+	if req.Author != nil {
+		cmd.AppendEnv(req.Author.appendEnv("AUTHOR", nil)...)
+	}
+	if req.Committer != nil {
+		cmd.AppendEnv(req.Committer.appendEnv("COMMITTER", nil)...)
+	}
+
+	if err := cmd.Run(w.exec); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 	return nil

@@ -21,15 +21,6 @@ type TransportRecorderOptions struct {
 	// Update specifies whether the Recorder should update fixtures.
 	Update func() bool
 
-	// WrapRealTransport wraps the real HTTP transport
-	// with the given function.
-	//
-	// This is called only in update mode.
-	WrapRealTransport func(
-		t testing.TB,
-		transport http.RoundTripper,
-	) http.RoundTripper
-
 	Matcher func(*http.Request, cassette.Request) bool
 }
 
@@ -53,9 +44,6 @@ func NewTransportRecorder(
 
 	if opts.Update != nil && opts.Update() {
 		mode = recorder.ModeRecordOnly
-		if opts.WrapRealTransport != nil {
-			realTransport = opts.WrapRealTransport(t, realTransport)
-		}
 
 		// Paranoid mode:
 		// maintain an allowlist of headers to keep in the fixtures
