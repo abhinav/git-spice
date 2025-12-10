@@ -71,14 +71,20 @@ func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 
 // OpenRepository opens the repository that this repository ID points to.
 func (f *Forge) OpenRepository(_ context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
+	return newRepository(f, token.(*AuthenticationToken), id.(*RepositoryID), http.DefaultClient)
+}
+
+// newRepository creates a new repository instance with the given HTTP client.
+func newRepository(f *Forge, token *AuthenticationToken, rid *RepositoryID, httpClient *http.Client) (forge.Repository, error) {
 	must.NotBeBlankf(f.URL, "URL is required")
 	must.NotBeBlankf(f.APIURL, "API URL is required")
 
-	rid := id.(*RepositoryID)
-	tok := token.(*AuthenticationToken).tok
-	client := f.jsonHTTPClient()
-	client.headers = map[string]string{
-		"Authentication-Token": tok,
+	client := &jsonHTTPClient{
+		log:    f.Log,
+		client: httpClient,
+		headers: map[string]string{
+			"Authentication-Token": token.tok,
+		},
 	}
 
 	apiURL, err := url.Parse(f.APIURL)

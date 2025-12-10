@@ -1,0 +1,188 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 113
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing IqmXnKIb","body":"Test PR with labels","base":"main","head":"IqmXnKIb","labels":["Gtq2NkjF"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 2,
+              "url": "http://127.0.0.1:65367/abhinav/test-repo/change/2"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.86825ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/2
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 544
+        body: |
+            {
+              "number": 2,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/2",
+              "state": "open",
+              "title": "Testing IqmXnKIb",
+              "body": "Test PR with labels",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "IqmXnKIb",
+                "sha": "c0f7a9ca698853d6f89722eb3914a324f66f5be5"
+              },
+              "labels": [
+                "Gtq2NkjF"
+              ]
+            }
+        headers:
+            Content-Length:
+                - "544"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 15.434375ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 23
+        host: 127.0.0.1:65366
+        body: '{"labels":["aJxKU058"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/2
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 176.75µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 34
+        host: 127.0.0.1:65366
+        body: '{"labels":["aJxKU058","KJtCRGrH"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/2
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 435.041µs
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes/by-branch/IqmXnKIb?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 636
+        body: |
+            [
+              {
+                "number": 2,
+                "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/2",
+                "state": "open",
+                "title": "Testing IqmXnKIb",
+                "body": "Test PR with labels",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "IqmXnKIb",
+                  "sha": "c0f7a9ca698853d6f89722eb3914a324f66f5be5"
+                },
+                "labels": [
+                  "Gtq2NkjF",
+                  "aJxKU058",
+                  "KJtCRGrH"
+                ]
+              }
+            ]
+        headers:
+            Content-Length:
+                - "636"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 17.328459ms

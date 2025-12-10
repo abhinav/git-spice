@@ -1,0 +1,136 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 123
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing iU2Gfhgv","body":"Test PR with assignee","base":"main","head":"iU2Gfhgv","assignees":["assignee-user"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 3,
+              "url": "http://127.0.0.1:65367/abhinav/test-repo/change/3"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.730958ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/3
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 554
+        body: |
+            {
+              "number": 3,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/3",
+              "state": "open",
+              "title": "Testing iU2Gfhgv",
+              "body": "Test PR with assignee",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "iU2Gfhgv",
+                "sha": "416b912b0164e69958def24757b1a4dac0c02470"
+              },
+              "assignees": [
+                "assignee-user"
+              ]
+            }
+        headers:
+            Content-Length:
+                - "554"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.314291ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes/by-branch/iU2Gfhgv?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 610
+        body: |
+            [
+              {
+                "number": 3,
+                "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/3",
+                "state": "open",
+                "title": "Testing iU2Gfhgv",
+                "body": "Test PR with assignee",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "iU2Gfhgv",
+                  "sha": "416b912b0164e69958def24757b1a4dac0c02470"
+                },
+                "assignees": [
+                  "assignee-user"
+                ]
+              }
+            ]
+        headers:
+            Content-Length:
+                - "610"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 14.681416ms

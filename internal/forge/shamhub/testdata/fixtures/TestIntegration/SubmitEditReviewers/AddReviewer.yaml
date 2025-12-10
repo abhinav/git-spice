@@ -1,0 +1,151 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 97
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing hSxbIDF8","body":"Test PR without reviewers","base":"main","head":"hSxbIDF8"}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 7,
+              "url": "http://127.0.0.1:65367/abhinav/test-repo/change/7"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 10.937375ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/7
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 516
+        body: |
+            {
+              "number": 7,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/7",
+              "state": "open",
+              "title": "Testing hSxbIDF8",
+              "body": "Test PR without reviewers",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "hSxbIDF8",
+                "sha": "654240cbf6b89855d97a7b25f6da21ee76d34b37"
+              }
+            }
+        headers:
+            Content-Length:
+                - "516"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 9.866459ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 31
+        host: 127.0.0.1:65366
+        body: '{"reviewers":["reviewer-user"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/7
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 114.375µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/7
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 568
+        body: |
+            {
+              "number": 7,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/7",
+              "state": "open",
+              "title": "Testing hSxbIDF8",
+              "body": "Test PR without reviewers",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "hSxbIDF8",
+                "sha": "654240cbf6b89855d97a7b25f6da21ee76d34b37"
+              },
+              "requested_reviewers": [
+                "reviewer-user"
+              ]
+            }
+        headers:
+            Content-Length:
+                - "568"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 9.789875ms

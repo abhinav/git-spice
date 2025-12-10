@@ -1,0 +1,221 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 98
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing Wbz5Cwdj","body":"Test draft PR","base":"main","head":"Wbz5Cwdj","draft":true}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 4,
+              "url": "http://127.0.0.1:65367/abhinav/test-repo/change/4"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.794416ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/4
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 521
+        body: |
+            {
+              "number": 4,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/4",
+              "draft": true,
+              "state": "open",
+              "title": "Testing Wbz5Cwdj",
+              "body": "Test draft PR",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "Wbz5Cwdj",
+                "sha": "ff3e6af2f989c2cbcb4d3f3117ffe58b4b93c79c"
+              }
+            }
+        headers:
+            Content-Length:
+                - "521"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.889375ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 15
+        host: 127.0.0.1:65366
+        body: '{"draft":false}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/4
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 181.958µs
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/4
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 504
+        body: |
+            {
+              "number": 4,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/4",
+              "state": "open",
+              "title": "Testing Wbz5Cwdj",
+              "body": "Test draft PR",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "Wbz5Cwdj",
+                "sha": "ff3e6af2f989c2cbcb4d3f3117ffe58b4b93c79c"
+              }
+            }
+        headers:
+            Content-Length:
+                - "504"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 19.152292ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 14
+        host: 127.0.0.1:65366
+        body: '{"draft":true}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/4
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 119.125µs
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        url: http://127.0.0.1:65366/abhinav/test-repo/change/4
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 521
+        body: |
+            {
+              "number": 4,
+              "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/4",
+              "draft": true,
+              "state": "open",
+              "title": "Testing Wbz5Cwdj",
+              "body": "Test draft PR",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "Wbz5Cwdj",
+                "sha": "ff3e6af2f989c2cbcb4d3f3117ffe58b4b93c79c"
+              }
+            }
+        headers:
+            Content-Length:
+                - "521"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 42.233125ms
