@@ -1,23 +1,44 @@
 ---
 name: test-script
-description: Use when writing or modifying test scripts for git-spice commands. Test scripts are .txt files in testdata/script/. These verify end-to-end behavior of git-spice workflows. Use this skill when creating new test scripts, updating existing ones, or when asked to test complex git-spice workflows involving branch operations, forge interactions, or interactive prompts.
+description: Use when writing or modifying .txt test scripts in testdata/script/ for git-spice - covers txtar format, end-to-end testing, ShamHub forge simulation, interactive prompts, and golden file comparisons for branch operations and stack workflows.
 ---
 
 # Test Scripts
 
 ## Overview
 
-Write test scripts for git-spice commands as `.txt` files.
+Write test scripts for git-spice commands as `.txt` files in txtar format.
 Test scripts verify end-to-end behavior and are stored in `testdata/script/`.
 
-## When to use this skill
+## Quick Reference
 
-Use this skill when:
+| Task | Command/Pattern |
+|------|----------------|
+| Run specific test | `mise run test:script --run $name` |
+| Update golden files | `mise run test:script --run $name --update` |
+| Create branch | `gs branch create <name> -m <msg>` |
+| Make commit | `gs commit create -m <msg>` |
+| Compare stdout | `cmp stdout $WORK/golden/file.txt` |
+| Partial match | `stdout 'expected substring'` |
+| Check file exists | `exists filename` |
+| Compare with env vars | `cmpenv stdout $WORK/golden/file.txt` |
+| Test interactive | `env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual` |
 
-- Writing new test scripts in testdata/script/
-- Modifying existing .txt test scripts
-- Testing complex git-spice workflows (branch operations, stack management, forge interactions)
-- Verifying interactive prompts and user input scenarios
+## Common Mistakes
+
+Avoid these errors when writing test scripts:
+
+- ❌ **Using shell operations**: Test scripts don't support `>`, `>>`, `2>`, `|`, or command substitution.
+  Use `cmp stdout`, `cmp stderr`, `stdout`, and `stderr` instead.
+
+- ❌ **Using `cat` or `ls`**: Use `exists filename` to check existence,
+  `cmp have_file want_file` to compare contents.
+
+- ❌ **Forgetting `as` and `at`**: Always freeze time and author for deterministic Git hashes.
+
+- ❌ **Using `git checkout -b`**: Use `gs branch create` instead (unless testing non-git-spice scenarios).
+
+- ❌ **Empty golden files with `(empty)`**: Just leave content blank after `-- path --`.
 
 ## Writing a test script
 
@@ -334,22 +355,6 @@ Verify the recorded URLs against the golden copy:
 ```
 cmpenv $WORK/browser.log $WORK/golden/browser.log
 ```
-
-### Common mistakes in test scripts
-
-- **Mistake**:
-  Trying to use shell redirections (`>`, `>>`, `2>`) or pipes (`|`).
-  **Problem**:
-  Test scripts do not support shell operations.
-  **Fix**:
-  Use `cmp stdout`, `cmp stderr`, `stdout`, and `stderr`.
-  There's no way to redirect output in test scripts.
-- **Mistake**:
-  Using `cat`, `ls`, or similar commands to check file existence.
-  **Fix**:
-  Use `exists filename` command for checking file existence.
-  Use `cmp have_file want_file` to compare file contents,
-  where `want_file` is defined in the golden section.
 
 ## Running test scripts
 
