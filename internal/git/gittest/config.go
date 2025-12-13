@@ -1,19 +1,27 @@
 package gittest
 
 import (
+	"runtime"
 	"strconv"
 )
 
 // DefaultConfig is the default Git configuration
 // for all test repositories.
 func DefaultConfig() Config {
-	return Config{
+	cfg := Config{
 		"init.defaultBranch": "main",
 		// Freeze what refs get decorated in the log output.
 		"log.excludeDecoration": "refs/remotes/*/HEAD",
 		"alias.graph":           "log --graph --decorate --oneline",
 		"core.autocrlf":         "false",
 	}
+
+	// On Windows, increase the timeout for template lookups.
+	if runtime.GOOS == "windows" {
+		cfg["spice.submit.listTemplatesTimeout"] = "10s"
+	}
+
+	return cfg
 }
 
 // Config is a set of Git configuration values.

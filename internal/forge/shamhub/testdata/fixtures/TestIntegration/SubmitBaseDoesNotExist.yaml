@@ -1,0 +1,55 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 106
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing XEXzAXzG","body":"Test PR with non-existent base","base":"b4NUbfgn","head":"XEXzAXzG"}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 27
+        body: |
+            base branch does not exist
+        headers:
+            Content-Length:
+                - "27"
+            Content-Type:
+                - text/plain; charset=utf-8
+        status: 400 Bad Request
+        code: 400
+        duration: 9.711791ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 29
+        host: 127.0.0.1:65366
+        body: '{"ref":"refs/heads/b4NUbfgn"}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/ref/exists
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 22
+        body: |
+            {
+              "exists": false
+            }
+        headers:
+            Content-Length:
+                - "22"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 7.788792ms

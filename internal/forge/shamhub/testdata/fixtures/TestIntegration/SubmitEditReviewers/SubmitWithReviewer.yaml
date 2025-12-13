@@ -1,0 +1,87 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 123
+        host: 127.0.0.1:65366
+        body: '{"subject":"Testing gqdwzQws","body":"Test PR with reviewer","base":"main","head":"gqdwzQws","reviewers":["reviewer-user"]}'
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 5,
+              "url": "http://127.0.0.1:65367/abhinav/test-repo/change/5"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 16.063125ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:65366
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:65366/abhinav/test-repo/changes/by-branch/gqdwzQws?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 620
+        body: |
+            [
+              {
+                "number": 5,
+                "html_url": "http://127.0.0.1:65367/abhinav/test-repo/change/5",
+                "state": "open",
+                "title": "Testing gqdwzQws",
+                "body": "Test PR with reviewer",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "1c1fe7739974d3178e47115e2884e8905b32ea73"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "gqdwzQws",
+                  "sha": "c9f0bb144f5c43093461a0c856ab3eac779fe135"
+                },
+                "requested_reviewers": [
+                  "reviewer-user"
+                ]
+              }
+            ]
+        headers:
+            Content-Length:
+                - "620"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 13.781584ms

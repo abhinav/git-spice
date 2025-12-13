@@ -14,6 +14,7 @@ shamhub new origin alice/example.git
 shamhub register alice
 shamhub register bob
 shamhub register charlie
+shamhub register dave
 git push origin main
 
 # create a branch

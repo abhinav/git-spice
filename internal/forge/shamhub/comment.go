@@ -217,10 +217,12 @@ func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCo
 	}, nil
 }
 
+var _listChangeCommentsPageSize = 10 // var for testing
+
 func (r *forgeRepository) ListChangeComments(
 	ctx context.Context,
 	id forge.ChangeID,
-	_ *forge.ListChangeCommentsOptions,
+	opts *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	u := r.apiURL.JoinPath(r.owner, r.repo, "comments")
 	q := u.Query()
@@ -231,7 +233,7 @@ func (r *forgeRepository) ListChangeComments(
 		offset := 0
 		for {
 			q.Set("offset", strconv.Itoa(offset))
-			q.Set("limit", "10")
+			q.Set("limit", strconv.Itoa(_listChangeCommentsPageSize))
 			u.RawQuery = q.Encode()
 
 			var res listChangeCommentsResponse
@@ -241,6 +243,23 @@ func (r *forgeRepository) ListChangeComments(
 			}
 
 			for _, item := range res.Items {
+				// Apply filtering if options are provided.
+				if opts != nil {
+					// Filter by BodyMatchesAll patterns.
+					if len(opts.BodyMatchesAll) > 0 {
+						matches := true
+						for _, pattern := range opts.BodyMatchesAll {
+							if !pattern.MatchString(item.Body) {
+								matches = false
+								break
+							}
+						}
+						if !matches {
+							continue
+						}
+					}
+				}
+
 				if !yield(&forge.ListChangeCommentItem{
 					ID:   ChangeCommentID(item.ID),
 					Body: item.Body,

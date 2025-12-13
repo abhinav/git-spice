@@ -108,6 +108,49 @@ nextChange:
 	return changes, nil
 }
 
+// toFindChangeItem converts a Change to a forge.FindChangeItem.
+func toFindChangeItem(c *Change) *forge.FindChangeItem {
+	var state forge.ChangeState
+	switch c.State {
+	case "open":
+		state = forge.ChangeOpen
+	case "closed":
+		if c.Merged {
+			state = forge.ChangeMerged
+		} else {
+			state = forge.ChangeClosed
+		}
+	}
+
+	labels := c.Labels
+	if len(labels) == 0 {
+		labels = nil
+	}
+
+	reviewers := c.RequestedReviewers
+	if len(reviewers) == 0 {
+		reviewers = nil
+	}
+
+	assignees := c.Assignees
+	if len(assignees) == 0 {
+		assignees = nil
+	}
+
+	return &forge.FindChangeItem{
+		ID:        ChangeID(c.Number),
+		URL:       c.URL,
+		Subject:   c.Subject,
+		HeadHash:  git.Hash(c.Head.Hash),
+		BaseName:  c.Base.Name,
+		Draft:     c.Draft,
+		State:     state,
+		Labels:    labels,
+		Reviewers: reviewers,
+		Assignees: assignees,
+	}
+}
+
 func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID) (*forge.FindChangeItem, error) {
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))
@@ -116,39 +159,7 @@ func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
-	var state forge.ChangeState
-	switch res.State {
-	case "open":
-		state = forge.ChangeOpen
-	case "closed":
-		if res.Merged {
-			state = forge.ChangeMerged
-		} else {
-			state = forge.ChangeClosed
-		}
-	}
-
-	labels := res.Labels
-	if len(labels) == 0 {
-		labels = nil
-	}
-
-	reviewers := res.RequestedReviewers
-	if len(reviewers) == 0 {
-		reviewers = nil
-	}
-
-	return &forge.FindChangeItem{
-		ID:        ChangeID(res.Number),
-		URL:       res.URL,
-		Subject:   res.Subject,
-		HeadHash:  git.Hash(res.Head.Hash),
-		BaseName:  res.Base.Name,
-		Draft:     res.Draft,
-		State:     state,
-		Labels:    labels,
-		Reviewers: reviewers,
-	}, nil
+	return toFindChangeItem(&res), nil
 }
 
 func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
@@ -173,39 +184,7 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 
 	changes := make([]*forge.FindChangeItem, len(res))
 	for i, c := range res {
-		var state forge.ChangeState
-		switch c.State {
-		case "open":
-			state = forge.ChangeOpen
-		case "closed":
-			if c.Merged {
-				state = forge.ChangeMerged
-			} else {
-				state = forge.ChangeClosed
-			}
-		}
-
-		labels := c.Labels
-		if len(labels) == 0 {
-			labels = nil
-		}
-
-		reviewers := c.RequestedReviewers
-		if len(reviewers) == 0 {
-			reviewers = nil
-		}
-
-		changes[i] = &forge.FindChangeItem{
-			ID:        ChangeID(c.Number),
-			URL:       c.URL,
-			State:     state,
-			Subject:   c.Subject,
-			HeadHash:  git.Hash(c.Head.Hash),
-			BaseName:  c.Base.Name,
-			Draft:     c.Draft,
-			Labels:    labels,
-			Reviewers: reviewers,
-		}
+		changes[i] = toFindChangeItem(c)
 	}
 	return changes, nil
 }

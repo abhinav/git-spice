@@ -65,6 +65,27 @@ func (sh *ShamHub) RegisterUser(username string) error {
 	return nil
 }
 
+// IssueToken issues an authentication token for the given username.
+// The user must already be registered.
+// This is a test helper method.
+func (sh *ShamHub) IssueToken(username string) (string, error) {
+	var buf [8]byte
+	_, _ = rand.Read(buf[:])
+	token := hex.EncodeToString(buf[:])
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for _, u := range sh.users {
+		if u.Username == username {
+			sh.tokens[token] = username
+			return token, nil
+		}
+	}
+
+	return "", fmt.Errorf("user %q not found", username)
+}
+
 // AuthenticationToken defines the token returned by the ShamHub forge.
 type AuthenticationToken struct {
 	forge.AuthenticationToken

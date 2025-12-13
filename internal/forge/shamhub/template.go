@@ -12,8 +12,10 @@ import (
 )
 
 var _changeTemplatePaths = []string{
-	".shamhub/CHANGE_TEMPLATE.md",
 	"CHANGE_TEMPLATE.md",
+	"CHANGE_TEMPLATE",
+	".shamhub/CHANGE_TEMPLATE.md",
+	".shamhub/CHANGE_TEMPLATE",
 }
 
 // ChangeTemplatePaths reports the case-insensitive paths at which
@@ -39,8 +41,6 @@ type changeTemplate struct {
 func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
 	owner, repo := req.Owner, req.Repo
 
-	// If the repository has a .shamhub/CHANGE_TEMPLATE.md file,
-	// that's the template to use.
 	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
 	defer flush()
 
@@ -53,7 +53,8 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 
 	var res changeTemplateResponse
 	for path := range templatePaths {
-		cmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+path)
+		// Try to read as a file (blob objects only).
+		cmd := exec.Command(sh.gitExe, "cat-file", "blob", "HEAD:"+path)
 		cmd.Dir = sh.repoDir(owner, repo)
 		cmd.Stderr = logw
 
@@ -62,6 +63,36 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 				Filename: path,
 				Body:     strings.TrimSpace(string(out)) + "\n",
 			})
+			continue
+		}
+
+		// Try to read as a directory.
+		lsCmd := exec.Command(sh.gitExe, "ls-tree", "--name-only", "HEAD:"+path)
+		lsCmd.Dir = sh.repoDir(owner, repo)
+		lsCmd.Stderr = logw
+
+		lsOut, err := lsCmd.Output()
+		if err != nil {
+			continue
+		}
+
+		// List all .md files in the directory.
+		for file := range strings.SplitSeq(strings.TrimSpace(string(lsOut)), "\n") {
+			if file == "" || !strings.HasSuffix(file, ".md") {
+				continue
+			}
+
+			filePath := path + "/" + file
+			catCmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+filePath)
+			catCmd.Dir = sh.repoDir(owner, repo)
+			catCmd.Stderr = logw
+
+			if fileOut, err := catCmd.Output(); err == nil {
+				res = append(res, &changeTemplate{
+					Filename: file,
+					Body:     strings.TrimSpace(string(fileOut)) + "\n",
+				})
+			}
 		}
 	}
 

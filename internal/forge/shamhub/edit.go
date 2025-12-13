@@ -81,6 +81,20 @@ func (sh *ShamHub) handleEditChange(_ context.Context, req *editChangeRequest) (
 	}
 
 	if len(req.Assignees) > 0 {
+		// Validate that all assignees are registered users.
+		for _, assignee := range req.Assignees {
+			found := false
+			for _, u := range sh.users {
+				if u.Username == assignee {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, badRequestErrorf("assignee %q is not a registered user", assignee)
+			}
+		}
+
 		assignees := sh.changes[changeIdx].Assignees
 		for _, assignee := range req.Assignees {
 			if !slices.Contains(assignees, assignee) {
