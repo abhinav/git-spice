@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/stretchr/testify/require"
 )
@@ -61,6 +62,46 @@ type Fixture[T any] struct {
 // New creates a new fixture with the given configuration.
 func New[T any](cfg Config, name string, gen func() T) Fixture[T] {
 	return Fixture[T]{cfg, name, gen}
+}
+
+// Stored is a variant of Fixture where the value can be set manually.
+// This is useful for cases where the value is not generated
+// by a function, but rather provided by the test itself in update mode.
+//
+// Example:
+//
+//	name, setName := fixturetest.Setter[string](cfg, "name")
+//	...
+//	if updateMode {
+//		x := doSomething()
+//		setName(x.Name)
+//	}
+//	...
+//	nameValue := name.Get(t)
+//
+// This has the effect of preserving the value of x.Name
+// across test runs.
+func Stored[T any](cfg Config, name string) (_ Fixture[T], set func(T)) {
+	var (
+		mu    sync.RWMutex
+		value T
+		isSet bool
+	)
+	set = func(v T) {
+		mu.Lock()
+		defer mu.Unlock()
+		value = v
+		isSet = true
+	}
+
+	return New(cfg, name, func() T {
+		mu.RLock()
+		defer mu.RUnlock()
+		if !isSet {
+			panic("fixture value not set")
+		}
+		return value
+	}), set
 }
 
 // Get returns the value of the fixture.

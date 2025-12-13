@@ -96,7 +96,16 @@ type mergeRequestsService interface {
 		opt *gitlab.ListProjectMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error)
+
+	AcceptMergeRequest(
+		pid any,
+		mergeRequest int64,
+		opt *gitlab.AcceptMergeRequestOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
+
+var _ mergeRequestsService = gitlab.MergeRequestsServiceInterface(nil)
 
 // notesService allows posting, listing, and fetching notes (comments)
 // on merge requests.
