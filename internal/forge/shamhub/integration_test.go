@@ -96,8 +96,10 @@ func TestIntegration(t *testing.T) {
 
 		// Register users for testing.
 		require.NoError(t, shamhub.RegisterUser("test-user"))
-		require.NoError(t, shamhub.RegisterUser("reviewer-user"))
-		require.NoError(t, shamhub.RegisterUser("assignee-user"))
+		require.NoError(t, shamhub.RegisterUser("reviewer1"))
+		require.NoError(t, shamhub.RegisterUser("reviewer2"))
+		require.NoError(t, shamhub.RegisterUser("assignee1"))
+		require.NoError(t, shamhub.RegisterUser("assignee2"))
 
 		// Issue token for test-user.
 		token, err := shamhub.IssueToken("test-user")
@@ -156,7 +158,7 @@ func TestIntegration(t *testing.T) {
 			}
 		},
 		SetCommentsPageSize: SetListChangeCommentsPageSize,
-		Reviewers:           []string{"reviewer-user"},
-		Assignees:           []string{"assignee-user"},
+		Reviewers:           []string{"reviewer1", "reviewer2"},
+		Assignees:           []string{"assignee1", "assignee2"},
 	})
 }

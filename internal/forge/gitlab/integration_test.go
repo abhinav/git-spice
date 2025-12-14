@@ -135,8 +135,12 @@ func TestIntegration(t *testing.T) {
 		},
 		SetCommentsPageSize:   gitlab.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
-		Reviewers:             []string{"abg"},
-		Assignees:             []string{"abg"},
+		// Unfortunately, GitLab does not support multiple reviewers
+		// in the Free Tier so we can't test multi-reviewer MRs.
+		// If someone with a paid GitLab plan wants to help test
+		// and/or contribute this, please do!
+		Reviewers: []string{"abg"},
+		Assignees: []string{"abg"},
 	})
 }
 

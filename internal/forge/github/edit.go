@@ -13,9 +13,9 @@ import (
 func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts.Base) &&
 		cmputil.Zero(opts.Draft) &&
-		len(opts.Labels) == 0 &&
-		len(opts.Reviewers) == 0 &&
-		len(opts.Assignees) == 0 {
+		len(opts.AddLabels) == 0 &&
+		len(opts.AddReviewers) == 0 &&
+		len(opts.AddAssignees) == 0 {
 		return nil // nothing to do
 	}
 	pr := mustPR(fid)
@@ -93,15 +93,15 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 	// perform in parallel, share resolved user IDs, etc.
 	// maybe even cache and persist resolved IDs in store.
 
-	if err := r.addLabelsToPullRequest(ctx, opts.Labels, graphQLID); err != nil {
+	if err := r.addLabelsToPullRequest(ctx, opts.AddLabels, graphQLID); err != nil {
 		return fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	if err := r.addReviewersToPullRequest(ctx, opts.Reviewers, graphQLID); err != nil {
+	if err := r.addReviewersToPullRequest(ctx, opts.AddReviewers, graphQLID); err != nil {
 		return fmt.Errorf("add reviewers to PR: %w", err)
 	}
 
-	if err := r.addAssigneesToPullRequest(ctx, opts.Assignees, graphQLID); err != nil {
+	if err := r.addAssigneesToPullRequest(ctx, opts.AddAssignees, graphQLID); err != nil {
 		return fmt.Errorf("add assignees to PR: %w", err)
 	}
 
