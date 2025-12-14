@@ -824,6 +824,11 @@ func (h *Handler) submitBranch(
 			updates = append(updates, "set draft to "+strconv.FormatBool(*opts.Draft))
 		}
 
+		// TODO:
+		// We _probably_ don't need to check for existing
+		// reviewers, assignees, etc. because the API contract
+		// is specifically that these are additive.
+
 		if len(opts.Assignees) > 0 {
 			existingAssigneeSet := make(map[string]struct{}, len(pull.Assignees))
 			for _, assignee := range pull.Assignees {
@@ -917,11 +922,11 @@ func (h *Handler) submitBranch(
 
 		if len(updates) > 0 {
 			opts := forge.EditChangeOptions{
-				Base:      upstreamBase,
-				Draft:     opts.Draft,
-				Labels:    opts.Labels,
-				Reviewers: opts.Reviewers,
-				Assignees: opts.Assignees,
+				Base:         upstreamBase,
+				Draft:        opts.Draft,
+				AddLabels:    opts.Labels,
+				AddReviewers: opts.Reviewers,
+				AddAssignees: opts.Assignees,
 			}
 
 			// remoteRepo is guaranteed to be available at this point.

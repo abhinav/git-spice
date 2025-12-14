@@ -23,9 +23,9 @@ var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts.Base) &&
 		cmputil.Zero(opts.Draft) &&
-		len(opts.Labels) == 0 &&
-		len(opts.Reviewers) == 0 &&
-		len(opts.Assignees) == 0 {
+		len(opts.AddLabels) == 0 &&
+		len(opts.AddReviewers) == 0 &&
+		len(opts.AddAssignees) == 0 {
 		return nil // nothing to do
 	}
 
@@ -82,12 +82,12 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		logUpdates = append(logUpdates, slog.Bool("draft", *opts.Draft))
 	}
 
-	if len(opts.Labels) > 0 {
-		updateOptions.AddLabels = (*gitlab.LabelOptions)(&opts.Labels)
+	if len(opts.AddLabels) > 0 {
+		updateOptions.AddLabels = (*gitlab.LabelOptions)(&opts.AddLabels)
 	}
 
-	if len(opts.Reviewers) > 0 {
-		reviewerIDs, err := r.resolveReviewerIDs(ctx, opts.Reviewers)
+	if len(opts.AddReviewers) > 0 {
+		reviewerIDs, err := r.resolveReviewerIDs(ctx, opts.AddReviewers)
 		if err != nil {
 			return fmt.Errorf("resolve reviewer IDs: %w", err)
 		}
@@ -102,8 +102,8 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		logUpdates = append(logUpdates, slog.Any("reviewers", merged))
 	}
 
-	if len(opts.Assignees) > 0 {
-		assigneeIDs, err := r.assigneeIDs(ctx, opts.Assignees)
+	if len(opts.AddAssignees) > 0 {
+		assigneeIDs, err := r.assigneeIDs(ctx, opts.AddAssignees)
 		if err != nil {
 			return fmt.Errorf("resolve assignees: %w", err)
 		}

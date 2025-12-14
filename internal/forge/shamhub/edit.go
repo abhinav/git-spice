@@ -115,9 +115,9 @@ func (r *forgeRepository) EditChange(ctx context.Context, fid forge.ChangeID, op
 	if opts.Draft != nil {
 		req.Draft = opts.Draft
 	}
-	req.Labels = opts.Labels
-	req.Reviewers = opts.Reviewers
-	req.Assignees = opts.Assignees
+	req.Labels = opts.AddLabels
+	req.Reviewers = opts.AddReviewers
+	req.Assignees = opts.AddAssignees
 
 	id := fid.(ChangeID)
 	u := r.apiURL.JoinPath(r.owner, r.repo, "change", strconv.Itoa(int(id)))

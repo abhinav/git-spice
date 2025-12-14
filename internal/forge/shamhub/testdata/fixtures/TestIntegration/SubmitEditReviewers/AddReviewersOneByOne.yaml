@@ -6,29 +6,29 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 113
+        content_length: 97
         host: 127.0.0.1:56339
-        body: '{"subject":"Testing PID8Q2rH","body":"Test PR with labels","base":"main","head":"PID8Q2rH","labels":["CCvJFc1d"]}'
+        body: '{"subject":"Testing ZlHRURj7","body":"Test PR without reviewers","base":"main","head":"ZlHRURj7"}'
         url: http://127.0.0.1:56339/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
+        content_length: 82
         body: |
             {
-              "number": 2,
-              "url": "http://127.0.0.1:56340/abhinav/test-repo/change/2"
+              "number": 10,
+              "url": "http://127.0.0.1:56340/abhinav/test-repo/change/10"
             }
         headers:
             Content-Length:
-                - "80"
+                - "82"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 15.906333ms
+        duration: 14.109541ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -36,20 +36,20 @@ interactions:
         proto_minor: 1
         content_length: 0
         host: 127.0.0.1:56339
-        url: http://127.0.0.1:56339/abhinav/test-repo/change/2
+        url: http://127.0.0.1:56339/abhinav/test-repo/change/10
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 544
+        content_length: 518
         body: |
             {
-              "number": 2,
-              "html_url": "http://127.0.0.1:56340/abhinav/test-repo/change/2",
+              "number": 10,
+              "html_url": "http://127.0.0.1:56340/abhinav/test-repo/change/10",
               "state": "open",
-              "title": "Testing PID8Q2rH",
-              "body": "Test PR with labels",
+              "title": "Testing ZlHRURj7",
+              "body": "Test PR without reviewers",
               "base": {
                 "repository": {
                   "owner": "abhinav",
@@ -63,30 +63,27 @@ interactions:
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "PID8Q2rH",
-                "sha": "785b981031acfa49d4a5aa967e52e6ac56d3f0c8"
-              },
-              "labels": [
-                "CCvJFc1d"
-              ]
+                "ref": "ZlHRURj7",
+                "sha": "77fbc52a3b0b47660ffe24b052123e356357ea21"
+              }
             }
         headers:
             Content-Length:
-                - "544"
+                - "518"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 16.251292ms
+        duration: 14.17025ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 23
+        content_length: 27
         host: 127.0.0.1:56339
-        body: '{"labels":["dSMOnJmF"]}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/change/2
+        body: '{"reviewers":["reviewer1"]}'
+        url: http://127.0.0.1:56339/abhinav/test-repo/change/10
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -102,16 +99,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 236.875µs
+        duration: 196.125µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 34
+        content_length: 27
         host: 127.0.0.1:56339
-        body: '{"labels":["dSMOnJmF","qAXa8Bev"]}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/change/2
+        body: '{"reviewers":["reviewer2"]}'
+        url: http://127.0.0.1:56339/abhinav/test-repo/change/10
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -127,7 +124,7 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 164.041µs
+        duration: 133.792µs
     - id: 4
       request:
         proto: HTTP/1.1
@@ -135,54 +132,46 @@ interactions:
         proto_minor: 1
         content_length: 0
         host: 127.0.0.1:56339
-        form:
-            limit:
-                - "10"
-            state:
-                - all
-        url: http://127.0.0.1:56339/abhinav/test-repo/changes/by-branch/PID8Q2rH?limit=10&state=all
+        url: http://127.0.0.1:56339/abhinav/test-repo/change/10
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 636
+        content_length: 583
         body: |
-            [
-              {
-                "number": 2,
-                "html_url": "http://127.0.0.1:56340/abhinav/test-repo/change/2",
-                "state": "open",
-                "title": "Testing PID8Q2rH",
-                "body": "Test PR with labels",
-                "base": {
-                  "repository": {
-                    "owner": "abhinav",
-                    "name": "test-repo"
-                  },
-                  "ref": "main",
-                  "sha": "15aa4e98502bfdff839bf63aebb00831d1840a23"
+            {
+              "number": 10,
+              "html_url": "http://127.0.0.1:56340/abhinav/test-repo/change/10",
+              "state": "open",
+              "title": "Testing ZlHRURj7",
+              "body": "Test PR without reviewers",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
                 },
-                "head": {
-                  "repository": {
-                    "owner": "abhinav",
-                    "name": "test-repo"
-                  },
-                  "ref": "PID8Q2rH",
-                  "sha": "785b981031acfa49d4a5aa967e52e6ac56d3f0c8"
+                "ref": "main",
+                "sha": "15aa4e98502bfdff839bf63aebb00831d1840a23"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
                 },
-                "labels": [
-                  "CCvJFc1d",
-                  "dSMOnJmF",
-                  "qAXa8Bev"
-                ]
-              }
-            ]
+                "ref": "ZlHRURj7",
+                "sha": "77fbc52a3b0b47660ffe24b052123e356357ea21"
+              },
+              "requested_reviewers": [
+                "reviewer1",
+                "reviewer2"
+              ]
+            }
         headers:
             Content-Length:
-                - "636"
+                - "583"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 12.808541ms
+        duration: 13.37275ms

@@ -710,7 +710,7 @@ func (s *integrationSuite) TestSubmitEditLabels(t *testing.T) {
 	t.Run("AddLabel", func(t *testing.T) {
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Labels: []string{label2},
+				AddLabels: []string{label2},
 			}), "could not add label2")
 	})
 
@@ -718,7 +718,7 @@ func (s *integrationSuite) TestSubmitEditLabels(t *testing.T) {
 	t.Run("AddDuplicateLabel", func(t *testing.T) {
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Labels: []string{label2, label3},
+				AddLabels: []string{label2, label3},
 			}), "could not add label2 and label3")
 
 		// Verify labels via FindChangesByBranch.
@@ -858,7 +858,7 @@ func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 		// Add reviewers with EditChange.
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Reviewers: s.Reviewers,
+				AddReviewers: s.Reviewers,
 			}), "could not add reviewer")
 
 		foundChange, err = repo.FindChangeByID(t.Context(), changeID)
@@ -866,6 +866,64 @@ func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 		assert.Equal(t, s.Reviewers, foundChange.Reviewers,
 			"change should have reviewer")
 	})
+
+	// If there are multiple available reviewers,
+	// test adding them one at a time.
+	if len(s.Reviewers) > 1 {
+		t.Run("AddReviewersOneByOne", func(t *testing.T) {
+			t.Parallel()
+
+			branchFixture := fixturetest.New(s.Fixtures, "branch-no-reviewer-one-by-one", func() string {
+				return randomString(8)
+			})
+			branchName := branchFixture.Get(t)
+			t.Logf("Creating branch: %s", branchName)
+
+			if Update() {
+				testRepo := newTestRepository(t, s.RemoteURL)
+
+				testRepo.CreateBranch(branchName)
+				testRepo.CheckoutBranch(branchName)
+				testRepo.WriteFile(branchName+".txt", randomString(32))
+				testRepo.AddAllAndCommit("commit from test")
+				testRepo.Push(branchName)
+
+				t.Cleanup(func() {
+					testRepo.DeleteRemoteBranch(branchName)
+				})
+			}
+
+			repo := s.OpenRepository(t)
+
+			// Submit a change with no reviewers.
+			change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+				Subject: "Testing " + branchName,
+				Body:    "Test PR without reviewers",
+				Base:    "main",
+				Head:    branchName,
+			})
+			require.NoError(t, err, "error creating PR")
+			changeID := change.ID
+
+			foundChange, err := repo.FindChangeByID(t.Context(), changeID)
+			require.NoError(t, err)
+			assert.Empty(t, foundChange.Reviewers, "change should have no reviewers")
+
+			// Add reviewers one by one.
+			for _, reviewer := range s.Reviewers {
+				require.NoError(t,
+					repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
+						AddReviewers: []string{reviewer},
+					}), "could not add reviewer: %s", reviewer)
+			}
+
+			// Verify all reviewers added.
+			foundChange, err = repo.FindChangeByID(t.Context(), changeID)
+			require.NoError(t, err)
+			assert.Equal(t, s.Reviewers, foundChange.Reviewers,
+				"change should have all reviewers")
+		})
+	}
 }
 
 func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
@@ -962,7 +1020,7 @@ func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
 
 		require.NoError(t,
 			repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
-				Assignees: s.Assignees,
+				AddAssignees: s.Assignees,
 			}), "could not add assignee")
 
 		// Verify assignee via FindChangeByID.
@@ -971,6 +1029,59 @@ func (s *integrationSuite) TestSubmitEditAssignees(t *testing.T) {
 		assert.ElementsMatch(t, s.Assignees, foundChange.Assignees,
 			"change should have assignee")
 	})
+
+	// If there are multiple available assignees,
+	// test adding them one at a time.
+	if len(s.Assignees) > 1 {
+		t.Run("AddAssigneesOneByOne", func(t *testing.T) {
+			t.Parallel()
+
+			branchFixture := fixturetest.New(s.Fixtures, "branch-no-assignee-one-by-one", func() string {
+				return randomString(8)
+			})
+
+			branchName := branchFixture.Get(t)
+			t.Logf("Creating branch: %s", branchName)
+
+			if Update() {
+				testRepo := newTestRepository(t, s.RemoteURL)
+
+				testRepo.CreateBranch(branchName)
+				testRepo.CheckoutBranch(branchName)
+				testRepo.WriteFile(branchName+".txt", randomString(32))
+				testRepo.AddAllAndCommit("commit from test")
+				testRepo.Push(branchName)
+
+				t.Cleanup(func() {
+					testRepo.DeleteRemoteBranch(branchName)
+				})
+			}
+
+			repo := s.OpenRepository(t)
+
+			// Submit a change with no assignees.
+			change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+				Subject: "Testing " + branchName,
+				Body:    "Test PR without assignees",
+				Base:    "main",
+				Head:    branchName,
+			})
+			require.NoError(t, err, "error creating PR")
+
+			changeID := change.ID
+			for _, assignee := range s.Assignees {
+				require.NoError(t,
+					repo.EditChange(t.Context(), changeID, forge.EditChangeOptions{
+						AddAssignees: []string{assignee},
+					}), "could not add assignee: %s", assignee)
+			}
+
+			foundChange, err := repo.FindChangeByID(t.Context(), changeID)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, s.Assignees, foundChange.Assignees,
+				"change should have all assignees")
+		})
+	}
 }
 
 func (s *integrationSuite) TestChangeComments(t *testing.T) {

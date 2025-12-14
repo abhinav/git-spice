@@ -328,16 +328,17 @@ type EditChangeOptions struct {
 	// If unset, the draft status is not changed.
 	Draft *bool
 
-	// Labels are the labels to apply to the change.
+	// AddLabels are the labels to apply to the change.
 	// Existing labels associated with the change will not be modified.
-	Labels []string
+	AddLabels []string
 
-	// Reviewers are the reviewers to request reviews from.
+	// AddReviewers are new reviewers to request reviews from.
 	// Existing reviewers associated with the change will not be modified.
-	Reviewers []string
+	AddReviewers []string
 
-	// Assignees are optional users to assign to the change.
-	Assignees []string
+	// AddAssignees are new users to assign to the change.
+	// Existing assignees associated with the change will not be modified.
+	AddAssignees []string
 }
 
 // FindChangeItem is a single result from searching for changes in the
