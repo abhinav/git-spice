@@ -32,3 +32,68 @@
     white-space: nowrap;
     width: 1px;
 }
+
+.used-by-section {
+    margin: 3rem 0;
+    text-align: center;
+}
+
+.used-by-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    color: var(--md-default-fg-color);
+}
+
+/* Marquee implementation
+ * Technique from: https://ryanmulligan.dev/blog/css-marquee/
+ * Creates an infinite horizontal scroll with seamless wrap-around.
+ */
+
+.used-by-marquee {
+    --marquee-gap: 2rem;
+    display: flex;
+    overflow: hidden;
+    user-select: none;
+    gap: var(--marquee-gap);
+}
+
+.used-by-marquee-content {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-start;
+    gap: var(--marquee-gap);
+    min-width: 100%;
+    animation: marquee 30s linear infinite;
+}
+
+.used-by-marquee-content a {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.used-by-marquee-content img {
+    height: 1.5rem;
+    width: auto;
+    opacity: 0.6;
+    filter: grayscale(100%);
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.used-by-marquee-content a:hover img {
+    opacity: 0.9;
+    filter: grayscale(0%);
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(calc(-100% - var(--marquee-gap)));
+    }
+}
+
+.used-by-marquee:hover .used-by-marquee-content {
+    animation-play-state: paused;
+}

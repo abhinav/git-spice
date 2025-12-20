@@ -65,6 +65,23 @@ $ gs repo sync
 [:material-run: Get started](start/index.md){ .md-button }
 [:material-compass: Learn more](guide/index.md){ .md-button }
 
+<div class="used-by-section" markdown>
+
+## Used by engineers at...
+
+<div class="used-by-marquee">
+  <div class="used-by-marquee-content">
+--8<-- "companies.md"
+  </div>
+  <div class="used-by-marquee-content" aria-hidden="true">
+--8<-- "companies.md"
+  </div>
+</div>
+
+[...and your organization](# "To get added or removed, email us at git-spice-users [at] abhg [dot] dev.")
+
+</div>
+
 ## Features
 
 <div class="grid cards" markdown>
