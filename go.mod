@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.3
 	github.com/zalando/go-keyring v0.2.6
-	gitlab.com/gitlab-org/api/client-go v1.8.1
+	gitlab.com/gitlab-org/api/client-go v1.10.0
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
 	go.abhg.dev/komplete v0.1.0
@@ -49,7 +49,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/godbus/dbus/v5 v5.2.0 // indirect
+	github.com/godbus/dbus/v5 v5.2.1 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
