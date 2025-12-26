@@ -1,5 +1,8 @@
 # git-spice
 
+[![Run in Smithery](https://smithery.ai/badge/skills/abhinav)](https://smithery.ai/skills?ns=abhinav&utm_source=github&utm_medium=badge)
+
+
 ## Introduction
 
 <div align="center">
