@@ -7,7 +7,7 @@ GOBIN = "{{ config_root }}/bin"
 PROJECT_ROOT = "{{ config_root }}"
 _.path = ["{{ config_root }}/bin"]
 
-[alias]
+[tool_alias]
 # Specify sources for all tools so we can refer to them directly.
 golangci-lint = "aqua:golangci/golangci-lint"
 changie = "ubi:miniscruff/changie"
