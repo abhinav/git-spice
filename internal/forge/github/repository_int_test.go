@@ -21,7 +21,7 @@ func MergeChange(ctx context.Context, repo *Repository, id *PR) error {
 	}
 	input := githubv4.MergePullRequestInput{PullRequestID: id.GQLID}
 
-	if err := repo.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := repo.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("merge pull request: %w", err)
 	}
 
@@ -43,7 +43,7 @@ func CloseChange(ctx context.Context, repo *Repository, id *PR) error {
 		State:         &state,
 	}
 
-	if err := repo.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := repo.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("close pull request: %w", err)
 	}
 

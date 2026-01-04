@@ -40,7 +40,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 			BaseRefName:   (*githubv4.String)(&opts.Base),
 		}
 
-		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+		if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
 		r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
@@ -82,7 +82,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 			logMsg = "Marked PR as ready for review"
 		}
 
-		if err := r.client.Mutate(ctx, m, input, nil); err != nil {
+		if err := r.gh4.Mutate(ctx, m, input, nil); err != nil {
 			return fmt.Errorf("update draft status: %w", err)
 		}
 
@@ -97,7 +97,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		return fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	if err := r.addReviewersToPullRequest(ctx, opts.AddReviewers, graphQLID); err != nil {
+	if err := r.addReviewersToPullRequest(ctx, opts.AddReviewers, pr.Number); err != nil {
 		return fmt.Errorf("add reviewers to PR: %w", err)
 	}
 

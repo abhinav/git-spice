@@ -18,7 +18,7 @@ func (r *Repository) RefExists(ctx context.Context, ref string) (bool, error) {
 		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
 
-	if err := r.client.Query(ctx, &q, map[string]any{
+	if err := r.gh4.Query(ctx, &q, map[string]any{
 		"owner": githubv4.String(r.owner),
 		"repo":  githubv4.String(r.repo),
 		"ref":   githubv4.String(ref),

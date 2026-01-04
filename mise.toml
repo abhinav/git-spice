@@ -136,7 +136,7 @@ go install -tags="
   {%- if flag(name='pprof') == 'true' -%}
     profile
   {%- endif -%}
-" go.abhg.dev/gs
+" -ldflags='-s -w' go.abhg.dev/gs
 """
 wait_for = ["generate"]
 description = "Build the gs binary"

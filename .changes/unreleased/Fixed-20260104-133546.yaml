@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: Fix --reviewer flag requiring ''read:org'' permissions on GitHub. We''ve switched to a different API to accomplish this without expanding scope.'
+time: 2026-01-04T13:35:46.194636-08:00

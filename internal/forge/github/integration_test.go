@@ -44,24 +44,25 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 	return forgetest.NewHTTPRecorder(t, name)
 }
 
-func newGitHubClient(
+func newGitHubClientPair(
 	httpClient *http.Client,
-) *githubv4.Client {
-	httpClient.Transport = graphqlutil.WrapTransport(httpClient.Transport)
-	return githubv4.NewClient(httpClient)
+) (*github.V3Client, *githubv4.Client) {
+	gqlHTTPClient := *httpClient
+	gqlHTTPClient.Transport = graphqlutil.WrapTransport(gqlHTTPClient.Transport)
+	return github.NewV3Client(httpClient, nil), githubv4.NewClient(&gqlHTTPClient)
 }
 
 func TestIntegration_Repository(t *testing.T) {
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	_, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", silogtest.New(t), ghc, nil)
+	gh3, gh4 := newGitHubClientPair(rec.GetDefaultClient())
+	_, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", silogtest.New(t), gh3, gh4, nil)
 	require.NoError(t, err)
 }
 
 func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
-	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", silogtest.New(t), ghc, _gitSpiceRepoID)
+	gh3, gh4 := newGitHubClientPair(rec.GetDefaultClient())
+	repo, err := github.NewRepository(t.Context(), new(github.Forge), "abhinav", "git-spice", silogtest.New(t), gh3, gh4, _gitSpiceRepoID)
 	require.NoError(t, err)
 
 	t.Run("valid", func(t *testing.T) {
@@ -110,10 +111,10 @@ func TestIntegration(t *testing.T) {
 				}),
 			}
 
-			ghc := newGitHubClient(httpClient)
+			gh3, gh4 := newGitHubClientPair(httpClient)
 			repo, err := github.NewRepository(
 				t.Context(), &githubForge, "abhinav", "test-repo",
-				silogtest.New(t), ghc, _testRepoID,
+				silogtest.New(t), gh3, gh4, _testRepoID,
 			)
 			require.NoError(t, err)
 			return repo
@@ -134,9 +135,9 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 	label := fixturetest.New(_fixtures, "label1", func() string { return randomString(8) }).Get(t)
 
 	rec := newRecorder(t, t.Name())
-	ghc := newGitHubClient(rec.GetDefaultClient())
+	gh3, gh4 := newGitHubClientPair(rec.GetDefaultClient())
 	repo, err := github.NewRepository(
-		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), ghc, _testRepoID,
+		t.Context(), new(github.Forge), "abhinav", "test-repo", silogtest.New(t), gh3, gh4, _testRepoID,
 	)
 	require.NoError(t, err)
 
@@ -174,8 +175,8 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
 	client.Transport = graphqlutil.WrapTransport(client.Transport)
-	ghc := newGitHubClient(client)
-	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "does-not-exist-repo", silogtest.New(t), ghc, nil)
+	gh3, gh4 := newGitHubClientPair(client)
+	_, err := github.NewRepository(ctx, new(github.Forge), "abhinav", "does-not-exist-repo", silogtest.New(t), gh3, gh4, nil)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, graphqlutil.ErrNotFound)
 

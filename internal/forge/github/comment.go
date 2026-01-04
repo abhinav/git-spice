@@ -61,7 +61,7 @@ func (r *Repository) PostChangeComment(
 		Body:      githubv4.String(markdown),
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
 	}
 
@@ -94,7 +94,7 @@ func (r *Repository) UpdateChangeComment(
 		Body: githubv4.String(markdown),
 		ID:   gqlID,
 	}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("update comment: %w", err)
 	}
 
@@ -119,7 +119,7 @@ func (r *Repository) DeleteChangeComment(
 	}
 
 	input := githubv4.DeleteIssueCommentInput{ID: gqlID}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
 	r.log.Debug("Deleted comment", "url", cid.URL)
@@ -201,7 +201,7 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			if err := r.client.Query(ctx, &q, variables); err != nil {
+			if err := r.gh4.Query(ctx, &q, variables); err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
 				return
 			}

@@ -14,7 +14,8 @@ type Repository struct {
 	owner, repo string
 	repoID      githubv4.ID
 	log         *silog.Logger
-	client      *githubv4.Client
+	gh3         *githubv3Client
+	gh4         *githubv4.Client
 	forge       *Forge
 }
 
@@ -25,7 +26,8 @@ func newRepository(
 	forge *Forge,
 	owner, repo string,
 	log *silog.Logger,
-	client *githubv4.Client,
+	gh3Client *githubv3Client,
+	gh4Client *githubv4.Client,
 	repoID githubv4.ID,
 ) (*Repository, error) {
 	log = log.With("repo", fmt.Sprintf("%s/%s", owner, repo))
@@ -35,7 +37,7 @@ func newRepository(
 				ID githubv4.ID `graphql:"id"`
 			} `graphql:"repository(owner: $owner, name: $repo)"`
 		}
-		if err := client.Query(ctx, &q, map[string]any{
+		if err := gh4Client.Query(ctx, &q, map[string]any{
 			"owner": githubv4.String(owner),
 			"repo":  githubv4.String(repo),
 		}); err != nil {
@@ -49,7 +51,8 @@ func newRepository(
 		owner:  owner,
 		repo:   repo,
 		log:    log,
-		client: client,
+		gh3:    gh3Client,
+		gh4:    gh4Client,
 		repoID: repoID,
 		forge:  forge,
 	}, nil

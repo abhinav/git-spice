@@ -28,7 +28,7 @@ func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []
 		AssigneeIDs:  assigneeIDs,
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("add assignees to assignable: %w", err)
 	}
 
@@ -65,7 +65,7 @@ func (r *Repository) assigneeID(ctx context.Context, login string) (githubv4.ID,
 	vars := map[string]any{
 		"login": githubv4.String(login),
 	}
-	if err := r.client.Query(ctx, &q, vars); err != nil {
+	if err := r.gh4.Query(ctx, &q, vars); err != nil {
 		return "", fmt.Errorf("query user: %w", err)
 	}
 	if q.User.ID == nil || q.User.ID == "" {

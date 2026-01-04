@@ -35,7 +35,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		input.Draft = githubv4.NewBoolean(true)
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		// If the base branch has not been pushed yet,
 		// the error is:
 		//   {
@@ -66,7 +66,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, m.CreatePullRequest.PullRequest.ID); err != nil {
+	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, int(m.CreatePullRequest.PullRequest.Number)); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add reviewers to PR: %w", err)
 	}
 

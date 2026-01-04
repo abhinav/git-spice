@@ -28,7 +28,7 @@ func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([
 		}
 	}
 
-	if err := r.client.Query(ctx, &q, map[string]any{"ids": gqlIDs}); err != nil {
+	if err := r.gh4.Query(ctx, &q, map[string]any{"ids": gqlIDs}); err != nil {
 		return nil, fmt.Errorf("retrieve change states: %w", err)
 	}
 

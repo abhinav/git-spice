@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"testing"
 	"time"
@@ -126,10 +127,14 @@ func TestListChangeComments(t *testing.T) {
 			}))
 			defer srv.Close()
 
+			apiURL, err := url.Parse(srv.URL)
+			require.NoError(t, err)
+
 			repo, err := newRepository(
 				t.Context(), new(Forge),
 				"owner", "repo",
 				silogtest.New(t),
+				newGitHubv3Client(http.DefaultClient, apiURL), // unused
 				githubv4.NewEnterpriseClient(srv.URL, nil),
 				"repoID",
 			)

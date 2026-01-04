@@ -32,7 +32,7 @@ func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTe
 		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
 
-	if err := r.client.Query(ctx, &q, map[string]any{
+	if err := r.gh4.Query(ctx, &q, map[string]any{
 		"owner": githubv4.String(r.owner),
 		"name":  githubv4.String(r.repo),
 	}); err != nil {

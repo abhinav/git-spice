@@ -9,7 +9,7 @@ interactions:
         content_length: 277
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"BgPZhb1L","title":"Testing BgPZhb1L","body":"Test PR without reviewers"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"75iyj4VQ","title":"Testing 75iyj4VQ","body":"Test PR without reviewers"}}}
         headers:
             Content-Type:
                 - application/json
@@ -21,13 +21,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs64rFc5","number":53,"url":"https://github.com/abhinav/test-repo/pull/53"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs67cesa","number":66,"url":"https://github.com/abhinav/test-repo/pull/66"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.011432042s
+        duration: 1.018676583s
     - id: 1
       request:
         proto: HTTP/1.1
@@ -36,7 +36,7 @@ interactions:
         content_length: 392
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":53,"owner":"abhinav","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":66,"owner":"abhinav","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -48,68 +48,41 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs64rFc5","number":53,"url":"https://github.com/abhinav/test-repo/pull/53","title":"Testing BgPZhb1L","state":"OPEN","headRefOid":"b71430c94dfdc7d471910fc36896ebb4b0c8aba5","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs67cesa","number":66,"url":"https://github.com/abhinav/test-repo/pull/66","title":"Testing 75iyj4VQ","state":"OPEN","headRefOid":"8cf800b945b1d5f72f5aaf25a70b4d10a9fabc58","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 409.245417ms
+        duration: 287.212667ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 97
+        content_length: 31
         host: api.github.com
-        body: |
-            {"query":"query($login:String!){user(login: $login){id}}","variables":{"login":"abhinav-robot"}}
+        body: '{"reviewers":["abhinav-robot"]}'
         headers:
             Content-Type:
                 - application/json
-        url: https://api.github.com/graphql
+        url: https://api.github.com/repos/abhinav/test-repo/pulls/66/requested_reviewers
         method: POST
       response:
         proto: HTTP/2.0
         proto_major: 2
         proto_minor: 0
-        content_length: -1
-        uncompressed: true
-        body: '{"data":{"user":{"id":"U_kgDOCzNVWQ"}}}'
+        content_length: 15712
+        body: '{"url":"https://api.github.com/repos/abhinav/test-repo/pulls/66","id":3144805146,"node_id":"PR_kwDOMVd0xs67cesa","html_url":"https://github.com/abhinav/test-repo/pull/66","diff_url":"https://github.com/abhinav/test-repo/pull/66.diff","patch_url":"https://github.com/abhinav/test-repo/pull/66.patch","issue_url":"https://api.github.com/repos/abhinav/test-repo/issues/66","number":66,"state":"open","locked":false,"title":"Testing 75iyj4VQ","user":{"login":"abhinav","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav","html_url":"https://github.com/abhinav","followers_url":"https://api.github.com/users/abhinav/followers","following_url":"https://api.github.com/users/abhinav/following{/other_user}","gists_url":"https://api.github.com/users/abhinav/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav/subscriptions","organizations_url":"https://api.github.com/users/abhinav/orgs","repos_url":"https://api.github.com/users/abhinav/repos","events_url":"https://api.github.com/users/abhinav/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav/received_events","type":"User","user_view_type":"public","site_admin":false},"body":"Test PR without reviewers","created_at":"2026-01-04T22:54:46Z","updated_at":"2026-01-04T22:54:47Z","closed_at":null,"merged_at":null,"merge_commit_sha":"1d3234610e96df1763d3d656ac4b886a874e4f97","assignee":null,"assignees":[],"requested_reviewers":[{"login":"abhinav-robot","id":187913561,"node_id":"U_kgDOCzNVWQ","avatar_url":"https://avatars.githubusercontent.com/u/187913561?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav-robot","html_url":"https://github.com/abhinav-robot","followers_url":"https://api.github.com/users/abhinav-robot/followers","following_url":"https://api.github.com/users/abhinav-robot/following{/other_user}","gists_url":"https://api.github.com/users/abhinav-robot/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav-robot/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav-robot/subscriptions","organizations_url":"https://api.github.com/users/abhinav-robot/orgs","repos_url":"https://api.github.com/users/abhinav-robot/repos","events_url":"https://api.github.com/users/abhinav-robot/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav-robot/received_events","type":"User","user_view_type":"public","site_admin":false}],"requested_teams":[],"labels":[],"milestone":null,"draft":false,"commits_url":"https://api.github.com/repos/abhinav/test-repo/pulls/66/commits","review_comments_url":"https://api.github.com/repos/abhinav/test-repo/pulls/66/comments","review_comment_url":"https://api.github.com/repos/abhinav/test-repo/pulls/comments{/number}","comments_url":"https://api.github.com/repos/abhinav/test-repo/issues/66/comments","statuses_url":"https://api.github.com/repos/abhinav/test-repo/statuses/8cf800b945b1d5f72f5aaf25a70b4d10a9fabc58","head":{"label":"abhinav:75iyj4VQ","ref":"75iyj4VQ","sha":"8cf800b945b1d5f72f5aaf25a70b4d10a9fabc58","user":{"login":"abhinav","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav","html_url":"https://github.com/abhinav","followers_url":"https://api.github.com/users/abhinav/followers","following_url":"https://api.github.com/users/abhinav/following{/other_user}","gists_url":"https://api.github.com/users/abhinav/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav/subscriptions","organizations_url":"https://api.github.com/users/abhinav/orgs","repos_url":"https://api.github.com/users/abhinav/repos","events_url":"https://api.github.com/users/abhinav/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav/received_events","type":"User","user_view_type":"public","site_admin":false},"repo":{"id":827815110,"node_id":"R_kgDOMVd0xg","name":"test-repo","full_name":"abhinav/test-repo","private":false,"owner":{"login":"abhinav","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav","html_url":"https://github.com/abhinav","followers_url":"https://api.github.com/users/abhinav/followers","following_url":"https://api.github.com/users/abhinav/following{/other_user}","gists_url":"https://api.github.com/users/abhinav/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav/subscriptions","organizations_url":"https://api.github.com/users/abhinav/orgs","repos_url":"https://api.github.com/users/abhinav/repos","events_url":"https://api.github.com/users/abhinav/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/abhinav/test-repo","description":"Repository used to test https://github.com/abhinav/git-spice","fork":false,"url":"https://api.github.com/repos/abhinav/test-repo","forks_url":"https://api.github.com/repos/abhinav/test-repo/forks","keys_url":"https://api.github.com/repos/abhinav/test-repo/keys{/key_id}","collaborators_url":"https://api.github.com/repos/abhinav/test-repo/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/abhinav/test-repo/teams","hooks_url":"https://api.github.com/repos/abhinav/test-repo/hooks","issue_events_url":"https://api.github.com/repos/abhinav/test-repo/issues/events{/number}","events_url":"https://api.github.com/repos/abhinav/test-repo/events","assignees_url":"https://api.github.com/repos/abhinav/test-repo/assignees{/user}","branches_url":"https://api.github.com/repos/abhinav/test-repo/branches{/branch}","tags_url":"https://api.github.com/repos/abhinav/test-repo/tags","blobs_url":"https://api.github.com/repos/abhinav/test-repo/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/abhinav/test-repo/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/abhinav/test-repo/git/refs{/sha}","trees_url":"https://api.github.com/repos/abhinav/test-repo/git/trees{/sha}","statuses_url":"https://api.github.com/repos/abhinav/test-repo/statuses/{sha}","languages_url":"https://api.github.com/repos/abhinav/test-repo/languages","stargazers_url":"https://api.github.com/repos/abhinav/test-repo/stargazers","contributors_url":"https://api.github.com/repos/abhinav/test-repo/contributors","subscribers_url":"https://api.github.com/repos/abhinav/test-repo/subscribers","subscription_url":"https://api.github.com/repos/abhinav/test-repo/subscription","commits_url":"https://api.github.com/repos/abhinav/test-repo/commits{/sha}","git_commits_url":"https://api.github.com/repos/abhinav/test-repo/git/commits{/sha}","comments_url":"https://api.github.com/repos/abhinav/test-repo/comments{/number}","issue_comment_url":"https://api.github.com/repos/abhinav/test-repo/issues/comments{/number}","contents_url":"https://api.github.com/repos/abhinav/test-repo/contents/{+path}","compare_url":"https://api.github.com/repos/abhinav/test-repo/compare/{base}...{head}","merges_url":"https://api.github.com/repos/abhinav/test-repo/merges","archive_url":"https://api.github.com/repos/abhinav/test-repo/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/abhinav/test-repo/downloads","issues_url":"https://api.github.com/repos/abhinav/test-repo/issues{/number}","pulls_url":"https://api.github.com/repos/abhinav/test-repo/pulls{/number}","milestones_url":"https://api.github.com/repos/abhinav/test-repo/milestones{/number}","notifications_url":"https://api.github.com/repos/abhinav/test-repo/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/abhinav/test-repo/labels{/name}","releases_url":"https://api.github.com/repos/abhinav/test-repo/releases{/id}","deployments_url":"https://api.github.com/repos/abhinav/test-repo/deployments","created_at":"2024-07-12T12:40:21Z","updated_at":"2025-12-13T18:58:58Z","pushed_at":"2026-01-04T22:54:45Z","git_url":"git://github.com/abhinav/test-repo.git","ssh_url":"git@github.com:abhinav/test-repo.git","clone_url":"https://github.com/abhinav/test-repo.git","svn_url":"https://github.com/abhinav/test-repo","homepage":"","size":9,"stargazers_count":0,"watchers_count":0,"language":null,"has_issues":false,"has_projects":false,"has_downloads":true,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":0,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":3,"license":null,"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"topics":[],"visibility":"public","forks":0,"open_issues":3,"watchers":0,"default_branch":"main"}},"base":{"label":"abhinav:main","ref":"main","sha":"c650c6853084f65b56f4965f1ba7b64d7ddd4473","user":{"login":"abhinav","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav","html_url":"https://github.com/abhinav","followers_url":"https://api.github.com/users/abhinav/followers","following_url":"https://api.github.com/users/abhinav/following{/other_user}","gists_url":"https://api.github.com/users/abhinav/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav/subscriptions","organizations_url":"https://api.github.com/users/abhinav/orgs","repos_url":"https://api.github.com/users/abhinav/repos","events_url":"https://api.github.com/users/abhinav/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav/received_events","type":"User","user_view_type":"public","site_admin":false},"repo":{"id":827815110,"node_id":"R_kgDOMVd0xg","name":"test-repo","full_name":"abhinav/test-repo","private":false,"owner":{"login":"abhinav","id":41730,"node_id":"MDQ6VXNlcjQxNzMw","avatar_url":"https://avatars.githubusercontent.com/u/41730?v=4","gravatar_id":"","url":"https://api.github.com/users/abhinav","html_url":"https://github.com/abhinav","followers_url":"https://api.github.com/users/abhinav/followers","following_url":"https://api.github.com/users/abhinav/following{/other_user}","gists_url":"https://api.github.com/users/abhinav/gists{/gist_id}","starred_url":"https://api.github.com/users/abhinav/starred{/owner}{/repo}","subscriptions_url":"https://api.github.com/users/abhinav/subscriptions","organizations_url":"https://api.github.com/users/abhinav/orgs","repos_url":"https://api.github.com/users/abhinav/repos","events_url":"https://api.github.com/users/abhinav/events{/privacy}","received_events_url":"https://api.github.com/users/abhinav/received_events","type":"User","user_view_type":"public","site_admin":false},"html_url":"https://github.com/abhinav/test-repo","description":"Repository used to test https://github.com/abhinav/git-spice","fork":false,"url":"https://api.github.com/repos/abhinav/test-repo","forks_url":"https://api.github.com/repos/abhinav/test-repo/forks","keys_url":"https://api.github.com/repos/abhinav/test-repo/keys{/key_id}","collaborators_url":"https://api.github.com/repos/abhinav/test-repo/collaborators{/collaborator}","teams_url":"https://api.github.com/repos/abhinav/test-repo/teams","hooks_url":"https://api.github.com/repos/abhinav/test-repo/hooks","issue_events_url":"https://api.github.com/repos/abhinav/test-repo/issues/events{/number}","events_url":"https://api.github.com/repos/abhinav/test-repo/events","assignees_url":"https://api.github.com/repos/abhinav/test-repo/assignees{/user}","branches_url":"https://api.github.com/repos/abhinav/test-repo/branches{/branch}","tags_url":"https://api.github.com/repos/abhinav/test-repo/tags","blobs_url":"https://api.github.com/repos/abhinav/test-repo/git/blobs{/sha}","git_tags_url":"https://api.github.com/repos/abhinav/test-repo/git/tags{/sha}","git_refs_url":"https://api.github.com/repos/abhinav/test-repo/git/refs{/sha}","trees_url":"https://api.github.com/repos/abhinav/test-repo/git/trees{/sha}","statuses_url":"https://api.github.com/repos/abhinav/test-repo/statuses/{sha}","languages_url":"https://api.github.com/repos/abhinav/test-repo/languages","stargazers_url":"https://api.github.com/repos/abhinav/test-repo/stargazers","contributors_url":"https://api.github.com/repos/abhinav/test-repo/contributors","subscribers_url":"https://api.github.com/repos/abhinav/test-repo/subscribers","subscription_url":"https://api.github.com/repos/abhinav/test-repo/subscription","commits_url":"https://api.github.com/repos/abhinav/test-repo/commits{/sha}","git_commits_url":"https://api.github.com/repos/abhinav/test-repo/git/commits{/sha}","comments_url":"https://api.github.com/repos/abhinav/test-repo/comments{/number}","issue_comment_url":"https://api.github.com/repos/abhinav/test-repo/issues/comments{/number}","contents_url":"https://api.github.com/repos/abhinav/test-repo/contents/{+path}","compare_url":"https://api.github.com/repos/abhinav/test-repo/compare/{base}...{head}","merges_url":"https://api.github.com/repos/abhinav/test-repo/merges","archive_url":"https://api.github.com/repos/abhinav/test-repo/{archive_format}{/ref}","downloads_url":"https://api.github.com/repos/abhinav/test-repo/downloads","issues_url":"https://api.github.com/repos/abhinav/test-repo/issues{/number}","pulls_url":"https://api.github.com/repos/abhinav/test-repo/pulls{/number}","milestones_url":"https://api.github.com/repos/abhinav/test-repo/milestones{/number}","notifications_url":"https://api.github.com/repos/abhinav/test-repo/notifications{?since,all,participating}","labels_url":"https://api.github.com/repos/abhinav/test-repo/labels{/name}","releases_url":"https://api.github.com/repos/abhinav/test-repo/releases{/id}","deployments_url":"https://api.github.com/repos/abhinav/test-repo/deployments","created_at":"2024-07-12T12:40:21Z","updated_at":"2025-12-13T18:58:58Z","pushed_at":"2026-01-04T22:54:45Z","git_url":"git://github.com/abhinav/test-repo.git","ssh_url":"git@github.com:abhinav/test-repo.git","clone_url":"https://github.com/abhinav/test-repo.git","svn_url":"https://github.com/abhinav/test-repo","homepage":"","size":9,"stargazers_count":0,"watchers_count":0,"language":null,"has_issues":false,"has_projects":false,"has_downloads":true,"has_wiki":false,"has_pages":false,"has_discussions":false,"forks_count":0,"mirror_url":null,"archived":false,"disabled":false,"open_issues_count":3,"license":null,"allow_forking":true,"is_template":false,"web_commit_signoff_required":false,"topics":[],"visibility":"public","forks":0,"open_issues":3,"watchers":0,"default_branch":"main"}},"_links":{"self":{"href":"https://api.github.com/repos/abhinav/test-repo/pulls/66"},"html":{"href":"https://github.com/abhinav/test-repo/pull/66"},"issue":{"href":"https://api.github.com/repos/abhinav/test-repo/issues/66"},"comments":{"href":"https://api.github.com/repos/abhinav/test-repo/issues/66/comments"},"review_comments":{"href":"https://api.github.com/repos/abhinav/test-repo/pulls/66/comments"},"review_comment":{"href":"https://api.github.com/repos/abhinav/test-repo/pulls/comments{/number}"},"commits":{"href":"https://api.github.com/repos/abhinav/test-repo/pulls/66/commits"},"statuses":{"href":"https://api.github.com/repos/abhinav/test-repo/statuses/8cf800b945b1d5f72f5aaf25a70b4d10a9fabc58"}},"author_association":"OWNER","auto_merge":null,"active_lock_reason":null}'
         headers:
+            Content-Length:
+                - "15712"
             Content-Type:
                 - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 224.101583ms
+        status: 201 Created
+        code: 201
+        duration: 622.626333ms
     - id: 3
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 201
-        host: api.github.com
-        body: |
-            {"query":"mutation($input:RequestReviewsInput!){requestReviews(input: $input){clientMutationId}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs64rFc5","userIds":["U_kgDOCzNVWQ"],"union":true}}}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        content_length: -1
-        uncompressed: true
-        body: '{"data":{"requestReviews":{"clientMutationId":null}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 593.04625ms
-    - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -117,7 +90,7 @@ interactions:
         content_length: 392
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":53,"owner":"abhinav","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":66,"owner":"abhinav","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -129,10 +102,10 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs64rFc5","number":53,"url":"https://github.com/abhinav/test-repo/pull/53","title":"Testing BgPZhb1L","state":"OPEN","headRefOid":"b71430c94dfdc7d471910fc36896ebb4b0c8aba5","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[{"requestedReviewer":{"login":"abhinav-robot"}}]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs67cesa","number":66,"url":"https://github.com/abhinav/test-repo/pull/66","title":"Testing 75iyj4VQ","state":"OPEN","headRefOid":"8cf800b945b1d5f72f5aaf25a70b4d10a9fabc58","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[{"requestedReviewer":{"login":"abhinav-robot"}}]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 306.370459ms
+        duration: 321.204625ms

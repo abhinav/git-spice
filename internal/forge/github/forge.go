@@ -107,12 +107,12 @@ func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToke
 	rid := mustRepositoryID(id)
 
 	tokenSource := tok.(*AuthenticationToken).tokenSource()
-	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
+	gh3, gh4, err := newGitHubClientPair(ctx, f.APIURL(), tokenSource)
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub client: %w", err)
 	}
 
-	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), ghc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), gh3, gh4, nil)
 }
 
 // RepositoryID is a unique identifier for a GitHub repository.
@@ -143,14 +143,18 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/pull/%d", rid.url, owner, repo, prNum)
 }
 
-func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.TokenSource) (*githubv4.Client, error) {
-	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
+func newGitHubClientPair(
+	ctx context.Context, apiURLStr string, tokenSource oauth2.TokenSource,
+) (*githubv3Client, *githubv4.Client, error) {
+	apiURL, err := url.Parse(apiURLStr)
 	if err != nil {
-		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
+		return nil, nil, fmt.Errorf("parse API URL: %w", err)
 	}
 
+	graphQLAPIURL := apiURL.JoinPath("/graphql").String()
 	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return newGitHubEnterpriseClient(graphQLAPIURL, httpClient), nil
+
+	return newGitHubv3Client(httpClient, apiURL), newGitHubv4EnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
 func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {

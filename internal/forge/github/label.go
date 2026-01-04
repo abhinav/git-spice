@@ -33,7 +33,7 @@ func (r *Repository) addLabelsToPullRequest(ctx context.Context, labels []string
 		LabelableID: prGraphQLID,
 		LabelIDs:    labelIDs,
 	}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("add labels to labelable: %w", err)
 	}
 	return nil
@@ -135,7 +135,7 @@ func (r *Repository) LabelID(ctx context.Context, name string) (githubv4.ID, err
 		"name":  githubv4.String(r.repo),
 		"label": githubv4.String(name),
 	}
-	if err := r.client.Query(ctx, &query, variables); err != nil {
+	if err := r.gh4.Query(ctx, &query, variables); err != nil {
 		return "", fmt.Errorf("query labels: %w", err)
 	}
 
@@ -164,7 +164,7 @@ func (r *Repository) CreateLabel(ctx context.Context, name string) (githubv4.ID,
 		Color:        githubv4.String(color),
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		if errors.Is(err, graphqlutil.ErrUnprocessable) {
 			// GitHub returns Unprocessable if the label already exists.
 			// If two concurrent requests try to create the same label,
@@ -191,7 +191,7 @@ func (r *Repository) DeleteLabel(ctx context.Context, labelID githubv4.ID) error
 	}
 
 	input := githubv4.DeleteLabelInput{ID: labelID}
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gh4.Mutate(ctx, &m, input, nil); err != nil {
 		if !errors.Is(err, graphqlutil.ErrNotFound) {
 			return fmt.Errorf("delete label mutation: %w", err)
 		}

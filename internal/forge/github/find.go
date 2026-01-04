@@ -140,7 +140,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		vars["states"] = []githubv4.PullRequestState{pullRequestState(opts.State)}
 	}
 
-	if err := r.client.Query(ctx, &q, vars); err != nil {
+	if err := r.gh4.Query(ctx, &q, vars); err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
 
@@ -161,7 +161,7 @@ func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*fo
 	}
 
 	pr := mustPR(id)
-	if err := r.client.Query(ctx, &q, map[string]any{
+	if err := r.gh4.Query(ctx, &q, map[string]any{
 		"owner":  githubv4.String(r.owner),
 		"repo":   githubv4.String(r.repo),
 		"number": githubv4.Int(pr.Number),

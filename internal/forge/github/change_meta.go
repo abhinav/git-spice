@@ -150,7 +150,7 @@ func (r *Repository) graphQLID(ctx context.Context, gid *PR) (githubv4.ID, error
 			} `graphql:"pullRequest(number: $number)"`
 		} `graphql:"repository(owner: $owner, name: $repo)"`
 	}
-	if err := r.client.Query(ctx, &q, map[string]any{
+	if err := r.gh4.Query(ctx, &q, map[string]any{
 		"owner":  githubv4.String(r.owner),
 		"repo":   githubv4.String(r.repo),
 		"number": githubv4.Int(gid.Number),
