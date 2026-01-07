@@ -161,8 +161,9 @@ Select an authentication method: {red}Personal Access Token{reset}
 
               - enter a descriptive note for the token
               - pick an expiration window, or select "No expiration"
-              - select `repo` scope for full access to all repositories,
-                or `public_repo` for access to public repositories only
+              - select the following scopes:
+                `repo`, `read:org` for full access to all repositories,
+                or just `public_repo` for access to public repositories only
 
           3. Click "Generate token" and copy the token.
 
@@ -184,6 +185,9 @@ Select an authentication method: {red}Personal Access Token{reset}
                 you want to use git-spice with
               - in the *Repository permissions* section,
                 grant **Read and write** access to **Pull requests** and **Contents**
+              - (<!-- gs:version 0.21.0 --> or higher)
+                in the *Organization permissions* section,
+                grant **Read-only** access to **Members**
 
           3. Click "Generate token" and copy the token.
 
