@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/shurcooL/githubv4"
-	"go.abhg.dev/gs/internal/must"
 )
 
 // addReviewersToPullRequest adds reviewers to a pull request.
@@ -64,73 +63,28 @@ func (r *Repository) reviewersIDs(
 			continue
 		}
 
-		rType, name := parseReviewer(reviewer)
-		switch rType {
-		case reviewerTypeUser:
-			id, err := r.userID(ctx, name)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("lookup user %q: %w", name, err))
-				continue
-			}
-			userIDs = append(userIDs, id)
-			r.log.Debug("Resolved user reviewer ID", "username", name, "id", id)
-
-		case reviewerTypeTeam:
-			org, teamSlug, _ := strings.Cut(name, "/")
+		// Team reviewer in the form "org/team",
+		// where "org" must match the repository owner.
+		if org, teamSlug, ok := strings.Cut(reviewer, "/"); ok {
 			id, err := r.teamID(ctx, org, teamSlug)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("lookup team %v/%q: %w", org, name, err))
+				errs = append(errs, fmt.Errorf("lookup team %q: %w", reviewer, err))
 				continue
 			}
 			teamIDs = append(teamIDs, id)
-			r.log.Debug("Resolved team reviewer ID", "team", name, "id", id)
-
-		default:
-			must.Failf("unknown reviewer type %#v for %q", rType, reviewer)
+			r.log.Debug("Resolved team reviewer ID", "team", reviewer, "id", id)
+		} else {
+			id, err := r.userID(ctx, reviewer)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("lookup user %q: %w", reviewer, err))
+				continue
+			}
+			userIDs = append(userIDs, id)
+			r.log.Debug("Resolved user reviewer ID", "username", reviewer, "id", id)
 		}
 	}
 
 	return userIDs, teamIDs, errors.Join(errs...)
-}
-
-type reviewerType int
-
-const (
-	reviewerTypeUser reviewerType = iota
-	reviewerTypeTeam
-)
-
-// parseReviewer determines if a reviewer is a user or team.
-// Format: "username" for users, "org/teamname" for teams.
-func parseReviewer(reviewer string) (reviewerType, string) {
-	if strings.Contains(reviewer, "/") {
-		return reviewerTypeTeam, reviewer
-	}
-	return reviewerTypeUser, reviewer
-}
-
-// userID looks up a user's GraphQL ID by login.
-func (r *Repository) userID(ctx context.Context, login string) (githubv4.ID, error) {
-	var query struct {
-		User struct {
-			ID githubv4.ID `graphql:"id"`
-		} `graphql:"user(login: $login)"`
-	}
-
-	variables := map[string]any{
-		"login": githubv4.String(login),
-	}
-
-	if err := r.client.Query(ctx, &query, variables); err != nil {
-		return "", fmt.Errorf("query user: %w", err)
-	}
-
-	id := query.User.ID
-	if id == "" || id == nil {
-		return "", fmt.Errorf("user not found: %q", login)
-	}
-
-	return id, nil
 }
 
 // teamID looks up a team's GraphQL ID by organization and team slug.
