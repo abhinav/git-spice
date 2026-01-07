@@ -57,3 +57,27 @@ func newRepository(
 
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
+
+// userID looks up a user's GraphQL ID by login.
+func (r *Repository) userID(ctx context.Context, login string) (githubv4.ID, error) {
+	var query struct {
+		User struct {
+			ID githubv4.ID `graphql:"id"`
+		} `graphql:"user(login: $login)"`
+	}
+
+	variables := map[string]any{
+		"login": githubv4.String(login),
+	}
+
+	if err := r.client.Query(ctx, &query, variables); err != nil {
+		return "", fmt.Errorf("query user: %w", err)
+	}
+
+	id := query.User.ID
+	if id == "" || id == nil {
+		return "", fmt.Errorf("user not found: %q", login)
+	}
+
+	return id, nil
+}

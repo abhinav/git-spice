@@ -33,6 +33,7 @@ type findPRNode struct {
 			} `graphql:"requestedReviewer"`
 		} `graphql:"nodes"`
 	} `graphql:"reviewRequests(first: 100)"`
+	// TODO: handle pagination of this information
 	Assignees struct {
 		Nodes []struct {
 			Login githubv4.String `graphql:"login"`

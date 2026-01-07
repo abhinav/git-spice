@@ -1,0 +1,8 @@
+kind: Changed
+body: >-
+  GitHub OAuth authentication now additionally requires the `read:org` scope.
+  We need this to resolve GitHub teams for the submit `--reviewer` flag.
+  If you're using git-spice via OAuth authentication,
+  please run `gs auth login --refresh` to generate a new token
+  with the expanded scope.
+time: 2026-01-06T18:33:48.992233-08:00

@@ -47,30 +47,11 @@ func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]git
 		}
 		seen[assignee] = struct{}{}
 
-		id, err := r.assigneeID(ctx, assignee)
+		id, err := r.userID(ctx, assignee)
 		if err != nil {
 			return nil, fmt.Errorf("resolve assignee %q: %w", assignee, err)
 		}
 		ids = append(ids, id)
 	}
 	return ids, nil
-}
-
-func (r *Repository) assigneeID(ctx context.Context, login string) (githubv4.ID, error) {
-	var q struct {
-		User struct {
-			ID githubv4.ID `graphql:"id"`
-		} `graphql:"user(login: $login)"`
-	}
-	vars := map[string]any{
-		"login": githubv4.String(login),
-	}
-	if err := r.client.Query(ctx, &q, vars); err != nil {
-		return "", fmt.Errorf("query user: %w", err)
-	}
-	if q.User.ID == nil || q.User.ID == "" {
-		return "", fmt.Errorf("user %q not found", login)
-	}
-
-	return q.User.ID, nil
 }
