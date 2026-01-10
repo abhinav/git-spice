@@ -179,6 +179,14 @@ func TestCmd_AppendEnv(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "value1 value2", output)
 	})
+
+	t.Run("GitSpiceExecSet", func(t *testing.T) {
+		cmd := Command(ctx, log, "sh", "-c", "echo $GIT_SPICE")
+
+		output, err := cmd.OutputChomp()
+		require.NoError(t, err)
+		assert.Equal(t, "1", output)
+	})
 }
 
 func TestCmd_Run(t *testing.T) {

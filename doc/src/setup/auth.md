@@ -185,7 +185,7 @@ Select an authentication method: {red}Personal Access Token{reset}
                 you want to use git-spice with
               - in the *Repository permissions* section,
                 grant **Read and write** access to **Pull requests** and **Contents**
-              - (<!-- gs:version 0.21.0 --> or higher)
+              - (<!-- gs:version v0.21.0 --> or higher)
                 in the *Organization permissions* section,
                 grant **Read-only** access to **Members**
 
