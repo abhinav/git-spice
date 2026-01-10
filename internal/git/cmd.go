@@ -47,8 +47,8 @@ func (ec *extraConfig) WithArgs(cmd *xec.Cmd) *xec.Cmd {
 		return cmd
 	}
 
-	args := append(newArgs, cmd.Args()...)
-	return cmd.WithArgs(args...)
+	newArgs = append(newArgs, cmd.Args()...)
+	return cmd.WithArgs(newArgs...)
 }
 
 // newGitCmd builds a new Git command with the given arguments.
