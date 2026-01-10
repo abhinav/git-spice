@@ -8,8 +8,8 @@ import (
 
 // Var returns the value of the given Git variable.
 func (r *Repository) Var(ctx context.Context, name string) (string, error) {
-	cmd := newGitCmd(ctx, r.log, "var", name)
-	out, err := cmd.Output(r.exec)
+	cmd := newGitCmd(ctx, r.log, r.exec, "var", name)
+	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("git var %s: %w", name, err)
 	}

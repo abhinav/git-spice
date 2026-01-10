@@ -149,15 +149,15 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 	log := cfg.log
 	args = append([]string{"config", "--null"}, args...)
 	return func(yield func(ConfigEntry, error) bool) {
-		cmd := newGitCmd(ctx, cfg.log, args...).
-			Dir(cfg.dir).
+		cmd := newGitCmd(ctx, cfg.log, cfg.exec, args...).
+			WithDir(cfg.dir).
 			AppendEnv(cfg.env...)
 
 		// With the --null flag, output is in the form:
 		//
 		//	key1\nvalue1\0
 		//	key2\nvalue2\0
-		for entry, err := range cmd.Scan(cfg.exec, scanutil.SplitNull) {
+		for entry, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				// git-config fails with a non-zero exit code if there are no matches.
 				// That's not an error for us, so we ignore it.

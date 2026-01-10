@@ -104,9 +104,9 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 	}
 
 	cmd := w.gitCmd(ctx, args...).
-		Stdin(os.Stdin).
-		Stdout(os.Stdout).
-		Stderr(os.Stderr)
+		WithStdin(os.Stdin).
+		WithStdout(os.Stdout).
+		WithStderr(os.Stderr)
 	if req.Author != nil {
 		cmd.AppendEnv(req.Author.appendEnv("AUTHOR", nil)...)
 	}
@@ -114,7 +114,7 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 		cmd.AppendEnv(req.Committer.appendEnv("COMMITTER", nil)...)
 	}
 
-	if err := cmd.Run(w.exec); err != nil {
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 	return nil

@@ -73,18 +73,18 @@ type TreeEntry struct {
 // Returns the hash of the new tree and the number of entries written.
 func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq2[TreeEntry, error]) (_ Hash, numEnts int, err error) {
 	var stdout bytes.Buffer
-	cmd := r.gitCmd(ctx, "mktree", "-z").Stdout(&stdout)
+	cmd := r.gitCmd(ctx, "mktree", "-z").WithStdout(&stdout)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return ZeroHash, numEnts, fmt.Errorf("pipe: %w", err)
 	}
 
-	if err := cmd.Start(r.exec); err != nil {
+	if err := cmd.Start(); err != nil {
 		return ZeroHash, numEnts, fmt.Errorf("start: %w", err)
 	}
 	defer func() {
 		if err != nil {
-			_ = cmd.Kill(r.exec)
+			_ = cmd.Kill()
 		}
 	}()
 
@@ -126,7 +126,7 @@ func (r *Repository) MakeTree(ctx context.Context, ents iter.Seq2[TreeEntry, err
 		return ZeroHash, numEnts, fmt.Errorf("close: %w", err)
 	}
 
-	if err := cmd.Wait(r.exec); err != nil {
+	if err := cmd.Wait(); err != nil {
 		return ZeroHash, numEnts, fmt.Errorf("wait: %w", err)
 	}
 
@@ -164,7 +164,7 @@ func (r *Repository) ListTree(
 
 	return func(yield func(TreeEntry, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
-		for line, err := range cmd.Scan(r.exec, scanutil.SplitNull) {
+		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(TreeEntry{}, fmt.Errorf("git ls-tree: %w", err))
 				return

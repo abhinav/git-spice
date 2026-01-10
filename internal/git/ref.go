@@ -95,5 +95,5 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	if req.OldHash != "" {
 		args = append(args, string(req.OldHash))
 	}
-	return r.gitCmd(ctx, args...).Run(r.exec)
+	return r.gitCmd(ctx, args...).Run()
 }

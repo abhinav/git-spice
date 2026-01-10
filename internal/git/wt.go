@@ -9,6 +9,7 @@ import (
 
 	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // Worktree is a checkout of a Git repository at a specific path.
@@ -33,8 +34,8 @@ func newWorktree(gitDir, rootDir string, repo *Repository, log *silog.Logger, ex
 	}
 }
 
-func (w *Worktree) gitCmd(ctx context.Context, args ...string) *gitCmd {
-	return newGitCmd(ctx, w.log, args...).Dir(w.rootDir)
+func (w *Worktree) gitCmd(ctx context.Context, args ...string) *xec.Cmd {
+	return newGitCmd(ctx, w.log, w.exec, args...).WithDir(w.rootDir)
 }
 
 // RootDir returns the absolute path to the root directory of the worktree.
@@ -50,8 +51,8 @@ func (w *Worktree) Repository() *Repository {
 // OpenWorktree opens a worktree of this repository at the given directory.
 func (r *Repository) OpenWorktree(ctx context.Context, dir string) (*Worktree, error) {
 	out, err := r.gitCmd(ctx, "rev-parse", "--show-toplevel", "--absolute-git-dir").
-		Dir(dir).
-		OutputString(r.exec)
+		WithDir(dir).
+		OutputChomp()
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +92,7 @@ type WorktreeListItem struct {
 func (r *Repository) Worktrees(ctx context.Context) iter.Seq2[*WorktreeListItem, error] {
 	return func(yield func(*WorktreeListItem, error) bool) {
 		var item *WorktreeListItem
-		for line, err := range r.gitCmd(ctx, "worktree", "list", "--porcelain", "-z").Scan(r.exec, scanutil.SplitNull) {
+		for line, err := range r.gitCmd(ctx, "worktree", "list", "--porcelain", "-z").Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(nil, fmt.Errorf("worktree list: %w", err))
 				return

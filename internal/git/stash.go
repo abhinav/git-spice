@@ -18,7 +18,7 @@ func (w *Worktree) StashCreate(ctx context.Context, message string) (Hash, error
 		args = append(args, message)
 	}
 
-	out, err := w.gitCmd(ctx, args...).OutputString(w.exec)
+	out, err := w.gitCmd(ctx, args...).OutputChomp()
 	if err != nil {
 		return ZeroHash, fmt.Errorf("stash create: %w", err)
 	}
@@ -38,7 +38,7 @@ func (w *Worktree) StashStore(ctx context.Context, stashHash Hash, message strin
 	}
 	args = append(args, stashHash.String())
 
-	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("stash store: %w", err)
 	}
 
@@ -54,7 +54,7 @@ func (w *Worktree) StashApply(ctx context.Context, stash string) error {
 		args = append(args, stash)
 	}
 
-	if err := w.gitCmd(ctx, args...).CaptureStdout().Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).CaptureStdout().Run(); err != nil {
 		return fmt.Errorf("stash apply: %w", err)
 	}
 
