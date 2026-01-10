@@ -62,7 +62,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 
 	return func(yield func(LocalBranch, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
-		for bs, err := range cmd.ScanLines(r.exec) {
+		for bs, err := range cmd.Lines() {
 			if err != nil {
 				yield(LocalBranch{}, fmt.Errorf("git for-each-ref: %w", err))
 				return
@@ -123,7 +123,7 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 	if req.Head != "" {
 		args = append(args, req.Head)
 	}
-	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+	if err := r.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -132,7 +132,7 @@ func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) 
 // BranchExists reports whether a branch with the given name exists.
 func (r *Repository) BranchExists(ctx context.Context, branch string) bool {
 	return r.gitCmd(ctx, "rev-parse", "--verify", "--quiet", "refs/heads/"+branch).
-		Run(r.exec) == nil
+		Run() == nil
 }
 
 // BranchDeleteOptions specifies options for deleting a branch.
@@ -165,7 +165,7 @@ func (r *Repository) DeleteBranch(
 	}
 	args = append(args, branch)
 
-	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+	if err := r.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -185,7 +185,7 @@ func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) 
 	r.log.Debug("Renaming branch", "old", req.OldName, "new", req.NewName)
 
 	args := []string{"branch", "--move", req.OldName, req.NewName}
-	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+	if err := r.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -201,7 +201,7 @@ func (r *Repository) BranchUpstream(ctx context.Context, branch string) (string,
 		"--quiet",
 		"--end-of-options",
 		branch+"@{upstream}",
-	).OutputString(r.exec)
+	).OutputChomp()
 	if err != nil {
 		return "", ErrNotExist
 	}
@@ -226,7 +226,7 @@ func (r *Repository) SetBranchUpstream(
 	}
 	args = append(args, branch)
 
-	if err := r.gitCmd(ctx, args...).Run(r.exec); err != nil {
+	if err := r.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil

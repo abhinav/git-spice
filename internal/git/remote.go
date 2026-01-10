@@ -17,7 +17,7 @@ func (r *Repository) ListRemotes(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("pipe stdout: %w", err)
 	}
 
-	if err := cmd.Start(r.exec); err != nil {
+	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start: %w", err)
 	}
 
@@ -30,7 +30,7 @@ func (r *Repository) ListRemotes(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("scan: %w", err)
 	}
 
-	if err := cmd.Wait(r.exec); err != nil {
+	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("git remote: %w", err)
 	}
 
@@ -39,7 +39,7 @@ func (r *Repository) ListRemotes(ctx context.Context) ([]string, error) {
 
 // RemoteURL reports the URL of a known Git remote.
 func (r *Repository) RemoteURL(ctx context.Context, remote string) (string, error) {
-	url, err := r.gitCmd(ctx, "remote", "get-url", remote).OutputString(r.exec)
+	url, err := r.gitCmd(ctx, "remote", "get-url", remote).OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("remote get-url: %w", err)
 	}
@@ -51,7 +51,7 @@ func (r *Repository) RemoteURL(ctx context.Context, remote string) (string, erro
 func (r *Repository) RemoteDefaultBranch(ctx context.Context, remote string) (string, error) {
 	ref, err := r.gitCmd(
 		ctx, "symbolic-ref", "--short", "refs/remotes/"+remote+"/HEAD").
-		OutputString(r.exec)
+		OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("symbolic-ref: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *Repository) RemoteDefaultBranch(ctx context.Context, remote string) (st
 func (r *Repository) RemoteFetchRefspecs(ctx context.Context, remote string) ([]Refspec, error) {
 	output, err := r.gitCmd(
 		ctx, "config", "--get-all", "remote."+remote+".fetch").
-		OutputString(r.exec)
+		OutputChomp()
 	if err != nil {
 		return nil, fmt.Errorf("config get-all remote.%s.fetch: %w", remote, err)
 	}
@@ -124,7 +124,7 @@ func (r *Repository) ListRemoteRefs(
 	return func(yield func(RemoteRef, error) bool) {
 		cmd := r.gitCmd(ctx, args...)
 
-		for bs, err := range cmd.ScanLines(r.exec) {
+		for bs, err := range cmd.Lines() {
 			if err != nil {
 				yield(RemoteRef{}, fmt.Errorf("git ls-remote: %w", err))
 				return

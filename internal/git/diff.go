@@ -44,7 +44,7 @@ func (w *Worktree) DiffWork(ctx context.Context) iter.Seq2[FileStatus, error] {
 		cmd := w.gitCmd(ctx, "diff-files", "--name-status", "-z")
 		var status string
 		var expectingPath bool
-		for line, err := range cmd.Scan(w.exec, scanutil.SplitNull) {
+		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(FileStatus{}, fmt.Errorf("git diff-files: %w", err))
 				return
@@ -81,7 +81,7 @@ func (w *Worktree) DiffIndex(ctx context.Context, treeish string) ([]FileStatus,
 		return nil, fmt.Errorf("pipe: %w", err)
 	}
 
-	if err := cmd.Start(w.exec); err != nil {
+	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start: %w", err)
 	}
 
@@ -90,7 +90,7 @@ func (w *Worktree) DiffIndex(ctx context.Context, treeish string) ([]FileStatus,
 		return nil, fmt.Errorf("parse: %w", err)
 	}
 
-	if err := cmd.Wait(w.exec); err != nil {
+	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("diff-index: %w", err)
 	}
 
@@ -104,7 +104,7 @@ func (r *Repository) DiffTree(ctx context.Context, treeish1, treeish2 string) it
 		cmd := r.gitCmd(ctx, "diff-tree", "--name-status", "-z", treeish1, treeish2)
 		var status string
 		var expectingPath bool
-		for line, err := range cmd.Scan(r.exec, scanutil.SplitNull) {
+		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(FileStatus{}, fmt.Errorf("git diff-tree: %w", err))
 				return

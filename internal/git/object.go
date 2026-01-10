@@ -30,8 +30,8 @@ func (r *Repository) ReadObject(ctx context.Context, typ Type, hash Hash, dst io
 	must.NotBeBlankf(string(typ), "object type must not be blank")
 	must.NotBeBlankf(string(hash), "object hash must not be blank")
 
-	cmd := r.gitCmd(ctx, "cat-file", string(typ), hash.String()).Stdout(dst)
-	if err := cmd.Run(r.exec); err != nil {
+	cmd := r.gitCmd(ctx, "cat-file", string(typ), hash.String()).WithStdout(dst)
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("cat-file: %w", err)
 	}
 	return nil
@@ -42,8 +42,8 @@ func (r *Repository) ReadObject(ctx context.Context, typ Type, hash Hash, dst io
 func (r *Repository) WriteObject(ctx context.Context, typ Type, src io.Reader) (Hash, error) {
 	must.NotBeBlankf(string(typ), "object type must not be blank")
 
-	cmd := r.gitCmd(ctx, "hash-object", "-w", "--stdin", "-t", string(typ)).Stdin(src)
-	out, err := cmd.OutputString(r.exec)
+	cmd := r.gitCmd(ctx, "hash-object", "-w", "--stdin", "-t", string(typ)).WithStdin(src)
+	out, err := cmd.OutputChomp()
 	if err != nil {
 		return ZeroHash, fmt.Errorf("hash-object: %w", err)
 	}

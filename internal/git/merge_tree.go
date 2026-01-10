@@ -114,9 +114,9 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 	}
 	_, _ = fmt.Fprintf(&stdin, "%v %v\n", req.Branch1, req.Branch2)
 
-	cmd := r.gitCmd(ctx, args...).StdinString(stdin.String())
+	cmd := r.gitCmd(ctx, args...).WithStdinString(stdin.String())
 	if req.conflictStyle != "" {
-		cmd = cmd.WithConfig(extraConfig{MergeConflictStyle: req.conflictStyle})
+		cmd = (&extraConfig{MergeConflictStyle: req.conflictStyle}).WithArgs(cmd)
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -124,7 +124,7 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 		return "", fmt.Errorf("create stdout pipe: %w", err)
 	}
 
-	if err := cmd.Start(r.exec); err != nil {
+	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start git-merge-tree: %w", err)
 	}
 
@@ -136,7 +136,7 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 		return "", fmt.Errorf("expected one result from git-merge-tree, got %d", len(outputs))
 	}
 
-	waitErr := cmd.Wait(r.exec) // will use below
+	waitErr := cmd.Wait() // will use below
 	if waitErr != nil {
 		waitErr = fmt.Errorf("git merge-tree: %w", err)
 	}

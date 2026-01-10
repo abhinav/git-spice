@@ -36,7 +36,7 @@ func (w *Worktree) CheckoutFiles(ctx context.Context, req *CheckoutFilesRequest)
 
 	args = append(args, "--")
 	args = append(args, req.Pathspecs...)
-	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil

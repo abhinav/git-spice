@@ -28,7 +28,7 @@ func (w *Worktree) ListFilesPaths(ctx context.Context, opts *ListFilesOptions) i
 	shown := make(map[string]struct{})
 	return func(yield func(string, error) bool) {
 		cmd := w.gitCmd(ctx, args...)
-		for line, err := range cmd.Scan(w.exec, scanutil.SplitNull) {
+		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield("", fmt.Errorf("git ls-files: %w", err))
 				continue
@@ -52,7 +52,7 @@ func (w *Worktree) ListFilesPaths(ctx context.Context, opts *ListFilesOptions) i
 func (w *Worktree) ListUntrackedFiles(ctx context.Context) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
 		cmd := w.gitCmd(ctx, "ls-files", "-z", "--others", "--exclude-standard")
-		for line, err := range cmd.Scan(w.exec, scanutil.SplitNull) {
+		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield("", fmt.Errorf("git ls-files: %w", err))
 				continue

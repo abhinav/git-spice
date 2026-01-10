@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // InitOptions configures the behavior of Init.
@@ -44,11 +45,11 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 	if opts.Log != nil {
 		opts.Log.Debug("Initializing repository", "path", dir)
 	}
-	initCmd := newGitCmd(ctx, opts.Log,
+	initCmd := newGitCmd(ctx, opts.Log, opts.exec,
 		"init",
 		"--initial-branch="+opts.Branch,
-	).Dir(dir)
-	if err := initCmd.Run(opts.exec); err != nil {
+	).WithDir(dir)
+	if err := initCmd.Run(); err != nil {
 		return nil, fmt.Errorf("git init: %w", err)
 	}
 
@@ -76,13 +77,13 @@ func OpenWorktree(ctx context.Context, dir string, opts OpenOptions) (*Worktree,
 		opts.Log = silog.Nop()
 	}
 
-	out, err := newGitCmd(ctx, opts.Log,
+	out, err := newGitCmd(ctx, opts.Log, opts.exec,
 		"rev-parse",
 		"--path-format=absolute",
 		"--show-toplevel",
 		"--git-common-dir",
 		"--git-dir",
-	).Dir(dir).OutputString(opts.exec)
+	).WithDir(dir).OutputChomp()
 	if err != nil {
 		return nil, err
 	}
@@ -111,11 +112,11 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		opts.Log = silog.Nop()
 	}
 
-	gitDir, err := newGitCmd(ctx, opts.Log,
+	gitDir, err := newGitCmd(ctx, opts.Log, opts.exec,
 		"rev-parse",
 		"--path-format=absolute",
 		"--git-common-dir",
-	).Dir(dir).OutputString(opts.exec)
+	).WithDir(dir).OutputChomp()
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +141,8 @@ func Clone(ctx context.Context, url, dir string, opts CloneOptions) (*Worktree, 
 	if opts.Log != nil {
 		opts.Log.Debug("Cloning repository", "url", url, "destination", dir)
 	}
-	cloneCmd := newGitCmd(ctx, opts.Log, "clone", url, dir)
-	if err := cloneCmd.Run(opts.exec); err != nil {
+	cloneCmd := newGitCmd(ctx, opts.Log, opts.exec, "clone", url, dir)
+	if err := cloneCmd.Run(); err != nil {
 		return nil, fmt.Errorf("git clone: %w", err)
 	}
 
@@ -175,6 +176,6 @@ func (r *Repository) WithLogger(log *silog.Logger) *Repository {
 
 // gitCmd returns a gitCmd that will run
 // with the repository's root as the working directory.
-func (r *Repository) gitCmd(ctx context.Context, args ...string) *gitCmd {
-	return newGitCmd(ctx, r.log, args...).Dir(r.gitDir)
+func (r *Repository) gitCmd(ctx context.Context, args ...string) *xec.Cmd {
+	return newGitCmd(ctx, r.log, r.exec, args...).WithDir(r.gitDir)
 }

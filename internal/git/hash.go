@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // ErrNotExist is returned when a Git object does not exist.
@@ -67,7 +69,7 @@ func (r *Repository) HashAt(ctx context.Context, treeish, path string) (Hash, er
 // ForkPoint reports the point at which b diverged from a.
 // See man git-merge-base for more information.
 func (r *Repository) ForkPoint(ctx context.Context, a, b string) (Hash, error) {
-	s, err := r.gitCmd(ctx, "merge-base", "--fork-point", a, b).OutputString(r.exec)
+	s, err := r.gitCmd(ctx, "merge-base", "--fork-point", a, b).OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("merge-base: %w", err)
 	}
@@ -76,7 +78,7 @@ func (r *Repository) ForkPoint(ctx context.Context, a, b string) (Hash, error) {
 
 // MergeBase reports the common ancestor of a and b.
 func (r *Repository) MergeBase(ctx context.Context, a, b string) (Hash, error) {
-	s, err := r.gitCmd(ctx, "merge-base", a, b).OutputString(r.exec)
+	s, err := r.gitCmd(ctx, "merge-base", a, b).OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("merge-base: %w", err)
 	}
@@ -87,18 +89,18 @@ func (r *Repository) MergeBase(ctx context.Context, a, b string) (Hash, error) {
 func (r *Repository) IsAncestor(ctx context.Context, a, b Hash) bool {
 	return r.gitCmd(ctx,
 		"merge-base", "--is-ancestor", string(a), string(b),
-	).Run(r.exec) == nil
+	).Run() == nil
 }
 
 func (r *Repository) revParse(ctx context.Context, ref string) (Hash, error) {
-	out, err := r.revParseCmd(ctx, ref).OutputString(r.exec)
+	out, err := r.revParseCmd(ctx, ref).OutputChomp()
 	if err != nil {
 		return "", ErrNotExist
 	}
 	return Hash(out), nil
 }
 
-func (r *Repository) revParseCmd(ctx context.Context, ref string) *gitCmd {
+func (r *Repository) revParseCmd(ctx context.Context, ref string) *xec.Cmd {
 	return r.gitCmd(ctx, "rev-parse",
 		"--verify",         // fail if the object does not exist
 		"--quiet",          // no output if object does not exist

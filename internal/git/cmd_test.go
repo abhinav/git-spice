@@ -17,9 +17,9 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("DefaultPrefixNoCommand", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, "--unknown-flag").
-			Dir(t.TempDir()).
-			Run(_realExec)
+		_ = newGitCmd(t.Context(), log, _realExec, "--unknown-flag").
+			WithDir(t.TempDir()).
+			Run()
 
 		assert.Contains(t, logBuffer.String(), " git: ")
 	})
@@ -27,9 +27,9 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("DefaultPrefixCommand", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, "unknown-cmd").
-			Dir(t.TempDir()).
-			Run(_realExec)
+		_ = newGitCmd(t.Context(), log, _realExec, "unknown-cmd").
+			WithDir(t.TempDir()).
+			Run()
 
 		assert.Contains(t, logBuffer.String(), " git unknown-cmd: ")
 	})
@@ -37,10 +37,10 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	t.Run("LogPrefixAfterwards", func(t *testing.T) {
 		defer logBuffer.Reset()
 
-		_ = newGitCmd(t.Context(), log, "whatever").
-			Dir(t.TempDir()).
-			LogPrefix("different").
-			Run(_realExec)
+		_ = newGitCmd(t.Context(), log, _realExec, "whatever").
+			WithDir(t.TempDir()).
+			WithLogPrefix("different").
+			Run()
 
 		assert.Contains(t, logBuffer.String(), " different: ")
 	})
