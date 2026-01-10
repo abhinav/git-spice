@@ -18,8 +18,6 @@ type execer = xec.Execer
 
 var _realExec = xec.DefaultExecer
 
-//go:generate mockgen -destination=mock_cmd_test.go -package=git -mock_names=execer=MockExecer -write_package_comment=false -typed . execer
-
 type extraConfig struct {
 	Editor string // core.editor
 

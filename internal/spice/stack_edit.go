@@ -11,8 +11,8 @@ import (
 	"os"
 	"slices"
 
-	"go.abhg.dev/gs/internal/execedit"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // ErrStackEditAborted is returned when the user requests
@@ -107,7 +107,7 @@ func editStackFile(editor string, branches []string) ([]string, error) {
 		return nil, err
 	}
 
-	editCmd := execedit.Command(editor, branchesFile)
+	editCmd := xec.EditCommand(editor, branchesFile)
 	if err := editCmd.Run(); err != nil {
 		return nil, fmt.Errorf("run editor: %w", err)
 	}

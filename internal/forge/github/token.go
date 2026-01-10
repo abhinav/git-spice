@@ -1,10 +1,11 @@
 package github
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"go.abhg.dev/gs/internal/xec"
 	"golang.org/x/oauth2"
 )
 
@@ -13,17 +14,14 @@ import (
 //
 // This is not super safe and we should probably nuke it.
 type CLITokenSource struct {
-	cmdOutput func(*exec.Cmd) ([]byte, error) // for testing
+	execer xec.Execer
 }
 
 // Token returns an oauth2 token using the GitHub CLI.
 func (ts *CLITokenSource) Token() (*oauth2.Token, error) {
-	cmdOutput := (*exec.Cmd).Output
-	if ts.cmdOutput != nil {
-		cmdOutput = ts.cmdOutput
-	}
-
-	bs, err := cmdOutput(exec.Command("gh", "auth", "token"))
+	ctx := context.Background()
+	cmd := xec.Command(ctx, nil, "gh", "auth", "token").WithExecer(ts.execer)
+	bs, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("get token from gh CLI: %w", err)
 	}

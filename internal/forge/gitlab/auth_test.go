@@ -20,7 +20,9 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
+	"go.abhg.dev/gs/internal/xec/xectest"
 	"go.abhg.dev/testing/stub"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/oauth2"
 )
 
@@ -345,8 +347,13 @@ func TestGLabCLI(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	execer := xectest.NewMockExecer(gomock.NewController(t))
+	glCLI.execer = execer
+
 	t.Run("Status/Okay", func(t *testing.T) {
-		glCLI.runCmd = func(*exec.Cmd) error { return nil }
+		execer.EXPECT().
+			Run(gomock.Any()).
+			Return(nil)
 
 		ok, err := glCLI.Status(t.Context(), "example.com")
 		require.NoError(t, err)
@@ -354,13 +361,15 @@ func TestGLabCLI(t *testing.T) {
 	})
 
 	t.Run("Token/Okay", func(t *testing.T) {
-		glCLI.runCmd = func(cmd *exec.Cmd) error {
-			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
-			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
-			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
-			_, _ = io.WriteString(cmd.Stderr, "   ✓ Token: 1234567890abcdef\n")
-			return nil
-		}
+		execer.EXPECT().
+			Run(gomock.Any()).
+			DoAndReturn(func(cmd *exec.Cmd) error {
+				_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+				_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+				_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+				_, _ = io.WriteString(cmd.Stderr, "   ✓ Token: 1234567890abcdef\n")
+				return nil
+			})
 
 		token, err := glCLI.Token(t.Context(), "example.com")
 		require.NoError(t, err)
@@ -368,12 +377,14 @@ func TestGLabCLI(t *testing.T) {
 	})
 
 	t.Run("Token/NoToken", func(t *testing.T) {
-		glCLI.runCmd = func(cmd *exec.Cmd) error {
-			_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
-			_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
-			_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
-			return nil
-		}
+		execer.EXPECT().
+			Run(gomock.Any()).
+			DoAndReturn(func(cmd *exec.Cmd) error {
+				_, _ = io.WriteString(cmd.Stderr, "gitlab.com\n")
+				_, _ = io.WriteString(cmd.Stderr, "   ✓ Logged in to gitlab.com\n")
+				_, _ = io.WriteString(cmd.Stderr, "   ✓ Git operations will use ssh protocol\n")
+				return nil
+			})
 
 		_, err := glCLI.Token(t.Context(), "example.com")
 		require.Error(t, err)

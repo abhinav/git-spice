@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"go.abhg.dev/gs/internal/execedit"
 	"go.abhg.dev/gs/internal/osutil"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // OpenEditorKeyMap defines the key bindings for [OpenEditor].
@@ -209,7 +209,7 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 				return tea.Quit
 			}
 
-			cmd := execedit.Command(a.Editor.Command, tmpFile)
+			cmd := xec.EditCommand(a.Editor.Command, tmpFile)
 			return tea.ExecProcess(cmd, func(err error) tea.Msg {
 				defer func() { _ = os.Remove(tmpFile) }()
 

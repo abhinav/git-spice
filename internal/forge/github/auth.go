@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -14,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/xec"
 	"golang.org/x/oauth2"
 )
 
@@ -191,7 +191,7 @@ var _authenticationMethods = []struct {
 		Build: func(authenticatorOptions) authenticator {
 			// Offer this option only if the user
 			// has the GH CLI installed.
-			ghExe, err := exec.LookPath("gh")
+			ghExe, err := xec.LookPath("gh")
 			if err != nil {
 				return nil
 			}
@@ -361,18 +361,14 @@ func (a *PATAuthenticator) Authenticate(_ context.Context, view ui.View) (*Authe
 type CLIAuthenticator struct {
 	GH string // required
 
-	runCmd func(*exec.Cmd) error
+	execer xec.Execer
 }
 
 // Authenticate checks if the user is authenticated with GitHub CLI.
-func (a *CLIAuthenticator) Authenticate(context.Context, ui.View) (*AuthenticationToken, error) {
-	runCmd := (*exec.Cmd).Run
-	if a.runCmd != nil {
-		runCmd = a.runCmd
-	}
-
-	if err := runCmd(exec.Command(a.GH, "auth", "token")); err != nil {
-		var exitErr *exec.ExitError
+func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
+	cmd := xec.Command(ctx, nil, a.GH, "auth", "token").WithExecer(a.execer)
+	if err := cmd.Run(); err != nil {
+		var exitErr *xec.ExitError
 		if errors.As(err, &exitErr) {
 			return nil, errors.Join(
 				errors.New("gh is not authenticated"),
