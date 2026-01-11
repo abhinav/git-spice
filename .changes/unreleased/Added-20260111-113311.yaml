@@ -1,0 +1,7 @@
+kind: Added
+body: >-
+  git-spice now sets the `GIT_SPICE=1` environment variable
+  for all commands it spawns, including git, editors, etc.
+  This can be used, e.g., in git hooks to detect when they are
+  being run in the context of git-spice.
+time: 2026-01-11T11:33:11.036339-08:00

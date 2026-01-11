@@ -82,6 +82,10 @@ func helpPrinter(_ kong.HelpOptions, ctx *kong.Context) error {
 		w.Print("Aliases can be combined to form shorthands for commands. For example:")
 		w.Printf("  %s bc => %s branch create", ctx.Model.Name, ctx.Model.Name)
 		w.Printf("  %s cc => %s commit create", ctx.Model.Name, ctx.Model.Name)
+
+		w.Print("")
+		w.Print("Environment variables:")
+		w.Print("  GIT_SPICE=1    Set for all commands spawned by git-spice")
 	}
 
 	return nil

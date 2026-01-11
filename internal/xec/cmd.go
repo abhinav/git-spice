@@ -19,6 +19,14 @@
 //
 //   - use Stderr to redirect stderr elsewhere
 //   - use WithLogPrefix to change the prefix for log messages
+//
+// # Environment variables
+//
+// All commands spawned via this package
+// always receive the environment variable "GIT_SPICE=1".
+//
+// Additional environment variables may be set
+// with the AppendEnv method.
 package xec
 
 import (
@@ -35,6 +43,8 @@ import (
 
 	"go.abhg.dev/gs/internal/silog"
 )
+
+const _gitSpiceEnv = "GIT_SPICE=1"
 
 var _osEnviron = os.Environ
 
@@ -63,7 +73,7 @@ func Command(ctx context.Context, log *silog.Logger, name string, args ...string
 	stderr, wrap := outputLogWriter("stderr", logger)
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stderr = stderr
-	cmd.Env = _osEnviron()
+	cmd.Env = append(_osEnviron(), _gitSpiceEnv)
 	return &Cmd{
 		cmd:     cmd,
 		log:     logger,

@@ -80,3 +80,6 @@ Run "gs <command> --help" for more information on a command.
 Aliases can be combined to form shorthands for commands. For example:
   gs bc => gs branch create
   gs cc => gs commit create
+
+Environment variables:
+  GIT_SPICE=1    Set for all commands spawned by git-spice

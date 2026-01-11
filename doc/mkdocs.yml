@@ -67,6 +67,10 @@ nav:
     - start/install.md
     - start/stack.md
     - start/submit.md
+  - Setting up: &setup
+    - setup/index.md
+    - setup/auth.md
+    - setup/shell.md
   - User Guide: &user-guide
     - guide/index.md
     - guide/concepts.md
@@ -75,10 +79,6 @@ nav:
     - guide/limits.md
     - guide/troubleshooting.md
     - guide/internals.md
-  - Setting up: &setup
-    - setup/index.md
-    - setup/auth.md
-    - setup/shell.md
   - CLI: &cli
     - cli/index.md
     - cli/reference.md

@@ -1,6 +1,9 @@
 package xec
 
-import "os/exec"
+import (
+	"os"
+	"os/exec"
+)
 
 // EditCommand constructs a command to open the editor
 // with the given editor command.
@@ -16,5 +19,6 @@ func EditCommand(editCmd string, args ...string) *exec.Cmd {
 		args = append([]string{"-c", editCmd + ` "$@"`, "--"}, args...)
 		cmd = exec.Command("sh", args...)
 	}
+	cmd.Env = append(os.Environ(), _gitSpiceEnv)
 	return cmd
 }
