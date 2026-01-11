@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // RebaseInterruptKind specifies the kind of rebase interruption.
@@ -188,7 +188,7 @@ func (w *Worktree) RebaseContinue(ctx context.Context, opts *RebaseContinueOptio
 
 func (w *Worktree) handleRebaseError(ctx context.Context, err error) error {
 	originalErr := err
-	if exitErr := new(exec.ExitError); !errors.As(err, &exitErr) {
+	if exitErr := new(xec.ExitError); !errors.As(err, &exitErr) {
 		return fmt.Errorf("rebase: %w", err)
 	}
 

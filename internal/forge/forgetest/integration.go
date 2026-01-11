@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/xec"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
@@ -1199,10 +1199,10 @@ func newTestRepository(t *testing.T, remoteURL string) *testRepository {
 	require.True(t, Update(), "testRepository only available in update mode")
 
 	repoDir := t.TempDir()
-	cmd := exec.Command("git", "clone", remoteURL, repoDir)
 	output := t.Output()
-	cmd.Stdout = output
-	cmd.Stderr = output
+	cmd := xec.Command(t.Context(), silogtest.New(t), "git", "clone", remoteURL, repoDir).
+		WithStdout(output).
+		WithStderr(output)
 	require.NoError(t, cmd.Run(), "failed to clone repository")
 
 	ctx := t.Context()
@@ -1247,10 +1247,11 @@ func (r *testRepository) WriteFile(path string, lines ...string) {
 
 // AddAllAndCommit stages all changes and creates a commit.
 func (r *testRepository) AddAllAndCommit(message string) git.Hash {
-	cmd := exec.Command("git", "add", ".")
-	cmd.Dir = r.root
-	cmd.Stdout = r.t.Output()
-	cmd.Stderr = r.t.Output()
+	output := r.t.Output()
+	cmd := xec.Command(r.t.Context(), silogtest.New(r.t), "git", "add", ".").
+		WithDir(r.root).
+		WithStdout(output).
+		WithStderr(output)
 	require.NoError(r.t, cmd.Run(), "git add failed")
 
 	ctx := r.ctx()

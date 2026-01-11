@@ -15,9 +15,9 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/must"
-	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/log/silog"
 )
 
@@ -84,9 +84,9 @@ func New(w io.Writer, opts *Options) *Logger {
 		}
 
 		if isTTY {
-			opts.Style = silog.DefaultStyle(ui.Renderer)
+			opts.Style = silog.DefaultStyle(lipgloss.DefaultRenderer())
 		} else {
-			opts.Style = silog.PlainStyle(ui.Renderer)
+			opts.Style = silog.PlainStyle(lipgloss.DefaultRenderer())
 		}
 	}
 

@@ -1,13 +1,13 @@
 package shamhub
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // ListChanges reports all changes known to the forge.
@@ -210,13 +210,9 @@ type ChangeBranch struct {
 }
 
 func (sh *ShamHub) toChangeBranch(b *shamBranch) (*ChangeBranch, error) {
-	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-	defer flush()
-
-	cmd := exec.Command(sh.gitExe, "rev-parse", b.Name)
-	cmd.Dir = sh.repoDir(b.Owner, b.Repo)
-	cmd.Stderr = logw
-	out, err := cmd.Output()
+	out, err := xec.Command(context.Background(), sh.log, sh.gitExe, "rev-parse", b.Name).
+		WithDir(sh.repoDir(b.Owner, b.Repo)).
+		Output()
 	if err != nil {
 		return nil, fmt.Errorf("get SHA for %v/%v:%v: %w", b.Owner, b.Repo, b.Name, err)
 	}
