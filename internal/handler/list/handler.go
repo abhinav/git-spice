@@ -131,6 +131,10 @@ type BranchItem struct {
 	ChangeState forge.ChangeState // populated if RemoteRepository is available
 	PushStatus  *PushStatus       // only if IncludePushStatus is set
 
+	// Worktree is the absolute path to the worktree where this branch is checked out.
+	// Empty if the branch is not checked out.
+	Worktree string
+
 	// NeedsRestack indicates whether this branch needs to be restacked
 	// on top of its base branch.
 	NeedsRestack bool
@@ -156,7 +160,9 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	req.Options = cmp.Or(req.Options, &Options{})
 	log := h.Log
 
-	branchGraph, err := h.Service.BranchGraph(ctx, nil)
+	branchGraph, err := h.Service.BranchGraph(ctx, &spice.BranchGraphOptions{
+		IncludeWorktrees: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("load branch graph: %w", err)
 	}
@@ -230,7 +236,8 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				}
 
 				item := &BranchItem{
-					Name: branch.Name,
+					Name:     branch.Name,
+					Worktree: branchGraph.Worktree(branch.Name),
 				}
 
 				// NB:

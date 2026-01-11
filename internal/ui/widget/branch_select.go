@@ -3,6 +3,8 @@ package widget
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -78,6 +80,10 @@ type BranchTreeItem struct {
 	// It will be appended to the branch name.
 	ChangeID string
 
+	// Worktree is the absolute path to the worktree where this branch is checked out.
+	// Empty if the branch is not checked out.
+	Worktree string
+
 	// Base is the name of the branch this branch is on top of.
 	// This will be used to create a tree view of branches.
 	// Branches with no base are considered root branches.
@@ -95,13 +101,10 @@ type branchInfo struct {
 	Aboves     []int // indexes of branches in 'all' with this as base
 	Highlights []int // indexes of runes in Branch name to highlight
 	Visible    bool  // whether this branch is visible
-}
 
-func (b *branchInfo) displayText() string {
-	if b.ChangeID != "" {
-		return fmt.Sprintf("%s (%s)", b.Branch, b.ChangeID)
-	}
-	return b.Branch
+	// DisplayText is the text displayed for this branch.
+	// This is also used for fuzzy searching.
+	DisplayText string
 }
 
 // BranchTreeSelect is a prompt that allows selecting a branch
@@ -124,10 +127,11 @@ type BranchTreeSelect struct {
 	filter []rune // filter text
 	err    error
 
-	title    string
-	desc     string
-	value    *string // selected branch name
-	accepted bool    // whether the current selection has been accepted
+	title           string
+	desc            string
+	value           *string // selected branch name
+	accepted        bool    // whether the current selection has been accepted
+	currentWorktree string  // absolute path to current worktree
 }
 
 var _ ui.Field = (*BranchTreeSelect)(nil)
@@ -234,6 +238,32 @@ func (b *BranchTreeSelect) Init() tea.Cmd {
 		base.Aboves = append(base.Aboves, bi.Index)
 	}
 
+	// Compute the display text for each branch.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "" // if no home directory, we won't substitute paths
+	}
+	for _, bi := range b.all {
+		var display strings.Builder
+		display.WriteString(bi.Branch)
+
+		if bi.ChangeID != "" {
+			fmt.Fprintf(&display, " (%s)", bi.ChangeID)
+		}
+		if wt := bi.Worktree; wt != "" && wt != b.currentWorktree {
+			// If the path is relative to the user's home directory
+			// use "~/$rel" instead.
+			rel, err := filepath.Rel(home, wt)
+			if err == nil && filepath.IsLocal(rel) {
+				wt = filepath.Join("~", rel)
+			}
+
+			fmt.Fprintf(&display, " [wt: %s]", wt)
+		}
+
+		bi.DisplayText = display.String()
+	}
+
 	roots := make([]int, 0, len(rootSet))
 	for idx := range rootSet {
 		roots = append(roots, idx)
@@ -268,6 +298,13 @@ func (b *BranchTreeSelect) Description() string {
 // WithDescription sets the description of the widget.
 func (b *BranchTreeSelect) WithDescription(description string) *BranchTreeSelect {
 	b.desc = description
+	return b
+}
+
+// WithCurrentWorktree sets the current worktree path.
+// Branches checked out in this worktree will not show a worktree indicator.
+func (b *BranchTreeSelect) WithCurrentWorktree(path string) *BranchTreeSelect {
+	b.currentWorktree = path
 	return b
 }
 
@@ -401,7 +438,7 @@ func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
 	if len(b.filter) == 0 {
 		return true
 	}
-	matches := fuzzy.Find(string(b.filter), []string{bi.displayText()})
+	matches := fuzzy.Find(string(b.filter), []string{bi.DisplayText})
 	if len(matches) == 0 {
 		return false
 	}
@@ -485,7 +522,7 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 
 			var o strings.Builder
 			lastRuneIdx := 0
-			label := []rune(bi.displayText())
+			label := []rune(bi.DisplayText)
 			for _, runeIdx := range highlights {
 				o.WriteString(nameStyle.Render(string(label[lastRuneIdx:runeIdx])))
 				o.WriteString(highlightStyle.Render(string(label[runeIdx])))

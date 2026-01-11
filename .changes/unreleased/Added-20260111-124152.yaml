@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  Branch listings including `gs log` commands
+  and commands that present a branch selection prompt,
+  all now show paths for branches checked out in other worktrees.
+time: 2026-01-11T12:41:52.899726-08:00

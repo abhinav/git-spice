@@ -8,6 +8,8 @@
 as 'Test <test@example.com>'
 at '2025-08-23T14:30:00Z'
 
+home .
+
 # setup main repo
 mkdir repo
 cd repo
@@ -45,6 +47,6 @@ feature content
 -- robot.golden --
 ===
 > Select a branch to checkout: 
-> ┏━□ feat1
+> ┏━□ feat1 [wt: ~/repo]
 > main ◀
 "feat1"

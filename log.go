@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -73,6 +75,8 @@ var (
 	_pushStatusStyle = ui.NewStyle().
 				Foreground(ui.Yellow).
 				Faint(true)
+
+	_worktreeStyle = ui.NewStyle().Faint(true)
 
 	_markerStyle = ui.NewStyle().
 			Foreground(ui.Yellow).
@@ -146,11 +150,13 @@ func (cmd *branchLogCmd) run(
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 		wantChangeState = cmd.CRStatus
+
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
 			ShowCRStatus:     wantChangeState,
 			PushStatusFormat: cmd.PushStatusFormat,
+			CurrentWorktree:  wt.RootDir(),
 		}
 	}
 
@@ -188,6 +194,7 @@ type graphLogPresenter struct {
 	ChangeFormat     changeFormat     // required
 	ShowCRStatus     bool             // required
 	PushStatusFormat pushStatusFormat // required
+	CurrentWorktree  string           // required
 }
 
 func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch string) error {
@@ -199,8 +206,13 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 		return fliptree.DefaultNodeMarker
 	}
 
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "" // if no home directory, we won't substitute paths
+	}
+
 	var s strings.Builder
-	err := fliptree.Write(&s, fliptree.Graph[*list.BranchItem]{
+	err = fliptree.Write(&s, fliptree.Graph[*list.BranchItem]{
 		Roots:  []int{res.TrunkIdx},
 		Values: res.Branches,
 		View: func(b *list.BranchItem) string {
@@ -241,6 +253,20 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 				}
 				crText.WriteString(")")
 				o.WriteString(crText.String())
+			}
+
+			// TODO: share this logic with branch_select.
+			if wt := b.Worktree; wt != "" && wt != p.CurrentWorktree {
+				// If the path is relative to the user's home directory
+				// use "~/$rel" instead.
+				rel, err := filepath.Rel(home, wt)
+				if err == nil && filepath.IsLocal(rel) {
+					wt = filepath.Join("~", rel)
+				}
+
+				o.WriteString(_worktreeStyle.Render(" [wt: "))
+				o.WriteString(_worktreeStyle.Render(wt))
+				o.WriteString(_worktreeStyle.Render("]"))
 			}
 
 			if b.NeedsRestack {
@@ -354,6 +380,8 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 			}
 		}
 
+		logBranch.Worktree = branch.Worktree
+
 		if err := enc.Encode(logBranch); err != nil {
 			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
 		}
@@ -392,6 +420,10 @@ type jsonLogBranch struct {
 	// This is unset if the branch has not been pushed
 	// from git-spice's perspective.
 	Push *jsonLogPushStatus `json:"push,omitempty"`
+
+	// Worktree is the absolute path to the worktree where this branch is checked out.
+	// This is unset if the branch is not checked out.
+	Worktree string `json:"worktree,omitempty"`
 }
 
 type jsonLogDown struct {

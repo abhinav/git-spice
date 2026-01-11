@@ -57,8 +57,9 @@ func (cmd *branchDeleteCmd) AfterApply(
 			Disabled: func(b git.LocalBranch) bool {
 				return b.Name == store.Trunk()
 			},
-			Default: currentBranch,
-			Title:   "Select a branch to delete",
+			Default:  currentBranch,
+			Worktree: wt.RootDir(),
+			Title:    "Select a branch to delete",
 		})
 		if err != nil {
 			return fmt.Errorf("select branch: %w", err)

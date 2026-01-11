@@ -1,7 +1,8 @@
 kind: Added
 body: >-
   git-spice now sets the `GIT_SPICE=1` environment variable
-  for all commands it spawns, including git, editors, etc.
-  This can be used, e.g., in git hooks to detect when they are
-  being run in the context of git-spice.
+  for most external commands it spawns, including editors and Git itself.
+  This may be used in, for example, Git hooks that need to detect
+  if they are being run as part of a git-spice operation.
+  For a demonstration of use, [see this recipe](https://abhinav.github.io/git-spice/recipes/#auto-track-branches-on-checkout).
 time: 2026-01-11T11:33:11.036339-08:00

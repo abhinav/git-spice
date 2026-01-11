@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -181,6 +182,18 @@ func TestScript(t *testing.T) {
 			},
 			"cmpenvJSON": cmdCmpenvJSON,
 			"shamhub":    shamhubCmd.Run,
+			"home": func(ts *testscript.TestScript, _ bool, args []string) {
+				if len(args) != 1 {
+					ts.Fatalf("usage: sethome <path>")
+				}
+
+				home := ts.MkAbs(args[0])
+				ts.Setenv("HOME", home)
+				ts.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+				if runtime.GOOS == "windows" {
+					ts.Setenv("USERPROFILE", home)
+				}
+			},
 		},
 	})
 }

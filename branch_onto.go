@@ -87,6 +87,7 @@ func (cmd *branchOntoCmd) AfterApply(
 				return b.Name == cmd.Branch
 			},
 			TrackedOnly: true,
+			Worktree:    wt.RootDir(),
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving %s onto another branch", cmd.Branch),

@@ -8,6 +8,8 @@
 as 'Test <test@example.com>'
 at '2025-10-18T10:00:00Z'
 
+home .
+
 # setup
 mkdir repo
 cd repo
@@ -51,7 +53,8 @@ stdout '^main$'
 
 # feat-2 needs to be restacked but its base is still main.
 gs ll -a
-cmp stderr $WORK/golden/ll-after-sync.txt
+[unix] cmp stderr $WORK/golden/ll-after-sync-unix.txt
+[windows] cmp stderr $WORK/golden/ll-after-sync-windows.txt
 git graph --branches
 cmp stdout $WORK/golden/graph-after-sync.txt
 
@@ -62,7 +65,8 @@ gs branch restack
 # feat-2 is now correctly stacked on top of main.
 cd ../repo
 gs ll -a
-cmp stderr $WORK/golden/ll-after-restack.txt
+[unix] cmp stderr $WORK/golden/ll-after-restack-unix.txt
+[windows] cmp stderr $WORK/golden/ll-after-restack-windows.txt
 git graph --branches
 cmp stdout $WORK/golden/graph-after-restack.txt
 
@@ -72,8 +76,12 @@ feat-1
 -- repo/feat2.txt --
 feat-2
 
--- golden/ll-after-sync.txt --
-┏━□ feat-2 (#2) (needs restack)
+-- golden/ll-after-sync-unix.txt --
+┏━□ feat-2 (#2) [wt: ~/feat-2] (needs restack)
+┃   7e23316 Add feat-2 (now)
+main ◀
+-- golden/ll-after-sync-windows.txt --
+┏━□ feat-2 (#2) [wt: ~\feat-2] (needs restack)
 ┃   7e23316 Add feat-2 (now)
 main ◀
 -- golden/graph-after-sync.txt --
@@ -85,8 +93,12 @@ main ◀
 * | 1f6ff6e Add feat-1
 |/  
 * c5c110d Initial commit
--- golden/ll-after-restack.txt --
-┏━□ feat-2 (#2) (needs push)
+-- golden/ll-after-restack-unix.txt --
+┏━□ feat-2 (#2) [wt: ~/feat-2] (needs push)
+┃   19505d8 Add feat-2 (now)
+main ◀
+-- golden/ll-after-restack-windows.txt --
+┏━□ feat-2 (#2) [wt: ~\feat-2] (needs push)
 ┃   19505d8 Add feat-2 (now)
 main ◀
 -- golden/graph-after-restack.txt --
