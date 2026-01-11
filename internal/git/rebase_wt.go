@@ -155,12 +155,12 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
 		silog.NonZero("upstream", req.Upstream),
 	)
 
-	cmd := w.gitCmd(ctx, args...).LogPrefix("git rebase")
+	cmd := w.gitCmd(ctx, args...).WithLogPrefix("git rebase")
 	if req.Interactive {
-		cmd.Stdin(os.Stdin).Stdout(os.Stdout).Stderr(os.Stderr)
+		cmd.WithStdin(os.Stdin).WithStdout(os.Stdout).WithStderr(os.Stderr)
 	}
 
-	if err := cmd.Run(w.exec); err != nil {
+	if err := cmd.Run(); err != nil {
 		return w.handleRebaseError(ctx, err)
 	}
 	return w.handleRebaseFinish(ctx)
@@ -176,11 +176,11 @@ type RebaseContinueOptions struct {
 // RebaseContinue continues an ongoing rebase operation.
 func (w *Worktree) RebaseContinue(ctx context.Context, opts *RebaseContinueOptions) error {
 	opts = cmp.Or(opts, &RebaseContinueOptions{})
-	cmd := w.gitCmd(ctx, "rebase", "--continue").Stdin(os.Stdin).Stdout(os.Stdout)
+	cmd := w.gitCmd(ctx, "rebase", "--continue").WithStdin(os.Stdin).WithStdout(os.Stdout)
 	if opts.Editor != "" {
-		cmd.WithConfig(extraConfig{Editor: opts.Editor})
+		cmd = (&extraConfig{Editor: opts.Editor}).WithArgs(cmd)
 	}
-	if err := cmd.Run(w.exec); err != nil {
+	if err := cmd.Run(); err != nil {
 		return w.handleRebaseError(ctx, err)
 	}
 	return w.handleRebaseFinish(ctx)
@@ -225,7 +225,7 @@ func (w *Worktree) handleRebaseFinish(ctx context.Context) error {
 
 // RebaseAbort aborts an ongoing rebase operation.
 func (w *Worktree) RebaseAbort(ctx context.Context) error {
-	if err := w.gitCmd(ctx, "rebase", "--abort").Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, "rebase", "--abort").Run(); err != nil {
 		return fmt.Errorf("rebase abort: %w", err)
 	}
 	return nil

@@ -99,10 +99,10 @@ func (w *Worktree) Reset(ctx context.Context, commit string, opts ResetOptions) 
 
 	cmd := w.gitCmd(ctx, args...)
 	if opts.Patch {
-		cmd.Stdin(os.Stdin)
-		cmd.Stdout(os.Stdout)
+		cmd.WithStdin(os.Stdin)
+		cmd.WithStdout(os.Stdout)
 	}
-	if err := cmd.Run(w.exec); err != nil {
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git reset: %w", err)
 	}
 

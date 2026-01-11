@@ -105,7 +105,7 @@ func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange,
 		cmd := r.gitCmd(ctx, args...)
 
 		var sawCommitHeader bool
-		for bs, err := range cmd.ScanLines(r.exec) {
+		for bs, err := range cmd.Lines() {
 			if err != nil {
 				yield("", fmt.Errorf("git rev-list: %w", err))
 				return
@@ -146,7 +146,7 @@ func (r *Repository) CountCommits(ctx context.Context, commits CommitRange) (int
 	args = append(args, "--count")
 
 	cmd := r.gitCmd(ctx, args...)
-	out, err := cmd.OutputString(r.exec)
+	out, err := cmd.OutputChomp()
 	if err != nil {
 		return 0, fmt.Errorf("rev-list: %w", err)
 	}

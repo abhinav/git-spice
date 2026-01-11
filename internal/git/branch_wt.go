@@ -15,7 +15,7 @@ var ErrDetachedHead = errors.New("in detached HEAD state")
 // It returns [ErrDetachedHead] if the repository is in detached HEAD state.
 func (w *Worktree) CurrentBranch(ctx context.Context) (string, error) {
 	name, err := w.gitCmd(ctx, "branch", "--show-current").
-		OutputString(w.exec)
+		OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("git rev-parse: %w", err)
 	}
@@ -38,7 +38,7 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 	if len(commitish) > 0 {
 		args = append(args, commitish)
 	}
-	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil
@@ -49,7 +49,7 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 func (w *Worktree) CheckoutBranch(ctx context.Context, branch string) error {
 	w.log.Debug("Checking out branch", "name", branch)
 
-	if err := w.gitCmd(ctx, "checkout", branch).Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, "checkout", branch).Run(); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil

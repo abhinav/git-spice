@@ -39,7 +39,7 @@ func (w *Worktree) Pull(ctx context.Context, opts PullOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	if err := w.gitCmd(ctx, args...).Run(w.exec); err != nil {
+	if err := w.gitCmd(ctx, args...).Run(); err != nil {
 		return fmt.Errorf("git pull: %w", err)
 	}
 

@@ -1,6 +1,10 @@
 package git
 
-import "context"
+import (
+	"context"
+
+	"go.abhg.dev/gs/internal/xec"
+)
 
 // Head reports the commit hash of HEAD.
 func (w *Worktree) Head(ctx context.Context) (Hash, error) {
@@ -15,13 +19,13 @@ func (w *Worktree) PeelToCommit(ctx context.Context, ref string) (Hash, error) {
 }
 
 func (w *Worktree) revParse(ctx context.Context, ref string) (Hash, error) {
-	out, err := w.revParseCmd(ctx, ref).OutputString(w.exec)
+	out, err := w.revParseCmd(ctx, ref).OutputChomp()
 	if err != nil {
 		return "", ErrNotExist
 	}
 	return Hash(out), nil
 }
 
-func (w *Worktree) revParseCmd(ctx context.Context, ref string) *gitCmd {
-	return w.repo.revParseCmd(ctx, ref).Dir(w.rootDir)
+func (w *Worktree) revParseCmd(ctx context.Context, ref string) *xec.Cmd {
+	return w.repo.revParseCmd(ctx, ref).WithDir(w.rootDir)
 }

@@ -91,8 +91,8 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 
 	cmd := r.gitCmd(ctx, args...).
 		AppendEnv(env...).
-		StdinString(req.Message)
-	out, err := cmd.OutputString(r.exec)
+		WithStdinString(req.Message)
+	out, err := cmd.OutputChomp()
 	if err != nil {
 		return ZeroHash, fmt.Errorf("commit-tree: %w", err)
 	}
@@ -150,7 +150,7 @@ func (r *Repository) ReadCommit(ctx context.Context, commitish string) (*CommitO
 			"%s%x00"+ // subject
 			"%b%x00", // body
 		commitish,
-	).OutputString(r.exec)
+	).OutputChomp()
 	if err != nil {
 		return nil, fmt.Errorf("git show: %w", err)
 	}
@@ -239,7 +239,7 @@ func (r *Repository) ReadCommit(ctx context.Context, commitish string) (*CommitO
 func (r *Repository) CommitSubject(ctx context.Context, commitish string) (string, error) {
 	out, err := r.gitCmd(ctx,
 		"show", "--no-patch", "--format=%s", commitish,
-	).OutputString(r.exec)
+	).OutputChomp()
 	if err != nil {
 		return "", fmt.Errorf("git log: %w", err)
 	}
@@ -276,7 +276,7 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 		return nil, fmt.Errorf("pipe: %w", err)
 	}
 
-	if err := cmd.Start(r.exec); err != nil {
+	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start rev-list: %w", err)
 	}
 
@@ -308,7 +308,7 @@ func (r *Repository) CommitMessageRange(ctx context.Context, start, stop string)
 		return nil, fmt.Errorf("scan: %w", err)
 	}
 
-	if err := cmd.Wait(r.exec); err != nil {
+	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("rev-list: %w", err)
 	}
 
@@ -327,7 +327,7 @@ func (r *Repository) CommitAheadBehind(ctx context.Context, upstream, head strin
 	//
 	// Reminder that left is "behind" because that's the number of commits
 	// in upstream but not in head.
-	str, err := r.gitCmd(ctx, "rev-list", "--count", "--left-right", upstream+"..."+head, "--").OutputString(r.exec)
+	str, err := r.gitCmd(ctx, "rev-list", "--count", "--left-right", upstream+"..."+head, "--").OutputChomp()
 	if err != nil {
 		return 0, 0, fmt.Errorf("rev-list: %w", err)
 	}
