@@ -17,6 +17,7 @@ linters:
     - gocritic    # general issues
     - intrange    # prefer "range N" over "x := 0; x < N; x++".
     - loggercheck # key-value pairs for structured logs
+    - depguard    # restrict usage of specified packages
     - makezero    # catch make([]T, N) used with append
     - musttag     # serialized structs must be tagged
     - nolintlint  # nolint rules
@@ -38,6 +39,15 @@ linters:
         # This is always a strings.Builder, and can't fail.
         - (go.abhg.dev/gs/internal/ui.Writer).WriteString
         - (go.abhg.dev/gs/internal/ui.Writer).Write
+
+    depguard:
+      rules:
+        no-os-exec:
+          files:
+            - "!$test"
+          deny:
+            - pkg: "os/exec$"
+              desc: "Use internal/xec instead of os/exec"
 
     govet:
       enable:
@@ -70,6 +80,15 @@ linters:
 
       - linters: [musttag]
         path: _test.go$
+
+      - linters: [depguard]
+        text: "import 'os/exec' is not allowed"
+        path: ^internal/xec/
+
+      # termtest needs the raw os/exec to spawn PTYs for testing.
+      - linters: [depguard]
+        text: "import 'os/exec' is not allowed"
+        path: ^internal/termtest/
 
 formatters:
   enable:

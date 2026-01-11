@@ -9,12 +9,12 @@ import (
 	"net/http/cgi"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // ShamHub is a fake GitHub-like Forge.
@@ -60,7 +60,7 @@ func New(cfg Config) (*ShamHub, error) {
 	}
 
 	if cfg.Git == "" {
-		gitExe, err := exec.LookPath("git")
+		gitExe, err := xec.LookPath("git")
 		if err != nil {
 			return nil, fmt.Errorf("find git binary: %w", err)
 		}

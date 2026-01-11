@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 type statesRequest struct {
@@ -172,17 +170,16 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	baseRef := change.Base
 	headRef := change.Head
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// If head is in a different repository (fork), fetch it.
 	if headRef.Owner != req.Owner || headRef.Repo != req.Repo {
 		// Fetch the head branch from the fork
-		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-		defer flush()
-
 		forkRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
-		fetchCmd := exec.Command(sh.gitExe, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name)
-		fetchCmd.Dir = targetRepoDir
-		fetchCmd.Stderr = logw
-		if err := fetchCmd.Run(); err != nil {
+		if err := xec.Command(ctx, sh.log, sh.gitExe, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name).
+			WithDir(targetRepoDir).
+			Run(); err != nil {
 			return fmt.Errorf("fetch from fork: %w", err)
 		}
 	}
@@ -197,13 +194,9 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	//
 	// This requires at least Git 2.38.
 	tree, err := func() (string, error) {
-		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-		defer flush()
-
-		cmd := exec.Command(sh.gitExe, "merge-tree", "--write-tree", baseRef.Name, headRef.Name)
-		cmd.Dir = targetRepoDir
-		cmd.Stderr = logw
-		out, err := cmd.Output()
+		out, err := xec.Command(ctx, sh.log, sh.gitExe, "merge-tree", "--write-tree", baseRef.Name, headRef.Name).
+			WithDir(targetRepoDir).
+			Output()
 		if err != nil {
 			return "", fmt.Errorf("merge-tree: %w", err)
 		}
@@ -215,9 +208,6 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	commit, err := func() (string, error) {
-		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-		defer flush()
-
 		change := sh.changes[changeIdx]
 
 		var msg string
@@ -233,11 +223,10 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		}
 		args = append(args, "-m", msg, tree)
 
-		cmd := exec.Command(sh.gitExe, args...)
-		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
-		cmd.Stderr = logw
-		cmd.Env = append(os.Environ(), commitEnv...)
-		out, err := cmd.Output()
+		out, err := xec.Command(ctx, sh.log, sh.gitExe, args...).
+			WithDir(sh.repoDir(req.Owner, req.Repo)).
+			AppendEnv(commitEnv...).
+			Output()
 		if err != nil {
 			return "", fmt.Errorf("commit-tree: %w", err)
 		}
@@ -250,14 +239,10 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	// Update the ref to point to the new commit.
 	err = func() error {
-		logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-		defer flush()
-
 		ref := "refs/heads/" + sh.changes[changeIdx].Base.Name
-		cmd := exec.Command(sh.gitExe, "update-ref", ref, commit)
-		cmd.Dir = sh.repoDir(req.Owner, req.Repo)
-		cmd.Stderr = logw
-		if err := cmd.Run(); err != nil {
+		if err := xec.Command(ctx, sh.log, sh.gitExe, "update-ref", ref, commit).
+			WithDir(sh.repoDir(req.Owner, req.Repo)).
+			Run(); err != nil {
 			return fmt.Errorf("update-ref: %w", err)
 		}
 
@@ -269,13 +254,9 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	if req.DeleteBranch {
 		err := func() error {
-			logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-			defer flush()
-
-			cmd := exec.Command(sh.gitExe, "branch", "-D", change.Head.Name)
-			cmd.Dir = sh.repoDir(change.Head.Owner, change.Head.Repo)
-			cmd.Stderr = logw
-			if err := cmd.Run(); err != nil {
+			if err := xec.Command(ctx, sh.log, sh.gitExe, "branch", "-D", change.Head.Name).
+				WithDir(sh.repoDir(change.Head.Owner, change.Head.Repo)).
+				Run(); err != nil {
 				return fmt.Errorf("delete branch: %w", err)
 			}
 

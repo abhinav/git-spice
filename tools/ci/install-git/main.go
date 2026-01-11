@@ -7,17 +7,18 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 func main() {
@@ -78,6 +79,9 @@ func run(log *silog.Logger, req installRequest) error {
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// If prefix is specified and $prefix/bin/git already exists,
 	// do nothing.
 	binDir := filepath.Join(req.Prefix, "bin")
@@ -87,7 +91,7 @@ func run(log *silog.Logger, req installRequest) error {
 		// build dependencies with apt-get.
 		if req.Debian {
 			installArgs := append([]string{"apt-get", "install"}, _gitBuildDependencies...)
-			if err := exec.Command("sudo", installArgs...).Run(); err != nil {
+			if err := xec.Command(ctx, log, "sudo", installArgs...).Run(); err != nil {
 				return fmt.Errorf("apt-get: %w", wrapExecError(err))
 			}
 		}
@@ -99,7 +103,7 @@ func run(log *silog.Logger, req installRequest) error {
 		defer cleanup()
 		log.Info("Extracted Git source", "path", srcDir)
 
-		if err := installGit(req.Prefix, srcDir); err != nil {
+		if err := installGit(ctx, log, req.Prefix, srcDir); err != nil {
 			return fmt.Errorf("install git: %w", err)
 		}
 
@@ -213,20 +217,20 @@ func downloadGit(log *silog.Logger, version string) (dir string, cleanup func(),
 	return dstPath, func() { _ = os.RemoveAll(dstPath) }, nil
 }
 
-func installGit(prefix, srcDir string) error {
-	buildCmd := exec.Command("make", "prefix="+prefix)
-	buildCmd.Dir = srcDir
-	buildCmd.Stdout = os.Stdout
-	buildCmd.Stderr = os.Stderr
-	if err := buildCmd.Run(); err != nil {
+func installGit(ctx context.Context, log *silog.Logger, prefix, srcDir string) error {
+	if err := xec.Command(ctx, log, "make", "prefix="+prefix).
+		WithDir(srcDir).
+		WithStdout(os.Stdout).
+		WithStderr(os.Stderr).
+		Run(); err != nil {
 		return fmt.Errorf("make: %w", err)
 	}
 
-	installCmd := exec.Command("make", "prefix="+prefix, "install")
-	installCmd.Dir = srcDir
-	installCmd.Stdout = os.Stdout
-	installCmd.Stderr = os.Stderr
-	if err := installCmd.Run(); err != nil {
+	if err := xec.Command(ctx, log, "make", "prefix="+prefix, "install").
+		WithDir(srcDir).
+		WithStdout(os.Stdout).
+		WithStderr(os.Stderr).
+		Run(); err != nil {
 		return fmt.Errorf("make install: %w", err)
 	}
 
@@ -265,7 +269,7 @@ func (w *progressWriter) Finish() {
 }
 
 func wrapExecError(err error) error {
-	var exitErr *exec.ExitError
+	var exitErr *xec.ExitError
 	if !errors.As(err, &exitErr) {
 		return err
 	}

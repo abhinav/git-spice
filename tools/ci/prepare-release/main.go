@@ -13,16 +13,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 func main() {
@@ -131,26 +132,26 @@ type changieClient struct {
 }
 
 func (c *changieClient) Batch(version string) error {
-	cmd := exec.Command("changie", "batch", version)
-	c.Log.Debugf("%v", cmd.Args)
+	cmd := xec.Command(context.Background(), nil, "changie", "batch", version)
+	c.Log.Debugf("%v", cmd.Args())
 	return wrapExecError(cmd.Run())
 }
 
 func (c *changieClient) Merge() error {
-	cmd := exec.Command("changie", "merge")
-	c.Log.Debugf("%v", cmd.Args)
+	cmd := xec.Command(context.Background(), nil, "changie", "merge")
+	c.Log.Debugf("%v", cmd.Args())
 	return wrapExecError(cmd.Run())
 }
 
 func (c *changieClient) Latest() (string, error) {
-	cmd := exec.Command("changie", "latest")
-	c.Log.Debugf("%v", cmd.Args)
+	cmd := xec.Command(context.Background(), nil, "changie", "latest")
+	c.Log.Debugf("%v", cmd.Args())
 	output, err := cmd.Output()
 	return strings.TrimSpace(string(output)), wrapExecError(err)
 }
 
 func wrapExecError(err error) error {
-	var exitErr *exec.ExitError
+	var exitErr *xec.ExitError
 	if !errors.As(err, &exitErr) {
 		return err
 	}

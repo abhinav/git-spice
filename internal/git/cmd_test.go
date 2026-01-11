@@ -6,7 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec/xectest"
 )
+
+var NewMockExecer = xectest.NewMockExecer
 
 func TestGitCmd_logPrefix(t *testing.T) {
 	var logBuffer bytes.Buffer

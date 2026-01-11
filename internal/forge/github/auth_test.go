@@ -20,6 +20,8 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
+	"go.abhg.dev/gs/internal/xec/xectest"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/oauth2"
 )
 
@@ -331,11 +333,14 @@ func TestAuthCLI(t *testing.T) {
 	discardView := &ui.FileView{W: io.Discard}
 
 	t.Run("success", func(t *testing.T) {
+		execer := xectest.NewMockExecer(gomock.NewController(t))
+		execer.EXPECT().
+			Run(gomock.Any()).
+			Return(nil)
+
 		tok, err := (&CLIAuthenticator{
-			GH: "gh",
-			runCmd: func(*exec.Cmd) error {
-				return nil
-			},
+			GH:     "gh",
+			execer: execer,
 		}).Authenticate(t.Context(), discardView)
 		require.NoError(t, err)
 
@@ -354,13 +359,16 @@ func TestAuthCLI(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
+		execer := xectest.NewMockExecer(gomock.NewController(t))
+		execer.EXPECT().
+			Run(gomock.Any()).
+			Return(&exec.ExitError{
+				Stderr: []byte("great sadness"),
+			})
+
 		_, err := (&CLIAuthenticator{
-			GH: "gh",
-			runCmd: func(*exec.Cmd) error {
-				return &exec.ExitError{
-					Stderr: []byte("great sadness"),
-				}
-			},
+			GH:     "gh",
+			execer: execer,
 		}).Authenticate(t.Context(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "not authenticated")
@@ -368,11 +376,14 @@ func TestAuthCLI(t *testing.T) {
 	})
 
 	t.Run("other error", func(t *testing.T) {
+		execer := xectest.NewMockExecer(gomock.NewController(t))
+		execer.EXPECT().
+			Run(gomock.Any()).
+			Return(errors.New("gh not found"))
+
 		_, err := (&CLIAuthenticator{
-			GH: "gh",
-			runCmd: func(*exec.Cmd) error {
-				return errors.New("gh not found")
-			},
+			GH:     "gh",
+			execer: execer,
 		}).Authenticate(t.Context(), discardView)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "gh not found")

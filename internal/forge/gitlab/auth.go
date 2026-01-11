@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os/exec"
 	"regexp"
 	"strings"
 
@@ -17,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/xec"
 	"golang.org/x/oauth2"
 )
 
@@ -242,7 +242,7 @@ type authenticator interface {
 	Authenticate(context.Context, ui.View) (*AuthenticationToken, error)
 }
 
-var _execLookPath = exec.LookPath
+var _execLookPath = xec.LookPath
 
 var _authenticationMethods = []struct {
 	Title       string
@@ -461,24 +461,25 @@ type gitlabCLI interface {
 }
 
 type glabCLI struct {
-	GL     string                // path to the glab executable
-	runCmd func(*exec.Cmd) error // for testing
+	GL string // path to the glab executable
+
+	execer xec.Execer
 }
 
 func newGitLabCLI(gl string) *glabCLI {
 	gl = cmp.Or(gl, "glab")
 	return &glabCLI{
-		GL:     gl,
-		runCmd: (*exec.Cmd).Run,
+		GL: gl,
 	}
 }
 
 // Status reports whether the user is authenticated with GitLab CLI.
 func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error) {
 	// This command exits with non-zero status if not authenticated.
-	cmd := exec.CommandContext(ctx, gc.GL, "auth", "status", "--hostname", host)
-	if err := gc.runCmd(cmd); err != nil {
-		var exitErr *exec.ExitError
+	cmd := xec.Command(ctx, nil, gc.GL, "auth", "status", "--hostname", host).
+		WithExecer(gc.execer)
+	if err := cmd.Run(); err != nil {
+		var exitErr *xec.ExitError
 		if errors.As(err, &exitErr) {
 			return false, nil
 		}
@@ -495,11 +496,12 @@ func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
 	// Token is printed to stderr on its own line in the form:
 	//    ✓ Token: 1234567890abcdef
 	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, gc.GL,
-		"auth", "status", "--hostname", host, "--show-token")
-	cmd.Stderr = &stderr
-	if err := gc.runCmd(cmd); err != nil {
-		var exitErr *exec.ExitError
+	cmd := xec.Command(ctx, nil, gc.GL,
+		"auth", "status", "--hostname", host, "--show-token").
+		WithExecer(gc.execer).
+		WithStderr(&stderr)
+	if err := cmd.Run(); err != nil {
+		var exitErr *xec.ExitError
 		if errors.As(err, &exitErr) {
 			return "", errors.Join(
 				errors.New("glab is not authenticated"),

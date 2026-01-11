@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"os/exec"
 	"strings"
 
 	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // Config provides access to Git configuration in the current context.
@@ -161,7 +161,7 @@ func (cfg *Config) list(ctx context.Context, args ...string) iter.Seq2[ConfigEnt
 			if err != nil {
 				// git-config fails with a non-zero exit code if there are no matches.
 				// That's not an error for us, so we ignore it.
-				if exitErr := new(exec.ExitError); errors.As(err, &exitErr) {
+				if exitErr := new(xec.ExitError); errors.As(err, &exitErr) {
 					return
 				}
 

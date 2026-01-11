@@ -5,7 +5,7 @@ import "os/exec"
 // TODO: processor might be a better name for this
 // since it controls the process lifecycle?
 
-//go:generate mockgen -destination=mock_execer_test.go -package=xec -write_package_comment=false -typed . Execer
+//go:generate mockgen -destination=xectest/mock_execer.go -package=xectest -write_package_comment=false -typed . Execer
 
 // Execer controls actual execution of commands.
 // It provides a way to intercept command execution for testing.

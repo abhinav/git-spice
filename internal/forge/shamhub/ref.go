@@ -3,9 +3,8 @@ package shamhub
 import (
 	"context"
 	"fmt"
-	"os/exec"
 
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 type refExistsRequest struct {
@@ -39,14 +38,9 @@ func (r *forgeRepository) RefExists(ctx context.Context, ref string) (bool, erro
 }
 
 func (sh *ShamHub) refExists(ctx context.Context, owner, repo, ref string) bool {
-	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-	defer flush()
-
-	cmd := exec.CommandContext(ctx, sh.gitExe,
-		"show-ref", "--verify", "--quiet", ref)
-	cmd.Dir = sh.repoDir(owner, repo)
-	cmd.Stderr = logw
-	return cmd.Run() == nil
+	return xec.Command(ctx, sh.log, sh.gitExe, "show-ref", "--verify", "--quiet", ref).
+		WithDir(sh.repoDir(owner, repo)).
+		Run() == nil
 }
 
 func (sh *ShamHub) branchRefExists(ctx context.Context, owner, repo, branch string) bool {

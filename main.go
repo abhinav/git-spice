@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -36,6 +35,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/xec"
 	"go.abhg.dev/komplete"
 )
 
@@ -204,11 +204,11 @@ func main() {
 			shArgs = append(shArgs, args[1:]...)
 		}
 
-		cmd := exec.CommandContext(ctx, "sh", shArgs...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Env = append(os.Environ(), fmt.Sprintf("%v=%d", recursionDepthEnvVar, depth+1))
-		if err := cmd.Run(); err != nil {
+		if err := xec.Command(ctx, logger, "sh", shArgs...).
+			WithStdout(os.Stdout).
+			WithStderr(os.Stderr).
+			AppendEnv(fmt.Sprintf("%v=%d", recursionDepthEnvVar, depth+1)).
+			Run(); err != nil {
 			logger.Fatalf("%v: %v", cmdName, err)
 		}
 		return

@@ -1,14 +1,15 @@
 package shamhub
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"slices"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // shamRepo is the internal representation of a repository.
@@ -76,30 +77,31 @@ func (sh *ShamHub) newRepository(owner, repo string, forkOf *repoID) (string, er
 		return "", fmt.Errorf("create repository: %w", err)
 	}
 
-	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-	defer flush()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	var cmd *exec.Cmd
 	if forkOf != nil {
 		// For forks, clone from the parent
 		parentDir := sh.repoDir(forkOf.Owner, forkOf.Name)
-		cmd = exec.Command(sh.gitExe, "clone", "--bare", parentDir, repoDir)
+		if err := xec.Command(ctx, sh.log, sh.gitExe, "clone", "--bare", parentDir, repoDir).
+			CaptureStdout().
+			Run(); err != nil {
+			return "", fmt.Errorf("create repository: %w", err)
+		}
 	} else {
 		// For new repositories, initialize from scratch
-		cmd = exec.Command(sh.gitExe, "init", "--bare", "--initial-branch=main", repoDir)
-	}
-	cmd.Stdout = logw
-	cmd.Stderr = logw
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("create repository: %w", err)
+		if err := xec.Command(ctx, sh.log, sh.gitExe, "init", "--bare", "--initial-branch=main", repoDir).
+			CaptureStdout().
+			Run(); err != nil {
+			return "", fmt.Errorf("create repository: %w", err)
+		}
 	}
 
 	// Configure the repository to accept pushes.
-	cfgCmd := exec.Command(sh.gitExe, "config", "http.receivepack", "true")
-	cfgCmd.Dir = repoDir
-	cfgCmd.Stdout = logw
-	cfgCmd.Stderr = logw
-	if err := cfgCmd.Run(); err != nil {
+	if err := xec.Command(ctx, sh.log, sh.gitExe, "config", "http.receivepack", "true").
+		WithDir(repoDir).
+		CaptureStdout().
+		Run(); err != nil {
 		return "", fmt.Errorf("configure repository: %w", err)
 	}
 

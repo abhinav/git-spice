@@ -2,13 +2,14 @@ package gittest
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // Version is a Git version string.
@@ -18,7 +19,7 @@ type Version struct {
 
 // CurrentVersion returns the current Git version installed on the system.
 func CurrentVersion() (Version, error) {
-	raw, err := exec.Command("git", "--version").Output()
+	raw, err := xec.Command(context.Background(), nil, "git", "--version").Output()
 	if err != nil {
 		return Version{}, fmt.Errorf("get Git version: %w", err)
 	}

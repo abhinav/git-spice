@@ -3,12 +3,11 @@ package shamhub
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 var _changeTemplatePaths = []string{
@@ -41,9 +40,6 @@ type changeTemplate struct {
 func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
 	owner, repo := req.Owner, req.Repo
 
-	logw, flush := silog.Writer(sh.log, silog.LevelDebug)
-	defer flush()
-
 	templatePaths := make(map[string]struct{})
 	for _, p := range _changeTemplatePaths {
 		templatePaths[p] = struct{}{}
@@ -54,11 +50,9 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 	var res changeTemplateResponse
 	for path := range templatePaths {
 		// Try to read as a file (blob objects only).
-		cmd := exec.Command(sh.gitExe, "cat-file", "blob", "HEAD:"+path)
-		cmd.Dir = sh.repoDir(owner, repo)
-		cmd.Stderr = logw
-
-		if out, err := cmd.Output(); err == nil {
+		if out, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "blob", "HEAD:"+path).
+			WithDir(sh.repoDir(owner, repo)).
+			Output(); err == nil {
 			res = append(res, &changeTemplate{
 				Filename: path,
 				Body:     strings.TrimSpace(string(out)) + "\n",
@@ -67,11 +61,9 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 		}
 
 		// Try to read as a directory.
-		lsCmd := exec.Command(sh.gitExe, "ls-tree", "--name-only", "HEAD:"+path)
-		lsCmd.Dir = sh.repoDir(owner, repo)
-		lsCmd.Stderr = logw
-
-		lsOut, err := lsCmd.Output()
+		lsOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "ls-tree", "--name-only", "HEAD:"+path).
+			WithDir(sh.repoDir(owner, repo)).
+			Output()
 		if err != nil {
 			continue
 		}
@@ -83,11 +75,9 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 			}
 
 			filePath := path + "/" + file
-			catCmd := exec.Command(sh.gitExe, "cat-file", "-p", "HEAD:"+filePath)
-			catCmd.Dir = sh.repoDir(owner, repo)
-			catCmd.Stderr = logw
-
-			if fileOut, err := catCmd.Output(); err == nil {
+			if fileOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "-p", "HEAD:"+filePath).
+				WithDir(sh.repoDir(owner, repo)).
+				Output(); err == nil {
 				res = append(res, &changeTemplate{
 					Filename: file,
 					Body:     strings.TrimSpace(string(fileOut)) + "\n",

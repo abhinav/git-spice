@@ -38,15 +38,11 @@ import (
 
 var _osEnviron = os.Environ
 
-// ExitError is returned from Wait or Run
-// when the command exits with a non-zero exit code.
-type ExitError = exec.ExitError
-
 // Cmd is an external command being prepared or run.
 type Cmd struct {
-	cmd    *exec.Cmd
-	log    *prefixLogger
-	execer Execer
+	cmd     *exec.Cmd
+	log     *prefixLogger
+	_execer Execer
 
 	// Wraps an error with stderr output.
 	wrap func(error) error
@@ -56,54 +52,68 @@ type Cmd struct {
 //
 // ctx controls the lifetime of the command,
 // and log is used to log command output and errors.
+// If log is nil, stderr is buffered and surfaced in the error if the command fails.
 func Command(ctx context.Context, log *silog.Logger, name string, args ...string) *Cmd {
+	if log == nil {
+		log = silog.Nop(&silog.Options{
+			Level: silog.LevelInfo,
+		})
+	}
 	logger := &prefixLogger{Logger: log, prefix: name}
 	stderr, wrap := outputLogWriter("stderr", logger)
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stderr = stderr
 	cmd.Env = _osEnviron()
 	return &Cmd{
-		cmd:    cmd,
-		log:    logger,
-		wrap:   wrap,
-		execer: DefaultExecer,
+		cmd:     cmd,
+		log:     logger,
+		wrap:    wrap,
+		_execer: DefaultExecer,
 	}
 }
 
 // WithExecer sets the Execer used to run the command.
+// If nil, the DefaultExecer is used.
 func (c *Cmd) WithExecer(execer Execer) *Cmd {
-	c.execer = execer
+	c._execer = execer
 	return c
+}
+
+func (c *Cmd) execer() Execer {
+	if c._execer != nil {
+		return c._execer
+	}
+	return DefaultExecer
 }
 
 // Run runs the command, blocking until it completes.
 //
 // It returns an error if the command fails with a non-zero exit code.
 func (c *Cmd) Run() error {
-	return c.wrap(c.execer.Run(c.cmd))
+	return c.wrap(c.execer().Run(c.cmd))
 }
 
 // Start starts the command, returning immediately.
 // It returns an error if the command fails to start.
 func (c *Cmd) Start() error {
-	return c.wrap(c.execer.Start(c.cmd))
+	return c.wrap(c.execer().Start(c.cmd))
 }
 
 // Wait waits for a command started with Start to complete.
 // It returns an error if the command fails with a non-zero exit code.
 func (c *Cmd) Wait() error {
-	return c.wrap(c.execer.Wait(c.cmd))
+	return c.wrap(c.execer().Wait(c.cmd))
 }
 
 // Kill kills a command started with Start.
 func (c *Cmd) Kill() error {
-	return c.wrap(c.execer.Kill(c.cmd))
+	return c.wrap(c.execer().Kill(c.cmd))
 }
 
 // Output runs the command and returns its stdout.
 // It returns an error if the command fails with a non-zero exit code.
 func (c *Cmd) Output() ([]byte, error) {
-	return c.execer.Output(c.cmd)
+	return c.execer().Output(c.cmd)
 }
 
 // Args returns the arguments passed to the command,

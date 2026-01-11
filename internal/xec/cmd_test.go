@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec/xectest"
 	"go.uber.org/mock/gomock"
 )
 
@@ -342,7 +343,7 @@ func TestCmd_Scan_StartError(t *testing.T) {
 	log := silog.Nop()
 	mockCtrl := gomock.NewController(t)
 
-	mock := NewMockExecer(mockCtrl)
+	mock := xectest.NewMockExecer(mockCtrl)
 	mock.EXPECT().
 		Start(gomock.Any()).
 		Return(errors.New("start failed"))
@@ -417,6 +418,31 @@ func TestCmd_StderrHandling(t *testing.T) {
 	})
 }
 
+func TestCommand_NilLogger(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("BuffersStderrInError", func(t *testing.T) {
+		cmd := Command(ctx, nil, "sh", "-c", "echo 'error message' >&2; exit 1")
+
+		err := cmd.Run()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "stderr:")
+		assert.Contains(t, err.Error(), "error message")
+	})
+
+	t.Run("NoErrorOnSuccess", func(t *testing.T) {
+		cmd := Command(ctx, nil, "sh", "-c", "echo 'stderr message' >&2")
+		require.NoError(t, cmd.Run())
+	})
+
+	t.Run("WorksWithOutput", func(t *testing.T) {
+		cmd := Command(ctx, nil, "echo", "hello")
+		output, err := cmd.Output()
+		require.NoError(t, err)
+		assert.Equal(t, "hello\n", string(output))
+	})
+}
+
 func TestCmd_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	log := silog.Nop()
@@ -438,7 +464,7 @@ func TestCmd_WithExecer(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
-		mock := NewMockExecer(mockCtrl)
+		mock := xectest.NewMockExecer(mockCtrl)
 		mock.EXPECT().
 			Run(gomock.Any()).
 			Return(nil)
@@ -449,7 +475,7 @@ func TestCmd_WithExecer(t *testing.T) {
 
 	t.Run("Start", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
-		mock := NewMockExecer(mockCtrl)
+		mock := xectest.NewMockExecer(mockCtrl)
 		mock.EXPECT().
 			Start(gomock.Any()).
 			Return(nil)
@@ -460,7 +486,7 @@ func TestCmd_WithExecer(t *testing.T) {
 
 	t.Run("Wait", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
-		mock := NewMockExecer(mockCtrl)
+		mock := xectest.NewMockExecer(mockCtrl)
 		mock.EXPECT().
 			Wait(gomock.Any()).
 			Return(nil)
@@ -471,7 +497,7 @@ func TestCmd_WithExecer(t *testing.T) {
 
 	t.Run("Kill", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
-		mock := NewMockExecer(mockCtrl)
+		mock := xectest.NewMockExecer(mockCtrl)
 		mock.EXPECT().
 			Kill(gomock.Any()).
 			Return(nil)
@@ -483,7 +509,7 @@ func TestCmd_WithExecer(t *testing.T) {
 	t.Run("Output", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		expected := []byte("output")
-		mock := NewMockExecer(mockCtrl)
+		mock := xectest.NewMockExecer(mockCtrl)
 		mock.EXPECT().
 			Output(gomock.Any()).
 			Return(expected, nil)
