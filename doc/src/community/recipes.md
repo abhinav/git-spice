@@ -7,6 +7,107 @@ description: >-
 
 # Recipes
 
+## Customization
+
+### Auto-track branches on checkout
+
+<!-- gs:version unreleased -->
+
+Git's post-checkout hook can be used
+to invoke git-spice automatically when a branch is checked out,
+and track the branch with git-spice if it is not already tracked.
+
+**Prerequisites:**
+
+- git-spice <!-- gs:version unreleased -->
+- Git hooks are enabled
+  (this is the default, but certain setups may disable them)
+- The repository is already initialized with git-spice ($$gs repo init$$)
+
+**Steps:**
+
+1. Copy this script under `.git/hooks/post-checkout` in your repository.
+
+    ??? example ".git/hooks/post-checkout"
+
+        ```bash
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        # post-checkout is invoked with:
+        #   $1 - ref of the previous HEAD
+        #   $2 - ref of the new HEAD
+        #   $3 - 1 for a branch checkout, 0 for a file checkout
+        shift # old SHA
+        shift # new SHA
+        checkout_type=$1
+
+        # Ignore non-branch checkouts.
+        if [[ "$checkout_type" -eq 0 ]]; then
+            exit 0
+        fi
+
+        # Don't do anything if this was invoked during a git-spice operation;
+        # if git-spice runs checkout, let it do what it's doing without interference.
+        if [[ -n "${GIT_SPICE:-}" ]]; then
+            exit 0
+        fi
+
+        # post-checkout hook does not receive the branch name,
+        # so get it from the new HEAD.
+        branch_name=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        if [[ -z "$branch_name" ]]; then
+            exit 0 # not a branch
+        fi
+
+        # ...and verify it's actually a local branch.
+        if ! git show-ref --verify --quiet refs/heads/"$branch_name"; then
+            exit 0
+        fi
+
+        # Don't attempt to track trunk.
+        trunk_name=$(gs trunk -n 2>/dev/null || echo "master")
+        if [[ "$branch_name" == "$trunk_name" ]]; then
+            exit 0
+        fi
+
+        # Check if the branch is already tracked by git-spice
+        # by poking at the internals. (gs ls --json will be slower here.)
+        #
+        # Warning: This may break if git-spice's internal storage format changes.
+        if ! git rev-parse --verify --quiet refs/spice/data:branches/"$branch_name" >/dev/null; then
+            echo >&2 "Branch not tracked with git-spice: '$branch_name'. Tracking it now..."
+
+            # We use 'downstack track' so that if there are any untracked branches
+            # downstack from this one, they get tracked too.
+            gs downstack track "$branch_name"
+        fi
+        ```
+
+2. Make sure the script is executable.
+
+    ```bash
+    chmod +x .git/hooks/post-checkout
+    ```
+
+3. Test it out by checking out an untracked branch.
+
+    ```bash
+    git checkout -b my-feature main
+    ```
+
+**How this works:**
+
+- The post-checkout hook is invoked by Git after a checkout operation,
+  whether with `git checkout` or `git switch`.
+- The script checks `GIT_SPICE` (added in <!-- gs:version unreleased -->)
+  to ensure it does not interfere
+  with git-spice's own operations (e.g. $$gs branch checkout$$).
+- It checks whether the new branch is already tracked by git-spice
+  by looking inside its internal storage ([Internals](../guide/internals.md)).
+- If the branch is not tracked, it invokes $$gs downstack track$$
+  to track the branch and any untracked branches downstack from it.
+
 ## Workflows
 
 ### Create branches without committing
