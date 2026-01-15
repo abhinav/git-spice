@@ -66,6 +66,7 @@ func (cmd *branchCheckoutCmd) AfterApply(
 				}
 				return b.Name != currentBranch && b.Worktree != ""
 			},
+			Worktree:    wt.RootDir(),
 			Default:     currentBranch,
 			TrackedOnly: !cmd.Untracked,
 			Title:       "Select a branch to checkout",

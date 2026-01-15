@@ -19,6 +19,8 @@ import (
 //   - want: name of the branch expected to be selected at the end
 //   - branches: branches available in the list. See below for format.
 //   - desc (optional): prompt description
+//   - home (optional): user's home directory
+//   - worktree (optional): current worktree
 //
 // The branches file is a JSON-encoded file with the format:
 //
@@ -36,17 +38,21 @@ func TestBranchTreeSelect_Script(t *testing.T) {
 				json.Unmarshal([]byte(ts.ReadFile("branches")), &input),
 				"read 'branches' file")
 
-			var desc string
-			if _, err := os.Stat(ts.MkAbs("desc")); err == nil {
-				desc = strings.TrimSpace(ts.ReadFile("desc"))
+			desc := readOptionalFile(ts, "desc")
+
+			if home := readOptionalFile(ts, "home"); home != "" {
+				ts.Setenv("HOME", home)
 			}
+
+			worktree := readOptionalFile(ts, "worktree")
 
 			var gotBranch string
 			widget := NewBranchTreeSelect().
 				WithTitle("Select a branch").
 				WithItems(input...).
 				WithDescription(desc).
-				WithValue(&gotBranch)
+				WithValue(&gotBranch).
+				WithCurrentWorktree(worktree)
 
 			assert.NoError(t, ui.Run(view, widget))
 			assert.Equal(t, wantBranch, gotBranch)
@@ -56,4 +62,11 @@ func TestBranchTreeSelect_Script(t *testing.T) {
 		},
 		"testdata/script/branch_tree_select",
 	)
+}
+
+func readOptionalFile(ts *testscript.TestScript, path string) string {
+	if _, err := os.Stat(ts.MkAbs(path)); err == nil {
+		return strings.TrimSpace(ts.ReadFile(path))
+	}
+	return ""
 }

@@ -1,0 +1,37 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed wt1
+await
+snapshot
+cmp stdout filter
+
+feed <Enter>
+
+-- home --
+/home/user
+-- worktree --
+/home/user/main
+-- branches --
+[
+  {"branch": "main", "worktree": "/home/user/main"},
+  {"branch": "feat1", "base": "main", "worktree": "/home/user/wt1"},
+  {"branch": "feat2", "base": "feat1", "changeID": "#456", "worktree": "/tmp/wt2"},
+  {"branch": "feat3", "base": "main"},
+  {"branch": "feat4", "base": "feat3", "changeID": "#789", "worktree": "/home/user/main"}
+]
+-- prompt --
+Select a branch:
+  ┏━■ feat2 (#456) [wt: /tmp/wt2] ◀
+┏━┻□ feat1 [wt: /home/user/wt1]
+┃ ┏━□ feat4 (#789)
+┣━┻□ feat3
+main
+-- filter --
+Select a branch:
+feat1 [wt: /home/user/wt1] ◀
+-- want --
+feat1

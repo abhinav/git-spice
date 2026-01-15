@@ -119,6 +119,15 @@ at <YYYY-MM-DD HH:MM:SS>
 
 Sets the timestamp of the commits that follow.
 
+### home
+
+```
+home <path>
+```
+
+Set HOME to the given path.
+The path will be converted to absolute.
+
 ### cmpenvJSON
 
 ```

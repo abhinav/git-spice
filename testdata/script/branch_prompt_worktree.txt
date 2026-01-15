@@ -1,0 +1,104 @@
+# branch {checkout, delete, onto} prompts show worktrees.
+
+as 'Test <test@example.com>'
+at '2026-01-13T09:14:15Z'
+
+home .
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+git add feat3.txt
+gs bc -m feat3
+
+gs trunk
+git worktree add ../feat1 feat1
+git worktree add ../feat2 feat2
+
+[unix] env ROBOT_INPUT=$WORK/robot-unix.golden
+[windows] env ROBOT_INPUT=$WORK/robot-windows.golden
+env ROBOT_OUTPUT=$WORK/robot.actual
+
+# check out feat3
+gs bco
+git branch --show-current
+stdout 'feat3'
+
+# delete feat3.
+gs bd --force
+
+# move feat2 onto main
+cd ../feat2
+gs bon
+
+cmp $WORK/robot.actual $ROBOT_INPUT
+
+gs ls -a
+[unix] cmp stderr $WORK/golden/ls-unix.txt
+[windows] cmp stderr $WORK/golden/ls-windows.txt
+
+-- robot-unix.golden --
+===
+> Select a branch to checkout: 
+>     ┏━□ feat3
+>   ┏━┻□ feat2 [wt: ~/feat2]
+> ┏━┻□ feat1 [wt: ~/feat1]
+> main ◀
+"feat3"
+===
+> Select a branch to delete: 
+>     ┏━■ feat3 ◀
+>   ┏━┻□ feat2 [wt: ~/feat2]
+> ┏━┻□ feat1 [wt: ~/feat1]
+> main
+"feat3"
+===
+> Select a branch to move onto: 
+>   ┏━□ feat2
+> ┏━┻■ feat1 [wt: ~/feat1] ◀
+> main
+>
+> Moving feat2 onto another branch
+"main"
+-- robot-windows.golden --
+===
+> Select a branch to checkout: 
+>     ┏━□ feat3
+>   ┏━┻□ feat2 [wt: ~\feat2]
+> ┏━┻□ feat1 [wt: ~\feat1]
+> main ◀
+"feat3"
+===
+> Select a branch to delete: 
+>     ┏━■ feat3 ◀
+>   ┏━┻□ feat2 [wt: ~\feat2]
+> ┏━┻□ feat1 [wt: ~\feat1]
+> main
+"feat3"
+===
+> Select a branch to move onto: 
+>   ┏━□ feat2
+> ┏━┻■ feat1 [wt: ~\feat1] ◀
+> main
+>
+> Moving feat2 onto another branch
+"main"
+-- golden/ls-unix.txt --
+┏━□ feat1 [wt: ~/feat1]
+┣━■ feat2 ◀
+main
+-- golden/ls-windows.txt --
+┏━□ feat1 [wt: ~\feat1]
+┣━■ feat2 ◀
+main
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- repo/feat3.txt --

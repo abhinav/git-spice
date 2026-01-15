@@ -92,6 +92,7 @@ func (cmd *upstackOntoCmd) AfterApply(
 				return isUpstack
 			},
 			TrackedOnly: true,
+			Worktree:    wt.RootDir(),
 			Default:     branch.Base,
 			Title:       "Select a branch to move onto",
 			Description: fmt.Sprintf("Moving the upstack of %s onto another branch", cmd.Branch),

@@ -103,6 +103,11 @@ type branchPromptRequest struct {
 
 	// Description specifies the description to display to the user.
 	Description string
+
+	// Worktree is the worktree inside which this prompt is running.
+	// Branches that are checked out in other worktrees will
+	// report their worktrees.
+	Worktree string
 }
 
 // Prompt displays a searchable list of branches in the terminal
@@ -115,7 +120,9 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		// Can be used to say "(checked out elsewhere)" or similar.
 	}
 
-	branchGraph, err := p.svc.BranchGraph(ctx, nil)
+	branchGraph, err := p.svc.BranchGraph(ctx, &spice.BranchGraphOptions{
+		IncludeWorktrees: req.Worktree != "",
+	})
 	if err != nil {
 		return "", fmt.Errorf("load branch graph: %w", err)
 	}
@@ -148,6 +155,7 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		widgetItem := widget.BranchTreeItem{
 			Branch:   branch.Name,
 			Disabled: disabled(branch),
+			Worktree: branch.Worktree,
 		}
 
 		if graphItem, ok := branchGraph.Lookup(branch.Name); ok {
@@ -171,7 +179,8 @@ func (p *branchPrompter) Prompt(ctx context.Context, req *branchPromptRequest) (
 		WithTitle(req.Title).
 		WithValue(&value).
 		WithItems(items...).
-		WithDescription(req.Description)
+		WithDescription(req.Description).
+		WithCurrentWorktree(req.Worktree)
 	if err := ui.Run(p.view, prompt); err != nil {
 		return "", fmt.Errorf("select branch: %w", err)
 	}
