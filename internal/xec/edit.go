@@ -20,5 +20,8 @@ func EditCommand(editCmd string, args ...string) *exec.Cmd {
 		cmd = exec.Command("sh", args...)
 	}
 	cmd.Env = append(os.Environ(), _gitSpiceEnv)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 	return cmd
 }
