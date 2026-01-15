@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 	"go.abhg.dev/gs/internal/ui/uitest"
 	"go.abhg.dev/testing/stub"
 )
@@ -28,7 +29,7 @@ func TestBranchSplit_Script(t *testing.T) {
 
 	uitest.RunScripts(t,
 		func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
-			var commits []CommitSummary
+			var commits []commit.Summary
 			require.NoError(t,
 				json.Unmarshal([]byte(ts.ReadFile("commits")), &commits),
 				"read 'commits' file")

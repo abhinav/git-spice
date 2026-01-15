@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 	"go.abhg.dev/gs/internal/ui/fliptree"
 )
 
@@ -44,7 +45,7 @@ type CommitPickStyle struct {
 	Branch      lipgloss.Style
 	CursorStyle lipgloss.Style
 
-	LogCommitStyle CommitSummaryStyle
+	LogCommitStyle commit.SummaryStyle
 }
 
 // DefaultCommitPickStyle is the default style for the commit pick widget.
@@ -54,7 +55,7 @@ var DefaultCommitPickStyle = CommitPickStyle{
 		Foreground(ui.Yellow).
 		Bold(true).
 		SetString("▶"),
-	LogCommitStyle: DefaultCommitSummaryStyle,
+	LogCommitStyle: commit.DefaultSummaryStyle,
 }
 
 // CommitPickBranch is a single branch shown in the commit pick widget.
@@ -68,7 +69,7 @@ type CommitPickBranch struct {
 	Base string
 
 	// Commits in the branch that we can select from.
-	Commits []CommitSummary
+	Commits []commit.Summary
 }
 
 type commitPickBranch struct {
@@ -79,7 +80,7 @@ type commitPickBranch struct {
 }
 
 type commitPickCommit struct {
-	Summary CommitSummary
+	Summary commit.Summary
 	Branch  int // index in CommitPick.branches
 }
 
@@ -311,6 +312,10 @@ func (c *CommitPick) Render(w ui.Writer) {
 		w.WriteString("\n")
 	}
 
+	summaryOptions := commit.SummaryOptions{
+		Now: _timeNow,
+	}
+
 	_ = fliptree.Write(w, fliptree.Graph[commitPickBranch]{
 		Values: c.branches,
 		Roots:  c.roots,
@@ -347,7 +352,7 @@ func (c *CommitPick) Render(w ui.Writer) {
 
 				o.WriteString(cursor)
 				o.WriteString(" ")
-				commit.Summary.Render(&o, summaryStyle)
+				commit.Summary.Render(&o, summaryStyle, &summaryOptions)
 			}
 
 			return o.String()
