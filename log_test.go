@@ -157,7 +157,10 @@ func TestChangeFormat(t *testing.T) {
 func TestJSONLogPresenter_Present(t *testing.T) {
 	t.Run("SingleBranch", func(t *testing.T) {
 		var buf bytes.Buffer
-		presenter := &jsonLogPresenter{Stdout: &buf}
+		presenter := &jsonLogPresenter{
+			Stdout:          &buf,
+			CurrentWorktree: "/repo",
+		}
 
 		res := &list.BranchesResponse{
 			Branches: []*list.BranchItem{
@@ -175,7 +178,10 @@ func TestJSONLogPresenter_Present(t *testing.T) {
 
 	t.Run("BranchStack", func(t *testing.T) {
 		var buf bytes.Buffer
-		presenter := &jsonLogPresenter{Stdout: &buf}
+		presenter := &jsonLogPresenter{
+			Stdout:          &buf,
+			CurrentWorktree: "/repo",
+		}
 
 		res := &list.BranchesResponse{
 			Branches: []*list.BranchItem{
@@ -205,7 +211,10 @@ func TestJSONLogPresenter_Present(t *testing.T) {
 
 	t.Run("CompleteFeatures", func(t *testing.T) {
 		var buf bytes.Buffer
-		presenter := &jsonLogPresenter{Stdout: &buf}
+		presenter := &jsonLogPresenter{
+			Stdout:          &buf,
+			CurrentWorktree: "/repo",
+		}
 
 		hash1 := git.Hash("abcdef0123456789abcdef0123456789abcdef01")
 		hash2 := git.Hash("123456789abcdef0123456789abcdef012345678")
@@ -248,6 +257,41 @@ func TestJSONLogPresenter_Present(t *testing.T) {
 
 		assert.Equal(t, `{"name":"main"}
 {"name":"feature","current":true,"down":{"name":"main","needsRestack":true},"commits":[{"sha":"abcdef0123456789abcdef0123456789abcdef01","subject":"Add new feature"},{"sha":"123456789abcdef0123456789abcdef012345678","subject":"Fix bug in feature"}],"change":{"id":"123","url":"https://github.com/owner/repo/pull/123"},"push":{"ahead":2,"behind":1,"needsPush":true}}
+`, buf.String())
+	})
+
+	t.Run("WorktreeFiltering", func(t *testing.T) {
+		var buf bytes.Buffer
+		presenter := &jsonLogPresenter{
+			Stdout:          &buf,
+			CurrentWorktree: "/home/user/repo",
+		}
+
+		res := &list.BranchesResponse{
+			Branches: []*list.BranchItem{
+				{Name: "main"},
+				{
+					Name:     "feature1",
+					Base:     "main",
+					Worktree: "/home/user/repo", // current worktree
+				},
+				{
+					Name:     "feature2",
+					Base:     "main",
+					Worktree: "/home/user/other-worktree", // different worktree
+				},
+			},
+			TrunkIdx: 0,
+		}
+
+		err := presenter.Present(res, "feature1")
+		require.NoError(t, err)
+
+		// feature1's worktree should be omitted (it's the current worktree).
+		// feature2's worktree should be included.
+		assert.Equal(t, `{"name":"main"}
+{"name":"feature1","current":true,"down":{"name":"main"}}
+{"name":"feature2","down":{"name":"main"},"worktree":"/home/user/other-worktree"}
 `, buf.String())
 	})
 }

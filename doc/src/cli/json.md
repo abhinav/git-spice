@@ -41,6 +41,12 @@ These objects take the following form:
   // May be omitted if false.
   current?: boolean,
 
+  // Worktree that this branch is checked out in (if any)
+  // if it's not the current worktree.
+  //
+  // This is always unset if current is true.
+  worktree?: string,
+
   // Branch directly below this one in the stack.
   // 'gs down' will check out this branch.
   // Omitted if this is the trunk branch.

@@ -29,7 +29,7 @@ gs log long
 cmp stderr $WORK/golden/linear.txt
 
 gs log long --json
-[unix] cmpenv stdout $WORK/golden/linear.json
+cmp stdout $WORK/golden/linear.json
 
 at '2024-03-31T18:00:00Z'
 gs bco feature3
@@ -39,7 +39,7 @@ gs log long
 cmp stderr $WORK/golden/linear_next_day.txt
 
 gs log long --json
-[unix] cmpenv stdout $WORK/golden/linear_next_day.json
+cmp stdout $WORK/golden/linear_next_day.json
 
 at '2024-05-01T18:00:00Z'
 gs bco feature2
@@ -49,7 +49,7 @@ gs log long
 cmp stderr $WORK/golden/linear_next_month.txt
 
 gs log long --json
-[unix] cmpenv stdout $WORK/golden/linear_next_month.json
+cmp stdout $WORK/golden/linear_next_month.json
 
 at '2024-05-01T18:30:00Z'
 gs bco feature1
@@ -60,7 +60,7 @@ gs log long
 cmp stderr $WORK/golden/merge_commit.txt
 
 gs log long --json
-cmpenv stdout $WORK/golden/merge_commit.json
+cmp stdout $WORK/golden/merge_commit.json
 
 -- repo/feature3/thing.txt --
 thing
@@ -115,24 +115,24 @@ main
 {"name":"feature2","down":{"name":"feature1"},"ups":[{"name":"feature3"}],"commits":[{"sha":"04d722a21cc222d6082d337dea8d040ba4566b5a","subject":"Add feature2"}]}
 {"name":"feature3","down":{"name":"feature2"},"ups":[{"name":"feature4"}],"commits":[{"sha":"66b6e9e47aa2f6c1019e470e46442d986aa10d0c","subject":"Add feature3"}]}
 {"name":"feature4","down":{"name":"feature3"},"ups":[{"name":"feature5"}],"commits":[{"sha":"16fd303a65ef44bad529b5f60e663934e58f5e2c","subject":"Add feature4"}]}
-{"name":"feature5","current":true,"down":{"name":"feature4"},"commits":[{"sha":"32bf40a94ef53251cfad43334032469b1d17bef5","subject":"Add feature5"}],"worktree":"$WORK/repo"}
+{"name":"feature5","current":true,"down":{"name":"feature4"},"commits":[{"sha":"32bf40a94ef53251cfad43334032469b1d17bef5","subject":"Add feature5"}]}
 {"name":"main","ups":[{"name":"feature1"}]}
 -- golden/linear_next_day.json --
 {"name":"feature1","down":{"name":"main"},"ups":[{"name":"feature2"}],"commits":[{"sha":"b649e21954e69848f4607eb771316c1855091350","subject":"Add feature1"}]}
 {"name":"feature2","down":{"name":"feature1"},"ups":[{"name":"feature3"}],"commits":[{"sha":"04d722a21cc222d6082d337dea8d040ba4566b5a","subject":"Add feature2"}]}
-{"name":"feature3","current":true,"down":{"name":"feature2"},"ups":[{"name":"feature4"}],"commits":[{"sha":"87cc709647a417414ff28ecc56b7063214e7ee24","subject":"thing"},{"sha":"66b6e9e47aa2f6c1019e470e46442d986aa10d0c","subject":"Add feature3"}],"worktree":"$WORK/repo"}
+{"name":"feature3","current":true,"down":{"name":"feature2"},"ups":[{"name":"feature4"}],"commits":[{"sha":"87cc709647a417414ff28ecc56b7063214e7ee24","subject":"thing"},{"sha":"66b6e9e47aa2f6c1019e470e46442d986aa10d0c","subject":"Add feature3"}]}
 {"name":"feature4","down":{"name":"feature3"},"ups":[{"name":"feature5"}],"commits":[{"sha":"97739c2d6fbecd6506dfd4256459aba447fd00bd","subject":"Add feature4"}]}
 {"name":"feature5","down":{"name":"feature4"},"commits":[{"sha":"165476c2db58235abceba45f5d27c3cdb69fc4fa","subject":"Add feature5"}]}
 {"name":"main","ups":[{"name":"feature1"}]}
 -- golden/linear_next_month.json --
 {"name":"feature1","down":{"name":"main"},"ups":[{"name":"feature2"}],"commits":[{"sha":"b649e21954e69848f4607eb771316c1855091350","subject":"Add feature1"}]}
-{"name":"feature2","current":true,"down":{"name":"feature1"},"ups":[{"name":"feature3"}],"commits":[{"sha":"9abe2e60bb0777c2b56a90f970bc47490a1f9ec8","subject":"stuff"},{"sha":"04d722a21cc222d6082d337dea8d040ba4566b5a","subject":"Add feature2"}],"worktree":"$WORK/repo"}
+{"name":"feature2","current":true,"down":{"name":"feature1"},"ups":[{"name":"feature3"}],"commits":[{"sha":"9abe2e60bb0777c2b56a90f970bc47490a1f9ec8","subject":"stuff"},{"sha":"04d722a21cc222d6082d337dea8d040ba4566b5a","subject":"Add feature2"}]}
 {"name":"feature3","down":{"name":"feature2"},"ups":[{"name":"feature4"}],"commits":[{"sha":"254a4f70287c1afb02dae61ce9bd82df91a75802","subject":"thing"},{"sha":"5a530c85cf4fb57f0fe64b7b6de605590b02209b","subject":"Add feature3"}]}
 {"name":"feature4","down":{"name":"feature3"},"ups":[{"name":"feature5"}],"commits":[{"sha":"88bfff0e9915ce8c099a6334c71c1d926947c381","subject":"Add feature4"}]}
 {"name":"feature5","down":{"name":"feature4"},"commits":[{"sha":"02d2cebb53f1cf3226c9a080e3866d442e20fb3c","subject":"Add feature5"}]}
 {"name":"main","ups":[{"name":"feature1"}]}
 -- golden/merge_commit.json --
-{"name":"feature1","current":true,"down":{"name":"main"},"ups":[{"name":"feature2"}],"commits":[{"sha":"a7e3da420acfca08bd4172cfecb80d5fa3a7b727","subject":"Merge feature2 into feature1"},{"sha":"210162b69f6bcc72bf6d0e884cf2c1ae5e6cadc3","subject":"more"},{"sha":"b649e21954e69848f4607eb771316c1855091350","subject":"Add feature1"}],"worktree":"$WORK/repo"}
+{"name":"feature1","current":true,"down":{"name":"main"},"ups":[{"name":"feature2"}],"commits":[{"sha":"a7e3da420acfca08bd4172cfecb80d5fa3a7b727","subject":"Merge feature2 into feature1"},{"sha":"210162b69f6bcc72bf6d0e884cf2c1ae5e6cadc3","subject":"more"},{"sha":"b649e21954e69848f4607eb771316c1855091350","subject":"Add feature1"}]}
 {"name":"feature2","down":{"name":"feature1","needsRestack":true},"ups":[{"name":"feature3"}],"commits":[{"sha":"9abe2e60bb0777c2b56a90f970bc47490a1f9ec8","subject":"stuff"},{"sha":"04d722a21cc222d6082d337dea8d040ba4566b5a","subject":"Add feature2"}]}
 {"name":"feature3","down":{"name":"feature2"},"ups":[{"name":"feature4"}],"commits":[{"sha":"254a4f70287c1afb02dae61ce9bd82df91a75802","subject":"thing"},{"sha":"5a530c85cf4fb57f0fe64b7b6de605590b02209b","subject":"Add feature3"}]}
 {"name":"feature4","down":{"name":"feature3"},"ups":[{"name":"feature5"}],"commits":[{"sha":"88bfff0e9915ce8c099a6334c71c1d926947c381","subject":"Add feature4"}]}

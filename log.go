@@ -135,7 +135,8 @@ func (cmd *branchLogCmd) run(
 		wantChangeState = cmd.CRStatus
 
 		presenter = &jsonLogPresenter{
-			Stdout: kctx.Stdout,
+			Stdout:          kctx.Stdout,
+			CurrentWorktree: wt.RootDir(),
 		}
 	} else {
 		// Determine which ChangeFormat to use:
@@ -310,7 +311,8 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 }
 
 type jsonLogPresenter struct {
-	Stdout io.Writer // required
+	Stdout          io.Writer // required
+	CurrentWorktree string    // required
 }
 
 func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch string) (retErr error) {
@@ -380,7 +382,9 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 			}
 		}
 
-		logBranch.Worktree = branch.Worktree
+		if wt := branch.Worktree; wt != "" && wt != p.CurrentWorktree {
+			logBranch.Worktree = wt
+		}
 
 		if err := enc.Encode(logBranch); err != nil {
 			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
@@ -421,8 +425,13 @@ type jsonLogBranch struct {
 	// from git-spice's perspective.
 	Push *jsonLogPushStatus `json:"push,omitempty"`
 
-	// Worktree is the absolute path to the worktree where this branch is checked out.
-	// This is unset if the branch is not checked out.
+	// Worktree is the absolute path to the worktree
+	// where this branch is checked out,
+	// if it's not the current branch.
+	//
+	// This is unset if the branch is not checked out
+	// in any worktree,
+	// or if it's the current branch (current is true).
 	Worktree string `json:"worktree,omitempty"`
 }
 

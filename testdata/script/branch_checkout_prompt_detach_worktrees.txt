@@ -31,9 +31,12 @@ git worktree add ../wt main
 # Attempt to checkout feat1 in detached HEAD state
 # from the other worktree.
 cd ../wt
-env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+[unix] env ROBOT_INPUT=$WORK/robot-unix.golden
+[windows] env ROBOT_INPUT=$WORK/robot-windows.golden
+env ROBOT_OUTPUT=$WORK/robot.actual
 gs branch checkout --detach
-cmp $WORK/robot.actual $WORK/robot.golden
+cmp $WORK/robot.actual $ROBOT_INPUT
 
 # verify both worktrees are on the same commit hash
 git rev-parse HEAD
@@ -44,9 +47,15 @@ feature content
 
 -- golden/feat1-hash.txt --
 121498bab12f8ac31e38043ac0b475ccfdcf7769
--- robot.golden --
+-- robot-unix.golden --
 ===
 > Select a branch to checkout: 
 > ┏━□ feat1 [wt: ~/repo]
+> main ◀
+"feat1"
+-- robot-windows.golden --
+===
+> Select a branch to checkout: 
+> ┏━□ feat1 [wt: ~\repo]
 > main ◀
 "feat1"

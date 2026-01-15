@@ -54,14 +54,13 @@ cmp stderr $WORK/golden/ll-with-status.txt
 
 # Test: JSON
 gs ls --json --no-cr-status
-[unix] cmpenv stdout $WORK/golden/ls-without-status.json
+cmpenv stdout $WORK/golden/ls-without-status.json
 gs ll --json --no-cr-status
-[unix] cmpenv stdout $WORK/golden/ll-without-status.json
+cmpenv stdout $WORK/golden/ll-without-status.json
 gs ls --json
-[unix] cmpenv stdout $WORK/golden/ls-with-status.json
+cmpenv stdout $WORK/golden/ls-with-status.json
 gs ll --json
-[unix] cmpenv stdout $WORK/golden/ll-with-status.json
-# Paths matched on unix only because of / vs \.
+cmpenv stdout $WORK/golden/ll-with-status.json
 
 -- repo/feat1.txt --
 feat1
@@ -101,20 +100,20 @@ main
 -- golden/ls-without-status.json --
 {"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
 {"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0},"worktree":"$WORK/repo"}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ll-without-status.json --
 {"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"ed5e364e35378f4b742951de90ec15d10fd6aae2","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
 {"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"769cbf5b61f500126a5580d6fd8e89ac78c468da","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"67480b64efd70742a4cf6da3cf01c56bddc14fe8","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0},"worktree":"$WORK/repo"}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"67480b64efd70742a4cf6da3cf01c56bddc14fe8","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ls-with-status.json --
 {"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","status":"merged"},"push":{"ahead":0,"behind":0}}
 {"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","status":"open"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"closed"},"push":{"ahead":0,"behind":0},"worktree":"$WORK/repo"}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"closed"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ll-with-status.json --
 {"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"ed5e364e35378f4b742951de90ec15d10fd6aae2","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","status":"merged"},"push":{"ahead":0,"behind":0}}
 {"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"769cbf5b61f500126a5580d6fd8e89ac78c468da","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","status":"open"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"67480b64efd70742a4cf6da3cf01c56bddc14fe8","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"closed"},"push":{"ahead":0,"behind":0},"worktree":"$WORK/repo"}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"67480b64efd70742a4cf6da3cf01c56bddc14fe8","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"closed"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
