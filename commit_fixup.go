@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 	"go.abhg.dev/gs/internal/ui/widget"
 )
 
@@ -205,11 +206,11 @@ func (cmd *commitFixupCmd) commitPrompt(
 					continue
 				}
 
-				commitSummaries := make([]widget.CommitSummary, len(commits))
+				commitSummaries := make([]commit.Summary, len(commits))
 
 				mu.Lock()
 				for i, c := range commits {
-					commitSummaries[i] = widget.CommitSummary{
+					commitSummaries[i] = commit.Summary{
 						ShortHash:  c.ShortHash,
 						Subject:    c.Subject,
 						AuthorDate: c.AuthorDate,

@@ -11,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 	"go.abhg.dev/gs/internal/ui/widget"
 )
 
@@ -94,12 +95,12 @@ func (cmd *branchSplitCmd) Run(
 				return nil, errors.New("cannot split a branch with fewer than 2 commits")
 			}
 
-			commits := make([]widget.CommitSummary, len(branchCommits))
-			for i, commit := range branchCommits {
-				commits[i] = widget.CommitSummary{
-					ShortHash:  commit.ShortHash,
-					Subject:    commit.Subject,
-					AuthorDate: commit.AuthorDate,
+			commits := make([]commit.Summary, len(branchCommits))
+			for i, c := range branchCommits {
+				commits[i] = commit.Summary{
+					ShortHash:  c.ShortHash,
+					Subject:    c.Subject,
+					AuthorDate: c.AuthorDate,
 				}
 			}
 
@@ -210,18 +211,18 @@ func (cmd *branchSplitCmd) Run(
 	return nil
 }
 
-func (cmd *branchSplitCmd) commitDescription(commit git.CommitDetail, head bool) string {
+func (cmd *branchSplitCmd) commitDescription(c git.CommitDetail, head bool) string {
 	var desc strings.Builder
 	if head {
 		desc.WriteString("  ■ ")
 	} else {
 		desc.WriteString("  □ ")
 	}
-	(&widget.CommitSummary{
-		ShortHash:  commit.ShortHash,
-		Subject:    commit.Subject,
-		AuthorDate: commit.AuthorDate,
-	}).Render(&desc, widget.DefaultCommitSummaryStyle)
+	(&commit.Summary{
+		ShortHash:  c.ShortHash,
+		Subject:    c.Subject,
+		AuthorDate: c.AuthorDate,
+	}).Render(&desc, commit.DefaultSummaryStyle, nil)
 
 	return desc.String()
 }

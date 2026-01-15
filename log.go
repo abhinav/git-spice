@@ -24,8 +24,8 @@ import (
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 	"go.abhg.dev/gs/internal/ui/fliptree"
-	"go.abhg.dev/gs/internal/ui/widget"
 )
 
 type logCmd struct {
@@ -61,7 +61,7 @@ var (
 				Foreground(ui.Cyan).
 				Bold(true)
 
-	_logCommitStyle = widget.CommitSummaryStyle{
+	_logCommitStyle = commit.SummaryStyle{
 		Hash:    ui.NewStyle().Foreground(ui.Yellow),
 		Subject: ui.NewStyle().Foreground(ui.Plain),
 		Time:    ui.NewStyle().Foreground(ui.Gray),
@@ -287,13 +287,13 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 				commitStyle = _logCommitFaintStyle
 			}
 
-			for _, commit := range b.Commits {
+			for _, c := range b.Commits {
 				o.WriteString("\n")
-				(&widget.CommitSummary{
-					ShortHash:  commit.ShortHash,
-					Subject:    commit.Subject,
-					AuthorDate: commit.AuthorDate,
-				}).Render(&o, commitStyle)
+				(&commit.Summary{
+					ShortHash:  c.ShortHash,
+					Subject:    c.Subject,
+					AuthorDate: c.AuthorDate,
+				}).Render(&o, commitStyle, nil)
 			}
 
 			return o.String()

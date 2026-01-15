@@ -10,12 +10,13 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/commit"
 )
 
 // BranchSplitStyle defines the styles for [BranchSplit].
 type BranchSplitStyle struct {
-	Commit     CommitSummaryStyle
-	HeadCommit CommitSummaryStyle
+	Commit     commit.SummaryStyle
+	HeadCommit commit.SummaryStyle
 
 	SplitMarker lipgloss.Style
 	HeadMarker  lipgloss.Style
@@ -23,8 +24,8 @@ type BranchSplitStyle struct {
 
 // DefaultBranchSplitStyle is the default style for a [BranchSplit].
 var DefaultBranchSplitStyle = BranchSplitStyle{
-	Commit:      DefaultCommitSummaryStyle,
-	HeadCommit:  DefaultCommitSummaryStyle.Faint(true),
+	Commit:      commit.DefaultSummaryStyle,
+	HeadCommit:  commit.DefaultSummaryStyle.Faint(true),
 	SplitMarker: ui.NewStyle().SetString("□"),
 	HeadMarker:  ui.NewStyle().SetString("■"),
 }
@@ -36,8 +37,8 @@ var DefaultBranchSplitStyle = BranchSplitStyle{
 type BranchSplit struct {
 	Style BranchSplitStyle
 
-	model   *ui.MultiSelect[CommitSummary]
-	commits []CommitSummary
+	model   *ui.MultiSelect[commit.Summary]
+	commits []commit.Summary
 	head    string
 }
 
@@ -55,7 +56,7 @@ func NewBranchSplit() *BranchSplit {
 }
 
 // WithCommits sets the commits to be listed in a branch split widget.
-func (b *BranchSplit) WithCommits(commits ...CommitSummary) *BranchSplit {
+func (b *BranchSplit) WithCommits(commits ...commit.Summary) *BranchSplit {
 	must.Bef(len(commits) >= 2, "cannot split a branch with fewer than 2 commits")
 	b.commits = commits
 	return b
@@ -75,12 +76,12 @@ func (b *BranchSplit) UnmarshalValue(unmarshal func(any) error) error {
 	}
 
 	selected := make([]int, 0, len(commits))
-	for _, commit := range commits {
-		idx := slices.IndexFunc(b.commits, func(c CommitSummary) bool {
-			return c.ShortHash == commit
+	for _, c := range commits {
+		idx := slices.IndexFunc(b.commits, func(summary commit.Summary) bool {
+			return summary.ShortHash == c
 		})
 		if idx == -1 {
-			return fmt.Errorf("cannot select %v: commit not found", commit)
+			return fmt.Errorf("cannot select %v: commit not found", c)
 		}
 
 		selected = append(selected, idx)
@@ -130,10 +131,10 @@ func (b *BranchSplit) Err() error { return nil }
 
 // Init initializes the widget.
 func (b *BranchSplit) Init() tea.Cmd {
-	options := make([]ui.MultiSelectOption[CommitSummary], len(b.commits))
-	for idx, commit := range b.commits {
-		options[idx] = ui.MultiSelectOption[CommitSummary]{
-			Value: commit,
+	options := make([]ui.MultiSelectOption[commit.Summary], len(b.commits))
+	for idx, c := range b.commits {
+		options[idx] = ui.MultiSelectOption[commit.Summary]{
+			Value: c,
 			Skip:  idx == len(b.commits)-1,
 		}
 	}
@@ -146,7 +147,7 @@ func (b *BranchSplit) Update(msg tea.Msg) tea.Cmd {
 	return b.model.Update(msg)
 }
 
-func (b *BranchSplit) renderCommit(w ui.Writer, idx int, option ui.MultiSelectOption[CommitSummary]) {
+func (b *BranchSplit) renderCommit(w ui.Writer, idx int, option ui.MultiSelectOption[commit.Summary]) {
 	commitStyle := b.Style.Commit
 	headIdx := len(b.commits) - 1
 	switch {
@@ -159,13 +160,17 @@ func (b *BranchSplit) renderCommit(w ui.Writer, idx int, option ui.MultiSelectOp
 		w.WriteString(" ")
 	}
 
+	summaryOptions := commit.SummaryOptions{
+		Now: _timeNow,
+	}
+
 	w.WriteString(" ")
-	commit := option.Value
-	(&CommitSummary{
-		ShortHash:  commit.ShortHash,
-		Subject:    commit.Subject,
-		AuthorDate: commit.AuthorDate,
-	}).Render(w, commitStyle)
+	c := option.Value
+	(&commit.Summary{
+		ShortHash:  c.ShortHash,
+		Subject:    c.Subject,
+		AuthorDate: c.AuthorDate,
+	}).Render(w, commitStyle, &summaryOptions)
 
 	if idx == headIdx && b.head != "" {
 		w.WriteString(" [")
