@@ -1,0 +1,97 @@
+# Test 'commit split' with multiple files, allowing multi-way split.
+
+[!unix] skip # pending github.com/creack/pty/pull/155
+[!git:2.52] skip # git add -p output is fixed to Git version
+
+as 'Test <test@example.com>'
+at '2024-07-08T05:04:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a commit with 3 files
+git add file1.txt file2.txt file3.txt
+gs bc -m 'Add all features' features
+
+# Create an upstack branch to verify restacking
+git add extra.txt
+gs bc -m 'Add extra' extra
+gs down
+
+# Split: select file1 first, then quit to get remainder
+with-term -final exit $WORK/input.txt -- gs commit split -m 'Add file1'
+cmp stdout $WORK/golden/output.txt
+
+# Verify log shows 2 commits
+git log --oneline features
+cmp stdout $WORK/golden/log.txt
+
+# Verify branch stack
+gs ll
+cmp stderr $WORK/golden/ll.txt
+
+-- repo/file1.txt --
+file 1 content
+
+-- repo/file2.txt --
+file 2 content
+
+-- repo/file3.txt --
+file 3 content
+
+-- repo/extra.txt --
+extra content
+
+-- input.txt --
+await file1
+feed y\r
+clear
+await file2
+feed q\r
+await
+
+-- golden/output.txt --
+### exit ###
+INF Select hunks for commit 1
+diff --git b/file1.txt a/file1.txt
+new file mode 100644
+index 0000000..a024894
+--- /dev/null
++++ a/file1.txt
+@@ -0,0 +1,2 @@
++file 1 content
++
+(1/3) Apply addition to index [y,n,q,a,d,e,p,P,?]? y
+
+diff --git b/file2.txt a/file2.txt
+new file mode 100644
+index 0000000..6bb0100
+--- /dev/null
++++ a/file2.txt
+@@ -0,0 +1,2 @@
++file 2 content
++
+(1/2) Apply addition to index [y,n,q,a,d,e,p,P,?]? q
+
+[features f94af9e] Add file1
+ 1 file changed, 2 insertions(+)
+ create mode 100644 file1.txt
+[features 40e0b8e] Add all features
+ Date: Mon Jul 8 05:04:32 2024 +0000
+ 2 files changed, 4 insertions(+)
+ create mode 100644 file2.txt
+ create mode 100644 file3.txt
+INF extra: restacked on features
+-- golden/log.txt --
+40e0b8e Add all features
+f94af9e Add file1
+-- golden/ll.txt --
+  ┏━□ extra
+  ┃   cc6a2fb Add extra (now)
+┏━┻■ features ◀
+┃    40e0b8e Add all features (now)
+┃    f94af9e Add file1 (now)
+main

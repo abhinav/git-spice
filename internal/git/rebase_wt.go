@@ -331,3 +331,33 @@ func (b RebaseBackend) stateDir() string {
 		return ""
 	}
 }
+
+// RebaseEdit starts an interactive rebase that pauses at the given commit
+// for editing. This is equivalent to changing "pick" to "edit" for that commit
+// in the rebase todo list.
+//
+// The function returns a [RebaseInterruptError] with Kind [RebaseInterruptDeliberate]
+// when the rebase successfully pauses at the target commit.
+func (w *Worktree) RebaseEdit(ctx context.Context, commit Hash) error {
+	// Use sed to change "pick <hash>" to "edit <hash>" for the target commit.
+	// The short hash is used in the rebase todo file.
+	shortHash := commit.Short()
+
+	// The sequence editor command replaces "pick <hash>" with "edit <hash>".
+	// We use a sed command that matches the short hash prefix.
+	sedCmd := fmt.Sprintf(
+		"sed -i.bak 's/^pick %s/edit %s/' \"$1\"",
+		shortHash, shortHash,
+	)
+
+	args := []string{
+		"-c", "sequence.editor=sh -c '" + sedCmd + "'",
+		"rebase", "--interactive", commit.String() + "^",
+	}
+
+	cmd := w.gitCmd(ctx, args...).WithLogPrefix("git rebase")
+	if err := cmd.Run(); err != nil {
+		return w.handleRebaseError(ctx, err)
+	}
+	return w.handleRebaseFinish(ctx)
+}

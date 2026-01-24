@@ -1,0 +1,91 @@
+# Test 'commit split' for a non-HEAD commit using rebase.
+
+[!unix] skip # pending github.com/creack/pty/pull/155
+[!git:2.52] skip # git add -p output is fixed to Git version
+
+as 'Test <test@example.com>'
+at '2024-07-08T05:04:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch with 3 commits
+git add file1.txt
+gs bc -m 'Commit 1' feature
+
+git add file2a.txt file2b.txt
+gs cc -m 'Commit 2 (to be split)'
+
+git add file3.txt
+gs cc -m 'Commit 3'
+
+# Show log before split
+git log --oneline -3
+
+# Split commit 2 (not HEAD) - using HEAD~1 to reference it
+with-term -final exit $WORK/input.txt -- gs commit split -m 'Commit 2a' HEAD~1
+cmp stdout $WORK/golden/output.txt
+
+# Verify log shows 4 commits total
+git log --oneline feature
+cmp stdout $WORK/golden/log.txt
+
+-- repo/file1.txt --
+file 1 content
+
+-- repo/file2a.txt --
+file 2a content
+
+-- repo/file2b.txt --
+file 2b content
+
+-- repo/file3.txt --
+file 3 content
+
+-- input.txt --
+await file2a
+feed y\r
+clear
+await file2b
+feed q\r
+await
+
+-- golden/output.txt --
+### exit ###
+INF Select hunks for commit 1
+diff --git b/file2a.txt a/file2a.txt
+new file mode 100644
+index 0000000..ca7daff
+--- /dev/null
++++ a/file2a.txt
+@@ -0,0 +1,2 @@
++file 2a content
++
+(1/2) Apply addition to index [y,n,q,a,d,e,p,P,?]? y
+
+diff --git b/file2b.txt a/file2b.txt
+new file mode 100644
+index 0000000..b44c68d
+--- /dev/null
++++ a/file2b.txt
+@@ -0,0 +1,2 @@
++file 2b content
++
+(1/1) Apply addition to index [y,n,q,a,d,e,p,P,?]? q
+
+[detached HEAD 88c1b2f] Commit 2a
+ 1 file changed, 2 insertions(+)
+ create mode 100644 file2a.txt
+[detached HEAD 4a3f8d2] Commit 2 (to be split)
+ Date: Mon Jul 8 05:04:32 2024 +0000
+ 1 file changed, 2 insertions(+)
+ create mode 100644 file2b.txt
+Successfully rebased and updated refs/heads/feature.
+-- golden/log.txt --
+7b2c3d1 Commit 3
+4a3f8d2 Commit 2 (to be split)
+88c1b2f Commit 2a
+a1b2c3d Commit 1
