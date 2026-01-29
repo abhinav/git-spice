@@ -131,6 +131,37 @@ func (r *Repository) DiffTree(ctx context.Context, treeish1, treeish2 string) it
 	}
 }
 
+// DiffText returns the unified diff text between two refs.
+// It uses the triple-dot syntax (base...head) to compare
+// the merge-base of base and head with head.
+func (r *Repository) DiffText(ctx context.Context, base, head string) (string, error) {
+	out, err := r.gitCmd(ctx, "diff", base+"..."+head).Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff %s...%s: %w", base, head, err)
+	}
+	return string(out), nil
+}
+
+// DiffTextDirect returns the unified diff text between two refs.
+// Unlike DiffText, it uses a direct two-dot comparison (base..head)
+// rather than the merge-base.
+func (r *Repository) DiffTextDirect(ctx context.Context, base, head string) (string, error) {
+	out, err := r.gitCmd(ctx, "diff", base, head).Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff %s %s: %w", base, head, err)
+	}
+	return string(out), nil
+}
+
+// DiffStaged returns the unified diff text of staged changes.
+func (w *Worktree) DiffStaged(ctx context.Context) (string, error) {
+	out, err := w.gitCmd(ctx, "diff", "--cached").Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff --cached: %w", err)
+	}
+	return string(out), nil
+}
+
 func parseDiffFileStatuses(r io.Reader, log *silog.Logger) ([]FileStatus, error) {
 	var files []FileStatus
 	scanner := bufio.NewScanner(r)

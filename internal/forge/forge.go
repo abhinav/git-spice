@@ -319,6 +319,14 @@ type SubmitChangeResult struct {
 // EditChangeOptions specifies options for an operation to edit
 // an existing change.
 type EditChangeOptions struct {
+	// Title specifies the new title for the change.
+	// If empty, the title is not changed.
+	Title string
+
+	// Body specifies the new body for the change.
+	// If empty, the body is not changed.
+	Body string
+
 	// Base specifies the name of the base branch.
 	//
 	// If unset, the base branch is not changed.

@@ -11,7 +11,9 @@ import (
 
 // EditChange edits an existing change in a repository.
 func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
-	if cmputil.Zero(opts.Base) &&
+	if cmputil.Zero(opts.Title) &&
+		cmputil.Zero(opts.Body) &&
+		cmputil.Zero(opts.Base) &&
 		cmputil.Zero(opts.Draft) &&
 		len(opts.AddLabels) == 0 &&
 		len(opts.AddReviewers) == 0 &&
@@ -26,7 +28,8 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		return fmt.Errorf("get pull request ID: %w", err)
 	}
 
-	if opts.Base != "" {
+	// Update title, body, and/or base if any are specified.
+	if opts.Title != "" || opts.Body != "" || opts.Base != "" {
 		var m struct {
 			UpdatePullRequest struct {
 				// We don't need any information back,
@@ -37,13 +40,23 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 
 		input := githubv4.UpdatePullRequestInput{
 			PullRequestID: graphQLID,
-			BaseRefName:   (*githubv4.String)(&opts.Base),
+		}
+		if opts.Title != "" {
+			input.Title = (*githubv4.String)(&opts.Title)
+			r.log.Debug("Updating PR title", "title", opts.Title)
+		}
+		if opts.Body != "" {
+			input.Body = (*githubv4.String)(&opts.Body)
+			r.log.Debug("Updating PR body")
+		}
+		if opts.Base != "" {
+			input.BaseRefName = (*githubv4.String)(&opts.Base)
+			r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
 		}
 
 		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
-		r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
 	}
 
 	// Draft status is a separate API call for some reason.
