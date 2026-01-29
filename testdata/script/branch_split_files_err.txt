@@ -1,0 +1,52 @@
+# Test gs branch split-files error cases.
+
+as 'Test <test@example.com>'
+at '2026-01-24T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Error: Cannot split trunk.
+! gs branch split-files main
+stderr 'cannot split trunk branch'
+
+# Create a branch with only one file.
+git add single.go
+gs bc single-file -m 'Add single file'
+
+# Error: Only one file - nothing to split.
+! gs branch split-files
+stderr 'only one file changed'
+
+# Create a branch with multiple files.
+git checkout main
+git add api.go
+git add db.go
+gs bc multi-file -m 'Add multiple files'
+
+# Error: Delete with unassigned files.
+! gs branch split-files --at 'api.go:api-changes:Add API' --delete
+stderr 'requires all files to be assigned'
+
+# Error: File not in branch changes.
+! gs branch split-files --at 'nonexistent.go:api-changes:Add API' --keep
+stderr 'file "nonexistent.go" not found'
+
+# Error: Duplicate file assignment.
+! gs branch split-files --at 'api.go:api-changes:Add API' --at 'api.go:db-changes:Add DB' --keep
+stderr 'already assigned'
+
+-- repo/single.go --
+package main
+
+func single() {}
+-- repo/api.go --
+package main
+
+func handleAPI() {}
+-- repo/db.go --
+package main
+
+func queryDB() {}

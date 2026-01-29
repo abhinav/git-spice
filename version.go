@@ -35,8 +35,8 @@ func (cmd *versionCmd) Run(app *kong.Kong) error {
 	}
 
 	fmt.Fprintln(app.Stdout)
-	fmt.Fprintln(app.Stdout, "Copyright (C) Abhinav Gupta")
-	fmt.Fprintln(app.Stdout, "  <https://github.com/abhinav/git-spice>")
+	fmt.Fprintln(app.Stdout, "Copyright (C) vvanirudh")
+	fmt.Fprintln(app.Stdout, "  <https://github.com/vvanirudh/gritt-spice>")
 	fmt.Fprintln(app.Stdout, "This program comes with ABSOLUTELY NO WARRANTY")
 	fmt.Fprintln(app.Stdout, "This is free software, and you are welcome to redistribute it")
 	fmt.Fprintln(app.Stdout, "under certain conditions; see source for details.")

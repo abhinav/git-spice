@@ -101,7 +101,7 @@ func (w *Worktree) DiffIndex(ctx context.Context, treeish string) ([]FileStatus,
 // The treeish1 and treeish2 arguments can be any valid tree-ish references.
 func (r *Repository) DiffTree(ctx context.Context, treeish1, treeish2 string) iter.Seq2[FileStatus, error] {
 	return func(yield func(FileStatus, error) bool) {
-		cmd := r.gitCmd(ctx, "diff-tree", "--name-status", "-z", treeish1, treeish2)
+		cmd := r.gitCmd(ctx, "diff-tree", "-r", "--name-status", "-z", treeish1, treeish2)
 		var status string
 		var expectingPath bool
 		for line, err := range cmd.Scan(scanutil.SplitNull) {

@@ -1,0 +1,78 @@
+# Test gs branch split-files: split a branch by files into a stack.
+
+as 'Test <test@example.com>'
+at '2026-01-24T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a feature branch with multiple files.
+git add api.go
+git add db.go
+git add utils.go
+git add config.go
+gs bc feature -m 'Add multiple features'
+
+# Verify initial state.
+gs ls -a
+cmp stderr $WORK/golden/before.txt
+
+# Split the branch by files using non-interactive mode.
+gs branch split-files --at 'api.go:api-changes:Add API' --at 'db.go|config.go:db-changes:Add DB and config' --keep
+
+# Verify the split result.
+gs ls -a
+cmp stderr $WORK/golden/after.txt
+
+# Verify git graph.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+# Verify each branch has the expected files.
+git show api-changes --name-only --format=''
+cmp stdout $WORK/golden/api-changes-files.txt
+
+git show db-changes --name-only --format=''
+cmp stdout $WORK/golden/db-changes-files.txt
+
+git show feature --name-only --format=''
+cmp stdout $WORK/golden/feature-files.txt
+
+-- repo/api.go --
+package main
+
+func handleAPI() {}
+-- repo/db.go --
+package main
+
+func queryDB() {}
+-- repo/utils.go --
+package main
+
+func utilFunc() {}
+-- repo/config.go --
+package main
+
+var Config = struct{}{}
+-- golden/before.txt --
+┏━■ feature ◀
+main
+-- golden/after.txt --
+    ┏━■ feature ◀
+  ┏━┻□ db-changes
+┏━┻□ api-changes
+main
+-- golden/graph.txt --
+* 4dd18a3 (HEAD -> feature) Add multiple features
+* 7bcdb49 (db-changes) Add DB and config
+* 1156373 (api-changes) Add API
+* 909d789 (main) Initial commit
+-- golden/api-changes-files.txt --
+api.go
+-- golden/db-changes-files.txt --
+config.go
+db.go
+-- golden/feature-files.txt --
+utils.go

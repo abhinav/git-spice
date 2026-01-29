@@ -1,0 +1,50 @@
+# Test gs branch split-files with --delete:
+# split all files and delete the original branch.
+
+as 'Test <test@example.com>'
+at '2026-01-24T10:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a feature branch with multiple files.
+git add api.go
+git add db.go
+gs bc feature -m 'Add features'
+
+# Verify initial state.
+gs ls -a
+cmp stderr $WORK/golden/before.txt
+
+# Split the branch by files with --delete.
+gs branch split-files --at 'api.go:api-changes:Add API' --at 'db.go:db-changes:Add DB' --delete
+
+# Verify the split result - original branch should be gone.
+gs ls -a
+cmp stderr $WORK/golden/after.txt
+
+# Verify git graph.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/api.go --
+package main
+
+func handleAPI() {}
+-- repo/db.go --
+package main
+
+func queryDB() {}
+-- golden/before.txt --
+┏━■ feature ◀
+main
+-- golden/after.txt --
+  ┏━■ db-changes ◀
+┏━┻□ api-changes
+main
+-- golden/graph.txt --
+* 98f7c86 (HEAD -> db-changes) Add DB
+* 1156373 (api-changes) Add API
+* 909d789 (main) Initial commit

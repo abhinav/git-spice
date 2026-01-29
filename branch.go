@@ -20,11 +20,12 @@ type branchCmd struct {
 	Checkout branchCheckoutCmd `cmd:"" aliases:"co" help:"Switch to a branch"`
 
 	// Creation and destruction
-	Create branchCreateCmd `cmd:"" aliases:"c" help:"Create a new branch"`
-	Delete branchDeleteCmd `cmd:"" aliases:"d,rm" help:"Delete branches"`
-	Fold   branchFoldCmd   `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
-	Split  branchSplitCmd  `cmd:"" aliases:"sp" help:"Split a branch on commits"`
-	Squash branchSquashCmd `cmd:"" aliases:"sq" help:"Squash a branch into one commit" released:"v0.11.0"`
+	Create     branchCreateCmd     `cmd:"" aliases:"c" help:"Create a new branch"`
+	Delete     branchDeleteCmd     `cmd:"" aliases:"d,rm" help:"Delete branches"`
+	Fold       branchFoldCmd       `cmd:"" aliases:"fo" help:"Merge a branch into its base"`
+	Split      branchSplitCmd      `cmd:"" aliases:"sp" help:"Split a branch on commits"`
+	SplitFiles branchSplitFilesCmd `cmd:"" aliases:"spf" help:"Split a branch by files into a stack"`
+	Squash     branchSquashCmd     `cmd:"" aliases:"sq" help:"Squash a branch into one commit" released:"v0.11.0"`
 
 	// Mutation
 	Edit    branchEditCmd    `cmd:"" aliases:"e" help:"Edit the commits in a branch"`
