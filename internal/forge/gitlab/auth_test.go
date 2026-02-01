@@ -560,8 +560,18 @@ func TestCLITokenParsing(t *testing.T) {
 			want: "1234567890abcdef",
 		},
 		{
+			name: "TokenFound",
+			give: "  ✓ Token found: abcdef\n",
+			want: "abcdef",
+		},
+		{
 			name: "glabPrefix",
 			give: "  ✓ Token: glab-AAAAA\n",
+			want: "glab-AAAAA",
+		},
+		{
+			name: "glabPrefixTokenFound",
+			give: "  ✓ Token found: glab-AAAAA\n",
 			want: "glab-AAAAA",
 		},
 		{
@@ -572,6 +582,10 @@ func TestCLITokenParsing(t *testing.T) {
 		{
 			name: "NoToken",
 			give: "  ✓ Token: \n",
+		},
+		{
+			name: "NoTokenFound",
+			give: "  ✓ Token found: \n",
 		},
 		{
 			name: "Unrelated",
