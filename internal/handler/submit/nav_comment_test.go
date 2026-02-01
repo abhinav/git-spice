@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -479,6 +480,210 @@ func TestUpdateNavigationComments(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
+	t.Run("SingleBranch", func(t *testing.T) {
+		log := silogtest.New(t)
+		ctrl := gomock.NewController(t)
+		store := statetest.NewMemoryStore(t, "main", "origin", log)
+
+		// Set up a branch with an existing navigation comment.
+		existingCommentID := shamhub.ChangeCommentID(42)
+		existingMeta := &shamhub.ChangeMetadata{
+			Number:            123,
+			NavigationComment: int(existingCommentID),
+		}
+		existingMetaJSON, err := json.Marshal(existingMeta)
+		require.NoError(t, err)
+
+		// Pre-populate the store with the branch.
+		err = statetest.UpdateBranch(t.Context(), store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{
+				{
+					Name:           "feat1",
+					Base:           "main",
+					ChangeMetadata: existingMetaJSON,
+					ChangeForge:    "shamhub",
+				},
+			},
+			Message: "setup",
+		})
+		require.NoError(t, err)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			LoadBranches(gomock.Any()).
+			Return([]spice.LoadBranchItem{
+				{
+					Name:           "feat1",
+					Base:           "main",
+					Head:           "abcd1234",
+					BaseHash:       "efgh5678",
+					UpstreamBranch: "feat1",
+					Change:         existingMeta,
+				},
+			}, nil)
+
+		mockForge := forgetest.NewMockForge(ctrl)
+		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
+		mockForge.EXPECT().
+			MarshalChangeMetadata(gomock.Any()).
+			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+				md, ok := m.(*shamhub.ChangeMetadata)
+				require.True(t, ok, "unexpected change metadata type: %T", m)
+				return json.Marshal(md)
+			}).
+			AnyTimes()
+
+		mockRemoteRepo := forgetest.NewMockRepository(ctrl)
+		mockRemoteRepo.EXPECT().Forge().Return(mockForge).AnyTimes()
+
+		// UpdateChangeComment returns ErrNotFound,
+		// simulating the comment being deleted externally.
+		mockRemoteRepo.EXPECT().
+			UpdateChangeComment(gomock.Any(), existingCommentID, gomock.Any()).
+			Return(forge.ErrNotFound)
+
+		// PostChangeComment should be called as recovery.
+		newCommentID := shamhub.ChangeCommentID(100)
+		mockRemoteRepo.EXPECT().
+			PostChangeComment(gomock.Any(), shamhub.ChangeID(123), gomock.Any()).
+			DoAndReturn(func(_ context.Context, _ forge.ChangeID, body string) (forge.ChangeCommentID, error) {
+				assert.Contains(t, body, "#123")
+				return newCommentID, nil
+			})
+
+		err = updateNavigationComments(
+			t.Context(),
+			store,
+			mockService, log,
+			NavCommentAlways,
+			NavCommentSyncBranch,
+			NavCommentDownstackAll,
+			"",
+			[]string{"feat1"},
+			func(context.Context) (forge.Repository, error) {
+				return mockRemoteRepo, nil
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("MultipleComments", func(t *testing.T) {
+		log := silogtest.New(t)
+		ctrl := gomock.NewController(t)
+		store := statetest.NewMemoryStore(t, "main", "origin", log)
+
+		// Set up a stack of 3 branches, each with an existing comment.
+		existingMetas := []*shamhub.ChangeMetadata{
+			{Number: 123, NavigationComment: 42},
+			{Number: 124, NavigationComment: 43},
+			{Number: 125, NavigationComment: 44},
+		}
+
+		// Pre-populate the store with the branches.
+		var upserts []state.UpsertRequest
+		for i, meta := range existingMetas {
+			metaJSON, err := json.Marshal(meta)
+			require.NoError(t, err)
+
+			bases := []string{"main", "feat1", "feat2"}
+			upserts = append(upserts, state.UpsertRequest{
+				Name:           []string{"feat1", "feat2", "feat3"}[i],
+				Base:           bases[i],
+				ChangeMetadata: metaJSON,
+				ChangeForge:    "shamhub",
+			})
+		}
+		err := statetest.UpdateBranch(t.Context(), store, &statetest.UpdateRequest{
+			Upserts: upserts,
+			Message: "setup",
+		})
+		require.NoError(t, err)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			LoadBranches(gomock.Any()).
+			Return([]spice.LoadBranchItem{
+				{
+					Name:           "feat1",
+					Base:           "main",
+					Head:           "abcd1234",
+					BaseHash:       "efgh5678",
+					UpstreamBranch: "feat1",
+					Change:         existingMetas[0],
+				},
+				{
+					Name:           "feat2",
+					Base:           "feat1",
+					Head:           "ijkl9012",
+					BaseHash:       "abcd1234",
+					UpstreamBranch: "feat2",
+					Change:         existingMetas[1],
+				},
+				{
+					Name:           "feat3",
+					Base:           "feat2",
+					Head:           "mnop3456",
+					BaseHash:       "ijkl9012",
+					UpstreamBranch: "feat3",
+					Change:         existingMetas[2],
+				},
+			}, nil)
+
+		mockForge := forgetest.NewMockForge(ctrl)
+		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
+		mockForge.EXPECT().
+			MarshalChangeMetadata(gomock.Any()).
+			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+				md, ok := m.(*shamhub.ChangeMetadata)
+				require.True(t, ok, "unexpected change metadata type: %T", m)
+				return json.Marshal(md)
+			}).
+			AnyTimes()
+
+		mockRemoteRepo := forgetest.NewMockRepository(ctrl)
+		mockRemoteRepo.EXPECT().Forge().Return(mockForge).AnyTimes()
+
+		// All UpdateChangeComment calls return ErrNotFound.
+		mockRemoteRepo.EXPECT().
+			UpdateChangeComment(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(forge.ErrNotFound).
+			Times(3)
+
+		var (
+			mu            sync.Mutex
+			commentIDNext = int64(100)
+		)
+		mockRemoteRepo.EXPECT().
+			PostChangeComment(gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(context.Context, forge.ChangeID, string) (forge.ChangeCommentID, error) {
+				mu.Lock()
+				defer mu.Unlock()
+
+				id := shamhub.ChangeCommentID(commentIDNext)
+				commentIDNext++
+				return id, nil
+			}).
+			Times(3)
+
+		err = updateNavigationComments(
+			t.Context(),
+			store,
+			mockService,
+			log,
+			NavCommentAlways,
+			NavCommentSyncDownstack,
+			NavCommentDownstackAll,
+			"",
+			[]string{"feat3"},
+			func(context.Context) (forge.Repository, error) {
+				return mockRemoteRepo, nil
+			},
+		)
+		require.NoError(t, err)
+	})
 }
 
 func TestGenerateStackNavigationComment(t *testing.T) {

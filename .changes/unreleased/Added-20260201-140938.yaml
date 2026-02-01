@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  submit: Detect and recreate navigation comments
+  if they are deleted externally.
+time: 2026-02-01T14:09:38.715578-08:00

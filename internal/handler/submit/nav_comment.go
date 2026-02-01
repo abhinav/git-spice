@@ -3,6 +3,7 @@ package submit
 import (
 	"context"
 	"encoding"
+	"errors"
 	"fmt"
 	"maps"
 	"regexp"
@@ -253,20 +254,75 @@ func updateNavigationComments(
 			Body   string
 		}
 		updateComment struct {
+			Branch  string
+			Meta    forge.ChangeMetadata
 			Change  forge.ChangeID
 			Comment forge.ChangeCommentID
 			Body    string
 		}
 	)
 
-	postc := make(chan *postComment)
-	updatec := make(chan *updateComment)
-	branchTx := store.BeginBranchTx()
 	var (
 		wg       sync.WaitGroup
 		mu       sync.Mutex // guards branchTx
 		upserted []string
 	)
+	branchTx := store.BeginBranchTx()
+	handlePostComment := func(post *postComment) error {
+		commentID, err := remoteRepo.PostChangeComment(ctx, post.Change, post.Body)
+		if err != nil {
+			return err
+		}
+
+		meta := post.Meta
+		meta.SetNavigationCommentID(commentID)
+		bs, err := remoteRepo.Forge().MarshalChangeMetadata(meta)
+		if err != nil {
+			return fmt.Errorf("marshal change metadata: %w", err)
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		if err := branchTx.Upsert(ctx, state.UpsertRequest{
+			Name:           post.Branch,
+			ChangeMetadata: bs,
+			ChangeForge:    remoteRepo.Forge().ID(),
+		}); err != nil {
+			return fmt.Errorf("update branch metadata: %w", err)
+		}
+
+		upserted = append(upserted, post.Branch)
+		return nil
+	}
+
+	handleUpdateComment := func(update *updateComment) error {
+		err := remoteRepo.UpdateChangeComment(ctx, update.Comment, update.Body)
+		if err == nil {
+			return nil
+		}
+
+		if errors.Is(err, forge.ErrNotFound) {
+			log.Info("Navigation comment was deleted, posting new comment",
+				"change", update.Change.String())
+
+			if err := handlePostComment(&postComment{
+				Branch: update.Branch,
+				Meta:   update.Meta,
+				Change: update.Change,
+				Body:   update.Body,
+			}); err != nil {
+				return fmt.Errorf("post replacement comment: %w", err)
+			}
+
+			return nil // recovery successful
+		}
+
+		return err
+	}
+
+	postc := make(chan *postComment)
+	updatec := make(chan *updateComment)
 	for range min(runtime.GOMAXPROCS(0), len(branchesToSync)) {
 		wg.Go(func() {
 			postc := postc
@@ -279,8 +335,7 @@ func updateNavigationComments(
 						continue
 					}
 
-					commentID, err := remoteRepo.PostChangeComment(ctx, post.Change, post.Body)
-					if err != nil {
+					if err := handlePostComment(post); err != nil {
 						log.Warn("Error posting comment",
 							"change", post.Change.String(),
 							"error", err,
@@ -288,40 +343,13 @@ func updateNavigationComments(
 						continue
 					}
 
-					meta := post.Meta
-					meta.SetNavigationCommentID(commentID)
-					bs, err := remoteRepo.Forge().MarshalChangeMetadata(meta)
-					if err != nil {
-						log.Warn("Error marshaling change metadata",
-							"change", post.Change.String(),
-							"error", err,
-						)
-						continue
-					}
-
-					mu.Lock()
-					if err := branchTx.Upsert(ctx, state.UpsertRequest{
-						Name:           post.Branch,
-						ChangeMetadata: bs,
-						ChangeForge:    remoteRepo.Forge().ID(),
-					}); err != nil {
-						log.Error("Unable to update branch metadata",
-							"branch", post.Branch,
-							"error", err,
-						)
-					} else {
-						upserted = append(upserted, post.Branch)
-					}
-					mu.Unlock()
-
 				case update, ok := <-updatec:
 					if !ok {
 						updatec = nil
 						continue
 					}
 
-					err := remoteRepo.UpdateChangeComment(ctx, update.Comment, update.Body)
-					if err != nil {
+					if err := handleUpdateComment(update); err != nil {
 						log.Warn("Error updating comment",
 							"change", update.Change.String(),
 							"error", err,
@@ -355,6 +383,8 @@ func updateNavigationComments(
 			}
 		} else {
 			updatec <- &updateComment{
+				Branch:  info.Branch,
+				Meta:    info.Meta,
 				Change:  info.Meta.ChangeID(),
 				Comment: info.Meta.NavigationCommentID(),
 				Body:    commentBody,

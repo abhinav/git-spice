@@ -67,6 +67,9 @@ func MatchRemoteURL(r *Registry, remoteURL string) (forge Forge, rid RepositoryI
 // does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")
 
+// ErrNotFound indicates that a requested resource does not exist.
+var ErrNotFound = errors.New("not found")
+
 //go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
 
 // TODO:
@@ -187,9 +190,10 @@ type Repository interface {
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangesStates(ctx context.Context, ids []ChangeID) ([]ChangeState, error)
 
-	// Post and update comments on changes.
+	// Post, update, and delete comments on changes.
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
 	UpdateChangeComment(context.Context, ChangeCommentID, string) error
+	DeleteChangeComment(context.Context, ChangeCommentID) error
 
 	// List comments on a CR, optionally filtered per the given options.
 	ListChangeComments(context.Context, ChangeID, *ListChangeCommentsOptions) iter.Seq2[*ListChangeCommentItem, error]

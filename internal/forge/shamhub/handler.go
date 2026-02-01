@@ -155,8 +155,8 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 			}
 		}
 
-		// Decode the body only if it's not a GET request.
-		if r.Method != http.MethodGet {
+		// Decode the body only if it's not a GET or DELETE request.
+		if r.Method != http.MethodGet && r.Method != http.MethodDelete {
 			dec := json.NewDecoder(r.Body)
 			dec.DisallowUnknownFields()
 			if err := dec.Decode(reqv.Addr().Interface()); err != nil {

@@ -1152,6 +1152,23 @@ func (s *integrationSuite) TestChangeComments(t *testing.T) {
 		comments[0] = updatedBody
 	})
 
+	// Updating a deleted comment should return ErrNotFound.
+	t.Run("UpdateDeletedComment", func(t *testing.T) {
+		// Delete the second comment.
+		err := repo.DeleteChangeComment(t.Context(), commentIDs[1])
+		require.NoError(t, err, "could not delete comment")
+
+		// Attempt to update the deleted comment.
+		err = repo.UpdateChangeComment(t.Context(), commentIDs[1], "should fail")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, forge.ErrNotFound,
+			"expected ErrNotFound for deleted comment")
+
+		// Remove from comments slice to keep ListAllComments happy.
+		comments = append(comments[:1], comments[2:]...)
+		commentIDs = append(commentIDs[:1], commentIDs[2:]...)
+	})
+
 	// List all comments with pagination.
 	t.Run("ListAllComments", func(t *testing.T) {
 		// Set a small page size to test pagination.
@@ -1163,7 +1180,7 @@ func (s *integrationSuite) TestChangeComments(t *testing.T) {
 			gotBodies = append(gotBodies, comment.Body)
 		}
 
-		assert.Len(t, gotBodies, TotalComments)
+		assert.Len(t, gotBodies, len(comments))
 		assert.ElementsMatch(t, comments, gotBodies)
 	})
 

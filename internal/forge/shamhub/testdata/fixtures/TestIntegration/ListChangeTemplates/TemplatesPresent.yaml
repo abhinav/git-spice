@@ -7,8 +7,8 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56339
-        url: http://127.0.0.1:56339/abhinav/test-repo/change-template
+        host: 127.0.0.1:57651
+        url: http://127.0.0.1:57651/abhinav/test-repo/change-template
         method: GET
       response:
         proto: HTTP/1.1
@@ -18,12 +18,12 @@ interactions:
         body: |
             [
               {
-                "filename": "RB9Ef8Hb.md",
-                "body": "This is a test template\n"
+                "filename": "0gSN9tI2.md",
+                "body": "\n"
               },
               {
-                "filename": "WZgt4pgr.md",
-                "body": "\n"
+                "filename": "ozsqJB9N.md",
+                "body": "This is a test template\n"
               }
             ]
         headers:
@@ -33,4 +33,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 111.585875ms
+        duration: 107.763833ms
