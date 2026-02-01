@@ -91,6 +91,7 @@ nav:
     - community/faq.md
     - community/recipes.md
     - community/integrations.md
+    - community/llms.md
   - Changelog: changelog.md
   - 🤍 Sponsor: https://github.com/sponsors/abhinav
 
