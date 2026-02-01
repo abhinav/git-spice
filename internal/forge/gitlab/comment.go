@@ -2,6 +2,7 @@ package gitlab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"strconv"
@@ -83,6 +84,9 @@ func (r *Repository) UpdateChangeComment(
 		gitlab.WithContext(ctx),
 	)
 	if err != nil {
+		if errors.Is(err, gitlab.ErrNotFound) {
+			return fmt.Errorf("update comment: %w", forge.ErrNotFound)
+		}
 		return fmt.Errorf("update comment: %w", err)
 	}
 	r.log.Debug("Updated comment",

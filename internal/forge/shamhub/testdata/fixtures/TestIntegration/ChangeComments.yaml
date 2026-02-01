@@ -7,37 +7,37 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 92
-        host: 127.0.0.1:56339
-        body: '{"subject":"Testing nSIed5BM","body":"Test PR for comments","base":"main","head":"nSIed5BM"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/changes
+        host: 127.0.0.1:57651
+        body: '{"subject":"Testing HVh7uxgu","body":"Test PR for comments","base":"main","head":"HVh7uxgu"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
+        content_length: 82
         body: |
             {
-              "number": 1,
-              "url": "http://127.0.0.1:56340/abhinav/test-repo/change/1"
+              "number": 10,
+              "url": "http://127.0.0.1:57652/abhinav/test-repo/change/10"
             }
         headers:
             Content-Length:
-                - "80"
+                - "82"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 21.140666ms
+        duration: 12.783417ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"QadMaoii4nQw8LEQfsqTda7fnU9nFXl7"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"WnJywqqb07OkpobqeCHn76ZAzvhmibmQ"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -55,16 +55,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 473.958µs
+        duration: 173.208µs
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"wTjebPZCvRJprjzHJk2z9ymnn8vz04Sa"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"nLc7rFudLcpqJVBVZhb0gMKKfbWO9Jwq"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -82,16 +82,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 156.833µs
+        duration: 85.625µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"AFXGXAGaWSEzcM9zLbabnn8SDGrj5HsG"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"FtilVlYA5WNblJMwIik7zUDUt8ltbnSs"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -109,16 +109,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 307.042µs
+        duration: 107.542µs
     - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"bdND6bmQg5i3ByoXcCq2eLpcOhEB3D2N"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"v5EBqWsh110OKettsolitinbS0UGH6mO"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -136,16 +136,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 172.791µs
+        duration: 108.125µs
     - id: 5
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"5YJVOphG6FSer3jwEe40YLaoItbxe3fB"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"mbF2hEBzyXGrfne0hObKEyaATsitmc3F"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -163,16 +163,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 152µs
+        duration: 112.875µs
     - id: 6
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"5oQBRyOnpcWegXQlMzlpgcX0705MF6Hh"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"8urf7xHceEiyvAA3JzVWBF4V8FdCH3l2"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -190,16 +190,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 131.166µs
+        duration: 76.042µs
     - id: 7
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"wmdtVP1h8Y2BnuKQmZE031Tf6NxGs9X2"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"xdLYyJ5DC7bPdp6hsanYzx4XqLfCdo1J"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -217,16 +217,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 158.25µs
+        duration: 80.5µs
     - id: 8
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"E1xhNVfEQicxa4LpfGGsoi1VQek6KaPj"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"LaFIHY7kGqqli94oL3zPlRgNRcRBvZMi"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -244,16 +244,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 105.875µs
+        duration: 146.417µs
     - id: 9
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"6MfplzWLuS4Bh6lhfFQLBv42fgVB59nW"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"GUT3zXAfl2HmcQK8VqwGy6JpZvTqcTp2"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -271,16 +271,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 115.333µs
+        duration: 81.875µs
     - id: 10
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 60
-        host: 127.0.0.1:56339
-        body: '{"changeNumber":1,"body":"mIopo9mIGgedFXYWxypy8ya2akYAguQe"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments
+        content_length: 61
+        host: 127.0.0.1:57651
+        body: '{"changeNumber":10,"body":"WcKfdl2Qddu8mvpTTzkG0Z7irBJWW8ep"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments
         method: POST
       response:
         proto: HTTP/1.1
@@ -298,16 +298,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 121.125µs
+        duration: 125.834µs
     - id: 11
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 43
-        host: 127.0.0.1:56339
-        body: '{"body":"H3N8mSwkpFg0DC6YjX98Gx0g8ecac0vq"}'
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments/1
+        host: 127.0.0.1:57651
+        body: '{"body":"lhD5hXUH3NxLLAWcrem6vH8YlVNxmyge"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments/1
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -325,22 +325,71 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 162.75µs
+        duration: 354.667µs
     - id: 12
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56339
+        host: 127.0.0.1:57651
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments/2
+        method: DELETE
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 191.959µs
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 22
+        host: 127.0.0.1:57651
+        body: '{"body":"should fail"}'
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments/2
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 41
+        body: |
+            comment 2 not found in abhinav/test-repo
+        headers:
+            Content-Length:
+                - "41"
+            Content-Type:
+                - text/plain; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 100.291µs
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:57651
         form:
             change:
-                - "1"
+                - "10"
             limit:
                 - "3"
             offset:
                 - "0"
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments?change=1&limit=3&offset=0
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments?change=10&limit=3&offset=0
         method: GET
       response:
         proto: HTTP/1.1
@@ -352,15 +401,15 @@ interactions:
               "items": [
                 {
                   "id": 1,
-                  "body": "H3N8mSwkpFg0DC6YjX98Gx0g8ecac0vq"
-                },
-                {
-                  "id": 2,
-                  "body": "wTjebPZCvRJprjzHJk2z9ymnn8vz04Sa"
+                  "body": "lhD5hXUH3NxLLAWcrem6vH8YlVNxmyge"
                 },
                 {
                   "id": 3,
-                  "body": "AFXGXAGaWSEzcM9zLbabnn8SDGrj5HsG"
+                  "body": "FtilVlYA5WNblJMwIik7zUDUt8ltbnSs"
+                },
+                {
+                  "id": 4,
+                  "body": "v5EBqWsh110OKettsolitinbS0UGH6mO"
                 }
               ],
               "offset": 3,
@@ -373,22 +422,22 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 199.875µs
-    - id: 13
+        duration: 103.166µs
+    - id: 15
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56339
+        host: 127.0.0.1:57651
         form:
             change:
-                - "1"
+                - "10"
             limit:
                 - "3"
             offset:
                 - "3"
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments?change=1&limit=3&offset=3
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments?change=10&limit=3&offset=3
         method: GET
       response:
         proto: HTTP/1.1
@@ -399,16 +448,16 @@ interactions:
             {
               "items": [
                 {
-                  "id": 4,
-                  "body": "bdND6bmQg5i3ByoXcCq2eLpcOhEB3D2N"
-                },
-                {
                   "id": 5,
-                  "body": "5YJVOphG6FSer3jwEe40YLaoItbxe3fB"
+                  "body": "mbF2hEBzyXGrfne0hObKEyaATsitmc3F"
                 },
                 {
                   "id": 6,
-                  "body": "5oQBRyOnpcWegXQlMzlpgcX0705MF6Hh"
+                  "body": "8urf7xHceEiyvAA3JzVWBF4V8FdCH3l2"
+                },
+                {
+                  "id": 7,
+                  "body": "xdLYyJ5DC7bPdp6hsanYzx4XqLfCdo1J"
                 }
               ],
               "offset": 6,
@@ -421,166 +470,122 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 121.209µs
-    - id: 14
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 0
-        host: 127.0.0.1:56339
-        form:
-            change:
-                - "1"
-            limit:
-                - "3"
-            offset:
-                - "6"
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments?change=1&limit=3&offset=6
-        method: GET
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 285
-        body: |
-            {
-              "items": [
-                {
-                  "id": 7,
-                  "body": "wmdtVP1h8Y2BnuKQmZE031Tf6NxGs9X2"
-                },
-                {
-                  "id": 8,
-                  "body": "E1xhNVfEQicxa4LpfGGsoi1VQek6KaPj"
-                },
-                {
-                  "id": 9,
-                  "body": "6MfplzWLuS4Bh6lhfFQLBv42fgVB59nW"
-                }
-              ],
-              "offset": 9,
-              "hasMore": true
-            }
-        headers:
-            Content-Length:
-                - "285"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 190.084µs
-    - id: 15
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 0
-        host: 127.0.0.1:56339
-        form:
-            change:
-                - "1"
-            limit:
-                - "3"
-            offset:
-                - "9"
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments?change=1&limit=3&offset=9
-        method: GET
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 114
-        body: |
-            {
-              "items": [
-                {
-                  "id": 10,
-                  "body": "mIopo9mIGgedFXYWxypy8ya2akYAguQe"
-                }
-              ],
-              "offset": 10
-            }
-        headers:
-            Content-Length:
-                - "114"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 108.583µs
+        duration: 271.375µs
     - id: 16
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56339
+        host: 127.0.0.1:57651
         form:
             change:
-                - "1"
-            limit:
                 - "10"
+            limit:
+                - "3"
             offset:
-                - "0"
-        url: http://127.0.0.1:56339/abhinav/test-repo/comments?change=1&limit=10&offset=0
+                - "6"
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments?change=10&limit=3&offset=6
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 807
+        content_length: 267
+        body: |
+            {
+              "items": [
+                {
+                  "id": 8,
+                  "body": "LaFIHY7kGqqli94oL3zPlRgNRcRBvZMi"
+                },
+                {
+                  "id": 9,
+                  "body": "GUT3zXAfl2HmcQK8VqwGy6JpZvTqcTp2"
+                },
+                {
+                  "id": 10,
+                  "body": "WcKfdl2Qddu8mvpTTzkG0Z7irBJWW8ep"
+                }
+              ],
+              "offset": 9
+            }
+        headers:
+            Content-Length:
+                - "267"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 115.708µs
+    - id: 17
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:57651
+        form:
+            change:
+                - "10"
+            limit:
+                - "10"
+            offset:
+                - "0"
+        url: http://127.0.0.1:57651/abhinav/test-repo/comments?change=10&limit=10&offset=0
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 729
         body: |
             {
               "items": [
                 {
                   "id": 1,
-                  "body": "H3N8mSwkpFg0DC6YjX98Gx0g8ecac0vq"
-                },
-                {
-                  "id": 2,
-                  "body": "wTjebPZCvRJprjzHJk2z9ymnn8vz04Sa"
+                  "body": "lhD5hXUH3NxLLAWcrem6vH8YlVNxmyge"
                 },
                 {
                   "id": 3,
-                  "body": "AFXGXAGaWSEzcM9zLbabnn8SDGrj5HsG"
+                  "body": "FtilVlYA5WNblJMwIik7zUDUt8ltbnSs"
                 },
                 {
                   "id": 4,
-                  "body": "bdND6bmQg5i3ByoXcCq2eLpcOhEB3D2N"
+                  "body": "v5EBqWsh110OKettsolitinbS0UGH6mO"
                 },
                 {
                   "id": 5,
-                  "body": "5YJVOphG6FSer3jwEe40YLaoItbxe3fB"
+                  "body": "mbF2hEBzyXGrfne0hObKEyaATsitmc3F"
                 },
                 {
                   "id": 6,
-                  "body": "5oQBRyOnpcWegXQlMzlpgcX0705MF6Hh"
+                  "body": "8urf7xHceEiyvAA3JzVWBF4V8FdCH3l2"
                 },
                 {
                   "id": 7,
-                  "body": "wmdtVP1h8Y2BnuKQmZE031Tf6NxGs9X2"
+                  "body": "xdLYyJ5DC7bPdp6hsanYzx4XqLfCdo1J"
                 },
                 {
                   "id": 8,
-                  "body": "E1xhNVfEQicxa4LpfGGsoi1VQek6KaPj"
+                  "body": "LaFIHY7kGqqli94oL3zPlRgNRcRBvZMi"
                 },
                 {
                   "id": 9,
-                  "body": "6MfplzWLuS4Bh6lhfFQLBv42fgVB59nW"
+                  "body": "GUT3zXAfl2HmcQK8VqwGy6JpZvTqcTp2"
                 },
                 {
                   "id": 10,
-                  "body": "mIopo9mIGgedFXYWxypy8ya2akYAguQe"
+                  "body": "WcKfdl2Qddu8mvpTTzkG0Z7irBJWW8ep"
                 }
               ],
-              "offset": 10
+              "offset": 9
             }
         headers:
             Content-Length:
-                - "807"
+                - "729"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 112.875µs
+        duration: 600.167µs

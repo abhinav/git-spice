@@ -223,6 +223,21 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		}
 		ts.Check(sh.RejectChange(req))
 
+	case "delete-comment":
+		if len(args) != 1 {
+			ts.Fatalf("usage: shamhub delete-comment <id>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			ts.Fatalf("invalid comment ID: %s", err)
+		}
+
+		ts.Check(sh.DeleteComment(id))
+
 	case "register":
 		if len(args) != 1 {
 			ts.Fatalf("usage: shamhub register <username>")

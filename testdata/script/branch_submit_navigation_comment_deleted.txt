@@ -1,0 +1,67 @@
+# Verify that when a navigation comment is deleted externally,
+# gs ss re-creates it instead of failing with a stale comment ID.
+# Regression test for https://github.com/abhinav/git-spice/issues/975
+
+as 'Test <test@example.com>'
+at '2025-01-18T21:28:29Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create and submit a branch
+git add feature.txt
+gs bc -m feature
+gs bs --fill
+
+# verify initial navigation comment
+shamhub dump comments
+cmp stdout $WORK/golden/initial-comments.txt
+
+# simulate external deletion of the navigation comment
+shamhub delete-comment 1
+
+# verify comment was deleted
+shamhub dump comments
+cmp stdout $WORK/golden/no-comments.txt
+
+# re-submit the branch - should create a new comment
+gs bs --fill
+
+# verify the new navigation comment was created
+shamhub dump comments
+cmp stdout $WORK/golden/recreated-comments.txt
+
+-- repo/feature.txt --
+feature content
+
+-- golden/initial-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/no-comments.txt --
+[]
+-- golden/recreated-comments.txt --
+- change: 1
+  body: |
+    This change is part of the following stack:
+
+    - #1 ◀
+
+    <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
+    <!-- gs:navigation comment -->
+-- golden/end --

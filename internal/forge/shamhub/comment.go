@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"slices"
 	"strconv"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -34,6 +35,21 @@ func (sh *ShamHub) ListChangeComments() ([]*ChangeComment, error) {
 	return comments, nil
 }
 
+// DeleteComment deletes a comment by its ID.
+func (sh *ShamHub) DeleteComment(id int) error {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for i, c := range sh.comments {
+		if c.ID == id {
+			sh.comments = slices.Delete(sh.comments, i, i+1)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("comment %d not found", id)
+}
+
 // ChangeCommentID uniquely identifies a comment on a change in ShamHub.
 type ChangeCommentID int
 
@@ -52,6 +68,7 @@ type shamComment struct {
 var (
 	_ = shamhubRESTHandler("POST /{owner}/{repo}/comments", (*ShamHub).handlePostChangeComment)
 	_ = shamhubRESTHandler("PATCH /{owner}/{repo}/comments/{id}", (*ShamHub).handleUpdateChangeComment)
+	_ = shamhubRESTHandler("DELETE /{owner}/{repo}/comments/{id}", (*ShamHub).handleDeleteChangeComment)
 	_ = shamhubRESTHandler("GET /{owner}/{repo}/comments", (*ShamHub).handleListChangeComments)
 )
 
@@ -164,6 +181,43 @@ func (r *forgeRepository) UpdateChangeComment(
 		return fmt.Errorf("update comment: %w", err)
 	}
 
+	return nil
+}
+
+type deleteCommentRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+	ID    int    `path:"id" json:"-"`
+}
+
+type deleteCommentResponse struct{}
+
+func (sh *ShamHub) handleDeleteChangeComment(_ context.Context, req *deleteCommentRequest) (*deleteCommentResponse, error) {
+	id := req.ID
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for i, c := range sh.comments {
+		if c.ID == id {
+			sh.comments = slices.Delete(sh.comments, i, i+1)
+			return &deleteCommentResponse{}, nil
+		}
+	}
+
+	return nil, notFoundErrorf("comment %d not found", id)
+}
+
+func (r *forgeRepository) DeleteChangeComment(
+	ctx context.Context,
+	id forge.ChangeCommentID,
+) error {
+	cid := int(id.(ChangeCommentID))
+	u := r.apiURL.JoinPath(r.owner, r.repo, "comments", strconv.Itoa(cid))
+	var res deleteCommentResponse
+	if err := r.client.Delete(ctx, u.String(), &res); err != nil {
+		return fmt.Errorf("delete comment: %w", err)
+	}
 	return nil
 }
 

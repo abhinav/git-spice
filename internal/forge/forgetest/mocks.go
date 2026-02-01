@@ -710,6 +710,44 @@ func (c *MockRepositoryChangesStatesCall) DoAndReturn(f func(context.Context, []
 	return c
 }
 
+// DeleteChangeComment mocks base method.
+func (m *MockRepository) DeleteChangeComment(arg0 context.Context, arg1 forge.ChangeCommentID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteChangeComment", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteChangeComment indicates an expected call of DeleteChangeComment.
+func (mr *MockRepositoryMockRecorder) DeleteChangeComment(arg0, arg1 any) *MockRepositoryDeleteChangeCommentCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteChangeComment", reflect.TypeOf((*MockRepository)(nil).DeleteChangeComment), arg0, arg1)
+	return &MockRepositoryDeleteChangeCommentCall{Call: call}
+}
+
+// MockRepositoryDeleteChangeCommentCall wrap *gomock.Call
+type MockRepositoryDeleteChangeCommentCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryDeleteChangeCommentCall) Return(arg0 error) *MockRepositoryDeleteChangeCommentCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryDeleteChangeCommentCall) Do(f func(context.Context, forge.ChangeCommentID) error) *MockRepositoryDeleteChangeCommentCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryDeleteChangeCommentCall) DoAndReturn(f func(context.Context, forge.ChangeCommentID) error) *MockRepositoryDeleteChangeCommentCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // EditChange mocks base method.
 func (m *MockRepository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
 	m.ctrl.T.Helper()

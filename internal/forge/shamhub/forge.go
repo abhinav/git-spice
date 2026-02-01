@@ -158,6 +158,10 @@ func (c *jsonHTTPClient) Patch(ctx context.Context, url string, req, res any) er
 	return c.do(ctx, http.MethodPatch, url, req, res)
 }
 
+func (c *jsonHTTPClient) Delete(ctx context.Context, url string, res any) error {
+	return c.do(ctx, http.MethodDelete, url, nil, res)
+}
+
 func (c *jsonHTTPClient) do(ctx context.Context, method, url string, req, res any) error {
 	var reqBody io.Reader
 	if req != nil {
@@ -189,6 +193,9 @@ func (c *jsonHTTPClient) do(ctx context.Context, method, url string, req, res an
 		return fmt.Errorf("read response body: %w", err)
 	}
 
+	if httpResp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("%w: %s", forge.ErrNotFound, resBody)
+	}
 	if httpResp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d\nbody: %s", httpResp.StatusCode, resBody)
 	}
