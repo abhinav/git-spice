@@ -1,21 +1,19 @@
 package widget
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"sort"
-	"strings"
 	"unicode"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/sahilm/fuzzy"
 	"go.abhg.dev/gs/internal/ui"
-	"go.abhg.dev/gs/internal/ui/fliptree"
+	"go.abhg.dev/gs/internal/ui/branchtree"
 )
 
 // BranchSelectKeyMap defines the key bindings for [Select].
@@ -52,24 +50,14 @@ var DefaultBranchSelectKeyMap = BranchSelectKeyMap{
 	),
 }
 
-// BranchTreeSelectStyle defines the styling for a [BranchTreeSelect] widget.
-type BranchTreeSelectStyle struct {
-	Name            lipgloss.Style
-	DisabedName     lipgloss.Style
-	SelectedName    lipgloss.Style
-	HighlightedName lipgloss.Style
-
-	Marker lipgloss.Style
-}
-
-// DefaultBranchTreeSelectStyle is the default style for a [BranchTreeSelect] widget.
-var DefaultBranchTreeSelectStyle = BranchTreeSelectStyle{
-	Name:            ui.NewStyle(),
-	SelectedName:    ui.NewStyle().Bold(true).Foreground(ui.Yellow),
-	DisabedName:     ui.NewStyle().Foreground(ui.Gray),
-	HighlightedName: ui.NewStyle().Foreground(ui.Cyan),
-	Marker:          ui.NewStyle().Foreground(ui.Yellow).Bold(true).SetString("◀"),
-}
+// _branchSelectStyle is the default style for a [BranchTreeSelect] widget.
+// It modifies branchtree.DefaultStyle to match the widget's visual appearance.
+var _branchSelectStyle = func() branchtree.Style {
+	s := branchtree.DefaultStyle
+	s.Branch = ui.NewStyle()
+	s.BranchHighlighted = ui.NewStyle().Bold(true).Foreground(ui.Yellow)
+	return s
+}()
 
 // BranchTreeItem is a single item in a [BranchTreeSelect].
 type BranchTreeItem struct {
@@ -97,14 +85,12 @@ type BranchTreeItem struct {
 type branchInfo struct {
 	BranchTreeItem
 
-	Index      int   // index in all
-	Aboves     []int // indexes of branches in 'all' with this as base
-	Highlights []int // indexes of runes in Branch name to highlight
-	Visible    bool  // whether this branch is visible
-
-	// DisplayText is the text displayed for this branch.
-	// This is also used for fuzzy searching.
-	DisplayText string
+	Index              int   // index in all
+	Aboves             []int // indexes of branches in 'all' with this as base
+	BranchHighlights   []int // indexes of runes in Branch name to highlight
+	ChangeIDHighlights []int // indexes of runes in ChangeID to highlight
+	WorktreeHighlights []int // indexes of runes in Worktree to highlight
+	Visible            bool  // whether this branch is visible
 }
 
 // BranchTreeSelect is a prompt that allows selecting a branch
@@ -114,7 +100,7 @@ type branchInfo struct {
 // In addition to arrow-based navigation,
 // it allows fuzzy filtering branches by typing the branch name.
 type BranchTreeSelect struct {
-	Style  BranchTreeSelectStyle
+	Style  *branchtree.Style
 	KeyMap BranchSelectKeyMap
 
 	all       []*branchInfo  // all known branches
@@ -139,7 +125,6 @@ var _ ui.Field = (*BranchTreeSelect)(nil)
 // NewBranchTreeSelect creates a new [BranchTreeSelect] widget.
 func NewBranchTreeSelect() *BranchTreeSelect {
 	return &BranchTreeSelect{
-		Style:     DefaultBranchTreeSelectStyle,
 		KeyMap:    DefaultBranchSelectKeyMap,
 		idxByName: make(map[string]int),
 		value:     new(string),
@@ -236,32 +221,6 @@ func (b *BranchTreeSelect) Init() tea.Cmd {
 		}
 
 		base.Aboves = append(base.Aboves, bi.Index)
-	}
-
-	// Compute the display text for each branch.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = "" // if no home directory, we won't substitute paths
-	}
-	for _, bi := range b.all {
-		var display strings.Builder
-		display.WriteString(bi.Branch)
-
-		if bi.ChangeID != "" {
-			fmt.Fprintf(&display, " (%s)", bi.ChangeID)
-		}
-		if wt := bi.Worktree; wt != "" && wt != b.currentWorktree {
-			// If the path is relative to the user's home directory
-			// use "~/$rel" instead.
-			rel, err := filepath.Rel(home, wt)
-			if err == nil && filepath.IsLocal(rel) {
-				wt = filepath.Join("~", rel)
-			}
-
-			fmt.Fprintf(&display, " [wt: %s]", wt)
-		}
-
-		bi.DisplayText = display.String()
 	}
 
 	roots := make([]int, 0, len(rootSet))
@@ -434,16 +393,46 @@ func (b *BranchTreeSelect) updateSelectable() {
 }
 
 func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
-	bi.Highlights = bi.Highlights[:0]
+	type filterMatcher struct {
+		str string // string to match
+		hls *[]int // highlights to update
+	}
+
+	matchers := []filterMatcher{
+		{bi.Branch, &bi.BranchHighlights},
+		{bi.ChangeID, &bi.ChangeIDHighlights},
+	}
+
+	// Only match worktree if it will be displayed.
+	// Worktrees matching the current worktree are not shown.
+	if bi.Worktree != "" && bi.Worktree != b.currentWorktree {
+		matchers = append(matchers, filterMatcher{bi.Worktree, &bi.WorktreeHighlights})
+	}
+
+	// Always reset highlights regardless of filter/matches.
+	for _, m := range matchers {
+		*m.hls = (*m.hls)[:0]
+	}
+
 	if len(b.filter) == 0 {
 		return true
 	}
-	matches := fuzzy.Find(string(b.filter), []string{bi.DisplayText})
-	if len(matches) == 0 {
-		return false
+
+	// Consider this matched if _any_ matcher had results.
+	var matched bool
+	for _, m := range matchers {
+		if len(m.str) == 0 {
+			continue
+		}
+
+		matches := fuzzy.Find(string(b.filter), []string{m.str})
+		if len(matches) > 0 {
+			*m.hls = matches[0].MatchedIndexes
+			matched = true
+		}
 	}
-	bi.Highlights = matches[0].MatchedIndexes
-	return true
+
+	return matched
 }
 
 // Render renders the widget.
@@ -457,18 +446,9 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 		w.WriteString("\n")
 	}
 
-	// visibleDescendants(start, dst)
-	//
-	// fills dst with the indexes of visible descendants
+	// visibleDescendants fills dst with the indexes of visible descendants
 	// of the branches in start.
-	// In short, for each branch in start,
-	//
-	//  - if the branch is visible, it is added to dst
-	//  - otherwise, for each of its Above branches,
-	//    their visible descendants are added to dst.
-	//
-	// The idea is that if we can't show 'foo',
-	// we should show its children 'bar' and 'baz' instead.
+	// If a branch is visible, it is added; otherwise, its children are checked.
 	var visibleDescendants func([]int, []int) []int
 	visibleDescendants = func(starts []int, visibles []int) []int {
 		for _, idx := range starts {
@@ -476,10 +456,8 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 				visibles = append(visibles, idx)
 				continue
 			}
-
 			visibles = visibleDescendants(b.all[idx].Aboves, visibles)
 		}
-
 		return visibles
 	}
 
@@ -488,56 +466,35 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 		selected = b.selectable[b.focused]
 	}
 
-	treeStyle := fliptree.DefaultStyle[*branchInfo]()
-	treeStyle.NodeMarker = func(bi *branchInfo) lipgloss.Style {
-		switch {
-		case bi.Disabled:
-			return fliptree.DefaultNodeMarker.Faint(true)
-		case bi.Index == selected:
-			return fliptree.DefaultNodeMarker.SetString("■")
-		default:
-			return fliptree.DefaultNodeMarker
+	// Convert branchTreeSelectItemInfo to BranchTreeItem.
+	items := make([]*branchtree.Item, len(b.all))
+	for i, bi := range b.all {
+		items[i] = &branchtree.Item{
+			Branch:             bi.Branch,
+			ChangeID:           bi.ChangeID,
+			Worktree:           bi.Worktree,
+			Aboves:             visibleDescendants(bi.Aboves, nil),
+			Highlighted:        bi.Index == selected,
+			Disabled:           bi.Disabled,
+			BranchHighlights:   bi.BranchHighlights,
+			ChangeIDHighlights: bi.ChangeIDHighlights,
+			WorktreeHighlights: bi.WorktreeHighlights,
 		}
 	}
 
-	// Render the tree.
-	_ = fliptree.Write(w, fliptree.Graph[*branchInfo]{
-		Roots:  visibleDescendants(b.roots, nil),
-		Values: b.all,
-		Edges: func(bi *branchInfo) []int {
-			return visibleDescendants(bi.Aboves, nil)
-		},
-		View: func(bi *branchInfo) string {
-			highlights := bi.Highlights
+	g := branchtree.Graph{
+		Items: items,
+		Roots: visibleDescendants(b.roots, nil),
+	}
 
-			nameStyle := b.Style.Name
-			highlightStyle := b.Style.HighlightedName
-			switch {
-			case bi.Disabled:
-				nameStyle = b.Style.DisabedName
-				highlightStyle = b.Style.DisabedName
-			case bi.Index == selected:
-				nameStyle = b.Style.SelectedName
-			}
+	var home string
+	if h, err := os.UserHomeDir(); err == nil {
+		home = h
+	}
 
-			var o strings.Builder
-			lastRuneIdx := 0
-			label := []rune(bi.DisplayText)
-			for _, runeIdx := range highlights {
-				o.WriteString(nameStyle.Render(string(label[lastRuneIdx:runeIdx])))
-				o.WriteString(highlightStyle.Render(string(label[runeIdx])))
-				lastRuneIdx = runeIdx + 1
-			}
-			o.WriteString(nameStyle.Render(string(label[lastRuneIdx:])))
-
-			if bi.Index == selected {
-				o.WriteString(" ")
-				o.WriteString(b.Style.Marker.String())
-			}
-
-			return o.String()
-		},
-	}, fliptree.Options[*branchInfo]{
-		Style: treeStyle,
+	_ = branchtree.Write(w, g, &branchtree.GraphOptions{
+		Style:           cmp.Or(b.Style, &_branchSelectStyle),
+		CurrentWorktree: b.currentWorktree,
+		HomeDir:         home,
 	})
 }

@@ -1,0 +1,37 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+# Filter by "main" which is part of the current worktree path.
+# feat4 is checked out in /home/user/main (the current worktree),
+# so it should NOT match via its worktree path (which isn't displayed).
+# Only "main" branch should match (via branch name).
+feed main
+await
+snapshot
+cmp stdout filter
+
+feed <Enter>
+
+-- home --
+/home/user
+-- worktree --
+/home/user/main
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "feat1", "base": "main", "worktree": "/home/user/wt1"},
+  {"branch": "feat4", "base": "main", "worktree": "/home/user/main"}
+]
+-- prompt --
+Select a branch:
+┏━■ feat1 [wt: /home/user/wt1] ◀
+┣━□ feat4
+main
+-- filter --
+Select a branch:
+main ◀
+-- want --
+main

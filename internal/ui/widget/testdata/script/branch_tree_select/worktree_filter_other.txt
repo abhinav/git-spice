@@ -1,0 +1,34 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+# Filter by a string that only matches feat1's worktree path.
+feed other-wt
+await
+snapshot
+cmp stdout filter
+
+feed <Enter>
+
+-- home --
+/home/user
+-- worktree --
+/home/user/main
+-- branches --
+[
+  {"branch": "main"},
+  {"branch": "feat1", "base": "main", "worktree": "/home/user/other-wt"},
+  {"branch": "feat2", "base": "main"}
+]
+-- prompt --
+Select a branch:
+┏━■ feat1 [wt: /home/user/other-wt] ◀
+┣━□ feat2
+main
+-- filter --
+Select a branch:
+feat1 [wt: /home/user/other-wt] ◀
+-- want --
+feat1
