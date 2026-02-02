@@ -162,7 +162,7 @@ type Options struct {
 
 	Reviewers           []string         `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
 	ConfiguredReviewers []string         `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"`
-	ReviewersAddWhen    ReviewersAddWhen `name:"reviewers-add-when" help:"When to add configured reviewers." hidden:"" config:"submit.reviewers.addWhen" default:"always" released:"unreleased"`
+	ReviewersAddWhen    ReviewersAddWhen `name:"reviewers-add-when" help:"When to add configured reviewers." hidden:"" config:"submit.reviewers.addWhen" default:"always" released:"v0.23.0"`
 
 	Assignees           []string `short:"a" name:"assign" placeholder:"ASSIGNEE" help:"Assign the change request to these users. Pass multiple times or separate with commas." released:"v0.21.0"`
 	ConfiguredAssignees []string `name:"configured-assignees" help:"Default assignees to add to change requests." hidden:"" config:"submit.assignees" released:"v0.21.0"` // merged with Assignees

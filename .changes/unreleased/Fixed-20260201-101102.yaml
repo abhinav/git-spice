@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  gitlab: Token extraction for CLI-based authentication
-  now supports the format used by glab CLI v1.66.0 and later.
-time: 2026-02-01T10:11:02.655003-08:00
