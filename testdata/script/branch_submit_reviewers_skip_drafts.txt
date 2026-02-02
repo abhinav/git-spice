@@ -1,0 +1,201 @@
+# Test spice.submit.reviewers.addWhen configuration option.
+# When set to "ready", configured reviewers are skipped for draft CRs.
+# Flag-specified reviewers are always added regardless of this setting.
+
+as 'Test <test@example.com>'
+at '2024-05-10T12:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+shamhub register bob
+shamhub register charlie
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Configure reviewers and set addWhen to "ready"
+git config spice.submit.reviewers bob
+git config spice.submit.reviewers.addWhen ready
+
+# Test 1: Create draft CR - configured reviewers should be skipped
+git add feature1.txt
+gs branch create feature1 -m 'Add feature 1'
+gs branch submit --fill --draft
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/cr1.json
+
+# Test 2: Create non-draft CR - configured reviewers should be added
+git add feature2.txt
+gs branch create feature2 -m 'Add feature 2'
+gs branch submit --fill --no-draft
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/cr2.json
+
+# Test 3: Flag reviewers are added even for draft CRs
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+gs branch submit --fill --draft --reviewer charlie
+shamhub dump change 3
+cmpenvJSON stdout $WORK/golden/cr3.json
+
+# Test 4: Update existing draft CR - configured reviewers still skipped
+gs bco feature1
+git add update1.txt
+gs commit create -m 'Update feature 1'
+gs branch submit --fill
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/cr1-updated.json
+
+# Test 5: Mark draft as ready - configured reviewers should be added
+gs branch submit --fill --no-draft
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/cr1-ready.json
+
+# Test 6: Verify default behavior (addWhen=always)
+git config --unset spice.submit.reviewers.addWhen
+git add feature4.txt
+gs branch create feature4 -m 'Add feature 4'
+gs branch submit --fill --draft
+shamhub dump change 4
+cmpenvJSON stdout $WORK/golden/cr4.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+-- repo/feature4.txt --
+This is feature 4
+-- repo/update1.txt --
+Update to feature 1
+
+-- golden/cr1.json --
+{
+  "number": 1,
+  "state": "open",
+  "draft": true,
+  "title": "Add feature 1",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature1",
+    "sha": "b11aeec6f5b6485e264e00e55c789454f5d3c505"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "main",
+    "sha": "5a134d671ff103ac1d74bb2b0e6531eadec1f54a"
+  }
+}
+
+-- golden/cr2.json --
+{
+  "number": 2,
+  "state": "open",
+  "title": "Add feature 2",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature2",
+    "sha": "cbae82dedac0d363eccb111924d50c9bfbedd583"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature1",
+    "sha": "b11aeec6f5b6485e264e00e55c789454f5d3c505"
+  },
+  "requested_reviewers": ["bob"]
+}
+
+-- golden/cr3.json --
+{
+  "number": 3,
+  "state": "open",
+  "draft": true,
+  "title": "Add feature 3",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/3",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature3",
+    "sha": "714a410abac9a18551f3af93621be6294b074444"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature2",
+    "sha": "cbae82dedac0d363eccb111924d50c9bfbedd583"
+  },
+  "requested_reviewers": ["charlie"]
+}
+
+-- golden/cr1-updated.json --
+{
+  "number": 1,
+  "state": "open",
+  "draft": true,
+  "title": "Add feature 1",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature1",
+    "sha": "07cfda133cd2cb04ab96012d03f454b814dba1bd"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "main",
+    "sha": "5a134d671ff103ac1d74bb2b0e6531eadec1f54a"
+  }
+}
+
+-- golden/cr1-ready.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature1",
+    "sha": "07cfda133cd2cb04ab96012d03f454b814dba1bd"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "main",
+    "sha": "5a134d671ff103ac1d74bb2b0e6531eadec1f54a"
+  },
+  "requested_reviewers": ["bob"]
+}
+
+-- golden/cr4.json --
+{
+  "number": 4,
+  "state": "open",
+  "draft": true,
+  "title": "Add feature 4",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/4",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature4",
+    "sha": "d442deb8cb3752f1917177b8829fe36b0d5e4e3e"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature1",
+    "sha": "07cfda133cd2cb04ab96012d03f454b814dba1bd"
+  },
+  "requested_reviewers": ["bob"]
+}

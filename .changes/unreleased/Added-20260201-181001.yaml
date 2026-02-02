@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  submit: Add `spice.submit.reviewers.addWhen` configuration option,
+  which allows controlling whether reviewers configured with
+  `spice.submit.reviewers` are added to draft change requests.
+time: 2026-02-01T18:10:01.526545-08:00

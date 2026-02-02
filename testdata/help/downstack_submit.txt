@@ -76,6 +76,8 @@ Configuration (🔧):
                              Which navigation comment to sync. Must be one of:
                              branch, downstack.
   spice.submit.reviewers     Default reviewers to add to change requests.
+  spice.submit.reviewers.addWhen
+                             When to add configured reviewers.
   spice.submit.template      Default template to use when multiple templates are
                              available
   spice.submit.updateOnly    Default value for --update-only in batch submit

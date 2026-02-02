@@ -363,8 +363,23 @@ The value must be a comma-separated list of reviewers.
 For GitHub, use usernames for individual reviewers
 or `org/team` format for team reviewers.
 
-Reviewers specified with the `--reviewers` flag
+Reviewers specified with the `--reviewer` flag
 will be combined with the configured reviewers.
+
+### spice.submit.reviewers.addWhen
+
+<!-- gs:version unreleased -->
+
+Controls when $$spice.submit.reviewers|configured reviewers$$
+are added to change requests.
+
+When set to `ready`, configured reviewers are skipped for draft CRs,
+except when added explicitly via the `--reviewer` flag.
+
+**Accepted values:**
+
+- `always` (default): add configured reviewers to all CRs
+- `ready`: only add configured reviewers when the CR is not a draft
 
 ### spice.submit.listTemplatesTimeout
 
