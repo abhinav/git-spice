@@ -11,7 +11,7 @@ description: >-
 
 ### Auto-track branches on checkout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.23.0 -->
 
 Git's post-checkout hook can be used
 to invoke git-spice automatically when a branch is checked out,
@@ -19,7 +19,7 @@ and track the branch with git-spice if it is not already tracked.
 
 **Prerequisites:**
 
-- git-spice <!-- gs:version unreleased -->
+- git-spice <!-- gs:version v0.23.0 -->
 - Git hooks are enabled
   (this is the default, but certain setups may disable them)
 - The repository is already initialized with git-spice ($$gs repo init$$)
@@ -100,7 +100,7 @@ and track the branch with git-spice if it is not already tracked.
 
 - The post-checkout hook is invoked by Git after a checkout operation,
   whether with `git checkout` or `git switch`.
-- The script checks `GIT_SPICE` (added in <!-- gs:version unreleased -->)
+- The script checks `GIT_SPICE` (added in <!-- gs:version v0.23.0 -->)
   to ensure it does not interfere
   with git-spice's own operations (e.g. $$gs branch checkout$$).
 - It checks whether the new branch is already tracked by git-spice

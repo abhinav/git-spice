@@ -368,7 +368,7 @@ will be combined with the configured reviewers.
 
 ### spice.submit.reviewers.addWhen
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.23.0 -->
 
 Controls when $$spice.submit.reviewers|configured reviewers$$
 are added to change requests.
