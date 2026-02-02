@@ -160,8 +160,9 @@ type Options struct {
 	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
 	ConfiguredLabels []string `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"` // merged with Labels
 
-	Reviewers           []string `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
-	ConfiguredReviewers []string `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"` // merged with Reviewers
+	Reviewers           []string         `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
+	ConfiguredReviewers []string         `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"`
+	ReviewersAddWhen    ReviewersAddWhen `name:"reviewers-add-when" help:"When to add configured reviewers." hidden:"" config:"submit.reviewers.addWhen" default:"always" released:"unreleased"`
 
 	Assignees           []string `short:"a" name:"assign" placeholder:"ASSIGNEE" help:"Assign the change request to these users. Pass multiple times or separate with commas." released:"v0.21.0"`
 	ConfiguredAssignees []string `name:"configured-assignees" help:"Default assignees to add to change requests." hidden:"" config:"submit.assignees" released:"v0.21.0"` // merged with Assignees
@@ -181,8 +182,22 @@ func mergeConfiguredValues(values []string, configured []string) []string {
 
 func mergeConfiguredOptions(opts *Options) {
 	opts.Labels = mergeConfiguredValues(opts.Labels, opts.ConfiguredLabels)
-	opts.Reviewers = mergeConfiguredValues(opts.Reviewers, opts.ConfiguredReviewers)
+	// Note: Reviewers are merged conditionally by effectiveReviewers
+	// based on draft status and ReviewersAddWhen setting.
 	opts.Assignees = mergeConfiguredValues(opts.Assignees, opts.ConfiguredAssignees)
+}
+
+// effectiveReviewers returns the reviewers to add to a change request.
+// Flag-specified reviewers are always included.
+// Configured reviewers are included based on the ReviewersAddWhen setting
+// and the draft status of the change request.
+func effectiveReviewers(opts *Options, isDraft bool) []string {
+	// If addWhen is "ready" and the CR is a draft,
+	// skip configured reviewers.
+	if opts.ReviewersAddWhen == ReviewersAddWhenReady && isDraft {
+		return opts.Reviewers
+	}
+	return mergeConfiguredValues(opts.Reviewers, opts.ConfiguredReviewers)
 }
 
 // NavCommentSync specifies the scope of navigation comment updates.
@@ -267,6 +282,50 @@ func (d *NavCommentDownstack) UnmarshalText(bs []byte) error {
 		*d = NavCommentDownstackOpen
 	default:
 		return fmt.Errorf("invalid value %q: expected all or open", bs)
+	}
+	return nil
+}
+
+// ReviewersAddWhen specifies when configured reviewers
+// should be added to change requests.
+type ReviewersAddWhen int
+
+const (
+	// ReviewersAddWhenAlways adds configured reviewers
+	// to all change requests regardless of draft status.
+	//
+	// This is the default.
+	ReviewersAddWhenAlways ReviewersAddWhen = iota
+
+	// ReviewersAddWhenReady adds configured reviewers
+	// only when the change request is not a draft.
+	ReviewersAddWhenReady
+)
+
+var _ encoding.TextUnmarshaler = (*ReviewersAddWhen)(nil)
+
+// String returns the string representation of the ReviewersAddWhen.
+func (r ReviewersAddWhen) String() string {
+	switch r {
+	case ReviewersAddWhenAlways:
+		return "always"
+	case ReviewersAddWhenReady:
+		return "ready"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes ReviewersAddWhen from text.
+// It supports "always" and "ready" values.
+func (r *ReviewersAddWhen) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "always":
+		*r = ReviewersAddWhenAlways
+	case "ready":
+		*r = ReviewersAddWhenReady
+	default:
+		return fmt.Errorf("invalid value %q: expected always or ready", bs)
 	}
 	return nil
 }
@@ -824,6 +883,15 @@ func (h *Handler) submitBranch(
 			updates = append(updates, "set draft to "+strconv.FormatBool(*opts.Draft))
 		}
 
+		// Determine the effective draft status for reviewer handling.
+		// If user is changing draft status, use the new value;
+		// otherwise, use the current draft status.
+		effectiveDraft := pull.Draft
+		if opts.Draft != nil {
+			effectiveDraft = *opts.Draft
+		}
+		reviewers := effectiveReviewers(opts.Options, effectiveDraft)
+
 		// TODO:
 		// We _probably_ don't need to check for existing
 		// reviewers, assignees, etc. because the API contract
@@ -866,13 +934,13 @@ func (h *Handler) submitBranch(
 		}
 
 		// Check for reviewers that would be added.
-		if len(opts.Reviewers) > 0 {
+		if len(reviewers) > 0 {
 			existingReviewerSet := make(map[string]struct{}, len(pull.Reviewers))
 			for _, reviewer := range pull.Reviewers {
 				existingReviewerSet[reviewer] = struct{}{}
 			}
 			var reviewersToAdd []string
-			for _, reviewer := range opts.Reviewers {
+			for _, reviewer := range reviewers {
 				if _, exists := existingReviewerSet[reviewer]; !exists {
 					reviewersToAdd = append(reviewersToAdd, reviewer)
 				}
@@ -921,11 +989,11 @@ func (h *Handler) submitBranch(
 		}
 
 		if len(updates) > 0 {
-			opts := forge.EditChangeOptions{
+			editOpts := forge.EditChangeOptions{
 				Base:         upstreamBase,
 				Draft:        opts.Draft,
 				AddLabels:    opts.Labels,
-				AddReviewers: opts.Reviewers,
+				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
 			}
 
@@ -935,7 +1003,7 @@ func (h *Handler) submitBranch(
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
 			}
 
-			if err := remoteRepo.EditChange(ctx, pull.ID, opts); err != nil {
+			if err := remoteRepo.EditChange(ctx, pull.ID, editOpts); err != nil {
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
 			}
 		}
@@ -1129,7 +1197,7 @@ func (h *Handler) prepareBranch(
 		store:          h.Store,
 		log:            h.Log,
 		labels:         opts.Labels,
-		reviewers:      opts.Reviewers,
+		reviewers:      effectiveReviewers(opts.Options, draft),
 		assignees:      opts.Assignees,
 	}, nil
 }
