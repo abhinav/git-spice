@@ -70,6 +70,33 @@ var ErrUnsupportedURL = errors.New("unsupported URL")
 // ErrNotFound indicates that a requested resource does not exist.
 var ErrNotFound = errors.New("not found")
 
+// ErrCommentCannotUpdate indicates that an existing comment cannot be updated.
+// This typically occurs when local state is missing required information
+// (e.g., PR ID for Bitbucket comments).
+// Callers should handle this by posting a new comment instead.
+var ErrCommentCannotUpdate = errors.New("comment cannot be updated")
+
+// CommentFormat specifies formatting preferences for navigation comments.
+type CommentFormat struct {
+	// Footer is appended at the end of the navigation comment.
+	// Defaults to HTML <sub> tag if empty.
+	Footer string
+
+	// Marker is an invisible marker used to identify navigation comments.
+	// Defaults to HTML comment if empty.
+	Marker string
+}
+
+// WithCommentFormat is an optional interface that forges can implement
+// to customize navigation comment formatting.
+// This is useful for forges like Bitbucket that don't support HTML in comments.
+type WithCommentFormat interface {
+	Forge
+
+	// CommentFormat returns custom formatting for navigation comments.
+	CommentFormat() CommentFormat
+}
+
 //go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
 
 // TODO:
@@ -209,6 +236,17 @@ type Repository interface {
 	//
 	// Returns an empty list if no templates are found.
 	ListChangeTemplates(context.Context) ([]*ChangeTemplate, error)
+}
+
+// WithChangeURL is an optional interface that repositories can implement
+// to provide URLs for changes.
+// This is used to generate clickable links in navigation comments
+// for forges that don't auto-link change references.
+type WithChangeURL interface {
+	Repository
+
+	// ChangeURL returns the web URL for viewing the given change.
+	ChangeURL(id ChangeID) string
 }
 
 // ChangeID is a unique identifier for a change in a repository.

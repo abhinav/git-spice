@@ -107,6 +107,15 @@ func updateNavigationComments(
 		return fmt.Errorf("get remote repository: %w", err)
 	}
 
+	// Create URL formatter for forges that need explicit links.
+	// Forges like GitHub auto-link "#123" to PRs, but Bitbucket doesn't.
+	var urlFormatter func(forge.ChangeID) string
+	if repo, ok := remoteRepo.(forge.WithChangeURL); ok {
+		urlFormatter = func(id forge.ChangeID) string {
+			return fmt.Sprintf("[%s](%s)", id.String(), repo.ChangeURL(id))
+		}
+	}
+
 	// Look up branch graph once, and share between all syncs.
 	trackedBranches, err := svc.LoadBranches(ctx)
 	if err != nil {
@@ -132,8 +141,9 @@ func updateNavigationComments(
 
 		idxByBranch[b.Name] = len(nodes)
 		nodes = append(nodes, &stackedChange{
-			Change: b.Change.ChangeID(),
-			Base:   -1,
+			Change:       b.Change.ChangeID(),
+			Base:         -1,
+			urlFormatter: urlFormatter,
 		})
 		infos = append(infos, branchInfo{
 			Branch: b.Name,
@@ -173,8 +183,9 @@ func updateNavigationComments(
 
 				idx := len(nodes)
 				nodes = append(nodes, &stackedChange{
-					Change: downstackCR,
-					Base:   lastDownstackIdx,
+					Change:       downstackCR,
+					Base:         lastDownstackIdx,
+					urlFormatter: urlFormatter,
 				})
 				// Inform previous node about this node.
 				if lastDownstackIdx != -1 {
@@ -302,23 +313,27 @@ func updateNavigationComments(
 			return nil
 		}
 
-		if errors.Is(err, forge.ErrNotFound) {
-			log.Info("Navigation comment was deleted, posting new comment",
-				"change", update.Change.String())
-
-			if err := handlePostComment(&postComment{
-				Branch: update.Branch,
-				Meta:   update.Meta,
-				Change: update.Change,
-				Body:   update.Body,
-			}); err != nil {
-				return fmt.Errorf("post replacement comment: %w", err)
-			}
-
-			return nil // recovery successful
+		recreatable := errors.Is(err, forge.ErrNotFound) ||
+			errors.Is(err, forge.ErrCommentCannotUpdate)
+		if !recreatable {
+			return err
 		}
 
-		return err
+		log.Info("Recreating navigation comment",
+			"change", update.Change.String(),
+			"reason", err,
+		)
+
+		if err := handlePostComment(&postComment{
+			Branch: update.Branch,
+			Meta:   update.Meta,
+			Change: update.Change,
+			Body:   update.Body,
+		}); err != nil {
+			return fmt.Errorf("post replacement comment: %w", err)
+		}
+
+		return nil
 	}
 
 	postc := make(chan *postComment)
@@ -373,7 +388,7 @@ func updateNavigationComments(
 		}
 
 		info := infos[idx]
-		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker)
+		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker, remoteRepo.Forge())
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: info.Branch,
@@ -413,6 +428,10 @@ type stackedChange struct {
 
 	Base   int // -1 = no base CR
 	Aboves []int
+
+	// urlFormatter, if set, formats the change as a markdown link.
+	// Used for forges that don't auto-link change references (e.g., Bitbucket).
+	urlFormatter func(forge.ChangeID) string
 }
 
 var _ stacknav.Node = (*stackedChange)(nil)
@@ -420,6 +439,9 @@ var _ stacknav.Node = (*stackedChange)(nil)
 func (s *stackedChange) BaseIdx() int { return s.Base }
 
 func (s *stackedChange) Value() string {
+	if s.urlFormatter != nil {
+		return s.urlFormatter(s.Change)
+	}
 	return s.Change.String()
 }
 
@@ -429,19 +451,37 @@ const (
 	_commentMarker = "<!-- gs:navigation comment -->"
 )
 
+// Alternate marker for forges that don't support HTML comments.
+// Uses Markdown link definition syntax which is invisible when rendered.
+const _markdownCommentMarker = "[gs]: # (navigation comment)"
+
 // Regular expressions that must ALL match a comment
 // for it to be considered a navigation comment
 // when detecting existing comments.
 var _navCommentRegexes = []*regexp.Regexp{
 	regexp.MustCompile(`(?m)^\Q` + _commentHeader + `\E$`),
-	regexp.MustCompile(`(?m)^\Q` + _commentMarker + `\E$`),
+	// Match either standard HTML comment or Markdown link definition marker.
+	regexp.MustCompile(`(?m)^(\Q` + _commentMarker + `\E|\Q` + _markdownCommentMarker + `\E)$`),
 }
 
 func generateStackNavigationComment(
 	nodes []*stackedChange,
 	current int,
 	marker string,
+	f forge.Forge,
 ) string {
+	footer := _commentFooter
+	commentMarker := _commentMarker
+	if fc, ok := f.(forge.WithCommentFormat); ok {
+		format := fc.CommentFormat()
+		if format.Footer != "" {
+			footer = format.Footer
+		}
+		if format.Marker != "" {
+			commentMarker = format.Marker
+		}
+	}
+
 	var sb strings.Builder
 	sb.WriteString(_commentHeader)
 	sb.WriteString("\n\n")
@@ -453,10 +493,10 @@ func generateStackNavigationComment(
 	stacknav.Print(&sb, nodes, current, opts)
 
 	sb.WriteString("\n")
-	sb.WriteString(_commentFooter)
+	sb.WriteString(footer)
 
 	sb.WriteString("\n")
-	sb.WriteString(_commentMarker)
+	sb.WriteString(commentMarker)
 	sb.WriteString("\n")
 	return sb.String()
 }

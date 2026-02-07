@@ -784,7 +784,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.want + "\n" +
 				_commentFooter + "\n" +
 				_commentMarker + "\n"
-			got := generateStackNavigationComment(tt.graph, tt.current, "")
+			got := generateStackNavigationComment(tt.graph, tt.current, "", nil)
 			assert.Equal(t, want, got)
 
 			// Sanity check: All generated comments must match
@@ -804,7 +804,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "<-- you are here")
+		got := generateStackNavigationComment(graph, 1, "<-- you are here", nil)
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123",
