@@ -6,11 +6,10 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"net"
 	"net/url"
-	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/forgeurl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -145,78 +144,26 @@ func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error
 		return "", "", fmt.Errorf("bad base URL: %w", err)
 	}
 
-	// We recognize the following GitLab remote URL formats:
-	//
-	//	http(s)://gitlab.com/OWNER/REPO.git
-	//	git@gitlab.com:OWNER/REPO.git
-	//
-	// We can parse these all with url.Parse
-	// if we normalize the latter to:
-	//
-	//	ssh://git@gitlab.com/OWNER/REPO.git
-	if !hasGitProtocol(remoteURL) && strings.Contains(remoteURL, ":") {
-		// $user@$host:$path => ssh://$user@$host/$path
-		remoteURL = "ssh://" + strings.Replace(remoteURL, ":", "/", 1)
-	}
-
-	u, err := url.Parse(remoteURL)
+	u, err := forgeurl.Parse(remoteURL)
 	if err != nil {
-		return "", "", fmt.Errorf("parse remote URL: %w", err)
+		return "", "", err
 	}
 
-	// If base URL doesn't explicitly specify a port,
-	// and the remote URL does, *and* it's a default port,
-	// strip it from the remote URL.
-	if baseURL.Port() == "" {
-		if host, port, err := net.SplitHostPort(u.Host); err == nil {
-			switch port {
-			case "443", "80":
-				u.Host = host
-			}
-		}
+	forgeurl.StripDefaultPort(baseURL, u)
+
+	if !forgeurl.MatchesHost(baseURL, u) {
+		return "", "", fmt.Errorf(
+			"%v is not a GitLab URL: expected host %q, got %q",
+			u, baseURL.Host, u.Host,
+		)
 	}
 
-	// May be a subdomain of base URL.
-	if u.Host != baseURL.Host && !strings.HasSuffix(u.Host, "."+baseURL.Host) {
-		return "", "", fmt.Errorf("%v is not a GitLab URL: expected host %q, got %q", u, baseURL.Host, u.Host)
-	}
-
-	s := u.Path                       // /OWNER/REPO.git/
-	s = strings.TrimPrefix(s, "/")    // OWNER/REPO.git/
-	s = strings.TrimSuffix(s, "/")    // OWNER/REPO/
-	s = strings.TrimSuffix(s, ".git") // OWNER/REPO
-
-	owner, repo, ok := strings.Cut(s, "/")
+	owner, repo, ok := forgeurl.ExtractPath(u.Path)
 	if !ok {
-		return "", "", fmt.Errorf("path %q does not contain a GitLab repository", s)
+		return "", "", fmt.Errorf(
+			"path %q does not contain a GitLab repository", u.Path,
+		)
 	}
 
 	return owner, repo, nil
-}
-
-// _gitProtocols is a list of known git protocols
-// including the :// suffix.
-var _gitProtocols = []string{
-	"ssh",
-	"git",
-	"git+ssh",
-	"git+https",
-	"git+http",
-	"https",
-	"http",
-}
-
-func init() {
-	for i, proto := range _gitProtocols {
-		_gitProtocols[i] = proto + "://"
-	}
-}
-
-func hasGitProtocol(url string) bool {
-	for _, proto := range _gitProtocols {
-		if strings.HasPrefix(url, proto) {
-			return true
-		}
-	}
-	return false
 }

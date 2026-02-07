@@ -329,6 +329,9 @@ Where:
     or command domains (e.g., "submit", "github").
   - See CHANGELOG.md for existing patterns.
 
+To skip the changelog check for internal changes, refactors,
+or test-only changes, include `[skip changelog]: <cause description>` in the PR description as a trailer.
+
 # Code Quality
 
 - Never introduce new third-party dependencies.
@@ -342,6 +345,23 @@ Where:
   Aim to keep lines within this limit for readability.
 
   Never exceed 120 characters per line.
+
+- **Package naming**
+
+  Do not pluralize package names.
+  Use singular nouns or compound names instead.
+
+  ```
+  // BAD: pluralized package names
+  urls
+  utils
+  helpers
+
+  // GOOD: singular or compound names
+  forgeurl
+  stringutil
+  testhelper
+  ```
 
 - **Logical grouping with comments**
 
