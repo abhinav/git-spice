@@ -536,6 +536,12 @@ or test-only changes, include `[skip changelog]: <cause description>` in the PR 
 
     Rationale: The presence of an error already indicates failure.
 
+## Code Anti-patterns
+
+NEVER do the following:
+
+- NEVER use string matching to check for specific error types or conditions.
+
 ## Comment style
 
 - Use full sentences for standalone comments
