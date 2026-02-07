@@ -6,11 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"iter"
+	"os"
 	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/gitedit"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -28,6 +31,7 @@ var _ RestackHandler = (*restack.Handler)(nil)
 // GitWorktree is a subset of the git.Worktree interface.
 type GitWorktree interface {
 	Head(ctx context.Context) (git.Hash, error)
+	IndexFile(ctx context.Context) (string, error)
 	DiffIndex(ctx context.Context, treeish string) ([]git.FileStatus, error)
 	WriteIndexTree(ctx context.Context) (git.Hash, error)
 	Rebase(ctx context.Context, req git.RebaseRequest) (err error)
@@ -44,6 +48,16 @@ type GitRepository interface {
 	PeelToCommit(ctx context.Context, rev string) (git.Hash, error)
 	ReadCommit(ctx context.Context, commitish string) (*git.CommitObject, error)
 	ListCommits(ctx context.Context, commits git.CommitRange) iter.Seq2[git.Hash, error]
+
+	// Methods required by gitedit.Repository.
+	GitDir() string
+	Var(ctx context.Context, name string) (string, error)
+	DiffTreePatch(ctx context.Context, w io.Writer,
+		treeish1, treeish2 string) error
+	Stripspace(ctx context.Context, input io.Reader,
+		output io.Writer, opts *git.StripspaceOptions) error
+	HookRun(ctx context.Context, hook string,
+		opts *git.HookRunOptions) error
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -59,17 +73,36 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler implements commit fixup operations.
 type Handler struct {
-	Log        *silog.Logger  // required
-	Restack    RestackHandler // required
-	Worktree   GitWorktree    // required
-	Repository GitRepository  // required
-	Service    Service        // required
+	Log        *silog.Logger       // required
+	Restack    RestackHandler      // required
+	Signals    gitedit.SignalStack // required
+	Worktree   GitWorktree         // required
+	Repository GitRepository       // required
+	Service    Service             // required
 }
 
 // Options holds options for fixing up a commit.
 type Options struct {
-	// SignCommits indicates whether Git is configured to sign commits.
+	// SignCommits indicates whether Git is configured
+	// to sign commits.
 	SignCommits bool `default:"false" hidden:"" config:"@commit.gpgsign"`
+
+	// Edit opens an editor to modify the commit message.
+	Edit bool `short:"e" help:"Open an editor to modify the commit message."`
+
+	// NoVerify allows a commit
+	// with commit-msg hooks bypassed.
+	NoVerify bool `help:"Bypass commit-msg hooks."`
+
+	// CommentString is the comment prefix for editor messages.
+	CommentString string `hidden:"" config:"@core.commentString" default:"#"`
+
+	// CleanupMode is the commit message cleanup mode.
+	CleanupMode string `hidden:"" config:"@commit.cleanup" default:"strip"`
+
+	// CommitVerbose is the verbosity level
+	// for the editor diff.
+	CommitVerbose bool `hidden:"" config:"@commit.verbose" default:"false"`
 
 	// TODO: -a/--all option to stage all changes?
 }
@@ -156,15 +189,51 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		return fmt.Errorf("merge conflict in files: %v", strings.Join(files, ", "))
 	}
 
+	// Determine the commit message.
+	// If --edit is specified, open the editor for the user.
+	commitMessage := targetCommit.Message()
+	// TODO: instead of holding message in memory, we could stream it.
+	if req.Options.Edit {
+		// TODO: inject editor
+		editor := &gitedit.Editor{
+			Repository:    h.Repository,
+			Signals:       h.Signals,
+			Log:           h.Log,
+			CommentString: req.Options.CommentString,
+			CleanupMode:   req.Options.CleanupMode,
+			Verbose:       req.Options.CommitVerbose,
+		}
+
+		var parent git.Hash
+		if len(targetCommit.Parents) > 0 {
+			parent = targetCommit.Parents[0]
+		}
+
+		var edited strings.Builder
+		err := editor.EditCommitMessage(
+			ctx,
+			strings.NewReader(commitMessage),
+			&edited,
+			&gitedit.EditCommitMessageOptions{
+				Env:      h.editorEnv(ctx),
+				NoVerify: req.Options.NoVerify,
+				Commit:   req.TargetHash,
+				Parent:   parent,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("edit commit message: %w", err)
+		}
+		commitMessage = strings.TrimRight(edited.String(), "\n")
+	}
+
 	newCommit, err := h.Repository.CommitTree(ctx, git.CommitTreeRequest{
 		Tree:      mergedTree,
 		Parents:   targetCommit.Parents,
-		Message:   targetCommit.Message(),
+		Message:   commitMessage,
 		GPGSign:   req.Options.SignCommits,
 		Author:    &targetCommit.Author,
 		Committer: &targetCommit.Committer,
-		// TODO: support -e/--edit?
-		// TODO: does this run pre-commit hooks?
 	})
 	if err != nil {
 		return fmt.Errorf("commit staged changes to target commit: %w", err)
@@ -186,8 +255,7 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 	}); err != nil {
 		// If the rebase is interrupted by a conflict,
 		// after it's resolved, just restack the upstack.
-		var rebaseErr *git.RebaseInterruptError
-		if errors.As(err, &rebaseErr) {
+		if rebaseErr, ok := errors.AsType[*git.RebaseInterruptError](err); ok {
 			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     rebaseErr,
 				Command: []string{"upstack", "restack", "--skip-start"},
@@ -243,4 +311,14 @@ func (h *Handler) findCommitBranch(
 	}
 
 	return "", fmt.Errorf("commit not found in any tracked branch: %s", wantCommit)
+}
+
+func (h *Handler) editorEnv(ctx context.Context) []string {
+	indexFile, err := h.Worktree.IndexFile(ctx)
+	if err == nil {
+		if _, err := os.Stat(indexFile); err == nil {
+			return []string{"GIT_INDEX_FILE=" + indexFile}
+		}
+	}
+	return nil
 }

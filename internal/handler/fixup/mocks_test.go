@@ -11,6 +11,7 @@ package fixup
 
 import (
 	context "context"
+	io "io"
 	iter "iter"
 	reflect "reflect"
 
@@ -180,6 +181,45 @@ func (c *MockGitWorktreeHeadCall) Do(f func(context.Context) (git.Hash, error)) 
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitWorktreeHeadCall) DoAndReturn(f func(context.Context) (git.Hash, error)) *MockGitWorktreeHeadCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// IndexFile mocks base method.
+func (m *MockGitWorktree) IndexFile(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IndexFile", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IndexFile indicates an expected call of IndexFile.
+func (mr *MockGitWorktreeMockRecorder) IndexFile(ctx any) *MockGitWorktreeIndexFileCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexFile", reflect.TypeOf((*MockGitWorktree)(nil).IndexFile), ctx)
+	return &MockGitWorktreeIndexFileCall{Call: call}
+}
+
+// MockGitWorktreeIndexFileCall wrap *gomock.Call
+type MockGitWorktreeIndexFileCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitWorktreeIndexFileCall) Return(arg0 string, arg1 error) *MockGitWorktreeIndexFileCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitWorktreeIndexFileCall) Do(f func(context.Context) (string, error)) *MockGitWorktreeIndexFileCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitWorktreeIndexFileCall) DoAndReturn(f func(context.Context) (string, error)) *MockGitWorktreeIndexFileCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -358,6 +398,120 @@ func (c *MockGitRepositoryCommitTreeCall) Do(f func(context.Context, git.CommitT
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitRepositoryCommitTreeCall) DoAndReturn(f func(context.Context, git.CommitTreeRequest) (git.Hash, error)) *MockGitRepositoryCommitTreeCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// DiffTreePatch mocks base method.
+func (m *MockGitRepository) DiffTreePatch(ctx context.Context, w io.Writer, treeish1, treeish2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiffTreePatch", ctx, w, treeish1, treeish2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DiffTreePatch indicates an expected call of DiffTreePatch.
+func (mr *MockGitRepositoryMockRecorder) DiffTreePatch(ctx, w, treeish1, treeish2 any) *MockGitRepositoryDiffTreePatchCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiffTreePatch", reflect.TypeOf((*MockGitRepository)(nil).DiffTreePatch), ctx, w, treeish1, treeish2)
+	return &MockGitRepositoryDiffTreePatchCall{Call: call}
+}
+
+// MockGitRepositoryDiffTreePatchCall wrap *gomock.Call
+type MockGitRepositoryDiffTreePatchCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryDiffTreePatchCall) Return(arg0 error) *MockGitRepositoryDiffTreePatchCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryDiffTreePatchCall) Do(f func(context.Context, io.Writer, string, string) error) *MockGitRepositoryDiffTreePatchCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryDiffTreePatchCall) DoAndReturn(f func(context.Context, io.Writer, string, string) error) *MockGitRepositoryDiffTreePatchCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// GitDir mocks base method.
+func (m *MockGitRepository) GitDir() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GitDir")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GitDir indicates an expected call of GitDir.
+func (mr *MockGitRepositoryMockRecorder) GitDir() *MockGitRepositoryGitDirCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GitDir", reflect.TypeOf((*MockGitRepository)(nil).GitDir))
+	return &MockGitRepositoryGitDirCall{Call: call}
+}
+
+// MockGitRepositoryGitDirCall wrap *gomock.Call
+type MockGitRepositoryGitDirCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryGitDirCall) Return(arg0 string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryGitDirCall) Do(f func() string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryGitDirCall) DoAndReturn(f func() string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// HookRun mocks base method.
+func (m *MockGitRepository) HookRun(ctx context.Context, hook string, opts *git.HookRunOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HookRun", ctx, hook, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// HookRun indicates an expected call of HookRun.
+func (mr *MockGitRepositoryMockRecorder) HookRun(ctx, hook, opts any) *MockGitRepositoryHookRunCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HookRun", reflect.TypeOf((*MockGitRepository)(nil).HookRun), ctx, hook, opts)
+	return &MockGitRepositoryHookRunCall{Call: call}
+}
+
+// MockGitRepositoryHookRunCall wrap *gomock.Call
+type MockGitRepositoryHookRunCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryHookRunCall) Return(arg0 error) *MockGitRepositoryHookRunCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryHookRunCall) Do(f func(context.Context, string, *git.HookRunOptions) error) *MockGitRepositoryHookRunCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryHookRunCall) DoAndReturn(f func(context.Context, string, *git.HookRunOptions) error) *MockGitRepositoryHookRunCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -551,6 +705,83 @@ func (c *MockGitRepositoryReadCommitCall) Do(f func(context.Context, string) (*g
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitRepositoryReadCommitCall) DoAndReturn(f func(context.Context, string) (*git.CommitObject, error)) *MockGitRepositoryReadCommitCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Stripspace mocks base method.
+func (m *MockGitRepository) Stripspace(ctx context.Context, input io.Reader, output io.Writer, opts *git.StripspaceOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stripspace", ctx, input, output, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stripspace indicates an expected call of Stripspace.
+func (mr *MockGitRepositoryMockRecorder) Stripspace(ctx, input, output, opts any) *MockGitRepositoryStripspaceCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stripspace", reflect.TypeOf((*MockGitRepository)(nil).Stripspace), ctx, input, output, opts)
+	return &MockGitRepositoryStripspaceCall{Call: call}
+}
+
+// MockGitRepositoryStripspaceCall wrap *gomock.Call
+type MockGitRepositoryStripspaceCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryStripspaceCall) Return(arg0 error) *MockGitRepositoryStripspaceCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryStripspaceCall) Do(f func(context.Context, io.Reader, io.Writer, *git.StripspaceOptions) error) *MockGitRepositoryStripspaceCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryStripspaceCall) DoAndReturn(f func(context.Context, io.Reader, io.Writer, *git.StripspaceOptions) error) *MockGitRepositoryStripspaceCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Var mocks base method.
+func (m *MockGitRepository) Var(ctx context.Context, name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Var", ctx, name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Var indicates an expected call of Var.
+func (mr *MockGitRepositoryMockRecorder) Var(ctx, name any) *MockGitRepositoryVarCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Var", reflect.TypeOf((*MockGitRepository)(nil).Var), ctx, name)
+	return &MockGitRepositoryVarCall{Call: call}
+}
+
+// MockGitRepositoryVarCall wrap *gomock.Call
+type MockGitRepositoryVarCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryVarCall) Return(arg0 string, arg1 error) *MockGitRepositoryVarCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryVarCall) Do(f func(context.Context, string) (string, error)) *MockGitRepositoryVarCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryVarCall) DoAndReturn(f func(context.Context, string) (string, error)) *MockGitRepositoryVarCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

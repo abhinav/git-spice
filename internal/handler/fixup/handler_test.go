@@ -3,12 +3,15 @@ package fixup
 import (
 	"bytes"
 	"iter"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
@@ -29,6 +32,7 @@ func TestFixupCommit_errors(t *testing.T) {
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
 			Worktree:   mockWorktree,
 			Repository: NewMockGitRepository(mockCtrl),
 			Service:    NewMockService(mockCtrl),
@@ -58,6 +62,7 @@ func TestFixupCommit_errors(t *testing.T) {
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
 			Worktree:   mockWorktree,
 			Repository: mockRepo,
 			Service:    NewMockService(mockCtrl),
@@ -90,6 +95,7 @@ func TestFixupCommit_errors(t *testing.T) {
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
 			Worktree:   mockWorktree,
 			Repository: mockRepo,
 			Service:    NewMockService(mockCtrl),
@@ -119,6 +125,7 @@ func TestFixupCommit_errors(t *testing.T) {
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
 			Worktree:   mockWorktree,
 			Repository: NewMockGitRepository(mockCtrl),
 			Service:    mockService,
@@ -148,6 +155,7 @@ func TestFixupCommit_errors(t *testing.T) {
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
 			Worktree:   mockWorktree,
 			Repository: NewMockGitRepository(mockCtrl),
 			Service:    mockService,
@@ -231,6 +239,7 @@ func TestFixupCommit_success(t *testing.T) {
 	err = (&Handler{
 		Log:        log,
 		Restack:    mockRestack,
+		Signals:    &sigstack.Stack{},
 		Worktree:   wt,
 		Repository: repo,
 		Service:    mockService,
@@ -247,6 +256,121 @@ func TestFixupCommit_success(t *testing.T) {
 
 	var got bytes.Buffer
 	err = repo.ReadObject(t.Context(), git.BlobType, blob, &got)
+	require.NoError(t, err)
+	assert.Equal(t, "staged content\n", got.String())
+}
+
+func TestFixupCommit_edit(t *testing.T) {
+	gittest.SkipUnlessVersionAtLeast(t, gittest.Version{
+		Major: 2, Minor: 45,
+	})
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		# main → feature1 → feature2
+		#         (target)   (head)
+		as 'Test Author <test@example.com>'
+		at '2025-06-20T21:28:29Z'
+
+		git init
+		git add main.txt
+		git commit -m 'Initial commit'
+
+		git checkout -b feature1
+		git add feature1.txt
+		git commit -m 'Add feature1'
+
+		git checkout -b feature2
+		git add feature2.txt
+		git commit -m 'Add feature2'
+
+		# Stage changes for fixup
+		git add staged.txt
+
+		-- main.txt --
+		main content
+
+		-- feature1.txt --
+		feature1 content
+
+		-- feature2.txt --
+		feature2 content
+
+		-- staged.txt --
+		staged content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	log := silog.Nop()
+	wt, err := git.OpenWorktree(t.Context(),
+		fixture.Dir(), git.OpenOptions{Log: log})
+	require.NoError(t, err)
+	repo := wt.Repository()
+
+	feature1Hash, err := repo.PeelToCommit(
+		t.Context(), "feature1",
+	)
+	require.NoError(t, err)
+
+	// Set GIT_EDITOR to a helper that replaces
+	// the message with "Edited message".
+	newMsgFile := filepath.Join(t.TempDir(), "new-msg")
+	require.NoError(t,
+		os.WriteFile(newMsgFile, []byte("Edited message\n"), 0o644))
+	editorExe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("FIXUP_EDITOR_HELPER", "1")
+	t.Setenv("FIXUP_EDITOR_GIVE", newMsgFile)
+	t.Setenv("GIT_EDITOR", editorExe)
+
+	mockCtrl := gomock.NewController(t)
+
+	mockService := NewMockService(mockCtrl)
+	mockService.EXPECT().
+		Trunk().
+		Return("main").
+		AnyTimes()
+
+	mockRestack := NewMockRestackHandler(mockCtrl)
+	mockRestack.EXPECT().
+		RestackUpstack(gomock.Any(), "feature1", gomock.Any()).
+		Return(nil)
+
+	var signals sigstack.Stack
+	err = (&Handler{
+		Log:        log,
+		Restack:    mockRestack,
+		Signals:    &signals,
+		Worktree:   wt,
+		Repository: repo,
+		Service:    mockService,
+	}).FixupCommit(t.Context(), &Request{
+		TargetHash:   feature1Hash,
+		TargetBranch: "feature1",
+		HeadBranch:   "feature2",
+		Options: &Options{
+			Edit: true,
+		},
+	})
+	require.NoError(t, err)
+
+	// Verify the commit message was changed.
+	commit, err := repo.ReadCommit(
+		t.Context(), "feature1",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "Edited message", commit.Message())
+
+	// Verify the staged file was applied.
+	blob, err := repo.HashAt(
+		t.Context(), "feature1", "staged.txt",
+	)
+	require.NoError(t, err)
+
+	var got bytes.Buffer
+	err = repo.ReadObject(
+		t.Context(), git.BlobType, blob, &got,
+	)
 	require.NoError(t, err)
 	assert.Equal(t, "staged content\n", got.String())
 }
@@ -278,6 +402,49 @@ func (m mapGraph) Downstack(branch string) iter.Seq[string] {
 			current = item.Base
 		}
 	}
+}
+
+func TestHandler_editorEnv(t *testing.T) {
+	t.Run("IndexExists", func(t *testing.T) {
+		indexFile := filepath.Join(t.TempDir(), "index")
+		require.NoError(t, os.WriteFile(indexFile, nil, 0o644))
+
+		mockCtrl := gomock.NewController(t)
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		mockWorktree.EXPECT().
+			IndexFile(gomock.Any()).
+			Return(indexFile, nil)
+
+		assert.Equal(
+			t,
+			[]string{"GIT_INDEX_FILE=" + indexFile},
+			(&Handler{
+				Log:        silogtest.New(t),
+				Restack:    NewMockRestackHandler(mockCtrl),
+				Signals:    &sigstack.Stack{},
+				Worktree:   mockWorktree,
+				Repository: NewMockGitRepository(mockCtrl),
+				Service:    NewMockService(mockCtrl),
+			}).editorEnv(t.Context()),
+		)
+	})
+
+	t.Run("IndexMissing", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		mockWorktree.EXPECT().
+			IndexFile(gomock.Any()).
+			Return(filepath.Join(t.TempDir(), "index"), nil)
+
+		assert.Nil(t, (&Handler{
+			Log:        silogtest.New(t),
+			Restack:    NewMockRestackHandler(mockCtrl),
+			Signals:    &sigstack.Stack{},
+			Worktree:   mockWorktree,
+			Repository: NewMockGitRepository(mockCtrl),
+			Service:    NewMockService(mockCtrl),
+		}).editorEnv(t.Context()))
+	})
 }
 
 func TestFindCommitBranch(t *testing.T) {
@@ -528,6 +695,7 @@ func TestFindCommitBranch(t *testing.T) {
 			handler := &Handler{
 				Log:        log,
 				Restack:    NewMockRestackHandler(mockCtrl),
+				Signals:    &sigstack.Stack{},
 				Repository: repo,
 				Worktree:   wt,
 				Service:    NewMockService(mockCtrl),

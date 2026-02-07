@@ -1,0 +1,101 @@
+# Verify that 'commit fixup -e' opens an editor
+# to modify the commit message,
+# and that the editor is NOT invoked without -e.
+
+[!git:2.45.0] skip
+
+as 'Test <test@example.com>'
+at '2025-09-05T21:28:29Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create a branch with a commit.
+git add file1.txt
+gs bc -m 'Add file1' feature
+
+# Stage a change for fixup.
+cp $WORK/extra/file1_updated.txt file1.txt
+git add file1.txt
+
+# Without -e, the editor should NOT be invoked.
+# Use 'false' as the editor so the test fails
+# if the editor is invoked.
+env EDITOR=false
+gs commit fixup HEAD
+
+# Verify message is unchanged.
+git log -1 --format=%B
+cmp stdout $WORK/golden/original_msg.txt
+
+# Stage another change for a second fixup with --edit.
+cp $WORK/extra/file1_final.txt file1.txt
+git add file1.txt
+
+mkdir $WORK/output
+env EDITOR=mockedit
+env MOCKEDIT_GIVE=$WORK/input/new_msg.txt
+env MOCKEDIT_RECORD=$WORK/output/editmsg.txt
+gs commit fixup -e HEAD
+
+# Verify the commit message was changed.
+git log -1 --format=%B
+cmp stdout $WORK/golden/new_msg.txt
+
+# Stage another change for a fixup with --edit and --no-verify.
+cp $WORK/extra/file1_noverify.txt file1.txt
+git add file1.txt
+
+cp $WORK/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
+cp $WORK/hooks/commit-msg .git/hooks/commit-msg
+exec chmod +x .git/hooks/prepare-commit-msg
+exec chmod +x .git/hooks/commit-msg
+
+env EDITOR=mockedit
+env MOCKEDIT_GIVE=$WORK/input/noverify_msg.txt
+env MOCKEDIT_RECORD=$WORK/output/noverify_editmsg.txt
+gs commit fixup -e --no-verify HEAD
+
+# --no-verify should skip commit-msg,
+# but it must not skip prepare-commit-msg.
+exists $WORK/output/prepare-ran
+! exists $WORK/output/commit-ran
+
+git log -1 --format=%B
+cmp stdout $WORK/golden/noverify_msg.txt
+
+-- repo/file1.txt --
+Original file1 content
+
+-- extra/file1_updated.txt --
+Updated file1 content
+
+-- extra/file1_final.txt --
+Final file1 content
+
+-- extra/file1_noverify.txt --
+No verify file1 content
+
+-- input/new_msg.txt --
+Edited commit message
+
+-- input/noverify_msg.txt --
+Edited message with no verify
+
+-- golden/original_msg.txt --
+Add file1
+-- golden/new_msg.txt --
+Edited commit message
+-- golden/noverify_msg.txt --
+Edited message with no verify
+-- hooks/prepare-commit-msg --
+#!/bin/sh
+echo prepare >"$WORK/output/prepare-ran"
+
+-- hooks/commit-msg --
+#!/bin/sh
+echo commit >"$WORK/output/commit-ran"
+exit 1
