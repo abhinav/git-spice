@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 
@@ -31,6 +30,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -76,13 +76,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt)
+	var sigStack sigstack.Stack
+	sigc := make(chan sigstack.Signal, 1)
+	sigStack.Notify(sigc, os.Interrupt)
 	go func() {
 		select {
 		case <-sigc:
+			sigStack.Stop(sigc)
 			logger.Info("Cleaning up. Press Ctrl-C again to exit immediately.")
 			cancel()
+
 		case <-ctx.Done():
 		}
 	}()
@@ -132,7 +135,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges),
+		kong.Bind(logger, &forges, &sigStack),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
 		kong.BindTo(secretStash, (*secret.Stash)(nil)),
