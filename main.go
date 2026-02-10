@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/cli/shorthand"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/bitbucket"
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
@@ -67,6 +68,7 @@ func main() {
 
 	// Register supported forges.
 	var forges forge.Registry
+	forges.Register(&bitbucket.Forge{Log: logger})
 	forges.Register(&github.Forge{Log: logger})
 	forges.Register(&gitlab.Forge{Log: logger})
 	for _, f := range _extraForges {

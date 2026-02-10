@@ -173,6 +173,27 @@ type Forge interface {
 	ClearAuthenticationToken(secret.Stash) error
 }
 
+// WithDisplayName is an optional interface that forges can implement
+// to provide a human-friendly display name for the UI.
+// If not implemented, the forge's ID is used as the display name.
+type WithDisplayName interface {
+	Forge
+
+	// DisplayName returns a human-friendly name for the forge,
+	// e.g. "Bitbucket (Atlassian)" instead of just "bitbucket".
+	DisplayName() string
+}
+
+// GetDisplayName returns the display name for a forge.
+// If the forge implements WithDisplayName, it returns DisplayName().
+// Otherwise, it returns the forge's ID.
+func GetDisplayName(f Forge) string {
+	if fd, ok := f.(WithDisplayName); ok {
+		return fd.DisplayName()
+	}
+	return f.ID()
+}
+
 // AuthenticationToken is a secret that results from a successful login.
 // It will be persisted in a safe place,
 // and re-used for future authentication with the forge.

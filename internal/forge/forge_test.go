@@ -65,6 +65,18 @@ func TestRegister(t *testing.T) {
 	})
 }
 
+func TestGetDisplayName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	t.Run("WithoutDisplayName", func(t *testing.T) {
+		mockForge := forgetest.NewMockForge(ctrl)
+		mockForge.EXPECT().ID().Return("test-forge")
+
+		name := forge.GetDisplayName(mockForge)
+		assert.Equal(t, "test-forge", name)
+	})
+}
+
 func TestChangeState(t *testing.T) {
 	tests := []struct {
 		state forge.ChangeState
