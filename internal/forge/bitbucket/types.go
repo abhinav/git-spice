@@ -32,6 +32,10 @@ func (id *PR) String() string {
 type PRComment struct {
 	// ID is the comment ID.
 	ID int64 `json:"id"`
+
+	// PRID is the pull request ID this comment belongs to.
+	// Required for updating comments via the Bitbucket API.
+	PRID int64 `json:"pr_id,omitempty"`
 }
 
 var _ forge.ChangeCommentID = (*PRComment)(nil)

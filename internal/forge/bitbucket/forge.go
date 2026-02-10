@@ -20,8 +20,8 @@ type Forge struct {
 }
 
 var (
-	_ forge.Forge           = (*Forge)(nil)
-	_ forge.WithDisplayName = (*Forge)(nil)
+	_ forge.Forge             = (*Forge)(nil)
+	_ forge.WithCommentFormat = (*Forge)(nil)
 )
 
 func (f *Forge) logger() *silog.Logger {
@@ -46,8 +46,17 @@ func (f *Forge) APIURL() string {
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "bitbucket" }
 
-// DisplayName returns a human-friendly name for the forge.
-func (*Forge) DisplayName() string { return "Bitbucket (Atlassian)" }
+// CommentFormat returns Bitbucket-specific comment formatting.
+// Bitbucket doesn't support HTML in comments, so we use plain Markdown.
+func (*Forge) CommentFormat() forge.CommentFormat {
+	return forge.CommentFormat{
+		// Use italic text instead of HTML <sub> tag.
+		Footer: "*Change managed by [git-spice](https://abhinav.github.io/git-spice/).*",
+		// Use Markdown link definition syntax instead of HTML comment.
+		// This renders as invisible on Bitbucket.
+		Marker: "[gs]: # (navigation comment)",
+	}
+}
 
 // CLIPlugin returns the CLI plugin for the Bitbucket Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
@@ -92,7 +101,7 @@ func (f *Forge) OpenRepository(
 	tok := token.(*AuthenticationToken)
 
 	client := newClient(f.APIURL(), tok, f.logger())
-	return newRepository(f, rid.workspace, rid.name, f.logger(), client), nil
+	return newRepository(f, rid.url, rid.workspace, rid.name, f.logger(), client), nil
 }
 
 func extractRepoInfo(bitbucketURL, remoteURL string) (workspace, repo string, err error) {

@@ -70,7 +70,7 @@ func resolveForge(ctx context.Context, forges *forge.Registry, log *silog.Logger
 	var opts []ui.SelectOption[forge.Forge]
 	for f := range forges.All() {
 		opts = append(opts, ui.SelectOption[forge.Forge]{
-			Label: f.ID(),
+			Label: forge.GetDisplayName(f),
 			Value: f,
 		})
 	}
