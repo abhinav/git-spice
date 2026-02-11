@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/shurcooL/githubv4"
@@ -94,19 +93,17 @@ func TestIntegration(t *testing.T) {
 		Log: silogtest.New(t),
 	}
 
+	const remoteURL = "https://github.com/abhinav/test-repo"
+
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL: "https://github.com/abhinav/test-repo",
+		RemoteURL: remoteURL,
 		Forge:     &githubForge,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			githubToken := os.Getenv("GITHUB_TOKEN")
-			if githubToken == "" {
-				githubToken = "token"
-			}
-
+			token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
 			httpClient.Transport = &oauth2.Transport{
 				Base: httpClient.Transport,
 				Source: oauth2.StaticTokenSource(&oauth2.Token{
-					AccessToken: githubToken,
+					AccessToken: token,
 				}),
 			}
 

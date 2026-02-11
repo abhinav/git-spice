@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"flag"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/xec"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
@@ -36,6 +38,66 @@ func init() {
 	if flag.Lookup("update") == nil {
 		flag.Bool("update", false, "update test fixtures")
 	}
+}
+
+// Token retrieves authentication credentials for the given forge URL.
+// In update mode, it tries multiple sources in order:
+//  1. Environment variable (explicit override)
+//  2. Stored OAuth credentials from secret stash (from 'gs auth login')
+//  3. GCM (git-credential-manager)
+//
+// In replay mode, it returns a dummy token.
+//
+// The envVar parameter should be the name of the environment variable
+// to check (e.g., "GITHUB_TOKEN").
+func Token(t *testing.T, forgeURL, envVar string) string {
+	if !Update() {
+		return "token"
+	}
+
+	// Try environment variable first for explicit override.
+	if token := os.Getenv(envVar); token != "" {
+		t.Logf("Using %s from environment", envVar)
+		return token
+	}
+
+	// Try stored OAuth credentials from stash.
+	if token := loadStashToken(t, forgeURL); token != "" {
+		t.Logf("Using stored OAuth token from stash for %s", forgeURL)
+		return token
+	}
+
+	// Try GCM.
+	cred, err := forge.LoadGCMCredential(forgeURL)
+	if err == nil {
+		t.Logf("Using token from git-credential-manager for %s", forgeURL)
+		return cred.Password
+	}
+
+	t.Fatalf("No credentials available for %s: set %s, run 'gs auth login', or configure git-credential-manager",
+		forgeURL, envVar)
+	return ""
+}
+
+// loadStashToken attempts to load OAuth credentials from the secret stash.
+// Returns empty string if no credentials are found or on error.
+func loadStashToken(t *testing.T, forgeURL string) string {
+	stash := new(secret.Keyring)
+	tokstr, err := stash.LoadSecret(forgeURL, "token")
+	if err != nil {
+		return ""
+	}
+
+	// Parse the JSON token structure to extract access_token.
+	var tok struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal([]byte(tokstr), &tok); err != nil {
+		t.Logf("Failed to parse stored token: %v", err)
+		return ""
+	}
+
+	return tok.AccessToken
 }
 
 // NewHTTPRecorder creates a new HTTP recorder for the given test and name.

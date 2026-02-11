@@ -81,6 +81,7 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, view ui.View) (forge.Aut
 
 	auth, err := selectAuthenticator(view, authenticatorOptions{
 		Endpoint: oauthEndpoint,
+		ForgeURL: f.URL(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("select authenticator: %w", err)
@@ -108,17 +109,33 @@ func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.Authenticati
 }
 
 // LoadAuthenticationToken loads the authentication token from the stash.
-// If the user has set GITHUB_TOKEN, it will be used instead.
+// Priority order:
+//  1. Environment variable (GITHUB_TOKEN)
+//  2. Stored token in secret stash
+//  3. git-credential-manager (GCM)
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
 	if f.Options.Token != "" {
-		// If the user has set GITHUB_TOKEN, we should use that
-		// regardless of what's in the stash.
 		return &AuthenticationToken{AccessToken: f.Options.Token}, nil
 	}
 
+	// Try stored token.
+	if tok, err := f.loadStoredToken(stash); err == nil {
+		return tok, nil
+	}
+
+	// Fall back to git-credential-manager.
+	if tok, err := f.loadGCMToken(); err == nil {
+		f.logger().Debug("Using credentials from git-credential-manager")
+		return tok, nil
+	}
+
+	return nil, errors.New("no authentication token available")
+}
+
+func (f *Forge) loadStoredToken(stash secret.Stash) (*AuthenticationToken, error) {
 	tokstr, err := stash.LoadSecret(f.URL(), "token")
 	if err != nil {
-		return nil, fmt.Errorf("load token: %w", err)
+		return nil, err
 	}
 
 	var tok AuthenticationToken
@@ -126,8 +143,15 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 		// Old token format, just use it as the access token.
 		return &AuthenticationToken{AccessToken: tokstr}, nil
 	}
-
 	return &tok, nil
+}
+
+func (f *Forge) loadGCMToken() (*AuthenticationToken, error) {
+	cred, err := forge.LoadGCMCredential(f.URL())
+	if err != nil {
+		return nil, err
+	}
+	return &AuthenticationToken{AccessToken: cred.Password}, nil
 }
 
 // ClearAuthenticationToken removes the authentication token from the stash.
@@ -199,12 +223,24 @@ var _authenticationMethods = []struct {
 			return &CLIAuthenticator{GH: ghExe}
 		},
 	},
+	{
+		Title:       "Git Credential Manager",
+		Description: gcmDesc,
+		Build: func(a authenticatorOptions) authenticator {
+			// Offer this option only if git is available.
+			if _, err := xec.LookPath("git"); err != nil {
+				return nil
+			}
+			return &GCMAuthenticator{URL: a.ForgeURL}
+		},
+	},
 }
 
 // authenticatorOptions presents the user with multiple authentication methods,
 // prompts them to choose one, and executes the chosen method.
 type authenticatorOptions struct {
 	Endpoint oauth2.Endpoint // required
+	ForgeURL string          // required
 }
 
 func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, error) {
@@ -277,6 +313,13 @@ func ghDesc(focused bool) string {
 	You must be logged into gh with 'gh auth login' for this to work.
 	You can use this if you're just experimenting and don't want to set up a token yet.
 	`, urlStyle(focused).Render("https://cli.github.com"))
+}
+
+func gcmDesc(bool) string {
+	return text.Dedent(`
+	Use OAuth credentials from git-credential-manager.
+	You must have GCM installed and already authenticated to GitHub.
+	`)
 }
 
 func urlStyle(focused bool) lipgloss.Style {
@@ -379,4 +422,23 @@ func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*Authen
 	}
 
 	return &AuthenticationToken{GitHubCLI: true}, nil
+}
+
+// GCMAuthenticator loads OAuth credentials
+// from git-credential-manager.
+type GCMAuthenticator struct {
+	URL string // required
+}
+
+// Authenticate loads credentials from git-credential-manager.
+func (a *GCMAuthenticator) Authenticate(
+	_ context.Context, _ ui.View,
+) (*AuthenticationToken, error) {
+	cred, err := forge.LoadGCMCredential(a.URL)
+	if err != nil {
+		return nil, fmt.Errorf("load GCM credentials: %w", err)
+	}
+	return &AuthenticationToken{
+		AccessToken: cred.Password,
+	}, nil
 }

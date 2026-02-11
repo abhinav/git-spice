@@ -45,15 +45,10 @@ func newRecorder(t *testing.T, name string) *recorder.Recorder {
 }
 
 func newGitLabClient(
+	t *testing.T,
 	httpClient *http.Client,
 ) *gitlab.Client {
-	tok, exists := os.LookupEnv("GITLAB_TOKEN")
-	var token string
-	if !exists {
-		token = "token"
-	} else {
-		token = tok
-	}
+	token := forgetest.Token(t, "https://gitlab.com", "GITLAB_TOKEN")
 	client, _ := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
 	return &gitlab.Client{
 		MergeRequests:    client.MergeRequests,
@@ -67,7 +62,7 @@ func newGitLabClient(
 func TestIntegration_Repository(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
+	ghc := newGitLabClient(t, rec.GetDefaultClient())
 	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, nil)
 	require.NoError(t, err)
 }
@@ -76,7 +71,7 @@ func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
 	ctx := t.Context()
 
 	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
+	ghc := newGitLabClient(t, rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
 		ctx,
 		new(gitlab.Forge), "abg", "test-repo",
@@ -119,7 +114,7 @@ func TestIntegration(t *testing.T) {
 		RemoteURL: "git@gitlab.com:abg/test-repo.git",
 		Forge:     &gitlabForge,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			ghc := newGitLabClient(httpClient)
+			ghc := newGitLabClient(t, httpClient)
 			repo, err := gitlab.NewRepository(
 				t.Context(), &gitlabForge, "abg", "test-repo",
 				silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
@@ -148,7 +143,7 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name())
 	client := rec.GetDefaultClient()
-	ghc := newGitLabClient(client)
+	ghc := newGitLabClient(t, client)
 	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", silogtest.New(t), ghc, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "404 Not Found")
@@ -228,7 +223,7 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 	}
 
 	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
+	ghc := newGitLabClient(t, rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
 		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc,
 		&gitlab.RepositoryOptions{

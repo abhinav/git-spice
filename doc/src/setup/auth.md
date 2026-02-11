@@ -1,7 +1,7 @@
 ---
 icon: material/lock
 description: >-
-  Authenticate with GitHub/GitLab to push and pull changes.
+  Authenticate with GitHub/GitLab/Bitbucket to push and pull changes.
 ---
 
 # Authentication
@@ -11,8 +11,10 @@ It does not require authentication for local stacking operations.
 However, once you want to push or pull changes to/from a remote repository,
 you will need to authenticate with the respective service.
 
-This page covers methods to authenticate git-spice with GitHub and GitLab.
+This page covers methods to authenticate git-spice
+with GitHub, GitLab, and Bitbucket Cloud.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
+Bitbucket Cloud support requires at least version <!-- gs:version unreleased -->.
 
 ## Logging in
 
@@ -44,9 +46,11 @@ Each supported service supports different authentication methods.
 
 - [OAuth](#oauth): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [GitHub App](#github-app): <!-- gs:badge:github -->
+- [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket -->
 - [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+- [API Token](#api-token): <!-- gs:badge:bitbucket -->
 - [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
-- [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+- [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
 
 Read on for more details on each method,
 or skip on to [Pick an authentication method](#picking-an-authentication-method).
@@ -128,6 +132,76 @@ You **must** install the GitHub App to access repositories with git-spice.
     to allow installation of the git-spice GitHub App.
     If that is not an option,
     use a [Personal Access Token](#personal-access-token).
+
+### Git Credential Manager
+
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:bitbucket -->
+
+[Git Credential Manager](https://github.com/git-credential-manager/git-credential-manager)
+(GCM) is a secure credential storage system for Git.
+If you already have GCM configured for GitHub or Bitbucket,
+git-spice can reuse those credentials automatically.
+
+```freeze language="terminal"
+{green}${reset} gs auth login
+Select an authentication method: {red}Git Credential Manager{reset}
+{green}INF{reset} successfully logged in
+```
+
+To set up GCM:
+
+1. Install Git Credential Manager:
+
+    === "macOS"
+
+        ```sh
+        brew install git-credential-manager
+        ```
+
+    === "Linux"
+
+        Follow the instructions at
+        <https://github.com/git-credential-manager/git-credential-manager>
+
+2. Configure Git to use GCM:
+
+    ```sh
+    git config --global credential.helper manager
+    ```
+
+3. Push or pull from a GitHub or Bitbucket repository once.
+   This triggers the OAuth flow in your browser.
+
+After that, git-spice will use the stored OAuth token automatically.
+
+Additionally, if you have GCM configured,
+git-spice will automatically fall back to GCM credentials
+when no other authentication token is available—even
+without running `gs auth login`.
+
+### API Token
+
+**Supported by** <!-- gs:badge:bitbucket -->
+
+Bitbucket API tokens provide a way to authenticate
+without using your main account password.
+To use an API token with git-spice:
+
+1. Go to <https://bitbucket.org/account/settings/api-tokens/>.
+2. Click "Create token".
+3. Enter a descriptive label.
+4. Select the following scopes:
+    - **pullrequest:write** - create and edit pull requests
+    - **account** - read workspace members for reviewer lookup
+5. Click "Create" and copy the generated token.
+
+```freeze language="terminal"
+{green}${reset} gs auth login
+Select an authentication method: {red}API Token{reset}
+{green}Enter Atlassian account email{reset}: user@example.com
+{green}Enter API token{reset}:
+{green}INF{reset} bitbucket: successfully logged in
+```
 
 ### Personal Access Token
 
@@ -235,7 +309,7 @@ git-spice will request a token from the CLI as needed.
 
 ### Environment variable
 
-**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
 
 You can provide the authentication token as an environment variable.
 This is not recommended as a primary authentication method,
@@ -249,6 +323,11 @@ but it can be useful in CI/CD environments.
 
     Set the `GITLAB_TOKEN` environment variable to your token.
 
+=== "<!-- gs:bitbucket -->"
+
+    Set the `BITBUCKET_TOKEN` environment variable to your OAuth token.
+    This should be a Bearer token (OAuth access token).
+
 If you have the environment variable set,
 this takes precedence over all other authentication methods.
 
@@ -256,24 +335,54 @@ The $$gs auth login$$ operation will always fail if you use this method.
 
 ## Picking an authentication method
 
-[OAuth](#oauth) is best if you have the permissions needed
-to install it on all repositories that you want to use git-spice with.
-Additionally, on GitHub, [GitHub App](#github-app) is similar,
-but it may be preferable if you don't want to give git-spice
-access to all your repositories.
+=== "<!-- gs:github -->"
 
-[Service CLI](#service-cli) is the most convenient method if you already have
-the CLI for the service installed and authenticated,
-and your organization already allows its use.
-It loses security benefits of the other methods,
-as it re-uses the token assigned to the CLI.
-For example, it you lose the ability to revoke the git-spice token
-without revoking the CLI token.
+    [OAuth](#oauth) is best if you have the permissions needed
+    to install it on all repositories that you want to use git-spice with.
+    [GitHub App](#github-app) is similar,
+    but it may be preferable if you don't want to give git-spice
+    access to all your repositories.
 
-[Personal Access Token](#personal-access-token) is flexible and secure.
-It may be used even with repositories where you don't have permission to
-install OAuth or GitHub Apps.
-However, it requires manual token management, making it less convenient.
+    [Git Credential Manager](#git-credential-manager)
+    is convenient if you already have GCM installed for git operations.
+    git-spice can reuse your existing GCM credentials automatically,
+    and will fall back to them even without explicit login.
+
+    [Service CLI](#service-cli) is the most convenient method
+    if you already have the GitHub CLI installed and authenticated.
+    It loses security benefits of the other methods,
+    as it re-uses the token assigned to the CLI.
+
+    [Personal Access Token](#personal-access-token)
+    is flexible and secure.
+    It may be used even with repositories where you don't have
+    permission to install OAuth or GitHub Apps.
+    However, it requires manual token management,
+    making it less convenient.
+
+=== "<!-- gs:gitlab -->"
+
+    [OAuth](#oauth) is best if you have the permissions needed
+    to install it on all repositories that you want to use git-spice with.
+
+    [Service CLI](#service-cli) is the most convenient method if you already have
+    the GitLab CLI installed and authenticated.
+    It loses security benefits of the other methods,
+    as it re-uses the token assigned to the CLI.
+
+    [Personal Access Token](#personal-access-token) is flexible and secure.
+    It may be used even with repositories where you don't have permission to
+    install OAuth Apps.
+    However, it requires manual token management, making it less convenient.
+
+=== "<!-- gs:bitbucket -->"
+
+    [Git Credential Manager](#git-credential-manager) integrates with
+    Bitbucket's OAuth flow and handles token refresh automatically.
+    This is convenient if you already have GCM installed for git operations.
+
+    [API Token](#api-token) is flexible and secure.
+    It requires manual token management but works without additional tools.
 
 [Environment variable](#environment-variable) is the least convenient
 and the least secure method. End users should typically never pick this.
@@ -396,3 +505,18 @@ reporting the full path to the secrets file.
 ```
 
 </details>
+
+## Bitbucket Cloud limitations
+
+<!-- gs:version unreleased -->
+
+Bitbucket Cloud support has some limitations compared to GitHub and GitLab:
+
+- **No PR labels**: Bitbucket does not support pull request labels.
+  The `--label` flag is ignored.
+- **No PR assignees**: Bitbucket does not support pull request assignees.
+  The `--assign` flag is ignored.
+- **No template enumeration**: Bitbucket does not provide an API
+  to list pull request templates.
+
+These are platform limitations, not git-spice limitations.
