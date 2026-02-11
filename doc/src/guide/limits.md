@@ -3,11 +3,12 @@ icon: octicons/stop-16
 title: Limitations
 description: >-
   Usage constraints and limitations when using git-spice
-  to interact with GitHub or GitLab.
+  to interact with GitHub, GitLab, or Bitbucket Cloud.
 ---
 
-Usage of git-spice with GitHub and GitLab runs into limitations
-of what is possible on those platforms, and how they handle Git commits.
+Usage of git-spice with GitHub, GitLab, and Bitbucket Cloud
+runs into limitations of what is possible on those platforms,
+and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
 
 ## Write access required
@@ -87,6 +88,22 @@ branches upstack from it need to be restacked, and all their CRs updated.
 
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->
+
+## Bitbucket Cloud limitations
+
+<!-- gs:version unreleased -->
+
+Bitbucket Cloud support has some limitations
+compared to GitHub and GitLab:
+
+- **No PR labels**: Bitbucket does not support pull request labels.
+  The `--label` flag is ignored.
+- **No PR assignees**: Bitbucket does not support pull request assignees.
+  The `--assign` flag is ignored.
+- **No template enumeration**: Bitbucket does not provide an API
+  to list pull request templates.
+
+These are platform limitations, not git-spice limitations.
 
 ## Base branch change may dismiss approvals
 

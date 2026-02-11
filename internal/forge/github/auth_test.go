@@ -192,6 +192,7 @@ func TestSelectAuthenticator(t *testing.T) {
 	drv := uitest.Drive(t, func(view ui.InteractiveView) {
 		auth, err := selectAuthenticator(view, authenticatorOptions{
 			Endpoint: oauth2.Endpoint{},
+			ForgeURL: "https://github.com",
 		})
 		require.NoError(t, err)
 		assert.True(t, reflect.TypeFor[*DeviceFlowAuthenticator]() == reflect.TypeOf(auth),
@@ -233,10 +234,14 @@ func TestSelectAuthenticator(t *testing.T) {
   You must be logged into gh with 'gh auth login' for this to work.
   You can use this if you're just experimenting and don't want to set up a
   token yet.
+
+  Git Credential Manager
+  Use OAuth credentials from git-credential-manager.
+  You must have GCM installed and already authenticated to GitHub.
 `).Equal(t, drv.Snapshot())
 
 	// Wrap around to "OAuth".
-	drv.PressN(tea.KeyDown, 2)
+	drv.PressN(tea.KeyDown, 3)
 	autogold.Expect(`Select an authentication method:
 ▶ OAuth
   Authorize git-spice to act on your behalf from this device only.
@@ -271,6 +276,10 @@ func TestSelectAuthenticator(t *testing.T) {
   You must be logged into gh with 'gh auth login' for this to work.
   You can use this if you're just experimenting and don't want to set up a
   token yet.
+
+  Git Credential Manager
+  Use OAuth credentials from git-credential-manager.
+  You must have GCM installed and already authenticated to GitHub.
 `).Equal(t, drv.Snapshot())
 
 	drv.Press(tea.KeyEnter) // select "OAuth"
@@ -320,6 +329,10 @@ func TestAuthenticationFlow_PAT(t *testing.T) {
   You must be logged into gh with 'gh auth login' for this to work.
   You can use this if you're just experimenting and don't want to set up a
   token yet.
+
+  Git Credential Manager
+  Use OAuth credentials from git-credential-manager.
+  You must have GCM installed and already authenticated to GitHub.
 `).Equal(t, drv.Snapshot())
 	drv.Press(tea.KeyEnter) // Select it.
 
