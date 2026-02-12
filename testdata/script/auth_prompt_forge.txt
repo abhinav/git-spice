@@ -15,7 +15,8 @@ cmp $WORK/robot.actual $WORK/robot.golden
 ===
 > Select a Forge: 
 >
-> ▶ github
+> ▶ bitbucket
+>   github
 >   gitlab
 >   shamhub
 "shamhub"

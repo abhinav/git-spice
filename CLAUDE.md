@@ -75,7 +75,19 @@ unless explicitly stated otherwise:
         mise run build
         ```
 
-    4. Changelog
+    4. Generate
+
+        If the change adds or modifies CLI commands, flags, or
+        configuration options (e.g., adding a new forge),
+        regenerate documentation and other generated files:
+
+        ```bash
+        mise run generate
+        ```
+
+        This updates `doc/includes/cli-reference.md` and other generated files.
+
+    5. Changelog
 
         If the change is user-facing, that is,
         it adds or modifies functionality visible to end users,
@@ -88,7 +100,7 @@ unless explicitly stated otherwise:
         changie new --kind $kind --body $body
         ```
 
-    5. Commit
+    6. Commit
 
         Create a commit with a descriptive message.
         Follow user-specified guidelines for commit messages if provided.
