@@ -239,6 +239,10 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 func (cmd cliDumper) dumpConfigFooter(node *kong.Node) {
 	var configKeys []string
 	for _, flag := range node.Flags {
+		if flag.Tag.Has("deprecated") {
+			continue
+		}
+
 		key := flag.Tag.Get("config")
 		if key == "" || key[0] == '@' {
 			// "@" is for git configuration keys.

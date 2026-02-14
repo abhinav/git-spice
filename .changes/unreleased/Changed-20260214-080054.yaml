@@ -1,0 +1,7 @@
+kind: Changed
+body: >-
+  branch checkout: Add 'spice.branchCheckout.trackUntracked' configuration option to control tracking of untracked branches.
+  Defaults to prompting the user,
+  but can be set to 'always' to always track untracked branches,
+  or 'never' to not track nor prompt.
+time: 2026-02-14T08:00:54.574347-08:00

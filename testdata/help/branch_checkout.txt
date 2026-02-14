@@ -26,9 +26,9 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
-  spice.branchCheckout.trackUntrackedPrompt
-                             Whether to prompt to track untracked branches when
-                             checked out.
+  spice.branchCheckout.trackUntracked
+                             Whether to track untracked branches on checkout.
+                             One of 'prompt', 'never', or 'always'.
   spice.branchPrompt.sort    Sort branches by the given field. Common values
                              include 'refname', 'commiterdate', etc. Defaults to
                              branch name.

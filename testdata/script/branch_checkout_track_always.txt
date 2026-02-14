@@ -1,0 +1,30 @@
+# 'branch checkout' automatically tracks an untracked branch
+# when spice.branchCheckout.trackUntracked is set to 'always'.
+
+as 'Test <test@example.com>'
+at '2026-02-14T15:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+git add foo.txt
+git commit -m 'Add foo.txt'
+
+git checkout main
+
+git config spice.branchCheckout.trackUntracked always
+
+gs branch checkout feature
+stderr 'automatically tracking branch'
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+-- repo/foo.txt --
+whatever
+-- golden/ls.txt --
+┏━■ feature ◀
+main

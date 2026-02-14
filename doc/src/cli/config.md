@@ -43,27 +43,39 @@ This option controls whether untracked branches are shown in the prompt.
 - `true`
 - `false` (default)
 
-### spice.branchCheckout.trackUntrackedPrompt
+### spice.branchCheckout.trackUntracked
 
-<!-- gs:version v0.14.0 -->
+<!-- gs:version unreleased -->
 
-If $$gs branch checkout$$ is used to checkout a branch that is not tracked,
-git-spice will present a prompt like the following to begin tracking it:
-
-```freeze language="terminal"
-{green}${reset} gs branch checkout {red}mybranch{reset}
-{yellow}WRN{reset} mybranch: branch not tracked
-{green}Do you want to track this branch now?{reset}: [{mag}Y{reset}/{mag}n{reset}]
-```
-
-This option allows you to disable the prompt
-if you frequently checkout untracked branches
-and don't want to be prompted to track them.
+When $$gs branch checkout$$ checks out a branch that is not tracked,
+this specifies whether that branch should be automatically tracked by git-spice.
 
 **Accepted values:**
 
-- `true` (default)
-- `false`
+- `prompt` (default):
+  present a confirmation prompt to track the branch, for example:
+
+    ```freeze language="terminal"
+    {green}${reset} gs branch checkout {red}mybranch{reset}
+    {yellow}WRN{reset} mybranch: branch not tracked
+    {green}Do you want to track this branch now?{reset}: [{mag}Y{reset}/{mag}n{reset}]
+    ```
+
+- `always` or `true`:
+  automatically track the branch without prompting
+
+- `never` or `false`:
+  don't track the branch and skip the prompt
+
+### spice.branchCheckout.trackUntrackedPrompt
+
+Deprecated in <!-- gs:version unreleased -->.
+Use $$spice.branchCheckout.trackUntracked$$ instead.
+
+Supported values were:
+
+- `true` (default): prompt to track untracked branches
+- `false`: don't prompt to track untracked branches
 
 ### spice.branchPrompt.sort
 

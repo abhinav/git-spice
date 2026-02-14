@@ -275,6 +275,12 @@ func (w *helpWriter) writeConfigOnlyOptions(node *kong.Node) {
 		if !flag.Hidden {
 			continue
 		}
+
+		// If deprecated, don't show in the help.
+		if flag.Tag.Has("deprecated") {
+			continue
+		}
+
 		key := flag.Tag.Get("config")
 		if key == "" || key[0] == '@' {
 			// Skip flags without config tags
