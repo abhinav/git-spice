@@ -72,7 +72,7 @@ type Service interface {
 
 var _ Service = (*spice.Service)(nil)
 
-//go:generate mockgen -typed -destination mocks_test.go -package submit . Service
+//go:generate mockgen -typed -destination mocks_test.go -package submit -write_package_comment=false . Service,Store
 
 // Handler implements support for submission of change requests.
 type Handler struct {
@@ -142,6 +142,8 @@ type Options struct {
 	NavCommentSync      NavCommentSync      `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
 	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" enum:"all,open" default:"all" hidden:"" help:"Which downstack CRs to include in navigation comments. Must be one of: all, open."`
 	NavCommentMarker    string              `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
+
+	SkipRestackCheck SkipRestackCheck `config:"submit.skipRestackCheck" hidden:"" help:"When to skip the restack check. Must be one of: never, trunk, always." default:"never"`
 
 	Force      bool  `help:"Force push, bypassing safety checks"`
 	NoVerify   bool  `help:"Bypass pre-push hooks when pushing to the remote." released:"v0.15.0"`
@@ -464,20 +466,32 @@ func (h *Handler) submitBranch(
 	svc := h.Service
 	log := h.Log
 
-	// Refuse to submit if the branch is not restacked.
-	if !opts.Force {
-		if err := svc.VerifyRestacked(ctx, branchToSubmit); err != nil {
-			log.Errorf("Branch %s needs to be restacked.", branchToSubmit)
-			log.Errorf("Run the following command to fix this:")
-			log.Errorf("  gs branch restack --branch=%s", branchToSubmit)
-			log.Errorf("Or, try again with --force to submit anyway.")
-			return status, errors.New("refusing to submit outdated branch")
-		}
-	}
-
 	branch, err := svc.LookupBranch(ctx, branchToSubmit)
 	if err != nil {
 		return status, fmt.Errorf("lookup branch: %w", err)
+	}
+
+	// Refuse to submit if the branch is not restacked.
+	if !opts.Force {
+		if err := svc.VerifyRestacked(ctx, branchToSubmit); err != nil {
+			if shouldSkipRestackCheck(
+				opts.SkipRestackCheck,
+				branch.Base,
+				h.Store.Trunk(),
+			) {
+				log.Warnf("Branch %s is not restacked."+
+					" Run 'gs branch restack --branch=%s'"+
+					" to fix this.",
+					branchToSubmit, branchToSubmit,
+				)
+			} else {
+				log.Errorf("Branch %s needs to be restacked.", branchToSubmit)
+				log.Errorf("Run the following command to fix this:")
+				log.Errorf("  gs branch restack --branch=%s", branchToSubmit)
+				log.Errorf("Or, try again with --force to submit anyway.")
+				return status, errors.New("refusing to submit outdated branch")
+			}
+		}
 	}
 
 	// Various code paths down below should call this

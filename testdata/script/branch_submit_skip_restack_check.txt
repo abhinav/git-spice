@@ -1,0 +1,68 @@
+# 'gs branch submit' with spice.submit.skipRestackCheck
+# controls whether outdated branches can be submitted
+# without --force.
+
+as 'Test <test@example.com>'
+at '2024-07-22T19:51:01Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create feature1 on main, feature2 on feature1.
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+# Advance main so feature1 needs restacking.
+gs trunk
+git add README.md
+git commit -m 'Add a README'
+
+# Default (never): submit feature1 fails.
+gs bco feature1
+! gs branch submit --fill
+stderr 'Branch feature1 needs to be restacked'
+
+# Mode trunk: feature1 (based on main) succeeds with warning.
+git config spice.submit.skipRestackCheck trunk
+gs branch submit --fill
+stderr 'Branch feature1 is not restacked'
+stderr 'gs branch restack'
+stderr 'Created #1'
+
+# Restack feature1 so its head moves,
+# making feature2 outdated.
+gs branch restack
+
+# Mode trunk: feature2 (based on feature1, not trunk) fails.
+gs bco feature2
+! gs branch submit --fill
+stderr 'Branch feature2 needs to be restacked'
+
+# Mode always: feature2 succeeds with warning.
+git config spice.submit.skipRestackCheck always
+gs branch submit --fill
+stderr 'Branch feature2 is not restacked'
+stderr 'gs branch restack'
+stderr 'Created #2'
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- repo/README.md --
+documentation

@@ -547,6 +547,37 @@ This option has no effect on $$gs branch submit$$,
 - `true`
 - `false` (default)
 
+### spice.submit.skipRestackCheck
+
+<!-- gs:version unreleased -->
+
+Controls whether submit commands ($$gs branch submit$$ and friends)
+skip the restack check for outdated branches.
+
+By default, git-spice refuses to submit a branch
+that is not restacked on top of its base.
+This option allows you to bypass that check
+without using the `--force` flag.
+
+This is useful for branches based on a fast-moving trunk
+(for example, in a monorepo),
+where every `git fetch` may cause branches to become outdated
+and require constant restacking.
+
+**Accepted values:**
+
+- `never` (default):
+  always enforce the restack check
+- `trunk`:
+  skip the restack check for branches based directly on trunk
+- `always`:
+  skip the restack check for all branches
+
+When the check is skipped,
+a warning is logged to indicate that the branch is outdated.
+The `--force` flag always bypasses the check
+regardless of this setting.
+
 ### spice.repoSync.closedChanges
 
 <!-- gs:version v0.17.0 -->

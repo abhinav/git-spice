@@ -1,0 +1,7 @@
+kind: Added
+body: >-
+  submit: Add 'spice.submit.skipRestackCheck' configuration option
+  to skip restack verification during branch submission.
+  This can be configured to skip the check only for branches on top of trunk,
+  or for all branches.
+time: 2026-02-14T07:22:37.646553-08:00
