@@ -163,6 +163,22 @@ Defaults to `$GITHUB_URL` if set, or `https://github.com` otherwise.
 
 See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
+### spice.forge.bitbucket.apiURL
+
+<!-- gs:version unreleased -->
+
+URL at which the Bitbucket API is available.
+Defaults to `$BITBUCKET_API_URL` if set,
+or `https://api.bitbucket.org/2.0` otherwise.
+
+### spice.forge.bitbucket.url
+
+<!-- gs:version unreleased -->
+
+URL of the Bitbucket instance used for Bitbucket requests.
+Defaults to `$BITBUCKET_URL` if set,
+or `https://bitbucket.org` otherwise.
+
 ### spice.forge.gitlab.url
 
 <!-- gs:version v0.9.0 -->
