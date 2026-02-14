@@ -70,7 +70,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	// and that should be the upstream (commit to start rebasing from)
 	// if the recorded base hash is out of date
 	// because the user changed something externally.
-	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
+	if !s.repo.IsAncestor(ctx, upstream, b.Head) {
 		forkPoint, err := s.repo.ForkPoint(ctx, b.Base, name)
 		if err == nil {
 			if upstream != forkPoint {

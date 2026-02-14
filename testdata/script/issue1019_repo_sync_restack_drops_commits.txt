@@ -1,0 +1,114 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1019
+#
+# When a single branch sits on trunk with multiple commits,
+# and trunk advances on the remote,
+# 'repo sync --restack' must preserve all commits on the branch.
+#
+# The bug: during restack, the fork-point fallback guard
+# checked whether the *current* base branch hash
+# was an ancestor of the branch head.
+# After a normal trunk fast-forward,
+# this is always false,
+# so the fork-point fallback fired on every restack.
+#
+# Consider a feature branch with commits A and B
+# on top of old-trunk, after trunk moves to new-trunk:
+#
+#     old-trunk --- new-trunk   (main)
+#         \
+#          A --- B              (feature)
+#
+# The guard checked IsAncestor(new-trunk, B),
+# which is false because new-trunk is not in B's ancestry.
+# This caused 'git merge-base --fork-point' to run,
+# and if main's reflog contained a stale entry
+# pointing at A, fork-point would return A.
+# The rebase then ran 'git rebase --onto new-trunk A feature',
+# replaying only B and silently dropping A.
+#
+# The fix checks the *stored* base hash instead:
+# IsAncestor(old-trunk, B) is true,
+# so fork-point is skipped and the rebase correctly uses
+# old-trunk as the upstream, preserving both commits.
+#
+# We don't know exactly how the reporter's reflog
+# got into a state that triggered the wrong fork-point result.
+# This test reproduces the bug by poisoning main's reflog
+# with a mid-branch commit, which is one plausible trigger.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a feature branch with 2 commits on trunk.
+git add file1.txt
+gs bc -m 'First feature commit' feature
+git add file2.txt
+gs cc -m 'Second feature commit'
+
+# Verify both commits are present before sync.
+gs ll
+cmp stderr $WORK/golden/ll-before.txt
+
+# Poison main's reflog:
+# Temporarily advance main to the first feature commit
+# then reset it back. This leaves an entry in main's reflog
+# pointing at a commit belonging to the feature branch,
+# which causes fork-point to return a mid-branch commit.
+git checkout main
+git merge --ff-only feature~1
+git checkout -B main feature~2
+git checkout feature
+
+# Simulate trunk advancing on the remote.
+# Clone and push a new commit to main.
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+git commit --allow-empty -m 'Remote trunk commit'
+git push origin main
+
+# Back to the original repo.
+cd ../repo
+
+# The user pulls trunk using vanilla git.
+git checkout main
+git pull origin main
+git checkout feature
+
+# Run repo sync with restack.
+gs repo sync --restack
+
+# Verify both commits are still present after restack.
+gs ll
+cmp stderr $WORK/golden/ll-after.txt
+
+-- repo/file1.txt --
+Contents of file1
+
+-- repo/file2.txt --
+Contents of file2
+
+-- golden/ll-before.txt --
+┏━■ feature ◀
+┃   4bb9afa Second feature commit (now)
+┃   260e03c First feature commit (now)
+main
+-- golden/ll-after.txt --
+┏━■ feature ◀
+┃   28d574d Second feature commit (now)
+┃   8d031d0 First feature commit (now)
+main
