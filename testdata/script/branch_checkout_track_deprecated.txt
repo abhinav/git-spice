@@ -1,9 +1,8 @@
-# Checkout out an untracked branch with 'branch checkout'
-# does not prompt if the user opts out of the prompt
-# using the deprecated trackUntrackedPrompt option.
+# Using the deprecated spice.branchCheckout.trackUntrackedPrompt option
+# logs a deprecation warning and applies expected behavior.
 
 as 'Test <test@example.com>'
-at '2025-05-11T10:48:49Z'
+at '2026-02-14T15:00:00Z'
 
 cd repo
 git init

@@ -1,0 +1,3 @@
+kind: Deprecated
+body: 'branch checkout: Deprecate ''spice.branchCheckout.trackUntrackedPrompt'' configuration option in favor of ''spice.branchCheckout.trackUntracked''.'
+time: 2026-02-14T08:11:38.611662-08:00

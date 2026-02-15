@@ -1,9 +1,8 @@
-# Checkout out an untracked branch with 'branch checkout'
-# does not prompt if the user opts out of the prompt
-# using the deprecated trackUntrackedPrompt option.
+# 'branch checkout' does not track or prompt for an untracked branch
+# when spice.branchCheckout.trackUntracked is set to 'never'.
 
 as 'Test <test@example.com>'
-at '2025-05-11T10:48:49Z'
+at '2026-02-14T15:00:00Z'
 
 cd repo
 git init
@@ -16,13 +15,12 @@ git commit -m 'Add foo.txt'
 
 git checkout main
 
-git config spice.branchCheckout.trackUntrackedPrompt false
+git config spice.branchCheckout.trackUntracked never
 
 # Enable interactive mode, but don't expect a prompt.
 env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
 gs branch checkout feature
 cmp $WORK/robot.actual $WORK/robot.golden
-stderr 'trackUntrackedPrompt is deprecated'
 stderr 'branch not tracked'
 
 -- repo/foo.txt --

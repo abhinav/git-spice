@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding"
 	"fmt"
+	"strings"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
@@ -11,12 +13,66 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
+// trackUntracked specifies the behavior
+// when checking out an untracked branch.
+type trackUntracked int
+
+const (
+	// trackUntrackedPrompt prompts the user to track the branch.
+	// This is the default behavior.
+	trackUntrackedPrompt trackUntracked = iota
+
+	// trackUntrackedNever silently skips tracking.
+	trackUntrackedNever
+
+	// trackUntrackedAlways automatically tracks the branch.
+	trackUntrackedAlways
+)
+
+var _ encoding.TextUnmarshaler = (*trackUntracked)(nil)
+
+// String returns the string representation
+// of the trackUntracked value.
+func (t trackUntracked) String() string {
+	switch t {
+	case trackUntrackedPrompt:
+		return "prompt"
+	case trackUntrackedNever:
+		return "never"
+	case trackUntrackedAlways:
+		return "always"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes trackUntracked from text.
+// It accepts "prompt", "never"/"false", and "always"/"true".
+// Matching is case-insensitive.
+func (t *trackUntracked) UnmarshalText(bs []byte) error {
+	switch strings.ToLower(string(bs)) {
+	case "prompt":
+		*t = trackUntrackedPrompt
+	case "never", "false":
+		*t = trackUntrackedNever
+	case "always", "true":
+		*t = trackUntrackedAlways
+	default:
+		return fmt.Errorf(
+			"invalid value %q:"+
+				" expected prompt, never, or always",
+			bs,
+		)
+	}
+	return nil
+}
+
 type branchCheckoutCmd struct {
 	checkout.Options
 	BranchPromptConfig
 
-	// Allow users to opt out of the "branch not tracked" prompt.
-	TrackUntrackedPrompt bool `config:"branchCheckout.trackUntrackedPrompt" hidden:"" default:"true" help:"Whether to prompt to track untracked branches when checked out."`
+	TrackUntracked          trackUntracked `config:"branchCheckout.trackUntracked" hidden:"" default:"prompt" help:"Whether to track untracked branches on checkout. One of 'prompt', 'never', or 'always'."`
+	TrackUntrackedPromptOld *bool          `config:"branchCheckout.trackUntrackedPrompt" hidden:"" deprecated:""`
 
 	Untracked bool   `short:"u" config:"branchCheckout.showUntracked" help:"Show untracked branches if one isn't supplied"`
 	Branch    string `arg:"" optional:"" help:"Name of the branch to checkout" predictor:"branches"`
@@ -90,25 +146,50 @@ func (cmd *branchCheckoutCmd) Run(
 	view ui.View,
 	handler CheckoutHandler,
 ) error {
+	mode := cmd.TrackUntracked
+
+	// Translate the deprecated option if set.
+	if cmd.TrackUntrackedPromptOld != nil {
+		if *cmd.TrackUntrackedPromptOld {
+			mode = trackUntrackedPrompt
+		} else {
+			mode = trackUntrackedNever
+		}
+
+		log.Warnf("spice.branchCheckout.trackUntrackedPrompt is deprecated and will be removed in the future")
+		log.Warnf("Please use spice.branchCheckout.trackUntracked=%v instead", mode.String())
+	}
+
 	return handler.CheckoutBranch(ctx, &checkout.Request{
 		Branch:  cmd.Branch,
 		Options: &cmd.Options,
 		ShouldTrack: func(branch string) (bool, error) {
-			if !ui.Interactive(view) || !cmd.TrackUntrackedPrompt {
+			switch mode {
+			case trackUntrackedAlways:
+				log.Infof("%v: automatically tracking branch", branch)
+				return true, nil
+
+			case trackUntrackedNever:
 				log.Warnf("%v: branch not tracked: run 'gs branch track'", branch)
 				return false, nil
-			}
 
-			log.Warnf("%v: branch not tracked", branch)
-			shouldTrack := true
-			prompt := ui.NewConfirm().
-				WithValue(&shouldTrack).
-				WithTitle("Do you want to track this branch now?")
-			if err := ui.Run(view, prompt); err != nil {
-				return false, fmt.Errorf("prompt: %w", err)
-			}
+			default: // trackUntrackedPrompt
+				if !ui.Interactive(view) {
+					log.Warnf("%v: branch not tracked: run 'gs branch track'", branch)
+					return false, nil
+				}
 
-			return shouldTrack, nil
+				log.Warnf("%v: branch not tracked", branch)
+				shouldTrack := true
+				prompt := ui.NewConfirm().
+					WithValue(&shouldTrack).
+					WithTitle("Do you want to track this branch now?")
+				if err := ui.Run(view, prompt); err != nil {
+					return false, fmt.Errorf("prompt: %w", err)
+				}
+
+				return shouldTrack, nil
+			}
 		},
 	})
 }
