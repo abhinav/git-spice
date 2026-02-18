@@ -1,6 +1,7 @@
 [[tools.changie]]
 version = "1.24.0"
-backend = "ubi:miniscruff/changie"
+backend = "github:miniscruff/changie"
+"platforms.linux-x64" = { checksum = "sha256:706937c1874eb7c270d15f644d8a84a74dfa7f27778cbc8ca9cb045a0d68d9df", url = "https://github.com/miniscruff/changie/releases/download/v1.24.0/changie_1.24.0_linux_amd64.tar.gz", url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/319542133"}
 "platforms.linux-x64-changie" = { checksum = "blake3:8b63ce3ca2871dba4d3a50cea6b4fc8c8aad789a18fdb8c88fc8e6b3b26977cc"}
 
 [[tools.go]]
@@ -21,6 +22,7 @@ backend = "ubi:mvdan/gofumpt"
 [[tools.golangci-lint]]
 version = "2.10.1"
 backend = "aqua:golangci/golangci-lint"
+"platforms.linux-x64" = { checksum = "sha256:dfa775874cf0561b404a02a8f4481fc69b28091da95aa697259820d429b09c99", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-linux-amd64.tar.gz"}
 
 [[tools.gotestsum]]
 version = "1.13.0"
@@ -34,3 +36,4 @@ backend = "aqua:gotestyourself/gotestsum"
 [[tools.requiredfield]]
 version = "0.9.0"
 backend = "github:abhinav/requiredfield"
+"platforms.linux-x64" = { checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf", url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-x86_64.tar.gz", url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740554"}
