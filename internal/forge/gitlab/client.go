@@ -35,7 +35,6 @@ func newGitLabClient(ctx context.Context, baseURL string, tok *AuthenticationTok
 		}
 
 	case AuthTypeOAuth2:
-		// Needs a different client constructor.
 		authSource = gitlab.OAuthTokenSource{
 			TokenSource: oauth2.StaticTokenSource(&oauth2.Token{
 				AccessToken: tok.AccessToken,
