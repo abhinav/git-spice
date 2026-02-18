@@ -159,7 +159,7 @@ func (r *Repository) ListChangeComments(
 
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
 		notesOptions := gitlab.ListMergeRequestNotesOptions{
-			Sort: gitlab.Ptr("asc"),
+			Sort: new("asc"),
 			ListOptions: gitlab.ListOptions{
 				PerPage: int64(_listChangeCommentsPageSize),
 			},

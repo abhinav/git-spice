@@ -29,7 +29,7 @@ var _fixtures = fixturetest.Config{Update: forgetest.Update}
 // To avoid looking this up for every test that needs the repo ID,
 // we'll just hardcode it here.
 var (
-	_testRepoID = gogitlab.Ptr(int64(64779801))
+	_testRepoID = new(int64(64779801))
 )
 
 // TODO: delete newRecorder when tests have been migrated to forgetest.

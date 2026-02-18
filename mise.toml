@@ -10,7 +10,8 @@ _.path = ["{{ config_root }}/bin"]
 [tool_alias]
 # Specify sources for all tools so we can refer to them directly.
 golangci-lint = "aqua:golangci/golangci-lint"
-changie = "ubi:miniscruff/changie"
+changie = "github:miniscruff/changie"
+requiredfield = "github:abhinav/requiredfield"
 
 [tools]
 # Self-explanatory.
@@ -27,8 +28,7 @@ golangci-lint = "latest"
 
 # Changelog manager.
 changie = "latest"
-
-"ubi:abhinav/requiredfield" = "0.8.0"
+requiredfield = "0.9.0"
 
 [tasks.generate]
 depends = ["tools"]
@@ -126,6 +126,14 @@ description = "Check for required fields"
 [tasks."lint:tidy"]
 run = "go mod tidy -diff"
 description = "Ensure go.mod and go.sum are up to date"
+
+[tasks."lint:gofix"]
+run = "go fix -diff ./..."
+description = "Check for necessary fixes"
+
+[tasks.gofix]
+run = "go fix ./..."
+description = "Apply go fix to all packages"
 
 [tasks.build]
 usage = """
