@@ -33,7 +33,7 @@ func CloseChange(ctx context.Context, repo *Repository, id *MR) error {
 		repo.repoID,
 		id.Number,
 		&gitlab.UpdateMergeRequestOptions{
-			StateEvent: gitlab.Ptr("close"),
+			StateEvent: new("close"),
 		},
 		gitlab.WithContext(ctx),
 	)

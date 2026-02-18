@@ -20,13 +20,13 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		SourceBranch: &req.Head,
 	}
 	if r.removeSourceBranchOnMerge {
-		input.RemoveSourceBranch = gitlab.Ptr(true)
+		input.RemoveSourceBranch = new(true)
 	}
 	if req.Body != "" {
 		input.Description = &req.Body
 	}
 	if req.Draft {
-		input.Title = gitlab.Ptr(fmt.Sprintf("%s %s", _draftPrefix, req.Subject))
+		input.Title = new(fmt.Sprintf("%s %s", _draftPrefix, req.Subject))
 	}
 	if len(req.Labels) > 0 {
 		input.Labels = (*gitlab.LabelOptions)(&req.Labels)

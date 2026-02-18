@@ -30,7 +30,7 @@ func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]int
 
 func (r *Repository) assigneeID(ctx context.Context, username string) (int64, error) {
 	users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
-		Username: gitlab.Ptr(username),
+		Username: new(username),
 	}, gitlab.WithContext(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("list users: %w", err)

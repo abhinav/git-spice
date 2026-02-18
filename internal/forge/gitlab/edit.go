@@ -71,7 +71,7 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 
 		if *opts.Draft {
 			if !mr.Draft {
-				updateOptions.Title = gitlab.Ptr(fmt.Sprintf("%s %s", _draftPrefix, mr.Title))
+				updateOptions.Title = new(fmt.Sprintf("%s %s", _draftPrefix, mr.Title))
 			}
 		} else {
 			if mr.Draft {

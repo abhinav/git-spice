@@ -466,7 +466,7 @@ func formatFlag(haveShort bool, flag *kong.Flag) (flagName, flagHelp string) {
 		name += "/" + flag.Tag.Negatable
 	}
 
-	sb.WriteString(fmt.Sprintf("%s--%s", short, name))
+	fmt.Fprintf(&sb, "%s--%s", short, name)
 
 	if !isBool && !isCounter {
 		sb.WriteString("=" + flag.FormatPlaceHolder())

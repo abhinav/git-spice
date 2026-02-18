@@ -582,6 +582,7 @@ func joinLines(lines ...string) string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
+//go:fix inline
 func ptr[T any](v T) *T {
-	return &v
+	return new(v)
 }
