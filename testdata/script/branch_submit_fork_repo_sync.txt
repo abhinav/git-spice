@@ -1,0 +1,102 @@
+# Test fork workflow: branch submit to upstream, then repo sync after merge.
+
+as 'Test <test@example.com>'
+at '2025-08-17T14:30:00Z'
+
+# Alice creates upstream repository
+mkdir -p alice/store
+cd alice/store
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub register alice
+shamhub register bob
+shamhub new upstream alice/store
+git push upstream main
+
+# Alice adds initial content
+cp $WORK/extra/initial.txt store.txt
+git add store.txt
+git commit -m 'Add initial store content'
+git push upstream main
+
+# Bob forks the repository
+shamhub fork alice/store bob
+
+# Bob clones his fork and sets up upstream
+mkdir $WORK/bob
+shamhub clone bob/store $WORK/bob/store
+cd $WORK/bob/store
+git remote add upstream $SHAMHUB_URL/alice/store
+
+# Verify remotes are set up correctly
+git remote -v
+stdout 'origin.*bob/store'
+stdout 'upstream.*alice/store'
+
+# Bob initializes gs with fork configuration
+gs repo init --remote=origin --upstream=upstream
+env SHAMHUB_USERNAME=bob
+gs auth login
+
+# Bob creates a feature branch and makes changes
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs bc feature -m 'Add feature from fork'
+
+# Bob submits the branch - should create PR against upstream
+gs branch submit --fill
+stderr 'Created #1:'
+
+# Verify the change request was created against upstream (alice/store)
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/pr-created.json
+
+# Check that Bob's branch was pushed to his fork
+git ls-remote origin feature
+stdout 'refs/heads/feature'
+
+# Alice merges Bob's change request
+shamhub merge alice/store 1
+
+# Bob syncs his repository
+gs repo sync
+stderr 'pulled 1 new commit'
+stderr '#1 was merged'
+
+# Verify Bob's main branch now has the merged content
+git checkout main
+cmp feature.txt $WORK/extra/feature.txt
+
+# Verify the feature branch was cleaned up
+! git show-ref refs/heads/feature
+
+-- extra/initial.txt --
+Initial store content
+-- extra/feature.txt --
+Feature from Bob's fork
+-- golden/pr-created.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature from fork",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/store/change/1",
+  "head": {
+    "repository": {
+      "owner": "bob",
+      "name": "store"
+    },
+    "ref": "feature",
+    "sha": "PLACEHOLDER"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "store"
+    },
+    "ref": "main",
+    "sha": "PLACEHOLDER"
+  }
+}
