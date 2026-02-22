@@ -56,7 +56,7 @@ func dumpShorthands(w io.Writer, shorts *shorthand.BuiltinSource) {
 	var t table
 	t.appendHeaders("Shorthand", "Long form")
 	for _, key := range keys {
-		cmd := cmdFullName(shorts.Node(key))
+		cmd := cmdFullNameWithPrefix(shorts.Node(key), "gs")
 		link := fmt.Sprintf("[%v](/cli/reference.md#%v)", cmd, strings.ReplaceAll(cmd, " ", "-"))
 		t.addRow("gs "+key, link)
 	}
@@ -119,7 +119,7 @@ func (cmd *cliDumper) dump(app *kong.Application) {
 	}
 
 	cmd.println("```")
-	cmd.println("gs" + app.Summary())
+	cmd.println("git-spice" + app.Summary())
 	cmd.println("```")
 	cmd.println()
 
@@ -155,7 +155,7 @@ func (cmd cliDumper) dumpCommand(node *kong.Node, level int) {
 		return
 	}
 
-	cmd.header(level, cmdFullName(node))
+	cmd.header(level, fmt.Sprintf("%s {#%s}", cmdFullName(node), cmdLegacyAnchor(node)))
 	cmd.println("```")
 	cmd.println("gs " + node.Summary())
 	cmd.println("```")
@@ -380,11 +380,20 @@ func (cmd cliDumper) printf(format string, args ...interface{}) {
 }
 
 func cmdFullName(node *kong.Node) string {
+	return cmdFullNameWithPrefix(node, "git-spice")
+}
+
+func cmdLegacyAnchor(node *kong.Node) string {
+	full := cmdFullNameWithPrefix(node, "gs")
+	return strings.ReplaceAll(full, " ", "-")
+}
+
+func cmdFullNameWithPrefix(node *kong.Node, prefix string) string {
 	var parts []string
 	for n := node; n != nil && n.Type == kong.CommandNode; n = n.Parent {
 		parts = append(parts, n.Name)
 	}
-	parts = append(parts, "gs")
+	parts = append(parts, prefix)
 	slices.Reverse(parts)
 	return strings.Join(parts, " ")
 }

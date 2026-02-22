@@ -5,10 +5,10 @@ builds:
   - env:
       - CGO_ENABLED=0
     main: .
-    binary: gs
+    binary: git-spice
     goos: [darwin, linux, windows]
     goarch: [amd64, arm64, arm]
-    goarm: [5, 6, 7]
+    goarm: ["5", "6", "7"]
     ldflags: '-s -w -X main._version={{.Version}}'
     ignore:
       - goos: darwin
@@ -17,6 +17,9 @@ builds:
         goarch: arm
     flags:
       - -trimpath
+    hooks:
+      post:
+        - cp "{{ .Path }}" "{{ dir .Path }}/gs{{ .Ext }}"
 
 archives:
   - formats: tar.gz
@@ -43,11 +46,15 @@ aurs:
     git_url: "ssh://aur@aur.archlinux.org/git-spice-bin.git"
     skip_upload: auto
     private_key: '{{ .Env.AUR_KEY }}'
+    provides:
+      - git-spice
+      - gs
     conflicts:
       - git-spice    # no non-bin package exists yet, but just in case
       - ghostscript  # ghostscript also provides a 'gs' binary
     package: |-
-      install -Dm755 "./gs" "${pkgdir}/usr/bin/gs"
+      install -Dm755 "./git-spice" "${pkgdir}/usr/bin/git-spice"
+      ln -s "git-spice" "${pkgdir}/usr/bin/gs"
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
       install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
@@ -68,12 +75,14 @@ homebrew_casks:
     description: "A tool for stacking Git branches."
     license: "GPL-3.0-or-later"
     skip_upload: auto
-    binary: gs
+    binaries: ["git-spice"]
     hooks:
       post:
         install: |
+          bin.install_symlink "git-spice" => "gs"
+
           if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/gs"]
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/git-spice"]
           end
 
 

@@ -135,7 +135,7 @@ func main() {
 	cmdName := filepath.Base(os.Args[0])
 	parser, err := kong.New(&cmd,
 		kong.Name(cmdName),
-		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
+		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
 		kong.Bind(logger, &forges, &sigStack),
 		kong.BindTo(ctx, (*context.Context)(nil)),
@@ -302,6 +302,15 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	// introduce a type that defaults to the current branch
 	// so that commands that don't need worktree aren't forced to use it
 	// just to get the current branch name.
+
+	// Deprecation warning for using the "gs" name.
+	// A future release will only be invokable as "git-spice".
+	if filepath.Base(os.Args[0]) == "gs" && os.Getenv("GIT_SPICE_NO_GS_WARNING") != "1" {
+		logger.Warn("Invoking git-spice as 'gs' is deprecated and will stop working in the future.")
+		logger.Warn("Please use 'git-spice', or add the following to your shell configuration:")
+		logger.Warn("  alias gs=git-spice")
+		logger.Warn("To suppress this warning, set GIT_SPICE_NO_GS_WARNING=1")
+	}
 
 	return errors.Join(
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {

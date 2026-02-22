@@ -8,5 +8,7 @@ description: >-
 
 # CLI
 
-The git-spice CLI is delivered as the command `gs`.
+The git-spice CLI is delivered as the command `git-spice`.
+Most examples in this documentation use `gs`;
+add `alias gs=git-spice` in your shell config if you prefer that form.
 Explore the [complete list of available commands here](reference.md).

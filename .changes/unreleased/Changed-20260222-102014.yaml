@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  Rename gs binary to git-spice in pre-built packaged artifacts.
+  To ease the transition, both versions of the binary are included,
+  and the command prints a deprecation warning when invoked as "gs".
+time: 2026-02-22T10:20:14.418243-08:00

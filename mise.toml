@@ -140,11 +140,12 @@ usage = """
 flag "--pprof" help="Build with pofiling flags"
 """
 run = """
-go install -tags="
+go build -o bin/git-spice -tags="
   {%- if flag(name='pprof') == 'true' -%}
     profile
   {%- endif -%}
 " go.abhg.dev/gs
+ln -sf git-spice {{ config_root }}/bin/gs
 """
 wait_for = ["generate"]
 description = "Build the gs binary"

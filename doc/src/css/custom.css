@@ -97,3 +97,11 @@
 .used-by-marquee:hover .used-by-marquee-content {
     animation-play-state: paused;
 }
+
+.gs-alias-note {
+    margin: 0;
+    max-width: 36ch;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    opacity: 0.75;
+}

@@ -126,7 +126,7 @@ If you want to pass all arguments through to the command,
 add `"$@"` to the end of the command alias.
 
 You can use shell command aliases to create custom helpers
-on top of git-spice commands, and invoke them through the `gs` command.
+on top of git-spice commands, and invoke them through the `gs` alias.
 
 For example:
 

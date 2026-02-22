@@ -5,6 +5,7 @@ in documentation
 The syntax is:
 
 - $$gs *$$ will produce a link to the CLI reference page.
+- $$git-spice *$$ will produce a link to the CLI reference page.
 - $$spice.*$$ will produce a link to the configuration reference page.
 
 By default, $$foo$$ will use {foo} as the link text.
@@ -42,6 +43,11 @@ def on_page_markdown(
         if title.startswith("gs "):
             icon = ":material-console:"
             id = title.replace(" ", "-")
+            page = _CLI_PAGE
+        elif title.startswith("git-spice "):
+            icon = ":material-console:"
+            suffix = title.removeprefix("git-spice ")
+            id = "gs-" + suffix.replace(" ", "-")
             page = _CLI_PAGE
         elif title.startswith("spice."):
             icon = ":material-wrench:"

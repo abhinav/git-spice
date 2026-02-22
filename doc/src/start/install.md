@@ -98,6 +98,24 @@ To **build from source**, follow these steps:
     go install go.abhg.dev/gs@latest
     ```
 
+## Recommended: add a `gs` alias
+
+The canonical command name is `git-spice`,
+but most examples in this documentation use `gs` for brevity.
+Add a shell alias so both forms work:
+
+=== "Bash / Zsh"
+
+    ```bash
+    alias gs=git-spice
+    ```
+
+=== "Fish"
+
+    ```fish
+    alias gs git-spice
+    ```
+
 ## Next steps
 
 - [ ] [Create your first stack](stack.md)

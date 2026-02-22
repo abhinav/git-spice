@@ -1,8 +1,8 @@
 ```
-gs <command> [flags]
+git-spice <command> [flags]
 ```
 
-gs (git-spice) is a command line tool for stacking Git branches.
+git-spice is a command line tool for stacking Git branches.
 
 **Global flags**
 
@@ -16,7 +16,7 @@ gs (git-spice) is a command line tool for stacking Git branches.
 
 ## Shell
 
-### gs shell completion
+### git-spice shell completion {#gs-shell-completion}
 
 ```
 gs shell completion [<shell>]
@@ -46,7 +46,7 @@ using a heuristic.
 
 ## Authentication
 
-### gs auth login
+### git-spice auth login {#gs-auth-login}
 
 ```
 gs auth login [flags]
@@ -76,7 +76,7 @@ or change the authentication method.
 
 * `--refresh`: Force a refresh of the authentication token
 
-### gs auth status
+### git-spice auth status {#gs-auth-status}
 
 ```
 gs auth status [flags]
@@ -86,7 +86,7 @@ Show current login status
 
 Exits with a non-zero code if not logged in.
 
-### gs auth logout
+### git-spice auth logout {#gs-auth-logout}
 
 ```
 gs auth logout [flags]
@@ -101,7 +101,7 @@ Does not do anything if not logged in.
 
 ## Repository
 
-### gs repo init
+### git-spice repo init {#gs-repo-init}
 
 ```
 gs repo (r) init (i) [flags]
@@ -134,7 +134,7 @@ and untrack all branches.
 * `--remote=NAME`: Name of the remote to push changes to
 * `--reset`: Forget all information about the repository
 
-### gs repo sync
+### git-spice repo sync {#gs-repo-sync}
 
 ```
 gs repo (r) sync (s) [flags]
@@ -155,7 +155,7 @@ was not initialized with a remote.
 
 **Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges)
 
-### gs repo restack
+### git-spice repo restack {#gs-repo-restack}
 
 ```
 gs repo (r) restack (r)
@@ -170,7 +170,7 @@ respective bases in dependency order, ensuring a linear history.
 
 ## Log
 
-### gs log short
+### git-spice log short {#gs-log-short}
 
 ```
 gs log (l) short (s) [flags]
@@ -193,7 +193,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 
 **Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
-### gs log long
+### git-spice log long {#gs-log-long}
 
 ```
 gs log (l) long (l) [flags]
@@ -218,7 +218,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 
 ## Stack
 
-### gs stack submit
+### git-spice stack submit {#gs-stack-submit}
 
 ```
 gs stack (s) submit (s) [flags]
@@ -271,7 +271,7 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### gs stack restack
+### git-spice stack restack {#gs-stack-restack}
 
 ```
 gs stack (s) restack (r) [flags]
@@ -288,7 +288,7 @@ Use --branch to rebase the stack of a different branch.
 
 * `--branch=NAME`: Branch to restack the stack of
 
-### gs stack edit
+### git-spice stack edit {#gs-stack-edit}
 
 ```
 gs stack (s) edit (e) [flags]
@@ -313,7 +313,7 @@ Branches that are deleted from the list will be ignored.
 * `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch whose stack we're editing. Defaults to current branch.
 
-### gs stack delete
+### git-spice stack delete {#gs-stack-delete}
 
 ```
 gs stack (s) delete (d) [flags]
@@ -337,7 +337,7 @@ you must use the --force flag to confirm deletion.
 
 * `--force`: Force deletion of the branches
 
-### gs upstack submit
+### git-spice upstack submit {#gs-upstack-submit}
 
 ```
 gs upstack (us) submit (s) [flags]
@@ -394,7 +394,7 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### gs upstack restack
+### git-spice upstack restack {#gs-upstack-restack}
 
 ```
 gs upstack (us) restack (r) [flags]
@@ -416,7 +416,7 @@ but still rebase all branches above it.
 * `--skip-start`: Do not restack the starting branch
 * `--branch=NAME`: Branch to restack the upstack of
 
-### gs upstack onto
+### git-spice upstack onto {#gs-upstack-onto}
 
 ```
 gs upstack (us) onto (o) [<onto>] [flags]
@@ -452,7 +452,7 @@ Use 'gs branch onto' to leave the branch's upstack alone.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
-### gs upstack delete
+### git-spice upstack delete {#gs-upstack-delete}
 
 ```
 gs upstack (us) delete (d) [flags]
@@ -476,7 +476,7 @@ you must use the --force flag to confirm deletion.
 
 * `--force`: Force deletion of the branches
 
-### gs downstack track
+### git-spice downstack track {#gs-downstack-track}
 
 ```
 gs downstack (ds) track (tr) [<branch>]
@@ -494,7 +494,7 @@ until reaching trunk or an already-tracked branch.
 
 * `branch`: Name of the branch to start tracking from
 
-### gs downstack submit
+### git-spice downstack submit {#gs-downstack-submit}
 
 ```
 gs downstack (ds) submit (s) [flags]
@@ -549,7 +549,7 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### gs downstack edit
+### git-spice downstack edit {#gs-downstack-edit}
 
 ```
 gs downstack (ds) edit (e) [flags]
@@ -575,7 +575,7 @@ Branches that are upstack of the current branch will not be modified.
 
 ## Branch
 
-### gs branch track
+### git-spice branch track {#gs-branch-track}
 
 ```
 gs branch (b) track (tr) [<branch>] [flags]
@@ -600,7 +600,7 @@ to track a manully created stack of branches at once.
 
 * `-b`, `--base=BRANCH`: Base branch this merges into
 
-### gs branch untrack
+### git-spice branch untrack {#gs-branch-untrack}
 
 ```
 gs branch (b) untrack (untr) [<branch>]
@@ -620,7 +620,7 @@ a different branch.
 
 * `branch`: Name of the branch to untrack. Defaults to current.
 
-### gs branch checkout
+### git-spice branch checkout {#gs-branch-checkout}
 
 ```
 gs branch (b) checkout (co) [<branch>] [flags]
@@ -648,7 +648,7 @@ without checking it out.
 
 **Configuration**: [spice.branchCheckout.showUntracked](/cli/config.md#spicebranchcheckoutshowuntracked), [spice.branchCheckout.trackUntracked](/cli/config.md#spicebranchcheckouttrackuntracked), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort), [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-### gs branch create
+### git-spice branch create {#gs-branch-create}
 
 ```
 gs branch (b) create (c) [<name>] [flags]
@@ -727,7 +727,7 @@ target (A) to the specified branch:
 
 **Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
-### gs branch delete
+### git-spice branch delete {#gs-branch-delete}
 
 ```
 gs branch (b) delete (d,rm) [<branches> ...] [flags]
@@ -757,7 +757,7 @@ Use --force to delete the branch regardless of unmerged changes.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
-### gs branch fold
+### git-spice branch fold {#gs-branch-fold}
 
 ```
 gs branch (b) fold (fo) [flags]
@@ -776,7 +776,7 @@ Use the --branch flag to target a different branch.
 
 * `--branch=NAME`: Name of the branch
 
-### gs branch split
+### git-spice branch split {#gs-branch-split}
 
 ```
 gs branch (b) split (sp) [flags]
@@ -824,7 +824,7 @@ would require a new name to be provided for commit 3.
 * `--at=COMMIT:NAME,...`: Commits to split the branch at.
 * `--branch=NAME`: Branch to split commits of.
 
-### gs branch squash
+### git-spice branch squash {#gs-branch-squash}
 
 ```
 gs branch (b) squash (sq) [flags]
@@ -847,7 +847,7 @@ Use the -m/--message flag to specify a commit message without editing.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--branch=NAME`: Branch to squash. Defaults to current branch. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
-### gs branch edit
+### git-spice branch edit {#gs-branch-edit}
 
 ```
 gs branch (b) edit (e)
@@ -862,7 +862,7 @@ from this branch.
 After the rebase,
 branches upstack from this branch will be restacked.
 
-### gs branch rename
+### git-spice branch rename {#gs-branch-rename}
 
 ```
 gs branch (b) rename (rn,mv) [<old-name> [<new-name>]]
@@ -893,7 +893,7 @@ and track the new branch name with 'gs branch track <new>'.
 * `old-name`: Old name of the branch
 * `new-name`: New name of the branch
 
-### gs branch restack
+### git-spice branch restack {#gs-branch-restack}
 
 ```
 gs branch (b) restack (r) [flags]
@@ -909,7 +909,7 @@ Use --branch to target a different branch.
 
 * `--branch=NAME`: Branch to restack
 
-### gs branch onto
+### git-spice branch onto {#gs-branch-onto}
 
 ```
 gs branch (b) onto (on) [<onto>] [flags]
@@ -951,7 +951,7 @@ Use 'gs upstack onto' to also move the upstack branches.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
-### gs branch submit
+### git-spice branch submit {#gs-branch-submit}
 
 ```
 gs branch (b) submit (s) [flags]
@@ -1008,7 +1008,7 @@ only if there are multiple CRs in the stack.
 
 ## Commit
 
-### gs commit create
+### git-spice commit create {#gs-commit-create}
 
 ```
 gs commit (c) create (c) [flags]
@@ -1044,7 +1044,7 @@ when you want to apply changes to an older commit.
 
 **Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
-### gs commit amend
+### git-spice commit amend {#gs-commit-amend}
 
 ```
 gs commit (c) amend (a) [flags]
@@ -1083,7 +1083,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 **Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
-### gs commit split
+### git-spice commit split {#gs-commit-split}
 
 ```
 gs commit (c) split (sp) [flags]
@@ -1100,7 +1100,7 @@ Branches upstack are restacked as needed.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 
-### gs commit fixup
+### git-spice commit fixup {#gs-commit-fixup}
 
 ```
 gs commit (c) fixup (f) [<commit>] [flags]
@@ -1127,7 +1127,7 @@ This command requires at least Git 2.45.
 
 * `commit`: The commit to fixup. Must be reachable from the HEAD commit.
 
-### gs commit pick
+### git-spice commit pick {#gs-commit-pick}
 
 ```
 gs commit (c) pick (p) [<commit>] [flags]
@@ -1162,7 +1162,7 @@ This command requires at least Git 2.45.
 
 ## Rebase
 
-### gs rebase continue
+### git-spice rebase continue {#gs-rebase-continue}
 
 ```
 gs rebase (rb) continue (c) [flags]
@@ -1190,7 +1190,7 @@ and use --edit to override it.
 
 **Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
 
-### gs rebase abort
+### git-spice rebase abort {#gs-rebase-abort}
 
 ```
 gs rebase (rb) abort (a)
@@ -1210,7 +1210,7 @@ even if a git-spice operation is not currently in progress.
 
 ## Navigation
 
-### gs up
+### git-spice up {#gs-up}
 
 ```
 gs up (u) [<n>] [flags]
@@ -1234,7 +1234,7 @@ Use the -n flag to print the branch without checking it out.
 
 **Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-### gs down
+### git-spice down {#gs-down}
 
 ```
 gs down (d) [<n>] [flags]
@@ -1258,7 +1258,7 @@ Use the -n flag to print the branch without checking it out.
 
 **Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-### gs top
+### git-spice top {#gs-top}
 
 ```
 gs top (U) [flags]
@@ -1278,7 +1278,7 @@ Use the -n flag to print the branch without checking it out.
 
 **Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-### gs bottom
+### git-spice bottom {#gs-bottom}
 
 ```
 gs bottom (D) [flags]
@@ -1300,7 +1300,7 @@ without checking it out.
 
 **Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-### gs trunk
+### git-spice trunk {#gs-trunk}
 
 ```
 gs trunk [flags]
@@ -1315,7 +1315,7 @@ Move to the trunk branch
 
 **Configuration**: [spice.checkout.verbose](/cli/config.md#spicecheckoutverbose)
 
-## gs version
+## git-spice version {#gs-version}
 
 ```
 gs version [flags]

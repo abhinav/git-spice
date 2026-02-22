@@ -8,6 +8,8 @@ description: >-
 
 git-spice supports completion for Bash, Zsh, and Fish.
 To set up completion, follow the instructions below.
+These snippets assume you have `gs` aliased to `git-spice`.
+If you don't use the alias, replace `gs` with `git-spice`.
 
 === "Bash"
 
