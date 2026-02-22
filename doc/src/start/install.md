@@ -54,7 +54,7 @@ that is able to download pre-built binaries from GitHub Releases.
 If you use ubi, use the following command to install git-spice:
 
 ```bash
-ubi --project abhinav/git-spice --exe gs
+ubi --project abhinav/git-spice --exe git-spice
 ```
 
 #### mise
@@ -65,7 +65,7 @@ and includes a ubi backend.
 If you use mise, use the following command to install git-spice:
 
 ```bash
-mise use --global 'ubi:abhinav/git-spice[exe=gs]'
+mise use --global 'ubi:abhinav/git-spice[exe=git-spice]'
 ```
 
 ### AUR (ArchLinux)
