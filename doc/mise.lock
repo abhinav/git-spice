@@ -1,6 +1,11 @@
 [[tools.python]]
 version = "3.14.3"
 backend = "core:python"
+"platforms.linux-arm64" = { checksum = "sha256:e9b0aef9baafb6b9e7a4d47b82d6d9778eeafb2c95d23fb5247d3a5f8e52c5a5", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:759457004082459a402f369225b82565d88ca8257d9fd11c642a1c76ab0cb1cc", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:348647e4c13b662f7b0d218ccf472688038679815fb1a429ca664b7dce324237", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-aarch64-apple-darwin-install_only_stripped.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:107c71b272b5eeecd7b7b607c4fac0796b0f221bc3391e6155a349789cc7eb17", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-apple-darwin-install_only_stripped.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:dc5feea0e16807e7c7b2d20af3f2c18c7153f9cbd4b54063172553fda60c5a1f", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.14.3+20260211-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"}
 
 [[tools.uv]]
 version = "0.10.0"
