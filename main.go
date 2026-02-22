@@ -303,15 +303,6 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	// so that commands that don't need worktree aren't forced to use it
 	// just to get the current branch name.
 
-	// Deprecation warning for using the "gs" name.
-	// A future release will only be invokable as "git-spice".
-	if filepath.Base(os.Args[0]) == "gs" && os.Getenv("GIT_SPICE_NO_GS_WARNING") != "1" {
-		logger.Warn("Invoking git-spice as 'gs' is deprecated and will stop working in the future.")
-		logger.Warn("Please use 'git-spice', or add the following to your shell configuration:")
-		logger.Warn("  alias gs=git-spice")
-		logger.Warn("To suppress this warning, set GIT_SPICE_NO_GS_WARNING=1")
-	}
-
 	return errors.Join(
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
 			return git.OpenWorktree(ctx, ".", git.OpenOptions{

@@ -2,8 +2,7 @@ version: 2
 project_name: git-spice
 
 builds:
-  - &default_build
-    id: git-spice
+  - id: git-spice
     env:
       - CGO_ENABLED=0
     main: .
@@ -19,11 +18,6 @@ builds:
         goarch: arm
     flags:
       - -trimpath
-
-  # Second build with the 'gs' name.
-  - <<: *default_build
-    id: gs
-    binary: gs
 
 archives:
   - formats: tar.gz
@@ -52,13 +46,10 @@ aurs:
     private_key: '{{ .Env.AUR_KEY }}'
     provides:
       - git-spice
-      - gs
     conflicts:
       - git-spice    # no non-bin package exists yet, but just in case
-      - ghostscript  # ghostscript also provides a 'gs' binary
     package: |-
       install -Dm755 "./git-spice" "${pkgdir}/usr/bin/git-spice"
-      install -Dm755 "./gs" "${pkgdir}/usr/bin/gs"
       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/git-spice/LICENSE"
       install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/git-spice/README.md"
       install -Dm644 "./CHANGELOG.md" "${pkgdir}/usr/share/doc/git-spice/CHANGELOG.md"
@@ -79,13 +70,12 @@ homebrew_casks:
     description: "A tool for stacking Git branches."
     license: "GPL-3.0-or-later"
     skip_upload: auto
-    binaries: ["git-spice", "gs"]
+    binaries: ["git-spice"]
     hooks:
       post:
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/git-spice"]
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/gs"]
           end
 
 checksum:

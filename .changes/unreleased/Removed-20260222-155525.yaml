@@ -1,0 +1,5 @@
+kind: Removed
+body: >-
+  Remove 'gs' binary from published packages:
+  GitHub Releasees, Homebrew Cask, and ArchLinux AUR package.
+time: 2026-02-22T15:55:25.164173-08:00

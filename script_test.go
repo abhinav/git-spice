@@ -48,10 +48,6 @@ func TestMain(m *testing.M) {
 
 	testscript.Main(m, map[string]func(){
 		"gs": func() {
-			// Don't pollute tests with warnings about
-			// the binary being named 'gs'.
-			_ = os.Setenv("GIT_SPICE_NO_GS_WARNING", "1")
-
 			logger := silog.New(os.Stderr, &silog.Options{
 				Level: silog.LevelDebug,
 			})
