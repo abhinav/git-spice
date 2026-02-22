@@ -4,15 +4,6 @@ backend = "ubi:miniscruff/changie"
 "platforms.linux-x64-changie" = { checksum = "blake3:8b63ce3ca2871dba4d3a50cea6b4fc8c8aad789a18fdb8c88fc8e6b3b26977cc"}
 
 [[tools.go]]
-version = "1.25.6"
-backend = "core:go"
-"platforms.linux-arm64" = { checksum = "sha256:738ef87d79c34272424ccdf83302b7b0300b8b096ed443896089306117943dd5", url = "https://dl.google.com/go/go1.25.6.linux-arm64.tar.gz"}
-"platforms.linux-x64" = { checksum = "sha256:f022b6aad78e362bcba9b0b94d09ad58c5a70c6ba3b7582905fababf5fe0181a", url = "https://dl.google.com/go/go1.25.6.linux-amd64.tar.gz"}
-"platforms.macos-arm64" = { checksum = "sha256:984521ae978a5377c7d782fd2dd953291840d7d3d0bd95781a1f32f16d94a006", url = "https://dl.google.com/go/go1.25.6.darwin-arm64.tar.gz"}
-"platforms.macos-x64" = { checksum = "sha256:e2b5b237f5c262931b8e280ac4b8363f156e19bfad5270c099998932819670b7", url = "https://dl.google.com/go/go1.25.6.darwin-amd64.tar.gz"}
-"platforms.windows-x64" = { checksum = "sha256:19b4733b727ba5c611b5656187f3ac367d278d64c3d4199a845e39c0fdac5335", url = "https://dl.google.com/go/go1.25.6.windows-amd64.zip"}
-
-[[tools.go]]
 version = "1.26.0"
 backend = "core:go"
 "platforms.linux-arm64" = { checksum = "sha256:bd03b743eb6eb4193ea3c3fd3956546bf0e3ca5b7076c8226334afe6b75704cd", url = "https://dl.google.com/go/go1.26.0.linux-arm64.tar.gz"}
@@ -28,13 +19,13 @@ backend = "ubi:mvdan/gofumpt"
 "platforms.macos-arm64-gofumpt" = { checksum = "blake3:58afa2c8f89ef60ed81a84502504fe23518cd62e2ea708c918be1f7d562896e5"}
 
 [[tools.golangci-lint]]
-version = "2.8.0"
-backend = "aqua:golangci/golangci-lint"
-"platforms.linux-x64" = { checksum = "sha256:7048bc6b25c9515ed092c83f9fa8709ca97937ead52d9ff317a143299ee97a50", url = "https://github.com/golangci/golangci-lint/releases/download/v2.8.0/golangci-lint-2.8.0-linux-amd64.tar.gz"}
-
-[[tools.golangci-lint]]
 version = "2.10.1"
 backend = "aqua:golangci/golangci-lint"
+"platforms.linux-arm64" = { checksum = "sha256:6652b42ae02915eb2f9cb2a2e0cac99514c8eded8388d88ae3e06e1a52c00de8", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-linux-arm64.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:dfa775874cf0561b404a02a8f4481fc69b28091da95aa697259820d429b09c99", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-linux-amd64.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:03bfadf67e52b441b7ec21305e501c717df93c959836d66c7f97312654acb297", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-darwin-arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:66fb0da81b8033b477f97eea420d4b46b230ca172b8bb87c6610109f3772b6b6", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-darwin-amd64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:c60c87695e79db8e320f0e5be885059859de52bb5ee5f11be5577828570bc2a3", url = "https://github.com/golangci/golangci-lint/releases/download/v2.10.1/golangci-lint-2.10.1-windows-amd64.zip"}
 
 [[tools.gotestsum]]
 version = "1.13.0"
