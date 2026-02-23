@@ -148,7 +148,7 @@ go build -o bin/git-spice -tags="
 ln -sf git-spice {{ config_root }}/bin/gs
 """
 wait_for = ["generate"]
-description = "Build the gs binary"
+description = "Build the git-spice binary"
 
 [tasks.tools]
 sources = ["go.mod"]

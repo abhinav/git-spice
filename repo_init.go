@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -129,7 +130,7 @@ func (cmd *repoInitCmd) Run(
 			git.CommitRangeFrom(upstreamHash).ExcludeFrom(trunkHash))
 		if err == nil && count > 0 {
 			log.Warnf("%v is behind upstream by %d commits", cmd.Trunk, count)
-			log.Warnf("Please run 'gs repo sync' before other git-spice commands.")
+			log.Warnf("Please run '%s repo sync' before other git-spice commands.", cli.Name())
 		}
 	}
 
@@ -155,7 +156,7 @@ func newRepoStorage(repo *git.Repository, log *silog.Logger) *storage.DB {
 }
 
 // ensureStore will open the spice data store in the provided Git repository,
-// initializing it with `gs repo init` if it hasn't already been initialized.
+// initializing it with `git-spice repo init` if it hasn't already been initialized.
 //
 // This allows nearly any other command to work without initialization
 // by auto-initializing the repository at that time.

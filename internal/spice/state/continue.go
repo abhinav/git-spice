@@ -13,7 +13,7 @@ type rebaseContinueState struct {
 }
 
 type rebaseContinuation struct {
-	// Command is the gs command that will be run.
+	// Command is the git-spice command that will be run.
 	Command []string `json:"command"`
 
 	// Branch on which the command must be run.
@@ -23,7 +23,7 @@ type rebaseContinuation struct {
 // Continuation includes the information needed to resume a
 // rebase operation that was interrupted.
 type Continuation struct {
-	// Command specifies the arguments for the gs operation
+	// Command specifies the arguments for the git-spice operation
 	// that was interrupted.
 	Command []string
 

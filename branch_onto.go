@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -21,7 +22,8 @@ type branchOntoCmd struct {
 }
 
 func (*branchOntoCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Commits of the current branch
 		are transplanted onto another branch
 		while leaving the rest of the stack intact.
@@ -34,18 +36,18 @@ func (*branchOntoCmd) Help() string {
 		Use the --branch flag to target a different branch for the move.
 
 		For example, given the following stack with B checked out,
-		running 'gs branch onto main' will move B onto main
+		running '%[1]s branch onto main' will move B onto main
 		and leave C on top of A.
 
-			       gs branch onto main
+			       %[1]s branch onto main
 
 			    ┌── C               ┌── B ◀
 			  ┌─┴ B ◀               │ ┌── C
 			┌─┴ A                   ├─┴ A
 			trunk                   trunk
 
-		Use 'gs upstack onto' to also move the upstack branches.
-	`)
+		Use '%[1]s upstack onto' to also move the upstack branches.
+	`, name))
 }
 
 func (cmd *branchOntoCmd) AfterApply(

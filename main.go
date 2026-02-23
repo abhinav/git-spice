@@ -1,4 +1,4 @@
-// gs (git-spice) is a command line tool for stacking Git branches.
+// git-spice is a command line tool for stacking Git branches.
 package main
 
 import (

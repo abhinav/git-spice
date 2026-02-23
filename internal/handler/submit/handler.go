@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/browser"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/iterutil"
@@ -479,15 +480,15 @@ func (h *Handler) submitBranch(
 				branch.Base,
 				h.Store.Trunk(),
 			) {
-				log.Warnf("Branch %s is not restacked."+
-					" Run 'gs branch restack --branch=%s'"+
+				log.Warnf("Branch %[1]s is not restacked."+
+					" Run '%[2]s branch restack --branch=%[1]s'"+
 					" to fix this.",
-					branchToSubmit, branchToSubmit,
+					branchToSubmit, cli.Name(),
 				)
 			} else {
 				log.Errorf("Branch %s needs to be restacked.", branchToSubmit)
 				log.Errorf("Run the following command to fix this:")
-				log.Errorf("  gs branch restack --branch=%s", branchToSubmit)
+				log.Errorf("  %s branch restack --branch=%s", cli.Name(), branchToSubmit)
 				log.Errorf("Or, try again with --force to submit anyway.")
 				return status, errors.New("refusing to submit outdated branch")
 			}
@@ -874,7 +875,7 @@ func (h *Handler) submitBranch(
 			log.Error("No upstream branch was found for branch %v with existing CR %v", branchToSubmit, existingChange.ID)
 			log.Error("We cannot update the CR without an upstream branch name.")
 			log.Error("To fix this, identify the correct upstream branch name and set it with, e.g.:")
-			log.Error("  git branch --set-upstream-to=<remote>/<branch> %v", branchToSubmit)
+			log.Errorf("  git branch --set-upstream-to=<remote>/<branch> %v", branchToSubmit)
 			log.Error("Then, try again.")
 			return status, errors.New("upstream branch not set")
 		}
@@ -1277,7 +1278,7 @@ func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, e
 		if errors.Is(err, forge.ErrUnsubmittedBase) {
 			b.log.Errorf("%v: cannot be submitted because base branch %q does not exist in the remote.", b.Name, b.base)
 			b.log.Errorf("Try submitting the base branch first:")
-			b.log.Errorf("  gs branch submit --branch=%s", b.base)
+			b.log.Errorf("  %s branch submit --branch=%s", cli.Name(), b.base)
 			return nil, "", fmt.Errorf("create change: %w", err)
 		}
 		return nil, "", fmt.Errorf("create change: %w", err)

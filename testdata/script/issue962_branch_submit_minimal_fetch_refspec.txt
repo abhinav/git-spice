@@ -106,6 +106,6 @@ FTL gs: submit branch feature1: remote cannot fetch pushed branch
 ERR No upstream branch was found for branch %v with existing CR %v  feature1=#1
 ERR We cannot update the CR without an upstream branch name.
 ERR To fix this, identify the correct upstream branch name and set it with, e.g.:
-ERR   git branch --set-upstream-to=<remote>/<branch> %v  !BADKEY=feature1
+ERR   git branch --set-upstream-to=<remote>/<branch> feature1
 ERR Then, try again.
 FTL gs: submit branch feature1: upstream branch not set

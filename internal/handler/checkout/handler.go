@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/must"
@@ -104,7 +105,7 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 			var restackErr *spice.BranchNeedsRestackError
 			switch {
 			case errors.As(err, &restackErr): // needs to be restacked
-				log.Warnf("%v: needs to be restacked: run 'gs branch restack --branch=%v'", branch, branch)
+				log.Warnf("%v: needs to be restacked: run '%s branch restack --branch=%v'", branch, cli.Name(), branch)
 
 			case errors.Is(err, git.ErrNotExist): // does not exist
 				// Branch name might be a reference to a remote branch.

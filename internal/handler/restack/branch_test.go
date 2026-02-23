@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -116,7 +117,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 		err := handler.RestackBranch(context.Background(), "untracked")
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "untracked branch")
-		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run 'gs branch track")
+		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run '"+cli.Name()+" branch track")
 	})
 
 	t.Run("AlreadyRestacked", func(t *testing.T) {

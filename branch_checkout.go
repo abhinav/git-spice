@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
@@ -170,12 +171,12 @@ func (cmd *branchCheckoutCmd) Run(
 				return true, nil
 
 			case trackUntrackedNever:
-				log.Warnf("%v: branch not tracked: run 'gs branch track'", branch)
+				log.Warnf("%v: branch not tracked: run '%s branch track'", branch, cli.Name())
 				return false, nil
 
 			default: // trackUntrackedPrompt
 				if !ui.Interactive(view) {
-					log.Warnf("%v: branch not tracked: run 'gs branch track'", branch)
+					log.Warnf("%v: branch not tracked: run '%s branch track'", branch, cli.Name())
 					return false, nil
 				}
 

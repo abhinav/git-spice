@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -15,17 +16,18 @@ import (
 type rebaseAbortCmd struct{}
 
 func (*rebaseAbortCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Cancels an ongoing git-spice operation that was interrupted by
 		a git rebase.
-		For example, if 'gs upstack restack' encounters a conflict,
-		cancel the operation with 'gs rebase abort'
-		(or its shorthand 'gs rba'),
+		For example, if '%[1]s upstack restack' encounters a conflict,
+		cancel the operation with '%[1]s rebase abort'
+		(or its shorthand '%[1]s rba'),
 		going back to the state before the rebase.
 
 		The command can be used in place of 'git rebase --abort'
 		even if a git-spice operation is not currently in progress.
-	`)
+	`, name))
 }
 
 func (cmd *rebaseAbortCmd) Run(
@@ -50,7 +52,7 @@ func (cmd *rebaseAbortCmd) Run(
 		}
 	}
 
-	conts, err := store.TakeContinuations(ctx, "gs rebase abort")
+	conts, err := store.TakeContinuations(ctx, cli.Name()+" rebase abort")
 	if err != nil {
 		return fmt.Errorf("take rebase continuations: %w", err)
 	}

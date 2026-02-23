@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
@@ -14,18 +15,19 @@ import (
 type commitCreateCmd struct {
 	All        bool   `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
-	Fixup      string `help:"Create a fixup commit. See also 'gs commit fixup'." placeholder:"COMMIT"`
+	Fixup      string `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
 	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
 	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff    bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 }
 
 func (*commitCreateCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Staged changes are committed to the current branch.
 		Branches upstack are restacked if necessary.
 		Use this as a shortcut for 'git commit'
-		followed by 'gs upstack restack'.
+		followed by '%[1]s upstack restack'.
 
 		An editor is opened to edit the commit message.
 		Use the -m/--message option to specify the message
@@ -36,9 +38,9 @@ func (*commitCreateCmd) Help() string {
 
 		Use the --fixup flag to create a new commit that will be merged
 		into another commit when run with 'git rebase --autosquash'.
-		See also, the 'gs commit fixup' command, which is preferable
+		See also, the '%[1]s commit fixup' command, which is preferable
 		when you want to apply changes to an older commit.
-	`)
+	`, name))
 }
 
 func (cmd *commitCreateCmd) Run(

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
@@ -99,7 +100,7 @@ func openRemoteRepository(
 	case errors.As(err, &notLoggedInErr):
 		f := notLoggedInErr.Forge
 		log.Errorf("No authentication token found for %s.", f.ID())
-		log.Errorf("Try running `gs auth login --forge=%s`", f.ID())
+		log.Errorf("Try running `%s auth login --forge=%s`", cli.Name(), f.ID())
 		return nil, err
 
 	default:

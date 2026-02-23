@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
@@ -209,7 +210,7 @@ loop:
 				})
 
 			case errors.Is(err, state.ErrNotExist):
-				h.Log.Errorf("%v: branch not tracked: run 'gs branch track %v' to track it", branch, branch)
+				h.Log.Errorf("%v: branch not tracked: run '%s branch track %v' to track it", branch, cli.Name(), branch)
 				return 0, errors.New("untracked branch")
 
 			case errors.Is(err, spice.ErrAlreadyRestacked):

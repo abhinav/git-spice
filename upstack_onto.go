@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
@@ -22,7 +23,8 @@ type upstackOntoCmd struct {
 }
 
 func (*upstackOntoCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		The current branch and its upstack will move onto the new base.
 
 		A prompt will allow selecting the new base for the branch.
@@ -30,17 +32,17 @@ func (*upstackOntoCmd) Help() string {
 		Use the --branch flag to target a different branch for the move.
 
 		For example, given the following stack with B checked out,
-		'gs upstack onto main' will have the following effect:
+		'%[1]s upstack onto main' will have the following effect:
 
-			       gs upstack onto main
+			       %[1]s upstack onto main
 
 			    ┌── C                 ┌── C
 			  ┌─┴ B ◀               ┌─┴ B ◀
 			┌─┴ A                   ├── A
 			trunk                   trunk
 
-		Use 'gs branch onto' to leave the branch's upstack alone.
-	`)
+		Use '%[1]s branch onto' to leave the branch's upstack alone.
+	`, name))
 }
 
 func (cmd *upstackOntoCmd) AfterApply(

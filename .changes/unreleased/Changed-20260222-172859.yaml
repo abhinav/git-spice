@@ -1,0 +1,3 @@
+kind: Changed
+body: Guidance printed by git-spice commands will use the name of the active binary instead of always using 'gs' or 'git-spice'.
+time: 2026-02-22T17:28:59.653573-08:00

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -18,13 +19,14 @@ type rebaseContinueCmd struct {
 }
 
 func (*rebaseContinueCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Continues an ongoing git-spice operation interrupted by
 		a git rebase after all conflicts have been resolved.
-		For example, if 'gs upstack restack' gets interrupted
+		For example, if '%[1]s upstack restack' gets interrupted
 		because a conflict arises during the rebase,
-		you can resolve the conflict and run 'gs rebase continue'
-		(or its shorthand 'gs rbc') to continue the operation.
+		you can resolve the conflict and run '%[1]s rebase continue'
+		(or its shorthand '%[1]s rbc') to continue the operation.
 
 		The command can be used in place of 'git rebase --continue'
 		even if a git-spice operation is not currently in progress.
@@ -32,7 +34,7 @@ func (*rebaseContinueCmd) Help() string {
 		Use the --no-edit flag to continue without opening an editor.
 		Make --no-edit the default by setting 'spice.rebaseContinue.edit' to false
 		and use --edit to override it.
-	`)
+	`, name))
 }
 
 func (cmd *rebaseContinueCmd) Run(
@@ -61,7 +63,7 @@ func (cmd *rebaseContinueCmd) Run(
 			var msg strings.Builder
 			fmt.Fprintf(&msg, "There are more conflicts to resolve.\n")
 			fmt.Fprintf(&msg, "Resolve them and run the following command again:\n")
-			fmt.Fprintf(&msg, "  gs rebase continue\n")
+			fmt.Fprintf(&msg, "  %s rebase continue\n", cli.Name())
 			fmt.Fprintf(&msg, "To abort the remaining operations run:\n")
 			fmt.Fprintf(&msg, "  git rebase --abort\n")
 			log.Error(msg.String())
@@ -75,7 +77,7 @@ func (cmd *rebaseContinueCmd) Run(
 	// they will clear the continuation list.
 	// So we'll want to grab the whole list here,
 	// and push the remainder of it back on if a command fails.
-	conts, err := store.TakeContinuations(ctx, "gs rebase continue")
+	conts, err := store.TakeContinuations(ctx, cli.Name()+" rebase continue")
 	if err != nil {
 		return fmt.Errorf("take rebase continuations: %w", err)
 	}

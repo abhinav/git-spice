@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/silog"
@@ -232,7 +233,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Contains(t, logBuffer.String(), "needs to be restacked")
-		assert.Contains(t, logBuffer.String(), "gs branch restack --branch=feature")
+		assert.Contains(t, logBuffer.String(), cli.Name()+" branch restack --branch=feature")
 	})
 
 	t.Run("NotTrackedButShouldTrack", func(t *testing.T) {

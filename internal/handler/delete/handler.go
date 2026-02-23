@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/must"
@@ -203,7 +204,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				// because we've already filtered for that.
 				checkoutDetached = true
 				log.Warnf("%v: checked out in another worktree (%v), will detach HEAD", checkoutTarget, worktreePath)
-				log.Warnf("%v: Use 'gs branch checkout' to pick a branch and exit detached state", checkoutTarget)
+				log.Warnf("%v: Use '%s branch checkout' to pick a branch and exit detached state", checkoutTarget, cli.Name())
 			}
 
 			// This is the only case where user's current HEAD is
@@ -272,7 +273,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				if worktreePath, ok := branchWorktrees[above]; ok {
 					skipRebase = true
 					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
-					log.Warnf("%v: Run 'gs branch restack' from that worktree to complete the rebase", above)
+					log.Warnf("%v: Run '%s branch restack' from that worktree to complete the rebase", above, cli.Name())
 				}
 			}
 
@@ -355,7 +356,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 		if tracked {
 			if err := branchTx.Delete(ctx, branch); err != nil {
 				log.Warn("Unable to untrack branch", "branch", branch, "error", err)
-				log.Warn("Try manually untracking the branch with 'gs branch untrack'")
+				log.Warnf("Try manually untracking the branch with '%s branch untrack'", cli.Name())
 			} else {
 				untrackedNames = append(untrackedNames, branch)
 			}

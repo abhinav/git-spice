@@ -63,7 +63,7 @@ var (
 	_ GitWorktree   = (*git.Worktree)(nil)
 )
 
-// Store provides storage for gs.
+// Store provides storage for git-spice.
 // It is a subset of the functionality provided by the state.Store type.
 type Store interface {
 	// Trunk returns the name of the trunk branch.

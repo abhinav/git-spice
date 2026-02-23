@@ -1,4 +1,4 @@
-// Package state defines and sores the state for gs.
+// Package state defines and sores the state for git-spice.
 package state
 
 import (
@@ -25,7 +25,7 @@ var _ DB = (*storage.DB)(nil)
 
 //go:generate mockgen -destination mocks_test.go -package state -typed . DB
 
-// Store implements storage for state tracked by gs.
+// Store implements storage for state tracked by git-spice.
 type Store struct {
 	db  DB
 	log *silog.Logger
@@ -91,7 +91,7 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 			_, err := store.LookupBranch(ctx, req.Trunk)
 			if err == nil {
 				// TODO: this should all be in 'repo init' implementation.
-				return nil, fmt.Errorf("trunk branch (%q) is tracked by gs; use --reset to clear", req.Trunk)
+				return nil, fmt.Errorf("trunk branch (%q) is tracked by git-spice; use --reset to clear", req.Trunk)
 			}
 
 			// Additionally,

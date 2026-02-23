@@ -66,24 +66,24 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	//
 	// For example, suppose we have:
 	//
-	//           C--D (Current)  (gs: base=OriginalBase)
+	//           C--D (Current)  (git-spice: base=OriginalBase)
 	//          /
 	//     o---X (OriginalBase)
 	//          \
-	//           A--B (NewBase)  (gs: base=OriginalBase)
+	//           A--B (NewBase)  (git-spice: base=OriginalBase)
 	//
-	// If we run 'gs branch onto NewBase' from Current,
+	// If we run 'git-spice branch onto NewBase' from Current,
 	// and there's a conflict, the user will resolve the rebase conflict,
-	// but the gs state will not yet be updated.
+	// but the git-spice state will not yet be updated.
 	//
 	//     o---X (OriginalBase)
 	//          \
-	//           A--B (NewBase)       (gs: base=OriginalBase)
+	//           A--B (NewBase)       (git-spice: base=OriginalBase)
 	//               \
-	//                C--D (Current)  (gs: base=OriginalBase)
+	//                C--D (Current)  (git-spice: base=OriginalBase)
 	//
-	// At that point, 'gs rebase continue' will re-run the original command
-	// 'gs branch onto NewBase' from Current,
+	// At that point, 'git-spice rebase continue' will re-run the original command
+	// 'git-spice branch onto NewBase' from Current,
 	// except the commits it wants (OriginalBase..Current)
 	// now includes commits OriginalBase..NewBase,
 	// which will fail for obvious reasons.

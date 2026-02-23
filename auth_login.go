@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
@@ -16,7 +17,8 @@ type authLoginCmd struct {
 }
 
 func (*authLoginCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		A prompt will allow selecting between available authentication methods.
 		Available methods include:
 
@@ -29,12 +31,12 @@ func (*authLoginCmd) Help() string {
 
 		The authentication token is stored in a system-provided
 		secure storage if available.
-		Use 'gs auth logout' to log out and delete the token from storage.
+		Use '%[1]s auth logout' to log out and delete the token from storage.
 
 		Fails if already logged in.
 		Use --refresh to force a refresh of the authentication token
 		or change the authentication method.
-	`)
+	`, name))
 }
 
 func (cmd *authLoginCmd) Run(

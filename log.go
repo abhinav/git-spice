@@ -340,15 +340,15 @@ type jsonLogBranch struct {
 
 	// Down is the base branch onto which this branch is stacked.
 	// This is unset if this branch is trunk.
-	// 'gs down' from the current branch will check out this branch.
+	// 'git-spice down' from the current branch will check out this branch.
 	Down *jsonLogDown `json:"down,omitempty"`
 
 	// Ups is a list of branches that are stacked directly above this branch.
-	// 'gs up' from this branch will check out one of these branches.
+	// 'git-spice up' from this branch will check out one of these branches.
 	Ups []jsonLogUp `json:"ups,omitempty"`
 
 	// Commits is a list of commits on this branch.
-	// These are not included unless invoked with 'gs log long'.
+	// These are not included unless invoked with 'git-spice log long'.
 	Commits []jsonLogCommit `json:"commits,omitempty"`
 
 	// Change is the associated change request, if any.

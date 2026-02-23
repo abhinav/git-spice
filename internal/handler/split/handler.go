@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
@@ -48,7 +49,7 @@ type Service interface {
 
 var _ Service = (*spice.Service)(nil)
 
-// Handler handles gs's branch split commands.
+// Handler handles git-spice's branch split commands.
 type Handler struct {
 	Log            *silog.Logger                            // required
 	View           ui.View                                  // required
@@ -305,9 +306,9 @@ func (h *Handler) SplitBranch(ctx context.Context, req *BranchRequest) (*BranchR
 
 		var reason string
 		if split.Name == branch {
-			reason = "gs: move branch head"
+			reason = cli.Name() + ": move branch head"
 		} else {
-			reason = "gs: create new branch"
+			reason = cli.Name() + ": create new branch"
 		}
 
 		if err := h.Repository.SetRef(ctx, git.SetRefRequest{
@@ -389,7 +390,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 		if toUpstreamBranch == fromBranch {
 			pushCmd := fmt.Sprintf("git push -u %v %v:<new name>", remote, fromBranch)
 
-			h.Log.Warnf("%v: If you push this branch with 'git push' instead of 'gs branch submit',", fromBranch)
+			h.Log.Warnf("%v: If you push this branch with 'git push' instead of '%s branch submit',", fromBranch, cli.Name())
 			h.Log.Warnf("%v: remember to use a different upstream branch name with the command:\n\t%s", fromBranch, h.HighlightStyle.Render(pushCmd))
 		}
 	}, nil

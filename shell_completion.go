@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/sliceutil"
@@ -21,23 +23,24 @@ type shellCompletionCmd struct {
 }
 
 func (c *shellCompletionCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		To set up shell completion, eval the output of this command
 		from your shell's rc file.
 		For example:
 
 			# bash
-			eval "$(gs shell completion bash)"
+			eval "$(%[1]s shell completion bash)"
 
 			# zsh
-			eval "$(gs shell completion zsh)"
+			eval "$(%[1]s shell completion zsh)"
 
 			# fish
-			eval "$(gs shell completion fish)"
+			eval "$(%[1]s shell completion fish)"
 
 		If shell name is not provided, the current shell is guessed
 		using a heuristic.
-	`)
+	`, name))
 }
 
 func predictBranches(_ komplete.Args) (predictions []string) {

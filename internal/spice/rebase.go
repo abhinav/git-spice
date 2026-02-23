@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -108,19 +109,19 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 		switch rebaseErr.Kind {
 		case git.RebaseInterruptConflict:
 			var msg strings.Builder
-			fmt.Fprintf(&msg, "There was a conflict while rebasing.\n")
-			fmt.Fprintf(&msg, "Resolve the conflict and run:\n")
-			fmt.Fprintf(&msg, "  gs rebase continue\n")
-			fmt.Fprintf(&msg, "Or abort the operation with:\n")
-			fmt.Fprintf(&msg, "  gs rebase abort\n")
+			fmt.Fprintf(&msg, "There was a conflict while rebasing.\n"+
+				"Resolve the conflict and run:\n"+
+				"  %[1]s rebase continue\n"+
+				"Or abort the operation with:\n"+
+				"  %[1]s rebase abort\n", cli.Name())
 			s.log.Error(msg.String())
 		case git.RebaseInterruptDeliberate:
 			var msg strings.Builder
-			fmt.Fprintf(&msg, "The rebase operation was interrupted with an 'edit' or 'break' command.\n")
-			fmt.Fprintf(&msg, "When you're ready to continue, run:\n")
-			fmt.Fprintf(&msg, "  gs rebase continue\n")
-			fmt.Fprintf(&msg, "Or abort the operation with:\n")
-			fmt.Fprintf(&msg, "  gs rebase abort\n")
+			fmt.Fprintf(&msg, "The rebase operation was interrupted with an 'edit' or 'break' command.\n"+
+				"When you're ready to continue, run:\n"+
+				"  %[1]s rebase continue\n"+
+				"Or abort the operation with:\n"+
+				"  %[1]s rebase abort\n", cli.Name())
 			s.log.Info(msg.String())
 		default:
 			must.Failf("unexpected rebase interrupt kind: %v", rebaseErr.Kind)

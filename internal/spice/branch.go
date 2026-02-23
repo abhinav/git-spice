@@ -99,7 +99,7 @@ func (e *DeletedBranchError) Error() string {
 	return fmt.Sprintf("tracked branch %v was deleted out of band", e.Name)
 }
 
-// LookupBranch returns information about a branch tracked by gs.
+// LookupBranch returns information about a branch tracked by git-spice.
 //
 // It returns [git.ErrNotExist] if the branch is not known to the repository,
 // [state.ErrNotExist] if the branch is not tracked,
@@ -299,7 +299,7 @@ func (s *Service) ForgetBranch(ctx context.Context, name string) error {
 	return nil
 }
 
-// RenameBranch renames a branch tracked by gs.
+// RenameBranch renames a branch tracked by git-spice.
 // This handles both, renaming the branch in the repository,
 // and updating the internal state to reflect the new name.
 func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) error {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -37,7 +38,8 @@ type branchCreateCmd struct {
 }
 
 func (*branchCreateCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Staged changes will be committed to the new branch.
 		If there are no staged changes, an empty commit will be created.
 		Use -a/--all to automatically stage modified and deleted files,
@@ -66,10 +68,10 @@ func (*branchCreateCmd) Help() string {
 			┌─┴ A ◀
 			trunk
 
-		'gs branch create X' will have the following effects
+		'%[1]s branch create X' will have the following effects
 		with different flags:
 
-			         gs branch create X
+			         %[1]s branch create X
 
 			 default  │   --insert   │  --below
 			──────────┼──────────────┼──────────
@@ -82,7 +84,7 @@ func (*branchCreateCmd) Help() string {
 		In all cases above, use of -t/--target flag will change the
 		target (A) to the specified branch:
 
-			     gs branch create X --target B
+			     %[1]s branch create X --target B
 
 			 default  │   --insert   │  --below
 			──────────┼──────────────┼────────────
@@ -91,7 +93,7 @@ func (*branchCreateCmd) Help() string {
 			  ┌─┴ B   │    ┌─┴ B     │   ┌─┴ X
 			┌─┴ A     │  ┌─┴ A       │ ┌─┴ A
 			trunk     │  trunk       │ trunk
-	`)
+	`, name))
 }
 
 func (cmd *branchCreateCmd) Run(

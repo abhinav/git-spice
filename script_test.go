@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/browser/browsertest"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/mockedit"
@@ -48,6 +49,7 @@ func TestMain(m *testing.M) {
 
 	testscript.Main(m, map[string]func(){
 		"gs": func() {
+			cli.SetName("gs")
 			logger := silog.New(os.Stderr, &silog.Options{
 				Level: silog.LevelDebug,
 			})

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -40,8 +41,9 @@ func verifyRestackFromTrunk(
 		return nil
 	}
 
-	desc := fmt.Sprintf("Running 'gs %s restack' from trunk restacks all tracked branches.\n"+
-		"Use 'gs repo restack' to suppress this prompt.", commandName)
+	name := cli.Name()
+	desc := fmt.Sprintf("Running '%[1]s %s restack' from trunk restacks all tracked branches.\n"+
+		"Use '%[1]s repo restack' to suppress this prompt.", name, commandName)
 
 	// Non-interactive mode: print warning and proceed
 	if !ui.Interactive(view) {

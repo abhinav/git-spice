@@ -13,6 +13,7 @@ import (
 	"sort"
 	"sync"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
@@ -335,7 +336,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 			}
 
 			log.Infof("Unsupported remote %q (%v)", h.Remote, remoteURL)
-			log.Info("All merged branches may not have been deleted. Use 'gs branch delete' to delete them.")
+			log.Infof("All merged branches may not have been deleted. Use '%s branch delete' to delete them.", cli.Name())
 		}()
 
 		branchesToDelete, err = h.findLocalMergedBranches(ctx, candidates, trunkEndHash)
@@ -431,7 +432,7 @@ func (h *Handler) findForgeFinishedBranches(
 
 	// There are two kinds of branches under consideration:
 	//
-	// 1. Branches that we submitted PRs for with `gs branch submit`.
+	// 1. Branches that we submitted PRs for with `git-spice branch submit`.
 	// 2. Branches that the user submitted PRs for manually
 	//    with 'gh pr create' or similar.
 	//
@@ -769,7 +770,7 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 
 		if branchInfo.Worktree != "" && branchInfo.Worktree != h.Worktree.RootDir() {
 			h.Log.Warnf("%v: checked out in another worktree (%v), skipping deletion.", branchInfo.Name, branchInfo.Worktree)
-			h.Log.Warn("Run 'gs branch delete' or run 'gs repo sync' again from that worktree to delete it.")
+			h.Log.Warnf("Run '%[1]s branch delete' or run '%[1]s repo sync' again from that worktree to delete it.", cli.Name())
 			continue
 		}
 

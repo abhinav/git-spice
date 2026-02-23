@@ -10,16 +10,21 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/cli"
 )
 
 //go:generate go test -run ^TestHelp$ -update
 
 func TestHelp(t *testing.T) {
+	oldName := cli.Name()
+	cli.SetName("gs")
+	defer cli.SetName(oldName)
+
 	// Build Kong parser with the same configuration as main
 	var cmd mainCmd
 	parser, err := kong.New(&cmd,
 		kong.Name("gs"),
-		kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
+		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Help(helpPrinter),
 		kong.Exit(func(int) {}), // Don't actually exit in tests
 		kong.Vars{
@@ -67,7 +72,7 @@ func TestHelp(t *testing.T) {
 			var helpBuf bytes.Buffer
 			testParser, err := kong.New(&cmd,
 				kong.Name("gs"),
-				kong.Description("gs (git-spice) is a command line tool for stacking Git branches."),
+				kong.Description("git-spice is a command line tool for stacking Git branches."),
 				kong.ConfigureHelp(kong.HelpOptions{Compact: true}),
 				kong.Help(helpPrinter),
 				kong.Exit(func(int) {}),

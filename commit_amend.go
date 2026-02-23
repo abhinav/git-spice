@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
@@ -27,13 +28,14 @@ type commitAmendCmd struct {
 }
 
 func (*commitAmendCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
 		This is a shortcut for 'git commit --amend'
-		followed by 'gs upstack restack'.
+		followed by '%[1]s upstack restack'.
 
-		Use 'gs commit fixup' to amend commits
+		Use '%[1]s commit fixup' to amend commits
 		that are further downstack.
 
 		An editor is opened to edit the commit message
@@ -47,7 +49,7 @@ func (*commitAmendCmd) Help() string {
 		To prevent accidental amends on the trunk branch,
 		a prompt will require confirmation when amending on trunk.
 		The --no-prompt flag can be used to skip this prompt in scripts.
-	`)
+	`, name))
 }
 
 func (cmd *commitAmendCmd) Run(
@@ -136,7 +138,7 @@ func (cmd *commitAmendCmd) Run(
 
 		// If we're in the middle of a rebase,
 		// and there are unmerged paths,
-		// what the user likely wants is 'git add' and 'gs rebase continue'.
+		// what the user likely wants is 'git add' and 'git-spice rebase continue'.
 		//
 		// (If there are no unmerged paths, amending is fine.)
 		var numUnmerged int
@@ -149,14 +151,14 @@ func (cmd *commitAmendCmd) Run(
 		if numUnmerged > 0 {
 			if !ui.Interactive(view) {
 				log.Warnf("You are in the middle of a rebase with unmerged paths.")
-				log.Warnf(`You probably want resolve the conflicts and run "git add", then "gs rebase continue" instead.`)
+				log.Warnf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name())
 			} else {
 				var continueAmend bool
 				fields := []ui.Field{
 					ui.NewList[bool]().
 						WithTitle("Do you want to amend the commit?").
-						WithDescription("You are in the middle of a rebase with unmerged paths.\n"+
-							"You might want to resolve the conflicts and run 'git add', then 'gs rebase continue' instead.").
+						WithDescription(fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
+							"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name())).
 						WithItems(
 							ui.ListItem[bool]{
 								Title:       "Yes",

@@ -5,7 +5,7 @@ package main
 // ProfileFlags is a placeholder for the profile flags.
 // The corresponding _enable Go file contains the actual implementation.
 //
-// To build gs with profiling enabled, use:
+// To build git-spice with profiling enabled, use:
 //
 //	go build -tags profile
 type ProfileFlags struct{}

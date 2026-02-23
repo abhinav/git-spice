@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/sliceutil"
@@ -69,7 +70,7 @@ func (h *Handler) TrackBranch(ctx context.Context, req *BranchRequest) error {
 		var restackErr *spice.BranchNeedsRestackError
 		if errors.As(err, &restackErr) {
 			log.Infof("%v: branch is behind its base and needs to be restacked.", req.Branch)
-			log.Infof("%v: run 'gs branch restack --branch=%v' to restack it", req.Branch, req.Branch)
+			log.Infof("%v: run '%s branch restack --branch=%v' to restack it", req.Branch, cli.Name(), req.Branch)
 		} else {
 			log.Warnf("%v: stack state verification failed: %v", req.Branch, err)
 		}

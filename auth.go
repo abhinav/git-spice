@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
@@ -106,7 +107,7 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 		return nil, nil, errors.New("not in a Git repository")
 	}
 
-	// If the repository is already initialized with gs,
+	// If the repository is already initialized with git-spice,
 	// and a remote is configured, use the forge for that remote.
 	var remote string
 	if store, err := state.OpenStore(ctx, newRepoStorage(repo, log), log); err == nil {
@@ -130,10 +131,10 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 			remote = remotes[0]
 
 		default:
-			// Repository not initialized with gs
+			// Repository not initialized with git-spice
 			// and has multiple remotes.
 			// We can't guess the forge in this case.
-			return nil, nil, errors.New("multiple remotes found: initialize with gs first")
+			return nil, nil, fmt.Errorf("multiple remotes found: initialize with %s first", cli.Name())
 		}
 	}
 

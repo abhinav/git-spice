@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice"
@@ -19,25 +20,26 @@ type branchRenameCmd struct {
 }
 
 func (*branchRenameCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		The following usage modes are supported:
 
 			# Rename <old> to <new>
-			gs branch rename <old> <new>
+			%[1]s branch rename <old> <new>
 
 			# Rename current branch to <new>
-			gs branch rename <new>
+			%[1]s branch rename <new>
 
 			# Rename current branch interactively
-			gs branch rename
+			%[1]s branch rename
 
-		If a branch was renamed outside of 'gs',
+		If a branch was renamed outside of '%[1]s',
 		for example with 'git branch -m',
 		the branch tracking information will be out of date.
 		To fix this,
-		untrack the old branch name with 'gs branch untrack <old>',
-		and track the new branch name with 'gs branch track <new>'.
-	`)
+		untrack the old branch name with '%[1]s branch untrack <old>',
+		and track the new branch name with '%[1]s branch track <new>'.
+	`, name))
 }
 
 func (cmd *branchRenameCmd) Run(
@@ -47,7 +49,7 @@ func (cmd *branchRenameCmd) Run(
 	svc *spice.Service,
 ) (err error) {
 	oldName, newName := cmd.OldName, cmd.NewName
-	// For "gs branch rename <new>",
+	// For "git-spice branch rename <new>",
 	// we'll actually get oldName = <new> and newName = "".
 	if oldName != "" && newName == "" {
 		oldName, newName = "", oldName

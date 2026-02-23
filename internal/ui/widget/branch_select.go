@@ -95,7 +95,7 @@ type branchInfo struct {
 
 // BranchTreeSelect is a prompt that allows selecting a branch
 // from a tree-view of branches.
-// The trunk branch is shown at the bottom of the tree similarly to 'gs ls'.
+// The trunk branch is shown at the bottom of the tree similarly to 'git-spice ls'.
 //
 // In addition to arrow-based navigation,
 // it allows fuzzy filtering branches by typing the branch name.

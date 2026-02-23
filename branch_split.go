@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/text"
@@ -22,7 +23,8 @@ type branchSplitCmd struct {
 }
 
 func (*branchSplitCmd) Help() string {
-	return text.Dedent(`
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
 		Splits the current branch into two or more branches
 		at specific commits,
 		inserting the new branches into the stack
@@ -40,10 +42,10 @@ func (*branchSplitCmd) Help() string {
 		For example:
 
 			# split at a specific commit
-			gs branch split --at 1234567:newbranch
+			%[1]s branch split --at 1234567:newbranch
 
 			# split at the previous commit
-			gs branch split --at HEAD^:newbranch
+			%[1]s branch split --at HEAD^:newbranch
 
 		If the original branch is assigned to one of the splits,
 		it is required to provide a new name for the commit at HEAD.
@@ -57,7 +59,7 @@ func (*branchSplitCmd) Help() string {
 
 		A split at commit 2 using the branch name "A"
 		would require a new name to be provided for commit 3.
-	`)
+	`, name))
 }
 
 // SplitHandler is a subset of split.Handler.

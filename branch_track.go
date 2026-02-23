@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/text"
@@ -15,16 +16,17 @@ type branchTrackCmd struct {
 }
 
 func (*branchTrackCmd) Help() string {
-	return text.Dedent(`
-		A branch must be tracked to be able to run gs operations on it.
-		Use 'gs branch create' to automatically track new branches.
+	name := cli.Name()
+	return text.Dedent(fmt.Sprintf(`
+		A branch must be tracked to be able to run %[1]s operations on it.
+		Use '%[1]s branch create' to automatically track new branches.
 
 		The base is guessed by comparing against other tracked branches.
 		Use --base to specify a base explicitly.
 
-		Use 'gs downstack track' from the topmost branch
+		Use '%[1]s downstack track' from the topmost branch
 		to track a manully created stack of branches at once.
-	`)
+	`, name))
 }
 
 // TrackHandler allows tracking branches.

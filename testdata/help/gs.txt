@@ -1,6 +1,6 @@
 Usage: gs <command> [flags]
 
-gs (git-spice) is a command line tool for stacking Git branches.
+git-spice is a command line tool for stacking Git branches.
 
 Global Flags:
   -h, --help           Show help for the command

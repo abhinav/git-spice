@@ -57,7 +57,7 @@ type RestackHandler interface {
 	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
 }
 
-// Handler handles gs's squash commands.
+// Handler handles git-spice's squash commands.
 type Handler struct {
 	Log        *silog.Logger  // required
 	Repository GitRepository  // required

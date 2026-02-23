@@ -27,7 +27,7 @@ func NewTestService(
 	return newService(repo, wt, store, forgeReg, log)
 }
 
-// NewMemoryStore builds gs state storage
+// NewMemoryStore builds git-spice state storage
 // that stores everything in memory.
 // The store is initialized with the trunk "main".
 func NewMemoryStore(t *testing.T) *state.Store {
