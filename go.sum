@@ -137,8 +137,8 @@ github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavM
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e/go.mod h1:RbqR21r5mrJuqunuUZ/Dhy/avygyECGrLceyNeo4LiM=
 github.com/zalando/go-keyring v0.2.6 h1:r7Yc3+H+Ux0+M72zacZoItR3UDxeWfKTcabvkI8ua9s=
 github.com/zalando/go-keyring v0.2.6/go.mod h1:2TCrxYrbUNYfNS/Kgy/LSrkSQzZ5UPVH85RwfczwvcI=
-gitlab.com/gitlab-org/api/client-go v1.35.0 h1:EZTgYVU+MCVGO3dEPR924GLUuHMtRVfXOAkHNvZe0Mg=
-gitlab.com/gitlab-org/api/client-go v1.35.0/go.mod h1:0r4QcFmvppZ6TqNP/2Af7T0ivxHC75a26TlWvyoyvzA=
+gitlab.com/gitlab-org/api/client-go v1.41.0 h1:qSWU5zSO9SbY7BUBIUCJ9nowN3adxdZguZWWfO8icLI=
+gitlab.com/gitlab-org/api/client-go v1.41.0/go.mod h1:xS4YrDOA5gcM+aDQ+uiQ9TparIEgfCiEzFA7TChGZPY=
 go.abhg.dev/container/ring v0.3.0 h1:sEYgxqyAsT2X1NkUEPQecR4WY7cZCbKZSGUsERhHyDI=
 go.abhg.dev/container/ring v0.3.0/go.mod h1:GoB+vof3ofHqP2h2S97aJkmrMLK/Dyn7UEupDTgfWV8=
 go.abhg.dev/io/ioutil v0.1.0 h1:YGGMzh9HT52JYuVWbnr/E5GkYHbL3yRNDjcxFDaUHNk=
