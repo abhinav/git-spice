@@ -13,7 +13,7 @@ interactions:
         remote_addr: ""
         request_uri: ""
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id}}}","variables":{"number":196,"owner":"abhinav","repo":"git-spice"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id}}}","variables":{"number":196,"owner":"test-owner","repo":"test-repo"}}
         form: {}
         headers:
             Content-Type:
@@ -47,7 +47,7 @@ interactions:
         remote_addr: ""
         request_uri: ""
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id}}}","variables":{"number":10000,"owner":"abhinav","repo":"git-spice"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id}}}","variables":{"number":10000,"owner":"test-owner","repo":"test-repo"}}
         form: {}
         headers:
             Content-Type:

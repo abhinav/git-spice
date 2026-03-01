@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"flag"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
+	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/xec"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/cassette"
@@ -38,10 +40,115 @@ func init() {
 	}
 }
 
+// Canonical placeholders for test repository values in VCR fixtures.
+// These make fixtures portable across different test environments.
+const (
+	CanonicalOwner = "test-owner"
+	CanonicalRepo  = "test-repo"
+)
+
+// Token retrieves authentication credentials for the given forge URL.
+// In update mode, it tries multiple sources in order:
+//  1. Environment variable (explicit override)
+//  2. Stored OAuth credentials from secret stash (from 'gs auth login')
+//  3. GCM (git-credential-manager)
+//
+// In replay mode, it returns a dummy token.
+//
+// The envVar parameter should be the name of the environment variable
+// to check (e.g., "GITHUB_TOKEN").
+func Token(t *testing.T, forgeURL, envVar string) string {
+	if !Update() {
+		return "token"
+	}
+
+	// Try environment variable first for explicit override.
+	if token := os.Getenv(envVar); token != "" {
+		t.Logf("Using %s from environment", envVar)
+		return token
+	}
+
+	// Try stored OAuth credentials from stash.
+	if token := loadStashToken(t, forgeURL); token != "" {
+		t.Logf("Using stored OAuth token from stash for %s", forgeURL)
+		return token
+	}
+
+	// Try GCM.
+	cred, err := forge.LoadGCMCredential(t.Context(), forgeURL)
+	if err == nil {
+		t.Logf("Using token from git-credential-manager for %s", forgeURL)
+		return cred.Password
+	}
+
+	t.Fatalf("No credentials available for %s: set %s, run 'gs auth login', or configure git-credential-manager",
+		forgeURL, envVar)
+	return ""
+}
+
+// loadStashToken attempts to load OAuth credentials from the secret stash.
+// Returns empty string if no credentials are found or on error.
+func loadStashToken(t *testing.T, forgeURL string) string {
+	stash := new(secret.Keyring)
+	tokstr, err := stash.LoadSecret(forgeURL, "token")
+	if err != nil {
+		t.Logf("load stored token for %s: %v", forgeURL, err)
+		return ""
+	}
+
+	// Parse the JSON token structure to extract access_token.
+	// Fall back to the raw string for old token formats.
+	var tok struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.Unmarshal([]byte(tokstr), &tok); err != nil {
+		return tokstr
+	}
+
+	return tok.AccessToken
+}
+
+// Credential retrieves full authentication credentials (username and password)
+// for the given forge URL. This is useful for forges like Bitbucket that require
+// both username and token for Basic auth.
+//
+// In update mode, it tries environment variables first, then falls back to GCM.
+// In replay mode, it returns dummy credentials.
+func Credential(t *testing.T, forgeURL, userEnvVar, passEnvVar string) (username, password string) {
+	if !Update() {
+		return "user@example.com", "token"
+	}
+
+	// Try environment variables first for explicit override.
+	user := os.Getenv(userEnvVar)
+	pass := os.Getenv(passEnvVar)
+	if user != "" && pass != "" {
+		t.Logf("Using %s/%s from environment", userEnvVar, passEnvVar)
+		return user, pass
+	}
+
+	// Try GCM.
+	cred, err := forge.LoadGCMCredential(t.Context(), forgeURL)
+	if err == nil {
+		t.Logf("Using credentials from git-credential-manager for %s", forgeURL)
+		return cred.Username, cred.Password
+	}
+
+	t.Fatalf("No credentials available for %s: set %s/%s or configure git-credential-manager",
+		forgeURL, userEnvVar, passEnvVar)
+	return "", ""
+}
+
 // NewHTTPRecorder creates a new HTTP recorder for the given test and name.
-func NewHTTPRecorder(t *testing.T, name string) *recorder.Recorder {
+// Sanitizers are applied to recorded fixtures in update mode.
+func NewHTTPRecorder(
+	t *testing.T,
+	name string,
+	sanitizers []httptest.Sanitizer,
+) *recorder.Recorder {
 	return httptest.NewTransportRecorder(t, name, httptest.TransportRecorderOptions{
-		Update: Update,
+		Update:     Update,
+		Sanitizers: sanitizers,
 		Matcher: func(r *http.Request, i cassette.Request) bool {
 			// If there's no body, just match the method and URL.
 			if r.Body == nil || r.Body == http.NoBody {
@@ -53,9 +160,15 @@ func NewHTTPRecorder(t *testing.T, name string) *recorder.Recorder {
 			assert.NoError(t, r.Body.Close())
 
 			r.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+
+			// Trim trailing newlines for comparison.
+			// YAML block scalars add a trailing newline to the body.
+			actualBody := strings.TrimRight(string(reqBody), "\n")
+			expectedBody := strings.TrimRight(i.Body, "\n")
+
 			return r.Method == i.Method &&
 				r.URL.String() == i.URL &&
-				string(reqBody) == i.Body
+				actualBody == expectedBody
 		},
 	})
 }
@@ -111,6 +224,42 @@ type IntegrationConfig struct {
 	// base branches to be absent when submitting changes.
 	// (GitLab does this. It's not clear why.)
 	BaseBranchMayBeAbsent bool // optional
+
+	// SkipLabels skips label-related tests.
+	// Set to true for forges that don't support labels (e.g., Bitbucket).
+	SkipLabels bool // optional
+
+	// SkipAssignees skips assignee-related tests.
+	// Set to true for forges that don't support assignees (e.g., Bitbucket).
+	SkipAssignees bool // optional
+
+	// SkipTemplates skips template-related tests.
+	// Set to true for forges that don't support PR templates.
+	SkipTemplates bool // optional
+
+	// SkipDraft skips draft-related tests.
+	// Set to true for forges with limited draft support.
+	SkipDraft bool // optional
+
+	// ShortHeadHash indicates the forge returns truncated commit hashes.
+	// When true, hash comparisons use prefix matching.
+	ShortHeadHash bool // optional
+
+	// SkipReviewers skips reviewer-related tests.
+	// Set to true for forges where user lookup by username doesn't work.
+	SkipReviewers bool // optional
+
+	// SkipMerge skips merge-related tests in ChangesStates.
+	// Set to true for forges that require approvals before merge.
+	SkipMerge bool // optional
+
+	// SkipCommentPagination skips the ListAllComments pagination test.
+	// Set to true for forges where comment listing with small page sizes fails.
+	SkipCommentPagination bool // optional
+
+	// Sanitizers are applied to recorded HTTP fixtures.
+	// Use ConfigSanitizers to create sanitizers from test configuration.
+	Sanitizers []httptest.Sanitizer // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -120,13 +269,18 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		Fixtures: fixturetest.Config{
 			Update: Update,
 		},
-		RemoteURL:           config.RemoteURL,
-		openRepository:      config.OpenRepository,
-		MergeChange:         config.MergeChange,
-		CloseChange:         config.CloseChange,
-		Reviewers:           config.Reviewers,
-		Assignees:           config.Assignees,
-		SetCommentsPageSize: config.SetCommentsPageSize,
+		RemoteURL:             config.RemoteURL,
+		openRepository:        config.OpenRepository,
+		MergeChange:           config.MergeChange,
+		CloseChange:           config.CloseChange,
+		Reviewers:             config.Reviewers,
+		Assignees:             config.Assignees,
+		SetCommentsPageSize:   config.SetCommentsPageSize,
+		Sanitizers:            config.Sanitizers,
+		shortHeadHash:         config.ShortHeadHash,
+		skipReviewers:         config.SkipReviewers,
+		skipMerge:             config.SkipMerge,
+		skipCommentPagination: config.SkipCommentPagination,
 	}
 
 	t.Run("SubmitEditChange", func(t *testing.T) {
@@ -141,17 +295,21 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		suite.TestSubmitChangeBase(t)
 	})
 
-	t.Run("SubmitEditDraft", func(t *testing.T) {
-		t.Parallel()
+	if !config.SkipDraft {
+		t.Run("SubmitEditDraft", func(t *testing.T) {
+			t.Parallel()
 
-		suite.TestSubmitChangeDraft(t)
-	})
+			suite.TestSubmitChangeDraft(t)
+		})
+	}
 
-	t.Run("ChangesStates", func(t *testing.T) {
-		t.Parallel()
+	if !config.SkipMerge {
+		t.Run("ChangesStates", func(t *testing.T) {
+			t.Parallel()
 
-		suite.TestChangeStates(t)
-	})
+			suite.TestChangeStates(t)
+		})
+	}
 
 	t.Run("FindChangesByBranchDoesNotExist", func(t *testing.T) {
 		t.Parallel()
@@ -161,15 +319,19 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 
 	// NOTE: ListChangeTemplates cannot run in parallel
 	// because it modifies the main branch.
-	t.Run("ListChangeTemplates", func(t *testing.T) {
-		suite.TestListChangeTemplates(t)
-	})
+	if !config.SkipTemplates {
+		t.Run("ListChangeTemplates", func(t *testing.T) {
+			suite.TestListChangeTemplates(t)
+		})
+	}
 
-	t.Run("SubmitEditLabels", func(t *testing.T) {
-		t.Parallel()
+	if !config.SkipLabels {
+		t.Run("SubmitEditLabels", func(t *testing.T) {
+			t.Parallel()
 
-		suite.TestSubmitEditLabels(t)
-	})
+			suite.TestSubmitEditLabels(t)
+		})
+	}
 
 	if !config.BaseBranchMayBeAbsent {
 		t.Run("SubmitBaseDoesNotExist", func(t *testing.T) {
@@ -179,17 +341,21 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		})
 	}
 
-	t.Run("SubmitEditReviewers", func(t *testing.T) {
-		t.Parallel()
+	if !config.SkipReviewers {
+		t.Run("SubmitEditReviewers", func(t *testing.T) {
+			t.Parallel()
 
-		suite.TestSubmitEditReviewers(t)
-	})
+			suite.TestSubmitEditReviewers(t)
+		})
+	}
 
-	t.Run("SubmitEditAssignees", func(t *testing.T) {
-		t.Parallel()
+	if !config.SkipAssignees {
+		t.Run("SubmitEditAssignees", func(t *testing.T) {
+			t.Parallel()
 
-		suite.TestSubmitEditAssignees(t)
-	})
+			suite.TestSubmitEditAssignees(t)
+		})
+	}
 
 	t.Run("ChangeComments", func(t *testing.T) {
 		t.Parallel()
@@ -226,6 +392,21 @@ type integrationSuite struct {
 	// SetCommentsPageSize sets the page size for listing comments.
 	SetCommentsPageSize func(testing.TB, int)
 
+	// Sanitizers are applied to recorded HTTP fixtures.
+	Sanitizers []httptest.Sanitizer
+
+	// shortHeadHash indicates the forge returns truncated commit hashes.
+	shortHeadHash bool
+
+	// skipReviewers skips reviewer-related tests.
+	skipReviewers bool
+
+	// skipMerge skips merge-related tests.
+	skipMerge bool
+
+	// skipCommentPagination skips pagination test.
+	skipCommentPagination bool
+
 	openRepository func(*testing.T, *http.Client) forge.Repository
 }
 
@@ -233,7 +414,7 @@ type integrationSuite struct {
 // In Update mode, it records HTTP interactions to fixtures.
 // In non-update mode, it replays from existing fixtures.
 func (s *integrationSuite) HTTPClient(t *testing.T) *http.Client {
-	rec := NewHTTPRecorder(t, t.Name())
+	rec := NewHTTPRecorder(t, t.Name(), s.Sanitizers)
 	return rec.GetDefaultClient()
 }
 
@@ -242,6 +423,18 @@ func (s *integrationSuite) HTTPClient(t *testing.T) *http.Client {
 func (s *integrationSuite) OpenRepository(t *testing.T) forge.Repository {
 	httpClient := s.HTTPClient(t)
 	return s.openRepository(t, httpClient)
+}
+
+// assertHashMatch asserts that two hashes match.
+// If shortHeadHash is set, it uses prefix matching (API returns short hash).
+func (s *integrationSuite) assertHashMatch(t *testing.T, expected, actual, msg string) {
+	t.Helper()
+	if s.shortHeadHash {
+		assert.True(t, strings.HasPrefix(expected, actual),
+			"%s: expected %q to be prefix of %q", msg, actual, expected)
+	} else {
+		assert.Equal(t, expected, actual, msg)
+	}
 }
 
 func (s *integrationSuite) TestSubmitEditChange(t *testing.T) {
@@ -287,7 +480,7 @@ func (s *integrationSuite) TestSubmitEditChange(t *testing.T) {
 	t.Run("FindChangeByID", func(t *testing.T) {
 		foundChange, err := repo.FindChangeByID(t.Context(), changeID)
 		require.NoError(t, err, "error finding change by ID")
-		assert.Equal(t, commitHash, foundChange.HeadHash.String(),
+		s.assertHashMatch(t, commitHash, foundChange.HeadHash.String(),
 			"head hash should match first commit")
 		assert.Equal(t, "Testing "+branchName, foundChange.Subject, "subject should match")
 		assert.Equal(t, "main", foundChange.BaseName, "base name should match")
@@ -303,7 +496,7 @@ func (s *integrationSuite) TestSubmitEditChange(t *testing.T) {
 
 		foundChange := changes[0]
 		assert.Equal(t, changeID, foundChange.ID, "ID should match")
-		assert.Equal(t, commitHash, foundChange.HeadHash.String(),
+		s.assertHashMatch(t, commitHash, foundChange.HeadHash.String(),
 			"head hash should match first commit")
 		assert.Equal(t, "Testing "+branchName, foundChange.Subject, "subject should match")
 		assert.Equal(t, "main", foundChange.BaseName, "base name should match")
@@ -1170,19 +1363,21 @@ func (s *integrationSuite) TestChangeComments(t *testing.T) {
 	})
 
 	// List all comments with pagination.
-	t.Run("ListAllComments", func(t *testing.T) {
-		// Set a small page size to test pagination.
-		s.SetCommentsPageSize(t, 3)
+	if !s.skipCommentPagination {
+		t.Run("ListAllComments", func(t *testing.T) {
+			// Set a small page size to test pagination.
+			s.SetCommentsPageSize(t, 3)
 
-		var gotBodies []string
-		for comment, err := range repo.ListChangeComments(t.Context(), changeID, nil /* opts */) {
-			require.NoError(t, err)
-			gotBodies = append(gotBodies, comment.Body)
-		}
+			var gotBodies []string
+			for comment, err := range repo.ListChangeComments(t.Context(), changeID, nil /* opts */) {
+				require.NoError(t, err)
+				gotBodies = append(gotBodies, comment.Body)
+			}
 
-		assert.Len(t, gotBodies, len(comments))
-		assert.ElementsMatch(t, comments, gotBodies)
-	})
+			assert.Len(t, gotBodies, len(comments))
+			assert.ElementsMatch(t, comments, gotBodies)
+		})
+	}
 
 	// List comments with filtering.
 	t.Run("ListFilteredComments", func(t *testing.T) {

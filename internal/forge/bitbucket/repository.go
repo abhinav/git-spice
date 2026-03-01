@@ -48,17 +48,6 @@ func (r *Repository) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/pull-requests/%d", r.url, r.workspace, r.repo, prNum)
 }
 
-// DeleteChangeComment deletes an existing comment.
-// Bitbucket API supports comment deletion but it's rarely needed.
-func (r *Repository) DeleteChangeComment(
-	_ context.Context,
-	_ forge.ChangeCommentID,
-) error {
-	// Not implemented - comment deletion is rarely needed
-	// and can be done manually if required.
-	return nil
-}
-
 // NewChangeMetadata returns the metadata for a pull request.
 func (r *Repository) NewChangeMetadata(
 	_ context.Context,

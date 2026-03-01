@@ -5,3 +5,6 @@ cover.out
 cover.html
 /.idea
 .mise
+
+# Test configuration (contains environment-specific values)
+internal/forge/forgetest/testconfig.yaml

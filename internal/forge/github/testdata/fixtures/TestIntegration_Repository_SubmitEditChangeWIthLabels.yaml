@@ -28,7 +28,7 @@ interactions:
       trailer: {}
       content_length: -1
       uncompressed: true
-      body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4"}}}}'
+      body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/test-owner/test-repo/pull/4"}}}}'
       headers:
         Content-Type:
           - application/json; charset=utf-8
@@ -81,7 +81,7 @@ interactions:
       remote_addr: ""
       request_uri: ""
       body: |
-        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"abhinav","repo":"test-repo"}}
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
       form: {}
       headers:
         Content-Type:
@@ -96,7 +96,7 @@ interactions:
       trailer: {}
       content_length: -1
       uncompressed: true
-      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"Fhr9q7Dn","isDraft":false}}}}'
+      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/test-owner/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"Fhr9q7Dn","isDraft":false}}}}'
       headers:
         Content-Type:
           - application/json; charset=utf-8
@@ -183,7 +183,7 @@ interactions:
       remote_addr: ""
       request_uri: ""
       body: |
-        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"abhinav","repo":"test-repo"}}
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
       form: {}
       headers:
         Content-Type:
@@ -198,7 +198,7 @@ interactions:
       trailer: {}
       content_length: -1
       uncompressed: true
-      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/abhinav/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"main","isDraft":true}}}}'
+      body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs51N_9r","number":4,"url":"https://github.com/test-owner/test-repo/pull/4","title":"khUwPziZ","state":"OPEN","headRefOid":"61098887be577b063ac0c73abb324e098e511c5f","baseRefName":"main","isDraft":true}}}}'
       headers:
         Content-Type:
           - application/json; charset=utf-8
@@ -251,7 +251,7 @@ interactions:
       remote_addr: ""
       request_uri: ""
       body: |
-        {"query":"query($name:String!$owner:String!){repository(owner: $owner, name: $name){labels(first: 100){nodes{id,name}}}}","variables":{"name":"test-repo","owner":"abhinav"}}
+        {"query":"query($name:String!$owner:String!){repository(owner: $owner, name: $name){labels(first: 100){nodes{id,name}}}}","variables":{"name":"test-repo","owner":"test-owner"}}
       form: { }
       headers:
         Content-Type:

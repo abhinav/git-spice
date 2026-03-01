@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"gopkg.in/dnaeon/go-vcr.v4/pkg/recorder"
 )
@@ -26,35 +27,42 @@ import (
 
 var _fixtures = fixturetest.Config{Update: forgetest.Update}
 
-// To avoid looking this up for every test that needs the repo ID,
-// we'll just hardcode it here.
-var (
-	_testRepoID = new(int64(64779801))
-)
+// testConfig returns the GitLab test configuration and sanitizers for VCR fixtures.
+// In update mode, loads from testconfig.yaml.
+// In replay mode, returns canonical placeholders.
+func testConfig(t *testing.T) (cfg forgetest.ForgeConfig, sanitizers []httptest.Sanitizer) {
+	config := forgetest.Config(t)
+	cfg = config.GitLab
+	canonical := forgetest.CanonicalGitLabConfig()
+	sanitizers = forgetest.ConfigSanitizers(cfg, canonical)
+	return cfg, sanitizers
+}
 
 // TODO: delete newRecorder when tests have been migrated to forgetest.
-func newRecorder(t *testing.T, name string) *recorder.Recorder {
+func newRecorder(
+	t *testing.T,
+	name string,
+	sanitizers []httptest.Sanitizer,
+) *recorder.Recorder {
 	t.Cleanup(func() {
 		if t.Failed() {
 			t.Logf("To update the test fixtures, run:")
-			t.Logf("    GITLAB_TOKEN=$token go test -update -run '^%s$'", t.Name())
+			t.Logf("    GITLAB_TEST_OWNER=$owner GITLAB_TEST_REPO=$repo GITLAB_TOKEN=$token go test -update -run '^%s$'", t.Name())
 		}
 	})
 
-	return forgetest.NewHTTPRecorder(t, name)
+	return forgetest.NewHTTPRecorder(t, name, sanitizers)
 }
 
 func newGitLabClient(
+	t *testing.T,
 	httpClient *http.Client,
 ) *gitlab.Client {
-	tok, exists := os.LookupEnv("GITLAB_TOKEN")
-	var token string
-	if !exists {
-		token = "token"
-	} else {
-		token = tok
-	}
-	client, _ := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
+	// GitLab API requires a Personal Access Token with 'api' scope.
+	// GCM tokens don't have sufficient scope, so GITLAB_TOKEN env var is required.
+	token := forgetest.Token(t, "https://gitlab.com", "GITLAB_TOKEN")
+	client, err := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
+	require.NoError(t, err)
 	return &gitlab.Client{
 		MergeRequests:    client.MergeRequests,
 		Notes:            client.Notes,
@@ -65,49 +73,22 @@ func newGitLabClient(
 }
 
 func TestIntegration_Repository(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
 	ctx := t.Context()
-	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc, nil)
+	rec := newRecorder(t, t.Name(), sanitizers)
+	ghc := newGitLabClient(t, rec.GetDefaultClient())
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil)
 	require.NoError(t, err)
-}
-
-func TestIntegration_Repository_NewChangeMetadata(t *testing.T) {
-	ctx := t.Context()
-
-	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(
-		ctx,
-		new(gitlab.Forge), "abg", "test-repo",
-		silogtest.New(t), ghc,
-		&gitlab.RepositoryOptions{RepositoryID: _testRepoID},
-	)
-	require.NoError(t, err)
-
-	t.Run("valid", func(t *testing.T) {
-		ctx := t.Context()
-		md, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 3})
-		require.NoError(t, err)
-
-		assert.Equal(t, &gitlab.MR{
-			Number: 3,
-		}, md.ChangeID())
-		assert.Equal(t, "gitlab", md.ForgeID())
-	})
-
-	t.Run("invalid", func(t *testing.T) {
-		ctx := t.Context()
-		_, err := repo.NewChangeMetadata(ctx, &gitlab.MR{Number: 10000})
-		require.NoError(t, err)
-	})
 }
 
 func TestIntegration(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
+	remoteURL := "https://gitlab.com/" + cfg.Owner + "/" + cfg.Repo
+
 	t.Cleanup(func() {
 		if t.Failed() && !forgetest.Update() {
 			t.Logf("To update the test fixtures, run:")
-			t.Logf("    GITLAB_TOKEN=$token go test -update -run '^%s$'", t.Name())
+			t.Logf("    Configure testconfig.yaml and run: GITLAB_TOKEN=$token go test -update -run '^%s$'", t.Name())
 		}
 	})
 
@@ -116,16 +97,17 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL: "git@gitlab.com:abg/test-repo.git",
-		Forge:     &gitlabForge,
+		RemoteURL:  remoteURL,
+		Forge:      &gitlabForge,
+		Sanitizers: sanitizers,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			ghc := newGitLabClient(httpClient)
-			repo, err := gitlab.NewRepository(
-				t.Context(), &gitlabForge, "abg", "test-repo",
-				silogtest.New(t), ghc, &gitlab.RepositoryOptions{RepositoryID: _testRepoID},
+			ghc := newGitLabClient(t, httpClient)
+			newRepo, err := gitlab.NewRepository(
+				t.Context(), &gitlabForge, cfg.Owner, cfg.Repo,
+				silogtest.New(t), ghc, nil,
 			)
 			require.NoError(t, err)
-			return repo
+			return newRepo
 		},
 		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, gitlab.MergeChange(t.Context(), repo.(*gitlab.Repository), change.(*gitlab.MR)))
@@ -135,26 +117,25 @@ func TestIntegration(t *testing.T) {
 		},
 		SetCommentsPageSize:   gitlab.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
-		// Unfortunately, GitLab does not support multiple reviewers
-		// in the Free Tier so we can't test multi-reviewer MRs.
-		// If someone with a paid GitLab plan wants to help test
-		// and/or contribute this, please do!
-		Reviewers: []string{"abg"},
-		Assignees: []string{"abg"},
+		SkipMerge:             true, // Merge requires MR approval settings to be disabled
+		Reviewers:             []string{cfg.Reviewer},
+		Assignees:             []string{cfg.Assignee},
 	})
 }
 
 func TestIntegration_Repository_notFoundError(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
 	ctx := t.Context()
-	rec := newRecorder(t, t.Name())
+	rec := newRecorder(t, t.Name(), sanitizers)
 	client := rec.GetDefaultClient()
-	ghc := newGitLabClient(client)
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), "abg", "does-not-exist-repo", silogtest.New(t), ghc, nil)
+	ghc := newGitLabClient(t, client)
+	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), ghc, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "404 Not Found")
 }
 
 func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
+	cfg, sanitizers := testConfig(t)
 	ctx := t.Context()
 	branchFixture := fixturetest.New(_fixtures, "branch", func() string {
 		return randomString(8)
@@ -177,7 +158,7 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 
 		t.Logf("Cloning test-repo...")
 		repoDir := t.TempDir()
-		cmd := exec.Command("git", "clone", "git@gitlab.com:abg/test-repo.git", repoDir)
+		cmd := exec.Command("git", "clone", "https://gitlab.com/"+cfg.Owner+"/"+cfg.Repo+".git", repoDir)
 		cmd.Stdout = output
 		cmd.Stderr = output
 		require.NoError(t, cmd.Run(), "failed to clone test-repo")
@@ -227,12 +208,11 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 		})
 	}
 
-	rec := newRecorder(t, t.Name())
-	ghc := newGitLabClient(rec.GetDefaultClient())
+	rec := newRecorder(t, t.Name(), sanitizers)
+	ghc := newGitLabClient(t, rec.GetDefaultClient())
 	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), "abg", "test-repo", silogtest.New(t), ghc,
+		ctx, new(gitlab.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc,
 		&gitlab.RepositoryOptions{
-			RepositoryID:              _testRepoID,
 			RemoveSourceBranchOnMerge: true,
 		},
 	)
@@ -247,8 +227,9 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 	require.NoError(t, err, "error creating MR")
 
 	mrID := change.ID.(*gitlab.MR)
+	projectPath := cfg.Owner + "/" + cfg.Repo
 	mr, _, err := ghc.MergeRequests.GetMergeRequest(
-		*_testRepoID, mrID.Number, nil,
+		projectPath, mrID.Number, nil,
 		gogitlab.WithContext(ctx),
 	)
 	require.NoError(t, err, "error fetching created MR")

@@ -6,10 +6,10 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 286
+        content_length: 146
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"cP73dsmB","headRefName":"KQgGf53K","title":"Testing KQgGf53K","body":"Test PR with non-existent base"}}}
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -21,22 +21,49 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":null}},"errors":[{"type":"UNPROCESSABLE","path":["createPullRequest"],"locations":[{"line":1,"column":42}],"message":"Head sha can''t be blank, Base sha can''t be blank, No commits between cP73dsmB and KQgGf53K, Base ref must be a branch"}]}'
+        body: '{"data":{"repository":{"id":"R_kgDORFeuHw"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 496.145083ms
+        duration: 175.305916ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 210
+        content_length: 286
         host: api.github.com
         body: |
-            {"query":"query($owner:String!$ref:String!$repo:String!){repository(owner: $owner, name: $repo){ref(qualifiedName: $ref){name}}}","variables":{"owner":"abhinav","ref":"refs/heads/cP73dsmB","repo":"test-repo"}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDORFeuHw","baseRefName":"cwtF8DNE","headRefName":"dm51RnEI","title":"Testing dm51RnEI","body":"Test PR with non-existent base"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createPullRequest":{"pullRequest":null}},"errors":[{"type":"UNPROCESSABLE","path":["createPullRequest"],"locations":[{"line":1,"column":42}],"message":"Head sha can''t be blank, Base sha can''t be blank, No commits between cwtF8DNE and dm51RnEI, Base ref must be a branch"}]}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 210.422458ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 214
+        host: api.github.com
+        body: |
+            {"query":"query($owner:String!$ref:String!$repo:String!){repository(owner: $owner, name: $repo){ref(qualifiedName: $ref){name}}}","variables":{"owner":"test-owner","ref":"refs/heads/cwtF8DNE","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -54,4 +81,4 @@ interactions:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 307.405333ms
+        duration: 335.871458ms

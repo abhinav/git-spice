@@ -6,10 +6,10 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 278
+        content_length: 146
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"fBYqIdKw","title":"Testing fBYqIdKw","body":"Test draft PR","draft":true}}}
+            {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -21,22 +21,22 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS","number":43,"url":"https://github.com/abhinav/test-repo/pull/43"}}}}'
+        body: '{"data":{"repository":{"id":"R_kgDORFeuHw"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.324469375s
+        duration: 234.658458ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 392
+        content_length: 278
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":43,"owner":"abhinav","repo":"test-repo"}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDORFeuHw","baseRefName":"main","headRefName":"23TQcaj4","title":"Testing 23TQcaj4","body":"Test draft PR","draft":true}}}
         headers:
             Content-Type:
                 - application/json
@@ -48,14 +48,41 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS","number":43,"url":"https://github.com/abhinav/test-repo/pull/43","title":"Testing fBYqIdKw","state":"OPEN","headRefOid":"6ad4aae7a012a1b534cb559c808d5f97bf147f19","baseRefName":"main","isDraft":true,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j","number":57,"url":"https://github.com/test-owner/test-repo/pull/57"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 322.382ms
+        duration: 741.811708ms
     - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 396
+        host: api.github.com
+        body: |
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":57,"owner":"test-owner","repo":"test-repo"}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j","number":57,"url":"https://github.com/test-owner/test-repo/pull/57","title":"Testing 23TQcaj4","state":"OPEN","headRefOid":"c521b0ae750caa58a742363d6eec74206389e95c","baseRefName":"main","isDraft":true,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 170.140292ms
+    - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -63,7 +90,7 @@ interactions:
         content_length: 190
         host: api.github.com
         body: |
-            {"query":"mutation($input:MarkPullRequestReadyForReviewInput!){markPullRequestReadyForReview(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs64LxHS"}}}
+            {"query":"mutation($input:MarkPullRequestReadyForReviewInput!){markPullRequestReadyForReview(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDORFeuH87AtZ9j"}}}
         headers:
             Content-Type:
                 - application/json
@@ -75,22 +102,22 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"markPullRequestReadyForReview":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS"}}}}'
+        body: '{"data":{"markPullRequestReadyForReview":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.805321584s
-    - id: 3
+        duration: 347.041375ms
+    - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 392
+        content_length: 396
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":43,"owner":"abhinav","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":57,"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -102,14 +129,14 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS","number":43,"url":"https://github.com/abhinav/test-repo/pull/43","title":"Testing fBYqIdKw","state":"OPEN","headRefOid":"6ad4aae7a012a1b534cb559c808d5f97bf147f19","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j","number":57,"url":"https://github.com/test-owner/test-repo/pull/57","title":"Testing 23TQcaj4","state":"OPEN","headRefOid":"c521b0ae750caa58a742363d6eec74206389e95c","baseRefName":"main","isDraft":false,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 429.239958ms
-    - id: 4
+        duration: 164.431208ms
+    - id: 5
       request:
         proto: HTTP/1.1
         proto_major: 1
@@ -117,7 +144,7 @@ interactions:
         content_length: 182
         host: api.github.com
         body: |
-            {"query":"mutation($input:ConvertPullRequestToDraftInput!){convertPullRequestToDraft(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs64LxHS"}}}
+            {"query":"mutation($input:ConvertPullRequestToDraftInput!){convertPullRequestToDraft(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDORFeuH87AtZ9j"}}}
         headers:
             Content-Type:
                 - application/json
@@ -129,22 +156,22 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"convertPullRequestToDraft":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS"}}}}'
+        body: '{"data":{"convertPullRequestToDraft":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 561.976083ms
-    - id: 5
+        duration: 630.821459ms
+    - id: 6
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 392
+        content_length: 396
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":43,"owner":"abhinav","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":57,"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -156,10 +183,10 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs64LxHS","number":43,"url":"https://github.com/abhinav/test-repo/pull/43","title":"Testing fBYqIdKw","state":"OPEN","headRefOid":"6ad4aae7a012a1b534cb559c808d5f97bf147f19","baseRefName":"main","isDraft":true,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDORFeuH87AtZ9j","number":57,"url":"https://github.com/test-owner/test-repo/pull/57","title":"Testing 23TQcaj4","state":"OPEN","headRefOid":"c521b0ae750caa58a742363d6eec74206389e95c","baseRefName":"main","isDraft":true,"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 470.609875ms
+        duration: 449.4475ms

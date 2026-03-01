@@ -73,6 +73,33 @@ func (r *Repository) updateComment(
 	return nil
 }
 
+// DeleteChangeComment deletes a comment on a pull request.
+func (r *Repository) DeleteChangeComment(
+	ctx context.Context,
+	id forge.ChangeCommentID,
+) error {
+	comment := mustPRComment(id)
+	if comment.PRID == 0 {
+		return fmt.Errorf("comment %d missing PR ID: %w",
+			comment.ID, forge.ErrCommentCannotUpdate)
+	}
+	return r.deleteComment(ctx, comment.PRID, comment.ID)
+}
+
+func (r *Repository) deleteComment(
+	ctx context.Context,
+	prID, commentID int64,
+) error {
+	path := fmt.Sprintf(
+		"/repositories/%s/%s/pullrequests/%d/comments/%d",
+		r.workspace, r.repo, prID, commentID,
+	)
+	if err := r.client.do(ctx, "DELETE", path, nil, nil); err != nil {
+		return fmt.Errorf("delete comment: %w", err)
+	}
+	return nil
+}
+
 // ListChangeComments lists comments on a pull request.
 func (r *Repository) ListChangeComments(
 	ctx context.Context,

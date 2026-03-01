@@ -133,6 +133,12 @@ func (r *Repository) ListChangeComments(
 	options *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	var filters []func(gitlab.Note) (keep bool)
+
+	// Always filter out system notes (e.g., "restored source branch").
+	filters = append(filters, func(note gitlab.Note) bool {
+		return !note.System
+	})
+
 	if options != nil {
 		if len(options.BodyMatchesAll) != 0 {
 			for _, re := range options.BodyMatchesAll {

@@ -1,0 +1,42 @@
+# Test configuration for forge integration tests.
+#
+# Copy this file to testconfig.yaml and fill in your values.
+# This file is required only when recording fixtures (using the -update flag).
+#
+# Authentication tokens are NOT stored here - they use the existing mechanisms:
+#   - Environment variables (GITHUB_TOKEN, GITLAB_TOKEN, BITBUCKET_TOKEN)
+#   - git-credential-manager
+#   - gs auth login credentials
+#
+# The values in this file will be sanitized in recorded fixtures,
+# replaced with canonical placeholders for portability.
+
+github:
+  # Repository owner (your GitHub username or organization)
+  owner: "your-github-username"
+  # Test repository name (should be a repo you have write access to)
+  repo: "your-test-repo"
+  # A GitHub user who can be added as a reviewer (can be a bot account)
+  reviewer: "another-github-user"
+  # A GitHub user who can be assigned to PRs (can be the same as reviewer)
+  assignee: "another-github-user"
+
+gitlab:
+  # Project namespace (your GitLab username or group)
+  owner: "your-gitlab-username"
+  # Test project name
+  repo: "your-test-repo"
+  # A GitLab user who can be added as a reviewer
+  reviewer: "another-gitlab-user"
+  # A GitLab user who can be assigned to MRs
+  assignee: "another-gitlab-user"
+
+bitbucket:
+  # Bitbucket workspace
+  owner: "your-bitbucket-workspace"
+  # Test repository name
+  repo: "your-test-repo"
+  # A Bitbucket user who can be added as a reviewer
+  reviewer: "another-bitbucket-user"
+  # Bitbucket does not support assignees, leave empty
+  assignee: ""
