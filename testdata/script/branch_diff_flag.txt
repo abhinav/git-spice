@@ -1,0 +1,30 @@
+# 'gs branch diff --branch' targets a specific branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch with changes
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+# go back to main
+gs down
+
+# diff targeting feature branch from main
+gs branch diff --branch feature
+stdout '\+feature contents'
+
+-- repo/init.txt --
+initial contents
+
+-- extra/feature.txt --
+feature contents

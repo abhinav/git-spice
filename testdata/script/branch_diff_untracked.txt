@@ -1,0 +1,28 @@
+# 'gs branch diff' on an untracked branch fails with a helpful message.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create an untracked branch via raw git
+git checkout -b untracked
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+git commit -m 'Add feature'
+
+# diff should fail with "not tracked" message
+! gs branch diff
+stderr 'branch not tracked'
+
+-- repo/init.txt --
+initial contents
+
+-- extra/feature.txt --
+feature contents
