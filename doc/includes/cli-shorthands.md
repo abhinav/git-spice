@@ -3,6 +3,7 @@
 | gs bc | [gs branch create](/cli/reference.md#gs-branch-create) |
 | gs bco | [gs branch checkout](/cli/reference.md#gs-branch-checkout) |
 | gs bd | [gs branch delete](/cli/reference.md#gs-branch-delete) |
+| gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
 | gs be | [gs branch edit](/cli/reference.md#gs-branch-edit) |
 | gs bfo | [gs branch fold](/cli/reference.md#gs-branch-fold) |
 | gs bon | [gs branch onto](/cli/reference.md#gs-branch-onto) |
