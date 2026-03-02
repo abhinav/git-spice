@@ -1,0 +1,27 @@
+# 'gs branch diff' shows changes relative to the base branch.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch with changes
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+# diff should show the added file
+gs branch diff
+stdout '\+feature contents'
+
+-- repo/init.txt --
+initial contents
+
+-- extra/feature.txt --
+feature contents
