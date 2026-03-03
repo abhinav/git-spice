@@ -125,13 +125,15 @@ func (c *Client) SendPromptWithModel(ctx context.Context, prompt, model string) 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	// Prepare command with -p flag for prompt and --print for non-interactive mode.
-	// The --print flag ensures the CLI outputs the response without interactive prompts.
-	args := []string{"-p", prompt, "--print"}
+	// Prepare command with --print for non-interactive mode.
+	// The prompt is passed via stdin to avoid "argument list too long" errors
+	// when the prompt (which may include large diffs) exceeds OS limits.
+	args := []string{"--print"}
 	if model != "" {
 		args = append(args, "--model", model)
 	}
-	cmd := xec.Command(ctx, c.log, binaryPath, args...)
+	cmd := xec.Command(ctx, c.log, binaryPath, args...).
+		WithStdinString(prompt)
 
 	// Use limited buffers to prevent memory exhaustion.
 	stdout := &limitedBuffer{limit: maxOutputSize}
