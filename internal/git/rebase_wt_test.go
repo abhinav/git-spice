@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -385,6 +386,95 @@ func TestRebase_autostashSuccess(t *testing.T) {
 		wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}))
 	require.NoError(t, err)
 	assert.Empty(t, unmergedFiles)
+}
+
+func TestRebase_indexLockRecovery(t *testing.T) {
+	// Verify that Rebase recovers from index.lock errors
+	// by waiting for the lock to clear
+	// and then continuing the rebase.
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2024-05-21T20:30:40Z'
+
+		git init
+		git commit --allow-empty -m 'Initial commit'
+
+		git add foo.txt
+		git commit -m 'Add foo'
+
+		git checkout -b feature
+		git add bar.txt
+		git commit -m 'Add bar'
+
+		git checkout main
+		git add baz.txt
+		git commit -m 'Add baz'
+
+		-- foo.txt --
+		Contents of foo
+
+		-- bar.txt --
+		Contents of bar
+
+		-- baz.txt --
+		Contents of baz
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	login(t, "foo")
+
+	gitDir := filepath.Join(fixture.Dir(), ".git")
+	lockPath := filepath.Join(gitDir, "index.lock")
+
+	t.Run("LockBeforeSequencer", func(t *testing.T) {
+		// Create the lock file before the rebase starts.
+		// Git fails before the sequencer runs,
+		// so no .git/rebase-merge/ state is created.
+		// Recovery must re-run the original rebase
+		// after the lock clears.
+		require.NoError(t,
+			os.WriteFile(lockPath, nil, 0o644))
+
+		// Remove the lock after a short delay
+		// so the recovery has time to detect the error
+		// and then find the lock gone.
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			_ = os.Remove(lockPath)
+		}()
+
+		wt, err := git.OpenWorktree(
+			t.Context(), fixture.Dir(),
+			git.OpenOptions{
+				Log: silogtest.New(t),
+			},
+		)
+		require.NoError(t, err)
+
+		err = wt.Rebase(t.Context(), git.RebaseRequest{
+			Branch:   "feature",
+			Upstream: "main",
+			Quiet:    true,
+		})
+		require.NoError(t, err,
+			"rebase should recover from index.lock")
+
+		// Clean up: reset to pre-rebase state
+		// for the next subtest.
+		resetCmd := exec.Command(
+			"git", "checkout", "main",
+		)
+		resetCmd.Dir = fixture.Dir()
+		require.NoError(t, resetCmd.Run())
+
+		resetFeature := exec.Command(
+			"git", "branch", "-f", "feature",
+			"feature@{1}",
+		)
+		resetFeature.Dir = fixture.Dir()
+		_ = resetFeature.Run()
+	})
 }
 
 func login(t testing.TB, username string) (home string) {
