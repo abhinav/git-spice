@@ -7,9 +7,13 @@ package git
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"iter"
+	"strings"
+	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -81,6 +85,68 @@ var _readOnlyGitCmds = map[string]struct{}{
 	"worktree":     {},
 }
 
+// _writeGitCmds is the set of git subcommands
+// that may acquire the index lock.
+// These commands are retried on index.lock contention.
+//
+// NOTE: "rebase" is intentionally excluded.
+// A failed rebase leaves .git/rebase-merge/ state behind,
+// so blindly re-running the command produces
+// "rebase already in progress" errors.
+// Rebase index.lock recovery is handled at a higher level
+// by [Worktree.Rebase].
+var _writeGitCmds = map[string]struct{}{
+	"checkout":   {},
+	"commit":     {},
+	"pull":       {},
+	"reset":      {},
+	"stash":      {},
+	"write-tree": {},
+}
+
+// Index lock retry configuration.
+// Controlled by spice.indexLockTimeout.
+var (
+	_indexLockMu      sync.RWMutex
+	_indexLockTimeout = 5 * time.Second
+)
+
+// SetIndexLockTimeout sets the maximum time to spend
+// retrying git commands that fail due to index.lock
+// contention.
+//
+// Value semantics match git's core.filesRefLockTimeout:
+// 0 disables retry, negative retries indefinitely.
+//
+// This is typically called once from main
+// after reading spice.indexLockTimeout from git config.
+func SetIndexLockTimeout(d time.Duration) {
+	_indexLockMu.Lock()
+	defer _indexLockMu.Unlock()
+	_indexLockTimeout = d
+}
+
+func indexLockTimeout() time.Duration {
+	_indexLockMu.RLock()
+	defer _indexLockMu.RUnlock()
+	return _indexLockTimeout
+}
+
+// isIndexLockErr reports whether err indicates
+// that git could not acquire the index lock.
+func isIndexLockErr(err error) bool {
+	if strings.Contains(err.Error(), "index.lock") {
+		return true
+	}
+	var exitErr *xec.ExitError
+	if errors.As(err, &exitErr) {
+		return strings.Contains(
+			string(exitErr.Stderr), "index.lock",
+		)
+	}
+	return false
+}
+
 // newGitCmd builds a new Git command for the given Git subcommand
 // and arguments.
 //
@@ -118,6 +184,17 @@ func newGitCmd(
 
 	if _, ok := _readOnlyGitCmds[subcmd]; ok {
 		cmd.AppendEnv("GIT_OPTIONAL_LOCKS=0")
+	}
+
+	if _, ok := _writeGitCmds[subcmd]; ok {
+		timeout := indexLockTimeout()
+		if timeout != 0 {
+			cmd.WithRetry(&xec.RetryPolicy{
+				Match:     isIndexLockErr,
+				Timeout:   timeout,
+				BaseDelay: 100 * time.Millisecond,
+			})
+		}
 	}
 
 	return &gitCmd{cmd: cmd}

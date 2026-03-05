@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/colorprofile"
@@ -147,6 +148,12 @@ func main() {
 	)
 	if err != nil {
 		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
+	}
+
+	if ms, ok := spiceConfig.IndexLockTimeout(); ok {
+		git.SetIndexLockTimeout(
+			time.Duration(ms) * time.Millisecond,
+		)
 	}
 
 	var cmd mainCmd

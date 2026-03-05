@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -162,10 +163,33 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 	cmd := w.gitCmd(ctx, "rebase", args...).
 		WithExtraConfig(extraCfg)
 	if req.Interactive {
-		cmd.WithStdin(os.Stdin).WithStdout(os.Stdout).WithStderr(os.Stderr)
+		cmd.WithStdin(os.Stdin).
+			WithStdout(os.Stdout).
+			WithStderr(os.Stderr)
 	}
 
 	if err := cmd.Run(); err != nil {
+		// Check if the failure was likely caused
+		// by index.lock contention.
+		// We check both the lock file on disk
+		// and the error message because:
+		//   - the lock file check works regardless
+		//     of log level (debug mode streams stderr
+		//     and doesn't capture it in the error)
+		//   - the error message check catches cases
+		//     where the lock was released before we
+		//     could check the file
+		lockPath := filepath.Join(w.gitDir, "index.lock")
+		_, lockExists := os.Stat(lockPath)
+		if lockExists == nil || isIndexLockErr(err) {
+			if contErr := w.recoverRebaseIndexLock(
+				ctx, args, extraCfg,
+			); contErr == nil {
+				return w.handleRebaseFinish(ctx)
+			}
+			// If recovery fails,
+			// fall through to normal error handling.
+		}
 		return w.handleRebaseError(ctx, err)
 	}
 	return w.handleRebaseFinish(ctx)
@@ -226,6 +250,109 @@ func (w *Worktree) handleRebaseFinish(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// recoverRebaseIndexLock attempts to recover
+// from an index.lock error during a rebase operation.
+//
+// When a rebase fails mid-pick because an external process
+// holds the index lock, git reschedules the pick
+// and leaves .git/rebase-merge/ state behind.
+// This method waits for the lock to be released,
+// then continues the rebase with 'git rebase --continue'.
+//
+// If the rebase failed before creating any state
+// (e.g., the lock was held during the initial checkout),
+// the original rebase command is re-run instead.
+//
+// rebaseArgs are the original arguments passed to `git rebase`
+// after the subcommand itself.
+//
+// Returns nil if recovery succeeds,
+// or the error from the recovery attempt if it fails
+// for reasons other than index.lock contention.
+func (w *Worktree) recoverRebaseIndexLock(
+	ctx context.Context,
+	rebaseArgs []string,
+	extraCfg *extraConfig,
+) error {
+	lockPath := filepath.Join(w.gitDir, "index.lock")
+	timeout := indexLockTimeout()
+	if timeout == 0 {
+		return errors.New("index lock retry disabled")
+	}
+
+	baseDelay := 100 * time.Millisecond
+	var deadline time.Time
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
+	}
+
+	for attempt := 0; ; attempt++ {
+		// Wait for the lock file to be removed.
+		delay := baseDelay << attempt
+		if timeout > 0 {
+			remaining := time.Until(deadline)
+			if remaining <= 0 {
+				return errors.New(
+					"timed out waiting for index.lock",
+				)
+			}
+			if delay > remaining {
+				delay = remaining
+			}
+		}
+
+		w.log.Debug("Waiting for index.lock to clear",
+			"attempt", attempt+1,
+			"delay", delay,
+		)
+
+		timer := time.NewTimer(delay)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		}
+
+		// Check if the lock file is still present.
+		if _, err := os.Stat(lockPath); err == nil {
+			continue // still locked
+		}
+
+		// Lock is gone. Pick recovery strategy
+		// based on whether git left rebase state.
+		var err error
+		if _, stateErr := w.RebaseState(ctx); stateErr == nil {
+			// Rebase state exists:
+			// the sequencer started but a pick failed.
+			// Continue from where it left off.
+			err = w.gitCmd(ctx, "rebase", "--continue").
+				WithExtraConfig(extraCfg).
+				Run()
+		} else {
+			// No rebase state:
+			// git failed before the sequencer started
+			// (e.g., during initial checkout).
+			// Re-run the original rebase command.
+			err = w.gitCmd(ctx, "rebase", rebaseArgs...).
+				WithExtraConfig(extraCfg).
+				Run()
+		}
+		if err == nil {
+			return nil
+		}
+
+		// If the recovery also hit index.lock,
+		// loop back and wait again.
+		if isIndexLockErr(err) {
+			continue
+		}
+
+		// Non-lock error from recovery.
+		return err
+	}
 }
 
 // RebaseAbort aborts an ongoing rebase operation.
