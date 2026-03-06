@@ -20,10 +20,19 @@ type client struct {
 }
 
 func newClient(baseURL string, token *AuthenticationToken, log *silog.Logger) *client {
+	return newClientWithHTTP(baseURL, token, log, http.DefaultClient)
+}
+
+func newClientWithHTTP(
+	baseURL string,
+	token *AuthenticationToken,
+	log *silog.Logger,
+	httpClient *http.Client,
+) *client {
 	return &client{
 		baseURL: baseURL,
 		token:   token,
-		http:    http.DefaultClient,
+		http:    httpClient,
 		log:     log,
 	}
 }

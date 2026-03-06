@@ -1,0 +1,406 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 146
+        host: api.bitbucket.org
+        body: '{"title":"Testing O2zaQfs0","description":"Test PR for comments","source":{"branch":{"name":"O2zaQfs0"}},"destination":{"branch":{"name":"main"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4332
+        body: '{"comment_count": 0, "task_count": 0, "type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "description": "Test PR for comments", "rendered": {"title": {"type": "rendered", "raw": "Testing O2zaQfs0", "markup": "markdown", "html": "<p>Testing O2zaQfs0</p>"}, "description": {"type": "rendered", "raw": "Test PR for comments", "markup": "markdown", "html": "<p>Test PR for comments</p>"}}, "state": "OPEN", "draft": false, "merge_commit": null, "close_source_branch": false, "closed_by": null, "author": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "reason": "", "created_on": "2026-02-03T17:38:55.650557+00:00", "updated_on": "2026-02-03T17:38:56.075887+00:00", "destination": {"branch": {"name": "main"}, "commit": {"hash": "5934bca3d15f", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/5934bca3d15f"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/5934bca3d15f"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "source": {"branch": {"name": "O2zaQfs0", "links": {}, "sync_strategies": ["merge_commit", "rebase"]}, "commit": {"hash": "ea9fb5cb0c29", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/ea9fb5cb0c29"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/ea9fb5cb0c29"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "reviewers": [], "participants": [], "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}, "commits": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/commits"}, "approve": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/approve"}, "request-changes": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/request-changes"}, "diff": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diff/test-owner/test-owner:ea9fb5cb0c29%0D5934bca3d15f?from_pullrequest_id=121&topic=true"}, "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diffstat/test-owner/test-owner:ea9fb5cb0c29%0D5934bca3d15f?from_pullrequest_id=121&topic=true"}, "comments": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments"}, "activity": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/activity"}, "merge": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/merge"}, "decline": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/decline"}, "statuses": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/statuses"}}, "summary": {"type": "rendered", "raw": "Test PR for comments", "markup": "markdown", "html": "<p>Test PR for comments</p>"}}'
+        headers:
+            Content-Length:
+                - "4332"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 916.119959ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"HLkbtLhW9yKZHKRuGbu8NtSYCQYPSDiB"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262436, "created_on": "2026-02-03T17:38:56.529261+00:00", "updated_on": "2026-02-03T17:38:56.537533+00:00", "content": {"type": "rendered", "raw": "HLkbtLhW9yKZHKRuGbu8NtSYCQYPSDiB", "markup": "markdown", "html": "<p>HLkbtLhW9yKZHKRuGbu8NtSYCQYPSDiB</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262436"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262436"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 550.517708ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"NHdXH5ITVO3eWtl59UhdDphTtt3BNK8W"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262440, "created_on": "2026-02-03T17:38:57.069986+00:00", "updated_on": "2026-02-03T17:38:57.078486+00:00", "content": {"type": "rendered", "raw": "NHdXH5ITVO3eWtl59UhdDphTtt3BNK8W", "markup": "markdown", "html": "<p>NHdXH5ITVO3eWtl59UhdDphTtt3BNK8W</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262440"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262440"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 512.250666ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"ICHcgRQLBqxvYMBOnEhhAkV5tuX3x1Ro"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262442, "created_on": "2026-02-03T17:38:57.614845+00:00", "updated_on": "2026-02-03T17:38:57.623392+00:00", "content": {"type": "rendered", "raw": "ICHcgRQLBqxvYMBOnEhhAkV5tuX3x1Ro", "markup": "markdown", "html": "<p>ICHcgRQLBqxvYMBOnEhhAkV5tuX3x1Ro</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262442"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262442"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 408.923875ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"4biBTSdlwAxqaQ15F33AeTh2rm00gyt3"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262445, "created_on": "2026-02-03T17:38:58.004511+00:00", "updated_on": "2026-02-03T17:38:58.014141+00:00", "content": {"type": "rendered", "raw": "4biBTSdlwAxqaQ15F33AeTh2rm00gyt3", "markup": "markdown", "html": "<p>4biBTSdlwAxqaQ15F33AeTh2rm00gyt3</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262445"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262445"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 409.314791ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"BUg5z6lceZa1IHZGfeaB4cryM8YZhiwX"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262446, "created_on": "2026-02-03T17:38:58.426635+00:00", "updated_on": "2026-02-03T17:38:58.434849+00:00", "content": {"type": "rendered", "raw": "BUg5z6lceZa1IHZGfeaB4cryM8YZhiwX", "markup": "markdown", "html": "<p>BUg5z6lceZa1IHZGfeaB4cryM8YZhiwX</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262446"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262446"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 409.185833ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"MjnbVJvXs3nxwdhBZFbTRosASI4XNhfi"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262448, "created_on": "2026-02-03T17:38:58.822696+00:00", "updated_on": "2026-02-03T17:38:58.830234+00:00", "content": {"type": "rendered", "raw": "MjnbVJvXs3nxwdhBZFbTRosASI4XNhfi", "markup": "markdown", "html": "<p>MjnbVJvXs3nxwdhBZFbTRosASI4XNhfi</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262448"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262448"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 337.981541ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"KyuH6cmVpI0cbNclalrqM0BgiUn75IVy"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262450, "created_on": "2026-02-03T17:38:59.190622+00:00", "updated_on": "2026-02-03T17:38:59.201111+00:00", "content": {"type": "rendered", "raw": "KyuH6cmVpI0cbNclalrqM0BgiUn75IVy", "markup": "markdown", "html": "<p>KyuH6cmVpI0cbNclalrqM0BgiUn75IVy</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262450"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262450"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 511.050875ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"bvNF3hEcTmf9D2f0OsEAM7jerptz03VJ"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262456, "created_on": "2026-02-03T17:38:59.659954+00:00", "updated_on": "2026-02-03T17:38:59.668119+00:00", "content": {"type": "rendered", "raw": "bvNF3hEcTmf9D2f0OsEAM7jerptz03VJ", "markup": "markdown", "html": "<p>bvNF3hEcTmf9D2f0OsEAM7jerptz03VJ</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262456"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262456"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 519.029042ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"6w77avxp21YvdhhlkIBVePKVzQXn6k9W"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262459, "created_on": "2026-02-03T17:39:00.235675+00:00", "updated_on": "2026-02-03T17:39:00.244628+00:00", "content": {"type": "rendered", "raw": "6w77avxp21YvdhhlkIBVePKVzQXn6k9W", "markup": "markdown", "html": "<p>6w77avxp21YvdhhlkIBVePKVzQXn6k9W</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262459"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262459"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 527.933958ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"tXJdSSeOl3uLGWoi3Glb2qeyrb7mmEpd"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262460, "created_on": "2026-02-03T17:39:00.710893+00:00", "updated_on": "2026-02-03T17:39:00.719821+00:00", "content": {"type": "rendered", "raw": "tXJdSSeOl3uLGWoi3Glb2qeyrb7mmEpd", "markup": "markdown", "html": "<p>tXJdSSeOl3uLGWoi3Glb2qeyrb7mmEpd</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262460"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262460"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 524.3015ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 54
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"dvZscRIKvKMkicr9umjp78rRiInskC8L"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262436
+        method: PUT
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 1434
+        body: '{"id": 749262436, "created_on": "2026-02-03T17:38:56.529261+00:00", "updated_on": "2026-02-03T17:39:01.246464+00:00", "content": {"type": "rendered", "raw": "dvZscRIKvKMkicr9umjp78rRiInskC8L", "markup": "markdown", "html": "<p>dvZscRIKvKMkicr9umjp78rRiInskC8L</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262436"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262436"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}'
+        headers:
+            Content-Length:
+                - "1434"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 281.801291ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.bitbucket.org
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262440
+        method: DELETE
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 0
+        body: ""
+        headers:
+            Content-Type:
+                - text/html; charset=utf-8
+        status: 204 No Content
+        code: 204
+        duration: 368.701375ms
+    - id: 13
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 33
+        host: api.bitbucket.org
+        body: '{"content":{"raw":"should fail"}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262440
+        method: PUT
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 52
+        body: '{"type": "error", "error": {"message": "749262440"}}'
+        headers:
+            Content-Length:
+                - "52"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 197.025917ms
+    - id: 14
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.bitbucket.org
+        form:
+            pagelen:
+                - "100"
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments?pagelen=100
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"values": [{"id": 749262436, "created_on": "2026-02-03T17:38:56.529261+00:00", "updated_on": "2026-02-03T17:39:01.246464+00:00", "content": {"type": "rendered", "raw": "dvZscRIKvKMkicr9umjp78rRiInskC8L", "markup": "markdown", "html": "<p>dvZscRIKvKMkicr9umjp78rRiInskC8L</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262436"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262436"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262440, "created_on": "2026-02-03T17:38:57.069986+00:00", "updated_on": "2026-02-03T17:38:57.078486+00:00", "content": {"type": "rendered", "raw": "", "markup": "markdown", "html": ""}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": true, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262440"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262440"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262442, "created_on": "2026-02-03T17:38:57.614845+00:00", "updated_on": "2026-02-03T17:38:57.623392+00:00", "content": {"type": "rendered", "raw": "ICHcgRQLBqxvYMBOnEhhAkV5tuX3x1Ro", "markup": "markdown", "html": "<p>ICHcgRQLBqxvYMBOnEhhAkV5tuX3x1Ro</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262442"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262442"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262445, "created_on": "2026-02-03T17:38:58.004511+00:00", "updated_on": "2026-02-03T17:38:58.014141+00:00", "content": {"type": "rendered", "raw": "4biBTSdlwAxqaQ15F33AeTh2rm00gyt3", "markup": "markdown", "html": "<p>4biBTSdlwAxqaQ15F33AeTh2rm00gyt3</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262445"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262445"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262446, "created_on": "2026-02-03T17:38:58.426635+00:00", "updated_on": "2026-02-03T17:38:58.434849+00:00", "content": {"type": "rendered", "raw": "BUg5z6lceZa1IHZGfeaB4cryM8YZhiwX", "markup": "markdown", "html": "<p>BUg5z6lceZa1IHZGfeaB4cryM8YZhiwX</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262446"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262446"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262448, "created_on": "2026-02-03T17:38:58.822696+00:00", "updated_on": "2026-02-03T17:38:58.830234+00:00", "content": {"type": "rendered", "raw": "MjnbVJvXs3nxwdhBZFbTRosASI4XNhfi", "markup": "markdown", "html": "<p>MjnbVJvXs3nxwdhBZFbTRosASI4XNhfi</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262448"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262448"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262450, "created_on": "2026-02-03T17:38:59.190622+00:00", "updated_on": "2026-02-03T17:38:59.201111+00:00", "content": {"type": "rendered", "raw": "KyuH6cmVpI0cbNclalrqM0BgiUn75IVy", "markup": "markdown", "html": "<p>KyuH6cmVpI0cbNclalrqM0BgiUn75IVy</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262450"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262450"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262456, "created_on": "2026-02-03T17:38:59.659954+00:00", "updated_on": "2026-02-03T17:38:59.668119+00:00", "content": {"type": "rendered", "raw": "bvNF3hEcTmf9D2f0OsEAM7jerptz03VJ", "markup": "markdown", "html": "<p>bvNF3hEcTmf9D2f0OsEAM7jerptz03VJ</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262456"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262456"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262459, "created_on": "2026-02-03T17:39:00.235675+00:00", "updated_on": "2026-02-03T17:39:00.244628+00:00", "content": {"type": "rendered", "raw": "6w77avxp21YvdhhlkIBVePKVzQXn6k9W", "markup": "markdown", "html": "<p>6w77avxp21YvdhhlkIBVePKVzQXn6k9W</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262459"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262459"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}, {"id": 749262460, "created_on": "2026-02-03T17:39:00.710893+00:00", "updated_on": "2026-02-03T17:39:00.719821+00:00", "content": {"type": "rendered", "raw": "tXJdSSeOl3uLGWoi3Glb2qeyrb7mmEpd", "markup": "markdown", "html": "<p>tXJdSSeOl3uLGWoi3Glb2qeyrb7mmEpd</p>"}, "user": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "deleted": false, "pending": false, "type": "pullrequest_comment", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121/comments/749262460"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121/_/diff#comment-749262460"}}, "pullrequest": {"type": "pullrequest", "id": 121, "title": "Testing O2zaQfs0", "draft": false, "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/121"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/121"}}}}], "pagelen": 100, "size": 10, "page": 1}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 518.511709ms

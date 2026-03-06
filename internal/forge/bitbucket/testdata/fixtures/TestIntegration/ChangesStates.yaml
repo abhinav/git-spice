@@ -1,0 +1,136 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 134
+        host: api.bitbucket.org
+        body: '{"title":"Open LMldw6Oi","description":"Open change","source":{"branch":{"name":"LMldw6Oi"}},"destination":{"branch":{"name":"main"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4265
+        body: '{"comment_count": 0, "task_count": 0, "type": "pullrequest", "id": 85, "title": "Open LMldw6Oi", "description": "Open change", "rendered": {"title": {"type": "rendered", "raw": "Open LMldw6Oi", "markup": "markdown", "html": "<p>Open LMldw6Oi</p>"}, "description": {"type": "rendered", "raw": "Open change", "markup": "markdown", "html": "<p>Open change</p>"}}, "state": "OPEN", "draft": false, "merge_commit": null, "close_source_branch": false, "closed_by": null, "author": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "reason": "", "created_on": "2026-01-30T12:51:55.346285+00:00", "updated_on": "2026-01-30T12:51:55.725968+00:00", "destination": {"branch": {"name": "main"}, "commit": {"hash": "5934bca3d15f", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/5934bca3d15f"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/5934bca3d15f"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "source": {"branch": {"name": "LMldw6Oi", "links": {}, "sync_strategies": ["merge_commit", "rebase"]}, "commit": {"hash": "ea7214b58aa7", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/ea7214b58aa7"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/ea7214b58aa7"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "reviewers": [], "participants": [], "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/85"}, "commits": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/commits"}, "approve": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/approve"}, "request-changes": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/request-changes"}, "diff": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diff/test-owner/test-owner:ea7214b58aa7%0D5934bca3d15f?from_pullrequest_id=85&topic=true"}, "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diffstat/test-owner/test-owner:ea7214b58aa7%0D5934bca3d15f?from_pullrequest_id=85&topic=true"}, "comments": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/comments"}, "activity": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/activity"}, "merge": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/merge"}, "decline": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/decline"}, "statuses": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/85/statuses"}}, "summary": {"type": "rendered", "raw": "Open change", "markup": "markdown", "html": "<p>Open change</p>"}}'
+        headers:
+            Content-Length:
+                - "4265"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 893.582292ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 138
+        host: api.bitbucket.org
+        body: '{"title":"Merged wNORH0DY","description":"Merged change","source":{"branch":{"name":"wNORH0DY"}},"destination":{"branch":{"name":"main"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4281
+        body: '{"comment_count": 0, "task_count": 0, "type": "pullrequest", "id": 86, "title": "Merged wNORH0DY", "description": "Merged change", "rendered": {"title": {"type": "rendered", "raw": "Merged wNORH0DY", "markup": "markdown", "html": "<p>Merged wNORH0DY</p>"}, "description": {"type": "rendered", "raw": "Merged change", "markup": "markdown", "html": "<p>Merged change</p>"}}, "state": "OPEN", "draft": false, "merge_commit": null, "close_source_branch": false, "closed_by": null, "author": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "reason": "", "created_on": "2026-01-30T12:51:56.153736+00:00", "updated_on": "2026-01-30T12:51:56.516503+00:00", "destination": {"branch": {"name": "main"}, "commit": {"hash": "5934bca3d15f", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/5934bca3d15f"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/5934bca3d15f"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "source": {"branch": {"name": "wNORH0DY", "links": {}, "sync_strategies": ["merge_commit", "rebase"]}, "commit": {"hash": "f736ec2d8333", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/f736ec2d8333"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/f736ec2d8333"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "reviewers": [], "participants": [], "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/86"}, "commits": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/commits"}, "approve": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/approve"}, "request-changes": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/request-changes"}, "diff": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diff/test-owner/test-owner:f736ec2d8333%0D5934bca3d15f?from_pullrequest_id=86&topic=true"}, "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diffstat/test-owner/test-owner:f736ec2d8333%0D5934bca3d15f?from_pullrequest_id=86&topic=true"}, "comments": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/comments"}, "activity": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/activity"}, "merge": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/merge"}, "decline": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/decline"}, "statuses": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/statuses"}}, "summary": {"type": "rendered", "raw": "Merged change", "markup": "markdown", "html": "<p>Merged change</p>"}}'
+        headers:
+            Content-Length:
+                - "4281"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 825.416292ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 138
+        host: api.bitbucket.org
+        body: '{"title":"Closed f6TbzoRn","description":"Closed change","source":{"branch":{"name":"f6TbzoRn"}},"destination":{"branch":{"name":"main"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4281
+        body: '{"comment_count": 0, "task_count": 0, "type": "pullrequest", "id": 87, "title": "Closed f6TbzoRn", "description": "Closed change", "rendered": {"title": {"type": "rendered", "raw": "Closed f6TbzoRn", "markup": "markdown", "html": "<p>Closed f6TbzoRn</p>"}, "description": {"type": "rendered", "raw": "Closed change", "markup": "markdown", "html": "<p>Closed change</p>"}}, "state": "OPEN", "draft": false, "merge_commit": null, "close_source_branch": false, "closed_by": null, "author": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "reason": "", "created_on": "2026-01-30T12:51:56.990280+00:00", "updated_on": "2026-01-30T12:51:57.362957+00:00", "destination": {"branch": {"name": "main"}, "commit": {"hash": "5934bca3d15f", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/5934bca3d15f"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/5934bca3d15f"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "source": {"branch": {"name": "f6TbzoRn", "links": {}, "sync_strategies": ["merge_commit", "rebase"]}, "commit": {"hash": "06aac8041503", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/06aac8041503"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/06aac8041503"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "reviewers": [], "participants": [], "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/87"}, "commits": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/commits"}, "approve": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/approve"}, "request-changes": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/request-changes"}, "diff": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diff/test-owner/test-owner:06aac8041503%0D5934bca3d15f?from_pullrequest_id=87&topic=true"}, "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diffstat/test-owner/test-owner:06aac8041503%0D5934bca3d15f?from_pullrequest_id=87&topic=true"}, "comments": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/comments"}, "activity": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/activity"}, "merge": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/merge"}, "decline": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/decline"}, "statuses": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/87/statuses"}}, "summary": {"type": "rendered", "raw": "Closed change", "markup": "markdown", "html": "<p>Closed change</p>"}}'
+        headers:
+            Content-Length:
+                - "4281"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 811.392958ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.bitbucket.org
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/approve
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 11
+        body: Bad Request
+        headers:
+            Content-Length:
+                - "11"
+            Content-Type:
+                - text/plain
+        status: 400 Bad Request
+        code: 400
+        duration: 272.054542ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.bitbucket.org
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/86/merge
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 11
+        body: Bad Request
+        headers:
+            Content-Length:
+                - "11"
+            Content-Type:
+                - text/plain
+        status: 400 Bad Request
+        code: 400
+        duration: 96.3795ms
