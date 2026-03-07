@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/alecthomas/kong v1.14.0
 	github.com/buildkite/shellwords v1.0.1
-	github.com/charmbracelet/bubbles v1.0.0
+	github.com/charmbracelet/bubbles/v2 v2.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/cli/browser v1.3.0
