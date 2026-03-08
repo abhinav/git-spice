@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  Upgrade TUI rendering to v2 of underlying libraries.
+  No user-facing changes are expected, but significant internal refactoring was required.
+  If you encounter unexpected side effects, please [report them here](https://github.com/abhinav/git-spice/issues).
+time: 2026-03-10T14:28:52.586798-07:00

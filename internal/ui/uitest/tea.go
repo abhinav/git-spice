@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -103,18 +103,18 @@ func Drive(
 
 // PressN simulates pressing the given key n times.
 // It blocks until the model has processed all resulting messages.
-func (d *Driver) PressN(key tea.KeyType, n int) {
+func (d *Driver) PressN(key rune, n int) {
 	d.t.Helper()
 
 	for range n {
-		d.inbound = append(d.inbound, tea.KeyMsg{Type: key})
+		d.inbound = append(d.inbound, tea.KeyPressMsg{Code: key})
 	}
 	d.step()
 }
 
 // Press simulates pressing the given key once.
 // It blocks until the model has processed all resulting messages.
-func (d *Driver) Press(key tea.KeyType) {
+func (d *Driver) Press(key rune) {
 	d.t.Helper()
 
 	d.PressN(key, 1)
@@ -124,9 +124,9 @@ func (d *Driver) Press(key tea.KeyType) {
 // It blocks until the model has processed all resulting messages.
 func (d *Driver) Type(s string) {
 	for _, r := range s {
-		d.inbound = append(d.inbound, tea.KeyMsg{
-			Type:  tea.KeyRunes,
-			Runes: []rune{r},
+		d.inbound = append(d.inbound, tea.KeyPressMsg{
+			Code: r,
+			Text: string(r),
 		})
 	}
 
@@ -177,21 +177,24 @@ type driverView struct {
 
 var _ ui.InteractiveView = (*driverView)(nil)
 
+func (*driverView) Theme() ui.Theme { return ui.DefaultThemeLight() }
+
 func (v *driverView) Prompt(fields ...ui.Field) error {
 	form := ui.NewForm(fields...)
-
-	// WindowSizeMsg must always be first
-	// after initialization.
 	var pending []tea.Msg
+
 	if cmd := form.Init(); cmd != nil {
 		pending = append(pending, cmd())
 	}
+
+	// WindowSizeMsg must always be first
+	// after initialization.
 	pending = append(pending, tea.WindowSizeMsg{
 		Width:  v.w,
 		Height: v.h,
 	})
 
-	v.driver.formView = form.View
+	v.driver.formView = form.Render
 	defer func() {
 		v.driver.formView = nil
 	}()
@@ -220,24 +223,20 @@ func (v *driverView) Prompt(fields ...ui.Field) error {
 			return nil
 
 		case tea.BatchMsg:
-			// Batch messages should be inserted to the front.
-			var prepend []tea.Msg
 			for _, cmd := range msg {
-				if msg := cmd(); msg != nil {
-					prepend = append(prepend, msg)
+				if cmd != nil {
+					pending = append(pending, cmd())
 				}
 			}
-			pending = append(prepend, pending...)
 
 		default:
 			// For all other messages,
 			// send them to the form for processing.
 			// Form mutates its state internally,
 			// so we don't need to capture the new state.
-			if _, cmd := form.Update(msg); cmd != nil {
-				if msg := cmd(); msg != nil {
-					pending = append(pending, msg)
-				}
+			_, cmd := form.Update(msg)
+			if cmd != nil {
+				pending = append(pending, cmd())
 			}
 		}
 	}

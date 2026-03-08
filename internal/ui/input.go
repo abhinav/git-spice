@@ -3,10 +3,9 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/cursor"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 )
 
 // InputKeyMap defines the key bindings for an input field.
@@ -38,6 +37,11 @@ type InputStyle struct{}
 // DefaultInputStyle is the default style for an input field.
 var DefaultInputStyle = InputStyle{}
 
+// InputCursorBlinks controls whether the Bubble Tea text cursor blinks.
+// Tests disable this to avoid background redraw traffic
+// that makes scripted snapshots unstable.
+var InputCursorBlinks = true
+
 // Input is a text input field.
 // It accepts a single line of text.
 type Input struct {
@@ -64,7 +68,6 @@ var _ Field = (*Input)(nil)
 func NewInput() *Input {
 	m := textinput.New()
 	m.Prompt = "" // we have our own prompt
-	m.Cursor.SetMode(cursor.CursorStatic)
 	return &Input{
 		KeyMap:    DefaultInputKeyMap,
 		Style:     DefaultInputStyle,
@@ -167,6 +170,10 @@ func (i *Input) WithValidate(f func(string) error) *Input {
 
 // Init initializes the field.
 func (i *Input) Init() tea.Cmd {
+	styles := i.model.Styles()
+	styles.Cursor.Blink = InputCursorBlinks
+	i.model.SetStyles(styles)
+
 	i.model.SetValue(*i.value)
 	i.model.Err = nil
 
@@ -235,6 +242,6 @@ func (i *Input) Update(msg tea.Msg) tea.Cmd {
 }
 
 // Render renders the input field.
-func (i *Input) Render(w Writer) {
+func (i *Input) Render(w Writer, _ Theme) {
 	w.WriteString(i.model.View())
 }

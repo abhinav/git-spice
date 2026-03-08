@@ -15,7 +15,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/log/silog"
@@ -77,16 +77,10 @@ func New(w io.Writer, opts *Options) *Logger {
 	must.Bef(opts.Level <= LevelError, "level must be <= LevelError, got %d", opts.Level)
 
 	if opts.Style == nil {
-		// The output writer must be file-like to check if it is a TTY.
-		var isTTY bool
-		if fileLike, ok := w.(interface{ Fd() uintptr }); ok {
-			isTTY = isatty.IsTerminal(fileLike.Fd())
-		}
-
-		if isTTY {
-			opts.Style = silog.DefaultStyle(lipgloss.DefaultRenderer())
+		if shouldColorize(w) {
+			opts.Style = silog.DefaultStyle()
 		} else {
-			opts.Style = silog.PlainStyle(lipgloss.DefaultRenderer())
+			opts.Style = silog.PlainStyle()
 		}
 	}
 
@@ -122,6 +116,19 @@ func New(w io.Writer, opts *Options) *Logger {
 		lvl:     &lvl,
 		onFatal: onFatal,
 	}
+}
+
+func shouldColorize(w io.Writer) bool {
+	if cpw, ok := w.(*colorprofile.Writer); ok {
+		return cpw.Profile > colorprofile.NoTTY
+	}
+
+	// The output writer must be file-like to check if it is a TTY.
+	if fileLike, ok := w.(interface{ Fd() uintptr }); ok {
+		return isatty.IsTerminal(fileLike.Fd())
+	}
+
+	return false
 }
 
 // Clone returns a new logger with the same configuration

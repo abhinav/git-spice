@@ -31,7 +31,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: NewMockGitRepository(ctrl),
 			Store:      store,
 			Service:    NewMockService(ctrl),
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -74,7 +74,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -105,7 +105,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -153,7 +153,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err = handler.TrackBranch(ctx, &BranchRequest{
@@ -189,7 +189,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{
@@ -222,7 +222,7 @@ func TestHandler_TrackBranch(t *testing.T) {
 			Repository: mockRepo,
 			Store:      store,
 			Service:    mockService,
-			View:       &ui.FileView{W: t.Output()},
+			View:       ui.NewFileView(t.Output()),
 		}
 
 		err := handler.TrackBranch(t.Context(), &BranchRequest{

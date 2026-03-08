@@ -3,7 +3,7 @@ package ui
 import (
 	"errors"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Deferred is a field that is not constructed
@@ -66,11 +66,11 @@ func (d *Deferred) Err() error {
 }
 
 // Render renders the deferred field.
-func (d *Deferred) Render(w Writer) {
+func (d *Deferred) Render(w Writer, theme Theme) {
 	if d.f == nil {
 		return
 	}
-	d.f.Render(w)
+	d.f.Render(w, theme)
 }
 
 // Update receives a new event.

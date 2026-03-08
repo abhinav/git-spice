@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/commit"
@@ -119,64 +119,64 @@ type PushStatus struct {
 // Style defines visual styling for branch items.
 type Style struct {
 	// Branch styles the branch name for normal items.
-	Branch lipgloss.Style
+	Branch ui.Style
 
 	// BranchHighlighted styles the branch name for highlighted items.
-	BranchHighlighted lipgloss.Style
+	BranchHighlighted ui.Style
 
 	// BranchDisabled styles the branch name for disabled items.
-	BranchDisabled lipgloss.Style
+	BranchDisabled ui.Style
 
 	// ChangeID styles the change ID/URL text.
-	ChangeID lipgloss.Style
+	ChangeID ui.Style
 
 	// ChangeState styles for different change states.
 	// Each style must include the text via SetString.
 	ChangeState ChangeStateStyle
 
 	// Worktree styles the worktree indicator.
-	Worktree lipgloss.Style
+	Worktree ui.Style
 
 	// PushStatus styles the push status text.
-	PushStatus lipgloss.Style
+	PushStatus ui.Style
 
 	// NeedsRestack styles the needs-restack indicator.
 	// Must include the text " (needs restack)" via SetString.
-	NeedsRestack lipgloss.Style
+	NeedsRestack ui.Style
 
 	// NodeMarker is the default node marker style.
 	// Must include the marker character via SetString.
-	NodeMarker lipgloss.Style
+	NodeMarker ui.Style
 
 	// NodeMarkerHighlighted styles the node marker for highlighted items.
 	// Must include the marker character via SetString.
-	NodeMarkerHighlighted lipgloss.Style
+	NodeMarkerHighlighted ui.Style
 
 	// NodeMarkerDisabled styles the node marker for disabled items.
 	// Must include the marker character via SetString.
-	NodeMarkerDisabled lipgloss.Style
+	NodeMarkerDisabled ui.Style
 
 	// TextHighlight styles characters matching fuzzy search.
-	TextHighlight lipgloss.Style
+	TextHighlight ui.Style
 
 	// Marker is the trailing selection marker shown for highlighted items.
 	// Must include the marker character via SetString.
-	Marker lipgloss.Style
+	Marker ui.Style
 }
 
 // ChangeStateStyle styles different change states.
 type ChangeStateStyle struct {
 	// Open styles the "open" state text.
 	// Must include text via SetString.
-	Open lipgloss.Style
+	Open ui.Style
 
 	// Closed styles the "closed" state text.
 	// Must include text via SetString.
-	Closed lipgloss.Style
+	Closed ui.Style
 
 	// Merged styles the "merged" state text.
 	// Must include text via SetString.
-	Merged lipgloss.Style
+	Merged ui.Style
 }
 
 // DefaultStyle is the default style for rendering branch trees.
@@ -203,6 +203,9 @@ var DefaultStyle = Style{
 
 // GraphOptions configures branch tree rendering.
 type GraphOptions struct {
+	// Theme defines the theme for default styles.
+	Theme ui.Theme
+
 	// Style defines visual styling for all items.
 	// If nil, DefaultStyle is used.
 	Style *Style
@@ -246,8 +249,12 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 		opts = &GraphOptions{}
 	}
 
-	style := *cmp.Or(opts.Style, &DefaultStyle)
+	if opts.Style == nil {
+		opts.Style = &DefaultStyle
+	}
+	style := opts.Style.resolve(opts.Theme)
 	renderer := branchTreeRenderer{
+		Theme:            opts.Theme,
 		Style:            style,
 		CommitStyle:      *cmp.Or(opts.CommitStyle, &commit.DefaultSummaryStyle),
 		PushStatusFormat: opts.PushStatusFormat,
@@ -257,14 +264,14 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 
 	treeStyle := &fliptree.Style[*Item]{
 		Joint: ui.NewStyle().Faint(true),
-		NodeMarker: func(item *Item) lipgloss.Style {
+		NodeMarker: func(item *Item) ui.Style {
 			switch {
 			case item.Disabled:
-				return style.NodeMarkerDisabled
+				return opts.Style.NodeMarkerDisabled
 			case item.Highlighted:
-				return style.NodeMarkerHighlighted
+				return opts.Style.NodeMarkerHighlighted
 			default:
-				return style.NodeMarker
+				return opts.Style.NodeMarker
 			}
 		},
 	}
@@ -274,11 +281,15 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 		Roots:  g.Roots,
 		Edges:  func(item *Item) []int { return item.Aboves },
 		View:   renderer.RenderItem,
-	}, fliptree.Options[*Item]{Style: treeStyle})
+	}, fliptree.Options[*Item]{
+		Theme: opts.Theme,
+		Style: treeStyle,
+	})
 }
 
 type branchTreeRenderer struct {
-	Style            Style
+	Theme            ui.Theme
+	Style            branchTreeStyle
 	CommitStyle      commit.SummaryStyle
 	PushStatusFormat PushStatusFormat
 	CurrentWorktree  string
@@ -455,7 +466,55 @@ func (r *branchTreeRenderer) commits(
 
 	for _, commit := range commits {
 		sb.WriteString("\n")
-		commit.Render(sb, commitStyle, nil /* options */)
+		commit.Render(sb, r.Theme, commitStyle, nil /* options */)
+	}
+}
+
+type branchTreeStyle struct {
+	Branch                lipgloss.Style
+	BranchHighlighted     lipgloss.Style
+	BranchDisabled        lipgloss.Style
+	ChangeID              lipgloss.Style
+	ChangeState           changeStateStyle
+	Worktree              lipgloss.Style
+	PushStatus            lipgloss.Style
+	NeedsRestack          lipgloss.Style
+	NodeMarker            lipgloss.Style
+	NodeMarkerHighlighted lipgloss.Style
+	NodeMarkerDisabled    lipgloss.Style
+	TextHighlight         lipgloss.Style
+	Marker                lipgloss.Style
+}
+
+func (s Style) resolve(theme ui.Theme) branchTreeStyle {
+	return branchTreeStyle{
+		Branch:                s.Branch.Resolve(theme),
+		BranchHighlighted:     s.BranchHighlighted.Resolve(theme),
+		BranchDisabled:        s.BranchDisabled.Resolve(theme),
+		ChangeID:              s.ChangeID.Resolve(theme),
+		ChangeState:           s.ChangeState.resolve(theme),
+		Worktree:              s.Worktree.Resolve(theme),
+		PushStatus:            s.PushStatus.Resolve(theme),
+		NeedsRestack:          s.NeedsRestack.Resolve(theme),
+		NodeMarker:            s.NodeMarker.Resolve(theme),
+		NodeMarkerHighlighted: s.NodeMarkerHighlighted.Resolve(theme),
+		NodeMarkerDisabled:    s.NodeMarkerDisabled.Resolve(theme),
+		TextHighlight:         s.TextHighlight.Resolve(theme),
+		Marker:                s.Marker.Resolve(theme),
+	}
+}
+
+type changeStateStyle struct {
+	Open   lipgloss.Style
+	Closed lipgloss.Style
+	Merged lipgloss.Style
+}
+
+func (s ChangeStateStyle) resolve(theme ui.Theme) changeStateStyle {
+	return changeStateStyle{
+		Open:   s.Open.Resolve(theme),
+		Closed: s.Closed.Resolve(theme),
+		Merged: s.Merged.Resolve(theme),
 	}
 }
 

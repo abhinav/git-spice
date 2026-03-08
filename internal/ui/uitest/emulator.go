@@ -1,14 +1,16 @@
 package uitest
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/vito/midterm"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -27,6 +29,9 @@ type EmulatorView struct {
 }
 
 var _ ui.InteractiveView = (*EmulatorView)(nil)
+
+// Theme reports the test terminal theme.
+func (*EmulatorView) Theme() ui.Theme { return ui.DefaultThemeLight() }
 
 // EmulatorViewOptions are options for creating an [EmulatorView].
 type EmulatorViewOptions struct {
@@ -53,6 +58,10 @@ func NewEmulatorView(opts *EmulatorViewOptions) *EmulatorView {
 	)
 	term.AutoResizeX = !opts.NoAutoResize
 	term.AutoResizeY = !opts.NoAutoResize
+	// Bubble Tea v2 renders assuming raw-terminal line-feed semantics.
+	// Midterm defaults to cooked-mode behavior, where '\n' implies '\r\n',
+	// which breaks relative cursor updates in the emulator.
+	term.Raw = true
 
 	logf := opts.Logf
 	if logf == nil {
@@ -92,12 +101,12 @@ func (e *EmulatorView) Prompt(fs ...ui.Field) error {
 	return ui.NewForm(fs...).Run(&ui.FormRunOptions{
 		Input:  stdinR,
 		Output: e,
+		Theme:  e.Theme(),
+		Width:  w,
+		Height: h,
 		// In-memory terminal emulator cannot be queried for size,
-		// so inject this manually.
-		SendMsg: tea.WindowSizeMsg{
-			Width:  w,
-			Height: h,
-		},
+		// so inject this manually for models that expect a startup resize msg.
+		SendMsg:        tea.WindowSizeMsg{Width: w, Height: h},
 		WithoutSignals: true,
 	})
 }
@@ -106,7 +115,33 @@ func (e *EmulatorView) Prompt(fs ...ui.Field) error {
 func (e *EmulatorView) Write(p []byte) (n int, err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.term.Write(p)
+
+	n = len(p)
+	for len(p) > 0 {
+		tab := bytes.IndexByte(p, '\t')
+		if tab < 0 {
+			_, err := e.term.Write(p)
+			return n, err
+		}
+
+		if tab > 0 {
+			if _, err := e.term.Write(p[:tab]); err != nil {
+				return n, err
+			}
+		}
+
+		// Bubble Tea v2 uses HT as a cursor-movement optimization during
+		// redraws. Midterm expands tabs into spaces, which erases previously
+		// rendered cells instead of just advancing the cursor.
+		move := 8 - (e.term.Cursor.X % 8)
+		if move == 0 {
+			move = 8
+		}
+		e.term.MoveForward(move)
+		p = p[tab+1:]
+	}
+
+	return n, nil
 }
 
 // Close closes the EmulatorView and frees its resources.
@@ -160,10 +195,26 @@ func (e *EmulatorView) Snapshot() string {
 func trimRightWS(rs []rune) []rune {
 	for i := len(rs) - 1; i >= 0; i-- {
 		switch rs[i] {
-		case ' ', '\t', '\n':
+		case 0, ' ', '\t', '\n':
 			// next
 		default:
-			return rs[:i+1]
+			rs = rs[:i+1]
+
+			// Midterm stores untouched cells as zero runes.
+			// Those cells render as spaces, but mutating a subslice here would
+			// write back into the terminal buffer, so copy only when
+			// normalization is actually needed.
+			if j := slices.Index(rs, 0); j >= 0 {
+				rs = slices.Clone(rs)
+				for k := j; k < len(rs); k++ {
+					if rs[k] == 0 {
+						rs[k] = ' '
+					}
+				}
+				return rs
+			}
+
+			return rs
 		}
 	}
 	return nil

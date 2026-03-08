@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/stretchr/testify/assert"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -30,6 +31,32 @@ func TestLogger_changeLevel(t *testing.T) {
 
 	logger.Debug("foo")
 	assert.Equal(t, "DBG foo\n", buffer.String())
+}
+
+func TestLogger_wrappedWriterStyle(t *testing.T) {
+	t.Run("ColorProfileWriter", func(t *testing.T) {
+		var buffer strings.Builder
+		logger := silog.New(&colorprofile.Writer{
+			Forward: &buffer,
+			Profile: colorprofile.ANSI,
+		}, nil)
+
+		logger.Info("hello")
+
+		assert.Contains(t, buffer.String(), "\x1b[")
+	})
+
+	t.Run("NoTTYColorProfileWriter", func(t *testing.T) {
+		var buffer strings.Builder
+		logger := silog.New(&colorprofile.Writer{
+			Forward: &buffer,
+			Profile: colorprofile.NoTTY,
+		}, nil)
+
+		logger.Info("hello")
+
+		assert.Equal(t, "INF hello\n", buffer.String())
+	})
 }
 
 func TestLogger_formatting(t *testing.T) {

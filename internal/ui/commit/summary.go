@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/dustin/go-humanize"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/ui"
@@ -34,9 +33,9 @@ type Summary struct {
 
 // SummaryStyle is the style for rendering a Summary.
 type SummaryStyle struct {
-	Hash    lipgloss.Style
-	Subject lipgloss.Style
-	Time    lipgloss.Style
+	Hash    ui.Style
+	Subject ui.Style
+	Time    ui.Style
 }
 
 // Faint returns a copy of the style with the faint attribute set to f.
@@ -69,18 +68,23 @@ type SummaryOptions struct {
 }
 
 // Render renders a Summary to the given writer.
-func (c *Summary) Render(w ui.Writer, style SummaryStyle, opts *SummaryOptions) {
+func (c *Summary) Render(
+	w ui.Writer,
+	theme ui.Theme,
+	style SummaryStyle,
+	opts *SummaryOptions,
+) {
 	opts = cmp.Or(opts, &SummaryOptions{})
 	now := opts.Now
 	if now == nil {
 		now = _timeNow
 	}
 
-	w.WriteString(style.Hash.Render(c.ShortHash.String()))
+	w.WriteString(style.Hash.Render(theme, c.ShortHash.String()))
 	w.WriteString(" ")
-	w.WriteString(style.Subject.Render(c.Subject))
+	w.WriteString(style.Subject.Render(theme, c.Subject))
 	w.WriteString(" ")
-	w.WriteString(style.Time.Render("(" + humanizeTime(now, c.AuthorDate) + ")"))
+	w.WriteString(style.Time.Render(theme, "("+humanizeTime(now, c.AuthorDate)+")"))
 }
 
 func humanizeTime(now func() time.Time, t time.Time) string {

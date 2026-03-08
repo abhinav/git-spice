@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
@@ -119,7 +120,7 @@ func TestWrite(t *testing.T) {
 				Items: []*Item{{
 					Branch:      "feat1",
 					ChangeID:    "#123",
-					ChangeState: ptr(forge.ChangeOpen),
+					ChangeState: new(forge.ChangeOpen),
 				}},
 				Roots: []int{0},
 			},
@@ -131,7 +132,7 @@ func TestWrite(t *testing.T) {
 				Items: []*Item{{
 					Branch:      "feat1",
 					ChangeID:    "#456",
-					ChangeState: ptr(forge.ChangeClosed),
+					ChangeState: new(forge.ChangeClosed),
 				}},
 				Roots: []int{0},
 			},
@@ -143,7 +144,7 @@ func TestWrite(t *testing.T) {
 				Items: []*Item{{
 					Branch:      "feat1",
 					ChangeID:    "#789",
-					ChangeState: ptr(forge.ChangeMerged),
+					ChangeState: new(forge.ChangeMerged),
 				}},
 				Roots: []int{0},
 			},
@@ -286,7 +287,7 @@ func TestWrite(t *testing.T) {
 				Items: []*Item{{
 					Branch:       "feat1",
 					ChangeID:     "#42",
-					ChangeState:  ptr(forge.ChangeOpen),
+					ChangeState:  new(forge.ChangeOpen),
 					Worktree:     p("/home/user/feat1"),
 					NeedsRestack: true,
 					PushStatus:   PushStatus{Ahead: 1},
@@ -322,7 +323,7 @@ func TestWrite(t *testing.T) {
 
 			var sb strings.Builder
 			require.NoError(t, Write(&sb, tt.give, opts))
-			assert.Equal(t, tt.want, sb.String())
+			assert.Equal(t, tt.want, ansi.Strip(sb.String()))
 		})
 	}
 }
@@ -364,7 +365,7 @@ func TestBranchTreeRenderer_worktree(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &branchTreeRenderer{
-				Style:   *plainStyle(),
+				Style:   plainStyle().resolve(ui.DefaultThemeLight()),
 				HomeDir: tt.homeDir,
 			}
 
@@ -441,7 +442,7 @@ func TestBranchTreeRenderer_worktreeHighlights(t *testing.T) {
 			)()
 
 			r := &branchTreeRenderer{
-				Style:   *plainStyle(),
+				Style:   plainStyle().resolve(ui.DefaultThemeLight()),
 				HomeDir: tt.homeDir,
 			}
 
@@ -580,9 +581,4 @@ func plainCommitStyle() *commit.SummaryStyle {
 // joinLines joins lines with newlines and adds a trailing newline.
 func joinLines(lines ...string) string {
 	return strings.Join(lines, "\n") + "\n"
-}
-
-//go:fix inline
-func ptr[T any](v T) *T {
-	return new(v)
 }

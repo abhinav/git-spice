@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"slices"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/ui"
@@ -18,8 +17,8 @@ type BranchSplitStyle struct {
 	Commit     commit.SummaryStyle
 	HeadCommit commit.SummaryStyle
 
-	SplitMarker lipgloss.Style
-	HeadMarker  lipgloss.Style
+	SplitMarker ui.Style
+	HeadMarker  ui.Style
 }
 
 // DefaultBranchSplitStyle is the default style for a [BranchSplit].
@@ -46,12 +45,12 @@ var _ ui.Field = (*BranchSplit)(nil)
 
 // NewBranchSplit creates a new [BranchSplit] widget.
 func NewBranchSplit() *BranchSplit {
-	bs := &BranchSplit{
-		Style: DefaultBranchSplitStyle,
-	}
+	bs := &BranchSplit{Style: DefaultBranchSplitStyle}
 	bs.model = ui.NewMultiSelect(bs.renderCommit)
-	bs.model.Style.ScrollUp = ui.NewStyle().Foreground(ui.Gray).SetString("    ▲▲▲")
-	bs.model.Style.ScrollDown = ui.NewStyle().Foreground(ui.Gray).SetString("    ▼▼▼")
+	style := ui.DefaultMultiSelectStyle
+	style.ScrollUp = style.ScrollUp.SetString("    ▲▲▲")
+	style.ScrollDown = style.ScrollDown.SetString("    ▼▼▼")
+	bs.model.Style = style
 	return bs
 }
 
@@ -147,15 +146,21 @@ func (b *BranchSplit) Update(msg tea.Msg) tea.Cmd {
 	return b.model.Update(msg)
 }
 
-func (b *BranchSplit) renderCommit(w ui.Writer, idx int, option ui.MultiSelectOption[commit.Summary]) {
-	commitStyle := b.Style.Commit
+func (b *BranchSplit) renderCommit(
+	w ui.Writer,
+	theme ui.Theme,
+	idx int,
+	option ui.MultiSelectOption[commit.Summary],
+) {
+	style := b.Style
+	commitStyle := style.Commit
 	headIdx := len(b.commits) - 1
 	switch {
 	case idx == headIdx:
-		commitStyle = b.Style.HeadCommit
-		w.WriteString(b.Style.HeadMarker.String())
+		commitStyle = style.HeadCommit
+		w.WriteString(style.HeadMarker.String(theme))
 	case option.Selected:
-		w.WriteString(b.Style.SplitMarker.String())
+		w.WriteString(style.SplitMarker.String(theme))
 	default:
 		w.WriteString(" ")
 	}
@@ -170,16 +175,16 @@ func (b *BranchSplit) renderCommit(w ui.Writer, idx int, option ui.MultiSelectOp
 		ShortHash:  c.ShortHash,
 		Subject:    c.Subject,
 		AuthorDate: c.AuthorDate,
-	}).Render(w, commitStyle, &summaryOptions)
+	}).Render(w, theme, commitStyle, &summaryOptions)
 
 	if idx == headIdx && b.head != "" {
 		w.WriteString(" [")
-		w.WriteString(b.Style.HeadCommit.Subject.Render(b.head))
+		w.WriteString(style.HeadCommit.Subject.Render(theme, b.head))
 		w.WriteString("]")
 	}
 }
 
 // Render renders the widget to the given writer.
-func (b *BranchSplit) Render(w ui.Writer) {
-	b.model.Render(w)
+func (b *BranchSplit) Render(w ui.Writer, theme ui.Theme) {
+	b.model.Render(w, theme)
 }

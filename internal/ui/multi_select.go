@@ -3,9 +3,8 @@ package ui
 import (
 	"slices"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/must"
 )
 
@@ -27,7 +26,8 @@ var DefaultMultiSelectKeyMap = MultiSelectKeyMap{
 		key.WithHelp("down/j", "move down"),
 	),
 	Toggle: key.NewBinding(
-		key.WithKeys(" ", "right"),
+		// Bubble Tea v2 names the spacebar "space" rather than " ".
+		key.WithKeys("space", "right"),
 		key.WithHelp("space", "toggle split"),
 	),
 	Accept: key.NewBinding(
@@ -39,16 +39,16 @@ var DefaultMultiSelectKeyMap = MultiSelectKeyMap{
 // MultiSelectStyle defines the styles for [MultiSelect].
 type MultiSelectStyle struct {
 	// Cursor is the string to use for the cursor.
-	Cursor lipgloss.Style
+	Cursor Style
 
 	// Done is the string for the Done button.
-	Done lipgloss.Style
+	Done Style
 
 	// ScrollUp is the string for the scroll up marker.
-	ScrollUp lipgloss.Style
+	ScrollUp Style
 
 	// ScrollDown is the string for the scroll down marker.
-	ScrollDown lipgloss.Style
+	ScrollDown Style
 }
 
 // DefaultMultiSelectStyle is the default style for a [MultiSelect].
@@ -67,7 +67,7 @@ type MultiSelect[T any] struct {
 	title string
 	desc  string
 
-	renderOption func(Writer, int, MultiSelectOption[T])
+	renderOption func(Writer, Theme, int, MultiSelectOption[T])
 	options      []MultiSelectOption[T]
 
 	cursor  mutliSelectCursor
@@ -80,7 +80,9 @@ type MultiSelect[T any] struct {
 var _ Field = (*MultiSelect[int])(nil)
 
 // NewMultiSelect constructs a new multi-select field.
-func NewMultiSelect[T any](render func(Writer, int, MultiSelectOption[T])) *MultiSelect[T] {
+func NewMultiSelect[T any](
+	render func(Writer, Theme, int, MultiSelectOption[T]),
+) *MultiSelect[T] {
 	return &MultiSelect[T]{
 		renderOption: render,
 		KeyMap:       DefaultMultiSelectKeyMap,
@@ -184,7 +186,7 @@ func (s *MultiSelect[T]) Init() tea.Cmd {
 func (s *MultiSelect[T]) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		s.visible = msg.Height - 5 // two scroll markers + Done
+		s.visible = max(1, msg.Height-5) // two scroll markers + Done
 
 	case tea.KeyMsg:
 		switch {
@@ -266,7 +268,9 @@ func (s *MultiSelect[T]) moveCursor(forwards bool) {
 }
 
 // Render renders the multi-select field.
-func (s *MultiSelect[T]) Render(w Writer) {
+func (s *MultiSelect[T]) Render(w Writer, theme Theme) {
+	style := s.Style
+
 	options := s.options
 	var offset int
 
@@ -277,7 +281,7 @@ func (s *MultiSelect[T]) Render(w Writer) {
 
 		w.WriteString("\n")
 		if s.offset > 0 {
-			w.WriteString(s.Style.ScrollUp.String())
+			w.WriteString(style.ScrollUp.String(theme))
 		}
 	}
 
@@ -286,21 +290,21 @@ func (s *MultiSelect[T]) Render(w Writer) {
 
 		w.WriteString("\n")
 		if idx == s.cursor.idx {
-			w.WriteString(s.Style.Cursor.String())
+			w.WriteString(style.Cursor.String(theme))
 		} else {
 			w.WriteString(" ")
 		}
 
 		w.WriteString(" ")
 
-		s.renderOption(w, idx, option)
+		s.renderOption(w, theme, idx, option)
 	}
 
 	// Need a scrollbar below the list.
 	if s.visible < len(s.options) && !s.accepted {
 		w.WriteString("\n")
 		if s.offset+s.visible < len(s.options)-1 {
-			w.WriteString(s.Style.ScrollDown.String())
+			w.WriteString(style.ScrollDown.String(theme))
 		}
 	}
 
@@ -308,11 +312,11 @@ func (s *MultiSelect[T]) Render(w Writer) {
 	if !s.accepted {
 		w.WriteString("\n")
 		if s.cursor.done() {
-			w.WriteString(s.Style.Cursor.String())
+			w.WriteString(style.Cursor.String(theme))
 		} else {
 			w.WriteString(" ")
 		}
 		w.WriteString(" ")
-		w.WriteString(s.Style.Done.String())
+		w.WriteString(style.Done.String(theme))
 	}
 }

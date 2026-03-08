@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,7 +76,7 @@ func TestAuthHasGitHubToken(t *testing.T) {
 		Log: silog.New(&logBuffer, nil),
 	}
 
-	view := &ui.FileView{W: io.Discard}
+	view := ui.NewFileView(io.Discard)
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
 		_, err := f.AuthenticationFlow(t.Context(), view)
@@ -181,7 +181,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 			DeviceAuthURL: srv.URL + "/device/code",
 			TokenURL:      srv.URL + "/oauth/access_token",
 		},
-	}).Authenticate(t.Context(), &ui.FileView{W: io.Discard})
+	}).Authenticate(t.Context(), ui.NewFileView(io.Discard))
 	require.NoError(t, err)
 
 	assert.Equal(t, "my-token", tok.AccessToken)
@@ -343,7 +343,7 @@ func TestAuthenticationFlow_PAT(t *testing.T) {
 }
 
 func TestAuthCLI(t *testing.T) {
-	discardView := &ui.FileView{W: io.Discard}
+	discardView := ui.NewFileView(io.Discard)
 
 	t.Run("success", func(t *testing.T) {
 		execer := xectest.NewMockExecer(gomock.NewController(t))

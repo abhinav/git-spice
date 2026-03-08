@@ -13,7 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -148,8 +149,11 @@ var _ ui.InteractiveView = (*RobotView)(nil)
 // This is buffered in-memory until the next prompt,
 // or until the view is closed.
 func (s *RobotView) Write(bs []byte) (n int, err error) {
-	return s.outputBuffer.Write(bs)
+	return s.noColorWriter(&s.outputBuffer).Write(bs)
 }
+
+// Theme reports the test terminal theme.
+func (s *RobotView) Theme() ui.Theme { return ui.DefaultThemeLight() }
 
 // Close flushes the output buffer to the output file.
 func (s *RobotView) Close() error {
@@ -224,17 +228,18 @@ fieldLoop:
 			}
 		}
 
-		var fieldView strings.Builder
-		fieldView.Write(s.outputBuffer.Bytes())
+		var fieldView bytes.Buffer
+		fieldViewWriter := s.noColorWriter(&fieldView)
+		_, _ = fieldViewWriter.Write(s.outputBuffer.Bytes())
 		s.outputBuffer.Reset()
 		if title := field.Title(); title != "" {
-			fieldView.WriteString(field.Title())
-			fieldView.WriteString(": ")
+			_, _ = fieldViewWriter.WriteString(field.Title())
+			_, _ = fieldViewWriter.WriteString(": ")
 		}
-		field.Render(&fieldView)
+		field.Render(fieldViewWriter, s.Theme())
 		if desc := field.Description(); desc != "" {
-			fieldView.WriteString("\n")
-			fieldView.WriteString(desc)
+			_, _ = fieldViewWriter.WriteString("\n")
+			_, _ = fieldViewWriter.WriteString(desc)
 		}
 		if err := field.Err(); err != nil {
 			return fmt.Errorf("field [%d]: %w", fieldIdx, err)
@@ -321,6 +326,13 @@ func (s *RobotView) appendOutputFixture(fixture robotFixture) error {
 	}
 
 	return nil
+}
+
+func (*RobotView) noColorWriter(w io.Writer) *colorprofile.Writer {
+	return &colorprofile.Writer{
+		Forward: w,
+		Profile: colorprofile.NoTTY,
+	}
 }
 
 type robotFixtureFile []robotFixture

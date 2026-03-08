@@ -149,8 +149,9 @@ func (cmd *branchSplitCmd) Run(
 			}
 
 			fields := make([]ui.Field, 0, len(selected)+1) // +1 for deferred HEAD field
+			theme := view.Theme()
 			for i, commit := range selected {
-				desc := cmd.commitDescription(commit, false /* head */)
+				desc := cmd.commitDescription(theme, commit, false /* head */)
 				input := branchNameWidget(desc, &branchNames[i])
 				fields = append(fields, input)
 			}
@@ -168,7 +169,7 @@ func (cmd *branchSplitCmd) Run(
 					return nil
 				}
 
-				desc := cmd.commitDescription(headCommit, true /* head */) +
+				desc := cmd.commitDescription(theme, headCommit, true /* head */) +
 					" [" + cmd.Branch + "]"
 				return branchNameWidget(desc, &headBranchName)
 			}))
@@ -213,7 +214,11 @@ func (cmd *branchSplitCmd) Run(
 	return nil
 }
 
-func (cmd *branchSplitCmd) commitDescription(c git.CommitDetail, head bool) string {
+func (cmd *branchSplitCmd) commitDescription(
+	theme ui.Theme,
+	c git.CommitDetail,
+	head bool,
+) string {
 	var desc strings.Builder
 	if head {
 		desc.WriteString("  ■ ")
@@ -224,7 +229,7 @@ func (cmd *branchSplitCmd) commitDescription(c git.CommitDetail, head bool) stri
 		ShortHash:  c.ShortHash,
 		Subject:    c.Subject,
 		AuthorDate: c.AuthorDate,
-	}).Render(&desc, commit.DefaultSummaryStyle, nil)
+	}).Render(&desc, theme, commit.DefaultSummaryStyle, nil)
 
 	return desc.String()
 }

@@ -65,7 +65,13 @@ func WithTerm() {
 	}
 
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = append(os.Environ(), "TERM=screen")
+	// Scripted PTYs do not answer background-color probes.
+	// Force a theme so interactive startup does not block on theme detection.
+	cmd.Env = append(
+		os.Environ(),
+		"TERM=screen",
+		"__GIT_SPICE_THEME=dark",
+	)
 
 	size := &pty.Winsize{
 		Rows: uint16(*rows),

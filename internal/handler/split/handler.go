@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/lipgloss"
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -57,7 +56,7 @@ type Handler struct {
 	Store          Store                                    // required
 	Service        Service                                  // required
 	FindForge      func(forgeID string) (forge.Forge, bool) // required
-	HighlightStyle lipgloss.Style                           // required
+	HighlightStyle ui.Style                                 // required
 }
 
 // Options defines options for the SplitBranch method.
@@ -389,9 +388,10 @@ func (h *Handler) prepareChangeMetadataTransfer(
 		h.Log.Infof("%v: Upstream branch '%v' transferred to '%v'", fromBranch, toUpstreamBranch, toBranch)
 		if toUpstreamBranch == fromBranch {
 			pushCmd := fmt.Sprintf("git push -u %v %v:<new name>", remote, fromBranch)
+			highlight := h.HighlightStyle.Resolve(h.View.Theme())
 
 			h.Log.Warnf("%v: If you push this branch with 'git push' instead of '%s branch submit',", fromBranch, cli.Name())
-			h.Log.Warnf("%v: remember to use a different upstream branch name with the command:\n\t%s", fromBranch, h.HighlightStyle.Render(pushCmd))
+			h.Log.Warnf("%v: remember to use a different upstream branch name with the command:\n\t%s", fromBranch, highlight.Render(pushCmd))
 		}
 	}, nil
 }

@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,7 +146,7 @@ func TestAuth_alreadyHasGitLabToken(t *testing.T) {
 		Log: silog.New(&logBuffer, nil),
 	}
 
-	view := &ui.FileView{W: io.Discard}
+	view := ui.NewFileView(io.Discard)
 
 	t.Run("AuthenticationFlow", func(t *testing.T) {
 		_, err := f.AuthenticationFlow(t.Context(), view)
@@ -479,7 +479,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 			DeviceAuthURL: srv.URL + "/oauth/authorize_device",
 			TokenURL:      srv.URL + "/oauth/token",
 		},
-	}).Authenticate(t.Context(), &ui.FileView{W: io.Discard})
+	}).Authenticate(t.Context(), ui.NewFileView(io.Discard))
 	require.NoError(t, err)
 
 	assert.Equal(t, &AuthenticationToken{
@@ -503,7 +503,7 @@ func TestCLIAuthenticator(t *testing.T) {
 		},
 	}
 
-	view := &ui.FileView{W: io.Discard}
+	view := ui.NewFileView(io.Discard)
 
 	t.Run("Success", func(t *testing.T) {
 		statusOk, statusErr = true, nil
