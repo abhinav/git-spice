@@ -102,11 +102,11 @@ func TestIntegration(t *testing.T) {
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{},
 		// Bitbucket limitations:
-		SkipLabels:    true, // no PR labels
-		SkipAssignees: true, // no PR assignees
-		SkipTemplates: true, // limited template support
-		ShortHeadHash: true, // API returns 12-char hashes
-		SkipMerge:     true, // requires branch permissions
+		SkipLabels:            true, // no PR labels
+		SkipAssignees:         true, // no PR assignees
+		SkipTemplates:         true, // limited template support
+		ShortHeadHash:         true, // API returns 12-char hashes
+		SkipMerge:             true, // requires branch permissions
 		SkipCommentPagination: true, // 403 with small pages
 	})
 }
