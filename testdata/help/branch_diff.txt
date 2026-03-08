@@ -1,0 +1,17 @@
+Usage: gs branch (b) diff (di) [flags]
+
+Show diff between a branch and its base
+
+Shows the diff between a branch and its base branch in the stack. This is
+equivalent to running 'git diff base...branch' where base is the branch below
+this one. Use --branch to target a different branch.
+
+Flags:
+  --branch=NAME    Branch to diff
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

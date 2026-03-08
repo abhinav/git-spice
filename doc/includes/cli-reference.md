@@ -951,6 +951,25 @@ Use 'gs upstack onto' to also move the upstack branches.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
+### git-spice branch diff {#gs-branch-diff}
+
+```
+gs branch (b) diff (di) [flags]
+```
+
+Show diff between a branch and its base
+
+Shows the diff between a branch
+and its base branch in the stack.
+This is equivalent to running
+'git diff base...branch'
+where base is the branch below this one.
+Use --branch to target a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to diff
+
 ### git-spice branch submit {#gs-branch-submit}
 
 ```
