@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -163,6 +164,10 @@ type FormRunOptions struct {
 	// If both are greater than zero, these are applied with tea.WithWindowSize.
 	Width, Height int
 
+	// TERM overrides the terminal type that Bubble Tea uses
+	// for capability detection.
+	TERM string
+
 	// WithoutSignals requests that the form not register signal handlers.
 	WithoutSignals bool
 }
@@ -182,6 +187,10 @@ func (f *Form) Run(opts *FormRunOptions) error {
 	}
 	if opts.Width > 0 && opts.Height > 0 {
 		teaOpts = append(teaOpts, tea.WithWindowSize(opts.Width, opts.Height))
+	}
+	if opts.TERM != "" {
+		teaOpts = append(teaOpts,
+			tea.WithEnvironment(append(os.Environ(), "TERM="+opts.TERM)))
 	}
 	if opts.WithoutSignals {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
