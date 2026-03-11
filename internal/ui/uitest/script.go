@@ -92,9 +92,27 @@ func RunScripts(
 
 		t := ts.Value(tKey{}).(testing.TB)
 
+		rows := opts.Rows
+		if _, err := os.Stat(ts.MkAbs("rows")); err == nil {
+			rowsText := strings.TrimSpace(ts.ReadFile("rows"))
+			rows, err = strconv.Atoi(rowsText)
+			if err != nil {
+				ts.Fatalf("read rows: %v", err)
+			}
+		}
+
+		cols := opts.Cols
+		if _, err := os.Stat(ts.MkAbs("cols")); err == nil {
+			colsText := strings.TrimSpace(ts.ReadFile("cols"))
+			cols, err = strconv.Atoi(colsText)
+			if err != nil {
+				ts.Fatalf("read cols: %v", err)
+			}
+		}
+
 		emu := NewEmulatorView(&EmulatorViewOptions{
-			Rows: opts.Rows,
-			Cols: opts.Cols,
+			Rows: rows,
+			Cols: cols,
 			Logf: ts.Logf,
 		})
 		done := make(chan struct{})

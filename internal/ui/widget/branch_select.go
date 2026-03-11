@@ -89,6 +89,7 @@ type branchInfo struct {
 
 	Index              int   // index in all
 	Aboves             []int // indexes of branches in 'all' with this as base
+	VisibleAboves      []int // visible children to render above this branch
 	BranchHighlights   []int // indexes of runes in Branch name to highlight
 	ChangeIDHighlights []int // indexes of runes in ChangeID to highlight
 	WorktreeHighlights []int // indexes of runes in Worktree to highlight
@@ -109,8 +110,12 @@ type BranchTreeSelect struct {
 	roots     []int          // indexes in 'all' of root branches
 	idxByName map[string]int // index in 'all' by branch name
 
-	selectable []int // indexes that can be selected and are visible
-	focused    int   // index in 'selectable' of the currently focused branch
+	selectable   []int // indexes that can be selected and are visible
+	visibleRoots []int // visible root indexes after filtering hidden intermediates
+	visibleOrder []int // visible branch indexes in render order
+	focused      int   // index in 'selectable' of the currently focused branch
+	visible      int   // number of visible rows in the branch list
+	offset       int   // offset of the first visible row
 
 	filter []rune // filter text
 	err    error
@@ -236,6 +241,7 @@ func (b *BranchTreeSelect) Init() tea.Cmd {
 	if selected >= 0 {
 		b.focused = max(slices.Index(b.selectable, selected), 0)
 	}
+	b.syncViewport()
 
 	return nil
 }
@@ -285,47 +291,52 @@ func (b *BranchTreeSelect) WithItems(items ...BranchTreeItem) *BranchTreeSelect 
 
 // Update updates the state of the widget based on a bubbletea message.
 func (b *BranchTreeSelect) Update(msg tea.Msg) tea.Cmd {
-	keyMsg, ok := msg.(tea.KeyMsg)
-	if !ok {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		b.visible = max(1, msg.Height-5)
+		b.syncViewport()
 		return nil
-	}
 
-	var filterChanged bool
-	switch {
-	case key.Matches(keyMsg, b.KeyMap.Up):
-		b.moveCursor(-1)
+	case tea.KeyMsg:
+		var filterChanged bool
+		switch {
+		case key.Matches(msg, b.KeyMap.Up):
+			b.moveCursor(-1)
 
-	case key.Matches(keyMsg, b.KeyMap.Down):
-		b.moveCursor(1)
+		case key.Matches(msg, b.KeyMap.Down):
+			b.moveCursor(1)
 
-	case key.Matches(keyMsg, b.KeyMap.Accept):
-		if b.focused >= 0 && b.focused < len(b.selectable) {
-			*b.value = b.all[b.selectable[b.focused]].Branch
-			b.accepted = true
-			return ui.AcceptField
-		}
+		case key.Matches(msg, b.KeyMap.Accept):
+			if b.focused >= 0 && b.focused < len(b.selectable) {
+				*b.value = b.all[b.selectable[b.focused]].Branch
+				b.accepted = true
+				return ui.AcceptField
+			}
 
-	case key.Matches(keyMsg, b.KeyMap.Delete):
-		if len(b.filter) > 0 {
-			b.filter = b.filter[:len(b.filter)-1]
+		case key.Matches(msg, b.KeyMap.Delete):
+			if len(b.filter) > 0 {
+				b.filter = b.filter[:len(b.filter)-1]
+				filterChanged = true
+			}
+
+		case key.Matches(msg, b.KeyMap.Discard):
+			if len(b.filter) > 0 {
+				b.filter = b.filter[:0]
+				filterChanged = true
+			}
+
+		case msg.Key().Text != "":
+			for _, r := range msg.Key().Text {
+				b.filter = append(b.filter, unicode.ToLower(r))
+			}
 			filterChanged = true
 		}
 
-	case key.Matches(keyMsg, b.KeyMap.Discard):
-		if len(b.filter) > 0 {
-			b.filter = b.filter[:0]
-			filterChanged = true
+		if filterChanged {
+			b.updateSelectable()
 		}
 
-	case keyMsg.Key().Text != "":
-		for _, r := range keyMsg.Key().Text {
-			b.filter = append(b.filter, unicode.ToLower(r))
-		}
-		filterChanged = true
-	}
-
-	if filterChanged {
-		b.updateSelectable()
+		b.syncViewport()
 	}
 
 	return nil
@@ -351,24 +362,62 @@ func (b *BranchTreeSelect) updateSelectable() {
 		selected = b.selectable[b.focused]
 	}
 
+	// Rebuild all filtered tree state from the full branch graph.
+	//
+	// Given roots main -> feat1 -> feat1.1,
+	// if only feat1.1 matches, the derived visible tree is:
+	//   visibleRoots = [feat1.1]
+	//   visibleOrder = [feat1.1]
+	//   selectable = [feat1.1] if it is not disabled
+	//
+	// At the end of this method:
+	//   - bi.Visible reports whether the branch itself matched
+	//   - bi.VisibleAboves lists visible children rendered beneath that branch
+	//   - visibleRoots is the filtered forest passed to Render
+	//   - visibleOrder is the tree order used for viewport sync
+	//   - selectable is the focusable subset of visibleOrder
 	b.selectable = b.selectable[:0]
-	var visit func(int)
-	visit = func(idx int) {
-		for _, above := range b.all[idx].Aboves {
-			visit(above)
+	b.visibleRoots = b.visibleRoots[:0]
+	b.visibleOrder = b.visibleOrder[:0]
+
+	// visit takes the index of a branch in the full tree.
+	// It returns that branch if it is visible,
+	// otherwise it returns the branch's visible descendants.
+	//
+	// In either case, the branch's state (Visible, VisibleAboves, etc.)
+	// is updated based on the filter.
+	var visit func(int) []int
+	visit = func(idx int) []int {
+		bi := b.all[idx]
+
+		var visibleChildren []int
+		for _, above := range bi.Aboves {
+			visibleChildren = append(visibleChildren, visit(above)...)
 		}
 
-		visible := b.matchesFilter(b.all[idx])
-		b.all[idx].Visible = visible
-		if visible && !b.all[idx].Disabled {
-			b.selectable = append(b.selectable, idx)
+		bi.Visible = b.matchesFilter(bi)
+		if bi.Visible {
+			// Visible branches stay in the rendered tree
+			// and keep the visible descendants found under them.
+			bi.VisibleAboves = append(bi.VisibleAboves[:0], visibleChildren...)
+			b.visibleOrder = append(b.visibleOrder, idx)
+			if !bi.Disabled {
+				b.selectable = append(b.selectable, idx)
+			}
+			return []int{idx}
 		}
+
+		// Hidden branches are removed from the rendered tree,
+		// but their visible descendants are promoted upward
+		// to the nearest visible ancestor or the root list.
+		bi.VisibleAboves = bi.VisibleAboves[:0]
+		return visibleChildren
 	}
 
 	// Depth-first traversal gives us the same order
 	// as the tree view.
 	for _, root := range b.roots {
-		visit(root)
+		b.visibleRoots = append(b.visibleRoots, visit(root)...)
 	}
 
 	if len(b.selectable) == 0 {
@@ -381,13 +430,19 @@ func (b *BranchTreeSelect) updateSelectable() {
 		b.focused = max(slices.Index(b.selectable, selected), 0)
 		return
 	}
+
+	if selectedIdx := slices.Index(b.selectable, selected); selectedIdx >= 0 {
+		b.focused = selectedIdx
+		return
+	}
+
 	// rank the selectable branches
 	branches := make([]string, len(b.selectable))
 	for i, idx := range b.selectable {
 		branches[i] = b.all[idx].Branch
 	}
 	matches := fuzzy.Find(string(b.filter), branches)
-	bestSelectable := selected
+	bestSelectable := b.selectable[0]
 	if len(matches) > 0 {
 		bestSelectable = b.selectable[matches[0].Index]
 	}
@@ -448,21 +503,6 @@ func (b *BranchTreeSelect) Render(w ui.Writer, theme ui.Theme) {
 		w.WriteString("\n")
 	}
 
-	// visibleDescendants fills dst with the indexes of visible descendants
-	// of the branches in start.
-	// If a branch is visible, it is added; otherwise, its children are checked.
-	var visibleDescendants func([]int, []int) []int
-	visibleDescendants = func(starts []int, visibles []int) []int {
-		for _, idx := range starts {
-			if b.all[idx].Visible {
-				visibles = append(visibles, idx)
-				continue
-			}
-			visibles = visibleDescendants(b.all[idx].Aboves, visibles)
-		}
-		return visibles
-	}
-
 	selected := -1
 	if b.focused >= 0 && b.focused < len(b.selectable) {
 		selected = b.selectable[b.focused]
@@ -475,7 +515,7 @@ func (b *BranchTreeSelect) Render(w ui.Writer, theme ui.Theme) {
 			Branch:             bi.Branch,
 			ChangeID:           bi.ChangeID,
 			Worktree:           bi.Worktree,
-			Aboves:             visibleDescendants(bi.Aboves, nil),
+			Aboves:             bi.VisibleAboves,
 			Highlighted:        bi.Index == selected,
 			Disabled:           bi.Disabled,
 			BranchHighlights:   bi.BranchHighlights,
@@ -486,7 +526,7 @@ func (b *BranchTreeSelect) Render(w ui.Writer, theme ui.Theme) {
 
 	g := branchtree.Graph{
 		Items: items,
-		Roots: visibleDescendants(b.roots, nil),
+		Roots: b.visibleRoots,
 	}
 
 	var home string
@@ -499,5 +539,48 @@ func (b *BranchTreeSelect) Render(w ui.Writer, theme ui.Theme) {
 		Style:           cmp.Or(b.Style, &DefaultBranchSelectStyle),
 		CurrentWorktree: b.currentWorktree,
 		HomeDir:         home,
+		Offset:          b.offset,
+		Height:          b.visible,
 	})
+}
+
+func (b *BranchTreeSelect) syncViewport() {
+	if b.visible <= 0 {
+		b.offset = 0
+		return
+	}
+
+	if len(b.visibleOrder) == 0 {
+		b.offset = 0
+		return
+	}
+
+	// Clamp the offset first so window resizes
+	// cannot leave the viewport beyond the rendered tree.
+	maxOffset := max(0, len(b.visibleOrder)-b.visible)
+	b.offset = min(b.offset, maxOffset)
+
+	if b.focused < 0 || b.focused >= len(b.selectable) {
+		return
+	}
+
+	// The cursor tracks an index into selectable branches,
+	// but the viewport scrolls over the full rendered tree.
+	selected := b.selectable[b.focused]
+	focused := slices.Index(b.visibleOrder, selected)
+	if focused < 0 {
+		// The focused branch should always be part of the visible tree.
+		// If it is not, leave the viewport unchanged rather than
+		// applying a bogus offset.
+		return
+	}
+
+	// Keep the focused branch inside the viewport
+	// while preserving the existing scroll position when possible.
+	switch {
+	case focused < b.offset:
+		b.offset = focused // scroll up
+	case focused >= b.offset+b.visible:
+		b.offset = focused - b.visible + 1 // scroll down
+	}
 }

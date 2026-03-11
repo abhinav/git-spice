@@ -1,0 +1,46 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed a
+await
+snapshot
+cmp stdout filter
+
+feed <Enter>
+
+-- rows --
+10
+-- branches --
+[
+  {"branch": "echo"},
+  {"branch": "alpha"},
+  {"branch": "bravo"},
+  {"branch": "charlie"},
+  {"branch": "delta"},
+  {"branch": "gamma"},
+  {"branch": "hotel"},
+  {"branch": "lambda"}
+]
+-- selected --
+delta
+-- want --
+delta
+-- prompt --
+Select a branch:
+echo
+alpha
+bravo
+charlie
+delta ◀
+▼▼▼
+-- filter --
+Select a branch:
+alpha
+bravo
+charlie
+delta ◀
+gamma
+▼▼▼
