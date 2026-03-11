@@ -38,7 +38,8 @@ Take the following steps to authenticate with a service:
 !!! tip
 
     Skip prompt (2) by running $$gs auth login$$
-    inside a Git repository cloned from GitHub or GitLab.
+    inside a Git repository cloned from
+    GitHub, GitLab, or Bitbucket.
 
 ## Authentication methods
 
@@ -47,8 +48,7 @@ Each supported service supports different authentication methods.
 - [OAuth](#oauth): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [GitHub App](#github-app): <!-- gs:badge:github -->
 - [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket -->
-- [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
-- [API Token](#api-token): <!-- gs:badge:bitbucket -->
+- [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
 - [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
 
@@ -179,33 +179,9 @@ git-spice will automatically fall back to GCM credentials
 when no other authentication token is available—even
 without running `gs auth login`.
 
-### API Token
-
-**Supported by** <!-- gs:badge:bitbucket -->
-
-Bitbucket API tokens provide a way to authenticate
-without using your main account password.
-To use an API token with git-spice:
-
-1. Go to <https://bitbucket.org/account/settings/api-tokens/>.
-2. Click "Create token".
-3. Enter a descriptive label.
-4. Select the following scopes:
-    - **pullrequest:write** - create and edit pull requests
-    - **account** - read workspace members for reviewer lookup
-5. Click "Create" and copy the generated token.
-
-```freeze language="terminal"
-{green}${reset} gs auth login
-Select an authentication method: {red}API Token{reset}
-{green}Enter Atlassian account email{reset}: user@example.com
-{green}Enter API token{reset}:
-{green}INF{reset} bitbucket: successfully logged in
-```
-
 ### Personal Access Token
 
-**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
+**Supported by** <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
 
 To use a Personal Access Token with git-spice,
 you will generate a Personal Access Token on the website
@@ -276,6 +252,32 @@ Select an authentication method: {red}Personal Access Token{reset}
         - pick a descriptive name for the token
         - pick an expiration date if needed
         - select the `api` scope
+
+=== "<!-- gs:bitbucket -->"
+
+    Bitbucket calls these **API tokens**,
+    but they serve the same role as a Personal Access Token.
+
+    1. Go to <https://bitbucket.org/account/settings/api-tokens/>.
+    2. Click "Create token".
+    3. Enter a descriptive label.
+    4. Select the following scopes:
+
+        - **pullrequest:write** - create and edit pull requests
+        - **account** - read workspace members for reviewer lookup
+
+    5. Click "Create" and copy the generated token.
+
+    In the login prompt, this method may still appear as `API Token`.
+    git-spice will then ask for your Atlassian account email and token:
+
+    ```freeze language="terminal"
+    {green}${reset} gs auth login
+    Select an authentication method: {red}API Token{reset}
+    {green}Enter Atlassian account email{reset}: user@example.com
+    {green}Enter API token{reset}:
+    {green}INF{reset} bitbucket: successfully logged in
+    ```
 
 After you have a token, enter it into the prompt.
 
@@ -381,7 +383,7 @@ The $$gs auth login$$ operation will always fail if you use this method.
     Bitbucket's OAuth flow and handles token refresh automatically.
     This is convenient if you already have GCM installed for git operations.
 
-    [API Token](#api-token) is flexible and secure.
+    [Personal Access Token](#personal-access-token) is flexible and secure.
     It requires manual token management but works without additional tools.
 
 [Environment variable](#environment-variable) is the least convenient
@@ -505,4 +507,3 @@ reporting the full path to the secrets file.
 ```
 
 </details>
-

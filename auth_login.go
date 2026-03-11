@@ -24,6 +24,7 @@ func (*authLoginCmd) Help() string {
 
 		- OAuth: Web-based authentication flow
 		- GitHub App (GitHub only): Authenticate using a GitHub App installation
+		- Git Credential Manager: Reuse credentials already stored for Git
 		- Personal Access Token: Directly provide a personal access token
 		- CLI: Use the GitHub or GitLab CLI tool for authentication (if installed)
 

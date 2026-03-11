@@ -84,12 +84,12 @@ text "Sibling" with s at F.n
 
 **Change Request**
 :   Change Request refers to a single merge-able unit of work
-    submitted to GitHub or GitLab.
+    submitted to GitHub, GitLab, or Bitbucket.
     Each Change Request corresponds to a branch.
-    On GitHub, these are called Pull Requests,
+    On GitHub and Bitbucket, these are called Pull Requests,
     and on GitLab, they are called Merge Requests.
-    Since git-spice supports both platforms,
-    the term Change Request is used to refer to both.
+    Since git-spice supports all three platforms,
+    the term Change Request is used to refer to all of them.
 
 **Stack**
 :   A stack is a collection of branches stacked on top of each other

@@ -11,7 +11,8 @@ next_page: ../guide/index.md
 # Your first stacked Change Requests
 
 This page will walk you through creating and updating
-*GitHub Pull Requests* or *GitLab Merge Requests* with git-spice.
+*GitHub Pull Requests*, *GitLab Merge Requests*,
+or *Bitbucket Pull Requests* with git-spice.
 git-spice refers to these as *Change Requests* (CRs).
 
 ## Prerequisites
@@ -29,12 +30,12 @@ git-spice refers to these as *Change Requests* (CRs).
       text "feat2"
       ```
 
-- [x] Set up a GitHub or GitLab repository.
+- [x] Set up a GitHub, GitLab, or Bitbucket repository.
 
     ??? info "Optional: Create an experimental repository"
 
         If you're following along with the tutorial,
-        you may want to create a new repository on GitHub
+        you may want to create a new repository
         to experiment with instead of using a real project.
 
         To do this, if you have the GitHub or GitLab CLI installed,

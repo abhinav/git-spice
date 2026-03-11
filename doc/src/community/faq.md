@@ -40,7 +40,7 @@ keeping them up-to-date and in sync with each other.
 
 ## Where is the authentication token stored?
 
-git-spice stores the GitHub authentication in a system-specific secure storage.
+git-spice stores authentication tokens in a system-specific secure storage.
 See [Authentication > Safety](../setup/auth.md#safety) for details.
 
 ## Why doesn't git-spice create one CR per commit?
@@ -48,7 +48,8 @@ See [Authentication > Safety](../setup/auth.md#safety) for details.
 With tooling like this, there are two options:
 each commit is an atomic unit of work, or each branch is.
 While the former might be more in line with Git's original philosophy,
-the latter is more practical for most teams with GitHub or GitLab-based workflows.
+the latter is more practical for most teams
+with GitHub, GitLab, or Bitbucket-based workflows.
 
 With a PR per commit, when a PR gets review feedback,
 you must amend that commit with fixes and force-push.
@@ -81,7 +82,8 @@ and leave them as-is.
 
 ## Will git-spice add support for other Git hosting services?
 
-As of writing this, git-spice supports GitHub and GitLab.
+As of writing this, git-spice supports
+GitHub, GitLab, and Bitbucket Cloud.
 It is specifically designed to support other forges;
 most of the code is forge-agnostic,
 with forge-specific code is isolated to their own directories inside
@@ -90,8 +92,14 @@ with forge-specific code is isolated to their own directories inside
 In fact,
 
 - git-spice's own integration tests run against a simulated forge
-  that acts similarly to GitHub and GitLab;
+  that acts similarly to supported hosted forges;
 - [GitLab support was added by an external contributor](https://github.com/abhinav/git-spice/pull/477)
+  without meaningful changes to the rest of the codebase;
+- Bitbucket support was added across several pull requests:
+  [#1020](https://github.com/abhinav/git-spice/pull/1020),
+  [#1021](https://github.com/abhinav/git-spice/pull/1021),
+  [#1030](https://github.com/abhinav/git-spice/pull/1030),
+  and [#1052](https://github.com/abhinav/git-spice/pull/1052),
   without meaningful changes to the rest of the codebase
 
 Therefore we're confident that adding support for other forges is feasible.
