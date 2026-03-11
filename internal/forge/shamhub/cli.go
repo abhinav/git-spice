@@ -223,6 +223,114 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		}
 		ts.Check(sh.RejectChange(req))
 
+	case "draft":
+		if len(args) != 2 {
+			ts.Fatalf("usage: shamhub draft <owner/repo> <pr>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr := args[0], args[1]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		ts.Check(sh.DraftChange(DraftChangeRequest{
+			Owner:  owner,
+			Repo:   repo,
+			Number: pr,
+		}))
+
+	case "review":
+		// shamhub review <owner/repo> <pr> <reviewer>
+		// Marks the PR as review-requested (review_requested).
+		if len(args) != 3 {
+			ts.Fatalf("usage: shamhub review <owner/repo> <pr> <reviewer>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr, reviewer := args[0], args[1], args[2]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		ts.Check(sh.ReviewChange(ReviewChangeRequest{
+			Owner:    owner,
+			Repo:     repo,
+			Number:   pr,
+			Decision: "review_requested",
+			Reviewer: reviewer,
+		}))
+
+	case "approve":
+		// shamhub approve <owner/repo> <pr> <reviewer>
+		// Marks the PR as approved by reviewer.
+		if len(args) != 3 {
+			ts.Fatalf("usage: shamhub approve <owner/repo> <pr> <reviewer>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr, reviewer := args[0], args[1], args[2]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		ts.Check(sh.ReviewChange(ReviewChangeRequest{
+			Owner:    owner,
+			Repo:     repo,
+			Number:   pr,
+			Decision: "approved",
+			Reviewer: reviewer,
+		}))
+
+	case "request-changes":
+		// shamhub request-changes <owner/repo> <pr> <reviewer>
+		// Marks the PR as having changes requested by reviewer.
+		if len(args) != 3 {
+			ts.Fatalf("usage: shamhub request-changes <owner/repo> <pr> <reviewer>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr, reviewer := args[0], args[1], args[2]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		ts.Check(sh.ReviewChange(ReviewChangeRequest{
+			Owner:    owner,
+			Repo:     repo,
+			Number:   pr,
+			Decision: "changes_requested",
+			Reviewer: reviewer,
+		}))
+
 	case "register":
 		if len(args) != 1 {
 			ts.Fatalf("usage: shamhub register <username>")

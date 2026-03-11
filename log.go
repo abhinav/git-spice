@@ -86,6 +86,11 @@ var (
 	_stateOpenStyle   = ui.NewStyle().Foreground(ui.Green).SetString("open")
 	_stateClosedStyle = ui.NewStyle().Foreground(ui.Gray).SetString("closed")
 	_stateMergedStyle = ui.NewStyle().Foreground(ui.Magenta).SetString("merged")
+
+	_draftStyle          = ui.NewStyle().Foreground(ui.Gray).SetString("draft")
+	_reviewRequiredStyle = ui.NewStyle().Foreground(ui.Yellow).SetString("review requested")
+	_reviewChangesStyle  = ui.NewStyle().Foreground(ui.Red).SetString("changes requested")
+	_reviewApprovedStyle = ui.NewStyle().Foreground(ui.Green).SetString("approved")
 )
 
 type ListHandler interface {
@@ -127,12 +132,12 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var presenter logPresenter
-	var wantChangeURL, wantPushStatus, wantChangeState bool
+	var wantChangeURL, wantPushStatus, wantChangeDetails bool
 	if cmd.JSON {
-		// JSON always wants URLs and push status, but respects --status for change state.
+		// JSON always wants URLs and push status, but respects --status for change details.
 		wantChangeURL = true
 		wantPushStatus = true
-		wantChangeState = cmd.CRStatus
+		wantChangeDetails = cmd.CRStatus
 
 		presenter = &jsonLogPresenter{
 			Stdout:          kctx.Stdout,
@@ -150,12 +155,12 @@ func (cmd *branchLogCmd) run(
 
 		wantChangeURL = changeFormat == changeFormatURL
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
-		wantChangeState = cmd.CRStatus
+		wantChangeDetails = cmd.CRStatus
 
 		presenter = &graphLogPresenter{
 			Stderr:           kctx.Stderr,
 			ChangeFormat:     changeFormat,
-			ShowCRStatus:     wantChangeState,
+			ShowCRStatus:     wantChangeDetails,
 			PushStatusFormat: cmd.PushStatusFormat,
 			CurrentWorktree:  wt.RootDir(),
 		}
@@ -168,8 +173,8 @@ func (cmd *branchLogCmd) run(
 	if wantChangeURL {
 		req.Include |= list.IncludeChangeURL
 	}
-	if wantChangeState {
-		req.Include |= list.IncludeChangeState
+	if wantChangeDetails {
+		req.Include |= list.IncludeChangeDetails
 	}
 	if opts.Commits {
 		req.Include |= list.IncludeCommits
@@ -236,21 +241,37 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 					must.Failf("unknown change format: %v", p.ChangeFormat)
 				}
 
-				var crStatus string
 				if p.ShowCRStatus {
+					var stateStr string
 					switch b.ChangeState {
 					case forge.ChangeOpen:
-						crStatus = _stateOpenStyle.String()
+						stateStr = _stateOpenStyle.String()
 					case forge.ChangeClosed:
-						crStatus = _stateClosedStyle.String()
+						stateStr = _stateClosedStyle.String()
 					case forge.ChangeMerged:
-						crStatus = _stateMergedStyle.String()
+						stateStr = _stateMergedStyle.String()
 					}
-				}
+					if stateStr != "" {
+						crText.WriteString(" ")
+						crText.WriteString(stateStr)
+					}
 
-				if crStatus != "" {
-					crText.WriteString(" ")
-					crText.WriteString(crStatus)
+					if b.ChangeDraft {
+						crText.WriteString(" ")
+						crText.WriteString(_draftStyle.String())
+					} else {
+						switch b.ChangeReviewDecision {
+						case forge.ChangeReviewRequired:
+							crText.WriteString(" ")
+							crText.WriteString(_reviewRequiredStyle.String())
+						case forge.ChangeReviewChangesRequested:
+							crText.WriteString(" ")
+							crText.WriteString(_reviewChangesStyle.String())
+						case forge.ChangeReviewApproved:
+							crText.WriteString(" ")
+							crText.WriteString(_reviewApprovedStyle.String())
+						}
+					}
 				}
 				crText.WriteString(")")
 				o.WriteString(crText.String())
@@ -371,6 +392,12 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 					jc.Status = "merged"
 				}
 			}
+			if branch.ChangeDraft {
+				jc.Draft = true
+			}
+			if rd := branch.ChangeReviewDecision; rd != forge.ChangeReviewNoReview {
+				jc.ReviewDecision = rd.String()
+			}
 			logBranch.Change = jc
 		}
 
@@ -468,6 +495,14 @@ type jsonLogChange struct {
 
 	// Status is the current state of the change (open|closed|merged).
 	Status string `json:"status,omitempty"`
+
+	// Draft is true if the change is not yet ready to be reviewed.
+	Draft bool `json:"draft,omitempty"`
+
+	// ReviewDecision is the current review decision for the change.
+	// Possible values: "review_requested", "changes_requested", "approved".
+	// Omitted if there is no review decision.
+	ReviewDecision string `json:"reviewDecision,omitempty"`
 }
 
 type jsonLogPushStatus struct {

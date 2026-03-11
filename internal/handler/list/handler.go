@@ -89,7 +89,12 @@ const (
 	// branches that have an associated ChangeID.
 	IncludeChangeState
 
-	needsRemoteID = IncludeChangeURL | IncludeChangeState
+	// IncludeChangeDetails includes draft status and review decision
+	// for branches with an associated ChangeID.
+	// This is a superset of IncludeChangeState.
+	IncludeChangeDetails
+
+	needsRemoteID = IncludeChangeURL | IncludeChangeState | IncludeChangeDetails
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -126,10 +131,12 @@ type BranchItem struct {
 	Commits []git.CommitDetail // only if IncludeCommits is set
 
 	// ChangeID is the ID of the associated change, if any.
-	ChangeID    forge.ChangeID
-	ChangeURL   string            // only if IncludeChangeURL is set
-	ChangeState forge.ChangeState // populated if RemoteRepository is available
-	PushStatus  *PushStatus       // only if IncludePushStatus is set
+	ChangeID             forge.ChangeID
+	ChangeURL            string                     // only if IncludeChangeURL is set
+	ChangeState          forge.ChangeState          // only if IncludeChangeState or IncludeChangeDetails is set
+	ChangeDraft          bool                       // only if IncludeChangeDetails is set
+	ChangeReviewDecision forge.ChangeReviewDecision // only if IncludeChangeDetails is set
+	PushStatus           *PushStatus                // only if IncludePushStatus is set
 
 	// Worktree is the absolute path to the worktree where this branch is checked out.
 	// Empty if the branch is not checked out.
@@ -351,12 +358,20 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		baseItem.Aboves = append(baseItem.Aboves, idx)
 	}
 
-	// If requested and possible, batch-resolve ChangeState for items with ChangeID.
-	if req.Include&IncludeChangeState != 0 && remoteForge != nil {
-		// Try to load change states, but don't fail the whole operation
-		// if something goes wrong.
-		if err := h.loadChangeStates(ctx, remoteForge, remoteRepoID, items); err != nil {
-			log.Warn("Could not load change states", "error", err)
+	// If requested and possible, batch-resolve change info for items with ChangeID.
+	if remoteForge != nil {
+		if req.Include&IncludeChangeDetails != 0 {
+			// Load full details (state, draft, review decision).
+			// Try to load change details, but don't fail the whole operation
+			// if something goes wrong.
+			if err := h.loadChangeDetails(ctx, remoteForge, remoteRepoID, items); err != nil {
+				log.Warn("Could not load change details", "error", err)
+			}
+		} else if req.Include&IncludeChangeState != 0 {
+			// Load only change states.
+			if err := h.loadChangeStates(ctx, remoteForge, remoteRepoID, items); err != nil {
+				log.Warn("Could not load change states", "error", err)
+			}
 		}
 	}
 
@@ -399,6 +414,49 @@ func (h *Handler) loadChangeStates(
 
 	for j, idx := range branchesIdx {
 		branches[idx].ChangeState = states[j]
+	}
+
+	return nil
+}
+
+func (h *Handler) loadChangeDetails(
+	ctx context.Context,
+	remoteForge forge.Forge,
+	remoteRepoID forge.RepositoryID,
+	branches []*BranchItem,
+) error {
+	// Collect IDs in the same order as items for stable mapping.
+	branchesIdx := make([]int, 0, len(branches)) // index in items
+	changeIDs := make([]forge.ChangeID, 0, len(branches))
+	// For each changeIDs[i], branchesIdx[i] is the index in branches.
+	for i, b := range branches {
+		if b.ChangeID != nil {
+			branchesIdx = append(branchesIdx, i)
+			changeIDs = append(changeIDs, b.ChangeID)
+		}
+	}
+
+	if len(changeIDs) == 0 {
+		return nil
+	}
+
+	remoteRepo, err := h.OpenRemoteRepository(ctx, remoteForge, remoteRepoID)
+	if err != nil {
+		return fmt.Errorf("open remote repository: %w", err)
+	}
+
+	details, err := remoteRepo.ChangesDetails(ctx, changeIDs)
+	if err != nil {
+		return fmt.Errorf("retrieve change details: %w", err)
+	}
+	if len(details) != len(changeIDs) {
+		return fmt.Errorf("forge returned %d details for %d changes", len(details), len(changeIDs))
+	}
+
+	for j, idx := range branchesIdx {
+		branches[idx].ChangeState = details[j].State
+		branches[idx].ChangeDraft = details[j].Draft
+		branches[idx].ChangeReviewDecision = details[j].ReviewDecision
 	}
 
 	return nil

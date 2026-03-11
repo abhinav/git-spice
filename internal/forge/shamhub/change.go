@@ -72,6 +72,16 @@ func (b *shamBranch) String() string {
 	return fmt.Sprintf("%s/%s:%s", b.Owner, b.Repo, b.Name)
 }
 
+// shamReviewDecision is the review decision for a shamChange.
+type shamReviewDecision int
+
+const (
+	shamReviewNoReview         shamReviewDecision = iota
+	shamReviewRequired                            // review requested but not yet submitted
+	shamReviewChangesRequested                    // reviewer requested changes
+	shamReviewApproved                            // reviewer approved
+)
+
 // shamChange is the internal representation of a [Change].
 type shamChange struct {
 	// State is the current state of the change.
@@ -84,6 +94,9 @@ type shamChange struct {
 
 	// Draft indicates that the change is not yet ready to be reviewed.
 	Draft bool
+
+	// ReviewDecision is the current review decision.
+	ReviewDecision shamReviewDecision
 
 	Subject string
 	Body    string
@@ -114,6 +127,10 @@ type Change struct {
 
 	// Draft indicates that the change is not yet ready to be reviewed.
 	Draft bool `json:"draft,omitempty"`
+
+	// ReviewDecision is the current review decision for the change.
+	// It may be "", "review_requested", "changes_requested", or "approved".
+	ReviewDecision string `json:"review_decision,omitempty"`
 
 	// State is the current state of the change.
 	// It may be "open" or "closed".
@@ -170,10 +187,21 @@ func (sh *ShamHub) toChange(c shamChange) (*Change, error) {
 	assignees := slices.Clone(c.Assignees)
 	slices.Sort(assignees)
 
+	var reviewDecision string
+	switch c.ReviewDecision {
+	case shamReviewRequired:
+		reviewDecision = "review_requested"
+	case shamReviewChangesRequested:
+		reviewDecision = "changes_requested"
+	case shamReviewApproved:
+		reviewDecision = "approved"
+	}
+
 	change := &Change{
 		Number:             c.Number,
 		URL:                sh.changeURL(c.Base.Owner, c.Base.Repo, c.Number),
 		Draft:              c.Draft,
+		ReviewDecision:     reviewDecision,
 		Subject:            c.Subject,
 		Body:               c.Body,
 		Base:               base,

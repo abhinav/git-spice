@@ -95,6 +95,138 @@ func (r *forgeRepository) ChangesStates(ctx context.Context, fids []forge.Change
 	return states, nil
 }
 
+type detailsRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
+	IDs []ChangeID `json:"ids"`
+}
+
+type changeDetail struct {
+	State          string `json:"state"`
+	Draft          bool   `json:"draft,omitempty"`
+	ReviewDecision string `json:"review_decision,omitempty"`
+}
+
+type detailsResponse struct {
+	Details []changeDetail `json:"details"`
+}
+
+var _ = shamhubRESTHandler("POST /{owner}/{repo}/change/details", (*ShamHub).handleDetails)
+
+func (sh *ShamHub) handleDetails(_ context.Context, req *detailsRequest) (*detailsResponse, error) {
+	owner, repo := req.Owner, req.Repo
+
+	// Map from change number to all positions it appears in req.IDs.
+	// This handles duplicate IDs and ensures the response length always
+	// matches len(req.IDs), preserving the 1:1 positional mapping
+	// that callers expect.
+	changeNumToIdxs := make(map[int][]int, len(req.IDs))
+	for i, id := range req.IDs {
+		changeNumToIdxs[int(id)] = append(changeNumToIdxs[int(id)], i)
+	}
+
+	sh.mu.RLock()
+	details := make([]changeDetail, len(req.IDs))
+	for _, c := range sh.changes {
+		if c.Base.Owner == owner && c.Base.Repo == repo {
+			idxs, ok := changeNumToIdxs[c.Number]
+			if !ok {
+				continue
+			}
+
+			var state string
+			switch c.State {
+			case shamChangeOpen:
+				state = "open"
+			case shamChangeClosed:
+				state = "closed"
+			case shamChangeMerged:
+				state = "merged"
+			}
+
+			var reviewDecision string
+			switch c.ReviewDecision {
+			case shamReviewRequired:
+				reviewDecision = "review_requested"
+			case shamReviewChangesRequested:
+				reviewDecision = "changes_requested"
+			case shamReviewApproved:
+				reviewDecision = "approved"
+			}
+
+			d := changeDetail{
+				State:          state,
+				Draft:          c.Draft,
+				ReviewDecision: reviewDecision,
+			}
+			for _, idx := range idxs {
+				details[idx] = d
+			}
+			delete(changeNumToIdxs, c.Number)
+
+			if len(changeNumToIdxs) == 0 {
+				break
+			}
+		}
+	}
+	sh.mu.RUnlock()
+
+	if len(changeNumToIdxs) > 0 {
+		return nil, notFoundErrorf("changes not found: %v", changeNumToIdxs)
+	}
+
+	return &detailsResponse{Details: details}, nil
+}
+
+func (r *forgeRepository) ChangesDetails(ctx context.Context, fids []forge.ChangeID) ([]forge.ChangeDetails, error) {
+	ids := make([]ChangeID, len(fids))
+	for i, fid := range fids {
+		ids[i] = fid.(ChangeID)
+	}
+
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", "details")
+	req := detailsRequest{IDs: ids}
+
+	var res detailsResponse
+	if err := r.client.Post(ctx, u.String(), req, &res); err != nil {
+		return nil, fmt.Errorf("get details: %w", err)
+	}
+
+	details := make([]forge.ChangeDetails, len(res.Details))
+	for i, d := range res.Details {
+		var state forge.ChangeState
+		switch d.State {
+		case "open":
+			state = forge.ChangeOpen
+		case "closed":
+			state = forge.ChangeClosed
+		case "merged":
+			state = forge.ChangeMerged
+		default:
+			state = forge.ChangeOpen
+		}
+
+		var reviewDecision forge.ChangeReviewDecision
+		switch d.ReviewDecision {
+		case "review_requested":
+			reviewDecision = forge.ChangeReviewRequired
+		case "changes_requested":
+			reviewDecision = forge.ChangeReviewChangesRequested
+		case "approved":
+			reviewDecision = forge.ChangeReviewApproved
+		}
+
+		details[i] = forge.ChangeDetails{
+			State:          state,
+			Draft:          d.Draft,
+			ReviewDecision: reviewDecision,
+		}
+	}
+
+	return details, nil
+}
+
 // MergeChangeRequest is a request to merge an open change
 // proposed against this forge.
 type MergeChangeRequest struct {

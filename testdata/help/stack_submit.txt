@@ -49,15 +49,16 @@ Flags:
   -a, --assign=ASSIGNEE,...      Assign the change request to these users.
                                  Pass multiple times or separate with commas.
       --no-web                   Alias for --web=false.
+      --claude-summary           Generate PR title and body using Claude AI.
 
 Global Flags:
-  -h, --help                       Show help for the command
-      --version                    Print version information and quit
-  -v, --verbose                    Enable verbose output ($GIT_SPICE_VERBOSE)
-  -C, --dir=DIR                    Change to DIR before doing anything
-      --[no-]prompt                Whether to prompt for missing information
-      --restack-method="rebase"    Method to use for restacking (rebase or
-                                   merge) (🔧 spice.restack.method)
+  -h, --help                      Show help for the command
+      --version                   Print version information and quit
+  -v, --verbose                   Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR                   Change to DIR before doing anything
+      --[no-]prompt               Whether to prompt for missing information
+      --restack-method="merge"    Method to use for restacking (rebase or merge)
+                                  (🔧 spice.restack.method)
 
 Configuration (🔧):
   spice.submit.assignees     Default assignees to add to change requests.

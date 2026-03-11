@@ -70,13 +70,13 @@ Flags:
                          empty commit (🔧 spice.branchCreate.commit)
 
 Global Flags:
-  -h, --help                       Show help for the command
-      --version                    Print version information and quit
-  -v, --verbose                    Enable verbose output ($GIT_SPICE_VERBOSE)
-  -C, --dir=DIR                    Change to DIR before doing anything
-      --[no-]prompt                Whether to prompt for missing information
-      --restack-method="rebase"    Method to use for restacking (rebase or
-                                   merge) (🔧 spice.restack.method)
+  -h, --help                      Show help for the command
+      --version                   Print version information and quit
+  -v, --verbose                   Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR                   Change to DIR before doing anything
+      --[no-]prompt               Whether to prompt for missing information
+      --restack-method="merge"    Method to use for restacking (rebase or merge)
+                                  (🔧 spice.restack.method)
 
 Configuration (🔧):
   spice.branchCreate.generatedBranchNameLimit

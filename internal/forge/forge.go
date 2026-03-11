@@ -186,6 +186,7 @@ type Repository interface {
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangesStates(ctx context.Context, ids []ChangeID) ([]ChangeState, error)
+	ChangesDetails(ctx context.Context, ids []ChangeID) ([]ChangeDetails, error)
 
 	// Post and update comments on changes.
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
@@ -395,6 +396,55 @@ type ChangeTemplate struct {
 
 	// Body is the content of the template file.
 	Body string
+}
+
+// ChangeDetails holds the current state, draft status,
+// and review decision for a change.
+type ChangeDetails struct {
+	// State is the current state of the change.
+	State ChangeState
+
+	// Draft indicates whether the change is a draft.
+	Draft bool
+
+	// ReviewDecision is the current review decision for the change.
+	ReviewDecision ChangeReviewDecision
+}
+
+// ChangeReviewDecision is the review decision for a change.
+type ChangeReviewDecision int
+
+const (
+	// ChangeReviewNoReview indicates that no review has been
+	// requested or submitted.
+	ChangeReviewNoReview ChangeReviewDecision = iota
+
+	// ChangeReviewRequired indicates that a review is required
+	// but has not yet been submitted.
+	ChangeReviewRequired
+
+	// ChangeReviewChangesRequested indicates that a reviewer
+	// has requested changes.
+	ChangeReviewChangesRequested
+
+	// ChangeReviewApproved indicates that the change
+	// has been approved by a reviewer.
+	ChangeReviewApproved
+)
+
+func (d ChangeReviewDecision) String() string {
+	switch d {
+	case ChangeReviewNoReview:
+		return ""
+	case ChangeReviewRequired:
+		return "review_requested"
+	case ChangeReviewChangesRequested:
+		return "changes_requested"
+	case ChangeReviewApproved:
+		return "approved"
+	default:
+		return fmt.Sprintf("ChangeReviewDecision(%d)", int(d))
+	}
 }
 
 // ChangeState is the current state of a change.

@@ -1,0 +1,137 @@
+# 'gs log' shows PR draft and review status alongside the CR ID
+# when --cr-status is enabled.
+
+as 'Test <test@example.com>'
+at '2026-03-10T12:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# set up a fake remote
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create stack feat1 -> feat2 -> feat3 -> feat4
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+git add feat4.txt
+gs bc feat4 -m 'feat4'
+
+# submit all four
+gs bco feat4
+gs dss --fill
+
+# server-side: mark feat1 as draft,
+# request review on feat2,
+# approve feat3,
+# request changes on feat4.
+shamhub draft alice/example 1
+shamhub review alice/example 2 alice
+shamhub approve alice/example 3 alice
+shamhub request-changes alice/example 4 alice
+
+# Test: no cr-status — no draft/review info shown
+gs ls
+cmp stderr $WORK/golden/ls-without-status.txt
+gs ll
+cmp stderr $WORK/golden/ll-without-status.txt
+
+# Test: with --cr-status flag
+gs ls -S
+cmp stderr $WORK/golden/ls-with-status.txt
+gs ll -S
+cmp stderr $WORK/golden/ll-with-status.txt
+
+# Test: with config option
+git config spice.log.crStatus true
+gs ls
+cmp stderr $WORK/golden/ls-with-status.txt
+gs ll
+cmp stderr $WORK/golden/ll-with-status.txt
+
+# Test: JSON output
+gs ls --json --no-cr-status
+cmpenv stdout $WORK/golden/ls-without-status.json
+gs ll --json --no-cr-status
+cmpenv stdout $WORK/golden/ll-without-status.json
+gs ls --json
+cmpenv stdout $WORK/golden/ls-with-status.json
+gs ll --json
+cmpenv stdout $WORK/golden/ll-with-status.json
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- repo/feat4.txt --
+feat4
+
+-- golden/ls-without-status.txt --
+      ┏━■ feat4 (#4) ◀
+    ┏━┻□ feat3 (#3)
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-without-status.txt --
+      ┏━■ feat4 (#4) ◀
+      ┃   f7f6688 feat4 (now)
+    ┏━┻□ feat3 (#3)
+    ┃    ace95dc feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    bec278e feat2 (now)
+┏━┻□ feat1 (#1)
+┃    4085b4c feat1 (now)
+main
+-- golden/ls-with-status.txt --
+      ┏━■ feat4 (#4 open changes requested) ◀
+    ┏━┻□ feat3 (#3 open approved)
+  ┏━┻□ feat2 (#2 open review requested)
+┏━┻□ feat1 (#1 open draft)
+main
+-- golden/ll-with-status.txt --
+      ┏━■ feat4 (#4 open changes requested) ◀
+      ┃   f7f6688 feat4 (now)
+    ┏━┻□ feat3 (#3 open approved)
+    ┃    ace95dc feat3 (now)
+  ┏━┻□ feat2 (#2 open review requested)
+  ┃    bec278e feat2 (now)
+┏━┻□ feat1 (#1 open draft)
+┃    4085b4c feat1 (now)
+main
+-- golden/ls-without-status.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","down":{"name":"feat2"},"ups":[{"name":"feat4"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"feat4","current":true,"down":{"name":"feat3"},"change":{"id":"#4","url":"$SHAMHUB_URL/alice/example/changes/4"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ll-without-status.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"4085b4c6f503696df97f2e18fe91f177b1d3dab1","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"bec278e2e0436322b810091e1ddd3991cc741bbe","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","down":{"name":"feat2"},"ups":[{"name":"feat4"}],"commits":[{"sha":"ace95dc9dff231c19375be7616c83e1aaedbae8b","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"feat4","current":true,"down":{"name":"feat3"},"commits":[{"sha":"f7f668872d54c37d0e142e08ce4196fac5214266","subject":"feat4"}],"change":{"id":"#4","url":"$SHAMHUB_URL/alice/example/changes/4"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ls-with-status.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","status":"open","draft":true},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","status":"open","reviewDecision":"review_requested"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","down":{"name":"feat2"},"ups":[{"name":"feat4"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"open","reviewDecision":"approved"},"push":{"ahead":0,"behind":0}}
+{"name":"feat4","current":true,"down":{"name":"feat3"},"change":{"id":"#4","url":"$SHAMHUB_URL/alice/example/changes/4","status":"open","reviewDecision":"changes_requested"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ll-with-status.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"4085b4c6f503696df97f2e18fe91f177b1d3dab1","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","status":"open","draft":true},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"bec278e2e0436322b810091e1ddd3991cc741bbe","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","status":"open","reviewDecision":"review_requested"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","down":{"name":"feat2"},"ups":[{"name":"feat4"}],"commits":[{"sha":"ace95dc9dff231c19375be7616c83e1aaedbae8b","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","status":"open","reviewDecision":"approved"},"push":{"ahead":0,"behind":0}}
+{"name":"feat4","current":true,"down":{"name":"feat3"},"commits":[{"sha":"f7f668872d54c37d0e142e08ce4196fac5214266","subject":"feat4"}],"change":{"id":"#4","url":"$SHAMHUB_URL/alice/example/changes/4","status":"open","reviewDecision":"changes_requested"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}

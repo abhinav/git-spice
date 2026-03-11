@@ -671,6 +671,45 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
+// ChangesDetails mocks base method.
+func (m *MockRepository) ChangesDetails(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeDetails, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangesDetails", ctx, ids)
+	ret0, _ := ret[0].([]forge.ChangeDetails)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangesDetails indicates an expected call of ChangesDetails.
+func (mr *MockRepositoryMockRecorder) ChangesDetails(ctx, ids any) *MockRepositoryChangesDetailsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangesDetails", reflect.TypeOf((*MockRepository)(nil).ChangesDetails), ctx, ids)
+	return &MockRepositoryChangesDetailsCall{Call: call}
+}
+
+// MockRepositoryChangesDetailsCall wrap *gomock.Call
+type MockRepositoryChangesDetailsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryChangesDetailsCall) Return(arg0 []forge.ChangeDetails, arg1 error) *MockRepositoryChangesDetailsCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryChangesDetailsCall) Do(f func(context.Context, []forge.ChangeID) ([]forge.ChangeDetails, error)) *MockRepositoryChangesDetailsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryChangesDetailsCall) DoAndReturn(f func(context.Context, []forge.ChangeID) ([]forge.ChangeDetails, error)) *MockRepositoryChangesDetailsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ChangesStates mocks base method.
 func (m *MockRepository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeState, error) {
 	m.ctrl.T.Helper()

@@ -3,13 +3,13 @@ Usage: gs <command> [flags]
 gs (git-spice) is a command line tool for stacking Git branches.
 
 Global Flags:
-  -h, --help                       Show help for the command
-      --version                    Print version information and quit
-  -v, --verbose                    Enable verbose output ($GIT_SPICE_VERBOSE)
-  -C, --dir=DIR                    Change to DIR before doing anything
-      --[no-]prompt                Whether to prompt for missing information
-      --restack-method="rebase"    Method to use for restacking (rebase or
-                                   merge) (🔧 spice.restack.method)
+  -h, --help                      Show help for the command
+      --version                   Print version information and quit
+  -v, --verbose                   Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR                   Change to DIR before doing anything
+      --[no-]prompt               Whether to prompt for missing information
+      --restack-method="merge"    Method to use for restacking (rebase or merge)
+                                  (🔧 spice.restack.method)
 
 Commands:
   continue    Continue an interrupted operation
@@ -47,19 +47,20 @@ Stack
   downstack (ds) edit (e)      Edit the order of branches below a branch
 
 Branch
-  branch (b) track (tr)        Track a branch
-  branch (b) untrack (untr)    Forget a tracked branch
-  branch (b) checkout (co)     Switch to a branch
-  branch (b) create (c)        Create a new branch
-  branch (b) delete (d,rm)     Delete branches
-  branch (b) fold (fo)         Merge a branch into its base
-  branch (b) split (sp)        Split a branch on commits
-  branch (b) squash (sq)       Squash a branch into one commit
-  branch (b) edit (e)          Edit the commits in a branch
-  branch (b) rename (rn,mv)    Rename a branch
-  branch (b) restack (r)       Restack a branch
-  branch (b) onto (on)         Move a branch onto another branch
-  branch (b) submit (s)        Submit a branch
+  branch (b) track (tr)           Track a branch
+  branch (b) untrack (untr)       Forget a tracked branch
+  branch (b) checkout (co)        Switch to a branch
+  branch (b) create (c)           Create a new branch
+  branch (b) delete (d,rm)        Delete branches
+  branch (b) fold (fo)            Merge a branch into its base
+  branch (b) split (sp)           Split a branch on commits
+  branch (b) split-files (spf)    Split a branch by files into a stack
+  branch (b) squash (sq)          Squash a branch into one commit
+  branch (b) edit (e)             Edit the commits in a branch
+  branch (b) rename (rn,mv)       Rename a branch
+  branch (b) restack (r)          Restack a branch
+  branch (b) onto (on)            Move a branch onto another branch
+  branch (b) submit (s)           Submit a branch
 
 Commit
   commit (c) create (c)    Create a new commit
@@ -71,6 +72,9 @@ Commit
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
   rebase (rb) abort (a)       Abort an operation
+
+AI
+  claude review    Review changes using Claude AI
 
 Navigation
   up (u)        Move up one branch

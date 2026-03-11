@@ -1,0 +1,34 @@
+Usage: gs claude review [flags]
+
+Review changes using Claude AI
+
+Reviews code changes using Claude AI.
+
+By default, reviews all changes from the trunk to the current branch. Use --from
+and --to flags to specify a custom range.
+
+The --per-branch flag reviews each branch in the stack individually, then
+provides an overall summary of the entire stack.
+
+Example usage:
+
+    gs claude review                      # Review current branch against trunk
+    gs claude review --from main --to feature
+    gs claude review --per-branch         # Review each branch in stack
+
+Flags:
+  --from=STRING     Start of the range to review (defaults to trunk)
+  --to=STRING       End of the range to review (defaults to current branch)
+  --per-branch      Review each branch individually, then provide an overall
+                    summary
+  --title=STRING    Title for the review (defaults to branch name or range)
+  --fix             After review, prompt to apply suggested fixes
+
+Global Flags:
+  -h, --help                      Show help for the command
+      --version                   Print version information and quit
+  -v, --verbose                   Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR                   Change to DIR before doing anything
+      --[no-]prompt               Whether to prompt for missing information
+      --restack-method="merge"    Method to use for restacking (rebase or merge)
+                                  (🔧 spice.restack.method)

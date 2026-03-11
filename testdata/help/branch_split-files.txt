@@ -1,0 +1,38 @@
+Usage: gs branch (b) split-files (spf) [<branch>] [flags]
+
+Split a branch by files into a stack
+
+Splits the file changes in a branch into a linear stack of branches. Each new
+branch contains a squashed commit with the selected files.
+
+Unlike 'gs branch split', which splits at commit boundaries, this command splits
+by files: all file changes in the branch (compared to its base) are presented
+for selection.
+
+Use --at to specify splits non-interactively:
+
+    gs branch split-files \
+      --at "src/api.go|src/routes.go:api-changes:Add API" \
+      --at "src/db.go:db-changes:Add DB queries" \
+      --keep
+
+Files are separated by pipes (|), followed by branch name and message.
+Use --keep to keep the original branch at the top of the stack, or --delete to
+remove it after splitting.
+
+Arguments:
+  [<branch>]    Branch to split (default: current branch)
+
+Flags:
+  --at=AT,...    Non-interactive: FILE|FILE:BRANCH:MESSAGE (repeatable)
+  --keep         Keep original branch at top of stack (non-interactive)
+  --delete       Delete original branch (non-interactive)
+
+Global Flags:
+  -h, --help                      Show help for the command
+      --version                   Print version information and quit
+  -v, --verbose                   Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR                   Change to DIR before doing anything
+      --[no-]prompt               Whether to prompt for missing information
+      --restack-method="merge"    Method to use for restacking (rebase or merge)
+                                  (🔧 spice.restack.method)
