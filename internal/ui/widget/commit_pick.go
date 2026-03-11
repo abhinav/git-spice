@@ -6,9 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/commit"
@@ -42,8 +41,8 @@ var DefaultCommitPickKeyMap = CommitPickKeyMap{
 
 // CommitPickStyle defines the visual style of the commit pick widget.
 type CommitPickStyle struct {
-	Branch      lipgloss.Style
-	CursorStyle lipgloss.Style
+	Branch      ui.Style
+	CursorStyle ui.Style
 
 	LogCommitStyle commit.SummaryStyle
 }
@@ -302,7 +301,9 @@ func (c *CommitPick) moveCursor(forwards bool) {
 }
 
 // Render renders the widget to a writer.
-func (c *CommitPick) Render(w ui.Writer) {
+func (c *CommitPick) Render(w ui.Writer, theme ui.Theme) {
+	style := c.Style
+
 	if c.accepted {
 		w.WriteString(c.value.String())
 		return
@@ -322,7 +323,7 @@ func (c *CommitPick) Render(w ui.Writer) {
 		Edges:  func(b commitPickBranch) []int { return b.Aboves },
 		View: func(b commitPickBranch) string {
 			var o strings.Builder
-			o.WriteString(c.Style.Branch.Render(b.Name))
+			o.WriteString(style.Branch.Render(theme, b.Name))
 
 			focusedCommitIdx := c.order[c.cursor]
 			focusedBranchIdx := c.commits[focusedCommitIdx].Branch
@@ -334,7 +335,7 @@ func (c *CommitPick) Render(w ui.Writer) {
 				o.WriteString("\n")
 
 				cursor := " "
-				summaryStyle := c.Style.LogCommitStyle
+				summaryStyle := style.LogCommitStyle
 				// Three levels of visibility for commits:
 				//  1. focused on commit
 				//  2. not focused on commit,
@@ -343,7 +344,7 @@ func (c *CommitPick) Render(w ui.Writer) {
 				switch {
 				case focusedCommitIdx == commitIdx:
 					summaryStyle = summaryStyle.Bold(true)
-					cursor = c.Style.CursorStyle.String()
+					cursor = style.CursorStyle.String(theme)
 				case focusedBranchIdx == commit.Branch:
 					// default style is good enough
 				default:
@@ -352,10 +353,10 @@ func (c *CommitPick) Render(w ui.Writer) {
 
 				o.WriteString(cursor)
 				o.WriteString(" ")
-				commit.Summary.Render(&o, summaryStyle, &summaryOptions)
+				commit.Summary.Render(&o, theme, summaryStyle, &summaryOptions)
 			}
 
 			return o.String()
 		},
-	}, fliptree.Options[commitPickBranch]{})
+	}, fliptree.Options[commitPickBranch]{Theme: theme})
 }

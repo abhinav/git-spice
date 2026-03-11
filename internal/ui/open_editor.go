@@ -6,9 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/osutil"
 	"go.abhg.dev/gs/internal/xec"
 )
@@ -33,8 +32,8 @@ var DefaultOpenEditorKeyMap = OpenEditorKeyMap{
 
 // OpenEditorStyle defines the display style for [OpenEditor].
 type OpenEditorStyle struct {
-	Key    lipgloss.Style // how to highlight keys
-	Editor lipgloss.Style
+	Key    Style // how to highlight keys
+	Editor Style
 
 	NoEditorMessage string
 }
@@ -240,10 +239,10 @@ func (a *OpenEditor) Update(msg tea.Msg) tea.Cmd {
 }
 
 // Render renders the field to the screen.
-func (a *OpenEditor) Render(w Writer) {
+func (a *OpenEditor) Render(w Writer, theme Theme) {
 	fmt.Fprintf(w, "Press [%v] to open %v or [%v] to skip",
-		a.Style.Key.Render(a.KeyMap.Edit.Help().Key),
-		a.Style.Editor.Render(a.Editor.Command),
-		a.Style.Key.Render(a.KeyMap.Accept.Help().Key),
+		a.Style.Key.Render(theme, a.KeyMap.Edit.Help().Key),
+		a.Style.Editor.Render(theme, a.Editor.Command),
+		a.Style.Key.Render(theme, a.KeyMap.Accept.Help().Key),
 	)
 }

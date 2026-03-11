@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // SelectKeyMap defines the key bindings for [Select].
@@ -42,10 +42,10 @@ var DefaultSelectKeyMap = SelectKeyMap{
 
 // SelectStyle defines the styles for [Select].
 type SelectStyle struct {
-	Selected  lipgloss.Style
-	Highlight lipgloss.Style
+	Selected  Style
+	Highlight Style
 
-	ScrollMarker lipgloss.Style
+	ScrollMarker Style
 }
 
 // DefaultSelectStyle is the default style for a [Select].
@@ -282,7 +282,7 @@ func (s *Select[T]) Update(msg tea.Msg) tea.Cmd {
 		if s.visible == 0 {
 			// Leave enough room for title, description, error,
 			// and two scroll markers.
-			s.visible = msg.Height - 5
+			s.visible = max(1, msg.Height-5)
 		}
 
 	case tea.KeyMsg:
@@ -321,8 +321,8 @@ func (s *Select[T]) Update(msg tea.Msg) tea.Cmd {
 				filterChanged = true
 			}
 
-		case msg.Type == tea.KeyRunes:
-			for _, r := range msg.Runes {
+		case msg.Key().Text != "":
+			for _, r := range msg.Key().Text {
 				s.filter = append(s.filter, unicode.ToLower(r))
 			}
 			filterChanged = true
@@ -386,7 +386,9 @@ func (s *Select[T]) matchOption(opt *selectOption[T]) bool {
 }
 
 // Render renders the select field.
-func (s *Select[T]) Render(out Writer) {
+func (s *Select[T]) Render(out Writer, theme Theme) {
+	style := s.Style
+
 	// If the field has been accepted, only render the label
 	// for the selected option.
 	if s.accepted {
@@ -405,7 +407,7 @@ func (s *Select[T]) Render(out Writer) {
 		return
 	}
 
-	highlight := s.Style.Highlight
+	highlight := style.Highlight.Resolve(theme)
 
 	matched := s.matched
 	offset := 0
@@ -415,7 +417,7 @@ func (s *Select[T]) Render(out Writer) {
 	}
 
 	if offset > 0 {
-		fmt.Fprintf(out, "%s\n", s.Style.ScrollMarker.Render("  ▲▲▲"))
+		fmt.Fprintf(out, "%s\n", style.ScrollMarker.Render(theme, "  ▲▲▲"))
 	} else {
 		out.WriteString("\n")
 	}
@@ -428,9 +430,9 @@ func (s *Select[T]) Render(out Writer) {
 			out.WriteString("\n")
 		}
 
-		style := NewStyle()
+		var lineStyle lipgloss.Style
 		if matchIdx == s.selected {
-			style = s.Style.Selected
+			lineStyle = style.Selected.Resolve(theme)
 			out.WriteString("▶ ")
 		} else {
 			out.WriteString("  ")
@@ -440,15 +442,15 @@ func (s *Select[T]) Render(out Writer) {
 		value := s.options[optionIdx].Label
 		lastRuneIdx := 0
 		for _, runeIdx := range s.options[optionIdx].Highlights {
-			out.WriteString(style.Render(value[lastRuneIdx:runeIdx]))
+			out.WriteString(lineStyle.Render(value[lastRuneIdx:runeIdx]))
 			out.WriteString(highlight.Render(string(value[runeIdx])))
 			lastRuneIdx = runeIdx + 1
 		}
-		out.WriteString(style.Render(value[lastRuneIdx:]))
+		out.WriteString(lineStyle.Render(value[lastRuneIdx:]))
 		out.WriteString("\n")
 	}
 
 	if offset+s.visible < len(s.matched) {
-		fmt.Fprintf(out, "%s\n", s.Style.ScrollMarker.Render("  ▼▼▼"))
+		fmt.Fprintf(out, "%s\n", style.ScrollMarker.Render(theme, "  ▼▼▼"))
 	}
 }

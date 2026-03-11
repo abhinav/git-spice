@@ -88,14 +88,14 @@ func (cmd *commitAmendCmd) Run(
 					WithItems(
 						ui.ListItem[bool]{
 							Title: "Yes",
-							Description: func(bool) string {
+							Description: func(ui.Theme, bool) string {
 								return "Amend the commit on trunk"
 							},
 							Value: true,
 						},
 						ui.ListItem[bool]{
 							Title: "No",
-							Description: func(bool) string {
+							Description: func(ui.Theme, bool) string {
 								return "Create a branch and commit there instead"
 							},
 							Value: false,
@@ -162,12 +162,12 @@ func (cmd *commitAmendCmd) Run(
 						WithItems(
 							ui.ListItem[bool]{
 								Title:       "Yes",
-								Description: func(bool) string { return "Continue with commit amend" },
+								Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
 								Value:       true,
 							},
 							ui.ListItem[bool]{
 								Title:       "No",
-								Description: func(bool) string { return "Abort the operation" },
+								Description: func(ui.Theme, bool) string { return "Abort the operation" },
 								Value:       false,
 							},
 						).

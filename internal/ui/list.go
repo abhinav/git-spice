@@ -3,9 +3,9 @@ package ui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // ListKeyMap defines key bindings for [List].
@@ -33,10 +33,10 @@ var DefaultListKeyMap = ListKeyMap{
 
 // ListStyle defines the styles for [List].
 type ListStyle struct {
-	Cursor lipgloss.Style
+	Cursor Style
 
-	ItemTitle         lipgloss.Style
-	SelectedItemTitle lipgloss.Style
+	ItemTitle         Style
+	SelectedItemTitle Style
 }
 
 // DefaultListStyle is the default style for a [List].
@@ -68,7 +68,7 @@ var _ Field = (*List[int])(nil)
 // ListItem is an item in a [List].
 type ListItem[T any] struct {
 	Title       string
-	Description func(focused bool) string
+	Description func(theme Theme, focused bool) string
 	Value       T
 }
 
@@ -204,19 +204,21 @@ func (l *List[T]) Update(msg tea.Msg) tea.Cmd {
 }
 
 // Render renders the list to the screen.
-func (l *List[T]) Render(w Writer) {
+func (l *List[T]) Render(w Writer, theme Theme) {
+	style := l.Style
+
 	if l.accepted {
 		w.WriteString(l.items[l.selected].Title)
 		return
 	}
 
 	for i, item := range l.items {
-		titleStyle := l.Style.ItemTitle
+		titleStyle := style.ItemTitle
 		cursor := "  "
 		descStyle := lipgloss.NewStyle().Width(l.width - 4)
 		if i == l.selected {
-			cursor = l.Style.Cursor.String() + " "
-			titleStyle = l.Style.SelectedItemTitle
+			cursor = style.Cursor.String(theme) + " "
+			titleStyle = style.SelectedItemTitle
 		} else {
 			descStyle = descStyle.Faint(true)
 			w.WriteString(" ")
@@ -228,8 +230,8 @@ func (l *List[T]) Render(w Writer) {
 			cursor,
 			lipgloss.JoinVertical(
 				lipgloss.Left,
-				titleStyle.Render(item.Title),
-				descStyle.Render(item.Description(i == l.selected)),
+				titleStyle.Render(theme, item.Title),
+				descStyle.Render(item.Description(theme, i == l.selected)),
 			),
 		))
 	}

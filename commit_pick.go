@@ -94,14 +94,14 @@ func (cmd *commitPickCmd) Run(
 				WithItems(
 					ui.ListItem[bool]{
 						Title: "Yes",
-						Description: func(bool) string {
+						Description: func(ui.Theme, bool) string {
 							return fmt.Sprintf("Cherry-pick commit %v on trunk", commit.Short())
 						},
 						Value: true,
 					},
 					ui.ListItem[bool]{
 						Title: "No",
-						Description: func(bool) string {
+						Description: func(ui.Theme, bool) string {
 							return "Abort the operation"
 						},
 						Value: false,

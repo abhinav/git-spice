@@ -49,7 +49,7 @@ func TestList(t *testing.T) {
 				listItems[i] = ui.ListItem[string]{
 					Title: item.Value,
 					Value: item.Value,
-					Description: func(focused bool) string {
+					Description: func(_ ui.Theme, focused bool) string {
 						desc := item.Desc
 						if focused && item.FocusedDesc != "" {
 							desc = item.FocusedDesc

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/ui"
@@ -24,7 +24,7 @@ var _update = flag.Bool("update", false, "update fixtures")
 func plainStyle() *Style[string] {
 	return &Style[string]{
 		Joint: ui.NewStyle(),
-		NodeMarker: func(string) lipgloss.Style {
+		NodeMarker: func(string) ui.Style {
 			return ui.NewStyle().SetString("□")
 		},
 	}
@@ -96,6 +96,7 @@ func TestWrite(t *testing.T) {
 
 			var sb strings.Builder
 			err := Write(&sb, g, Options[string]{
+				Theme: ui.DefaultThemeLight(),
 				Style: plainStyle(),
 			})
 			require.NoError(t, err)
@@ -204,6 +205,7 @@ func testWriteProperty(t *rapid.T) {
 
 	var out strings.Builder
 	if err := Write(&out, g, Options[string]{
+		Theme: ui.DefaultThemeLight(),
 		Style: plainStyle(),
 	}); err != nil {
 		t.Skip(err)
@@ -305,6 +307,39 @@ func testWriteProperty(t *rapid.T) {
 
 		}
 	}
+}
+
+func TestWrite_resolvesThemeAtRenderTime(t *testing.T) {
+	g := Graph[string]{
+		Values: []string{"main", "feat"},
+		Roots:  []int{0},
+		Edges: func(n string) []int {
+			if n == "main" {
+				return []int{1}
+			}
+			return nil
+		},
+		View: func(n string) string { return n },
+	}
+
+	opts := Options[string]{
+		Theme: ui.DefaultThemeDark(),
+		Style: &Style[string]{
+			Joint: ui.NewStyle(),
+			NodeMarker: func(string) ui.Style {
+				return ui.NewStyle().
+					Foreground(ui.Cyan).
+					SetString("■")
+			},
+		},
+	}
+
+	var out strings.Builder
+	require.NoError(t, Write(&out, g, opts))
+
+	got := out.String()
+	assert.Equal(t, "┏━■ feat\nmain\n", ansi.Strip(got))
+	assert.Contains(t, got, "\x1b[96m■\x1b[m")
 }
 
 func stripTrailingSpaces(s string) string {

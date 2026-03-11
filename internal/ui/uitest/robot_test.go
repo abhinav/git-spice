@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/text"
@@ -118,6 +118,44 @@ func TestRobotView_persistsState(t *testing.T) {
 	`), string(got))
 }
 
+func TestRobotView_noTTYStripsANSI(t *testing.T) {
+	dir := t.TempDir()
+	inputFile := filepath.Join(dir, "input")
+	outputFile := filepath.Join(dir, "output")
+
+	require.NoError(t, os.WriteFile(inputFile, []byte(`"foo"`+"\n"), 0o644))
+
+	view, err := NewRobotView(inputFile, &RobotViewOptions{
+		OutputFile: outputFile,
+	})
+	require.NoError(t, err)
+
+	_, err = io.WriteString(
+		view,
+		ui.NewStyle().
+			Bold(true).
+			Render(ui.DefaultThemeLight(), "Captain: "),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, view.Prompt(&fakeField{
+		View: ui.NewStyle().
+			Foreground(ui.Green).
+			Render(ui.DefaultThemeLight(), "Warp"),
+	}))
+	require.NoError(t, view.Close())
+
+	got, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+
+	assert.Equal(t, text.Dedent(`
+		===
+		> Captain: Warp
+		"foo"
+
+	`), string(got))
+}
+
 type fakeField struct {
 	GotValue any
 	View     string
@@ -133,7 +171,7 @@ func (f *fakeField) Title() string       { return "" }
 
 func (f *fakeField) Update(tea.Msg) tea.Cmd { return nil }
 
-func (f *fakeField) Render(w ui.Writer) {
+func (f *fakeField) Render(w ui.Writer, _ ui.Theme) {
 	_, _ = w.WriteString(f.View)
 }
 

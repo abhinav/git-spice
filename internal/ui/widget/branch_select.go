@@ -9,8 +9,8 @@ import (
 	"sort"
 	"unicode"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/sahilm/fuzzy"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/branchtree"
@@ -50,12 +50,14 @@ var DefaultBranchSelectKeyMap = BranchSelectKeyMap{
 	),
 }
 
-// _branchSelectStyle is the default style for a [BranchTreeSelect] widget.
+// DefaultBranchSelectStyle is the default style for a [BranchTreeSelect] widget.
 // It modifies branchtree.DefaultStyle to match the widget's visual appearance.
-var _branchSelectStyle = func() branchtree.Style {
+var DefaultBranchSelectStyle = func() branchtree.Style {
 	s := branchtree.DefaultStyle
 	s.Branch = ui.NewStyle()
-	s.BranchHighlighted = ui.NewStyle().Bold(true).Foreground(ui.Yellow)
+	s.BranchHighlighted = ui.NewStyle().
+		Bold(true).
+		Foreground(ui.Yellow)
 	return s
 }()
 
@@ -315,8 +317,8 @@ func (b *BranchTreeSelect) Update(msg tea.Msg) tea.Cmd {
 			filterChanged = true
 		}
 
-	case keyMsg.Type == tea.KeyRunes:
-		for _, r := range keyMsg.Runes {
+	case keyMsg.Key().Text != "":
+		for _, r := range keyMsg.Key().Text {
 			b.filter = append(b.filter, unicode.ToLower(r))
 		}
 		filterChanged = true
@@ -436,7 +438,7 @@ func (b *BranchTreeSelect) matchesFilter(bi *branchInfo) bool {
 }
 
 // Render renders the widget.
-func (b *BranchTreeSelect) Render(w ui.Writer) {
+func (b *BranchTreeSelect) Render(w ui.Writer, theme ui.Theme) {
 	if b.accepted {
 		w.WriteString(b.Value())
 		return
@@ -493,7 +495,8 @@ func (b *BranchTreeSelect) Render(w ui.Writer) {
 	}
 
 	_ = branchtree.Write(w, g, &branchtree.GraphOptions{
-		Style:           cmp.Or(b.Style, &_branchSelectStyle),
+		Theme:           theme,
+		Style:           cmp.Or(b.Style, &DefaultBranchSelectStyle),
 		CurrentWorktree: b.currentWorktree,
 		HomeDir:         home,
 	})

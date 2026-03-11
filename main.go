@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/alecthomas/kong"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/cli/experiment"
@@ -55,14 +56,16 @@ var (
 
 	// Forges to registry into main at startup besides the defaults.
 	_extraForges []forge.Forge
+
+	_highlightStyle = ui.NewStyle().
+			Foreground(ui.Cyan).
+			Bold(true)
 )
 
 var errNoPrompt = ui.ErrPrompt
 
-var _highlightStyle = ui.NewStyle().Foreground(ui.Cyan).Bold(true)
-
 func main() {
-	logger := silog.New(os.Stderr, &silog.Options{
+	logger := silog.New(colorprofile.NewWriter(os.Stderr, os.Environ()), &silog.Options{
 		Level: silog.LevelInfo,
 	})
 
@@ -521,10 +524,7 @@ var _ AutostashHandler = (*autostash.Handler)(nil)
 
 var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {
 	if interactive {
-		return &ui.TerminalView{
-			R: stdin,
-			W: stderr,
-		}, nil
+		return ui.NewTerminalView(stdin, stderr), nil
 	}
-	return &ui.FileView{W: stderr}, nil
+	return ui.NewFileView(stderr), nil
 }

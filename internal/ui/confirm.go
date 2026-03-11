@@ -3,9 +3,8 @@ package ui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 // ConfirmKeyMap defines the key bindings for [Confirm].
@@ -33,7 +32,7 @@ var DefaultConfirmKeyMap = ConfirmKeyMap{
 
 // ConfirmStyle configures the appearance of a [Confirm] field.
 type ConfirmStyle struct {
-	Key lipgloss.Style // how to highlight keys
+	Key Style // how to highlight keys
 }
 
 // DefaultConfirmStyle is the default style for a [Confirm] field.
@@ -148,16 +147,18 @@ func (c *Confirm) Update(msg tea.Msg) tea.Cmd {
 }
 
 // Render renders the confirm field to the given writer.
-func (c *Confirm) Render(w Writer) {
+func (c *Confirm) Render(w Writer, theme Theme) {
+	style := c.Style
+
 	w.WriteString("[")
 	if *c.value {
-		w.WriteString(c.Style.Key.Render("Y"))
+		w.WriteString(style.Key.Render(theme, "Y"))
 		w.WriteString("/")
-		w.WriteString(c.Style.Key.Render("n"))
+		w.WriteString(style.Key.Render(theme, "n"))
 	} else {
-		w.WriteString(c.Style.Key.Render("y"))
+		w.WriteString(style.Key.Render(theme, "y"))
 		w.WriteString("/")
-		w.WriteString(c.Style.Key.Render("N"))
+		w.WriteString(style.Key.Render(theme, "N"))
 	}
 	w.WriteString("]")
 }

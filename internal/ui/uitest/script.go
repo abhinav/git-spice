@@ -435,14 +435,23 @@ func (s *scriptState) Await(want string) error {
 	}
 
 	var (
-		last    []string
-		matched bool
+		last      []string
+		candidate []string
+		matched   bool
 	)
 	for time.Since(start) < timeout {
 		last = s.emu.Rows()
 		if match(last) {
-			matched = true
-			break
+			// Bubble Tea v2 can emit a short burst of diff frames for one logical
+			// update. Wait for two identical snapshots so tests observe the
+			// settled screen, not an intermediate redraw.
+			if candidate != nil && slices.Equal(last, candidate) {
+				matched = true
+				break
+			}
+			candidate = slices.Clone(last)
+		} else {
+			candidate = nil
 		}
 		time.Sleep(50 * time.Millisecond)
 	}

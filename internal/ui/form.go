@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 )
 
 // FormKeyMap defines the key bindings for a form.
@@ -28,22 +28,21 @@ var DefaultFormKeyMap = FormKeyMap{
 
 // FormStyle configures the appearance of a [Form].
 type FormStyle struct {
-	Error lipgloss.Style
+	Error Style
 
-	Title         lipgloss.Style
-	Description   lipgloss.Style
-	AcceptedTitle lipgloss.Style
+	Title         Style
+	Description   Style
+	AcceptedTitle Style
 
-	AcceptedField lipgloss.Style
+	AcceptedField Style
 }
 
 // DefaultFormStyle is the default style for a [Form].
 var DefaultFormStyle = FormStyle{
 	Error:         NewStyle().Foreground(Red),
-	Title:         _titleStyle,
-	Description:   _descriptionStyle,
-	AcceptedTitle: _acceptedTitleStyle,
-
+	Title:         NewStyle().Foreground(Green).Bold(true),
+	Description:   NewStyle().Foreground(Gray).Faint(true),
+	AcceptedTitle: NewStyle().Foreground(Plain),
 	AcceptedField: NewStyle().Faint(true),
 }
 
@@ -79,7 +78,7 @@ type Field interface {
 	// If this returns [SkipField], the field will be skipped.
 	Init() tea.Cmd
 	Update(msg tea.Msg) tea.Cmd
-	Render(Writer)
+	Render(Writer, Theme)
 
 	// UnmarshalValue unmarshals the field's value
 	// using the given unmarshal function.
@@ -128,6 +127,7 @@ type Form struct {
 
 	err     error
 	focused int // index of the focused field
+	theme   Theme
 }
 
 var _ tea.Model = (*Form)(nil)
@@ -153,9 +153,20 @@ type FormRunOptions struct {
 	// Defaults to os.Stderr.
 	Output io.Writer
 
+	// Theme is the active theme for the form.
+	Theme Theme
+
 	// SendMsg specifies a message that should be posted
 	// to the program at startup.
 	SendMsg tea.Msg
+
+	// Width and Height specify the initial window size for the program.
+	// If both are greater than zero, these are applied with tea.WithWindowSize.
+	Width, Height int
+
+	// TERM overrides the terminal type that Bubble Tea uses
+	// for capability detection.
+	TERM string
 
 	// WithoutSignals requests that the form not register signal handlers.
 	WithoutSignals bool
@@ -165,6 +176,7 @@ type FormRunOptions struct {
 // It returns a combination of all errors returned by the fields.
 func (f *Form) Run(opts *FormRunOptions) error {
 	opts = cmp.Or(opts, &FormRunOptions{})
+	f.theme = opts.Theme
 
 	var teaOpts []tea.ProgramOption
 	if i := opts.Input; i != nil {
@@ -172,6 +184,13 @@ func (f *Form) Run(opts *FormRunOptions) error {
 	}
 	if o := opts.Output; o != nil {
 		teaOpts = append(teaOpts, tea.WithOutput(o))
+	}
+	if opts.Width > 0 && opts.Height > 0 {
+		teaOpts = append(teaOpts, tea.WithWindowSize(opts.Width, opts.Height))
+	}
+	if opts.TERM != "" {
+		teaOpts = append(teaOpts,
+			tea.WithEnvironment(append(os.Environ(), "TERM="+opts.TERM)))
 	}
 	if opts.WithoutSignals {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
@@ -252,11 +271,13 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return f, f.fields[f.focused].Update(msg)
 }
 
-// View implements tea.Model.
-func (f *Form) View() string {
+// Render renders the form to a string.
+func (f *Form) Render() string {
+	style := f.Style
+
 	var s strings.Builder
 	for _, accepted := range f.accepted {
-		s.WriteString(f.Style.AcceptedField.Render(accepted))
+		s.WriteString(style.AcceptedField.Render(f.theme, accepted))
 		s.WriteString("\n")
 	}
 
@@ -267,20 +288,27 @@ func (f *Form) View() string {
 	return s.String()
 }
 
+// View implements tea.Model.
+func (f *Form) View() tea.View {
+	return tea.NewView(f.Render())
+}
+
 func (f *Form) renderField(w Writer, field Field, accepted bool) {
+	style := f.Style
+
 	if title := field.Title(); title != "" {
-		titleStyle := f.Style.Title
+		titleStyle := style.Title
 		if accepted {
-			titleStyle = f.Style.AcceptedTitle
+			titleStyle = style.AcceptedTitle
 		}
 
-		fmt.Fprintf(w, "%s: ", titleStyle.Render(title))
+		fmt.Fprintf(w, "%s: ", titleStyle.Render(f.theme, title))
 	}
-	field.Render(w)
+	field.Render(w, f.theme)
 	if err := field.Err(); err != nil {
-		fmt.Fprintf(w, "\n%s", f.Style.Error.Render(err.Error()))
+		fmt.Fprintf(w, "\n%s", style.Error.Render(f.theme, err.Error()))
 	}
 	if desc := field.Description(); !accepted && desc != "" {
-		fmt.Fprintf(w, "\n%s", f.Style.Description.Render(desc))
+		fmt.Fprintf(w, "\n%s", style.Description.Render(f.theme, desc))
 	}
 }

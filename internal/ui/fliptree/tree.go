@@ -17,12 +17,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/ui"
 )
 
 // DefaultNodeMarker is the marker used for each node in the tree.
-var DefaultNodeMarker = lipgloss.NewStyle().SetString("□")
+var DefaultNodeMarker = ui.NewStyle().SetString("□")
 
 // Graph defines a directed graph.
 type Graph[T any] struct {
@@ -47,26 +47,27 @@ type Graph[T any] struct {
 
 // Options configure the rendering of the tree.
 type Options[T any] struct {
+	Theme ui.Theme
 	Style *Style[T]
 }
 
 // Style configures the visual appearance of the tree.
 type Style[T any] struct {
 	// Joint defines how the connecting joints between nodes are rendered.
-	Joint lipgloss.Style
+	Joint ui.Style
 
 	// NodeMarker returns the style of the marker
 	// placed next to each node based on the node's value.
 	//
 	// By default, all nodes are marked with [DefaultNodeMarker].
-	NodeMarker func(T) lipgloss.Style
+	NodeMarker func(T) ui.Style
 }
 
 // DefaultStyle returns the default style for rendering trees.
 func DefaultStyle[T any]() *Style[T] {
 	return &Style[T]{
 		Joint: ui.NewStyle().Faint(true),
-		NodeMarker: func(T) lipgloss.Style {
+		NodeMarker: func(T) ui.Style {
 			return DefaultNodeMarker
 		},
 	}
@@ -81,7 +82,7 @@ func Write[T any](w io.Writer, g Graph[T], opts Options[T]) error {
 	tw := treeWriter[T]{
 		w:     bufio.NewWriter(w),
 		g:     g,
-		style: opts.Style,
+		style: newTreeStyle(opts.Style, opts.Theme),
 	}
 	for _, root := range g.Roots {
 		if err := tw.writeTree(root, nil, nil); err != nil {
@@ -96,7 +97,21 @@ type treeWriter[T any] struct {
 	g Graph[T]
 
 	lineNum int
-	style   *Style[T]
+	style   treeStyle[T]
+}
+
+type treeStyle[T any] struct {
+	Joint      lipgloss.Style
+	NodeMarker func(T) lipgloss.Style
+}
+
+func newTreeStyle[T any](s *Style[T], theme ui.Theme) treeStyle[T] {
+	return treeStyle[T]{
+		Joint: s.Joint.Resolve(theme),
+		NodeMarker: func(v T) lipgloss.Style {
+			return s.NodeMarker(v).Resolve(theme)
+		},
+	}
 }
 
 const (

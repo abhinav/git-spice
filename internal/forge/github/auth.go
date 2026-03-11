@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
@@ -174,7 +174,7 @@ type authenticator interface {
 
 var _authenticationMethods = []struct {
 	Title       string
-	Description func(focused bool) string
+	Description func(ui.Theme, bool) string
 	Build       func(authenticatorOptions) authenticator
 }{
 	{
@@ -273,7 +273,7 @@ func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, e
 	return method, err
 }
 
-func oauthDesc(bool) string {
+func oauthDesc(_ ui.Theme, _ bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will get access to all repositories: public and private.
@@ -281,26 +281,47 @@ func oauthDesc(bool) string {
 	`)
 }
 
-func oauthPublicDesc(bool) string {
+func oauthPublicDesc(_ ui.Theme, _ bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will only get access to public repositories.
 	`)
 }
 
-func githubAppDesc(focused bool) string {
+func githubAppDesc(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	if focused {
+		urlStyle = _urlStyleFocused
+	}
+
 	return text.Dedentf(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will only get access to repositories where the git-spice GitHub App is installed explicitly.
 	Use %[1]s to install the App on repositories.
 	For private repositories, you will need to request installation from a repository owner.
-	`, urlStyle(focused).Render("https://github.com/apps/git-spice"))
+	`, urlStyle.Render(theme, "https://github.com/apps/git-spice"))
 }
 
-func patDesc(focused bool) string {
-	scopeStyle := ui.NewStyle()
+var (
+	_urlStyle = ui.NewStyle()
+
+	_urlStyleFocused = ui.NewStyle().
+				Bold(true).
+				Foreground(ui.Magenta).
+				Underline(true)
+
+	_scopeStyle = ui.NewStyle()
+
+	_scopeStyleFocused = ui.NewStyle().
+				Bold(true)
+)
+
+func patDesc(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	scopeStyle := _scopeStyle
 	if focused {
-		scopeStyle = scopeStyle.Bold(true)
+		urlStyle = _urlStyleFocused
+		scopeStyle = _scopeStyleFocused
 	}
 
 	return text.Dedentf(`
@@ -309,34 +330,47 @@ func patDesc(focused bool) string {
 	Fine-grained tokens need read/write access to Repository %[4]s and %[5]s.
 	You can use this method if you do not have the ability to install a GitHub or OAuth App on your repositories.
 	`,
-		urlStyle(focused).Render("https://github.com/settings/tokens"),
-		scopeStyle.Render("repo"), scopeStyle.Render("public_repo"),
-		scopeStyle.Render("Contents"), scopeStyle.Render("Pull requests"),
+		urlStyle.Render(theme, "https://github.com/settings/tokens"),
+		scopeStyle.Render(theme, "repo"),
+		scopeStyle.Render(theme, "public_repo"),
+		scopeStyle.Render(theme, "Contents"),
+		scopeStyle.Render(theme, "Pull requests"),
 	)
 }
 
-func ghDesc(focused bool) string {
+func ghDesc(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	if focused {
+		urlStyle = _urlStyleFocused
+	}
+
 	return text.Dedentf(`
 	Re-use an existing GitHub CLI (%[1]s) session.
 	You must be logged into gh with 'gh auth login' for this to work.
 	You can use this if you're just experimenting and don't want to set up a token yet.
-	`, urlStyle(focused).Render("https://cli.github.com"))
+	`, urlStyle.Render(theme, "https://cli.github.com"))
 }
 
-func gcmDesc(bool) string {
+func gcmDesc(_ ui.Theme, _ bool) string {
 	return text.Dedent(`
 	Use OAuth credentials from git-credential-manager.
 	You must have GCM installed and already authenticated to GitHub.
 	`)
 }
 
-func urlStyle(focused bool) lipgloss.Style {
-	s := ui.NewStyle()
-	if focused {
-		s = s.Bold(true).Foreground(ui.Magenta).Underline(true)
-	}
-	return s
-}
+var (
+	_deviceFlowURLStyle = ui.NewStyle().
+				Foreground(ui.Cyan).
+				Bold(true).
+				Underline(true)
+
+	_deviceFlowCodeStyle = ui.NewStyle().
+				Foreground(ui.Cyan).
+				Bold(true)
+
+	_deviceFlowFaintStyle = ui.NewStyle().
+				Faint(true)
+)
 
 // DeviceFlowAuthenticator implements the OAuth device flow for GitHub.
 // This is used for OAuth and GitHub App authentication.
@@ -365,15 +399,16 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View
 		return nil, err
 	}
 
-	urlStle := ui.NewStyle().Foreground(ui.Cyan).Bold(true).Underline(true)
-	codeStyle := ui.NewStyle().Foreground(ui.Cyan).Bold(true)
-	bullet := ui.NewStyle().PaddingLeft(2).Foreground(ui.Gray)
-	faint := ui.NewStyle().Faint(true)
+	theme := view.Theme()
+	urlStyle := _deviceFlowURLStyle.Resolve(theme)
+	codeStyle := _deviceFlowCodeStyle.Resolve(theme)
+	bullet := lipgloss.NewStyle().PaddingLeft(2).Foreground(theme.Gray)
+	faint := _deviceFlowFaintStyle.Resolve(theme)
 
-	fmt.Fprintf(view, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
-	fmt.Fprintf(view, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
-	fmt.Fprintln(view, faint.Render("The code expires in a few minutes."))
-	fmt.Fprintln(view, faint.Render("It will take a few seconds to verify after you enter it."))
+	lipgloss.Fprintf(view, "%s Visit %s\n", bullet.Render("1."), urlStyle.Render(resp.VerificationURI))
+	lipgloss.Fprintf(view, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
+	lipgloss.Fprintln(view, faint.Render("The code expires in a few minutes."))
+	lipgloss.Fprintln(view, faint.Render("It will take a few seconds to verify after you enter it."))
 	// TODO: maybe open browser with flag opt-out
 
 	token, err := cfg.DeviceAccessToken(ctx, resp,

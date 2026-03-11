@@ -104,14 +104,29 @@ func (f *Forge) selectAuthMethod(view ui.View) (authMethod, error) {
 	return method, err
 }
 
-func gcmAuthDescription(bool) string {
+func gcmAuthDescription(_ ui.Theme, _ bool) string {
 	return "Use OAuth credentials from git-credential-manager.\n" +
 		"You must have GCM installed and already authenticated."
 }
 
-func apiTokenAuthDescription(bool) string {
+var (
+	_urlStyle = ui.NewStyle()
+
+	_urlStyleFocused = ui.NewStyle().
+				Bold(true).
+				Foreground(ui.Magenta).
+				Underline(true)
+)
+
+func apiTokenAuthDescription(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	if focused {
+		urlStyle = _urlStyleFocused
+	}
+
 	return "Enter an API token manually.\n" +
-		"Create one at https://bitbucket.org/account/settings/api-tokens/"
+		"Create one at " +
+		urlStyle.Render(theme, "https://bitbucket.org/account/settings/api-tokens/")
 }
 
 func (f *Forge) gcmAuth(ctx context.Context, log *silog.Logger) (*AuthenticationToken, error) {

@@ -20,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/branchtree"
 	"go.abhg.dev/gs/internal/ui/commit"
 )
@@ -115,8 +116,10 @@ func (cmd *branchLogCmd) run(
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 		wantChangeState = cmd.CRStatus
 
+		stderrView := ui.NewFileView(kctx.Stderr)
 		presenter = &graphLogPresenter{
-			Stderr:           kctx.Stderr,
+			Stderr:           stderrView,
+			Theme:            stderrView.Theme(),
 			ChangeFormat:     changeFormat,
 			ShowCRStatus:     wantChangeState,
 			PushStatusFormat: cmd.PushStatusFormat,
@@ -154,7 +157,8 @@ type logPresenter interface {
 }
 
 type graphLogPresenter struct {
-	Stderr           io.Writer        // required
+	Stderr           ui.View          // required
+	Theme            ui.Theme         // required
 	ChangeFormat     changeFormat     // required
 	ShowCRStatus     bool             // required
 	PushStatusFormat pushStatusFormat // required
@@ -232,18 +236,17 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 	}
 
 	opts := &branchtree.GraphOptions{
+		Theme:            p.Theme,
 		PushStatusFormat: pushFmt,
 		CurrentWorktree:  p.CurrentWorktree,
 		HomeDir:          home,
 	}
 
-	var s strings.Builder
-	if err := branchtree.Write(&s, g, opts); err != nil {
+	if err := branchtree.Write(p.Stderr, g, opts); err != nil {
 		return fmt.Errorf("write tree: %w", err)
 	}
 
-	_, err = fmt.Fprint(p.Stderr, s.String())
-	return err
+	return nil
 }
 
 type jsonLogPresenter struct {

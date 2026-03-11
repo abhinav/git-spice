@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
@@ -246,7 +246,7 @@ var _execLookPath = xec.LookPath
 
 var _authenticationMethods = []struct {
 	Title       string
-	Description func(focused bool) string
+	Description func(ui.Theme, bool) string
 	Build       func(authenticatorOptions) authenticator
 }{
 	{
@@ -316,7 +316,7 @@ func selectAuthenticator(view ui.View, a authenticatorOptions) (authenticator, e
 	return method, err
 }
 
-func oauthDesc(bool) string {
+func oauthDesc(_ ui.Theme, _ bool) string {
 	return text.Dedent(`
 	Authorize git-spice to act on your behalf from this device only.
 	git-spice will get access to all repositories: public and private.
@@ -324,36 +324,63 @@ func oauthDesc(bool) string {
 	`)
 }
 
-func patDesc(focused bool) string {
-	scopeStyle := ui.NewStyle()
+var (
+	_urlStyle = ui.NewStyle()
+
+	_urlStyleFocused = ui.NewStyle().
+				Bold(true).
+				Foreground(ui.Magenta).
+				Underline(true)
+
+	_scopeStyle = ui.NewStyle()
+
+	_scopeStyleFocused = ui.NewStyle().
+				Bold(true)
+)
+
+func patDesc(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	scopeStyle := _scopeStyle
 	if focused {
-		scopeStyle = scopeStyle.Bold(true)
+		urlStyle = _urlStyleFocused
+		scopeStyle = _scopeStyleFocused
 	}
 
 	return text.Dedentf(`
 	Enter a Personal Access Token generated from %[1]s.
 	The Personal Access Token need the following scope: %[2]s.
 	`,
-		urlStyle(focused).Render("https://gitlab.com/-/user_settings/personal_access_tokens"),
-		scopeStyle.Render("api"),
+		urlStyle.Render(theme, "https://gitlab.com/-/user_settings/personal_access_tokens"),
+		scopeStyle.Render(theme, "api"),
 	)
 }
 
-func glDesc(focused bool) string {
+func glDesc(theme ui.Theme, focused bool) string {
+	urlStyle := _urlStyle
+	if focused {
+		urlStyle = _urlStyleFocused
+	}
+
 	return text.Dedentf(`
 	Re-use an existing GitLab CLI (%[1]s) session.
 	You must be logged into glab with 'glab auth login' for this to work.
 	You can use this if you're just experimenting and don't want to set up a token yet.
-	`, urlStyle(focused).Render("https://gitlab.com/gitlab-org/cli"))
+	`, urlStyle.Render(theme, "https://gitlab.com/gitlab-org/cli"))
 }
 
-func urlStyle(focused bool) lipgloss.Style {
-	s := ui.NewStyle()
-	if focused {
-		s = s.Bold(true).Foreground(ui.Magenta).Underline(true)
-	}
-	return s
-}
+var (
+	_deviceFlowURLStyle = ui.NewStyle().
+				Foreground(ui.Cyan).
+				Bold(true).
+				Underline(true)
+
+	_deviceFlowCodeStyle = ui.NewStyle().
+				Foreground(ui.Cyan).
+				Bold(true)
+
+	_deviceFlowFaintStyle = ui.NewStyle().
+				Faint(true)
+)
 
 // TODO: share authenticators with GitHub
 
@@ -408,15 +435,16 @@ func (a *DeviceFlowAuthenticator) Authenticate(ctx context.Context, view ui.View
 		return nil, err
 	}
 
-	urlStle := ui.NewStyle().Foreground(ui.Cyan).Bold(true).Underline(true)
-	codeStyle := ui.NewStyle().Foreground(ui.Cyan).Bold(true)
-	bullet := ui.NewStyle().PaddingLeft(2).Foreground(ui.Gray)
-	faint := ui.NewStyle().Faint(true)
+	theme := view.Theme()
+	urlStyle := _deviceFlowURLStyle.Resolve(theme)
+	codeStyle := _deviceFlowCodeStyle.Resolve(theme)
+	bullet := lipgloss.NewStyle().PaddingLeft(2).Foreground(theme.Gray)
+	faint := _deviceFlowFaintStyle.Resolve(theme)
 
-	fmt.Fprintf(view, "%s Visit %s\n", bullet.Render("1."), urlStle.Render(resp.VerificationURI))
-	fmt.Fprintf(view, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
-	fmt.Fprintln(view, faint.Render("The code expires in a few minutes."))
-	fmt.Fprintln(view, faint.Render("It will take a few seconds to verify after you enter it."))
+	lipgloss.Fprintf(view, "%s Visit %s\n", bullet.Render("1."), urlStyle.Render(resp.VerificationURI))
+	lipgloss.Fprintf(view, "%s Enter code: %s\n", bullet.Render("2."), codeStyle.Render(resp.UserCode))
+	lipgloss.Fprintln(view, faint.Render("The code expires in a few minutes."))
+	lipgloss.Fprintln(view, faint.Render("It will take a few seconds to verify after you enter it."))
 	// TODO: maybe open browser with flag opt-out
 
 	token, err := cfg.DeviceAccessToken(ctx, resp,
