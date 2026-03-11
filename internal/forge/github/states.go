@@ -50,8 +50,12 @@ func (r *Repository) ChangesDetails(ctx context.Context, ids []forge.ChangeID) (
 				IsDraft        githubv4.Boolean                   `graphql:"isDraft"`
 				ReviewDecision githubv4.PullRequestReviewDecision `graphql:"reviewDecision"`
 				ReviewRequests struct {
-					TotalCount githubv4.Int `graphql:"totalCount"`
-				} `graphql:"reviewRequests"`
+					Nodes []struct {
+						RequestedReviewer struct {
+							Typename githubv4.String `graphql:"__typename"`
+						} `graphql:"requestedReviewer"`
+					} `graphql:"nodes"`
+				} `graphql:"reviewRequests(first: 100)"`
 			} `graphql:"... on PullRequest"`
 		} `graphql:"nodes(ids: $ids)"`
 	}
@@ -73,12 +77,19 @@ func (r *Repository) ChangesDetails(ctx context.Context, ids []forge.ChangeID) (
 	details := make([]forge.ChangeDetails, len(ids))
 	for i, node := range q.Nodes {
 		pr := node.PullRequest
+		var hasHumanReviewer bool
+		for _, rr := range pr.ReviewRequests.Nodes {
+			if rr.RequestedReviewer.Typename != "Bot" {
+				hasHumanReviewer = true
+				break
+			}
+		}
 		details[i] = forge.ChangeDetails{
 			State: forgeChangeState(pr.State),
 			Draft: bool(pr.IsDraft),
 			ReviewDecision: forgeReviewDecision(
 				pr.ReviewDecision,
-				int(pr.ReviewRequests.TotalCount),
+				hasHumanReviewer,
 			),
 		}
 	}
@@ -86,17 +97,19 @@ func (r *Repository) ChangesDetails(ctx context.Context, ids []forge.ChangeID) (
 	return details, nil
 }
 
-// forgeReviewDecision maps a GitHub reviewDecision and pending review request
-// count to a forge.ChangeReviewDecision.
+// forgeReviewDecision maps a GitHub reviewDecision and whether there are
+// pending human review requests to a forge.ChangeReviewDecision.
 //
 // reviewDecision is only set when branch protection rules require a review.
 // When reviewers have been requested but no such rule exists,
 // reviewDecision is empty even though reviews are pending.
-// In that case, a non-zero pendingReviewCount is used as a fallback
+// In that case, hasHumanReviewer is used as a fallback
 // to detect that reviews have been requested.
+// Bot reviewers (GitHub type "Bot") are ignored,
+// as they are automated and not human reviewers.
 func forgeReviewDecision(
 	d githubv4.PullRequestReviewDecision,
-	pendingReviewCount int,
+	hasHumanReviewer bool,
 ) forge.ChangeReviewDecision {
 	switch d {
 	case githubv4.PullRequestReviewDecisionApproved:
@@ -109,8 +122,8 @@ func forgeReviewDecision(
 
 	// reviewDecision is null when no branch protection rule requires a review,
 	// even if reviewers have been requested.
-	// Fall back to the pending review request count.
-	if pendingReviewCount > 0 {
+	// Fall back to checking for pending human reviewers.
+	if hasHumanReviewer {
 		return forge.ChangeReviewRequired
 	}
 
