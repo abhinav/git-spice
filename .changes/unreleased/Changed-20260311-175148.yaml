@@ -1,0 +1,7 @@
+kind: Changed
+body: >-
+  gitlab: Replace the GitLab API client with a smaller internal client.
+  This allows us to reduce the binary size by >25%.
+  We expect no other user-facing impact from this,
+  so please [report bugs](https://github.com/abhinav/git-spice/issues) if you see any.
+time: 2026-03-11T17:51:48.003886-07:00

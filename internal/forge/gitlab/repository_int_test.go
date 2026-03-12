@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // NewRepository re-exports the private NewRepository function
@@ -14,12 +14,16 @@ var NewRepository = newRepository
 // RepositoryOptions re-exports the private repositoryOptions type
 type RepositoryOptions = repositoryOptions
 
+func RepositoryProjectID(repo *Repository) int64 {
+	return repo.repoID
+}
+
 func MergeChange(ctx context.Context, repo *Repository, id *MR) error {
-	_, _, err := repo.client.MergeRequests.AcceptMergeRequest(
+	_, _, err := repo.client.MergeRequestAccept(
+		ctx,
 		repo.repoID,
 		id.Number,
 		&gitlab.AcceptMergeRequestOptions{},
-		gitlab.WithContext(ctx),
 	)
 	if err != nil {
 		return fmt.Errorf("merge merge request: %w", err)
@@ -29,13 +33,13 @@ func MergeChange(ctx context.Context, repo *Repository, id *MR) error {
 }
 
 func CloseChange(ctx context.Context, repo *Repository, id *MR) error {
-	_, _, err := repo.client.MergeRequests.UpdateMergeRequest(
+	_, _, err := repo.client.MergeRequestUpdate(
+		ctx,
 		repo.repoID,
 		id.Number,
 		&gitlab.UpdateMergeRequestOptions{
 			StateEvent: new("close"),
 		},
-		gitlab.WithContext(ctx),
 	)
 	if err != nil {
 		return fmt.Errorf("close merge request: %w", err)

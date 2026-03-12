@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // ChangesStates retrieves the states of the given changes in bulk.
@@ -15,9 +15,9 @@ func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([
 		mrIDs[i] = mustMR(id).Number
 	}
 
-	mergeRequests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
-		r.repoID, &gitlab.ListProjectMergeRequestsOptions{IIDs: &mrIDs},
-		gitlab.WithContext(ctx),
+	mergeRequests, _, err := r.client.MergeRequestList(
+		ctx, r.repoID,
+		&gitlab.ListProjectMergeRequestsOptions{IIDs: &mrIDs},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)

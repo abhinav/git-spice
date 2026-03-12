@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"slices"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/cmputil"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // GitLab tracks draft status in the title of a merge request
@@ -45,9 +45,8 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		}
 
 		var err error
-		mergeRequest, _, err = r.client.MergeRequests.GetMergeRequest(
-			r.repoID, mrID.Number, nil,
-			gitlab.WithContext(ctx),
+		mergeRequest, _, err = r.client.MergeRequestGet(
+			ctx, r.repoID, mrID.Number, nil,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("get merge request for update: %w", err)
@@ -118,9 +117,8 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 		logUpdates = append(logUpdates, slog.Any("assignees", merged))
 	}
 
-	_, _, err := r.client.MergeRequests.UpdateMergeRequest(
-		r.repoID, mrID.Number, &updateOptions,
-		gitlab.WithContext(ctx),
+	_, _, err := r.client.MergeRequestUpdate(
+		ctx, r.repoID, mrID.Number, &updateOptions,
 	)
 	if err != nil {
 		return fmt.Errorf("update merge request: %w", err)

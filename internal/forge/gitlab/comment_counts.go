@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // CommentCountsByChange retrieves comment resolution counts for multiple MRs.
@@ -40,9 +40,11 @@ func (r *Repository) discussionCounts(
 	}
 
 	for {
-		discussions, resp, err := r.client.Discussions.ListMergeRequestDiscussions(
-			r.repoID, mrNumber, opts,
-			gitlab.WithContext(ctx),
+		discussions, resp, err := r.client.MergeRequestDiscussionList(
+			ctx,
+			r.repoID,
+			mrNumber,
+			opts,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("list discussions: %w", err)
@@ -61,7 +63,7 @@ func (r *Repository) discussionCounts(
 		if resp.CurrentPage >= resp.TotalPages {
 			break
 		}
-		opts.Page = resp.NextPage
+		opts.Page = int64(resp.NextPage)
 	}
 
 	return &forge.CommentCounts{

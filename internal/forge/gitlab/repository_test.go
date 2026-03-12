@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 func TestAccessValueName(t *testing.T) {

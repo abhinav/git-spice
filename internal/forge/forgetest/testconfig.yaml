@@ -23,13 +23,13 @@ github:
 
 gitlab:
   # Project namespace (your GitLab username or group)
-  owner: "ed-irlllc"
+  owner: "abg"
   # Test project name
-  repo: "git-spice-test"
+  repo: "test-repo"
   # A GitLab user who can be added as a reviewer
-  reviewer: "ekohlwey1"
+  reviewer: "abg-robot"
   # A GitLab user who can be assigned to MRs
-  assignee: "ekohlwey1"
+  assignee: "abg"
 
 bitbucket:
   # Bitbucket workspace
