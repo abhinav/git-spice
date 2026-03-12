@@ -18,6 +18,7 @@ import (
 //
 //   - want: name of the branch expected to be selected at the end
 //   - branches: branches available in the list. See below for format.
+//   - selected (optional): preselected branch name
 //   - desc (optional): prompt description
 //   - home (optional): user's home directory
 //   - worktree (optional): current worktree
@@ -46,7 +47,7 @@ func TestBranchTreeSelect_Script(t *testing.T) {
 
 			worktree := readOptionalFile(ts, "worktree")
 
-			var gotBranch string
+			gotBranch := readOptionalFile(ts, "selected")
 			widget := NewBranchTreeSelect().
 				WithTitle("Select a branch").
 				WithItems(input...).

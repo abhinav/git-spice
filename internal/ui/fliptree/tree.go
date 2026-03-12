@@ -13,6 +13,8 @@ package fliptree
 
 import (
 	"bufio"
+	"bytes"
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -23,6 +25,18 @@ import (
 
 // DefaultNodeMarker is the marker used for each node in the tree.
 var DefaultNodeMarker = ui.NewStyle().SetString("□")
+
+// DefaultScrollUpMarker is the marker shown
+// when content is scrolled out above the viewport.
+var DefaultScrollUpMarker = ui.NewStyle().
+	Foreground(ui.Gray).
+	SetString("▲▲▲")
+
+// DefaultScrollDownMarker is the marker shown
+// when content is scrolled out below the viewport.
+var DefaultScrollDownMarker = ui.NewStyle().
+	Foreground(ui.Gray).
+	SetString("▼▼▼")
 
 // Graph defines a directed graph.
 type Graph[T any] struct {
@@ -49,6 +63,15 @@ type Graph[T any] struct {
 type Options[T any] struct {
 	Theme ui.Theme
 	Style *Style[T]
+
+	// Offset states the number of lines to skip before rendering the tree,
+	// and Height states the maximum number of lines to render after that.
+	//
+	// Use these together to render a view of a larger tree.
+	//
+	// A height <= 0 indicates no limit.
+	// Scroll markers are rendered for a height > 0.
+	Offset, Height int
 }
 
 // Style configures the visual appearance of the tree.
@@ -61,6 +84,14 @@ type Style[T any] struct {
 	//
 	// By default, all nodes are marked with [DefaultNodeMarker].
 	NodeMarker func(T) ui.Style
+
+	// ScrollUpMarker is shown above the viewport
+	// when content exists above it.
+	ScrollUpMarker ui.Style
+
+	// ScrollDownMarker is shown below the viewport
+	// when content exists below it.
+	ScrollDownMarker ui.Style
 }
 
 // DefaultStyle returns the default style for rendering trees.
@@ -70,6 +101,8 @@ func DefaultStyle[T any]() *Style[T] {
 		NodeMarker: func(T) ui.Style {
 			return DefaultNodeMarker
 		},
+		ScrollUpMarker:   DefaultScrollUpMarker,
+		ScrollDownMarker: DefaultScrollDownMarker,
 	}
 }
 
@@ -80,12 +113,20 @@ func Write[T any](w io.Writer, g Graph[T], opts Options[T]) error {
 	}
 
 	tw := treeWriter[T]{
-		w:     bufio.NewWriter(w),
-		g:     g,
-		style: newTreeStyle(opts.Style, opts.Theme),
+		w:      bufio.NewWriter(w),
+		g:      g,
+		style:  newTreeStyle(opts.Style, opts.Theme),
+		offset: max(0, opts.Offset),
+		height: opts.Height,
 	}
 	for _, root := range g.Roots {
 		if err := tw.writeTree(root, nil, nil); err != nil {
+			return err
+		}
+	}
+
+	if tw.truncatedBelow {
+		if _, err := fmt.Fprintln(tw.w, tw.style.ScrollDownMarker.String()); err != nil {
 			return err
 		}
 	}
@@ -97,12 +138,38 @@ type treeWriter[T any] struct {
 	g Graph[T]
 
 	lineNum int
-	style   treeStyle[T]
+
+	// Number of rendered tree lines to skip before starting the viewport.
+	offset int
+	// Maximum number of tree content lines to write.
+	// Zero or negative means no viewport limit.
+	height int
+
+	// Number of tree content lines written to the viewport,
+	// excluding scroll markers.
+	wroteLines int
+
+	// Whether the top scroll marker has already been emitted.
+	// This is shown once when offset > 0 and the first viewport line is written.
+	wroteScrollUp bool
+
+	// Whether tree content was cut off at the bottom.
+	// This is true if height > 0,
+	// and the number of lines to write exceeds the height limit.
+	//
+	// This informs the caller whether a bottom scroll marker
+	// should be emitted after the tree is fully rendered.
+	truncatedBelow bool
+	// TODO: maybe we can fold this into the render loop
+
+	style treeStyle[T]
 }
 
 type treeStyle[T any] struct {
-	Joint      lipgloss.Style
-	NodeMarker func(T) lipgloss.Style
+	Joint            lipgloss.Style
+	NodeMarker       func(T) lipgloss.Style
+	ScrollUpMarker   lipgloss.Style
+	ScrollDownMarker lipgloss.Style
 }
 
 func newTreeStyle[T any](s *Style[T], theme ui.Theme) treeStyle[T] {
@@ -111,6 +178,8 @@ func newTreeStyle[T any](s *Style[T], theme ui.Theme) treeStyle[T] {
 		NodeMarker: func(v T) lipgloss.Style {
 			return s.NodeMarker(v).Resolve(theme)
 		},
+		ScrollUpMarker:   s.ScrollUpMarker.Resolve(theme),
+		ScrollDownMarker: s.ScrollDownMarker.Resolve(theme),
 	}
 }
 
@@ -225,25 +294,58 @@ func (tw *treeWriter[T]) writeTree(nodeIdx int, path []int, pathNodeIxes []int) 
 		lastJoint = string(_verticalRight) + string(_horizontal)
 	}
 
-	lines := strings.Split(tw.g.View(nodeValue), "\n")
-	for idx, line := range lines {
+	var lineBuffer bytes.Buffer
+	firstLine := true
+	for line := range strings.SplitSeq(tw.g.View(nodeValue), "\n") {
+		lineBuffer.Reset()
+
 		// The text may be multi-line.
 		// Only the first line has a title marker.
-		if idx == 0 {
-			tw.pipes(path, lastJoint, titlePrefix)
+		if firstLine {
+			firstLine = false
+			tw.pipes(&lineBuffer, path, lastJoint, titlePrefix)
 		} else {
-			tw.pipes(path, string(_vertical)+" ", bodyPrefix)
+			tw.pipes(&lineBuffer, path, string(_vertical)+" ", bodyPrefix)
 		}
 
-		_, _ = tw.w.WriteString(line)
-		_, _ = tw.w.WriteString("\n")
-		tw.lineNum++
+		lineBuffer.WriteString(line)
+		tw.writeLine(lineBuffer.Bytes())
 	}
 
 	return nil
 }
 
-func (tw *treeWriter[T]) pipes(path []int, joint string, marker string) {
+// writeLine writes a line of the tree to the output,
+// respecting the scroll offset and height limits.
+//
+// This performs necessary bookkeeping internally.
+func (tw *treeWriter[T]) writeLine(line []byte) {
+	lineNum := tw.lineNum
+	tw.lineNum++
+
+	if lineNum < tw.offset {
+		return
+	}
+
+	if tw.height > 0 && tw.wroteLines >= tw.height {
+		tw.truncatedBelow = true
+		return
+	}
+
+	// If content above the viewport is getting cut off,
+	// we need to add a scroll marker.
+	if !tw.wroteScrollUp && tw.offset > 0 {
+		_, _ = fmt.Fprintln(tw.w, tw.style.ScrollUpMarker.String())
+		tw.wroteScrollUp = true
+	}
+
+	_, _ = tw.w.Write(line)
+	_ = tw.w.WriteByte('\n')
+
+	tw.wroteLines++
+}
+
+func (tw *treeWriter[T]) pipes(buf *bytes.Buffer, path []int, joint string, marker string) {
 	if len(path) == 0 {
 		return
 	}
@@ -254,15 +356,16 @@ func (tw *treeWriter[T]) pipes(path []int, joint string, marker string) {
 	// needs just connecting pipes.
 	for _, pos := range path[:len(path)-1] {
 		if pos > 0 {
-			_, _ = tw.w.WriteString(
+			buf.WriteString(
 				style.Render(string(_vertical) + " "),
 			)
 		} else {
-			_, _ = tw.w.WriteString("  ")
+			buf.WriteString("  ")
 		}
 	}
 
-	_, _ = tw.w.WriteString(style.Render(joint) + marker)
+	buf.WriteString(style.Render(joint))
+	buf.WriteString(marker)
 }
 
 // CycleError is returned when a cycle is detected in the tree.

@@ -1,0 +1,83 @@
+init
+
+await Select a branch
+snapshot
+cmp stdout prompt
+
+feed -r 5 <Down>
+await
+snapshot
+cmp stdout scrolled
+
+feed -r 3 <Down>
+await
+snapshot
+cmp stdout wrapped
+
+feed a
+await
+snapshot
+cmp stdout filtered
+
+feed <Up>
+await
+snapshot
+cmp stdout filtered_wrapped
+
+feed <Enter>
+
+-- rows --
+10
+-- branches --
+[
+  {"branch": "echo"},
+  {"branch": "alpha"},
+  {"branch": "bravo"},
+  {"branch": "charlie"},
+  {"branch": "delta"},
+  {"branch": "gamma"},
+  {"branch": "lambda"}
+]
+-- want --
+lambda
+-- prompt --
+Select a branch:
+echo ◀
+alpha
+bravo
+charlie
+delta
+▼▼▼
+-- scrolled --
+Select a branch:
+▲▲▲
+alpha
+bravo
+charlie
+delta
+gamma ◀
+▼▼▼
+-- wrapped --
+Select a branch:
+echo
+alpha ◀
+bravo
+charlie
+delta
+▼▼▼
+-- filtered --
+Select a branch:
+alpha ◀
+bravo
+charlie
+delta
+gamma
+▼▼▼
+-- filtered_wrapped --
+Select a branch:
+▲▲▲
+bravo
+charlie
+delta
+gamma
+lambda ◀

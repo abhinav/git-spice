@@ -225,6 +225,13 @@ type GraphOptions struct {
 	// HomeDir is used for "~" substitution in worktree paths.
 	// If empty, no substitution is performed.
 	HomeDir string
+
+	// Offset is the number of rendered lines to skip.
+	Offset int
+
+	// Height is the maximum number of rendered lines to show.
+	// Zero or negative means render all lines.
+	Height int
 }
 
 // PushStatusFormat controls how push status is rendered.
@@ -262,18 +269,16 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 		HomeDir:          opts.HomeDir,
 	}
 
-	treeStyle := &fliptree.Style[*Item]{
-		Joint: ui.NewStyle().Faint(true),
-		NodeMarker: func(item *Item) ui.Style {
-			switch {
-			case item.Disabled:
-				return opts.Style.NodeMarkerDisabled
-			case item.Highlighted:
-				return opts.Style.NodeMarkerHighlighted
-			default:
-				return opts.Style.NodeMarker
-			}
-		},
+	treeStyle := fliptree.DefaultStyle[*Item]()
+	treeStyle.NodeMarker = func(item *Item) ui.Style {
+		switch {
+		case item.Disabled:
+			return opts.Style.NodeMarkerDisabled
+		case item.Highlighted:
+			return opts.Style.NodeMarkerHighlighted
+		default:
+			return opts.Style.NodeMarker
+		}
 	}
 
 	return fliptree.Write(w, fliptree.Graph[*Item]{
@@ -282,8 +287,10 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 		Edges:  func(item *Item) []int { return item.Aboves },
 		View:   renderer.RenderItem,
 	}, fliptree.Options[*Item]{
-		Theme: opts.Theme,
-		Style: treeStyle,
+		Theme:  opts.Theme,
+		Style:  treeStyle,
+		Offset: opts.Offset,
+		Height: opts.Height,
 	})
 }
 

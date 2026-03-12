@@ -27,7 +27,51 @@ func plainStyle() *Style[string] {
 		NodeMarker: func(string) ui.Style {
 			return ui.NewStyle().SetString("□")
 		},
+		ScrollUpMarker:   ui.NewStyle().SetString("▲▲▲"),
+		ScrollDownMarker: ui.NewStyle().SetString("▼▼▼"),
 	}
+}
+
+func TestWrite_Viewport(t *testing.T) {
+	g := Graph[string]{
+		Values: []string{"main", "alpha", "bravo", "charlie", "delta", "echo"},
+		Roots:  []int{0},
+		View:   func(n string) string { return n },
+		Edges: func(n string) []int {
+			switch n {
+			case "main":
+				return []int{1}
+			case "alpha":
+				return []int{2}
+			case "bravo":
+				return []int{3}
+			case "charlie":
+				return []int{4}
+			case "delta":
+				return []int{5}
+			default:
+				return nil
+			}
+		},
+	}
+
+	var sb strings.Builder
+	err := Write(&sb, g, Options[string]{
+		Theme:  ui.DefaultThemeLight(),
+		Style:  plainStyle(),
+		Offset: 1,
+		Height: 3,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, stripTrailingSpaces(strings.Join([]string{
+		"▲▲▲",
+		"      ┏━┻□ delta",
+		"    ┏━┻□ charlie",
+		"  ┏━┻□ bravo",
+		"▼▼▼",
+		"",
+	}, "\n")), stripTrailingSpaces(sb.String()))
 }
 
 func TestWrite(t *testing.T) {
