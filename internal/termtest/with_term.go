@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/creack/pty"
@@ -124,10 +125,11 @@ func WithTerm() {
 }
 
 type terminalEmulator struct {
-	cmd  *exec.Cmd
-	pty  *os.File
-	logf func(string, ...any)
-	emu  *uitest.EmulatorView
+	cmd      *exec.Cmd
+	pty      *os.File
+	logf     func(string, ...any)
+	emu      *uitest.EmulatorView
+	readDone chan struct{}
 }
 
 func newVT100Emulator(
@@ -148,13 +150,16 @@ func newVT100Emulator(
 			Cols:         cols,
 			NoAutoResize: noAutoResize,
 		}),
-		logf: logf,
+		logf:     logf,
+		readDone: make(chan struct{}),
 	}
 	go m.Start()
 	return &m
 }
 
 func (m *terminalEmulator) Start() {
+	defer close(m.readDone)
+
 	var buffer [1024]byte
 loop:
 	for {
@@ -166,7 +171,9 @@ loop:
 			}
 		}
 		if err != nil {
-			if !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) {
+			if !errors.Is(err, io.EOF) &&
+				!errors.Is(err, os.ErrClosed) &&
+				!errors.Is(err, syscall.EIO) {
 				m.logf("read error: %v", err)
 			}
 			break loop
@@ -189,9 +196,15 @@ func (m *terminalEmulator) Close() error {
 	case <-time.After(3 * time.Second):
 		waitErr = fmt.Errorf("timeout waiting for %v", m.cmd)
 		_ = m.cmd.Process.Kill()
+		waitErr = errors.Join(waitErr, <-waitErrc)
 	}
 
 	closeErr := m.pty.Close()
+	select {
+	case <-m.readDone:
+	case <-time.After(3 * time.Second):
+		waitErr = errors.Join(waitErr, errors.New("timeout waiting for PTY reader"))
+	}
 
 	return errors.Join(waitErr, closeErr, writeErr)
 }
