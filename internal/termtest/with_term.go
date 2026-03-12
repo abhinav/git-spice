@@ -93,6 +93,11 @@ func WithTerm() {
 			if err := emu.Close(); err != nil {
 				log.Printf("%v: %v", cmd, err)
 				exitCode = 1
+
+				log.Printf("## output before close:")
+				for _, line := range emu.Rows() {
+					log.Printf("## %v", line)
+				}
 			}
 
 			if *finalSnapshot != "" {
