@@ -69,6 +69,9 @@ Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
   rebase (rb) abort (a)       Abort an operation
 
+CI
+  ci merge-guard    Block merging a PR whose base is not trunk
+
 Navigation
   up (u)        Move up one branch
   down (d)      Move down one branch
