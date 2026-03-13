@@ -1,0 +1,3 @@
+kind: Added
+body: 'ci: Add ''gs ci merge-guard'' to block out-of-order stacked PR merges'
+time: 2026-05-12T10:10:00.762024-04:00

@@ -286,50 +286,6 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### git-spice stack merge {#gs-stack-merge}
-
-```
-gs stack (s) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a stack
-
-Merges the CRs for the current branch's stack into trunk.
-Use --branch to merge a different branch's stack.
-
-The stack includes the selected branch,
-its downstack branches down to trunk,
-and every upstack branch.
-
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
-
-Before merging, the stack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
-
-Before each merge, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
-before failing if merge readiness is not reached.
-
-By default, a branch failure skips that branch's upstack descendants,
-but independent sibling branches continue.
-Use --fail-fast to stop the queue after the first branch failure.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--no-branch-check`: Skip stale base validation before merging.
-* `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
-
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
-
 ### git-spice stack restack {#gs-stack-restack}
 
 ```
@@ -626,7 +582,7 @@ This command acts as a local merge queue:
 it merges one Change Request,
 waits for that merge to finish,
 restacks and updates the next Change Request,
-waits for merge readiness on the updated Change Request,
+waits for its CI checks to pass,
 and then repeats the process.
 
 For a stack like this:
@@ -644,15 +600,13 @@ Before merging, the downstack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
 (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge
 to complete, restacks and updates the next PR,
-waits for merge readiness on the updated PR,
+waits for CI checks on the updated PR,
 and syncs merged branch cleanup.
 
 Use --no-wait for single branch merging
@@ -661,13 +615,13 @@ when you don't want to wait for the merge to propagate.
 
 **Flags**
 
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--branch=NAME`: Branch to start merging from
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1121,35 +1075,6 @@ Use --branch to target a different branch.
 
 * `--branch=NAME`: Branch to diff
 
-### git-spice branch merge {#gs-branch-merge}
-
-```
-gs branch (b) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a branch into trunk
-
-Merges the CR for the current branch into trunk.
-Use --branch to merge a different branch.
-
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
-
-Before merging, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
-
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
-
 ### git-spice branch submit {#gs-branch-submit}
 
 ```
@@ -1414,6 +1339,43 @@ going back to the state before the rebase.
 
 The command can be used in place of 'git rebase --abort'
 even if a git-spice operation is not currently in progress.
+
+## CI
+
+### git-spice ci merge-guard {#gs-ci-merge-guard}
+
+```
+gs ci merge-guard <number> [flags]
+```
+
+Block merging a PR whose base is not trunk
+
+Checks whether a change request is safe to merge
+by verifying its base branch is trunk.
+
+Use this in forge CI/CD pipelines to prevent
+out-of-order merges in a stacked PR workflow.
+
+By default, only git-spice managed PRs are checked.
+Unmanaged PRs are allowed through.
+Use --all to block any PR whose base is not trunk.
+
+The trunk branch is detected from the git-spice
+navigation comment on the PR.
+Use --trunk to override this detection.
+
+Exit codes:
+  0  PR is safe to merge (base is trunk, or unmanaged)
+  1  PR should not be merged yet
+
+**Arguments**
+
+* `number`: Change request number to check
+
+**Flags**
+
+* `--trunk=STRING`: Override trunk branch name
+* `--all`: Block all non-trunk-based PRs, not just git-spice managed ones
 
 ## Navigation
 

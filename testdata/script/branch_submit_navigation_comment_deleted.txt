@@ -53,6 +53,7 @@ feature content
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/no-comments.txt --
 []
 -- golden/recreated-comments.txt --
@@ -64,4 +65,5 @@ feature content
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/end --

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -450,6 +451,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				tt.sync,
 				tt.downstack,
 				"",
+				"main",
 				tt.submit,
 				func(context.Context) (forge.Repository, error) {
 					return mockRemoteRepo, nil
@@ -462,9 +464,12 @@ func TestUpdateNavigationComments(t *testing.T) {
 				if assert.Len(t, commentIDs, 1, "change %v doesn't have exactly one comment", changeID) {
 					body, ok := comments[commentIDs[0]]
 					if assert.True(t, ok, "comment %v on change %v has no body", commentIDs[0], changeID) {
-						// Strip header, footer, and marker to get just the navigation content
+						// Strip header, footer, marker, and trunk metadata
+						// to get just the navigation content.
 						stripped := strings.TrimPrefix(body, _commentHeader+"\n\n")
-						stripped = strings.TrimSuffix(stripped, "\n"+_commentFooter+"\n"+_commentMarker+"\n")
+						stripped = strings.TrimSuffix(stripped,
+							"\n"+_commentFooter+"\n"+_commentMarker+
+								"\n"+fmt.Sprintf(_trunkMarkerHTML, "main")+"\n")
 						gotComments[int(changeID)] = stripped
 					}
 				}
@@ -562,6 +567,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 			NavCommentSyncBranch,
 			NavCommentDownstackAll,
 			"",
+			"main",
 			[]string{"feat1"},
 			func(context.Context) (forge.Repository, error) {
 				return mockRemoteRepo, nil
@@ -677,6 +683,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 			NavCommentSyncDownstack,
 			NavCommentDownstackAll,
 			"",
+			"main",
 			[]string{"feat3"},
 			func(context.Context) (forge.Repository, error) {
 				return mockRemoteRepo, nil
@@ -784,13 +791,13 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 				tt.want + "\n" +
 				_commentFooter + "\n" +
 				_commentMarker + "\n"
-			got := generateStackNavigationComment(tt.graph, tt.current, "", nil)
+			got := generateStackNavigationComment(tt.graph, tt.current, "", "", nil)
 			assert.Equal(t, want, got)
 
 			// Sanity check: All generated comments must match
 			// these regular expressions.
 			t.Run("Regexp", func(t *testing.T) {
-				for _, re := range _navCommentRegexes {
+				for _, re := range NavCommentRegexes {
 					assert.True(t, re.MatchString(got), "regexp %q failed", re)
 				}
 			})
@@ -804,7 +811,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "<-- you are here", nil)
+		got := generateStackNavigationComment(graph, 1, "<-- you are here", "", nil)
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123",
@@ -827,7 +834,7 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 		}
 		graph[0].Aboves = []int{1}
 
-		got := generateStackNavigationComment(graph, 1, "", nil)
+		got := generateStackNavigationComment(graph, 1, "", "", nil)
 		want := _commentHeader + "\n\n" +
 			joinLines(
 				"- #123+",
@@ -959,6 +966,33 @@ func TestNavCommentDownstack_UnmarshalText(t *testing.T) {
 		var d NavCommentDownstack
 		require.Error(t, d.UnmarshalText([]byte("unknown")))
 		assert.Equal(t, "unknown", NavCommentDownstack(42).String())
+	})
+}
+
+func TestExtractTrunkFromComment(t *testing.T) {
+	t.Run("HTML", func(t *testing.T) {
+		body := "some text\n<!-- gs:trunk main -->\n"
+		assert.Equal(t, "main", ExtractTrunkFromComment(body))
+	})
+
+	t.Run("Markdown", func(t *testing.T) {
+		body := "some text\n[gs:trunk]: # (develop)\n"
+		assert.Equal(t, "develop", ExtractTrunkFromComment(body))
+	})
+
+	t.Run("Missing", func(t *testing.T) {
+		body := "no trunk metadata here\n"
+		assert.Equal(t, "", ExtractTrunkFromComment(body))
+	})
+
+	t.Run("FullComment", func(t *testing.T) {
+		body := generateStackNavigationComment(
+			[]*stackedChange{
+				{Change: _changeID("1"), Base: -1},
+			},
+			0, "", "main", nil,
+		)
+		assert.Equal(t, "main", ExtractTrunkFromComment(body))
 	})
 }
 
