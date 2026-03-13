@@ -1,0 +1,69 @@
+# branch onto a branch that has a prior restack merge commit
+# should not carry over old parent's changes to the new parent.
+#
+# Regression test: when using merge restack method,
+# a branch that was restacked onto its parent (creating a merge commit)
+# should not retain the old parent's changes after 'gs branch onto'.
+
+as 'Test <test@example.com>'
+at '2026-03-13T10:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Configure merge-based restacking
+git config spice.restack.method merge
+
+# Create feat1 and child on top of it
+git add feat1.txt
+gs bc feat1 -m feat1
+
+gs branch checkout feat1
+git add child.txt
+gs bc child -m child
+
+# Add more commits to feat1 (simulating feat1 getting new work)
+gs branch checkout feat1
+git add feat1b.txt
+gs cc -m 'feat1: add more'
+
+# gs cc automatically restacks upstack branches,
+# so child is already restacked onto the updated feat1
+# (with a merge commit bringing in feat1b.txt).
+gs branch checkout child
+exists feat1b.txt
+
+# Create feat2 as an independent branch from trunk
+gs trunk
+git add feat2.txt
+gs bc feat2 -m feat2
+
+# Now move child onto feat2.
+# child's history contains a merge commit from feat1,
+# but after the onto operation, feat1's changes must not be present.
+gs branch checkout child
+gs branch onto feat2
+stderr 'child: moved onto feat2'
+
+# feat1's changes must NOT be present in child's worktree
+! exists feat1.txt
+! exists feat1b.txt
+
+# feat2 and child's own changes must be present
+exists feat2.txt
+exists child.txt
+
+-- repo/init.txt --
+initial
+-- repo/feat1.txt --
+feature 1
+-- repo/feat1b.txt --
+feature 1b
+-- repo/feat2.txt --
+feature 2
+-- repo/child.txt --
+child feature

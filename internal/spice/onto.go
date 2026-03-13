@@ -124,38 +124,21 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	}
 
 	if !req.SkipRebase {
-		switch s.restackMethod {
-		case RestackMethodRebase:
-			if err := s.wt.Rebase(ctx, git.RebaseRequest{
-				Branch:    req.Branch,
-				Upstream:  string(fromHash),
-				Onto:      ontoHash.String(),
-				Autostash: true,
-				Quiet:     true, // TODO: if verbose, disable this
-			}); err != nil {
-				return fmt.Errorf("rebase: %w", err)
-			}
-
-		case RestackMethodMerge:
-			// For "onto" operations with merge method,
-			// we need to:
-			// 1. Checkout the branch
-			// 2. Merge the new base into it
-			if err := s.wt.CheckoutBranch(ctx, req.Branch); err != nil {
-				return fmt.Errorf("checkout: %w", err)
-			}
-
-			if err := s.wt.Merge(ctx, git.MergeRequest{
-				Commit:  ontoHash.String(),
-				NoFF:    false,
-				Quiet:   true,
-				Message: fmt.Sprintf("Restack: merge %s into %s", req.Onto, req.Branch),
-			}); err != nil {
-				return fmt.Errorf("merge: %w", err)
-			}
-
-		default:
-			return fmt.Errorf("unknown restack method: %v", s.restackMethod)
+		// Regardless of the configured restack method,
+		// "onto" operations always use rebase.
+		// A merge cannot transplant commits from one base to another:
+		// it would bring the new base into the branch
+		// but the branch would still contain history from the old base.
+		// Only 'git rebase --onto' can correctly isolate and replay
+		// the commits unique to the branch onto a different base.
+		if err := s.wt.Rebase(ctx, git.RebaseRequest{
+			Branch:    req.Branch,
+			Upstream:  string(fromHash),
+			Onto:      ontoHash.String(),
+			Autostash: true,
+			Quiet:     true, // TODO: if verbose, disable this
+		}); err != nil {
+			return fmt.Errorf("rebase: %w", err)
 		}
 	}
 
