@@ -117,7 +117,11 @@ func forgeReviewDecision(
 	case githubv4.PullRequestReviewDecisionChangesRequested:
 		return forge.ChangeReviewChangesRequested
 	case githubv4.PullRequestReviewDecisionReviewRequired:
-		return forge.ChangeReviewRequired
+		// If only bot reviewers are pending,
+		// treat this as no review required.
+		if hasHumanReviewer {
+			return forge.ChangeReviewRequired
+		}
 	}
 
 	// reviewDecision is null when no branch protection rule requires a review,

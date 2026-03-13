@@ -26,9 +26,16 @@ func TestForgeReviewDecision(t *testing.T) {
 			want: forge.ChangeReviewChangesRequested,
 		},
 		{
-			name: "ReviewRequired",
-			d:    githubv4.PullRequestReviewDecisionReviewRequired,
-			want: forge.ChangeReviewRequired,
+			name:             "ReviewRequired",
+			d:                githubv4.PullRequestReviewDecisionReviewRequired,
+			hasHumanReviewer: true,
+			want:             forge.ChangeReviewRequired,
+		},
+		{
+			name:             "ReviewRequiredBotOnly",
+			d:                githubv4.PullRequestReviewDecisionReviewRequired,
+			hasHumanReviewer: false,
+			want:             forge.ChangeReviewNoReview,
 		},
 		{
 			name: "NoReviewNoReviewers",
