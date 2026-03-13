@@ -148,6 +148,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -158,6 +159,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -168,6 +170,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/pr-1-merged.json --
 [
   {
@@ -253,6 +256,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -263,6 +267,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -273,6 +278,7 @@ This is feature 3
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/ls.txt --
     ┏━□ feature3 (#3)
   ┏━┻□ feature2 (#2)
