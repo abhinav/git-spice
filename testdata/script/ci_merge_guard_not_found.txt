@@ -1,0 +1,24 @@
+# 'ci merge-guard' fails cleanly when the PR does not exist.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# no PRs exist — guard should fail with a clear error
+! gs ci merge-guard 999
+stderr 'find change #999'
+
+-- repo/.gitkeep --

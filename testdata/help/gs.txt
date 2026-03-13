@@ -31,7 +31,6 @@ Log
 
 Stack
   stack (s) submit (s)          Submit a stack
-  stack (s) merge (m)           Merge a stack
   stack (s) restack (r)         Restack a stack
   stack (s) edit (e)            Edit the order of branches in a stack
   stack (s) delete (d)          Delete all branches in a stack
@@ -59,7 +58,6 @@ Branch
   branch (b) restack (r)       Restack a branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
-  branch (b) merge (m)         Merge a branch into trunk
   branch (b) submit (s)        Submit a branch
 
 Commit
@@ -72,6 +70,9 @@ Commit
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
   rebase (rb) abort (a)       Abort an operation
+
+CI
+  ci merge-guard    Block merging a PR whose base is not trunk
 
 Navigation
   up (u)        Move up one branch
