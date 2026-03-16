@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 
+	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/sync"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -27,6 +31,45 @@ type SyncHandler interface {
 	SyncTrunk(ctx context.Context, opts *sync.TrunkOptions) error
 }
 
-func (cmd *repoSyncCmd) Run(ctx context.Context, syncHandler SyncHandler) error {
-	return syncHandler.SyncTrunk(ctx, &cmd.TrunkOptions)
+func (cmd *repoSyncCmd) Run(
+	ctx context.Context,
+	log *silog.Logger,
+	wt *git.Worktree,
+	syncHandler SyncHandler,
+	autostashHandler AutostashHandler,
+) (retErr error) {
+	currentBranch, err := wt.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	cleanup, err := autostashHandler.BeginAutostash(
+		ctx, &autostash.Options{
+			Message:   "git-spice: autostash before sync",
+			ResetMode: autostash.ResetHard,
+			Branch:    currentBranch,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	defer cleanup(&retErr)
+
+	if err := syncHandler.SyncTrunk(
+		ctx, &cmd.TrunkOptions,
+	); err != nil {
+		return err
+	}
+
+	if err := wt.CheckoutBranch(
+		ctx, currentBranch,
+	); err != nil {
+		log.Warn(
+			"Could not restore original branch",
+			"branch", currentBranch,
+			"error", err,
+		)
+	}
+
+	return nil
 }
