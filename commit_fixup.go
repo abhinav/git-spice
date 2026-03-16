@@ -162,7 +162,7 @@ func (cmd *commitFixupCmd) Run(
 				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
 			}
 		}
-		cleanup(&retErr)
+		cleanup(&retErr, nil)
 	}()
 
 	req := &fixup.Request{

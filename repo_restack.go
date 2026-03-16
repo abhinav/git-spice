@@ -42,7 +42,7 @@ func (*repoRestackCmd) Run(
 	if err != nil {
 		return err
 	}
-	defer cleanup(&retErr)
+	defer cleanup(&retErr, nil)
 
 	count, err := handler.Restack(ctx, &restack.Request{
 		Branch:          store.Trunk(),

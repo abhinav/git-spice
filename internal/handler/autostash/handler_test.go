@@ -36,7 +36,7 @@ func TestHandler_AutoStash(t *testing.T) {
 			ResetMode: ResetNone,
 		})
 		require.NoError(t, err)
-		cleanup(nil) // should be no-op
+		cleanup(nil, nil) // should be no-op
 	})
 
 	t.Run("StashAndPop", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestHandler_AutoStash(t *testing.T) {
 		mockWorktree.EXPECT().
 			StashApply(gomock.Any(), stashHash.String()).
 			Return(nil)
-		cleanup(nil)
+		cleanup(nil, nil)
 	})
 
 	t.Run("StashApplyError", func(t *testing.T) {
@@ -95,7 +95,7 @@ func TestHandler_AutoStash(t *testing.T) {
 			StashStore(gomock.Any(), stashHash, gomock.Any()).
 			Return(nil)
 
-		cleanup(new(error))
+		cleanup(new(error), nil)
 
 		assert.Contains(t, logBuf.String(), "Failed to apply autostash")
 		assert.Contains(t, logBuf.String(), "apply them with 'git stash pop'")
@@ -127,7 +127,7 @@ func TestHandler_AutoStash_reset(t *testing.T) {
 			ResetMode: ResetHard,
 		})
 		require.NoError(t, err)
-		cleanup(nil)
+		cleanup(nil, nil)
 	})
 
 	t.Run("Worktree", func(t *testing.T) {
@@ -154,19 +154,15 @@ func TestHandler_AutoStash_reset(t *testing.T) {
 			ResetMode: ResetWorktree,
 		})
 		require.NoError(t, err)
-		cleanup(nil)
+		cleanup(nil, nil)
 	})
 }
 
 func TestHandler_AutoStash_options(t *testing.T) {
-	t.Run("Branch", func(t *testing.T) {
+	t.Run("BranchFallback", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		mockWorktree := NewMockGitWorktree(mockCtrl)
-		mockWorktree.EXPECT().
-			CurrentBranch(gomock.Any()).
-			Return("feature", nil)
-
 		stashHash := git.Hash("stashhash")
 		mockWorktree.EXPECT().
 			StashCreate(gomock.Any(), gomock.Any()).
@@ -178,6 +174,7 @@ func TestHandler_AutoStash_options(t *testing.T) {
 			Worktree: mockWorktree,
 			Service:  mockService,
 		}).BeginAutostash(t.Context(), &Options{
+			Branch:    "feature",
 			ResetMode: ResetNone,
 		})
 		require.NoError(t, err)
@@ -188,7 +185,36 @@ func TestHandler_AutoStash_options(t *testing.T) {
 				Err:    conflictErr,
 				Branch: "feature",
 			}).Return(nil)
-		cleanup(&conflictErr)
+		cleanup(&conflictErr, nil)
+	})
+
+	t.Run("CleanupBranchOverride", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		stashHash := git.Hash("stashhash")
+		mockWorktree.EXPECT().
+			StashCreate(gomock.Any(), gomock.Any()).
+			Return(stashHash, nil)
+
+		mockService := NewMockService(mockCtrl)
+		cleanup, err := (&Handler{
+			Log:      silogtest.New(t),
+			Worktree: mockWorktree,
+			Service:  mockService,
+		}).BeginAutostash(t.Context(), &Options{
+			Branch:    "feature",
+			ResetMode: ResetNone,
+		})
+		require.NoError(t, err)
+
+		conflictErr := errors.New("sadness")
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), rebaseRescueMatcher{
+				Err:    conflictErr,
+				Branch: "main",
+			}).Return(nil)
+		cleanup(&conflictErr, &CleanupOptions{RescueBranch: "main"})
 	})
 }
 

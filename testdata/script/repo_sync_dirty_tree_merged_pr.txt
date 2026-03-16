@@ -1,0 +1,73 @@
+# 'repo sync' with a dirty worktree on a branch
+# that is NOT the one being rebased during branch deletion.
+#
+# Setup: main -> feature1 (PR merged)
+#         main -> feature3 (user is here, with dirty changes)
+#         feature1 -> feature2 (will be rebased onto main)
+#
+# The dirty changes on feature3 should be preserved after sync.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+gs repo init
+
+# create feature1 -> feature2 stack
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+# create a separate feature3 branch off main
+gs bco main
+git add feature3.txt
+gs bc -m 'Add feature3' feature3
+
+# submit feature1
+gs bco feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# go to feature3 and dirty a tracked file
+gs bco feature3
+cp $WORK/extra/feature3_dirty.txt feature3.txt
+
+# merge feature1's PR server side and sync.
+shamhub merge alice/example 1
+gs repo sync
+stderr 'feature1: #1 was merged'
+
+# dirty changes should still be present on feature3
+cmp feature3.txt $WORK/extra/feature3_dirty.txt
+
+# we should still be on feature3
+git branch --show-current
+stdout 'feature3'
+
+-- repo/feature1.txt --
+Contents of feature1
+
+-- repo/feature2.txt --
+Contents of feature2
+
+-- repo/feature3.txt --
+Contents of feature3
+
+-- extra/feature3_dirty.txt --
+Contents of feature3
+with uncommitted dirty changes

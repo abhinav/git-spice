@@ -47,7 +47,7 @@ var _ GitWorktree = (*git.Worktree)(nil)
 
 // AutostashHandler is a subset of the autostash.Handler interface.
 type AutostashHandler interface {
-	BeginAutostash(ctx context.Context, opts *autostash.Options) (cleanup func(*error), err error)
+	BeginAutostash(ctx context.Context, opts *autostash.Options) (cleanup func(*error, *autostash.CleanupOptions), err error)
 }
 
 var _ AutostashHandler = (*autostash.Handler)(nil)
@@ -215,7 +215,7 @@ func (h *Handler) CherryPickCommit(ctx context.Context, req *Request) (retErr er
 	if err != nil {
 		return fmt.Errorf("autostash: %w", err)
 	}
-	defer cleanup(&retErr)
+	defer cleanup(&retErr, nil)
 
 	if err := h.Worktree.Reset(ctx, newCommit.String(), git.ResetOptions{
 		Mode: git.ResetHard,
