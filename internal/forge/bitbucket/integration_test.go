@@ -62,6 +62,7 @@ func TestIntegration(t *testing.T) {
 			if source == forgetest.CredentialSourceGCM {
 				authType = bitbucket.AuthTypeGCM
 			}
+
 			return bitbucket.NewRepositoryForTest(
 				&bitbucketForge,
 				bitbucket.DefaultURL,

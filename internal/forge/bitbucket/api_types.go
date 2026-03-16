@@ -89,6 +89,26 @@ type apiComment struct {
 	Content apiContent `json:"content"`
 	User    apiUser    `json:"user"`
 	Links   apiPRLinks `json:"links"`
+
+	// Inline is set for code review (diff) comments.
+	// Only inline comments are resolvable.
+	Inline *apiInline `json:"inline,omitempty"`
+
+	// Resolution is set when the comment has been resolved.
+	// Nil means unresolved, non-nil means resolved.
+	Resolution *apiResolution `json:"resolution,omitempty"`
+}
+
+// apiInline identifies inline (code review) comment location.
+type apiInline struct {
+	Path string `json:"path"`
+	From *int   `json:"from,omitempty"`
+	To   *int   `json:"to,omitempty"`
+}
+
+// apiResolution indicates a comment has been resolved.
+type apiResolution struct {
+	Type string `json:"type"`
 }
 
 // apiContent represents comment content.

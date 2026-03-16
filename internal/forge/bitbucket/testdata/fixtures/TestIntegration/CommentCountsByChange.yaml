@@ -1,0 +1,59 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 152
+        host: api.bitbucket.org
+        body: '{"title":"Testing ESNhWqeC","description":"Test PR for comment counts","source":{"branch":{"name":"ESNhWqeC"}},"destination":{"branch":{"name":"main"}}}'
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 4362
+        body: '{"comment_count": 0, "task_count": 0, "type": "pullrequest", "id": 101, "title": "Testing ESNhWqeC", "description": "Test PR for comment counts", "rendered": {"title": {"type": "rendered", "raw": "Testing ESNhWqeC", "markup": "markdown", "html": "<p>Testing ESNhWqeC</p>"}, "description": {"type": "rendered", "raw": "Test PR for comment counts", "markup": "markdown", "html": "<p>Test PR for comment counts</p>"}}, "state": "OPEN", "draft": false, "merge_commit": null, "close_source_branch": false, "closed_by": null, "author": {"display_name": "Ed Kohlwey", "links": {"self": {"href": "https://api.bitbucket.org/2.0/users/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D"}, "avatar": {"href": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/70121:2fb6ef7e-ae8b-4607-812d-06464301ba51/2afd832e-e6fa-409f-91c9-5d0980e60586/128"}, "html": {"href": "https://bitbucket.org/%7Bb473f550-fefb-4fe3-8c5a-9695bbd31ed1%7D/"}}, "type": "user", "uuid": "{b473f550-fefb-4fe3-8c5a-9695bbd31ed1}", "account_id": "70121:2fb6ef7e-ae8b-4607-812d-06464301ba51", "nickname": "Ed Kohlwey"}, "reason": "", "created_on": "2026-01-31T12:54:52.866564+00:00", "updated_on": "2026-01-31T12:54:53.293226+00:00", "destination": {"branch": {"name": "main"}, "commit": {"hash": "5934bca3d15f", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/5934bca3d15f"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/5934bca3d15f"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "source": {"branch": {"name": "ESNhWqeC", "links": {}, "sync_strategies": ["merge_commit", "rebase"]}, "commit": {"hash": "298e9b999046", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/commit/298e9b999046"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/commits/298e9b999046"}}, "type": "commit"}, "repository": {"type": "repository", "full_name": "test-owner/test-owner", "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner"}, "avatar": {"href": "https://bytebucket.org/ravatar/%7Bbabb7b39-ab80-4015-999f-ebd75db36c15%7D?ts=default"}}, "name": "test-owner", "uuid": "{babb7b39-ab80-4015-999f-ebd75db36c15}"}}, "reviewers": [], "participants": [], "links": {"self": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101"}, "html": {"href": "https://bitbucket.org/test-owner/test-owner/pull-requests/101"}, "commits": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/commits"}, "approve": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/approve"}, "request-changes": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/request-changes"}, "diff": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diff/test-owner/test-owner:298e9b999046%0D5934bca3d15f?from_pullrequest_id=101&topic=true"}, "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/diffstat/test-owner/test-owner:298e9b999046%0D5934bca3d15f?from_pullrequest_id=101&topic=true"}, "comments": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/comments"}, "activity": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/activity"}, "merge": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/merge"}, "decline": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/decline"}, "statuses": {"href": "https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/statuses"}}, "summary": {"type": "rendered", "raw": "Test PR for comment counts", "markup": "markdown", "html": "<p>Test PR for comment counts</p>"}}'
+        headers:
+            Content-Length:
+                - "4362"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 1.028642417s
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: api.bitbucket.org
+        form:
+            pagelen:
+                - "100"
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests/101/comments?pagelen=100
+        method: GET
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: 52
+        body: '{"values": [], "pagelen": 100, "size": 0, "page": 1}'
+        headers:
+            Content-Length:
+                - "52"
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 266.13975ms

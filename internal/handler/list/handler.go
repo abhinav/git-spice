@@ -89,7 +89,11 @@ const (
 	// branches that have an associated ChangeID.
 	IncludeChangeState
 
-	needsRemoteID = IncludeChangeURL | IncludeChangeState
+	// IncludeCommentCounts includes comment resolution counts for
+	// branches that have an associated ChangeID.
+	IncludeCommentCounts
+
+	needsRemoteID = IncludeChangeURL | IncludeChangeState | IncludeCommentCounts
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -126,10 +130,11 @@ type BranchItem struct {
 	Commits []git.CommitDetail // only if IncludeCommits is set
 
 	// ChangeID is the ID of the associated change, if any.
-	ChangeID    forge.ChangeID
-	ChangeURL   string            // only if IncludeChangeURL is set
-	ChangeState forge.ChangeState // populated if RemoteRepository is available
-	PushStatus  *PushStatus       // only if IncludePushStatus is set
+	ChangeID      forge.ChangeID
+	ChangeURL     string               // only if IncludeChangeURL is set
+	ChangeState   forge.ChangeState    // populated if RemoteRepository is available
+	CommentCounts *forge.CommentCounts // only if IncludeCommentCounts is set
+	PushStatus    *PushStatus          // only if IncludePushStatus is set
 
 	// Worktree is the absolute path to the worktree where this branch is checked out.
 	// Empty if the branch is not checked out.
@@ -360,6 +365,13 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		}
 	}
 
+	// If requested and possible, batch-resolve CommentCounts for items with ChangeID.
+	if req.Include&IncludeCommentCounts != 0 && remoteForge != nil {
+		if err := h.loadCommentCounts(ctx, remoteForge, remoteRepoID, items); err != nil {
+			log.Warn("Could not load comment counts", "error", err)
+		}
+	}
+
 	return &BranchesResponse{
 		TrunkIdx: trunkIdx,
 		Branches: items,
@@ -399,6 +411,42 @@ func (h *Handler) loadChangeStates(
 
 	for j, idx := range branchesIdx {
 		branches[idx].ChangeState = states[j]
+	}
+
+	return nil
+}
+
+func (h *Handler) loadCommentCounts(
+	ctx context.Context,
+	remoteForge forge.Forge,
+	remoteRepoID forge.RepositoryID,
+	branches []*BranchItem,
+) error {
+	branchesIdx := make([]int, 0, len(branches))
+	changeIDs := make([]forge.ChangeID, 0, len(branches))
+	for i, b := range branches {
+		if b.ChangeID != nil {
+			branchesIdx = append(branchesIdx, i)
+			changeIDs = append(changeIDs, b.ChangeID)
+		}
+	}
+
+	if len(changeIDs) == 0 {
+		return nil
+	}
+
+	remoteRepo, err := h.OpenRemoteRepository(ctx, remoteForge, remoteRepoID)
+	if err != nil {
+		return fmt.Errorf("open remote repository: %w", err)
+	}
+
+	counts, err := remoteRepo.CommentCountsByChange(ctx, changeIDs)
+	if err != nil {
+		return fmt.Errorf("retrieve comment counts: %w", err)
+	}
+
+	for j, idx := range branchesIdx {
+		branches[idx].CommentCounts = counts[j]
 	}
 
 	return nil

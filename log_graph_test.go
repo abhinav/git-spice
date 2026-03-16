@@ -15,12 +15,13 @@ func TestGraphLogPresenter_Present(t *testing.T) {
 	var buf bytes.Buffer
 	stderrView := ui.NewFileView(&buf)
 	presenter := &graphLogPresenter{
-		Stderr:           stderrView,
-		Theme:            stderrView.Theme(),
-		ChangeFormat:     changeFormatID,
-		ShowCRStatus:     false,
-		PushStatusFormat: pushStatusDisabled,
-		CurrentWorktree:  "/repo",
+		Stderr:            stderrView,
+		Theme:             stderrView.Theme(),
+		ChangeFormat:      changeFormatID,
+		ShowCRStatus:      false,
+		ShowCommentCounts: false,
+		PushStatusFormat:  pushStatusDisabled,
+		CurrentWorktree:   "/repo",
 	}
 
 	res := &list.BranchesResponse{
@@ -47,12 +48,13 @@ func TestGraphLogPresenter_Present_preservesColor(t *testing.T) {
 		Profile: colorprofile.TrueColor,
 	})
 	presenter := &graphLogPresenter{
-		Stderr:           stderrView,
-		Theme:            stderrView.Theme(),
-		ChangeFormat:     changeFormatID,
-		ShowCRStatus:     false,
-		PushStatusFormat: pushStatusDisabled,
-		CurrentWorktree:  "/repo",
+		Stderr:            stderrView,
+		Theme:             stderrView.Theme(),
+		ChangeFormat:      changeFormatID,
+		ShowCRStatus:      false,
+		ShowCommentCounts: false,
+		PushStatusFormat:  pushStatusDisabled,
+		CurrentWorktree:   "/repo",
 	}
 
 	res := &list.BranchesResponse{

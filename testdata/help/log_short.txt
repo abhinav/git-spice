@@ -13,6 +13,8 @@ Flags:
                           (🔧 spice.log.all)
   -S, --[no-]cr-status    Request and include information about the Change
                           Request (🔧 spice.log.crStatus)
+  -c, --[no-]comments     Include comment resolution counts for changes (🔧
+                          spice.log.comments)
       --json              Write to stdout as a stream of JSON objects in an
                           unspecified order
 
