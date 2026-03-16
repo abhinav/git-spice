@@ -537,6 +537,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			forges *forge.Registry,
 			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
+			autostashHandler AutostashHandler,
 		) (SyncHandler, error) {
 			remote, err := ensureRemote(ctx, repo, store, log, view)
 			// TODO: move ensure remote to Service
@@ -562,6 +563,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Service:          svc,
 				Delete:           deleteHandler,
 				Restack:          restackHandler,
+				Autostash:        autostashHandler,
 				Remote:           remote,
 				RemoteRepository: remoteRepo,
 			}, nil
@@ -570,7 +572,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 }
 
 type AutostashHandler interface {
-	BeginAutostash(ctx context.Context, opts *autostash.Options) (func(*error), error)
+	BeginAutostash(ctx context.Context, opts *autostash.Options) (func(*error, *autostash.CleanupOptions), error)
 	RestoreAutostash(ctx context.Context, stashHash string) error
 }
 

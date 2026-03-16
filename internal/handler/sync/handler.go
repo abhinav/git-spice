@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"iter"
 	"runtime"
+	"slices"
 	"sort"
 	"sync"
 
@@ -17,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -24,6 +26,8 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 )
+
+//go:generate mockgen -package sync -typed -destination mocks_test.go . GitRepository,GitWorktree,Store,Service,DeleteHandler,RestackHandler,AutostashHandler
 
 // GitRepository provides access to tree-less Git operations.
 type GitRepository interface {
@@ -75,16 +79,24 @@ type RestackHandler interface {
 	RestackStack(ctx context.Context, branch string) error
 }
 
+// AutostashHandler is a subset of the autostash.Handler interface.
+type AutostashHandler interface {
+	BeginAutostash(ctx context.Context, opts *autostash.Options) (func(*error, *autostash.CleanupOptions), error)
+}
+
+var _ AutostashHandler = (*autostash.Handler)(nil)
+
 // Handler implements syncing commands.
 type Handler struct {
-	Log        *silog.Logger  // required
-	View       ui.View        // required
-	Repository GitRepository  // required
-	Worktree   GitWorktree    // required
-	Store      Store          // required
-	Service    Service        // required
-	Delete     DeleteHandler  // required
-	Restack    RestackHandler // required
+	Log        *silog.Logger    // required
+	View       ui.View          // required
+	Repository GitRepository    // required
+	Worktree   GitWorktree      // required
+	Store      Store            // required
+	Service    Service          // required
+	Delete     DeleteHandler    // required
+	Restack    RestackHandler   // required
+	Autostash  AutostashHandler // required
 
 	Remote string // required
 	// RemoteRepository is set only if remote refers to a supported forge.
@@ -159,7 +171,7 @@ type TrunkOptions struct {
 //
 // It also detects other tracked branches that have been merged upstream
 // and deletes them. (TODO: this should not be separated out.)
-func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
+func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr error) {
 	log := h.Log
 	opts = cmp.Or(opts, &TrunkOptions{})
 	currentBranch, err := h.Worktree.CurrentBranch(ctx)
@@ -170,6 +182,37 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 		currentBranch = "" // detached head
 	}
 
+	autostashCleanupOptions := autostash.CleanupOptions{
+		RescueBranch: currentBranch,
+	}
+	var autostashCleanup func(*error, *autostash.CleanupOptions)
+	defer func() {
+		if autostashCleanup != nil {
+			autostashCleanup(&retErr, &autostashCleanupOptions)
+		}
+	}()
+
+	// Begin autostash only when sync is about to disturb
+	// the current worktree.
+	//
+	// Call this immediately before operations
+	// that may fail because of dirty changes,
+	// or that may rebase, delete, or check out branches
+	// in this worktree.
+	//
+	// Once started, the deferred cleanup restores
+	// the stashed changes on success,
+	// or schedules them for rescue on failure.
+	beginAutostash := sync.OnceValue(func() error {
+		var err error
+		autostashCleanup, err = h.Autostash.BeginAutostash(ctx, &autostash.Options{
+			Message:   "git-spice: autostash before sync",
+			ResetMode: autostash.ResetHard,
+		})
+		return err
+	})
+
+	var trunkCheckedOutElsewhere bool
 	trunk := h.Store.Trunk()
 	trunkStartHash, err := h.Repository.PeelToCommit(ctx, trunk)
 	if err != nil {
@@ -212,26 +255,27 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 			return fmt.Errorf("update trunk: %w", err)
 		}
 	} else {
-		var worktreePath string // non-empty if checked out in another worktree
+		var trunkWorktreePath string // non-empty if checked out in another worktree
 		for branch, err := range h.Repository.LocalBranches(ctx, nil) {
 			if err != nil {
 				return fmt.Errorf("list branches: %w", err)
 			}
 
 			if branch.Name == trunk && branch.Worktree != "" {
-				worktreePath = branch.Worktree
+				trunkWorktreePath = branch.Worktree
 				break
 			}
 		}
 
-		if worktreePath != "" {
+		if trunkWorktreePath != "" {
+			trunkCheckedOutElsewhere = true
 			// (1c): Trunk is not the current branch,
 			// but it is checked out in another worktree.
 			// Re-run this command in that worktree.
-			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", worktreePath)
-			trunkWT, err := h.Repository.OpenWorktree(ctx, worktreePath)
+			log.Debug("Trunk is checked out in another worktree: syncing that worktree instead", "worktree", trunkWorktreePath)
+			trunkWT, err := h.Repository.OpenWorktree(ctx, trunkWorktreePath)
 			if err != nil {
-				return fmt.Errorf("open worktree %q: %w", worktreePath, err)
+				return fmt.Errorf("open worktree %q: %w", trunkWorktreePath, err)
 			}
 
 			if err := pullTrunk(trunkWT); err != nil {
@@ -269,6 +313,10 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 				// but also (1b) trunk is not checked out anywhere,
 				// so we can check out trunk and rebase.
 				log.Debug("trunk has unpushed commits: pulling from remote")
+
+				if err := beginAutostash(); err != nil {
+					return err
+				}
 
 				if err := h.Worktree.CheckoutBranch(ctx, trunk); err != nil {
 					return fmt.Errorf("checkout trunk: %w", err)
@@ -351,17 +399,52 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) error {
 		}
 	}
 
-	if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
-		return err
+	if len(branchesToDelete) > 0 {
+		if err := beginAutostash(); err != nil {
+			return err
+		}
+
+		// If sync deletes the branch we started on,
+		// a later rescued rebase cannot resume on that branch.
+		// Point autostash rescue
+		// at the branch sync intends to leave us on after deletion instead:
+		// trunk in the usual case,
+		// or no branch at all if trunk is checked out
+		// in another worktree
+		// and deletion leaves this worktree detached.
+		//
+		// If the current branch is not being deleted,
+		// keep rescuing onto that branch.
+		deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
+			return b.BranchName == currentBranch
+		})
+		if deletingCurrentBranch {
+			if trunkCheckedOutElsewhere {
+				autostashCleanupOptions.RescueBranch = ""
+			} else {
+				autostashCleanupOptions.RescueBranch = trunk
+			}
+		} else {
+			autostashCleanupOptions.RescueBranch = currentBranch
+		}
+
+		if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
+			return err
+		}
 	}
 
 	if opts.Restack {
+		if err := beginAutostash(); err != nil {
+			return err
+		}
+
 		// current branch may have changed after deletion
 		// of merged branches.
 		currentBranch, err := h.Worktree.CurrentBranch(ctx)
 		if err != nil {
 			log.Warn("Failed to get current branch, skipping restack", "error", err)
 		} else {
+			autostashCleanupOptions.RescueBranch = currentBranch
 			// TODO: if the merged branch leaves us on trunk
 			// --restack will end up restacking all known branches.
 			return h.Restack.RestackStack(ctx, currentBranch)

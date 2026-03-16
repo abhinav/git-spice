@@ -92,6 +92,14 @@ type Options struct {
 	ResetMode ResetMode
 }
 
+// CleanupOptions configures how autostash cleanup behaves.
+type CleanupOptions struct {
+	// RescueBranch is the branch on which rebase rescue should resume.
+	//
+	// If unset, BeginAutostash falls back to Options.Branch.
+	RescueBranch string
+}
+
 // BeginAutostash starts an autostash session.
 //
 // It stashes uncommitted changes (if any),
@@ -107,7 +115,7 @@ type Options struct {
 //	if err != nil {
 //	    return err
 //	}
-//	defer cleanup(&err)
+//	defer cleanup(&err, nil)
 //
 //	// Perform operations...
 //	return someOperation()
@@ -121,20 +129,9 @@ type Options struct {
 func (h *Handler) BeginAutostash(
 	ctx context.Context,
 	opts *Options,
-) (cleanup func(*error), err error) {
+) (cleanup func(*error, *CleanupOptions), err error) {
 	opts = cmp.Or(opts, &Options{})
 	opts.Message = cmp.Or(opts.Message, "git-spice: autostash before operation")
-
-	if opts.Branch == "" {
-		currentBranch, err := h.Worktree.CurrentBranch(ctx)
-		if err != nil {
-			if errors.Is(err, git.ErrDetachedHead) {
-				return nil, errors.New("HEAD is detached; cannot determine branch for autostash")
-			}
-			return nil, fmt.Errorf("determine current branch: %w", err)
-		}
-		opts.Branch = currentBranch
-	}
 
 	stashHash, err := h.Worktree.StashCreate(ctx, opts.Message)
 	if err != nil {
@@ -144,7 +141,7 @@ func (h *Handler) BeginAutostash(
 
 		// No changes to stash.
 		// Return a no-op cleanup function.
-		return func(*error) {}, nil
+		return func(*error, *CleanupOptions) {}, nil
 	}
 
 	// We created a stash.
@@ -171,7 +168,7 @@ func (h *Handler) BeginAutostash(
 		panic(fmt.Sprintf("unknown ResetMode: %d", opts.ResetMode))
 	}
 
-	return func(errPtr *error) {
+	return func(errPtr *error, cleanupOpts *CleanupOptions) {
 		// Provided context may have been canceled or timed out.
 		ctx := context.WithoutCancel(ctx)
 
@@ -189,11 +186,27 @@ func (h *Handler) BeginAutostash(
 			return
 		}
 
+		rescueBranch := opts.Branch
+		if cleanupOpts != nil && cleanupOpts.RescueBranch != "" {
+			rescueBranch = cleanupOpts.RescueBranch
+		}
+		if rescueBranch == "" {
+			currentBranch, err := h.Worktree.CurrentBranch(ctx)
+			if err != nil {
+				if !errors.Is(err, git.ErrDetachedHead) {
+					*errPtr = fmt.Errorf("determine branch for autostash rescue: %w", err)
+					return
+				}
+			} else {
+				rescueBranch = currentBranch
+			}
+		}
+
 		// Failure: schedule stash restoration via RebaseRescue.
 		*errPtr = h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 			Err:     *errPtr,
 			Command: []string{"internal", "autostash-pop", stashHash.String()},
-			Branch:  opts.Branch,
+			Branch:  rescueBranch,
 			Message: fmt.Sprintf("interrupted: restore stashed changes %q", stashHash),
 		})
 	}, nil
