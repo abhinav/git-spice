@@ -31,6 +31,7 @@ require (
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/oauth2 v0.36.0
+	golang.org/x/sync v0.19.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
@@ -72,7 +73,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect

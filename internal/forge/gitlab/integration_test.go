@@ -64,6 +64,7 @@ func newGitLabClient(
 	client, err := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
 	require.NoError(t, err)
 	return &gitlab.Client{
+		Discussions:      client.Discussions,
 		MergeRequests:    client.MergeRequests,
 		Notes:            client.Notes,
 		ProjectTemplates: client.ProjectTemplates,

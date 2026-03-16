@@ -1,0 +1,115 @@
+# 'gs log' supports comment counts controlled by --cr-comments/configuration.
+
+as 'Test <test@example.com>'
+at '2026-04-04T21:15:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+
+gs bco feat3
+gs dss --fill
+
+shamhub comment post -id=101 -resolvable alice/example 1 'feat1 unresolved'
+
+shamhub comment post -id=102 -resolvable alice/example 1 'feat1 resolved'
+shamhub comment edit -resolved=true 102
+
+shamhub comment post -id=201 -resolvable alice/example 2 'feat2 resolved'
+shamhub comment edit -resolved=true 201
+
+gs ls
+cmp stderr $WORK/golden/ls-without-comments.txt
+gs ll
+cmp stderr $WORK/golden/ll-without-comments.txt
+
+gs ls -c
+cmp stderr $WORK/golden/ls-with-comments.txt
+gs ll -c
+cmp stderr $WORK/golden/ll-with-comments.txt
+
+git config spice.log.crComments true
+gs ls
+cmp stderr $WORK/golden/ls-with-comments.txt
+gs ll
+cmp stderr $WORK/golden/ll-with-comments.txt
+
+gs ls --json --no-cr-comments
+cmpenv stdout $WORK/golden/ls-without-comments.json
+gs ll --json --no-cr-comments
+cmpenv stdout $WORK/golden/ll-without-comments.json
+gs ls --json
+cmpenv stdout $WORK/golden/ls-with-comments.json
+gs ll --json
+cmpenv stdout $WORK/golden/ll-with-comments.json
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+
+-- golden/ls-without-comments.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2)
+┏━┻□ feat1 (#1)
+main
+-- golden/ll-without-comments.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   7112afb feat3 (now)
+  ┏━┻□ feat2 (#2)
+  ┃    87abb98 feat2 (now)
+┏━┻□ feat1 (#1)
+┃    92fc5a4 feat1 (now)
+main
+-- golden/ls-with-comments.txt --
+    ┏━■ feat3 (#3) ◀
+  ┏━┻□ feat2 (#2) [☑️1/1💬]
+┏━┻□ feat1 (#1) [☑️1/2💬]
+main
+-- golden/ll-with-comments.txt --
+    ┏━■ feat3 (#3) ◀
+    ┃   7112afb feat3 (now)
+  ┏━┻□ feat2 (#2) [☑️1/1💬]
+  ┃    87abb98 feat2 (now)
+┏━┻□ feat1 (#1) [☑️1/2💬]
+┃    92fc5a4 feat1 (now)
+main
+-- golden/ls-without-comments.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ll-without-comments.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ls-with-comments.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ll-with-comments.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}

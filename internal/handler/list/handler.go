@@ -18,6 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
+	"golang.org/x/sync/errgroup"
 )
 
 // GitRepository lists operations from git.Repository
@@ -89,7 +90,11 @@ const (
 	// branches that have an associated ChangeID.
 	IncludeChangeState
 
-	needsRemoteID = IncludeChangeURL | IncludeChangeState
+	// IncludeCommentCounts includes comment resolution counts for
+	// branches that have an associated ChangeID.
+	IncludeCommentCounts
+
+	needsRemoteID = IncludeChangeURL | IncludeChangeState | IncludeCommentCounts
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -126,10 +131,11 @@ type BranchItem struct {
 	Commits []git.CommitDetail // only if IncludeCommits is set
 
 	// ChangeID is the ID of the associated change, if any.
-	ChangeID    forge.ChangeID
-	ChangeURL   string            // only if IncludeChangeURL is set
-	ChangeState forge.ChangeState // populated if RemoteRepository is available
-	PushStatus  *PushStatus       // only if IncludePushStatus is set
+	ChangeID      forge.ChangeID
+	ChangeURL     string               // only if IncludeChangeURL is set
+	ChangeState   forge.ChangeState    // populated if RemoteRepository is available
+	CommentCounts *forge.CommentCounts // only if IncludeCommentCounts is set
+	PushStatus    *PushStatus          // only if IncludePushStatus is set
 
 	// Worktree is the absolute path to the worktree where this branch is checked out.
 	// Empty if the branch is not checked out.
@@ -351,12 +357,12 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		baseItem.Aboves = append(baseItem.Aboves, idx)
 	}
 
-	// If requested and possible, batch-resolve ChangeState for items with ChangeID.
-	if req.Include&IncludeChangeState != 0 && remoteForge != nil {
-		// Try to load change states, but don't fail the whole operation
+	// If requested and possible, batch-resolve remote change metadata.
+	if req.Include&(IncludeChangeState|IncludeCommentCounts) != 0 && remoteForge != nil {
+		// Try to load remote metadata, but don't fail the whole operation
 		// if something goes wrong.
-		if err := h.loadChangeStates(ctx, remoteForge, remoteRepoID, items); err != nil {
-			log.Warn("Could not load change states", "error", err)
+		if err := h.loadRemoteChangeData(ctx, remoteForge, remoteRepoID, req.Include, items); err != nil {
+			log.Warn("Could not load remote change data", "error", err)
 		}
 	}
 
@@ -366,14 +372,15 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}, nil
 }
 
-func (h *Handler) loadChangeStates(
+func (h *Handler) loadRemoteChangeData(
 	ctx context.Context,
 	remoteForge forge.Forge,
 	remoteRepoID forge.RepositoryID,
+	include Include,
 	branches []*BranchItem,
 ) error {
 	// Collect IDs in the same order as items for stable mapping.
-	branchesIdx := make([]int, 0, len(branches)) // index in items
+	branchesIdx := make([]int, 0, len(branches))
 	changeIDs := make([]forge.ChangeID, 0, len(branches))
 	// For each changeIDs[i], branchesIdx[i] is the index in branches.
 	for i, b := range branches {
@@ -392,13 +399,51 @@ func (h *Handler) loadChangeStates(
 		return fmt.Errorf("open remote repository: %w", err)
 	}
 
-	states, err := remoteRepo.ChangesStates(ctx, changeIDs)
-	if err != nil {
-		return fmt.Errorf("retrieve change states: %w", err)
+	var updates []func()
+	wg, ctx := errgroup.WithContext(ctx)
+
+	if include&IncludeChangeState != 0 {
+		var states []forge.ChangeState
+		updates = append(updates, func() {
+			for j, idx := range branchesIdx {
+				branches[idx].ChangeState = states[j]
+			}
+		})
+
+		wg.Go(func() error {
+			var err error
+			states, err = remoteRepo.ChangesStates(ctx, changeIDs)
+			if err != nil {
+				return fmt.Errorf("retrieve change states: %w", err)
+			}
+			return nil
+		})
 	}
 
-	for j, idx := range branchesIdx {
-		branches[idx].ChangeState = states[j]
+	if include&IncludeCommentCounts != 0 {
+		var counts []*forge.CommentCounts
+		updates = append(updates, func() {
+			for j, idx := range branchesIdx {
+				branches[idx].CommentCounts = counts[j]
+			}
+		})
+
+		wg.Go(func() error {
+			var err error
+			counts, err = remoteRepo.CommentCountsByChange(ctx, changeIDs)
+			if err != nil {
+				return fmt.Errorf("retrieve comment counts: %w", err)
+			}
+			return nil
+		})
+	}
+
+	if err := wg.Wait(); err != nil {
+		return err
+	}
+
+	for _, update := range updates {
+		update()
 	}
 
 	return nil

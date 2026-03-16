@@ -3,6 +3,7 @@ package shamhub
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"iter"
 	"slices"
@@ -50,6 +51,76 @@ func (sh *ShamHub) DeleteComment(id int) error {
 	return fmt.Errorf("comment %d not found", id)
 }
 
+// PostCommentRequest requests creation of a ShamHub comment.
+type PostCommentRequest struct {
+	// Owner is the repository owner.
+	Owner string
+
+	// Repo is the repository name.
+	Repo string
+
+	// Change is the change number the comment belongs to.
+	Change int
+
+	// ID is an optional explicit comment ID.
+	// Zero means auto-assign the next available ID.
+	ID int
+
+	// Body is the comment text.
+	Body string
+
+	// Resolvable reports whether the comment can be resolved.
+	Resolvable bool
+
+	// Resolved reports whether the comment is already resolved.
+	Resolved bool
+}
+
+// PostComment creates a comment on the given change.
+func (sh *ShamHub) PostComment(req PostCommentRequest) (int, error) {
+	comment, err := sh.postComment(req)
+	if err != nil {
+		return 0, err
+	}
+	return comment.ID, nil
+}
+
+// EditCommentRequest requests a state update for a ShamHub comment.
+type EditCommentRequest struct {
+	// ID identifies the comment to update.
+	ID int
+
+	// Resolved optionally updates the resolved state.
+	// Nil leaves the field unchanged.
+	Resolved *bool
+}
+
+// EditComment updates the state of a comment.
+func (sh *ShamHub) EditComment(req EditCommentRequest) error {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for i, comment := range sh.comments {
+		if comment.ID != req.ID {
+			continue
+		}
+
+		updated := comment
+		if req.Resolved != nil {
+			updated.Resolved = *req.Resolved
+		}
+
+		if err := validateCommentState(updated.Resolvable, updated.Resolved); err != nil {
+			return err
+		}
+
+		sh.comments[i] = updated
+		return nil
+	}
+
+	return fmt.Errorf("comment %d not found", req.ID)
+}
+
 // ChangeCommentID uniquely identifies a comment on a change in ShamHub.
 type ChangeCommentID int
 
@@ -63,6 +134,12 @@ type shamComment struct {
 	ID     int
 	Change int
 	Body   string
+
+	// Resolvable indicates this is a code review comment that can be resolved.
+	Resolvable bool
+
+	// Resolved indicates this comment has been resolved.
+	Resolved bool
 }
 
 var (
@@ -85,30 +162,15 @@ type postCommentResponse struct {
 }
 
 func (sh *ShamHub) handlePostChangeComment(_ context.Context, req *postCommentRequest) (*postCommentResponse, error) {
-	owner, repo := req.Owner, req.Repo
-
-	sh.mu.RLock()
-	var found bool
-	for _, c := range sh.changes {
-		if c.Base.Owner == owner && c.Base.Repo == repo && c.Number == req.Change {
-			found = true
-			break
-		}
-	}
-	sh.mu.RUnlock()
-
-	if !found {
-		return nil, notFoundErrorf("change %d not found in %s/%s", req.Change, owner, repo)
-	}
-
-	sh.mu.Lock()
-	comment := shamComment{
-		ID:     len(sh.comments) + 1,
+	comment, err := sh.postComment(PostCommentRequest{
+		Owner:  req.Owner,
+		Repo:   req.Repo,
 		Change: req.Change,
 		Body:   req.Body,
+	})
+	if err != nil {
+		return nil, err
 	}
-	sh.comments = append(sh.comments, comment)
-	sh.mu.Unlock()
 
 	return &postCommentResponse{
 		ID: comment.ID,
@@ -147,6 +209,78 @@ func (sh *ShamHub) handleUpdateChangeComment(_ context.Context, req *updateComme
 	}
 
 	return &updateCommentResponse{ID: id}, nil
+}
+
+func (sh *ShamHub) postComment(req PostCommentRequest) (shamComment, error) {
+	if err := validateCommentState(req.Resolvable, req.Resolved); err != nil {
+		return shamComment{}, err
+	}
+
+	sh.mu.RLock()
+	var found bool
+	for _, c := range sh.changes {
+		if c.Base.Owner == req.Owner &&
+			c.Base.Repo == req.Repo &&
+			c.Number == req.Change {
+			found = true
+			break
+		}
+	}
+	sh.mu.RUnlock()
+
+	if !found {
+		return shamComment{}, notFoundErrorf(
+			"change %d not found in %s/%s",
+			req.Change, req.Owner, req.Repo,
+		)
+	}
+
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	commentID := req.ID
+	if commentID == 0 {
+		commentID = sh.nextCommentID()
+	} else if sh.commentByID(commentID) != nil {
+		return shamComment{}, fmt.Errorf("comment %d already exists", commentID)
+	}
+
+	comment := shamComment{
+		ID:         commentID,
+		Change:     req.Change,
+		Body:       req.Body,
+		Resolvable: req.Resolvable,
+		Resolved:   req.Resolved,
+	}
+	sh.comments = append(sh.comments, comment)
+	return comment, nil
+}
+
+func validateCommentState(resolvable, resolved bool) error {
+	if resolved && !resolvable {
+		return errors.New("resolved comments must be resolvable")
+	}
+	return nil
+}
+
+func (sh *ShamHub) nextCommentID() int {
+	if len(sh.comments) == 0 {
+		return 1
+	}
+
+	maxComment := slices.MaxFunc(sh.comments, func(a, b shamComment) int {
+		return a.ID - b.ID
+	})
+	return maxComment.ID + 1
+}
+
+func (sh *ShamHub) commentByID(id int) *shamComment {
+	for i := range sh.comments {
+		if sh.comments[i].ID == id {
+			return &sh.comments[i]
+		}
+	}
+	return nil
 }
 
 func (r *forgeRepository) PostChangeComment(

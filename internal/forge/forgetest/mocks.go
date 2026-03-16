@@ -710,6 +710,45 @@ func (c *MockRepositoryChangesStatesCall) DoAndReturn(f func(context.Context, []
 	return c
 }
 
+// CommentCountsByChange mocks base method.
+func (m *MockRepository) CommentCountsByChange(ctx context.Context, ids []forge.ChangeID) ([]*forge.CommentCounts, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommentCountsByChange", ctx, ids)
+	ret0, _ := ret[0].([]*forge.CommentCounts)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommentCountsByChange indicates an expected call of CommentCountsByChange.
+func (mr *MockRepositoryMockRecorder) CommentCountsByChange(ctx, ids any) *MockRepositoryCommentCountsByChangeCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommentCountsByChange", reflect.TypeOf((*MockRepository)(nil).CommentCountsByChange), ctx, ids)
+	return &MockRepositoryCommentCountsByChangeCall{Call: call}
+}
+
+// MockRepositoryCommentCountsByChangeCall wrap *gomock.Call
+type MockRepositoryCommentCountsByChangeCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryCommentCountsByChangeCall) Return(arg0 []*forge.CommentCounts, arg1 error) *MockRepositoryCommentCountsByChangeCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryCommentCountsByChangeCall) Do(f func(context.Context, []forge.ChangeID) ([]*forge.CommentCounts, error)) *MockRepositoryCommentCountsByChangeCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryCommentCountsByChangeCall) DoAndReturn(f func(context.Context, []forge.ChangeID) ([]*forge.CommentCounts, error)) *MockRepositoryCommentCountsByChangeCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // DeleteChangeComment mocks base method.
 func (m *MockRepository) DeleteChangeComment(arg0 context.Context, arg1 forge.ChangeCommentID) error {
 	m.ctrl.T.Helper()

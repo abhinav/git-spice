@@ -97,6 +97,20 @@ These objects take the following form:
     // May be omitted if the remote forge is unsupported,
     // authentication is missing, or the status could not be determined.
     status?: "open" | "closed" | "merged",
+
+    // Comment resolution counts for the Change Request.
+    // Present only if '--cr-comments=true'
+    // (or 'spice.log.crComments=true').
+    comments?: {
+      // Number of resolved comments or threads.
+      resolved: int,
+
+      // Number of unresolved comments or threads.
+      unresolved: int,
+
+      // Total number of resolvable comments or threads.
+      total: int,
+    },
   },
 
   // Push status of the branch.

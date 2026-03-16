@@ -235,6 +235,33 @@ shamhub reject <owner/repo> <num>
 Rejects Change Request `<num>` made in the given repository.
 Closes the CR without merging.
 
+#### shamhub comment post
+
+```
+shamhub comment post [-id=N] [-resolvable] [-resolved] <owner/repo> <change> <body>
+```
+
+Posts a comment on the given change.
+Use `-id` to assign a deterministic comment ID for later script steps.
+Use `-resolvable` and `-resolved` to seed review-thread state.
+
+#### shamhub comment edit
+
+```
+shamhub comment edit [-resolved=true|false] <id>
+```
+
+Edits the resolved state of an existing comment by ID.
+Whether a comment is resolvable is fixed at creation time.
+
+#### shamhub comment delete
+
+```
+shamhub comment delete <id>
+```
+
+Deletes a comment by ID.
+
 #### shamhub dump
 
 ```

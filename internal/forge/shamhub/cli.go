@@ -46,8 +46,116 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 	scriptState := ts.Value(shamHubKey{}).(*shamHubValue)
 	sh := scriptState.sh
 
+runCommand:
 	cmd, args := args[0], args[1:]
 	switch cmd {
+	case "comment":
+		if len(args) == 0 {
+			ts.Fatalf("usage: shamhub comment <post|edit|delete> [args ...]")
+		}
+
+		switch args[0] {
+		case "post":
+			if sh == nil {
+				ts.Fatalf("ShamHub not initialized")
+			}
+
+			logw, closeLogw := ioutil.PrintfWriter(ts.Logf, "shamhub comment post: ")
+			ts.Defer(closeLogw)
+
+			flag := flag.NewFlagSet("shamhub comment post", flag.ContinueOnError)
+			flag.SetOutput(logw)
+			flag.Usage = func() {
+				fmt.Fprintln(logw, "usage: shamhub comment post [-id=N] [-resolvable] [-resolved] <owner/repo> <change> <body>")
+			}
+
+			id := flag.Int("id", 0, "explicit comment ID")
+			resolvable := flag.Bool("resolvable", false, "mark comment as resolvable")
+			resolved := flag.Bool("resolved", false, "mark comment as resolved")
+			ts.Check(flag.Parse(args[1:]))
+			args = flag.Args()
+			if len(args) != 3 {
+				flag.Usage()
+				ts.Fatalf("expected 3 arguments, got %d", len(args))
+			}
+
+			ownerRepo, changeStr, body := args[0], args[1], args[2]
+			owner, repo, ok := strings.Cut(ownerRepo, "/")
+			if !ok {
+				ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+			}
+			repo = strings.TrimSuffix(repo, ".git")
+
+			change, err := strconv.Atoi(changeStr)
+			if err != nil {
+				ts.Fatalf("invalid change number: %s", err)
+			}
+
+			commentID, err := sh.PostComment(PostCommentRequest{
+				Owner:      owner,
+				Repo:       repo,
+				Change:     change,
+				ID:         *id,
+				Body:       body,
+				Resolvable: *resolvable,
+				Resolved:   *resolved,
+			})
+			ts.Check(err)
+			fmt.Fprintln(ts.Stdout(), commentID)
+
+		case "edit":
+			if sh == nil {
+				ts.Fatalf("ShamHub not initialized")
+			}
+
+			logw, closeLogw := ioutil.PrintfWriter(ts.Logf, "shamhub comment edit: ")
+			ts.Defer(closeLogw)
+
+			flag := flag.NewFlagSet("shamhub comment edit", flag.ContinueOnError)
+			flag.SetOutput(logw)
+			flag.Usage = func() {
+				fmt.Fprintln(logw, "usage: shamhub comment edit [-resolved=true|false] <id>")
+			}
+
+			var resolved optionalBoolFlag
+			flag.Var(&resolved, "resolved", "set whether the comment is resolved")
+			ts.Check(flag.Parse(args[1:]))
+			args = flag.Args()
+			if len(args) != 1 {
+				flag.Usage()
+				ts.Fatalf("expected 1 argument, got %d", len(args))
+			}
+
+			id, err := strconv.Atoi(args[0])
+			if err != nil {
+				ts.Fatalf("invalid comment ID: %s", err)
+			}
+
+			ts.Check(sh.EditComment(EditCommentRequest{
+				ID:       id,
+				Resolved: resolved.Ptr(),
+			}))
+
+		case "delete":
+			if len(args) != 2 {
+				ts.Fatalf("usage: shamhub comment delete <id>")
+			}
+
+			if sh == nil {
+				ts.Fatalf("ShamHub not initialized")
+			}
+
+			id, err := strconv.Atoi(args[1])
+			if err != nil {
+				ts.Fatalf("invalid comment ID: %s", err)
+			}
+
+			ts.Check(sh.DeleteComment(id))
+
+		default:
+			ts.Fatalf("unknown shamhub comment command: %s", args[0])
+		}
+
 	case "init":
 		if len(args) != 0 {
 			ts.Fatalf("usage: shamhub init")
@@ -224,19 +332,8 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 		ts.Check(sh.RejectChange(req))
 
 	case "delete-comment":
-		if len(args) != 1 {
-			ts.Fatalf("usage: shamhub delete-comment <id>")
-		}
-		if sh == nil {
-			ts.Fatalf("ShamHub not initialized")
-		}
-
-		id, err := strconv.Atoi(args[0])
-		if err != nil {
-			ts.Fatalf("invalid comment ID: %s", err)
-		}
-
-		ts.Check(sh.DeleteComment(id))
+		args = slices.Replace(args, 0, 0, "comment", "delete")
+		goto runCommand
 
 	case "register":
 		if len(args) != 1 {
@@ -370,4 +467,28 @@ func (c *Cmd) Run(ts *testscript.TestScript, neg bool, args []string) {
 	default:
 		ts.Fatalf("unknown command: %s", cmd)
 	}
+}
+
+type optionalBoolFlag struct {
+	value *bool
+}
+
+func (f *optionalBoolFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return strconv.FormatBool(*f.value)
+}
+
+func (f *optionalBoolFlag) Set(s string) error {
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return err
+	}
+	f.value = &v
+	return nil
+}
+
+func (f *optionalBoolFlag) Ptr() *bool {
+	return f.value
 }
