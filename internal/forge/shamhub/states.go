@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -130,6 +131,10 @@ type MergeChangeRequest struct {
 	// as a single squashed commit with the PR subject/body
 	// instead of a merge commit.
 	Squash bool
+
+	// HeadHash, if non-empty, causes the merge to fail
+	// if the change's head doesn't match this hash.
+	HeadHash string
 }
 
 // MergeChange merges an open change against this forge.
@@ -188,6 +193,25 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// If a HeadHash is provided, verify the head matches.
+	if req.HeadHash != "" {
+		headRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
+		out, err := xec.Command(ctx, sh.log, sh.gitExe,
+			"rev-parse", headRef.Name).
+			WithDir(headRepoDir).
+			Output()
+		if err != nil {
+			return fmt.Errorf("resolve head ref: %w", err)
+		}
+		actual := strings.TrimSpace(string(out))
+		if actual != req.HeadHash {
+			return fmt.Errorf(
+				"head hash mismatch: expected %s, got %s",
+				req.HeadHash, actual,
+			)
+		}
+	}
 
 	// If head is in a different repository (fork), fetch it.
 	if headRef.Owner != req.Owner || headRef.Repo != req.Repo {
@@ -299,5 +323,58 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	sh.changes[changeIdx].State = shamChangeMerged
 	sh.changes[changeIdx].HeadHash = headHash
+	return nil
+}
+
+// REST endpoint: merge a change.
+
+type mergeChangeRequest struct {
+	Owner    string `path:"owner" json:"-"`
+	Repo     string `path:"repo" json:"-"`
+	Number   int    `path:"number" json:"-"`
+	HeadHash string `json:"headHash,omitempty"`
+}
+
+type mergeChangeResponse struct{}
+
+var _ = shamhubRESTHandler(
+	"POST /{owner}/{repo}/change/{number}/merge",
+	(*ShamHub).handleMergeChange,
+)
+
+func (sh *ShamHub) handleMergeChange(
+	_ context.Context, req *mergeChangeRequest,
+) (*mergeChangeResponse, error) {
+	err := sh.MergeChange(MergeChangeRequest{
+		Owner:    req.Owner,
+		Repo:     req.Repo,
+		Number:   req.Number,
+		HeadHash: req.HeadHash,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &mergeChangeResponse{}, nil
+}
+
+// MergeChange merges a change via the ShamHub REST API.
+func (r *forgeRepository) MergeChange(
+	ctx context.Context, fid forge.ChangeID,
+	opts forge.MergeChangeOptions,
+) error {
+	id := fid.(ChangeID)
+	u := r.apiURL.JoinPath(
+		r.owner, r.repo,
+		"change", strconv.Itoa(int(id)), "merge",
+	)
+
+	body := mergeChangeRequest{
+		HeadHash: string(opts.HeadHash),
+	}
+	var res mergeChangeResponse
+	if err := r.client.Post(ctx, u.String(), body, &res); err != nil {
+		return fmt.Errorf("merge change: %w", err)
+	}
+
 	return nil
 }

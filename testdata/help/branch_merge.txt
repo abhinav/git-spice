@@ -1,0 +1,34 @@
+Usage: gs branch (b) merge (m) [flags]
+
+Merge a branch and its downstack
+
+Merges the current branch and all branches below it into trunk via the forge
+API, bottom-up. Use --branch to start at a different branch.
+
+Already-merged branches are skipped automatically. Branches must have an open
+Change Request to be merged.
+
+Before merging, the downstack is checked for branches whose base PR was already
+merged on the forge. Use --no-branch-check to skip this validation.
+
+Before each merge, waits for CI checks to pass. Use --build-timeout to configure
+the maximum wait (default: 30m, 0 means fail immediately if not ready).
+
+Between merges, the command waits for each merge to complete, retargets the next
+PR to trunk, and cleans up the merged local branch. Use --no-wait to skip the
+propagation polling.
+
+Flags:
+  --branch=NAME          Branch to merge
+  --no-wait              Skip polling for each merge to propagate (still
+                         retargets and cleans up).
+  --no-branch-check      Skip stale base validation before merging.
+  --build-timeout=30m    Max time to wait for CI checks before each merge.
+                         0 means check once. (🔧 spice.merge.buildTimeout)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
