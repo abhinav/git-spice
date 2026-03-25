@@ -57,6 +57,7 @@ Branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
   branch (b) submit (s)        Submit a branch
+  branch (b) merge (m)         Merge a branch and its downstack
 
 Commit
   commit (c) create (c)    Create a new commit

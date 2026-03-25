@@ -1043,6 +1043,43 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
+### git-spice branch merge {#gs-branch-merge}
+
+```
+gs branch (b) merge (m) [flags]
+```
+
+Merge a branch and its downstack
+
+Merges the current branch and all branches below it
+into trunk via the forge API, bottom-up.
+Use --branch to start at a different branch.
+
+Already-merged branches are skipped automatically.
+Branches must have an open Change Request to be merged.
+
+Before merging, the downstack is checked for branches
+whose base PR was already merged on the forge.
+Use --no-branch-check to skip this validation.
+
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
+(default: 30m, 0 means fail immediately if not ready).
+
+Between merges, the command waits for each merge
+to complete, retargets the next PR to trunk,
+and cleans up the merged local branch.
+Use --no-wait to skip the propagation polling.
+
+**Flags**
+
+* `--branch=NAME`: Branch to merge
+* `--no-wait`: Skip polling for each merge to propagate (still retargets and cleans up).
+* `--no-branch-check`: Skip stale base validation before merging.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout)
+
 ## Commit
 
 ### git-spice commit create {#gs-commit-create}

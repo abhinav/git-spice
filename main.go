@@ -28,6 +28,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
@@ -622,6 +623,69 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				RemoteRepository: remoteRepo,
 				PushRepository:   pushRepository,
 			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			svc *spice.Service,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+			deleteHandler DeleteHandler,
+		) (MergeHandler, error) {
+			remote, err := ensureRemote(
+				ctx, repo, store, log, view,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				return nil, err
+			}
+			remoteRepo, err := openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			return &merge.Handler{
+				Log:              log,
+				View:             view,
+				Store:            store,
+				Service:          svc,
+				RemoteRepository: remoteRepo,
+				Delete:           deleteHandler,
+				Repository:       repo,
+				Remote:           remote.Upstream,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+		) (forge.Repository, error) {
+			remote, err := ensureRemote(ctx, repo, store, log, view)
+			if err != nil {
+				return nil, err
+			}
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				return nil, err
+			}
+			return openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
 		}),
 	)
 }

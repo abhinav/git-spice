@@ -5,28 +5,16 @@ import (
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/forge"
 )
 
 // NewRepository re-exports the private NewRepository function
 // for testing.
 var NewRepository = newRepository
 
+// MergeChange merges a pull request using the production method.
 func MergeChange(ctx context.Context, repo *Repository, id *PR) error {
-	var m struct {
-		MergePullRequest struct {
-			PullRequest struct {
-				ID githubv4.ID `graphql:"id"`
-			} `graphql:"pullRequest"`
-		} `graphql:"mergePullRequest(input: $input)"`
-	}
-	input := githubv4.MergePullRequestInput{PullRequestID: id.GQLID}
-
-	if err := repo.client.Mutate(ctx, &m, input, nil); err != nil {
-		return fmt.Errorf("merge pull request: %w", err)
-	}
-
-	repo.log.Debug("Merged pull request", "pr", id.Number)
-	return nil
+	return repo.MergeChange(ctx, id, forge.MergeChangeOptions{})
 }
 
 func CloseChange(ctx context.Context, repo *Repository, id *PR) error {
