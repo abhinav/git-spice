@@ -1,0 +1,52 @@
+# 'repo sync' retargets upstack PRs on the forge
+# after deleting merged branches.
+
+as 'Test <test@example.com>'
+at '2026-03-04T18:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# verify feature2 targets feature1 initially
+shamhub dump change 2
+stdout '"ref": "feature1"'
+
+# merge feature1 externally
+shamhub merge alice/example 1
+
+# sync should detect the merge, delete feature1,
+# and retarget feature2's PR to main.
+gs repo sync
+stderr 'feature1: #1 was merged'
+stderr 'Retargeting feature2 to main'
+
+# verify feature2's PR now targets main
+shamhub dump change 2
+stdout '"ref": "main"'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
