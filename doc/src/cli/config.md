@@ -365,6 +365,19 @@ whether the branch is in sync with its pushed counterpart.
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
+### spice.merge.buildTimeout
+
+<!-- gs:version unreleased -->
+
+Maximum time $$gs branch merge$$ waits for CI checks to pass
+before merging each branch in the stack.
+
+The value must be a duration string such as
+`30m`, `1h`, `90s`, etc.
+Set to `0` to fail immediately if checks aren't already passing.
+
+Defaults to `30m`.
+
 ### spice.rebaseContinue.edit
 
 <!-- gs:version v0.10.0 -->

@@ -1,0 +1,51 @@
+# 'branch merge' refuses to merge branches
+# with unpushed local commits.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack (pushes to remote)
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# add an unpushed commit on feature1
+gs bco feature1
+cp $WORK/extra.txt extra.txt
+git add extra.txt
+git commit -m 'Add extra (not pushed)'
+gs bco feature2
+
+# merge should fail because feature1 has unpushed commits
+! gs branch merge
+stderr 'out of sync'
+stderr 'feature1'
+stderr 'gs branch submit'
+stderr 'git reset --hard'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- extra.txt --
+This is an unpushed change

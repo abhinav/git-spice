@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
@@ -18,18 +19,9 @@ func RepositoryProjectID(repo *Repository) int64 {
 	return repo.repoID
 }
 
+// MergeChange merges a merge request using the production method.
 func MergeChange(ctx context.Context, repo *Repository, id *MR) error {
-	_, _, err := repo.client.MergeRequestAccept(
-		ctx,
-		repo.repoID,
-		id.Number,
-		&gitlab.AcceptMergeRequestOptions{},
-	)
-	if err != nil {
-		return fmt.Errorf("merge merge request: %w", err)
-	}
-	repo.log.Debug("Merged merge request", "mr", id.Number)
-	return nil
+	return repo.MergeChange(ctx, id, forge.MergeChangeOptions{})
 }
 
 func CloseChange(ctx context.Context, repo *Repository, id *MR) error {
