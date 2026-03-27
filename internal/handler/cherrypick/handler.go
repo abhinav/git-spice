@@ -173,6 +173,12 @@ func (h *Handler) CherryPickCommit(ctx context.Context, req *Request) (retErr er
 			if _, ok := localChanges[f.Path]; ok {
 				conflicts = append(conflicts, f.Path)
 			}
+			if f.OldPath != "" {
+				if _, ok := localChanges[f.OldPath]; ok {
+					conflicts = append(conflicts,
+						f.OldPath)
+				}
+			}
 		}
 
 		sort.Strings(conflicts)
