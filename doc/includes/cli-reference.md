@@ -165,7 +165,7 @@ was not initialized with a remote.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -174,6 +174,10 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+**Flags**
+
+* `-w`, `--worktree`: Only restack branches in the current worktree.
 
 ## Log
 
@@ -195,6 +199,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
@@ -219,6 +224,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
@@ -1195,6 +1201,43 @@ This command requires at least Git 2.45.
 **Flags**
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
+
+## Worktree
+
+### git-spice worktree list {#gs-worktree-list}
+
+```
+gs worktree (wt) list (ls)
+```
+
+List worktrees and their branches
+
+Lists all worktrees associated with the repository.
+For each worktree, shows the checked-out branch
+and any tracked branches in its stack.
+
+### git-spice worktree create {#gs-worktree-create}
+
+```
+gs worktree (wt) create (c) <path> [flags]
+```
+
+Create a new worktree
+
+Creates a new Git worktree at the given path.
+The worktree starts in detached HEAD state
+at the current trunk commit.
+
+Use -b/--branch to create a new tracked branch
+in the worktree.
+
+**Arguments**
+
+* `path`: Path for the new worktree
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Create and check out a new branch in the worktree
 
 ## Rebase
 
