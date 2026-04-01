@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	gitlab "gitlab.com/gitlab-org/api/client-go/v2"
 )
 
 // assigneeIDs resolves assignee usernames to GitLab user IDs.

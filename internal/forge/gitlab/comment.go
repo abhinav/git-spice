@@ -7,7 +7,7 @@ import (
 	"iter"
 	"strconv"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
+	gitlab "gitlab.com/gitlab-org/api/client-go/v2"
 	"go.abhg.dev/gs/internal/forge"
 )
 
