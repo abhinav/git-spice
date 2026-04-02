@@ -3,10 +3,10 @@ module go.abhg.dev/gs
 go 1.26.0
 
 require (
-	charm.land/bubbles/v2 v2.0.0
-	charm.land/bubbletea/v2 v2.0.1
-	charm.land/lipgloss/v2 v2.0.0
-	github.com/alecthomas/kong v1.14.0
+	charm.land/bubbles/v2 v2.1.0
+	charm.land/bubbletea/v2 v2.0.2
+	charm.land/lipgloss/v2 v2.0.2
+	github.com/alecthomas/kong v1.15.0
 	github.com/buildkite/shellwords v1.0.1
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/x/ansi v0.11.6
@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/vito/midterm v0.2.4
-	github.com/zalando/go-keyring v0.2.6
+	github.com/zalando/go-keyring v0.2.8
 	gitlab.com/gitlab-org/api/client-go v1.46.0
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0
@@ -30,14 +30,13 @@ require (
 	go.abhg.dev/log/silog v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/oauth2 v0.35.0
+	golang.org/x/oauth2 v0.36.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
 )
 
 require (
-	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260205113103-524a6607adb8 // indirect
@@ -61,7 +60,7 @@ require (
 	github.com/hexops/valast v1.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-runewidth v0.0.20 // indirect
+	github.com/mattn/go-runewidth v0.0.21 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/nightlyone/lockfile v1.0.0 // indirect

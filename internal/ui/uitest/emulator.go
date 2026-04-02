@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -58,10 +59,11 @@ func NewEmulatorView(opts *EmulatorViewOptions) *EmulatorView {
 	)
 	term.AutoResizeX = !opts.NoAutoResize
 	term.AutoResizeY = !opts.NoAutoResize
+
 	// Bubble Tea v2 renders assuming raw-terminal line-feed semantics.
 	// Midterm defaults to cooked-mode behavior, where '\n' implies '\r\n',
 	// which breaks relative cursor updates in the emulator.
-	term.Raw = true
+	term.Raw = runtime.GOOS == "windows"
 
 	logf := opts.Logf
 	if logf == nil {

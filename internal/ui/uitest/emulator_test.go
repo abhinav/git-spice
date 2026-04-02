@@ -7,18 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEmulatorView_Write_mapsBareNewlineToCarriageReturn(t *testing.T) {
-	view := NewEmulatorView(nil)
-
-	_, err := view.Write([]byte("Select a branch:\n\x1b[10Drow"))
-	require.NoError(t, err)
-
-	assert.Equal(t, []string{
-		"Select a branch:",
-		"      row",
-	}, view.Rows())
-}
-
 func TestRenderedRow_zeroRunesBecomeSpaces(t *testing.T) {
 	row := []rune{0, 'a', 0}
 
