@@ -53,6 +53,7 @@ usage = '''
 flag "-v --verbose" default="false" help="Enable verbose output"
 flag "--race" default="false" help="Enable data race detection"
 flag "--update" default="false" help="Update expected results"
+flag "--count <count>" default="1" help="Number of times to run tests"
 
 flag "--shard-index <shard_index>" default="0" help="Shard index to run"
 flag "--shard-count <shard_count>" default="1" help="Total number of shards"
@@ -66,6 +67,7 @@ gotestsum
   {%- endif %} -- {# -#}
   -tags=script {# enable script tests -#}
   -run TestScript/{{option(name='run')}} {# run only script tests -#}
+  -count {{option(name='count')}} {# number of times to run tests -#}
   -race={{flag(name='race')}} {# race detection -#}
   -shard-index={{option(name='shard-index')}} {# shard index -#}
   -shard-count={{option(name='shard-count')}} {# shard count -#}

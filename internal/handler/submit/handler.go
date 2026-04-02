@@ -46,6 +46,7 @@ var _ GitRepository = (*git.Repository)(nil)
 // that is used by the submit handler.
 type GitWorktree interface {
 	Push(ctx context.Context, opts git.PushOptions) error
+	Var(ctx context.Context, name string) (string, error)
 }
 
 var _ GitWorktree = (*git.Worktree)(nil)
@@ -1116,7 +1117,7 @@ func (h *Handler) prepareBranch(
 	}
 
 	var fields []ui.Field
-	form := newBranchSubmitForm(ctx, h.Service, h.Repository, remoteRepo, h.Log, opts.Options)
+	form := newBranchSubmitForm(ctx, h.Service, h.Worktree, remoteRepo, h.Log, opts.Options)
 	if opts.Title == "" {
 		opts.Title = defaultTitle
 		fields = append(fields, form.titleField(&opts.Title, msgs))
