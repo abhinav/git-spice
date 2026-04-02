@@ -18,7 +18,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       name: Check out repository
-    - uses: jdx/mise-action@v3
+    - uses: jdx/mise-action@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - run: mise run lint
@@ -29,7 +29,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       name: Check out repository
-    - uses: jdx/mise-action@v3
+    - uses: jdx/mise-action@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
@@ -62,7 +62,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-    - uses: jdx/mise-action@v3
+    - uses: jdx/mise-action@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache
@@ -105,7 +105,7 @@ jobs:
         GOTESTSUM_FORMAT: github-actions
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v5.5.2
+      uses: codecov/codecov-action@v6.0.0
       if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out

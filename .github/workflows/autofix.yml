@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
       name: Check out repository
-    - uses: jdx/mise-action@v3
+    - uses: jdx/mise-action@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Go cache

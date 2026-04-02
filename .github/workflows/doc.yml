@@ -24,7 +24,7 @@ jobs:
         with:
           lfs: true
 
-      - uses: jdx/mise-action@v3
+      - uses: jdx/mise-action@v4
         with:
           working_directory: doc
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -58,4 +58,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
