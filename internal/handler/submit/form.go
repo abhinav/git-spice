@@ -14,12 +14,12 @@ import (
 )
 
 type branchSubmitForm struct {
-	ctx    context.Context
-	svc    Service
-	repo   GitRepository
-	remote forge.Repository
-	log    *silog.Logger
-	opts   *Options
+	ctx      context.Context
+	svc      Service
+	worktree GitWorktree
+	remote   forge.Repository
+	log      *silog.Logger
+	opts     *Options
 
 	tmpl *forge.ChangeTemplate
 }
@@ -27,18 +27,18 @@ type branchSubmitForm struct {
 func newBranchSubmitForm(
 	ctx context.Context,
 	svc Service,
-	repo GitRepository,
+	worktree GitWorktree,
 	remoteRepo forge.Repository,
 	log *silog.Logger,
 	opts *Options,
 ) *branchSubmitForm {
 	return &branchSubmitForm{
-		ctx:    ctx,
-		svc:    svc,
-		log:    log,
-		repo:   repo,
-		remote: remoteRepo,
-		opts:   opts,
+		ctx:      ctx,
+		svc:      svc,
+		worktree: worktree,
+		log:      log,
+		remote:   remoteRepo,
+		opts:     opts,
 	}
 }
 
@@ -111,7 +111,7 @@ func (f *branchSubmitForm) templateField(changeTemplatesCh <-chan []*forge.Chang
 
 func (f *branchSubmitForm) bodyField(body *string) ui.Field {
 	editor := ui.Editor{
-		Command: gitEditor(f.ctx, f.repo),
+		Command: gitEditor(f.ctx, f.worktree),
 		Ext:     "md",
 	}
 
@@ -147,8 +147,8 @@ func (f *branchSubmitForm) draftField(draft *bool) ui.Field {
 // to prompt the user to fill information.
 //
 // TODO: extract this somewhere
-func gitEditor(ctx context.Context, repo GitRepository) string {
-	gitEditor, err := repo.Var(ctx, "GIT_EDITOR")
+func gitEditor(ctx context.Context, worktree GitWorktree) string {
+	gitEditor, err := worktree.Var(ctx, "GIT_EDITOR")
 	if err != nil {
 		// 'git var GIT_EDITOR' will basically never fail,
 		// but if it does, fall back to EDITOR or vi.
