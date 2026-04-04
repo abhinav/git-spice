@@ -89,24 +89,6 @@ func (cmd *commitFixupCmd) Run(
 		return fmt.Errorf("determine current branch: %w", err)
 	}
 
-	cleanup, err := autostashHandler.BeginAutostash(ctx, &autostash.Options{
-		Message:   "git-spice: autostash before commit fixup",
-		ResetMode: autostash.ResetWorktree,
-		Branch:    currentBranch,
-	})
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if retErr == nil {
-			if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
-				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
-			}
-		}
-		cleanup(&retErr)
-	}()
-
 	var (
 		commitHash   git.Hash
 		commitBranch string
@@ -132,6 +114,57 @@ func (cmd *commitFixupCmd) Run(
 		}
 	}
 	must.NotBeBlankf(commitHash, "commit hash not specified, nor set in prompt")
+
+	head, err := wt.Head(ctx)
+	if err != nil {
+		return fmt.Errorf("determine HEAD: %w", err)
+	}
+
+	// Target commit must be an ancestor of HEAD.
+	if !repo.IsAncestor(ctx, commitHash, head) {
+		log.Errorf("Target commit (%v) is not reachable from HEAD (%v)", commitHash, head)
+		return errors.New("fixup commit must be an ancestor of HEAD")
+	}
+
+	// But it must be more recent than trunk.
+	//
+	// TODO:
+	// Non-restack version of this command that works for detached HEAD
+	// would also support fixing up commits that are already in trunk.
+	if trunkHash, err := repo.PeelToCommit(ctx, svc.Trunk()); err == nil {
+		if repo.IsAncestor(ctx, commitHash, trunkHash) {
+			log.Errorf("Target commit (%v) is already in trunk (%v)", commitHash, trunkHash)
+			return errors.New("cannot fixup a commit that has been merged into trunk")
+		}
+	}
+
+	// There must be something to commit.
+	if diff, err := wt.DiffIndex(ctx, head.String()); err != nil {
+		return fmt.Errorf("diff index: %w", err)
+	} else if len(diff) == 0 {
+		return errors.New("no changes staged for commit")
+	}
+
+	// Delay autostash until validation is complete so that
+	// rejections leave unstaged worktree changes untouched.
+	cleanup, err := autostashHandler.BeginAutostash(ctx, &autostash.Options{
+		Message:   "git-spice: autostash before commit fixup",
+		ResetMode: autostash.ResetWorktree,
+		Branch:    currentBranch,
+	})
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if retErr == nil {
+			if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
+				retErr = fmt.Errorf("restore original branch %q: %w", currentBranch, err)
+			}
+		}
+		cleanup(&retErr)
+	}()
+
 	req := &fixup.Request{
 		Options:      &cmd.Options,
 		TargetHash:   commitHash,

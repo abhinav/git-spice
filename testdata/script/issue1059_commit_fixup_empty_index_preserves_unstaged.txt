@@ -1,0 +1,53 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1059
+#
+# If 'gs commit fixup' is run with no staged changes
+# but with unstaged changes in the worktree,
+# it must report the empty-index error
+# without discarding the unstaged edits.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2026-03-12T21:50:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+# Create main -> next.
+git add initial.txt
+gs cc -m 'initial commit'
+
+git add next.txt
+gs bc next -m 'next'
+
+# Leave an edit unstaged.
+cp $WORK/extra/next_dirty.txt next.txt
+git status --porcelain
+cmp stdout $WORK/golden/status_before.txt
+
+# Fixup should reject the empty index,
+# and must not discard the unstaged change.
+! gs commit fixup HEAD
+stderr 'no changes staged for commit'
+
+git status --porcelain
+cmp stdout $WORK/golden/status_after.txt
+cmp next.txt $WORK/extra/next_dirty.txt
+
+git stash list
+cmp stdout $WORK/golden/stash_list.txt
+
+-- repo/initial.txt --
+initial file
+-- repo/next.txt --
+next file
+-- extra/next_dirty.txt --
+update file
+-- golden/status_before.txt --
+ M next.txt
+-- golden/status_after.txt --
+ M next.txt
+-- golden/stash_list.txt --
