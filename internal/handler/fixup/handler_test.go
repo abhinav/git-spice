@@ -41,8 +41,8 @@ func TestFixupCommit_errors(t *testing.T) {
 		assert.ErrorContains(t, err, "determine HEAD")
 	})
 
-	// Target commit is not an ancestor of HEAD.
-	t.Run("TargetNotAncestor", func(t *testing.T) {
+	// Error reading the target commit.
+	t.Run("ReadTargetCommitError", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		mockWorktree := NewMockGitWorktree(mockCtrl)
@@ -52,8 +52,8 @@ func TestFixupCommit_errors(t *testing.T) {
 
 		mockRepo := NewMockGitRepository(mockCtrl)
 		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("def456")).
-			Return(false)
+			ReadCommit(gomock.Any(), "abc123").
+			Return(nil, assert.AnError)
 
 		err := (&Handler{
 			Log:        silogtest.New(t),
@@ -67,11 +67,43 @@ func TestFixupCommit_errors(t *testing.T) {
 			HeadBranch:   "feat2",
 		})
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "fixup commit must be an ancestor of HEAD")
+		assert.ErrorContains(t, err, "read target commit")
 	})
 
-	// Target commit is on the trunk branch.
-	t.Run("AlreadyOnTrunk", func(t *testing.T) {
+	// Error writing the staged changes to a tree.
+	t.Run("WriteIndexTreeError", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		mockWorktree.EXPECT().
+			Head(gomock.Any()).
+			Return("def456", nil)
+		mockWorktree.EXPECT().
+			WriteIndexTree(gomock.Any()).
+			Return(git.Hash(""), assert.AnError)
+
+		mockRepo := NewMockGitRepository(mockCtrl)
+		mockRepo.EXPECT().
+			ReadCommit(gomock.Any(), "abc123").
+			Return(&git.CommitObject{}, nil)
+
+		err := (&Handler{
+			Log:        silogtest.New(t),
+			Restack:    NewMockRestackHandler(mockCtrl),
+			Worktree:   mockWorktree,
+			Repository: mockRepo,
+			Service:    NewMockService(mockCtrl),
+		}).FixupCommit(t.Context(), &Request{
+			TargetHash:   "abc123",
+			TargetBranch: "feat1",
+			HeadBranch:   "feat2",
+		})
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "write staged changes to tree")
+	})
+
+	// Error loading the branch graph if the target branch must be inferred.
+	t.Run("BranchGraphError", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
 		mockWorktree := NewMockGitWorktree(mockCtrl)
@@ -81,122 +113,51 @@ func TestFixupCommit_errors(t *testing.T) {
 
 		mockService := NewMockService(mockCtrl)
 		mockService.EXPECT().
-			Trunk().
-			Return("main").
-			AnyTimes()
-
-		mockRepo := NewMockGitRepository(mockCtrl)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("def456")).
-			Return(true)
-		mockRepo.EXPECT().
-			PeelToCommit(gomock.Any(), "main").
-			Return(git.Hash("789abc"), nil)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("789abc")).
-			Return(true)
-
-		err := (&Handler{
-			Log:        silogtest.New(t),
-			Restack:    NewMockRestackHandler(mockCtrl),
-			Worktree:   mockWorktree,
-			Repository: mockRepo,
-			Service:    mockService,
-		}).FixupCommit(t.Context(), &Request{
-			TargetHash:   "abc123",
-			TargetBranch: "feat1",
-			HeadBranch:   "feat2",
-		})
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "cannot fixup a commit that has been merged into trunk")
-	})
-
-	// No changes staged for commit.
-	t.Run("NoStagedChanges", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-
-		mockWorktree := NewMockGitWorktree(mockCtrl)
-		mockWorktree.EXPECT().
-			Head(gomock.Any()).
-			Return("def456", nil)
-		mockWorktree.EXPECT().
-			DiffIndex(gomock.Any(), "def456").
-			Return([]git.FileStatus{}, nil)
-
-		mockService := NewMockService(mockCtrl)
-		mockService.EXPECT().
-			Trunk().
-			Return("main").
-			AnyTimes()
-
-		mockRepo := NewMockGitRepository(mockCtrl)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("def456")).
-			Return(true)
-		mockRepo.EXPECT().
-			PeelToCommit(gomock.Any(), "main").
-			Return(git.Hash("789abc"), nil)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("789abc")).
-			Return(false)
-
-		err := (&Handler{
-			Log:        silogtest.New(t),
-			Restack:    NewMockRestackHandler(mockCtrl),
-			Worktree:   mockWorktree,
-			Repository: mockRepo,
-			Service:    mockService,
-		}).FixupCommit(t.Context(), &Request{
-			TargetHash:   "abc123",
-			TargetBranch: "feat1",
-			HeadBranch:   "feat2",
-		})
-		require.Error(t, err)
-		assert.ErrorContains(t, err, "no changes staged for commit")
-	})
-
-	// Error diffing index.
-	t.Run("DiffIndexError", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-
-		mockWorktree := NewMockGitWorktree(mockCtrl)
-		mockWorktree.EXPECT().
-			Head(gomock.Any()).
-			Return("def456", nil)
-		mockWorktree.EXPECT().
-			DiffIndex(gomock.Any(), "def456").
+			BranchGraph(gomock.Any(), nil).
 			Return(nil, assert.AnError)
 
+		err := (&Handler{
+			Log:        silogtest.New(t),
+			Restack:    NewMockRestackHandler(mockCtrl),
+			Worktree:   mockWorktree,
+			Repository: NewMockGitRepository(mockCtrl),
+			Service:    mockService,
+		}).FixupCommit(t.Context(), &Request{
+			TargetHash:   "abc123",
+			TargetBranch: "",
+			HeadBranch:   "feat2",
+		})
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "fetch branch graph")
+	})
+
+	// Error identifying the target branch from the graph.
+	t.Run("FindCommitBranchError", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		mockWorktree.EXPECT().
+			Head(gomock.Any()).
+			Return("def456", nil)
+
 		mockService := NewMockService(mockCtrl)
 		mockService.EXPECT().
-			Trunk().
-			Return("main").
-			AnyTimes()
-
-		mockRepo := NewMockGitRepository(mockCtrl)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("def456")).
-			Return(true)
-		mockRepo.EXPECT().
-			PeelToCommit(gomock.Any(), "main").
-			Return(git.Hash("789abc"), nil)
-		mockRepo.EXPECT().
-			IsAncestor(gomock.Any(), git.Hash("abc123"), git.Hash("789abc")).
-			Return(false)
+			BranchGraph(gomock.Any(), nil).
+			Return(&spice.BranchGraph{}, nil)
 
 		err := (&Handler{
 			Log:        silogtest.New(t),
 			Restack:    NewMockRestackHandler(mockCtrl),
 			Worktree:   mockWorktree,
-			Repository: mockRepo,
+			Repository: NewMockGitRepository(mockCtrl),
 			Service:    mockService,
 		}).FixupCommit(t.Context(), &Request{
 			TargetHash:   "abc123",
-			TargetBranch: "feat1",
+			TargetBranch: "",
 			HeadBranch:   "feat2",
 		})
 		require.Error(t, err)
-		assert.ErrorContains(t, err, "diff index")
+		assert.ErrorContains(t, err, "try using the prompt to select a commit")
 	})
 }
 

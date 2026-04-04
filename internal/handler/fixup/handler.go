@@ -77,6 +77,9 @@ type Options struct {
 // Request holds parameters for fixing up a commit.
 type Request struct {
 	// TargetHash is the commit to fixup with the staged changes.
+	//
+	// The caller must already have verified that this commit
+	// is reachable from HEAD and has not already been merged into trunk.
 	TargetHash git.Hash // required
 
 	// TargetBranch is the branch that [TargetHash] belongs to.
@@ -85,6 +88,9 @@ type Request struct {
 	TargetBranch string // optional
 
 	// HeadBranch is the current branch.
+	//
+	// The caller must already have verified that HEAD has staged changes
+	// to apply to TargetHash.
 	HeadBranch string // required
 
 	Options *Options // optional
@@ -98,31 +104,6 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 	head, err := h.Worktree.Head(ctx)
 	if err != nil {
 		return fmt.Errorf("determine HEAD: %w", err)
-	}
-
-	// Target commit must be an ancestor of HEAD.
-	if !h.Repository.IsAncestor(ctx, req.TargetHash, head) {
-		h.Log.Errorf("Target commit (%v) is not reachable from HEAD (%v)", req.TargetHash, head)
-		return errors.New("fixup commit must be an ancestor of HEAD")
-	}
-
-	// But it must be more recent than trunk.
-	//
-	// TODO:
-	// Non-restack version of this command that works for detached HEAD
-	// would also support fixing up commits that are already in trunk.
-	if trunkHash, err := h.Repository.PeelToCommit(ctx, h.Service.Trunk()); err == nil {
-		if h.Repository.IsAncestor(ctx, req.TargetHash, trunkHash) {
-			h.Log.Errorf("Target commit (%v) is already in trunk (%v)", req.TargetHash, trunkHash)
-			return errors.New("cannot fixup a commit that has been merged into trunk")
-		}
-	}
-
-	// There must be something to commit.
-	if diff, err := h.Worktree.DiffIndex(ctx, head.String()); err != nil {
-		return fmt.Errorf("diff index: %w", err)
-	} else if len(diff) == 0 {
-		return errors.New("no changes staged for commit")
 	}
 
 	// If a branch name is not provided,
