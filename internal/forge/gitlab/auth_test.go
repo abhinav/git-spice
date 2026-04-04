@@ -580,6 +580,11 @@ func TestCLITokenParsing(t *testing.T) {
 			want: "abc-def-ghi",
 		},
 		{
+			name: "Dots",
+			give: "  ✓ Token found: glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
+			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
+		},
+		{
 			name: "NoToken",
 			give: "  ✓ Token: \n",
 		},

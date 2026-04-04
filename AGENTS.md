@@ -14,7 +14,7 @@
 | Run all test scripts     | `mise run test:script` (use sparingly; slow)    |
 | Run specific test script | `mise run test:script --run $name`              |
 | Update test script       | `mise run test:script --run $name --update`     |
-| Add changelog entry      | `changie new --kind $kind --body $body`         |
+| Add changelog entry      | `mise run changie new --kind $kind --body $body` |
 
 ## Overview
 
@@ -97,7 +97,7 @@ unless explicitly stated otherwise:
         Ask if unsure.
 
         ```bash
-        changie new --kind $kind --body $body
+        mise run changie new --kind $kind --body $body
         ```
 
     6. Commit
@@ -318,7 +318,7 @@ Unreleased changes are stored in the .changes/unreleased directory.
 To add a changelog entry for a user-facing change, run:
 
 ```
-changie new --kind $kind --body $body
+mise run changie new --kind $kind --body $body
 ```
 
 Where:
