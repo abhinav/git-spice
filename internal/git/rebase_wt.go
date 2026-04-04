@@ -12,6 +12,7 @@ import (
 
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/xec"
 )
 
@@ -94,7 +95,7 @@ type RebaseRequest struct {
 
 // Rebase runs a git rebase operation with the specified parameters.
 // It returns [RebaseInterruptError] for known rebase interruptions,
-func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
+func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error) {
 	args := []string{
 		// Never include advice on how to resolve merge conflicts.
 		// We'll do that ourselves.
@@ -115,13 +116,15 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
 		// So we need to check if we're left with any unmerged files
 		// separately and fail the operation if so.
 		defer func() {
-			if err != nil {
+			if retErr != nil {
 				return
 			}
 
-			var unmergedFiles []string
-			for path := range w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}) {
-				unmergedFiles = append(unmergedFiles, path)
+			unmergedFiles, err := sliceutil.CollectErr(
+				w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}))
+			if err != nil {
+				retErr = fmt.Errorf("list unmerged files: %w", err)
+				return
 			}
 			if len(unmergedFiles) == 0 {
 				return
@@ -136,7 +139,7 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (err error) {
 			w.log.Error("Resolve the conflict and run 'git stash drop' to remove the stash entry.")
 			w.log.Error("Or change to a branch where the stash can apply, and run 'git stash pop'.")
 
-			err = fmt.Errorf("%v: dirty changes could not be re-applied", req.Branch)
+			retErr = fmt.Errorf("%v: dirty changes could not be re-applied", req.Branch)
 		}()
 	}
 	if req.Quiet {

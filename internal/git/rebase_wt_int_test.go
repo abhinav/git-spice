@@ -1,0 +1,86 @@
+package git
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/silog"
+)
+
+// TestRebase_issue1083_lsFilesError covers
+// https://github.com/abhinav/git-spice/issues/1083.
+//
+// If the post-rebase 'git ls-files --unmerged' probe fails,
+// Rebase must surface that probe error directly.
+// Before the fix, the iterator error was ignored,
+// and the zero-value path was treated like a real file.
+// That produced a blank bullet in the user-facing conflict report.
+func TestRebase_issue1083_lsFilesError(t *testing.T) {
+	installFakeGit(t)
+	t.Setenv("GIT_ISSUE_1083_HELPER", "1")
+
+	var logBuf bytes.Buffer
+	log := silog.New(&logBuf, nil)
+
+	_, wt := NewFakeRepositoryWithLogger(t, "", _realExec, log)
+
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:    "feature",
+		Upstream:  "main",
+		Autostash: true,
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "list unmerged files")
+	assert.ErrorContains(t, err, "git ls-files")
+	assert.NotErrorAs(t, err, new(*RebaseInterruptError))
+	assert.NotContains(t, err.Error(), "dirty changes could not be re-applied")
+	assert.Empty(t, logBuf.String())
+}
+
+func gitIssue1083() {
+	subcommand := ""
+	for i := 1; i < len(os.Args); i++ {
+		if os.Args[i] == "-c" {
+			i++
+			continue
+		}
+		subcommand = os.Args[i]
+		break
+	}
+
+	switch subcommand {
+	case "rebase":
+		// Skip the real rebase machinery.
+		// This test only exercises failure in the follow-up ls-files probe.
+		return
+	case "ls-files":
+		fmt.Fprintln(os.Stderr, "fatal: synthetic ls-files failure")
+		os.Exit(1)
+	default:
+		fmt.Fprintf(os.Stderr, "unexpected git command %q: %v\n",
+			subcommand, os.Args)
+		os.Exit(1)
+	}
+}
+
+func installFakeGit(t testing.TB) {
+	t.Helper()
+
+	dir := t.TempDir()
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	name := "git"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	require.NoError(t, os.Symlink(exe, filepath.Join(dir, name)))
+
+	t.Setenv("PATH", dir+string(filepath.ListSeparator)+os.Getenv("PATH"))
+}
