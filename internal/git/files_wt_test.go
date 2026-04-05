@@ -104,6 +104,72 @@ func TestListFilesPaths_unmerged(t *testing.T) {
 	})
 }
 
+func TestListFilesPaths_unmergedSpecialCharacters(t *testing.T) {
+	t.Parallel()
+
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping test on Windows")
+	}
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-06-21T09:27:19Z'
+
+		git init
+		mv just-blank.txt ' '
+		git add ' '
+		git add 'file with spaces.txt'
+		git commit -m 'Initial commit'
+
+		git checkout -b feature
+		cp $WORK/blank-feature.txt ' '
+		cp $WORK/spaces-feature.txt 'file with spaces.txt'
+		git add ' '
+		git add 'file with spaces.txt'
+		git commit -m 'Feature changes'
+
+		git checkout main
+		cp $WORK/blank-main.txt ' '
+		cp $WORK/spaces-main.txt 'file with spaces.txt'
+		git add ' '
+		git add 'file with spaces.txt'
+		git commit -m 'Main changes'
+
+		! git merge feature
+
+		-- just-blank.txt --
+		base blank file
+
+		-- file with spaces.txt --
+		base spaced file
+
+		-- blank-feature.txt --
+		feature blank file
+
+		-- blank-main.txt --
+		main blank file
+
+		-- spaces-feature.txt --
+		feature spaced file
+
+		-- spaces-main.txt --
+		main spaced file
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	paths, err := sliceutil.CollectErr(
+		wt.ListFilesPaths(t.Context(), &git.ListFilesOptions{Unmerged: true}))
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []string{" ", "file with spaces.txt"}, paths)
+}
+
 func TestListFilesPaths_specialCharacters(t *testing.T) {
 	t.Parallel()
 

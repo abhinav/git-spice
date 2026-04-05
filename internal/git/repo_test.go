@@ -9,11 +9,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/text"
 )
 
 func NewFakeRepository(t testing.TB, dir string, execer execer) (*Repository, *Worktree) {
+	return NewFakeRepositoryWithLogger(t, dir, execer, nil)
+}
+
+func NewFakeRepositoryWithLogger(
+	t testing.TB,
+	dir string,
+	execer execer,
+	log *silog.Logger,
+) (*Repository, *Worktree) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
@@ -24,8 +34,12 @@ func NewFakeRepository(t testing.TB, dir string, execer execer) (*Repository, *W
 		}
 	}
 
-	repo := newRepository(gitDir, silogtest.New(t), execer)
-	wt := newWorktree(gitDir, dir, repo, silogtest.New(t), execer)
+	if log == nil {
+		log = silogtest.New(t)
+	}
+
+	repo := newRepository(gitDir, log, execer)
+	wt := newWorktree(gitDir, dir, repo, log, execer)
 	return repo, wt
 }
 
