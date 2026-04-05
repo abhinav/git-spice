@@ -7,8 +7,8 @@ import (
 	"iter"
 	"strconv"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // MRComment identifies a comment on a GitLab MR.
@@ -53,9 +53,8 @@ func (r *Repository) PostChangeComment(
 	}
 
 	mrNumber := mr.Number
-	note, _, err := r.client.Notes.CreateMergeRequestNote(
-		r.repoID, mrNumber, &noteOptions,
-		gitlab.WithContext(ctx),
+	note, _, err := r.client.MergeRequestNoteCreate(
+		ctx, r.repoID, mrNumber, &noteOptions,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("post comment: %w", err)
@@ -79,9 +78,8 @@ func (r *Repository) UpdateChangeComment(
 		Body: &markdown,
 	}
 
-	_, _, err := r.client.Notes.UpdateMergeRequestNote(
-		r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
-		gitlab.WithContext(ctx),
+	_, _, err := r.client.MergeRequestNoteUpdate(
+		ctx, r.repoID, mrComment.MRNumber, mrComment.Number, &noteOptions,
 	)
 	if err != nil {
 		if errors.Is(err, gitlab.ErrNotFound) {
@@ -105,9 +103,8 @@ func (r *Repository) DeleteChangeComment(
 	// It's just nice to have to clean up after the integration test.
 	mrComment := mustMRComment(id)
 
-	_, err := r.client.Notes.DeleteMergeRequestNote(
-		r.repoID, mrComment.MRNumber, mrComment.Number,
-		gitlab.WithContext(ctx),
+	_, err := r.client.MergeRequestNoteDelete(
+		ctx, r.repoID, mrComment.MRNumber, mrComment.Number,
 	)
 	if err != nil {
 		return fmt.Errorf("delete comment: %w", err)
@@ -172,9 +169,8 @@ func (r *Repository) ListChangeComments(
 		}
 
 		for pageNum := 1; true; pageNum++ {
-			notes, response, err := r.client.Notes.ListMergeRequestNotes(
-				r.repoID, mrNumber, &notesOptions,
-				gitlab.WithContext(ctx),
+			notes, response, err := r.client.MergeRequestNoteList(
+				ctx, r.repoID, mrNumber, &notesOptions,
 			)
 			if err != nil {
 				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
@@ -206,11 +202,11 @@ func (r *Repository) ListChangeComments(
 				}
 			}
 
-			if response.CurrentPage >= response.TotalPages {
+			if response.NextPage == 0 {
 				return
 			}
 
-			notesOptions.Page = response.NextPage
+			notesOptions.Page = int64(response.NextPage)
 		}
 	}
 }

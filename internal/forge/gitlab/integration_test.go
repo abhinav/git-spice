@@ -11,11 +11,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	gogitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
-	"go.abhg.dev/gs/internal/forge/gitlab"
+	gitlabforge "go.abhg.dev/gs/internal/forge/gitlab"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
@@ -61,16 +61,15 @@ func newGitLabClient(
 	// GitLab API requires a Personal Access Token with 'api' scope.
 	// GCM tokens don't have sufficient scope, so GITLAB_TOKEN env var is required.
 	token := forgetest.Token(t, "https://gitlab.com", "GITLAB_TOKEN")
-	client, err := gogitlab.NewClient(token, gogitlab.WithHTTPClient(httpClient))
+	client, err := gitlab.NewClient(gitlab.StaticTokenSource(gitlab.Token{
+		Type:  gitlab.TokenTypePrivateToken,
+		Value: token,
+	}), &gitlab.ClientOptions{
+		BaseURL:    "https://gitlab.com",
+		HTTPClient: httpClient,
+	})
 	require.NoError(t, err)
-	return &gitlab.Client{
-		Discussions:      client.Discussions,
-		MergeRequests:    client.MergeRequests,
-		Notes:            client.Notes,
-		ProjectTemplates: client.ProjectTemplates,
-		Projects:         client.Projects,
-		Users:            client.Users,
-	}
+	return client
 }
 
 func TestIntegration_Repository(t *testing.T) {
@@ -78,7 +77,9 @@ func TestIntegration_Repository(t *testing.T) {
 	ctx := t.Context()
 	rec := newRecorder(t, t.Name(), sanitizers)
 	ghc := newGitLabClient(t, rec.GetDefaultClient())
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil)
+	_, err := gitlabforge.NewRepository(
+		ctx, new(gitlabforge.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil,
+	)
 	require.NoError(t, err)
 }
 
@@ -93,7 +94,7 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 
-	gitlabForge := gitlab.Forge{
+	gitlabForge := gitlabforge.Forge{
 		Log: silogtest.New(t),
 	}
 
@@ -103,7 +104,7 @@ func TestIntegration(t *testing.T) {
 		Sanitizers: sanitizers,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			ghc := newGitLabClient(t, httpClient)
-			newRepo, err := gitlab.NewRepository(
+			newRepo, err := gitlabforge.NewRepository(
 				t.Context(), &gitlabForge, cfg.Owner, cfg.Repo,
 				silogtest.New(t), ghc, nil,
 			)
@@ -111,12 +112,12 @@ func TestIntegration(t *testing.T) {
 			return newRepo
 		},
 		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlab.MergeChange(t.Context(), repo.(*gitlab.Repository), change.(*gitlab.MR)))
+			require.NoError(t, gitlabforge.MergeChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
 		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlab.CloseChange(t.Context(), repo.(*gitlab.Repository), change.(*gitlab.MR)))
+			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
 		},
-		SetCommentsPageSize:   gitlab.SetListChangeCommentsPageSize,
+		SetCommentsPageSize:   gitlabforge.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
@@ -130,7 +131,7 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 	rec := newRecorder(t, t.Name(), sanitizers)
 	client := rec.GetDefaultClient()
 	ghc := newGitLabClient(t, client)
-	_, err := gitlab.NewRepository(ctx, new(gitlab.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), ghc, nil)
+	_, err := gitlabforge.NewRepository(ctx, new(gitlabforge.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), ghc, nil)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "404 Not Found")
 }
@@ -211,9 +212,9 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 
 	rec := newRecorder(t, t.Name(), sanitizers)
 	ghc := newGitLabClient(t, rec.GetDefaultClient())
-	repo, err := gitlab.NewRepository(
-		ctx, new(gitlab.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc,
-		&gitlab.RepositoryOptions{
+	repo, err := gitlabforge.NewRepository(
+		ctx, new(gitlabforge.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc,
+		&gitlabforge.RepositoryOptions{
 			RemoveSourceBranchOnMerge: true,
 		},
 	)
@@ -227,12 +228,8 @@ func TestIntegration_Repository_SubmitChange_removeSourceBranch(t *testing.T) {
 	})
 	require.NoError(t, err, "error creating MR")
 
-	mrID := change.ID.(*gitlab.MR)
-	projectPath := cfg.Owner + "/" + cfg.Repo
-	mr, _, err := ghc.MergeRequests.GetMergeRequest(
-		projectPath, mrID.Number, nil,
-		gogitlab.WithContext(ctx),
-	)
+	mrID := change.ID.(*gitlabforge.MR)
+	mr, _, err := ghc.MergeRequestGet(ctx, gitlabforge.RepositoryProjectID(repo), mrID.Number, nil)
 	require.NoError(t, err, "error fetching created MR")
 	assert.True(t, mr.ForceRemoveSourceBranch,
 		"RemoveSourceBranch should be true on created MR")

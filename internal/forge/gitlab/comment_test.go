@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -36,7 +36,7 @@ func TestListChangeComments(t *testing.T) {
 	}{
 		{
 			name:    "NoFilter",
-			project: newProject(100, gitlab.Ptr(gitlab.DeveloperPermissions), nil),
+			project: newProject(100, new(gitlab.DeveloperPermissions), nil),
 			user:    gitlab.User{ID: 1},
 			notes: []gitlab.Note{
 				{
@@ -52,7 +52,7 @@ func TestListChangeComments(t *testing.T) {
 		},
 		{
 			name:    "BodyMatchesAll",
-			project: newProject(100, gitlab.Ptr(gitlab.DeveloperPermissions), nil),
+			project: newProject(100, new(gitlab.DeveloperPermissions), nil),
 			user:    gitlab.User{ID: 1},
 			notes: []gitlab.Note{
 				{
@@ -73,7 +73,7 @@ func TestListChangeComments(t *testing.T) {
 		},
 		{
 			name:    "CanUpdate",
-			project: newProject(100, gitlab.Ptr(gitlab.DeveloperPermissions), nil),
+			project: newProject(100, new(gitlab.DeveloperPermissions), nil),
 			user:    gitlab.User{ID: 1},
 			notes: []gitlab.Note{
 				{
@@ -94,7 +94,7 @@ func TestListChangeComments(t *testing.T) {
 		},
 		{
 			name:    "CanUpdateByProjectAccessLevelPermission",
-			project: newProject(100, gitlab.Ptr(gitlab.MaintainerPermissions), nil),
+			project: newProject(100, new(gitlab.MaintainerPermissions), nil),
 			user:    gitlab.User{ID: 1},
 			notes: []gitlab.Note{
 				{
@@ -115,7 +115,7 @@ func TestListChangeComments(t *testing.T) {
 		},
 		{
 			name:    "CanUpdateByGroupAccessLevelPermission",
-			project: newProject(100, nil, gitlab.Ptr(gitlab.MaintainerPermissions)),
+			project: newProject(100, nil, new(gitlab.MaintainerPermissions)),
 			user:    gitlab.User{ID: 1},
 			notes: []gitlab.Note{
 				{
@@ -152,10 +152,14 @@ func TestListChangeComments(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			client, _ := newGitLabClient(t.Context(), srv.URL, &AuthenticationToken{
+			tokenSource, err := newGatewayTokenSource(&AuthenticationToken{
 				AuthType:    AuthTypePAT,
 				AccessToken: "token",
 			})
+			require.NoError(t, err)
+
+			client, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: srv.URL})
+			require.NoError(t, err)
 			repoID := int64(100)
 			repo, err := newRepository(
 				t.Context(), new(Forge),

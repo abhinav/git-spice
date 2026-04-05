@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/git"
 )
 
 func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.FindChangeItem {
-	labels := []string(mr.Labels)
+	labels := mr.Labels
 	if len(labels) == 0 {
 		labels = nil
 	}
@@ -48,7 +48,7 @@ func basicMergeRequestToFindChangeItem(mr *gitlab.BasicMergeRequest) *forge.Find
 }
 
 func mergeRequestToFindChangeItem(mr *gitlab.MergeRequest) *forge.FindChangeItem {
-	labels := []string(mr.Labels)
+	labels := mr.Labels
 	if len(labels) == 0 {
 		labels = nil
 	}
@@ -130,10 +130,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 	if opts.State != 0 {
 		opt.State = new(mergeRequestState(opts.State))
 	}
-	requests, _, err := r.client.MergeRequests.ListProjectMergeRequests(
-		r.repoID, opt,
-		gitlab.WithContext(ctx),
-	)
+	requests, _, err := r.client.MergeRequestList(ctx, r.repoID, opt)
 	if err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
@@ -148,9 +145,8 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 // FindChangeByID searches for a change with the given ID.
 func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	mr, _, err := r.client.MergeRequests.GetMergeRequest(
-		r.repoID, mustMR(id).Number, nil,
-		gitlab.WithContext(ctx),
+	mr, _, err := r.client.MergeRequestGet(
+		ctx, r.repoID, mustMR(id).Number, nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)

@@ -10,6 +10,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgeurl"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -99,7 +100,12 @@ func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, token forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
-	glc, err := newGitLabClient(ctx, f.APIURL(), token.(*AuthenticationToken))
+	tokenSource, err := newGatewayTokenSource(token.(*AuthenticationToken))
+	if err != nil {
+		return nil, fmt.Errorf("build GitLab token source: %w", err)
+	}
+
+	glc, err := gitlab.NewClient(tokenSource, &gitlab.ClientOptions{BaseURL: f.APIURL()})
 	if err != nil {
 		return nil, fmt.Errorf("create GitLab client: %w", err)
 	}

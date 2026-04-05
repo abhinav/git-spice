@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strconv"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/silog"
 )
 
 // Repository is a GitLab repository.
 type Repository struct {
-	client *gitlabClient
+	client *gitlab.Client
 
 	owner, repo string
 	log         *silog.Logger
@@ -41,7 +41,7 @@ func newRepository(
 	forge *Forge,
 	owner, repo string,
 	log *silog.Logger,
-	client *gitlabClient,
+	client *gitlab.Client,
 	opts *repositoryOptions,
 ) (*Repository, error) {
 	opts = cmp.Or(opts, &repositoryOptions{})
@@ -54,22 +54,20 @@ func newRepository(
 		projectIdentifier = owner + "/" + repo
 	}
 
-	project, _, err := client.Projects.GetProject(projectIdentifier, nil,
-		gitlab.WithContext(ctx),
-	)
+	project, _, err := client.ProjectGet(ctx, projectIdentifier, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get repository ID: %w", err)
 	}
 
-	user, _, err := client.Users.CurrentUser(gitlab.WithContext(ctx))
+	user, _, err := client.UserCurrent(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get current user: %w", err)
 	}
 
 	var accessLevel gitlab.AccessLevelValue
-	if project.Permissions.ProjectAccess != nil {
+	if project.Permissions != nil && project.Permissions.ProjectAccess != nil {
 		accessLevel = project.Permissions.ProjectAccess.AccessLevel
-	} else if project.Permissions.GroupAccess != nil {
+	} else if project.Permissions != nil && project.Permissions.GroupAccess != nil {
 		accessLevel = project.Permissions.GroupAccess.AccessLevel
 	}
 	log.Debugf("Repository access level: %v", accessValueName(accessLevel))
@@ -118,9 +116,9 @@ func (r *Repository) resolveReviewerIDs(ctx context.Context, usernames []string)
 
 	reviewerIDs := make([]int64, 0, len(usernames))
 	for _, username := range usernames {
-		users, _, err := r.client.Users.ListUsers(&gitlab.ListUsersOptions{
+		users, _, err := r.client.UserList(ctx, &gitlab.ListUsersOptions{
 			Username: &username,
-		}, gitlab.WithContext(ctx))
+		})
 		if err != nil {
 			return nil, fmt.Errorf("lookup user %q: %w", username, err)
 		}

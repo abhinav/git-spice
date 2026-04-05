@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
 // _draftPrefix is the prefix added for Draft merge requests.
@@ -48,10 +48,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		input.AssigneeIDs = &assigneeIDs
 	}
 
-	request, _, err := r.client.MergeRequests.CreateMergeRequest(
-		r.repoID, input,
-		gitlab.WithContext(ctx),
-	)
+	request, _, err := r.client.MergeRequestCreate(ctx, r.repoID, input)
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("create merge request: %w", err)
 	}

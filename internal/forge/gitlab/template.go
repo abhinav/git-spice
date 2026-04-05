@@ -3,7 +3,6 @@ package gitlab
 import (
 	"context"
 
-	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"go.abhg.dev/gs/internal/forge"
 )
 
@@ -20,9 +19,8 @@ func (f *Forge) ChangeTemplatePaths() []string {
 func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
 	const templateType = "merge_requests"
 
-	templates, _, err := r.client.ProjectTemplates.ListTemplates(
-		r.repoID, templateType, nil,
-		gitlab.WithContext(ctx),
+	templates, _, err := r.client.ProjectTemplateList(
+		ctx, r.repoID, templateType, nil,
 	)
 	if err != nil {
 		return nil, err
@@ -30,9 +28,8 @@ func (r *Repository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTe
 
 	var out []*forge.ChangeTemplate
 	for _, t := range templates {
-		template, _, err := r.client.ProjectTemplates.GetProjectTemplate(
-			r.repoID, templateType, t.Name,
-			gitlab.WithContext(ctx),
+		template, _, err := r.client.ProjectTemplateGet(
+			ctx, r.repoID, templateType, t.Name,
 		)
 		if err != nil {
 			continue
