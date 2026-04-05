@@ -294,6 +294,22 @@ as it adds a network request for each 'gs log' operation.
 - `false` (default)
 - `true`
 
+### spice.log.crComments
+
+<!-- gs:version unreleased -->
+
+Specifies whether $$gs log short$$ and $$gs log long$$
+should request and show comment resolution counts
+for associated Change Requests.
+
+It is not recommended to set this option to true
+as it adds a network request for each `gs log` operation.
+
+**Accepted values:**
+
+- `false` (default)
+- `true`
+
 ### spice.log.pushStatusFormat
 
 <!-- gs:version v0.13.0 -->
