@@ -327,7 +327,8 @@ func patDesc(theme ui.Theme, focused bool) string {
 	return text.Dedentf(`
 	Enter a classic or fine-grained Personal Access Token generated from %[1]s.
 	Classic tokens need at least one of the following scopes: %[2]s or %[3]s.
-	Fine-grained tokens need read/write access to Repository %[4]s and %[5]s.
+	Fine-grained tokens need read/write access to Repository %[4]s and %[5]s,
+	and read-only access to Organization %[6]s.
 	You can use this method if you do not have the ability to install a GitHub or OAuth App on your repositories.
 	`,
 		urlStyle.Render(theme, "https://github.com/settings/tokens"),
@@ -335,6 +336,7 @@ func patDesc(theme ui.Theme, focused bool) string {
 		scopeStyle.Render(theme, "public_repo"),
 		scopeStyle.Render(theme, "Contents"),
 		scopeStyle.Render(theme, "Pull requests"),
+		scopeStyle.Render(theme, "Members"),
 	)
 }
 
