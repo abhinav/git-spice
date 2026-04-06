@@ -21,7 +21,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20260209031235-2402fdf4a9ed
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
-	github.com/vito/midterm v0.2.4
+	github.com/vito/midterm v0.2.5-0.20260406170451-de5b3b202c56
 	github.com/zalando/go-keyring v0.2.8
 	go.abhg.dev/container/ring v0.3.0
 	go.abhg.dev/io/ioutil v0.1.0

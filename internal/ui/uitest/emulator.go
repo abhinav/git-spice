@@ -106,13 +106,6 @@ func (e *EmulatorView) Prompt(fs ...ui.Field) error {
 		Theme:  e.Theme(),
 		Width:  w,
 		Height: h,
-		// Force xterm capabilities in emulator-backed tests.
-		// With TERM unset, Bubble Tea falls back to insert-mode redraws
-		// using CSI 4 h/l, which midterm does not emulate correctly.
-		// Advertising xterm steers Bubble Tea to a redraw path that
-		// preserves the real rendered text while remaining compatible
-		// with the test terminal.
-		TERM: "xterm-256color",
 		// In-memory terminal emulator cannot be queried for size,
 		// so inject this manually for models that expect a startup resize msg.
 		SendMsg:        tea.WindowSizeMsg{Width: w, Height: h},
