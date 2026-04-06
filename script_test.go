@@ -41,7 +41,7 @@ var (
 func TestMain(m *testing.M) {
 	// Always override the secret stash with a memory stash
 	// so that tests don't accidentally use the system keyring.
-	_secretStash = new(secret.MemoryStash)
+	_keyringStash = new(secret.MemoryStash)
 
 	// Always override the browser launcher with a no-op launcher
 	// so tests don't accidentally open a browser.
@@ -56,7 +56,7 @@ func TestMain(m *testing.M) {
 
 			// If a secret server is configured, use it.
 			var err error
-			_secretStash, err = secrettest.NewClient(os.Getenv("SECRET_SERVER_URL"))
+			_keyringStash, err = secrettest.NewClient(os.Getenv("SECRET_SERVER_URL"))
 			if err != nil {
 				logger.Fatalf("Could not create secret client: %v", err)
 			}

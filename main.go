@@ -3,12 +3,14 @@ package main
 
 import (
 	"context"
+	"encoding"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/colorprofile"
@@ -46,10 +48,10 @@ import (
 var _version = "dev"
 
 var (
-	// _secretStash is the secret stash used by the application.
+	// _keyringStash is the secure secret stash used by the application.
 	//
 	// This is overridden in tests to use a memory stash.
-	_secretStash secret.Stash = new(secret.Keyring)
+	_keyringStash secret.Stash = new(secret.Keyring)
 
 	// _browserLauncher opens URLs in the user's configured browser.
 	_browserLauncher browser.Launcher = new(browser.Browser)
@@ -63,6 +65,47 @@ var (
 )
 
 var errNoPrompt = ui.ErrPrompt
+
+type secretBackend int
+
+const (
+	secretBackendAuto secretBackend = iota
+	secretBackendFile
+	secretBackendKeyring
+)
+
+var _ encoding.TextUnmarshaler = (*secretBackend)(nil)
+
+func (b *secretBackend) UnmarshalText(bs []byte) error {
+	switch strings.ToLower(string(bs)) {
+	case "auto":
+		*b = secretBackendAuto
+	case "file":
+		*b = secretBackendFile
+	case "keyring":
+		*b = secretBackendKeyring
+	default:
+		return fmt.Errorf(
+			"invalid value %q: expected auto, file, or keyring",
+			string(bs),
+		)
+	}
+
+	return nil
+}
+
+func (b secretBackend) String() string {
+	switch b {
+	case secretBackendAuto:
+		return "auto"
+	case secretBackendFile:
+		return "file"
+	case secretBackendKeyring:
+		return "keyring"
+	default:
+		return fmt.Sprintf("secretBackend(%d)", int(b))
+	}
+}
 
 func main() {
 	logger := silog.New(colorprofile.NewWriter(os.Stderr, os.Environ()), &silog.Options{
@@ -95,17 +138,6 @@ func main() {
 		}
 	}()
 
-	// On macOS, UserConfigDir always returns ~/Library/Application Support.
-	// XDG_CONFIG_HOME should take precedence if set.
-	userConfigDir := os.Getenv("XDG_CONFIG_HOME")
-	if userConfigDir == "" {
-		var err error
-		userConfigDir, err = os.UserConfigDir()
-		if err != nil {
-			logger.Fatalf("Error getting user config directory: %v", err)
-		}
-	}
-
 	spiceConfig, err := spice.LoadConfig(
 		ctx,
 		git.NewConfig(git.ConfigOptions{Log: logger}),
@@ -115,14 +147,6 @@ func main() {
 	)
 	if err != nil {
 		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
-	}
-
-	secretStash := &secret.FallbackStash{
-		Primary: _secretStash,
-		Secondary: &secret.InsecureStash{
-			Path: filepath.Join(filepath.Join(userConfigDir, "git-spice"), "secrets.json"),
-			Log:  logger,
-		},
 	}
 
 	var cmd mainCmd
@@ -143,7 +167,6 @@ func main() {
 		kong.Bind(logger, &forges, &sigStack),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
-		kong.BindTo(secretStash, (*secret.Stash)(nil)),
 		kong.Vars{
 			// Default to prompting only when the terminal is interactive.
 			"defaultPrompt": strconv.FormatBool(isatty.IsTerminal(os.Stdin.Fd())),
@@ -253,10 +276,11 @@ type mainCmd struct {
 	// Global options that are never accessed directly by subcommands.
 	Globals struct {
 		// Flags with built-in side effects.
-		Version versionFlag        `help:"Print version information and quit"`
-		Verbose bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
-		Dir     kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
-		Prompt  bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+		Version       versionFlag        `help:"Print version information and quit"`
+		Verbose       bool               `short:"v" help:"Enable verbose output" env:"GIT_SPICE_VERBOSE"`
+		Dir           kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
+		Prompt        bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
+		SecretBackend secretBackend      `name:"secret-backend" hidden:"" config:"secret.backend" env:"GIT_SPICE_SECRET_BACKEND" default:"auto" help:"Backend to use for secret storage."`
 	} `embed:"" group:"globals"`
 
 	Shell shellCmd `cmd:"" group:"Shell"`
@@ -294,11 +318,41 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		logger.SetLevel(silog.LevelDebug)
 	}
 
+	// On macOS, UserConfigDir always returns ~/Library/Application Support.
+	// XDG_CONFIG_HOME should take precedence if set.
+	userConfigDir := os.Getenv("XDG_CONFIG_HOME")
+	if userConfigDir == "" {
+		var err error
+		userConfigDir, err = os.UserConfigDir()
+		if err != nil {
+			return fmt.Errorf("get user config directory: %w", err)
+		}
+	}
+
 	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)
 	if err != nil {
 		return fmt.Errorf("build view: %w", err)
 	}
 	kctx.BindTo(view, (*ui.View)(nil))
+
+	insecureStash := &secret.InsecureStash{
+		Path: filepath.Join(userConfigDir, "git-spice", "secrets.json"),
+		Log:  logger,
+	}
+
+	var secretStash secret.Stash
+	switch cmd.Globals.SecretBackend {
+	case secretBackendFile:
+		secretStash = insecureStash
+	case secretBackendKeyring:
+		secretStash = _keyringStash
+	default:
+		secretStash = &secret.FallbackStash{
+			Primary:   _keyringStash,
+			Secondary: insecureStash,
+		}
+	}
+	kctx.BindTo(secretStash, (*secret.Stash)(nil))
 
 	// TODO: bind interfaces, not values
 	// TODO:
