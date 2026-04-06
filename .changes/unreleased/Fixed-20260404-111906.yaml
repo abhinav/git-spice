@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'restack: Failures during an internal `git ls-files` check are now reported with a clearer error message instead of an unhelpful unmerged-file report.'
-time: 2026-04-04T11:19:06.350853-07:00

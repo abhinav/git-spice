@@ -91,7 +91,7 @@ branches upstack from it need to be restacked, and all their CRs updated.
 
 ## Bitbucket Cloud limitations
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 Bitbucket Cloud support has some limitations
 compared to GitHub and GitLab:

@@ -14,7 +14,7 @@ description: >-
 
     - <!-- gs:github -->
     - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
-    - <!-- gs:bitbucket --> (<!-- gs:version unreleased -->)
+    - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
 
     If you're using a different service,
     you can still use git-spice,

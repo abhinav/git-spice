@@ -14,7 +14,7 @@ you will need to authenticate with the respective service.
 This page covers methods to authenticate git-spice
 with GitHub, GitLab, and Bitbucket Cloud.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
-Bitbucket Cloud support requires at least version <!-- gs:version unreleased -->.
+Bitbucket Cloud support requires at least version <!-- gs:version v0.25.0 -->.
 
 ## Logging in
 

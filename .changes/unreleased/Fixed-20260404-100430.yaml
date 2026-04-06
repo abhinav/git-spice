@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'commit fixup: Preserve unstaged worktree changes when rejecting an empty index.'
-time: 2026-04-04T10:04:30.828139-07:00
