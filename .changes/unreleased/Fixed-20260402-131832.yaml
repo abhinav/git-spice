@@ -1,4 +1,0 @@
-kind: Fixed
-body: >-
-  submit: Honor worktree-local and repository-local Git editor settings for interactive prompts.
-time: 2026-04-02T13:18:32.176775-07:00

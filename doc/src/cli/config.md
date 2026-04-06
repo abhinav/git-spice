@@ -45,7 +45,7 @@ This option controls whether untracked branches are shown in the prompt.
 
 ### spice.branchCheckout.trackUntracked
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 When $$gs branch checkout$$ checks out a branch that is not tracked,
 this specifies whether that branch should be automatically tracked by git-spice.
@@ -69,7 +69,7 @@ this specifies whether that branch should be automatically tracked by git-spice.
 
 ### spice.branchCheckout.trackUntrackedPrompt
 
-Deprecated in <!-- gs:version unreleased -->.
+Deprecated in <!-- gs:version v0.25.0 -->.
 Use $$spice.branchCheckout.trackUntracked$$ instead.
 
 Supported values were:
@@ -177,7 +177,7 @@ See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
 ### spice.forge.bitbucket.apiURL
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 URL at which the Bitbucket API is available.
 Defaults to `$BITBUCKET_API_URL` if set,
@@ -185,7 +185,7 @@ or `https://api.bitbucket.org/2.0` otherwise.
 
 ### spice.forge.bitbucket.url
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 URL of the Bitbucket instance used for Bitbucket requests.
 Defaults to `$BITBUCKET_URL` if set,
@@ -296,7 +296,7 @@ as it adds a network request for each 'gs log' operation.
 
 ### spice.log.crComments
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 Specifies whether $$gs log short$$ and $$gs log long$$
 should request and show comment resolution counts
@@ -577,7 +577,7 @@ This option has no effect on $$gs branch submit$$,
 
 ### spice.submit.skipRestackCheck
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.25.0 -->
 
 Controls whether submit commands ($$gs branch submit$$ and friends)
 skip the restack check for outdated branches.
