@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_homebrew:
+        description: Skip the Homebrew formula bump step.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -127,6 +132,7 @@ jobs:
 
     - name: Update Homebrew Formula
       uses: dawidd6/action-homebrew-bump-formula@v7
+      if: inputs.skip_homebrew == false
       with:
         token: ${{ secrets.ROBOT_PAT }}
         user_name: Abhinav Gupta
