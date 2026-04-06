@@ -1,0 +1,63 @@
+# Resubmitting a renamed branch with a closed PR immediately
+# reuses the old remote branch name.
+#
+# https://github.com/abhinav/git-spice/issues/1041
+
+as 'Test <test@example.com>'
+at '2024-09-04T05:06:07Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc -m 'Add feature 1' feat1
+gs ss --fill
+stderr 'Created #1'
+
+# Close the PR, rename the branch, and submit again immediately.
+shamhub reject alice/example 1
+gs branch rename feat1-renamed
+
+gs ss --fill
+stderr 'Ignoring CR #1 as it was closed'
+stderr 'Created #2'
+
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/change-2.json
+
+-- repo/feat1.txt --
+Contents of feature 1
+-- golden/change-2.json --
+{
+  "number": 2,
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "c649f748239dea65932c853775c6121d7cc79029"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feat1",
+    "sha": "11aef079d2994b11b4349ee4c7e2f8502ba3586c"
+  }
+}
