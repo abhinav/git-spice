@@ -277,14 +277,12 @@ func (cmd *branchSplitFilesCmd) getChangedFiles(
 			Path:   status.Path,
 		}
 
-		// Handle renames: status starts with R and may have a score (e.g., R100).
+		// Handle renames:
+		// status starts with R and may have a score
+		// (e.g., R100).
 		if strings.HasPrefix(status.Status, "R") {
 			entry.Status = "R"
-			// For renames, DiffTree returns the path as "old\tnew".
-			if oldPath, newPath, ok := strings.Cut(status.Path, "\t"); ok {
-				entry.OldPath = oldPath
-				entry.Path = newPath
-			}
+			entry.OldPath = status.OldPath
 		}
 
 		files = append(files, entry)

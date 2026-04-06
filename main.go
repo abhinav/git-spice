@@ -271,6 +271,8 @@ type mainCmd struct {
 
 	Claude claudeCmd `cmd:"" group:"AI" help:"Claude AI integration commands"`
 
+	Claude claudeCmd `cmd:"" group:"AI" help:"Claude AI integration commands"`
+
 	// Navigation
 	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`
 	Down   downCmd   `cmd:"" aliases:"d" group:"Navigation" help:"Move down one branch"`

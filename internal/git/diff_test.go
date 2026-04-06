@@ -1,6 +1,7 @@
 package git_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -362,6 +363,105 @@ func TestRepository_DiffTree(t *testing.T) {
 			{Status: "A", Path: "e.txt"},
 		}
 		assert.ElementsMatch(t, expected, files)
+	})
+
+	t.Run("RenamedFile", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			git init
+			git add old-name.txt
+			git add unchanged.txt
+			git commit -m 'Initial commit'
+
+			git mv old-name.txt new-name.txt
+			git commit -m 'Rename file'
+
+			-- old-name.txt --
+			some content
+			-- unchanged.txt --
+			unchanged
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(
+			repo.DiffTree(t.Context(), "HEAD~1", "HEAD"),
+		)
+		require.NoError(t, err)
+
+		require.Len(t, files, 1)
+		assert.Equal(t, "new-name.txt", files[0].Path)
+		assert.Equal(t, "old-name.txt", files[0].OldPath)
+		assert.True(t,
+			strings.HasPrefix(files[0].Status, "R"),
+			"status should start with R, got %q",
+			files[0].Status,
+		)
+	})
+
+	t.Run("RenamedAndModified", func(t *testing.T) {
+		t.Parallel()
+
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-06-21T10:00:00Z'
+
+			git init
+			git add original.txt
+			git add keep.txt
+			git commit -m 'Initial commit'
+
+			git mv original.txt moved.txt
+			git add new-file.txt
+			git commit -m 'Rename and add'
+
+			-- original.txt --
+			file content here
+			-- keep.txt --
+			unchanged
+			-- new-file.txt --
+			brand new
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		files, err := sliceutil.CollectErr(
+			repo.DiffTree(t.Context(), "HEAD~1", "HEAD"),
+		)
+		require.NoError(t, err)
+
+		// Should have a rename and an add.
+		require.Len(t, files, 2)
+
+		var renamed, added git.FileStatus
+		for _, f := range files {
+			if strings.HasPrefix(f.Status, "R") {
+				renamed = f
+			} else {
+				added = f
+			}
+		}
+
+		assert.Equal(t, "moved.txt", renamed.Path)
+		assert.Equal(t, "original.txt", renamed.OldPath)
+
+		assert.Equal(t, "A", added.Status)
+		assert.Equal(t, "new-file.txt", added.Path)
+		assert.Empty(t, added.OldPath)
 	})
 }
 

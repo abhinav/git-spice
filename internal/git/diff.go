@@ -34,7 +34,12 @@ type FileStatus struct {
 	Status string
 
 	// Path to the file relative to the tree root.
+	// For renames and copies, this is the new path.
 	Path string
+
+	// OldPath is the previous path for renames and copies.
+	// It is empty for non-rename/copy statuses.
+	OldPath string
 }
 
 // DiffWork compares the working tree with the index
@@ -101,9 +106,28 @@ func (w *Worktree) DiffIndex(ctx context.Context, treeish string) ([]FileStatus,
 // The treeish1 and treeish2 arguments can be any valid tree-ish references.
 func (r *Repository) DiffTree(ctx context.Context, treeish1, treeish2 string) iter.Seq2[FileStatus, error] {
 	return func(yield func(FileStatus, error) bool) {
-		cmd := r.gitCmd(ctx, "diff-tree", "-r", "--name-status", "-z", treeish1, treeish2)
-		var status string
-		var expectingPath bool
+		cmd := r.gitCmd(ctx,
+			"diff-tree", "-r",
+			"--name-status", "-z",
+			"-M", // detect renames
+			treeish1, treeish2,
+		)
+
+		// With -z, fields are null-separated.
+		// Most statuses produce: STATUS \0 PATH \0
+		// Renames (Rxx) and copies (Cxx) produce:
+		//   STATUS \0 OLD_PATH \0 NEW_PATH \0
+		const (
+			stateStatus  = iota // expecting status code
+			statePath           // expecting path
+			stateOldPath        // expecting old path (rename/copy)
+			stateNewPath        // expecting new path (rename/copy)
+		)
+		var (
+			state   = stateStatus
+			status  string
+			oldPath string
+		)
 		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(FileStatus{}, fmt.Errorf("git diff-tree: %w", err))
@@ -113,19 +137,38 @@ func (r *Repository) DiffTree(ctx context.Context, treeish1, treeish2 string) it
 				continue
 			}
 
-			if !expectingPath {
-				// First part is the status
+			switch state {
+			case stateStatus:
 				status = string(line)
-				expectingPath = true
-			} else {
-				// Second part is the path
+				if len(status) > 0 &&
+					(status[0] == 'R' || status[0] == 'C') {
+					state = stateOldPath
+				} else {
+					state = statePath
+				}
+
+			case statePath:
 				if !yield(FileStatus{
 					Status: status,
 					Path:   string(line),
 				}, nil) {
 					return
 				}
-				expectingPath = false
+				state = stateStatus
+
+			case stateOldPath:
+				oldPath = string(line)
+				state = stateNewPath
+
+			case stateNewPath:
+				if !yield(FileStatus{
+					Status:  status,
+					Path:    string(line),
+					OldPath: oldPath,
+				}, nil) {
+					return
+				}
+				state = stateStatus
 			}
 		}
 	}
