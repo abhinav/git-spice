@@ -225,7 +225,8 @@ func TestSelectAuthenticator(t *testing.T) {
   Classic tokens need at least one of the following scopes: repo or
   public_repo.
   Fine-grained tokens need read/write access to Repository Contents and Pull
-  requests.
+  requests,
+  and read-only access to Organization Members.
   You can use this method if you do not have the ability to install a GitHub
   or OAuth App on your repositories.
 
@@ -267,7 +268,8 @@ func TestSelectAuthenticator(t *testing.T) {
   Classic tokens need at least one of the following scopes: repo or
   public_repo.
   Fine-grained tokens need read/write access to Repository Contents and Pull
-  requests.
+  requests,
+  and read-only access to Organization Members.
   You can use this method if you do not have the ability to install a GitHub
   or OAuth App on your repositories.
 
@@ -320,7 +322,8 @@ func TestAuthenticationFlow_PAT(t *testing.T) {
   Classic tokens need at least one of the following scopes: repo or
   public_repo.
   Fine-grained tokens need read/write access to Repository Contents and Pull
-  requests.
+  requests,
+  and read-only access to Organization Members.
   You can use this method if you do not have the ability to install a GitHub
   or OAuth App on your repositories.
 
