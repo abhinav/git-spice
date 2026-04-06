@@ -30,7 +30,7 @@ require (
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.2.0
