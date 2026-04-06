@@ -507,3 +507,27 @@ reporting the full path to the secrets file.
 ```
 
 </details>
+
+### Choosing a secret backend
+
+<!-- gs:version unreleased -->
+
+You can override the default backend selection
+with the $$spice.secret.backend$$ configuration option
+or the `$GIT_SPICE_SECRET_BACKEND` environment variable.
+
+For example,
+to force file-based storage on a headless Linux machine:
+
+```freeze language="bash"
+export GIT_SPICE_SECRET_BACKEND=file
+```
+
+Or with git-config:
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.secret.backend{reset} {mag}file{reset}
+```
+
+See $$spice.secret.backend$$
+for a full list of supported values.

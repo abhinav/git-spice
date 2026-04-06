@@ -76,6 +76,10 @@ Navigation
   bottom (D)    Move to the bottom of the stack
   trunk         Move to the trunk branch
 
+Configuration (🔧):
+  spice.secret.backend    Backend to use for secret storage
+                          ($GIT_SPICE_SECRET_BACKEND).
+
 Run "gs <command> --help" for more information on a command.
 
 Aliases can be combined to form shorthands for commands. For example:

@@ -233,6 +233,29 @@ Whether to remove the source branch when a Merge Request is merged.
 - `true` (default)
 - `false`
 
+### spice.secret.backend
+
+<!-- gs:version unreleased -->
+
+Controls which backend git-spice uses
+to store authentication tokens.
+
+Defaults to `auto`.
+This may also be set with the `$GIT_SPICE_SECRET_BACKEND`
+environment variable.
+
+**Accepted values:**
+
+- `auto` (default):
+  use the system keyring if available,
+  and fall back to the plain-text secrets file otherwise
+
+- `file`:
+  always store tokens in the plain-text secrets file
+
+- `keyring`:
+  always use the system keyring backend
+
 ### spice.log.all
 
 Whether $$gs log short$$ and $$gs log long$$ should show all stacks by default,
