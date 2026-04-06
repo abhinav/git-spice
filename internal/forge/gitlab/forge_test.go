@@ -125,6 +125,13 @@ func TestExtractRepoInfo(t *testing.T) {
 			wantOwner: "mycompany",
 			wantRepo:  "myrepo",
 		},
+		{
+			name:      "ssh protocol with arbitrary port on matching host",
+			gitlabURL: "https://gitlab.example.com",
+			give:      "ssh://git@gitlab.example.com:12051/mycompany/myrepo.git",
+			wantOwner: "mycompany",
+			wantRepo:  "myrepo",
+		},
 	}
 
 	for _, tt := range tests {

@@ -71,10 +71,35 @@ func StripDefaultPort(baseURL, remoteURL *url.URL) {
 // MatchesHost reports whether the remote URL's host matches the base URL's
 // host, either exactly or as a subdomain.
 func MatchesHost(baseURL, remoteURL *url.URL) bool {
-	if remoteURL.Host == baseURL.Host {
+	baseHost := baseURL.Hostname()
+	remoteHost := remoteURL.Hostname()
+
+	// Compare hostnames without ports,
+	// so remotes like host:12051 still match
+	// a forge configured as https://host.
+	// Subdomains are accepted for hosts like ssh.github.com.
+	hostMatches := remoteHost == baseHost ||
+		strings.HasSuffix(remoteHost, "."+baseHost)
+	if !hostMatches {
+		return false
+	}
+
+	basePort := baseURL.Port()
+	// A forge configured without an explicit port
+	// should accept remotes on any port for that host.
+	// For example,
+	// https://gitlab.example.com should accept
+	// ssh://git@gitlab.example.com:12051/group/repo.git.
+	// If the forge URL specifies a port,
+	// require the remote to use that same port.
+	// For example,
+	// ssh://git@ssh.github.example.com:1443 should not accept
+	// ssh://git@ssh.github.example.com:22/org/repo.git.
+	if basePort == "" {
 		return true
 	}
-	return strings.HasSuffix(remoteURL.Host, "."+baseURL.Host)
+
+	return remoteURL.Port() == basePort
 }
 
 // ExtractPath extracts owner and repository name from a URL path.

@@ -156,6 +156,24 @@ func TestMatchesHost(t *testing.T) {
 			want:       true,
 		},
 		{
+			name:       "match ignores remote port",
+			baseHost:   "gitlab.example.com",
+			remoteHost: "gitlab.example.com:12051",
+			want:       true,
+		},
+		{
+			name:       "subdomain match ignores remote port",
+			baseHost:   "github.com",
+			remoteHost: "ssh.github.com:22",
+			want:       true,
+		},
+		{
+			name:       "base port must match",
+			baseHost:   "github.com:443",
+			remoteHost: "github.com:22",
+			want:       false,
+		},
+		{
 			name:       "no match",
 			baseHost:   "github.com",
 			remoteHost: "gitlab.com",
