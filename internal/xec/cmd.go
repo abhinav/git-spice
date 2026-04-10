@@ -259,6 +259,7 @@ func (c *Cmd) Args() []string {
 // args does not include the command name itself.
 func (c *Cmd) WithArgs(args ...string) *Cmd {
 	c.cmd.Args = append([]string{c.cmd.Args[0]}, args...)
+	c.params.args = append([]string(nil), args...)
 	return c
 }
 

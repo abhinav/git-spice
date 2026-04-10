@@ -198,6 +198,24 @@ func TestCmd_RunWithRetry(t *testing.T) {
 
 		require.NoError(t, cmd.Run())
 	})
+
+	t.Run("RetriesWithUpdatedArgs", func(t *testing.T) {
+		marker := t.TempDir() + "/marker"
+		cmd := Command(t.Context(), silog.Nop(),
+			"sh", "-c", "exit 1").
+			WithRetry(&RetryPolicy{
+				Match:     func(error) bool { return true },
+				Timeout:   time.Second,
+				BaseDelay: 10 * time.Millisecond,
+			})
+		cmd.WithArgs(
+			"-c",
+			"if [ -f "+marker+" ]; then exit 0; "+
+				"else touch "+marker+"; exit 1; fi",
+		)
+
+		require.NoError(t, cmd.Run())
+	})
 }
 
 func TestCmd_OutputWithRetry(t *testing.T) {
