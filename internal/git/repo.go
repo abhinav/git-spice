@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 // InitOptions configures the behavior of Init.
@@ -174,8 +173,8 @@ func (r *Repository) WithLogger(log *silog.Logger) *Repository {
 	return &newR
 }
 
-// gitCmd returns a gitCmd that will run
-// with the repository's root as the working directory.
-func (r *Repository) gitCmd(ctx context.Context, args ...string) *xec.Cmd {
+// gitCmd returns a Git command wrapper
+// configured to run in this repository.
+func (r *Repository) gitCmd(ctx context.Context, args ...string) *gitCmd {
 	return newGitCmd(ctx, r.log, r.exec, args...).WithDir(r.gitDir)
 }

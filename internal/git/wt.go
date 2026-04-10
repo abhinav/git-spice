@@ -9,7 +9,6 @@ import (
 
 	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 // Worktree is a checkout of a Git repository at a specific path.
@@ -34,7 +33,9 @@ func newWorktree(gitDir, rootDir string, repo *Repository, log *silog.Logger, ex
 	}
 }
 
-func (w *Worktree) gitCmd(ctx context.Context, args ...string) *xec.Cmd {
+// gitCmd returns a Git command wrapper
+// configured to run inside this worktree.
+func (w *Worktree) gitCmd(ctx context.Context, args ...string) *gitCmd {
 	return newGitCmd(ctx, w.log, w.exec, args...).WithDir(w.rootDir)
 }
 

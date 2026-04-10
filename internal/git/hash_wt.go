@@ -1,10 +1,6 @@
 package git
 
-import (
-	"context"
-
-	"go.abhg.dev/gs/internal/xec"
-)
+import "context"
 
 // Head reports the commit hash of HEAD.
 func (w *Worktree) Head(ctx context.Context) (Hash, error) {
@@ -26,6 +22,6 @@ func (w *Worktree) revParse(ctx context.Context, ref string) (Hash, error) {
 	return Hash(out), nil
 }
 
-func (w *Worktree) revParseCmd(ctx context.Context, ref string) *xec.Cmd {
+func (w *Worktree) revParseCmd(ctx context.Context, ref string) *gitCmd {
 	return w.repo.revParseCmd(ctx, ref).WithDir(w.rootDir)
 }

@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-
-	"go.abhg.dev/gs/internal/xec"
 )
 
 // ErrNotExist is returned when a Git object does not exist.
@@ -100,7 +98,7 @@ func (r *Repository) revParse(ctx context.Context, ref string) (Hash, error) {
 	return Hash(out), nil
 }
 
-func (r *Repository) revParseCmd(ctx context.Context, ref string) *xec.Cmd {
+func (r *Repository) revParseCmd(ctx context.Context, ref string) *gitCmd {
 	return r.gitCmd(ctx, "rev-parse",
 		"--verify",         // fail if the object does not exist
 		"--quiet",          // no output if object does not exist

@@ -48,3 +48,31 @@ func TestGitCmd_logPrefix(t *testing.T) {
 		assert.Contains(t, logBuffer.String(), " different: ")
 	})
 }
+
+func TestGitCmd_WithExtraConfig(t *testing.T) {
+	t.Run("PrependsConfigArgs", func(t *testing.T) {
+		cmd := newGitCmd(
+			t.Context(), silog.Nop(), _realExec,
+			"rebase", "--continue",
+		).WithExtraConfig(&extraConfig{
+			Editor:             "vim",
+			MergeConflictStyle: "zdiff3",
+		})
+
+		assert.Equal(t, []string{
+			"-c", "core.editor=vim",
+			"-c", "merge.conflictStyle=zdiff3",
+			"rebase", "--continue",
+		}, cmd.Args())
+	})
+
+	t.Run("NilIsNoOp", func(t *testing.T) {
+		cmd := newGitCmd(
+			t.Context(), silog.Nop(), _realExec,
+			"rev-parse", "HEAD",
+		)
+
+		assert.Equal(t, cmd, cmd.WithExtraConfig(nil))
+		assert.Equal(t, []string{"rev-parse", "HEAD"}, cmd.Args())
+	})
+}

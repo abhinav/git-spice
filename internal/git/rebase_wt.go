@@ -181,7 +181,7 @@ func (w *Worktree) RebaseContinue(ctx context.Context, opts *RebaseContinueOptio
 	opts = cmp.Or(opts, &RebaseContinueOptions{})
 	cmd := w.gitCmd(ctx, "rebase", "--continue").WithStdin(os.Stdin).WithStdout(os.Stdout)
 	if opts.Editor != "" {
-		cmd = (&extraConfig{Editor: opts.Editor}).WithArgs(cmd)
+		cmd = cmd.WithExtraConfig(&extraConfig{Editor: opts.Editor})
 	}
 	if err := cmd.Run(); err != nil {
 		return w.handleRebaseError(ctx, err)

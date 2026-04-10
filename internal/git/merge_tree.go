@@ -116,7 +116,9 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 
 	cmd := r.gitCmd(ctx, args...).WithStdinString(stdin.String())
 	if req.conflictStyle != "" {
-		cmd = (&extraConfig{MergeConflictStyle: req.conflictStyle}).WithArgs(cmd)
+		cmd = cmd.WithExtraConfig(&extraConfig{
+			MergeConflictStyle: req.conflictStyle,
+		})
 	}
 
 	stdout, err := cmd.StdoutPipe()
