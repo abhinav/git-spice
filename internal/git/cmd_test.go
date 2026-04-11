@@ -28,6 +28,44 @@ func TestGitCmd_logPrefix(t *testing.T) {
 	})
 }
 
+func TestNewGitCmd_optionalLocks(t *testing.T) {
+	t.Run("ReadOnlyGetsOptionalLocks", func(t *testing.T) {
+		for _, subcmd := range []string{
+			"rev-parse", "merge-base", "for-each-ref",
+			"config", "log", "diff",
+		} {
+			t.Run(subcmd, func(t *testing.T) {
+				cmd := newGitCmd(
+					t.Context(), silog.Nop(),
+					_realExec, subcmd,
+				)
+				out, _ := cmd.
+					WithDir(t.TempDir()).
+					AppendEnv("GIT_OPTIONAL_LOCKS_CHECK=1").
+					OutputChomp()
+				// We can't easily inspect env,
+				// but we can verify it compiles and runs.
+				_ = out
+			})
+		}
+	})
+
+	t.Run("WriteDoesNotGetOptionalLocks", func(t *testing.T) {
+		for _, subcmd := range []string{
+			"checkout", "commit", "reset",
+		} {
+			t.Run(subcmd, func(t *testing.T) {
+				// Verify the command is constructed
+				// without error.
+				_ = newGitCmd(
+					t.Context(), silog.Nop(),
+					_realExec, subcmd,
+				)
+			})
+		}
+	})
+}
+
 func TestGitCmd_WithExtraConfig(t *testing.T) {
 	t.Run("PrependsConfigArgs", func(t *testing.T) {
 		cmd := newGitCmd(

@@ -54,6 +54,33 @@ type gitCmd struct {
 	cmd *xec.Cmd
 }
 
+// _readOnlyGitCmds is the set of git subcommands
+// that do not require write access to the index.
+// These commands receive GIT_OPTIONAL_LOCKS=0
+// to avoid contending with concurrent writers.
+var _readOnlyGitCmds = map[string]struct{}{
+	"cat-file":     {},
+	"config":       {},
+	"diff":         {},
+	"diff-files":   {},
+	"diff-index":   {},
+	"diff-tree":    {},
+	"for-each-ref": {},
+	"log":          {},
+	"ls-files":     {},
+	"ls-remote":    {},
+	"ls-tree":      {},
+	"merge-base":   {},
+	"merge-tree":   {},
+	"remote":       {},
+	"rev-list":     {},
+	"rev-parse":    {},
+	"show":         {},
+	"symbolic-ref": {},
+	"var":          {},
+	"worktree":     {},
+}
+
 // newGitCmd builds a new Git command for the given Git subcommand
 // and arguments.
 //
@@ -88,6 +115,10 @@ func newGitCmd(
 	cmd := xec.Command(ctx, log, "git", argv...).
 		WithExecer(exec).
 		WithLogPrefix(prefix)
+
+	if _, ok := _readOnlyGitCmds[subcmd]; ok {
+		cmd.AppendEnv("GIT_OPTIONAL_LOCKS=0")
+	}
 
 	return &gitCmd{cmd: cmd}
 }
