@@ -33,30 +33,19 @@ func (r *Repository) commentCounts(
 	prID int64,
 ) (*forge.CommentCounts, error) {
 	var total, resolved int
-
-	path := fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests/%d/comments?pagelen=%d",
-		r.workspace, r.repo, prID, _listChangeCommentsPageSize,
-	)
-
-	for path != "" {
-		comments, nextPath, err := r.fetchCommentPage(ctx, path)
+	for c, err := range r.listPullRequestComments(ctx, prID) {
 		if err != nil {
 			return nil, err
 		}
 
-		for _, c := range comments {
-			// Only inline code review comments are resolvable.
-			if c.Inline == nil {
-				continue
-			}
-			total++
-			if c.Resolution != nil {
-				resolved++
-			}
+		// Only inline code review comments are resolvable.
+		if c.Inline == nil {
+			continue
 		}
-
-		path = nextPath
+		total++
+		if c.Resolution != nil {
+			resolved++
+		}
 	}
 
 	return &forge.CommentCounts{

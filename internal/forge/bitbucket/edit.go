@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
 // EditChange edits an existing pull request.
@@ -36,17 +37,20 @@ func (r *Repository) updatePRBase(ctx context.Context, prID int64, base string) 
 		return nil
 	}
 
-	req := &apiUpdatePRRequest{
-		Destination: &apiBranchRef{Branch: apiBranch{Name: base}},
-	}
-	return r.updatePullRequest(ctx, prID, req)
+	return r.updatePullRequest(ctx, prID, &bitbucket.PullRequestUpdateRequest{
+		Destination: &bitbucket.BranchRef{
+			Branch: bitbucket.Branch{Name: base},
+		},
+	})
 }
 
 func (r *Repository) updatePRDraft(ctx context.Context, prID int64, draft *bool) error {
 	if draft == nil {
 		return nil
 	}
-	return r.updatePullRequest(ctx, prID, &apiUpdatePRRequest{Draft: draft})
+	return r.updatePullRequest(ctx, prID, &bitbucket.PullRequestUpdateRequest{
+		Draft: draft,
+	})
 }
 
 func (r *Repository) addPRReviewers(
@@ -73,27 +77,26 @@ func (r *Repository) addPRReviewers(
 	// Merge existing and new reviewers.
 	allReviewers := mergeReviewers(pr.Reviewers, newReviewers)
 
-	req := &apiUpdatePRRequest{
-		Title:     pr.Title, // Required by Bitbucket PUT
+	return r.updatePullRequest(ctx, prID, &bitbucket.PullRequestUpdateRequest{
+		Title:     &pr.Title,
 		Reviewers: allReviewers,
-	}
-	return r.updatePullRequest(ctx, prID, req)
+	})
 }
 
-func mergeReviewers(existing []apiUser, added []apiReviewer) []apiReviewer {
+func mergeReviewers(existing []bitbucket.User, added []string) []bitbucket.Reviewer {
 	seen := make(map[string]bool)
-	result := make([]apiReviewer, 0, len(existing)+len(added))
+	result := make([]bitbucket.Reviewer, 0, len(existing)+len(added))
 
 	for _, u := range existing {
 		if !seen[u.UUID] {
 			seen[u.UUID] = true
-			result = append(result, apiReviewer{UUID: u.UUID})
+			result = append(result, bitbucket.Reviewer{UUID: u.UUID})
 		}
 	}
 	for _, rev := range added {
-		if !seen[rev.UUID] {
-			seen[rev.UUID] = true
-			result = append(result, rev)
+		if !seen[rev] {
+			seen[rev] = true
+			result = append(result, bitbucket.Reviewer{UUID: rev})
 		}
 	}
 	return result
@@ -102,12 +105,10 @@ func mergeReviewers(existing []apiUser, added []apiReviewer) []apiReviewer {
 func (r *Repository) updatePullRequest(
 	ctx context.Context,
 	prID int64,
-	req *apiUpdatePRRequest,
+	req *bitbucket.PullRequestUpdateRequest,
 ) error {
-	path := fmt.Sprintf("/repositories/%s/%s/pullrequests/%d", r.workspace, r.repo, prID)
-
-	var resp apiPullRequest
-	if err := r.client.put(ctx, path, req, &resp); err != nil {
+	_, _, err := r.client.PullRequestUpdate(ctx, r.workspace, r.repo, prID, req)
+	if err != nil {
 		return fmt.Errorf("update pull request: %w", err)
 	}
 	r.log.Debug("Updated pull request", "pr", prID)

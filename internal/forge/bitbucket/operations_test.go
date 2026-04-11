@@ -10,29 +10,30 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestListChangeComments(t *testing.T) {
 	tests := []struct {
 		name       string
-		comments   []apiComment
+		comments   []bitbucket.Comment
 		opts       *forge.ListChangeCommentsOptions
 		wantBodies []string
 	}{
 		{
 			name: "NoFilter",
-			comments: []apiComment{
-				{ID: 1, Content: apiContent{Raw: "hello"}},
-				{ID: 2, Content: apiContent{Raw: "world"}},
+			comments: []bitbucket.Comment{
+				{ID: 1, Content: bitbucket.Content{Raw: "hello"}},
+				{ID: 2, Content: bitbucket.Content{Raw: "world"}},
 			},
 			wantBodies: []string{"hello", "world"},
 		},
 		{
 			name: "BodyMatchesAll",
-			comments: []apiComment{
-				{ID: 1, Content: apiContent{Raw: "hello"}},
-				{ID: 2, Content: apiContent{Raw: "world"}},
+			comments: []bitbucket.Comment{
+				{ID: 1, Content: bitbucket.Content{Raw: "hello"}},
+				{ID: 2, Content: bitbucket.Content{Raw: "world"}},
 			},
 			opts: &forge.ListChangeCommentsOptions{
 				BodyMatchesAll: []*regexp.Regexp{
@@ -43,7 +44,7 @@ func TestListChangeComments(t *testing.T) {
 		},
 		{
 			name:       "EmptyList",
-			comments:   []apiComment{},
+			comments:   []bitbucket.Comment{},
 			wantBodies: nil,
 		},
 	}
@@ -51,7 +52,7 @@ func TestListChangeComments(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				resp := apiCommentList{Values: tt.comments}
+				resp := bitbucket.CommentList{Values: tt.comments}
 				assert.NoError(t, json.NewEncoder(w).Encode(resp))
 			}))
 			defer srv.Close()
@@ -75,11 +76,11 @@ func TestPostChangeComment(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Contains(t, r.URL.Path, "/pullrequests/1/comments")
 
-		var req apiCreateCommentRequest
+		var req bitbucket.CommentCreateRequest
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 		assert.Equal(t, "test comment", req.Content.Raw)
 
-		resp := apiComment{ID: 42, Content: apiContent{Raw: req.Content.Raw}}
+		resp := bitbucket.Comment{ID: 42, Content: bitbucket.Content{Raw: req.Content.Raw}}
 		assert.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
 	defer srv.Close()
@@ -100,7 +101,7 @@ func TestUpdateChangeComment(t *testing.T) {
 			assert.Equal(t, http.MethodPut, r.Method)
 			assert.Contains(t, r.URL.Path, "/pullrequests/123/comments/42")
 
-			var req apiCreateCommentRequest
+			var req bitbucket.CommentCreateRequest
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 			assert.Equal(t, "updated content", req.Content.Raw)
 
@@ -134,20 +135,20 @@ func TestUpdateChangeComment(t *testing.T) {
 func TestFindChangesByBranch(t *testing.T) {
 	tests := []struct {
 		name    string
-		prs     []apiPullRequest
+		prs     []bitbucket.PullRequest
 		branch  string
 		opts    forge.FindChangesOptions
 		wantLen int
 	}{
 		{
 			name: "SinglePR",
-			prs: []apiPullRequest{
+			prs: []bitbucket.PullRequest{
 				{
 					ID:          1,
 					Title:       "Test PR",
 					State:       stateOpen,
-					Destination: apiBranchRef{Branch: apiBranch{Name: "main"}},
-					Links:       apiPRLinks{HTML: apiLink{Href: "https://example.com/pr/1"}},
+					Destination: bitbucket.BranchRef{Branch: bitbucket.Branch{Name: "main"}},
+					Links:       bitbucket.PullRequestLinks{HTML: bitbucket.Link{Href: "https://example.com/pr/1"}},
 				},
 			},
 			branch:  "feature",
@@ -155,13 +156,13 @@ func TestFindChangesByBranch(t *testing.T) {
 		},
 		{
 			name:    "NoPRs",
-			prs:     []apiPullRequest{},
+			prs:     []bitbucket.PullRequest{},
 			branch:  "feature",
 			wantLen: 0,
 		},
 		{
 			name: "MultiplePRs",
-			prs: []apiPullRequest{
+			prs: []bitbucket.PullRequest{
 				{ID: 1, Title: "PR 1", State: stateOpen},
 				{ID: 2, Title: "PR 2", State: stateOpen},
 			},
@@ -173,7 +174,7 @@ func TestFindChangesByBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				resp := apiPRList{Values: tt.prs}
+				resp := bitbucket.PullRequestList{Values: tt.prs}
 				assert.NoError(t, json.NewEncoder(w).Encode(resp))
 			}))
 			defer srv.Close()
@@ -191,12 +192,12 @@ func TestFindChangeByID(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "/pullrequests/42")
 
-		resp := apiPullRequest{
+		resp := bitbucket.PullRequest{
 			ID:          42,
 			Title:       "Test PR",
 			State:       stateOpen,
-			Destination: apiBranchRef{Branch: apiBranch{Name: "main"}},
-			Links:       apiPRLinks{HTML: apiLink{Href: "https://example.com/pr/42"}},
+			Destination: bitbucket.BranchRef{Branch: bitbucket.Branch{Name: "main"}},
+			Links:       bitbucket.PullRequestLinks{HTML: bitbucket.Link{Href: "https://example.com/pr/42"}},
 		}
 		assert.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
@@ -259,7 +260,7 @@ func TestChangesStates(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// Return first PR state for simple single-PR tests.
 				for id := range tt.prStates {
-					resp := apiPullRequest{ID: id, State: tt.prStates[id]}
+					resp := bitbucket.PullRequest{ID: id, State: tt.prStates[id]}
 					_ = json.NewEncoder(w).Encode(resp)
 					break
 				}
@@ -281,9 +282,9 @@ func TestSubmitChange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle workspace members lookup for reviewer resolution.
 		if r.URL.Path == "/workspaces/workspace/members" {
-			resp := apiWorkspaceMemberList{
-				Values: []apiWorkspaceMember{
-					{User: apiUser{UUID: "{user-uuid}", Nickname: "reviewer1"}},
+			resp := bitbucket.WorkspaceMemberList{
+				Values: []bitbucket.WorkspaceMember{
+					{User: bitbucket.User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
 				},
 			}
 			assert.NoError(t, json.NewEncoder(w).Encode(resp))
@@ -293,16 +294,16 @@ func TestSubmitChange(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Contains(t, r.URL.Path, "/pullrequests")
 
-		var req apiCreatePRRequest
+		var req bitbucket.PullRequestCreateRequest
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 		assert.Equal(t, "Test PR", req.Title)
 		assert.Equal(t, "feature", req.Source.Branch.Name)
 		assert.Equal(t, "main", req.Destination.Branch.Name)
 
-		resp := apiPullRequest{
+		resp := bitbucket.PullRequest{
 			ID:    123,
 			Title: req.Title,
-			Links: apiPRLinks{HTML: apiLink{Href: "https://example.com/pr/123"}},
+			Links: bitbucket.PullRequestLinks{HTML: bitbucket.Link{Href: "https://example.com/pr/123"}},
 		}
 		assert.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
@@ -353,13 +354,85 @@ func TestEditChange(t *testing.T) {
 	}
 }
 
+func TestListChangeComments_absoluteNextURL(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.RawQuery {
+		case "pagelen=100":
+			resp := bitbucket.CommentList{
+				Values: []bitbucket.Comment{
+					{ID: 1, Content: bitbucket.Content{Raw: "first"}},
+				},
+				Next: srv.URL + "/repositories/workspace/repo/pullrequests/1/comments?page=2",
+			}
+			assert.NoError(t, json.NewEncoder(w).Encode(resp))
+		default:
+			resp := bitbucket.CommentList{
+				Values: []bitbucket.Comment{
+					{ID: 2, Content: bitbucket.Content{Raw: "second"}},
+				},
+			}
+			assert.NoError(t, json.NewEncoder(w).Encode(resp))
+		}
+	}))
+	defer srv.Close()
+
+	repo := newTestRepository(srv.URL)
+
+	var bodies []string
+	for comment, err := range repo.ListChangeComments(t.Context(), &PR{Number: 1}, nil) {
+		require.NoError(t, err)
+		bodies = append(bodies, comment.Body)
+	}
+
+	assert.Equal(t, []string{"first", "second"}, bodies)
+}
+
+func TestSubmitChange_absoluteNextURLForReviewerLookup(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/workspaces/workspace/members" && r.URL.RawQuery == "":
+			resp := bitbucket.WorkspaceMemberList{
+				Values: nil,
+				Next:   srv.URL + "/workspaces/workspace/members?page=2",
+			}
+			assert.NoError(t, json.NewEncoder(w).Encode(resp))
+		case r.URL.Path == "/workspaces/workspace/members":
+			resp := bitbucket.WorkspaceMemberList{
+				Values: []bitbucket.WorkspaceMember{
+					{User: bitbucket.User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
+				},
+			}
+			assert.NoError(t, json.NewEncoder(w).Encode(resp))
+		default:
+			resp := bitbucket.PullRequest{
+				ID:    123,
+				Title: "Test PR",
+				Links: bitbucket.PullRequestLinks{HTML: bitbucket.Link{Href: "https://example.com/pr/123"}},
+			}
+			assert.NoError(t, json.NewEncoder(w).Encode(resp))
+		}
+	}))
+	defer srv.Close()
+
+	repo := newTestRepository(srv.URL)
+	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject:   "Test PR",
+		Head:      "feature",
+		Base:      "main",
+		Reviewers: []string{"reviewer1"},
+	})
+	require.NoError(t, err)
+}
+
 func newEditChangeServer(t *testing.T, _ forge.EditChangeOptions) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle workspace members lookup for reviewer resolution.
 		if r.Method == http.MethodGet && r.URL.Path == "/workspaces/workspace/members" {
-			resp := apiWorkspaceMemberList{
-				Values: []apiWorkspaceMember{
-					{User: apiUser{UUID: "{user-uuid}", Nickname: "reviewer1"}},
+			resp := bitbucket.WorkspaceMemberList{
+				Values: []bitbucket.WorkspaceMember{
+					{User: bitbucket.User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
 				},
 			}
 			assert.NoError(t, json.NewEncoder(w).Encode(resp))
@@ -368,7 +441,7 @@ func newEditChangeServer(t *testing.T, _ forge.EditChangeOptions) *httptest.Serv
 
 		// Handle GET to fetch current PR.
 		if r.Method == http.MethodGet {
-			resp := apiPullRequest{
+			resp := bitbucket.PullRequest{
 				ID:    1,
 				Title: "Test PR",
 				State: stateOpen,
@@ -379,7 +452,7 @@ func newEditChangeServer(t *testing.T, _ forge.EditChangeOptions) *httptest.Serv
 
 		// Handle PUT to update PR.
 		assert.Equal(t, http.MethodPut, r.Method)
-		resp := apiPullRequest{ID: 1, Title: "Test PR"}
+		resp := bitbucket.PullRequest{ID: 1, Title: "Test PR"}
 		assert.NoError(t, json.NewEncoder(w).Encode(resp))
 	}))
 }
@@ -424,6 +497,27 @@ func TestStateToAPI(t *testing.T) {
 }
 
 func newTestRepository(baseURL string) *Repository {
-	client := newClient(baseURL, &AuthenticationToken{AccessToken: "test"}, silog.Nop())
-	return newRepository(&Forge{}, baseURL, "workspace", "repo", silog.Nop(), client)
+	token := &AuthenticationToken{AccessToken: "test"}
+	tokenSource, err := newGatewayTokenSource(token)
+	if err != nil {
+		panic(err)
+	}
+
+	client, err := bitbucket.NewClient(tokenSource, &bitbucket.ClientOptions{
+		BaseURL: baseURL,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return newRepository(
+		&Forge{},
+		baseURL,
+		"workspace",
+		"repo",
+		silog.Nop(),
+		client,
+		token,
+		http.DefaultClient,
+	)
 }

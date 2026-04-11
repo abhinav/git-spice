@@ -4,10 +4,12 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgeurl"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -100,8 +102,19 @@ func (f *Forge) OpenRepository(
 	rid := mustRepositoryID(id)
 	tok := token.(*AuthenticationToken)
 
-	client := newClient(f.APIURL(), tok, f.logger())
-	return newRepository(f, rid.url, rid.workspace, rid.name, f.logger(), client), nil
+	tokenSource, err := newGatewayTokenSource(tok)
+	if err != nil {
+		return nil, fmt.Errorf("build Bitbucket token source: %w", err)
+	}
+
+	client, err := bitbucket.NewClient(tokenSource, &bitbucket.ClientOptions{
+		BaseURL: f.APIURL(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create Bitbucket client: %w", err)
+	}
+
+	return newRepository(f, rid.url, rid.workspace, rid.name, f.logger(), client, tok, http.DefaultClient), nil
 }
 
 func extractRepoInfo(bitbucketURL, remoteURL string) (workspace, repo string, err error) {

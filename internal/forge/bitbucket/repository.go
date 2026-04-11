@@ -3,14 +3,18 @@ package bitbucket
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 )
 
 // Repository is a Bitbucket repository.
 type Repository struct {
-	client *client
+	client *bitbucket.Client
+	token  *AuthenticationToken
+	http   *http.Client
 
 	url             string // base URL (e.g., "https://bitbucket.org")
 	workspace, repo string
@@ -27,10 +31,14 @@ func newRepository(
 	forge *Forge,
 	url, workspace, repo string,
 	log *silog.Logger,
-	client *client,
+	client *bitbucket.Client,
+	token *AuthenticationToken,
+	httpClient *http.Client,
 ) *Repository {
 	return &Repository{
 		client:    client,
+		token:     token,
+		http:      httpClient,
 		url:       url,
 		workspace: workspace,
 		repo:      repo,

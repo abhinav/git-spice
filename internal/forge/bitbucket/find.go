@@ -3,9 +3,9 @@ package bitbucket
 import (
 	"context"
 	"fmt"
-	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/git"
 )
 
@@ -26,7 +26,7 @@ func (r *Repository) listPRsByBranch(
 	ctx context.Context,
 	branch string,
 	opts forge.FindChangesOptions,
-) ([]apiPullRequest, error) {
+) ([]bitbucket.PullRequest, error) {
 	query := fmt.Sprintf(`source.branch.name="%s"`, branch)
 	if opts.State != 0 {
 		query += fmt.Sprintf(` AND state="%s"`, stateToAPI(opts.State))
@@ -37,13 +37,14 @@ func (r *Repository) listPRsByBranch(
 		limit = 10
 	}
 
-	path := fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests?q=%s&pagelen=%d&fields=%%2Bvalues.reviewers",
-		r.workspace, r.repo, url.QueryEscape(query), limit,
+	resp, _, err := r.client.PullRequestList(ctx, r.workspace, r.repo,
+		&bitbucket.PullRequestListOptions{
+			Query:   query,
+			PageLen: limit,
+			Fields:  []string{"+values.reviewers"},
+		},
 	)
-
-	var resp apiPRList
-	if err := r.client.get(ctx, path, &resp); err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("list pull requests: %w", err)
 	}
 	return resp.Values, nil
@@ -64,17 +65,15 @@ func (r *Repository) FindChangeByID(
 func (r *Repository) getPullRequest(
 	ctx context.Context,
 	prID int64,
-) (*apiPullRequest, error) {
-	path := fmt.Sprintf("/repositories/%s/%s/pullrequests/%d", r.workspace, r.repo, prID)
-
-	var pr apiPullRequest
-	if err := r.client.get(ctx, path, &pr); err != nil {
+) (*bitbucket.PullRequest, error) {
+	pr, _, err := r.client.PullRequestGet(ctx, r.workspace, r.repo, prID)
+	if err != nil {
 		return nil, fmt.Errorf("get pull request: %w", err)
 	}
-	return &pr, nil
+	return pr, nil
 }
 
-func (r *Repository) convertPRsToFindItems(prs []apiPullRequest) []*forge.FindChangeItem {
+func (r *Repository) convertPRsToFindItems(prs []bitbucket.PullRequest) []*forge.FindChangeItem {
 	items := make([]*forge.FindChangeItem, len(prs))
 	for i := range prs {
 		items[i] = r.convertPRToFindItem(&prs[i])
@@ -82,7 +81,7 @@ func (r *Repository) convertPRsToFindItems(prs []apiPullRequest) []*forge.FindCh
 	return items
 }
 
-func (r *Repository) convertPRToFindItem(pr *apiPullRequest) *forge.FindChangeItem {
+func (r *Repository) convertPRToFindItem(pr *bitbucket.PullRequest) *forge.FindChangeItem {
 	return &forge.FindChangeItem{
 		ID:        &PR{Number: pr.ID},
 		URL:       pr.Links.HTML.Href,
@@ -95,7 +94,7 @@ func (r *Repository) convertPRToFindItem(pr *apiPullRequest) *forge.FindChangeIt
 	}
 }
 
-func extractHeadHash(pr *apiPullRequest) git.Hash {
+func extractHeadHash(pr *bitbucket.PullRequest) git.Hash {
 	if pr.Source.Commit != nil {
 		return git.Hash(pr.Source.Commit.Hash)
 	}
@@ -105,7 +104,7 @@ func extractHeadHash(pr *apiPullRequest) git.Hash {
 	return ""
 }
 
-func extractUsernames(users []apiUser) []string {
+func extractUsernames(users []bitbucket.User) []string {
 	if len(users) == 0 {
 		return nil
 	}
@@ -118,7 +117,7 @@ func extractUsernames(users []apiUser) []string {
 
 // extractUsername returns the username for display purposes.
 // Falls back to Nickname since Bitbucket deprecated usernames.
-func extractUsername(u *apiUser) string {
+func extractUsername(u *bitbucket.User) string {
 	if u.Username != "" {
 		return u.Username
 	}
