@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
 // SubmitChange creates a new pull request in the repository.
@@ -45,15 +46,15 @@ func (r *Repository) warnUnsupportedFeatures(req forge.SubmitChangeRequest) {
 
 func (r *Repository) buildCreatePRRequest(
 	req forge.SubmitChangeRequest,
-	reviewers []apiReviewer,
-) *apiCreatePRRequest {
-	apiReq := &apiCreatePRRequest{
+	reviewers []string,
+) *bitbucket.PullRequestCreateRequest {
+	apiReq := &bitbucket.PullRequestCreateRequest{
 		Title: req.Subject,
-		Source: apiBranchRef{
-			Branch: apiBranch{Name: req.Head},
+		Source: bitbucket.BranchRef{
+			Branch: bitbucket.Branch{Name: req.Head},
 		},
-		Destination: apiBranchRef{
-			Branch: apiBranch{Name: req.Base},
+		Destination: bitbucket.BranchRef{
+			Branch: bitbucket.Branch{Name: req.Base},
 		},
 		Draft: req.Draft,
 	}
@@ -61,62 +62,51 @@ func (r *Repository) buildCreatePRRequest(
 		apiReq.Description = req.Body
 	}
 	if len(reviewers) > 0 {
-		apiReq.Reviewers = reviewers
+		apiReq.Reviewers = make([]bitbucket.Reviewer, 0, len(reviewers))
+		for _, reviewer := range reviewers {
+			apiReq.Reviewers = append(apiReq.Reviewers, bitbucket.Reviewer{
+				UUID: reviewer,
+			})
+		}
 	}
 	return apiReq
 }
 
 func (r *Repository) createPullRequest(
 	ctx context.Context,
-	req *apiCreatePRRequest,
-) (*apiPullRequest, error) {
-	path := fmt.Sprintf("/repositories/%s/%s/pullrequests", r.workspace, r.repo)
-
-	var resp apiPullRequest
-	if err := r.client.post(ctx, path, req, &resp); err != nil {
-		if isDestinationBranchNotFound(err) {
+	req *bitbucket.PullRequestCreateRequest,
+) (*bitbucket.PullRequest, error) {
+	pr, _, err := r.client.PullRequestCreate(ctx, r.workspace, r.repo, req)
+	if err != nil {
+		if errors.Is(err, bitbucket.ErrDestinationBranchNotFound) {
 			return nil, fmt.Errorf("create pull request: %w", forge.ErrUnsubmittedBase)
 		}
 		return nil, fmt.Errorf("create pull request: %w", err)
 	}
-	return &resp, nil
-}
-
-// isDestinationBranchNotFound checks if the error indicates
-// the destination branch doesn't exist.
-func isDestinationBranchNotFound(err error) bool {
-	var apiErr *apiError
-	if !errors.As(err, &apiErr) {
-		return false
-	}
-	if apiErr.StatusCode != 400 {
-		return false
-	}
-	return strings.Contains(apiErr.Body, "destination") &&
-		strings.Contains(apiErr.Body, "branch not found")
+	return pr, nil
 }
 
 func (r *Repository) resolveReviewerUUIDs(
 	ctx context.Context,
 	usernames []string,
-) ([]apiReviewer, error) {
+) ([]string, error) {
 	if len(usernames) == 0 {
 		return nil, nil
 	}
 
-	reviewers := make([]apiReviewer, 0, len(usernames))
+	reviewers := make([]string, 0, len(usernames))
 	for _, username := range usernames {
 		user, err := r.getUser(ctx, username)
 		if err != nil {
 			return nil, fmt.Errorf("lookup user %q: %w", username, err)
 		}
-		reviewers = append(reviewers, apiReviewer{UUID: user.UUID})
+		reviewers = append(reviewers, user.UUID)
 		r.log.Debug("Resolved reviewer", "username", username, "uuid", user.UUID)
 	}
 	return reviewers, nil
 }
 
-func (r *Repository) getUser(ctx context.Context, identifier string) (*apiUser, error) {
+func (r *Repository) getUser(ctx context.Context, identifier string) (*bitbucket.User, error) {
 	if isAccountID(identifier) {
 		return r.getUserByAccountID(ctx, identifier)
 	}
@@ -126,7 +116,7 @@ func (r *Repository) getUser(ctx context.Context, identifier string) (*apiUser, 
 func (r *Repository) getUserByNickname(
 	ctx context.Context,
 	nickname string,
-) (*apiUser, error) {
+) (*bitbucket.User, error) {
 	user, err := r.findWorkspaceMember(ctx, nickname)
 	if err != nil {
 		return nil, err
@@ -140,7 +130,7 @@ func (r *Repository) getUserByNickname(
 func (r *Repository) getUserByAccountID(
 	ctx context.Context,
 	accountID string,
-) (*apiUser, error) {
+) (*bitbucket.User, error) {
 	user, err := r.findWorkspaceMemberByAccountID(ctx, accountID)
 	if err != nil {
 		return nil, err
@@ -154,16 +144,19 @@ func (r *Repository) getUserByAccountID(
 func (r *Repository) findWorkspaceMemberByAccountID(
 	ctx context.Context,
 	accountID string,
-) (*apiUser, error) {
-	path := fmt.Sprintf("/workspaces/%s/members", r.workspace)
+) (*bitbucket.User, error) {
+	var path string
 
-	for path != "" {
+	for {
 		user, nextPath, err := r.searchMemberPageByAccountID(ctx, path, accountID)
 		if err != nil {
 			return nil, err
 		}
 		if user != nil {
 			return user, nil
+		}
+		if nextPath == "" {
+			break
 		}
 		path = nextPath
 	}
@@ -172,34 +165,48 @@ func (r *Repository) findWorkspaceMemberByAccountID(
 
 func (r *Repository) searchMemberPageByAccountID(
 	ctx context.Context,
-	path, accountID string,
-) (*apiUser, string, error) {
-	var resp apiWorkspaceMemberList
-	if err := r.client.get(ctx, path, &resp); err != nil {
+	path string,
+	accountID string,
+) (*bitbucket.User, string, error) {
+	var opt *bitbucket.WorkspaceMemberListOptions
+	if path != "" {
+		opt = &bitbucket.WorkspaceMemberListOptions{PageURL: path}
+	}
+
+	members, resp, err := r.client.WorkspaceMemberList(
+		ctx,
+		r.workspace,
+		opt,
+	)
+	if err != nil {
 		return nil, "", fmt.Errorf("list workspace members: %w", err)
 	}
 
-	for _, member := range resp.Values {
+	for i := range members.Values {
+		member := &members.Values[i]
 		if member.User.AccountID == accountID {
 			return &member.User, "", nil
 		}
 	}
-	return nil, resp.Next, nil
+	return nil, resp.NextURL, nil
 }
 
 func (r *Repository) findWorkspaceMember(
 	ctx context.Context,
 	nickname string,
-) (*apiUser, error) {
-	var matches []apiUser
-	path := fmt.Sprintf("/workspaces/%s/members", r.workspace)
+) (*bitbucket.User, error) {
+	var matches []*bitbucket.User
+	var path string
 
-	for path != "" {
+	for {
 		pageMatches, nextPath, err := r.searchMemberPage(ctx, path, nickname)
 		if err != nil {
 			return nil, err
 		}
 		matches = append(matches, pageMatches...)
+		if nextPath == "" {
+			break
+		}
 		path = nextPath
 	}
 
@@ -208,13 +215,13 @@ func (r *Repository) findWorkspaceMember(
 
 func (r *Repository) selectUniqueMatch(
 	nickname string,
-	matches []apiUser,
-) (*apiUser, error) {
+	matches []*bitbucket.User,
+) (*bitbucket.User, error) {
 	switch len(matches) {
 	case 0:
 		return nil, nil
 	case 1:
-		return &matches[0], nil
+		return matches[0], nil
 	default:
 		return nil, &ambiguousUserError{Nickname: nickname, Matches: matches}
 	}
@@ -222,26 +229,37 @@ func (r *Repository) selectUniqueMatch(
 
 func (r *Repository) searchMemberPage(
 	ctx context.Context,
-	path, nickname string,
-) ([]apiUser, string, error) {
-	var resp apiWorkspaceMemberList
-	if err := r.client.get(ctx, path, &resp); err != nil {
+	path string,
+	nickname string,
+) ([]*bitbucket.User, string, error) {
+	var opt *bitbucket.WorkspaceMemberListOptions
+	if path != "" {
+		opt = &bitbucket.WorkspaceMemberListOptions{PageURL: path}
+	}
+
+	members, resp, err := r.client.WorkspaceMemberList(
+		ctx,
+		r.workspace,
+		opt,
+	)
+	if err != nil {
 		return nil, "", fmt.Errorf("list workspace members: %w", err)
 	}
 
-	var matches []apiUser
-	for _, member := range resp.Values {
+	var matches []*bitbucket.User
+	for i := range members.Values {
+		member := &members.Values[i]
 		if matchesNickname(&member.User, nickname) {
-			matches = append(matches, member.User)
+			matches = append(matches, &member.User)
 		}
 	}
-	return matches, resp.Next, nil
+	return matches, resp.NextURL, nil
 }
 
 // matchesNickname checks if the user matches the given nickname.
 // It checks Username first (for backward compatibility), then Nickname
 // (since Bitbucket deprecated usernames in favor of account IDs).
-func matchesNickname(user *apiUser, nickname string) bool {
+func matchesNickname(user *bitbucket.User, nickname string) bool {
 	if user.Username != "" && strings.EqualFold(user.Username, nickname) {
 		return true
 	}
@@ -257,7 +275,7 @@ func isAccountID(identifier string) bool {
 // ambiguousUserError indicates multiple workspace members match the nickname.
 type ambiguousUserError struct {
 	Nickname string
-	Matches  []apiUser
+	Matches  []*bitbucket.User
 }
 
 func (e *ambiguousUserError) Error() string {

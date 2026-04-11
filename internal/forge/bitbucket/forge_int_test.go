@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"net/http"
 
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -15,6 +16,18 @@ func NewRepositoryForTest(
 	httpClient *http.Client,
 	token *AuthenticationToken,
 ) *Repository {
-	client := newClientWithHTTP(forge.APIURL(), token, log, httpClient)
-	return newRepository(forge, url, workspace, repo, log, client)
+	tokenSource, err := newGatewayTokenSource(token)
+	if err != nil {
+		panic(err)
+	}
+
+	client, err := bitbucket.NewClient(tokenSource, &bitbucket.ClientOptions{
+		BaseURL:    forge.APIURL(),
+		HTTPClient: httpClient,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return newRepository(forge, url, workspace, repo, log, client, token, httpClient)
 }

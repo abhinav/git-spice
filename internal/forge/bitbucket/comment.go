@@ -7,6 +7,7 @@ import (
 	"iter"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
 // _listChangeCommentsPageSize is the number of comments to fetch per page.
@@ -31,21 +32,16 @@ func (r *Repository) createComment(
 	ctx context.Context,
 	prID int64,
 	body string,
-) (*apiComment, error) {
-	path := fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests/%d/comments",
-		r.workspace, r.repo, prID,
+) (*bitbucket.Comment, error) {
+	comment, _, err := r.client.CommentCreate(ctx, r.workspace, r.repo, prID,
+		&bitbucket.CommentCreateRequest{
+			Content: bitbucket.Content{Raw: body},
+		},
 	)
-
-	req := &apiCreateCommentRequest{
-		Content: apiContent{Raw: body},
-	}
-
-	var resp apiComment
-	if err := r.client.post(ctx, path, req, &resp); err != nil {
+	if err != nil {
 		return nil, fmt.Errorf("create comment: %w", err)
 	}
-	return &resp, nil
+	return comment, nil
 }
 
 // UpdateChangeComment updates an existing comment on a pull request.
@@ -63,20 +59,15 @@ func (r *Repository) updateComment(
 	prID, commentID int64,
 	body string,
 ) error {
-	path := fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests/%d/comments/%d",
-		r.workspace, r.repo, prID, commentID,
+	_, _, err := r.client.CommentUpdate(ctx, r.workspace, r.repo, prID, commentID,
+		&bitbucket.CommentCreateRequest{
+			Content: bitbucket.Content{Raw: body},
+		},
 	)
-
-	req := &apiCreateCommentRequest{
-		Content: apiContent{Raw: body},
-	}
-
-	if err := r.client.put(ctx, path, req, nil); err != nil {
+	if err != nil {
 		// 404 means the comment doesn't exist (deleted or wrong PR).
 		// Return sentinel error so caller can recreate it.
-		var apiErr *apiError
-		if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+		if errors.Is(err, bitbucket.ErrNotFound) {
 			return fmt.Errorf("comment %d not found: %w", commentID, forge.ErrNotFound)
 		}
 		return fmt.Errorf("update comment: %w", err)
@@ -101,11 +92,7 @@ func (r *Repository) deleteComment(
 	ctx context.Context,
 	prID, commentID int64,
 ) error {
-	path := fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests/%d/comments/%d",
-		r.workspace, r.repo, prID, commentID,
-	)
-	if err := r.client.do(ctx, "DELETE", path, nil, nil); err != nil {
+	if _, err := r.client.CommentDelete(ctx, r.workspace, r.repo, prID, commentID); err != nil {
 		return fmt.Errorf("delete comment: %w", err)
 	}
 	return nil
@@ -118,74 +105,54 @@ func (r *Repository) ListChangeComments(
 	opts *forge.ListChangeCommentsOptions,
 ) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	prID := mustPR(id).Number
-	return r.iterateComments(ctx, prID, opts)
-}
 
-func (r *Repository) iterateComments(
-	ctx context.Context,
-	prID int64,
-	opts *forge.ListChangeCommentsOptions,
-) iter.Seq2[*forge.ListChangeCommentItem, error] {
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
-		path := r.buildCommentsPath(prID)
-		r.fetchAndYieldComments(ctx, path, prID, opts, yield)
+		for c, err := range r.listPullRequestComments(ctx, prID) {
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if !matchesBodyFilter(c.Content.Raw, opts) {
+				continue
+			}
+
+			if !yield(convertComment(c, prID), nil) {
+				return
+			}
+		}
 	}
 }
 
-func (r *Repository) buildCommentsPath(prID int64) string {
-	return fmt.Sprintf(
-		"/repositories/%s/%s/pullrequests/%d/comments?pagelen=%d",
-		r.workspace, r.repo, prID, _listChangeCommentsPageSize,
-	)
-}
-
-func (r *Repository) fetchAndYieldComments(
-	ctx context.Context,
-	path string,
-	prID int64,
-	opts *forge.ListChangeCommentsOptions,
-	yield func(*forge.ListChangeCommentItem, error) bool,
-) {
-	for path != "" {
-		comments, nextPath, err := r.fetchCommentPage(ctx, path)
-		if err != nil {
-			yield(nil, err)
-			return
+func (r *Repository) listPullRequestComments(
+	ctx context.Context, prID int64,
+) iter.Seq2[*bitbucket.Comment, error] {
+	return func(yield func(*bitbucket.Comment, error) bool) {
+		listOptions := bitbucket.CommentListOptions{
+			PageLen: _listChangeCommentsPageSize,
 		}
 
-		if !yieldFilteredComments(comments, prID, opts, yield) {
-			return
-		}
-		path = nextPath
-	}
-}
+		for {
+			comments, resp, err := r.client.CommentList(
+				ctx, r.workspace, r.repo, prID, &listOptions,
+			)
+			if err != nil {
+				yield(nil, fmt.Errorf("list comments: %w", err))
+				return
+			}
 
-func (r *Repository) fetchCommentPage(
-	ctx context.Context,
-	path string,
-) ([]apiComment, string, error) {
-	var resp apiCommentList
-	if err := r.client.get(ctx, path, &resp); err != nil {
-		return nil, "", fmt.Errorf("list comments: %w", err)
-	}
-	return resp.Values, resp.Next, nil
-}
+			for _, c := range comments.Values {
+				if !yield(&c, nil) {
+					return
+				}
+			}
 
-func yieldFilteredComments(
-	comments []apiComment,
-	prID int64,
-	opts *forge.ListChangeCommentsOptions,
-	yield func(*forge.ListChangeCommentItem, error) bool,
-) bool {
-	for _, c := range comments {
-		if !matchesBodyFilter(c.Content.Raw, opts) {
-			continue
-		}
-		if !yield(convertComment(&c, prID), nil) {
-			return false
+			if resp.NextURL == "" {
+				return
+			}
+			listOptions.PageURL = resp.NextURL
 		}
 	}
-	return true
 }
 
 func matchesBodyFilter(body string, opts *forge.ListChangeCommentsOptions) bool {
@@ -200,7 +167,10 @@ func matchesBodyFilter(body string, opts *forge.ListChangeCommentsOptions) bool 
 	return true
 }
 
-func convertComment(c *apiComment, prID int64) *forge.ListChangeCommentItem {
+func convertComment(
+	c *bitbucket.Comment,
+	prID int64,
+) *forge.ListChangeCommentItem {
 	return &forge.ListChangeCommentItem{
 		ID:   &PRComment{ID: c.ID, PRID: prID},
 		Body: c.Content.Raw,
