@@ -75,8 +75,7 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 		return ZeroHash, errors.New("empty commit message")
 	}
 
-	args := make([]string, 0, 2+2*len(req.Parents))
-	args = append(args, "commit-tree")
+	args := make([]string, 0, 1+2*len(req.Parents))
 	for _, parent := range req.Parents {
 		args = append(args, "-p", parent.String())
 	}
@@ -89,7 +88,7 @@ func (r *Repository) CommitTree(ctx context.Context, req CommitTreeRequest) (Has
 	env = req.Author.appendEnv("AUTHOR", env)
 	env = req.Committer.appendEnv("COMMITTER", env)
 
-	cmd := r.gitCmd(ctx, args...).
+	cmd := r.gitCmd(ctx, "commit-tree", args...).
 		AppendEnv(env...).
 		WithStdinString(req.Message)
 	out, err := cmd.OutputChomp()

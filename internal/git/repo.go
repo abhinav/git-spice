@@ -175,6 +175,6 @@ func (r *Repository) WithLogger(log *silog.Logger) *Repository {
 
 // gitCmd returns a Git command wrapper
 // configured to run in this repository.
-func (r *Repository) gitCmd(ctx context.Context, args ...string) *gitCmd {
-	return newGitCmd(ctx, r.log, r.exec, args...).WithDir(r.gitDir)
+func (r *Repository) gitCmd(ctx context.Context, subcmd string, args ...string) *gitCmd {
+	return newGitCmd(ctx, r.log, r.exec, subcmd, args...).WithDir(r.gitDir)
 }

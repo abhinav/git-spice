@@ -87,7 +87,7 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	)
 
 	// git update-ref [-m <reason>] <rev> <newvalue> [<oldvalue>]
-	args := []string{"update-ref"}
+	var args []string
 	if req.Reason != "" {
 		args = append(args, "-m", req.Reason)
 	}
@@ -95,5 +95,5 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	if req.OldHash != "" {
 		args = append(args, string(req.OldHash))
 	}
-	return r.gitCmd(ctx, args...).Run()
+	return r.gitCmd(ctx, "update-ref", args...).Run()
 }

@@ -7,9 +7,9 @@ package git
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"iter"
-	"strings"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -25,6 +25,8 @@ type extraConfig struct {
 	Editor string // core.editor
 
 	MergeConflictStyle string // merge.conflictStyle
+
+	AdviceMergeConflict *bool // advice.mergeConflict
 }
 
 // args builds the git -c flags for the configured values.
@@ -35,6 +37,10 @@ func (ec *extraConfig) args() []string {
 	}
 	if ec.MergeConflictStyle != "" {
 		args = append(args, "-c", "merge.conflictStyle="+ec.MergeConflictStyle)
+	}
+	if ec.AdviceMergeConflict != nil {
+		args = append(args, "-c",
+			fmt.Sprintf("advice.mergeConflict=%t", *ec.AdviceMergeConflict))
 	}
 	return args
 }
@@ -48,8 +54,8 @@ type gitCmd struct {
 	cmd *xec.Cmd
 }
 
-// newGitCmd builds a new Git command with the given arguments.
-// The first argument is the Git subcommand to run.
+// newGitCmd builds a new Git command for the given Git subcommand
+// and arguments.
 //
 // If the logger is at Debug level or lower,
 // stderr of the command will be written to the logger.
@@ -58,9 +64,11 @@ type gitCmd struct {
 //
 // This allows for a nicer, less noisy UX for expected errors:
 //
-//   - if a Git command was expected to fail, and the error is never logged,
+//   - if a Git command was expected to fail,
+//     and the error is never logged,
 //     its stderr output will not be shown to the user.
-//   - if the error is logged, the stderr output will be shown to the user.
+//   - if the error is logged,
+//     the stderr output will be shown to the user.
 //   - if the program is running in verbose mode,
 //     the stderr output will always be shown to the user,
 //     but it won't be duplicated in the error message.
@@ -68,14 +76,16 @@ func newGitCmd(
 	ctx context.Context,
 	log *silog.Logger,
 	exec execer,
+	subcmd string,
 	args ...string,
 ) *gitCmd {
 	prefix := "git"
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		prefix += " " + args[0]
+	if subcmd != "" {
+		prefix += " " + subcmd
 	}
 
-	cmd := xec.Command(ctx, log, "git", args...).
+	argv := append([]string{subcmd}, args...)
+	cmd := xec.Command(ctx, log, "git", argv...).
 		WithExecer(exec).
 		WithLogPrefix(prefix)
 
@@ -168,12 +178,6 @@ func (c *gitCmd) WithArgs(args ...string) *gitCmd {
 // WithDir sets the working directory for the wrapped command.
 func (c *gitCmd) WithDir(dir string) *gitCmd {
 	c.cmd.WithDir(dir)
-	return c
-}
-
-// WithLogPrefix overrides the log prefix used by the wrapped command.
-func (c *gitCmd) WithLogPrefix(prefix string) *gitCmd {
-	c.cmd.WithLogPrefix(prefix)
 	return c
 }
 

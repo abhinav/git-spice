@@ -114,7 +114,7 @@ func (r *Repository) ListRemoteRefs(
 		opts = &ListRemoteRefsOptions{}
 	}
 
-	args := []string{"ls-remote", "--quiet"}
+	args := []string{"--quiet"}
 	if opts.Heads {
 		args = append(args, "--heads")
 	}
@@ -122,7 +122,7 @@ func (r *Repository) ListRemoteRefs(
 	args = append(args, opts.Patterns...)
 
 	return func(yield func(RemoteRef, error) bool) {
-		cmd := r.gitCmd(ctx, args...)
+		cmd := r.gitCmd(ctx, "ls-remote", args...)
 
 		for bs, err := range cmd.Lines() {
 			if err != nil {

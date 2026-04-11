@@ -17,16 +17,6 @@ func TestGitCmd_logPrefix(t *testing.T) {
 		Level: silog.LevelDebug,
 	})
 
-	t.Run("DefaultPrefixNoCommand", func(t *testing.T) {
-		defer logBuffer.Reset()
-
-		_ = newGitCmd(t.Context(), log, _realExec, "--unknown-flag").
-			WithDir(t.TempDir()).
-			Run()
-
-		assert.Contains(t, logBuffer.String(), " git: ")
-	})
-
 	t.Run("DefaultPrefixCommand", func(t *testing.T) {
 		defer logBuffer.Reset()
 
@@ -36,17 +26,6 @@ func TestGitCmd_logPrefix(t *testing.T) {
 
 		assert.Contains(t, logBuffer.String(), " git unknown-cmd: ")
 	})
-
-	t.Run("LogPrefixAfterwards", func(t *testing.T) {
-		defer logBuffer.Reset()
-
-		_ = newGitCmd(t.Context(), log, _realExec, "whatever").
-			WithDir(t.TempDir()).
-			WithLogPrefix("different").
-			Run()
-
-		assert.Contains(t, logBuffer.String(), " different: ")
-	})
 }
 
 func TestGitCmd_WithExtraConfig(t *testing.T) {
@@ -55,13 +34,15 @@ func TestGitCmd_WithExtraConfig(t *testing.T) {
 			t.Context(), silog.Nop(), _realExec,
 			"rebase", "--continue",
 		).WithExtraConfig(&extraConfig{
-			Editor:             "vim",
-			MergeConflictStyle: "zdiff3",
+			Editor:              "vim",
+			MergeConflictStyle:  "zdiff3",
+			AdviceMergeConflict: new(false),
 		})
 
 		assert.Equal(t, []string{
 			"-c", "core.editor=vim",
 			"-c", "merge.conflictStyle=zdiff3",
+			"-c", "advice.mergeConflict=false",
 			"rebase", "--continue",
 		}, cmd.Args())
 	})
@@ -75,4 +56,15 @@ func TestGitCmd_WithExtraConfig(t *testing.T) {
 		assert.Equal(t, cmd, cmd.WithExtraConfig(nil))
 		assert.Equal(t, []string{"rev-parse", "HEAD"}, cmd.Args())
 	})
+}
+
+func TestNewGitCmd_args(t *testing.T) {
+	cmd := newGitCmd(
+		t.Context(), silog.Nop(), _realExec,
+		"rev-parse", "--verify", "HEAD",
+	)
+
+	assert.Equal(t, []string{
+		"rev-parse", "--verify", "HEAD",
+	}, cmd.Args())
 }

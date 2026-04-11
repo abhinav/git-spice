@@ -23,7 +23,7 @@ type CheckoutFilesRequest struct {
 // CheckoutFiles checks out files from the specified tree-ish to the working directory.
 // This wraps 'git checkout [<tree-ish>] -- [<pathspec>...]'.
 func (w *Worktree) CheckoutFiles(ctx context.Context, req *CheckoutFilesRequest) error {
-	args := []string{"checkout"}
+	var args []string
 	if req.Overlay {
 		args = append(args, "--overlay")
 	} else {
@@ -36,7 +36,7 @@ func (w *Worktree) CheckoutFiles(ctx context.Context, req *CheckoutFilesRequest)
 
 	args = append(args, "--")
 	args = append(args, req.Pathspecs...)
-	if err := w.gitCmd(ctx, args...).Run(); err != nil {
+	if err := w.gitCmd(ctx, "checkout", args...).Run(); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil

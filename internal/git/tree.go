@@ -153,7 +153,6 @@ func (r *Repository) ListTree(
 	opts ListTreeOptions,
 ) iter.Seq2[TreeEntry, error] {
 	args := []string{
-		"ls-tree",
 		"-z",          // NUL-terminate entries for proper handling of special characters
 		"--full-tree", // don't limit listing to the current working directory
 	}
@@ -163,7 +162,7 @@ func (r *Repository) ListTree(
 	args = append(args, tree.String())
 
 	return func(yield func(TreeEntry, error) bool) {
-		cmd := r.gitCmd(ctx, args...)
+		cmd := r.gitCmd(ctx, "ls-tree", args...)
 		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield(TreeEntry{}, fmt.Errorf("git ls-tree: %w", err))

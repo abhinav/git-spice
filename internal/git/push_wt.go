@@ -46,7 +46,7 @@ func (w *Worktree) Push(ctx context.Context, opts PushOptions) error {
 		silog.NonZero("force", opts.Force),
 		silog.NonZero("lease", forceWithLease(opts.ForceWithLease)))
 
-	args := []string{"push"}
+	var args []string
 	if lease := opts.ForceWithLease; lease != "" {
 		args = append(args, "--force-with-lease="+lease)
 	}
@@ -63,7 +63,7 @@ func (w *Worktree) Push(ctx context.Context, opts PushOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	cmd := w.gitCmd(ctx, args...).CaptureStdout()
+	cmd := w.gitCmd(ctx, "push", args...).CaptureStdout()
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("push: %w", err)
 	}

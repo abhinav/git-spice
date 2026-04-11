@@ -263,8 +263,8 @@ func TestIntegrationConfigListRegexp(t *testing.T) {
 			ctx := t.Context()
 			log := silogtest.New(t)
 			for _, set := range tt.sets {
-				args := append([]string{"config", "--global"}, set...)
-				err := newGitCmd(ctx, log, _realExec, args...).
+				args := append([]string{"--global"}, set...)
+				err := newGitCmd(ctx, log, _realExec, "config", args...).
 					WithDir(home).
 					AppendEnv(env...).
 					Run()

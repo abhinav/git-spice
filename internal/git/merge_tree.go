@@ -100,7 +100,6 @@ func (e *MergeTreeConflictError) Error() string {
 func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Hash, retErr error) {
 	// TODO: support multiple requests now that we're using stdin
 	args := []string{
-		"merge-tree",
 		"--write-tree", // other mode is deprecated
 		"--stdin",      // pass input on stdin
 		"-z",
@@ -114,7 +113,7 @@ func (r *Repository) MergeTree(ctx context.Context, req MergeTreeRequest) (_ Has
 	}
 	_, _ = fmt.Fprintf(&stdin, "%v %v\n", req.Branch1, req.Branch2)
 
-	cmd := r.gitCmd(ctx, args...).WithStdinString(stdin.String())
+	cmd := r.gitCmd(ctx, "merge-tree", args...).WithStdinString(stdin.String())
 	if req.conflictStyle != "" {
 		cmd = cmd.WithExtraConfig(&extraConfig{
 			MergeConflictStyle: req.conflictStyle,

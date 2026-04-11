@@ -30,7 +30,7 @@ func (r *Repository) Fetch(ctx context.Context, opts FetchOptions) error {
 
 	r.log.Debug("Fetching from remote", silog.NonZero("name", opts.Remote))
 
-	args := []string{"fetch"}
+	var args []string
 	if opts.Remote != "" {
 		args = append(args, opts.Remote)
 	}
@@ -38,7 +38,7 @@ func (r *Repository) Fetch(ctx context.Context, opts FetchOptions) error {
 		args = append(args, refspec.String())
 	}
 
-	if err := r.gitCmd(ctx, args...).Run(); err != nil {
+	if err := r.gitCmd(ctx, "fetch", args...).Run(); err != nil {
 		return fmt.Errorf("fetch: %w", err)
 	}
 

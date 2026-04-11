@@ -96,12 +96,7 @@ type RebaseRequest struct {
 // Rebase runs a git rebase operation with the specified parameters.
 // It returns [RebaseInterruptError] for known rebase interruptions,
 func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error) {
-	args := []string{
-		// Never include advice on how to resolve merge conflicts.
-		// We'll do that ourselves.
-		"-c", "advice.mergeConflict=false",
-		"rebase",
-	}
+	var args []string
 	if req.Interactive {
 		args = append(args, "--interactive")
 	}
@@ -158,7 +153,14 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		silog.NonZero("upstream", req.Upstream),
 	)
 
-	cmd := w.gitCmd(ctx, args...).WithLogPrefix("git rebase")
+	extraCfg := &extraConfig{
+		// Never include advice on how to resolve merge conflicts.
+		// We'll do that ourselves.
+		AdviceMergeConflict: new(false),
+	}
+
+	cmd := w.gitCmd(ctx, "rebase", args...).
+		WithExtraConfig(extraCfg)
 	if req.Interactive {
 		cmd.WithStdin(os.Stdin).WithStdout(os.Stdout).WithStderr(os.Stderr)
 	}

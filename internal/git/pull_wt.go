@@ -25,7 +25,7 @@ func (w *Worktree) Pull(ctx context.Context, opts PullOptions) error {
 
 	w.log.Debug("Pulling from remote", silog.NonZero("name", opts.Remote))
 
-	args := []string{"pull"}
+	var args []string
 	if opts.Rebase {
 		args = append(args, "--rebase")
 	}
@@ -39,7 +39,7 @@ func (w *Worktree) Pull(ctx context.Context, opts PullOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	if err := w.gitCmd(ctx, args...).Run(); err != nil {
+	if err := w.gitCmd(ctx, "pull", args...).Run(); err != nil {
 		return fmt.Errorf("git pull: %w", err)
 	}
 
