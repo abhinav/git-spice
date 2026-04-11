@@ -20,14 +20,14 @@ type ListFilesOptions struct {
 // using the given options to filter.
 func (w *Worktree) ListFilesPaths(ctx context.Context, opts *ListFilesOptions) iter.Seq2[string, error] {
 	opts = cmp.Or(opts, &ListFilesOptions{})
-	args := []string{"ls-files", "-z", "--format=%(path)"}
+	args := []string{"-z", "--format=%(path)"}
 	if opts.Unmerged {
 		args = append(args, "--unmerged")
 	}
 
 	shown := make(map[string]struct{})
 	return func(yield func(string, error) bool) {
-		cmd := w.gitCmd(ctx, args...)
+		cmd := w.gitCmd(ctx, "ls-files", args...)
 		for line, err := range cmd.Scan(scanutil.SplitNull) {
 			if err != nil {
 				yield("", fmt.Errorf("git ls-files: %w", err))

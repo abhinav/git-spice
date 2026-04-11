@@ -94,15 +94,14 @@ func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange
 //
 // See git-log(1) for details on the format string.
 func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange, format string) iter.Seq2[string, error] {
-	args := make([]string, 0, len(commits)+3)
-	args = append(args, "rev-list")
+	args := make([]string, 0, len(commits)+2)
 	if format != "" {
 		args = append(args, "--format="+format)
 	}
 	args = append(args, []string(commits)...)
 
 	return func(yield func(string, error) bool) {
-		cmd := r.gitCmd(ctx, args...)
+		cmd := r.gitCmd(ctx, "rev-list", args...)
 
 		var sawCommitHeader bool
 		for bs, err := range cmd.Lines() {
@@ -141,11 +140,10 @@ func (r *Repository) listCommitsFormat(ctx context.Context, commits CommitRange,
 // CountCommits reports the number of commits matched by the given range.
 func (r *Repository) CountCommits(ctx context.Context, commits CommitRange) (int, error) {
 	args := make([]string, 0, len(commits)+1)
-	args = append(args, "rev-list")
 	args = append(args, []string(commits)...)
 	args = append(args, "--count")
 
-	cmd := r.gitCmd(ctx, args...)
+	cmd := r.gitCmd(ctx, "rev-list", args...)
 	out, err := cmd.OutputChomp()
 	if err != nil {
 		return 0, fmt.Errorf("rev-list: %w", err)

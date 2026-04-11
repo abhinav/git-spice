@@ -46,9 +46,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 		opts = &LocalBranchesOptions{}
 	}
 
-	args := []string{
-		"for-each-ref", "--format=%(refname) %(objectname) %(worktreepath)",
-	}
+	args := []string{"--format=%(refname) %(objectname) %(worktreepath)"}
 	if opts.Sort != "" {
 		args = append(args, "--sort="+opts.Sort)
 	}
@@ -61,7 +59,7 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 	}
 
 	return func(yield func(LocalBranch, error) bool) {
-		cmd := r.gitCmd(ctx, args...)
+		cmd := r.gitCmd(ctx, "for-each-ref", args...)
 		for bs, err := range cmd.Lines() {
 			if err != nil {
 				yield(LocalBranch{}, fmt.Errorf("git for-each-ref: %w", err))
@@ -116,14 +114,14 @@ type CreateBranchRequest struct {
 func (r *Repository) CreateBranch(ctx context.Context, req CreateBranchRequest) error {
 	r.log.Debug("Creating branch", "name", req.Name, "head", req.Head)
 
-	args := []string{"branch", req.Name}
+	args := []string{req.Name}
 	if req.Force {
 		args = append(args, "--force")
 	}
 	if req.Head != "" {
 		args = append(args, req.Head)
 	}
-	if err := r.gitCmd(ctx, args...).Run(); err != nil {
+	if err := r.gitCmd(ctx, "branch", args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -156,7 +154,7 @@ func (r *Repository) DeleteBranch(
 ) error {
 	r.log.Debug("Deleting branch", "name", branch)
 
-	args := []string{"branch", "--delete"}
+	args := []string{"--delete"}
 	if opts.Force {
 		args = append(args, "--force")
 	}
@@ -165,7 +163,7 @@ func (r *Repository) DeleteBranch(
 	}
 	args = append(args, branch)
 
-	if err := r.gitCmd(ctx, args...).Run(); err != nil {
+	if err := r.gitCmd(ctx, "branch", args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -184,8 +182,8 @@ type RenameBranchRequest struct {
 func (r *Repository) RenameBranch(ctx context.Context, req RenameBranchRequest) error {
 	r.log.Debug("Renaming branch", "old", req.OldName, "new", req.NewName)
 
-	args := []string{"branch", "--move", req.OldName, req.NewName}
-	if err := r.gitCmd(ctx, args...).Run(); err != nil {
+	args := []string{"--move", req.OldName, req.NewName}
+	if err := r.gitCmd(ctx, "branch", args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil
@@ -216,7 +214,7 @@ func (r *Repository) SetBranchUpstream(
 	ctx context.Context,
 	branch, upstream string,
 ) error {
-	args := []string{"branch"}
+	var args []string
 	if upstream == "" {
 		r.log.Debug("Unsetting branch upstream", "name", branch)
 		args = append(args, "--unset-upstream")
@@ -226,7 +224,7 @@ func (r *Repository) SetBranchUpstream(
 	}
 	args = append(args, branch)
 
-	if err := r.gitCmd(ctx, args...).Run(); err != nil {
+	if err := r.gitCmd(ctx, "branch", args...).Run(); err != nil {
 		return fmt.Errorf("git branch: %w", err)
 	}
 	return nil

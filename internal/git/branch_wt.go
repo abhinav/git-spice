@@ -34,11 +34,11 @@ func (w *Worktree) CurrentBranch(ctx context.Context) (string, error) {
 func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 	w.log.Debug("Detaching HEAD", "commit", commitish)
 
-	args := []string{"checkout", "--detach"}
+	args := []string{"--detach"}
 	if len(commitish) > 0 {
 		args = append(args, commitish)
 	}
-	if err := w.gitCmd(ctx, args...).Run(); err != nil {
+	if err := w.gitCmd(ctx, "checkout", args...).Run(); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil

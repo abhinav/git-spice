@@ -57,7 +57,7 @@ type CommitRequest struct {
 // Commit runs the 'git commit' command,
 // allowing the user to commit changes.
 func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
-	args := []string{"commit"}
+	var args []string
 	if req.All {
 		args = append(args, "-a")
 	}
@@ -103,7 +103,7 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 		args = append(args, "--signoff")
 	}
 
-	cmd := w.gitCmd(ctx, args...).
+	cmd := w.gitCmd(ctx, "commit", args...).
 		WithStdin(os.Stdin).
 		WithStdout(os.Stdout).
 		WithStderr(os.Stderr)
