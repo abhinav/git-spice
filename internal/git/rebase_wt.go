@@ -182,13 +182,10 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		lockPath := filepath.Join(w.gitDir, "index.lock")
 		_, lockExists := os.Stat(lockPath)
 		if lockExists == nil || isIndexLockErr(err) {
-			if contErr := w.recoverRebaseIndexLock(
-				ctx, args, extraCfg, req.Interactive,
-			); contErr == nil {
-				return w.handleRebaseFinish(ctx)
+			if err := w.recoverRebaseIndexLock(ctx, args, extraCfg, req.Interactive); err != nil {
+				return w.handleRebaseError(ctx, err)
 			}
-			// If recovery fails,
-			// fall through to normal error handling.
+			return w.handleRebaseFinish(ctx)
 		}
 		return w.handleRebaseError(ctx, err)
 	}

@@ -2,6 +2,7 @@ package git
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -82,6 +83,37 @@ func TestWorktree_recoverRebaseIndexLock_interactivePreservesTerminal(t *testing
 	require.NoError(t, err)
 }
 
+func TestRebase_recoveryFailureReturnsRecoveryErr(t *testing.T) {
+	installFakeGit(t)
+	t.Setenv("GIT_ISSUE_1083_HELPER", "rebase-recovery-failure")
+	t.Setenv("GIT_REBASE_RECOVERY_MARKER",
+		filepath.Join(t.TempDir(), "rebase-recovery-marker"))
+
+	log := silog.Nop(&silog.Options{Level: silog.LevelInfo})
+	_, wt := NewFakeRepositoryWithLogger(t, "", _realExec, log)
+
+	oldTimeout := indexLockTimeout()
+	SetIndexLockTimeout(200 * time.Millisecond)
+	t.Cleanup(func() {
+		SetIndexLockTimeout(oldTimeout)
+	})
+
+	lockPath := filepath.Join(wt.gitDir, "index.lock")
+	require.NoError(t, os.WriteFile(lockPath, nil, 0o644))
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = os.Remove(lockPath)
+	}()
+
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:   "feature",
+		Upstream: "main",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "fatal: recovery failed")
+	assert.NotContains(t, err.Error(), "index.lock")
+}
+
 func gitIssue1083() {
 	subcommand := ""
 	for i := 1; i < len(os.Args); i++ {
@@ -106,6 +138,18 @@ func gitIssue1083() {
 			subcommand, os.Args)
 		os.Exit(1)
 	}
+}
+
+func gitRebaseRecoveryFailure() {
+	marker := os.Getenv("GIT_REBASE_RECOVERY_MARKER")
+	if _, err := os.Stat(marker); errors.Is(err, os.ErrNotExist) {
+		_ = os.WriteFile(marker, nil, 0o644)
+		fmt.Fprintln(os.Stderr, "fatal: initial failure")
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stderr, "fatal: recovery failed")
+	os.Exit(1)
 }
 
 func installFakeGit(t testing.TB) {
