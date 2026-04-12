@@ -72,7 +72,6 @@ type Cmd struct {
 type cmdParams struct {
 	ctx  context.Context
 	name string
-	args []string
 }
 
 // Command constructs a Cmd to execute a program with the given arguments.
@@ -99,7 +98,6 @@ func Command(ctx context.Context, log *silog.Logger, name string, args ...string
 		params: cmdParams{
 			ctx:  ctx,
 			name: name,
-			args: append([]string(nil), args...),
 		},
 	}
 }
@@ -183,7 +181,7 @@ func (c *Cmd) rebuild() {
 	fresh := exec.CommandContext(
 		c.params.ctx,
 		c.params.name,
-		c.params.args...,
+		c.cmd.Args[1:]...,
 	)
 	fresh.Dir = c.cmd.Dir
 	fresh.Env = append([]string(nil), c.cmd.Env...)
@@ -259,7 +257,6 @@ func (c *Cmd) Args() []string {
 // args does not include the command name itself.
 func (c *Cmd) WithArgs(args ...string) *Cmd {
 	c.cmd.Args = append([]string{c.cmd.Args[0]}, args...)
-	c.params.args = append([]string(nil), args...)
 	return c
 }
 
