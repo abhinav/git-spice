@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -64,6 +63,8 @@ func (e *RebaseInterruptError) Error() string {
 func (e *RebaseInterruptError) Unwrap() error {
 	return e.Err
 }
+
+var errIndexLockHeld = errors.New("index.lock is still held")
 
 // RebaseRequest is a request to rebase a branch.
 type RebaseRequest struct {
@@ -280,61 +281,40 @@ func (w *Worktree) recoverRebaseIndexLock(
 		return errors.New("index lock retry disabled")
 	}
 
-	baseDelay := 100 * time.Millisecond
-	var deadline time.Time
-	if timeout > 0 {
-		deadline = time.Now().Add(timeout)
-	}
-
-	for attempt := 0; ; attempt++ {
-		// Wait for the lock file to be removed.
-		delay := baseDelay << attempt
-		if timeout > 0 {
-			remaining := time.Until(deadline)
-			if remaining <= 0 {
-				return errors.New(
-					"timed out waiting for index.lock",
+	return newIndexLockRetry(timeout, _indexLockRetryDelay).do(
+		ctx,
+		func(err error) bool {
+			return errors.Is(err, errIndexLockHeld) || isIndexLockErr(err)
+		},
+		func(attempt indexLockAttempt) error {
+			_, err := os.Stat(lockPath)
+			switch {
+			case err == nil:
+				w.log.Debug("Waiting for index.lock to clear",
+					"attempt", attempt.Number,
 				)
+				return errIndexLockHeld
+
+			case !errors.Is(err, os.ErrNotExist):
+				return fmt.Errorf("stat %q: %w", lockPath, err)
 			}
-			if delay > remaining {
-				delay = remaining
+
+			// Lock is gone. Pick recovery strategy
+			// based on whether git left rebase state.
+			if _, stateErr := w.RebaseState(ctx); stateErr == nil {
+				// Rebase state exists:
+				// the sequencer started but a pick failed.
+				// Continue from where it left off.
+				cmd := w.gitCmd(ctx, "rebase", "--continue").
+					WithExtraConfig(extraCfg)
+				if interactive {
+					cmd.WithStdin(os.Stdin).
+						WithStdout(os.Stdout).
+						WithStderr(os.Stderr)
+				}
+				return cmd.Run()
 			}
-		}
 
-		w.log.Debug("Waiting for index.lock to clear",
-			"attempt", attempt+1,
-			"delay", delay,
-		)
-
-		timer := time.NewTimer(delay)
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			timer.Stop()
-			return ctx.Err()
-		}
-
-		// Check if the lock file is still present.
-		if _, err := os.Stat(lockPath); err == nil {
-			continue // still locked
-		}
-
-		// Lock is gone. Pick recovery strategy
-		// based on whether git left rebase state.
-		var err error
-		if _, stateErr := w.RebaseState(ctx); stateErr == nil {
-			// Rebase state exists:
-			// the sequencer started but a pick failed.
-			// Continue from where it left off.
-			cmd := w.gitCmd(ctx, "rebase", "--continue").
-				WithExtraConfig(extraCfg)
-			if interactive {
-				cmd.WithStdin(os.Stdin).
-					WithStdout(os.Stdout).
-					WithStderr(os.Stderr)
-			}
-			err = cmd.Run()
-		} else {
 			// No rebase state:
 			// git failed before the sequencer started
 			// (e.g., during initial checkout).
@@ -346,21 +326,9 @@ func (w *Worktree) recoverRebaseIndexLock(
 					WithStdout(os.Stdout).
 					WithStderr(os.Stderr)
 			}
-			err = cmd.Run()
-		}
-		if err == nil {
-			return nil
-		}
-
-		// If the recovery also hit index.lock,
-		// loop back and wait again.
-		if isIndexLockErr(err) {
-			continue
-		}
-
-		// Non-lock error from recovery.
-		return err
-	}
+			return cmd.Run()
+		},
+	)
 }
 
 // RebaseAbort aborts an ongoing rebase operation.

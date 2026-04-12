@@ -197,11 +197,12 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 
 // IndexLockTimeout returns the configured timeout
 // for retrying git commands that fail due to index.lock
-// contention, or -1 if not configured.
+// contention.
 //
 // The value is read from spice.indexLockTimeout
 // and is in milliseconds.
-// See [git.SetIndexLockTimeout] for semantics.
+// A positive value enables bounded retry.
+// A non-positive value disables retry.
 func (c *Config) IndexLockTimeout() (int, bool) {
 	values := c.items["spice.indexlocktimeout"]
 	if len(values) == 0 {

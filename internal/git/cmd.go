@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"go.abhg.dev/gs/internal/retry"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
 )
@@ -55,7 +56,19 @@ func (ec *extraConfig) args() []string {
 // It centralizes Git-specific command policy in [newGitCmd]
 // while preserving the fluent API that internal/git callers expect.
 type gitCmd struct {
-	cmd *xec.Cmd
+	cmd   *xec.Cmd
+	ctx   context.Context
+	log   *silog.Logger
+	retry *indexLockRetry
+}
+
+// indexLockRetry describes how Git index.lock recovery should be retried.
+//
+// A nil retry policy disables retry entirely.
+// timeout bounds the total retry duration.
+type indexLockRetry struct {
+	timeout time.Duration
+	delay   time.Duration
 }
 
 // _readOnlyGitCmds is the set of git subcommands
@@ -111,19 +124,21 @@ var (
 	_indexLockTimeout = 5 * time.Second
 )
 
+const _indexLockRetryDelay = 100 * time.Millisecond
+
 // SetIndexLockTimeout sets the maximum time to spend
 // retrying git commands that fail due to index.lock
 // contention.
 //
-// Value semantics match git's core.filesRefLockTimeout:
-// 0 disables retry, negative retries indefinitely.
+// A non-positive value disables retry.
+// A positive value bounds the total time spent retrying.
 //
 // This is typically called once from main
 // after reading spice.indexLockTimeout from git config.
 func SetIndexLockTimeout(d time.Duration) {
 	_indexLockMu.Lock()
 	defer _indexLockMu.Unlock()
-	_indexLockTimeout = d
+	_indexLockTimeout = max(d, 0)
 }
 
 func indexLockTimeout() time.Duration {
@@ -186,18 +201,17 @@ func newGitCmd(
 		cmd.AppendEnv("GIT_OPTIONAL_LOCKS=0")
 	}
 
+	var retryPolicy *indexLockRetry
 	if _, ok := _writeGitCmds[subcmd]; ok {
-		timeout := indexLockTimeout()
-		if timeout != 0 {
-			cmd.WithRetry(&xec.RetryPolicy{
-				Match:     isIndexLockErr,
-				Timeout:   timeout,
-				BaseDelay: 100 * time.Millisecond,
-			})
-		}
+		retryPolicy = newIndexLockRetry(indexLockTimeout(), _indexLockRetryDelay)
 	}
 
-	return &gitCmd{cmd: cmd}
+	return &gitCmd{
+		cmd:   cmd,
+		ctx:   ctx,
+		log:   log,
+		retry: retryPolicy,
+	}
 }
 
 // WithExtraConfig prepends transient git -c configuration
@@ -221,6 +235,11 @@ func (c *gitCmd) WithExtraConfig(ec *extraConfig) *gitCmd {
 
 // Run runs the wrapped command, blocking until it completes.
 func (c *gitCmd) Run() error {
+	if c.retry != nil {
+		return c.runWithRetry(func(cmd *xec.Cmd) error {
+			return cmd.Run()
+		})
+	}
 	return c.cmd.Run()
 }
 
@@ -236,7 +255,104 @@ func (c *gitCmd) Wait() error {
 
 // Output runs the wrapped command and returns its stdout.
 func (c *gitCmd) Output() ([]byte, error) {
-	return c.cmd.Output()
+	if c.retry == nil {
+		return c.cmd.Output()
+	}
+
+	var out []byte
+	err := c.runWithRetry(func(cmd *xec.Cmd) error {
+		var err error
+		out, err = cmd.Output()
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// runWithRetry retries command execution on index.lock contention
+// using the retry policy chosen at construction time.
+//
+// Non-index-lock failures are terminal and are returned immediately.
+func (c *gitCmd) runWithRetry(run func(*xec.Cmd) error) error {
+	current := c.cmd
+	return c.retry.do(
+		c.ctx,
+		isIndexLockErr,
+		func(attempt indexLockAttempt) error {
+			err := run(current)
+			if err == nil {
+				c.cmd = current
+				return nil
+			}
+
+			if !isIndexLockErr(err) {
+				return err
+			}
+
+			if c.log != nil {
+				c.log.Debug(
+					"Retrying Git command after index.lock contention",
+					"attempt", attempt.Number,
+					"error", err,
+				)
+			}
+			current = current.Clone()
+
+			return err
+		},
+	)
+}
+
+// indexLockAttempt describes one execution in an index.lock retry loop.
+//
+// Number is 1-indexed.
+type indexLockAttempt struct {
+	Number int
+}
+
+// newIndexLockRetry converts git's timeout-based retry setting
+// into a retry schedule.
+//
+// A non-positive timeout disables retry.
+// A positive timeout bounds the retry duration.
+func newIndexLockRetry(
+	timeout time.Duration,
+	delay time.Duration,
+) *indexLockRetry {
+	if timeout <= 0 {
+		return nil
+	}
+
+	return &indexLockRetry{
+		timeout: timeout,
+		delay:   delay,
+	}
+}
+
+// do runs fn with bounded retry behavior.
+//
+// match identifies retryable errors.
+// Any non-matching error is returned immediately.
+func (r *indexLockRetry) do(
+	ctx context.Context,
+	match func(error) bool,
+	fn func(indexLockAttempt) error,
+) error {
+	return retry.Exponential{
+		Timeout: r.timeout,
+		Delay:   r.delay,
+	}.Do(ctx, func(attempt retry.Attempt) error {
+		err := fn(indexLockAttempt{Number: attempt.Number})
+		if err == nil {
+			return nil
+		}
+		if !match(err) {
+			return retry.Fail(err)
+		}
+		return err
+	})
 }
 
 // OutputChomp runs the wrapped command

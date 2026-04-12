@@ -40,7 +40,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -51,27 +50,14 @@ var _osEnviron = os.Environ
 
 // Cmd is an external command being prepared or run.
 type Cmd struct {
+	ctx     context.Context
+	name    string
 	cmd     *exec.Cmd
 	log     *prefixLogger
 	_execer Execer
 
 	// Wraps an error with stderr output.
 	wrap func(error) error
-
-	// retry, if non-nil, enables automatic retry
-	// on transient failures.
-	retry *RetryPolicy
-
-	// params stores construction values
-	// needed to rebuild the command on retry.
-	params cmdParams
-}
-
-// cmdParams holds parameters needed
-// to reconstruct an [exec.Cmd] for retry.
-type cmdParams struct {
-	ctx  context.Context
-	name string
 }
 
 // Command constructs a Cmd to execute a program with the given arguments.
@@ -91,14 +77,12 @@ func Command(ctx context.Context, log *silog.Logger, name string, args ...string
 	cmd.Stderr = stderr
 	cmd.Env = append(_osEnviron(), _gitSpiceEnv)
 	return &Cmd{
+		ctx:     ctx,
+		name:    name,
 		cmd:     cmd,
 		log:     logger,
 		wrap:    wrap,
 		_execer: DefaultExecer,
-		params: cmdParams{
-			ctx:  ctx,
-			name: name,
-		},
 	}
 }
 
@@ -116,80 +100,11 @@ func (c *Cmd) execer() Execer {
 	return DefaultExecer
 }
 
-// WithRetry enables automatic retry
-// on transient failures matching the policy.
-//
-// Retry applies only to [Cmd.Run] and [Cmd.Output].
-// Streaming methods ([Cmd.Start], [Cmd.Scan]) are unaffected.
-func (c *Cmd) WithRetry(p *RetryPolicy) *Cmd {
-	c.retry = p
-	return c
-}
-
 // Run runs the command, blocking until it completes.
 //
 // It returns an error if the command fails with a non-zero exit code.
 func (c *Cmd) Run() error {
-	if c.retry == nil || c.retry.Timeout == 0 {
-		return c.wrap(c.execer().Run(c.cmd))
-	}
-	return c.runRetrying()
-}
-
-func (c *Cmd) runRetrying() error {
-	var deadline time.Time
-	for attempt := 0; ; attempt++ {
-		err := c.wrap(c.execer().Run(c.cmd))
-		if err == nil || !c.retry.Match(err) {
-			return err
-		}
-
-		c.log.Log(silog.LevelDebug,
-			"retrying after transient failure",
-			"attempt", attempt+1, "error", err)
-
-		// Set deadline on first matchable failure,
-		// not before execution.
-		// The command itself may run for a long time
-		// before encountering a transient error.
-		if attempt == 0 {
-			deadline = c.retryDeadline()
-		}
-		if !c.retry.backoff(c.params.ctx, attempt, deadline) {
-			return err
-		}
-		c.rebuild()
-	}
-}
-
-func (c *Cmd) retryDeadline() time.Time {
-	if c.retry.Timeout <= 0 {
-		// Negative timeout: retry indefinitely.
-		return time.Time{}
-	}
-	return c.retry.now().Add(c.retry.Timeout)
-}
-
-// rebuild reconstructs the underlying [exec.Cmd]
-// so the command can be retried.
-//
-// Only the stderr capture is rebuilt;
-// dir, env, stdin, and stdout are preserved
-// from the current command.
-func (c *Cmd) rebuild() {
-	stderr, wrap := outputLogWriter("stderr", c.log)
-	fresh := exec.CommandContext(
-		c.params.ctx,
-		c.params.name,
-		c.cmd.Args[1:]...,
-	)
-	fresh.Dir = c.cmd.Dir
-	fresh.Env = append([]string(nil), c.cmd.Env...)
-	fresh.Stdin = c.cmd.Stdin
-	fresh.Stdout = c.cmd.Stdout
-	fresh.Stderr = stderr
-	c.cmd = fresh
-	c.wrap = wrap
+	return c.wrap(c.execer().Run(c.cmd))
 }
 
 // Start starts the command, returning immediately.
@@ -212,37 +127,7 @@ func (c *Cmd) Kill() error {
 // Output runs the command and returns its stdout.
 // It returns an error if the command fails with a non-zero exit code.
 func (c *Cmd) Output() ([]byte, error) {
-	if c.retry == nil || c.retry.Timeout == 0 {
-		return c.execer().Output(c.cmd)
-	}
-	return c.outputRetrying()
-}
-
-func (c *Cmd) outputRetrying() ([]byte, error) {
-	var deadline time.Time
-	for attempt := 0; ; attempt++ {
-		out, err := c.execer().Output(c.cmd)
-		if err == nil || !c.retry.Match(err) {
-			return out, err
-		}
-
-		c.log.Log(silog.LevelDebug,
-			"retrying after transient failure",
-			"attempt", attempt+1, "error", err)
-
-		// Set deadline on first matchable failure,
-		// not before execution.
-		if attempt == 0 {
-			deadline = c.retryDeadline()
-		}
-		if !c.retry.backoff(c.params.ctx, attempt, deadline) {
-			return out, err
-		}
-		// Clear stdout before rebuild because Output()
-		// sets it internally on each call.
-		c.cmd.Stdout = nil
-		c.rebuild()
-	}
+	return c.execer().Output(c.cmd)
 }
 
 // Args returns the arguments passed to the command,
@@ -258,6 +143,24 @@ func (c *Cmd) Args() []string {
 func (c *Cmd) WithArgs(args ...string) *Cmd {
 	c.cmd.Args = append([]string{c.cmd.Args[0]}, args...)
 	return c
+}
+
+// Clone builds a fresh command with the current configuration.
+//
+// This preserves the configured arguments, working directory,
+// environment, stdio wiring, logging behavior, and execer.
+// The returned command has not been started or run.
+func (c *Cmd) Clone() *Cmd {
+	clone := Command(c.ctx, c.log.Logger, c.name, c.Args()...)
+	clone._execer = c._execer
+	clone.cmd.Dir = c.cmd.Dir
+	clone.cmd.Env = append([]string(nil), c.cmd.Env...)
+	clone.cmd.Stdin = c.cmd.Stdin
+	clone.cmd.Stdout = c.cmd.Stdout
+	clone.cmd.Stderr = c.cmd.Stderr
+	clone.wrap = c.wrap
+	clone.log.SetPrefix(c.log.prefix)
+	return clone
 }
 
 // WithLogPrefix changes the prefixed used for log messages from this command.
