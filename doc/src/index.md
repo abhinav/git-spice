@@ -78,7 +78,7 @@ $ gs repo sync
   </div>
 </div>
 
-[...and your organization](# "To get added or removed, email us at git-spice-users [at] abhg [dot] dev.")
+[...and your organization](# "Email us at git-spice-users [at] abhg [dot] dev. Place not guaranteed.")
 
 </div>
 
