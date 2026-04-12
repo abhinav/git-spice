@@ -38,7 +38,10 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 	if len(commitish) > 0 {
 		args = append(args, commitish)
 	}
-	if err := w.gitCmd(ctx, "checkout", args...).Run(); err != nil {
+
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "checkout", args...)
+	}); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil
@@ -49,7 +52,9 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 func (w *Worktree) CheckoutBranch(ctx context.Context, branch string) error {
 	w.log.Debug("Checking out branch", "name", branch)
 
-	if err := w.gitCmd(ctx, "checkout", branch).Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "checkout", branch)
+	}); err != nil {
 		return fmt.Errorf("git checkout: %w", err)
 	}
 	return nil

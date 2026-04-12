@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/retry"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/xec"
@@ -168,21 +169,12 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr)
 	}
+	observer := cmd.ObserveIndexLock()
 
 	if err := cmd.Run(); err != nil {
-		// Check if the failure was likely caused
-		// by index.lock contention.
-		// We check both the lock file on disk
-		// and the error message because:
-		//   - the lock file check works regardless
-		//     of log level (debug mode streams stderr
-		//     and doesn't capture it in the error)
-		//   - the error message check catches cases
-		//     where the lock was released before we
-		//     could check the file
 		lockPath := filepath.Join(w.gitDir, "index.lock")
 		_, lockExists := os.Stat(lockPath)
-		if lockExists == nil || isIndexLockErr(err) {
+		if lockExists == nil || observer.IsIndexLockErr(err) {
 			if err := w.recoverRebaseIndexLock(ctx, args, extraCfg, req.Interactive); err != nil {
 				return w.handleRebaseError(ctx, err)
 			}
@@ -277,58 +269,71 @@ func (w *Worktree) recoverRebaseIndexLock(
 ) error {
 	lockPath := filepath.Join(w.gitDir, "index.lock")
 	timeout := indexLockTimeout()
-	if timeout == 0 {
+	if timeout <= 0 {
 		return errors.New("index lock retry disabled")
 	}
 
-	return newIndexLockRetry(timeout, _indexLockRetryDelay).do(
-		ctx,
-		func(err error) bool {
-			return errors.Is(err, errIndexLockHeld) || isIndexLockErr(err)
-		},
-		func(attempt indexLockAttempt) error {
-			_, err := os.Stat(lockPath)
-			switch {
-			case err == nil:
-				w.log.Debug("Waiting for index.lock to clear",
-					"attempt", attempt.Number,
-				)
-				return errIndexLockHeld
+	return retry.Exponential{
+		Timeout: timeout,
+		Delay:   _indexLockRetryDelay,
+	}.Do(ctx, func(attempt retry.Attempt) error {
+		_, err := os.Stat(lockPath)
+		switch {
+		case err == nil:
+			w.log.Debug("Waiting for index.lock to clear",
+				"attempt", attempt.Number,
+			)
+			return errIndexLockHeld
 
-			case !errors.Is(err, os.ErrNotExist):
-				return fmt.Errorf("stat %q: %w", lockPath, err)
+		case !errors.Is(err, os.ErrNotExist):
+			return fmt.Errorf("stat %q: %w", lockPath, err)
+		}
+
+		// Lock is gone. Pick recovery strategy
+		// based on whether git left rebase state.
+		if _, stateErr := w.RebaseState(ctx); stateErr == nil {
+			// Rebase state exists:
+			// the sequencer started but a pick failed.
+			// Continue from where it left off.
+			if err := w.runGitWithIndexLockRetry(
+				ctx,
+				func() *gitCmd {
+					cmd := w.gitCmd(ctx, "rebase", "--continue").
+						WithExtraConfig(extraCfg)
+					if interactive {
+						cmd.WithStdin(os.Stdin).
+							WithStdout(os.Stdout).
+							WithStderr(os.Stderr)
+					}
+					return cmd
+				},
+			); err != nil {
+				return retry.Fail(err)
 			}
+			return nil
+		}
 
-			// Lock is gone. Pick recovery strategy
-			// based on whether git left rebase state.
-			if _, stateErr := w.RebaseState(ctx); stateErr == nil {
-				// Rebase state exists:
-				// the sequencer started but a pick failed.
-				// Continue from where it left off.
-				cmd := w.gitCmd(ctx, "rebase", "--continue").
+		// No rebase state:
+		// git failed before the sequencer started
+		// (e.g., during initial checkout).
+		// Re-run the original rebase command.
+		if err := w.runGitWithIndexLockRetry(
+			ctx,
+			func() *gitCmd {
+				cmd := w.gitCmd(ctx, "rebase", rebaseArgs...).
 					WithExtraConfig(extraCfg)
 				if interactive {
 					cmd.WithStdin(os.Stdin).
 						WithStdout(os.Stdout).
 						WithStderr(os.Stderr)
 				}
-				return cmd.Run()
-			}
-
-			// No rebase state:
-			// git failed before the sequencer started
-			// (e.g., during initial checkout).
-			// Re-run the original rebase command.
-			cmd := w.gitCmd(ctx, "rebase", rebaseArgs...).
-				WithExtraConfig(extraCfg)
-			if interactive {
-				cmd.WithStdin(os.Stdin).
-					WithStdout(os.Stdout).
-					WithStderr(os.Stderr)
-			}
-			return cmd.Run()
-		},
-	)
+				return cmd
+			},
+		); err != nil {
+			return retry.Fail(err)
+		}
+		return nil
+	})
 }
 
 // RebaseAbort aborts an ongoing rebase operation.

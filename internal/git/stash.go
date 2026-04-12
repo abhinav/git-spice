@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // ErrNoChanges is returned when there are no changes to stash.
@@ -18,11 +19,16 @@ func (w *Worktree) StashCreate(ctx context.Context, message string) (Hash, error
 		args = append(args, message)
 	}
 
-	out, err := w.gitCmd(ctx, "stash", args...).OutputChomp()
+	var buf strings.Builder
+	err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		buf.Reset()
+		return w.gitCmd(ctx, "stash", args...).WithStdout(&buf)
+	})
 	if err != nil {
 		return ZeroHash, fmt.Errorf("stash create: %w", err)
 	}
 
+	out := strings.TrimSuffix(buf.String(), "\n")
 	if out == "" {
 		return ZeroHash, ErrNoChanges
 	}
@@ -38,7 +44,9 @@ func (w *Worktree) StashStore(ctx context.Context, stashHash Hash, message strin
 	}
 	args = append(args, stashHash.String())
 
-	if err := w.gitCmd(ctx, "stash", args...).Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "stash", args...)
+	}); err != nil {
 		return fmt.Errorf("stash store: %w", err)
 	}
 
@@ -54,7 +62,9 @@ func (w *Worktree) StashApply(ctx context.Context, stash string) error {
 		args = append(args, stash)
 	}
 
-	if err := w.gitCmd(ctx, "stash", args...).CaptureStdout().Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "stash", args...).CaptureStdout()
+	}); err != nil {
 		return fmt.Errorf("stash apply: %w", err)
 	}
 

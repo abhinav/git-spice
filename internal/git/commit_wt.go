@@ -103,18 +103,19 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 		args = append(args, "--signoff")
 	}
 
-	cmd := w.gitCmd(ctx, "commit", args...).
-		WithStdin(os.Stdin).
-		WithStdout(os.Stdout).
-		WithStderr(os.Stderr)
-	if req.Author != nil {
-		cmd.AppendEnv(req.Author.appendEnv("AUTHOR", nil)...)
-	}
-	if req.Committer != nil {
-		cmd.AppendEnv(req.Committer.appendEnv("COMMITTER", nil)...)
-	}
-
-	if err := cmd.Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		cmd := w.gitCmd(ctx, "commit", args...).
+			WithStdin(os.Stdin).
+			WithStdout(os.Stdout).
+			WithStderr(os.Stderr)
+		if req.Author != nil {
+			cmd.AppendEnv(req.Author.appendEnv("AUTHOR", nil)...)
+		}
+		if req.Committer != nil {
+			cmd.AppendEnv(req.Committer.appendEnv("COMMITTER", nil)...)
+		}
+		return cmd
+	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}
 	return nil

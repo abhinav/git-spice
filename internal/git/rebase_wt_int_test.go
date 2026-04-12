@@ -70,7 +70,6 @@ func TestWorktree_recoverRebaseIndexLock_interactivePreservesTerminal(t *testing
 		DoAndReturn(func(cmd *exec.Cmd) error {
 			assert.Same(t, os.Stdin, cmd.Stdin)
 			assert.Same(t, os.Stdout, cmd.Stdout)
-			assert.Same(t, os.Stderr, cmd.Stderr)
 			return nil
 		})
 

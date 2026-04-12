@@ -50,7 +50,6 @@ var _osEnviron = os.Environ
 
 // Cmd is an external command being prepared or run.
 type Cmd struct {
-	ctx     context.Context
 	name    string
 	cmd     *exec.Cmd
 	log     *prefixLogger
@@ -77,7 +76,6 @@ func Command(ctx context.Context, log *silog.Logger, name string, args ...string
 	cmd.Stderr = stderr
 	cmd.Env = append(_osEnviron(), _gitSpiceEnv)
 	return &Cmd{
-		ctx:     ctx,
 		name:    name,
 		cmd:     cmd,
 		log:     logger,
@@ -145,24 +143,6 @@ func (c *Cmd) WithArgs(args ...string) *Cmd {
 	return c
 }
 
-// Clone builds a fresh command with the current configuration.
-//
-// This preserves the configured arguments, working directory,
-// environment, stdio wiring, logging behavior, and execer.
-// The returned command has not been started or run.
-func (c *Cmd) Clone() *Cmd {
-	clone := Command(c.ctx, c.log.Logger, c.name, c.Args()...)
-	clone._execer = c._execer
-	clone.cmd.Dir = c.cmd.Dir
-	clone.cmd.Env = append([]string(nil), c.cmd.Env...)
-	clone.cmd.Stdin = c.cmd.Stdin
-	clone.cmd.Stdout = c.cmd.Stdout
-	clone.cmd.Stderr = c.cmd.Stderr
-	clone.wrap = c.wrap
-	clone.log.SetPrefix(c.log.prefix)
-	return clone
-}
-
 // WithLogPrefix changes the prefixed used for log messages from this command.
 func (c *Cmd) WithLogPrefix(prefix string) *Cmd {
 	c.log.SetPrefix(prefix)
@@ -190,6 +170,17 @@ func (c *Cmd) CaptureStdout() *Cmd {
 	c.wrap = func(err error) error {
 		return wrap(oldWrap(err))
 	}
+	return c
+}
+
+// TeeStderr duplicates the command's current stderr stream
+// to the provided writer while preserving existing behavior.
+//
+// If stderr has not been explicitly redirected,
+// TeeStderr wraps the command's current default stderr sink.
+// A later call to [WithStderr] replaces the tee entirely.
+func (c *Cmd) TeeStderr(w io.Writer) *Cmd {
+	c.cmd.Stderr = io.MultiWriter(c.cmd.Stderr, w)
 	return c
 }
 

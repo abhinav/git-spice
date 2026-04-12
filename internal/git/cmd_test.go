@@ -2,15 +2,11 @@ package git
 
 import (
 	"bytes"
-	"errors"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec/xectest"
-	"go.uber.org/mock/gomock"
 )
 
 var NewMockExecer = xectest.NewMockExecer
@@ -98,109 +94,6 @@ func TestGitCmd_WithExtraConfig(t *testing.T) {
 		assert.Equal(t, cmd, cmd.WithExtraConfig(nil))
 		assert.Equal(t, []string{"rev-parse", "HEAD"}, cmd.Args())
 	})
-}
-
-func TestIsIndexLockErr(t *testing.T) {
-	t.Run("MatchesErrorString", func(t *testing.T) {
-		err := errors.New(
-			"Unable to create " +
-				"'/repo/.git/index.lock': File exists",
-		)
-		assert.True(t, isIndexLockErr(err))
-	})
-
-	t.Run("MatchesExitErrorStderr", func(t *testing.T) {
-		err := &exec.ExitError{
-			Stderr: []byte(
-				"error: Unable to create " +
-					"'/repo/.git/index.lock': " +
-					"File exists.\n",
-			),
-		}
-		assert.True(t, isIndexLockErr(err))
-	})
-
-	t.Run("DoesNotMatchUnrelated", func(t *testing.T) {
-		err := errors.New("some other error")
-		assert.False(t, isIndexLockErr(err))
-	})
-
-	t.Run("DoesNotMatchUnrelatedExitError", func(t *testing.T) {
-		err := &exec.ExitError{
-			Stderr: []byte("merge conflict\n"),
-		}
-		assert.False(t, isIndexLockErr(err))
-	})
-}
-
-// TestNewGitCmd_retryWithExtraConfig verifies that write commands
-// retain their updated arguments across retries.
-func TestNewGitCmd_retryWithExtraConfig(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockExec := NewMockExecer(ctrl)
-
-	lockErr := errors.New(
-		"Unable to create " +
-			"'/repo/.git/index.lock': File exists",
-	)
-
-	var gotArgs [][]string
-
-	// First attempt fails with index.lock;
-	// second attempt succeeds.
-	first := mockExec.EXPECT().
-		Run(gomock.Any()).
-		DoAndReturn(func(cmd *exec.Cmd) error {
-			gotArgs = append(gotArgs, append([]string(nil), cmd.Args...))
-			return lockErr
-		})
-	mockExec.EXPECT().
-		Run(gomock.Any()).
-		After(first.Call).
-		DoAndReturn(func(cmd *exec.Cmd) error {
-			gotArgs = append(gotArgs, append([]string(nil), cmd.Args...))
-			return nil
-		})
-
-	cmd := newGitCmd(
-		t.Context(), silog.Nop(), mockExec, "checkout",
-	).WithExtraConfig(&extraConfig{Editor: "true"})
-	require.NoError(t, cmd.Run())
-	require.Len(t, gotArgs, 2)
-	assert.Equal(t, gotArgs[0], gotArgs[1])
-	assert.Equal(t, []string{
-		"git",
-		"-c", "core.editor=true",
-		"checkout",
-	}, gotArgs[0])
-}
-
-// TestNewGitCmd_rebaseNoGenericRetry verifies that rebase
-// does not use the generic retry mechanism.
-// Rebase recovery is handled at a higher level
-// by [Worktree.Rebase].
-func TestNewGitCmd_rebaseNoGenericRetry(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockExec := NewMockExecer(ctrl)
-
-	lockErr := errors.New(
-		"Unable to create " +
-			"'/repo/.git/index.lock': File exists",
-	)
-
-	// Only one attempt: no retry for rebase.
-	mockExec.EXPECT().
-		Run(gomock.Any()).
-		Return(lockErr)
-
-	cmd := newGitCmd(
-		t.Context(), silog.Nop(), mockExec, "rebase",
-	).WithExtraConfig(&extraConfig{
-		AdviceMergeConflict: new(false),
-	})
-	err := cmd.Run()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "index.lock")
 }
 
 func TestNewGitCmd_args(t *testing.T) {
