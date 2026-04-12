@@ -148,9 +148,9 @@ func main() {
 	)
 	if err != nil {
 		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
-	}
-
-	if ms, ok := spiceConfig.IndexLockTimeout(); ok {
+	} else if ms, ok := spiceConfig.IndexLockTimeout(); ok {
+		// Protect against dereferencing a nil config
+		// after a load failure.
 		git.SetIndexLockTimeout(
 			time.Duration(ms) * time.Millisecond,
 		)
