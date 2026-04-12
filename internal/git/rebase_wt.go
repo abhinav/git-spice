@@ -183,7 +183,7 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		_, lockExists := os.Stat(lockPath)
 		if lockExists == nil || isIndexLockErr(err) {
 			if contErr := w.recoverRebaseIndexLock(
-				ctx, args, extraCfg,
+				ctx, args, extraCfg, req.Interactive,
 			); contErr == nil {
 				return w.handleRebaseFinish(ctx)
 			}
@@ -275,6 +275,7 @@ func (w *Worktree) recoverRebaseIndexLock(
 	ctx context.Context,
 	rebaseArgs []string,
 	extraCfg *extraConfig,
+	interactive bool,
 ) error {
 	lockPath := filepath.Join(w.gitDir, "index.lock")
 	timeout := indexLockTimeout()
@@ -328,17 +329,27 @@ func (w *Worktree) recoverRebaseIndexLock(
 			// Rebase state exists:
 			// the sequencer started but a pick failed.
 			// Continue from where it left off.
-			err = w.gitCmd(ctx, "rebase", "--continue").
-				WithExtraConfig(extraCfg).
-				Run()
+			cmd := w.gitCmd(ctx, "rebase", "--continue").
+				WithExtraConfig(extraCfg)
+			if interactive {
+				cmd.WithStdin(os.Stdin).
+					WithStdout(os.Stdout).
+					WithStderr(os.Stderr)
+			}
+			err = cmd.Run()
 		} else {
 			// No rebase state:
 			// git failed before the sequencer started
 			// (e.g., during initial checkout).
 			// Re-run the original rebase command.
-			err = w.gitCmd(ctx, "rebase", rebaseArgs...).
-				WithExtraConfig(extraCfg).
-				Run()
+			cmd := w.gitCmd(ctx, "rebase", rebaseArgs...).
+				WithExtraConfig(extraCfg)
+			if interactive {
+				cmd.WithStdin(os.Stdin).
+					WithStdout(os.Stdout).
+					WithStderr(os.Stderr)
+			}
+			err = cmd.Run()
 		}
 		if err == nil {
 			return nil

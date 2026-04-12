@@ -2,11 +2,15 @@ package git
 
 import (
 	"bytes"
+	"errors"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec/xectest"
+	"go.uber.org/mock/gomock"
 )
 
 var NewMockExecer = xectest.NewMockExecer

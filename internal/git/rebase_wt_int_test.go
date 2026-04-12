@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
+	"go.uber.org/mock/gomock"
 )
 
 // TestRebase_issue1083_lsFilesError covers
@@ -41,6 +44,42 @@ func TestRebase_issue1083_lsFilesError(t *testing.T) {
 	assert.NotErrorAs(t, err, new(*RebaseInterruptError))
 	assert.NotContains(t, err.Error(), "dirty changes could not be re-applied")
 	assert.Empty(t, logBuf.String())
+}
+
+func TestWorktree_recoverRebaseIndexLock_interactivePreservesTerminal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockExec := NewMockExecer(ctrl)
+	_, wt := NewFakeRepository(t, "", mockExec)
+
+	oldTimeout := indexLockTimeout()
+	SetIndexLockTimeout(200 * time.Millisecond)
+	t.Cleanup(func() {
+		SetIndexLockTimeout(oldTimeout)
+	})
+
+	lockPath := filepath.Join(wt.gitDir, "index.lock")
+	require.NoError(t, os.WriteFile(lockPath, nil, 0o644))
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = os.Remove(lockPath)
+	}()
+
+	mockExec.EXPECT().
+		Run(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
+			assert.Same(t, os.Stdin, cmd.Stdin)
+			assert.Same(t, os.Stdout, cmd.Stdout)
+			assert.Same(t, os.Stderr, cmd.Stderr)
+			return nil
+		})
+
+	err := wt.recoverRebaseIndexLock(
+		t.Context(),
+		[]string{"--interactive", "main", "feature"},
+		&extraConfig{},
+		true,
+	)
+	require.NoError(t, err)
 }
 
 func gitIssue1083() {
