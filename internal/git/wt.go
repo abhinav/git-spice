@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"strings"
+	"time"
 
 	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/silog"
@@ -21,15 +22,18 @@ type Worktree struct {
 
 	log  *silog.Logger
 	exec execer
+
+	indexLockTimeout time.Duration
 }
 
-func newWorktree(gitDir, rootDir string, repo *Repository, log *silog.Logger, exec execer) *Worktree {
+func newWorktree(gitDir, rootDir string, repo *Repository, opts commonOptions) *Worktree {
 	return &Worktree{
-		gitDir:  gitDir,
-		rootDir: rootDir,
-		repo:    repo,
-		log:     log,
-		exec:    exec,
+		gitDir:           gitDir,
+		rootDir:          rootDir,
+		repo:             repo,
+		log:              opts.log,
+		exec:             opts.exec,
+		indexLockTimeout: opts.indexLockTimeout,
 	}
 }
 
@@ -62,7 +66,11 @@ func (r *Repository) OpenWorktree(ctx context.Context, dir string) (*Worktree, e
 	if !ok {
 		return nil, fmt.Errorf("unexpected output from git rev-parse: %q", out)
 	}
-	return newWorktree(gitDir, rootDir, r, r.log, r.exec), nil
+	return newWorktree(gitDir, rootDir, r, commonOptions{
+		log:              r.log,
+		exec:             r.exec,
+		indexLockTimeout: r.indexLockTimeout,
+	}), nil
 }
 
 // WorktreeListItem represents a worktree associated with a repository.

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,18 @@ func NewFakeRepositoryWithLogger(
 	execer execer,
 	log *silog.Logger,
 ) (*Repository, *Worktree) {
+	return newFakeRepositoryWithCommonOptions(t, dir, commonOptions{
+		log:              log,
+		exec:             execer,
+		indexLockTimeout: _defaultIndexLockTimeout,
+	})
+}
+
+func newFakeRepositoryWithCommonOptions(
+	t testing.TB,
+	dir string,
+	opts commonOptions,
+) (*Repository, *Worktree) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
@@ -34,12 +47,15 @@ func NewFakeRepositoryWithLogger(
 		}
 	}
 
-	if log == nil {
-		log = silogtest.New(t)
+	if opts.log == nil {
+		opts.log = silogtest.New(t)
+	}
+	if opts.exec == nil {
+		opts.exec = _realExec
 	}
 
-	repo := newRepository(gitDir, log, execer)
-	wt := newWorktree(gitDir, dir, repo, log, execer)
+	repo := newRepository(gitDir, opts)
+	wt := newWorktree(gitDir, dir, repo, opts)
 	return repo, wt
 }
 
@@ -107,4 +123,30 @@ func TestExtraConfig_Args(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestOpen_timeoutResolution(t *testing.T) {
+	t.Run("NilUsesDefault", func(t *testing.T) {
+		repo, wt := NewFakeRepository(t, "", nil)
+		assert.Equal(t, _defaultIndexLockTimeout, repo.indexLockTimeout)
+		assert.Equal(t, _defaultIndexLockTimeout, wt.indexLockTimeout)
+	})
+
+	t.Run("ZeroDisablesRetry", func(t *testing.T) {
+		timeout := time.Duration(0)
+		repo, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			indexLockTimeout: timeout,
+		})
+		assert.Zero(t, repo.indexLockTimeout)
+		assert.Zero(t, wt.indexLockTimeout)
+	})
+
+	t.Run("PositiveTimeoutPreserved", func(t *testing.T) {
+		timeout := 250 * time.Millisecond
+		repo, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			indexLockTimeout: timeout,
+		})
+		assert.Equal(t, timeout, repo.indexLockTimeout)
+		assert.Equal(t, timeout, wt.indexLockTimeout)
+	})
 }

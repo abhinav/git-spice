@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"iter"
-	"sync"
 	"time"
 
 	"go.abhg.dev/gs/internal/silog"
@@ -22,6 +21,16 @@ import (
 type execer = xec.Execer
 
 var _realExec = xec.DefaultExecer
+
+const _defaultIndexLockTimeout = 5 * time.Second
+
+type commonOptions struct {
+	log *silog.Logger
+
+	exec execer
+
+	indexLockTimeout time.Duration
+}
 
 type extraConfig struct {
 	Editor string // core.editor
@@ -84,35 +93,7 @@ var _readOnlyGitCmds = map[string]struct{}{
 	"worktree":     {},
 }
 
-// Index lock retry configuration.
-// Controlled by spice.indexLockTimeout.
-var (
-	_indexLockMu      sync.RWMutex
-	_indexLockTimeout = 5 * time.Second
-)
-
 const _indexLockRetryDelay = 100 * time.Millisecond
-
-// SetIndexLockTimeout sets the maximum time to spend
-// retrying git commands that fail due to index.lock
-// contention.
-//
-// A non-positive value disables retry.
-// A positive value bounds the total time spent retrying.
-//
-// This is typically called once from main
-// after reading spice.indexLockTimeout from git config.
-func SetIndexLockTimeout(d time.Duration) {
-	_indexLockMu.Lock()
-	defer _indexLockMu.Unlock()
-	_indexLockTimeout = max(d, 0)
-}
-
-func indexLockTimeout() time.Duration {
-	_indexLockMu.RLock()
-	defer _indexLockMu.RUnlock()
-	return _indexLockTimeout
-}
 
 // newGitCmd builds a new Git command for the given Git subcommand
 // and arguments.

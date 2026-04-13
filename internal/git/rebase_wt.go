@@ -166,7 +166,7 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 	var retrying bool
 
 	err := retry.Exponential{
-		Timeout: indexLockTimeout(),
+		Timeout: w.indexLockTimeout,
 		Delay:   _indexLockRetryDelay,
 	}.Do(ctx, func(attempt retry.Attempt) error {
 		if retrying {

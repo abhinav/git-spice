@@ -70,12 +70,12 @@ func TestIndexLockObserver_Seen(t *testing.T) {
 
 func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 	t.Run("RetryDisabledBuildsOnce", func(t *testing.T) {
-		oldTimeout := indexLockTimeout()
-		SetIndexLockTimeout(0)
-		t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 		mockExecer := NewMockExecer(gomock.NewController(t))
-		_, wt := NewFakeRepository(t, "", mockExecer)
+		timeout := time.Duration(0)
+		_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			exec:             mockExecer,
+			indexLockTimeout: timeout,
+		})
 
 		builds := 0
 		mockExecer.EXPECT().
@@ -94,12 +94,11 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 	})
 
 	t.Run("RetryableFailureRebuildsCommand", func(t *testing.T) {
-		oldTimeout := indexLockTimeout()
-		SetIndexLockTimeout(time.Second)
-		t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 		mockExecer := NewMockExecer(gomock.NewController(t))
-		_, wt := NewFakeRepository(t, "", mockExecer)
+		_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			exec:             mockExecer,
+			indexLockTimeout: time.Second,
+		})
 
 		builds := 0
 		mockExecer.EXPECT().
@@ -123,12 +122,11 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 	})
 
 	t.Run("TerminalFailureStopsImmediately", func(t *testing.T) {
-		oldTimeout := indexLockTimeout()
-		SetIndexLockTimeout(time.Second)
-		t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 		mockExecer := NewMockExecer(gomock.NewController(t))
-		_, wt := NewFakeRepository(t, "", mockExecer)
+		_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			exec:             mockExecer,
+			indexLockTimeout: time.Second,
+		})
 
 		builds := 0
 		mockExecer.EXPECT().
@@ -152,12 +150,11 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 
 	t.Run("TimeoutExhaustion", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			oldTimeout := indexLockTimeout()
-			SetIndexLockTimeout(150 * time.Millisecond)
-			t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 			mockExecer := NewMockExecer(gomock.NewController(t))
-			_, wt := NewFakeRepository(t, "", mockExecer)
+			_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+				exec:             mockExecer,
+				indexLockTimeout: 150 * time.Millisecond,
+			})
 
 			mockExecer.EXPECT().
 				Run(gomock.Any()).
@@ -179,12 +176,11 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 
 	t.Run("ContextCancellation", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
-			oldTimeout := indexLockTimeout()
-			SetIndexLockTimeout(time.Second)
-			t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 			mockExecer := NewMockExecer(gomock.NewController(t))
-			_, wt := NewFakeRepository(t, "", mockExecer)
+			_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+				exec:             mockExecer,
+				indexLockTimeout: time.Second,
+			})
 
 			mockExecer.EXPECT().
 				Run(gomock.Any()).
@@ -214,17 +210,17 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 	})
 
 	t.Run("LogsAttemptNumber", func(t *testing.T) {
-		oldTimeout := indexLockTimeout()
-		SetIndexLockTimeout(time.Second)
-		t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 		var logBuffer bytes.Buffer
 		log := silog.New(&logBuffer, &silog.Options{
 			Level: silog.LevelDebug,
 		})
 
 		mockExecer := NewMockExecer(gomock.NewController(t))
-		_, wt := NewFakeRepositoryWithLogger(t, "", mockExecer, log)
+		_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+			log:              log,
+			exec:             mockExecer,
+			indexLockTimeout: time.Second,
+		})
 
 		attempts := 0
 		mockExecer.EXPECT().
@@ -282,12 +278,11 @@ func TestObserveIndexLock(t *testing.T) {
 }
 
 func TestWorktree_WriteIndexTree_retryResetsBuffer(t *testing.T) {
-	oldTimeout := indexLockTimeout()
-	SetIndexLockTimeout(time.Second)
-	t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 	mockExecer := NewMockExecer(gomock.NewController(t))
-	_, wt := NewFakeRepository(t, "", mockExecer)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		exec:             mockExecer,
+		indexLockTimeout: time.Second,
+	})
 
 	attempts := 0
 	mockExecer.EXPECT().
@@ -311,12 +306,11 @@ func TestWorktree_WriteIndexTree_retryResetsBuffer(t *testing.T) {
 }
 
 func TestWorktree_StashCreate_retryResetsBuffer(t *testing.T) {
-	oldTimeout := indexLockTimeout()
-	SetIndexLockTimeout(time.Second)
-	t.Cleanup(func() { SetIndexLockTimeout(oldTimeout) })
-
 	mockExecer := NewMockExecer(gomock.NewController(t))
-	_, wt := NewFakeRepository(t, "", mockExecer)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		exec:             mockExecer,
+		indexLockTimeout: time.Second,
+	})
 
 	attempts := 0
 	mockExecer.EXPECT().

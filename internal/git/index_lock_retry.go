@@ -42,7 +42,7 @@ func (w *Worktree) runGitWithIndexLockRetry(
 	}
 
 	return retry.Exponential{
-		Timeout: indexLockTimeout(),
+		Timeout: w.indexLockTimeout,
 		Delay:   _indexLockRetryDelay,
 	}.Do(ctx, runAttempt)
 }

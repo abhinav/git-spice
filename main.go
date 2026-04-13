@@ -359,8 +359,6 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
 
-	git.SetIndexLockTimeout(cmd.Git.IndexLockTimeout)
-
 	// TODO: bind interfaces, not values
 	// TODO:
 	// introduce a type that defaults to the current branch
@@ -370,7 +368,8 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	return errors.Join(
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
 			return git.OpenWorktree(ctx, ".", git.OpenOptions{
-				Log: logger,
+				Log:              logger,
+				IndexLockTimeout: &cmd.Git.IndexLockTimeout,
 			})
 		}),
 		kctx.BindSingletonProvider(func(wt *git.Worktree) (*git.Repository, error) {

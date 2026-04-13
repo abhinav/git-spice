@@ -50,12 +50,9 @@ func TestRebase_issue1083_lsFilesError(t *testing.T) {
 func TestRebase_interactiveRetryPreservesTerminal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockExec := NewMockExecer(ctrl)
-	_, wt := NewFakeRepository(t, "", mockExec)
-
-	oldTimeout := indexLockTimeout()
-	SetIndexLockTimeout(200 * time.Millisecond)
-	t.Cleanup(func() {
-		SetIndexLockTimeout(oldTimeout)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		exec:             mockExec,
+		indexLockTimeout: 200 * time.Millisecond,
 	})
 
 	lockPath := filepath.Join(wt.gitDir, "index.lock")
@@ -96,12 +93,10 @@ func TestRebase_recoveryFailureReturnsRecoveryErr(t *testing.T) {
 		filepath.Join(t.TempDir(), "rebase-recovery-marker"))
 
 	log := silog.Nop(&silog.Options{Level: silog.LevelInfo})
-	_, wt := NewFakeRepositoryWithLogger(t, "", _realExec, log)
-
-	oldTimeout := indexLockTimeout()
-	SetIndexLockTimeout(200 * time.Millisecond)
-	t.Cleanup(func() {
-		SetIndexLockTimeout(oldTimeout)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		log:              log,
+		exec:             _realExec,
+		indexLockTimeout: 200 * time.Millisecond,
 	})
 
 	lockPath := filepath.Join(wt.gitDir, "index.lock")
