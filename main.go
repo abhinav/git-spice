@@ -148,12 +148,6 @@ func main() {
 	)
 	if err != nil {
 		logger.Error("Error loading spice configuration; continuing without it.", "error", err)
-	} else if ms, ok := spiceConfig.IndexLockTimeout(); ok {
-		// Protect against dereferencing a nil config
-		// after a load failure.
-		git.SetIndexLockTimeout(
-			time.Duration(ms) * time.Millisecond,
-		)
 	}
 
 	var cmd mainCmd
@@ -290,6 +284,10 @@ type mainCmd struct {
 		SecretBackend secretBackend      `name:"secret-backend" hidden:"" config:"secret.backend" env:"GIT_SPICE_SECRET_BACKEND" default:"auto" help:"Backend to use for secret storage."`
 	} `embed:"" group:"globals"`
 
+	Git struct {
+		IndexLockTimeout time.Duration `name:"git-index-lock-timeout" hidden:"" default:"5s" config:"git.indexLockTimeout" help:"Total time to spend retrying git commands that fail due to index.lock contention. Set to 0 to disable retries."`
+	} `embed:""`
+
 	Shell shellCmd `cmd:"" group:"Shell"`
 	Auth  authCmd  `cmd:"" group:"Authentication"`
 
@@ -360,6 +358,8 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
+
+	git.SetIndexLockTimeout(cmd.Git.IndexLockTimeout)
 
 	// TODO: bind interfaces, not values
 	// TODO:

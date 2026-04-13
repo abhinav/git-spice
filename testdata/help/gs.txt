@@ -77,8 +77,11 @@ Navigation
   trunk         Move to the trunk branch
 
 Configuration (🔧):
-  spice.secret.backend    Backend to use for secret storage
-                          ($GIT_SPICE_SECRET_BACKEND).
+  spice.git.indexLockTimeout    Total time to spend retrying git commands that
+                                fail due to index.lock contention. Set to 0 to
+                                disable retries.
+  spice.secret.backend          Backend to use for secret storage
+                                ($GIT_SPICE_SECRET_BACKEND).
 
 Run "gs <command> --help" for more information on a command.
 
