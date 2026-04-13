@@ -47,7 +47,7 @@ func TestRebase_issue1083_lsFilesError(t *testing.T) {
 	assert.Empty(t, logBuf.String())
 }
 
-func TestWorktree_recoverRebaseIndexLock_interactivePreservesTerminal(t *testing.T) {
+func TestRebase_interactiveRetryPreservesTerminal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockExec := NewMockExecer(ctrl)
 	_, wt := NewFakeRepository(t, "", mockExec)
@@ -68,17 +68,24 @@ func TestWorktree_recoverRebaseIndexLock_interactivePreservesTerminal(t *testing
 	mockExec.EXPECT().
 		Run(gomock.Any()).
 		DoAndReturn(func(cmd *exec.Cmd) error {
+			_, _ = fmt.Fprintln(cmd.Stderr, "fatal: Unable to create '.git/index.lock'")
+			return &exec.ExitError{}
+		})
+
+	mockExec.EXPECT().
+		Run(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
 			assert.Same(t, os.Stdin, cmd.Stdin)
 			assert.Same(t, os.Stdout, cmd.Stdout)
+			assert.NotNil(t, cmd.Stderr)
 			return nil
 		})
 
-	err := wt.recoverRebaseIndexLock(
-		t.Context(),
-		[]string{"--interactive", "main", "feature"},
-		&extraConfig{},
-		true,
-	)
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:      "feature",
+		Upstream:    "main",
+		Interactive: true,
+	})
 	require.NoError(t, err)
 }
 
@@ -143,7 +150,7 @@ func gitRebaseRecoveryFailure() {
 	marker := os.Getenv("GIT_REBASE_RECOVERY_MARKER")
 	if _, err := os.Stat(marker); errors.Is(err, os.ErrNotExist) {
 		_ = os.WriteFile(marker, nil, 0o644)
-		fmt.Fprintln(os.Stderr, "fatal: initial failure")
+		fmt.Fprintln(os.Stderr, "fatal: Unable to create '.git/index.lock'")
 		os.Exit(1)
 	}
 

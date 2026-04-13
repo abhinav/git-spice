@@ -15,13 +15,16 @@ import (
 type Exponential struct {
 	// Delay is the delay before the second attempt.
 	// Each later retry doubles the previous delay.
-	// Delay must be greater than zero.
+	// Delay must be greater than zero when Timeout is positive.
 	Delay time.Duration
 
 	// Timeout is the total amount of time available
 	// for retryable failures after the first attempt.
 	// When the timeout is exhausted,
 	// Do returns an [ExhaustedError].
+	//
+	// If Timeout is zero, Do invokes the operation exactly once
+	// and returns its result directly without retrying.
 	Timeout time.Duration
 }
 
@@ -88,8 +91,16 @@ func (e Exponential) Do(
 	ctx context.Context,
 	fn func(Attempt) error,
 ) error {
+	must.Bef(e.Timeout >= 0, "retry.Exponential.Timeout must be >= 0")
+	if e.Timeout == 0 {
+		err := fn(Attempt{Number: 1})
+		if term, ok := errors.AsType[*terminalError](err); ok {
+			return term.err
+		}
+		return err
+	}
+
 	must.Bef(e.Delay > 0, "retry.Exponential.Delay must be > 0")
-	must.Bef(e.Timeout > 0, "retry.Exponential.Timeout must be > 0")
 
 	// Needs to be separate to distinguish between attempts exhausted
 	// and underlying timeout being cancelled.

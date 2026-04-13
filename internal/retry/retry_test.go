@@ -26,6 +26,32 @@ func TestExponential_Do_successOnFirstAttempt(t *testing.T) {
 	assert.Equal(t, []Attempt{{Number: 1}}, attempts)
 }
 
+func TestExponential_Do_zeroTimeoutRunsOnce(t *testing.T) {
+	var attempts []Attempt
+
+	err := Exponential{
+		Timeout: 0,
+	}.Do(t.Context(), func(attempt Attempt) error {
+		attempts = append(attempts, attempt)
+		return nil
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []Attempt{{Number: 1}}, attempts)
+}
+
+func TestExponential_Do_zeroTimeoutReturnsErrorDirectly(t *testing.T) {
+	errWant := errors.New("fail once")
+
+	err := Exponential{
+		Timeout: 0,
+	}.Do(t.Context(), func(Attempt) error {
+		return errWant
+	})
+
+	require.ErrorIs(t, err, errWant)
+}
+
 func TestExponential_Do_successAfterRetryableFailures(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var times []time.Time
@@ -140,4 +166,15 @@ func TestExponential_Do_zeroDelayPanics(t *testing.T) {
 			return nil
 		})
 	})
+}
+
+func TestExponential_Do_zeroTimeoutDoesNotRequireDelay(t *testing.T) {
+	err := Exponential{
+		Timeout: 0,
+		Delay:   0,
+	}.Do(t.Context(), func(Attempt) error {
+		return nil
+	})
+
+	require.NoError(t, err)
 }

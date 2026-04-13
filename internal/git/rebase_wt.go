@@ -162,24 +162,68 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		AdviceMergeConflict: new(false),
 	}
 
-	cmd := w.gitCmd(ctx, "rebase", args...).
-		WithExtraConfig(extraCfg)
-	if req.Interactive {
-		cmd.WithStdin(os.Stdin).
-			WithStdout(os.Stdout).
-			WithStderr(os.Stderr)
-	}
-	observer := cmd.ObserveIndexLock()
+	lockPath := filepath.Join(w.gitDir, "index.lock")
+	var retrying bool
 
-	if err := cmd.Run(); err != nil {
-		lockPath := filepath.Join(w.gitDir, "index.lock")
-		_, lockExists := os.Stat(lockPath)
-		if lockExists == nil || observer.IsIndexLockErr(err) {
-			if err := w.recoverRebaseIndexLock(ctx, args, extraCfg, req.Interactive); err != nil {
-				return w.handleRebaseError(ctx, err)
+	err := retry.Exponential{
+		Timeout: indexLockTimeout(),
+		Delay:   _indexLockRetryDelay,
+	}.Do(ctx, func(attempt retry.Attempt) error {
+		if retrying {
+			// When a rebase fails because another process holds index.lock,
+			// Git may already have rescheduled the current pick and left
+			// rebase state behind. Wait for the lock to disappear before
+			// trying to advance the rebase again.
+			if _, err := os.Stat(lockPath); err == nil {
+				w.log.Debug("Waiting for index.lock to clear",
+					"attempt", attempt.Number,
+				)
+				return errIndexLockHeld
+			} else if !errors.Is(err, os.ErrNotExist) {
+				return retry.Fail(fmt.Errorf("stat %q: %w", lockPath, err))
 			}
-			return w.handleRebaseFinish(ctx)
 		}
+
+		cmdArgs := args
+		if retrying {
+			// Once the lock is gone, pick the recovery strategy based on
+			// whether Git left rebase state behind.
+			//
+			// If rebase state exists, the sequencer started and a pick failed,
+			// so continue from where it left off.
+			//
+			// Otherwise, Git failed before the sequencer started
+			// (for example during the initial checkout),
+			// so rerun the original rebase command.
+			if _, err := w.RebaseState(ctx); err == nil {
+				cmdArgs = []string{"--continue"}
+			}
+		}
+
+		cmd := w.gitCmd(ctx, "rebase", cmdArgs...).
+			WithExtraConfig(extraCfg)
+		if req.Interactive {
+			cmd.WithStdin(os.Stdin).
+				WithStdout(os.Stdout).
+				WithStderr(os.Stderr)
+		}
+
+		observer := cmd.ObserveIndexLock()
+		if err := cmd.Run(); err != nil {
+			if observer.IsIndexLockErr(err) {
+				retrying = true
+				w.log.Debug("Retrying Git command after index.lock contention",
+					"attempt", attempt.Number,
+					"error", err,
+				)
+				return err
+			}
+			return retry.Fail(err)
+		}
+
+		return nil
+	})
+	if err != nil {
 		return w.handleRebaseError(ctx, err)
 	}
 	return w.handleRebaseFinish(ctx)
@@ -240,100 +284,6 @@ func (w *Worktree) handleRebaseFinish(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// recoverRebaseIndexLock attempts to recover
-// from an index.lock error during a rebase operation.
-//
-// When a rebase fails mid-pick because an external process
-// holds the index lock, git reschedules the pick
-// and leaves .git/rebase-merge/ state behind.
-// This method waits for the lock to be released,
-// then continues the rebase with 'git rebase --continue'.
-//
-// If the rebase failed before creating any state
-// (e.g., the lock was held during the initial checkout),
-// the original rebase command is re-run instead.
-//
-// rebaseArgs are the original arguments passed to `git rebase`
-// after the subcommand itself.
-//
-// Returns nil if recovery succeeds,
-// or the error from the recovery attempt if it fails
-// for reasons other than index.lock contention.
-func (w *Worktree) recoverRebaseIndexLock(
-	ctx context.Context,
-	rebaseArgs []string,
-	extraCfg *extraConfig,
-	interactive bool,
-) error {
-	lockPath := filepath.Join(w.gitDir, "index.lock")
-	timeout := indexLockTimeout()
-	if timeout <= 0 {
-		return errors.New("index lock retry disabled")
-	}
-
-	return retry.Exponential{
-		Timeout: timeout,
-		Delay:   _indexLockRetryDelay,
-	}.Do(ctx, func(attempt retry.Attempt) error {
-		_, err := os.Stat(lockPath)
-		switch {
-		case err == nil:
-			w.log.Debug("Waiting for index.lock to clear",
-				"attempt", attempt.Number,
-			)
-			return errIndexLockHeld
-
-		case !errors.Is(err, os.ErrNotExist):
-			return fmt.Errorf("stat %q: %w", lockPath, err)
-		}
-
-		// Lock is gone. Pick recovery strategy
-		// based on whether git left rebase state.
-		if _, stateErr := w.RebaseState(ctx); stateErr == nil {
-			// Rebase state exists:
-			// the sequencer started but a pick failed.
-			// Continue from where it left off.
-			if err := w.runGitWithIndexLockRetry(
-				ctx,
-				func() *gitCmd {
-					cmd := w.gitCmd(ctx, "rebase", "--continue").
-						WithExtraConfig(extraCfg)
-					if interactive {
-						cmd.WithStdin(os.Stdin).
-							WithStdout(os.Stdout).
-							WithStderr(os.Stderr)
-					}
-					return cmd
-				},
-			); err != nil {
-				return retry.Fail(err)
-			}
-			return nil
-		}
-
-		// No rebase state:
-		// git failed before the sequencer started
-		// (e.g., during initial checkout).
-		// Re-run the original rebase command.
-		if err := w.runGitWithIndexLockRetry(
-			ctx,
-			func() *gitCmd {
-				cmd := w.gitCmd(ctx, "rebase", rebaseArgs...).
-					WithExtraConfig(extraCfg)
-				if interactive {
-					cmd.WithStdin(os.Stdin).
-						WithStdout(os.Stdout).
-						WithStderr(os.Stderr)
-				}
-				return cmd
-			},
-		); err != nil {
-			return retry.Fail(err)
-		}
-		return nil
-	})
 }
 
 // RebaseAbort aborts an ongoing rebase operation.
