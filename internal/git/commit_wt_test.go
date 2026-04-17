@@ -91,6 +91,15 @@ Signed-off-by: Test Committer <signer@example.com>`))
 }
 
 func TestWorktree_Commit_messageFile(t *testing.T) {
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("USER", "testuser")
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("GIT_COMMITTER_NAME", "Test Committer")
+	t.Setenv("GIT_COMMITTER_EMAIL", "committer@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "Test Author")
+	t.Setenv("GIT_AUTHOR_EMAIL", "author@example.com")
+
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 		at '2025-08-30T21:28:29Z'
 		as 'Test Owner <test@example.com>'
