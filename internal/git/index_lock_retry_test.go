@@ -174,6 +174,38 @@ func TestWorktree_runGitWithIndexLockRetry(t *testing.T) {
 		})
 	})
 
+	t.Run("LongFirstAttemptDoesNotConsumeRetryTimeout", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			mockExecer := NewMockExecer(gomock.NewController(t))
+			_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+				exec:             mockExecer,
+				indexLockTimeout: 150 * time.Millisecond,
+			})
+
+			attempts := 0
+			mockExecer.EXPECT().
+				Run(gomock.Any()).
+				DoAndReturn(func(cmd *exec.Cmd) error {
+					attempts++
+					if attempts == 1 {
+						time.Sleep(10 * time.Second)
+					}
+					_, _ = io.WriteString(cmd.Stderr, "fatal: index.lock\n")
+					return &exec.ExitError{}
+				}).
+				Times(2)
+
+			err := wt.runGitWithIndexLockRetry(t.Context(), func() *gitCmd {
+				return wt.gitCmd(t.Context(), "status")
+			})
+
+			var exhausted *retry.ExhaustedError
+			require.ErrorAs(t, err, &exhausted)
+			assert.Equal(t, 2, exhausted.Attempts)
+			assert.Equal(t, 2, attempts)
+		})
+	})
+
 	t.Run("ContextCancellation", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			mockExecer := NewMockExecer(gomock.NewController(t))

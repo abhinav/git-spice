@@ -82,7 +82,8 @@ func (e *terminalError) Unwrap() error {
 // A nil error from fn reports success.
 // An error produced by [Fail] stops retrying immediately
 // and is returned unwrapped.
-// Any other error is retried until the timeout is exhausted,
+// Any other error from the first attempt starts the retry timeout window.
+// Subsequent retryable errors are retried until the timeout is exhausted,
 // at which point an [ExhaustedError] is returned.
 //
 // If ctx is canceled before or during a backoff delay,
@@ -102,24 +103,22 @@ func (e Exponential) Do(
 
 	must.Bef(e.Delay > 0, "retry.Exponential.Delay must be > 0")
 
+	err := fn(Attempt{Number: 1})
+	if err == nil {
+		return nil
+	}
+	if term, ok := errors.AsType[*terminalError](err); ok {
+		return term.err
+	}
+
 	// Needs to be separate to distinguish between attempts exhausted
 	// and underlying timeout being cancelled.
 	deadlineCtx, cancel := context.WithTimeout(ctx, e.Timeout)
 	defer cancel()
 
-	var lastErr error
-	for attemptNum := 1; ; attemptNum++ {
-		err := fn(Attempt{Number: attemptNum})
-		if err == nil {
-			return nil
-		}
-
-		if term, ok := errors.AsType[*terminalError](err); ok {
-			return term.err
-		}
-
-		delay := e.Delay << (attemptNum - 1)
-		lastErr = err
+	lastErr := err
+	for attemptNum := 2; ; attemptNum++ {
+		delay := e.Delay << (attemptNum - 2)
 		select {
 		case <-time.After(delay):
 			// Try again.
@@ -130,9 +129,20 @@ func (e Exponential) Do(
 			}
 
 			return &ExhaustedError{
-				Attempts: attemptNum,
+				Attempts: attemptNum - 1,
 				Err:      lastErr,
 			}
 		}
+
+		err := fn(Attempt{Number: attemptNum})
+		if err == nil {
+			return nil
+		}
+
+		if term, ok := errors.AsType[*terminalError](err); ok {
+			return term.err
+		}
+
+		lastErr = err
 	}
 }

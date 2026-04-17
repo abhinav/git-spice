@@ -52,6 +52,20 @@ func TestExponential_Do_zeroTimeoutReturnsErrorDirectly(t *testing.T) {
 	require.ErrorIs(t, err, errWant)
 }
 
+func TestExponential_Do_zeroTimeoutRetryableFailureIsNotExhausted(t *testing.T) {
+	errWant := errors.New("fail once")
+
+	err := Exponential{
+		Timeout: 0,
+	}.Do(t.Context(), func(Attempt) error {
+		return errWant
+	})
+
+	require.ErrorIs(t, err, errWant)
+	var exhausted *ExhaustedError
+	assert.False(t, errors.As(err, &exhausted))
+}
+
 func TestExponential_Do_successAfterRetryableFailures(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var times []time.Time
@@ -71,6 +85,30 @@ func TestExponential_Do_successAfterRetryableFailures(t *testing.T) {
 		require.Len(t, times, 3)
 		assert.Equal(t, 100*time.Millisecond, times[1].Sub(times[0]))
 		assert.Equal(t, 200*time.Millisecond, times[2].Sub(times[1]))
+	})
+}
+
+func TestExponential_Do_timeoutStartsAfterFirstFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		errWant := errors.New("still failing")
+		attempts := 0
+
+		err := Exponential{
+			Timeout: 150 * time.Millisecond,
+			Delay:   100 * time.Millisecond,
+		}.Do(t.Context(), func(Attempt) error {
+			attempts++
+			if attempts == 1 {
+				time.Sleep(10 * time.Second)
+			}
+			return errWant
+		})
+
+		var exhaustedErr *ExhaustedError
+		require.ErrorAs(t, err, &exhaustedErr)
+		assert.Equal(t, 2, exhaustedErr.Attempts)
+		assert.Equal(t, 2, attempts)
+		assert.ErrorIs(t, err, errWant)
 	})
 }
 
