@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
@@ -169,6 +170,56 @@ func TestMainSecretBackendConfig_errors(t *testing.T) {
 			for _, msg := range tt.wantErr {
 				assert.ErrorContains(t, err, msg)
 			}
+		})
+	}
+}
+
+func TestMainGitIndexLockTimeoutConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		args   []string
+		want   time.Duration
+	}{
+		{
+			name: "Default",
+			args: []string{"version"},
+			want: 5 * time.Second,
+		},
+		{
+			name: "ConfigZero",
+			config: joinLines(
+				`[spice "git"]`,
+				`  indexLockTimeout = 0`,
+			),
+			args: []string{"version"},
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(tt.args)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Git.IndexLockTimeout)
 		})
 	}
 }
