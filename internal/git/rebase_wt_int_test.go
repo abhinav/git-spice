@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/xec"
 	"go.uber.org/mock/gomock"
 )
 
@@ -84,6 +85,31 @@ func TestRebase_interactiveRetryPreservesTerminal(t *testing.T) {
 		Interactive: true,
 	})
 	require.NoError(t, err)
+}
+
+func TestRebase_zeroIndexLockTimeoutDisablesRetry(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockExec := NewMockExecer(ctrl)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		exec:             mockExec,
+		indexLockTimeout: 0,
+	})
+
+	mockExec.EXPECT().
+		Run(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
+			_, _ = fmt.Fprintln(cmd.Stderr,
+				"fatal: Unable to create '.git/index.lock'")
+			return &exec.ExitError{}
+		}).
+		Times(1)
+
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:   "feature",
+		Upstream: "main",
+	})
+	require.Error(t, err)
+	assert.ErrorAs(t, err, new(*xec.ExitError))
 }
 
 func TestRebase_recoveryFailureReturnsRecoveryErr(t *testing.T) {

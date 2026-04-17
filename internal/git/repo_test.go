@@ -3,6 +3,7 @@ package git
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/text"
+	"go.uber.org/mock/gomock"
 )
 
 func NewFakeRepository(t testing.TB, dir string, execer execer) (*Repository, *Worktree) {
@@ -149,4 +151,55 @@ func TestOpen_timeoutResolution(t *testing.T) {
 		assert.Equal(t, timeout, repo.indexLockTimeout)
 		assert.Equal(t, timeout, wt.indexLockTimeout)
 	})
+}
+
+func TestOpenWorktree_timeoutResolution(t *testing.T) {
+	zero := time.Duration(0)
+	negative := -time.Second
+	positive := 250 * time.Millisecond
+
+	tests := []struct {
+		name    string
+		timeout *time.Duration
+		want    time.Duration
+	}{
+		{
+			name: "Default",
+			want: _defaultIndexLockTimeout,
+		},
+		{
+			name:    "ZeroDisablesRetry",
+			timeout: &zero,
+			want:    0,
+		},
+		{
+			name:    "NegativeClampsToZero",
+			timeout: &negative,
+			want:    0,
+		},
+		{
+			name:    "PositiveTimeoutPreserved",
+			timeout: &positive,
+			want:    positive,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExecer := NewMockExecer(gomock.NewController(t))
+			mockExecer.EXPECT().
+				Output(gomock.Any()).
+				DoAndReturn(func(*exec.Cmd) ([]byte, error) {
+					return []byte("/repo\n/repo/.git\n/repo/.git\n"), nil
+				})
+
+			wt, err := OpenWorktree(t.Context(), "/repo", OpenOptions{
+				exec:             mockExecer,
+				IndexLockTimeout: tt.timeout,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, wt.indexLockTimeout)
+			assert.Equal(t, tt.want, wt.Repository().indexLockTimeout)
+		})
+	}
 }
