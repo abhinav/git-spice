@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/colorprofile"
@@ -283,6 +284,10 @@ type mainCmd struct {
 		SecretBackend secretBackend      `name:"secret-backend" hidden:"" config:"secret.backend" env:"GIT_SPICE_SECRET_BACKEND" default:"auto" help:"Backend to use for secret storage."`
 	} `embed:"" group:"globals"`
 
+	Git struct {
+		IndexLockTimeout time.Duration `name:"git-index-lock-timeout" hidden:"" default:"5s" config:"git.indexLockTimeout" help:"Total time to spend retrying git commands that fail due to index.lock contention. Set to 0 to disable retries."`
+	} `embed:""`
+
 	Shell shellCmd `cmd:"" group:"Shell"`
 	Auth  authCmd  `cmd:"" group:"Authentication"`
 
@@ -363,7 +368,8 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 	return errors.Join(
 		kctx.BindSingletonProvider(func() (*git.Worktree, error) {
 			return git.OpenWorktree(ctx, ".", git.OpenOptions{
-				Log: logger,
+				Log:              logger,
+				IndexLockTimeout: &cmd.Git.IndexLockTimeout,
 			})
 		}),
 		kctx.BindSingletonProvider(func(wt *git.Worktree) (*git.Repository, error) {

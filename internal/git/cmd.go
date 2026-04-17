@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"iter"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -20,6 +21,16 @@ import (
 type execer = xec.Execer
 
 var _realExec = xec.DefaultExecer
+
+const _defaultIndexLockTimeout = 5 * time.Second
+
+type commonOptions struct {
+	log *silog.Logger
+
+	exec execer
+
+	indexLockTimeout time.Duration
+}
 
 type extraConfig struct {
 	Editor string // core.editor
@@ -52,6 +63,7 @@ func (ec *extraConfig) args() []string {
 // while preserving the fluent API that internal/git callers expect.
 type gitCmd struct {
 	cmd *xec.Cmd
+	log *silog.Logger
 }
 
 // _readOnlyGitCmds is the set of git subcommands
@@ -80,6 +92,8 @@ var _readOnlyGitCmds = map[string]struct{}{
 	"var":          {},
 	"worktree":     {},
 }
+
+const _indexLockRetryDelay = 100 * time.Millisecond
 
 // newGitCmd builds a new Git command for the given Git subcommand
 // and arguments.
@@ -120,7 +134,10 @@ func newGitCmd(
 		cmd.AppendEnv("GIT_OPTIONAL_LOCKS=0")
 	}
 
-	return &gitCmd{cmd: cmd}
+	return &gitCmd{
+		cmd: cmd,
+		log: log,
+	}
 }
 
 // WithExtraConfig prepends transient git -c configuration

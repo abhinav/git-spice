@@ -23,10 +23,11 @@ func TestRepository_StashCreate(t *testing.T) {
 		ctx := t.Context()
 
 		mockExecer.EXPECT().
-			Output(gomock.Any()).
-			DoAndReturn(func(cmd *exec.Cmd) ([]byte, error) {
+			Run(gomock.Any()).
+			DoAndReturn(func(cmd *exec.Cmd) error {
 				assert.Equal(t, []string{"git", "stash", "create", "test message"}, cmd.Args)
-				return []byte("abc123def456\n"), nil
+				_, err := cmd.Stdout.Write([]byte("abc123def456\n"))
+				return err
 			})
 
 		hash, err := wt.StashCreate(ctx, "test message")
@@ -40,10 +41,11 @@ func TestRepository_StashCreate(t *testing.T) {
 		ctx := t.Context()
 
 		mockExecer.EXPECT().
-			Output(gomock.Any()).
-			DoAndReturn(func(cmd *exec.Cmd) ([]byte, error) {
+			Run(gomock.Any()).
+			DoAndReturn(func(cmd *exec.Cmd) error {
 				assert.Equal(t, []string{"git", "stash", "create"}, cmd.Args)
-				return []byte("abc123def456\n"), nil
+				_, err := cmd.Stdout.Write([]byte("abc123def456\n"))
+				return err
 			})
 
 		hash, err := wt.StashCreate(ctx, "")
@@ -57,8 +59,8 @@ func TestRepository_StashCreate(t *testing.T) {
 		ctx := t.Context()
 
 		mockExecer.EXPECT().
-			Output(gomock.Any()).
-			Return([]byte(""), nil)
+			Run(gomock.Any()).
+			Return(nil)
 
 		hash, err := wt.StashCreate(ctx, "test message")
 		assert.ErrorIs(t, err, git.ErrNoChanges)
@@ -71,8 +73,8 @@ func TestRepository_StashCreate(t *testing.T) {
 		ctx := t.Context()
 
 		mockExecer.EXPECT().
-			Output(gomock.Any()).
-			Return(nil, errors.New("git command failed"))
+			Run(gomock.Any()).
+			Return(errors.New("git command failed"))
 
 		hash, err := wt.StashCreate(ctx, "test message")
 		assert.Error(t, err)

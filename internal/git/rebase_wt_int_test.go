@@ -2,15 +2,19 @@ package git
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/silog"
+	"go.uber.org/mock/gomock"
 )
 
 // TestRebase_issue1083_lsFilesError covers
@@ -43,6 +47,74 @@ func TestRebase_issue1083_lsFilesError(t *testing.T) {
 	assert.Empty(t, logBuf.String())
 }
 
+func TestRebase_interactiveRetryPreservesTerminal(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockExec := NewMockExecer(ctrl)
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		exec:             mockExec,
+		indexLockTimeout: 200 * time.Millisecond,
+	})
+
+	lockPath := filepath.Join(wt.gitDir, "index.lock")
+	require.NoError(t, os.WriteFile(lockPath, nil, 0o644))
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = os.Remove(lockPath)
+	}()
+
+	mockExec.EXPECT().
+		Run(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
+			_, _ = fmt.Fprintln(cmd.Stderr, "fatal: Unable to create '.git/index.lock'")
+			return &exec.ExitError{}
+		})
+
+	mockExec.EXPECT().
+		Run(gomock.Any()).
+		DoAndReturn(func(cmd *exec.Cmd) error {
+			assert.Same(t, os.Stdin, cmd.Stdin)
+			assert.Same(t, os.Stdout, cmd.Stdout)
+			assert.NotNil(t, cmd.Stderr)
+			return nil
+		})
+
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:      "feature",
+		Upstream:    "main",
+		Interactive: true,
+	})
+	require.NoError(t, err)
+}
+
+func TestRebase_recoveryFailureReturnsRecoveryErr(t *testing.T) {
+	installFakeGit(t)
+	t.Setenv("GIT_ISSUE_1083_HELPER", "rebase-recovery-failure")
+	t.Setenv("GIT_REBASE_RECOVERY_MARKER",
+		filepath.Join(t.TempDir(), "rebase-recovery-marker"))
+
+	log := silog.Nop(&silog.Options{Level: silog.LevelInfo})
+	_, wt := newFakeRepositoryWithCommonOptions(t, "", commonOptions{
+		log:              log,
+		exec:             _realExec,
+		indexLockTimeout: 200 * time.Millisecond,
+	})
+
+	lockPath := filepath.Join(wt.gitDir, "index.lock")
+	require.NoError(t, os.WriteFile(lockPath, nil, 0o644))
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		_ = os.Remove(lockPath)
+	}()
+
+	err := wt.Rebase(t.Context(), RebaseRequest{
+		Branch:   "feature",
+		Upstream: "main",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "fatal: recovery failed")
+	assert.NotContains(t, err.Error(), "index.lock")
+}
+
 func gitIssue1083() {
 	subcommand := ""
 	for i := 1; i < len(os.Args); i++ {
@@ -67,6 +139,18 @@ func gitIssue1083() {
 			subcommand, os.Args)
 		os.Exit(1)
 	}
+}
+
+func gitRebaseRecoveryFailure() {
+	marker := os.Getenv("GIT_REBASE_RECOVERY_MARKER")
+	if _, err := os.Stat(marker); errors.Is(err, os.ErrNotExist) {
+		_ = os.WriteFile(marker, nil, 0o644)
+		fmt.Fprintln(os.Stderr, "fatal: Unable to create '.git/index.lock'")
+		os.Exit(1)
+	}
+
+	fmt.Fprintln(os.Stderr, "fatal: recovery failed")
+	os.Exit(1)
 }
 
 func installFakeGit(t testing.TB) {

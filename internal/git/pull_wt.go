@@ -39,7 +39,9 @@ func (w *Worktree) Pull(ctx context.Context, opts PullOptions) error {
 		args = append(args, opts.Refspec.String())
 	}
 
-	if err := w.gitCmd(ctx, "pull", args...).Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "pull", args...)
+	}); err != nil {
 		return fmt.Errorf("git pull: %w", err)
 	}
 

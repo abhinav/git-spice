@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -12,6 +13,12 @@ import (
 type InitOptions struct {
 	// Log specifies the logger to use for messages.
 	Log *silog.Logger
+
+	// IndexLockTimeout configures how long to spend retrying
+	// git commands that fail because the index lock is held.
+	// If nil, the package default is used.
+	// If zero, retries are disabled.
+	IndexLockTimeout *time.Duration
 
 	// Branch is the name of the initial branch to create.
 	// Defaults to "main".
@@ -37,14 +44,27 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 	if opts.exec == nil {
 		opts.exec = _realExec
 	}
+	log := opts.Log
+	if log == nil {
+		log = silog.Nop()
+	}
 	if opts.Branch == "" {
 		opts.Branch = "main"
+	}
+
+	commonOpts := commonOptions{
+		log:              log,
+		exec:             opts.exec,
+		indexLockTimeout: _defaultIndexLockTimeout,
+	}
+	if opts.IndexLockTimeout != nil {
+		commonOpts.indexLockTimeout = max(*opts.IndexLockTimeout, 0)
 	}
 
 	if opts.Log != nil {
 		opts.Log.Debug("Initializing repository", "path", dir)
 	}
-	initCmd := newGitCmd(ctx, opts.Log, opts.exec,
+	initCmd := newGitCmd(ctx, commonOpts.log, commonOpts.exec,
 		"init",
 		"--initial-branch="+opts.Branch,
 	).WithDir(dir)
@@ -53,8 +73,9 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 	}
 
 	return OpenWorktree(ctx, dir, OpenOptions{
-		Log:  opts.Log,
-		exec: opts.exec,
+		Log:              opts.Log,
+		IndexLockTimeout: opts.IndexLockTimeout,
+		exec:             opts.exec,
 	})
 }
 
@@ -62,6 +83,12 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 type OpenOptions struct {
 	// Log specifies the logger to use for messages.
 	Log *silog.Logger
+
+	// IndexLockTimeout configures how long to spend retrying
+	// git commands that fail because the index lock is held.
+	// If nil, the package default is used.
+	// If zero, retries are disabled.
+	IndexLockTimeout *time.Duration
 
 	exec execer
 }
@@ -72,11 +99,20 @@ func OpenWorktree(ctx context.Context, dir string, opts OpenOptions) (*Worktree,
 	if opts.exec == nil {
 		opts.exec = _realExec
 	}
-	if opts.Log == nil {
-		opts.Log = silog.Nop()
+	log := opts.Log
+	if log == nil {
+		log = silog.Nop()
+	}
+	commonOpts := commonOptions{
+		log:              log,
+		exec:             opts.exec,
+		indexLockTimeout: _defaultIndexLockTimeout,
+	}
+	if opts.IndexLockTimeout != nil {
+		commonOpts.indexLockTimeout = max(*opts.IndexLockTimeout, 0)
 	}
 
-	out, err := newGitCmd(ctx, opts.Log, opts.exec,
+	out, err := newGitCmd(ctx, commonOpts.log, commonOpts.exec,
 		"rev-parse",
 		"--path-format=absolute",
 		"--show-toplevel",
@@ -96,8 +132,8 @@ func OpenWorktree(ctx context.Context, dir string, opts OpenOptions) (*Worktree,
 		return nil, fmt.Errorf("unexpected output from git rev-parse: %q", out)
 	}
 
-	repo := newRepository(gitCommonDir, opts.Log, opts.exec)
-	wt := newWorktree(gitDir, rootDir, repo, opts.Log, opts.exec)
+	repo := newRepository(gitCommonDir, commonOpts)
+	wt := newWorktree(gitDir, rootDir, repo, commonOpts)
 	return wt, nil
 }
 
@@ -107,11 +143,20 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 	if opts.exec == nil {
 		opts.exec = _realExec
 	}
-	if opts.Log == nil {
-		opts.Log = silog.Nop()
+	log := opts.Log
+	if log == nil {
+		log = silog.Nop()
+	}
+	commonOpts := commonOptions{
+		log:              log,
+		exec:             opts.exec,
+		indexLockTimeout: _defaultIndexLockTimeout,
+	}
+	if opts.IndexLockTimeout != nil {
+		commonOpts.indexLockTimeout = max(*opts.IndexLockTimeout, 0)
 	}
 
-	gitDir, err := newGitCmd(ctx, opts.Log, opts.exec,
+	gitDir, err := newGitCmd(ctx, commonOpts.log, commonOpts.exec,
 		"rev-parse",
 		"--path-format=absolute",
 		"--git-common-dir",
@@ -120,13 +165,19 @@ func Open(ctx context.Context, dir string, opts OpenOptions) (*Repository, error
 		return nil, err
 	}
 
-	return newRepository(gitDir, opts.Log, opts.exec), nil
+	return newRepository(gitDir, commonOpts), nil
 }
 
 // CloneOptions configures the behavior of [Clone].
 type CloneOptions struct {
 	// Log specifies the logger to use for messages.
 	Log *silog.Logger
+
+	// IndexLockTimeout configures how long to spend retrying
+	// git commands that fail because the index lock is held.
+	// If nil, the package default is used.
+	// If zero, retries are disabled.
+	IndexLockTimeout *time.Duration
 
 	exec execer
 }
@@ -155,13 +206,16 @@ type Repository struct {
 
 	log  *silog.Logger
 	exec execer
+
+	indexLockTimeout time.Duration
 }
 
-func newRepository(gitDir string, log *silog.Logger, exec execer) *Repository {
+func newRepository(gitDir string, opts commonOptions) *Repository {
 	return &Repository{
-		gitDir: gitDir,
-		log:    log,
-		exec:   exec,
+		gitDir:           gitDir,
+		log:              opts.log,
+		exec:             opts.exec,
+		indexLockTimeout: opts.indexLockTimeout,
 	}
 }
 

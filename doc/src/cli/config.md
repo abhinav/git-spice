@@ -233,6 +233,23 @@ Whether to remove the source branch when a Merge Request is merged.
 - `true` (default)
 - `false`
 
+### spice.git.indexLockTimeout
+
+<!-- gs:version unreleased -->
+
+git-spice will detect and retry Git commands
+that fail due to `index.lock` contention
+when multiple Git operations are running concurrently.
+
+This option controls the maximum time spent retrying
+after the first failed attempt.
+
+The value must be a duration string such as
+`250ms`, `5s`, `1m`, etc.
+Set to `0` to disable these retries entirely.
+
+Defaults to `5s`.
+
 ### spice.secret.backend
 
 <!-- gs:version unreleased -->

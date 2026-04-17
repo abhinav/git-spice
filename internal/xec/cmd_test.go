@@ -136,6 +136,49 @@ func TestCmd_WithStderr(t *testing.T) {
 	assert.Equal(t, "stderr output\n", buf.String())
 }
 
+func TestCmd_TeeStderr(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("PreservesDefaultStderrHandling", func(t *testing.T) {
+		var tee bytes.Buffer
+
+		cmd := Command(ctx, nil, "sh", "-c", "echo 'error message' >&2; exit 1").
+			TeeStderr(&tee)
+
+		err := cmd.Run()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "stderr:")
+		assert.Contains(t, err.Error(), "error message")
+		assert.Equal(t, "error message\n", tee.String())
+	})
+
+	t.Run("WrapsExplicitStderrDestination", func(t *testing.T) {
+		var stderr bytes.Buffer
+		var tee bytes.Buffer
+
+		cmd := Command(ctx, silog.Nop(), "sh", "-c", "echo 'stderr output' >&2").
+			WithStderr(&stderr).
+			TeeStderr(&tee)
+
+		require.NoError(t, cmd.Run())
+		assert.Equal(t, "stderr output\n", stderr.String())
+		assert.Equal(t, "stderr output\n", tee.String())
+	})
+
+	t.Run("WithStderrAfterwardReplacesTee", func(t *testing.T) {
+		var tee bytes.Buffer
+		var stderr bytes.Buffer
+
+		cmd := Command(ctx, silog.Nop(), "sh", "-c", "echo 'stderr output' >&2").
+			TeeStderr(&tee).
+			WithStderr(&stderr)
+
+		require.NoError(t, cmd.Run())
+		assert.Equal(t, "", tee.String())
+		assert.Equal(t, "stderr output\n", stderr.String())
+	})
+}
+
 func TestCmd_WithStdin(t *testing.T) {
 	ctx := t.Context()
 	log := silog.Nop()

@@ -50,6 +50,7 @@ var _osEnviron = os.Environ
 
 // Cmd is an external command being prepared or run.
 type Cmd struct {
+	name    string
 	cmd     *exec.Cmd
 	log     *prefixLogger
 	_execer Execer
@@ -75,6 +76,7 @@ func Command(ctx context.Context, log *silog.Logger, name string, args ...string
 	cmd.Stderr = stderr
 	cmd.Env = append(_osEnviron(), _gitSpiceEnv)
 	return &Cmd{
+		name:    name,
 		cmd:     cmd,
 		log:     logger,
 		wrap:    wrap,
@@ -168,6 +170,17 @@ func (c *Cmd) CaptureStdout() *Cmd {
 	c.wrap = func(err error) error {
 		return wrap(oldWrap(err))
 	}
+	return c
+}
+
+// TeeStderr duplicates the command's current stderr stream
+// to the provided writer while preserving existing behavior.
+//
+// If stderr has not been explicitly redirected,
+// TeeStderr wraps the command's current default stderr sink.
+// A later call to [WithStderr] replaces the tee entirely.
+func (c *Cmd) TeeStderr(w io.Writer) *Cmd {
+	c.cmd.Stderr = io.MultiWriter(c.cmd.Stderr, w)
 	return c
 }
 

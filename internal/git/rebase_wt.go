@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/retry"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/xec"
@@ -63,6 +64,8 @@ func (e *RebaseInterruptError) Error() string {
 func (e *RebaseInterruptError) Unwrap() error {
 	return e.Err
 }
+
+var errIndexLockHeld = errors.New("index.lock is still held")
 
 // RebaseRequest is a request to rebase a branch.
 type RebaseRequest struct {
@@ -159,13 +162,68 @@ func (w *Worktree) Rebase(ctx context.Context, req RebaseRequest) (retErr error)
 		AdviceMergeConflict: new(false),
 	}
 
-	cmd := w.gitCmd(ctx, "rebase", args...).
-		WithExtraConfig(extraCfg)
-	if req.Interactive {
-		cmd.WithStdin(os.Stdin).WithStdout(os.Stdout).WithStderr(os.Stderr)
-	}
+	lockPath := filepath.Join(w.gitDir, "index.lock")
+	var retrying bool
 
-	if err := cmd.Run(); err != nil {
+	err := retry.Exponential{
+		Timeout: w.indexLockTimeout,
+		Delay:   _indexLockRetryDelay,
+	}.Do(ctx, func(attempt retry.Attempt) error {
+		if retrying {
+			// When a rebase fails because another process holds index.lock,
+			// Git may already have rescheduled the current pick and left
+			// rebase state behind. Wait for the lock to disappear before
+			// trying to advance the rebase again.
+			if _, err := os.Stat(lockPath); err == nil {
+				w.log.Debug("Waiting for index.lock to clear",
+					"attempt", attempt.Number,
+				)
+				return errIndexLockHeld
+			} else if !errors.Is(err, os.ErrNotExist) {
+				return retry.Fail(fmt.Errorf("stat %q: %w", lockPath, err))
+			}
+		}
+
+		cmdArgs := args
+		if retrying {
+			// Once the lock is gone, pick the recovery strategy based on
+			// whether Git left rebase state behind.
+			//
+			// If rebase state exists, the sequencer started and a pick failed,
+			// so continue from where it left off.
+			//
+			// Otherwise, Git failed before the sequencer started
+			// (for example during the initial checkout),
+			// so rerun the original rebase command.
+			if _, err := w.RebaseState(ctx); err == nil {
+				cmdArgs = []string{"--continue"}
+			}
+		}
+
+		cmd := w.gitCmd(ctx, "rebase", cmdArgs...).
+			WithExtraConfig(extraCfg)
+		if req.Interactive {
+			cmd.WithStdin(os.Stdin).
+				WithStdout(os.Stdout).
+				WithStderr(os.Stderr)
+		}
+
+		observer := cmd.ObserveIndexLock()
+		if err := cmd.Run(); err != nil {
+			if observer.IsIndexLockErr(err) {
+				retrying = true
+				w.log.Debug("Retrying Git command after index.lock contention",
+					"attempt", attempt.Number,
+					"error", err,
+				)
+				return err
+			}
+			return retry.Fail(err)
+		}
+
+		return nil
+	})
+	if err != nil {
 		return w.handleRebaseError(ctx, err)
 	}
 	return w.handleRebaseFinish(ctx)

@@ -22,6 +22,9 @@ func TestMain(m *testing.M) {
 		case "1":
 			gitIssue1083()
 			os.Exit(0)
+		case "rebase-recovery-failure":
+			gitRebaseRecoveryFailure()
+			os.Exit(0)
 		default:
 			_, _ = os.Stderr.WriteString(
 				"fake git invoked without configured helper mode\n")

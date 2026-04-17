@@ -97,12 +97,14 @@ func (w *Worktree) Reset(ctx context.Context, commit string, opts ResetOptions) 
 		w.log.Debug("Resetting repository", "commit", commit, "mode", opts.Mode)
 	}
 
-	cmd := w.gitCmd(ctx, "reset", args...)
-	if opts.Patch {
-		cmd.WithStdin(os.Stdin)
-		cmd.WithStdout(os.Stdout)
-	}
-	if err := cmd.Run(); err != nil {
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		cmd := w.gitCmd(ctx, "reset", args...)
+		if opts.Patch {
+			cmd.WithStdin(os.Stdin)
+			cmd.WithStdout(os.Stdout)
+		}
+		return cmd
+	}); err != nil {
 		return fmt.Errorf("git reset: %w", err)
 	}
 
