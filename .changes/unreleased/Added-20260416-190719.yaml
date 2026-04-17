@@ -1,0 +1,3 @@
+kind: Added
+body: The new 'spice.git.indexLockTimeout' configuration option controls how long git-spice retries index.lock contention.
+time: 2026-04-16T19:07:19.281418-07:00
