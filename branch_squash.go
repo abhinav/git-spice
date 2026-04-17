@@ -21,7 +21,8 @@ func (*branchSquashCmd) Help() string {
 		and restack upstack branches.
 
 		An editor will open to edit the commit message of the squashed commit.
-		Use the -m/--message flag to specify a commit message without editing.
+		Use the -m/--message or -F/--file flag
+		to specify a commit message without editing.
 	`)
 }
 

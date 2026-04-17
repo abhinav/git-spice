@@ -1,6 +1,8 @@
 package git_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -86,4 +88,39 @@ Signed-off-by: Test Committer <committer@example.com>`))
 Signed-off-by: Test Committer <committer@example.com>
 Signed-off-by: Test Committer <signer@example.com>`))
 	})
+}
+
+func TestWorktree_Commit_messageFile(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		at '2025-08-30T21:28:29Z'
+		as 'Test Owner <test@example.com>'
+
+		git init
+		git commit --allow-empty -m 'Initial commit'
+
+		git add file.txt
+
+		-- file.txt --
+		test content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	ctx := t.Context()
+	worktree, err := git.OpenWorktree(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	messageFile := filepath.Join(fixture.Dir(), "message.txt")
+	require.NoError(t, os.WriteFile(messageFile, []byte("Add test file\n\nFrom file.\n"), 0o644))
+
+	require.NoError(t, worktree.Commit(ctx, git.CommitRequest{
+		MessageFile: messageFile,
+	}))
+
+	commit, err := worktree.Repository().ReadCommit(ctx, "HEAD")
+	require.NoError(t, err)
+	require.Equal(t, "Add test file", commit.Subject)
+	require.Equal(t, "From file.\n", commit.Body)
 }

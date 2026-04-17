@@ -9,8 +9,8 @@ restacked if necessary. This is a shortcut for 'git commit --amend' followed by
 Use 'gs commit fixup' to amend commits that are further downstack.
 
 An editor is opened to edit the commit message unless the --no-edit flag is
-given. Use the -m/--message option to specify the message on the command line.
-Git hooks are run unless the --no-verify flag is given.
+given. Use the -m/--message or -F/--file option to specify the message without
+opening an editor. Git hooks are run unless the --no-verify flag is given.
 
 Use the -a/--all flag to stage all changes before committing.
 
@@ -19,13 +19,14 @@ confirmation when amending on trunk. The --no-prompt flag can be used to skip
 this prompt in scripts.
 
 Flags:
-  -a, --all            Stage all changes before committing.
-      --allow-empty    Create a commit even if it contains no changes.
-  -m, --message=MSG    Use the given message as the commit message.
-      --no-edit        Don't edit the commit message
-      --no-verify      Bypass pre-commit and commit-msg hooks.
-      --signoff        Add Signed-off-by trailer to the commit message (🔧
-                       spice.commit.signoff)
+  -a, --all                  Stage all changes before committing.
+      --allow-empty          Create a commit even if it contains no changes.
+  -m, --message=MSG          Use the given message as the commit message.
+  -F, --message-file=FILE    Read the commit message from the given file.
+      --no-edit              Don't edit the commit message
+      --no-verify            Bypass pre-commit and commit-msg hooks.
+      --signoff              Add Signed-off-by trailer to the commit message (🔧
+                             spice.commit.signoff)
 
 Global Flags:
   -h, --help           Show help for the command

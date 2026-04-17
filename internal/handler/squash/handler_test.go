@@ -244,6 +244,66 @@ func TestHandler_SquashBranch(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("MessageFile", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		branchName := "feature"
+		baseHash := git.Hash("abc123")
+		headHash := git.Hash("def456")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			VerifyRestacked(t.Context(), branchName).
+			Return(nil)
+		mockService.EXPECT().
+			LookupBranch(t.Context(), branchName).
+			Return(&spice.LookupBranchResponse{
+				Head:     headHash,
+				BaseHash: baseHash,
+			}, nil)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			SetRef(t.Context(), gomock.Any()).
+			Return(nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			DetachHead(t.Context(), branchName).
+			Return(nil)
+		mockWorktree.EXPECT().
+			Reset(t.Context(), baseHash.String(), git.ResetOptions{Mode: git.ResetSoft}).
+			Return(nil)
+		mockWorktree.EXPECT().
+			Commit(t.Context(), git.CommitRequest{MessageFile: "message.txt"}).
+			Return(nil)
+		mockWorktree.EXPECT().
+			Head(t.Context()).
+			Return(git.Hash("new123"), nil)
+		mockWorktree.EXPECT().
+			CheckoutBranch(t.Context(), branchName).
+			Return(nil)
+
+		mockRestack := NewMockRestackHandler(ctrl)
+		mockRestack.EXPECT().
+			RestackUpstack(t.Context(), branchName, nil).
+			Return(nil)
+
+		handler := &Handler{
+			Log:        silog.Nop(),
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Store:      mockStore,
+			Service:    mockService,
+			Restack:    mockRestack,
+		}
+
+		err := handler.SquashBranch(t.Context(), branchName, &Options{
+			MessageFile: "message.txt",
+		})
+		assert.NoError(t, err)
+	})
+
 	t.Run("NoMessage", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 

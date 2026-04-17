@@ -1,0 +1,56 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1108.
+# commit split should accept -F/--file.
+
+[!unix] skip # pending github.com/creack/pty/pull/155
+[!git:2.52] skip # git add -p output is fixed to Git version
+
+as 'Test <test@example.com>'
+at '2026-04-16T19:00:01Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt feature2.txt
+gs branch create features -m 'Add features'
+
+git add feature3.txt
+gs branch create feature3 -m 'Add feature 3'
+gs down
+
+with-term -final exit $WORK/input.txt -- gs commit split -F $WORK/input/message.txt
+
+git log --format=%s -2
+cmp stdout $WORK/golden/subjects.txt
+
+git log --format=%s -1 HEAD^
+cmp stdout $WORK/golden/split-subject.txt
+
+git log --format=%b -1 HEAD^
+stdout 'Split body.'
+
+-- repo/feature1.txt --
+feature 1
+
+-- repo/feature2.txt --
+feature 2
+
+-- repo/feature3.txt --
+feature 3
+
+-- input.txt --
+await feature1
+feed y\r
+await feature2
+feed q\r
+
+-- input/message.txt --
+Add feature 1 from file
+
+Split body.
+-- golden/subjects.txt --
+Add features
+Add feature 1 from file
+-- golden/split-subject.txt --
+Add feature 1 from file

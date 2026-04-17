@@ -6,8 +6,9 @@ Interactively select hunks from the current commit to split into new commits
 below it. Branches upstack are restacked as needed.
 
 Flags:
-  -m, --message=MSG    Use the given message as the commit message.
-      --no-verify      Bypass pre-commit and commit-msg hooks.
+  -m, --message=MSG          Use the given message as the commit message.
+  -F, --message-file=FILE    Read the commit message from the given file.
+      --no-verify            Bypass pre-commit and commit-msg hooks.
 
 Global Flags:
   -h, --help           Show help for the command

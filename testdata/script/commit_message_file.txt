@@ -1,0 +1,80 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1108.
+# Commands that create commits should accept -F/--file.
+
+as 'Test <test@example.com>'
+at '2026-04-16T19:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# -m and -F should be mutually exclusive.
+! gs commit create -m 'bad' -F $WORK/input/commit-create.txt
+stderr '--message and --message-file'
+
+# branch create should accept -F.
+git add branch-create.txt
+gs branch create feature -F $WORK/input/branch-create.txt
+git log --format=%B -1
+cmp stdout $WORK/golden/branch-create-msg.txt
+
+# commit create should accept -F.
+git add commit-create.txt
+gs commit create -F $WORK/input/commit-create.txt
+git log --format=%B -1
+cmp stdout $WORK/golden/commit-create-msg.txt
+
+# commit amend should accept -F.
+git add commit-amend.txt
+gs commit amend -F $WORK/input/commit-amend.txt
+git log --format=%B -1
+stdout 'Amend commit from file'
+stdout 'Amend body.'
+
+# branch squash should accept -F.
+git add squash1.txt
+gs commit create -m 'Add squash1'
+git add squash2.txt
+gs commit create -m 'Add squash2'
+gs branch squash -F $WORK/input/branch-squash.txt
+git log --format=%B -1
+stdout 'Squash branch from file'
+stdout 'Squash body.'
+
+-- repo/branch-create.txt --
+branch create content
+-- repo/commit-create.txt --
+commit create content
+-- repo/commit-amend.txt --
+commit amend content
+-- repo/squash1.txt --
+squash content 1
+-- repo/squash2.txt --
+squash content 2
+-- input/branch-create.txt --
+Create feature from file
+
+Branch body.
+-- input/commit-create.txt --
+Add another commit from file
+
+Create body.
+-- input/commit-amend.txt --
+Amend commit from file
+
+Amend body.
+-- input/branch-squash.txt --
+Squash branch from file
+
+Squash body.
+-- golden/branch-create-msg.txt --
+Create feature from file
+
+Branch body.
+
+-- golden/commit-create-msg.txt --
+Add another commit from file
+
+Create body.
+

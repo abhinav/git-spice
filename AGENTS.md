@@ -117,6 +117,10 @@ This project has two kinds of tests:
   in a shell-like syntax (note: NOT actual shell scripts).
   The syntax for these is described in testdata/script/README.md.
 
+  Name test scripts using the `<command>_<scenario>.txt` convention.
+  Reserve `issue123_...` prefixes for regression tests
+  that are specifically tied to that issue.
+
 ### Unit tests
 
 #### Testing best practices

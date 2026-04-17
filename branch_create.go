@@ -28,8 +28,9 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
-	All     bool   `short:"a" help:"Automatically stage modified and deleted files"`
-	Message string `short:"m" placeholder:"MSG" help:"Commit message"`
+	All         bool   `short:"a" help:"Automatically stage modified and deleted files"`
+	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Commit message"`
+	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
@@ -45,7 +46,7 @@ func (*branchCreateCmd) Help() string {
 		Use -a/--all to automatically stage modified and deleted files,
 		just like 'git commit -a'.
 		Use --no-commit to create the branch without committing.
-		-m/--message always implies --commit.
+		-m/--message and -F/--file always imply --commit.
 
 		If a branch name is not provided,
 		it will be generated from the commit message.
@@ -106,7 +107,7 @@ func (cmd *branchCreateCmd) Run(
 	restackHandler RestackHandler,
 ) (err error) {
 	// If a message is specified, automatically enable commits
-	if cmd.Message != "" {
+	if cmd.Message != "" || cmd.MessageFile != "" {
 		cmd.Commit = true
 	}
 
@@ -351,11 +352,12 @@ func (cmd *branchCreateCmd) commit(
 	}
 
 	if err := wt.Commit(ctx, git.CommitRequest{
-		AllowEmpty: len(diff) == 0,
-		Message:    cmd.Message,
-		NoVerify:   cmd.NoVerify,
-		All:        cmd.All,
-		Signoff:    cmd.Signoff,
+		AllowEmpty:  len(diff) == 0,
+		Message:     cmd.Message,
+		MessageFile: cmd.MessageFile,
+		NoVerify:    cmd.NoVerify,
+		All:         cmd.All,
+		Signoff:     cmd.Signoff,
 	}); err != nil {
 		if err := wt.CheckoutBranch(ctx, baseName); err != nil {
 			log.Warn("Could not restore original branch. You may need to reset manually.", "error", err)
