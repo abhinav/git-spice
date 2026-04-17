@@ -12,8 +12,9 @@ import (
 )
 
 type commitSplitCmd struct {
-	Message  string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
-	NoVerify bool   `help:"Bypass pre-commit and commit-msg hooks."`
+	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
+	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	NoVerify    bool   `help:"Bypass pre-commit and commit-msg hooks."`
 }
 
 func (*commitSplitCmd) Help() string {
@@ -70,8 +71,9 @@ func (cmd *commitSplitCmd) Run(
 	}
 
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:  cmd.Message,
-		NoVerify: cmd.NoVerify,
+		Message:     cmd.Message,
+		MessageFile: cmd.MessageFile,
+		NoVerify:    cmd.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

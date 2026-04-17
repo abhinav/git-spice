@@ -77,7 +77,8 @@ type Options struct {
 
 	NoEdit bool `released:"v0.16.0" help:"Do not open an editor to edit the squashed commit message. Only applicable if --message is not used."`
 
-	Message string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
+	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 }
 
 // SquashBranch squashes all commits in the given branch into a single commit.
@@ -105,7 +106,7 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	// combine the commit messages of all commits in the branch
 	// to form the initial commit message for the squashed commit.
 	var commitTemplate string
-	if opts.Message == "" {
+	if opts.Message == "" && opts.MessageFile == "" {
 		commitMessages, err := h.Repository.CommitMessageRange(ctx, branch.Head.String(), branch.BaseHash.String())
 		if err != nil {
 			return fmt.Errorf("get commit messages: %w", err)
@@ -157,9 +158,10 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	}
 
 	if err := h.Worktree.Commit(ctx, git.CommitRequest{
-		Message:  opts.Message,
-		Template: commitTemplate,
-		NoVerify: opts.NoVerify,
+		Message:     opts.Message,
+		MessageFile: opts.MessageFile,
+		Template:    commitTemplate,
+		NoVerify:    opts.NoVerify,
 	}); err != nil {
 		return fmt.Errorf("commit squashed changes: %w", err)
 	}

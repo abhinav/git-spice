@@ -13,12 +13,13 @@ import (
 )
 
 type commitCreateCmd struct {
-	All        bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty bool   `help:"Create a new commit even if it contains no changes."`
-	Fixup      string `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
-	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
-	NoVerify   bool   `help:"Bypass pre-commit and commit-msg hooks."`
-	Signoff    bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	All         bool   `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool   `help:"Create a new commit even if it contains no changes."`
+	Fixup       string `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
+	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
+	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	NoVerify    bool   `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff     bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -30,7 +31,7 @@ func (*commitCreateCmd) Help() string {
 		followed by '%[1]s upstack restack'.
 
 		An editor is opened to edit the commit message.
-		Use the -m/--message option to specify the message
+		Use the -m/--message or -F/--file option to specify the message
 		without opening an editor.
 		Git hooks are run unless the --no-verify flag is given.
 
@@ -50,12 +51,13 @@ func (cmd *commitCreateCmd) Run(
 	restackHandler RestackHandler,
 ) error {
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:    cmd.Message,
-		All:        cmd.All,
-		AllowEmpty: cmd.AllowEmpty,
-		Fixup:      cmd.Fixup,
-		NoVerify:   cmd.NoVerify,
-		Signoff:    cmd.Signoff,
+		Message:     cmd.Message,
+		MessageFile: cmd.MessageFile,
+		All:         cmd.All,
+		AllowEmpty:  cmd.AllowEmpty,
+		Fixup:       cmd.Fixup,
+		NoVerify:    cmd.NoVerify,
+		Signoff:     cmd.Signoff,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

@@ -18,9 +18,10 @@ import (
 type commitAmendCmd struct {
 	branchCreateConfig // TODO: find a way to avoid this
 
-	All        bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty bool   `help:"Create a commit even if it contains no changes."`
-	Message    string `short:"m" placeholder:"MSG" help:"Use the given message as the commit message."`
+	All         bool   `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool   `help:"Create a commit even if it contains no changes."`
+	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
+	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
@@ -40,8 +41,8 @@ func (*commitAmendCmd) Help() string {
 
 		An editor is opened to edit the commit message
 		unless the --no-edit flag is given.
-		Use the -m/--message option to specify the message
-		on the command line.
+		Use the -m/--message or -F/--file option
+		to specify the message without opening an editor.
 		Git hooks are run unless the --no-verify flag is given.
 
 		Use the -a/--all flag to stage all changes before committing.
@@ -124,6 +125,7 @@ func (cmd *commitAmendCmd) Run(
 					All:                cmd.All,
 					NoVerify:           cmd.NoVerify,
 					Message:            cmd.Message,
+					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
 				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
@@ -184,13 +186,14 @@ func (cmd *commitAmendCmd) Run(
 	}
 
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:    cmd.Message,
-		AllowEmpty: cmd.AllowEmpty,
-		Amend:      true,
-		NoEdit:     cmd.NoEdit,
-		NoVerify:   cmd.NoVerify,
-		All:        cmd.All,
-		Signoff:    cmd.Signoff,
+		Message:     cmd.Message,
+		MessageFile: cmd.MessageFile,
+		AllowEmpty:  cmd.AllowEmpty,
+		Amend:       true,
+		NoEdit:      cmd.NoEdit,
+		NoVerify:    cmd.NoVerify,
+		All:         cmd.All,
+		Signoff:     cmd.Signoff,
 	}); err != nil {
 		return fmt.Errorf("commit: %w", err)
 	}

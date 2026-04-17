@@ -15,6 +15,9 @@ type CommitRequest struct {
 	// $EDITOR is opened to edit the message.
 	Message string
 
+	// MessageFile reads the commit message from the given file.
+	MessageFile string
+
 	// ReuseMessage uses the commit message from the given commitish
 	// as the commit message.
 	ReuseMessage string
@@ -63,6 +66,9 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.Message != "" {
 		args = append(args, "-m", req.Message)
+	}
+	if req.MessageFile != "" {
+		args = append(args, "-F", req.MessageFile)
 	}
 	if req.Template != "" {
 		f, err := os.CreateTemp("", "commit-template-")
