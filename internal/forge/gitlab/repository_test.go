@@ -16,3 +16,8 @@ func TestAccessValueName(t *testing.T) {
 		assert.Equal(t, "999", accessValueName(gitlab.AccessLevelValue(999)))
 	})
 }
+
+func TestRepository_NavigationReference(t *testing.T) {
+	repo := &Repository{}
+	assert.Equal(t, "!42+", repo.NavigationReference(&MR{Number: 42}))
+}

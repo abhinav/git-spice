@@ -28,7 +28,19 @@ type Repository struct {
 	removeSourceBranchOnMerge bool
 }
 
-var _ forge.Repository = (*Repository)(nil)
+var (
+	_ forge.Repository              = (*Repository)(nil)
+	_ forge.WithNavigationReference = (*Repository)(nil)
+)
+
+// NavigationReference returns the GitLab reference to the given merge
+// request with the "+" expansion suffix.
+// GitLab renders "!NNN+" as the MR title inline with a link to it,
+// making stack navigation listings more informative than bare "!NNN"
+// references.
+func (r *Repository) NavigationReference(id forge.ChangeID) string {
+	return mustMR(id).String() + "+"
+}
 
 type repositoryOptions struct {
 	RepositoryID *int64 // if nil, repository ID will be looked up

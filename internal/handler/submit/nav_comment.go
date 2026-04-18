@@ -107,12 +107,19 @@ func updateNavigationComments(
 		return fmt.Errorf("get remote repository: %w", err)
 	}
 
-	// Create URL formatter for forges that need explicit links.
-	// Forges like GitHub auto-link "#123" to PRs, but Bitbucket doesn't.
+	// Build a reference formatter for forges that customize navigation.
+	// Forges like GitHub auto-link "#123" and need no formatter.
+	// GitLab implements WithNavigationReference to append "+" so the MR
+	// title is rendered inline.
+	// Bitbucket doesn't auto-link "#123", so WithChangeURL wraps the
+	// reference in an explicit markdown link.
 	var urlFormatter func(forge.ChangeID) string
-	if repo, ok := remoteRepo.(forge.WithChangeURL); ok {
+	switch r := remoteRepo.(type) {
+	case forge.WithNavigationReference:
+		urlFormatter = r.NavigationReference
+	case forge.WithChangeURL:
 		urlFormatter = func(id forge.ChangeID) string {
-			return fmt.Sprintf("[%s](%s)", id.String(), repo.ChangeURL(id))
+			return fmt.Sprintf("[%s](%s)", id.String(), r.ChangeURL(id))
 		}
 	}
 

@@ -271,6 +271,22 @@ type WithChangeURL interface {
 	ChangeURL(id ChangeID) string
 }
 
+// WithNavigationReference is an optional interface that repositories can
+// implement to customize how a change is referenced inside stack
+// navigation (comments or descriptions).
+//
+// Forges like GitLab support reference expansion (e.g. "!123+") that
+// renders the change title inline when the markdown is rendered.
+// Repositories that implement this interface take precedence over
+// [WithChangeURL] for navigation rendering.
+type WithNavigationReference interface {
+	Repository
+
+	// NavigationReference returns the markdown snippet used to reference
+	// the given change ID in stack navigation content.
+	NavigationReference(id ChangeID) string
+}
+
 // ChangeID is a unique identifier for a change in a repository.
 type ChangeID interface {
 	String() string
