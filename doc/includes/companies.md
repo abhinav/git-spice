@@ -6,4 +6,5 @@
 <a href="https://rippling.com"><img alt="Rippling" src="img/companies/rippling.svg"></a>
 <a href="https://sourcegraph.com/"><img alt="Sourcegraph" src="img/companies/sourcegraph.svg"></a>
 <a href="https://spotify.com/"><img alt="Spotify" src="img/companies/spotify.svg"></a>
+<a href="https://www.toasttab.com/"><img alt="Toast" src="img/companies/toast.svg"></a>
 <a href="https://uber.com/"><img alt="Uber" src="img/companies/uber.svg"></a>
