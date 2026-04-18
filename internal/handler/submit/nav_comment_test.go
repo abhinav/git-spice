@@ -814,6 +814,29 @@ func TestGenerateStackNavigationComment(t *testing.T) {
 			_commentMarker + "\n"
 		assert.Equal(t, want, got)
 	})
+
+	t.Run("UrlFormatter", func(t *testing.T) {
+		// Simulates a forge that customizes navigation references,
+		// e.g. GitLab's "!NNN+" expansion.
+		fmtRef := func(id forge.ChangeID) string {
+			return id.String() + "+"
+		}
+		graph := []*stackedChange{
+			{Change: _changeID("123"), Base: -1, urlFormatter: fmtRef},
+			{Change: _changeID("124"), Base: 0, urlFormatter: fmtRef},
+		}
+		graph[0].Aboves = []int{1}
+
+		got := generateStackNavigationComment(graph, 1, "", nil)
+		want := _commentHeader + "\n\n" +
+			joinLines(
+				"- #123+",
+				"    - #124+ ◀",
+			) + "\n" +
+			_commentFooter + "\n" +
+			_commentMarker + "\n"
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestNavigationCommentWhen_StringMarshal(t *testing.T) {
