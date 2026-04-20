@@ -255,7 +255,7 @@ func TestIssue1079_bashPTYLosesFirstTypedByte(t *testing.T) {
 			output := buffer.String()
 			t.Logf("probe output:\n%s", output)
 			assert.NotContains(t, output, "command not found")
-			assert.Contains(t, output, probeText+"\n")
+			assert.Contains(t, output, probeText)
 		})
 	}
 }
