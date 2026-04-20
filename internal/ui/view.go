@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/charmbracelet/colorprofile"
 )
@@ -79,7 +80,7 @@ type TerminalView struct {
 	r io.Reader
 	w io.Writer
 
-	theme Theme
+	theme func() Theme
 }
 
 var _ InteractiveView = (*TerminalView)(nil)
@@ -87,9 +88,11 @@ var _ InteractiveView = (*TerminalView)(nil)
 // NewTerminalView builds an interactive view for the given streams.
 func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
 	return &TerminalView{
-		r:     r,
-		w:     w,
-		theme: detectTheme(r, w),
+		r: r,
+		w: w,
+		theme: sync.OnceValue(func() Theme {
+			return detectTheme(r, w)
+		}),
 	}
 }
 
@@ -99,7 +102,7 @@ func (tv *TerminalView) Write(p []byte) (int, error) {
 
 // Theme reports the active terminal theme for this view.
 func (tv *TerminalView) Theme() Theme {
-	return tv.theme
+	return tv.theme()
 }
 
 // Prompt prompts the user for input with the given interactive fields.
@@ -107,6 +110,6 @@ func (tv *TerminalView) Prompt(fields ...Field) error {
 	return NewForm(fields...).Run(&FormRunOptions{
 		Input:  tv.r,
 		Output: tv.w,
-		Theme:  tv.theme,
+		Theme:  tv.theme(),
 	})
 }
