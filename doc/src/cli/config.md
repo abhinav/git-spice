@@ -235,7 +235,7 @@ Whether to remove the source branch when a Merge Request is merged.
 
 ### spice.git.indexLockTimeout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.26.0 -->
 
 git-spice will detect and retry Git commands
 that fail due to `index.lock` contention
@@ -252,7 +252,7 @@ Defaults to `5s`.
 
 ### spice.secret.backend
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.26.0 -->
 
 Controls which backend git-spice uses
 to store authentication tokens.

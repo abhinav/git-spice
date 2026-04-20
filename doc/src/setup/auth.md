@@ -510,7 +510,7 @@ reporting the full path to the secrets file.
 
 ### Choosing a secret backend
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.26.0 -->
 
 You can override the default backend selection
 with the $$spice.secret.backend$$ configuration option

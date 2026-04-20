@@ -1,3 +1,0 @@
-kind: Changed
-body: 'git: Operations that fail due to index.lock contention are now retried.'
-time: 2026-04-16T19:07:19.281426-07:00
