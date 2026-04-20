@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'git: Reduced index.lock contention by disabling optional Git locks for read-only commands.'
-time: 2026-04-10T23:24:08.684447-07:00

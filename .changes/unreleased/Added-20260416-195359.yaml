@@ -1,4 +1,0 @@
-kind: Added
-body: >-
-  commit: Add '-F'/'--file' flag to read a commit message from a file.
-time: 2026-04-16T19:53:59.613718-07:00

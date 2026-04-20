@@ -1,3 +1,0 @@
-kind: Changed
-body: 'submit: GitLab MR references in stack navigation now use GitLab''s "+" reference expansion so the MR title renders inline.'
-time: 2026-04-17T16:00:00.000000-07:00

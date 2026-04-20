@@ -1,6 +1,0 @@
-kind: Fixed
-body: >-
-  ui: Fix interactive shells occasionally dropping the first character
-  of the next command when typing begins before a git-spice command has
-  fully returned control to the shell.
-time: 2026-04-19T16:21:08.637012-07:00
