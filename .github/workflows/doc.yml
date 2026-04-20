@@ -36,7 +36,7 @@ jobs:
           MAIN_BUILD: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: doc/_site/
 
