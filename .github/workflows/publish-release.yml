@@ -64,12 +64,15 @@ jobs:
     - name: Extract changelog
       run: |
         {
-          tail -n+2 .changes/v${{ env.VERSION }}.md 
+          tail -n+2 .changes/v${{ env.VERSION }}.md
 
-          echo ""
+          echo
           echo "---"
-          echo ""
-          echo "[Support git-spice development](https://github.com/sponsors/abhinav)"
+          echo
+          echo "Thanks to the following sponsors for supporting this release:"
+          cat SPONSORS.md
+          echo
+          echo "[Become a sponsor](https://github.com/sponsors/abhinav)"
         } > ${{ github.workspace }}-CHANGELOG.txt
         echo "::group::CHANGELOG"
         cat ${{ github.workspace }}-CHANGELOG.txt
