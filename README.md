@@ -62,6 +62,11 @@ $ gs sr        # stack restack
 
 See <https://abhinav.github.io/git-spice/> for the full documentation.
 
+## Sponsors
+
+<!-- sponsors -->
+<!-- sponsors -->
+
 ## License
 
 This software is distributed under the GPL-3.0 License:

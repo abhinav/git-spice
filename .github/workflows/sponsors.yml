@@ -1,0 +1,50 @@
+name: Update Sponsors
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sponsors
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Update SPONSORS.md
+        uses: mkljczk/github-sponsors-readme-action@d398091ffd8234b513d082451391e6dd143c803a # v1.0.10
+        with:
+          token: ${{ secrets.SPONSORS_PAT }}
+          file: SPONSORS.md
+          include-private: true
+
+      - name: Update README.md
+        uses: mkljczk/github-sponsors-readme-action@d398091ffd8234b513d082451391e6dd143c803a # v1.0.10
+        with:
+          token: ${{ secrets.SPONSORS_PAT }}
+          file: README.md
+          include-private: true
+
+      - name: Commit updates
+        run: |
+          if git diff --quiet -- SPONSORS.md README.md; then
+            echo "No sponsor changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add SPONSORS.md README.md
+          git commit -m "Update sponsors"
+          git push origin HEAD:main
