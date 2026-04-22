@@ -32,7 +32,7 @@ validation:
 strict: true
 
 theme:
-  name: material
+  name: materialx
   custom_dir: overrides
   palette:
     scheme: slate

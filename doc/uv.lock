@@ -269,11 +269,11 @@ source = { virtual = "." }
 dev = [
     { name = "cairosvg" },
     { name = "markdown-exec", extra = ["ansi"] },
-    { name = "mkdocs" },
     { name = "mkdocs-llmstxt" },
-    { name = "mkdocs-material", extra = ["imaging"] },
+    { name = "mkdocs-materialx" },
     { name = "mkdocs-redirects" },
     { name = "pillow" },
+    { name = "properdocs" },
 ]
 
 [package.metadata]
@@ -282,11 +282,11 @@ dev = [
 dev = [
     { name = "cairosvg", specifier = ">=2.7.1" },
     { name = "markdown-exec", extras = ["ansi"], specifier = ">=1.9.3" },
-    { name = "mkdocs", specifier = ">=1.6.0" },
     { name = "mkdocs-llmstxt", specifier = ">=0.3.1" },
-    { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.5.33" },
+    { name = "mkdocs-materialx" },
     { name = "mkdocs-redirects", specifier = ">=1.2.1" },
     { name = "pillow", specifier = ">=10.4.0" },
+    { name = "properdocs" },
 ]
 
 [[package]]
@@ -492,6 +492,19 @@ wheels = [
 ]
 
 [[package]]
+name = "mkdocs-document-dates"
+version = "3.7.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mkdocs" },
+    { name = "properdocs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/36/60718707e71cf86ca18680c7830d6204c19cfe6a6320a606c2ad2fbfb970/mkdocs_document_dates-3.7.4.tar.gz", hash = "sha256:75cbb2aea5ee90d9f6fbd5c07d96df1b923f1f9bb6cdc44ef5b90d3c0f74e525", size = 194142, upload-time = "2026-04-17T13:15:12.178Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/f5/b4fefdd0e8d9bd0b4844de32722d0ef0e6204262318aa1b753133562a6c4/mkdocs_document_dates-3.7.4-py3-none-any.whl", hash = "sha256:5d744c38dd7c2656a7c206da52f3aec9524b8ea6df454a8fc23ba249eb1a7769", size = 199439, upload-time = "2026-04-17T13:15:10.581Z" },
+]
+
+[[package]]
 name = "mkdocs-get-deps"
 version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -521,8 +534,17 @@ wheels = [
 ]
 
 [[package]]
-name = "mkdocs-material"
-version = "9.7.6"
+name = "mkdocs-material-extensions"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/79/9b/9b4c96d6593b2a541e1cb8b34899a6d021d208bb357042823d4d2cabdbe7/mkdocs_material_extensions-1.3.1.tar.gz", hash = "sha256:10c9511cea88f568257f960358a467d12b970e1f7b2c0e5fb2bb48cab1928443", size = 11847, upload-time = "2023-11-22T19:09:45.208Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl", hash = "sha256:adff8b62700b25cb77b53358dad940f3ef973dd6db797907c49e3c2ef3ab4e31", size = 8728, upload-time = "2023-11-22T19:09:43.465Z" },
+]
+
+[[package]]
+name = "mkdocs-materialx"
+version = "10.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "babel" },
@@ -531,30 +553,17 @@ dependencies = [
     { name = "jinja2" },
     { name = "markdown" },
     { name = "mkdocs" },
+    { name = "mkdocs-document-dates" },
     { name = "mkdocs-material-extensions" },
     { name = "paginate" },
+    { name = "properdocs" },
     { name = "pygments" },
     { name = "pymdown-extensions" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/29/6d2bcf41ae40802c4beda2432396fff97b8456fb496371d1bc7aad6512ec/mkdocs_material-9.7.6.tar.gz", hash = "sha256:00bdde50574f776d328b1862fe65daeaf581ec309bd150f7bff345a098c64a69", size = 4097959, upload-time = "2026-03-19T15:41:58.161Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/d1/1897c84662bf8a1b68fafa81e8d020b08223ef2b270ff84c7f5d51954564/mkdocs_materialx-10.1.3.tar.gz", hash = "sha256:d46d56ee5db7e542a4fe537a1726c8e65d992c942e889a16cab9e684b756d3ab", size = 4097804, upload-time = "2026-04-10T12:46:03.972Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/01/bc663630c510822c95c47a66af9fa7a443c295b47d5f041e5e6ae62ef659/mkdocs_material-9.7.6-py3-none-any.whl", hash = "sha256:71b84353921b8ea1ba84fe11c50912cc512da8fe0881038fcc9a0761c0e635ba", size = 9305470, upload-time = "2026-03-19T15:41:55.217Z" },
-]
-
-[package.optional-dependencies]
-imaging = [
-    { name = "cairosvg" },
-    { name = "pillow" },
-]
-
-[[package]]
-name = "mkdocs-material-extensions"
-version = "1.3.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/79/9b/9b4c96d6593b2a541e1cb8b34899a6d021d208bb357042823d4d2cabdbe7/mkdocs_material_extensions-1.3.1.tar.gz", hash = "sha256:10c9511cea88f568257f960358a467d12b970e1f7b2c0e5fb2bb48cab1928443", size = 11847, upload-time = "2023-11-22T19:09:45.208Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl", hash = "sha256:adff8b62700b25cb77b53358dad940f3ef973dd6db797907c49e3c2ef3ab4e31", size = 8728, upload-time = "2023-11-22T19:09:43.465Z" },
+    { url = "https://files.pythonhosted.org/packages/da/67/1b49fa1caa66a8f8ec87dff9ab58175660e0b9199aaa724c88e043ede478/mkdocs_materialx-10.1.3-py3-none-any.whl", hash = "sha256:e1f8e1f38c5066e77cd483c2587938e26fb6af474d8c37088b93b3c013d77ea8", size = 9288832, upload-time = "2026-04-10T12:45:48.008Z" },
 ]
 
 [[package]]
