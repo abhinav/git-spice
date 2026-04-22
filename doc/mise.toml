@@ -20,12 +20,12 @@ uv = "latest"
 
 [tasks.build]
 depends = ["tools:*", "generate"]
-run = "uv run mkdocs build"
+run = "uv run properdocs build -f mkdocs.yml"
 description = "Build the documentation"
 
 [tasks.serve]
 depends = ["tools:*", "generate"]
-run = "uv run mkdocs serve"
+run = "uv run properdocs serve -f mkdocs.yml"
 description = "Serve the documentation"
 
 [tasks.generate]
