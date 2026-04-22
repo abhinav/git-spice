@@ -1,3 +1,5 @@
 kind: Fixed
-body: 'auth: Prevent git credential fill from prompting when no credential helper is configured'
+body: >-
+  auth: Disable prompting when querying Git Credential Manager (GCM).
+  With prompting enabled, GCM may block the authentication flow.
 time: 2026-04-22T17:04:32.29156277Z
