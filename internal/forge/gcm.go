@@ -29,6 +29,7 @@ func LoadGCMCredential(ctx context.Context, forgeURL string) (*GCMCredential, er
 	input := fmt.Sprintf("protocol=https\nhost=%s\n\n", host)
 
 	output, err := xec.Command(ctx, nil, "git", "credential", "fill").
+		AppendEnv("GIT_TERMINAL_PROMPT=0").
 		WithStdinString(input).
 		Output()
 	if err != nil {

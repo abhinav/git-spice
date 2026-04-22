@@ -1,6 +1,10 @@
 package forge
 
 import (
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -127,4 +131,60 @@ func TestExtractHost(t *testing.T) {
 			assert.Equal(t, tt.wantOut, extractHost(tt.rawURL))
 		})
 	}
+}
+
+func TestLoadGCMCredential_disablesTerminalPrompt(t *testing.T) {
+	// Regression test for issue #1120:
+	// https://github.com/abhinav/git-spice/issues/1120
+	dir := t.TempDir()
+	gitPath := filepath.Join(dir, "git")
+	if runtime.GOOS == "windows" {
+		gitPath += ".exe"
+	}
+
+	testExe, err := os.Executable()
+	require.NoError(t, err)
+	createFakeGitExecutable(t, testExe, gitPath)
+
+	t.Setenv(
+		"PATH",
+		dir+string(os.PathListSeparator)+os.Getenv("PATH"),
+	)
+	t.Setenv("GS_GCM_TEST_FAKE_GIT_MODE", "gcm-fill")
+
+	cred, err := LoadGCMCredential(
+		t.Context(),
+		"https://github.com/git-spice/git-spice",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "test-user", cred.Username)
+	assert.Equal(t, "test-token", cred.Password)
+}
+
+func createFakeGitExecutable(
+	t *testing.T,
+	testExe string,
+	gitPath string,
+) {
+	t.Helper()
+
+	if err := os.Symlink(testExe, gitPath); err == nil {
+		return
+	}
+
+	src, err := os.Open(testExe)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, src.Close())
+	}()
+
+	dst, err := os.Create(gitPath)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, dst.Close())
+	}()
+
+	_, err = io.Copy(dst, src)
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(gitPath, 0o755))
 }
