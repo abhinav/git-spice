@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  auth: Fix 'git credential' being queried
-  even when Git Credential Manager is not explicitly selected.
-time: 2026-04-22T20:53:27.892730204Z
