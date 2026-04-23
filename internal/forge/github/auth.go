@@ -23,26 +23,111 @@ const (
 	// (These are not secret.)
 )
 
+// TokenType is the source of the GitHub authentication token.
+type TokenType int
+
+const (
+	// TokenTypeStash indicates that the token is loaded from the stash.
+	// The AccessToken MUST be stored in the stash.
+	TokenTypeStash TokenType = iota
+
+	// TokenTypeGCM indicates that the token is loaded from git-credential-manager.
+	// AccessToken is not used.
+	TokenTypeGCM
+
+	// TokenTypeCLI indicates that the token is loaded from GitHub CLI.
+	// AccessToken is not used.
+	TokenTypeCLI
+)
+
+func (s TokenType) String() string {
+	switch s {
+	case TokenTypeStash:
+		return "stash"
+	case TokenTypeGCM:
+		return "git-credential-manager"
+	case TokenTypeCLI:
+		return "gh"
+	default:
+		return "unknown"
+	}
+}
+
+// MarshalText encodes the token type as a stable string identifier.
+func (s TokenType) MarshalText() ([]byte, error) {
+	return []byte(s.String()), nil
+}
+
+// UnmarshalText decodes a token type from its string identifier.
+func (s *TokenType) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "stash", "":
+		*s = TokenTypeStash
+	case "git-credential-manager", "gcm":
+		*s = TokenTypeGCM
+	case "gh", "cli":
+		*s = TokenTypeCLI
+	default:
+		return fmt.Errorf("invalid token source: %q", text)
+	}
+
+	return nil
+}
+
 // AuthenticationToken defines the token returned by the GitHub forge.
 type AuthenticationToken struct {
 	forge.AuthenticationToken
 
-	// GitHubCLI is true if we should use GitHub CLI for API requests.
-	//
-	// If true, AccessToken is not used.
-	GitHubCLI bool `json:"github_cli,omitempty"`
+	// Type indicates where the token is loaded from.
+	// This determines whether AccessToken is used.
+	Type TokenType `json:"type"`
 
 	// AccessToken is the GitHub access token.
+	//
+	// Not used if Type is TokenTypeGCM or TokenTypeCLI.
 	AccessToken string `json:"access_token,omitempty"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 
-func (t *AuthenticationToken) tokenSource() oauth2.TokenSource {
-	if t.GitHubCLI {
-		return &CLITokenSource{}
+// UnmarshalJSON decodes the current token schema and legacy CLI schema.
+func (t *AuthenticationToken) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type        TokenType `json:"type"`
+		AccessToken string    `json:"access_token,omitempty"`
+
+		GitHubCLI bool `json:"github_cli,omitempty"` // for backward compatibility
 	}
-	return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken})
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	t.Type = raw.Type
+	t.AccessToken = raw.AccessToken
+	if raw.GitHubCLI {
+		t.Type = TokenTypeCLI
+	}
+
+	return nil
+}
+
+func (f *Forge) tokenSource(t *AuthenticationToken) (oauth2.TokenSource, error) {
+	switch t.Type {
+	case TokenTypeGCM:
+		tok, err := f.loadGCMToken()
+		if err != nil {
+			return nil, fmt.Errorf("load GCM token: %w", err)
+		}
+		return oauth2.StaticTokenSource(&oauth2.Token{
+			AccessToken: tok.AccessToken,
+		}), nil
+
+	case TokenTypeCLI:
+		return &CLITokenSource{}, nil
+
+	default:
+		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken}), nil
+	}
 }
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {
@@ -112,34 +197,11 @@ func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.Authenticati
 // Priority order:
 //  1. Environment variable (GITHUB_TOKEN)
 //  2. Stored token in secret stash
-//  3. git-credential-manager (GCM)
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
 	if f.Options.Token != "" {
 		return &AuthenticationToken{AccessToken: f.Options.Token}, nil
 	}
 
-	var errs []error
-
-	// Try stored token.
-	if tok, err := f.loadStoredToken(stash); err != nil {
-		errs = append(errs, fmt.Errorf("load stored token: %w", err))
-	} else {
-		return tok, nil
-	}
-
-	// Fall back to git-credential-manager.
-	if tok, err := f.loadGCMToken(); err != nil {
-		errs = append(errs, fmt.Errorf("load GCM token: %w", err))
-	} else {
-		f.logger().Debug("Using credentials from git-credential-manager")
-		return tok, nil
-	}
-
-	return nil, fmt.Errorf("no authentication token available:\n%w",
-		errors.Join(errs...))
-}
-
-func (f *Forge) loadStoredToken(stash secret.Stash) (*AuthenticationToken, error) {
 	tokstr, err := stash.LoadSecret(f.URL(), "token")
 	if err != nil {
 		return nil, err
@@ -466,7 +528,7 @@ func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*Authen
 		return nil, fmt.Errorf("run gh: %w", err)
 	}
 
-	return &AuthenticationToken{GitHubCLI: true}, nil
+	return &AuthenticationToken{Type: TokenTypeCLI}, nil
 }
 
 // GCMAuthenticator loads OAuth credentials
@@ -479,11 +541,8 @@ type GCMAuthenticator struct {
 func (a *GCMAuthenticator) Authenticate(
 	ctx context.Context, _ ui.View,
 ) (*AuthenticationToken, error) {
-	cred, err := forge.LoadGCMCredential(ctx, a.URL)
-	if err != nil {
+	if _, err := forge.LoadGCMCredential(ctx, a.URL); err != nil {
 		return nil, fmt.Errorf("load GCM credentials: %w", err)
 	}
-	return &AuthenticationToken{
-		AccessToken: cred.Password,
-	}, nil
+	return &AuthenticationToken{Type: TokenTypeGCM}, nil
 }

@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os/exec"
+	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -20,6 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/uitest"
+	"go.abhg.dev/gs/internal/xec"
 	"go.abhg.dev/gs/internal/xec/xectest"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/oauth2"
@@ -27,11 +30,14 @@ import (
 
 func TestAuthenticationToken_tokenSource(t *testing.T) {
 	t.Run("AccessToken", func(t *testing.T) {
+		f := Forge{Log: silog.Nop()}
 		tok := &AuthenticationToken{
 			AccessToken: "token",
 		}
 
-		src := tok.tokenSource()
+		src, err := f.tokenSource(tok)
+		require.NoError(t, err)
+
 		got, err := src.Token()
 		require.NoError(t, err)
 
@@ -39,12 +45,27 @@ func TestAuthenticationToken_tokenSource(t *testing.T) {
 	})
 
 	t.Run("GitHubCLI", func(t *testing.T) {
+		f := Forge{Log: silog.Nop()}
 		token := &AuthenticationToken{
-			GitHubCLI: true,
+			Type: TokenTypeCLI,
 		}
 
-		src := token.tokenSource()
+		src, err := f.tokenSource(token)
+		require.NoError(t, err)
+
 		assert.IsType(t, new(CLITokenSource), src)
+	})
+
+	t.Run("GCM", func(t *testing.T) {
+		f := Forge{Log: silog.Nop()}
+		putFakeGitOnPath(t)
+
+		src, err := f.tokenSource(&AuthenticationToken{Type: TokenTypeGCM})
+		require.NoError(t, err)
+
+		got, err := src.Token()
+		require.NoError(t, err)
+		assert.Equal(t, "test-token", got.AccessToken)
 	})
 }
 
@@ -185,7 +206,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "my-token", tok.AccessToken)
-	assert.False(t, tok.GitHubCLI)
+	assert.Equal(t, TokenTypeStash, tok.Type)
 }
 
 func TestSelectAuthenticator(t *testing.T) {
@@ -370,7 +391,11 @@ func TestAuthCLI(t *testing.T) {
 			tok, err := f.LoadAuthenticationToken(&stash)
 			require.NoError(t, err)
 
-			assert.True(t, tok.(*AuthenticationToken).GitHubCLI)
+			assert.Equal(
+				t,
+				TokenTypeCLI,
+				tok.(*AuthenticationToken).Type,
+			)
 		})
 	})
 
@@ -378,7 +403,7 @@ func TestAuthCLI(t *testing.T) {
 		execer := xectest.NewMockExecer(gomock.NewController(t))
 		execer.EXPECT().
 			Run(gomock.Any()).
-			Return(&exec.ExitError{
+			Return(&xec.ExitError{
 				Stderr: []byte("great sadness"),
 			})
 
@@ -404,4 +429,108 @@ func TestAuthCLI(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "gh not found")
 	})
+}
+
+func TestLoadAuthenticationToken_noStoredTokenDoesNotFallbackToGCM(
+	t *testing.T,
+) {
+	f := Forge{Log: silog.Nop()}
+	var stash secret.MemoryStash
+
+	putFakeGitOnPath(t)
+
+	_, err := f.LoadAuthenticationToken(&stash)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "secret not found")
+}
+
+func TestLoadAuthenticationToken_storedGCM(t *testing.T) {
+	f := Forge{Log: silog.Nop()}
+	var stash secret.MemoryStash
+
+	putFakeGitOnPath(t)
+
+	err := stash.SaveSecret(f.URL(), "token", `{"type":"gcm"}`)
+	require.NoError(t, err)
+
+	got, err := f.LoadAuthenticationToken(&stash)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		&AuthenticationToken{Type: TokenTypeGCM},
+		got.(*AuthenticationToken),
+	)
+}
+
+func TestLoadAuthenticationToken_oldGitHubCLISchema(t *testing.T) {
+	f := Forge{Log: silog.Nop()}
+	var stash secret.MemoryStash
+
+	err := stash.SaveSecret(f.URL(), "token", `{"github_cli":true}`)
+	require.NoError(t, err)
+
+	got, err := f.LoadAuthenticationToken(&stash)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		&AuthenticationToken{Type: TokenTypeCLI},
+		got,
+	)
+}
+
+func TestLoadAuthenticationToken_savedCLISchema(t *testing.T) {
+	f := Forge{Log: silog.Nop()}
+	var stash secret.MemoryStash
+
+	require.NoError(t, f.SaveAuthenticationToken(&stash, &AuthenticationToken{
+		Type: TokenTypeCLI,
+	}))
+
+	got, err := f.LoadAuthenticationToken(&stash)
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		&AuthenticationToken{Type: TokenTypeCLI},
+		got,
+	)
+}
+
+func putFakeGitOnPath(t *testing.T) {
+	t.Helper()
+
+	dir := t.TempDir()
+	gitPath := filepath.Join(dir, "git")
+	if runtime.GOOS == "windows" {
+		gitPath += ".exe"
+	}
+
+	testExe, err := os.Executable()
+	require.NoError(t, err)
+	linkTestBinary(t, testExe, gitPath)
+
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+}
+
+func linkTestBinary(t *testing.T, testExe, gitPath string) {
+	t.Helper()
+
+	if err := os.Symlink(testExe, gitPath); err == nil {
+		return
+	}
+
+	src, err := os.Open(testExe)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, src.Close())
+	}()
+
+	dst, err := os.Create(gitPath)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, dst.Close())
+	}()
+
+	_, err = io.Copy(dst, src)
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(gitPath, 0o755))
 }

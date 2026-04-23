@@ -37,6 +37,9 @@ type AuthenticationToken struct {
 	AuthType AuthType `json:"auth_type"`
 
 	// AccessToken is the Bitbucket API token.
+	//
+	// Not used if AuthType is AuthTypeGCM,
+	// as the token is loaded from git-credential-manager on demand.
 	AccessToken string `json:"access_token,omitempty"`
 }
 
@@ -130,15 +133,14 @@ func apiTokenAuthDescription(theme ui.Theme, focused bool) string {
 }
 
 func (f *Forge) gcmAuth(ctx context.Context, log *silog.Logger) (*AuthenticationToken, error) {
-	token, err := f.loadGCMCredentials(ctx)
-	if err != nil {
+	if _, err := f.loadGCMCredentials(ctx); err != nil {
 		log.Error("Could not load credentials from git-credential-manager.")
 		log.Error("Ensure GCM is installed and you have authenticated to Bitbucket.")
 		return nil, fmt.Errorf("load GCM credentials: %w", err)
 	}
 
 	log.Info("Successfully loaded credentials from git-credential-manager.")
-	return token, nil
+	return &AuthenticationToken{AuthType: AuthTypeGCM}, nil
 }
 
 func (f *Forge) apiTokenAuth(_ context.Context, view ui.View) (*AuthenticationToken, error) {
@@ -202,7 +204,9 @@ func (f *Forge) SaveAuthenticationToken(
 // Priority order:
 //  1. Environment variable (BITBUCKET_TOKEN)
 //  2. Stored token in secret stash
-//  3. git-credential-manager (GCM)
+//
+// For a stored token configured to use GCM, the access token is loaded from
+// git-credential-manager on demand.
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
 	// Environment variable takes highest precedence.
 	if f.Options.Token != "" {
@@ -212,26 +216,21 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 		}, nil
 	}
 
-	var errs []error
-
 	// Try stored token next.
-	if token, err := f.loadStoredToken(stash); err != nil {
-		errs = append(errs, fmt.Errorf("load stored token: %w", err))
-	} else {
-		return token, nil
+	token, err := f.loadStoredToken(stash)
+	if err != nil {
+		return nil, fmt.Errorf("load stored token: %w", err)
 	}
 
-	// Fall back to git-credential-manager.
-	// No caller-provided context here; use Background.
-	if token, err := f.loadGCMCredentials(context.Background()); err != nil {
-		errs = append(errs, fmt.Errorf("load GCM credentials: %w", err))
-	} else {
-		f.logger().Debug("Using credentials from git-credential-manager")
-		return token, nil
+	if token.AuthType == AuthTypeGCM {
+		gcmToken, err := f.loadGCMCredentials(context.Background())
+		if err != nil {
+			return nil, fmt.Errorf("load GCM credentials: %w", err)
+		}
+		return gcmToken, nil
 	}
 
-	return nil, fmt.Errorf("no authentication token available:\n%w",
-		errors.Join(errs...))
+	return token, nil
 }
 
 func (f *Forge) loadStoredToken(stash secret.Stash) (*AuthenticationToken, error) {
@@ -247,11 +246,6 @@ func (f *Forge) loadStoredToken(stash secret.Stash) (*AuthenticationToken, error
 	return &token, nil
 }
 
-// ClearAuthenticationToken removes the authentication token from the stash.
-func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
-	return stash.DeleteSecret(f.URL(), "token")
-}
-
 // loadGCMCredentials attempts to load OAuth credentials
 // from git-credential-manager.
 // Returns an error if GCM credentials are not available.
@@ -265,4 +259,9 @@ func (f *Forge) loadGCMCredentials(ctx context.Context) (*AuthenticationToken, e
 		AuthType:    AuthTypeGCM,
 		AccessToken: cred.Password,
 	}, nil
+}
+
+// ClearAuthenticationToken removes the authentication token from the stash.
+func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
+	return stash.DeleteSecret(f.URL(), "token")
 }
