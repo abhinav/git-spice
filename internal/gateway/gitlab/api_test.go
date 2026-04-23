@@ -213,6 +213,52 @@ func TestClient_MergeRequestList(t *testing.T) {
 	assert.Equal(t, int64(56), mergeRequests[1].IID)
 }
 
+func TestClient_MergeRequestList_paginated(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		switch r.URL.Query().Get("page") {
+		case "", "1":
+			w.Header().Set("X-Page", "1")
+			w.Header().Set("X-Next-Page", "2")
+			w.Header().Set("X-Total-Pages", "2")
+			writeJSON(t, w, http.StatusOK, []*BasicMergeRequest{
+				{IID: 1, Title: "One"},
+				{IID: 2, Title: "Two"},
+			})
+		case "2":
+			w.Header().Set("X-Page", "2")
+			w.Header().Set("X-Next-Page", "")
+			w.Header().Set("X-Total-Pages", "2")
+			writeJSON(t, w, http.StatusOK, []*BasicMergeRequest{
+				{IID: 3, Title: "Three"},
+			})
+		default:
+			t.Fatalf("unexpected page: %q", r.URL.Query().Get("page"))
+		}
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+
+	var all []*BasicMergeRequest
+	opts := &ListProjectMergeRequestsOptions{
+		ListOptions: ListOptions{PerPage: 2},
+	}
+	for {
+		page, resp, err := client.MergeRequestList(t.Context(), int64(42), opts)
+		require.NoError(t, err)
+		all = append(all, page...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = int64(resp.NextPage)
+	}
+
+	require.Len(t, all, 3)
+	assert.Equal(t, int64(1), all[0].IID)
+	assert.Equal(t, int64(3), all[2].IID)
+}
+
 func TestClient_MergeRequestAccept(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPut, r.Method)
