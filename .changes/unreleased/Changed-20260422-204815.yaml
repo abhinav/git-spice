@@ -1,0 +1,3 @@
+kind: Changed
+body: 'auth: git-spice will no longer automatically fall back to Git Credential Manager-managed credentials without running ''gs auth login''.'
+time: 2026-04-22T20:48:15.839391-07:00

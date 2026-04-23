@@ -105,7 +105,11 @@ func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
 func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToken, id forge.RepositoryID) (forge.Repository, error) {
 	rid := mustRepositoryID(id)
 
-	tokenSource := tok.(*AuthenticationToken).tokenSource()
+	tokenSource, err := f.tokenSource(tok.(*AuthenticationToken))
+	if err != nil {
+		return nil, err
+	}
+
 	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
 	if err != nil {
 		return nil, fmt.Errorf("create GitHub client: %w", err)

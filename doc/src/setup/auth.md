@@ -140,7 +140,7 @@ You **must** install the GitHub App to access repositories with git-spice.
 [Git Credential Manager](https://github.com/git-credential-manager/git-credential-manager)
 (GCM) is a secure credential storage system for Git.
 If you already have GCM configured for GitHub or Bitbucket,
-git-spice can reuse those credentials automatically.
+git-spice can reuse those credentials.
 
 ```freeze language="terminal"
 {green}${reset} gs auth login
@@ -173,11 +173,6 @@ To set up GCM:
    This triggers the OAuth flow in your browser.
 
 After that, git-spice will use the stored OAuth token automatically.
-
-Additionally, if you have GCM configured,
-git-spice will automatically fall back to GCM credentials
-when no other authentication token is available—even
-without running `gs auth login`.
 
 ### Personal Access Token
 
@@ -347,8 +342,6 @@ The $$gs auth login$$ operation will always fail if you use this method.
 
     [Git Credential Manager](#git-credential-manager)
     is convenient if you already have GCM installed for git operations.
-    git-spice can reuse your existing GCM credentials automatically,
-    and will fall back to them even without explicit login.
 
     [Service CLI](#service-cli) is the most convenient method
     if you already have the GitHub CLI installed and authenticated.
