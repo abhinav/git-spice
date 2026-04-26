@@ -583,6 +583,8 @@ or test-only changes, include `[skip changelog]: <cause description>` in the PR 
 Markdown documentation resides inside `doc/src`.
 The layout and structure of the documentation
 is described in `doc/mkdocs.yml`.
+This content powers the website,
+so document user-facing changes there when appropriate.
 
 When documenting unreleased features, add the following placeholder:
 
@@ -590,8 +592,10 @@ When documenting unreleased features, add the following placeholder:
 <!-- gs:version unreleased -->
 ```
 
-This will be automatically updated to the correct version
-when the feature is released.
+On the website,
+this renders a badge indicating that the feature is unreleased.
+The placeholder will be automatically updated to the correct version
+on the next release.
 
 ## Documentation style
 

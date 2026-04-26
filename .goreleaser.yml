@@ -1,6 +1,15 @@
 version: 2
 project_name: git-spice
 
+release:
+  prerelease: auto
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incminor .Tag }}-dev"
+
 builds:
   - id: git-spice
     env:
@@ -19,8 +28,22 @@ builds:
     flags:
       - -trimpath
 
+  # Keep Linux distro packages on a narrower target matrix than release
+  # archives so package formats do not inherit every Linux ARM variant.
+  - id: git-spice-linux-package
+    env:
+      - CGO_ENABLED=0
+    main: .
+    binary: git-spice
+    goos: [linux]
+    goarch: [amd64, arm64]
+    ldflags: '-s -w -X main._version={{.Version}}'
+    flags:
+      - -trimpath
+
 archives:
-  - formats: tar.gz
+  - ids: [git-spice]
+    formats: tar.gz
     # uname compatible archive name.
     name_template: >-
       {{- .ProjectName }}.
@@ -31,8 +54,45 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-release:
-  prerelease: auto
+nfpms:
+  - ids: [git-spice-linux-package]
+    package_name: git-spice
+    file_name_template: "{{ .ConventionalFileName }}"
+    homepage: "https://abhinav.github.io/git-spice/"
+    maintainer: "Abhinav Gupta <mail@abhinavg.net>"
+    description: "A tool for stacking Git branches."
+    license: "GPL-3.0-or-later"
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    dependencies:
+      - git
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/licenses/git-spice/LICENSE
+      - src: ./README.md
+        dst: /usr/share/doc/git-spice/README.md
+      - src: ./CHANGELOG.md
+        dst: /usr/share/doc/git-spice/CHANGELOG.md
+
+snapcrafts:
+  - ids: [git-spice-linux-package]
+    name: git-spice
+    title: git-spice
+    summary: A tool for stacking Git branches.
+    description: >-
+      git-spice helps you manage stacked Git branches, restack changes,
+      and submit pull requests or merge requests for a stack.
+    license: "GPL-3.0-or-later"
+    confinement: classic
+    grade: stable
+    publish: true
+    disable: '{{ ne (index .Env "ENABLE_SNAPCRAFT") "true" }}'
+    apps:
+      git-spice:
+        command: git-spice
 
 aurs:
   - name: git-spice-bin
@@ -77,9 +137,3 @@ homebrew_casks:
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/git-spice"]
           end
-
-checksum:
-  name_template: 'checksums.txt'
-
-snapshot:
-  version_template: "{{ incminor .Tag }}-dev"
