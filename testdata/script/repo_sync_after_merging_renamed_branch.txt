@@ -28,7 +28,8 @@ stderr 'Created #'
 gs branch rename feat1
 cp $WORK/extra/feature1-update.txt feature1.txt
 git add feature1.txt
-git commit -m 'update feature1'
+gs cc -m 'update feature1'
+gs branch submit
 
 # merge the PR
 shamhub merge alice/example 1
@@ -44,4 +45,3 @@ Contents of feature1
 
 -- extra/feature1-update.txt --
 New contents of feature1
-

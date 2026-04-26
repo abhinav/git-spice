@@ -403,16 +403,16 @@ func (h *Handler) loadRemoteChangeData(
 	wg, ctx := errgroup.WithContext(ctx)
 
 	if include&IncludeChangeState != 0 {
-		var states []forge.ChangeState
+		var statuses []forge.ChangeStatus
 		updates = append(updates, func() {
 			for j, idx := range branchesIdx {
-				branches[idx].ChangeState = states[j]
+				branches[idx].ChangeState = statuses[j].State
 			}
 		})
 
 		wg.Go(func() error {
 			var err error
-			states, err = remoteRepo.ChangesStates(ctx, changeIDs)
+			statuses, err = remoteRepo.ChangeStatuses(ctx, changeIDs)
 			if err != nil {
 				return fmt.Errorf("retrieve change states: %w", err)
 			}

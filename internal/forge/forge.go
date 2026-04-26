@@ -236,7 +236,7 @@ type Repository interface {
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
-	ChangesStates(ctx context.Context, ids []ChangeID) ([]ChangeState, error)
+	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -456,6 +456,15 @@ type FindChangeItem struct {
 	// Assignees are the usernames of users
 	// who are assigned to the change.
 	Assignees []string
+}
+
+// ChangeStatus is a compact status summary for a change.
+type ChangeStatus struct {
+	// State is the current state of the change.
+	State ChangeState
+
+	// HeadHash is the hash of the commit at the top of the change.
+	HeadHash git.Hash
 }
 
 // ChangeTemplate is a template for a new change proposal.

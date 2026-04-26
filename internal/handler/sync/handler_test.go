@@ -17,6 +17,77 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
+func TestMergedChangeHeadCheck(t *testing.T) {
+	// ancestorCheck describes one expected ancestry query.
+	type ancestorCheck struct {
+		ancestor   git.Hash
+		descendant git.Hash
+		isAncestor bool
+	}
+
+	tests := []struct {
+		name   string
+		local  git.Hash
+		remote git.Hash
+		// Ancestry queries expected for non-equal local and remote heads.
+		ancestorChecks []ancestorCheck
+		want           mergedChangeHeadStatus
+	}{
+		{
+			name:   "Exact",
+			local:  git.Hash("aaa"),
+			remote: git.Hash("aaa"),
+			want:   mergedChangeHeadExact,
+		},
+		{
+			name:   "RemoteContainsLocal",
+			local:  git.Hash("aaa"),
+			remote: git.Hash("bbb"),
+			ancestorChecks: []ancestorCheck{
+				{
+					ancestor:   git.Hash("aaa"),
+					descendant: git.Hash("bbb"),
+					isAncestor: true,
+				},
+			},
+			want: mergedChangeHeadRemoteContainsLocal,
+		},
+		{
+			name:   "LocalContainsRemote",
+			local:  git.Hash("bbb"),
+			remote: git.Hash("aaa"),
+			want:   mergedChangeHeadMismatch,
+		},
+		{
+			name:   "Unknown",
+			local:  git.Hash("aaa"),
+			remote: git.Hash("bbb"),
+			want:   mergedChangeHeadMismatch,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockRepo := NewMockGitRepository(ctrl)
+			for _, check := range tt.ancestorChecks {
+				mockRepo.EXPECT().
+					IsAncestor(gomock.Any(), check.ancestor, check.descendant).
+					Return(check.isAncestor)
+			}
+			if tt.local != tt.remote && len(tt.ancestorChecks) == 0 {
+				mockRepo.EXPECT().
+					IsAncestor(gomock.Any(), tt.local, tt.remote).
+					Return(false)
+			}
+
+			assert.Equal(t, tt.want,
+				mergedChangeHeadCheck(t.Context(), mockRepo, tt.local, tt.remote))
+		})
+	}
+}
+
 func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 	t.Run("FetchOnlyDoesNotStart", func(t *testing.T) {
 		ctrl := gomock.NewController(t)

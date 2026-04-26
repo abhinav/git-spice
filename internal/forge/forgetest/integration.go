@@ -281,7 +281,7 @@ type IntegrationConfig struct {
 	// Set to true for forges where user lookup by username doesn't work.
 	SkipReviewers bool // optional
 
-	// SkipMerge skips merge-related tests in ChangesStates.
+	// SkipMerge skips merge-related tests in ChangeStatuses.
 	// Set to true for forges that require approvals before merge.
 	SkipMerge bool // optional
 
@@ -753,18 +753,19 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 	s.MergeChange(t, repo, mergedChange.ID)
 	s.CloseChange(t, repo, closedChange.ID)
 
-	// Verify states.
-	states, err := repo.ChangesStates(t.Context(), []forge.ChangeID{
+	// Verify statuses.
+	statuses, err := repo.ChangeStatuses(t.Context(), []forge.ChangeID{
 		openChange.ID,
 		mergedChange.ID,
 		closedChange.ID,
 	})
 	require.NoError(t, err, "error fetching change states")
-	assert.Equal(t, []forge.ChangeState{
-		forge.ChangeOpen,
-		forge.ChangeMerged,
-		forge.ChangeClosed,
-	}, states, "change states should match expected")
+	assert.Equal(t, forge.ChangeOpen, statuses[0].State)
+	assert.Equal(t, forge.ChangeMerged, statuses[1].State)
+	assert.Equal(t, forge.ChangeClosed, statuses[2].State)
+	assert.NotEmpty(t, statuses[0].HeadHash)
+	assert.NotEmpty(t, statuses[1].HeadHash)
+	assert.NotEmpty(t, statuses[2].HeadHash)
 }
 
 // FindChangesByBranch returns no error, and an empty slice
