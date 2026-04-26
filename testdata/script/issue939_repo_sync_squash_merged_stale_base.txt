@@ -1,0 +1,76 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/939
+#
+# When a squash-merged downstack branch is deleted,
+# 'repo sync' must not replay downstack commits already present
+# in the upstack branch because git-spice's stored base hash is stale.
+
+as 'Test <test@example.com>'
+at '2026-04-26T12:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack: main -> base -> stacked.
+git add base.txt
+gs bc base -m 'Add base file'
+
+git add stacked.txt
+gs bc stacked -m 'Add stacked file'
+
+# Add another commit to the downstack branch after the upstack exists.
+gs bco base
+cp $WORK/extra/base-v2.txt base.txt
+git add base.txt
+git commit -m 'Update base file'
+cp $WORK/extra/base-v3.txt base.txt
+git add base.txt
+git commit -m 'Update base file again'
+
+# Restack the upstack branch with plain Git.
+# This makes the new downstack commits reachable from 'stacked',
+# but leaves git-spice's stored BaseHash for 'stacked' pointing
+# at the older downstack commit.
+git checkout stacked
+git rebase base
+
+# Submit only the downstack branch.
+gs bco base
+gs branch submit --fill
+stderr 'Created #1'
+
+shamhub merge -squash -prune alice/example 1
+gs repo sync
+stderr 'base: #1 was merged'
+
+# The downstack branch was deleted,
+# and the upstack branch was moved onto the squash-merged trunk.
+! git rev-parse --verify base
+git rev-parse --verify stacked
+
+gs ll -a
+stderr 'stacked'
+stderr 'main'
+
+git graph --branches
+stdout 'Add stacked file'
+stdout 'Add base file \(\#1\)'
+
+-- repo/base.txt --
+base v1
+-- repo/stacked.txt --
+stacked
+-- extra/base-v2.txt --
+base v2
+-- extra/base-v3.txt --
+base v3

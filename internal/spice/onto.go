@@ -58,7 +58,30 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		ontoHash = onto.Head
 	}
 
-	// We're trying to move commits BaseHash..HEAD onto commit OntoHash.
+	// The recorded base hash may be stale if the old base branch
+	// was advanced outside git-spice,
+	// and the branch being moved was restacked outside git-spice.
+	//
+	// For example:
+	//
+	//     o---A (RecordedBase)
+	//          \
+	//           B---C (ActualBase)
+	//                \
+	//                 D (Current)
+	//
+	// git-spice may still think Current is based on RecordedBase,
+	// but using RecordedBase..Current would replay B and C.
+	// If ActualBase is reachable from Current,
+	// use ActualBase..Current so only Current's own commits are replayed.
+	fromHash := branch.BaseHash
+	if actualBaseHash, err := s.repo.PeelToCommit(ctx, branch.Base); err == nil {
+		if s.repo.IsAncestor(ctx, actualBaseHash, branch.Head) {
+			fromHash = actualBaseHash
+		}
+	}
+
+	// We're trying to move the selected commit range onto OntoHash.
 	//
 	// However, there's a possibility that BaseHash is reachable from OntoHash
 	// because the old base is also the base of onto,
@@ -91,7 +114,6 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	// To catch this, if OriginalBase is reachable from NewBase,
 	// we'll change the commit range to NewBase..Current.
 	// This will turn the rebase into a no-op, but it'll correctly update state.
-	fromHash := branch.BaseHash
 	if s.repo.IsAncestor(ctx, fromHash, ontoHash) {
 		fromHash = ontoHash
 	}
