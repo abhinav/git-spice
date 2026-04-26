@@ -828,6 +828,8 @@ would require a new name to be provided for commit 3.
 * `--at=COMMIT:NAME,...`: Commits to split the branch at.
 * `--branch=NAME`: Branch to split commits of.
 
+**Configuration**: [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix)
+
 ### git-spice branch squash {#gs-branch-squash}
 
 ```

@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch split: Branch name prompts now start with the configured branch creation prefix.'
+time: 2026-04-25T10:19:22.267463-07:00

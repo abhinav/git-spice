@@ -1,0 +1,62 @@
+# branch split prompts with the configured branch creation prefix.
+#
+# https://github.com/abhinav/git-spice/issues/1119
+
+as 'Test <test@example.com>'
+at '2024-06-23T10:00:12Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m 'Add feature1' features
+git add feature2.txt
+gs cc -m 'Add feature2'
+git add feature3.txt
+gs cc -m 'Add feature3'
+
+git config spice.branchCreate.prefix 'myuser/'
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+gs branch split
+cmp $WORK/robot.actual $WORK/robot.golden
+
+gs ll -a
+cmp stderr $WORK/golden/after.txt
+
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- repo/feature3.txt --
+feature3
+-- golden/after.txt --
+    ┏━■ features ◀
+    ┃   1b17c72 Add feature3 (now)
+  ┏━┻□ myuser/feature2
+  ┃    0c7ed55 Add feature2 (now)
+┏━┻□ myuser/feature1
+┃    a3a4c59 Add feature1 (now)
+main
+-- robot.golden --
+===
+> Select commits: 
+> ▶   a3a4c59 Add feature1 (now)
+>     0c7ed55 Add feature2 (now)
+>   ■ 1b17c72 Add feature3 (now) [features]
+>   Done
+> Select commits to split the branch at
+[
+  "a3a4c59",
+  "0c7ed55"
+]
+===
+> Branch name: myuser/ 
+>   □ a3a4c59 Add feature1 (now)
+"myuser/feature1"
+===
+> Branch name: myuser/ 
+>   □ 0c7ed55 Add feature2 (now)
+"myuser/feature2"

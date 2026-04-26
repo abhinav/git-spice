@@ -20,6 +20,8 @@ type branchSplitCmd struct {
 	split.Options
 
 	Branch string `placeholder:"NAME" help:"Branch to split commits of."`
+
+	Prefix string `default:"" config:"branchCreate.prefix" hidden:""`
 }
 
 func (*branchSplitCmd) Help() string {
@@ -151,6 +153,7 @@ func (cmd *branchSplitCmd) Run(
 			fields := make([]ui.Field, 0, len(selected)+1) // +1 for deferred HEAD field
 			theme := view.Theme()
 			for i, commit := range selected {
+				branchNames[i] = cmd.Prefix
 				desc := cmd.commitDescription(theme, commit, false /* head */)
 				input := branchNameWidget(desc, &branchNames[i])
 				fields = append(fields, input)
@@ -171,6 +174,7 @@ func (cmd *branchSplitCmd) Run(
 
 				desc := cmd.commitDescription(theme, headCommit, true /* head */) +
 					" [" + cmd.Branch + "]"
+				headBranchName = cmd.Prefix
 				return branchNameWidget(desc, &headBranchName)
 			}))
 
