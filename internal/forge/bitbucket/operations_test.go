@@ -214,7 +214,7 @@ func TestFindChangeByID(t *testing.T) {
 	assert.Equal(t, forge.ChangeOpen, item.State)
 }
 
-func TestChangesStates(t *testing.T) {
+func TestChangeStatuses(t *testing.T) {
 	tests := []struct {
 		name       string
 		prStates   map[int64]string
@@ -260,7 +260,13 @@ func TestChangesStates(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// Return first PR state for simple single-PR tests.
 				for id := range tt.prStates {
-					resp := bitbucket.PullRequest{ID: id, State: tt.prStates[id]}
+					resp := bitbucket.PullRequest{
+						ID:    id,
+						State: tt.prStates[id],
+						Source: bitbucket.BranchRef{
+							Commit: &bitbucket.Commit{Hash: "abcdef123456"},
+						},
+					}
 					_ = json.NewEncoder(w).Encode(resp)
 					break
 				}
@@ -270,9 +276,11 @@ func TestChangesStates(t *testing.T) {
 			// Need a more sophisticated mock for multiple PRs.
 			if len(tt.ids) == 1 {
 				repo := newTestRepository(srv.URL)
-				states, err := repo.ChangesStates(t.Context(), tt.ids)
+				statuses, err := repo.ChangeStatuses(t.Context(), tt.ids)
 				require.NoError(t, err)
-				assert.Equal(t, tt.wantStates, states)
+				require.Len(t, statuses, 1)
+				assert.Equal(t, tt.wantStates[0], statuses[0].State)
+				assert.Equal(t, "abcdef123456", statuses[0].HeadHash.String())
 			}
 		})
 	}

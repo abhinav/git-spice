@@ -15,28 +15,31 @@ const (
 	stateSuperseded = "SUPERSEDED"
 )
 
-// ChangesStates retrieves the states of multiple pull requests.
-func (r *Repository) ChangesStates(
+// ChangeStatuses retrieves compact statuses for multiple pull requests.
+func (r *Repository) ChangeStatuses(
 	ctx context.Context,
 	ids []forge.ChangeID,
-) ([]forge.ChangeState, error) {
-	states := make([]forge.ChangeState, len(ids))
+) ([]forge.ChangeStatus, error) {
+	statuses := make([]forge.ChangeStatus, len(ids))
 	for i, id := range ids {
-		state, err := r.getChangeState(ctx, mustPR(id).Number)
+		status, err := r.getChangeStatus(ctx, mustPR(id).Number)
 		if err != nil {
 			return nil, fmt.Errorf("get state for PR #%d: %w", mustPR(id).Number, err)
 		}
-		states[i] = state
+		statuses[i] = status
 	}
-	return states, nil
+	return statuses, nil
 }
 
-func (r *Repository) getChangeState(ctx context.Context, prID int64) (forge.ChangeState, error) {
+func (r *Repository) getChangeStatus(ctx context.Context, prID int64) (forge.ChangeStatus, error) {
 	pr, err := r.getPullRequest(ctx, prID)
 	if err != nil {
-		return 0, err
+		return forge.ChangeStatus{}, err
 	}
-	return stateFromAPI(pr.State), nil
+	return forge.ChangeStatus{
+		State:    stateFromAPI(pr.State),
+		HeadHash: extractHeadHash(pr),
+	}, nil
 }
 
 func stateFromAPI(state string) forge.ChangeState {

@@ -6,7 +6,7 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 146
+        content_length: 142
         host: api.github.com
         body: |
             {"query":"query($owner:String!$repo:String!){repository(owner: $owner, name: $repo){id}}","variables":{"owner":"test-owner","repo":"test-repo"}}
@@ -21,13 +21,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"id":"R_kgDORFeuHw"}}}'
+        body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 164.45975ms
+        duration: 286.532125ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -36,7 +36,7 @@ interactions:
         content_length: 260
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDORFeuHw","baseRefName":"main","headRefName":"GaNySRNV","title":"Open GaNySRNV","body":"Open change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"Lgwei5Q0","title":"Open Lgwei5Q0","body":"Open change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -48,13 +48,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtaAm","number":60,"url":"https://github.com/test-owner/test-repo/pull/60"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvb","number":68,"url":"https://github.com/test-owner/test-repo/pull/68"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.045985708s
+        duration: 915.464625ms
     - id: 2
       request:
         proto: HTTP/1.1
@@ -63,7 +63,7 @@ interactions:
         content_length: 264
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDORFeuHw","baseRefName":"main","headRefName":"WR7mLr5c","title":"Merged WR7mLr5c","body":"Merged change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"oR1r89qa","title":"Merged oR1r89qa","body":"Merged change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -75,13 +75,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtaA0","number":62,"url":"https://github.com/test-owner/test-repo/pull/62"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvy","number":69,"url":"https://github.com/test-owner/test-repo/pull/69"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 713.979667ms
+        duration: 996.899875ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -90,7 +90,7 @@ interactions:
         content_length: 264
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDORFeuHw","baseRefName":"main","headRefName":"b5PnGZXf","title":"Closed b5PnGZXf","body":"Closed change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"LHSD69GY","title":"Closed LHSD69GY","body":"Closed change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -102,13 +102,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtaBC","number":63,"url":"https://github.com/test-owner/test-repo/pull/63"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHwb","number":70,"url":"https://github.com/test-owner/test-repo/pull/70"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 715.496458ms
+        duration: 1.544673917s
     - id: 4
       request:
         proto: HTTP/1.1
@@ -117,7 +117,7 @@ interactions:
         content_length: 164
         host: api.github.com
         body: |
-            {"query":"mutation($input:MergePullRequestInput!){mergePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDORFeuH87AtaA0"}}}
+            {"query":"mutation($input:MergePullRequestInput!){mergePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs7VxHvy"}}}
         headers:
             Content-Type:
                 - application/json
@@ -129,13 +129,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"mergePullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtaA0"}}}}'
+        body: '{"data":{"mergePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvy"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.39461725s
+        duration: 1.840947959s
     - id: 5
       request:
         proto: HTTP/1.1
@@ -144,7 +144,7 @@ interactions:
         content_length: 183
         host: api.github.com
         body: |
-            {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDORFeuH87AtaBC","state":"CLOSED"}}}
+            {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs7VxHwb","state":"CLOSED"}}}
         headers:
             Content-Type:
                 - application/json
@@ -156,22 +156,22 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDORFeuH87AtaBC"}}}}'
+        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHwb"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 720.737167ms
+        duration: 818.099583ms
     - id: 6
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 164
+        content_length: 175
         host: api.github.com
         body: |
-            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state}}}","variables":{"ids":["PR_kwDORFeuH87AtaAm","PR_kwDORFeuH87AtaA0","PR_kwDORFeuH87AtaBC"]}}
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs7VxHvb","PR_kwDOMVd0xs7VxHvy","PR_kwDOMVd0xs7VxHwb"]}}
         headers:
             Content-Type:
                 - application/json
@@ -183,10 +183,10 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"nodes":[{"state":"OPEN"},{"state":"MERGED"},{"state":"CLOSED"}]}}'
+        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"3a0df6baa6afa3ba213d544ed1f10d3650e9497d"},{"state":"MERGED","headRefOid":"2fbdfe75f33a6b4b71e8995e13e366b7e96979d2"},{"state":"CLOSED","headRefOid":"01b3391a453432ea5483ae10f67b88d9c1d2e5ba"}]}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 176.806167ms
+        duration: 216.685916ms

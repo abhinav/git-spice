@@ -6,14 +6,16 @@ import (
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 )
 
-// ChangesStates retrieves the states of the given changes in bulk.
-func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeState, error) {
+// ChangeStatuses retrieves compact statuses for the given changes in bulk.
+func (r *Repository) ChangeStatuses(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeStatus, error) {
 	var q struct {
 		Nodes []struct {
 			PullRequest struct {
-				State githubv4.PullRequestState `graphql:"state"`
+				State      githubv4.PullRequestState `graphql:"state"`
+				HeadRefOid githubv4.GitObjectID      `graphql:"headRefOid"`
 			} `graphql:"... on PullRequest"`
 		} `graphql:"nodes(ids: $ids)"`
 	}
@@ -32,10 +34,13 @@ func (r *Repository) ChangesStates(ctx context.Context, ids []forge.ChangeID) ([
 		return nil, fmt.Errorf("retrieve change states: %w", err)
 	}
 
-	states := make([]forge.ChangeState, len(ids))
+	statuses := make([]forge.ChangeStatus, len(ids))
 	for i, pr := range q.Nodes {
-		states[i] = forgeChangeState(pr.PullRequest.State)
+		statuses[i] = forge.ChangeStatus{
+			State:    forgeChangeState(pr.PullRequest.State),
+			HeadHash: git.Hash(pr.PullRequest.HeadRefOid),
+		}
 	}
 
-	return states, nil
+	return statuses, nil
 }

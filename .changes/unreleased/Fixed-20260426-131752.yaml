@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'repo sync: Prevent branches with unsubmitted local commits from being deleted after their change request is merged.'
+time: 2026-04-26T13:17:52.841836-07:00

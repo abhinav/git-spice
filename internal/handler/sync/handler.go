@@ -493,6 +493,9 @@ func (h *Handler) findForgeFinishedBranches(
 
 		Change forge.ChangeID
 		State  forge.ChangeState
+		// Head SHA reported by the forge for the change.
+		RemoteHeadSHA git.Hash
+		LocalHeadSHA  git.Hash
 
 		// Branch name pushed to the remote.
 		UpstreamBranch string
@@ -540,6 +543,7 @@ func (h *Handler) findForgeFinishedBranches(
 				Name:            b.Name,
 				Base:            b.Base,
 				Change:          b.Change.ChangeID(),
+				LocalHeadSHA:    b.Head,
 				UpstreamBranch:  upstreamBranch,
 				MergedDownstack: b.MergedDownstack,
 			}
@@ -567,14 +571,15 @@ func (h *Handler) findForgeFinishedBranches(
 				changeIDs[i] = b.Change
 			}
 
-			states, err := h.RemoteRepository.ChangesStates(ctx, changeIDs)
+			statuses, err := h.RemoteRepository.ChangeStatuses(ctx, changeIDs)
 			if err != nil {
 				h.Log.Error("Failed to query CR status", "error", err)
 				return
 			}
 
-			for i, state := range states {
-				submittedBranches[i].State = state
+			for i, status := range statuses {
+				submittedBranches[i].State = status.State
+				submittedBranches[i].RemoteHeadSHA = status.HeadHash
 			}
 		})
 	}
@@ -673,7 +678,12 @@ func (h *Handler) findForgeFinishedBranches(
 			}
 
 		case forge.ChangeMerged:
-			h.Log.Infof("%v: %v was merged", branch.Name, branch.Change)
+			if !h.shouldDeleteMergedChange(ctx,
+				branch.Name, branch.Change,
+				branch.LocalHeadSHA, branch.RemoteHeadSHA) {
+				continue
+			}
+
 			finishedBranches[branch.Name] = finishedBranch{
 				Name:           branch.Name,
 				Base:           branch.Base,
@@ -700,34 +710,9 @@ func (h *Handler) findForgeFinishedBranches(
 		}
 		mergedDownstacks[branch.Name] = branch.MergedDownstack
 
-		if branch.RemoteHeadSHA == branch.LocalHeadSHA {
-			h.Log.Infof("%v: %v was merged", branch.Name, branch.Change)
-			finishedBranches[branch.Name] = finished
-			continue
-		}
-
-		mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
-			branch.Change, branch.LocalHeadSHA.Short(), branch.RemoteHeadSHA.Short())
-
-		// If the remote head SHA doesn't match the local head SHA,
-		// there may be local commits that haven't been pushed yet.
-		// Prompt for deletion if we have the option of prompting.
-		if !ui.Interactive(h.View) {
-			h.Log.Warnf("%v: %v. Skipping...", branch.Name, mismatchMsg)
-			continue
-		}
-
-		var shouldDelete bool
-		prompt := ui.NewConfirm().
-			WithTitle(fmt.Sprintf("Delete %v?", branch.Name)).
-			WithDescription(mismatchMsg).
-			WithValue(&shouldDelete)
-		if err := ui.Run(h.View, prompt); err != nil {
-			h.Log.Warn("Skipping branch", "branch", branch.Name, "error", err)
-			continue
-		}
-
-		if shouldDelete {
+		if h.shouldDeleteMergedChange(ctx,
+			branch.Name, branch.Change,
+			branch.LocalHeadSHA, branch.RemoteHeadSHA) {
 			finishedBranches[branch.Name] = finished
 		}
 	}
@@ -823,6 +808,85 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	return branchesToDelete, nil
+}
+
+func (h *Handler) shouldDeleteMergedChange(
+	ctx context.Context,
+	branchName string,
+	changeID forge.ChangeID,
+	localHead, remoteHead git.Hash,
+) bool {
+	switch mergedChangeHeadCheck(ctx, h.Repository, localHead, remoteHead) {
+	case mergedChangeHeadExact:
+		h.Log.Infof("%v: %v was merged", branchName, changeID)
+		return true
+
+	case mergedChangeHeadRemoteContainsLocal:
+		h.Log.Infof("%v: %v was merged; local SHA %v is included in remote SHA %v",
+			branchName, changeID, localHead.Short(), remoteHead.Short())
+		return true
+
+	case mergedChangeHeadMismatch:
+		mismatchMsg := fmt.Sprintf("%v was merged but local SHA (%v) does not match remote SHA (%v)",
+			changeID, localHead.Short(), remoteHead.Short())
+
+		// If the remote head SHA doesn't contain the local head SHA,
+		// there may be local commits that haven't been pushed yet.
+		// Prompt for deletion if we have the option of prompting.
+		if !ui.Interactive(h.View) {
+			h.Log.Warnf("%v: %v. Skipping...", branchName, mismatchMsg)
+			return false
+		}
+
+		var shouldDelete bool
+		prompt := ui.NewConfirm().
+			WithTitle(fmt.Sprintf("Delete %v?", branchName)).
+			WithDescription(mismatchMsg).
+			WithValue(&shouldDelete)
+		if err := ui.Run(h.View, prompt); err != nil {
+			h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
+			return false
+		}
+
+		return shouldDelete
+
+	default:
+		must.Bef(false, "unknown merged change head status")
+		return false
+	}
+}
+
+type mergedChangeHeadStatus int
+
+const (
+	// The local branch head is the same commit as the forge-reported head.
+	mergedChangeHeadExact mergedChangeHeadStatus = iota + 1
+
+	// The forge-reported head contains the local branch head.
+	mergedChangeHeadRemoteContainsLocal
+
+	// The forge-reported head does not prove that local commits are safe.
+	mergedChangeHeadMismatch
+)
+
+func mergedChangeHeadCheck(
+	ctx context.Context,
+	repo GitRepository,
+	localHead, remoteHead git.Hash,
+) mergedChangeHeadStatus {
+	if localHead == "" || remoteHead == "" {
+		return mergedChangeHeadMismatch
+	}
+
+	if localHead == remoteHead {
+		return mergedChangeHeadExact
+	}
+
+	if repo.IsAncestor(ctx, localHead, remoteHead) {
+		return mergedChangeHeadRemoteContainsLocal
+	}
+
+	return mergedChangeHeadMismatch
 }
 
 type branchDeletion struct {

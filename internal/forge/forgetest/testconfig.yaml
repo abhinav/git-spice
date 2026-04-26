@@ -13,13 +13,13 @@
 
 github:
   # Repository owner (your GitHub username or organization)
-  owner: "ed-irl"
+  owner: "abhinav"
   # Test repository name (should be a repo you have write access to)
-  repo: "git-spice-test"
+  repo: "test-repo"
   # A GitHub user who can be added as a reviewer (can be a bot account)
-  reviewer: "ekohlwey"
+  reviewer: "abhinav-robot"
   # A GitHub user who can be assigned to PRs (can be the same as reviewer)
-  assignee: "ekohlwey"
+  assignee: "abhinav"
 
 gitlab:
   # Project namespace (your GitLab username or group)

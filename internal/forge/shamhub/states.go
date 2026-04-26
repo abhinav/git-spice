@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/xec"
 )
 
@@ -19,10 +20,15 @@ type statesRequest struct {
 }
 
 type statesResponse struct {
-	States []string `json:"states"`
+	Statuses []changeStatus `json:"statuses"`
 }
 
 var _ = shamhubRESTHandler("POST /{owner}/{repo}/change/states", (*ShamHub).handleStates)
+
+type changeStatus struct {
+	State    string `json:"state"`
+	HeadHash string `json:"headHash"`
+}
 
 func (sh *ShamHub) handleStates(_ context.Context, req *statesRequest) (*statesResponse, error) {
 	owner, repo := req.Owner, req.Repo
@@ -33,7 +39,9 @@ func (sh *ShamHub) handleStates(_ context.Context, req *statesRequest) (*statesR
 	}
 
 	sh.mu.RLock()
-	states := make([]string, len(changeNumToIdx))
+	defer sh.mu.RUnlock()
+
+	statuses := make([]changeStatus, len(changeNumToIdx))
 	for _, c := range sh.changes {
 		if c.Base.Owner == owner && c.Base.Repo == repo {
 			idx, ok := changeNumToIdx[c.Number]
@@ -42,11 +50,20 @@ func (sh *ShamHub) handleStates(_ context.Context, req *statesRequest) (*statesR
 			}
 			switch c.State {
 			case shamChangeOpen:
-				states[idx] = "open"
+				statuses[idx].State = "open"
 			case shamChangeClosed:
-				states[idx] = "closed"
+				statuses[idx].State = "closed"
 			case shamChangeMerged:
-				states[idx] = "merged"
+				statuses[idx].State = "merged"
+			}
+			if c.HeadHash != "" {
+				statuses[idx].HeadHash = c.HeadHash
+			} else {
+				head, err := sh.toChangeBranch(c.Head)
+				if err != nil {
+					return nil, fmt.Errorf("head branch: %w", err)
+				}
+				statuses[idx].HeadHash = head.Hash
 			}
 			delete(changeNumToIdx, c.Number)
 
@@ -55,16 +72,14 @@ func (sh *ShamHub) handleStates(_ context.Context, req *statesRequest) (*statesR
 			}
 		}
 	}
-	sh.mu.RUnlock()
-
 	if len(changeNumToIdx) > 0 {
 		return nil, notFoundErrorf("changes not found: %v", changeNumToIdx)
 	}
 
-	return &statesResponse{States: states}, nil
+	return &statesResponse{Statuses: statuses}, nil
 }
 
-func (r *forgeRepository) ChangesStates(ctx context.Context, fids []forge.ChangeID) ([]forge.ChangeState, error) {
+func (r *forgeRepository) ChangeStatuses(ctx context.Context, fids []forge.ChangeID) ([]forge.ChangeStatus, error) {
 	ids := make([]ChangeID, len(fids))
 	for i, fid := range fids {
 		ids[i] = fid.(ChangeID)
@@ -78,21 +93,22 @@ func (r *forgeRepository) ChangesStates(ctx context.Context, fids []forge.Change
 		return nil, fmt.Errorf("get states: %w", err)
 	}
 
-	states := make([]forge.ChangeState, len(res.States))
-	for i, state := range res.States {
-		switch state {
+	statuses := make([]forge.ChangeStatus, len(res.Statuses))
+	for i, status := range res.Statuses {
+		switch status.State {
 		case "open":
-			states[i] = forge.ChangeOpen
+			statuses[i].State = forge.ChangeOpen
 		case "closed":
-			states[i] = forge.ChangeClosed
+			statuses[i].State = forge.ChangeClosed
 		case "merged":
-			states[i] = forge.ChangeMerged
+			statuses[i].State = forge.ChangeMerged
 		default:
-			states[i] = forge.ChangeOpen // default to open for unknown states
+			statuses[i].State = forge.ChangeOpen // default to open for unknown states
 		}
+		statuses[i].HeadHash = git.Hash(status.HeadHash)
 	}
 
-	return states, nil
+	return statuses, nil
 }
 
 // MergeChangeRequest is a request to merge an open change
@@ -237,6 +253,20 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		return err
 	}
 
+	headHash, err := func() (string, error) {
+		out, err := xec.Command(ctx, sh.log, sh.gitExe, "rev-parse", headRef.Name).
+			WithDir(sh.repoDir(headRef.Owner, headRef.Repo)).
+			Output()
+		if err != nil {
+			return "", fmt.Errorf("rev-parse head: %w", err)
+		}
+
+		return strings.TrimSpace(string(out)), nil
+	}()
+	if err != nil {
+		return err
+	}
+
 	// Update the ref to point to the new commit.
 	err = func() error {
 		ref := "refs/heads/" + sh.changes[changeIdx].Base.Name
@@ -268,5 +298,6 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	sh.changes[changeIdx].State = shamChangeMerged
+	sh.changes[changeIdx].HeadHash = headHash
 	return nil
 }

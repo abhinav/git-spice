@@ -92,6 +92,12 @@ type shamChange struct {
 	// Head will merge into Base.
 	Base, Head *shamBranch
 
+	// HeadHash is the last known hash of Head.
+	// This is populated when the change is merged,
+	// so status queries can keep reporting the merged head
+	// even if the source branch was deleted.
+	HeadHash string
+
 	// Labels are the labels associated with the change.
 	Labels []string
 

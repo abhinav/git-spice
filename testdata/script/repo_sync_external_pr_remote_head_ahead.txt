@@ -1,0 +1,50 @@
+# 'repo sync' deletes a branch for an externally-created merged CR
+# if the forge-reported CR head includes the local branch head.
+
+as 'Test <test@example.com>'
+at '2026-04-26T12:30:00Z'
+
+# Setup.
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up a fake GitHub remote.
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create and submit a branch.
+git add feature.txt
+gs bc -m 'Add feature' feature
+gs branch submit --fill
+stderr 'Created #'
+
+# Push a server-side-style commit to the CR branch,
+# then rewind the local branch to simulate the remote head being ahead.
+mv $WORK/extra/updated-feature.txt feature.txt
+git add feature.txt
+gs cc -m 'Update feature on remote'
+git push origin feature
+git reset --hard HEAD^
+
+# Forget the CR metadata so this exercises the untracked/external path.
+gs repo init --reset --trunk=main --remote=origin
+gs branch track --base=main feature
+
+shamhub merge alice/example 1
+gs repo sync
+stderr 'feature: #1 was merged; local SHA c8a3a1e is included in remote SHA e88f0fc'
+
+git branch --list feature
+cmp stdout $WORK/golden/no-branches.txt
+
+-- repo/feature.txt --
+Contents of feature
+-- extra/updated-feature.txt --
+Updated contents of feature
+-- golden/no-branches.txt --

@@ -99,18 +99,27 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 61
+        content_length: 254
         body: |
             {
-              "states": [
-                "open",
-                "merged",
-                "closed"
+              "statuses": [
+                {
+                  "state": "open",
+                  "headHash": "1111111111111111111111111111111111111111"
+                },
+                {
+                  "state": "merged",
+                  "headHash": "2222222222222222222222222222222222222222"
+                },
+                {
+                  "state": "closed",
+                  "headHash": "3333333333333333333333333333333333333333"
+                }
               ]
             }
         headers:
             Content-Length:
-                - "61"
+                - "254"
             Content-Type:
                 - application/json
         status: 200 OK
