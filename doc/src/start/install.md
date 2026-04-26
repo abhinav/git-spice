@@ -81,6 +81,57 @@ makepkg -si
 yay -S git-spice-bin
 ```
 
+### Linux packages
+
+<!-- gs:version unreleased -->
+
+GitHub Releases also provides native Linux packages:
+
+- `.deb` packages for Debian and Ubuntu
+- `.rpm` packages for Fedora, RHEL, Rocky, AlmaLinux, and openSUSE
+- `.apk` packages for Alpine
+
+Download the package for your architecture
+from the [GitHub Releases page](https://github.com/abhinav/git-spice/releases),
+then install it with your system package manager:
+
+=== "Debian / Ubuntu"
+
+    ```bash
+    sudo apt install ./git-spice_<version>_<arch>.deb
+    ```
+
+=== "Fedora / RHEL / Rocky / AlmaLinux"
+
+    ```bash
+    sudo dnf install ./git-spice-<version>-1.<arch>.rpm
+    ```
+
+=== "openSUSE"
+
+    ```bash
+    sudo zypper install ./git-spice-<version>-1.<arch>.rpm
+    ```
+
+=== "Alpine"
+
+    ```bash
+    sudo apk add --allow-untrusted ./git-spice-<version>-r1.<arch>.apk
+    ```
+
+### Snap
+
+<!-- gs:version unreleased -->
+
+If you use Snap, install the published `git-spice` snap with:
+
+```bash
+sudo snap install git-spice --classic
+```
+
+The snap uses `classic` confinement
+so it can work with your existing Git repositories and system Git binary.
+
 ### Manual download
 
 You can manually download the latest release of git-spice from the

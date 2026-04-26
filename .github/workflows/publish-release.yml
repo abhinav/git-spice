@@ -86,6 +86,11 @@ jobs:
       env:
         TAG: v${{ env.VERSION }}
 
+    - name: Install packaging tools
+      if: inputs.skip_publish == false
+      run: |
+        sudo snap install snapcraft --classic
+
     - name: Release
       if: inputs.skip_publish == false
       uses: goreleaser/goreleaser-action@v7
@@ -94,9 +99,11 @@ jobs:
         version: latest
         args: release --clean --release-notes ${{ github.workspace }}-CHANGELOG.txt
       env:
+        ENABLE_SNAPCRAFT: "true"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         AUR_KEY: ${{ secrets.AUR_KEY }}
         HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         GORELEASER_CURRENT_TAG: v${{ env.VERSION }}
 
   # Run only if the release was successful.
