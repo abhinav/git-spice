@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'gitlab: Fix crash when restacking a stack with more than 20 submitted MRs.'
-time: 2026-04-22T21:51:17.320974-07:00

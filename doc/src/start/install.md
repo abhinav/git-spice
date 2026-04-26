@@ -83,7 +83,7 @@ yay -S git-spice-bin
 
 ### Linux packages
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.27.0 -->
 
 GitHub Releases also provides native Linux packages:
 
@@ -121,7 +121,7 @@ then install it with your system package manager:
 
 ### Snap
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.27.0 -->
 
 If you use Snap, install the published `git-spice` snap with:
 
