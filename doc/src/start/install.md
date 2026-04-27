@@ -117,7 +117,7 @@ then install it with your system package manager:
 
     ```bash
     sudo apk add --allow-untrusted ./git-spice-<version>-r1.<arch>.apk
-    ``
+    ```
 
 ### Manual download
 
