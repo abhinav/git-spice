@@ -44,20 +44,51 @@ func openRemoteRepositorySilent(
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.Repository, error) {
+	f, repoID, err := resolveRemoteRepositorySilent(ctx, forges, gitRepo, remote)
+	if err != nil {
+		return nil, err
+	}
+
+	return openForgeRepository(ctx, stash, f, repoID)
+}
+
+func resolveRemoteRepositoryID(
+	ctx context.Context,
+	forges *forge.Registry,
+	gitRepo *git.Repository,
+	remote string,
+) (forge.RepositoryID, error) {
 	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
 	if err != nil {
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
+	_, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
+	if !ok {
+		return nil, fmt.Errorf("no forge matches remote URL %q", remoteURL)
+	}
+	return repoID, nil
+}
+
+func resolveRemoteRepositorySilent(
+	ctx context.Context,
+	forges *forge.Registry,
+	gitRepo *git.Repository,
+	remote string,
+) (forge.Forge, forge.RepositoryID, error) {
+	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get remote URL: %w", err)
+	}
+
 	f, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
 	if !ok {
-		return nil, &unsupportedForgeError{
+		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
 			RemoteURL: remoteURL,
 		}
 	}
-
-	return openForgeRepository(ctx, stash, f, repoID)
+	return f, repoID, nil
 }
 
 func openForgeRepository(
@@ -77,33 +108,37 @@ func openForgeRepository(
 	return f.OpenRepository(ctx, tok, repoID)
 }
 
-func openRemoteRepository(
+func resolveRemoteRepository(
 	ctx context.Context,
 	log *silog.Logger,
-	stash secret.Stash,
 	forges *forge.Registry,
 	gitRepo *git.Repository,
 	remote string,
-) (forge.Repository, error) {
-	forgeRepo, err := openRemoteRepositorySilent(ctx, stash, forges, gitRepo, remote)
+) (forge.Forge, forge.RepositoryID, error) {
+	f, repoID, err := resolveRemoteRepositorySilent(ctx, forges, gitRepo, remote)
 
-	var (
-		unsupportedErr *unsupportedForgeError
-		notLoggedInErr *notLoggedInError
-	)
-	switch {
-	case errors.As(err, &unsupportedErr):
+	if unsupportedErr, ok := errors.AsType[*unsupportedForgeError](err); ok {
 		log.Error("Could not guess repository from remote URL", "url", unsupportedErr.RemoteURL)
 		log.Error("Are you sure the remote identifies a supported Git host?")
-		return nil, err
+	}
 
-	case errors.As(err, &notLoggedInErr):
+	return f, repoID, err
+}
+
+func openRepository(
+	ctx context.Context,
+	log *silog.Logger,
+	stash secret.Stash,
+	f forge.Forge,
+	repo forge.RepositoryID,
+) (forge.Repository, error) {
+	forgeRepo, err := openForgeRepository(ctx, stash, f, repo)
+
+	if notLoggedInErr, ok := errors.AsType[*notLoggedInError](err); ok {
 		f := notLoggedInErr.Forge
 		log.Errorf("No authentication token found for %s.", f.ID())
 		log.Errorf("Try running `%s auth login --forge=%s`", cli.Name(), f.ID())
-		return nil, err
-
-	default:
-		return forgeRepo, err
 	}
+
+	return forgeRepo, err
 }

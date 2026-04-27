@@ -43,6 +43,35 @@ keeping them up-to-date and in sync with each other.
 git-spice stores authentication tokens in a system-specific secure storage.
 See [Authentication > Safety](../setup/auth.md#safety) for details.
 
+## Can I use git-spice with a fork of a repository?
+
+<!-- gs:version unreleased -->
+
+Yes.
+
+Configure the upstream repository as the upstream remote
+and your fork as the push remote:
+
+```freeze language="terminal"
+{green}${reset} git clone https://github.com/your-username/project.git
+{green}${reset} cd project
+{gray}# This gives us a repository with origin set to your fork.{reset}
+
+{green}${reset} git remote add {red}upstream{reset} https://github.com/example/project.git
+{green}${reset} git fetch {red}upstream{reset}
+{green}${reset} gs repo init {green}--upstream {red}upstream{reset} {green}--remote {red}origin{reset}
+```
+
+After that,
+git-spice will push your branches to your fork (`origin`),
+and open Change Requests against the upstream repository (`upstream`).
+
+Fork mode has some limitations, chief among them being
+that Change Requests are only created for branches based directly on trunk.
+Branches stacked on top of other local branches are still pushed to your fork,
+but Change Requests cannot be created for them
+until their base branch is merged into trunk, and they are rebased on top.
+
 ## Why doesn't git-spice create one CR per commit?
 
 With tooling like this, there are two options:

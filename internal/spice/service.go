@@ -68,7 +68,7 @@ var (
 type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
-	Remote() (string, error)
+	Remote() (state.Remote, error)
 
 	// LookupBranch returns the branch state for the given branch,
 	// or [state.ErrNotExist] if the branch does not exist.

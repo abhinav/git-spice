@@ -70,6 +70,8 @@ line from 1/2 way between A.n and B.s \
 text "Sibling" with s at F.n
 ```
 
+## Working with local branches
+
 **Branch**
 :   A regular Git branch.
     Branches can have a *base*: the branch they were created from.
@@ -82,14 +84,6 @@ text "Sibling" with s at F.n
     This is "main" or "master" in most repositories.
     Trunk is the only branch that does not have a base branch.
 
-**Change Request**
-:   Change Request refers to a single merge-able unit of work
-    submitted to GitHub, GitLab, or Bitbucket.
-    Each Change Request corresponds to a branch.
-    On GitHub and Bitbucket, these are called Pull Requests,
-    and on GitLab, they are called Merge Requests.
-    Since git-spice supports all three platforms,
-    the term Change Request is used to refer to all of them.
 
 **Stack**
 :   A stack is a collection of branches stacked on top of each other
@@ -119,3 +113,54 @@ text "Sibling" with s at F.n
     on top of its base branch, which it may have diverged from.
     This is done to keep the branch up-to-date with its base branch,
     and maintain a linear history.
+
+## Working with remote repositories
+
+**Change Request**
+:   Change Request refers to a single merge-able unit of work
+    submitted to GitHub, GitLab, or Bitbucket.
+    Each Change Request corresponds to a branch.
+    On GitHub and Bitbucket, these are called Pull Requests,
+    and on GitLab, they are called Merge Requests.
+    Since git-spice supports all three platforms,
+    the term Change Request is used to refer to all of them.
+
+**Upstream remote**
+:   The Git remote that hosts the trunk branch
+    and receives Change Requests.
+    Operations that pull trunk (e.g. $$gs repo sync$$)
+    or manipulate Change Requests (e.g. $$gs branch submit$$)
+    use the upstream remote.
+
+    In a same-repository workflow,
+    the upstream remote and push remote are the same.
+    In a fork workflow,
+    the upstream remote points to the target repository,
+    and the push remote points to your fork.
+
+**Push remote**
+:   The Git remote that receives submitted branch pushes.
+    Operations that publish branch commits
+    or inspect remote branch state use the push remote.
+
+    In a same-repository workflow,
+    the upstream remote and push remote are the same.
+    In a fork workflow,
+    the upstream remote points to the target repository,
+    and the push remote points to your fork.
+
+**Fork mode**
+:   Fork mode is enabled when the push remote and upstream remote differ.
+    This may be used when you do not have write access to the target repository,
+    and instead maintain a fork of the repository that you push branches to.
+
+    In fork mode, git-spice pushes branches to the push remote,
+    and opens Change Requests against the upstream remote.
+
+    Change Requests are opened from the push remote to the upstream remote,
+    only for branches that are based directly on trunk.
+    Branches stacked on top of another local branch are still pushed to your fork,
+    but git-spice does not create Change Requests for them.
+
+    See [Fork Workflows](cr.md#fork-workflows)
+    for setup and workflow examples.

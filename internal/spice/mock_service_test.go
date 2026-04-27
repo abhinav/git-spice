@@ -388,10 +388,10 @@ func (mr *MockStoreMockRecorder) LookupBranch(ctx, name any) *gomock.Call {
 }
 
 // Remote mocks base method.
-func (m *MockStore) Remote() (string, error) {
+func (m *MockStore) Remote() (state.Remote, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Remote")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(state.Remote)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

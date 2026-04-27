@@ -101,6 +101,9 @@ type Handler struct {
 	Remote string // required
 	// RemoteRepository is set only if remote refers to a supported forge.
 	RemoteRepository forge.Repository // optional
+	// PushRepository identifies the repository that owns pushed branches.
+	// If nil, pushed branches are expected to live in RemoteRepository.
+	PushRepository forge.RepositoryID // optional
 }
 
 // ClosedChanges specifies how to handle closed Change Requests.
@@ -590,7 +593,8 @@ func (h *Handler) findForgeFinishedBranches(
 			wg.Go(func() {
 				for b := range trackedch {
 					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
-						Limit: 10,
+						PushRepository: h.PushRepository,
+						Limit:          10,
 					})
 					if err != nil {
 						h.Log.Error("Failed to list changes", "branch", b.Name, "error", err)

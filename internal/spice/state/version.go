@@ -17,23 +17,18 @@ type Version int
 // Supported versions of the storage layout.
 const (
 	VersionOne Version = 1
+	VersionTwo Version = 2
 
 	// LatestVersion refers to the latest supported version.
-	LatestVersion = VersionOne
+	LatestVersion = VersionTwo
 )
 
-// checkVersion verifies that the given DB
-// uses a supported version of the layout.
-func checkVersion(ctx context.Context, db DB) error {
-	version, err := loadVersion(ctx, db)
-	if err != nil {
-		return fmt.Errorf("load store version: %w", err)
-	}
-
+// checkVersion verifies that the given version is supported.
+func checkVersion(version Version) error {
 	// If/when we make a breaking change to the storage format,
 	// we'll add migration code here.
 	switch version {
-	case VersionOne:
+	case VersionOne, VersionTwo:
 		// ok
 
 	default:

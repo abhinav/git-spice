@@ -15,6 +15,7 @@ import (
 
 	git "go.abhg.dev/gs/internal/git"
 	track "go.abhg.dev/gs/internal/handler/track"
+	state "go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -406,10 +407,10 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // Remote mocks base method.
-func (m *MockStore) Remote() (string, error) {
+func (m *MockStore) Remote() (state.Remote, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Remote")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(state.Remote)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -427,19 +428,19 @@ type MockStoreRemoteCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockStoreRemoteCall) Return(arg0 string, arg1 error) *MockStoreRemoteCall {
+func (c *MockStoreRemoteCall) Return(arg0 state.Remote, arg1 error) *MockStoreRemoteCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockStoreRemoteCall) Do(f func() (string, error)) *MockStoreRemoteCall {
+func (c *MockStoreRemoteCall) Do(f func() (state.Remote, error)) *MockStoreRemoteCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockStoreRemoteCall) DoAndReturn(f func() (string, error)) *MockStoreRemoteCall {
+func (c *MockStoreRemoteCall) DoAndReturn(f func() (state.Remote, error)) *MockStoreRemoteCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

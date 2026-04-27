@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/spice/state/storage"
-	"go.uber.org/mock/gomock"
 )
 
 func TestLoadVersion(t *testing.T) {
@@ -25,6 +24,13 @@ func TestLoadVersion(t *testing.T) {
 				"version": []byte("1"),
 			},
 			want: VersionOne,
+		},
+		{
+			name: "ExplicitV2",
+			files: storage.MapBackend{
+				"version": []byte("2"),
+			},
+			want: VersionTwo,
 		},
 		{
 			name: "FutureVersion",
@@ -47,30 +53,22 @@ func TestLoadVersion(t *testing.T) {
 
 func TestCheckVersion(t *testing.T) {
 	tests := []struct {
-		name  string
-		files storage.MapBackend
-		err   bool
+		name    string
+		version Version
+		err     bool
 	}{
-		{name: "ImplicitV1"},
+		{name: "VersionOne", version: VersionOne},
+		{name: "VersionTwo", version: VersionTwo},
 		{
-			name: "ExplicitV1",
-			files: storage.MapBackend{
-				"version": []byte("1"),
-			},
-		},
-		{
-			name: "UnsupportedVersion",
-			files: storage.MapBackend{
-				"version": []byte("500"),
-			},
-			err: true,
+			name:    "UnsupportedVersion",
+			version: Version(500),
+			err:     true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			db := storage.NewDB(tt.files)
-			err := checkVersion(t.Context(), db)
+			err := checkVersion(tt.version)
 			if tt.err {
 				require.Error(t, err)
 				assert.ErrorAs(t, err, new(*VersionMismatchError))
@@ -79,20 +77,6 @@ func TestCheckVersion(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestCheckVersion_loadError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockDB := NewMockDB(ctrl)
-
-	mockDB.EXPECT().
-		Get(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(assert.AnError)
-
-	err := checkVersion(t.Context(), mockDB)
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "load store version:")
-	assert.ErrorIs(t, err, assert.AnError)
 }
 
 func TestVersionMismatchError(t *testing.T) {

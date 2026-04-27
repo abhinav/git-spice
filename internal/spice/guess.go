@@ -17,7 +17,8 @@ type GuessOp int
 // List of guess operations.
 const (
 	GuessUnknown GuessOp = iota
-	GuessRemote
+	GuessUpstreamRemote
+	GuessPushRemote
 	GuessTrunk
 )
 
@@ -27,16 +28,25 @@ type Guesser struct {
 	// Select prompts a user to select from a list of options
 	// and returns the selected option.
 	//
-	// selected is the the option that should be selected by default
+	// selected is the option that should be selected by default
 	// or an empty string if there's no preferred default.
 	Select func(op GuessOp, opts []string, selected string) (string, error) // required
 }
 
-// GuessRemote attempts to guess the name of the remote
-// to use for the repository.
+// GuessUpstreamRemote attempts to guess the upstream remote.
+func (g *Guesser) GuessUpstreamRemote(ctx context.Context, repo GitRepository) (string, error) {
+	return g.guessRemote(ctx, repo, GuessUpstreamRemote, "")
+}
+
+// GuessPushRemote attempts to guess the push remote.
 //
-// It returns an empty string if a remote was not found.
-func (g *Guesser) GuessRemote(ctx context.Context, repo GitRepository) (string, error) {
+// selected is the remote that should be selected by default
+// if prompting is necessary.
+func (g *Guesser) GuessPushRemote(ctx context.Context, repo GitRepository, selected string) (string, error) {
+	return g.guessRemote(ctx, repo, GuessPushRemote, selected)
+}
+
+func (g *Guesser) guessRemote(ctx context.Context, repo GitRepository, op GuessOp, selected string) (string, error) {
 	remotes, err := repo.ListRemotes(ctx)
 	if err != nil {
 		return "", fmt.Errorf("list remotes: %w", err)
@@ -48,7 +58,7 @@ func (g *Guesser) GuessRemote(ctx context.Context, repo GitRepository) (string, 
 	case 1:
 		return remotes[0], nil
 	default:
-		remote, err := g.Select(GuessRemote, remotes, "")
+		remote, err := g.Select(op, remotes, selected)
 		if err != nil {
 			return "", fmt.Errorf("prompt for remote: %w", err)
 		}

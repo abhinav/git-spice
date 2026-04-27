@@ -88,30 +88,96 @@ type Handler struct {
 
 	// TODO: these should not be a func reference
 	// this whole memoize thing is a bit of a hack
-	FindRemote           func(ctx context.Context) (string, error)                          // required
-	OpenRemoteRepository func(ctx context.Context, remote string) (forge.Repository, error) // required
-	remote               memoizedValue[string]
-	remoteRepository     memoizedValue[forge.Repository]
+
+	// FindRemote returns the configured upstream and push remotes.
+	FindRemote func(ctx context.Context) (state.Remote, error) // required
+
+	// ResolveRepository resolves a remote name to its forge repository.
+	ResolveRepository func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) // required
+
+	// OpenRepository opens a resolved forge repository.
+	OpenRepository func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) // required
+
+	_remote       memoizedValue[state.Remote]
+	_upstream     memoizedValue[resolvedRepository]
+	_upstreamRepo memoizedValue[forge.Repository]
+	_pushRepoID   memoizedValue[forge.RepositoryID]
 }
 
-// Remote returns the remote name for the current repository,
+// remote returns the remotes for the current repository,
 // memoizing the result.
-func (h *Handler) Remote(ctx context.Context) (string, error) {
-	return h.remote.Get(func() (string, error) {
+func (h *Handler) remote(ctx context.Context) (state.Remote, error) {
+	return h._remote.Get(func() (state.Remote, error) {
 		return h.FindRemote(ctx)
 	})
 }
 
-// RemoteRepository returns the remote repository for the current repository,
+// resolvedRepository is a remote resolved to forge coordinates.
+type resolvedRepository struct {
+	forge forge.Forge
+	id    forge.RepositoryID
+}
+
+func (h *Handler) upstream(ctx context.Context) (resolvedRepository, error) {
+	return h._upstream.Get(func() (resolvedRepository, error) {
+		remote, err := h.remote(ctx)
+		if err != nil {
+			return resolvedRepository{}, fmt.Errorf("get remote: %w", err)
+		}
+
+		f, repoID, err := h.ResolveRepository(ctx, remote.Upstream)
+		if err != nil {
+			return resolvedRepository{}, fmt.Errorf("resolve remote repository: %w", err)
+		}
+
+		return resolvedRepository{
+			forge: f,
+			id:    repoID,
+		}, nil
+	})
+}
+
+// upstreamRepository returns the remote repository for the current repository,
 // memoizing the result.
-func (h *Handler) RemoteRepository(ctx context.Context) (forge.Repository, error) {
-	return h.remoteRepository.Get(func() (forge.Repository, error) {
-		remote, err := h.Remote(ctx)
+func (h *Handler) upstreamRepository(ctx context.Context) (forge.Repository, error) {
+	return h._upstreamRepo.Get(func() (forge.Repository, error) {
+		upstream, err := h.upstream(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		return h.OpenRepository(ctx, upstream.forge, upstream.id)
+	})
+}
+
+// pushRepositoryID returns the repository ID for the push remote,
+// memoizing the result.
+func (h *Handler) pushRepositoryID(ctx context.Context) (forge.RepositoryID, error) {
+	return h._pushRepoID.Get(func() (forge.RepositoryID, error) {
+		remote, err := h.remote(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("get remote: %w", err)
 		}
+		if remote.Push == "" {
+			return nil, nil
+		}
 
-		return h.OpenRemoteRepository(ctx, remote)
+		upstream, err := h.upstream(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		f, repoID, err := h.ResolveRepository(ctx, remote.Push)
+		if err != nil {
+			return nil, err
+		}
+		if f.ID() != upstream.forge.ID() {
+			return nil, fmt.Errorf(
+				"push remote %q uses different forge %q than upstream remote %q: %q",
+				remote.Push, f.ID(), remote.Upstream, upstream.forge.ID(),
+			)
+		}
+		return repoID, nil
 	})
 }
 
@@ -364,7 +430,6 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	for _, branch := range req.Branches {
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
-
 		status, err := h.submitBranch(
 			ctx,
 			branch,
@@ -390,7 +455,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		opts.NavCommentDownstack,
 		opts.NavCommentMarker,
 		branchesToComment,
-		h.RemoteRepository,
+		h.upstreamRepository,
 	)
 }
 
@@ -437,7 +502,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		opts.NavCommentDownstack,
 		opts.NavCommentMarker,
 		[]string{req.Branch},
-		h.RemoteRepository,
+		h.upstreamRepository,
 	)
 }
 
@@ -488,15 +553,20 @@ func (h *Handler) submitBranch(
 		return status, fmt.Errorf("peel to commit: %w", err)
 	}
 
-	remote, err := h.Remote(ctx)
+	remote, err := h.remote(ctx)
 	if err != nil {
 		return status, fmt.Errorf("get remote: %w", err)
+	}
+	if remote.ForkMode() && branch.Base != h.Store.Trunk() {
+		h.Log.Infof("%v: Pushing to %v, skipping CR: base is %v",
+			branchToSubmit, remote.Push, branch.Base)
+		opts.Publish = false
 	}
 
 	// Prefer the upstream branch name stored in the data store if available.
 	// This is how we account for branches that have been renamed after submitting.
 	storedUpstream := branch.UpstreamBranch
-	upstreamBranch, err := h.resolveUpstreamBranch(ctx, remote, branchToSubmit, storedUpstream)
+	upstreamBranch, err := h.resolveUpstreamBranch(ctx, remote.Push, branchToSubmit, storedUpstream)
 	if err != nil {
 		return status, fmt.Errorf("resolve upstream branch: %w", err)
 	}
@@ -520,7 +590,7 @@ func (h *Handler) submitBranch(
 		// If the branch doesn't have a CR associated with it,
 		// we'll probably need to create one,
 		// but verify that there isn't already one open.
-		remoteRepo, err := h.RemoteRepository(ctx)
+		remoteRepo, err := h.upstreamRepository(ctx)
 		if err != nil {
 			return status, fmt.Errorf("discover CR for %s: %w", branchToSubmit, err)
 		}
@@ -529,9 +599,15 @@ func (h *Handler) submitBranch(
 		// or the branch name itself if we don't have an upstream branch.
 		// In case of the latter, we'll need to verify that the HEAD matches.
 		crBranch := cmp.Or(upstreamBranch, branchToSubmit)
+		pushRepo, err := h.pushRepositoryID(ctx)
+		if err != nil {
+			return status, fmt.Errorf("get push repository: %w", err)
+		}
+
 		changes, err := remoteRepo.FindChangesByBranch(ctx, crBranch, forge.FindChangesOptions{
-			State: forge.ChangeOpen,
-			Limit: 3,
+			State:          forge.ChangeOpen,
+			PushRepository: pushRepo,
+			Limit:          3,
 		})
 		if err != nil {
 			return status, fmt.Errorf("list changes: %w", err)
@@ -614,7 +690,7 @@ func (h *Handler) submitBranch(
 			// TODO: Ask the user to pick one and associate it with the branch.
 		}
 	} else if branch.Change != nil {
-		remoteRepo, err := h.RemoteRepository(ctx)
+		remoteRepo, err := h.upstreamRepository(ctx)
 		if err != nil {
 			return status, fmt.Errorf("look up CR %v: %w", branch.Change.ChangeID(), err)
 		}
@@ -642,7 +718,7 @@ func (h *Handler) submitBranch(
 			// may no longer reflect the user's intent for a replacement CR.
 			// Re-read the branch's current upstream configuration and prefer it
 			// over the stored upstream branch name for the new submission.
-			upstreamBranch, err = h.resolveUpstreamBranch(ctx, remote, branchToSubmit, "")
+			upstreamBranch, err = h.resolveUpstreamBranch(ctx, remote.Push, branchToSubmit, "")
 			if err != nil {
 				upstreamBranch = cmp.Or(storedUpstream, branchToSubmit)
 			} else if upstreamBranch == "" {
@@ -671,13 +747,13 @@ func (h *Handler) submitBranch(
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
 		if upstreamBranch == "" {
-			unique, err := svc.UnusedBranchName(ctx, remote, branchToSubmit)
+			unique, err := svc.UnusedBranchName(ctx, remote.Push, branchToSubmit)
 			if err != nil {
 				return status, fmt.Errorf("find unique branch name: %w", err)
 			}
 
 			if unique != branchToSubmit {
-				log.Infof("%v: Branch name already in use in remote '%v'", branchToSubmit, remote)
+				log.Infof("%v: Branch name already in use in remote '%v'", branchToSubmit, remote.Push)
 				log.Infof("%v: Using upstream name '%v' instead", branchToSubmit, unique)
 			}
 			upstreamBranch = unique
@@ -731,9 +807,9 @@ func (h *Handler) submitBranch(
 		// Otherwise, we will push to origin/feature,
 		// but won't have a local refs/remotes/origin/feature
 		// to track it after a 'git fetch'.
-		if refspecs, err := h.Repository.RemoteFetchRefspecs(ctx, remote); err != nil {
+		if refspecs, err := h.Repository.RemoteFetchRefspecs(ctx, remote.Push); err != nil {
 			log.Warn("Unable to verify remote's fetch refspecs",
-				"remote", remote,
+				"remote", remote.Push,
 				"error", err)
 		} else {
 			wantMatch := "refs/heads/" + upstreamBranch
@@ -746,7 +822,7 @@ func (h *Handler) submitBranch(
 			}
 
 			if !hasMatch && !opts.Force {
-				log.Errorf("Remote '%v' has refspecs:", remote)
+				log.Errorf("Remote '%v' has refspecs:", remote.Push)
 				for _, refspec := range refspecs {
 					log.Errorf("  - %v", refspec)
 				}
@@ -756,11 +832,11 @@ func (h *Handler) submitBranch(
 				log.Error("To fix this, you can do one of the following:")
 				log.Errorf("1. Manually add a fetch refspec for just this branch:")
 				log.Errorf("       git config --add remote.%v.fetch +refs/heads/%v:refs/remotes/%v/%v",
-					remote, upstreamBranch, remote, upstreamBranch)
+					remote.Push, upstreamBranch, remote.Push, upstreamBranch)
 				log.Errorf("2. Prefix all your branches with your username (e.g. '%v/%v'),", user, upstreamBranch)
 				log.Errorf("   and add a fetch refspec to fetch all branches under that prefix:")
 				log.Errorf("       git config --add remote.%v.fetch '+refs/heads/%v/*:refs/remotes/%v/%v/*'",
-					remote, user, remote, user)
+					remote.Push, user, remote.Push, user)
 				log.Errorf("   You can configure git-spice to automatically add this prefix for future branches with:")
 				log.Errorf("       git config --global spice.branchCreate.prefix %v/", user)
 				log.Errorf("3. Use the --force flag to push anyway (not recommended).")
@@ -772,9 +848,14 @@ func (h *Handler) submitBranch(
 		if opts.Publish {
 			needsNavComment()
 
-			remoteRepo, err := h.RemoteRepository(ctx)
+			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
 				return status, fmt.Errorf("prepare publish: %w", err)
+			}
+
+			pushRepo, err := h.pushRepositoryID(ctx)
+			if err != nil {
+				return status, fmt.Errorf("get push repository: %w", err)
 			}
 
 			// TODO: Refactor:
@@ -784,9 +865,10 @@ func (h *Handler) submitBranch(
 			prepared, err = h.prepareBranch(
 				ctx,
 				branchToSubmit,
-				remote, // TODO: need this?
+				remote.Upstream,
 				remoteRepo,
 				upstreamBranch, branch.Base, upstreamBase,
+				pushRepo,
 				opts,
 			)
 			if err != nil {
@@ -795,7 +877,7 @@ func (h *Handler) submitBranch(
 		}
 
 		pushOpts := git.PushOptions{
-			Remote: remote,
+			Remote: remote.Push,
 			Refspec: git.Refspec(
 				commitHash.String() + ":refs/heads/" + upstreamBranch,
 			),
@@ -808,7 +890,7 @@ func (h *Handler) submitBranch(
 		// Use a --force-with-lease to avoid
 		// overwriting someone else's changes.
 		if !opts.Force {
-			existingHash, err := h.Repository.PeelToCommit(ctx, remote+"/"+upstreamBranch)
+			existingHash, err := h.Repository.PeelToCommit(ctx, remote.Push+"/"+upstreamBranch)
 			if err == nil {
 				pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
 			}
@@ -841,9 +923,9 @@ func (h *Handler) submitBranch(
 			}
 		}()
 
-		upstream := remote + "/" + upstreamBranch
+		upstream := remote.Push + "/" + upstreamBranch
 		if err := h.Repository.SetBranchUpstream(ctx, branchToSubmit, upstream); err != nil {
-			log.Warn("Could not set upstream", "branch", branchToSubmit, "remote", remote, "error", err)
+			log.Warn("Could not set upstream", "branch", branchToSubmit, "remote", remote.Push, "error", err)
 		}
 
 		if prepared != nil {
@@ -982,7 +1064,7 @@ func (h *Handler) submitBranch(
 
 		if pull.HeadHash != commitHash {
 			pushOpts := git.PushOptions{
-				Remote: remote,
+				Remote: remote.Push,
 				Refspec: git.Refspec(
 					commitHash.String() + ":refs/heads/" + upstreamBranch,
 				),
@@ -992,7 +1074,7 @@ func (h *Handler) submitBranch(
 			if !opts.Force {
 				// Force push, but only if the ref is exactly
 				// where we think it is.
-				existingHash, err := h.Repository.PeelToCommit(ctx, remote+"/"+upstreamBranch)
+				existingHash, err := h.Repository.PeelToCommit(ctx, remote.Push+"/"+upstreamBranch)
 				if err == nil {
 					pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
 				}
@@ -1014,7 +1096,7 @@ func (h *Handler) submitBranch(
 			}
 
 			// remoteRepo is guaranteed to be available at this point.
-			remoteRepo, err := h.RemoteRepository(ctx)
+			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
 			}
@@ -1076,6 +1158,7 @@ func (h *Handler) prepareBranch(
 	remoteName string,
 	remoteRepo forge.Repository,
 	upstreamBranch, baseBranch, upstreamBase string,
+	pushRepository forge.RepositoryID,
 	opts *submitOptions,
 ) (*preparedBranch, error) {
 	// Fetch the template while we're prompting the other fields.
@@ -1249,6 +1332,7 @@ func (h *Handler) prepareBranch(
 		draft:          draft,
 		head:           upstreamBranch,
 		base:           upstreamBase,
+		pushRepository: pushRepository,
 		remoteRepo:     remoteRepo,
 		store:          h.Store,
 		log:            h.Log,
@@ -1297,21 +1381,23 @@ type preparedBranch struct {
 	reviewers []string
 	assignees []string
 
-	remoteRepo forge.Repository
-	store      Store
-	log        *silog.Logger
+	pushRepository forge.RepositoryID
+	remoteRepo     forge.Repository
+	store          Store
+	log            *silog.Logger
 }
 
 func (b *preparedBranch) Publish(ctx context.Context) (forge.ChangeID, string, error) {
 	result, err := b.remoteRepo.SubmitChange(ctx, forge.SubmitChangeRequest{
-		Subject:   b.Subject,
-		Body:      b.Body,
-		Head:      b.head,
-		Base:      b.base,
-		Draft:     b.draft,
-		Labels:    b.labels,
-		Reviewers: b.reviewers,
-		Assignees: b.assignees,
+		Subject:        b.Subject,
+		Body:           b.Body,
+		Head:           b.head,
+		Base:           b.base,
+		PushRepository: b.pushRepository,
+		Draft:          b.draft,
+		Labels:         b.labels,
+		Reviewers:      b.reviewers,
+		Assignees:      b.assignees,
 	})
 	if err != nil {
 		// If the branch could not be submitted because the base branch

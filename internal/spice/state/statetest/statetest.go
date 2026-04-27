@@ -26,10 +26,13 @@ func NewMemoryStore(t testing.TB, trunk, remote string, log *silog.Logger) *stat
 	}
 
 	store, err := state.InitStore(t.Context(), state.InitStoreRequest{
-		DB:     db,
-		Trunk:  cmp.Or(trunk, "main"),
-		Remote: remote,
-		Log:    log,
+		DB:    db,
+		Trunk: cmp.Or(trunk, "main"),
+		Remote: state.Remote{
+			Upstream: remote,
+			Push:     remote,
+		},
+		Log: log,
 	})
 	if err != nil {
 		t.Fatalf("failed to initialize store: %v", err)

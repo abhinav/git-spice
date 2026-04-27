@@ -33,7 +33,7 @@ var _ GitRepository = (*git.Repository)(nil)
 
 // Store provides access to git-spice's state store.
 type Store interface {
-	Remote() (string, error)
+	Remote() (state.Remote, error)
 	Trunk() string
 }
 
@@ -173,10 +173,10 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		return nil, fmt.Errorf("load branch graph: %w", err)
 	}
 
-	getRemote := sync.OnceValue(func() string {
+	getRemote := sync.OnceValue(func() state.Remote {
 		remote, err := h.Store.Remote()
 		if err != nil {
-			return ""
+			return state.Remote{}
 		}
 		return remote
 	})
@@ -188,8 +188,11 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	if req.Include&needsRemoteID != 0 {
 		err := func() error {
 			remote := getRemote()
+			if remote == (state.Remote{}) {
+				return state.ErrNotExist
+			}
 
-			remoteURL, err := h.Repository.RemoteURL(ctx, remote)
+			remoteURL, err := h.Repository.RemoteURL(ctx, remote.Upstream)
 			if err != nil {
 				return fmt.Errorf("get remote URL: %w", err)
 			}
@@ -283,13 +286,16 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				}
 
 				if req.Include&IncludePushStatus != 0 && branch.UpstreamBranch != "" {
-					upstream := getRemote() + "/" + branch.UpstreamBranch
-					ahead, behind, err := h.Repository.CommitAheadBehind(ctx, upstream, string(branch.Head))
-					if err == nil {
-						item.PushStatus = &PushStatus{
-							Ahead:     ahead,
-							Behind:    behind,
-							NeedsPush: ahead > 0 || behind > 0,
+					remote := getRemote()
+					if remote != (state.Remote{}) {
+						upstream := remote.Push + "/" + branch.UpstreamBranch
+						ahead, behind, err := h.Repository.CommitAheadBehind(ctx, upstream, string(branch.Head))
+						if err == nil {
+							item.PushStatus = &PushStatus{
+								Ahead:     ahead,
+								Behind:    behind,
+								NeedsPush: ahead > 0 || behind > 0,
+							}
 						}
 					}
 				}

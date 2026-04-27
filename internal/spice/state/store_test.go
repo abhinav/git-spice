@@ -129,6 +129,245 @@ func TestStore(t *testing.T) {
 	})
 }
 
+func TestOpenStore_remoteMigration(t *testing.T) {
+	tests := []struct {
+		name        string
+		mem         storage.MapBackend
+		want        state.Remote
+		wantVersion string
+		wantRepo    string
+	}{
+		{
+			name: "ImplicitV1",
+			mem: storage.MapBackend{
+				"repo": []byte(`{"trunk":"main","remote":"origin"}`),
+			},
+			want: state.Remote{
+				Upstream: "origin",
+				Push:     "origin",
+			},
+			wantRepo: `{"trunk":"main","remote":"origin"}`,
+		},
+		{
+			name: "ExplicitV1",
+			mem: storage.MapBackend{
+				"version": []byte("1"),
+				"repo":    []byte(`{"trunk":"main","remote":"origin"}`),
+			},
+			want: state.Remote{
+				Upstream: "origin",
+				Push:     "origin",
+			},
+			wantVersion: `1`,
+			wantRepo:    `{"trunk":"main","remote":"origin"}`,
+		},
+		{
+			name: "ExplicitV2",
+			mem: storage.MapBackend{
+				"version": []byte("2"),
+				"repo": []byte(
+					`{"trunk":"main","remotes":{"upstream":"upstream","push":"origin"}}`,
+				),
+			},
+			want: state.Remote{
+				Upstream: "upstream",
+				Push:     "origin",
+			},
+			wantVersion: `2`,
+			wantRepo: `{
+				"trunk": "main",
+				"remotes": {
+					"upstream": "upstream",
+					"push": "origin"
+				}
+			}`,
+		},
+		{
+			name: "PreviousV2RemoteObject",
+			mem: storage.MapBackend{
+				"version": []byte("2"),
+				"repo": []byte(
+					`{"trunk":"main","remote":{"upstream":"upstream","push":"origin"}}`,
+				),
+			},
+			want: state.Remote{
+				Upstream: "upstream",
+				Push:     "origin",
+			},
+			wantVersion: `2`,
+			wantRepo: `{
+				"trunk": "main",
+				"remote": {
+					"upstream": "upstream",
+					"push": "origin"
+				}
+			}`,
+		},
+		{
+			name: "OmittedRemote",
+			mem: storage.MapBackend{
+				"repo": []byte(`{"trunk":"main"}`),
+			},
+			wantRepo: `{"trunk":"main"}`,
+		},
+		{
+			name: "EmptyLegacyRemote",
+			mem: storage.MapBackend{
+				"repo": []byte(`{"trunk":"main","remote":""}`),
+			},
+			wantRepo: `{"trunk":"main","remote":""}`,
+		},
+		{
+			name: "EmptyRemoteObject",
+			mem: storage.MapBackend{
+				"version": []byte("2"),
+				"repo":    []byte(`{"trunk":"main","remote":{}}`),
+			},
+			wantVersion: `2`,
+			wantRepo:    `{"trunk":"main","remote":{}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store, err := state.OpenStore(
+				t.Context(),
+				storage.NewDB(tt.mem),
+				silogtest.New(t),
+			)
+			require.NoError(t, err)
+
+			got, err := store.Remote()
+			if tt.want == (state.Remote{}) {
+				require.ErrorIs(t, err, state.ErrNotExist)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+
+			if tt.wantVersion == "" {
+				assert.Empty(t, tt.mem["version"])
+			} else {
+				assert.JSONEq(t, tt.wantVersion, string(tt.mem["version"]))
+			}
+			assert.JSONEq(t, tt.wantRepo, string(tt.mem["repo"]))
+		})
+	}
+}
+
+func TestOpenStore_remoteMigrationMalformed(t *testing.T) {
+	mem := storage.MapBackend{
+		"repo": []byte(`{"trunk":"main","remote":1}`),
+	}
+
+	_, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "get repo state:")
+}
+
+func TestInitStore_writesVersionOneForSameRemote(t *testing.T) {
+	mem := make(storage.MapBackend)
+	_, err := state.InitStore(t.Context(), state.InitStoreRequest{
+		DB:    storage.NewDB(mem),
+		Trunk: "main",
+		Remote: state.Remote{
+			Upstream: "origin",
+			Push:     "origin",
+		},
+	})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `1`, string(mem["version"]))
+	assert.JSONEq(t, `{
+		"trunk": "main",
+		"remote": "origin"
+	}`, string(mem["repo"]))
+}
+
+func TestInitStore_writesVersionTwoRemotesObjectForForkMode(t *testing.T) {
+	mem := make(storage.MapBackend)
+	_, err := state.InitStore(t.Context(), state.InitStoreRequest{
+		DB:    storage.NewDB(mem),
+		Trunk: "main",
+		Remote: state.Remote{
+			Upstream: "upstream",
+			Push:     "origin",
+		},
+	})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `2`, string(mem["version"]))
+	assert.JSONEq(t, `{
+		"trunk": "main",
+		"remote": "upstream",
+		"remotes": {
+			"upstream": "upstream",
+			"push": "origin"
+		}
+	}`, string(mem["repo"]))
+}
+
+func TestStore_SetRemote(t *testing.T) {
+	mem := storage.MapBackend{
+		"repo": []byte(`{"trunk":"main","remote":"origin"}`),
+	}
+	store, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
+	require.NoError(t, err)
+
+	err = store.SetRemote(t.Context(), state.Remote{
+		Upstream: "upstream",
+		Push:     "origin",
+	})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `2`, string(mem["version"]))
+	assert.JSONEq(t, `{
+		"trunk": "main",
+		"remote": "upstream",
+		"remotes": {
+			"upstream": "upstream",
+			"push": "origin"
+		}
+	}`, string(mem["repo"]))
+
+	got, err := store.Remote()
+	require.NoError(t, err)
+	assert.Equal(t, state.Remote{
+		Upstream: "upstream",
+		Push:     "origin",
+	}, got)
+}
+
+func TestStore_SetRemote_downgradesToVersionOneForSameRemote(t *testing.T) {
+	mem := storage.MapBackend{
+		"version": []byte("2"),
+		"repo": []byte(
+			`{"trunk":"main","remote":"upstream","remotes":{"upstream":"upstream","push":"origin"}}`,
+		),
+	}
+	store, err := state.OpenStore(t.Context(), storage.NewDB(mem), nil)
+	require.NoError(t, err)
+
+	err = store.SetRemote(t.Context(), state.Remote{
+		Upstream: "origin",
+		Push:     "origin",
+	})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `1`, string(mem["version"]))
+	assert.JSONEq(t, `{
+		"trunk": "main",
+		"remote": "origin"
+	}`, string(mem["repo"]))
+
+	got, err := store.Remote()
+	require.NoError(t, err)
+	assert.Equal(t, state.Remote{
+		Upstream: "origin",
+		Push:     "origin",
+	}, got)
+}
+
 func TestOpenStore_errors(t *testing.T) {
 	t.Run("VersionMismatch", func(t *testing.T) {
 		mem := storage.MapBackend{

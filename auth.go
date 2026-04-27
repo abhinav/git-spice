@@ -111,9 +111,8 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 	// and a remote is configured, use the forge for that remote.
 	var remote string
 	if store, err := state.OpenStore(ctx, newRepoStorage(repo, log), log); err == nil {
-		remote, err = store.Remote()
-		if err != nil {
-			remote = ""
+		if r, err := store.Remote(); err == nil {
+			remote = r.Upstream
 		}
 	}
 

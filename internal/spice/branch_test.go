@@ -66,7 +66,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 
 		mockStore.EXPECT().
 			Remote().
-			Return("", git.ErrNotExist).
+			Return(state.Remote{}, git.ErrNotExist).
 			AnyTimes()
 
 		mockRepo.EXPECT().
@@ -152,10 +152,13 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 
 	// Use in-memory storage backend and real store.
 	store, err := state.InitStore(ctx, state.InitStoreRequest{
-		DB:     storage.NewDB(make(storage.MapBackend)),
-		Trunk:  "main",
-		Remote: "origin",
-		Log:    silogtest.New(t),
+		DB:    storage.NewDB(make(storage.MapBackend)),
+		Trunk: "main",
+		Remote: state.Remote{
+			Upstream: "origin",
+			Push:     "origin",
+		},
+		Log: silogtest.New(t),
 	})
 	require.NoError(t, err)
 
@@ -272,6 +275,24 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		lookup, err := store.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 		assert.Empty(t, lookup.UpstreamBranch)
+	})
+
+	t.Run("ForkModeUsesPushRemote", func(t *testing.T) {
+		require.NoError(t, store.SetRemote(ctx, state.Remote{
+			Upstream: "upstream",
+			Push:     "origin",
+		}))
+		setUpstreamBranch("feature")
+
+		// Submitted branches are pushed to the push remote in fork mode,
+		// so the upstream branch name must be validated there.
+		mockRepo.EXPECT().
+			PeelToCommit(gomock.Any(), "origin/feature").
+			Return(git.Hash("def123"), nil)
+
+		resp, err := svc.LookupBranch(ctx, "feature")
+		require.NoError(t, err)
+		assert.Equal(t, "feature", resp.UpstreamBranch)
 	})
 }
 

@@ -1,0 +1,90 @@
+# Test fork workflow: submit to upstream,
+# then sync after the upstream change is merged.
+
+as 'Test <test@example.com>'
+at '2026-04-26T17:20:00Z'
+
+# Alice creates the upstream repository.
+mkdir -p alice/store
+cd alice/store
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub register alice
+shamhub register bob
+shamhub new upstream alice/store
+git push upstream main
+
+cp $WORK/extra/initial.txt store.txt
+git add store.txt
+git commit -m 'Add initial store content'
+git push upstream main
+
+# Bob forks the repository and adds the upstream remote.
+shamhub fork alice/store bob
+mkdir $WORK/bob
+shamhub clone bob/store $WORK/bob/store
+cd $WORK/bob/store
+git remote add upstream $SHAMHUB_URL/alice/store
+git fetch upstream
+
+git remote -v
+stdout 'origin.*bob/store'
+stdout 'upstream.*alice/store'
+
+gs repo init --remote=origin --upstream=upstream
+env SHAMHUB_USERNAME=bob
+gs auth login
+
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs branch create feature -m 'Add feature from fork'
+
+gs branch submit --fill
+stderr 'Created #1:'
+
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/pr-created.json
+
+git ls-remote origin feature
+stdout 'refs/heads/feature'
+
+shamhub merge alice/store 1
+
+gs repo sync
+stderr 'pulled 2 new commit'
+stderr '#1 was merged'
+
+git checkout main
+cmp feature.txt $WORK/extra/feature.txt
+! git show-ref refs/heads/feature
+
+-- extra/initial.txt --
+Initial store content
+-- extra/feature.txt --
+Feature from Bob's fork
+-- golden/pr-created.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature from fork",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/store/change/1",
+  "head": {
+    "repository": {
+      "owner": "bob",
+      "name": "store"
+    },
+    "ref": "feature",
+    "sha": "43125a4fcc8869f32593d01247bd2f1f0afb2902"
+  },
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "store"
+    },
+    "ref": "main",
+    "sha": "7572890b516c26623e5f02668c5837fa853d3d79"
+  }
+}

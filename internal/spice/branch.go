@@ -216,8 +216,11 @@ func (s *Service) verifyUpstreamBranchRef(ctx context.Context, branch, upstreamB
 	if err != nil {
 		return false, nil // no remote, no upstream branch
 	}
+	if remote.Push == "" {
+		return false, nil
+	}
 
-	upstreamRef := remote + "/" + upstreamBranch
+	upstreamRef := remote.Push + "/" + upstreamBranch
 	if _, err := s.repo.PeelToCommit(ctx, upstreamRef); err == nil {
 		return true, nil
 	}

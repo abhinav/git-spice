@@ -32,7 +32,7 @@ type Options struct {
 type Store interface {
 	// Trunk returns the name of the trunk branch.
 	Trunk() string
-	Remote() (string, error)
+	Remote() (state.Remote, error)
 }
 
 // GitWorktree allows changing which branch or commit
@@ -112,22 +112,22 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 				// Try to recover by checking if the branch exists in the remote.
 				var recovered bool
 				if remote, err := h.Store.Remote(); err == nil {
-					upstreamBranch := fmt.Sprintf("%s/%s", remote, branch)
-					if upstreamHead, err := h.Repository.PeelToCommit(ctx, upstreamBranch); err == nil {
-						h.Log.Infof("%v: found remote branch %v, checking out", branch, upstreamBranch)
+					remoteBranch := fmt.Sprintf("%s/%s", remote.Push, branch)
+					if remoteHead, err := h.Repository.PeelToCommit(ctx, remoteBranch); err == nil {
+						h.Log.Infof("%v: found remote branch %v, checking out", branch, remoteBranch)
 
 						createReq := git.CreateBranchRequest{
 							Name: branch,
-							Head: string(upstreamHead),
+							Head: string(remoteHead),
 						}
 						if err := h.Repository.CreateBranch(ctx, createReq); err != nil {
-							return fmt.Errorf("create branch from remote %q: %w", upstreamBranch, err)
+							return fmt.Errorf("create branch from remote %q: %w", remoteBranch, err)
 						}
 
-						if err := h.Repository.SetBranchUpstream(ctx, branch, upstreamBranch); err != nil {
+						if err := h.Repository.SetBranchUpstream(ctx, branch, remoteBranch); err != nil {
 							// Non-fatal error; just log it.
 							log.Error("Error setting upstream for branch",
-								"name", branch, "upstream", upstreamBranch, "error", err)
+								"name", branch, "upstream", remoteBranch, "error", err)
 						}
 
 						recovered = true
