@@ -433,6 +433,15 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	}
 
+	// Retarget surviving upstack PRs on the forge
+	// so their base matches the updated local state.
+	if h.RemoteRepository != nil {
+		h.retargetUpstackChanges(ctx,
+			collectRetargetCandidates(
+				branchesToDelete, candidates, trunk,
+			))
+	}
+
 	if opts.Restack {
 		if err := beginAutostash(); err != nil {
 			return err
@@ -951,4 +960,103 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 	}
 
 	return nil
+}
+
+// retargetCandidate is a branch whose forge change
+// needs retargeting after a sync deletion.
+type retargetCandidate struct {
+	branch   string
+	changeID forge.ChangeID
+	newBase  string
+}
+
+// collectRetargetCandidates identifies branches
+// that need forge retargeting after sync deletion.
+//
+// It examines pre-deletion branch state to find branches
+// that survive deletion but have a base being deleted.
+// For each, it resolves the nearest surviving ancestor
+// as the new base.
+func collectRetargetCandidates(
+	deletions []branchDeletion,
+	candidates []spice.LoadBranchItem,
+	trunk string,
+) []retargetCandidate {
+	deletedNames := make(map[string]struct{}, len(deletions))
+	for _, d := range deletions {
+		deletedNames[d.BranchName] = struct{}{}
+	}
+
+	baseOf := make(map[string]string, len(candidates))
+	for _, c := range candidates {
+		baseOf[c.Name] = c.Base
+	}
+
+	var result []retargetCandidate
+	for _, c := range candidates {
+		if _, deleted := deletedNames[c.Name]; deleted {
+			continue
+		}
+		if c.Change == nil {
+			continue
+		}
+		if _, baseDeleted := deletedNames[c.Base]; !baseDeleted {
+			continue
+		}
+
+		result = append(result, retargetCandidate{
+			branch:   c.Name,
+			changeID: c.Change.ChangeID(),
+			newBase: survivingAncestor(
+				c.Base, baseOf, deletedNames, trunk,
+			),
+		})
+	}
+	return result
+}
+
+// survivingAncestor walks up the base chain
+// to find the nearest ancestor not being deleted.
+func survivingAncestor(
+	base string,
+	baseOf map[string]string,
+	deletedNames map[string]struct{},
+	trunk string,
+) string {
+	visited := make(map[string]struct{})
+	for {
+		if _, cycle := visited[base]; cycle {
+			return trunk
+		}
+		visited[base] = struct{}{}
+
+		parent, ok := baseOf[base]
+		if !ok {
+			return trunk
+		}
+		if _, deleted := deletedNames[parent]; !deleted {
+			return parent
+		}
+		base = parent
+	}
+}
+
+// retargetUpstackChanges retargets forge changes
+// for upstack branches surviving deletion.
+func (h *Handler) retargetUpstackChanges(
+	ctx context.Context,
+	candidates []retargetCandidate,
+) {
+	for _, c := range candidates {
+		h.Log.Infof("Retargeting %s to %s...",
+			c.branch, c.newBase)
+		err := h.RemoteRepository.EditChange(
+			ctx, c.changeID,
+			forge.EditChangeOptions{Base: c.newBase},
+		)
+		if err != nil {
+			h.Log.Warn("Retarget failed",
+				"branch", c.branch, "error", err)
+		}
+	}
 }

@@ -1,0 +1,59 @@
+# 'repo sync' retargets upstack PRs correctly
+# when multiple stacked branches are merged.
+
+as 'Test <test@example.com>'
+at '2026-03-04T18:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> A -> B -> C
+git add a.txt
+gs bc feature-a -m 'Add feature A'
+git add b.txt
+gs bc feature-b -m 'Add feature B'
+git add c.txt
+gs bc feature-c -m 'Add feature C'
+
+# submit the full stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# verify feature-c targets feature-b initially
+shamhub dump change 3
+stdout '"ref": "feature-b"'
+
+# merge A and B externally
+shamhub merge alice/example 1
+shamhub merge alice/example 2
+
+# sync should detect both merges
+# and retarget feature-c's PR to main.
+gs repo sync
+stderr 'feature-a: #1 was merged'
+stderr 'feature-b: #2 was merged'
+stderr 'Retargeting feature-c to main'
+
+# verify feature-c's PR now targets main
+shamhub dump change 3
+stdout '"ref": "main"'
+
+-- repo/a.txt --
+Feature A
+-- repo/b.txt --
+Feature B
+-- repo/c.txt --
+Feature C
