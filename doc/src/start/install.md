@@ -117,20 +117,7 @@ then install it with your system package manager:
 
     ```bash
     sudo apk add --allow-untrusted ./git-spice-<version>-r1.<arch>.apk
-    ```
-
-### Snap
-
-<!-- gs:version v0.27.0 -->
-
-If you use Snap, install the published `git-spice` snap with:
-
-```bash
-sudo snap install git-spice --classic
-```
-
-The snap uses `classic` confinement
-so it can work with your existing Git repositories and system Git binary.
+    ``
 
 ### Manual download
 
