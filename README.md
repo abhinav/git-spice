@@ -52,7 +52,7 @@ $ gs sr        # stack restack
 
 - Create, edit, and navigate stacks of branches with ease.
 - Submit the entire stack or parts of it with a single command.
-  Supports GitHub and GitLab.
+  Supports GitHub, GitLab, and BitBucket.
 - Keep using your existing workflow and adopt git-spice incrementally.
 - Completely offline operation with no external dependencies
   until you push or pull from a remote repository.
