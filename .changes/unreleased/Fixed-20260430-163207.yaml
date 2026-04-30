@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: Skipped unsubmitted branches before restack checks during update-only stack submissions.'
+time: 2026-04-30T16:32:07.587405012Z

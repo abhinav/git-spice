@@ -1,0 +1,45 @@
+# stack submit --update-only skips an unsubmitted branch even if it needs restack
+
+as 'Test <test@example.com>'
+at '2024-12-20T21:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# stack: main -> feat1 -> feat2
+git add feat1.txt
+gs bc -m feat1
+git add feat2.txt
+gs bc -m feat2
+
+# submit only feat1
+gs down
+gs bs --fill
+stderr 'Created #1'
+gs up
+
+# add a new commit to feat1 and leave feat2 behind so feat2 needs restack
+gs bco feat1
+git commit --allow-empty -m 'feat1 update'
+gs bco feat2
+gs ll
+stderr 'feat2 .*needs restack'
+
+# update-only submit should succeed: feat1 updated, feat2 skipped
+gs stack submit --update-only --fill
+stderr 'Updated #1'
+stderr 'feat2: Skipping unsubmitted branch'
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
