@@ -473,29 +473,6 @@ func (h *Handler) submitBranch(
 		return status, fmt.Errorf("lookup branch: %w", err)
 	}
 
-	// Refuse to submit if the branch is not restacked.
-	if !opts.Force {
-		if err := svc.VerifyRestacked(ctx, branchToSubmit); err != nil {
-			if shouldSkipRestackCheck(
-				opts.SkipRestackCheck,
-				branch.Base,
-				h.Store.Trunk(),
-			) {
-				log.Warnf("Branch %[1]s is not restacked."+
-					" Run '%[2]s branch restack --branch=%[1]s'"+
-					" to fix this.",
-					branchToSubmit, cli.Name(),
-				)
-			} else {
-				log.Errorf("Branch %s needs to be restacked.", branchToSubmit)
-				log.Errorf("Run the following command to fix this:")
-				log.Errorf("  %s branch restack --branch=%s", cli.Name(), branchToSubmit)
-				log.Errorf("Or, try again with --force to submit anyway.")
-				return status, errors.New("refusing to submit outdated branch")
-			}
-		}
-	}
-
 	// Various code paths down below should call this
 	// if the branch is being published as a CR (new or existing)
 	// so it should get a nav comment.
@@ -713,7 +690,32 @@ func (h *Handler) submitBranch(
 			}
 			return status, nil
 		}
+	}
 
+	// Refuse to submit if the branch is not restacked.
+	if !opts.Force {
+		if err := svc.VerifyRestacked(ctx, branchToSubmit); err != nil {
+			if shouldSkipRestackCheck(
+				opts.SkipRestackCheck,
+				branch.Base,
+				h.Store.Trunk(),
+			) {
+				log.Warnf("Branch %[1]s is not restacked."+
+					" Run '%[2]s branch restack --branch=%[1]s'"+
+					" to fix this.",
+					branchToSubmit, cli.Name(),
+				)
+			} else {
+				log.Errorf("Branch %s needs to be restacked.", branchToSubmit)
+				log.Errorf("Run the following command to fix this:")
+				log.Errorf("  %s branch restack --branch=%s", cli.Name(), branchToSubmit)
+				log.Errorf("Or, try again with --force to submit anyway.")
+				return status, errors.New("refusing to submit outdated branch")
+			}
+		}
+	}
+
+	if existingChange == nil {
 		if opts.DryRun {
 			if opts.Publish {
 				log.Infof("WOULD create a CR for %s", branchToSubmit)
