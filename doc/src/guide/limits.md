@@ -86,6 +86,13 @@ arrow " restack" ljust from Y.s to Z.n
 As a result of this, when a branch is squash-merged into the trunk branch,
 branches upstack from it need to be restacked, and all their CRs updated.
 
+To restack and re-submit the current stack after a squash merge, you can run:
+
+```freeze language="terminal"
+{green}${reset} gs repo sync --restack
+{green}${reset} gs stack submit
+```
+
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->
 
