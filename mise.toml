@@ -12,6 +12,7 @@ _.path = ["{{ config_root }}/bin"]
 golangci-lint = "aqua:golangci/golangci-lint"
 changie = "github:miniscruff/changie"
 requiredfield = "github:abhinav/requiredfield"
+gofumpt = "aqua:mvdan/gofumpt"
 
 [tools]
 # Self-explanatory.
