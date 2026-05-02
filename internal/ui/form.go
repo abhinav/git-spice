@@ -32,6 +32,7 @@ type FormStyle struct {
 
 	Title         Style
 	Description   Style
+	Footer        Style
 	AcceptedTitle Style
 
 	AcceptedField Style
@@ -42,8 +43,15 @@ var DefaultFormStyle = FormStyle{
 	Error:         NewStyle().Foreground(Red),
 	Title:         NewStyle().Foreground(Green).Bold(true),
 	Description:   NewStyle().Foreground(Gray).Faint(true),
+	Footer:        NewStyle().Foreground(Plain),
 	AcceptedTitle: NewStyle().Foreground(Plain),
 	AcceptedField: NewStyle().Faint(true),
+}
+
+// fieldFooter is implemented by fields that render clear,
+// active-field guidance below the ordinary field description.
+type fieldFooter interface {
+	Footer() string
 }
 
 type acceptFieldMsg struct{}
@@ -128,6 +136,7 @@ type Form struct {
 	err     error
 	focused int // index of the focused field
 	theme   Theme
+	width   int
 }
 
 var _ tea.Model = (*Form)(nil)
@@ -253,6 +262,9 @@ func (f *Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case skipFieldMsg:
 		f.focused++
 
+	case tea.WindowSizeMsg:
+		f.width = msg.Width
+
 	case tea.KeyMsg:
 		if key.Matches(msg, f.KeyMap.Cancel) {
 			f.err = errors.New("user cancelled")
@@ -309,6 +321,19 @@ func (f *Form) renderField(w Writer, field Field, accepted bool) {
 		fmt.Fprintf(w, "\n%s", style.Error.Render(f.theme, err.Error()))
 	}
 	if desc := field.Description(); !accepted && desc != "" {
-		fmt.Fprintf(w, "\n%s", style.Description.Render(f.theme, desc))
+		descStyle := style.Description.Resolve(f.theme)
+		if f.width > 0 {
+			descStyle = descStyle.Width(f.width)
+		}
+		fmt.Fprintf(w, "\n%s", descStyle.Render(desc))
+	}
+	if footerField, ok := field.(fieldFooter); !accepted && ok {
+		if footer := footerField.Footer(); footer != "" {
+			footerStyle := style.Footer.Resolve(f.theme)
+			if f.width > 0 {
+				footerStyle = footerStyle.Width(f.width)
+			}
+			fmt.Fprintf(w, "\n\n%s", footerStyle.Render(footer))
+		}
 	}
 }

@@ -156,9 +156,40 @@ func TestRobotView_noTTYStripsANSI(t *testing.T) {
 	`), string(got))
 }
 
+func TestRobotView_rendersFooter(t *testing.T) {
+	dir := t.TempDir()
+	inputFile := filepath.Join(dir, "input")
+	outputFile := filepath.Join(dir, "output")
+
+	require.NoError(t, os.WriteFile(inputFile, []byte(`"foo"`+"\n"), 0o644))
+
+	view, err := NewRobotView(inputFile, &RobotViewOptions{
+		OutputFile: outputFile,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, view.Prompt(&fakeField{
+		View:       "Warp factor?",
+		FooterText: "Engineering advisory",
+	}))
+	require.NoError(t, view.Close())
+
+	got, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+
+	assert.Equal(t, text.Dedent(`
+		===
+		> Warp factor?
+		> Engineering advisory
+		"foo"
+
+	`), string(got))
+}
+
 type fakeField struct {
-	GotValue any
-	View     string
+	GotValue   any
+	View       string
+	FooterText string
 }
 
 var _ ui.Field = (*fakeField)(nil)
@@ -168,6 +199,7 @@ func (f *fakeField) Err() error    { return nil }
 
 func (f *fakeField) Description() string { return "" }
 func (f *fakeField) Title() string       { return "" }
+func (f *fakeField) Footer() string      { return f.FooterText }
 
 func (f *fakeField) Update(tea.Msg) tea.Cmd { return nil }
 

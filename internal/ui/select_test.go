@@ -68,3 +68,23 @@ func TestSelect(t *testing.T) {
 		"testdata/script/select",
 	)
 }
+
+func TestSelect_Footer(t *testing.T) {
+	selectField := ui.NewSelect[string]().
+		WithOptions(
+			ui.SelectOption[string]{Label: "origin", Value: "origin"},
+			ui.SelectOption[string]{Label: "upstream", Value: "upstream"},
+		).
+		WithFooterFunc(func(value string) string {
+			if value == "upstream" {
+				return "fork mode"
+			}
+			return ""
+		})
+
+	assert.Empty(t, selectField.Footer())
+
+	selectField.WithSelected(1)
+
+	assert.Equal(t, "fork mode", selectField.Footer())
+}
