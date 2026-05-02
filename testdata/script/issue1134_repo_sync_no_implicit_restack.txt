@@ -1,0 +1,99 @@
+# 'repo sync' must not implicitly restack branches after merged deletions.
+#
+# https://github.com/abhinav/git-spice/issues/1134
+
+as 'Test <test@example.com>'
+at '2026-05-01T12:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack: main -> a -> b -> c.
+git add a.txt
+gs bc -m 'Add a' a
+git add b.txt
+gs bc -m 'Add b' b
+git add c.txt
+gs bc -m 'Add c' c
+gs stack submit --fill
+
+# Merge the bottom two branches server-side and sync without --restack.
+shamhub merge alice/example 2
+shamhub merge alice/example 1
+gs repo sync
+stderr 'a: #1 was merged'
+stderr 'b: #2 was merged'
+stderr 'c: retargeted upstack onto main'
+! stderr 'c: moved upstack onto main'
+
+# a and b are gone, but c has only been retargeted in state.
+! git rev-parse --verify a
+! git rev-parse --verify b
+git rev-parse --verify c
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after-sync.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-sync.txt
+
+# An explicit restack replays c onto main.
+gs branch restack --branch c
+stderr 'c: restacked on main'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after-restack.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-restack.txt
+
+-- repo/a.txt --
+a
+-- repo/b.txt --
+b
+-- repo/c.txt --
+c
+-- golden/ll-after-sync.txt --
+┏━■ c (#3) (needs restack) ◀
+┃   bd749dc Add c (now)
+main
+-- golden/graph-after-sync.txt --
+* bd749dc (HEAD -> c, origin/c) Add c
+| *   6195e00 (origin/main, main) Merge change #1
+| |\  
+| | *   26e3162 Merge change #2
+| | |\  
+| |_|/  
+|/| |   
+* | | 8e43bef Add b
+| |/  
+|/|   
+* | 0fa8ccf Add a
+|/  
+* b567761 Initial commit
+-- golden/ll-after-restack.txt --
+┏━■ c (#3) (needs push) ◀
+┃   9eaaa26 Add c (now)
+main
+-- golden/graph-after-restack.txt --
+* 9eaaa26 (HEAD -> c) Add c
+*   6195e00 (origin/main, main) Merge change #1
+|\  
+| *   26e3162 Merge change #2
+| |\  
+| | * 8e43bef Add b
+| |/  
+| * 0fa8ccf Add a
+|/  
+* b567761 Initial commit

@@ -71,8 +71,27 @@ type Handler struct {
 // Request is a request to delete one or more branches.
 type Request struct {
 	Branches []string
-	Force    bool
+
+	Force bool
+
+	// UpstackPolicy controls how surviving upstacks are moved
+	// after their base branches are deleted.
+	//
+	// The zero value leaves upstacks for an explicit restack later.
+	UpstackPolicy UpstackPolicy
 }
+
+// UpstackPolicy controls how branch deletion handles surviving upstacks.
+type UpstackPolicy int
+
+const (
+	// UpstackDoNothing moves surviving upstacks by updating state only.
+	UpstackDoNothing UpstackPolicy = iota
+
+	// UpstackRestackAboves moves surviving upstacks
+	// by replaying their commits immediately.
+	UpstackRestackAboves
+)
 
 // DeleteBranches deletes the specified branches from the repository,
 // updating all internal state as necessary.
@@ -263,11 +282,12 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				continue
 			}
 
-			// Check if the upstack branch is checked out in another worktree.
-			// If so, we need to skip the rebase operation
-			// and leave the branch in a "needs restack" state.
-			var skipRebase bool
-			if above != currentBranch {
+			// Skip the rebase if the caller requested bookkeeping-only
+			// retargeting, or if the upstack branch cannot be rebased
+			// from this worktree.
+			restackAbove := req.UpstackPolicy == UpstackRestackAboves
+			skipRebase := !restackAbove
+			if !skipRebase && above != currentBranch {
 				if worktreePath, ok := branchWorktrees[above]; ok {
 					skipRebase = true
 					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
@@ -294,7 +314,11 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 					Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
 				})
 			}
-			log.Infof("%v: moved upstack onto %v", above, base)
+			if restackAbove {
+				log.Infof("%v: moved upstack onto %v", above, base)
+			} else {
+				log.Infof("%v: retargeted upstack onto %v", above, base)
+			}
 		}
 	}
 

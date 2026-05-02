@@ -106,7 +106,7 @@ $ gs repo sync
     [parts of](cli/reference.md#gs-upstack-submit)
     [the stack](cli/reference.md#gs-downstack-submit).
     If a branch has already been submitted, git-spice will update the submission.
-    If it has been merged, git-spice will automatically restack branches that depend on it.
+    If it has been merged, git-spice will automatically retarget branches that depend on it.
 
 -   [:material-stairs:{ .lg .middle } __Incremental improvements__](start/stack.md)
 
