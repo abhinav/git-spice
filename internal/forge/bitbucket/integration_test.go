@@ -33,7 +33,6 @@ func TestIntegration(t *testing.T) {
 	cfg, sanitizers := testConfig(t)
 	remoteURL := bitbucket.DefaultURL +
 		"/" + cfg.Owner + "/" + cfg.Repo + ".git"
-
 	t.Cleanup(func() {
 		if t.Failed() && !forgetest.Update() {
 			t.Logf("To update the test fixtures, run:")
@@ -48,7 +47,12 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:  remoteURL,
+		RemoteURL: remoteURL,
+		// TODO:
+		// Uncomment this to record BitBucket fixtures.
+		// Unfortunately, I don't have a BitBucket account,
+		// and have been unable to set one up successfully.
+		// PushRemoteURL: bitbucket.DefaultURL + "/" + cfg.ForkOwner + "/" + cfg.ForkRepo + ".git",
 		Forge:      &bitbucketForge,
 		Sanitizers: sanitizers,
 		OpenRepository: func(

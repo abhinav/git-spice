@@ -58,6 +58,11 @@ func (r *Repository) buildCreatePRRequest(
 		},
 		Draft: req.Draft,
 	}
+	if req.PushRepository != nil {
+		apiReq.Source.Repository = &bitbucket.RepositoryRef{
+			FullName: req.PushRepository.String(),
+		}
+	}
 	if req.Body != "" {
 		apiReq.Description = req.Body
 	}

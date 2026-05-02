@@ -30,19 +30,11 @@ func newRepository(
 ) (*Repository, error) {
 	log = log.With("repo", fmt.Sprintf("%s/%s", owner, repo))
 	if repoID == "" || repoID == nil {
-		var q struct {
-			Repository struct {
-				ID githubv4.ID `graphql:"id"`
-			} `graphql:"repository(owner: $owner, name: $repo)"`
-		}
-		if err := client.Query(ctx, &q, map[string]any{
-			"owner": githubv4.String(owner),
-			"repo":  githubv4.String(repo),
-		}); err != nil {
+		var err error
+		repoID, err = repositoryGQLID(ctx, client, owner, repo)
+		if err != nil {
 			return nil, fmt.Errorf("get repository ID: %w", err)
 		}
-
-		repoID = q.Repository.ID
 	}
 
 	return &Repository{
@@ -57,6 +49,25 @@ func newRepository(
 
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
+
+func repositoryGQLID(
+	ctx context.Context,
+	client *githubv4.Client,
+	owner, repo string,
+) (githubv4.ID, error) {
+	var q struct {
+		Repository struct {
+			ID githubv4.ID `graphql:"id"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
+	}
+	if err := client.Query(ctx, &q, map[string]any{
+		"owner": githubv4.String(owner),
+		"repo":  githubv4.String(repo),
+	}); err != nil {
+		return "", fmt.Errorf("query repository: %w", err)
+	}
+	return q.Repository.ID, nil
+}
 
 // userID looks up a user's GraphQL ID by login.
 func (r *Repository) userID(ctx context.Context, login string) (githubv4.ID, error) {

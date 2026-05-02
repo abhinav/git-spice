@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -49,8 +50,9 @@ type findChangesByBranchRequest struct {
 	Repo   string `path:"repo" json:"-"`
 	Branch string `path:"branch" json:"-"`
 
-	Limit int    `form:"limit" json:"-"`
-	State string `form:"state" json:"-"`
+	Limit    int    `form:"limit" json:"-"`
+	State    string `form:"state" json:"-"`
+	HeadRepo string `form:"head_repo" json:"-"`
 }
 
 func (sh *ShamHub) handleFindChangesByBranch(_ context.Context, req *findChangesByBranchRequest) ([]*Change, error) {
@@ -62,6 +64,18 @@ func (sh *ShamHub) handleFindChangesByBranch(_ context.Context, req *findChanges
 		func(c shamChange) bool { return c.Base.Repo == repo },
 		func(c shamChange) bool { return c.Head.Name == branch },
 	}
+	headOwner, headRepo := owner, repo
+	if req.HeadRepo != "" {
+		var ok bool
+		headOwner, headRepo, ok = strings.Cut(req.HeadRepo, "/")
+		if !ok {
+			return nil, badRequestErrorf("invalid head_repo format, expected 'owner/repo'")
+		}
+	}
+	filters = append(filters,
+		func(c shamChange) bool { return c.Head.Owner == headOwner },
+		func(c shamChange) bool { return c.Head.Repo == headRepo },
+	)
 
 	if state := req.State; state != "" && state != "all" {
 		var s shamChangeState
@@ -109,7 +123,7 @@ nextChange:
 }
 
 // toFindChangeItem converts a Change to a forge.FindChangeItem.
-func toFindChangeItem(c *Change) *forge.FindChangeItem {
+func (r *forgeRepository) toFindChangeItem(c *Change) *forge.FindChangeItem {
 	var state forge.ChangeState
 	switch c.State {
 	case "open":
@@ -159,7 +173,7 @@ func (r *forgeRepository) FindChangeByID(ctx context.Context, fid forge.ChangeID
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
-	return toFindChangeItem(&res), nil
+	return r.toFindChangeItem(&res), nil
 }
 
 func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string, opts forge.FindChangesOptions) ([]*forge.FindChangeItem, error) {
@@ -175,6 +189,9 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 	} else {
 		q.Set("state", opts.State.String())
 	}
+	if opts.PushRepository != nil {
+		q.Set("head_repo", opts.PushRepository.String())
+	}
 	u.RawQuery = q.Encode()
 
 	var res []*Change
@@ -184,7 +201,7 @@ func (r *forgeRepository) FindChangesByBranch(ctx context.Context, branch string
 
 	changes := make([]*forge.FindChangeItem, len(res))
 	for i, c := range res {
-		changes[i] = toFindChangeItem(c)
+		changes[i] = r.toFindChangeItem(c)
 	}
 	return changes, nil
 }

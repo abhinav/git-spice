@@ -14,10 +14,19 @@ const _draftPrefix = "Draft:"
 
 // SubmitChange creates a new change in a repository.
 func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
+	projectID := r.repoID
 	input := &gitlab.CreateMergeRequestOptions{
 		Title:        &req.Subject,
 		TargetBranch: &req.Base,
 		SourceBranch: &req.Head,
+	}
+	if req.PushRepository != nil {
+		pushProjectID, err := r.projectID(ctx, req.PushRepository)
+		if err != nil {
+			return forge.SubmitChangeResult{}, fmt.Errorf("get source project ID: %w", err)
+		}
+		projectID = pushProjectID
+		input.TargetProjectID = &r.repoID
 	}
 	if r.removeSourceBranchOnMerge {
 		input.RemoveSourceBranch = new(true)
@@ -48,7 +57,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		input.AssigneeIDs = &assigneeIDs
 	}
 
-	request, _, err := r.client.MergeRequestCreate(ctx, r.repoID, input)
+	request, _, err := r.client.MergeRequestCreate(ctx, projectID, input)
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("create merge request: %w", err)
 	}

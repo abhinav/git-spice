@@ -111,13 +111,19 @@ type WorkspaceMemberListOptions struct {
 
 // BranchRef references a branch in a repository.
 type BranchRef struct {
-	Branch Branch  `json:"branch"`
-	Commit *Commit `json:"commit,omitempty"`
+	Branch     Branch         `json:"branch"`
+	Commit     *Commit        `json:"commit,omitempty"`
+	Repository *RepositoryRef `json:"repository,omitempty"`
 }
 
 // Branch is a branch reference within a request or response.
 type Branch struct {
 	Name string `json:"name"`
+}
+
+// RepositoryRef identifies a repository in a pull request branch reference.
+type RepositoryRef struct {
+	FullName string `json:"full_name,omitempty"`
 }
 
 // Reviewer identifies a reviewer by UUID.

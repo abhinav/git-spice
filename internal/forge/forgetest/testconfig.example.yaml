@@ -16,6 +16,10 @@ github:
   owner: "your-github-username"
   # Test repository name (should be a repo you have write access to)
   repo: "your-test-repo"
+  # Fork repository owner for cross-repository pull request tests
+  forkOwner: "your-github-username"
+  # Fork repository name for cross-repository pull request tests
+  forkRepo: "your-test-repo-fork"
   # A GitHub user who can be added as a reviewer (can be a bot account)
   reviewer: "another-github-user"
   # A GitHub user who can be assigned to PRs (can be the same as reviewer)
@@ -26,6 +30,10 @@ gitlab:
   owner: "your-gitlab-username"
   # Test project name
   repo: "your-test-repo"
+  # Fork project namespace for cross-project merge request tests
+  forkOwner: "your-gitlab-username"
+  # Fork project name for cross-project merge request tests
+  forkRepo: "your-test-repo-fork"
   # A GitLab user who can be added as a reviewer
   reviewer: "another-gitlab-user"
   # A GitLab user who can be assigned to MRs
@@ -36,6 +44,10 @@ bitbucket:
   owner: "your-bitbucket-workspace"
   # Test repository name
   repo: "your-test-repo"
+  # Fork workspace for cross-repository pull request tests
+  forkOwner: "your-bitbucket-workspace"
+  # Fork repository name for cross-repository pull request tests
+  forkRepo: "your-test-repo-fork"
   # A Bitbucket user who can be added as a reviewer
   reviewer: "another-bitbucket-user"
   # Bitbucket does not support assignees, leave empty

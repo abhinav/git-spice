@@ -28,6 +28,21 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		BaseRefName:  githubv4.String(req.Base),
 		HeadRefName:  githubv4.String(req.Head),
 	}
+	if req.PushRepository != nil {
+		pushRepository := mustRepositoryID(req.PushRepository)
+		if pushRepository.owner != r.owner || pushRepository.name != r.repo {
+			pushRepoID, err := repositoryGQLID(
+				ctx,
+				r.client,
+				pushRepository.owner,
+				pushRepository.name,
+			)
+			if err != nil {
+				return forge.SubmitChangeResult{}, fmt.Errorf("get push repository ID: %w", err)
+			}
+			input.HeadRepositoryID = &pushRepoID
+		}
+	}
 	if req.Body != "" {
 		input.Body = (*githubv4.String)(&req.Body)
 	}

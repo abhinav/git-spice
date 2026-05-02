@@ -79,6 +79,7 @@ func TestIntegration_Repository(t *testing.T) {
 func TestIntegration(t *testing.T) {
 	cfg, sanitizers := testConfig(t)
 	remoteURL := "https://github.com/" + cfg.Owner + "/" + cfg.Repo
+	pushRemoteURL := "https://github.com/" + cfg.ForkOwner + "/" + cfg.ForkRepo
 
 	t.Cleanup(func() {
 		if t.Failed() && !forgetest.Update() {
@@ -92,9 +93,10 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL:  remoteURL,
-		Forge:      &githubForge,
-		Sanitizers: sanitizers,
+		RemoteURL:     remoteURL,
+		PushRemoteURL: pushRemoteURL,
+		Forge:         &githubForge,
+		Sanitizers:    sanitizers,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			token := forgetest.Token(t, remoteURL, "GITHUB_TOKEN")
 			httpClient.Transport = &oauth2.Transport{
