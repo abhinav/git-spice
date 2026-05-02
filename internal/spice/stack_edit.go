@@ -166,8 +166,8 @@ func createStackEditFile(branches []string) (_ string, err error) {
 	}
 	defer func() { err = errors.Join(err, file.Close()) }()
 
-	for i := len(branches) - 1; i >= 0; i-- {
-		if _, err := fmt.Fprintln(file, branches[i]); err != nil {
+	for _, v := range slices.Backward(branches) {
+		if _, err := fmt.Fprintln(file, v); err != nil {
 			return "", fmt.Errorf("write branc: %w", err)
 		}
 	}

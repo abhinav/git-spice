@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -58,8 +59,8 @@ func (f *branchSubmitForm) titleField(title *string, commits []git.CommitMessage
 		// Put the commits in chronological order
 		// for the user to choose titles from.
 		options := make([]string, len(commits))
-		for i := len(commits) - 1; i >= 0; i-- {
-			options[len(commits)-1-i] = commits[i].Subject
+		for i, v := range slices.Backward(commits) {
+			options[len(commits)-1-i] = v.Subject
 		}
 		input = input.WithOptions(options)
 	}
