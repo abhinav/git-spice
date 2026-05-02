@@ -61,9 +61,10 @@ type Select[T any] struct {
 	KeyMap SelectKeyMap
 	Style  SelectStyle
 
-	title string
-	desc  string
-	value *T
+	title      string
+	desc       string
+	footerFunc func(T) string
+	value      *T
 
 	options  []selectOption[T] // list of options
 	filter   []rune            // filter to match options
@@ -250,6 +251,39 @@ func (s *Select[T]) Description() string {
 func (s *Select[T]) WithDescription(desc string) *Select[T] {
 	s.desc = desc
 	return s
+}
+
+// Footer returns the footer for the currently selected option.
+func (s *Select[T]) Footer() string {
+	if s.footerFunc == nil {
+		return ""
+	}
+
+	value, ok := s.selectedValue()
+	if !ok {
+		return ""
+	}
+
+	return s.footerFunc(value)
+}
+
+// WithFooterFunc sets a function that produces footer text
+// for the currently selected option.
+//
+// The footer is rendered as active-field guidance by [Form],
+// separate from the field description.
+func (s *Select[T]) WithFooterFunc(f func(T) string) *Select[T] {
+	s.footerFunc = f
+	return s
+}
+
+func (s *Select[T]) selectedValue() (T, bool) {
+	if s.selected < 0 || s.selected >= len(s.matched) {
+		var zero T
+		return zero, false
+	}
+
+	return s.options[s.matched[s.selected]].Value, true
 }
 
 // WithVisible sets the number of visible options in the select field.

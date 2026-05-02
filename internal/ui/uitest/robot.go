@@ -241,6 +241,12 @@ fieldLoop:
 			_, _ = fieldViewWriter.WriteString("\n")
 			_, _ = fieldViewWriter.WriteString(desc)
 		}
+		if footerField, ok := field.(interface{ Footer() string }); ok {
+			if footer := footerField.Footer(); footer != "" {
+				_, _ = fieldViewWriter.WriteString("\n")
+				_, _ = fieldViewWriter.WriteString(footer)
+			}
+		}
 		if err := field.Err(); err != nil {
 			return fmt.Errorf("field [%d]: %w", fieldIdx, err)
 		}
