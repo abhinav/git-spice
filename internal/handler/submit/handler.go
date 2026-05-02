@@ -1143,8 +1143,8 @@ func (h *Handler) prepareBranch(
 		// The revisions are in reverse order,
 		// so we'll want to iterate in reverse.
 		defaultTitle = msgs[len(msgs)-1].Subject
-		for i := len(msgs) - 1; i >= 0; i-- {
-			msg := msgs[i]
+		for _, v := range slices.Backward(msgs) {
+			msg := v
 			if defaultBody.Len() > 0 {
 				defaultBody.WriteString("\n\n")
 			}

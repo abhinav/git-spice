@@ -5,6 +5,7 @@ package stacknav
 import (
 	"fmt"
 	"io"
+	"slices"
 )
 
 const (
@@ -105,8 +106,8 @@ func Print[N Node](w io.Writer, nodes []N, currentIdx int, opts *PrintOptions) {
 		}
 
 		// Reverse order to print from base to current.
-		for i := len(downstacks) - 1; i >= 0; i-- {
-			writeNode(downstacks[i], indent)
+		for _, v := range slices.Backward(downstacks) {
+			writeNode(v, indent)
 			indent++
 		}
 	}

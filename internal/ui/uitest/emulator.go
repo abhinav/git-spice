@@ -175,8 +175,8 @@ func (e *EmulatorView) Rows() []string {
 	}
 
 	// Trim trailing empty lines.
-	for i := len(lines) - 1; i >= 0; i-- {
-		if len(lines[i]) > 0 {
+	for i, v := range slices.Backward(lines) {
+		if len(v) > 0 {
 			lines = lines[:i+1]
 			break
 		}
@@ -195,8 +195,8 @@ func (e *EmulatorView) Snapshot() string {
 }
 
 func trimRightWS(rs []rune) []rune {
-	for i := len(rs) - 1; i >= 0; i-- {
-		switch rs[i] {
+	for i, v := range slices.Backward(rs) {
+		switch v {
 		case 0, ' ', '\t', '\n':
 			// next
 		default:
