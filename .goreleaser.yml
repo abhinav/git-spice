@@ -77,23 +77,6 @@ nfpms:
       - src: ./CHANGELOG.md
         dst: /usr/share/doc/git-spice/CHANGELOG.md
 
-snapcrafts:
-  - ids: [git-spice-linux-package]
-    name: git-spice
-    title: git-spice
-    summary: A tool for stacking Git branches.
-    description: >-
-      git-spice helps you manage stacked Git branches, restack changes,
-      and submit pull requests or merge requests for a stack.
-    license: "GPL-3.0-or-later"
-    confinement: classic
-    grade: stable
-    publish: true
-    disable: '{{ ne (index .Env "ENABLE_SNAPCRAFT") "true" }}'
-    apps:
-      git-spice:
-        command: git-spice
-
 aurs:
   - name: git-spice-bin
     homepage: "https://abhinav.github.io/git-spice/"
