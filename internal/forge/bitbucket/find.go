@@ -28,6 +28,11 @@ func (r *Repository) listPRsByBranch(
 	opts forge.FindChangesOptions,
 ) ([]bitbucket.PullRequest, error) {
 	query := fmt.Sprintf(`source.branch.name="%s"`, branch)
+	pushRepository := opts.PushRepository
+	if pushRepository == nil {
+		pushRepository = r.repositoryID()
+	}
+	query += fmt.Sprintf(` AND source.repository.full_name="%s"`, pushRepository.String())
 	if opts.State != 0 {
 		query += fmt.Sprintf(` AND state="%s"`, stateToAPI(opts.State))
 	}
@@ -91,6 +96,14 @@ func (r *Repository) convertPRToFindItem(pr *bitbucket.PullRequest) *forge.FindC
 		HeadHash:  extractHeadHash(pr),
 		Draft:     pr.Draft,
 		Reviewers: extractUsernames(pr.Reviewers),
+	}
+}
+
+func (r *Repository) repositoryID() *RepositoryID {
+	return &RepositoryID{
+		url:       r.url,
+		workspace: r.workspace,
+		name:      r.repo,
 	}
 }
 

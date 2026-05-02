@@ -108,9 +108,9 @@ func (r *forgeRepository) SubmitChange(ctx context.Context, req forge.SubmitChan
 		Reviewers: req.Reviewers,
 		Assignees: req.Assignees,
 	}
-
-	// For now, fork functionality is handled at the ShamHub server level
-	// Future enhancement: detect if head branch is from a fork
+	if req.PushRepository != nil {
+		submitReq.HeadRepo = req.PushRepository.String()
+	}
 
 	var res submitChangeResponse
 	if err := r.client.Post(ctx, u.String(), submitReq, &res); err != nil {

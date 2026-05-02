@@ -329,6 +329,11 @@ type ChangeMetadata interface {
 type FindChangesOptions struct {
 	State ChangeState // 0 = all
 
+	// PushRepository is the repository that owns the head branch.
+	// If nil, only changes whose head branch is owned by the target
+	// repository are returned.
+	PushRepository RepositoryID
+
 	// Limit specifies the maximum number of changes to return.
 	// Changes are sorted by most recently updated.
 	// Defaults to 10.
@@ -376,6 +381,10 @@ type SubmitChangeRequest struct {
 	//
 	// This must have already been pushed to the remote.
 	Head string // required
+
+	// PushRepository is the repository that owns the head branch.
+	// If nil, the target repository owns the head branch.
+	PushRepository RepositoryID
 
 	// Draft specifies whether the change should be marked as a draft.
 	Draft bool

@@ -119,6 +119,15 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		opts.Limit = 10
 	}
 
+	pushProjectID := r.repoID
+	if opts.PushRepository != nil {
+		var err error
+		pushProjectID, err = r.projectID(ctx, opts.PushRepository)
+		if err != nil {
+			return nil, fmt.Errorf("get source project ID: %w", err)
+		}
+	}
+
 	opt := &gitlab.ListProjectMergeRequestsOptions{
 		OrderBy:      new("updated_at"),
 		SourceBranch: new(branch),
@@ -135,9 +144,12 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
 
-	changes := make([]*forge.FindChangeItem, len(requests))
-	for i, mr := range requests {
-		changes[i] = basicMergeRequestToFindChangeItem(mr)
+	changes := make([]*forge.FindChangeItem, 0, len(requests))
+	for _, mr := range requests {
+		if mr.SourceProjectID != pushProjectID {
+			continue
+		}
+		changes = append(changes, basicMergeRequestToFindChangeItem(mr))
 	}
 
 	return changes, nil

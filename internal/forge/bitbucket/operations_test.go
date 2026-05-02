@@ -134,11 +134,12 @@ func TestUpdateChangeComment(t *testing.T) {
 
 func TestFindChangesByBranch(t *testing.T) {
 	tests := []struct {
-		name    string
-		prs     []bitbucket.PullRequest
-		branch  string
-		opts    forge.FindChangesOptions
-		wantLen int
+		name              string
+		prs               []bitbucket.PullRequest
+		branch            string
+		opts              forge.FindChangesOptions
+		wantQueryContains []string
+		wantLen           int
 	}{
 		{
 			name: "SinglePR",
@@ -151,7 +152,10 @@ func TestFindChangesByBranch(t *testing.T) {
 					Links:       bitbucket.PullRequestLinks{HTML: bitbucket.Link{Href: "https://example.com/pr/1"}},
 				},
 			},
-			branch:  "feature",
+			branch: "feature",
+			wantQueryContains: []string{
+				`source.repository.full_name="workspace/repo"`,
+			},
 			wantLen: 1,
 		},
 		{
@@ -169,11 +173,30 @@ func TestFindChangesByBranch(t *testing.T) {
 			branch:  "feature",
 			wantLen: 2,
 		},
+		{
+			name: "PushRepository",
+			opts: forge.FindChangesOptions{
+				PushRepository: &RepositoryID{
+					url:       "https://example.com",
+					workspace: "fork",
+					name:      "repo",
+				},
+			},
+			branch: "feature",
+			wantQueryContains: []string{
+				`source.repository.full_name="fork/repo"`,
+			},
+			wantLen: 0,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				query := r.URL.Query().Get("q")
+				for _, want := range tt.wantQueryContains {
+					assert.Contains(t, query, want)
+				}
 				resp := bitbucket.PullRequestList{Values: tt.prs}
 				assert.NoError(t, json.NewEncoder(w).Encode(resp))
 			}))

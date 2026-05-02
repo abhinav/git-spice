@@ -16,6 +16,10 @@ github:
   owner: "abhinav"
   # Test repository name (should be a repo you have write access to)
   repo: "test-repo"
+  # Fork repository owner for cross-repository pull request tests
+  forkOwner: "abhinav-robot"
+  # Fork repository name for cross-repository pull request tests
+  forkRepo: "test-repo-fork"
   # A GitHub user who can be added as a reviewer (can be a bot account)
   reviewer: "abhinav-robot"
   # A GitHub user who can be assigned to PRs (can be the same as reviewer)
@@ -26,6 +30,10 @@ gitlab:
   owner: "abg"
   # Test project name
   repo: "test-repo"
+  # Fork project namespace for cross-project merge request tests
+  forkOwner: "abg-robot"
+  # Fork project name for cross-project merge request tests
+  forkRepo: "test-repo-fork"
   # A GitLab user who can be added as a reviewer
   reviewer: "abg-robot"
   # A GitLab user who can be assigned to MRs

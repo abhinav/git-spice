@@ -229,6 +229,12 @@ type IntegrationConfig struct {
 	// Example: "https://github.com/abhinav/test-repo"
 	RemoteURL string // required
 
+	// PushRemoteURL is the Git remote URL for a fork repository
+	// used to test cross-repository change requests.
+	//
+	// If empty, fork integration tests are skipped.
+	PushRemoteURL string // optional
+
 	// Forge is the forge being tested.
 	Forge forge.Forge // required
 
@@ -306,6 +312,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			Update: Update,
 		},
 		RemoteURL:             config.RemoteURL,
+		PushRemoteURL:         config.PushRemoteURL,
 		openRepository:        config.OpenRepository,
 		MergeChange:           config.MergeChange,
 		CloseChange:           config.CloseChange,
@@ -353,6 +360,14 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 
 		suite.TestFindChangesByBranchDoesNotExist(t)
 	})
+
+	if config.PushRemoteURL != "" {
+		t.Run("SubmitChangeFromPushRepository", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestSubmitChangeFromPushRepository(t)
+		})
+	}
 
 	// NOTE: ListChangeTemplates cannot run in parallel
 	// because it modifies the main branch.
@@ -421,6 +436,9 @@ type integrationSuite struct {
 	//
 	// Example: "https://github.com/abhinav/test-repo"
 	RemoteURL string
+
+	// PushRemoteURL is the Git remote URL for a fork repository.
+	PushRemoteURL string
 
 	// MergeChange merges a change.
 	MergeChange MergeChangeFunc
@@ -776,6 +794,79 @@ func (s *integrationSuite) TestFindChangesByBranchDoesNotExist(t *testing.T) {
 	changes, err := repo.FindChangesByBranch(t.Context(), "does-not-exist", forge.FindChangesOptions{})
 	require.NoError(t, err, "should not error for non-existent branch")
 	assert.Empty(t, changes, "should return empty slice for non-existent branch")
+}
+
+// TestSubmitChangeFromPushRepository verifies that a forge can create
+// and discover a change whose head branch belongs to a fork repository.
+func (s *integrationSuite) TestSubmitChangeFromPushRepository(t *testing.T) {
+	branchFixture := fixturetest.New(s.Fixtures, "fork-branch", func() string {
+		return randomString(8)
+	})
+	commitHashFixture, setCommitHash := fixturetest.Stored[string](
+		s.Fixtures,
+		"forkCommitHash",
+	)
+
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating fork branch: %s", branchName)
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+
+		testRepo.CreateBranch(branchName)
+		testRepo.CheckoutBranch(branchName)
+		testRepo.WriteFile(branchName+".txt", randomString(32))
+		hash := testRepo.AddAllAndCommit("commit from fork test")
+		testRepo.AddRemote("pushrepo", s.PushRemoteURL)
+		testRepo.PushTo("pushrepo", branchName)
+		setCommitHash(hash.String())
+
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranchFrom("pushrepo", branchName)
+		})
+	}
+	commitHash := commitHashFixture.Get(t)
+
+	pushRepository, err := s.Forge.ParseRemoteURL(s.PushRemoteURL)
+	require.NoError(t, err, "parse push repository URL")
+
+	repo := s.OpenRepository(t)
+	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject:        "Testing fork " + branchName,
+		Body:           "Test fork change request",
+		Base:           "main",
+		Head:           branchName,
+		PushRepository: pushRepository,
+	})
+	require.NoError(t, err, "error creating fork change request")
+
+	t.Run("FindChangeByID", func(t *testing.T) {
+		foundChange, err := repo.FindChangeByID(t.Context(), change.ID)
+		require.NoError(t, err, "error finding change by ID")
+		s.assertHashMatch(t, commitHash, foundChange.HeadHash.String(),
+			"head hash should match fork commit")
+	})
+
+	t.Run("FindChangesByBranch", func(t *testing.T) {
+		changes, err := repo.FindChangesByBranch(t.Context(), branchName,
+			forge.FindChangesOptions{
+				PushRepository: pushRepository,
+			})
+		require.NoError(t, err, "error finding change by fork branch")
+		require.Len(t, changes, 1, "expected exactly one change")
+
+		foundChange := changes[0]
+		assert.Equal(t, change.ID, foundChange.ID, "ID should match")
+		s.assertHashMatch(t, commitHash, foundChange.HeadHash.String(),
+			"head hash should match fork commit")
+	})
+
+	t.Run("FindChangesByBranchDefaultsToTargetRepository", func(t *testing.T) {
+		changes, err := repo.FindChangesByBranch(t.Context(), branchName,
+			forge.FindChangesOptions{})
+		require.NoError(t, err, "error finding change by branch")
+		assert.Empty(t, changes,
+			"fork change should not match target repository default")
+	})
 }
 
 func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
@@ -1599,19 +1690,43 @@ func (r *testRepository) CheckoutBranch(name string) {
 
 // Push pushes the given refspec to origin.
 func (r *testRepository) Push(refspec string) {
+	r.PushTo("origin", refspec)
+}
+
+// AddRemote adds a remote to the test repository.
+func (r *testRepository) AddRemote(name, remoteURL string) {
+	output := r.t.Output()
+	cmd := xec.Command(
+		r.ctx(),
+		silogtest.New(r.t),
+		"git", "remote", "add", name, remoteURL,
+	).
+		WithDir(r.root).
+		WithStdout(output).
+		WithStderr(output)
+	require.NoError(r.t, cmd.Run(), "could not add remote: %s", name)
+}
+
+// PushTo pushes the given refspec to a remote.
+func (r *testRepository) PushTo(remote, refspec string) {
 	ctx := r.ctx()
 	require.NoError(r.t, r.work.Push(ctx, git.PushOptions{
-		Remote:  "origin",
+		Remote:  remote,
 		Refspec: git.Refspec(refspec),
-	}), "error pushing refspec: %s", refspec)
+	}), "error pushing refspec %s to %s", refspec, remote)
 }
 
 // DeleteRemoteBranch deletes a remote branch.
 func (r *testRepository) DeleteRemoteBranch(name string) {
+	r.DeleteRemoteBranchFrom("origin", name)
+}
+
+// DeleteRemoteBranchFrom deletes a branch from a remote.
+func (r *testRepository) DeleteRemoteBranchFrom(remote, name string) {
 	ctx := r.ctx()
-	r.t.Logf("Deleting remote branch: %s", name)
+	r.t.Logf("Deleting remote branch: %s/%s", remote, name)
 	assert.NoError(r.t, r.work.Push(ctx, git.PushOptions{
-		Remote:  "origin",
+		Remote:  remote,
 		Refspec: git.Refspec(":" + name),
 	}), "error deleting branch")
 }

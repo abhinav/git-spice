@@ -10,15 +10,21 @@ import (
 )
 
 type findPRNode struct {
-	ID          githubv4.ID               `graphql:"id"`
-	Number      githubv4.Int              `graphql:"number"`
-	URL         githubv4.URI              `graphql:"url"`
-	Title       githubv4.String           `graphql:"title"`
-	State       githubv4.PullRequestState `graphql:"state"`
-	HeadRefOid  githubv4.GitObjectID      `graphql:"headRefOid"`
-	BaseRefName githubv4.String           `graphql:"baseRefName"`
-	IsDraft     githubv4.Boolean          `graphql:"isDraft"`
-	Labels      struct {
+	ID             githubv4.ID               `graphql:"id"`
+	Number         githubv4.Int              `graphql:"number"`
+	URL            githubv4.URI              `graphql:"url"`
+	Title          githubv4.String           `graphql:"title"`
+	State          githubv4.PullRequestState `graphql:"state"`
+	HeadRefOid     githubv4.GitObjectID      `graphql:"headRefOid"`
+	BaseRefName    githubv4.String           `graphql:"baseRefName"`
+	IsDraft        githubv4.Boolean          `graphql:"isDraft"`
+	HeadRepository struct {
+		Owner struct {
+			Login githubv4.String `graphql:"login"`
+		} `graphql:"owner"`
+		Name githubv4.String `graphql:"name"`
+	} `graphql:"headRepository"`
+	Labels struct {
 		Nodes []struct {
 			Name githubv4.String `graphql:"name"`
 		} `graphql:"nodes"`
@@ -116,6 +122,10 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 	if opts.Limit == 0 {
 		opts.Limit = 10
 	}
+	pushRepository := opts.PushRepository
+	if pushRepository == nil {
+		pushRepository = r.repositoryID()
+	}
 
 	var q struct {
 		Repository struct {
@@ -145,9 +155,17 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
 
-	changes := make([]*forge.FindChangeItem, len(q.Repository.PullRequests.Nodes))
-	for i, node := range q.Repository.PullRequests.Nodes {
-		changes[i] = node.toFindChangeItem()
+	changes := make([]*forge.FindChangeItem, 0, len(q.Repository.PullRequests.Nodes))
+	for _, node := range q.Repository.PullRequests.Nodes {
+		nodeRepository := RepositoryID{
+			url:   r.forge.URL(),
+			owner: string(node.HeadRepository.Owner.Login),
+			name:  string(node.HeadRepository.Name),
+		}
+		if nodeRepository.String() != pushRepository.String() {
+			continue
+		}
+		changes = append(changes, node.toFindChangeItem())
 	}
 
 	return changes, nil
@@ -171,4 +189,12 @@ func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*fo
 	}
 
 	return q.Repository.PullRequest.toFindChangeItem(), nil
+}
+
+func (r *Repository) repositoryID() *RepositoryID {
+	return &RepositoryID{
+		url:   r.forge.URL(),
+		owner: r.owner,
+		name:  r.repo,
+	}
 }

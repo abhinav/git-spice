@@ -18,6 +18,10 @@ import (
 var _fixtures = fixturetest.Config{Update: forgetest.Update}
 
 func TestIntegration(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "commit.gpgsign")
+	t.Setenv("GIT_CONFIG_VALUE_0", "false")
+
 	t.Cleanup(func() {
 		if t.Failed() && !forgetest.Update() {
 			t.Logf("To update the test fixtures, run:")
@@ -29,6 +33,7 @@ func TestIntegration(t *testing.T) {
 	apiURLFixture, setAPIURL := fixturetest.Stored[string](_fixtures, "apiURL")
 	gitURLFixture, setGitURL := fixturetest.Stored[string](_fixtures, "gitURL")
 	repoURLFixture, setRepoURL := fixturetest.Stored[string](_fixtures, "repoURL")
+	pushRepoURLFixture, setPushRepoURL := fixturetest.Stored[string](_fixtures, "pushRepoURL")
 	tokenFixture, setToken := fixturetest.Stored[string](_fixtures, "token")
 
 	var shamhub *ShamHub // non-nil only in update mode
@@ -51,6 +56,15 @@ func TestIntegration(t *testing.T) {
 		require.NoError(t, err)
 		t.Logf("Created test repository at %s", repoURL)
 		setRepoURL(repoURL)
+
+		pushRepoURL, err := shamhub.ForkRepository(
+			"abhinav",
+			"test-repo",
+			"abhinav-fork",
+		)
+		require.NoError(t, err)
+		t.Logf("Created push repository at %s", pushRepoURL)
+		setPushRepoURL(pushRepoURL)
 
 		// Add initial commit to the repository so tests can create branches.
 		func() {
@@ -111,6 +125,7 @@ func TestIntegration(t *testing.T) {
 	apiURL := apiURLFixture.Get(t)
 	gitURL := gitURLFixture.Get(t)
 	repoURL := repoURLFixture.Get(t)
+	pushRepoURL := pushRepoURLFixture.Get(t)
 	token := tokenFixture.Get(t)
 
 	shamForge := &Forge{
@@ -122,8 +137,9 @@ func TestIntegration(t *testing.T) {
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{
-		RemoteURL: repoURL,
-		Forge:     shamForge,
+		RemoteURL:     repoURL,
+		PushRemoteURL: pushRepoURL,
+		Forge:         shamForge,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
 			repoID, err := shamForge.ParseRemoteURL(repoURL)
 			require.NoError(t, err)

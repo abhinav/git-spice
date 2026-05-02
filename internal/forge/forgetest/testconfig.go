@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"sync"
 	"testing"
 
@@ -27,6 +28,12 @@ type ForgeConfig struct {
 
 	// Repo is the repository name.
 	Repo string `yaml:"repo"`
+
+	// ForkOwner is the owner or workspace for a fork repository.
+	ForkOwner string `yaml:"forkOwner"`
+
+	// ForkRepo is the name of the fork repository.
+	ForkRepo string `yaml:"forkRepo"`
 
 	// Reviewer is a username that can be added as a reviewer to changes.
 	Reviewer string `yaml:"reviewer"`
@@ -79,10 +86,12 @@ func canonicalConfig() *TestConfig {
 // CanonicalGitHubConfig returns canonical placeholders for GitHub fixtures.
 func CanonicalGitHubConfig() ForgeConfig {
 	return ForgeConfig{
-		Owner:    CanonicalOwner,
-		Repo:     CanonicalRepo,
-		Reviewer: "test-owner-robot",
-		Assignee: "test-owner-robot",
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalRepo,
+		ForkOwner: "test-owner-robot",
+		ForkRepo:  "test-fork-repo",
+		Reviewer:  "test-owner-robot",
+		Assignee:  CanonicalOwner,
 	}
 }
 
@@ -92,10 +101,12 @@ func CanonicalGitHubConfig() ForgeConfig {
 // conflicts when both have the same value.
 func CanonicalGitLabConfig() ForgeConfig {
 	return ForgeConfig{
-		Owner:    CanonicalOwner,
-		Repo:     CanonicalRepo,
-		Reviewer: "test-reviewer",
-		Assignee: "test-reviewer", // Same as reviewer to handle value collisions
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalRepo,
+		ForkOwner: "test-fork-owner",
+		ForkRepo:  "test-fork-repo",
+		Reviewer:  "test-reviewer",
+		Assignee:  "test-reviewer", // Same as reviewer to handle value collisions
 	}
 }
 
@@ -105,10 +116,12 @@ func CanonicalGitLabConfig() ForgeConfig {
 // repo "foo"). This prevents sanitization conflicts when both have the same value.
 func CanonicalBitbucketConfig() ForgeConfig {
 	return ForgeConfig{
-		Owner:    CanonicalOwner,
-		Repo:     CanonicalOwner, // Same as owner to handle workspace/repo name collisions
-		Reviewer: "Test Reviewer",
-		Assignee: "",
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalOwner, // Same as owner to handle workspace/repo name collisions
+		ForkOwner: "test-fork-owner",
+		ForkRepo:  "test-fork-repo",
+		Reviewer:  "Test Reviewer",
+		Assignee:  "",
 	}
 }
 
@@ -152,8 +165,14 @@ func ConfigSanitizers(cfg ForgeConfig, canonical ForgeConfig) []Sanitizer {
 
 	addSanitizer(cfg.Owner, canonical.Owner)
 	addSanitizer(cfg.Repo, canonical.Repo)
+	addSanitizer(cfg.ForkOwner, canonical.ForkOwner)
+	addSanitizer(cfg.ForkRepo, canonical.ForkRepo)
 	addSanitizer(cfg.Reviewer, canonical.Reviewer)
 	addSanitizer(cfg.Assignee, canonical.Assignee)
+
+	sort.SliceStable(sanitizers, func(i, j int) bool {
+		return len(sanitizers[i].Replace) > len(sanitizers[j].Replace)
+	})
 
 	return sanitizers
 }

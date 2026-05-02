@@ -460,6 +460,7 @@ type User struct {
 // https://docs.gitlab.com/api/merge_requests/
 type BasicMergeRequest struct {
 	IID                     int64        `json:"iid"`
+	SourceProjectID         int64        `json:"source_project_id"`
 	TargetBranch            string       `json:"target_branch"`
 	Title                   string       `json:"title"`
 	State                   string       `json:"state"`
@@ -558,6 +559,7 @@ type CreateMergeRequestOptions struct {
 	Description        *string       `json:"description,omitempty"`
 	SourceBranch       *string       `json:"source_branch,omitempty"`
 	TargetBranch       *string       `json:"target_branch,omitempty"`
+	TargetProjectID    *int64        `json:"target_project_id,omitempty"`
 	Labels             *LabelOptions `json:"labels,omitempty"`
 	AssigneeIDs        *[]int64      `json:"assignee_ids,omitempty"`
 	ReviewerIDs        *[]int64      `json:"reviewer_ids,omitempty"`

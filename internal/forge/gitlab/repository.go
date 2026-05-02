@@ -28,6 +28,15 @@ type Repository struct {
 	removeSourceBranchOnMerge bool
 }
 
+func (r *Repository) projectID(ctx context.Context, id forge.RepositoryID) (int64, error) {
+	rid := mustRepositoryID(id)
+	project, _, err := r.client.ProjectGet(ctx, rid.owner+"/"+rid.name, nil)
+	if err != nil {
+		return 0, fmt.Errorf("get project: %w", err)
+	}
+	return project.ID, nil
+}
+
 var (
 	_ forge.Repository              = (*Repository)(nil)
 	_ forge.WithNavigationReference = (*Repository)(nil)

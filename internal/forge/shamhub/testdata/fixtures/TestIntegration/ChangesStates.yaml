@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 80
-        host: 127.0.0.1:57651
-        body: '{"subject":"Open EQKHbqh3","body":"Open change","base":"main","head":"EQKHbqh3"}'
-        url: http://127.0.0.1:57651/abhinav/test-repo/changes
+        host: 127.0.0.1:58759
+        body: '{"subject":"Open zvzYpb6I","body":"Open change","base":"main","head":"zvzYpb6I"}'
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 80
         body: |
             {
-              "number": 9,
-              "url": "http://127.0.0.1:57652/abhinav/test-repo/change/9"
+              "number": 7,
+              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/7"
             }
         headers:
             Content-Length:
@@ -28,44 +28,44 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 15.2515ms
+        duration: 20.3095ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 84
-        host: 127.0.0.1:57651
-        body: '{"subject":"Merged veiBNw7p","body":"Merged change","base":"main","head":"veiBNw7p"}'
-        url: http://127.0.0.1:57651/abhinav/test-repo/changes
+        host: 127.0.0.1:58759
+        body: '{"subject":"Merged HUExsFLI","body":"Merged change","base":"main","head":"HUExsFLI"}'
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
+        content_length: 80
         body: |
             {
-              "number": 12,
-              "url": "http://127.0.0.1:57652/abhinav/test-repo/change/12"
+              "number": 8,
+              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/8"
             }
         headers:
             Content-Length:
-                - "82"
+                - "80"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 14.923208ms
+        duration: 19.118458ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 84
-        host: 127.0.0.1:57651
-        body: '{"subject":"Closed lHIrDh5d","body":"Closed change","base":"main","head":"lHIrDh5d"}'
-        url: http://127.0.0.1:57651/abhinav/test-repo/changes
+        host: 127.0.0.1:58759
+        body: '{"subject":"Closed YVWetzbP","body":"Closed change","base":"main","head":"YVWetzbP"}'
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -74,8 +74,8 @@ interactions:
         content_length: 82
         body: |
             {
-              "number": 13,
-              "url": "http://127.0.0.1:57652/abhinav/test-repo/change/13"
+              "number": 10,
+              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/10"
             }
         headers:
             Content-Length:
@@ -84,44 +84,44 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 13.924958ms
+        duration: 19.336042ms
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 17
-        host: 127.0.0.1:57651
-        body: '{"ids":[9,12,13]}'
-        url: http://127.0.0.1:57651/abhinav/test-repo/change/states
+        content_length: 16
+        host: 127.0.0.1:58759
+        body: '{"ids":[7,8,10]}'
+        url: http://127.0.0.1:58759/abhinav/test-repo/change/states
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 254
+        content_length: 318
         body: |
             {
               "statuses": [
                 {
                   "state": "open",
-                  "headHash": "1111111111111111111111111111111111111111"
+                  "headHash": "f5a9d5cb4a52f965b15a000be7aa275d13d8c9c2"
                 },
                 {
                   "state": "merged",
-                  "headHash": "2222222222222222222222222222222222222222"
+                  "headHash": "32823ce03626a08e26505aa071c1e412fc329581"
                 },
                 {
                   "state": "closed",
-                  "headHash": "3333333333333333333333333333333333333333"
+                  "headHash": "7162b367a7a5a1e2a485150aed5d65f0d56af66c"
                 }
               ]
             }
         headers:
             Content-Length:
-                - "254"
+                - "318"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 159.75µs
+        duration: 20.187791ms

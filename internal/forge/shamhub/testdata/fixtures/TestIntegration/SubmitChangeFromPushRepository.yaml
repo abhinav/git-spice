@@ -1,0 +1,161 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 138
+        host: 127.0.0.1:58759
+        body: '{"subject":"Testing fork Y8voLfph","body":"Test fork change request","base":"main","head":"Y8voLfph","head_repo":"abhinav-fork/test-repo"}'
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 5,
+              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/5"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 20.181209ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:58759
+        url: http://127.0.0.1:58759/abhinav/test-repo/change/5
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 525
+        body: |
+            {
+              "number": 5,
+              "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/5",
+              "state": "open",
+              "title": "Testing fork Y8voLfph",
+              "body": "Test fork change request",
+              "base": {
+                "repository": {
+                  "owner": "abhinav",
+                  "name": "test-repo"
+                },
+                "ref": "main",
+                "sha": "a5d51b179b81f5b03c6ee4647ea57c81969f653f"
+              },
+              "head": {
+                "repository": {
+                  "owner": "abhinav-fork",
+                  "name": "test-repo"
+                },
+                "ref": "Y8voLfph",
+                "sha": "5ccf55fc5c77aca121ee5ee2b0da370a637013d1"
+              }
+            }
+        headers:
+            Content-Length:
+                - "525"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 21.381959ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:58759
+        form:
+            head_repo:
+                - abhinav-fork/test-repo
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes/by-branch/Y8voLfph?head_repo=abhinav-fork%2Ftest-repo&limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 575
+        body: |
+            [
+              {
+                "number": 5,
+                "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/5",
+                "state": "open",
+                "title": "Testing fork Y8voLfph",
+                "body": "Test fork change request",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "a5d51b179b81f5b03c6ee4647ea57c81969f653f"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav-fork",
+                    "name": "test-repo"
+                  },
+                  "ref": "Y8voLfph",
+                  "sha": "5ccf55fc5c77aca121ee5ee2b0da370a637013d1"
+                }
+              }
+            ]
+        headers:
+            Content-Length:
+                - "575"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 17.586417ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:58759
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:58759/abhinav/test-repo/changes/by-branch/Y8voLfph?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            []
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 571.5µs

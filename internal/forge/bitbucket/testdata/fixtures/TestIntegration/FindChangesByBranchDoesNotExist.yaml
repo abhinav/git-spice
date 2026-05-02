@@ -14,11 +14,11 @@ interactions:
             pagelen:
                 - "10"
             q:
-                - source.branch.name="does-not-exist"
+                - source.branch.name="does-not-exist" AND source.repository.full_name="test-owner/test-owner"
         headers:
             Content-Type:
                 - application/json
-        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests?q=source.branch.name%3D%22does-not-exist%22&pagelen=10&fields=%2Bvalues.reviewers
+        url: https://api.bitbucket.org/2.0/repositories/test-owner/test-owner/pullrequests?q=source.branch.name%3D%22does-not-exist%22+AND+source.repository.full_name%3D%22test-owner%2Ftest-owner%22&pagelen=10&fields=%2Bvalues.reviewers
         method: GET
       response:
         proto: HTTP/2.0
