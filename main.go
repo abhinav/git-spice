@@ -446,11 +446,14 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Store:      store,
 				Service:    svc,
 				Browser:    _browserLauncher,
-				FindRemote: func(ctx context.Context) (string, error) {
+				FindRemote: func(ctx context.Context) (state.Remote, error) {
 					return ensureRemote(ctx, wt.Repository(), store, log, view)
 				},
-				OpenRemoteRepository: func(ctx context.Context, remote string) (forge.Repository, error) {
-					return openRemoteRepository(ctx, log, secretStash, forges, wt.Repository(), remote)
+				ResolveRepository: func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) {
+					return resolveRemoteRepository(ctx, log, forges, wt.Repository(), remote)
+				},
+				OpenRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
+					return openRepository(ctx, log, secretStash, f, repo)
 				},
 			}, nil
 		}),
@@ -551,13 +554,21 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				return nil, err
 			}
 
-			remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote)
+			remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote.Upstream)
 			if err != nil {
 				var unsupported *unsupportedForgeError
 				if !errors.As(err, &unsupported) {
 					return nil, err
 				}
 				remoteRepo = nil
+			}
+
+			var pushRepository forge.RepositoryID
+			if remote.ForkMode() {
+				pushRepository, err = resolveRemoteRepositoryID(ctx, forges, repo, remote.Push)
+				if err != nil {
+					return nil, fmt.Errorf("resolve push repository: %w", err)
+				}
 			}
 
 			return &sync.Handler{
@@ -570,8 +581,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Delete:           deleteHandler,
 				Restack:          restackHandler,
 				Autostash:        autostashHandler,
-				Remote:           remote,
+				Remote:           remote.Upstream,
 				RemoteRepository: remoteRepo,
+				PushRepository:   pushRepository,
 			}, nil
 		}),
 	)

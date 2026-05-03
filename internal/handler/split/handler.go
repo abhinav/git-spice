@@ -35,7 +35,7 @@ var _ GitRepository = (*git.Repository)(nil)
 // Store is the git-spice data store.
 type Store interface {
 	Trunk() string
-	Remote() (string, error)
+	Remote() (state.Remote, error)
 	BeginBranchTx() *state.BranchTx
 }
 
@@ -375,7 +375,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 		"from", fromBranch, "to", toBranch)
 
 	return func() {
-		if err := h.Repository.SetBranchUpstream(ctx, toBranch, remote+"/"+toUpstreamBranch); err != nil {
+		if err := h.Repository.SetBranchUpstream(ctx, toBranch, remote.Push+"/"+toUpstreamBranch); err != nil {
 			h.Log.Warnf("%v: Failed to set upstream branch %v: %v", toBranch, toUpstreamBranch, err)
 		}
 
@@ -387,7 +387,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 
 		h.Log.Infof("%v: Upstream branch '%v' transferred to '%v'", fromBranch, toUpstreamBranch, toBranch)
 		if toUpstreamBranch == fromBranch {
-			pushCmd := fmt.Sprintf("git push -u %v %v:<new name>", remote, fromBranch)
+			pushCmd := fmt.Sprintf("git push -u %v %v:<new name>", remote.Push, fromBranch)
 			highlight := h.HighlightStyle.Resolve(h.View.Theme())
 
 			h.Log.Warnf("%v: If you push this branch with 'git push' instead of '%s branch submit',", fromBranch, cli.Name())

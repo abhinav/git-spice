@@ -327,7 +327,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockStore.
 			EXPECT().
 			Remote().
-			Return("", git.ErrNotExist)
+			Return(state.Remote{}, git.ErrNotExist)
 
 		err := handler.CheckoutBranch(t.Context(), &Request{
 			Branch: "feature",
@@ -360,7 +360,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockStore.
 			EXPECT().
 			Remote().
-			Return("origin", nil)
+			Return(state.Remote{Upstream: "origin", Push: "origin"}, nil)
 		mockRepo.
 			EXPECT().
 			PeelToCommit(gomock.Any(), "origin/feature").
@@ -413,7 +413,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockStore.
 			EXPECT().
 			Remote().
-			Return("origin", nil)
+			Return(state.Remote{Upstream: "origin", Push: "origin"}, nil)
 		mockRepo.
 			EXPECT().
 			PeelToCommit(gomock.Any(), "origin/feature").
@@ -465,7 +465,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockStore.
 			EXPECT().
 			Remote().
-			Return("origin", nil)
+			Return(state.Remote{Upstream: "origin", Push: "origin"}, nil)
 		mockRepo.
 			EXPECT().
 			PeelToCommit(gomock.Any(), "origin/feature").
@@ -508,7 +508,7 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		mockStore.
 			EXPECT().
 			Remote().
-			Return("origin", nil)
+			Return(state.Remote{Upstream: "origin", Push: "origin"}, nil)
 		mockRepo.
 			EXPECT().
 			PeelToCommit(gomock.Any(), "origin/feature").

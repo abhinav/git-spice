@@ -1,0 +1,50 @@
+# 'gs branch checkout' recovers remote branches from the push remote
+# in fork mode.
+
+as 'Test User <test@example.com>'
+at '2026-05-03T10:12:00Z'
+
+# Create an upstream repository without the feature branch.
+mkdir upstream
+cd upstream
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Create a fork that has the feature branch.
+cd ..
+git clone upstream fork
+cd fork
+git checkout -b feature
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+git commit -m 'Add feature'
+
+# Clone the upstream repository and add the fork as the push remote.
+cd ..
+git clone upstream repo
+cd repo
+git remote rename origin upstream
+git remote add origin $WORK/fork
+git fetch origin
+gs repo init --upstream upstream --remote origin
+
+# The branch exists only on the push remote.
+! git rev-parse --verify --quiet refs/heads/feature
+! git rev-parse --verify --quiet refs/remotes/upstream/feature
+git rev-parse --verify --quiet refs/remotes/origin/feature
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+gs branch checkout feature
+
+git rev-parse --abbrev-ref @{upstream}
+stdout 'origin/feature'
+
+cmp $WORK/robot.actual $WORK/robot.golden
+
+-- extra/feature.txt --
+feature
+-- robot.golden --
+===
+> Do you want to track this branch now?: [Y/n]
+true

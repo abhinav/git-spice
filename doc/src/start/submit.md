@@ -62,6 +62,15 @@ git-spice refers to these as *Change Requests* (CRs).
             If you don't have the GitLab CLI installed,
             go to <https://gitlab.com/projects/new> and follow the instructions there.
 
+    !!! note "Forked repositories"
+
+        git-spice can also be used with forked repositories,
+        with some limitations.
+        See [Fork workflows](../guide/cr.md#fork-workflows) for details.
+
+        For this tutorial,
+        we recommend using a repository you can push branches to directly.
+
 ## Create a Change Request
 
 1. Check out `feat1`.

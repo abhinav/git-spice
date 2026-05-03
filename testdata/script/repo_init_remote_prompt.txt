@@ -1,4 +1,4 @@
-# 'gs repo init' prompts for a remote
+# 'gs repo init' prompts for upstream and push remotes
 # if there are multiple remotes.
 
 as 'Test <test@example.com>'
@@ -18,10 +18,18 @@ cmp $WORK/robot.actual $WORK/robot.golden
 
 -- robot.golden --
 ===
-> Please select a remote: 
+> Please select an upstream remote: 
 >
 > ▶ origin
 >   upstream
 >
-> Merged changes will be pushed to this remote
+> Change requests will be opened against this remote
+"upstream"
+===
+> Please select a push remote: 
+>
+>   origin
+> ▶ upstream
+>
+> Submitted branches will be pushed to this remote
 "origin"

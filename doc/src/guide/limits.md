@@ -11,7 +11,7 @@ runs into limitations of what is possible on those platforms,
 and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
 
-## Write access required
+## Write access required for stacked CRs
 
 When a branch `F` is stacked on another branch `B`,
 and you want to submit Change Requests for both,
@@ -21,6 +21,25 @@ To do this, git-spice needs to push both branches to the same repository.
 Therefore, to use git-spice to stack PRs,
 you need write access to the repository:
 specifically the ability to push new branches.
+
+## Fork mode submits only trunk-based branches
+
+<!-- gs:version unreleased -->
+
+When the upstream and push remotes differ,
+git-spice uses fork mode.
+In this mode,
+branch pushes go to the push remote,
+and Change Requests are opened against the upstream remote.
+
+Fork mode creates Change Requests only for branches
+that are based directly on trunk.
+Branches stacked on top of another local branch are still pushed
+to the push remote,
+but stack submission commands skip Change Request creation for them.
+
+To submit a fully stacked series of Change Requests,
+push access to the upstream repository is still required.
 
 ## Squash-merges restack the upstack
 

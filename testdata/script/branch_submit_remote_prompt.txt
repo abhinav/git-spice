@@ -1,5 +1,5 @@
 # 'branch submit' after initializing without a remote
-# will ask for a remote to push to.
+# will ask for upstream and push remotes.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -13,9 +13,9 @@ gs repo init
 shamhub init
 shamhub new upstream alice/example.git
 shamhub register bob
-shamhub new origin bob/example-fork.git
 git push upstream main
-git push origin main
+shamhub fork alice/example bob
+git remote add origin $SHAMHUB_URL/bob/example
 
 git add feature1.txt
 gs bc -m 'Add feature1' feature1
@@ -35,12 +35,20 @@ Contents of feature1
 
 -- robot.golden --
 ===
-> Please select a remote: 
+> Please select an upstream remote: 
 >
 > ▶ origin
 >   upstream
 >
-> Changes will be pushed to this remote
+> Change requests will be opened against this remote
+"upstream"
+===
+> Please select a push remote: 
+>
+>   origin
+> ▶ upstream
+>
+> Submitted branches will be pushed to this remote
 "origin"
 
 -- golden/pulls.json --
@@ -50,19 +58,19 @@ Contents of feature1
     "state": "open",
     "title": "Add feature1",
     "body": "",
-    "html_url": "$SHAMHUB_URL/bob/example-fork/change/1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
     "head": {
       "repository": {
         "owner": "bob",
-        "name": "example-fork"
+        "name": "example"
       },
       "ref": "feature1",
       "sha": "25596d0f65bb595aa658f9fa7fe164949cd2ea0b"
     },
     "base": {
       "repository": {
-        "owner": "bob",
-        "name": "example-fork"
+        "owner": "alice",
+        "name": "example"
       },
       "ref": "main",
       "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"

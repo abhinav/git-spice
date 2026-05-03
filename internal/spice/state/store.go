@@ -31,7 +31,7 @@ type Store struct {
 	log *silog.Logger
 
 	trunk  string
-	remote string
+	remote Remote
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -43,12 +43,11 @@ type InitStoreRequest struct {
 	// e.g. "main" or "master".
 	Trunk string
 
-	// Remote is the name of the remote to use for pushing and pulling.
-	// e.g. "origin" or "upstream".
+	// Remote identifies the remotes to use for pushing and pulling.
 	//
-	// If empty, a remote will not be configured and push/pull
-	// operations will not be available.
-	Remote string
+	// If empty, a remote will not be configured and push/pull operations
+	// will not be available.
+	Remote Remote
 
 	// Reset indicates that the store's state should be nuked
 	// if it's already initialized.
@@ -109,15 +108,12 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 	update := storage.UpdateRequest{
 		Sets: []storage.SetRequest{
 			{
-				Key: _repoJSON,
-				Value: repoInfo{
-					Trunk:  req.Trunk,
-					Remote: req.Remote,
-				},
+				Key:   _repoJSON,
+				Value: newRepoInfo(req.Trunk, store.remote),
 			},
 			{
 				Key:   _versionFile,
-				Value: LatestVersion,
+				Value: storageVersionForRemote(store.remote),
 			},
 		},
 		Message: "initialize store",
@@ -178,7 +174,11 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 		logger = silog.Nop()
 	}
 
-	if err := checkVersion(ctx, db); err != nil {
+	version, err := loadVersion(ctx, db)
+	if err != nil {
+		return nil, fmt.Errorf("load store version: %w", err)
+	}
+	if err := checkVersion(version); err != nil {
 		return nil, fmt.Errorf("check store layout: %w", err)
 	}
 
@@ -197,7 +197,14 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 	return &Store{
 		db:     db,
 		trunk:  info.Trunk,
-		remote: info.Remote,
+		remote: info.stateRemote(),
 		log:    logger,
 	}, nil
+}
+
+func storageVersionForRemote(remote Remote) Version {
+	if remote.ForkMode() {
+		return VersionTwo
+	}
+	return VersionOne
 }

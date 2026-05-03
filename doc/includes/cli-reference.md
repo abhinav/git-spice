@@ -116,12 +116,17 @@ A prompt will ask for one if not provided with --trunk.
 
 Most branch stacking operations are local
 and do not require a network connection.
-For operations that push or pull commits, a remote is required.
-A prompt will ask for one during initialization
+For operations that push or pull commits, remotes are required.
+A prompt will ask for them during initialization
 if not provided with --remote.
 
+The upstream remote hosts trunk and receives change requests.
+The push remote receives submitted branch pushes.
+If only --remote is provided,
+it is used as both the upstream and push remote.
+
 Re-run the command on an already initialized repository
-to change the trunk or remote.
+to change the trunk or remotes.
 If the trunk branch is changed on re-initialization,
 existing branches stacked on the old trunk
 will be updated to point to the new trunk.
@@ -132,7 +137,8 @@ and untrack all branches.
 **Flags**
 
 * `--trunk=BRANCH`: Name of the trunk branch
-* `--remote=NAME`: Name of the remote to push changes to
+* `--remote=NAME`: Name of the remote to push submitted branches to
+* `--upstream=NAME`: Name of the remote to open change requests against
 * `--reset`: Forget all information about the repository
 
 ### git-spice repo sync {#gs-repo-sync}

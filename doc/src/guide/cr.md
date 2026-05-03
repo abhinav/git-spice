@@ -58,10 +58,59 @@ For example:
 
 !!! important
 
-    Be aware that for stacks with multiple branches,
-    you must have write access to the repository
-    so that you can push branches to it.
-    See [Limitations](limits.md) for more information.
+    Creating a fully stacked series of Change Requests requires
+    write access to the upstream repository.
+    git-spice must be able to push each branch in the stack
+    to the repository that receives the Change Requests.
+
+    Fork workflows use a different submission model.
+    See [Fork workflows](#fork-workflows)
+    and [Limitations](limits.md) for details.
+
+### Fork workflows
+
+<!-- gs:version unreleased -->
+
+git-spice supports fork-based contribution workflows
+by storing separate upstream and push remotes.
+The upstream remote hosts trunk and receives Change Requests.
+The push remote receives branch pushes,
+and is usually your fork.
+
+For example,
+if `origin` points to your fork
+and `upstream` points to the project repository,
+initialize the repository like this:
+
+```freeze language="terminal"
+{green}${reset} gs repo init --upstream upstream --remote origin
+```
+
+After initialization,
+submission commands such as $$gs branch submit$$
+push branches to `origin`
+and open Change Requests against `upstream`.
+Synchronization commands such as $$gs repo sync$$ pull trunk from `upstream`.
+
+```freeze language="terminal"
+{yellow}[feature]{reset} {green}${reset} gs branch submit --fill
+{green}INF{reset} Created #123: https://github.com/example/project/pull/123
+```
+
+Submitting stacks with $$gs stack submit$$ or friends
+creates Change Requests only for branches that are based directly on trunk.
+All other branches are still pushed to the push remote (your fork),
+but git-spice does not create Change Requests for them
+until their base branch is merged
+and they are restacked on top of trunk.
+
+```freeze language="terminal"
+{green}${reset} git branch --show-current
+{yellow}feature-a{reset}
+{green}${reset} gs stack submit --fill
+{green}INF{reset} Created #123: https://github.com/example/project/pull/123
+{green}INF{reset} feature-b: Pushing to origin, skipping CR: base is feature-a
+```
 
 ### Navigation comments
 

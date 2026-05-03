@@ -1,6 +1,7 @@
 package submit
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -8,8 +9,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/spice/state"
+	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -54,6 +60,58 @@ func TestBranchSubmit_listChangeTemplates(t *testing.T) {
 		})
 		assert.Empty(t, got)
 	})
+}
+
+func TestHandler_pushRepositoryID_rejectsDifferentForge(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	upstreamForge := forgetest.NewMockForge(mockCtrl)
+	upstreamForge.EXPECT().
+		ID().
+		Return("github").
+		AnyTimes()
+
+	pushForge := forgetest.NewMockForge(mockCtrl)
+	pushForge.EXPECT().
+		ID().
+		Return("gitlab").
+		AnyTimes()
+
+	handler := &Handler{
+		Log:        silog.Nop(),
+		View:       ui.NewFileView(&bytes.Buffer{}),
+		Repository: nil,
+		Worktree:   nil,
+		Store:      NewMockStore(mockCtrl),
+		Service:    NewMockService(mockCtrl),
+		Browser:    &browser.Noop{},
+		FindRemote: func(context.Context) (state.Remote, error) {
+			return state.Remote{
+				Upstream: "upstream",
+				Push:     "origin",
+			}, nil
+		},
+		OpenRepository: func(context.Context, forge.Forge, forge.RepositoryID) (forge.Repository, error) {
+			return nil, assert.AnError
+		},
+		ResolveRepository: func(
+			_ context.Context,
+			remote string,
+		) (forge.Forge, forge.RepositoryID, error) {
+			switch remote {
+			case "upstream":
+				return upstreamForge, stubRepositoryID("alice/repo"), nil
+			case "origin":
+				return pushForge, stubRepositoryID("bob/repo"), nil
+			default:
+				return nil, nil, assert.AnError
+			}
+		},
+	}
+
+	_, err := handler.pushRepositoryID(t.Context())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "different forge")
 }
 
 func TestReviewersAddWhen_UnmarshalText(t *testing.T) {
@@ -192,4 +250,14 @@ func TestEffectiveReviewers(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+type stubRepositoryID string
+
+func (id stubRepositoryID) String() string {
+	return string(id)
+}
+
+func (id stubRepositoryID) ChangeURL(forge.ChangeID) string {
+	return string(id)
 }
