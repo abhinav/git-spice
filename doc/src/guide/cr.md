@@ -92,6 +92,12 @@ push branches to `origin`
 and open Change Requests against `upstream`.
 Synchronization commands such as $$gs repo sync$$ pull trunk from `upstream`.
 
+!!! warning "GitHub App authentication"
+
+    For GitHub fork workflows,
+    GitHub App authentication is incompatible with Fork mode.
+    Use one of the other GitHub authentication methods instead.
+
 ```freeze language="terminal"
 {yellow}[feature]{reset} {green}${reset} gs branch submit --fill
 {green}INF{reset} Created #123: https://github.com/example/project/pull/123

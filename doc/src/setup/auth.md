@@ -124,6 +124,9 @@ It will take a few seconds to verify after you enter it.
 
 **Important**: Authentication alone does not grant any access.
 You **must** install the GitHub App to access repositories with git-spice.
+GitHub App authentication is incompatible with Fork mode.
+For GitHub fork workflows,
+use one of the other GitHub authentication methods instead.
 
 !!! note
 
@@ -336,9 +339,12 @@ The $$gs auth login$$ operation will always fail if you use this method.
 
     [OAuth](#oauth) is best if you have the permissions needed
     to install it on all repositories that you want to use git-spice with.
+
     [GitHub App](#github-app) is similar,
     but it may be preferable if you don't want to give git-spice
     access to all your repositories.
+    GitHub App authentication is incompatible with Fork mode;
+    use one of the other GitHub authentication methods instead.
 
     [Git Credential Manager](#git-credential-manager)
     is convenient if you already have GCM installed for git operations.

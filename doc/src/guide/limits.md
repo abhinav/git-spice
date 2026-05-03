@@ -41,6 +41,9 @@ but stack submission commands skip Change Request creation for them.
 To submit a fully stacked series of Change Requests,
 push access to the upstream repository is still required.
 
+GitHub App authentication is incompatible with Fork mode.
+Use one of the other GitHub authentication methods instead.
+
 ## Squash-merges restack the upstack
 
 On GitHub, when a Pull Request is squash-merged into the trunk branch,
