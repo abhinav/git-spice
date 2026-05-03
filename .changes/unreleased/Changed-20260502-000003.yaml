@@ -1,3 +1,0 @@
-kind: Changed
-body: 'storage: Change repository storage to support fork mode. Repositories using fork mode cannot be opened with older git-spice versions.'
-time: 2026-05-02T00:00:03-07:00
