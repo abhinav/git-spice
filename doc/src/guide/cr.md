@@ -69,7 +69,7 @@ For example:
 
 ### Fork workflows
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.28.0 -->
 
 git-spice supports fork-based contribution workflows
 by storing separate upstream and push remotes.

@@ -24,7 +24,7 @@ specifically the ability to push new branches.
 
 ## Fork mode submits only trunk-based branches
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.28.0 -->
 
 When the upstream and push remotes differ,
 git-spice uses fork mode.

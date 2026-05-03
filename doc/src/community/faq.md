@@ -45,7 +45,7 @@ See [Authentication > Safety](../setup/auth.md#safety) for details.
 
 ## Can I use git-spice with a fork of a repository?
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.28.0 -->
 
 Yes.
 
