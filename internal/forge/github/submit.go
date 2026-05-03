@@ -40,6 +40,14 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 			if err != nil {
 				return forge.SubmitChangeResult{}, fmt.Errorf("get push repository ID: %w", err)
 			}
+
+			// GitHub documents fork heads as owner:branch,
+			// but GraphQL also exposes headRepositoryId to identify
+			// the fork repository unambiguously. Send both for fork PRs:
+			// the qualified head name is human-readable in diagnostics,
+			// and the repository ID avoids ambiguity when repository names
+			// or ownership relationships are unusual.
+			input.HeadRefName = githubv4.String(pushRepository.owner + ":" + req.Head)
 			input.HeadRepositoryID = &pushRepoID
 		}
 	}

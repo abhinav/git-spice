@@ -72,6 +72,17 @@ Branches stacked on top of other local branches are still pushed to your fork,
 but Change Requests cannot be created for them
 until their base branch is merged into trunk, and they are rebased on top.
 
+On GitHub,
+GitHub App authentication is incompatible with Fork mode.
+GitHub will reject the Pull Request creation request.
+If you see this error:
+
+```text
+createPullRequest: FORBIDDEN: Resource not accessible by integration
+```
+
+log in with one of the other GitHub authentication methods instead.
+
 ## Why doesn't git-spice create one CR per commit?
 
 With tooling like this, there are two options:
