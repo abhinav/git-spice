@@ -10,6 +10,10 @@
 *.png filter=lfs diff=lfs merge=lfs -text
 *.gif filter=lfs diff=lfs merge=lfs -text
 
+# Don't put these in exported archives.
+.*/ export-ignore
+doc/ export-ignore
+
 # pgregory.net/rapid should be considered generated code to reduce noise.
 **/testdata/rapid/**/*.fail linguist-generated
 

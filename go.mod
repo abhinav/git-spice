@@ -29,6 +29,7 @@ require (
 	go.abhg.dev/log/silog v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
+	golang.org/x/mod v0.33.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
@@ -69,7 +70,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
-	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	mvdan.cc/gofumpt v0.9.2 // indirect
