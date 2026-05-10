@@ -16,6 +16,7 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
@@ -220,6 +221,111 @@ func TestMainGitIndexLockTimeoutConfig(t *testing.T) {
 			_, err = parser.Parse(tt.args)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, cmd.Git.IndexLockTimeout)
+		})
+	}
+}
+
+func TestRepoSyncRestackConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		args    []string
+		want    sync.RestackMode
+		wantErr []string
+	}{
+		{
+			name: "Default",
+			args: []string{"repo", "sync"},
+			want: sync.RestackNone,
+		},
+		{
+			name: "FlagWithoutValue",
+			args: []string{"repo", "sync", "--restack"},
+			want: sync.RestackUpstack,
+		},
+		{
+			name: "FlagTrue",
+			args: []string{"repo", "sync", "--restack=true"},
+			want: sync.RestackUpstack,
+		},
+		{
+			name: "FlagFalse",
+			args: []string{"repo", "sync", "--restack=false"},
+			want: sync.RestackNone,
+		},
+		{
+			name: "FlagNone",
+			args: []string{"repo", "sync", "--restack=none"},
+			want: sync.RestackNone,
+		},
+		{
+			name: "FlagUpstack",
+			args: []string{"repo", "sync", "--restack=upstack"},
+			want: sync.RestackUpstack,
+		},
+		{
+			name: "FlagAboves",
+			args: []string{"repo", "sync", "--restack=aboves"},
+			want: sync.RestackAboves,
+		},
+		{
+			name: "Config",
+			config: joinLines(
+				`[spice "repoSync"]`,
+				`  restack = aboves`,
+			),
+			args: []string{"repo", "sync"},
+			want: sync.RestackAboves,
+		},
+		{
+			name: "FlagOverridesConfig",
+			config: joinLines(
+				`[spice "repoSync"]`,
+				`  restack = aboves`,
+			),
+			args: []string{"repo", "sync", "--restack=none"},
+			want: sync.RestackNone,
+		},
+		{
+			name: "Invalid",
+			args: []string{"repo", "sync", "--restack=invalid"},
+			wantErr: []string{
+				`--restack: invalid value "invalid": expected none, aboves, or upstack`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(tt.args)
+			if len(tt.wantErr) > 0 {
+				require.Error(t, err)
+				for _, msg := range tt.wantErr {
+					assert.ErrorContains(t, err, msg)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Repo.Sync.Restack)
 		})
 	}
 }

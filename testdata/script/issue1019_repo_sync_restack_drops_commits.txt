@@ -1,8 +1,8 @@
 # Regression test for https://github.com/abhinav/git-spice/issues/1019
 #
-# When a single branch sits on trunk with multiple commits,
+# When a single branch sits on trunk with multiple commits
 # and trunk advances on the remote,
-# 'repo sync --restack' must preserve all commits on the branch.
+# restacking after 'repo sync' must preserve all commits on the branch.
 #
 # The bug: during restack, the fork-point fallback guard
 # checked whether the *current* base branch hash
@@ -89,8 +89,10 @@ git checkout main
 git pull origin main
 git checkout feature
 
-# Run repo sync with restack.
-gs repo sync --restack
+# Run repo sync, then restack explicitly
+# since no branches were merged (and won't restack automatically).
+gs repo sync
+gs branch restack
 
 # Verify both commits are still present after restack.
 gs ll

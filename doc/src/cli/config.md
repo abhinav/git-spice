@@ -663,6 +663,23 @@ a warning is logged to indicate that the branch is outdated.
 The `--force` flag always bypasses the check
 regardless of this setting.
 
+### spice.repoSync.restack
+
+<!-- gs:version unreleased -->
+
+Which branches to restack after syncing trunk
+and deleting merged branches with $$gs repo sync$$.
+
+**Accepted values:**
+
+- `none` (default): do not restack anything
+- `aboves`: restack only direct upstacks of deleted branches
+- `upstack`: restack all upstacks of deleted branches
+
+The command-line flag uses the same values.
+Bare `gs repo sync --restack` selects `upstack`.
+`gs repo sync --restack=false` selects `none`.
+
 ### spice.repoSync.closedChanges
 
 <!-- gs:version v0.17.0 -->

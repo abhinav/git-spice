@@ -17,6 +17,7 @@ import (
 	git "go.abhg.dev/gs/internal/git"
 	autostash "go.abhg.dev/gs/internal/handler/autostash"
 	delete "go.abhg.dev/gs/internal/handler/delete"
+	restack "go.abhg.dev/gs/internal/handler/restack"
 	spice "go.abhg.dev/gs/internal/spice"
 	state "go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
@@ -819,40 +820,78 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 	return m.recorder
 }
 
-// RestackStack mocks base method.
-func (m *MockRestackHandler) RestackStack(ctx context.Context, branch string) error {
+// RestackBranch mocks base method.
+func (m *MockRestackHandler) RestackBranch(ctx context.Context, branch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackStack", ctx, branch)
+	ret := m.ctrl.Call(m, "RestackBranch", ctx, branch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RestackStack indicates an expected call of RestackStack.
-func (mr *MockRestackHandlerMockRecorder) RestackStack(ctx, branch any) *MockRestackHandlerRestackStackCall {
+// RestackBranch indicates an expected call of RestackBranch.
+func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, branch any) *MockRestackHandlerRestackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackStack", reflect.TypeOf((*MockRestackHandler)(nil).RestackStack), ctx, branch)
-	return &MockRestackHandlerRestackStackCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, branch)
+	return &MockRestackHandlerRestackBranchCall{Call: call}
 }
 
-// MockRestackHandlerRestackStackCall wrap *gomock.Call
-type MockRestackHandlerRestackStackCall struct {
+// MockRestackHandlerRestackBranchCall wrap *gomock.Call
+type MockRestackHandlerRestackBranchCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockRestackHandlerRestackStackCall) Return(arg0 error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) Return(arg0 error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRestackHandlerRestackStackCall) Do(f func(context.Context, string) error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRestackHandlerRestackStackCall) DoAndReturn(f func(context.Context, string) error) *MockRestackHandlerRestackStackCall {
+func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// RestackUpstack mocks base method.
+func (m *MockRestackHandler) RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestackUpstack", ctx, branch, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestackUpstack indicates an expected call of RestackUpstack.
+func (mr *MockRestackHandlerMockRecorder) RestackUpstack(ctx, branch, opts any) *MockRestackHandlerRestackUpstackCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackUpstack", reflect.TypeOf((*MockRestackHandler)(nil).RestackUpstack), ctx, branch, opts)
+	return &MockRestackHandlerRestackUpstackCall{Call: call}
+}
+
+// MockRestackHandlerRestackUpstackCall wrap *gomock.Call
+type MockRestackHandlerRestackUpstackCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRestackHandlerRestackUpstackCall) Return(arg0 error) *MockRestackHandlerRestackUpstackCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRestackHandlerRestackUpstackCall) Do(f func(context.Context, string, *restack.UpstackOptions) error) *MockRestackHandlerRestackUpstackCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRestackHandlerRestackUpstackCall) DoAndReturn(f func(context.Context, string, *restack.UpstackOptions) error) *MockRestackHandlerRestackUpstackCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

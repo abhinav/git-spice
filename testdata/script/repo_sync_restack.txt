@@ -1,4 +1,4 @@
-# 'repo sync' with --restack flag restacks branches after syncing
+# 'repo sync --restack' restacks upstacks of deleted merged branches.
 
 as 'Test <test@example.com>'
 at '2024-05-18T13:59:12Z'

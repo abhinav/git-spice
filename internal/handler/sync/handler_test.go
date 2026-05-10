@@ -231,14 +231,16 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Times(1)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
-		gomock.InOrder(
-			mockWorktree.EXPECT().
-				CurrentBranch(gomock.Any()).
-				Return("feature", nil),
-			mockWorktree.EXPECT().
-				CurrentBranch(gomock.Any()).
-				Return("feature", nil),
-		)
+		mockWorktree.EXPECT().
+			CurrentBranch(gomock.Any()).
+			Return("feature", nil)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return("/repo").
+			AnyTimes()
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "main").
+			Return(nil)
 
 		mockStore := NewMockStore(ctrl)
 		mockStore.EXPECT().
@@ -246,16 +248,45 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Return("main")
 
 		mockRepo := newFetchOnlyRepoMocks(ctrl)
+		mockRepo.EXPECT().
+			LocalBranches(gomock.Any(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature"},
+			}).
+			Return(branchIter(git.LocalBranch{Name: "feature"}))
+
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
 			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
 			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
 				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name: "feature",
+						Head: git.Hash("trunk"),
+						Base: "main",
+					},
+					{
+						Name: "child",
+						Head: git.Hash("child-head"),
+						Base: "feature",
+					},
+				},
 			}), nil)
+		mockRepo.EXPECT().
+			IsAncestor(gomock.Any(), git.Hash("child-head"), git.Hash("trunk")).
+			Return(false)
+
+		mockDelete := NewMockDeleteHandler(ctrl)
+		mockDelete.EXPECT().
+			DeleteBranches(gomock.Any(), &branchdel.Request{
+				Branches: []string{"feature"},
+				Force:    true,
+			}).
+			Return(nil)
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackStack(gomock.Any(), "feature").
+			RestackUpstack(gomock.Any(), "child", nil).
 			Return(nil)
 
 		handler := &Handler{
@@ -265,15 +296,373 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Worktree:   mockWorktree,
 			Store:      mockStore,
 			Service:    mockService,
-			Delete:     NewMockDeleteHandler(ctrl),
+			Delete:     mockDelete,
 			Restack:    mockRestack,
 			Autostash:  mockAutostash,
 			Remote:     "origin",
 		}
 
-		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{Restack: true}))
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{Restack: RestackUpstack}))
 		assert.Equal(t, 1, cleanupCalls)
-		assert.Equal(t, "feature", rescueBranch)
+		assert.Equal(t, "main", rescueBranch)
+	})
+}
+
+func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
+	t.Run("Aboves", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := newFetchOnlyRepoMocks(ctrl)
+		mockRepo.EXPECT().
+			LocalBranches(gomock.Any(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature"},
+			}).
+			Return(branchIter(git.LocalBranch{Name: "feature"}))
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			CurrentBranch(gomock.Any()).
+			Return("feature", nil)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return("/repo").
+			AnyTimes()
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "main").
+			Return(nil)
+
+		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().
+			Trunk().
+			Return("main")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name: "feature",
+						Head: git.Hash("trunk"),
+						Base: "main",
+					},
+					{
+						Name: "child",
+						Head: git.Hash("child-head"),
+						Base: "feature",
+					},
+				},
+			}), nil)
+		mockRepo.EXPECT().
+			IsAncestor(gomock.Any(), git.Hash("child-head"), git.Hash("trunk")).
+			Return(false)
+
+		mockDelete := NewMockDeleteHandler(ctrl)
+		mockDelete.EXPECT().
+			DeleteBranches(gomock.Any(), &branchdel.Request{
+				Branches: []string{"feature"},
+				Force:    true,
+			}).
+			Return(nil)
+
+		mockRestack := NewMockRestackHandler(ctrl)
+		mockRestack.EXPECT().
+			RestackBranch(gomock.Any(), "child").
+			Return(nil)
+
+		mockAutostash := NewMockAutostashHandler(ctrl)
+		mockAutostash.EXPECT().
+			BeginAutostash(gomock.Any(), &autostash.Options{
+				Message:   "git-spice: autostash before sync",
+				ResetMode: autostash.ResetHard,
+			}).
+			Return(func(*error, *autostash.CleanupOptions) {}, nil).
+			AnyTimes()
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Store:      mockStore,
+			Service:    mockService,
+			Delete:     mockDelete,
+			Restack:    mockRestack,
+			Autostash:  mockAutostash,
+			Remote:     "origin",
+		}
+
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
+			Restack: RestackAboves,
+		}))
+	})
+
+	t.Run("Upstack", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := newFetchOnlyRepoMocks(ctrl)
+		mockRepo.EXPECT().
+			LocalBranches(gomock.Any(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature"},
+			}).
+			Return(branchIter(git.LocalBranch{Name: "feature"}))
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			CurrentBranch(gomock.Any()).
+			Return("feature", nil)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return("/repo").
+			AnyTimes()
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "main").
+			Return(nil)
+
+		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().
+			Trunk().
+			Return("main")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name: "feature",
+						Head: git.Hash("trunk"),
+						Base: "main",
+					},
+					{
+						Name: "child",
+						Head: git.Hash("child-head"),
+						Base: "feature",
+					},
+				},
+			}), nil)
+		mockRepo.EXPECT().
+			IsAncestor(gomock.Any(), git.Hash("child-head"), git.Hash("trunk")).
+			Return(false)
+
+		mockDelete := NewMockDeleteHandler(ctrl)
+		mockDelete.EXPECT().
+			DeleteBranches(gomock.Any(), &branchdel.Request{
+				Branches: []string{"feature"},
+				Force:    true,
+			}).
+			Return(nil)
+
+		mockRestack := NewMockRestackHandler(ctrl)
+		mockRestack.EXPECT().
+			RestackUpstack(gomock.Any(), "child", nil).
+			Return(nil)
+
+		mockAutostash := NewMockAutostashHandler(ctrl)
+		mockAutostash.EXPECT().
+			BeginAutostash(gomock.Any(), &autostash.Options{
+				Message:   "git-spice: autostash before sync",
+				ResetMode: autostash.ResetHard,
+			}).
+			Return(func(*error, *autostash.CleanupOptions) {}, nil).
+			AnyTimes()
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Store:      mockStore,
+			Service:    mockService,
+			Delete:     mockDelete,
+			Restack:    mockRestack,
+			Autostash:  mockAutostash,
+			Remote:     "origin",
+		}
+
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
+			Restack: RestackUpstack,
+		}))
+	})
+
+	t.Run("MultipleAdjacentDeletions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := newFetchOnlyRepoMocks(ctrl)
+		mockRepo.EXPECT().
+			LocalBranches(gomock.Any(), &git.LocalBranchesOptions{
+				Patterns: []string{"a", "b"},
+			}).
+			Return(branchIter(
+				git.LocalBranch{Name: "a"},
+				git.LocalBranch{Name: "b"},
+			))
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			CurrentBranch(gomock.Any()).
+			Return("c", nil)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return("/repo").
+			AnyTimes()
+
+		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().
+			Trunk().
+			Return("main")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name: "a",
+						Head: git.Hash("trunk"),
+						Base: "main",
+					},
+					{
+						Name: "b",
+						Head: git.Hash("trunk"),
+						Base: "a",
+					},
+					{
+						Name: "c",
+						Head: git.Hash("c-head"),
+						Base: "b",
+					},
+				},
+			}), nil)
+		mockRepo.EXPECT().
+			IsAncestor(gomock.Any(), git.Hash("c-head"), git.Hash("trunk")).
+			Return(false)
+
+		mockDelete := NewMockDeleteHandler(ctrl)
+		mockDelete.EXPECT().
+			DeleteBranches(gomock.Any(), &branchdel.Request{
+				Branches: []string{"a", "b"},
+				Force:    true,
+			}).
+			Return(nil)
+
+		mockRestack := NewMockRestackHandler(ctrl)
+		mockRestack.EXPECT().
+			RestackUpstack(gomock.Any(), "c", nil).
+			Return(nil)
+
+		mockAutostash := NewMockAutostashHandler(ctrl)
+		mockAutostash.EXPECT().
+			BeginAutostash(gomock.Any(), &autostash.Options{
+				Message:   "git-spice: autostash before sync",
+				ResetMode: autostash.ResetHard,
+			}).
+			Return(func(*error, *autostash.CleanupOptions) {}, nil).
+			AnyTimes()
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Store:      mockStore,
+			Service:    mockService,
+			Delete:     mockDelete,
+			Restack:    mockRestack,
+			Autostash:  mockAutostash,
+			Remote:     "origin",
+		}
+
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
+			Restack: RestackUpstack,
+		}))
+	})
+
+	t.Run("SkippedDeletion", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := newFetchOnlyRepoMocks(ctrl)
+		mockRepo.EXPECT().
+			LocalBranches(gomock.Any(), &git.LocalBranchesOptions{
+				Patterns: []string{"feature"},
+			}).
+			Return(branchIter(git.LocalBranch{
+				Name:     "feature",
+				Worktree: "/other",
+			}))
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			CurrentBranch(gomock.Any()).
+			Return("child", nil)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return("/repo").
+			AnyTimes()
+
+		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().
+			Trunk().
+			Return("main")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name: "feature",
+						Head: git.Hash("trunk"),
+						Base: "main",
+					},
+					{
+						Name: "child",
+						Head: git.Hash("child-head"),
+						Base: "feature",
+					},
+				},
+			}), nil)
+		mockRepo.EXPECT().
+			IsAncestor(gomock.Any(), git.Hash("child-head"), git.Hash("trunk")).
+			Return(false)
+
+		mockDelete := NewMockDeleteHandler(ctrl)
+		mockDelete.EXPECT().
+			DeleteBranches(gomock.Any(), &branchdel.Request{
+				Branches: []string{},
+				Force:    true,
+			}).
+			Return(nil)
+
+		mockAutostash := NewMockAutostashHandler(ctrl)
+		mockAutostash.EXPECT().
+			BeginAutostash(gomock.Any(), &autostash.Options{
+				Message:   "git-spice: autostash before sync",
+				ResetMode: autostash.ResetHard,
+			}).
+			Return(func(*error, *autostash.CleanupOptions) {}, nil).
+			AnyTimes()
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   mockWorktree,
+			Store:      mockStore,
+			Service:    mockService,
+			Delete:     mockDelete,
+			Restack:    NewMockRestackHandler(ctrl),
+			Autostash:  mockAutostash,
+			Remote:     "origin",
+		}
+
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
+			Restack: RestackUpstack,
+		}))
 	})
 }
 
@@ -292,7 +681,7 @@ func newFetchOnlyRepoMocks(ctrl *gomock.Controller) *MockGitRepository {
 		Return(singleBranchIter(git.LocalBranch{Name: "main"})).
 		AnyTimes()
 	mockRepo.EXPECT().
-		IsAncestor(gomock.Any(), gomock.Any(), gomock.Any()).
+		IsAncestor(gomock.Any(), git.Hash("trunk"), git.Hash("trunk")).
 		Return(true).
 		AnyTimes()
 	mockRepo.EXPECT().
@@ -304,11 +693,23 @@ func newFetchOnlyRepoMocks(ctrl *gomock.Controller) *MockGitRepository {
 		}).
 		Return(nil).
 		AnyTimes()
+	mockRepo.EXPECT().
+		RemoteURL(gomock.Any(), "origin").
+		Return("https://github.com/owner/repo", nil).
+		AnyTimes()
 	return mockRepo
 }
 
 func singleBranchIter(branch git.LocalBranch) iter.Seq2[git.LocalBranch, error] {
+	return branchIter(branch)
+}
+
+func branchIter(branches ...git.LocalBranch) iter.Seq2[git.LocalBranch, error] {
 	return func(yield func(git.LocalBranch, error) bool) {
-		yield(branch, nil)
+		for _, branch := range branches {
+			if !yield(branch, nil) {
+				return
+			}
+		}
 	}
 }

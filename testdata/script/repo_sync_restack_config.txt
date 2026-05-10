@@ -1,0 +1,71 @@
+# 'repo sync' uses repoSync.restack as its default restack mode,
+# and an explicit --restack=none overrides that configuration.
+
+as 'Test <test@example.com>'
+at '2026-05-09T12:30:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+git config spice.repoSync.restack aboves
+
+# With repoSync.restack=aboves, repo sync restacks direct upstacks.
+git add a.txt
+gs bc -m 'Add a' a
+git add b.txt
+gs bc -m 'Add b' b
+gs stack submit --fill
+
+shamhub merge alice/example 1
+gs repo sync
+stderr 'a: #1 was merged'
+stderr 'b: restacked on main'
+
+gs ll -a
+cmp stderr $WORK/golden/config-branch-ll.txt
+
+# A CLI --restack=none override should leave the surviving upstack
+# retargeted in state without rebasing it.
+git switch main
+git add c.txt
+gs bc -m 'Add c' c
+git add d.txt
+gs bc -m 'Add d' d
+gs stack submit --fill
+
+shamhub merge alice/example 3
+gs repo sync --restack=none
+stderr 'c: #3 was merged'
+! stderr 'd: restacked'
+
+gs ll -a
+cmp stderr $WORK/golden/override-none-ll.txt
+
+-- repo/a.txt --
+a
+-- repo/b.txt --
+b
+-- repo/c.txt --
+c
+-- repo/d.txt --
+d
+-- golden/config-branch-ll.txt --
+┏━■ b (#2) (needs push) ◀
+┃   b57bc06 Add b (now)
+main
+-- golden/override-none-ll.txt --
+┏━□ b (#2) (needs restack) (needs push)
+┃   b57bc06 Add b (now)
+┣━■ d (#4) (needs restack) ◀
+┃   c40282a Add d (now)
+main
