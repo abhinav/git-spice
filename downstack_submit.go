@@ -34,6 +34,7 @@ func (cmd *downstackSubmitCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	forgeRepo *optionalForgeRepository,
 	submitHandler SubmitHandler,
 ) error {
 	if cmd.Branch == "" {
@@ -46,6 +47,12 @@ func (cmd *downstackSubmitCmd) Run(
 
 	if cmd.Branch == store.Trunk() {
 		return errors.New("nothing to submit below trunk")
+	}
+
+	if err := cmd.checkDownstack(
+		ctx, svc, forgeRepo.Repository, cmd.Branch,
+	); err != nil {
+		return err
 	}
 
 	downstacks, err := svc.ListDownstack(ctx, cmd.Branch)

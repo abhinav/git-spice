@@ -108,6 +108,16 @@ func openForgeRepository(
 	return f.OpenRepository(ctx, tok, repoID)
 }
 
+// optionalForgeRepository wraps a forge.Repository that may be unsupported.
+// When the remote is not a supported forge, Repository is nil
+// but the wrapper itself is non-nil so kong DI can inject it.
+//
+// Commands that need forge access should check Repository for nil and
+// short-circuit accordingly (e.g. submit --no-publish skips validation).
+type optionalForgeRepository struct {
+	forge.Repository
+}
+
 func resolveRemoteRepository(
 	ctx context.Context,
 	log *silog.Logger,

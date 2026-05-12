@@ -36,6 +36,7 @@ func (cmd *upstackSubmitCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	forgeRepo *optionalForgeRepository,
 	submitHandler SubmitHandler,
 ) error {
 	if cmd.Branch == "" {
@@ -46,22 +47,17 @@ func (cmd *upstackSubmitCmd) Run(
 		cmd.Branch = currentBranch
 	}
 
+	if err := cmd.checkDownstack(
+		ctx, svc, forgeRepo.Repository, cmd.Branch,
+	); err != nil {
+		return err
+	}
+
 	if cmd.Branch != store.Trunk() {
-		b, err := svc.LookupBranch(ctx, cmd.Branch)
-		if err != nil {
-			return fmt.Errorf("lookup branch %v: %w", cmd.Branch, err)
-		}
-
-		if b.Base != store.Trunk() {
-			base, err := svc.LookupBranch(ctx, b.Base)
-			if err != nil {
-				return fmt.Errorf("lookup base %v: %w", b.Base, err)
-			}
-
-			if base.Change == nil && cmd.Publish {
-				log.Errorf("%v: base (%v) has not been submitted", cmd.Branch, b.Base)
-				return errors.New("submit the base branch first")
-			}
+		if err := cmd.verifyBaseSubmitted(
+			ctx, log, svc, store, cmd.Branch,
+		); err != nil {
+			return err
 		}
 	}
 
@@ -83,4 +79,33 @@ func (cmd *upstackSubmitCmd) Run(
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
 	})
+}
+
+func (cmd *upstackSubmitCmd) verifyBaseSubmitted(
+	ctx context.Context,
+	log *silog.Logger,
+	svc *spice.Service,
+	store *state.Store,
+	branch string,
+) error {
+	b, err := svc.LookupBranch(ctx, branch)
+	if err != nil {
+		return fmt.Errorf("lookup branch %v: %w", branch, err)
+	}
+
+	if b.Base == store.Trunk() {
+		return nil
+	}
+
+	base, err := svc.LookupBranch(ctx, b.Base)
+	if err != nil {
+		return fmt.Errorf("lookup base %v: %w", b.Base, err)
+	}
+
+	if base.Change == nil && cmd.Publish {
+		log.Errorf("%v: base (%v) has not been submitted",
+			branch, b.Base)
+		return errors.New("submit the base branch first")
+	}
+	return nil
 }

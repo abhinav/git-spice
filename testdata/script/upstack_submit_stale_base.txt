@@ -1,0 +1,48 @@
+# 'upstack submit' blocks when a downstack base has already been merged.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# merge feature1 externally
+shamhub merge alice/example 1
+
+# upstack submit from feature2 should block:
+# feature2's downstack includes feature1 (stale).
+! gs upstack submit --fill
+stderr 'stale base feature1'
+stderr 'gs repo sync'
+stderr 'no-branch-check'
+
+# --no-branch-check bypasses the stale base check
+gs upstack submit --fill --no-branch-check
+stderr '#2 is up-to-date'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
