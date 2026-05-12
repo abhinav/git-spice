@@ -431,7 +431,11 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 			autostashCleanupOptions.RescueBranch = currentBranch
 		}
 
-		if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
+		// Skip restack unless --restack flag is explicitly set.
+		// This ensures upstacks are only re-targeted (metadata update)
+		// without actually rebasing them.
+		skipRestack := !opts.Restack
+		if err := h.deleteBranches(ctx, branchesToDelete, skipRestack); err != nil {
 			return err
 		}
 	}
@@ -898,7 +902,7 @@ type branchDeletion struct {
 	UpstreamName string
 }
 
-func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion) error {
+func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion, skipRestack bool) error {
 	if len(branchesToDelete) == 0 {
 		return nil
 	}
@@ -929,8 +933,9 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 	}
 
 	err := h.Delete.DeleteBranches(ctx, &branchdel.Request{
-		Branches: deleteBranchNames,
-		Force:    true,
+		Branches:    deleteBranchNames,
+		Force:       true,
+		SkipRestack: skipRestack,
 	})
 	if err != nil {
 		return fmt.Errorf("delete merged branches: %w", err)

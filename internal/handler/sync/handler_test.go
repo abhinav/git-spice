@@ -180,8 +180,9 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 		mockDelete := NewMockDeleteHandler(ctrl)
 		mockDelete.EXPECT().
 			DeleteBranches(gomock.Any(), &branchdel.Request{
-				Branches: []string{"feature"},
-				Force:    true,
+				Branches:    []string{"feature"},
+				Force:       true,
+				SkipRestack: true, // Default behavior: skip restack unless --restack flag is set
 			}).
 			Return(nil)
 
