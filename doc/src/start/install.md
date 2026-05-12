@@ -81,6 +81,19 @@ makepkg -si
 yay -S git-spice-bin
 ```
 
+### Ubuntu PPA
+
+<!-- gs:version unreleased -->
+
+If you're using Ubuntu,
+install git-spice from the official PPA:
+
+```bash
+sudo add-apt-repository ppa:abhg/git-spice
+sudo apt update
+sudo apt install git-spice
+```
+
 ### Linux packages
 
 <!-- gs:version v0.27.0 -->
