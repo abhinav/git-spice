@@ -18,6 +18,7 @@ url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/31954
 checksum = "sha256:706937c1874eb7c270d15f644d8a84a74dfa7f27778cbc8ca9cb045a0d68d9df"
 url = "https://github.com/miniscruff/changie/releases/download/v1.24.0/changie_1.24.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/319542133"
+github_attestations = "unavailable"
 
 [tools.changie."platforms.linux-x64-changie"]
 checksum = "blake3:8b63ce3ca2871dba4d3a50cea6b4fc8c8aad789a18fdb8c88fc8e6b3b26977cc"
@@ -78,9 +79,72 @@ url = "https://dl.google.com/go/go1.26.3.windows-amd64.zip"
 version = "0.10.0"
 backend = "aqua:mvdan/gofumpt"
 
+[tools.gofumpt."platforms.linux-arm64"]
+checksum = "sha256:5d239f93b1ed2dfe74d39b25112bb770a04f6581f986d4b4f5d380521e12ca61"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_arm64"
+
+[tools.gofumpt."platforms.linux-arm64-musl"]
+checksum = "sha256:5d239f93b1ed2dfe74d39b25112bb770a04f6581f986d4b4f5d380521e12ca61"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_arm64"
+
+[tools.gofumpt."platforms.linux-x64"]
+checksum = "sha256:48ee398ec72afdaca6accb70f5ed741349d5dcccb52c5bb4c4469d698980b186"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_amd64"
+
+[tools.gofumpt."platforms.linux-x64-musl"]
+checksum = "sha256:48ee398ec72afdaca6accb70f5ed741349d5dcccb52c5bb4c4469d698980b186"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_linux_amd64"
+
+[tools.gofumpt."platforms.macos-arm64"]
+checksum = "sha256:ba4b348e729cba915d5c7dc515774e2f2c7cc5c5ad011de20d34be10e5a2f906"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_darwin_arm64"
+
+[tools.gofumpt."platforms.macos-x64"]
+checksum = "sha256:30e5b914a824c3b6bd0480e4f493517012167d380de74643879c50f4aa0c834e"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_darwin_amd64"
+
+[tools.gofumpt."platforms.windows-x64"]
+checksum = "sha256:20872b464435512b74678b1155b75bd75220de5737ad8c075b9151c846543697"
+url = "https://github.com/mvdan/gofumpt/releases/download/v0.10.0/gofumpt_v0.10.0_windows_amd64.exe"
+
 [[tools.golangci-lint]]
 version = "2.12.2"
 backend = "aqua:golangci/golangci-lint"
+
+[tools.golangci-lint."platforms.linux-arm64"]
+checksum = "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-arm64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.linux-arm64-musl"]
+checksum = "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-arm64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.linux-x64"]
+checksum = "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-amd64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.linux-x64-musl"]
+checksum = "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-amd64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.macos-arm64"]
+checksum = "sha256:a9c54498731b3128f79e090be6110f3e5fffccc617b08142ed244d4126c73f29"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-darwin-arm64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.macos-x64"]
+checksum = "sha256:f6f06d94b6241521c53d15450c5209b028270bf966f842afb11c030c79f5bc16"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-darwin-amd64.tar.gz"
+provenance = "github-attestations"
+
+[tools.golangci-lint."platforms.windows-x64"]
+checksum = "sha256:bd42e3ebc8cb4ececb86941983baaf1dc221bbb04d838e94ce63b49cc91e02bb"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-windows-amd64.zip"
+provenance = "github-attestations"
 
 [[tools.gotestsum]]
 version = "1.13.0"
@@ -132,6 +196,7 @@ url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/35
 checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
 url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-x86_64.tar.gz"
 url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740554"
+github_attestations = "unavailable"
 
 [tools.requiredfield."platforms.linux-x64-musl"]
 checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
