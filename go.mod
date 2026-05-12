@@ -17,10 +17,10 @@ require (
 	github.com/hexops/autogold/v2 v2.3.1
 	github.com/mattn/go-isatty v0.0.22
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/sahilm/fuzzy v0.1.1
+	github.com/sahilm/fuzzy v0.1.2
 	github.com/shurcooL/githubv4 v0.0.0-20260209031235-2402fdf4a9ed
 	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	github.com/vito/midterm v0.2.5-0.20260406170451-de5b3b202c56
 	github.com/zalando/go-keyring v0.2.8
 	go.abhg.dev/container/ring v0.3.0
@@ -29,7 +29,7 @@ require (
 	go.abhg.dev/log/silog v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/mod v0.33.0
+	golang.org/x/mod v0.36.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
@@ -71,7 +71,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
 	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	mvdan.cc/gofumpt v0.9.2 // indirect
 )
 
