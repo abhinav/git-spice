@@ -1,6 +1,6 @@
 # Conflict with restacking remaining branches
 # after a base branch is merged
-# is properly handled by 'repo sync'
+# is properly handled by 'repo sync --restack'
 
 as 'Test <test@example.com>'
 at '2025-01-17T05:06:07Z'
@@ -49,7 +49,7 @@ git push origin main
 
 cd ../repo
 gs bco feat2
-! gs repo sync
+! gs repo sync --restack
 stderr '#1 was merged'
 stderr 'There was a conflict while rebasing'
 

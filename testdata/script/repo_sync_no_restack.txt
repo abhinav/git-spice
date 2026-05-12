@@ -20,15 +20,13 @@ gs auth login
 
 # Create a stack: main -> feat1 -> feat2
 git add feat1.txt
-gs bc -m 'Add feature 1'
+gs bc -m 'Add feature 1' feat1
+
 git add feat2.txt
-gs cc -m 'Add feature 2'
+gs bc -m 'Add feature 2' feat2
 
-gs ll
-cmp stderr $WORK/golden/ll-before-sync.txt
-
-# Submit both changes
-gs branch submit --fill
+# Submit the entire stack
+gs stack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
@@ -37,40 +35,40 @@ shamhub merge alice/example 1
 
 # Sync without --restack
 # This should delete feat1 and update feat2's base to main
-# but NOT rebase feat2 onto main yet
+# but NOT rebase feat2 onto main.
 gs repo sync
 stderr '#1 was merged'
 
-# feat2 should still exist but have metadata pointing to main
-gs ll
-cmp stderr $WORK/golden/ll-after-sync.txt
-
-# Verify that feat2's base is now main in metadata
-gs branch show feat2
-stdout 'Base: main'
+# feat2 should still exist.
+# The git graph should show feat2 NOT rebased onto main
+# (still on top of feat1's original commit).
+git graph --branches
+cmp stdout $WORK/golden/graph-after-sync.txt
 
 # Now explicitly restack to actually rebase
 gs repo sync --restack
 
-gs ll
-cmp stderr $WORK/golden/ll-after-restack.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-after-restack.txt
 
 -- repo/feat1.txt --
 feature 1
 -- repo/feat2.txt --
 feature 2
 
--- golden/ll-before-sync.txt --
-┏━■ add-feature-2 (#2) ◀
-┃   [0-9a-f]+ Add feature 2 \(now\)
-┣━■ add-feature-1 (#1)
-┃   [0-9a-f]+ Add feature 1 \(now\)
-main
--- golden/ll-after-sync.txt --
-┏━■ add-feature-2 (#2) ◀
-┃   [0-9a-f]+ Add feature 2 \(now\)
-main
--- golden/ll-after-restack.txt --
-┏━■ add-feature-2 (#2) ◀
-┃   [0-9a-f]+ Add feature 2 \(now\)
-main
+-- golden/graph-after-sync.txt --
+* 1715fe8 (HEAD -> feat2, origin/feat2) Add feature 2
+| *   052886d (origin/main, main) Merge change #1
+| |\  
+| |/  
+|/|   
+* | 4be7a61 Add feature 1
+|/  
+* e41b284 Initial commit
+-- golden/graph-after-restack.txt --
+* 105ff59 (HEAD -> feat2) Add feature 2
+*   052886d (origin/main, main) Merge change #1
+|\  
+| * 4be7a61 Add feature 1
+|/  
+* e41b284 Initial commit

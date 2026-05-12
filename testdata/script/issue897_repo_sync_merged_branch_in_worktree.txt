@@ -47,9 +47,9 @@ git worktree add ../wt-feature3 feature3
 # merge only feature1 (the downstack branch)
 shamhub merge alice/example.git 1
 
-# sync the original repo
+# sync the original repo with --restack
 # This should delete feature1 and skip rebasing feature2 since it's in a worktree
-gs repo sync
+gs repo sync --restack
 stderr 'feature1.*was merged'
 
 # feature2 should get a warning about being in a worktree
