@@ -1,0 +1,61 @@
+# With spice.submit.label.addWhen=create
+# configured labels are applied only while creating CRs,
+# but labels passed with --label are still applied to updates.
+
+as 'Test User <test@example.com>'
+at '2026-05-12T19:20:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create the CR before configured labels exist.
+git add feature.txt
+gs branch create feature -m 'Add feature'
+gs branch submit --fill
+
+# Configured labels should not be added when updating the existing CR,
+# but an explicit --label should still be honored.
+git config spice.submit.label skip-ci
+git config spice.submit.label.addWhen create
+
+cp $WORK/extra/feature-modified.txt feature.txt
+git add -u
+gs commit create -m 'Modify feature'
+gs branch submit --fill --label manual
+
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/change.json
+
+-- repo/feature.txt --
+feature
+-- extra/feature-modified.txt --
+feature modified
+-- golden/change.json --
+{
+  "number": 1,
+  "state": "open",
+  "title": "Add feature",
+  "body": "",
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "head": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "feature",
+    "sha": "408c570b7ae47c3c24f4d89b1448f1bf47439775"
+  },
+  "base": {
+    "repository": {"owner": "alice", "name": "example"},
+    "ref": "main",
+    "sha": "b19c3d5a962be08d0385bf5a7f049cd84c334e21"
+  },
+  "labels": ["manual"]
+}

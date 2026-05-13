@@ -1,0 +1,107 @@
+# A 'downstack restack' can continue through conflicts with 'gs rebase continue'.
+
+as 'Test <test@example.com>'
+at '2026-05-12T18:30:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/extra/feature1.txt feature1.txt
+git add feature1.txt
+gs branch create feature1 -m 'feature1'
+
+cp $WORK/extra/feature2.txt feature2.txt
+git add feature2.txt
+gs branch create feature2 -m 'feature2'
+
+cp $WORK/extra/feature3.txt feature3.txt
+git add feature3.txt
+gs branch create feature3 -m 'feature3'
+
+cp $WORK/extra/feature4.txt feature4.txt
+git add feature4.txt
+gs branch create feature4 -m 'feature4'
+
+# Advance trunk with changes that conflict with downstack branches.
+gs trunk
+cp $WORK/extra/feature1.conflict.txt feature1.txt
+cp $WORK/extra/feature2.conflict.txt feature2.txt
+git add feature1.txt feature2.txt
+git commit -m 'Add feature 1 and 2 on trunk'
+
+# Restack from feature3 down toward trunk.
+gs branch checkout feature3
+! gs downstack restack
+stderr 'There was a conflict'
+
+# Only feature1.txt should be conflicting right now.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature1.txt
+
+cp $WORK/extra/feature1.resolved.txt feature1.txt
+git add feature1.txt
+! gs rebase continue --no-edit
+stderr 'There was a conflict'
+
+# Only feature2.txt should be conflicting now,
+# proving the original downstack restack operation resumed.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status-feature2.txt
+
+cp $WORK/extra/feature2.resolved.txt feature2.txt
+git add feature2.txt
+gs rebase continue --no-edit
+
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+gs branch checkout feature3
+cmp feature1.txt $WORK/extra/feature1.resolved.txt
+cmp feature2.txt $WORK/extra/feature2.resolved.txt
+cmp feature3.txt $WORK/extra/feature3.txt
+
+gs branch checkout feature4
+cmp feature1.txt $WORK/extra/feature1.txt
+cmp feature2.txt $WORK/extra/feature2.txt
+cmp feature3.txt $WORK/extra/feature3.txt
+cmp feature4.txt $WORK/extra/feature4.txt
+
+-- extra/feature1.txt --
+foo
+-- extra/feature2.txt --
+bar
+-- extra/feature3.txt --
+baz
+-- extra/feature4.txt --
+qux
+
+-- extra/feature1.conflict.txt --
+not foo
+-- extra/feature2.conflict.txt --
+not bar
+
+-- extra/feature1.resolved.txt --
+foo
+not foo
+-- extra/feature2.resolved.txt --
+bar
+not bar
+
+-- golden/conflict-status-feature1.txt --
+AA feature1.txt
+-- golden/conflict-status-feature2.txt --
+AA feature2.txt
+-- golden/graph.txt --
+* 4f3cac8 (HEAD -> feature3) feature3
+* ef00f7d (feature2) feature2
+* c63096a (feature1) feature1
+* 6934d49 (main) Add feature 1 and 2 on trunk
+| * 43c11d6 (feature4) feature4
+| * 54c2862 feature3
+| * 1163ed0 feature2
+| * a788d4b feature1
+|/  
+* bb84898 Initial commit
