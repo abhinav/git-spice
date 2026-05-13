@@ -70,13 +70,26 @@ type Handler struct {
 
 // Request is a request to delete one or more branches.
 type Request struct {
-	Branches []string
-	Force    bool
-	// SkipRestack, if true, updates upstack metadata (base branch name)
-	// but does not rebase upstacks onto the new base.
-	// This leaves upstacks in a "needs restack" state.
-	SkipRestack bool
+	Branches      []string
+	Force         bool
+	UpstackPolicy UpstackPolicy
 }
+
+// UpstackPolicy controls how surviving upstacks are moved
+// after their base branches are deleted.
+type UpstackPolicy int
+
+const (
+	// UpstackDoNothing moves surviving upstacks by updating state only.
+	//
+	// This leaves the upstacks marked as needing restack,
+	// so a later restack can replay their commits from the old base.
+	UpstackDoNothing UpstackPolicy = iota
+
+	// UpstackRestackAboves moves surviving upstacks
+	// by replaying their commits immediately.
+	UpstackRestackAboves
+)
 
 // DeleteBranches deletes the specified branches from the repository,
 // updating all internal state as necessary.
@@ -269,15 +282,11 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				continue
 			}
 
-			// Check if the upstack branch is checked out in another worktree.
-			// If so, we need to skip the rebase operation
-			// and leave the branch in a "needs restack" state.
-			//
-			// Also skip rebase if the caller requested SkipRestack.
-			var skipRebase bool
-			if req.SkipRestack {
-				skipRebase = true
-			} else if above != currentBranch {
+			// Skip the rebase when the caller wants state-only retargeting,
+			// or when the branch must be rebased from another worktree.
+			restackAbove := req.UpstackPolicy == UpstackRestackAboves
+			skipRebase := !restackAbove
+			if restackAbove && above != currentBranch {
 				if worktreePath, ok := branchWorktrees[above]; ok {
 					skipRebase = true
 					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
@@ -304,7 +313,11 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 					Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
 				})
 			}
-			log.Infof("%v: moved upstack onto %v", above, base)
+			if restackAbove {
+				log.Infof("%v: moved upstack onto %v", above, base)
+			} else {
+				log.Infof("%v: retargeted upstack onto %v", above, base)
+			}
 		}
 	}
 

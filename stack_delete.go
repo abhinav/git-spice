@@ -81,7 +81,8 @@ func (cmd *stackDeleteCmd) Run(
 	}
 
 	return handler.DeleteBranches(ctx, &delete.Request{
-		Branches: stack,
-		Force:    cmd.Force,
+		Branches:      stack,
+		Force:         cmd.Force,
+		UpstackPolicy: delete.UpstackRestackAboves,
 	})
 }

@@ -85,7 +85,8 @@ func (cmd *upstackDeleteCmd) Run(
 	}
 
 	return handler.DeleteBranches(ctx, &delete.Request{
-		Branches: upstack,
-		Force:    cmd.Force,
+		Branches:      upstack,
+		Force:         cmd.Force,
+		UpstackPolicy: delete.UpstackRestackAboves,
 	})
 }
