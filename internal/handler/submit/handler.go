@@ -227,8 +227,9 @@ type Options struct {
 	// - milestone
 	// - reviewers
 
-	Labels           []string `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
-	ConfiguredLabels []string `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"` // merged with Labels
+	Labels           []string      `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
+	ConfiguredLabels []string      `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"`
+	LabelsAddWhen    LabelsAddWhen `name:"labels-add-when" help:"When to add configured labels." hidden:"" config:"submit.label.addWhen" default:"always"`
 
 	Reviewers           []string         `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
 	ConfiguredReviewers []string         `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"`
@@ -251,10 +252,24 @@ func mergeConfiguredValues(values []string, configured []string) []string {
 }
 
 func mergeConfiguredOptions(opts *Options) {
-	opts.Labels = mergeConfiguredValues(opts.Labels, opts.ConfiguredLabels)
+	// Note: Labels are merged conditionally by effectiveLabels
+	// based on LabelsAddWhen setting.
 	// Note: Reviewers are merged conditionally by effectiveReviewers
 	// based on draft status and ReviewersAddWhen setting.
 	opts.Assignees = mergeConfiguredValues(opts.Assignees, opts.ConfiguredAssignees)
+}
+
+// effectiveLabels returns the labels to add to a change request.
+// Flag-specified labels are always included.
+// Configured labels are included based on the LabelsAddWhen setting
+// and whether the change request is being created or updated.
+func effectiveLabels(opts *Options, isCreate bool) []string {
+	// If addWhen is "create" and the CR already exists,
+	// skip configured labels.
+	if opts.LabelsAddWhen == LabelsAddWhenCreate && !isCreate {
+		return opts.Labels
+	}
+	return mergeConfiguredValues(opts.Labels, opts.ConfiguredLabels)
 }
 
 // effectiveReviewers returns the reviewers to add to a change request.
@@ -396,6 +411,50 @@ func (r *ReviewersAddWhen) UnmarshalText(bs []byte) error {
 		*r = ReviewersAddWhenReady
 	default:
 		return fmt.Errorf("invalid value %q: expected always or ready", bs)
+	}
+	return nil
+}
+
+// LabelsAddWhen specifies when configured labels
+// should be added to change requests.
+type LabelsAddWhen int
+
+const (
+	// LabelsAddWhenAlways adds configured labels
+	// to all change requests on every submit.
+	//
+	// This is the default.
+	LabelsAddWhenAlways LabelsAddWhen = iota
+
+	// LabelsAddWhenCreate adds configured labels
+	// only when creating a new change request.
+	LabelsAddWhenCreate
+)
+
+var _ encoding.TextUnmarshaler = (*LabelsAddWhen)(nil)
+
+// String returns the string representation of the LabelsAddWhen.
+func (l LabelsAddWhen) String() string {
+	switch l {
+	case LabelsAddWhenAlways:
+		return "always"
+	case LabelsAddWhenCreate:
+		return "create"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes LabelsAddWhen from text.
+// It supports "always" and "create" values.
+func (l *LabelsAddWhen) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "always":
+		*l = LabelsAddWhenAlways
+	case "create":
+		*l = LabelsAddWhenCreate
+	default:
+		return fmt.Errorf("invalid value %q: expected always or create", bs)
 	}
 	return nil
 }
@@ -989,6 +1048,7 @@ func (h *Handler) submitBranch(
 			effectiveDraft = *opts.Draft
 		}
 		reviewers := effectiveReviewers(opts.Options, effectiveDraft)
+		labels := effectiveLabels(opts.Options, false)
 
 		// TODO:
 		// We _probably_ don't need to check for existing
@@ -1014,13 +1074,13 @@ func (h *Handler) submitBranch(
 		}
 
 		// Check for labels that would be added.
-		if len(opts.Labels) > 0 {
+		if len(labels) > 0 {
 			existingLabelSet := make(map[string]struct{}, len(pull.Labels))
 			for _, label := range pull.Labels {
 				existingLabelSet[label] = struct{}{}
 			}
 			var labelsToAdd []string
-			for _, label := range opts.Labels {
+			for _, label := range labels {
 				if _, exists := existingLabelSet[label]; !exists {
 					labelsToAdd = append(labelsToAdd, label)
 				}
@@ -1090,7 +1150,7 @@ func (h *Handler) submitBranch(
 			editOpts := forge.EditChangeOptions{
 				Base:         upstreamBase,
 				Draft:        opts.Draft,
-				AddLabels:    opts.Labels,
+				AddLabels:    labels,
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
 			}
@@ -1336,7 +1396,7 @@ func (h *Handler) prepareBranch(
 		remoteRepo:     remoteRepo,
 		store:          h.Store,
 		log:            h.Log,
-		labels:         opts.Labels,
+		labels:         effectiveLabels(opts.Options, true),
 		reviewers:      effectiveReviewers(opts.Options, draft),
 		assignees:      opts.Assignees,
 	}, nil

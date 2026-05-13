@@ -62,6 +62,7 @@ Configuration (🔧):
   spice.submit.draft               Default value for --draft when creating
                                    change requests.
   spice.submit.label               Default labels to add to change requests.
+  spice.submit.label.addWhen       When to add configured labels.
   spice.submit.listTemplatesTimeout
                                    Timeout for listing CR templates
   spice.submit.navigationComment.downstack
