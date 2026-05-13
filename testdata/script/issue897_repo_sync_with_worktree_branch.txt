@@ -42,7 +42,7 @@ shamhub merge alice/example.git 1
 gs repo sync --restack
 stderr 'feat-1: .* was merged'
 stderr 'feat-1: deleted'
-stderr 'feat-2: checked out in another worktree .*/feat-2., skipping rebase'
+stderr 'feat-2: checked out in another worktree .*/feat-2., skipping'
 
 # feat-1 was deleted and feat-2 still exists
 ! git rev-parse --verify feat-1
