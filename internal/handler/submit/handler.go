@@ -463,6 +463,20 @@ func (l *LabelsAddWhen) UnmarshalText(bs []byte) error {
 // that are only available to batch submit operations.
 type BatchOptions struct {
 	UpdateOnlyDefault bool `config:"submit.updateOnly" help:"Default value for --update-only in batch submit operations." hidden:"" default:"false"`
+
+	// BranchMetadata provides per-branch title and body overrides
+	// for CR creation. When a branch has an entry here,
+	// its title and body are used directly
+	// instead of deriving from commits.
+	BranchMetadata map[string]BranchMeta `kong:"-"`
+}
+
+// BranchMeta holds per-branch CR metadata for batch submissions.
+// When provided via --fill-from, these values are used directly
+// instead of deriving title and body from commit messages.
+type BranchMeta struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
 }
 
 // BatchRequest is a request to submit one or more change requests.
@@ -489,10 +503,19 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 	for _, branch := range req.Branches {
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
+		sopts := &submitOptions{Options: &opts}
+
+		// Use per-branch metadata if available.
+		if batchOpts.BranchMetadata != nil {
+			if meta, ok := batchOpts.BranchMetadata[branch]; ok {
+				sopts.Title = meta.Title
+				sopts.Body = meta.Body
+			}
+		}
 		status, err := h.submitBranch(
 			ctx,
 			branch,
-			&submitOptions{Options: &opts},
+			sopts,
 		)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)

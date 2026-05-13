@@ -14,6 +14,8 @@ import (
 type stackSubmitCmd struct {
 	submitOptions
 	submit.BatchOptions
+
+	FillFrom string `name:"fill-from" help:"JSON file mapping branch names to {title, body} for CR creation. Use '-' for stdin." placeholder:"FILE"`
 }
 
 func (*stackSubmitCmd) Help() string {
@@ -48,6 +50,14 @@ func (cmd *stackSubmitCmd) Run(
 	}
 
 	// TODO: separate preparation of the stack from submission
+
+	if cmd.FillFrom != "" {
+		meta, err := parseFillFrom(cmd.FillFrom)
+		if err != nil {
+			return fmt.Errorf("--fill-from: %w", err)
+		}
+		cmd.BranchMetadata = meta
+	}
 
 	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
 		Branches:     toSubmit,
