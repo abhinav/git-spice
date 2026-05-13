@@ -582,6 +582,24 @@ Branches that are upstack of the current branch will not be modified.
 * `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch to edit from. Defaults to current branch.
 
+### git-spice downstack restack {#gs-downstack-restack}
+
+```
+gs downstack (ds) restack (r) [flags]
+```
+
+Restack a branch and its downstack
+
+The current branch and all branches below it until trunk
+are rebased on top of their respective bases,
+ensuring a linear history.
+
+Use --branch to start at a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to restack the downstack of
+
 ## Branch
 
 ### git-spice branch track {#gs-branch-track}

@@ -30,17 +30,18 @@ Log
   log (l) long (l)     List branches and commits
 
 Stack
-  stack (s) submit (s)         Submit a stack
-  stack (s) restack (r)        Restack a stack
-  stack (s) edit (e)           Edit the order of branches in a stack
-  stack (s) delete (d)         Delete all branches in a stack
-  upstack (us) submit (s)      Submit a branch and those above it
-  upstack (us) restack (r)     Restack a branch and its upstack
-  upstack (us) onto (o)        Move a branch onto another branch
-  upstack (us) delete (d)      Delete all branches above the current branch
-  downstack (ds) track (tr)    Track all untracked branches below a branch
-  downstack (ds) submit (s)    Submit a branch and those below it
-  downstack (ds) edit (e)      Edit the order of branches below a branch
+  stack (s) submit (s)          Submit a stack
+  stack (s) restack (r)         Restack a stack
+  stack (s) edit (e)            Edit the order of branches in a stack
+  stack (s) delete (d)          Delete all branches in a stack
+  upstack (us) submit (s)       Submit a branch and those above it
+  upstack (us) restack (r)      Restack a branch and its upstack
+  upstack (us) onto (o)         Move a branch onto another branch
+  upstack (us) delete (d)       Delete all branches above the current branch
+  downstack (ds) track (tr)     Track all untracked branches below a branch
+  downstack (ds) submit (s)     Submit a branch and those below it
+  downstack (ds) edit (e)       Edit the order of branches below a branch
+  downstack (ds) restack (r)    Restack a branch and its downstack
 
 Branch
   branch (b) track (tr)        Track a branch

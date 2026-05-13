@@ -1,0 +1,18 @@
+Usage: gs downstack (ds) restack (r) [flags]
+
+Restack a branch and its downstack
+
+The current branch and all branches below it until trunk are rebased on top of
+their respective bases, ensuring a linear history.
+
+Use --branch to start at a different branch.
+
+Flags:
+  --branch=NAME    Branch to restack the downstack of
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
