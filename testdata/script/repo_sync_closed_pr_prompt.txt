@@ -53,5 +53,5 @@ main
 > #1 was closed but not merged.
 true
 -- golden/closed.txt --
-┏━■ feature2 (#2) ◀
+┏━■ feature2 (#2) (needs restack) ◀
 main

@@ -166,6 +166,35 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 		}
 	}
 
+	// The recorded base hash may have been preserved across a state-only
+	// retarget (for example, by 'repo sync' deleting a merged base branch
+	// without rebasing the upstack). In that case the recorded BaseHash
+	// still sits inside this branch's history — it was never replayed away —
+	// but it points at a commit on a different branch from the new base, so
+	// it is not an ancestor of the actual base head. The branch carries
+	// orphan commits that a restack would replay onto the new base.
+	//
+	// Only flag this when:
+	//   - the recorded BaseHash differs from the actual base head, and
+	//   - the recorded BaseHash is still in this branch's history (so the
+	//     commits really are present and would be dropped on rebase), and
+	//   - the recorded BaseHash is not an ancestor of the actual base head
+	//     (so the new base is not just a fast-forward of the old one).
+	//
+	// The middle condition rules out cases where the user rebased the
+	// branch externally and the old base was dropped from history. The
+	// last condition rules out the plain "base advanced on the same
+	// branch" case, which is harmless and handled by the silent update
+	// below.
+	if b.BaseHash != baseHash && b.BaseHash != "" &&
+		s.repo.IsAncestor(ctx, b.BaseHash, b.Head) &&
+		!s.repo.IsAncestor(ctx, b.BaseHash, baseHash) {
+		return git.ZeroHash, &BranchNeedsRestackError{
+			Base:     b.Base,
+			BaseHash: baseHash,
+		}
+	}
+
 	// Branch does not need to be restacked
 	// but the base hash stored in state may be out of date.
 	if b.BaseHash != baseHash {
