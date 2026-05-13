@@ -1048,7 +1048,7 @@ func (h *Handler) submitBranch(
 			effectiveDraft = *opts.Draft
 		}
 		reviewers := effectiveReviewers(opts.Options, effectiveDraft)
-		labels := effectiveLabels(opts.Options, false)
+		labels := effectiveLabels(opts.Options, false /* isCreate */)
 
 		// TODO:
 		// We _probably_ don't need to check for existing
@@ -1396,7 +1396,7 @@ func (h *Handler) prepareBranch(
 		remoteRepo:     remoteRepo,
 		store:          h.Store,
 		log:            h.Log,
-		labels:         effectiveLabels(opts.Options, true),
+		labels:         effectiveLabels(opts.Options, true /* isCreate */),
 		reviewers:      effectiveReviewers(opts.Options, draft),
 		assignees:      opts.Assignees,
 	}, nil
