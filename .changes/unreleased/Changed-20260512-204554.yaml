@@ -1,0 +1,3 @@
+kind: Changed
+body: repo sync: No longer restacks branches by default. Use the --restack flag to restack during sync.
+time: 2026-05-12T20:45:54.000000-07:00
