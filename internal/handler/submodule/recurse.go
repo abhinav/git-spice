@@ -23,10 +23,10 @@ const (
 	storageAuthorEmail = "git-spice@localhost"
 )
 
-// SubmoduleContext bundles the per-submodule plumbing
+// Context bundles the per-submodule plumbing
 // (worktree, repository, store, service) needed to run
 // git-spice handlers inside a submodule's working tree.
-type SubmoduleContext struct {
+type Context struct {
 	Path       string
 	Worktree   *git.Worktree
 	Repository *git.Repository
@@ -35,7 +35,7 @@ type SubmoduleContext struct {
 	Log        *silog.Logger
 }
 
-// OpenSubmoduleContext opens the submodule at path under parentWT
+// OpenContext opens the submodule at path under parentWT
 // and constructs the git-spice plumbing rooted at that worktree.
 //
 // Returns [ErrSubmoduleNotInitialized] if the submodule has not been
@@ -45,13 +45,13 @@ type SubmoduleContext struct {
 // forges may be nil for callers that only need worktree/store access.
 // It is required for callers that will exercise forge-aware operations
 // (e.g., submit) inside the submodule.
-func OpenSubmoduleContext(
+func OpenContext(
 	ctx context.Context,
 	parentWT *git.Worktree,
 	path string,
 	forges *forge.Registry,
 	log *silog.Logger,
-) (*SubmoduleContext, error) {
+) (*Context, error) {
 	subWT, err := parentWT.SubmoduleWorktree(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("open worktree: %w", err)
@@ -80,7 +80,7 @@ func OpenSubmoduleContext(
 
 	svc := spice.NewService(subRepo, subWT, store, forges, log)
 
-	return &SubmoduleContext{
+	return &Context{
 		Path:       path,
 		Worktree:   subWT,
 		Repository: subRepo,
@@ -95,7 +95,7 @@ func OpenSubmoduleContext(
 // appears in exclude and submodules that are not gs-initialized
 // (a soft skip; logged at info level).
 //
-// For each remaining submodule, a [SubmoduleContext] is constructed
+// For each remaining submodule, a [Context] is constructed
 // and fn is invoked. Iteration stops on the first error from fn.
 func ForEachInitializedSubmodule(
 	ctx context.Context,
@@ -103,7 +103,7 @@ func ForEachInitializedSubmodule(
 	exclude []string,
 	forges *forge.Registry,
 	log *silog.Logger,
-	fn func(*SubmoduleContext) error,
+	fn func(*Context) error,
 ) error {
 	subs, err := parentWT.Submodules(ctx)
 	if err != nil {
@@ -117,7 +117,7 @@ func ForEachInitializedSubmodule(
 			continue
 		}
 
-		subCtx, err := OpenSubmoduleContext(ctx, parentWT, sub.Path, forges, log)
+		subCtx, err := OpenContext(ctx, parentWT, sub.Path, forges, log)
 		if err != nil {
 			if errors.Is(err, ErrSubmoduleNotInitialized) {
 				log.Info("Skipping submodule (not initialized with gs)",

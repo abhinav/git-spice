@@ -143,8 +143,7 @@ func (a *Applier) rollback(
 	switched []switchedSub,
 ) {
 	// Restore in reverse order of switching.
-	for i := len(switched) - 1; i >= 0; i-- {
-		s := switched[i]
+	for _, s := range slices.Backward(switched) {
 		subWt, err := a.Worktree.SubmoduleWorktree(ctx, s.path)
 		if err != nil {
 			a.Log.Warn("Submodule rollback failed: open worktree",
@@ -162,4 +161,124 @@ func (a *Applier) rollback(
 
 func (a *Applier) isExcluded(path string) bool {
 	return slices.Contains(a.Exclude, path)
+}
+
+// MergeFoldRequest specifies inputs for [Applier.MergeAssociationsForFold].
+type MergeFoldRequest struct {
+	// Base is the branch that survives the fold (the destination).
+	Base string
+
+	// Child is the branch being folded away.
+	Child string
+
+	// ModuleBranch is an optional map of submodule path -> branch name
+	// that pre-resolves specific conflicts without prompting.
+	// Typically set from a CLI flag like --module-branch=path=branch.
+	ModuleBranch map[string]string
+
+	// Resolve, if non-nil, is called for each unresolved conflict.
+	// It receives the conflict description and must return the chosen
+	// branch name.
+	//
+	// If Resolve is nil and ModuleBranch does not cover a conflict,
+	// the merge returns a [FoldConflictError] listing all unresolved
+	// conflicts.
+	Resolve func(FoldConflict) (string, error)
+}
+
+// MergeAssociationsForFold computes the submodule association map that
+// should be recorded on req.Base after folding req.Child into it.
+//
+// Per-path resolution:
+//   - both branches record nothing → omit the path.
+//   - only base records → keep base's value.
+//   - only child records → adopt child's value (tip-state wins).
+//   - both record the same value → keep it.
+//   - both record different values → consult req.ModuleBranch[path];
+//     if absent, call req.Resolve; if that is nil, accumulate into a
+//     [FoldConflictError] and return it after scanning all conflicts.
+//
+// The returned map is suitable for [state.UpsertRequest.Submodules]:
+// keys absent from the map are left unchanged; empty-string values
+// would delete recorded entries (not produced by this method).
+func (a *Applier) MergeAssociationsForFold(
+	ctx context.Context, req MergeFoldRequest,
+) (map[string]string, error) {
+	baseSubs := map[string]string{}
+	if resp, err := a.Store.LookupBranch(ctx, req.Base); err == nil {
+		baseSubs = resp.Submodules
+	} else if !errors.Is(err, state.ErrNotExist) {
+		return nil, fmt.Errorf(
+			"lookup base %s: %w", req.Base, err,
+		)
+	}
+
+	childSubs := map[string]string{}
+	if resp, err := a.Store.LookupBranch(ctx, req.Child); err == nil {
+		childSubs = resp.Submodules
+	} else if !errors.Is(err, state.ErrNotExist) {
+		return nil, fmt.Errorf(
+			"lookup child %s: %w", req.Child, err,
+		)
+	}
+
+	pathSet := make(map[string]struct{}, len(baseSubs)+len(childSubs))
+	for p := range baseSubs {
+		pathSet[p] = struct{}{}
+	}
+	for p := range childSubs {
+		pathSet[p] = struct{}{}
+	}
+	paths := make([]string, 0, len(pathSet))
+	for p := range pathSet {
+		paths = append(paths, p)
+	}
+	slices.Sort(paths)
+
+	resolved := make(map[string]string, len(paths))
+	var conflicts []FoldConflict
+
+	for _, p := range paths {
+		bv, hasB := baseSubs[p]
+		cv, hasC := childSubs[p]
+
+		switch {
+		case !hasB && !hasC:
+			// nothing recorded; skip.
+		case hasB && !hasC:
+			resolved[p] = bv
+		case !hasB && hasC:
+			resolved[p] = cv
+		case bv == cv:
+			resolved[p] = bv
+		default:
+			// True conflict: both record, values differ.
+			if v, ok := req.ModuleBranch[p]; ok {
+				resolved[p] = v
+				continue
+			}
+			if req.Resolve != nil {
+				v, err := req.Resolve(FoldConflict{
+					Path:        p,
+					BaseBranch:  bv,
+					ChildBranch: cv,
+				})
+				if err != nil {
+					return nil, err
+				}
+				resolved[p] = v
+				continue
+			}
+			conflicts = append(conflicts, FoldConflict{
+				Path:        p,
+				BaseBranch:  bv,
+				ChildBranch: cv,
+			})
+		}
+	}
+
+	if len(conflicts) > 0 {
+		return nil, &FoldConflictError{Conflicts: conflicts}
+	}
+	return resolved, nil
 }
