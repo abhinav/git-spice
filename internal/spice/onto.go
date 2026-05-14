@@ -43,19 +43,22 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		return fmt.Errorf("lookup branch: %w", err)
 	}
 
-	var ontoHash git.Hash
-	if req.Onto == s.store.Trunk() {
-		ontoHash, err = s.repo.PeelToCommit(ctx, req.Onto)
-		if err != nil {
-			return fmt.Errorf("resolve trunk: %w", err)
-		}
-	} else {
-		// Non-trunk branches must be tracked.
-		onto, err := s.LookupBranch(ctx, req.Onto)
-		if err != nil {
+	// Verify non-trunk target is tracked.
+	if req.Onto != s.store.Trunk() {
+		if _, err := s.LookupBranch(ctx, req.Onto); err != nil {
 			return fmt.Errorf("lookup onto: %w", err)
 		}
-		ontoHash = onto.Head
+	}
+
+	// Always resolve the target from the git ref
+	// rather than the stored state.
+	// The stored head may be stale
+	// if a prior operation in the same transaction
+	// (e.g. branch onto moving upstack branches)
+	// modified the target branch's git ref.
+	ontoHash, err := s.repo.PeelToCommit(ctx, req.Onto)
+	if err != nil {
+		return fmt.Errorf("resolve %v: %w", req.Onto, err)
 	}
 
 	// The recorded base hash may be stale if the old base branch

@@ -222,6 +222,11 @@ type RepositoryID interface {
 // because the base branch has not been pushed yet.
 var ErrUnsubmittedBase = errors.New("base branch has not been submitted yet")
 
+// ErrMergeNotAllowed indicates that a change cannot be merged
+// because preconditions are not met
+// (e.g., failing checks, review requirements, conflicts).
+var ErrMergeNotAllowed = errors.New("merge not allowed")
+
 // Repository is a Git repository hosted on a forge.
 type Repository interface {
 	Forge() Forge
@@ -235,9 +240,24 @@ type Repository interface {
 	SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error)
 
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
+
+	// MergeChange merges an open change into its base branch.
+	//
+	// Returns ErrMergeNotAllowed if the change cannot be merged
+	// (e.g., failing checks, review requirements, conflicts).
+	MergeChange(ctx context.Context, id ChangeID, opts MergeChangeOptions) error
+
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
+
+	// ChangeChecksStatus reports the aggregate CI/checks
+	// state for the given change.
+	//
+	// If the forge has no CI/checks integration
+	// or the change has no required checks,
+	// implementations should return ChecksPassed.
+	ChangeChecksStatus(ctx context.Context, id ChangeID) (ChecksState, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -437,6 +457,18 @@ type EditChangeOptions struct {
 	// Body specifies a new description for the change.
 	// If nil, the description is not changed.
 	Body *string
+}
+
+// MergeChangeOptions specifies options for a merge operation.
+type MergeChangeOptions struct {
+	// HeadHash, if non-empty, causes the merge to fail
+	// if the change's current head commit doesn't match.
+	// This prevents merging a change whose content
+	// has changed since the caller last inspected it.
+	//
+	// Not all forges support this; unsupported forges
+	// ignore the field.
+	HeadHash git.Hash
 }
 
 // FindChangeItem is a single result from searching for changes in the
@@ -707,4 +739,46 @@ type WithCommentEdit interface {
 	EditComment(
 		ctx context.Context, id ChangeCommentID, body string,
 	) error
+}
+
+// ChecksState represents the aggregate CI/checks
+// status for a change.
+type ChecksState int
+
+const (
+	// ChecksPending indicates checks are still running.
+	ChecksPending ChecksState = iota + 1
+
+	// ChecksPassed indicates all checks have passed.
+	ChecksPassed
+
+	// ChecksFailed indicates one or more checks failed.
+	ChecksFailed
+)
+
+func (s ChecksState) String() string {
+	switch s {
+	case ChecksPending:
+		return "pending"
+	case ChecksPassed:
+		return "passed"
+	case ChecksFailed:
+		return "failed"
+	default:
+		return fmt.Sprintf("ChecksState(%d)", int(s))
+	}
+}
+
+// GoString returns a Go-syntax representation.
+func (s ChecksState) GoString() string {
+	switch s {
+	case ChecksPending:
+		return "ChecksPending"
+	case ChecksPassed:
+		return "ChecksPassed"
+	case ChecksFailed:
+		return "ChecksFailed"
+	default:
+		return fmt.Sprintf("ChecksState(%d)", int(s))
+	}
 }

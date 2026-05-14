@@ -29,6 +29,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/integration"
+	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
@@ -468,6 +469,43 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
+			_ *silog.Logger,
+			_ ui.View,
+			store *state.Store,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+		) (*optionalForgeRepository, error) {
+			// Use the cached remote if one is already set.
+			// Don't call ensureRemote eagerly: that would
+			// run prompts before the command has a chance
+			// to decide whether it needs a forge at all
+			// (e.g. submit --no-publish).
+			remote, err := store.Remote()
+			if err != nil {
+				if errors.Is(err, state.ErrNotExist) {
+					// Defer remote resolution to the
+					// command itself; treat as "no
+					// supported forge available."
+					return &optionalForgeRepository{}, nil
+				}
+				return nil, fmt.Errorf("get remote: %w", err)
+			}
+			remoteRepo, err := openRemoteRepositorySilent(
+				ctx, secretStash, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				var unsupported *unsupportedForgeError
+				if errors.As(err, &unsupported) {
+					return &optionalForgeRepository{}, nil
+				}
+				return nil, err
+			}
+			return &optionalForgeRepository{
+				Repository: remoteRepo,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
 			worktree *git.Worktree,
 			store *state.Store,
@@ -614,6 +652,69 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Store:      store,
 				Service:    svc,
 			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			svc *spice.Service,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+			deleteHandler DeleteHandler,
+		) (MergeHandler, error) {
+			remote, err := ensureRemote(
+				ctx, repo, store, log, view,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				return nil, err
+			}
+			remoteRepo, err := openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			return &merge.Handler{
+				Log:              log,
+				View:             view,
+				Store:            store,
+				Service:          svc,
+				RemoteRepository: remoteRepo,
+				Delete:           deleteHandler,
+				Repository:       repo,
+				Remote:           remote.Upstream,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+		) (forge.Repository, error) {
+			remote, err := ensureRemote(ctx, repo, store, log, view)
+			if err != nil {
+				return nil, err
+			}
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				return nil, err
+			}
+			return openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
 		}),
 	)
 }

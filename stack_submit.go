@@ -28,12 +28,19 @@ func (cmd *stackSubmitCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	forgeRepo *optionalForgeRepository,
 	submitHandler SubmitHandler,
 	integrationHandler IntegrationHandler,
 ) error {
 	currentBranch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if err := cmd.checkDownstack(
+		ctx, svc, forgeRepo.Repository, currentBranch,
+	); err != nil {
+		return err
 	}
 
 	stack, err := svc.ListStack(ctx, currentBranch)

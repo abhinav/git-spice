@@ -43,30 +43,21 @@ Stack
   downstack (ds) edit (e)      Edit the order of branches below a branch
 
 Branch
-  branch (b) track (tr)            Track a branch
-  branch (b) untrack (untr)        Forget a tracked branch
-  branch (b) checkout (co)         Switch to a branch
-  branch (b) create (c)            Create a new branch
-  branch (b) delete (d,rm)         Delete branches
-  branch (b) fold (fo)             Merge a branch into its base
-  branch (b) split (sp)            Split a branch on commits
-  branch (b) squash (sq)           Squash a branch into one commit
-  branch (b) edit (e)              Edit the commits in a branch
-  branch (b) rename (rn,mv)        Rename a branch
-  branch (b) restack (r)           Restack a branch
-  branch (b) onto (on)             Move a branch onto another branch
-  branch (b) diff (di)             Show diff between a branch and its base
-  branch (b) submit (s)            Submit a branch
-  branch (b) comment (cmt) list (ls)
-                                   List comments on a change request
-  branch (b) comment (cmt) stage
-                                   Stage an inline comment for batch submission
-  branch (b) comment (cmt) add     Post an inline comment immediately
-  branch (b) comment (cmt) submit-staged (ss)
-                                   Submit all staged comments as a review
-  branch (b) comment (cmt) resolve
-                                   Resolve or unresolve a review thread
-  branch (b) comment (cmt) edit    Edit a comment
+  branch (b) track (tr)        Track a branch
+  branch (b) untrack (untr)    Forget a tracked branch
+  branch (b) checkout (co)     Switch to a branch
+  branch (b) create (c)        Create a new branch
+  branch (b) delete (d,rm)     Delete branches
+  branch (b) fold (fo)         Merge a branch into its base
+  branch (b) split (sp)        Split a branch on commits
+  branch (b) squash (sq)       Squash a branch into one commit
+  branch (b) edit (e)          Edit the commits in a branch
+  branch (b) rename (rn,mv)    Rename a branch
+  branch (b) restack (r)       Restack a branch
+  branch (b) onto (on)         Move a branch onto another branch
+  branch (b) diff (di)         Show diff between a branch and its base
+  branch (b) submit (s)        Submit a branch
+  branch (b) merge (m)         Merge a branch and its downstack
 
 Commit
   commit (c) create (c)    Create a new commit
@@ -75,29 +66,9 @@ Commit
   commit (c) fixup (f)     Fixup a commit below the current commit
   commit (c) pick (p)      Cherry-pick a commit
 
-Integration
-  integration (int) show (s)       Show the configured integration branch
-  integration (int) create (c)     Configure the integration branch
-  integration (int) delete (d,rm)
-                                   Remove the integration branch configuration
-  integration (int) checkout (co)
-                                   Switch to the integration branch
-  integration (int) rebuild (rb)
-                                   Rebuild the integration branch
-  integration (int) submit (sub)
-                                   Push the integration branch to the remote
-  integration (int) tip add (a)    Add a branch to the integration tip list
-  integration (int) tip remove (r,rm)
-                                   Remove a branch from the integration tip list
-  integration (int) tip list (l,ls)
-                                   List the configured integration tips
-
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
   rebase (rb) abort (a)       Abort an operation
-
-CI
-  ci merge-guard    Block merging a PR whose base is not trunk
 
 Navigation
   up (u)        Move up one branch

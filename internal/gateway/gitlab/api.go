@@ -592,7 +592,8 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
-	DiffRefs MergeRequestDiffRefs `json:"diff_refs"`
+	DiffRefs     MergeRequestDiffRefs `json:"diff_refs"`
+	HeadPipeline *Pipeline            `json:"head_pipeline,omitempty"`
 }
 
 // MergeRequestDiffRefs holds the SHAs needed
@@ -601,6 +602,14 @@ type MergeRequestDiffRefs struct {
 	BaseSha  string `json:"base_sha"`
 	HeadSha  string `json:"head_sha"`
 	StartSha string `json:"start_sha"`
+}
+
+// Pipeline is a GitLab CI pipeline status summary.
+//
+// GitLab pipelines API:
+// https://docs.gitlab.com/api/pipelines/
+type Pipeline struct {
+	Status string `json:"status"`
 }
 
 // NoteAuthor matches the nested author object in note responses.
@@ -756,7 +765,8 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 
 // AcceptMergeRequestOptions configures merge-request acceptance.
 type AcceptMergeRequestOptions struct {
-	ShouldRemoveSourceBranch *bool `json:"should_remove_source_branch,omitempty"`
+	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
+	SHA                      *string `json:"sha,omitempty"`
 }
 
 // CreateMergeRequestNoteOptions configures note creation.

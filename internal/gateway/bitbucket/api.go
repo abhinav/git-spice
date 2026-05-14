@@ -404,6 +404,60 @@ func (c *Client) CommentResolve(
 	return &response, resp, nil
 }
 
+// PullRequestMerge merges an open pull request.
+func (c *Client) PullRequestMerge(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+) (*PullRequest, *Response, error) {
+	var response PullRequest
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"/repositories/%s/%s/pullrequests/%d/merge",
+			workspace, repo, prID,
+		),
+		nil, nil, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// CommitStatus is a build status on a commit.
+type CommitStatus struct {
+	State string `json:"state"`
+}
+
+// CommitStatusList is the response for listing commit statuses.
+type CommitStatusList struct {
+	Values []CommitStatus `json:"values"`
+	Next   string         `json:"next,omitempty"`
+}
+
+// CommitStatusList lists build statuses for a commit.
+func (c *Client) CommitStatusList(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	commitHash string,
+) (*CommitStatusList, *Response, error) {
+	var response CommitStatusList
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"/repositories/%s/%s/commit/%s/statuses",
+			workspace, repo, commitHash,
+		),
+		nil, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
 
 func buildPullRequestListRequest(
 	workspace string,
