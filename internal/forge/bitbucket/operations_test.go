@@ -675,6 +675,165 @@ func TestStateToAPI(t *testing.T) {
 	}
 }
 
+func TestPostInlineComment(t *testing.T) {
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(
+			w http.ResponseWriter, r *http.Request,
+		) {
+			assert.Equal(t, http.MethodPost, r.Method)
+			assert.Contains(t, r.URL.Path,
+				"/pullrequests/1/comments",
+			)
+
+			var req bitbucket.CommentCreateRequest
+			require.NoError(t,
+				json.NewDecoder(r.Body).Decode(&req),
+			)
+			assert.Equal(t, "new comment", req.Content.Raw)
+			assert.Equal(t, "file.go", req.Inline.Path)
+			require.NotNil(t, req.Inline.To)
+			assert.Equal(t, 42, *req.Inline.To)
+
+			resp := bitbucket.Comment{
+				ID:      10,
+				Content: bitbucket.Content{Raw: req.Content.Raw},
+				Inline: &bitbucket.Inline{
+					Path: req.Inline.Path,
+					To:   req.Inline.To,
+				},
+				User: bitbucket.User{DisplayName: "alice"},
+			}
+			assert.NoError(t,
+				json.NewEncoder(w).Encode(resp),
+			)
+		}),
+	)
+	defer srv.Close()
+
+	repo := newTestRepository(srv.URL)
+	posted, err := repo.PostInlineComment(
+		t.Context(),
+		&PR{Number: 1},
+		forge.InlineCommentRequest{
+			Path: "file.go",
+			Line: 42,
+			Body: "new comment",
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, "new comment", posted.Body)
+	assert.Equal(t, "file.go", posted.Path)
+	assert.Equal(t, 42, posted.Line)
+}
+
+func TestPostInlineComment_reply(t *testing.T) {
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(
+			w http.ResponseWriter, r *http.Request,
+		) {
+			assert.Equal(t, http.MethodPost, r.Method)
+
+			// Decode as raw JSON to verify structure.
+			var raw map[string]json.RawMessage
+			require.NoError(t,
+				json.NewDecoder(r.Body).Decode(&raw),
+			)
+
+			// Must have parent.id, not inline.
+			assert.Contains(t, raw, "parent",
+				"reply must include parent field",
+			)
+			assert.NotContains(t, raw, "inline",
+				"reply must not include inline field",
+			)
+
+			var parent bitbucket.CommentRef
+			require.NoError(t,
+				json.Unmarshal(raw["parent"], &parent),
+			)
+			assert.Equal(t, int64(99), parent.ID)
+
+			resp := bitbucket.Comment{
+				ID:      20,
+				Content: bitbucket.Content{Raw: "reply body"},
+				User:    bitbucket.User{DisplayName: "bob"},
+			}
+			assert.NoError(t,
+				json.NewEncoder(w).Encode(resp),
+			)
+		}),
+	)
+	defer srv.Close()
+
+	repo := newTestRepository(srv.URL)
+	posted, err := repo.PostInlineComment(
+		t.Context(),
+		&PR{Number: 1},
+		forge.InlineCommentRequest{
+			Body:     "reply body",
+			ThreadID: "99:1", // commentID:prID
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, "reply body", posted.Body)
+	assert.Equal(t, "99:1", posted.ThreadID)
+}
+
+func TestSubmitReview_withReply(t *testing.T) {
+	var requests []map[string]json.RawMessage
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(
+			w http.ResponseWriter, r *http.Request,
+		) {
+			var raw map[string]json.RawMessage
+			require.NoError(t,
+				json.NewDecoder(r.Body).Decode(&raw),
+			)
+			requests = append(requests, raw)
+
+			resp := bitbucket.Comment{
+				ID:      int64(len(requests)),
+				Content: bitbucket.Content{Raw: "ok"},
+			}
+			assert.NoError(t,
+				json.NewEncoder(w).Encode(resp),
+			)
+		}),
+	)
+	defer srv.Close()
+
+	repo := newTestRepository(srv.URL)
+	err := repo.SubmitReview(
+		t.Context(),
+		&PR{Number: 1},
+		forge.ReviewRequest{
+			Comments: []forge.InlineCommentRequest{
+				{
+					Path: "a.go",
+					Line: 10,
+					Body: "new comment",
+				},
+				{
+					Body:     "thread reply",
+					ThreadID: "55:1",
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, requests, 2)
+
+	// First request: new inline comment.
+	assert.Contains(t, requests[0], "inline")
+	assert.NotContains(t, requests[0], "parent")
+
+	// Second request: reply to thread.
+	assert.Contains(t, requests[1], "parent")
+	assert.NotContains(t, requests[1], "inline")
+}
+
 func newTestRepository(baseURL string) *Repository {
 	token := &AuthenticationToken{AccessToken: "test"}
 	tokenSource, err := newGatewayTokenSource(token)
