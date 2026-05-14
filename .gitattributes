@@ -20,3 +20,27 @@ doc/ export-ignore
 # mise files that don't need to be seen in diffs by default.
 mise.lock linguist-generated
 /bin/mise lingust-generated
+
+# Auto-resolve merge conflicts for files that are derived from source
+# or test runs (CLI reference, help fixtures, mocks, recorded test
+# fixtures). On conflict, the `regenerate` driver re-runs the
+# appropriate generator against the merged source rather than picking
+# a side. Picking a side is dangerous here because either side may
+# carry structural changes (a new flag, a new test case, a new mock
+# method) that the random/stochastic diff hides.
+#
+# To activate, run `mise run setup` once after cloning to register the
+# `regenerate` merge driver and the .githooks path.
+
+# Deterministically-generated CLI documentation and help fixtures.
+doc/includes/cli-reference.md         merge=regenerate
+doc/includes/cli-shorthands.md        merge=regenerate
+testdata/help/*.txt                   merge=regenerate
+
+# Generated mock files.
+**/mocks_test.go                      merge=regenerate
+**/mock_*.go                          merge=regenerate
+**/mocks.go                           merge=regenerate
+
+# Recorded ShamHub HTTP/test fixtures with stochastic IDs.
+internal/forge/shamhub/testdata/**    merge=regenerate
