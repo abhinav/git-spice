@@ -278,7 +278,7 @@ only if there are multiple CRs in the stack.
 * `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -401,7 +401,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice upstack restack {#gs-upstack-restack}
 
@@ -556,7 +556,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -581,24 +581,6 @@ Branches that are upstack of the current branch will not be modified.
 
 * `--editor=STRING`: Editor to use for editing the downstack. Defaults to Git's default editor.
 * `--branch=NAME`: Branch to edit from. Defaults to current branch.
-
-### git-spice downstack restack {#gs-downstack-restack}
-
-```
-gs downstack (ds) restack (r) [flags]
-```
-
-Restack a branch and its downstack
-
-The current branch and all branches below it until trunk
-are rebased on top of their respective bases,
-ensuring a linear history.
-
-Use --branch to start at a different branch.
-
-**Flags**
-
-* `--branch=NAME`: Branch to restack the downstack of
 
 ## Branch
 
@@ -747,6 +729,7 @@ target (A) to the specified branch:
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
+* `-c`, `--fill`: Fill the commit message using the configured message generator.
 * `-m`, `--message=MSG`: Commit message
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
@@ -873,6 +856,7 @@ to specify a commit message without editing.
 
 **Flags**
 
+* `-c`, `--fill`: Fill the commit message using the configured message generator.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 * `-m`, `--message=MSG`: Use the given message as the commit message.
@@ -1055,7 +1039,7 @@ only if there are multiple CRs in the stack.
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ## Commit
 
@@ -1088,6 +1072,7 @@ when you want to apply changes to an older commit.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
+* `-c`, `--fill`: Fill the commit message using the configured message generator.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'git-spice commit fixup'.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
@@ -1128,6 +1113,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
+* `-c`, `--fill`: Fill the commit message using the configured message updater.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-edit`: Don't edit the commit message
@@ -1180,11 +1166,6 @@ This command requires at least Git 2.45.
 **Arguments**
 
 * `commit`: The commit to fixup. Must be reachable from the HEAD commit.
-
-**Flags**
-
-* `-e`, `--edit`: Open an editor to modify the commit message.
-* `--no-verify`: Bypass commit-msg hooks.
 
 ### git-spice commit pick {#gs-commit-pick}
 

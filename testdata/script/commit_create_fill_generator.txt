@@ -1,0 +1,28 @@
+# 'gs cc --fill' uses the configured message generator
+# to produce a commit message.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# configure the generator
+git config spice.messageGenerator 'echo generated commit message'
+
+# create a commit using --fill
+git add foo.txt
+gs cc --fill
+
+# verify the commit message
+git log -1 --format=%s
+stdout 'generated commit message'
+
+-- repo/foo.txt --
+Contents of foo.

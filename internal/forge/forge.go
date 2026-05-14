@@ -428,6 +428,14 @@ type EditChangeOptions struct {
 	// AddAssignees are new users to assign to the change.
 	// Existing assignees associated with the change will not be modified.
 	AddAssignees []string
+
+	// Subject specifies a new title for the change.
+	// If empty, the title is not changed.
+	Subject string
+
+	// Body specifies a new description for the change.
+	// If nil, the description is not changed.
+	Body *string
 }
 
 // FindChangeItem is a single result from searching for changes in the
@@ -444,6 +452,9 @@ type FindChangeItem struct {
 
 	// Subject is the title of the change.
 	Subject string // required
+
+	// Body is the description of the change.
+	Body string
 
 	// HeadHash is the hash of the commit at the top of the change.
 	HeadHash git.Hash // required

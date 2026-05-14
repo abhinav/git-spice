@@ -19,6 +19,8 @@ command, which is preferable when you want to apply changes to an older commit.
 Flags:
   -a, --all                  Stage all changes before committing.
       --allow-empty          Create a new commit even if it contains no changes.
+  -c, --fill                 Fill the commit message using the configured
+                             message generator.
       --fixup=COMMIT         Create a fixup commit. See also 'git-spice commit
                              fixup'.
   -m, --message=MSG          Use the given message as the commit message.

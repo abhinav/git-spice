@@ -1,0 +1,25 @@
+# 'gs branch squash --fill' without a message generator configured
+# should error telling the user to configure one.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo i
+
+# Create a branch with two commits
+git add feature1.txt
+gs branch create feature-1 -m 'First commit'
+git add feature2.txt
+git commit -m 'Second commit'
+
+# squash with --fill but NO message generator configured
+! gs branch squash --fill
+stderr 'spice.messageGenerator'
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
