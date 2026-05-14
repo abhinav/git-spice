@@ -6,7 +6,6 @@
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
 | gs be | [gs branch edit](/cli/reference.md#gs-branch-edit) |
 | gs bfo | [gs branch fold](/cli/reference.md#gs-branch-fold) |
-| gs bm | [gs branch merge](/cli/reference.md#gs-branch-merge) |
 | gs bon | [gs branch onto](/cli/reference.md#gs-branch-onto) |
 | gs br | [gs branch restack](/cli/reference.md#gs-branch-restack) |
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
@@ -21,10 +20,14 @@
 | gs cp | [gs commit pick](/cli/reference.md#gs-commit-pick) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
-| gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
+| gs intc | [gs integration create](/cli/reference.md#gs-integration-create) |
+| gs intco | [gs integration checkout](/cli/reference.md#gs-integration-checkout) |
+| gs intd | [gs integration delete](/cli/reference.md#gs-integration-delete) |
+| gs intrb | [gs integration rebuild](/cli/reference.md#gs-integration-rebuild) |
+| gs ints | [gs integration submit](/cli/reference.md#gs-integration-submit) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |
 | gs ls | [gs log short](/cli/reference.md#gs-log-short) |
 | gs rba | [gs rebase abort](/cli/reference.md#gs-rebase-abort) |
@@ -34,7 +37,6 @@
 | gs rs | [gs repo sync](/cli/reference.md#gs-repo-sync) |
 | gs sd | [gs stack delete](/cli/reference.md#gs-stack-delete) |
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |
-| gs sm | [gs stack merge](/cli/reference.md#gs-stack-merge) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
 | gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |
