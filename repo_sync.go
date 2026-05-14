@@ -33,6 +33,17 @@ type SyncHandler interface {
 	SyncTrunk(ctx context.Context, opts *sync.TrunkOptions) error
 }
 
-func (cmd *repoSyncCmd) Run(ctx context.Context, syncHandler SyncHandler) error {
-	return syncHandler.SyncTrunk(ctx, &cmd.TrunkOptions)
+func (cmd *repoSyncCmd) Run(
+	ctx context.Context,
+	syncHandler SyncHandler,
+	integrationHandler IntegrationHandler,
+) error {
+	if err := syncHandler.SyncTrunk(ctx, &cmd.TrunkOptions); err != nil {
+		return err
+	}
+
+	// Like the restack commands, rebuild the integration branch if the
+	// sync moved or deleted any tracked tip. MaybeRebuild is drift-gated,
+	// so this is a no-op when nothing changed or integration is unset.
+	return integrationHandler.MaybeRebuild(ctx)
 }

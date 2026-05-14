@@ -1,0 +1,59 @@
+# Verifies that restacking a branch which is a tracked integration tip
+# automatically triggers a rebuild of the integration branch.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+git add feat-b.txt
+gs bc feat-b -m 'Add feat-b'
+
+# Configure integration with feat-a and feat-b.
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+# Initial rebuild establishes baseline tip hashes.
+gs integration rebuild
+stderr 'Integration branch "preview" rebuilt with 2 tip\(s\).'
+
+# Show: no drift after rebuild.
+gs integration show
+cmp stdout $WORK/golden/show-after-rebuild.txt
+
+# Now amend feat-a so its hash moves.
+gs branch checkout feat-a
+git add feat-a-extra.txt
+gs commit create -m 'feat-a follow-up'
+
+# At this point feat-a has drifted but rebuild hasn't run yet.
+git checkout main
+
+# 'gs upstack restack' from main rebuilds nothing (feat-a is upstack),
+# but the post-restack hook detects drift and rebuilds the integration.
+gs upstack restack
+stderr 'Rebuilding integration branch "preview"'
+
+# After auto-rebuild, a second restack finds no drift and does not
+# rebuild again (no "Rebuilding integration branch" log this time).
+gs upstack restack
+! stderr 'Rebuilding integration branch'
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-a-extra.txt --
+follow-up
+-- repo/feat-b.txt --
+feature b
+-- golden/show-after-rebuild.txt --
+Integration branch: preview
+Tips:
+  - feat-a (b049cb7)
+  - feat-b (6fc243e)
