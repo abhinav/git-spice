@@ -16,9 +16,19 @@ type SubmoduleTracker interface {
 var _ SubmoduleTracker = (*submodule.Tracker)(nil)
 
 // SubmoduleApplier switches tracked submodules to the branches
-// recorded for a parent branch, transactionally.
+// recorded for a parent branch, transactionally, and coordinates
+// submodule-side commits at parent commit time.
 type SubmoduleApplier interface {
 	ApplyAssociations(ctx context.Context, parentBranch string) error
+	PreCommitSubmodules(
+		ctx context.Context,
+		parentBranch string,
+		mode submodule.CommitMode,
+		msg submodule.CommitMessageSource,
+	) (staged []string, err error)
+	PostAmendInteractiveSubmodules(
+		ctx context.Context, parentBranch string,
+	) (staged []string, err error)
 }
 
 var _ SubmoduleApplier = (*submodule.Applier)(nil)
