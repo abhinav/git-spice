@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/iterutil"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -85,6 +86,9 @@ type Handler struct {
 	Store      Store            // required
 	Service    Service          // required
 	Browser    browser.Launcher // required
+	Config     *spice.Config    // optional
+	RepoRoot   string           // optional; repo root dir
+	Args       []string         // optional; invoking process args
 
 	// TODO: these should not be a func reference
 	// this whole memoize thing is a bit of a hack
@@ -1049,6 +1053,42 @@ func (h *Handler) submitBranch(
 			}
 		}
 
+		// If --fill and a message generator is configured,
+		// run it to update the title and body.
+		var (
+			updatedSubject string
+			updatedBody    *string
+		)
+		if opts.Fill && h.Config != nil {
+			if script := h.Config.MessageGenerator(); script != "" {
+				env := []string{
+					"GS_MESSAGE_KIND=branch",
+					"GS_MESSAGE_UPDATE=true",
+					"GS_BRANCH=" + branchToSubmit,
+					"GS_BASE=" + branch.Base,
+					"GS_TITLE=" + pull.Subject,
+					"GS_BODY=" + pull.Body,
+				}
+				result, err := (&msggen.Runner{
+					Log:  log,
+					Args: h.Args,
+				}).Run(
+					ctx, script, h.RepoRoot, env,
+				)
+				if err != nil {
+					log.Warn(
+						"Message generator failed",
+						"error", err,
+					)
+				} else {
+					updatedSubject = result.Title
+					updatedBody = &result.Body
+					updates = append(updates,
+						"update title/body")
+				}
+			}
+		}
+
 		if len(updates) == 0 {
 			log.Infof("CR %v is up-to-date: %s", pull.ID, pull.URL)
 			return status, nil
@@ -1090,6 +1130,8 @@ func (h *Handler) submitBranch(
 			editOpts := forge.EditChangeOptions{
 				Base:         upstreamBase,
 				Draft:        opts.Draft,
+				Subject:      updatedSubject,
+				Body:         updatedBody,
 				AddLabels:    opts.Labels,
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
@@ -1235,6 +1277,36 @@ func (h *Handler) prepareBranch(
 			if msg.Body != "" {
 				defaultBody.WriteString("\n\n")
 				defaultBody.WriteString(msg.Body)
+			}
+		}
+	}
+
+	// If --fill and a message generator is configured,
+	// run it to produce the title and body.
+	if opts.Fill && opts.Title == "" && opts.Body == "" &&
+		h.Config != nil {
+		if script := h.Config.MessageGenerator(); script != "" {
+			env := []string{
+				"GS_MESSAGE_KIND=branch",
+				"GS_MESSAGE_UPDATE=false",
+				"GS_BRANCH=" + branchToSubmit,
+				"GS_BASE=" + baseBranch,
+			}
+			result, err := (&msggen.Runner{
+				Log:  h.Log,
+				Args: h.Args,
+			}).Run(
+				ctx, script, h.RepoRoot, env,
+			)
+			if err != nil {
+				h.Log.Warn(
+					"Message generator failed,"+
+						" falling back to default",
+					"error", err,
+				)
+			} else {
+				opts.Title = result.Title
+				opts.Body = result.Body
 			}
 		}
 	}

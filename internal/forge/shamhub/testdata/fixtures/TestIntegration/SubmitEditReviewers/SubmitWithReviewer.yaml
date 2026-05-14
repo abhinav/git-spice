@@ -7,54 +7,54 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:58759
-        body: '{"subject":"Testing E0vn4LsV","body":"Test PR with reviewer","base":"main","head":"E0vn4LsV","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes
+        host: 127.0.0.1:57035
+        body: '{"subject":"Testing jPM09bmi","body":"Test PR with reviewer","base":"main","head":"jPM09bmi","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:57035/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
+        content_length: 80
         body: |
             {
-              "number": 14,
-              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/14"
+              "number": 5,
+              "url": "http://127.0.0.1:57036/abhinav/test-repo/change/5"
             }
         headers:
             Content-Length:
-                - "82"
+                - "80"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 23.823333ms
+        duration: 42.211167ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:58759
+        host: 127.0.0.1:57035
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes/by-branch/E0vn4LsV?limit=10&state=all
+        url: http://127.0.0.1:57035/abhinav/test-repo/changes/by-branch/jPM09bmi?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 637
+        content_length: 635
         body: |
             [
               {
-                "number": 14,
-                "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/14",
+                "number": 5,
+                "html_url": "http://127.0.0.1:57036/abhinav/test-repo/change/5",
                 "state": "open",
-                "title": "Testing E0vn4LsV",
+                "title": "Testing jPM09bmi",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "ab081f41b2e6a172f2b938d18331f8bb4a50f76d"
+                  "sha": "df106cd50b11f5b0d7948f26900d32667d644df4"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "E0vn4LsV",
-                  "sha": "fea0709b1c947152b9fbf9ed0cb3d22a0e8679c4"
+                  "ref": "jPM09bmi",
+                  "sha": "ff895ea6c9653846b7725ea8cf32839f6c6cb62b"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -80,9 +80,9 @@ interactions:
             ]
         headers:
             Content-Length:
-                - "637"
+                - "635"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 18.551333ms
+        duration: 41.007958ms

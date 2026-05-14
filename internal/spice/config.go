@@ -220,6 +220,30 @@ func (c *Config) Shorthands() []string {
 	return slices.Sorted(maps.Keys(c.shorthands))
 }
 
+// lastValue returns the last value for the given config key,
+// or an empty string if the key is not set.
+func (c *Config) lastValue(key string) string {
+	values := c.items[git.ConfigKey(
+		_spiceSection+"."+key,
+	).Canonical()]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[len(values)-1]
+}
+
+// MessageGenerator returns the configured script
+// for generating or updating messages,
+// or an empty string if not set.
+//
+// The value is read from spice.messageGenerator.
+// The script receives GS_MESSAGE_KIND and GS_MESSAGE_UPDATE
+// environment variables to determine the context.
+func (c *Config) MessageGenerator() string {
+	return c.lastValue("messageGenerator")
+}
+
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }

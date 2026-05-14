@@ -1,0 +1,72 @@
+# 'gs branch submit --fill' uses the configured branch message
+# updater to update the PR title and body on re-submit.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create and submit a branch
+git add feature.txt
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# configure the message generator
+git config spice.messageGenerator 'printf "Updated Title\n\nUpdated body text"'
+
+# make a change and re-submit
+cp $WORK/extra/feature-update.txt feature.txt
+git add feature.txt
+git commit -m 'update feature'
+
+gs branch submit --fill
+stderr 'Updated #'
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature.txt --
+Contents of feature
+
+-- extra/feature-update.txt --
+New contents of feature
+
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "Updated Title",
+    "body": "Updated body text",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "f4ab6ac87db56e8f0d7f2e6199450716884ee7b8"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  }
+]

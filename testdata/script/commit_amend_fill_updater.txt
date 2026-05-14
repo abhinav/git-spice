@@ -1,0 +1,31 @@
+# 'gs ca --fill' uses the configured message updater
+# to update the commit message.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# create initial commit
+git add foo.txt
+gs cc -m 'original message'
+
+# configure the updater to echo a fixed updated message
+git config spice.messageGenerator 'echo updated message'
+
+# amend using --fill
+gs ca --fill
+
+# verify the commit message was updated
+git log -1 --format=%s
+stdout 'updated message'
+
+-- repo/foo.txt --
+Contents of foo.
