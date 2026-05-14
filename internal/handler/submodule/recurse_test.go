@@ -30,7 +30,7 @@ func TestOpenSubmoduleContext_uninitialized(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = submodule.OpenSubmoduleContext(
+	_, err = submodule.OpenContext(
 		t.Context(), parentWT, "libs/core", nil, log,
 	)
 	assert.ErrorIs(t, err, submodule.ErrSubmoduleNotInitialized)
@@ -71,7 +71,7 @@ func TestForEachInitializedSubmodule_skipsUninitialized(t *testing.T) {
 	// fn was called zero times because neither is correctly initialized.
 	err = submodule.ForEachInitializedSubmodule(
 		t.Context(), parentWT, nil, nil, log,
-		func(c *submodule.SubmoduleContext) error {
+		func(c *submodule.Context) error {
 			visited = append(visited, c.Path)
 			return nil
 		},
@@ -109,7 +109,7 @@ func TestForEachInitializedSubmodule_excluded(t *testing.T) {
 	var visited []string
 	err = submodule.ForEachInitializedSubmodule(
 		t.Context(), parentWT, []string{"libs/a"}, nil, log,
-		func(c *submodule.SubmoduleContext) error {
+		func(c *submodule.Context) error {
 			visited = append(visited, c.Path)
 			return errors.New("should not be called")
 		},

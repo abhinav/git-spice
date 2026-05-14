@@ -108,6 +108,7 @@ func (cmd *branchOntoCmd) Run(
 	wt *git.Worktree,
 	svc *spice.Service,
 	restackHandler RestackHandler,
+	submoduleApplier SubmoduleApplier,
 ) error {
 	branch, err := svc.LookupBranch(ctx, cmd.Branch)
 	if err != nil {
@@ -157,5 +158,32 @@ func (cmd *branchOntoCmd) Run(
 	}
 
 	log.Infof("%s: moved onto %s", cmd.Branch, cmd.Onto)
-	return wt.CheckoutBranch(ctx, cmd.Branch)
+
+	// Snapshot parent HEAD before the checkout so a submodule apply
+	// failure rolls back cleanly. branch onto bypasses checkout.Handler
+	// (its VerifyRestacked path is not appropriate post-BranchOnto),
+	// so we apply submodule associations directly here.
+	parentSnap, snapErr := wt.SnapshotHead(ctx)
+	if snapErr != nil {
+		log.Warn("Could not snapshot HEAD before checkout; "+
+			"submodule rollback disabled",
+			"error", snapErr)
+	}
+
+	if err := wt.CheckoutBranch(ctx, cmd.Branch); err != nil {
+		return err
+	}
+
+	if err := submoduleApplier.ApplyAssociations(ctx, cmd.Branch); err != nil {
+		if parentSnap != nil {
+			if rerr := wt.RestoreHead(ctx, parentSnap); rerr != nil {
+				log.Warn("Parent rollback failed after submodule conflict",
+					"target", parentSnap.Hash,
+					"error", rerr)
+			}
+		}
+		return fmt.Errorf("apply submodules: %w", err)
+	}
+
+	return nil
 }

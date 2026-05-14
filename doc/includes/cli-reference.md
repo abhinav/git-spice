@@ -785,6 +785,7 @@ Use the --branch flag to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Name of the branch
+* `--module-branch=PATH=BRANCH`: Per-submodule branch override for fold conflicts (repeatable)
 
 ### git-spice branch split {#gs-branch-split}
 
