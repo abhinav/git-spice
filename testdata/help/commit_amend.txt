@@ -19,14 +19,17 @@ confirmation when amending on trunk. The --no-prompt flag can be used to skip
 this prompt in scripts.
 
 Flags:
-  -a, --all                  Stage all changes before committing.
-      --allow-empty          Create a commit even if it contains no changes.
-  -m, --message=MSG          Use the given message as the commit message.
-  -F, --message-file=FILE    Read the commit message from the given file.
-      --no-edit              Don't edit the commit message
-      --no-verify            Bypass pre-commit and commit-msg hooks.
-      --signoff              Add Signed-off-by trailer to the commit message (🔧
-                             spice.commit.signoff)
+  -a, --all                        Stage all changes before committing.
+      --allow-empty                Create a commit even if it contains no
+                                   changes.
+  -m, --message=MSG                Use the given message as the commit message.
+  -F, --message-file=FILE          Read the commit message from the given file.
+      --no-edit                    Don't edit the commit message
+      --no-verify                  Bypass pre-commit and commit-msg hooks.
+      --signoff                    Add Signed-off-by trailer to the commit
+                                   message (🔧 spice.commit.signoff)
+      --module-message=PATH=MSG    Per-submodule commit message override
+                                   (repeatable, non-interactive amend only)
 
 Global Flags:
   -h, --help           Show help for the command

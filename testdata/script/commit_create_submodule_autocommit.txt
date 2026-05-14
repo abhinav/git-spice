@@ -1,0 +1,53 @@
+# 'gs commit create' auto-commits staged content in a tracked
+# submodule that's on the recorded branch (state 1), and updates
+# the gitlink in the parent commit in one go.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo with a 'feat' branch.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+
+# Set up the parent repo with a tracked branch on the submodule.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Move sub onto sub-feat and create parent branch.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add parent-file.txt
+gs branch create feat-x -m 'Add parent file'
+
+# Stage content inside the submodule.
+cp $WORK/extra/new-feat.txt libs/core/new-feat.txt
+cd libs/core
+git add new-feat.txt
+cd $WORK/repo
+
+# Commit on the parent. The submodule should auto-commit and the
+# parent commit should include the gitlink update.
+gs commit create -m 'Update with submodule changes'
+
+# Verify the submodule has a new commit on sub-feat.
+cd libs/core
+git log --oneline sub-feat
+stdout 'Update with submodule changes'
+git rev-parse --abbrev-ref HEAD
+stdout 'sub-feat'
+
+-- sub-repo/feat.txt --
+sub feature
+-- repo/parent-file.txt --
+parent content
+-- extra/new-feat.txt --
+new sub content
