@@ -262,6 +262,42 @@ func (g *BranchGraph) Bottom(branch string) string {
 	return ""
 }
 
+// StacksInWorktree returns all complete stacks
+// that have at least one branch checked out
+// in the given worktree.
+//
+// Each yielded value is the full stack of branches,
+// ordered from bottom to top.
+func (g *BranchGraph) StacksInWorktree(wt string) iter.Seq[[]string] {
+	return func(yield func([]string) bool) {
+		// Find all branches checked out in the given worktree.
+		seen := make(map[string]bool, len(g.branches))
+		for idx, branch := range g.branches {
+			if g.worktrees[idx] != wt {
+				continue
+			}
+
+			// Find the bottom of the stack.
+			bottom := g.Bottom(branch.Name)
+			if bottom == "" {
+				// Branch is trunk. Skip.
+				continue
+			}
+
+			if seen[bottom] {
+				// Already yielded this stack.
+				continue
+			}
+			seen[bottom] = true
+
+			stack := slices.Collect(g.Stack(bottom))
+			if !yield(stack) {
+				return
+			}
+		}
+	}
+}
+
 // Stack returns the full stack of branches that the given branch is in.
 //
 // This includes all downstack branches and all upstack branches,

@@ -12,7 +12,9 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type repoRestackCmd struct{}
+type repoRestackCmd struct {
+	Worktree bool `short:"w" long:"worktree" help:"Only restack branches in the current worktree."`
+}
 
 func (*repoRestackCmd) Help() string {
 	return text.Dedent(`
@@ -21,7 +23,7 @@ func (*repoRestackCmd) Help() string {
 	`)
 }
 
-func (*repoRestackCmd) Run(
+func (cmd *repoRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
@@ -45,11 +47,17 @@ func (*repoRestackCmd) Run(
 	}
 	defer cleanup(&retErr, nil)
 
-	count, err := handler.Restack(ctx, &restack.Request{
+	req := restack.Request{
 		Branch:          store.Trunk(),
 		Scope:           restack.ScopeUpstackExclusive,
 		ContinueCommand: []string{"repo", "restack"},
-	})
+		SkipCheckout:    true, // caller handles checkout
+	}
+	if cmd.Worktree {
+		req.WorktreeFilter = wt.RootDir()
+	}
+
+	count, err := handler.Restack(ctx, &req)
 	if err != nil {
 		return err
 	}

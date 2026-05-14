@@ -1,0 +1,33 @@
+# 'worktree create' creates a new worktree at the given path.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a worktree without a branch (detached HEAD).
+gs worktree create $WORK/wt1
+stderr 'Created worktree'
+
+# Verify the worktree is in detached HEAD state.
+cd $WORK/wt1
+git rev-parse --abbrev-ref HEAD
+stdout 'HEAD'
+
+# Go back to main repo and create a worktree with a branch.
+cd $WORK/repo
+gs worktree create $WORK/wt2 -b feat1
+stderr 'Created worktree'
+stderr 'Created and checked out branch feat1'
+
+# Verify the branch in wt2.
+cd $WORK/wt2
+git branch --show-current
+stdout 'feat1'
+
+-- repo/dummy.txt --
+dummy

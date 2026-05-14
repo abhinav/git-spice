@@ -306,6 +306,7 @@ type mainCmd struct {
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
 	Integration integrationCmd `cmd:"" aliases:"int" group:"Integration"`
+	Worktree    worktreeCmd    `cmd:"" aliases:"wt" group:"Worktree"`
 
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
