@@ -9,7 +9,9 @@ branch downstack.
 Use the --branch flag to target a different branch.
 
 Flags:
-  --branch=NAME    Name of the branch
+  --branch=NAME                  Name of the branch
+  --module-branch=PATH=BRANCH    Per-submodule branch override for fold
+                                 conflicts (repeatable)
 
 Global Flags:
   -h, --help           Show help for the command
