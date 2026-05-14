@@ -243,6 +243,15 @@ func (c *Config) MessageGenerator() string {
 	return c.lastValue("messageGenerator")
 }
 
+// SubmoduleExclusions returns the list of submodule paths
+// excluded from recursive operations via
+// spice.submodule.exclude in git-config.
+func (c *Config) SubmoduleExclusions() []string {
+	key := git.ConfigKey(
+		_spiceSection + ".submodule.exclude",
+	).Canonical()
+	return c.items[key]
+}
 
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.

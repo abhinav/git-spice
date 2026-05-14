@@ -97,6 +97,27 @@ func TestBranchStateUnmarshal(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "WithSubmodules",
+			give: `{
+				"base": {"name": "main", "hash": "abc123"},
+				"submodules": {
+					"libs/core": {"branch": "feature-x"},
+					"libs/util": {"branch": "fix-y"}
+				}
+			}`,
+			want: &branchState{
+				Base: branchStateBase{
+					Name: "main",
+					Hash: "abc123",
+				},
+				Submodules: map[string]*submoduleBranch{
+					"libs/core": {Branch: "feature-x"},
+					"libs/util": {Branch: "fix-y"},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

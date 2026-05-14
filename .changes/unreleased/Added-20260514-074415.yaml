@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: ''gs stack restack --recurse-submodules'' restacks tracked submodules after the parent. Pair with ''spice.submodule.recurse=true'' (auto-set by ''gs repo init --recurse-submodules'') so the flag is not needed on every invocation.'
+time: 2026-05-14T07:44:15.152979-04:00

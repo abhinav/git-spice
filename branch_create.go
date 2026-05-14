@@ -9,6 +9,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -35,8 +36,9 @@ type branchCreateCmd struct {
 	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Commit message"`
 	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
-	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
-	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	NoVerify      bool              `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff       bool              `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	ModuleMessage map[string]string `name:"module-message" placeholder:"PATH=MSG" help:"Per-submodule commit message override (repeatable)"`
 
 	Commit bool `negatable:"" default:"true" config:"branchCreate.commit" help:"Commit staged changes to the new branch, or create an empty commit"`
 }
@@ -108,6 +110,8 @@ func (cmd *branchCreateCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	submoduleTracker SubmoduleTracker,
+	submoduleApplier SubmoduleApplier,
 	restackHandler RestackHandler,
 ) (err error) {
 	// If a message is specified, automatically enable commits
@@ -218,6 +222,20 @@ func (cmd *branchCreateCmd) Run(
 	)
 	branchAt := baseHash
 	if cmd.Commit {
+		// Run submodule-side commit/state checks against the parent
+		// branch (cmd.Target) before detaching HEAD — state 3 errors
+		// should fail loud before we touch the worktree.
+		if _, err := submoduleApplier.PreCommitSubmodules(ctx, cmd.Target, submodule.CommitModeCreate, submodule.CommitMessageSource{
+			Message:       cmd.Message,
+			MessageFile:   cmd.MessageFile,
+			ModuleMessage: cmd.ModuleMessage,
+			Signoff:       cmd.Signoff,
+			NoVerify:      cmd.NoVerify,
+			All:           cmd.All,
+		}); err != nil {
+			return fmt.Errorf("submodule pre-commit: %w", err)
+		}
+
 		commitHash, restore, err := cmd.commit(ctx, cfg, wt, baseName, log)
 		if err != nil {
 			return err
@@ -330,6 +348,21 @@ func (cmd *branchCreateCmd) Run(
 
 	if err := branchTx.Commit(ctx, msg); err != nil {
 		return fmt.Errorf("update branch state: %w", err)
+	}
+
+	// Record submodule associations if a commit was made.
+	// Inherit from the parent branch as a baseline so a fresh child
+	// is consistent with its parent's submodule pinning unless the
+	// user has explicitly moved a submodule.
+	if cmd.Commit {
+		if err := submoduleTracker.RecordWithInheritance(
+			ctx, branchName, cmd.Target,
+		); err != nil {
+			log.Warn(
+				"Could not record submodule associations",
+				"error", err,
+			)
+		}
 	}
 
 	if cmd.Below || cmd.Insert {

@@ -1,0 +1,32 @@
+# 'gs repo init --recurse-submodules' initializes git-spice in
+# each submodule and sets spice.submodule.recurse=true.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Sub repo (no gs init).
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Parent repo with submodule added but no init yet.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Initialize parent with recurse-submodules.
+gs repo init --trunk=main --recurse-submodules
+
+# Both repos should be initialized.
+git -C libs/core rev-parse --verify refs/spice/data
+git rev-parse --verify refs/spice/data
+
+# The local config should be set.
+git config --local spice.submodule.recurse
+stdout 'true'
+
+-- sub-repo/feat.txt --
+sub feature
+-- repo/.keep --

@@ -41,6 +41,9 @@ type branchCmd struct {
 
 	// Comment management
 	Comment branchCommentCmd `cmd:"" aliases:"cmt" help:"Manage change request comments"`
+
+	// Submodule management
+	Submodule branchSubmoduleCmd `cmd:"" aliases:"sm" help:"Manage submodule branch associations"`
 }
 
 // BranchPromptConfig defines configuration for the branch tree prompt
