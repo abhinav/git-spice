@@ -1,0 +1,43 @@
+# Edit a staged comment before submission.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# stage a comment
+gs branch comment stage main.go:3 -m 'Original comment.'
+stderr 'Staged comment sc-1'
+
+# edit the staged comment with -m
+gs branch comment edit sc-1 -m 'Updated comment.'
+stderr 'Updated staged comment sc-1'
+
+# verify the edit took effect by listing staged
+gs branch comment list --staged
+stderr 'Updated comment'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+}
