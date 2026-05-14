@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# merge-regenerate — git merge driver that regenerates conflicted
+# generated files instead of picking a side.
+#
+# Args (provided by git via merge.<name>.driver):
+#   $1 %O  ancestor version (base)
+#   $2 %A  current version (ours) — also where we must write the result
+#   $3 %B  incoming version (theirs)
+#   $4 %P  the path being merged
+#
+# Why regenerate rather than take-incoming: many of these files are
+# only PARTIALLY stochastic. Two branches may have added or changed
+# real structure (a new flag, a new test fixture, a new mock method)
+# in addition to drifting on random IDs. Picking a side silently
+# drops the other side's structural change. Re-running the generator
+# from the merged source produces the correct merged output.
+#
+# Generators that emit many files in one run (TestHelp produces every
+# testdata/help/*.txt; TestIntegration in shamhub produces every
+# fixture under that tree) are deduped per merge via a tmp marker
+# keyed by the parent PID, so they run at most once even when N
+# files in their output set all conflict.
+set -euo pipefail
+
+ancestor=$1
+current=$2
+incoming=$3
+path=$4
+
+root="$(git rev-parse --show-toplevel)"
+markers="${TMPDIR:-/tmp}/spice-regen-$PPID"
+mkdir -p "$markers"
+
+# In a rebase, each commit being applied has its own pre-regenerated
+# version of these files. Re-running the generator after one pick
+# leaves the worktree in a state that doesn't match what the next
+# pick expects, breaking the rebase. Fall back to take-incoming
+# (which is what the rebase would naturally want) and let the user
+# regenerate explicitly once the rebase is finished.
+git_dir="$(git rev-parse --git-dir)"
+if [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; then
+    cp -f "$incoming" "$current"
+    exit 0
+fi
+
+# regen runs $cmd at most once per merge, then copies the resulting
+# file from the worktree into %A so git accepts the resolution.
+regen() {
+    local key=$1
+    shift
+    local marker="$markers/$key"
+    if [ ! -f "$marker" ]; then
+        echo "merge-regenerate: $* (for $path)" >&2
+        ( cd "$root" && "$@" ) >&2
+        touch "$marker"
+    fi
+    cp -f "$root/$path" "$current"
+}
+
+case "$path" in
+    internal/forge/shamhub/testdata/*)
+        regen shamhub go test -run TestIntegration ./internal/forge/shamhub/ -update
+        ;;
+    testdata/help/*.txt)
+        regen help go test -run TestHelp . -update
+        ;;
+    doc/includes/cli-reference.md | doc/includes/cli-shorthands.md)
+        regen mise-generate mise run generate
+        ;;
+    *mocks_test.go | *mock_*.go | *mocks.go)
+        regen mise-generate mise run generate
+        ;;
+    *)
+        echo "merge-regenerate: no rule for $path; taking incoming" >&2
+        cp -f "$incoming" "$current"
+        ;;
+esac

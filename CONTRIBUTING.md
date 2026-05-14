@@ -29,6 +29,12 @@ If you don't have mise set up, you may:
 
 See available tasks with `mise tasks` in the project directory.
 
+Run `mise run setup` once after cloning to register the local
+merge driver and post-merge hook used to auto-resolve and refresh
+generated-file conflicts. This is optional but strongly recommended
+when working with integration branches (see
+[Integration branches](doc/src/guide/integration.md)).
+
 Tasks you'll need to run regularly are:
 
 ```
