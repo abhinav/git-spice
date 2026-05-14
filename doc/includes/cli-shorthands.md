@@ -1,6 +1,8 @@
 | **Shorthand** | **Long form** |
 |  --- | --- |
 | gs bc | [gs branch create](/cli/reference.md#gs-branch-create) |
+| gs bcmtls | [gs branch comment list](/cli/reference.md#gs-branch-comment-list) |
+| gs bcmtss | [gs branch comment submit-staged](/cli/reference.md#gs-branch-comment-submit-staged) |
 | gs bco | [gs branch checkout](/cli/reference.md#gs-branch-checkout) |
 | gs bd | [gs branch delete](/cli/reference.md#gs-branch-delete) |
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
@@ -20,7 +22,6 @@
 | gs cp | [gs commit pick](/cli/reference.md#gs-commit-pick) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
-| gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
