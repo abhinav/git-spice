@@ -80,3 +80,49 @@ func (w *Worktree) CheckoutBranch(ctx context.Context, branch string) error {
 	}
 	return nil
 }
+
+// CheckoutNewBranchRequest is a request to create and switch to a new
+// branch in one operation.
+type CheckoutNewBranchRequest struct {
+	// Name is the name of the branch to create.
+	Name string // required
+
+	// StartPoint is the commit-ish that the new branch should point at.
+	// If empty, the current HEAD is used.
+	StartPoint string
+
+	// Force resets the branch if it already exists.
+	// Without Force, the operation fails if the branch already exists.
+	Force bool
+}
+
+// CheckoutNewBranch creates a new branch and switches to it.
+// With Force=true, an existing branch with the same name is reset
+// to StartPoint.
+func (w *Worktree) CheckoutNewBranch(ctx context.Context, req CheckoutNewBranchRequest) error {
+	if req.Name == "" {
+		return errors.New("checkout new branch: name is required")
+	}
+
+	w.log.Debug("Creating and checking out new branch",
+		"name", req.Name,
+		"start", req.StartPoint,
+		"force", req.Force,
+	)
+
+	flag := "-b"
+	if req.Force {
+		flag = "-B"
+	}
+	args := []string{flag, req.Name}
+	if req.StartPoint != "" {
+		args = append(args, req.StartPoint)
+	}
+
+	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
+		return w.gitCmd(ctx, "checkout", args...)
+	}); err != nil {
+		return fmt.Errorf("git checkout: %w", err)
+	}
+	return nil
+}
