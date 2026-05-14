@@ -1,0 +1,29 @@
+Usage: gs branch (b) comment (cmt) stage [<file-and-line>] [flags]
+
+Stage an inline comment for batch submission
+
+Stages an inline comment for later batch submission. Provide the file and line
+number as file.go:42.
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread instead of starting a new one.
+
+Staged comments are submitted together with 'gs branch comment submit-staged'.
+
+Arguments:
+  [<file-and-line>]    File and line in the form file.go:42.
+
+Flags:
+  -m, --message=MSG          Comment body. Opens editor if not provided.
+      --respond=THREAD_ID    Thread ID to reply to instead of starting a new
+                             thread.
+  -b, --branch=BRANCH        Branch to stage comment for. Defaults to current
+                             branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

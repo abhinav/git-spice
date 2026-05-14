@@ -1,0 +1,29 @@
+Usage: gs branch (b) comment (cmt) edit <id> [flags]
+
+Edit a comment
+
+Edits the body of a comment.
+
+For staged comments (sc-N prefix), the comment is updated in the local staging
+area.
+
+For forge comments, the comment is updated on the remote forge.
+
+If no message is given with -m, an editor is opened with the current comment
+body pre-filled.
+
+Arguments:
+  <id>    Comment ID to edit. Use 'sc-N' for staged comments or a forge comment
+          ID.
+
+Flags:
+  -m, --message=MSG      New comment body. Opens editor if not provided.
+  -b, --branch=BRANCH    Branch whose comments to edit. Defaults to current
+                         branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

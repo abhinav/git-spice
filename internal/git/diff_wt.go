@@ -19,3 +19,18 @@ func (w *Worktree) DiffBranch(ctx context.Context, base, head string) error {
 	}
 	return nil
 }
+
+// DiffBranchBytes returns the unified diff output
+// between base and head using triple-dot syntax.
+func (w *Worktree) DiffBranchBytes(
+	ctx context.Context,
+	base, head string,
+) ([]byte, error) {
+	out, err := w.gitCmd(
+		ctx, "diff", base+"..."+head,
+	).Output()
+	if err != nil {
+		return nil, fmt.Errorf("diff: %w", err)
+	}
+	return out, nil
+}
