@@ -33,6 +33,10 @@ type Store interface {
 
 	// BeginBranchTx begins a transaction for modifying branch state.
 	BeginBranchTx() *state.BranchTx
+
+	// Integration returns the configured integration branch, or
+	// [state.ErrNotExist] if none is configured.
+	Integration(ctx context.Context) (*state.IntegrationInfo, error)
 }
 
 var _ Store = (*state.Store)(nil)
