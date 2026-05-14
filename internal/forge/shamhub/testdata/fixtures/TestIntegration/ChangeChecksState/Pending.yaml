@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 88
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53569
         body: '{"subject":"Checks MGWUNTrV","body":"Checks state test","base":"main","head":"MGWUNTrV"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -19,7 +19,7 @@ interactions:
         body: |
             {
               "number": 3,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/3"
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/3"
             }
         headers:
             Content-Length:
@@ -35,9 +35,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 19
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53569
         body: '{"state":"pending"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/3/checks
+        url: http://127.0.0.1:53569/abhinav/test-repo/change/3/checks
         method: POST
       response:
         proto: HTTP/1.1
@@ -60,8 +60,8 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/3/checks
+        host: 127.0.0.1:53569
+        url: http://127.0.0.1:53569/abhinav/test-repo/change/3/checks
         method: GET
       response:
         proto: HTTP/1.1

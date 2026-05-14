@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ProjectGet fetches a single project by numeric ID or `group/project` path.
@@ -326,6 +327,116 @@ func (c *Client) MergeRequestDiscussionList(
 	return response, resp, nil
 }
 
+// MergeRequestDiscussionCreate creates a new discussion (review thread)
+// on a merge request.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#create-new-merge-request-thread
+func (c *Client) MergeRequestDiscussionCreate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	opt *CreateMergeRequestDiscussionOptions,
+) (*Discussion, *Response, error) {
+	var response Discussion
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions",
+			projectID, mergeRequest,
+		),
+		nil, opt, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionResolve resolves or unresolves a discussion thread.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#resolve-a-merge-request-thread
+func (c *Client) MergeRequestDiscussionResolve(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	opt *ResolveMergeRequestDiscussionOptions,
+) (*Discussion, *Response, error) {
+	var response Discussion
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s",
+			projectID, mergeRequest,
+			url.PathEscape(discussionID),
+		),
+		nil, opt, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionNoteCreate adds a note to an existing discussion
+// thread (i.e. reply).
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#add-note-to-existing-merge-request-thread
+func (c *Client) MergeRequestDiscussionNoteCreate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	opt *AddMergeRequestDiscussionNoteOptions,
+) (*DiscussionNote, *Response, error) {
+	var response DiscussionNote
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s/notes",
+			projectID, mergeRequest,
+			url.PathEscape(discussionID),
+		),
+		nil, opt, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// MergeRequestDiscussionNoteUpdate edits the body of an existing
+// discussion note.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/discussions/#modify-an-existing-merge-request-thread-note
+func (c *Client) MergeRequestDiscussionNoteUpdate(
+	ctx context.Context,
+	projectID int64,
+	mergeRequest int64,
+	discussionID string,
+	noteID int64,
+	opt *UpdateMergeRequestDiscussionNoteOptions,
+) (*DiscussionNote, *Response, error) {
+	var response DiscussionNote
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/merge_requests/%d/discussions/%s/notes/%d",
+			projectID, mergeRequest,
+			url.PathEscape(discussionID), noteID,
+		),
+		nil, opt, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
 // ProjectTemplateList lists project templates for a template type.
 //
 // GitLab API:
@@ -504,7 +615,16 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
-	HeadPipeline *Pipeline `json:"head_pipeline,omitempty"`
+	HeadPipeline *Pipeline            `json:"head_pipeline,omitempty"`
+	DiffRefs     MergeRequestDiffRefs `json:"diff_refs"`
+}
+
+// MergeRequestDiffRefs holds the SHAs needed
+// to position inline comments on a merge request diff.
+type MergeRequestDiffRefs struct {
+	BaseSha  string `json:"base_sha"`
+	HeadSha  string `json:"head_sha"`
+	StartSha string `json:"start_sha"`
 }
 
 // Pipeline is a GitLab CI pipeline status summary.
@@ -567,8 +687,25 @@ type Discussion struct {
 // GitLab discussions API:
 // https://docs.gitlab.com/api/discussions/
 type DiscussionNote struct {
-	Resolvable bool `json:"resolvable"`
-	Resolved   bool `json:"resolved"`
+	ID         int64               `json:"id"`
+	Body       string              `json:"body"`
+	Author     DiscussionNoteUser  `json:"author"`
+	Position   *DiscussionPosition `json:"position,omitempty"`
+	CreatedAt  *time.Time          `json:"created_at,omitempty"`
+	Resolvable bool                `json:"resolvable"`
+	Resolved   bool                `json:"resolved"`
+}
+
+// DiscussionNoteUser matches the author shape on a discussion note.
+type DiscussionNoteUser struct {
+	Username string `json:"username"`
+}
+
+// DiscussionPosition is the inline position of a code-review note.
+type DiscussionPosition struct {
+	NewPath string `json:"new_path"`
+	OldPath string `json:"old_path"`
+	NewLine int64  `json:"new_line"`
 }
 
 // ProjectTemplate matches the subset of project template fields
@@ -741,6 +878,42 @@ func (o *ListMergeRequestDiscussionsOptions) encodeQuery() url.Values {
 
 // ListProjectTemplatesOptions configures template-list requests.
 type ListProjectTemplatesOptions struct{}
+
+// CreateMergeRequestDiscussionOptions configures the creation
+// of a new merge request discussion thread.
+type CreateMergeRequestDiscussionOptions struct {
+	Body     *string          `json:"body,omitempty"`
+	Position *PositionOptions `json:"position,omitempty"`
+}
+
+// PositionOptions describes the inline position for
+// a discussion-creation request.
+type PositionOptions struct {
+	BaseSHA      *string `json:"base_sha,omitempty"`
+	HeadSHA      *string `json:"head_sha,omitempty"`
+	StartSHA     *string `json:"start_sha,omitempty"`
+	PositionType *string `json:"position_type,omitempty"`
+	NewPath      *string `json:"new_path,omitempty"`
+	OldPath      *string `json:"old_path,omitempty"`
+	NewLine      *int64  `json:"new_line,omitempty"`
+}
+
+// ResolveMergeRequestDiscussionOptions configures resolve/unresolve.
+type ResolveMergeRequestDiscussionOptions struct {
+	Resolved *bool `json:"resolved,omitempty"`
+}
+
+// AddMergeRequestDiscussionNoteOptions configures replies on
+// an existing discussion thread.
+type AddMergeRequestDiscussionNoteOptions struct {
+	Body *string `json:"body,omitempty"`
+}
+
+// UpdateMergeRequestDiscussionNoteOptions configures edits to
+// an existing discussion note.
+type UpdateMergeRequestDiscussionNoteOptions struct {
+	Body *string `json:"body,omitempty"`
+}
 
 func gitlabProjectResource(project any) (string, error) {
 	switch v := project.(type) {

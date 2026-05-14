@@ -7,9 +7,65 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 80
-        host: 127.0.0.1:56373
-        body: '{"subject":"Open jMfwXkYK","body":"Open change","base":"main","head":"jMfwXkYK"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53569
+        body: '{"subject":"Open QohFltlh","body":"Open change","base":"main","head":"QohFltlh"}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 9,
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/9"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 29.667375ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 84
+        host: 127.0.0.1:53569
+        body: '{"subject":"Merged gvgMWiD8","body":"Merged change","base":"main","head":"gvgMWiD8"}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 82
+        body: |
+            {
+              "number": 11,
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/11"
+            }
+        headers:
+            Content-Length:
+                - "82"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 29.907541ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 84
+        host: 127.0.0.1:53569
+        body: '{"subject":"Closed mzMsv5Rh","body":"Closed change","base":"main","head":"mzMsv5Rh"}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -19,7 +75,7 @@ interactions:
         body: |
             {
               "number": 15,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/15"
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/15"
             }
         headers:
             Content-Length:
@@ -28,72 +84,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 13.188042ms
-    - id: 1
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 84
-        host: 127.0.0.1:56373
-        body: '{"subject":"Merged C5hzQ5Ik","body":"Merged change","base":"main","head":"C5hzQ5Ik"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
-        method: POST
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 82
-        body: |
-            {
-              "number": 16,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/16"
-            }
-        headers:
-            Content-Length:
-                - "82"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 13.844667ms
-    - id: 2
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 84
-        host: 127.0.0.1:56373
-        body: '{"subject":"Closed IEtiDhFs","body":"Closed change","base":"main","head":"IEtiDhFs"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
-        method: POST
-      response:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 82
-        body: |
-            {
-              "number": 18,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/18"
-            }
-        headers:
-            Content-Length:
-                - "82"
-            Content-Type:
-                - application/json
-        status: 200 OK
-        code: 200
-        duration: 14.069959ms
+        duration: 27.266959ms
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 18
-        host: 127.0.0.1:56373
-        body: '{"ids":[15,16,18]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/states
+        content_length: 17
+        host: 127.0.0.1:53569
+        body: '{"ids":[9,11,15]}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/change/states
         method: POST
       response:
         proto: HTTP/1.1
@@ -105,15 +105,15 @@ interactions:
               "statuses": [
                 {
                   "state": "open",
-                  "headHash": "84a9e994290ae89ccc93f7d2a03d009b39d103ea"
+                  "headHash": "df17da0bd1722f06dbd75d8948417dded7a12d77"
                 },
                 {
                   "state": "merged",
-                  "headHash": "25b03948515094aec6d2cf82537f16d56a1486dc"
+                  "headHash": "fae1a4a757b2259632acb5eb5926849f125dc594"
                 },
                 {
                   "state": "closed",
-                  "headHash": "0c32e505344f156f8aa70189cfd851a1a40765cd"
+                  "headHash": "145f79d936fdcaf9ccd165ed6be52de6eaba9895"
                 }
               ]
             }
@@ -124,4 +124,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 10.51575ms
+        duration: 27.146958ms
