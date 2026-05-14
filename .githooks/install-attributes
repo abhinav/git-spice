@@ -1,0 +1,40 @@
+#!/bin/sh
+# install-attributes — install the regenerate merge driver into the
+# per-clone .git/info directory so it works regardless of the
+# currently-checked-out branch.
+#
+# We install BOTH the path mappings (.git/info/attributes) and the
+# driver script itself (.git/info/merge-regenerate) into .git/info
+# because both move when the worktree branch changes:
+#
+#   - The tracked .gitattributes carrying the merge=regenerate lines
+#     only exists where this branch has been merged in. During
+#     `gs integration rebuild` the worktree is reset to trunk, so
+#     those lines wouldn't apply until they reach trunk.
+#   - The tracked .githooks/merge-regenerate script has the same
+#     problem: trunk's worktree doesn't carry the script, so git
+#     would not find the driver to invoke.
+#
+# .git/info is per-clone state untouched by branch checkout, so both
+# the mappings and the script stay in scope. We re-copy on every
+# setup invocation so updates take effect immediately.
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+info="$root/.git/info"
+mkdir -p "$info"
+
+cat > "$info/attributes" <<'EOF'
+# Managed by `.githooks/install-attributes` (invoked by `mise run setup`).
+# Mirrors the regenerate-driver block in the tracked .gitattributes.
+doc/includes/cli-reference.md         merge=regenerate
+doc/includes/cli-shorthands.md        merge=regenerate
+testdata/help/*.txt                   merge=regenerate
+**/mocks_test.go                      merge=regenerate
+**/mock_*.go                          merge=regenerate
+**/mocks.go                           merge=regenerate
+internal/forge/shamhub/testdata/**    merge=regenerate
+EOF
+
+cp "$root/.githooks/merge-regenerate" "$info/merge-regenerate"
+chmod +x "$info/merge-regenerate"
