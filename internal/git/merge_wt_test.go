@@ -23,6 +23,8 @@ func TestWorktree_Merge_noFF(t *testing.T) {
 		at '2025-01-01T00:00:00Z'
 
 		git init
+		git config user.name 'Test'
+		git config user.email 'test@example.com'
 		git add base.txt
 		git commit -m 'Initial commit'
 
@@ -65,6 +67,8 @@ func TestWorktree_Merge_conflict(t *testing.T) {
 		at '2025-01-01T00:00:00Z'
 
 		git init
+		git config user.name 'Test'
+		git config user.email 'test@example.com'
 		git add shared.txt
 		git commit -m 'Initial commit'
 
@@ -119,6 +123,8 @@ func TestWorktree_Merge_conflictLeaveInWorktree(t *testing.T) {
 		at '2025-01-01T00:00:00Z'
 
 		git init
+		git config user.name 'Test'
+		git config user.email 'test@example.com'
 		git add shared.txt
 		git commit -m 'Initial commit'
 
