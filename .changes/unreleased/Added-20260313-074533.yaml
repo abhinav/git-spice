@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: Add `gs branch submodule list` and `gs branch submodule repoint` commands. Submodule branch associations are recorded automatically at commit time and displayed as `[path:branch]` in `gs ls` and `gs ll`.'
+time: 2026-03-13T07:45:33.612939-04:00
