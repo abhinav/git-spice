@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/onto"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -116,14 +117,43 @@ func (cmd *branchOntoCmd) AfterApply(
 
 func (cmd *branchOntoCmd) Run(
 	ctx context.Context,
+	log *silog.Logger,
+	wt *git.Worktree,
 	handler OntoHandler,
+	submoduleApplier SubmoduleApplier,
 ) error {
-	return handler.BranchOnto(ctx, &onto.BranchRequest{
+	// Snapshot parent HEAD before the checkout so a submodule apply
+	// failure rolls back cleanly. branch onto bypasses checkout.Handler
+	// (its VerifyRestacked path is not appropriate post-BranchOnto),
+	// so we apply submodule associations directly after the handler runs.
+	parentSnap, snapErr := wt.SnapshotHead(ctx)
+	if snapErr != nil {
+		log.Warn("Could not snapshot HEAD before checkout; "+
+			"submodule rollback disabled",
+			"error", snapErr)
+	}
+
+	if err := handler.BranchOnto(ctx, &onto.BranchRequest{
 		Branch:          cmd.Branch,
 		Onto:            cmd.Onto,
 		Restack:         cmd.Restack,
 		ContinueCommand: cmd.continueCommand(),
-	})
+	}); err != nil {
+		return err
+	}
+
+	if err := submoduleApplier.ApplyAssociations(ctx, cmd.Branch); err != nil {
+		if parentSnap != nil {
+			if rerr := wt.RestoreHead(ctx, parentSnap); rerr != nil {
+				log.Warn("Parent rollback failed after submodule conflict",
+					"target", parentSnap.Hash,
+					"error", rerr)
+			}
+		}
+		return fmt.Errorf("apply submodules: %w", err)
+	}
+
+	return nil
 }
 
 func (cmd *branchOntoCmd) continueCommand() []string {
