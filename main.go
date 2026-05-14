@@ -444,6 +444,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			wt *git.Worktree,
 			svc *spice.Service,
 			trackHandler TrackHandler,
+			submoduleApplier SubmoduleApplier,
 		) (CheckoutHandler, error) {
 			return &checkout.Handler{
 				Stdout:     kctx.Stdout,
@@ -453,6 +454,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Track:      trackHandler,
 				Service:    svc,
+				Submodule:  submoduleApplier,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -519,6 +521,23 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				exclude = cfg.SubmoduleExclusions()
 			}
 			return &submodule.Tracker{
+				Log:      log,
+				Worktree: wt,
+				Store:    store,
+				Exclude:  exclude,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			wt *git.Worktree,
+			store *state.Store,
+			cfg *spice.Config,
+		) (SubmoduleApplier, error) {
+			var exclude []string
+			if cfg != nil {
+				exclude = cfg.SubmoduleExclusions()
+			}
+			return &submodule.Applier{
 				Log:      log,
 				Worktree: wt,
 				Store:    store,

@@ -212,3 +212,107 @@ func TestTracker_RecordBranchState_noSubmodules(
 
 // Ensure fakeWorktree implements the interface.
 var _ submodule.GitWorktree = (*fakeWorktree)(nil)
+
+func TestTracker_RecordWithInheritance_inheritsThenOverlays(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	// Set up the parent branch with two recorded submodules.
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name: "parent",
+		Base: "main",
+		Submodules: map[string]string{
+			"libs/core": "feat-core",
+			"libs/util": "feat-util",
+		},
+	}))
+	require.NoError(t, tx.Commit(ctx, "set up parent"))
+
+	// Current worktree has libs/util on a different branch.
+	wt := &fakeWorktree{
+		subs: []git.Submodule{
+			{Path: "libs/core"},
+			{Path: "libs/util"},
+		},
+		branches: map[string]string{
+			"libs/core": "feat-core",
+			"libs/util": "feat-util-v2",
+		},
+	}
+
+	tracker := submodule.Tracker{
+		Log:      silog.Nop(),
+		Worktree: wt,
+		Store:    store,
+	}
+
+	// Pre-create the child branch.
+	tx = store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name: "child",
+		Base: "parent",
+	}))
+	require.NoError(t, tx.Commit(ctx, "create child"))
+
+	require.NoError(t,
+		tracker.RecordWithInheritance(ctx, "child", "parent"),
+	)
+
+	resp, err := store.LookupBranch(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		"libs/core": "feat-core",    // inherited from parent
+		"libs/util": "feat-util-v2", // overlayed by current state
+	}, resp.Submodules)
+}
+
+func TestTracker_RecordWithInheritance_noParentRecord(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	wt := &fakeWorktree{
+		subs: []git.Submodule{{Path: "libs/core"}},
+		branches: map[string]string{
+			"libs/core": "feat-core",
+		},
+	}
+
+	tracker := submodule.Tracker{
+		Log:      silog.Nop(),
+		Worktree: wt,
+		Store:    store,
+	}
+
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name: "feature-x",
+		Base: "main",
+	}))
+	require.NoError(t, tx.Commit(ctx, "create branch"))
+
+	// Parent "main" is not tracked in store, so no inheritance.
+	require.NoError(t,
+		tracker.RecordWithInheritance(ctx, "feature-x", "main"),
+	)
+
+	resp, err := store.LookupBranch(ctx, "feature-x")
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		"libs/core": "feat-core",
+	}, resp.Submodules)
+}
