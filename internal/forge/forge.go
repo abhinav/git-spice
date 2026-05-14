@@ -10,6 +10,7 @@ import (
 	"iter"
 	"regexp"
 	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/secret"
@@ -97,7 +98,7 @@ type WithCommentFormat interface {
 	CommentFormat() CommentFormat
 }
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed -write_package_comment=false . Forge,RepositoryID,Repository,WithInlineComments,WithThreadResolution,WithCommentEdit
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions
@@ -575,4 +576,135 @@ func (s *ChangeState) UnmarshalText(b []byte) error {
 		return fmt.Errorf("unknown change state: %q", b)
 	}
 	return nil
+}
+
+// Inline comment types and optional interfaces
+
+// InlineCommentRequest describes a new inline comment
+// to post on a change diff.
+type InlineCommentRequest struct {
+	// Path is the file path relative to the repository root.
+	Path string
+
+	// Line is the line number in the new version of the file.
+	Line int
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Side indicates which side of the diff the comment
+	// applies to. Use "LEFT" for the old version
+	// or "RIGHT" (default) for the new version.
+	Side string
+
+	// ThreadID is set when replying to an existing thread.
+	// The format is forge-specific.
+	ThreadID string
+}
+
+// InlineComment is a comment on a specific line of a diff.
+type InlineComment struct {
+	// ID is the forge-specific comment identifier.
+	ID ChangeCommentID
+
+	// ThreadID is the forge-specific thread identifier.
+	ThreadID string
+
+	// Path is the file path relative to the repository root.
+	Path string
+
+	// Line is the line number in the diff.
+	Line int
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Author is the username of the comment author.
+	Author string
+
+	// Resolved indicates the comment thread is resolved.
+	Resolved bool
+
+	// Outdated indicates the comment is on an outdated diff.
+	Outdated bool
+
+	// CreatedAt is the time the comment was created.
+	CreatedAt time.Time
+}
+
+// ReviewEvent specifies the type of review being submitted.
+type ReviewEvent int
+
+const (
+	// ReviewComment submits a review with comments only.
+	ReviewComment ReviewEvent = iota
+
+	// ReviewApprove submits an approving review.
+	ReviewApprove
+
+	// ReviewRequestChanges submits a review
+	// requesting changes.
+	ReviewRequestChanges
+)
+
+// ReviewRequest is a batch of inline comments
+// submitted together as a single review.
+type ReviewRequest struct {
+	// Body is the overall review body (optional).
+	Body string
+
+	// Comments are the inline comments in the review.
+	Comments []InlineCommentRequest
+
+	// Event is the review event type.
+	Event ReviewEvent
+}
+
+// WithInlineComments is an optional interface
+// for forges that support inline/diff comments
+// and code reviews.
+type WithInlineComments interface {
+	Repository
+
+	// ListInlineComments lists inline/review comments
+	// on a change.
+	ListInlineComments(
+		ctx context.Context, id ChangeID,
+	) ([]*InlineComment, error)
+
+	// SubmitReview posts a batch of inline comments
+	// as a single review.
+	SubmitReview(
+		ctx context.Context, id ChangeID, req ReviewRequest,
+	) error
+
+	// PostInlineComment posts a single inline comment
+	// outside of a batch review.
+	PostInlineComment(
+		ctx context.Context, id ChangeID,
+		req InlineCommentRequest,
+	) (*InlineComment, error)
+}
+
+// WithThreadResolution is an optional interface
+// for forges that support resolving comment threads.
+type WithThreadResolution interface {
+	Repository
+
+	// ResolveThread marks a comment thread as resolved.
+	ResolveThread(ctx context.Context, threadID string) error
+
+	// UnresolveThread marks a comment thread as unresolved.
+	UnresolveThread(ctx context.Context, threadID string) error
+}
+
+// WithCommentEdit is an optional interface
+// for forges that support editing existing comments.
+type WithCommentEdit interface {
+	Repository
+
+	// EditComment updates the body of an existing comment.
+	EditComment(
+		ctx context.Context, id ChangeCommentID, body string,
+	) error
 }
