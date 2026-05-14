@@ -1,0 +1,24 @@
+Usage: gs integration (int) create (c) <name> [flags]
+
+Configure the integration branch
+
+Configures the singleton integration branch for this repo. The branch is
+materialized by sequentially merging each tip onto trunk; it is never given a PR
+and is invisible to 'gs branch' commands.
+
+Use 'gs integration tip add <branch>' to add tips later, or pass --tip multiple
+times here.
+
+Arguments:
+  <name>    Local name of the integration branch
+
+Flags:
+  --upstream=BRANCH    Upstream branch name (defaults to local name)
+  --tip=BRANCH,...     Tip branches to include (repeat to add more)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

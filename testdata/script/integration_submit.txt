@@ -1,0 +1,48 @@
+# Verifies 'gs integration submit' pushes the branch without creating a
+# change request (PR).
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+gs integration submit
+stderr 'Integration branch pushed.'
+
+# No CR (PR) was created.
+shamhub dump changes
+cmp stdout $WORK/golden/no-pulls.txt
+
+# Verify the branch appeared on the remote.
+cd ../
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git branch -r
+cmp stdout $WORK/golden/remote-branches.txt
+
+-- repo/feat-a.txt --
+feature a
+-- golden/no-pulls.txt --
+[]
+-- golden/remote-branches.txt --
+  origin/HEAD -> origin/main
+  origin/main
+  origin/preview
