@@ -7,14 +7,18 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
 
 type stackRestackCmd struct {
-	Branch string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+	Branch            string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+	RecurseSubmodules bool   `name:"recurse-submodules" negatable:"" config:"submodule.recurse" help:"Also restack tracked submodules"`
 }
 
 func (*stackRestackCmd) Help() string {
@@ -81,12 +85,55 @@ func (cmd *stackRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
+	wt *git.Worktree,
 	store *state.Store,
+	cfg *spice.Config,
 	handler RestackHandler,
 ) error {
 	if err := verifyRestackFromTrunk(log, view, store, cmd.Branch, "stack"); err != nil {
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch)
+	if err := handler.RestackStack(ctx, cmd.Branch); err != nil {
+		return err
+	}
+
+	if !cmd.RecurseSubmodules {
+		return nil
+	}
+
+	var exclude []string
+	if cfg != nil {
+		exclude = cfg.SubmoduleExclusions()
+	}
+
+	return submodule.ForEachInitializedSubmodule(
+		ctx, wt, exclude, nil, log,
+		func(c *submodule.Context) error {
+			subCurrent, err := c.Worktree.CurrentBranch(ctx)
+			if err != nil {
+				log.Warn("Skipping submodule: cannot determine current branch",
+					"path", c.Path, "error", err)
+				return nil
+			}
+			log.Infof("Recursing restack into %s on %s",
+				c.Path, subCurrent)
+			subHandler := &restack.Handler{
+				Log:      c.Log,
+				Worktree: c.Worktree,
+				Store:    c.Store,
+				Service:  c.Service,
+			}
+			if _, err := subHandler.Restack(ctx, &restack.Request{
+				Branch:          subCurrent,
+				ContinueCommand: []string{"stack", "restack"},
+				Scope:           restack.ScopeStack,
+			}); err != nil {
+				return fmt.Errorf(
+					"submodule %s restack: %w", c.Path, err,
+				)
+			}
+			return nil
+		},
+	)
 }
