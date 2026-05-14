@@ -1,0 +1,28 @@
+Usage: gs branch (b) comment (cmt) list (ls) [flags]
+
+List comments on a change request
+
+Lists comments on the change request associated with the current branch.
+Use --branch to target a different branch.
+
+Staged comments that have not yet been submitted are shown with an 'sc-N'
+prefix.
+
+Use --staged to show only staged comments. Use --unresolved to show only
+unresolved comments.
+
+With --json, prints output to stdout as a stream of JSON objects.
+
+Flags:
+  -b, --branch=BRANCH    Branch to list comments for. Defaults to current
+                         branch.
+      --staged           Show only staged comments.
+      --unresolved       Show only unresolved comments.
+      --json             Write to stdout as a stream of JSON objects.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
