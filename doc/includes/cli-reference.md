@@ -140,6 +140,7 @@ and untrack all branches.
 * `--remote=NAME`: Name of the remote to push submitted branches to
 * `--upstream=NAME`: Name of the remote to open change requests against
 * `--reset`: Forget all information about the repository
+* `--[no-]recurse-submodules`: Also initialize tracked submodules. Prompts when unset and submodules are present.
 
 ### git-spice repo sync {#gs-repo-sync}
 

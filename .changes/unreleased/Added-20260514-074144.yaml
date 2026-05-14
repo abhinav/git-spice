@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: ''gs repo init'' offers to initialize tracked submodules recursively (--recurse-submodules/--no-recurse-submodules), resolving each sub''s trunk via .gitmodules branch, HEAD upstream, or the guesser. On opt-in, ''spice.submodule.recurse=true'' is written so daily ops will recurse.'
+time: 2026-05-14T07:41:44.8119-04:00
