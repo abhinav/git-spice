@@ -1039,6 +1039,166 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
+### git-spice branch comment list {#gs-branch-comment-list}
+
+```
+gs branch (b) comment (cmt) list (ls) [flags]
+```
+
+List comments on a change request
+
+Lists comments on the change request
+associated with the current branch.
+Use --branch to target a different branch.
+
+Staged comments that have not yet been submitted
+are shown with an 'sc-N' prefix.
+
+Use --staged to show only staged comments.
+Use --unresolved to show only unresolved comments.
+
+With --json, prints output to stdout
+as a stream of JSON objects.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list comments for. Defaults to current branch.
+* `--staged`: Show only staged comments.
+* `--unresolved`: Show only unresolved comments.
+* `--json`: Write to stdout as a stream of JSON objects. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
+### git-spice branch comment stage {#gs-branch-comment-stage}
+
+```
+gs branch (b) comment (cmt) stage [<file-and-line>] [flags]
+```
+
+Stage an inline comment for batch submission
+
+Stages an inline comment for later batch submission.
+Provide the file and line number as file.go:42.
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread
+instead of starting a new one.
+
+Staged comments are submitted together with
+'gs branch comment submit-staged'.
+
+**Arguments**
+
+* `file-and-line`: File and line in the form file.go:42.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--respond=THREAD_ID`: Thread ID to reply to instead of starting a new thread.
+* `-b`, `--branch=BRANCH`: Branch to stage comment for. Defaults to current branch.
+
+### git-spice branch comment add {#gs-branch-comment-add}
+
+```
+gs branch (b) comment (cmt) add [<file-and-line>] [flags]
+```
+
+Post an inline comment immediately
+
+Posts an inline comment immediately
+on the change request for the current branch.
+Provide the file and line number as file.go:42.
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread
+instead of starting a new one.
+
+**Arguments**
+
+* `file-and-line`: File and line in the form file.go:42.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--respond=THREAD_ID`: Thread ID to reply to instead of starting a new thread.
+* `-b`, `--branch=BRANCH`: Branch to add comment for. Defaults to current branch.
+
+### git-spice branch comment submit-staged {#gs-branch-comment-submit-staged}
+
+```
+gs branch (b) comment (cmt) submit-staged (ss) [flags]
+```
+
+Submit all staged comments as a review
+
+Submits all staged comments for the current branch
+as a single review on the change request.
+
+Use --approve or --request-changes
+to set the review event type.
+Defaults to a comment-only review.
+
+Use --body to add an overall review body.
+
+**Flags**
+
+* `--body=BODY`: Overall review body.
+* `--approve`: Mark the review as approved.
+* `--request-changes`: Mark the review as requesting changes.
+* `-b`, `--branch=BRANCH`: Branch to submit staged comments for. Defaults to current branch.
+
+### git-spice branch comment resolve {#gs-branch-comment-resolve}
+
+```
+gs branch (b) comment (cmt) resolve <thread-id> [flags]
+```
+
+Resolve or unresolve a review thread
+
+Resolves a review thread on the change request
+for the current branch.
+
+Use --unresolve to mark the thread as unresolved.
+
+The thread ID is shown in 'gs branch comment list'.
+
+**Arguments**
+
+* `thread-id`: Thread ID to resolve.
+
+**Flags**
+
+* `--unresolve`: Unresolve the thread instead of resolving it.
+* `-b`, `--branch=BRANCH`: Branch whose change request contains the thread. Defaults to current branch.
+
+### git-spice branch comment edit {#gs-branch-comment-edit}
+
+```
+gs branch (b) comment (cmt) edit <id> [flags]
+```
+
+Edit a comment
+
+Edits the body of a comment.
+
+For staged comments (sc-N prefix),
+the comment is updated in the local staging area.
+
+For forge comments, the comment is updated
+on the remote forge.
+
+If no message is given with -m, an editor is opened
+with the current comment body pre-filled.
+
+**Arguments**
+
+* `id`: Comment ID to edit. Use 'sc-N' for staged comments or a forge comment ID.
+
+**Flags**
+
+* `-m`, `--message=MSG`: New comment body. Opens editor if not provided.
+* `-b`, `--branch=BRANCH`: Branch whose comments to edit. Defaults to current branch.
+
 ## Commit
 
 ### git-spice commit create {#gs-commit-create}
