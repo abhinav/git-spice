@@ -1196,45 +1196,6 @@ func (m *MockWithInlineComments) EXPECT() *MockWithInlineCommentsMockRecorder {
 	return m.recorder
 }
 
-// ChangeChecksStatus mocks base method.
-func (m *MockWithInlineComments) ChangeChecksStatus(ctx context.Context, id forge.ChangeID) (forge.ChecksState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeChecksStatus", ctx, id)
-	ret0, _ := ret[0].(forge.ChecksState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ChangeChecksStatus indicates an expected call of ChangeChecksStatus.
-func (mr *MockWithInlineCommentsMockRecorder) ChangeChecksStatus(ctx, id any) *MockWithInlineCommentsChangeChecksStatusCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChecksStatus", reflect.TypeOf((*MockWithInlineComments)(nil).ChangeChecksStatus), ctx, id)
-	return &MockWithInlineCommentsChangeChecksStatusCall{Call: call}
-}
-
-// MockWithInlineCommentsChangeChecksStatusCall wrap *gomock.Call
-type MockWithInlineCommentsChangeChecksStatusCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithInlineCommentsChangeChecksStatusCall) Return(arg0 forge.ChecksState, arg1 error) *MockWithInlineCommentsChangeChecksStatusCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithInlineCommentsChangeChecksStatusCall) Do(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithInlineCommentsChangeChecksStatusCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithInlineCommentsChangeChecksStatusCall) DoAndReturn(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithInlineCommentsChangeChecksStatusCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // ChangeStatuses mocks base method.
 func (m *MockWithInlineComments) ChangeStatuses(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeStatus, error) {
 	m.ctrl.T.Helper()
@@ -1621,44 +1582,6 @@ func (c *MockWithInlineCommentsListInlineCommentsCall) DoAndReturn(f func(contex
 	return c
 }
 
-// MergeChange mocks base method.
-func (m *MockWithInlineComments) MergeChange(ctx context.Context, id forge.ChangeID, opts forge.MergeChangeOptions) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeChange", ctx, id, opts)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MergeChange indicates an expected call of MergeChange.
-func (mr *MockWithInlineCommentsMockRecorder) MergeChange(ctx, id, opts any) *MockWithInlineCommentsMergeChangeCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeChange", reflect.TypeOf((*MockWithInlineComments)(nil).MergeChange), ctx, id, opts)
-	return &MockWithInlineCommentsMergeChangeCall{Call: call}
-}
-
-// MockWithInlineCommentsMergeChangeCall wrap *gomock.Call
-type MockWithInlineCommentsMergeChangeCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithInlineCommentsMergeChangeCall) Return(arg0 error) *MockWithInlineCommentsMergeChangeCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithInlineCommentsMergeChangeCall) Do(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithInlineCommentsMergeChangeCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithInlineCommentsMergeChangeCall) DoAndReturn(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithInlineCommentsMergeChangeCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // NewChangeMetadata mocks base method.
 func (m *MockWithInlineComments) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
 	m.ctrl.T.Helper()
@@ -1913,45 +1836,6 @@ func NewMockWithThreadResolution(ctrl *gomock.Controller) *MockWithThreadResolut
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWithThreadResolution) EXPECT() *MockWithThreadResolutionMockRecorder {
 	return m.recorder
-}
-
-// ChangeChecksStatus mocks base method.
-func (m *MockWithThreadResolution) ChangeChecksStatus(ctx context.Context, id forge.ChangeID) (forge.ChecksState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeChecksStatus", ctx, id)
-	ret0, _ := ret[0].(forge.ChecksState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ChangeChecksStatus indicates an expected call of ChangeChecksStatus.
-func (mr *MockWithThreadResolutionMockRecorder) ChangeChecksStatus(ctx, id any) *MockWithThreadResolutionChangeChecksStatusCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChecksStatus", reflect.TypeOf((*MockWithThreadResolution)(nil).ChangeChecksStatus), ctx, id)
-	return &MockWithThreadResolutionChangeChecksStatusCall{Call: call}
-}
-
-// MockWithThreadResolutionChangeChecksStatusCall wrap *gomock.Call
-type MockWithThreadResolutionChangeChecksStatusCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithThreadResolutionChangeChecksStatusCall) Return(arg0 forge.ChecksState, arg1 error) *MockWithThreadResolutionChangeChecksStatusCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithThreadResolutionChangeChecksStatusCall) Do(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithThreadResolutionChangeChecksStatusCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithThreadResolutionChangeChecksStatusCall) DoAndReturn(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithThreadResolutionChangeChecksStatusCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
 }
 
 // ChangeStatuses mocks base method.
@@ -2301,44 +2185,6 @@ func (c *MockWithThreadResolutionListChangeTemplatesCall) DoAndReturn(f func(con
 	return c
 }
 
-// MergeChange mocks base method.
-func (m *MockWithThreadResolution) MergeChange(ctx context.Context, id forge.ChangeID, opts forge.MergeChangeOptions) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeChange", ctx, id, opts)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MergeChange indicates an expected call of MergeChange.
-func (mr *MockWithThreadResolutionMockRecorder) MergeChange(ctx, id, opts any) *MockWithThreadResolutionMergeChangeCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeChange", reflect.TypeOf((*MockWithThreadResolution)(nil).MergeChange), ctx, id, opts)
-	return &MockWithThreadResolutionMergeChangeCall{Call: call}
-}
-
-// MockWithThreadResolutionMergeChangeCall wrap *gomock.Call
-type MockWithThreadResolutionMergeChangeCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithThreadResolutionMergeChangeCall) Return(arg0 error) *MockWithThreadResolutionMergeChangeCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithThreadResolutionMergeChangeCall) Do(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithThreadResolutionMergeChangeCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithThreadResolutionMergeChangeCall) DoAndReturn(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithThreadResolutionMergeChangeCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // NewChangeMetadata mocks base method.
 func (m *MockWithThreadResolution) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
 	m.ctrl.T.Helper()
@@ -2592,45 +2438,6 @@ func NewMockWithCommentEdit(ctrl *gomock.Controller) *MockWithCommentEdit {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWithCommentEdit) EXPECT() *MockWithCommentEditMockRecorder {
 	return m.recorder
-}
-
-// ChangeChecksStatus mocks base method.
-func (m *MockWithCommentEdit) ChangeChecksStatus(ctx context.Context, id forge.ChangeID) (forge.ChecksState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeChecksStatus", ctx, id)
-	ret0, _ := ret[0].(forge.ChecksState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ChangeChecksStatus indicates an expected call of ChangeChecksStatus.
-func (mr *MockWithCommentEditMockRecorder) ChangeChecksStatus(ctx, id any) *MockWithCommentEditChangeChecksStatusCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChecksStatus", reflect.TypeOf((*MockWithCommentEdit)(nil).ChangeChecksStatus), ctx, id)
-	return &MockWithCommentEditChangeChecksStatusCall{Call: call}
-}
-
-// MockWithCommentEditChangeChecksStatusCall wrap *gomock.Call
-type MockWithCommentEditChangeChecksStatusCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithCommentEditChangeChecksStatusCall) Return(arg0 forge.ChecksState, arg1 error) *MockWithCommentEditChangeChecksStatusCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithCommentEditChangeChecksStatusCall) Do(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithCommentEditChangeChecksStatusCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithCommentEditChangeChecksStatusCall) DoAndReturn(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockWithCommentEditChangeChecksStatusCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
 }
 
 // ChangeStatuses mocks base method.
@@ -3014,44 +2821,6 @@ func (c *MockWithCommentEditListChangeTemplatesCall) Do(f func(context.Context) 
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockWithCommentEditListChangeTemplatesCall) DoAndReturn(f func(context.Context) ([]*forge.ChangeTemplate, error)) *MockWithCommentEditListChangeTemplatesCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// MergeChange mocks base method.
-func (m *MockWithCommentEdit) MergeChange(ctx context.Context, id forge.ChangeID, opts forge.MergeChangeOptions) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeChange", ctx, id, opts)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MergeChange indicates an expected call of MergeChange.
-func (mr *MockWithCommentEditMockRecorder) MergeChange(ctx, id, opts any) *MockWithCommentEditMergeChangeCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeChange", reflect.TypeOf((*MockWithCommentEdit)(nil).MergeChange), ctx, id, opts)
-	return &MockWithCommentEditMergeChangeCall{Call: call}
-}
-
-// MockWithCommentEditMergeChangeCall wrap *gomock.Call
-type MockWithCommentEditMergeChangeCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockWithCommentEditMergeChangeCall) Return(arg0 error) *MockWithCommentEditMergeChangeCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockWithCommentEditMergeChangeCall) Do(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithCommentEditMergeChangeCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockWithCommentEditMergeChangeCall) DoAndReturn(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockWithCommentEditMergeChangeCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
