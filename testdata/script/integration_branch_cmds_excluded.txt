@@ -1,0 +1,32 @@
+# Verifies that the integration branch is invisible to 'gs branch'
+# commands: it is not tracked, and an attempt to track it is rejected.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+# 'gs ll' does not include preview.
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+# 'gs branch track preview' is rejected.
+git checkout preview
+! gs branch track preview
+stderr 'cannot track integration branch'
+
+-- repo/feat-a.txt --
+feature a
+-- golden/ls.txt --
+┏━□ feat-a
+main ◀

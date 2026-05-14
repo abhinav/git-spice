@@ -162,7 +162,7 @@ func TestWorktree_CheckoutNewBranch(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = wt.CheckoutNewBranch(t.Context(), git.CheckoutNewBranchRequest{})
+		err = wt.CheckoutNewBranch(t.Context(), git.CheckoutNewBranchRequest{Name: ""})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "name is required")
 	})

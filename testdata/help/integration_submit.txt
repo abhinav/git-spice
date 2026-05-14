@@ -1,0 +1,17 @@
+Usage: gs integration (int) submit (sub)
+
+Push the integration branch to the remote
+
+Pushes the integration branch to the configured remote with --force-with-lease
+against the hash recorded at the previous successful push.
+
+No change request (PR) is opened: this command only pushes the branch. Once a
+manual submit succeeds, 'gs stack submit' and 'gs upstack submit' will keep the
+published branch in sync with local rebuilds.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
