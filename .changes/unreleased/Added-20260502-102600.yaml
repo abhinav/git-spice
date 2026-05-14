@@ -1,0 +1,3 @@
+kind: Added
+body: 'branch comment list: Add --json flag to write comments as a stream of JSON objects'
+time: 2026-05-02T10:26:00.668941-04:00
