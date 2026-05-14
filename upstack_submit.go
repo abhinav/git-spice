@@ -38,6 +38,7 @@ func (cmd *upstackSubmitCmd) Run(
 	store *state.Store,
 	svc *spice.Service,
 	submitHandler SubmitHandler,
+	integrationHandler IntegrationHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -68,12 +69,15 @@ func (cmd *upstackSubmitCmd) Run(
 
 	// TODO: separate preparation of the stack from submission
 
-	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+	if err := submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
 		Branches:     upstacks,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
 		BranchGraph:  graph,
-	})
+	}); err != nil {
+		return err
+	}
+	return integrationHandler.MaybeRebuildAndSubmit(ctx)
 }
 
 func (cmd *upstackSubmitCmd) verifyBaseSubmitted(

@@ -35,6 +35,7 @@ func (cmd *downstackSubmitCmd) Run(
 	store *state.Store,
 	svc *spice.Service,
 	submitHandler SubmitHandler,
+	integrationHandler IntegrationHandler,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -59,10 +60,13 @@ func (cmd *downstackSubmitCmd) Run(
 
 	// TODO: separate preparation of the stack from submission
 
-	return submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
+	if err := submitHandler.SubmitBatch(ctx, &submit.BatchRequest{
 		Branches:     downstacks,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
 		BranchGraph:  graph,
-	})
+	}); err != nil {
+		return err
+	}
+	return integrationHandler.MaybeRebuildAndSubmit(ctx)
 }
