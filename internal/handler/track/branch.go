@@ -32,6 +32,12 @@ func (h *Handler) TrackBranch(ctx context.Context, req *BranchRequest) error {
 		return errors.New("cannot track trunk branch")
 	}
 
+	if info, err := store.Integration(ctx); err == nil && info.Name == req.Branch {
+		return fmt.Errorf("cannot track integration branch %q", req.Branch)
+	} else if err != nil && !errors.Is(err, state.ErrNotExist) {
+		return fmt.Errorf("check integration: %w", err)
+	}
+
 	if req.Base == "" {
 		log.Debugf("%v: looking for base branch", req.Branch)
 

@@ -1,0 +1,45 @@
+# Verifies 'gs integration checkout' (alias 'gs intco') switches to
+# the integration branch when configured and rebuilt.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+
+# Before rebuild: checkout fails because the branch doesn't exist yet.
+! gs integration checkout
+stderr 'does not exist'
+
+# Materialize the branch.
+gs integration rebuild
+
+# Now checkout succeeds.
+gs integration checkout
+stderr 'Switched to integration branch.'
+git symbolic-ref HEAD
+cmp stdout $WORK/golden/head.txt
+
+# The shorthand 'gs intco' also works.
+gs trunk
+gs intco
+git symbolic-ref HEAD
+cmp stdout $WORK/golden/head.txt
+
+# Checkout fails when no integration is configured.
+gs integration delete
+! gs integration checkout
+stderr 'no integration branch configured'
+
+-- repo/feat-a.txt --
+feature a
+-- golden/head.txt --
+refs/heads/preview
