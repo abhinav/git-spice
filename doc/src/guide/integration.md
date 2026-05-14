@@ -67,6 +67,29 @@ pending-rebuild state remains; clear it by re-configuring the
 integration with `gs integration delete` followed by `gs integration
 create`.
 
+### Generated-file conflicts
+
+Some files in the repository are derived from source or test runs
+(CLI reference, help fixtures, mocks, recorded ShamHub fixtures).
+When two branches both touch them, the conflicts mix stochastic
+noise (random IDs) with real structural changes (a new flag, a new
+test case, a new mock method). Picking either side blindly silently
+drops the structural change from the other branch.
+
+The `.gitattributes` file declares a `regenerate` merge driver for
+these paths. The driver re-runs the appropriate generator against
+the merged source so the output reflects both branches' real
+changes. To activate, run once after cloning:
+
+```freeze language="terminal"
+{green}${reset} mise run setup
+```
+
+After that, `gs intrb` (and any other `git merge` in the repo) will
+auto-resolve generated-file conflicts by regenerating, not by
+picking a side. Each generator runs at most once per merge even when
+many files in its output set conflict.
+
 ## Switching to the integration branch
 
 Use $$gs integration checkout$$ (shorthand: `gs intco`) to switch the
