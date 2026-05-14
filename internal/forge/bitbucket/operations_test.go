@@ -383,6 +383,91 @@ func TestEditChange(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+
+	t.Run("SubjectBodyPreservedWithReviewers", func(t *testing.T) {
+		testEditChangePreservesDescription(t)
+	})
+}
+
+// testEditChangePreservesDescription verifies that
+// adding reviewers to a PR with an existing description
+// does not clear the description.
+//
+// Bitbucket replaces the entire PR resource on PUT,
+// so a PUT that omits "description" will wipe it out.
+// The reviewer PUT must therefore re-send the existing description.
+func testEditChangePreservesDescription(t *testing.T) {
+	t.Helper()
+
+	// Track the PR description across PUTs.
+	// Bitbucket-style: PUT replaces the resource,
+	// so an omitted description clears it.
+	lastDescription := "Initial description"
+	srv := httptest.NewServer(
+		http.HandlerFunc(func(
+			w http.ResponseWriter, r *http.Request,
+		) {
+			path := r.URL.Path
+			switch {
+			case r.Method == http.MethodGet &&
+				path == "/workspaces/workspace/members":
+				respondWithMembers(w)
+			case r.Method == http.MethodGet:
+				respondWithPR(w, lastDescription)
+			case r.Method == http.MethodPut:
+				lastDescription = handlePUT(t, r)
+				respondWithPR(w, lastDescription)
+			}
+		}),
+	)
+	defer srv.Close()
+
+	err := newTestRepository(srv.URL).EditChange(
+		t.Context(),
+		&PR{Number: 1},
+		forge.EditChangeOptions{
+			AddReviewers: []string{"reviewer1"},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "Initial description", lastDescription,
+		"description must survive the reviewer PUT")
+}
+
+func respondWithMembers(w http.ResponseWriter) {
+	resp := bitbucket.WorkspaceMemberList{
+		Values: []bitbucket.WorkspaceMember{{
+			User: bitbucket.User{
+				UUID:     "{user-uuid}",
+				Nickname: "reviewer1",
+			},
+		}},
+	}
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func respondWithPR(w http.ResponseWriter, desc string) {
+	resp := bitbucket.PullRequest{
+		ID:          1,
+		Title:       "Test PR",
+		Description: desc,
+		State:       stateOpen,
+	}
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// handlePUT decodes the update request and returns
+// the description that the resource should now have,
+// mimicking Bitbucket's replace-on-PUT semantics.
+func handlePUT(t *testing.T, r *http.Request) string {
+	t.Helper()
+
+	var req bitbucket.PullRequestUpdateRequest
+	require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+	if req.Description == nil {
+		return ""
+	}
+	return *req.Description
 }
 
 func TestListChangeComments_absoluteNextURL(t *testing.T) {

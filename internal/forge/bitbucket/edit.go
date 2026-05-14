@@ -104,8 +104,9 @@ func (r *Repository) addPRReviewers(
 	allReviewers := mergeReviewers(pr.Reviewers, newReviewers)
 
 	return r.updatePullRequest(ctx, prID, &bitbucket.PullRequestUpdateRequest{
-		Title:     &pr.Title,
-		Reviewers: allReviewers,
+		Title:       &pr.Title,       // required by Bitbucket PUT
+		Description: &pr.Description, // preserve existing description
+		Reviewers:   allReviewers,
 	})
 }
 
