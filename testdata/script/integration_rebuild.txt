@@ -1,0 +1,62 @@
+# Verifies that 'gs integration rebuild' materializes the integration
+# branch by sequentially merging tips onto trunk.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+git add feat-b.txt
+gs bc feat-b -m 'Add feat-b'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+gs integration rebuild
+
+# The preview branch now exists with both tips merged.
+git show-ref --verify refs/heads/preview
+
+git log --oneline preview
+cmp stdout $WORK/golden/log.txt
+
+# After rebuild, both tips are present.
+git show preview:feat-a.txt
+cmp stdout $WORK/golden/feat-a.txt
+git show preview:feat-b.txt
+cmp stdout $WORK/golden/feat-b.txt
+
+# Rebuild is idempotent: a second rebuild with no drift still succeeds.
+gs integration rebuild
+stderr 'Integration branch "preview" rebuilt with 2 tip\(s\).'
+
+# Rebuild also works when already checked out on the integration
+# branch. We stay on the integration branch when finished.
+gs integration checkout
+gs integration rebuild
+stderr 'Integration branch "preview" rebuilt with 2 tip\(s\).'
+git symbolic-ref HEAD
+cmp stdout $WORK/golden/head-preview.txt
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-b.txt --
+feature b
+-- golden/feat-a.txt --
+feature a
+-- golden/feat-b.txt --
+feature b
+-- golden/log.txt --
+12332ca Merge feat-b into preview
+132effa Merge feat-a into preview
+6fc243e Add feat-b
+a044690 Initial commit
+b049cb7 Add feat-a
+-- golden/head-preview.txt --
+refs/heads/preview

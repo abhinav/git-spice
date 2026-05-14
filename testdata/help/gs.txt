@@ -40,7 +40,6 @@ Stack
   upstack (us) delete (d)       Delete all branches above the current branch
   downstack (ds) track (tr)     Track all untracked branches below a branch
   downstack (ds) submit (s)     Submit a branch and those below it
-  downstack (ds) merge (m)      Merge a branch and those below it
   downstack (ds) edit (e)       Edit the order of branches below a branch
   downstack (ds) restack (r)    Restack a branch and its downstack
 
@@ -66,6 +65,24 @@ Commit
   commit (c) split (sp)    Split the current commit
   commit (c) fixup (f)     Fixup a commit below the current commit
   commit (c) pick (p)      Cherry-pick a commit
+
+Integration
+  integration (int) show           Show the configured integration branch
+  integration (int) create (c)     Configure the integration branch
+  integration (int) delete (d,rm)
+                                   Remove the integration branch configuration
+  integration (int) checkout (co)
+                                   Switch to the integration branch
+  integration (int) rebuild (rb)
+                                   Rebuild the integration branch
+  integration (int) submit (s)     Push the integration branch to the remote
+  integration (int) mark-pushed    Record a hash as the integration branch's
+                                   last-pushed value
+  integration (int) tip add (a)    Add a branch to the integration tip list
+  integration (int) tip remove (r,rm)
+                                   Remove a branch from the integration tip list
+  integration (int) tip list (l,ls)
+                                   List the configured integration tips
 
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation

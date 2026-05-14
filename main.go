@@ -28,6 +28,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/integration"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/handler/restack"
@@ -196,6 +197,7 @@ func main() {
 		}),
 		komplete.WithPredictor("branches", komplete.PredictFunc(predictBranches)),
 		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
+		komplete.WithPredictor("integrationTips", komplete.PredictFunc(predictIntegrationTips)),
 		komplete.WithPredictor("remotes", komplete.PredictFunc(predictRemotes)),
 		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
 		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges(&forges))),
@@ -305,6 +307,8 @@ type mainCmd struct {
 
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
+
+	Integration integrationCmd `cmd:"" aliases:"int" group:"Integration"`
 
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
@@ -681,6 +685,21 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			view ui.View,
 		) (state.Remote, error) {
 			return ensureRemote(ctx, repo, store, log, view)
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			repo *git.Repository,
+			wt *git.Worktree,
+			store *state.Store,
+			svc *spice.Service,
+		) (IntegrationHandler, error) {
+			return &integration.Handler{
+				Log:        log,
+				Repository: repo,
+				Worktree:   wt,
+				Store:      store,
+				Service:    svc,
+			}, nil
 		}),
 	)
 }

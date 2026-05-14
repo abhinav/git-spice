@@ -1,0 +1,63 @@
+# Verifies 'gs integration tip add/remove/list' behavior.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+git add feat-b.txt
+gs bc feat-b -m 'Add feat-b'
+
+git checkout main
+gs integration create preview
+
+# Initially: no tips.
+gs integration tip list
+cmp stdout $WORK/golden/empty.txt
+
+gs integration tip add feat-a feat-b
+gs integration tip list
+cmp stdout $WORK/golden/two-tips.txt
+
+# Adding the same tip twice is rejected.
+! gs integration tip add feat-a
+stderr 'already configured'
+
+# Adding trunk is rejected.
+! gs integration tip add main
+stderr 'must not equal trunk'
+
+# Adding the integration branch name is rejected.
+! gs integration tip add preview
+stderr 'must not equal integration'
+
+# Adding an untracked branch is rejected.
+! gs integration tip add nonexistent
+stderr 'not tracked'
+
+# Remove a tip.
+gs integration tip remove feat-a
+gs integration tip list
+cmp stdout $WORK/golden/one-tip.txt
+
+# Removing a tip that isn't configured is rejected.
+! gs integration tip remove feat-a
+stderr 'is not configured'
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-b.txt --
+feature b
+-- golden/empty.txt --
+-- golden/two-tips.txt --
+feat-a
+feat-b
+-- golden/one-tip.txt --
+feat-b

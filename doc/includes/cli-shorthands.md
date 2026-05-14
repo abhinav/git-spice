@@ -20,10 +20,14 @@
 | gs cp | [gs commit pick](/cli/reference.md#gs-commit-pick) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
-| gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
+| gs intc | [gs integration create](/cli/reference.md#gs-integration-create) |
+| gs intco | [gs integration checkout](/cli/reference.md#gs-integration-checkout) |
+| gs intd | [gs integration delete](/cli/reference.md#gs-integration-delete) |
+| gs intrb | [gs integration rebuild](/cli/reference.md#gs-integration-rebuild) |
+| gs ints | [gs integration submit](/cli/reference.md#gs-integration-submit) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |
 | gs ls | [gs log short](/cli/reference.md#gs-log-short) |
 | gs rba | [gs rebase abort](/cli/reference.md#gs-rebase-abort) |

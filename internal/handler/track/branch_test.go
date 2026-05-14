@@ -41,6 +41,29 @@ func TestHandler_TrackBranch(t *testing.T) {
 		assert.Contains(t, err.Error(), "cannot track trunk branch")
 	})
 
+	t.Run("CannotTrackIntegration", func(t *testing.T) {
+		log := silog.Nop()
+		store := statetest.NewMemoryStore(t, "main", "", log)
+		require.NoError(t, store.SetIntegration(t.Context(), &state.IntegrationInfo{
+			Name: "preview",
+		}))
+
+		ctrl := gomock.NewController(t)
+		handler := &Handler{
+			Log:        log,
+			Repository: NewMockGitRepository(ctrl),
+			Store:      store,
+			Service:    NewMockService(ctrl),
+			View:       ui.NewFileView(t.Output()),
+		}
+
+		err := handler.TrackBranch(t.Context(), &BranchRequest{
+			Branch: "preview",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "integration branch")
+	})
+
 	t.Run("BaseSpecified", func(t *testing.T) {
 		log := silog.Nop()
 		store := statetest.NewMemoryStore(t, "main", "", log)
