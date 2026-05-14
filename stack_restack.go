@@ -83,10 +83,14 @@ func (cmd *stackRestackCmd) Run(
 	view ui.View,
 	store *state.Store,
 	handler RestackHandler,
+	integrationHandler IntegrationHandler,
 ) error {
 	if err := verifyRestackFromTrunk(log, view, store, cmd.Branch, "stack"); err != nil {
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch, nil)
+	if err := handler.RestackStack(ctx, cmd.Branch, nil); err != nil {
+		return err
+	}
+	return integrationHandler.MaybeRebuild(ctx)
 }
