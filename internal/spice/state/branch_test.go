@@ -287,6 +287,129 @@ func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	assert.Equal(t, "", foo.UpstreamBranch)
 }
 
+func TestBranchTxUpsert_submodules(t *testing.T) {
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	// Set initial submodule associations.
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{{
+			Name: "feat",
+			Base: "main",
+			Submodules: map[string]string{
+				"libs/core": "feat-core",
+				"libs/util": "feat-util",
+			},
+		}},
+		Message: "add feat",
+	}))
+
+	t.Run("InitialSet", func(t *testing.T) {
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"libs/core": "feat-core",
+			"libs/util": "feat-util",
+		}, res.Submodules)
+	})
+
+	t.Run("MergeNewEntry", func(t *testing.T) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name: "feat",
+				Submodules: map[string]string{
+					"libs/new": "feat-new",
+				},
+			}},
+			Message: "add new submodule",
+		}))
+
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"libs/core": "feat-core",
+			"libs/util": "feat-util",
+			"libs/new":  "feat-new",
+		}, res.Submodules)
+	})
+
+	t.Run("OverwriteEntry", func(t *testing.T) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name: "feat",
+				Submodules: map[string]string{
+					"libs/core": "feat-core-v2",
+				},
+			}},
+			Message: "repoint submodule",
+		}))
+
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Equal(t, "feat-core-v2", res.Submodules["libs/core"])
+		assert.Equal(t, "feat-util", res.Submodules["libs/util"])
+		assert.Equal(t, "feat-new", res.Submodules["libs/new"])
+	})
+
+	t.Run("RemoveEntry", func(t *testing.T) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name: "feat",
+				Submodules: map[string]string{
+					"libs/new": "", // empty = remove
+				},
+			}},
+			Message: "remove submodule",
+		}))
+
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"libs/core": "feat-core-v2",
+			"libs/util": "feat-util",
+		}, res.Submodules)
+	})
+
+	t.Run("NilLeavesUnchanged", func(t *testing.T) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name: "feat",
+				// Submodules: nil — should not change
+			}},
+			Message: "unrelated update",
+		}))
+
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"libs/core": "feat-core-v2",
+			"libs/util": "feat-util",
+		}, res.Submodules)
+	})
+
+	t.Run("RemoveAllClears", func(t *testing.T) {
+		require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name: "feat",
+				Submodules: map[string]string{
+					"libs/core": "",
+					"libs/util": "",
+				},
+			}},
+			Message: "remove all submodules",
+		}))
+
+		res, err := store.LookupBranch(t.Context(), "feat")
+		require.NoError(t, err)
+		assert.Empty(t, res.Submodules)
+	})
+}
+
 // Uses rapid to run randomized scenarios on the branch state
 // to ensure we never leave it in a corrupted state.
 func TestBranchStateUncorruptible(t *testing.T) {

@@ -1039,6 +1039,45 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
+### git-spice branch submodule list {#gs-branch-submodule-list}
+
+```
+gs branch (b) submodule (sm) list (ls) [flags]
+```
+
+List submodule branch associations
+
+Shows the submodule branch associations
+recorded for the given branch.
+If no branch is specified,
+the current branch is used.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list associations for. Defaults to current branch.
+
+### git-spice branch submodule repoint {#gs-branch-submodule-repoint}
+
+```
+gs branch (b) submodule (sm) repoint <path> [flags]
+```
+
+Change submodule branch association for the current branch
+
+Changes which submodule branch is associated
+with the current parent branch.
+
+If --branch is not specified,
+the submodule's current branch is used.
+
+**Arguments**
+
+* `path`: Submodule path to repoint.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Submodule branch to associate. Defaults to submodule's current branch.
+
 ## Commit
 
 ### git-spice commit create {#gs-commit-create}

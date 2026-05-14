@@ -32,6 +32,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
 	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
@@ -165,7 +166,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack),
+		kong.Bind(logger, &forges, &sigStack, spiceConfig),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
 		kong.Vars{
@@ -468,6 +469,23 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree: worktree,
 				Store:    store,
 				Service:  svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			wt *git.Worktree,
+			store *state.Store,
+			cfg *spice.Config,
+		) (SubmoduleTracker, error) {
+			var exclude []string
+			if cfg != nil {
+				exclude = cfg.SubmoduleExclusions()
+			}
+			return &submodule.Tracker{
+				Log:      log,
+				Worktree: wt,
+				Store:    store,
+				Exclude:  exclude,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
