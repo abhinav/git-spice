@@ -1181,6 +1181,11 @@ This command requires at least Git 2.45.
 
 * `commit`: The commit to fixup. Must be reachable from the HEAD commit.
 
+**Flags**
+
+* `-e`, `--edit`: Open an editor to modify the commit message.
+* `--no-verify`: Bypass commit-msg hooks.
+
 ### git-spice commit pick {#gs-commit-pick}
 
 ```
