@@ -84,6 +84,44 @@ func (c *MockForgeAuthenticationFlowCall) DoAndReturn(f func(context.Context, ui
 	return c
 }
 
+// BaseURL mocks base method.
+func (m *MockForge) BaseURL() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BaseURL")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// BaseURL indicates an expected call of BaseURL.
+func (mr *MockForgeMockRecorder) BaseURL() *MockForgeBaseURLCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BaseURL", reflect.TypeOf((*MockForge)(nil).BaseURL))
+	return &MockForgeBaseURLCall{Call: call}
+}
+
+// MockForgeBaseURLCall wrap *gomock.Call
+type MockForgeBaseURLCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockForgeBaseURLCall) Return(arg0 string) *MockForgeBaseURLCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockForgeBaseURLCall) Do(f func() string) *MockForgeBaseURLCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockForgeBaseURLCall) DoAndReturn(f func() string) *MockForgeBaseURLCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // CLIPlugin mocks base method.
 func (m *MockForge) CLIPlugin() any {
 	m.ctrl.T.Helper()
@@ -392,41 +430,41 @@ func (c *MockForgeOpenRepositoryCall) DoAndReturn(f func(context.Context, forge.
 	return c
 }
 
-// ParseRemoteURL mocks base method.
-func (m *MockForge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
+// ParseRepositoryPath mocks base method.
+func (m *MockForge) ParseRepositoryPath(arg0 string) (forge.RepositoryID, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseRemoteURL", remoteURL)
+	ret := m.ctrl.Call(m, "ParseRepositoryPath", arg0)
 	ret0, _ := ret[0].(forge.RepositoryID)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseRemoteURL indicates an expected call of ParseRemoteURL.
-func (mr *MockForgeMockRecorder) ParseRemoteURL(remoteURL any) *MockForgeParseRemoteURLCall {
+// ParseRepositoryPath indicates an expected call of ParseRepositoryPath.
+func (mr *MockForgeMockRecorder) ParseRepositoryPath(arg0 any) *MockForgeParseRepositoryPathCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseRemoteURL", reflect.TypeOf((*MockForge)(nil).ParseRemoteURL), remoteURL)
-	return &MockForgeParseRemoteURLCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseRepositoryPath", reflect.TypeOf((*MockForge)(nil).ParseRepositoryPath), arg0)
+	return &MockForgeParseRepositoryPathCall{Call: call}
 }
 
-// MockForgeParseRemoteURLCall wrap *gomock.Call
-type MockForgeParseRemoteURLCall struct {
+// MockForgeParseRepositoryPathCall wrap *gomock.Call
+type MockForgeParseRepositoryPathCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockForgeParseRemoteURLCall) Return(arg0 forge.RepositoryID, arg1 error) *MockForgeParseRemoteURLCall {
+func (c *MockForgeParseRepositoryPathCall) Return(arg0 forge.RepositoryID, arg1 error) *MockForgeParseRepositoryPathCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeParseRemoteURLCall) Do(f func(string) (forge.RepositoryID, error)) *MockForgeParseRemoteURLCall {
+func (c *MockForgeParseRepositoryPathCall) Do(f func(string) (forge.RepositoryID, error)) *MockForgeParseRepositoryPathCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeParseRemoteURLCall) DoAndReturn(f func(string) (forge.RepositoryID, error)) *MockForgeParseRemoteURLCall {
+func (c *MockForgeParseRepositoryPathCall) DoAndReturn(f func(string) (forge.RepositoryID, error)) *MockForgeParseRepositoryPathCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

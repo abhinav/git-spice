@@ -14,6 +14,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
@@ -201,8 +202,13 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				return fmt.Errorf("get remote URL: %w", err)
 			}
 
+			parsedRemoteURL, err := giturl.Parse(remoteURL)
+			if err != nil {
+				return fmt.Errorf("parse remote URL: %w", err)
+			}
+
 			var ok bool
-			remoteForge, remoteRepoID, ok = forge.MatchRemoteURL(h.Forges, remoteURL)
+			remoteForge, remoteRepoID, ok = forge.FromRemoteURL(h.Forges, parsedRemoteURL)
 			if !ok {
 				return nil
 			}

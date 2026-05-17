@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -53,16 +55,57 @@ func (r *Registry) Lookup(id string) (Forge, bool) {
 	return f.(Forge), true
 }
 
-// MatchRemoteURL attempts to match the given remote URL with a registered forge.
-// Returns the matched forge, and information about the matched repository.
-func MatchRemoteURL(r *Registry, remoteURL string) (forge Forge, rid RepositoryID, ok bool) {
+// FromRemoteURL attempts to match the given remote URL with a registered forge.
+// It returns the matched forge and information about the matched repository.
+func FromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
 	for f := range r.All() {
-		rid, err := f.ParseRemoteURL(remoteURL)
+		baseURL, err := url.Parse(f.BaseURL())
+		if err != nil {
+			continue
+		}
+
+		baseHost := baseURL.Hostname()
+		remoteHost := remoteURL.Hostname
+		// Some forges advertise a base URL such as "https://github.com",
+		// while Git remotes use a related SSH hostname like "ssh.github.com".
+		// Accept subdomains so these documented SSH hosts still infer
+		// the same forge.
+		hostMatches := remoteHost == baseHost ||
+			strings.HasSuffix(remoteHost, "."+baseHost)
+		if !hostMatches {
+			continue
+		}
+
+		// A base URL without an explicit port describes the forge host,
+		// not one transport endpoint.
+		// In that case, allow the remote to specify its SSH port.
+		basePort := baseURL.Port()
+		if basePort != "" && remoteURL.Port != basePort {
+			continue
+		}
+
+		rid, err := f.ParseRepositoryPath(remoteURL.Path)
 		if err == nil {
 			return f, rid, true
 		}
 	}
 	return nil, nil, false
+}
+
+// SplitRepositoryPath extracts owner and repository name from a URL path.
+//
+// It strips leading/trailing slashes and the ".git" suffix,
+// then splits on the first slash to get owner/repository components.
+// For example,
+// "/owner/repo.git" returns "owner" and "repo";
+// "/workspace/repo/" returns "workspace" and "repo".
+func SplitRepositoryPath(path string) (owner, repo string, ok bool) {
+	s := strings.TrimPrefix(path, "/")
+	s = strings.TrimSuffix(s, "/")
+	s = strings.TrimSuffix(s, ".git")
+
+	owner, repo, ok = strings.Cut(s, "/")
+	return owner, repo, ok
 }
 
 // ErrUnsupportedURL indicates that the given remote URL
@@ -118,17 +161,24 @@ type Forge interface {
 	// Return nil if the forge does not require any extra CLI flags.
 	CLIPlugin() any
 
-	// ParseRemoteURL extracts information about a Forge-hosted repository
-	// from the given remote URL, and returns a [RepositoryID] identifying it.
+	// BaseURL reports the configured forge web URL.
 	//
-	// Returns ErrUnsupportedURL if the remote URL does not match
+	// Remote URL inference uses the host and optional port from this URL.
+	// Providers may also use the same configured URL for user-facing links.
+	BaseURL() string
+
+	// ParseRepositoryPath extracts information about a Forge-hosted repository
+	// from an already-extracted repository path,
+	// and returns a [RepositoryID] identifying it.
+	//
+	// Returns ErrUnsupportedURL if the path does not identify
 	// this forge.
 	//
-	// This operation should not make any network requests,
+	// This operation should not make any network requests.
 	//
-	// For example, this would take "https://github.com/foo/bar.git"
-	// and return a GitHub RepositoryID for the repository "foo/bar".
-	ParseRemoteURL(remoteURL string) (RepositoryID, error)
+	// For example, this would take "/foo/bar.git" and return
+	// a GitHub RepositoryID for the repository "foo/bar".
+	ParseRepositoryPath(string) (RepositoryID, error)
 
 	// OpenRepository opens the remote repository that the given ID points to.
 	OpenRepository(ctx context.Context, tok AuthenticationToken, repo RepositoryID) (Repository, error)

@@ -5,10 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/forgeurl"
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -37,6 +35,11 @@ func (f *Forge) logger() *silog.Logger {
 // or the default URL if none is set.
 func (f *Forge) URL() string {
 	return cmp.Or(f.Options.URL, DefaultURL)
+}
+
+// BaseURL reports the Bitbucket web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.URL()
 }
 
 // APIURL returns the base API URL configured for the Bitbucket Forge
@@ -76,12 +79,12 @@ func (*Forge) ChangeTemplatePaths() []string {
 	}
 }
 
-// ParseRemoteURL parses the given remote URL and returns a [RepositoryID]
-// for the Bitbucket repository it points to.
+// ParseRepositoryPath parses a Bitbucket repository path and returns
+// a [RepositoryID] for the repository it identifies.
 //
-// It returns [ErrUnsupportedURL] if the remote URL is not a valid Bitbucket URL.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
-	workspace, repo, err := extractRepoInfo(f.URL(), remoteURL)
+// It returns [ErrUnsupportedURL] if the path is not a valid Bitbucket path.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	workspace, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -117,30 +120,11 @@ func (f *Forge) OpenRepository(
 	return newRepository(f, rid.url, rid.workspace, rid.name, f.logger(), client, tok, http.DefaultClient), nil
 }
 
-func extractRepoInfo(bitbucketURL, remoteURL string) (workspace, repo string, err error) {
-	baseURL, err := url.Parse(bitbucketURL)
-	if err != nil {
-		return "", "", fmt.Errorf("bad base URL: %w", err)
-	}
-
-	u, err := forgeurl.Parse(remoteURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	forgeurl.StripDefaultPort(baseURL, u)
-
-	if !forgeurl.MatchesHost(baseURL, u) {
-		return "", "", fmt.Errorf(
-			"%v is not a Bitbucket URL: expected host %q, got %q",
-			u, baseURL.Host, u.Host,
-		)
-	}
-
-	workspace, repo, ok := forgeurl.ExtractPath(u.Path)
+func extractRepoInfo(path string) (workspace, repo string, err error) {
+	workspace, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
 		return "", "", fmt.Errorf(
-			"path %q does not contain a Bitbucket repository", u.Path,
+			"path %q does not contain a Bitbucket repository", path,
 		)
 	}
 

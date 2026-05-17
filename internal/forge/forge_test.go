@@ -1,13 +1,14 @@
 package forge_test
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.uber.org/mock/gomock"
 )
 
@@ -16,15 +17,17 @@ func TestRegister(t *testing.T) {
 
 	mockForge := forgetest.NewMockForge(ctrl)
 	mockForge.EXPECT().ID().Return("a").AnyTimes()
+	mockForge.EXPECT().BaseURL().Return("https://example.com").AnyTimes()
 
 	mockHandle := forgetest.NewMockRepositoryID(ctrl)
-	mockForge.EXPECT().ParseRemoteURL(gomock.Any()).
-		DoAndReturn(func(url string) (forge.RepositoryID, error) {
-			if strings.HasPrefix(url, "https://example.com/") {
+	mockForge.EXPECT().ParseRepositoryPath(gomock.Any()).
+		DoAndReturn(func(path string) (forge.RepositoryID, error) {
+			if path == "/foo" {
 				return mockHandle, nil
 			}
 
-			return nil, forge.ErrUnsupportedURL
+			return nil, fmt.Errorf("%w: unexpected path %q",
+				forge.ErrUnsupportedURL, path)
 		}).AnyTimes()
 
 	var registry forge.Registry
@@ -51,18 +54,128 @@ func TestRegister(t *testing.T) {
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})
+}
 
-	t.Run("MatchForgeURL", func(t *testing.T) {
-		f, h, ok := forge.MatchRemoteURL(&registry, "https://example.com/foo")
-		assert.True(t, ok, "forge not found")
-		assert.Equal(t, "a", f.ID(), "forge ID mismatch")
-		assert.Same(t, mockHandle, h, "repository ID mismatch")
+func TestFromRemoteURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
 
-		t.Run("NoMatch", func(t *testing.T) {
-			_, _, ok := forge.MatchRemoteURL(&registry, "https://example.org/foo")
+	tests := []struct {
+		name      string
+		baseURL   string
+		remoteURL string
+	}{
+		{
+			name:      "MatchingHost",
+			baseURL:   "https://example.com",
+			remoteURL: "https://example.com/foo",
+		},
+		{
+			name:      "Subdomain",
+			baseURL:   "https://example.com",
+			remoteURL: "ssh://git@ssh.example.com/foo",
+		},
+		{
+			name:      "RemotePort",
+			baseURL:   "https://example.com",
+			remoteURL: "ssh://git@example.com:2222/foo",
+		},
+		{
+			name:      "ExplicitBasePort",
+			baseURL:   "https://example.com:8443",
+			remoteURL: "ssh://git@example.com:8443/foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHandle := forgetest.NewMockRepositoryID(ctrl)
+			mockForge := forgetest.NewMockForge(ctrl)
+			mockForge.EXPECT().ID().Return("a").AnyTimes()
+			mockForge.EXPECT().BaseURL().Return(tt.baseURL)
+			mockForge.EXPECT().
+				ParseRepositoryPath("/foo").
+				Return(mockHandle, nil)
+
+			var registry forge.Registry
+			defer registry.Register(mockForge)()
+
+			remoteURL, err := giturl.Parse(tt.remoteURL)
+			require.NoError(t, err)
+
+			f, h, ok := forge.FromRemoteURL(&registry, remoteURL)
+			assert.True(t, ok, "forge not found")
+			assert.Equal(t, "a", f.ID(), "forge ID mismatch")
+			assert.Same(t, mockHandle, h, "repository ID mismatch")
+		})
+	}
+}
+
+func TestFromRemoteURL_noMatch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	tests := []struct {
+		name      string
+		baseURL   string
+		remoteURL string
+	}{
+		{
+			name:      "WrongHost",
+			baseURL:   "https://example.com",
+			remoteURL: "https://example.org/foo",
+		},
+		{
+			name:      "AliasHost",
+			baseURL:   "https://example.com",
+			remoteURL: "git@example-alias:foo",
+		},
+		{
+			name:      "InvalidBaseURL",
+			baseURL:   "NOT\tA\nVALID URL",
+			remoteURL: "https://example.com/foo",
+		},
+		{
+			name:      "ExplicitBasePortMismatch",
+			baseURL:   "https://example.com:8443",
+			remoteURL: "ssh://git@example.com:2222/foo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockForge := forgetest.NewMockForge(ctrl)
+			mockForge.EXPECT().ID().Return("a").AnyTimes()
+			mockForge.EXPECT().BaseURL().Return(tt.baseURL)
+
+			var registry forge.Registry
+			defer registry.Register(mockForge)()
+
+			remoteURL, err := giturl.Parse(tt.remoteURL)
+			require.NoError(t, err)
+
+			_, _, ok := forge.FromRemoteURL(&registry, remoteURL)
 			assert.False(t, ok, "unexpected forge match")
 		})
-	})
+	}
+}
+
+func TestFromRemoteURL_unsupportedRepositoryPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockForge(ctrl)
+	mockForge.EXPECT().ID().Return("a").AnyTimes()
+	mockForge.EXPECT().BaseURL().Return("https://example.com")
+	mockForge.EXPECT().
+		ParseRepositoryPath("/foo").
+		Return(nil, fmt.Errorf("%w: unexpected path", forge.ErrUnsupportedURL))
+
+	var registry forge.Registry
+	defer registry.Register(mockForge)()
+
+	remoteURL, err := giturl.Parse("https://example.com/foo")
+	require.NoError(t, err)
+
+	_, _, ok := forge.FromRemoteURL(&registry, remoteURL)
+	assert.False(t, ok, "unexpected forge match")
 }
 
 func TestGetDisplayName(t *testing.T) {
@@ -75,6 +188,79 @@ func TestGetDisplayName(t *testing.T) {
 		name := forge.GetDisplayName(mockForge)
 		assert.Equal(t, "test-forge", name)
 	})
+}
+
+func TestSplitRepositoryPath(t *testing.T) {
+	tests := []struct {
+		name      string
+		give      string
+		wantOwner string
+		wantRepo  string
+	}{
+		{
+			name:      "Simple",
+			give:      "/owner/repo",
+			wantOwner: "owner",
+			wantRepo:  "repo",
+		},
+		{
+			name:      "WithGitSuffix",
+			give:      "/owner/repo.git",
+			wantOwner: "owner",
+			wantRepo:  "repo",
+		},
+		{
+			name:      "TrailingSlash",
+			give:      "/owner/repo/",
+			wantOwner: "owner",
+			wantRepo:  "repo",
+		},
+		{
+			name:      "BothSuffixAndSlash",
+			give:      "/owner/repo.git/",
+			wantOwner: "owner",
+			wantRepo:  "repo",
+		},
+		{
+			name:      "NoLeadingSlash",
+			give:      "owner/repo",
+			wantOwner: "owner",
+			wantRepo:  "repo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			owner, repo, ok := forge.SplitRepositoryPath(tt.give)
+
+			require.True(t, ok)
+			assert.Equal(t, tt.wantOwner, owner)
+			assert.Equal(t, tt.wantRepo, repo)
+		})
+	}
+}
+
+func TestSplitRepositoryPath_noMatch(t *testing.T) {
+	tests := []struct {
+		name string
+		give string
+	}{
+		{
+			name: "NoRepoComponent",
+			give: "/owner",
+		},
+		{
+			name: "Empty",
+			give: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, ok := forge.SplitRepositoryPath(tt.give)
+			assert.False(t, ok)
+		})
+	}
 }
 
 func TestChangeState(t *testing.T) {

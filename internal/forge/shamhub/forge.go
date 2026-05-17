@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/must"
@@ -50,14 +49,19 @@ func (*Forge) ID() string { return "shamhub" }
 // CLIPlugin registers additional CLI flags for the ShamHub forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// ParseRemoteURL parses the given remote URL and returns a [RepositoryID]
-// for the repository if it matches the ShamHub URL.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
+// BaseURL reports the ShamHub web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.URL
+}
+
+// ParseRepositoryPath parses a ShamHub repository path and returns
+// a [RepositoryID] for the repository it identifies.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
 	if f.URL == "" {
 		return nil, fmt.Errorf("%w: ShamHub is not initialized", forge.ErrUnsupportedURL)
 	}
 
-	owner, repo, err := extractRepoInfo(f.URL, remoteURL)
+	owner, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -123,16 +127,10 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/changes/%v", rid.url, rid.owner, rid.repo, int(cr))
 }
 
-func extractRepoInfo(forgeURL, remoteURL string) (owner, repo string, err error) {
-	tail, ok := strings.CutPrefix(remoteURL, forgeURL)
+func extractRepoInfo(path string) (owner, repo string, err error) {
+	owner, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
-		return "", "", fmt.Errorf("unrecognized host: %v", remoteURL)
-	}
-
-	tail = strings.TrimSuffix(strings.TrimPrefix(tail, "/"), ".git")
-	owner, repo, ok = strings.Cut(tail, "/")
-	if !ok {
-		return "", "", fmt.Errorf("no '/' found in %q", tail)
+		return "", "", fmt.Errorf("no '/' found in %q", path)
 	}
 
 	return owner, repo, nil
