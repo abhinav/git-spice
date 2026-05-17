@@ -34,12 +34,13 @@ shamhub merge alice/example 1
 # upstack submit from feature2 should block:
 # feature2's downstack includes feature1 (stale).
 ! gs upstack submit --fill
-stderr 'stale base feature1'
+stderr 'base=feature1'
+stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
-stderr 'no-branch-check'
+stderr '--force'
 
-# --no-branch-check bypasses the stale base check
-gs upstack submit --fill --no-branch-check
+# --force bypasses the stale base check
+gs upstack submit --fill --force
 stderr '#2 is up-to-date'
 
 -- repo/feature1.txt --

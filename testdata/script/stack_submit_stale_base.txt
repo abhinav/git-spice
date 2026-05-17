@@ -33,12 +33,13 @@ shamhub merge alice/example 1
 
 # stack submit should block: feature2's base is stale
 ! gs stack submit --fill
-stderr 'stale base feature1'
+stderr 'base=feature1'
+stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
-stderr 'no-branch-check'
+stderr '--force'
 
-# --no-branch-check bypasses the stale base check
-gs stack submit --fill --no-branch-check
+# --force bypasses the stale base check
+gs stack submit --fill --force
 stderr '#2 is up-to-date'
 
 -- repo/feature1.txt --

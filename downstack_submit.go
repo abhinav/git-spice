@@ -34,7 +34,6 @@ func (cmd *downstackSubmitCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
-	forgeRepo *optionalForgeRepository,
 	submitHandler SubmitHandler,
 ) error {
 	if cmd.Branch == "" {
@@ -49,16 +48,12 @@ func (cmd *downstackSubmitCmd) Run(
 		return errors.New("nothing to submit below trunk")
 	}
 
-	if err := cmd.checkDownstack(
-		ctx, svc, forgeRepo.Repository, cmd.Branch,
-	); err != nil {
-		return err
+	graph, err := svc.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
 	}
 
-	downstacks, err := svc.ListDownstack(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("list downstack: %w", err)
-	}
+	downstacks := slices.Collect(graph.Downstack(cmd.Branch))
 	must.NotBeEmptyf(downstacks, "downstack cannot be empty")
 	slices.Reverse(downstacks)
 
@@ -68,5 +63,6 @@ func (cmd *downstackSubmitCmd) Run(
 		Branches:     downstacks,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
+		BranchGraph:  graph,
 	})
 }

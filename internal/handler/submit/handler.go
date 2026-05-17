@@ -65,9 +65,9 @@ var _ Store = (*state.Store)(nil)
 
 // Service provides access to the Spice service.
 type Service interface {
+	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 	LoadBranches(context.Context) ([]spice.LoadBranchItem, error)
 	VerifyRestacked(ctx context.Context, name string) error
-	LookupBranch(ctx context.Context, name string) (*spice.LookupBranchResponse, error)
 	UnusedBranchName(ctx context.Context, remote string, branch string) (string, error)
 	ListChangeTemplates(context.Context, string, forge.Repository) ([]*forge.ChangeTemplate, error)
 }
@@ -411,6 +411,13 @@ type BatchRequest struct {
 	Branches     []string // required
 	Options      *Options
 	BatchOptions *BatchOptions // required
+
+	// BranchGraph is an optional graph already built by the command layer.
+	//
+	// Batch submit commands often build the graph to decide which branches are
+	// in scope. Reusing it here avoids loading the same branch state again for
+	// stale-base validation.
+	BranchGraph *spice.BranchGraph
 }
 
 // SubmitBatch submits a batch of branches to a remote repository,
@@ -426,12 +433,25 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		opts.UpdateOnly = &batchOpts.UpdateOnlyDefault
 	}
 
+	graph := req.BranchGraph
+	if graph == nil {
+		var err error
+		graph, err = h.Service.BranchGraph(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("build branch graph: %w", err)
+		}
+	}
+	if err := h.checkStaleSubmissionBases(ctx, graph, req.Branches, opts); err != nil {
+		return err
+	}
+
 	var branchesToComment []string
 	for _, branch := range req.Branches {
 		// Shallow copy the options because submitBranch may modify them.
 		opts := *opts
 		status, err := h.submitBranch(
 			ctx,
+			graph,
 			branch,
 			&submitOptions{Options: &opts},
 		)
@@ -469,6 +489,10 @@ type Request struct {
 
 	// Options are the options for the submit operation.
 	Options *Options // optional
+
+	// BranchGraph is an optional graph already built by the command layer.
+	// If not provided, it may be loaded as required.
+	BranchGraph *spice.BranchGraph
 }
 
 // Submit submits a single branch to a remote repository,
@@ -476,8 +500,21 @@ type Request struct {
 func (h *Handler) Submit(ctx context.Context, req *Request) error {
 	opts := cmp.Or(req.Options, &Options{})
 	mergeConfiguredOptions(opts)
+	graph := req.BranchGraph
+	if graph == nil {
+		var err error
+		graph, err = h.Service.BranchGraph(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("build branch graph: %w", err)
+		}
+	}
+	if err := h.checkStaleSubmissionBases(ctx, graph, []string{req.Branch}, opts); err != nil {
+		return err
+	}
+
 	status, err := h.submitBranch(
 		ctx,
+		graph,
 		req.Branch,
 		&submitOptions{
 			Options: opts,
@@ -523,6 +560,7 @@ type submitOptions struct {
 
 func (h *Handler) submitBranch(
 	ctx context.Context,
+	graph *spice.BranchGraph,
 	branchToSubmit string,
 	opts *submitOptions,
 ) (status submitStatus, err error) {
@@ -533,9 +571,9 @@ func (h *Handler) submitBranch(
 	svc := h.Service
 	log := h.Log
 
-	branch, err := svc.LookupBranch(ctx, branchToSubmit)
-	if err != nil {
-		return status, fmt.Errorf("lookup branch: %w", err)
+	branch, ok := graph.Lookup(branchToSubmit)
+	if !ok {
+		return status, fmt.Errorf("lookup branch: %w", state.ErrNotExist)
 	}
 
 	// Various code paths down below should call this
@@ -575,9 +613,9 @@ func (h *Handler) submitBranch(
 	// use that name instead.
 	upstreamBase := branch.Base
 	if branch.Base != h.Store.Trunk() {
-		baseBranch, err := svc.LookupBranch(ctx, branch.Base)
-		if err != nil {
-			return status, fmt.Errorf("lookup base branch: %w", err)
+		baseBranch, ok := graph.Lookup(branch.Base)
+		if !ok {
+			return status, fmt.Errorf("lookup base branch: %w", state.ErrNotExist)
 		}
 		upstreamBase = cmp.Or(baseBranch.UpstreamBranch, branch.Base)
 	}

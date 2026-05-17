@@ -37,12 +37,13 @@ shamhub merge alice/example 1
 # from feat3, stack submit should detect feat1 as stale
 # even though feat3's immediate base is feat2
 ! gs ss --fill
-stderr 'stale base feature1'
+stderr 'base=feature1'
+stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
-stderr 'no-branch-check'
+stderr '--force'
 
-# --no-branch-check bypasses the stale base check for submit
-gs ss --fill --no-branch-check
+# --force bypasses the stale base check for submit
+gs ss --fill --force
 stderr '#3 is up-to-date'
 
 -- repo/feature1.txt --

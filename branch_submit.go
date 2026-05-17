@@ -2,13 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/submit"
-	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -16,8 +13,7 @@ import (
 type submitOptions struct {
 	submit.Options
 
-	NoWeb         bool `help:"Alias for --web=false."`
-	NoBranchCheck bool `help:"Skip stale base validation before submitting."`
+	NoWeb bool `help:"Alias for --web=false."`
 
 	// TODO: Other creation options e.g.:
 	// - milestone
@@ -95,8 +91,6 @@ type SubmitHandler interface {
 func (cmd *branchSubmitCmd) Run(
 	ctx context.Context,
 	wt *git.Worktree,
-	svc *spice.Service,
-	forgeRepo *optionalForgeRepository,
 	submitHandler SubmitHandler,
 ) error {
 	if cmd.NoWeb {
@@ -111,46 +105,10 @@ func (cmd *branchSubmitCmd) Run(
 		cmd.Branch = currentBranch
 	}
 
-	if err := cmd.checkDownstack(
-		ctx, svc, forgeRepo.Repository, cmd.Branch,
-	); err != nil {
-		return err
-	}
-
 	return submitHandler.Submit(ctx, &submit.Request{
 		Branch:  cmd.Branch,
 		Title:   cmd.Title,
 		Body:    cmd.Body,
 		Options: &cmd.Options,
 	})
-}
-
-// checkDownstack validates that no branch in the downstack
-// has a base whose forge change was already merged.
-func (opts *submitOptions) checkDownstack(
-	ctx context.Context,
-	svc *spice.Service,
-	forgeRepo forge.Repository,
-	branch string,
-) error {
-	if opts.NoBranchCheck {
-		return nil
-	}
-
-	graph, err := svc.BranchGraph(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("build branch graph: %w", err)
-	}
-
-	err = spice.ValidateDownstack(ctx, graph, forgeRepo, branch)
-	var staleErr *spice.StaleBaseError
-	if errors.As(err, &staleErr) {
-		return fmt.Errorf(
-			"%s has stale base %s (already merged); "+
-				"run 'gs repo sync' first, "+
-				"or use --no-branch-check to bypass",
-			staleErr.Branch, staleErr.Base,
-		)
-	}
-	return err
 }

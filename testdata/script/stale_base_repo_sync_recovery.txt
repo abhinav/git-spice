@@ -33,7 +33,8 @@ shamhub merge alice/example 1
 
 # stack submit blocks: feature2's base is stale
 ! gs ss --fill
-stderr 'stale base feature1'
+stderr 'base=feature1'
+stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
 
 # recover by syncing
