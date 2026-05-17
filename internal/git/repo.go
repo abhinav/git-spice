@@ -227,6 +227,12 @@ func (r *Repository) WithLogger(log *silog.Logger) *Repository {
 	return &newR
 }
 
+// GitDir returns the absolute path
+// to the repository's git directory.
+func (r *Repository) GitDir() string {
+	return r.gitDir
+}
+
 // gitCmd returns a Git command wrapper
 // configured to run in this repository.
 func (r *Repository) gitCmd(ctx context.Context, subcmd string, args ...string) *gitCmd {

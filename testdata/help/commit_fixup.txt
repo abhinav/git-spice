@@ -17,6 +17,10 @@ This command requires at least Git 2.45.
 Arguments:
   [<commit>]    The commit to fixup. Must be reachable from the HEAD commit.
 
+Flags:
+  -e, --edit         Open an editor to modify the commit message.
+      --no-verify    Bypass commit-msg hooks.
+
 Global Flags:
   -h, --help           Show help for the command
       --version        Print version information and quit

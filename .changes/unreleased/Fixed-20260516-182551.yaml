@@ -1,0 +1,4 @@
+kind: Fixed
+body: >-
+  commit fixup: Fix unstaged worktree changes when staged fixup changes conflict.
+time: 2026-05-16T18:25:51.319248-07:00

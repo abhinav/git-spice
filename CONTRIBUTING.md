@@ -190,6 +190,76 @@ To release a new version, take the following steps:
 3. Once the pull request has merged, trigger the
    [Publishh release workflow](https://github.com/abhinav/git-spice/actions/workflows/publish-release.yml).
 
+### Ubuntu PPA packages
+
+The PPA publisher is implemented by `tools/ci/launchpad-ppa`.
+It builds Ubuntu source packages for Launchpad from a Git archive,
+adds the embedded Debian packaging recipe,
+vendors Go modules in the temporary source tree,
+and writes the result to `dist/debian/<series>`.
+
+To build unsigned source packages without uploading them,
+run:
+
+```bash
+go run ./tools/ci/launchpad-ppa \
+  -version vX.Y.Z \
+  -series noble,plucky,questing,resolute
+```
+
+The `-series` flag may be repeated
+or may receive a comma-separated list.
+If `-ref` is omitted,
+the publisher exports the Git ref matching `-version`;
+for example,
+`-version v0.28.0` defaults to `-ref v0.28.0`.
+
+The current package recipe targets Ubuntu Noble and newer series.
+It requires a Go 1.26 toolchain package
+from the configured Launchpad build dependencies
+for each target series.
+
+For GitHub Actions publishing,
+configure these secrets in the release environment:
+
+- `LAUNCHPAD_GPG_PRIVATE_KEY`
+- `LAUNCHPAD_GPG_KEY_ID`
+- `LAUNCHPAD_GPG_PASSPHRASE`
+
+The private key is consumed by the GitHub workflow
+before invoking the publisher.
+Local signing only needs the key already imported into GPG,
+with `LAUNCHPAD_GPG_KEY_ID` and `LAUNCHPAD_GPG_PASSPHRASE`
+set in the environment.
+
+To sign and upload the source packages,
+run:
+
+```bash
+go run ./tools/ci/launchpad-ppa \
+  -version vX.Y.Z \
+  -series noble,plucky,questing,resolute \
+  -sign \
+  -dput
+```
+
+Without `-dput`,
+the publisher prints the `dput` commands it would run.
+With `-dput`,
+it uploads the signed source packages to `ppa:abhg/git-spice`
+unless another `-dput-target` is provided.
+
+The release workflow publishes these source packages
+after the GitHub release succeeds.
+It uses the same publisher command,
+passes `-sign` and `-dput`,
+and requires the GitHub Actions secrets listed above.
+
+If a PPA upload must be retried for the same upstream version,
+rerun the release workflow with a higher `ppa_revision` value.
+For example,
+`ppa_revision=2` publishes `X.Y.Z-1~ppa2`.
+
 ## Backporting changes
 
 (For maintainers only.)

@@ -1,0 +1,81 @@
+-- debian/changelog --
+git-spice (0.0.0-1~ppa1) noble; urgency=medium
+
+  * Placeholder changelog for local packaging.
+
+ -- Abhinav Gupta <mail@abhinavg.net>  Thu, 01 Jan 1970 00:00:00 +0000
+-- debian/control --
+Source: git-spice
+Section: vcs
+Priority: optional
+Maintainer: Abhinav Gupta <mail@abhinavg.net>
+Build-Depends:
+ debhelper-compat (= 13),
+ golang-go (>= 2:1.26~),
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://abhinav.github.io/git-spice/
+
+Package: git-spice
+Architecture: any
+Depends:
+ git (>= 2.38),
+ ${misc:Depends},
+Description: tool for stacking Git branches
+ git-spice helps manage stacked Git branches for workflows that build
+ pull requests or merge requests as a series of dependent changes.
+-- debian/copyright --
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: git-spice
+Source: https://github.com/abhinav/git-spice
+
+Files: *
+Copyright: 2024-2026 Abhinav Gupta
+License: GPL-3+
+
+License: GPL-3+
+ This package is free software:
+ you can redistribute it and/or modify it
+ under the terms of the GNU General Public License
+ as published by the Free Software Foundation,
+ either version 3 of the License,
+ or (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE.
+ See the GNU General Public License for more details.
+ .
+ On Debian systems,
+ the full text of the GNU General Public License version 3
+ can be found in `/usr/share/common-licenses/GPL-3`.
+-- debian/docs --
+README.md
+-- debian/install --
+_build/git-spice usr/bin
+-- debian/rules --
+#!/usr/bin/make -f
+
+export GO111MODULE := on
+export GOFLAGS := -mod=vendor -trimpath
+export GOTOOLCHAIN := local
+
+VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/-.*//')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	CGO_ENABLED=0 go build \
+		-o _build/git-spice \
+		-ldflags "-s -w -X main._version=$(VERSION)" \
+		go.abhg.dev/gs
+
+override_dh_auto_test:
+	@echo "Skipping upstream tests during package build."
+
+override_dh_installchangelogs:
+	dh_installchangelogs CHANGELOG.md
+-- debian/source/format --
+3.0 (quilt)

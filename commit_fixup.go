@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/fixup"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
@@ -53,12 +54,14 @@ func (cmd *commitFixupCmd) AfterApply(kctx *kong.Context) error {
 		log *silog.Logger,
 		repo *git.Repository,
 		wt *git.Worktree,
+		signals *sigstack.Stack,
 		svc *spice.Service,
 		restackHandler RestackHandler,
 	) (FixupHandler, error) {
 		return &fixup.Handler{
 			Log:        log,
 			Worktree:   wt,
+			Signals:    signals,
 			Repository: repo,
 			Service:    svc,
 			Restack:    restackHandler,

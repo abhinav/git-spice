@@ -20,6 +20,7 @@
 | gs cp | [gs commit pick](/cli/reference.md#gs-commit-pick) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
+| gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |

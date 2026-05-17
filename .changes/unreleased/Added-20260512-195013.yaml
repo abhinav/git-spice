@@ -1,0 +1,5 @@
+kind: Added
+body: >-
+  submit: Add 'spice.submit.label.addWhen' configuration option
+  to control when configured labels are added to CRs.
+time: 2026-05-12T19:50:13.098706-07:00

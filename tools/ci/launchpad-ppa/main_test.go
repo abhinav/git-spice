@@ -1,0 +1,113 @@
+package main
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestSeriesFlag_Set(t *testing.T) {
+	var series seriesFlag
+
+	require.NoError(t, series.Set("noble,plucky"))
+	require.NoError(t, series.Set("questing"))
+	require.NoError(t, series.Set(" resolute, "))
+
+	assert.Equal(t,
+		seriesFlag{"noble", "plucky", "questing", "resolute"},
+		series)
+}
+
+func TestNewPackagePlan_defaults(t *testing.T) {
+	plan, err := newPackagePlan(publishRequest{
+		Version:     "v0.28.0",
+		PPARevision: 1,
+		DputTarget:  _defaultDputTarget,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "v0.28.0", plan.Version)
+	assert.Equal(t, "0.28.0", plan.UpstreamVersion)
+	assert.Equal(t, "0.28.0-1~ppa1", plan.DebianVersion)
+	assert.Equal(t, "v0.28.0", plan.Ref)
+	assert.Equal(t, []string{"noble"}, plan.Series)
+	assert.Nil(t, plan.Sign)
+	assert.False(t, plan.Dput)
+	assert.Equal(t, _defaultDputTarget, plan.DputTarget)
+}
+
+func TestNewPackagePlan_customValues(t *testing.T) {
+	plan, err := newPackagePlan(publishRequest{
+		Version:     "v0.28.0",
+		Ref:         "release-branch",
+		Series:      seriesFlag{"noble", "plucky"},
+		PPARevision: 2,
+		Dput:        true,
+		DputTarget:  "ppa:test/git-spice",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "release-branch", plan.Ref)
+	assert.Equal(t, []string{"noble", "plucky"}, plan.Series)
+	assert.Equal(t, "0.28.0-1~ppa2", plan.DebianVersion)
+	assert.Nil(t, plan.Sign)
+	assert.True(t, plan.Dput)
+	assert.Equal(t, "ppa:test/git-spice", plan.DputTarget)
+}
+
+func TestNewPackagePlan_invalid(t *testing.T) {
+	_, err := newPackagePlan(publishRequest{
+		Version:     "not-a-version",
+		PPARevision: 0,
+	})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "version must be a valid semantic version")
+	assert.ErrorContains(t, err, "PPA revision must be positive")
+	assert.ErrorContains(t, err, "-dput-target is required")
+}
+
+func TestSignConfigFromEnv(t *testing.T) {
+	t.Run("Disabled", func(t *testing.T) {
+		sign, err := signConfigFromEnv(false)
+		require.NoError(t, err)
+		assert.Nil(t, sign)
+	})
+
+	t.Run("Valid", func(t *testing.T) {
+		t.Setenv(_launchpadGPGKeyIDEnv, "ABC123")
+		t.Setenv(_launchpadGPGPassphraseEnv, "secret")
+
+		sign, err := signConfigFromEnv(true)
+		require.NoError(t, err)
+		require.NotNil(t, sign)
+		assert.Equal(t, "ABC123", sign.KeyID)
+		assert.Equal(t, "secret", sign.Passphrase)
+	})
+
+	t.Run("MissingKey", func(t *testing.T) {
+		t.Setenv(_launchpadGPGPassphraseEnv, "secret")
+
+		_, err := signConfigFromEnv(true)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, _launchpadGPGKeyIDEnv)
+	})
+
+	t.Run("MissingPassphrase", func(t *testing.T) {
+		t.Setenv(_launchpadGPGKeyIDEnv, "ABC123")
+
+		_, err := signConfigFromEnv(true)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, _launchpadGPGPassphraseEnv)
+	})
+}
+
+func TestRenderDputCommand(t *testing.T) {
+	assert.Equal(t,
+		"dput ppa:abhg/git-spice dist/debian/noble/git-spice_0.28.0-1~ppa1_source.changes",
+		renderDputCommand(
+			"ppa:abhg/git-spice",
+			"dist/debian/noble/git-spice_0.28.0-1~ppa1_source.changes",
+		))
+}

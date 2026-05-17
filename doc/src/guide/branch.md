@@ -297,6 +297,8 @@ text "gs upstack restack" mono with w at last.e
 
     git-spice also offers
     $$gs branch restack$$ to restack just the current branch onto its base,
+    $$gs upstack restack$$ to restack the current branch and branches above it,
+    $$gs downstack restack$$ to restack the current branch and branches below it,
     and $$gs stack restack$$ to restack all branches in the current stack.
 
 ### Automatic restacking

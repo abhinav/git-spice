@@ -436,6 +436,23 @@ The value must be a comma-separated list of labels.
 Labels specified with the `-l`/`--label` flags
 will be combined with the configured labels.
 
+<!-- TODO(abhinav): oops, "label" should've been "labels" -->
+
+### spice.submit.label.addWhen
+
+<!-- gs:version unreleased -->
+
+Controls when $$spice.submit.label$$ are added to change requests.
+
+When set to `create`, configured labels are skipped
+when updating existing CRs,
+except when added explicitly via the `-l`/`--label` flag.
+
+**Accepted values:**
+
+- `always` (default): add configured labels to all CRs
+- `create`: only add configured labels when creating a CR
+
 ### spice.submit.reviewers
 
 <!-- gs:version v0.21.0 -->

@@ -1,0 +1,69 @@
+# Restack a branch and its downstack without restacking its upstack.
+
+as 'Test <test@example.com>'
+at '2026-05-12T18:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Set up a stack of four branches on top of each other.
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git add feature3.txt
+gs branch create feature3 -m 'Add feature3'
+
+git add feature4.txt
+gs branch create feature4 -m 'Add feature4'
+
+# Advance trunk so every branch in the stack needs restacking.
+gs branch checkout main
+cp $WORK/extra/feature0.txt .
+git add feature0.txt
+git commit -m 'Add feature0'
+
+# Restack from feature3 down toward trunk.
+git checkout feature3
+gs downstack restack
+stderr 'INF feature1: restacked on main'
+stderr 'INF feature2: restacked on feature1'
+stderr 'INF feature3: restacked on feature2'
+! stderr 'feature4: restacked'
+
+# The operation returns to the starting branch.
+git branch --show-current
+stdout '^feature3$'
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+! gs downstack restack --branch main
+stderr 'nothing to restack below trunk'
+
+-- repo/feature1.txt --
+foo
+-- repo/feature2.txt --
+bar
+-- repo/feature3.txt --
+baz
+-- repo/feature4.txt --
+qux
+-- extra/feature0.txt --
+quux
+-- golden/branches.txt --
+* 13b3e98 (HEAD -> feature3) Add feature3
+* fe3b184 (feature2) Add feature2
+* ee6da8b (feature1) Add feature1
+* 4e3615c (main) Add feature0
+| * a91fd9c (feature4) Add feature4
+| * 1daffe4 Add feature3
+| * 5a8a43d Add feature2
+| * 3652a5c Add feature1
+|/  
+* 204b656 Initial commit

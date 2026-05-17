@@ -2,7 +2,7 @@ module go.abhg.dev/gs/doc
 
 go 1.24.0
 
-toolchain go1.26.2
+toolchain go1.26.3
 
 require github.com/charmbracelet/freeze v0.2.2
 

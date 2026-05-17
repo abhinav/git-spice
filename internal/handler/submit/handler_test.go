@@ -340,6 +340,144 @@ func TestEffectiveReviewers(t *testing.T) {
 	}
 }
 
+func TestLabelsAddWhen_UnmarshalText(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    LabelsAddWhen
+		wantErr string
+	}{
+		{
+			name:  "Always",
+			input: "always",
+			want:  LabelsAddWhenAlways,
+		},
+		{
+			name:  "Create",
+			input: "create",
+			want:  LabelsAddWhenCreate,
+		},
+		{
+			name:    "Invalid",
+			input:   "never",
+			wantErr: `invalid value "never": expected always or create`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got LabelsAddWhen
+			err := got.UnmarshalText([]byte(tt.input))
+
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestLabelsAddWhen_String(t *testing.T) {
+	tests := []struct {
+		name  string
+		value LabelsAddWhen
+		want  string
+	}{
+		{name: "Always", value: LabelsAddWhenAlways, want: "always"},
+		{name: "Create", value: LabelsAddWhenCreate, want: "create"},
+		{name: "Unknown", value: LabelsAddWhen(99), want: "unknown"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.value.String())
+		})
+	}
+}
+
+func TestEffectiveLabels(t *testing.T) {
+	tests := []struct {
+		name             string
+		addWhen          LabelsAddWhen
+		isCreate         bool
+		flagLabels       []string
+		configuredLabels []string
+		want             []string
+	}{
+		{
+			name:             "AlwaysCreate",
+			addWhen:          LabelsAddWhenAlways,
+			isCreate:         true,
+			flagLabels:       []string{"bug"},
+			configuredLabels: []string{"skip-ci"},
+			want:             []string{"bug", "skip-ci"},
+		},
+		{
+			name:             "AlwaysUpdate",
+			addWhen:          LabelsAddWhenAlways,
+			isCreate:         false,
+			flagLabels:       []string{"bug"},
+			configuredLabels: []string{"skip-ci"},
+			want:             []string{"bug", "skip-ci"},
+		},
+		{
+			name:             "CreateOnCreate",
+			addWhen:          LabelsAddWhenCreate,
+			isCreate:         true,
+			flagLabels:       []string{"bug"},
+			configuredLabels: []string{"skip-ci"},
+			want:             []string{"bug", "skip-ci"},
+		},
+		{
+			name:             "CreateOnUpdate",
+			addWhen:          LabelsAddWhenCreate,
+			isCreate:         false,
+			flagLabels:       []string{"bug"},
+			configuredLabels: []string{"skip-ci"},
+			want:             []string{"bug"},
+		},
+		{
+			name:             "CreateOnUpdateNoFlags",
+			addWhen:          LabelsAddWhenCreate,
+			isCreate:         false,
+			flagLabels:       nil,
+			configuredLabels: []string{"skip-ci"},
+			want:             nil,
+		},
+		{
+			name:             "Deduplication",
+			addWhen:          LabelsAddWhenAlways,
+			isCreate:         true,
+			flagLabels:       []string{"bug", "skip-ci"},
+			configuredLabels: []string{"skip-ci", "feature"},
+			want:             []string{"bug", "skip-ci", "feature"},
+		},
+		{
+			name:             "EmptyBoth",
+			addWhen:          LabelsAddWhenAlways,
+			isCreate:         true,
+			flagLabels:       nil,
+			configuredLabels: nil,
+			want:             nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := &Options{
+				Labels:           tt.flagLabels,
+				ConfiguredLabels: tt.configuredLabels,
+				LabelsAddWhen:    tt.addWhen,
+			}
+			got := effectiveLabels(opts, tt.isCreate)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 type stubRepositoryID string
 
 func (id stubRepositoryID) String() string {
