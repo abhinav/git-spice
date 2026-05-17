@@ -389,6 +389,37 @@ The $$gs auth login$$ operation will always fail if you use this method.
 and the least secure method. End users should typically never pick this.
 It is intended only for CI/CD environments where you have no other choice.
 
+## Aliased SSH remotes
+
+<!-- gs:version unreleased -->
+
+git-spice usually identifies the forge from the Git remote URL.
+For example, a remote hosted on `github.com` identifies GitHub.
+
+If your SSH configuration uses a host alias,
+the remote URL may not identify the forge:
+
+```freeze language="terminal"
+{green}${reset} git remote -v
+origin  git@github-work:OWNER/REPO.git (fetch)
+origin  git@github-work:OWNER/REPO.git (push)
+```
+
+In that case, configure the forge kind explicitly:
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.kind{reset} {mag}github{reset}
+```
+
+After this, run $$gs auth login$$ and other forge-backed commands normally.
+The configured kind selects the forge implementation;
+the configured forge URL,
+such as $$spice.forge.github.url$$ for GitHub Enterprise,
+still controls web links and API requests.
+
+You may also set the same value for one command with the
+`GIT_SPICE_FORGE_KIND` environment variable.
+
 ## Self-hosted instances
 
 ### GitHub Enterprise

@@ -36,7 +36,7 @@ func (*logCmd) AfterApply(kctx *kong.Context) error {
 		repo *git.Repository,
 		store *state.Store,
 		svc *spice.Service,
-		forges *forge.Registry,
+		remoteResolver *remoteResolver,
 		stash secret.Stash,
 	) (ListHandler, error) {
 		return &list.Handler{
@@ -44,7 +44,14 @@ func (*logCmd) AfterApply(kctx *kong.Context) error {
 			Repository: repo,
 			Store:      store,
 			Service:    svc,
-			Forges:     forges,
+			ResolveRepository: func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) {
+				f, repoID, err := remoteResolver.Resolve(ctx, remote)
+				var unsupported *unsupportedForgeError
+				if errors.As(err, &unsupported) {
+					return nil, nil, nil
+				}
+				return f, repoID, err
+			},
 			OpenRemoteRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
 				return openForgeRepository(ctx, stash, f, repo)
 			},

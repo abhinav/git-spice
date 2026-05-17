@@ -276,6 +276,12 @@ func (w *helpWriter) writeConfigOnlyOptions(node *kong.Node) {
 			continue
 		}
 
+		// Some global escape hatches are documented on the configuration page
+		// without repeating them in every command's generated help.
+		if flag.Tag.Get("configHelp") == "-" {
+			continue
+		}
+
 		// If deprecated, don't show in the help.
 		if flag.Tag.Has("deprecated") {
 			continue

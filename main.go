@@ -167,7 +167,8 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack),
+		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
 		kong.Vars{
@@ -290,6 +291,8 @@ type mainCmd struct {
 		IndexLockTimeout time.Duration `name:"git-index-lock-timeout" hidden:"" default:"5s" config:"git.indexLockTimeout" help:"Total time to spend retrying git commands that fail due to index.lock contention. Set to 0 to disable retries."`
 	} `embed:""`
 
+	Forge forgeOptions `embed:""`
+
 	Shell shellCmd `cmd:"" group:"Shell"`
 	Auth  authCmd  `cmd:"" group:"Authentication"`
 
@@ -318,6 +321,14 @@ type mainCmd struct {
 
 	// Hidden commands:
 	DumpMD dumpMarkdownCmd `name:"dumpmd" hidden:"" cmd:"" help:"Dump a Markdown reference to stdout and quit"`
+}
+
+// forgeOptions defines application-wide forge selection options.
+type forgeOptions struct {
+	// Kind names the forge to use when a Git remote URL does not identify one.
+	// It is hidden from command help because forge selection is a repository
+	// or environment setting rather than a per-invocation control.
+	Kind string `name:"forge-kind" hidden:"" config:"forge.kind" env:"GIT_SPICE_FORGE_KIND" configHelp:"-" help:"Forge kind to use when remote URLs do not identify a supported Git host."`
 }
 
 func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *silog.Logger) error {
@@ -360,6 +371,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}
 	}
 	kctx.BindTo(secretStash, (*secret.Stash)(nil))
+	kctx.BindTo(&cmd.Forge, (*forgeOptions)(nil))
 
 	// TODO: bind interfaces, not values
 	// TODO:
@@ -376,6 +388,16 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(wt *git.Worktree) (*git.Repository, error) {
 			return wt.Repository(), nil
+		}),
+		kctx.BindSingletonProvider(func(
+			repo *git.Repository,
+			forges *forge.Registry,
+		) *remoteResolver {
+			return &remoteResolver{
+				Forges:     forges,
+				Repository: repo,
+				ForgeKind:  cmd.Forge.Kind,
+			}
 		}),
 		kctx.BindSingletonProvider(func(repo *git.Repository, wt *git.Worktree) (*state.Store, error) {
 			return ensureStore(ctx, repo, wt, logger, view)
@@ -438,7 +460,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			wt *git.Worktree,
 			svc *spice.Service,
 			secretStash secret.Stash,
-			forges *forge.Registry,
+			remoteResolver *remoteResolver,
 		) (SubmitHandler, error) {
 			return &submit.Handler{
 				Log:        log,
@@ -452,7 +474,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 					return ensureRemote(ctx, wt.Repository(), store, log, view)
 				},
 				ResolveRepository: func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) {
-					return resolveRemoteRepository(ctx, log, forges, wt.Repository(), remote)
+					return resolveRemoteRepository(ctx, log, remoteResolver, remote)
 				},
 				OpenRepository: func(ctx context.Context, f forge.Forge, repo forge.RepositoryID) (forge.Repository, error) {
 					return openRepository(ctx, log, secretStash, f, repo)
@@ -560,7 +582,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			store *state.Store,
 			svc *spice.Service,
 			secretStash secret.Stash,
-			forges *forge.Registry,
+			remoteResolver *remoteResolver,
 			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
 			autostashHandler AutostashHandler,
@@ -571,7 +593,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				return nil, err
 			}
 
-			remoteRepo, err := openRemoteRepositorySilent(ctx, secretStash, forges, repo, remote.Upstream)
+			remoteRepo, err := remoteResolver.Open(ctx, secretStash, remote.Upstream)
 			if err != nil {
 				var unsupported *unsupportedForgeError
 				if !errors.As(err, &unsupported) {
@@ -582,7 +604,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 
 			var pushRepository forge.RepositoryID
 			if remote.ForkMode() {
-				pushRepository, err = resolveRemoteRepositoryID(ctx, forges, repo, remote.Push)
+				pushRepository, err = remoteResolver.ResolveID(ctx, remote.Push)
 				if err != nil {
 					return nil, fmt.Errorf("resolve push repository: %w", err)
 				}
@@ -631,12 +653,11 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
 			secretStash secret.Stash,
-			forges *forge.Registry,
-			repo *git.Repository,
+			remoteResolver *remoteResolver,
 			remote state.Remote,
 		) (forge.Repository, error) {
 			f, repoID, err := resolveRemoteRepository(
-				ctx, log, forges, repo, remote.Upstream,
+				ctx, log, remoteResolver, remote.Upstream,
 			)
 			if err != nil {
 				return nil, fmt.Errorf(

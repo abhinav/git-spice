@@ -551,6 +551,72 @@ func TestBranchOntoRestackConfig(t *testing.T) {
 	}
 }
 
+func TestMainForgeKindConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		env    string
+		config string
+		want   string
+	}{
+		{
+			name: "Default",
+			want: "",
+		},
+		{
+			name: "Environment",
+			env:  "github",
+			want: "github",
+		},
+		{
+			name: "Config",
+			config: joinLines(
+				`[spice "forge"]`,
+				`  kind = gitlab`,
+			),
+			want: "gitlab",
+		},
+		{
+			name: "ConfigOverridesEnvironment",
+			env:  "github",
+			config: joinLines(
+				`[spice "forge"]`,
+				`  kind = gitlab`,
+			),
+			want: "gitlab",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.env != "" {
+				t.Setenv("GIT_SPICE_FORGE_KIND", tt.env)
+			}
+
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse([]string{"version"})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Forge.Kind)
+		})
+	}
+}
+
 func loadTestSpiceConfig(t *testing.T, cfg string) *spice.Config {
 	t.Helper()
 
