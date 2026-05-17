@@ -152,6 +152,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 2
   body: |
     This change is part of the following stack:
@@ -162,6 +163,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -172,6 +174,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/submit-second-stack-comments.txt --
 - change: 4
   body: |
@@ -182,6 +185,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 5
   body: |
     This change is part of the following stack:
@@ -191,6 +195,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/bottom-prs-merged-comments.txt --
 - change: 2
   body: |
@@ -202,6 +207,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -212,6 +218,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 5
   body: |
     This change is part of the following stack:
@@ -221,6 +228,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/branch-onto-comments.txt --
 - change: 2
   body: |
@@ -233,6 +241,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 3
   body: |
     This change is part of the following stack:
@@ -243,6 +252,7 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 - change: 5
   body: |
     This change is part of the following stack:
@@ -253,3 +263,4 @@ main
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->

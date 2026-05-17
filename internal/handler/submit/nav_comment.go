@@ -91,6 +91,7 @@ func updateNavigationComments(
 	navCommentSync NavCommentSync,
 	navCommentDownstack NavCommentDownstack,
 	navCommentMarker string,
+	trunk string,
 	submittedBranches []string,
 	getRemoteRepo func(context.Context) (forge.Repository, error),
 ) error {
@@ -395,7 +396,7 @@ func updateNavigationComments(
 		}
 
 		info := infos[idx]
-		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker, remoteRepo.Forge())
+		commentBody := generateStackNavigationComment(nodes, idx, navCommentMarker, trunk, remoteRepo.Forge())
 		if info.Meta.NavigationCommentID() == nil {
 			postc <- &postComment{
 				Branch: info.Branch,
@@ -462,23 +463,54 @@ const (
 // Uses Markdown link definition syntax which is invisible when rendered.
 const _markdownCommentMarker = "[gs]: # (navigation comment)"
 
-// Regular expressions that must ALL match a comment
-// for it to be considered a navigation comment
-// when detecting existing comments.
-var _navCommentRegexes = []*regexp.Regexp{
+// Trunk metadata markers embed the trunk branch name
+// in the navigation comment for CI merge-guard detection.
+const (
+	_trunkMarkerHTML     = "<!-- gs:trunk %s -->"
+	_trunkMarkerMarkdown = "[gs:trunk]: # (%s)"
+)
+
+// NavCommentRegexes are regular expressions
+// that must ALL match a comment body
+// for it to be considered a git-spice navigation comment.
+var NavCommentRegexes = []*regexp.Regexp{
 	regexp.MustCompile(`(?m)^\Q` + _commentHeader + `\E$`),
 	// Match either standard HTML comment or Markdown link definition marker.
 	regexp.MustCompile(`(?m)^(\Q` + _commentMarker + `\E|\Q` + _markdownCommentMarker + `\E)$`),
+}
+
+// _trunkMetadataRegex extracts the trunk branch name
+// from either HTML or Markdown trunk metadata markers.
+var _trunkMetadataRegex = regexp.MustCompile(
+	`(?m)^(?:<!-- gs:trunk (\S+) -->|\[gs:trunk\]: # \((\S+)\))$`,
+)
+
+// ExtractTrunkFromComment extracts the trunk branch name
+// from a git-spice navigation comment body.
+// Returns "" if not found.
+func ExtractTrunkFromComment(body string) string {
+	m := _trunkMetadataRegex.FindStringSubmatch(body)
+	if m == nil {
+		return ""
+	}
+
+	// Group 1 = HTML format, group 2 = Markdown format.
+	if m[1] != "" {
+		return m[1]
+	}
+	return m[2]
 }
 
 func generateStackNavigationComment(
 	nodes []*stackedChange,
 	current int,
 	marker string,
+	trunk string,
 	f forge.Forge,
 ) string {
 	footer := _commentFooter
 	commentMarker := _commentMarker
+	trunkMarker := _trunkMarkerHTML
 	if fc, ok := f.(forge.WithCommentFormat); ok {
 		format := fc.CommentFormat()
 		if format.Footer != "" {
@@ -486,6 +518,7 @@ func generateStackNavigationComment(
 		}
 		if format.Marker != "" {
 			commentMarker = format.Marker
+			trunkMarker = _trunkMarkerMarkdown
 		}
 	}
 
@@ -501,9 +534,12 @@ func generateStackNavigationComment(
 
 	sb.WriteString("\n")
 	sb.WriteString(footer)
-
 	sb.WriteString("\n")
 	sb.WriteString(commentMarker)
+	if trunk != "" {
+		sb.WriteString("\n")
+		fmt.Fprintf(&sb, trunkMarker, trunk)
+	}
 	sb.WriteString("\n")
 	return sb.String()
 }
