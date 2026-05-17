@@ -448,12 +448,12 @@ func TestRepository_MergeTree(t *testing.T) {
 			git commit -m 'Initial commit'
 
 			git checkout -b above
-			mv $WORK/above.txt main.txt
+			cp $WORK/above.txt main.txt
 			git add main.txt
 			git commit -m 'Add above'
 
 			git checkout -b below main
-			mv $WORK/below.txt main.txt
+			cp $WORK/below.txt main.txt
 			git add main.txt
 			git commit -m 'Add below'
 
