@@ -48,10 +48,12 @@ func (cmd *downstackSubmitCmd) Run(
 		return errors.New("nothing to submit below trunk")
 	}
 
-	downstacks, err := svc.ListDownstack(ctx, cmd.Branch)
+	graph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("list downstack: %w", err)
+		return fmt.Errorf("build branch graph: %w", err)
 	}
+
+	downstacks := slices.Collect(graph.Downstack(cmd.Branch))
 	must.NotBeEmptyf(downstacks, "downstack cannot be empty")
 	slices.Reverse(downstacks)
 
@@ -61,5 +63,6 @@ func (cmd *downstackSubmitCmd) Run(
 		Branches:     downstacks,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
+		BranchGraph:  graph,
 	})
 }

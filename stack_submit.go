@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/submit"
@@ -35,9 +36,14 @@ func (cmd *stackSubmitCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	stack, err := svc.ListStack(ctx, currentBranch)
+	graph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("list stack: %w", err)
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	stack := slices.Collect(graph.Stack(currentBranch))
+	if len(stack) == 0 {
+		stack = []string{currentBranch}
 	}
 	toSubmit := stack[:0]
 	for _, branch := range stack {
@@ -53,5 +59,6 @@ func (cmd *stackSubmitCmd) Run(
 		Branches:     toSubmit,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
+		BranchGraph:  graph,
 	})
 }

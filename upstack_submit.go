@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/submit"
@@ -46,29 +47,18 @@ func (cmd *upstackSubmitCmd) Run(
 		cmd.Branch = currentBranch
 	}
 
-	if cmd.Branch != store.Trunk() {
-		b, err := svc.LookupBranch(ctx, cmd.Branch)
-		if err != nil {
-			return fmt.Errorf("lookup branch %v: %w", cmd.Branch, err)
-		}
-
-		if b.Base != store.Trunk() {
-			base, err := svc.LookupBranch(ctx, b.Base)
-			if err != nil {
-				return fmt.Errorf("lookup base %v: %w", b.Base, err)
-			}
-
-			if base.Change == nil && cmd.Publish {
-				log.Errorf("%v: base (%v) has not been submitted", cmd.Branch, b.Base)
-				return errors.New("submit the base branch first")
-			}
-		}
-	}
-
-	upstacks, err := svc.ListUpstack(ctx, cmd.Branch)
+	graph, err := svc.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("list upstack: %w", err)
+		return fmt.Errorf("build branch graph: %w", err)
 	}
+
+	if cmd.Branch != store.Trunk() {
+		if err := cmd.verifyBaseSubmitted(log, graph, store, cmd.Branch); err != nil {
+			return err
+		}
+	}
+
+	upstacks := slices.Collect(graph.Upstack(cmd.Branch))
 
 	// If running from trunk, exclude trunk from the list.
 	// Trunk cannot be submitted but everything upstack can.
@@ -82,5 +72,34 @@ func (cmd *upstackSubmitCmd) Run(
 		Branches:     upstacks,
 		Options:      &cmd.Options,
 		BatchOptions: &cmd.BatchOptions,
+		BranchGraph:  graph,
 	})
+}
+
+func (cmd *upstackSubmitCmd) verifyBaseSubmitted(
+	log *silog.Logger,
+	graph *spice.BranchGraph,
+	store *state.Store,
+	branch string,
+) error {
+	b, ok := graph.Lookup(branch)
+	if !ok {
+		return fmt.Errorf("lookup branch %v: %w", branch, git.ErrNotExist)
+	}
+
+	if b.Base == store.Trunk() {
+		// If base is trunk, this check doesn't apply.
+		return nil
+	}
+
+	base, ok := graph.Lookup(b.Base)
+	if !ok {
+		return fmt.Errorf("lookup base %v: %w", b.Base, git.ErrNotExist)
+	}
+
+	if base.Change == nil && cmd.Publish {
+		log.Errorf("%v: base (%v) has not been submitted", branch, b.Base)
+		return errors.New("submit the base branch first")
+	}
+	return nil
 }

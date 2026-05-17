@@ -14,6 +14,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
@@ -112,6 +113,93 @@ func TestHandler_pushRepositoryID_rejectsDifferentForge(t *testing.T) {
 	_, err := handler.pushRepositoryID(t.Context())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "different forge")
+}
+
+func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(mockCtrl)
+	mockStore.EXPECT().
+		Trunk().
+		Return("main").
+		AnyTimes()
+
+	mockService := NewMockService(mockCtrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Any()).
+		Return(buildStaleBaseTestGraph(t, "main", []spice.LoadBranchItem{
+			{Name: "feat1", Base: "main", Change: submitFakeChange("pr-1")},
+			{Name: "feat2", Base: "feat1", Change: submitFakeChange("pr-2")},
+		}), nil)
+
+	mockRemoteRepo := forgetest.NewMockRepository(mockCtrl)
+	mockRemoteRepo.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{
+			submitFakeChangeID("pr-1"),
+		}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeMerged},
+		}, nil)
+
+	handler := &Handler{
+		Log:        silog.Nop(),
+		View:       ui.NewFileView(&bytes.Buffer{}),
+		Repository: nil,
+		Worktree:   nil,
+		Store:      mockStore,
+		Service:    mockService,
+		Browser:    &browser.Noop{},
+		FindRemote: func(context.Context) (state.Remote, error) {
+			return state.Remote{Upstream: "origin", Push: "origin"}, nil
+		},
+		OpenRepository: func(
+			context.Context,
+			forge.Forge,
+			forge.RepositoryID,
+		) (forge.Repository, error) {
+			return mockRemoteRepo, nil
+		},
+		ResolveRepository: func(
+			context.Context,
+			string,
+		) (forge.Forge, forge.RepositoryID, error) {
+			return forgetest.NewMockForge(mockCtrl),
+				stubRepositoryID("alice/repo"), nil
+		},
+	}
+
+	err := handler.SubmitBatch(t.Context(), &BatchRequest{
+		Branches:     []string{"feat2"},
+		Options:      &Options{},
+		BatchOptions: &BatchOptions{},
+	})
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "1 branches with stale bases were found")
+	assert.ErrorContains(t, err, "gs repo sync")
+	assert.ErrorContains(t, err, "--force")
+}
+
+func TestHandler_checkStaleSubmissionBases_forceSkipsValidation(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	handler := &Handler{
+		Log:               silog.Nop(),
+		View:              ui.NewFileView(&bytes.Buffer{}),
+		Repository:        nil,
+		Worktree:          nil,
+		Store:             NewMockStore(mockCtrl),
+		Service:           NewMockService(mockCtrl),
+		Browser:           &browser.Noop{},
+		FindRemote:        nil,
+		ResolveRepository: nil,
+		OpenRepository:    nil,
+	}
+
+	err := handler.checkStaleSubmissionBases(
+		t.Context(), nil, []string{"feat2"}, &Options{Force: true},
+	)
+	require.NoError(t, err)
 }
 
 func TestReviewersAddWhen_UnmarshalText(t *testing.T) {
@@ -252,16 +340,6 @@ func TestEffectiveReviewers(t *testing.T) {
 	}
 }
 
-type stubRepositoryID string
-
-func (id stubRepositoryID) String() string {
-	return string(id)
-}
-
-func (id stubRepositoryID) ChangeURL(forge.ChangeID) string {
-	return string(id)
-}
-
 func TestLabelsAddWhen_UnmarshalText(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -398,4 +476,41 @@ func TestEffectiveLabels(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+type stubRepositoryID string
+
+func (id stubRepositoryID) String() string {
+	return string(id)
+}
+
+func (id stubRepositoryID) ChangeURL(forge.ChangeID) string {
+	return string(id)
+}
+
+// submitFakeChangeMetadata is the minimal change metadata needed by submit
+// handler tests that reason about stored branch state.
+type submitFakeChangeMetadata struct {
+	id forge.ChangeID
+}
+
+var _ forge.ChangeMetadata = (*submitFakeChangeMetadata)(nil)
+
+func (m *submitFakeChangeMetadata) ForgeID() string { return "test" }
+func (m *submitFakeChangeMetadata) ChangeID() forge.ChangeID {
+	return m.id
+}
+
+func (m *submitFakeChangeMetadata) NavigationCommentID() forge.ChangeCommentID {
+	return nil
+}
+func (m *submitFakeChangeMetadata) SetNavigationCommentID(forge.ChangeCommentID) {}
+
+// submitFakeChangeID identifies a fake change in submit handler tests.
+type submitFakeChangeID string
+
+func (id submitFakeChangeID) String() string { return string(id) }
+
+func submitFakeChange(id string) forge.ChangeMetadata {
+	return &submitFakeChangeMetadata{id: submitFakeChangeID(id)}
 }
