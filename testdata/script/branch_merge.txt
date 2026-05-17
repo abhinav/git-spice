@@ -1,0 +1,76 @@
+# Merge a stack of branches bottom-up with 'branch merge'.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+git add feature3.txt
+gs bc feature3 -m 'Add feature 3'
+
+# submit the full stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# verify all three changes are open
+shamhub dump changes
+stdout '"state": "open"'
+
+# merge the stack from the top
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'Merging feature1'
+stderr 'Cleaning up feature1'
+stderr 'Retargeting feature2 to main'
+stderr 'Merging feature2'
+stderr 'Cleaning up feature2'
+stderr 'Retargeting feature3 to main'
+stderr 'Merging feature3'
+stderr 'Cleaning up feature3'
+stderr 'All 3 change.s. merged.'
+
+# verify all three changes are now merged
+shamhub dump changes
+stdout '"merged": true'
+! stdout '"state": "open"'
+
+# verify that the later PRs were retargeted to main
+shamhub dump change 2
+stdout '"ref": "main"'
+shamhub dump change 3
+stdout '"ref": "main"'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+-- robot-merge.golden --
+===
+> Merge 3 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+>   feature3 (#3)
+true
