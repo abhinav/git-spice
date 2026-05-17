@@ -11,8 +11,8 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 git config spice.experiment.commitFixup true
 
-# Create initial commit with file
-git add conflict_file.txt
+# Create initial commit with files
+git add conflict_file.txt dirty_file.txt
 gs bc -m 'Add conflict file' feature
 
 # Create second commit that modifies the file differently
@@ -27,6 +27,9 @@ cmp stdout $WORK/golden/log.txt
 cp $WORK/extra/conflict_file_v3.txt conflict_file.txt
 git add conflict_file.txt
 
+# Leave an unrelated unstaged edit in the worktree.
+cp $WORK/extra/dirty_file_modified.txt dirty_file.txt
+
 # Try to fixup the first commit - should fail due to conflict
 ! gs commit fixup HEAD~1
 cmp stderr $WORK/golden/fixup_stderr.txt
@@ -35,6 +38,7 @@ cmp stderr $WORK/golden/fixup_stderr.txt
 # Verify the working directory and staging area are unchanged
 git status --porcelain
 cmp stdout $WORK/golden/status.txt
+cmp dirty_file.txt $WORK/extra/dirty_file_modified.txt
 
 # Verify the original commits are still intact
 git log --oneline
@@ -45,6 +49,10 @@ Original content
 line 2
 line 3
 
+-- repo/dirty_file.txt --
+Original dirty content
+-- extra/dirty_file_modified.txt --
+Unstaged dirty content
 -- extra/conflict_file_v2.txt --
 Modified content in commit 2
 line 2
@@ -56,14 +64,16 @@ line 2
 line 3
 
 -- golden/fixup_stderr.txt --
-ERR Staged changes conflict with commit 257b793:
+ERR Staged changes conflict with commit ccb4cca:
 ERR   Auto-merging conflict_file.txt
 ERR   CONFLICT (content): Merge conflict in conflict_file.txt
 ERR Try unstaging some changes and running the command again.
+INF Applied autostash
 FTL gs: merge conflict in files: conflict_file.txt
 -- golden/status.txt --
 M  conflict_file.txt
+ M dirty_file.txt
 -- golden/log.txt --
-34e36b2 Modify conflict file
-257b793 Add conflict file
+3aa60b8 Modify conflict file
+ccb4cca Add conflict file
 7cd9101 Initial commit
