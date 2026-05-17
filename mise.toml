@@ -12,7 +12,6 @@ _.path = ["{{ config_root }}/bin"]
 golangci-lint = "aqua:golangci/golangci-lint"
 changie = "github:miniscruff/changie"
 requiredfield = "github:abhinav/requiredfield"
-gofumpt = "aqua:mvdan/gofumpt"
 
 [tools]
 # Self-explanatory.
@@ -20,9 +19,6 @@ go = "latest"
 
 # Test runner with prettier output.
 gotestsum = "latest"
-
-# Stricter code formatting.
-gofumpt = "latest"
 
 # Collection of linters.
 golangci-lint = "latest"
@@ -110,7 +106,7 @@ run = "go mod tidy"
 description = "Update go.mod and go.sum files"
 
 [tasks.fmt]
-run = "gofumpt -w ."
+run = "golangci-lint fmt"
 description = "Format all go files"
 
 [tasks.lint]
