@@ -13,6 +13,8 @@ import (
 func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts.Base) &&
 		cmputil.Zero(opts.Draft) &&
+		cmputil.Zero(opts.Subject) &&
+		cmputil.Zero(opts.Body) &&
 		len(opts.AddLabels) == 0 &&
 		len(opts.AddReviewers) == 0 &&
 		len(opts.AddAssignees) == 0 {
@@ -26,7 +28,7 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		return fmt.Errorf("get pull request ID: %w", err)
 	}
 
-	if opts.Base != "" {
+	if opts.Base != "" || opts.Subject != "" || opts.Body != nil {
 		var m struct {
 			UpdatePullRequest struct {
 				// We don't need any information back,
@@ -37,13 +39,21 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 
 		input := githubv4.UpdatePullRequestInput{
 			PullRequestID: graphQLID,
-			BaseRefName:   (*githubv4.String)(&opts.Base),
+		}
+		if opts.Base != "" {
+			input.BaseRefName = (*githubv4.String)(&opts.Base)
+		}
+		if opts.Subject != "" {
+			input.Title = (*githubv4.String)(&opts.Subject)
+		}
+		if opts.Body != nil {
+			input.Body = (*githubv4.String)(opts.Body)
 		}
 
 		if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 			return fmt.Errorf("edit pull request: %w", err)
 		}
-		r.log.Debug("Changed base branch for PR", "new.base", opts.Base)
+		r.log.Debug("Updated PR", "pr", pr.Number)
 	}
 
 	// Draft status is a separate API call for some reason.

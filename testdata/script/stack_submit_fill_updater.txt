@@ -1,0 +1,113 @@
+# 'gs stack submit --fill' passes correct per-branch env vars
+# on re-submit (update path) with GS_MESSAGE_UPDATE=true.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc -m 'Add feature 1' feature1
+git add feature2.txt
+gs bc -m 'Add feature 2' feature2
+
+# initial submit with --fill
+gs ss --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# configure a generator that echoes update status and env vars
+git config spice.messageGenerator 'printf "update=$GS_MESSAGE_UPDATE branch=$GS_BRANCH base=$GS_BASE\n\nupdated body for $GS_BRANCH"'
+
+# make changes on each branch and re-submit
+gs bco feature1
+cp $WORK/extra/feature1-update.txt feature1.txt
+git add feature1.txt
+git commit -m 'update feature 1'
+gs sr
+
+gs bco feature2
+cp $WORK/extra/feature2-update.txt feature2.txt
+git add feature2.txt
+git commit -m 'update feature 2'
+
+gs bco feature1
+gs ss --fill
+stderr 'Updated #1'
+stderr 'Updated #2'
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+Contents of feature 1
+-- repo/feature2.txt --
+Contents of feature 2
+
+-- extra/feature1-update.txt --
+Updated feature 1
+-- extra/feature2-update.txt --
+Updated feature 2
+
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "state": "open",
+    "title": "update=true branch=feature1 base=main",
+    "body": "updated body for feature1",
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "a85049ea92598807902e5508be230ab849bccae0"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "ece8ed7bb81d74cb6787309fa41b7deb2e0558a3"
+    }
+  },
+  {
+    "number": 2,
+    "state": "open",
+    "title": "update=true branch=feature2 base=feature1",
+    "body": "updated body for feature2",
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "43042235a50b58fc1772e294399eda0f94941e09"
+    },
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "a85049ea92598807902e5508be230ab849bccae0"
+    }
+  }
+]

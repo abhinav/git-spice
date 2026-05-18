@@ -62,6 +62,8 @@ Flags:
                              restack its upstack
   -t, --target=BRANCH        Branch to create the new branch above/below
   -a, --all                  Automatically stage modified and deleted files
+  -c, --fill                 Fill the commit message using the configured
+                             message generator.
   -m, --message=MSG          Commit message
   -F, --message-file=FILE    Read the commit message from the given file.
       --no-verify            Bypass pre-commit and commit-msg hooks.

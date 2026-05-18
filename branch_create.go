@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -29,6 +31,7 @@ type branchCreateCmd struct {
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
 	All         bool   `short:"a" help:"Automatically stage modified and deleted files"`
+	Fill        bool   `short:"c" help:"Fill the commit message using the configured message generator."`
 	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Commit message"`
 	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
@@ -100,6 +103,7 @@ func (*branchCreateCmd) Help() string {
 func (cmd *branchCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
+	cfg *spice.Config,
 	repo *git.Repository,
 	wt *git.Worktree,
 	store *state.Store,
@@ -108,6 +112,11 @@ func (cmd *branchCreateCmd) Run(
 ) (err error) {
 	// If a message is specified, automatically enable commits
 	if cmd.Message != "" || cmd.MessageFile != "" {
+		cmd.Commit = true
+	}
+
+	// If --fill is set, automatically enable commits.
+	if cmd.Fill {
 		cmd.Commit = true
 	}
 
@@ -209,7 +218,7 @@ func (cmd *branchCreateCmd) Run(
 	)
 	branchAt := baseHash
 	if cmd.Commit {
-		commitHash, restore, err := cmd.commit(ctx, wt, baseName, log)
+		commitHash, restore, err := cmd.commit(ctx, cfg, wt, baseName, log)
 		if err != nil {
 			return err
 		}
@@ -337,10 +346,37 @@ func (cmd *branchCreateCmd) Run(
 // the repository to its original state if an error occurs.
 func (cmd *branchCreateCmd) commit(
 	ctx context.Context,
+	cfg *spice.Config,
 	wt *git.Worktree,
 	baseName string,
 	log *silog.Logger,
 ) (commitHash git.Hash, restore func() error, err error) {
+	// If --fill is set and no message was provided,
+	// try to generate one using the configured script.
+	if cmd.Fill && cmd.Message == "" {
+		script := cfg.MessageGenerator()
+		if script == "" {
+			return "", nil, msggen.ErrNoGenerator
+		}
+
+		env := msggenEnv("commit", false,
+			"GS_BASE="+baseName,
+		)
+		result, err := (&msggen.Runner{
+			Log:  log,
+			Args: os.Args,
+		}).Run(
+			ctx, script, wt.RootDir(), env,
+		)
+		if err != nil {
+			log.Warn("Message generator failed, "+
+				"falling back to editor",
+				"error", err)
+		} else {
+			cmd.Message = result.Message()
+		}
+	}
+
 	// We'll need --allow-empty if there are no staged changes.
 	diff, err := wt.DiffIndex(ctx, "HEAD")
 	if err != nil {

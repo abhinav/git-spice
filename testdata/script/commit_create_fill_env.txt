@@ -1,0 +1,28 @@
+# 'gs cc --fill' sets GS_MESSAGE_KIND and GS_MESSAGE_UPDATE
+# environment variables for the message generator.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# configure a generator that echoes the env vars
+git config spice.messageGenerator 'echo "kind=$GS_MESSAGE_KIND update=$GS_MESSAGE_UPDATE"'
+
+# create a commit using --fill
+git add foo.txt
+gs cc --fill
+
+# verify the env vars were set correctly
+git log -1 --format=%s
+stdout 'kind=commit update=false'
+
+-- repo/foo.txt --
+Contents of foo.

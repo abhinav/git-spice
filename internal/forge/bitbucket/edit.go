@@ -24,6 +24,12 @@ func (r *Repository) EditChange(
 		return err
 	}
 
+	if err := r.updatePRSubjectBody(
+		ctx, prID, opts.Subject, opts.Body,
+	); err != nil {
+		return err
+	}
+
 	if err := r.addPRReviewers(ctx, prID, opts.AddReviewers); err != nil {
 		return err
 	}
@@ -42,6 +48,26 @@ func (r *Repository) updatePRBase(ctx context.Context, prID int64, base string) 
 			Branch: bitbucket.Branch{Name: base},
 		},
 	})
+}
+
+func (r *Repository) updatePRSubjectBody(
+	ctx context.Context,
+	prID int64,
+	subject string,
+	body *string,
+) error {
+	if subject == "" && body == nil {
+		return nil
+	}
+
+	req := &bitbucket.PullRequestUpdateRequest{}
+	if subject != "" {
+		req.Title = &subject
+	}
+	if body != nil {
+		req.Description = body
+	}
+	return r.updatePullRequest(ctx, prID, req)
 }
 
 func (r *Repository) updatePRDraft(ctx context.Context, prID int64, draft *bool) error {
