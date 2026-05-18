@@ -36,12 +36,13 @@ gs stack submit --fill
 gs bco feat-1
 git worktree add ../feat-2 feat-2
 
-# Merge feat-1 on the remote and sync
+# Merge feat-1 on the remote and sync with --restack
+# to exercise the worktree-aware rebase path.
 shamhub merge alice/example.git 1
-gs repo sync
+gs repo sync --restack
 stderr 'feat-1: .* was merged'
 stderr 'feat-1: deleted'
-stderr 'feat-2: checked out in another worktree .*/feat-2., skipping rebase'
+stderr 'feat-2: checked out in another worktree .*/feat-2., skipping'
 
 # feat-1 was deleted and feat-2 still exists
 ! git rev-parse --verify feat-1

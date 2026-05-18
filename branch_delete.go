@@ -82,7 +82,8 @@ func (cmd *branchDeleteCmd) Run(
 	handler DeleteHandler,
 ) error {
 	return handler.DeleteBranches(ctx, &delete.Request{
-		Branches: cmd.Branches,
-		Force:    cmd.Force,
+		Branches:      cmd.Branches,
+		Force:         cmd.Force,
+		UpstackPolicy: delete.UpstackRestackAboves,
 	})
 }

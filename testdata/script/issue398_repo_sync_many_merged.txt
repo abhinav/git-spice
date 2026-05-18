@@ -136,27 +136,28 @@ main ◀
 ┏━┻□ feat1 (#1)
 main ◀
 -- golden/graph.txt --
-* ab3dc43 (feat1-part2) feat1.part2
-| * 9bffe4e (feat2-part2) feat2.part2
-|/  
-| * f27faaa (feat3-part2) feat3.part2
-|/  
-| * 43f356c (feat4-part2) feat4.part2
-|/  
-*   d744bd8 (HEAD -> main, origin/main) Merge change #1
-|\  
-| *   a2aa887 Merge change #2
-| |\  
-| | *   0e75bc3 Merge change #3
-| | |\  
-| | | *   50c346f Merge change #4
-| | | |\  
-| | | | * 267a7ec feat4
-| | | |/  
-| | | * fcb4332 feat3
-| | |/  
-| | * aee78bc feat2
-| |/  
-| * fc49b37 feat1
+* 3b90c1c (origin/feat1-part2, feat1-part2) feat1.part2
+| * a252f85 (origin/feat2-part2, feat2-part2) feat2.part2
+| | * 9a90907 (origin/feat3-part2, feat3-part2) feat3.part2
+| | | * d568d96 (origin/feat4-part2, feat4-part2) feat4.part2
+| | | | *   d744bd8 (HEAD -> main, origin/main) Merge change #1
+| | | | |\  
+| | | | | * a2aa887 Merge change #2
+| |_|_|_|/| 
+|/| | | | | 
+| | | | | * 0e75bc3 Merge change #3
+| | |_|_|/| 
+| |/| | | | 
+| | | | | * 50c346f Merge change #4
+| | | |_|/| 
+| | |/| |/  
+| | | |/|   
+| | | * | 267a7ec feat4
+| | |/ /  
+| | * / fcb4332 feat3
+| |/ /  
+| * / aee78bc feat2
+|/ /  
+* / fc49b37 feat1
 |/  
 * f6036b5 Initial commit

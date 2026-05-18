@@ -1,0 +1,74 @@
+# 'repo sync' should not restack upstacks without --restack flag.
+# This is the fix for issue #1134.
+
+as 'Test <test@example.com>'
+at '2024-12-28T18:14:15Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack: main -> feat1 -> feat2
+git add feat1.txt
+gs bc -m 'Add feature 1' feat1
+
+git add feat2.txt
+gs bc -m 'Add feature 2' feat2
+
+# Submit the entire stack
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# Merge feat1 (the downstack)
+shamhub merge alice/example 1
+
+# Sync without --restack
+# This should delete feat1 and update feat2's base to main
+# but NOT rebase feat2 onto main.
+gs repo sync
+stderr '#1 was merged'
+
+# feat2 should still exist.
+# The git graph should show feat2 NOT rebased onto main
+# (still on top of feat1's original commit).
+git graph --branches
+cmp stdout $WORK/golden/graph-after-sync.txt
+
+# Now explicitly restack to actually rebase
+gs repo sync --restack
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-restack.txt
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+
+-- golden/graph-after-sync.txt --
+* 1715fe8 (HEAD -> feat2, origin/feat2) Add feature 2
+| *   052886d (origin/main, main) Merge change #1
+| |\  
+| |/  
+|/|   
+* | 4be7a61 Add feature 1
+|/  
+* e41b284 Initial commit
+-- golden/graph-after-restack.txt --
+* 105ff59 (HEAD -> feat2) Add feature 2
+*   052886d (origin/main, main) Merge change #1
+|\  
+| * 4be7a61 Add feature 1
+|/  
+* e41b284 Initial commit
