@@ -161,3 +161,61 @@ func validateStaleBaseCandidates(
 	}
 	return count, nil
 }
+
+// StaleBase identifies a local branch whose base change has already been
+// merged on the forge.
+//
+// External callers (e.g. branch merge) use this with [CheckStaleBases]
+// to perform the same pre-flight check that submit does, without
+// duplicating the candidate-discovery and forge-query logic.
+type StaleBase struct {
+	// Branch is the local branch whose Base is stale.
+	Branch string
+
+	// Base is the downstack base branch whose change was merged.
+	Base string
+}
+
+// CheckStaleBases queries the forge for the state of each branch's
+// downstack bases and returns any whose base change is already merged.
+//
+// This is the same check that submit performs internally, exposed for
+// other commands that need to validate stack consistency against the
+// forge before performing an irreversible operation. Returns nil when
+// no bases are stale.
+func CheckStaleBases(
+	ctx context.Context,
+	forgeRepo forge.Repository,
+	graph *spice.BranchGraph,
+	branches []string,
+) ([]StaleBase, error) {
+	candidates := staleBaseCandidates(graph, branches)
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]forge.ChangeID, len(candidates))
+	for i, c := range candidates {
+		ids[i] = c.ChangeID
+	}
+
+	statuses, err := forgeRepo.ChangeStatuses(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("query change states: %w", err)
+	}
+	must.BeEqualf(len(statuses), len(candidates),
+		"query change states: got %d statuses for %d changes",
+		len(statuses), len(candidates),
+	)
+
+	var stale []StaleBase
+	for i, c := range candidates {
+		if statuses[i].State == forge.ChangeMerged {
+			stale = append(stale, StaleBase{
+				Branch: c.Branch,
+				Base:   c.Base,
+			})
+		}
+	}
+	return stale, nil
+}
