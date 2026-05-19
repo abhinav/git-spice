@@ -1,0 +1,52 @@
+# State 2: sub HEAD moved (independent of parent's staged content)
+# but no staged content in the sub. The parent commit should still
+# pick up the updated gitlink.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add parent-file.txt
+gs branch create feat-x -m 'Add parent file'
+
+# User commits directly in the submodule via plain git.
+cd libs/core
+cp $WORK/extra/independent.txt independent.txt
+git add independent.txt
+git -c user.name=Test -c user.email=test@example.com commit -m 'Independent sub commit'
+cd $WORK/repo
+
+# The parent's gitlink is now behind the sub's HEAD.
+# Running 'gs commit create' should pick up the gitlink update.
+cp $WORK/extra/more-parent.txt more-parent.txt
+git add more-parent.txt
+gs commit create -m 'More parent work'
+
+# The latest parent commit should record the new gitlink.
+git diff HEAD^ HEAD -- libs/core
+stdout 'Subproject commit'
+
+-- sub-repo/feat.txt --
+sub feature
+-- repo/parent-file.txt --
+parent content
+-- extra/independent.txt --
+independent sub work
+-- extra/more-parent.txt --
+more parent work

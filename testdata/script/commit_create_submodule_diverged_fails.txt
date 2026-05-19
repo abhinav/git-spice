@@ -1,0 +1,55 @@
+# State 3: 'gs commit create' refuses to commit when a tracked
+# submodule has staged content but is on a different branch than
+# what the parent records.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+gs trunk
+git add fix.txt
+gs branch create sub-fix -m 'Add fix'
+
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Move sub to sub-feat; parent records that on feat-x.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add parent-file.txt
+gs branch create feat-x -m 'Add parent file'
+
+# Now the user moves the submodule to sub-fix manually and stages
+# content there.
+cd libs/core
+git checkout sub-fix
+cd $WORK/repo
+cp $WORK/extra/new.txt libs/core/new.txt
+cd libs/core
+git add new.txt
+cd $WORK/repo
+
+# Commit should refuse, with a clear message and both remediation hints.
+! gs commit create -m 'Update'
+stderr 'libs/core'
+stderr 'sub-feat'
+stderr 'sub-fix'
+
+-- sub-repo/feat.txt --
+sub feature
+-- sub-repo/fix.txt --
+sub fix
+-- repo/parent-file.txt --
+parent content
+-- extra/new.txt --
+new sub content
