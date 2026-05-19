@@ -1,0 +1,58 @@
+# Verifies that 'gs stack submit --fill' triggers an auto-push of the
+# integration branch when a prior manual submit has set
+# LastPushedHash, but is a no-op when no manual submit has happened.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+# Configure integration with feat-a as a tip.
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+# No manual submit yet: 'gs stack submit --fill' does not push integration.
+git checkout main
+gs stack submit --fill
+! stderr 'Integration branch'
+
+# Verify integration branch is NOT yet on the remote.
+cd ../
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git branch -r
+! stdout 'origin/preview'
+
+# Back to repo: manually submit integration.
+cd ../repo
+gs integration submit
+stderr 'Integration branch pushed.'
+
+# Make a follow-up change to feat-a, restack via stack submit.
+gs branch checkout feat-a
+git add feat-a-extra.txt
+gs commit create -m 'feat-a follow-up'
+
+git checkout main
+gs stack submit --fill
+# Now the auto-submit fires because LastPushedHash is set.
+stderr 'Submitting integration branch'
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-a-extra.txt --
+extra
