@@ -1,0 +1,47 @@
+# 'gs ls' and 'gs ll' show submodule branch associations
+# alongside branch names.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feature.txt
+gs branch create sub-feat -m 'Add feature'
+
+# Set up the parent repo.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Check out a branch in the submodule.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+
+# Create a branch with submodule association.
+git add file.txt
+gs branch create feat-x -m 'Add file'
+
+gs ls -a
+cmp stderr $WORK/golden/ls.txt
+
+gs ll -a
+stderr 'feat-x \[libs/core:sub-feat\]'
+stderr 'Add file'
+
+-- sub-repo/feature.txt --
+submodule feature
+-- repo/file.txt --
+parent file
+-- golden/ls.txt --
+┏━■ feat-x [libs/core:sub-feat] ◀
+main

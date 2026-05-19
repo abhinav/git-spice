@@ -82,6 +82,10 @@ type LookupBranchResponse struct {
 	//
 	// This is used to correctly display the history of the branch.
 	MergedDownstack []json.RawMessage
+
+	// Submodules maps submodule paths
+	// to associated branch names.
+	Submodules map[string]string
 }
 
 // DeletedBranchError is returned when a branch was deleted out of band.
@@ -146,6 +150,7 @@ func (s *Service) LookupBranch(ctx context.Context, name string) (*LookupBranchR
 			UpstreamBranch:  resp.UpstreamBranch,
 			Head:            head,
 			MergedDownstack: resp.MergedDownstack,
+			Submodules:      resp.Submodules,
 		}
 
 		if resp.ChangeMetadata != nil {
@@ -410,6 +415,10 @@ type LoadBranchItem struct {
 	// MergedDownstack contains information about any branches,
 	// which this one was based on, that have already been merged into trunk.
 	MergedDownstack []json.RawMessage
+
+	// Submodules maps submodule paths
+	// to associated branch names.
+	Submodules map[string]string
 }
 
 // LoadBranches loads all tracked branches
@@ -458,6 +467,7 @@ func (s *Service) LoadBranches(ctx context.Context) ([]LoadBranchItem, error) {
 					UpstreamBranch:  resp.UpstreamBranch,
 					Change:          resp.Change,
 					MergedDownstack: resp.MergedDownstack,
+					Submodules:      resp.Submodules,
 				})
 				mu.Unlock()
 			}

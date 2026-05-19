@@ -1,0 +1,60 @@
+# Commit-time recording of submodule branch associations.
+# 'gs cc' and 'gs bc' record which submodule branches
+# are active when a parent commit is made.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feature.txt
+gs branch create sub-feat -m 'Add feature'
+
+# Set up the parent repo.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Check out a branch in the submodule.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+
+# 'gs branch create' records submodule associations.
+git add file1.txt
+gs branch create feat-x -m 'Add file1'
+
+gs branch submodule list
+cmp stderr $WORK/golden/list-feat.txt
+
+# 'gs commit create' also records associations.
+cd libs/core
+git checkout main
+cd $WORK/repo
+
+cp $WORK/extra/file2.txt file2.txt
+git add file2.txt
+gs commit create -m 'Add file2'
+
+# Association updated to reflect the current submodule branch.
+gs branch submodule list
+cmp stderr $WORK/golden/list-main.txt
+
+-- sub-repo/feature.txt --
+submodule feature
+-- repo/file1.txt --
+parent file 1
+-- extra/file2.txt --
+parent file 2
+-- golden/list-feat.txt --
+INF libs/core                      →  sub-feat
+-- golden/list-main.txt --
+INF libs/core                      →  main
