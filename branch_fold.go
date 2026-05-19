@@ -7,6 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -15,7 +16,8 @@ import (
 )
 
 type branchFoldCmd struct {
-	Branch string `placeholder:"NAME" help:"Name of the branch" predictor:"trackedBranches"`
+	Branch       string            `placeholder:"NAME" help:"Name of the branch" predictor:"trackedBranches"`
+	ModuleBranch map[string]string `name:"module-branch" placeholder:"PATH=BRANCH" help:"Per-submodule branch override for fold conflicts (repeatable)"`
 }
 
 func (*branchFoldCmd) Help() string {
@@ -38,6 +40,7 @@ func (cmd *branchFoldCmd) Run(
 	store *state.Store,
 	svc *spice.Service,
 	checkoutHandler CheckoutHandler,
+	submoduleApplier SubmoduleApplier,
 ) error {
 	if cmd.Branch == "" {
 		currentBranch, err := wt.CurrentBranch(ctx)
@@ -101,7 +104,73 @@ func (cmd *branchFoldCmd) Run(
 		return fmt.Errorf("peel to commit: %w", err)
 	}
 
+	// Merge submodule associations from child into base.
+	// The child branch is being folded away; its sub-branch records
+	// should win when they differ from the base's, but conflicting
+	// per-sub records require explicit resolution.
+	type submoduleApplierWithMerge interface {
+		MergeAssociationsForFold(
+			ctx context.Context, req submodule.MergeFoldRequest,
+		) (map[string]string, error)
+	}
+	merge, _ := submoduleApplier.(submoduleApplierWithMerge)
+	var resolvedSubs map[string]string
+	if merge != nil && b.Base != store.Trunk() {
+		// Trunk is not tracked in the store; nothing to merge against.
+		var resolveFn func(submodule.FoldConflict) (string, error)
+		if ui.Interactive(view) {
+			resolveFn = func(c submodule.FoldConflict) (string, error) {
+				var pick string
+				prompt := ui.NewSelect[string]().
+					WithValue(&pick).
+					WithOptions(
+						ui.SelectOption[string]{
+							Label: c.ChildBranch,
+							Value: c.ChildBranch,
+						},
+						ui.SelectOption[string]{
+							Label: c.BaseBranch,
+							Value: c.BaseBranch,
+						},
+					).
+					WithTitle(fmt.Sprintf(
+						"Submodule %s: pick branch for %s",
+						c.Path, b.Base)).
+					WithDescription(fmt.Sprintf(
+						"Folding %s (records %s) into %s (records %s)",
+						cmd.Branch, c.ChildBranch,
+						b.Base, c.BaseBranch))
+				if err := ui.Run(view, prompt); err != nil {
+					return "", err
+				}
+				return pick, nil
+			}
+		}
+		var err error
+		resolvedSubs, err = merge.MergeAssociationsForFold(ctx, submodule.MergeFoldRequest{
+			Base:         b.Base,
+			Child:        cmd.Branch,
+			ModuleBranch: cmd.ModuleBranch,
+			Resolve:      resolveFn,
+		})
+		if err != nil {
+			return fmt.Errorf("merge submodule associations: %w", err)
+		}
+	}
+
 	tx := store.BeginBranchTx()
+
+	// Persist the merged submodule associations onto the base.
+	if len(resolvedSubs) > 0 {
+		if err := tx.Upsert(ctx, state.UpsertRequest{
+			Name:       b.Base,
+			Submodules: resolvedSubs,
+		}); err != nil {
+			return fmt.Errorf(
+				"set submodule associations on %v: %w", b.Base, err,
+			)
+		}
+	}
 
 	// Change the base of all branches above us
 	// to the base of the branch we are folding.

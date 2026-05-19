@@ -325,9 +325,12 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	// Record submodule associations if a commit was made.
+	// Inherit from the parent branch as a baseline so a fresh child
+	// is consistent with its parent's submodule pinning unless the
+	// user has explicitly moved a submodule.
 	if cmd.Commit {
-		if err := submoduleTracker.RecordBranchState(
-			ctx, branchName,
+		if err := submoduleTracker.RecordWithInheritance(
+			ctx, branchName, cmd.Target,
 		); err != nil {
 			log.Warn(
 				"Could not record submodule associations",

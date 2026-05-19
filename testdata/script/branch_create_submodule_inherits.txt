@@ -1,0 +1,64 @@
+# 'gs branch create' inherits submodule associations from the parent
+# branch as a baseline, then overlays the current submodule state.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo with two branches.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+gs trunk
+git add fix.txt
+gs branch create sub-fix -m 'Add fix'
+
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Switch sub to sub-feat; create parent branch feat-x.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add file1.txt
+gs branch create feat-x -m 'Add file1'
+
+# Without explicitly changing the submodule, create child branch feat-y.
+# The child should inherit libs/core:sub-feat from the parent.
+git add file2.txt
+gs branch create feat-y -m 'Add file2'
+
+gs branch submodule list
+stderr 'libs/core'
+stderr 'sub-feat'
+
+# Now flip the submodule to sub-fix and create another child branch.
+cd libs/core
+git checkout sub-fix
+cd $WORK/repo
+git add file3.txt
+gs branch create feat-z -m 'Add file3'
+
+# feat-z should record the new state, not parent's value.
+gs branch submodule list
+stderr 'libs/core'
+stderr 'sub-fix'
+
+-- sub-repo/feat.txt --
+sub feature
+-- sub-repo/fix.txt --
+sub fix
+-- repo/file1.txt --
+parent file 1
+-- repo/file2.txt --
+parent file 2
+-- repo/file3.txt --
+parent file 3
