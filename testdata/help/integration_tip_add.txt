@@ -1,0 +1,19 @@
+Usage: gs integration (int) tip add (a) <branches> ...
+
+Add a branch to the integration tip list
+
+Adds one or more tracked branches to the integration tip list. Each branch must
+already be tracked by git-spice; this command does not track new branches.
+
+Branches are added in order. If one fails to add, the previous ones remain in
+the tip list.
+
+Arguments:
+  <branches> ...    Branches to add as tips
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

@@ -1,0 +1,21 @@
+Usage: gs integration (int) rebuild (rb) [flags]
+
+Rebuild the integration branch
+
+Regenerates the integration branch by resetting it to trunk and sequentially
+merging each configured tip with --no-ff. Rerere is enabled for the duration of
+these merges so any recorded conflict resolutions are replayed automatically.
+
+On conflict, the merge is left in the worktree. Resolve the conflicting files,
+commit with 'git merge --continue', then re-run 'gs integration rebuild' (or 'gs
+intrb') to resume.
+
+Flags:
+  --push    Also push the integration branch after rebuilding
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
