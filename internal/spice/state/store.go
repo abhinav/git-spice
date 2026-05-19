@@ -105,15 +105,16 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 		}
 	}
 
+	info := newRepoInfo(req.Trunk, store.remote)
 	update := storage.UpdateRequest{
 		Sets: []storage.SetRequest{
 			{
 				Key:   _repoJSON,
-				Value: newRepoInfo(req.Trunk, store.remote),
+				Value: info,
 			},
 			{
 				Key:   _versionFile,
-				Value: storageVersionForRemote(store.remote),
+				Value: storageVersion(info),
 			},
 		},
 		Message: "initialize store",
@@ -202,8 +203,11 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 	}, nil
 }
 
-func storageVersionForRemote(remote Remote) Version {
-	if remote.ForkMode() {
+func storageVersion(info repoInfo) Version {
+	if info.Integration != nil {
+		return VersionThree
+	}
+	if info.stateRemote().ForkMode() {
 		return VersionTwo
 	}
 	return VersionOne
