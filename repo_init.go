@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
@@ -27,7 +28,8 @@ type repoInitCmd struct {
 	Remote   string `placeholder:"NAME" predictor:"remotes" help:"Name of the remote to push submitted branches to"`
 	Upstream string `placeholder:"NAME" predictor:"remotes" help:"Name of the remote to open change requests against"`
 
-	Reset bool `help:"Forget all information about the repository"`
+	Reset   bool  `help:"Forget all information about the repository"`
+	Recurse *bool `name:"recurse-submodules" negatable:"" help:"Also initialize tracked submodules. Prompts when unset and submodules are present."`
 }
 
 func (*repoInitCmd) Help() string {
@@ -110,7 +112,161 @@ func (cmd *repoInitCmd) Run(
 	}
 
 	log.Info("Initialized repository", "trunk", cmd.Trunk)
+
+	if err := cmd.maybeRecurseSubmodules(ctx, log, view, wt); err != nil {
+		// Recursive init is opportunistic: surface as a warning,
+		// not a hard failure of the parent init.
+		log.Warn("Recursive submodule init failed", "error", err)
+	}
+
 	return nil
+}
+
+// maybeRecurseSubmodules optionally initializes git-spice in each
+// tracked submodule and persists `spice.submodule.recurse=true` for
+// future ops to pick up.
+func (cmd *repoInitCmd) maybeRecurseSubmodules(
+	ctx context.Context,
+	log *silog.Logger,
+	view ui.View,
+	wt *git.Worktree,
+) error {
+	subs, err := wt.Submodules(ctx)
+	if err != nil {
+		return fmt.Errorf("list submodules: %w", err)
+	}
+	if len(subs) == 0 {
+		return nil
+	}
+
+	// Resolve whether to recurse:
+	// - explicit flag wins;
+	// - interactive: prompt with default Yes;
+	// - non-interactive: default Yes for non-interactive scripts.
+	var recurse bool
+	switch {
+	case cmd.Recurse != nil:
+		recurse = *cmd.Recurse
+	case ui.Interactive(view):
+		recurse = true
+		prompt := ui.NewConfirm().
+			WithTitle(fmt.Sprintf(
+				"Initialize %d submodule(s) with git-spice too?",
+				len(subs))).
+			WithDescription(
+				"You can rerun 'gs repo init --no-recurse-submodules' to skip later.").
+			WithValue(&recurse)
+		if err := ui.Run(view, prompt); err != nil {
+			return fmt.Errorf("submodule prompt: %w", err)
+		}
+	default:
+		recurse = true
+	}
+
+	if !recurse {
+		return nil
+	}
+
+	for _, sub := range subs {
+		if err := cmd.initOneSubmodule(ctx, log, view, wt, sub); err != nil {
+			log.Warn("Submodule init failed",
+				"path", sub.Path, "error", err)
+			continue
+		}
+	}
+
+	// Persist the recurse preference for future ops, if unset.
+	if err := writeRecurseConfigIfUnset(ctx, wt, log); err != nil {
+		log.Warn("Could not set spice.submodule.recurse",
+			"error", err)
+	}
+
+	return nil
+}
+
+// writeRecurseConfigIfUnset writes spice.submodule.recurse=true to
+// the worktree's local git-config only when the key is absent so
+// an explicit user opt-out is never overridden.
+func writeRecurseConfigIfUnset(
+	ctx context.Context, wt *git.Worktree, log *silog.Logger,
+) error {
+	if existing, err := wt.GitConfigGet(ctx, "spice.submodule.recurse"); err == nil && existing != "" {
+		// Already explicitly set — never override.
+		return nil
+	}
+	if err := wt.GitConfigSet(ctx,
+		"spice.submodule.recurse", "true"); err != nil {
+		return err
+	}
+	log.Info(
+		"Submodule recursion enabled. " +
+			"Use 'git config spice.submodule.recurse false' to opt out.",
+	)
+	return nil
+}
+
+// initOneSubmodule initializes git-spice inside a single submodule.
+// Trunk is resolved by precedence:
+//  1. submodule.<name>.branch in .gitmodules (tracking branch);
+//  2. submodule HEAD's upstream branch;
+//  3. submodule's repo guesser (interactive prompt or auto-detect).
+func (cmd *repoInitCmd) initOneSubmodule(
+	ctx context.Context,
+	log *silog.Logger,
+	view ui.View,
+	parentWT *git.Worktree,
+	sub git.Submodule,
+) error {
+	has, err := parentWT.SubmoduleHasGsStore(ctx, sub.Path)
+	if err != nil {
+		return fmt.Errorf("check gs store: %w", err)
+	}
+	if has {
+		log.Info("Submodule already initialized",
+			"path", sub.Path)
+		return nil
+	}
+
+	subWT, err := parentWT.SubmoduleWorktree(ctx, sub.Path)
+	if err != nil {
+		return fmt.Errorf("open submodule worktree: %w", err)
+	}
+	subRepo := subWT.Repository()
+
+	trunk, src := resolveSubmoduleTrunk(ctx, subWT, sub)
+	log.Info("Initializing submodule",
+		"path", sub.Path,
+		"trunk", trunk,
+		"source", src)
+
+	return (&repoInitCmd{
+		Trunk: trunk,
+		Reset: cmd.Reset,
+	}).Run(ctx, log, view, subRepo, subWT)
+}
+
+// resolveSubmoduleTrunk picks the trunk branch for a submodule init
+// based on .gitmodules, HEAD's upstream, or guesser fallback.
+func resolveSubmoduleTrunk(
+	ctx context.Context,
+	subWT *git.Worktree,
+	sub git.Submodule,
+) (trunk string, source string) {
+	if sub.Branch != "" && subWT.Repository().BranchExists(ctx, sub.Branch) {
+		return sub.Branch, ".gitmodules"
+	}
+	cur, err := subWT.CurrentBranch(ctx)
+	if err == nil {
+		if upstream, err := subWT.Repository().BranchUpstream(ctx, cur); err == nil {
+			// upstream is e.g. "origin/main"; strip the remote prefix.
+			if _, branch, ok := strings.Cut(upstream, "/"); ok {
+				return branch, "HEAD upstream"
+			}
+		}
+		return cur, "current branch"
+	}
+	// Falls back to empty so the child repoInitCmd guesses interactively.
+	return "", "guess"
 }
 
 // repoInitRemoteGuesser guesses remotes for repository initialization.

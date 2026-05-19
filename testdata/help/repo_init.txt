@@ -20,10 +20,13 @@ stacked on the old trunk will be updated to point to the new trunk.
 Re-run with --reset to discard all stored information and untrack all branches.
 
 Flags:
-  --trunk=BRANCH     Name of the trunk branch
-  --remote=NAME      Name of the remote to push submitted branches to
-  --upstream=NAME    Name of the remote to open change requests against
-  --reset            Forget all information about the repository
+  --trunk=BRANCH               Name of the trunk branch
+  --remote=NAME                Name of the remote to push submitted branches to
+  --upstream=NAME              Name of the remote to open change requests
+                               against
+  --reset                      Forget all information about the repository
+  --[no-]recurse-submodules    Also initialize tracked submodules. Prompts when
+                               unset and submodules are present.
 
 Global Flags:
   -h, --help           Show help for the command
