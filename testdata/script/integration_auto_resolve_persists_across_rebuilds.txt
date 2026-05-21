@@ -1,0 +1,63 @@
+# The resolution file persists across rebuilds. If an entry for the
+# current (ours, theirs) already exists, gs preserves it so the user
+# doesn't re-answer.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+gs integration create preview --tip feat-b
+
+chmod 700 $WORK/resolver.sh
+git config spice.integration.resolver $WORK/resolver.sh
+git config spice.integration.autoResolve true
+
+# Pre-seed the resolution file with a Q&A for (preview, feat-b).
+cp $WORK/golden/resolution.json .integration_resolution.json
+
+gs integration rebuild
+stderr 'rebuilt with 1 tip\(s\)'
+
+# Resolution file should still carry the pre-seeded entry (with
+# instruction count unchanged).
+exists $WORK/repo/.integration_resolution.json
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- golden/resolution.json --
+{
+  "resolutions": [
+    {
+      "merging_branches": {"ours": "preview", "theirs": "feat-b"},
+      "resolution_instructions": [
+        {"question": "which version wins?", "answer": "feat-b"}
+      ]
+    }
+  ]
+}
+-- resolver.sh --
+#!/bin/sh
+# Verify the pre-seeded Q&A reached us through the file.
+grep -q 'which version wins' .integration_resolution.json || exit 1
+grep -q 'feat-b' .integration_resolution.json || exit 1
+cp feat-b-version.txt shared.txt
+echo '{}'

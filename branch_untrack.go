@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -29,8 +30,10 @@ func (*branchUntrackCmd) Help() string {
 
 func (cmd *branchUntrackCmd) Run(
 	ctx context.Context,
+	log *silog.Logger,
 	wt *git.Worktree,
 	svc *spice.Service,
+	integrationHandler IntegrationHandler,
 ) error {
 	if cmd.Branch == "" {
 		var err error
@@ -46,6 +49,10 @@ func (cmd *branchUntrackCmd) Run(
 		}
 
 		return fmt.Errorf("forget branch: %w", err)
+	}
+
+	if err := integrationHandler.OnBranchRemoved(ctx, cmd.Branch); err != nil {
+		log.Warnf("prune integration resolution file: %v", err)
 	}
 
 	return nil

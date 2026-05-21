@@ -136,3 +136,37 @@ func (w *Worktree) MergeAbort(ctx context.Context) error {
 	}
 	return nil
 }
+
+// MergeContinue stages the listed paths and commits an in-progress
+// merge. Used after an external resolver has modified the conflicting
+// files. Returns an error if any unmerged paths remain after staging.
+//
+// message is used as the merge commit message.
+func (w *Worktree) MergeContinue(
+	ctx context.Context, paths []string, message string,
+) error {
+	if len(paths) > 0 {
+		addArgs := append([]string{"--"}, paths...)
+		if err := w.gitCmd(ctx, "add", addArgs...).Run(); err != nil {
+			return fmt.Errorf("git add: %w", err)
+		}
+	}
+
+	unmerged, err := sliceutil.CollectErr(
+		w.ListFilesPaths(ctx, &ListFilesOptions{Unmerged: true}))
+	if err != nil {
+		return fmt.Errorf("list unmerged files: %w", err)
+	}
+	if len(unmerged) > 0 {
+		return fmt.Errorf("unmerged paths remain after resolution: %s",
+			strings.Join(unmerged, ", "))
+	}
+
+	if message == "" {
+		message = "Merge"
+	}
+	if err := w.gitCmd(ctx, "commit", "--no-edit", "-m", message).Run(); err != nil {
+		return fmt.Errorf("git commit: %w", err)
+	}
+	return nil
+}

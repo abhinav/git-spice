@@ -264,6 +264,39 @@ func (c *Config) ScriptResolveMaxIterations() int {
 	return n
 }
 
+// IntegrationResolver returns the configured script for auto-resolving
+// integration branch merge conflicts, or empty if none is set.
+//
+// Read from spice.integration.resolver.
+func (c *Config) IntegrationResolver() string {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".integration.resolver",
+	).Canonical()]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[len(values)-1]
+}
+
+// IntegrationAutoResolve reports whether the configured resolver
+// should run automatically during integration rebuilds.
+//
+// Read from spice.integration.autoResolve. Defaults to false.
+// Unparseable values are treated as false.
+func (c *Config) IntegrationAutoResolve() bool {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".integration.autoResolve",
+	).Canonical()]
+	if len(values) == 0 {
+		return false
+	}
+	v, err := strconv.ParseBool(values[len(values)-1])
+	if err != nil {
+		return false
+	}
+	return v
+}
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }
