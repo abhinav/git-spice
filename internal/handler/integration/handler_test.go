@@ -422,7 +422,7 @@ func TestHandler_Rebuild(t *testing.T) {
 			CheckoutBranch(gomock.Any(), "main").
 			Return(nil)
 
-		res, err := h.Rebuild(t.Context())
+		res, err := h.Rebuild(t.Context(), nil)
 		require.NoError(t, err)
 		assert.Equal(t, "preview", res.Name)
 		assert.Equal(t, []git.Hash{"hash-a", "hash-b"}, res.TipHashes)
@@ -475,7 +475,7 @@ func TestHandler_Rebuild(t *testing.T) {
 		// No final CheckoutBranch call expected since we started on
 		// the integration branch already.
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.NoError(t, err)
 	})
 
@@ -494,7 +494,7 @@ func TestHandler_Rebuild(t *testing.T) {
 			IsClean(gomock.Any()).
 			Return(false, nil)
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "uncommitted")
 	})
@@ -558,7 +558,7 @@ func TestHandler_Rebuild(t *testing.T) {
 			Return(nil)
 		// No CheckoutBranch: the conflict is left in the worktree.
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.Error(t, err)
 		var conflict *ConflictError
 		assert.True(t, errors.As(err, &conflict))
@@ -611,7 +611,7 @@ func TestHandler_Rebuild(t *testing.T) {
 			ClearPendingIntegrationRebuild(gomock.Any()).
 			Return(nil)
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.NoError(t, err)
 	})
 
@@ -628,7 +628,7 @@ func TestHandler_Rebuild(t *testing.T) {
 				&git.WorktreeListItem{Path: "/wt/preview", Branch: "preview"},
 			))
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "another worktree")
 	})
@@ -650,10 +650,366 @@ func TestHandler_Rebuild(t *testing.T) {
 			LookupBranch(gomock.Any(), "feat-x").
 			Return(&spice.LookupBranchResponse{}, nil)
 
-		_, err := h.Rebuild(t.Context())
+		_, err := h.Rebuild(t.Context(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "would be reverted")
 	})
+}
+
+// boolPtr returns a *bool with the given value, for RebuildOptions.
+//
+//nolint:unparam // helper kept for symmetry across true/false call sites
+func boolPtr(b bool) *bool {
+	p := new(bool)
+	*p = b
+	return p
+}
+
+// newHandlerWithResolver returns a handler set up for auto-resolve tests:
+// resolver + prompter mocks + repo root in a temp dir.
+func newHandlerWithResolver(t *testing.T) (*Handler, *handlerMocks, *MockResolver, *MockQuestionPrompter) {
+	t.Helper()
+	mockCtrl := gomock.NewController(t)
+	mocks := &handlerMocks{
+		Repository: NewMockGitRepository(mockCtrl),
+		Worktree:   NewMockGitWorktree(mockCtrl),
+		Store:      NewMockStore(mockCtrl),
+		Service:    NewMockService(mockCtrl),
+	}
+	resolver := NewMockResolver(mockCtrl)
+	prompter := NewMockQuestionPrompter(mockCtrl)
+	h := &Handler{
+		Log:                silogtest.New(t),
+		Repository:         mocks.Repository,
+		Worktree:           mocks.Worktree,
+		Store:              mocks.Store,
+		Service:            mocks.Service,
+		Resolver:           resolver,
+		Prompter:           prompter,
+		DefaultAutoResolve: false,
+		RepoRoot:           t.TempDir(),
+	}
+	expectBorrowableWorktree(mocks)
+	return h, mocks, resolver, prompter
+}
+
+// setupConflictMerge primes the mocks for a fresh rebuild with a single
+// tip that conflicts. Returns the merge message gs will pass to the
+// resolver and MergeContinue.
+func setupConflictMerge(t *testing.T, mocks *handlerMocks) string {
+	t.Helper()
+	info := &state.IntegrationInfo{
+		Name: "preview",
+		Tips: []state.IntegrationTip{{Name: "feat-a"}},
+	}
+	mocks.Store.EXPECT().Integration(gomock.Any()).Return(info, nil)
+	mocks.Store.EXPECT().
+		PendingIntegrationRebuild(gomock.Any()).
+		Return(nil, state.ErrNotExist)
+	mocks.Worktree.EXPECT().CurrentBranch(gomock.Any()).Return("main", nil)
+	mocks.Worktree.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mocks.Store.EXPECT().Trunk().Return("main").AnyTimes()
+	mocks.Repository.EXPECT().
+		PeelToCommit(gomock.Any(), "main").
+		Return(git.Hash("trunk-hash"), nil)
+	mocks.Service.EXPECT().
+		LookupBranch(gomock.Any(), "feat-a").
+		Return(&spice.LookupBranchResponse{}, nil)
+	mocks.Repository.EXPECT().
+		PeelToCommit(gomock.Any(), "feat-a").
+		Return(git.Hash("hash-a"), nil)
+	mocks.Worktree.EXPECT().
+		CheckoutNewBranch(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Return(&git.MergeConflictError{
+			Refs:          []string{"hash-a"},
+			ConflictPaths: []string{"shared.txt"},
+		})
+	return "Merge feat-a into preview"
+}
+
+func TestHandler_Rebuild_autoResolveSuccess(t *testing.T) {
+	h, mocks, resolver, _ := newHandlerWithResolver(t)
+	mergeMsg := setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Cond(func(req *ResolveRequest) bool {
+			return req.IntegrationName == "preview" &&
+				req.TipName == "feat-a"
+		})).
+		Return(&ResolveResponse{}, nil)
+	mocks.Worktree.EXPECT().
+		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
+		Return(nil)
+
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+
+	res, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.NoError(t, err)
+	assert.Equal(t, "preview", res.Name)
+}
+
+func TestHandler_Rebuild_autoResolveQuestions(t *testing.T) {
+	h, mocks, resolver, prompter := newHandlerWithResolver(t)
+	mergeMsg := setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(&ResolveResponse{
+			Questions: []string{"Should feat-a win?"},
+		}, nil)
+	prompter.EXPECT().
+		AskAnswers(gomock.Any(), []string{"Should feat-a win?"}).
+		Return([]string{"yes"}, nil)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(&ResolveResponse{}, nil)
+	mocks.Worktree.EXPECT().
+		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
+		Return(nil)
+
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.NoError(t, err)
+
+	file, err := LoadResolutionFile(h.RepoRoot + "/" + ResolutionFileName)
+	require.NoError(t, err)
+	require.Len(t, file.Resolutions, 1)
+	require.Len(t, file.Resolutions[0].ResolutionInstructions, 1)
+	assert.Equal(t, "Should feat-a win?",
+		file.Resolutions[0].ResolutionInstructions[0].Question)
+	assert.Equal(t, "yes",
+		file.Resolutions[0].ResolutionInstructions[0].Answer)
+}
+
+func TestHandler_Rebuild_autoResolveUnresolvedNoQuestions(t *testing.T) {
+	h, mocks, resolver, _ := newHandlerWithResolver(t)
+	setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(&ResolveResponse{
+			UnresolvedFiles: []string{"shared.txt"},
+		}, nil)
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+	assert.Equal(t, "feat-a", conflictErr.Tip)
+}
+
+func TestHandler_Rebuild_autoResolveResolverError(t *testing.T) {
+	h, mocks, resolver, _ := newHandlerWithResolver(t)
+	setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("resolver crashed"))
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+}
+
+func TestHandler_Rebuild_autoResolveDisabledByOpts(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	h.DefaultAutoResolve = true
+	setupConflictMerge(t, mocks)
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(false)})
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+}
+
+func TestHandler_Rebuild_autoResolveDisabledByDefault(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	setupConflictMerge(t, mocks)
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+}
+
+func TestHandler_Rebuild_autoResolveIterationCap(t *testing.T) {
+	h, mocks, resolver, prompter := newHandlerWithResolver(t)
+	setupConflictMerge(t, mocks)
+
+	for range maxAutoResolveIterations {
+		resolver.EXPECT().
+			Resolve(gomock.Any(), gomock.Any()).
+			Return(&ResolveResponse{
+				Questions: []string{"stuck question"},
+			}, nil)
+		prompter.EXPECT().
+			AskAnswers(gomock.Any(), gomock.Any()).
+			Return([]string{"some answer"}, nil)
+	}
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+}
+
+func TestHandler_Rebuild_autoResolveAssumptions(t *testing.T) {
+	h, mocks, resolver, _ := newHandlerWithResolver(t)
+	mergeMsg := setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(&ResolveResponse{
+			Assumptions: []string{"picked feat-a per commit timestamp"},
+		}, nil)
+	mocks.Worktree.EXPECT().
+		MergeContinue(gomock.Any(), gomock.Any(), mergeMsg).
+		Return(nil)
+
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
+	require.NoError(t, err)
+}
+
+func TestHandler_OnBranchRemoved(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	// No integration configured -> tip pruning is a no-op.
+	mocks.Store.EXPECT().
+		Integration(gomock.Any()).
+		Return(nil, state.ErrNotExist)
+
+	path := h.RepoRoot + "/" + ResolutionFileName
+	seed := &ResolutionFile{
+		Resolutions: []ResolutionEntry{
+			{MergingBranches: MergePair{Ours: "preview", Theirs: "feat-a"}},
+			{MergingBranches: MergePair{Ours: "preview", Theirs: "feat-b"}},
+		},
+	}
+	require.NoError(t, seed.Save(path))
+
+	require.NoError(t, h.OnBranchRemoved(t.Context(), "feat-a"))
+
+	file, err := LoadResolutionFile(path)
+	require.NoError(t, err)
+	require.Len(t, file.Resolutions, 1)
+	assert.Equal(t, "feat-b", file.Resolutions[0].MergingBranches.Theirs)
+}
+
+func TestHandler_OnBranchRemoved_noFile(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	mocks.Store.EXPECT().
+		Integration(gomock.Any()).
+		Return(nil, state.ErrNotExist)
+	require.NoError(t, h.OnBranchRemoved(t.Context(), "feat-a"))
+}
+
+func TestHandler_OnBranchRemoved_noMatchingEntries(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	mocks.Store.EXPECT().
+		Integration(gomock.Any()).
+		Return(nil, state.ErrNotExist)
+
+	path := h.RepoRoot + "/" + ResolutionFileName
+	seed := &ResolutionFile{
+		Resolutions: []ResolutionEntry{
+			{MergingBranches: MergePair{Ours: "preview", Theirs: "feat-a"}},
+		},
+	}
+	require.NoError(t, seed.Save(path))
+
+	require.NoError(t, h.OnBranchRemoved(t.Context(), "ghost"))
+
+	file, err := LoadResolutionFile(path)
+	require.NoError(t, err)
+	assert.Len(t, file.Resolutions, 1)
+}
+
+func TestHandler_OnBranchRemoved_prunesTip(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+
+	info := &state.IntegrationInfo{
+		Name: "preview",
+		Tips: []state.IntegrationTip{
+			{Name: "feat-a"},
+			{Name: "feat-b"},
+		},
+	}
+	mocks.Store.EXPECT().
+		Integration(gomock.Any()).
+		Return(info, nil)
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), &state.IntegrationInfo{
+			Name: "preview",
+			Tips: []state.IntegrationTip{{Name: "feat-b"}},
+		}).
+		Return(nil)
+
+	require.NoError(t, h.OnBranchRemoved(t.Context(), "feat-a"))
+}
+
+func TestHandler_OnBranchRemoved_branchNotATip(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+
+	mocks.Store.EXPECT().
+		Integration(gomock.Any()).
+		Return(&state.IntegrationInfo{
+			Name: "preview",
+			Tips: []state.IntegrationTip{{Name: "feat-a"}},
+		}, nil)
+	// SetIntegration should NOT be called.
+
+	require.NoError(t, h.OnBranchRemoved(t.Context(), "ghost"))
 }
 
 func TestHandler_Submit(t *testing.T) {

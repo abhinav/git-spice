@@ -1,0 +1,45 @@
+# Resolver reports unresolved_files with no questions: auto-resolve
+# fails, falling through to the existing conflict-surfacing path.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+chmod 700 $WORK/resolver.sh
+git config spice.integration.resolver $WORK/resolver.sh
+git config spice.integration.autoResolve true
+
+! gs integration rebuild
+stderr 'unresolved files with no questions: shared.txt'
+stderr 'Merge conflict in tip feat-b'
+
+# Worktree should be left in conflict state (LeaveConflict semantics).
+git status
+stdout 'You have unmerged paths'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- resolver.sh --
+#!/bin/sh
+echo '{"unresolved_files": ["shared.txt"]}'
