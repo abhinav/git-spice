@@ -236,6 +236,34 @@ func (c *Config) Shorthands() []string {
 	return slices.Sorted(maps.Keys(c.shorthands))
 }
 
+// DefaultScriptResolveMaxIterations is the iteration cap used when
+// spice.scriptResolve.maxIterations is unset or invalid. A script that
+// keeps returning new questions hits this many iterations before
+// git-spice gives up and falls back to manual resolution.
+const DefaultScriptResolveMaxIterations = 10
+
+// ScriptResolveMaxIterations returns the configured iteration cap for
+// script-driven Q&A loops. Read from spice.scriptResolve.maxIterations
+// and defaults to [DefaultScriptResolveMaxIterations]. Non-positive or
+// non-numeric values fall back to the default and emit a warning.
+func (c *Config) ScriptResolveMaxIterations() int {
+	key := git.ConfigKey("spice.scriptResolve.maxIterations").Canonical()
+	values, ok := c.items[key]
+	if !ok || len(values) == 0 {
+		return DefaultScriptResolveMaxIterations
+	}
+	last := strings.TrimSpace(values[len(values)-1])
+	n, err := strconv.Atoi(last)
+	if err != nil || n <= 0 {
+		c.log.Warnf(
+			"invalid value for %v: %q (using default %d)",
+			key, last, DefaultScriptResolveMaxIterations,
+		)
+		return DefaultScriptResolveMaxIterations
+	}
+	return n
+}
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }
