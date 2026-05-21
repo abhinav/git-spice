@@ -37,6 +37,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -168,7 +169,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
 		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
@@ -590,6 +591,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
 			autostashHandler AutostashHandler,
+			integrationHandler IntegrationHandler,
 		) (SyncHandler, error) {
 			remote, err := ensureRemote(ctx, repo, store, log, view)
 			// TODO: move ensure remote to Service
@@ -624,6 +626,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Delete:           deleteHandler,
 				Restack:          restackHandler,
 				Autostash:        autostashHandler,
+				OnBranchRemoved:  integrationHandler.OnBranchRemoved,
 				Remote:           remote.Upstream,
 				RemoteRepository: remoteRepo,
 				PushRepository:   pushRepository,
@@ -688,17 +691,36 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			view ui.View,
 			repo *git.Repository,
 			wt *git.Worktree,
 			store *state.Store,
 			svc *spice.Service,
+			cfg *spice.Config,
 		) (IntegrationHandler, error) {
+			repoRoot := wt.RootDir()
+			var resolver integration.Resolver
+			if script := cfg.IntegrationResolver(); script != "" {
+				resolver = &integration.ScriptResolver{
+					Log:    log,
+					Script: script,
+					Runner: &scriptrun.Runner{
+						Log:  log,
+						Args: os.Args,
+					},
+					RepoRoot: repoRoot,
+				}
+			}
 			return &integration.Handler{
-				Log:        log,
-				Repository: repo,
-				Worktree:   wt,
-				Store:      store,
-				Service:    svc,
+				Log:                log,
+				Repository:         repo,
+				Worktree:           wt,
+				Store:              store,
+				Service:            svc,
+				Resolver:           resolver,
+				Prompter:           integration.NewViewPrompter(view),
+				DefaultAutoResolve: cfg.IntegrationAutoResolve(),
+				RepoRoot:           repoRoot,
 			}, nil
 		}),
 	)

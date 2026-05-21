@@ -641,3 +641,132 @@ func TestIntegrationConfig_gitConfigReferences(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_IntegrationResolver(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{
+			name:   "Unset",
+			config: "",
+			want:   "",
+		},
+		{
+			name: "Simple",
+			config: text.Dedent(`
+				[spice "integration"]
+				resolver = "/path/to/resolver.sh"
+			`),
+			want: "/path/to/resolver.sh",
+		},
+		{
+			name: "LastValueWins",
+			config: text.Dedent(`
+				[spice "integration"]
+				resolver = "/first.sh"
+				resolver = "/second.sh"
+			`),
+			want: "/second.sh",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			require.NoError(t, os.WriteFile(
+				filepath.Join(home, ".gitconfig"),
+				[]byte(tt.config),
+				0o600,
+			))
+
+			ctx := t.Context()
+			gitCfg := git.NewConfig(git.ConfigOptions{
+				Log: silogtest.New(t),
+				Dir: home,
+				Env: []string{
+					"HOME=" + home,
+					"USER=testuser",
+					"GIT_CONFIG_NOSYSTEM=1",
+				},
+			})
+			spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+				Log: silogtest.New(t),
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, spicecfg.IntegrationResolver())
+		})
+	}
+}
+
+func TestConfig_IntegrationAutoResolve(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   bool
+	}{
+		{
+			name:   "Unset",
+			config: "",
+			want:   false,
+		},
+		{
+			name: "True",
+			config: text.Dedent(`
+				[spice "integration"]
+				autoResolve = true
+			`),
+			want: true,
+		},
+		{
+			name: "False",
+			config: text.Dedent(`
+				[spice "integration"]
+				autoResolve = false
+			`),
+			want: false,
+		},
+		{
+			name: "Garbage",
+			config: text.Dedent(`
+				[spice "integration"]
+				autoResolve = not-a-bool
+			`),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			require.NoError(t, os.WriteFile(
+				filepath.Join(home, ".gitconfig"),
+				[]byte(tt.config),
+				0o600,
+			))
+
+			ctx := t.Context()
+			gitCfg := git.NewConfig(git.ConfigOptions{
+				Log: silogtest.New(t),
+				Dir: home,
+				Env: []string{
+					"HOME=" + home,
+					"USER=testuser",
+					"GIT_CONFIG_NOSYSTEM=1",
+				},
+			})
+			spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+				Log: silogtest.New(t),
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want, spicecfg.IntegrationAutoResolve())
+		})
+	}
+}

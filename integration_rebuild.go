@@ -12,7 +12,8 @@ import (
 )
 
 type integrationRebuildCmd struct {
-	Push bool `name:"push" help:"Also push the integration branch after rebuilding"`
+	Push        bool `name:"push" help:"Also push the integration branch after rebuilding"`
+	AutoResolve bool `name:"auto-resolve" negatable:"" config:"integration.autoResolve" help:"Auto-resolve merge conflicts using the configured resolver script"`
 }
 
 func (*integrationRebuildCmd) Help() string {
@@ -25,6 +26,11 @@ func (*integrationRebuildCmd) Help() string {
 		On conflict, the merge is left in the worktree. Resolve the
 		conflicting files, commit with 'git merge --continue', then
 		re-run 'gs integration rebuild' (or 'gs intrb') to resume.
+
+		With --auto-resolve (or spice.integration.autoResolve=true), a
+		configured resolver script is invoked to attempt automatic
+		resolution before surfacing conflicts. See the recipe for
+		details on the JSON protocol the script must implement.
 	`)
 }
 
@@ -33,7 +39,9 @@ func (cmd *integrationRebuildCmd) Run(
 	log *silog.Logger,
 	handler IntegrationHandler,
 ) error {
-	res, err := handler.Rebuild(ctx)
+	res, err := handler.Rebuild(ctx, &integration.RebuildOptions{
+		AutoResolve: &cmd.AutoResolve,
+	})
 	if err != nil {
 		conflict := new(integration.ConflictError)
 		if errors.As(err, &conflict) {

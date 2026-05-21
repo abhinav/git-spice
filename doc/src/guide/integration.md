@@ -127,6 +127,194 @@ subsequent `gs stack submit`, `gs upstack submit`, and
 `gs downstack submit` invocations will keep the published branch in
 sync by pushing the latest rebuild.
 
+## Auto-resolving conflicts
+
+<!-- gs:version unreleased -->
+
+Even with rerere and the `regenerate` merge driver handling the
+mechanical conflicts, rebuilds can still surface hand-resolution
+conflicts when two tips touch the same file. For local-only integration
+branches, you can configure a script that resolves these conflicts
+automatically.
+
+### Configuration
+
+Two git-config keys control the feature:
+
+- `spice.integration.resolver` — the resolver script body. The value
+  is the script itself (not a path); git-spice runs it via `sh -c`,
+  the same shape as $$spice.messageGenerator$$. Typically set at
+  `--global` scope since the resolver is a personal preference.
+- `spice.integration.autoResolve` — when `true`, the resolver runs
+  automatically on every $$gs integration rebuild$$.
+
+See [Example: Claude-Code resolver](#example-claude-code-resolver)
+below for a copy-paste install snippet.
+
+Per-invocation overrides are available on $$gs integration rebuild$$:
+
+- `--auto-resolve` enables auto-resolve for this invocation.
+- `--no-auto-resolve` disables it, even when the config has it on.
+
+### The resolver protocol
+
+The script is run from the repository root with the conflict-in-progress
+worktree. It must produce a single JSON document on stdout matching:
+
+```json
+{
+  "assumptions":      ["string", ...],
+  "questions":        ["string", ...],
+  "unresolved_files": ["string", ...]
+}
+```
+
+All fields are optional. `{}` means "everything resolved cleanly."
+
+| Response                                            | Behavior                                                                              |
+|-----------------------------------------------------|---------------------------------------------------------------------------------------|
+| Empty (or `assumptions` only)                       | Assumptions logged at info level. Files staged, merge committed.                      |
+| `questions` populated                               | Each question is asked interactively. Answers append to the resolution file. Resolver is re-invoked. |
+| `unresolved_files` populated, no `questions`        | Auto-resolve fails with an error; conflict surfaces normally for manual resolution.   |
+| Non-zero exit code or invalid JSON                  | Auto-resolve fails; conflict surfaces normally. Output is logged at error level.      |
+
+Anything in `unresolved_files` is left unstaged; everything else is
+staged and committed.
+
+### The resolution file
+
+A file named `.integration_resolution.json` is maintained at the
+repository root. **Add it to `.gitignore`** — it contains session
+state, not source.
+
+```json
+{
+  "current_merge": {
+    "ours":   "preview",
+    "theirs": "feat-a"
+  },
+  "resolutions": [
+    {
+      "merging_branches": {"ours": "preview", "theirs": "feat-a"},
+      "resolution_instructions": [
+        {"question": "...", "answer": "..."}
+      ]
+    }
+  ]
+}
+```
+
+`current_merge` is rewritten before each resolver invocation so the
+script knows which merge is in progress. `resolutions` accumulates
+Q&A pairs *across rebuilds*, so once you've answered a question for a
+given (ours, theirs) pair, future rebuilds will not re-ask it.
+
+Entries are pruned automatically when their branches are
+untracked (`gs branch untrack`), deleted (`gs branch delete`), or
+removed by `gs repo sync` after the underlying CR merges.
+
+You may also edit the file by hand between iterations — for example,
+to add standing guidance.
+
+### Example: Claude-Code resolver
+
+The resolver is configured as a user-level preference — the config
+value is the script body itself, run by git-spice via `sh -c`,
+the same shape as $$spice.messageGenerator$$. Use `--global` so the
+script applies to every repo you run integration rebuilds in.
+
+Paste the block below into a terminal to install a resolver that
+delegates to [Claude Code](https://docs.claude.com/en/docs/claude-code)
+and turn auto-resolve on by default:
+
+```bash
+git config --global spice.integration.resolver "$(cat <<'GITCONFIG'
+#!/bin/sh
+exec claude --print --max-turns 30 <<'PROMPT'
+You are resolving merge conflicts on a throwaway integration branch.
+
+CONTEXT
+- 'git ls-files --unmerged' lists the conflicted paths.
+- 'git log -p ours' and 'git log -p theirs' show the commits on each
+  side; 'git diff ours theirs -- <path>' compares them on one file.
+- .integration_resolution.json names the merge in progress
+  (current_merge: ours = the integration branch, theirs = the tip
+  being merged) and carries any prior Q&A you have recorded under
+  resolutions. Honor that prior guidance when it applies.
+
+WHAT TO DO
+- Edit each conflicted file in place. Remove the <<<<<<<, =======,
+  and >>>>>>> markers and produce a syntactically valid merged file.
+- Do NOT run 'git add' or 'git commit'. After you exit, git-spice
+  stages every originally-conflicted path and commits the merge.
+
+OUTPUT — emit exactly one JSON document on stdout, then exit:
+
+  {"assumptions": [...], "questions": [...], "unresolved_files": [...]}
+
+- All three keys are optional. Empty (or assumptions-only) means
+  "everything resolved cleanly"; git-spice will stage and commit.
+- "assumptions" — short notes on judgement calls you made. They are
+  surfaced in the rebuild log so a human can spot-check them.
+- "questions" — ask the user when you cannot resolve confidently.
+  Each question is shown interactively; the user's answers are
+  appended to .integration_resolution.json and you are re-invoked
+  with them in scope. Prefer asking over guessing.
+- "unresolved_files" — list paths you could not resolve. With no
+  questions set, this fails the rebuild and drops the user into
+  manual resolution. Use only as a last resort.
+PROMPT
+GITCONFIG
+)"
+
+git config --global spice.integration.autoResolve true
+```
+
+For Claude Code to run unattended, pre-approve the tools it needs in
+`~/.claude/settings.json`. The schema is a `permissions` object with
+an `allow` array of tool patterns
+([reference](https://docs.claude.com/en/docs/claude-code/settings#permissions)):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git ls-files:*)"
+    ]
+  }
+}
+```
+
+Bare names like `Read` and `Edit` allow the tool on any path; scope
+them with `Read(/repo/path/**)` if you'd rather only let the resolver
+read inside the integration repo.
+
+If you already run Claude Code with a permissive default — e.g.,
+`permissions.defaultMode` set to `auto` (skip routine prompts) or
+`bypassPermissions` (skip all prompts) — you can omit the `allow`
+list entirely. The integration branch is throwaway, so this is a
+reasonable trade-off for unattended rebuilds. See the upstream
+[settings reference](https://docs.claude.com/en/docs/claude-code/settings#permissions)
+for what each mode covers.
+
+### Iteration loop
+
+When the resolver returns questions, git-spice will prompt you for
+each in order. Your answers are appended to the resolution file
+before the resolver is re-invoked.
+
+If a resolution turns out to be wrong, the integration branch is
+throwaway: investigate the diff, update your prompt or hand-edit
+`resolution_instructions`, then run $$gs integration rebuild$$ again.
+
+If rerere has recorded an incorrect resolution from an earlier run,
+`git rerere clear` wipes the cache.
+
 ## Removing the configuration
 
 Use $$gs integration delete$$ to remove the configuration. The
