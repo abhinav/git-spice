@@ -46,6 +46,10 @@ type Item struct {
 	// depending on ChangeState.
 	ChangeID string
 
+	// ChangeURL is the URL for the change request.
+	// If non-empty, ChangeID text is rendered as an OSC 8 hyperlink.
+	ChangeURL string
+
 	// ChangeIDHighlights contains rune indexes in [ChangeID] to highlight.
 	// Characters at these indexes use Style.TextHighlight.
 	ChangeIDHighlights []int
@@ -326,7 +330,7 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 	r.branchName(sb, item)
 
 	if item.ChangeID != "" {
-		r.changeID(sb, item.ChangeID, item.ChangeIDHighlights, item.ChangeState)
+		r.changeID(sb, item.ChangeID, item.ChangeURL, item.ChangeIDHighlights, item.ChangeState)
 	}
 
 	if cc := item.CommentCounts; cc != nil && cc.Total > 0 {
@@ -369,13 +373,20 @@ func (r *branchTreeRenderer) branchName(sb *strings.Builder, item *Item) {
 func (r *branchTreeRenderer) changeID(
 	sb *strings.Builder,
 	changeID string,
+	changeURL string,
 	changeIDHighlights []int,
 	changeState *forge.ChangeState,
 ) {
 	sb.WriteString(" (")
 	defer sb.WriteString(")")
 
-	renderTextWithHighlights(sb, changeID, changeIDHighlights, r.Style.ChangeID, r.Style.TextHighlight)
+	var inner strings.Builder
+	renderTextWithHighlights(&inner, changeID, changeIDHighlights, r.Style.ChangeID, r.Style.TextHighlight)
+	text := inner.String()
+	if changeURL != "" {
+		text = lipgloss.NewStyle().Hyperlink(changeURL).Render(text)
+	}
+	sb.WriteString(text)
 
 	if changeState != nil {
 		sb.WriteString(" ")

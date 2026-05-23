@@ -1,0 +1,3 @@
+kind: Added
+body: 'log: change IDs in terminal output are clickable OSC 8 hyperlinks.'
+time: 2026-05-23T11:44:04.658226+03:00

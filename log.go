@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/list"
@@ -115,7 +116,12 @@ func (cmd *branchLogCmd) run(
 			changeFormat = *cmd.ChangeFormatShort
 		}
 
-		wantChangeURL = changeFormat == changeFormatURL
+		var hyperlinks bool
+		if f, ok := kctx.Stderr.(interface{ Fd() uintptr }); ok {
+			hyperlinks = isatty.IsTerminal(f.Fd())
+		}
+
+		wantChangeURL = changeFormat == changeFormatURL || hyperlinks
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 		wantChangeState = cmd.CRStatus
 		wantCommentCounts = cmd.Comments
@@ -199,6 +205,7 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			case changeFormatURL:
 				item.ChangeID = b.ChangeURL
 			}
+			item.ChangeURL = b.ChangeURL
 
 			// Include change state if requested.
 			if p.ShowCRStatus && b.ChangeState != 0 {
