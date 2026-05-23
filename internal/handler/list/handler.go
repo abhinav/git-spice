@@ -175,7 +175,11 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 
 	getRemote := sync.OnceValue(func() state.Remote {
 		remote, err := h.Store.Remote()
+		if errors.Is(err, state.ErrNotExist) {
+			return state.Remote{}
+		}
 		if err != nil {
+			log.Warn("Could not load remote configuration", "error", err)
 			return state.Remote{}
 		}
 		return remote
@@ -189,7 +193,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		err := func() error {
 			remote := getRemote()
 			if remote == (state.Remote{}) {
-				return state.ErrNotExist
+				return nil
 			}
 
 			remoteURL, err := h.Repository.RemoteURL(ctx, remote.Upstream)
