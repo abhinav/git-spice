@@ -69,6 +69,14 @@ gs up 3
 git branch
 cmp stdout $WORK/golden/git_branch_feature3.output
 
+# up [N] rejects zero
+! gs up 0
+stderr 'number of branches must be positive'
+
+# up [N] rejects negative counts
+! gs up -- -1
+stderr 'number of branches must be positive'
+
 # up [N] out of bounds
 gs up 5
 git branch
@@ -78,6 +86,14 @@ cmp stdout $WORK/golden/git_branch_feature5.output
 gs down 2
 git branch
 cmp stdout $WORK/golden/git_branch_feature3.output
+
+# down [N] rejects zero
+! gs down 0
+stderr 'number of branches must be positive'
+
+# down [N] rejects negative counts
+! gs down -- -1
+stderr 'number of branches must be positive'
 
 # down [N] out of bounds
 gs down 5
