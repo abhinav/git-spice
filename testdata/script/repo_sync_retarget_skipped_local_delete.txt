@@ -1,0 +1,85 @@
+# 'repo sync' retargets upstack PRs on the forge
+# even when local branch deletion is skipped.
+
+as 'Test <test@example.com>'
+at '2026-05-23T20:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# verify the local stack shape
+gs ls
+cmp stderr $WORK/golden/ls-before.txt
+
+# feature1 is checked out elsewhere,
+# so sync cannot delete it locally even after the forge merges it.
+git checkout main
+git worktree add ../wt-feature1 feature1
+shamhub merge alice/example 1
+
+# The local branch remains,
+# but the forge stack should no longer target a finished branch.
+gs repo sync
+stderr 'feature1: #1 was merged'
+stderr 'feature1: checked out in another worktree.*skipping deletion'
+stderr 'Retargeting feature2 to main'
+
+git rev-parse --verify feature1
+
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/change-2.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- golden/ls-before.txt --
+  ┏━■ feature2 (#2) ◀
+┏━┻□ feature1 (#1)
+main
+-- golden/change-2.json --
+{
+  "number": 2,
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "state": "open",
+  "title": "Add feature 2",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "c6e2fe6a9663ac4b978e5504aa4114d42eb2c608"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "ecb61364f24700c531d9bfaa30007864fbc295e8"
+  }
+}
