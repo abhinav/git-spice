@@ -18,7 +18,6 @@ url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/31954
 checksum = "sha256:706937c1874eb7c270d15f644d8a84a74dfa7f27778cbc8ca9cb045a0d68d9df"
 url = "https://github.com/miniscruff/changie/releases/download/v1.24.0/changie_1.24.0_linux_amd64.tar.gz"
 url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/319542133"
-github_attestations = "unavailable"
 
 [tools.changie."platforms.linux-x64-changie"]
 checksum = "blake3:8b63ce3ca2871dba4d3a50cea6b4fc8c8aad789a18fdb8c88fc8e6b3b26977cc"
@@ -164,7 +163,6 @@ url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/35
 checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
 url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-x86_64.tar.gz"
 url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740554"
-github_attestations = "unavailable"
 
 [tools.requiredfield."platforms.linux-x64-musl"]
 checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
