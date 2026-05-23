@@ -204,7 +204,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 			var ok bool
 			remoteForge, remoteRepoID, ok = forge.MatchRemoteURL(h.Forges, remoteURL)
 			if !ok {
-				return fmt.Errorf("no forge matches remote URL %q", remoteURL)
+				return nil
 			}
 
 			return nil
