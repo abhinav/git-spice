@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
@@ -35,6 +36,10 @@ func (cmd *downCmd) Run(
 	svc *spice.Service,
 	checkoutHandler CheckoutHandler,
 ) error {
+	if cmd.N <= 0 {
+		return errors.New("number of branches must be positive")
+	}
+
 	current, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		// TODO: handle not a branch

@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'navigation: Non-positive branch counts for up and down are now rejected instead of causing a panic.'
+time: 2026-05-23T09:35:36.521337-07:00
