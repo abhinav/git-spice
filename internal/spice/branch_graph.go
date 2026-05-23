@@ -262,6 +262,67 @@ func (g *BranchGraph) Bottom(branch string) string {
 	return ""
 }
 
+// NextBase resolves the base branch to use
+// when one or more downstack branches should be ignored.
+//
+// This is a graph operation,
+// but not a policy decision:
+// callers decide what "except" means.
+// For branch deletion,
+// the predicate usually means "this branch is being deleted locally."
+// For repository sync,
+// it may mean "this branch is already finished on the forge."
+//
+// The search starts from branch's current base,
+// not from branch itself.
+// If that base is excepted,
+// NextBase walks downstack until it finds a base
+// that the predicate allows.
+//
+// A base that is not excepted is returned as-is,
+// even if the graph does not track that base branch.
+// This lets callers build a graph from only the branches
+// relevant to the operation:
+// the graph must know how to walk through excepted branches,
+// but it does not need to know every possible surviving base.
+//
+// If branch is unknown,
+// or an excepted base is not in the graph,
+// NextBase returns trunk.
+// These fallbacks keep callers from preserving an invalid base edge
+// when the branch graph is already inconsistent.
+func (g *BranchGraph) NextBase(
+	branch string,
+	except func(string) bool,
+) string {
+	idx, ok := g.byName[branch]
+	if !ok {
+		return g.trunk
+	}
+
+	if except == nil {
+		except = func(string) bool { return false }
+	}
+
+	visited := make(map[string]struct{})
+	visited[branch] = struct{}{}
+	base := g.branches[idx].Base
+	for except(base) {
+		if _, ok := visited[base]; ok {
+			return g.trunk
+		}
+		visited[base] = struct{}{}
+
+		idx, ok := g.byName[base]
+		if !ok {
+			return g.trunk
+		}
+		base = g.branches[idx].Base
+	}
+
+	return base
+}
+
 // Stack returns the full stack of branches that the given branch is in.
 //
 // This includes all downstack branches and all upstack branches,

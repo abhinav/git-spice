@@ -1,13 +1,14 @@
-package spice
+package spice_test
 
 import (
-	"context"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"pgregory.net/rapid"
 )
 
@@ -18,21 +19,20 @@ func TestBranchGraph(t *testing.T) {
 	//	      '-> feature3 --> feature5
 	feature1WT := t.TempDir()
 	feature5WT := t.TempDir()
-	graph, err := NewBranchGraph(t.Context(), &branchLoaderStub{
-		trunk: "main",
-		branches: []LoadBranchItem{
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk: "main",
+		Branches: []spice.LoadBranchItem{
 			{Name: "feature1", Base: "main"},
 			{Name: "feature2", Base: "feature1"},
 			{Name: "feature4", Base: "feature1"},
 			{Name: "feature3", Base: "main"},
 			{Name: "feature5", Base: "feature3"},
 		},
-		worktrees: map[string]string{
+		Worktrees: map[string]string{
 			"feature1": feature1WT,
 			"feature5": feature5WT,
 		},
-	}, &BranchGraphOptions{IncludeWorktrees: true})
-	require.NoError(t, err)
+	})
 
 	assert.Equal(t, "main", graph.Trunk())
 
@@ -175,6 +175,30 @@ func TestBranchGraph(t *testing.T) {
 		}
 	})
 
+	t.Run("NextBase", func(t *testing.T) {
+		tests := []struct {
+			name   string
+			except []string
+			want   string
+		}{
+			{name: "main", except: []string{"feature1"}, want: "main"},
+			{name: "unknown", except: []string{"feature1"}, want: "main"},
+			{name: "feature1", except: []string{"feature1"}, want: "main"},
+			{name: "feature2", except: []string{"feature1"}, want: "main"},
+			{name: "feature4", except: []string{"feature1"}, want: "main"},
+			{name: "feature5", except: []string{"feature3"}, want: "main"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got := graph.NextBase(tt.name, func(branch string) bool {
+					return slices.Contains(tt.except, branch)
+				})
+				assert.Equal(t, tt.want, got)
+			})
+		}
+	})
+
 	t.Run("Stack", func(t *testing.T) {
 		tests := []struct {
 			name string
@@ -236,6 +260,34 @@ func TestBranchGraph(t *testing.T) {
 	})
 }
 
+func TestBranchGraph_NextBase_cycle(t *testing.T) {
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk: "main",
+		Branches: []spice.LoadBranchItem{
+			{Name: "feature1", Base: "feature2"},
+			{Name: "feature2", Base: "feature1"},
+		},
+	})
+
+	got := graph.NextBase("feature1", func(string) bool { return true })
+	assert.Equal(t, "main", got)
+}
+
+func TestBranchGraph_NextBase_partialGraph(t *testing.T) {
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk: "main",
+		Branches: []spice.LoadBranchItem{
+			{Name: "feature1", Base: "feature2"},
+			{Name: "feature2", Base: "survivor"},
+		},
+	})
+
+	got := graph.NextBase("feature1", func(branch string) bool {
+		return branch == "feature2"
+	})
+	assert.Equal(t, "survivor", got)
+}
+
 func TestBranchGraphRapid(t *testing.T) {
 	rapid.Check(t, testBranchGraphRapid)
 }
@@ -249,7 +301,7 @@ func testBranchGraphRapid(t *rapid.T) {
 
 	// To guarantee no cycles in generated graph,
 	// we'll only use previously generated branches as bases.
-	var branchItems []LoadBranchItem
+	var branchItems []spice.LoadBranchItem
 	for range rapid.IntRange(0, 100).Draw(t, "numBranches") {
 		name := branchNameGen.Filter(func(name string) bool {
 			// Requested name must be unused.
@@ -257,7 +309,7 @@ func testBranchGraphRapid(t *rapid.T) {
 		}).Draw(t, "branchName")
 		base := rapid.SampledFrom(allBranches).Draw(t, "baseBranch")
 		allBranches = append(allBranches, name)
-		branchItems = append(branchItems, LoadBranchItem{
+		branchItems = append(branchItems, spice.LoadBranchItem{
 			Name:           name,
 			Base:           base,
 			Head:           git.Hash(gitHashGen.Draw(t, "headHash")),
@@ -266,11 +318,10 @@ func testBranchGraphRapid(t *rapid.T) {
 		})
 	}
 
-	graph, err := NewBranchGraph(t.Context(), &branchLoaderStub{
-		trunk:    trunk,
-		branches: branchItems,
-	}, nil)
-	require.NoError(t, err)
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk:    trunk,
+		Branches: branchItems,
+	})
 
 	t.Repeat(map[string]func(*rapid.T){
 		"All": func(t *rapid.T) {
@@ -336,8 +387,9 @@ func testBranchGraphRapid(t *rapid.T) {
 				assert.NotEmpty(t, bottom, "bottom should not be empty for tracked branches")
 				assert.NotEqual(t, trunk, bottom, "bottom should not be trunk for tracked branches")
 
-				// TODO: don't look at internals
-				assert.Equal(t, trunk, graph.branches[graph.byName[bottom]].Base,
+				bottomBranch, ok := graph.Lookup(bottom)
+				require.True(t, ok, "bottom branch should be tracked")
+				assert.Equal(t, trunk, bottomBranch.Base,
 					"base of bottom branch should be trunk")
 			}
 		},
@@ -361,31 +413,4 @@ func testBranchGraphRapid(t *rapid.T) {
 			}
 		},
 	})
-}
-
-type branchLoaderStub struct {
-	trunk     string
-	branches  []LoadBranchItem
-	worktrees map[string]string
-}
-
-var _ BranchLoader = (*branchLoaderStub)(nil)
-
-func (s *branchLoaderStub) Trunk() string {
-	return s.trunk
-}
-
-func (s *branchLoaderStub) LoadBranches(_ context.Context) ([]LoadBranchItem, error) {
-	return slices.Clone(s.branches), nil
-}
-
-func (s *branchLoaderStub) LookupWorktrees(_ context.Context, branches []string) (map[string]string, error) {
-	wts := make(map[string]string)
-	for _, b := range branches {
-		wt := s.worktrees[b]
-		if wt != "" {
-			wts[b] = wt
-		}
-	}
-	return wts, nil
 }

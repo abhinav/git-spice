@@ -51,7 +51,7 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to spice.Service methods
 type Service interface {
 	LookupBranch(ctx context.Context, name string) (*spice.LookupBranchResponse, error)
-	ListAbove(ctx context.Context, branch string) ([]string, error)
+	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 	BranchOnto(ctx context.Context, req *spice.BranchOntoRequest) error
 	RebaseRescue(ctx context.Context, req spice.RebaseRescueRequest) error
 }
@@ -235,6 +235,11 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 		deleteOrder[i] = branchesToDelete[name]
 	}
 
+	branchGraph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("get branch graph: %w", err)
+	}
+
 	// For each branch under consideration,
 	// if it's a tracked branch, update the upstacks from it
 	// to point to its base, or the next branch downstack
@@ -247,19 +252,12 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 
 		// Search through the bases to find one
 		// that isn't being deleted.
-		base := info.Base
-		baseInfo, deletingBase := branchesToDelete[base]
-		for base != h.Store.Trunk() && deletingBase {
-			base = baseInfo.Base
-			baseInfo, deletingBase = branchesToDelete[base]
-		}
+		base := branchGraph.NextBase(branch, func(branch string) bool {
+			_, ok := branchesToDelete[branch]
+			return ok
+		})
 
-		aboves, err := h.Service.ListAbove(ctx, branch)
-		if err != nil {
-			return fmt.Errorf("list above %v: %w", branch, err)
-		}
-
-		for _, above := range aboves {
+		for above := range branchGraph.Aboves(branch) {
 			if _, ok := branchesToDelete[above]; ok {
 				// This upstack is also being deleted. Skip.
 				continue

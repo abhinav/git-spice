@@ -7,6 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 )
 
 // fakeChangeID is a string-based ChangeID for testing.
@@ -29,19 +30,25 @@ func (m *fakeChangeMetadata) NavigationCommentID() forge.ChangeCommentID {
 func (m *fakeChangeMetadata) SetNavigationCommentID(forge.ChangeCommentID) {}
 
 func TestCollectRetargetCandidates(t *testing.T) {
+	branchGraph := func(branches []spice.LoadBranchItem) *spice.BranchGraph {
+		return spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk:    "main",
+			Branches: branches,
+		})
+	}
+
 	t.Run("SingleDeletion", func(t *testing.T) {
 		// main -> A -> B; A deleted, B survives with change.
 		got := collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "A"}},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{
 					Name:   "B",
 					Base:   "A",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Equal(t, []retargetCandidate{
@@ -56,7 +63,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 				{BranchName: "A"},
 				{BranchName: "B"},
 			},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{Name: "B", Base: "A"},
 				{
@@ -64,8 +71,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Base:   "B",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Equal(t, []retargetCandidate{
@@ -77,11 +83,10 @@ func TestCollectRetargetCandidates(t *testing.T) {
 		// A deleted, B survives but has no published change.
 		got := collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "A"}},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{Name: "B", Base: "A"},
-			},
-			"main",
+			}),
 		)
 
 		assert.Empty(t, got)
@@ -94,15 +99,14 @@ func TestCollectRetargetCandidates(t *testing.T) {
 				{BranchName: "A"},
 				{BranchName: "B"},
 			},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{
 					Name:   "B",
 					Base:   "A",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Empty(t, got)
@@ -112,15 +116,14 @@ func TestCollectRetargetCandidates(t *testing.T) {
 		// A is not deleted; B's base is not in the deletion set.
 		got := collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "X"}},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{
 					Name:   "B",
 					Base:   "A",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Empty(t, got)
@@ -134,7 +137,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 				{BranchName: "A"},
 				{BranchName: "B"},
 			},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "B"},
 				{Name: "B", Base: "A"},
 				{
@@ -142,8 +145,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Base:   "A",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Equal(t, []retargetCandidate{
@@ -156,7 +158,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 		// C should retarget to A, not main.
 		got := collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "B"}},
-			[]spice.LoadBranchItem{
+			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{Name: "B", Base: "A"},
 				{
@@ -164,8 +166,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Base:   "B",
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
-			},
-			"main",
+			}),
 		)
 
 		assert.Equal(t, []retargetCandidate{

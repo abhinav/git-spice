@@ -14,6 +14,7 @@ import (
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -107,8 +108,10 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 		mockRepo := newFetchOnlyRepoMocks(ctrl)
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return(nil, nil)
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+			}), nil)
 
 		handler := &Handler{
 			Log:        silogtest.New(t),
@@ -170,12 +173,15 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return([]spice.LoadBranchItem{{
-				Name: "feature",
-				Head: git.Hash("trunk"),
-				Base: "main",
-			}}, nil)
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{{
+					Name: "feature",
+					Head: git.Hash("trunk"),
+					Base: "main",
+				}},
+			}), nil)
 
 		mockDelete := NewMockDeleteHandler(ctrl)
 		mockDelete.EXPECT().
@@ -242,8 +248,10 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 		mockRepo := newFetchOnlyRepoMocks(ctrl)
 		mockService := NewMockService(ctrl)
 		mockService.EXPECT().
-			LoadBranches(gomock.Any()).
-			Return(nil, nil)
+			BranchGraph(gomock.Any(), (*spice.BranchGraphOptions)(nil)).
+			Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+			}), nil)
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
