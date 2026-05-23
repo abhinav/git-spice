@@ -63,7 +63,7 @@ var _ Store = (*state.Store)(nil)
 
 // Service is a subset of the spice.Service interface.
 type Service interface {
-	LoadBranches(ctx context.Context) ([]spice.LoadBranchItem, error)
+	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 	ListAbove(ctx context.Context, name string) ([]string, error)
 }
 
@@ -366,10 +366,11 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	}
 
-	candidates, err := h.Service.LoadBranches(ctx)
+	branchGraph, err := h.Service.BranchGraph(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("list tracked branches: %w", err)
+		return fmt.Errorf("get branch graph: %w", err)
 	}
+	candidates := slices.Collect(branchGraph.All())
 
 	var branchesToDelete []branchDeletion
 	if h.RemoteRepository == nil {
@@ -434,6 +435,15 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
 			return err
 		}
+	}
+
+	// Retarget surviving upstack PRs on the forge
+	// around branches that are finished there.
+	if h.RemoteRepository != nil {
+		h.retargetUpstackChanges(ctx,
+			collectRetargetCandidates(
+				branchesToDelete, branchGraph,
+			))
 	}
 
 	if opts.Restack {
@@ -955,4 +965,72 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 	}
 
 	return nil
+}
+
+// retargetCandidate is a branch whose forge change
+// needs retargeting after a sync deletion.
+type retargetCandidate struct {
+	branch   string
+	changeID forge.ChangeID
+	newBase  string
+}
+
+// collectRetargetCandidates identifies branches
+// that need forge retargeting after sync deletion.
+//
+// It examines pre-deletion branch state to find branches
+// that survive deletion but have a base being deleted.
+// For each, it resolves the nearest surviving ancestor
+// as the new base.
+func collectRetargetCandidates(
+	deletions []branchDeletion,
+	branchGraph *spice.BranchGraph,
+) []retargetCandidate {
+	deletedNames := make(map[string]struct{}, len(deletions))
+	for _, d := range deletions {
+		deletedNames[d.BranchName] = struct{}{}
+	}
+
+	var result []retargetCandidate
+	for c := range branchGraph.All() {
+		if _, deleted := deletedNames[c.Name]; deleted {
+			continue
+		}
+		if c.Change == nil {
+			continue
+		}
+		if _, baseDeleted := deletedNames[c.Base]; !baseDeleted {
+			continue
+		}
+
+		result = append(result, retargetCandidate{
+			branch:   c.Name,
+			changeID: c.Change.ChangeID(),
+			newBase: branchGraph.NextBase(c.Name, func(branch string) bool {
+				_, deleted := deletedNames[branch]
+				return deleted
+			}),
+		})
+	}
+	return result
+}
+
+// retargetUpstackChanges retargets forge changes
+// for upstack branches surviving deletion.
+func (h *Handler) retargetUpstackChanges(
+	ctx context.Context,
+	candidates []retargetCandidate,
+) {
+	for _, c := range candidates {
+		h.Log.Infof("Retargeting %s to %s...",
+			c.branch, c.newBase)
+		err := h.RemoteRepository.EditChange(
+			ctx, c.changeID,
+			forge.EditChangeOptions{Base: c.newBase},
+		)
+		if err != nil {
+			h.Log.Warn("Retarget failed",
+				"branch", c.branch, "error", err)
+		}
+	}
 }
