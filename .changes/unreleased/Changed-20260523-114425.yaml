@@ -1,0 +1,3 @@
+kind: Changed
+body: 'repo sync: Upstack PRs are now retargeted after their base branch is merged.'
+time: 2026-05-23T11:44:25.007139-07:00
