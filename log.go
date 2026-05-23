@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/mattn/go-isatty"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/list"
@@ -94,10 +93,9 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var presenter logPresenter
-	var wantChangeURL, wantPushStatus, wantChangeState, wantCommentCounts bool
+	var wantPushStatus, wantChangeState, wantCommentCounts bool
 	if cmd.JSON {
 		// JSON always wants URLs and push status, but respects flags for change state/comments.
-		wantChangeURL = true
 		wantPushStatus = true
 		wantChangeState = cmd.CRStatus
 		wantCommentCounts = cmd.Comments
@@ -116,12 +114,6 @@ func (cmd *branchLogCmd) run(
 			changeFormat = *cmd.ChangeFormatShort
 		}
 
-		var hyperlinks bool
-		if f, ok := kctx.Stderr.(interface{ Fd() uintptr }); ok {
-			hyperlinks = isatty.IsTerminal(f.Fd())
-		}
-
-		wantChangeURL = changeFormat == changeFormatURL || hyperlinks
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 		wantChangeState = cmd.CRStatus
 		wantCommentCounts = cmd.Comments
@@ -141,9 +133,7 @@ func (cmd *branchLogCmd) run(
 	req := list.BranchesRequest{
 		Branch:  currentBranch,
 		Options: &cmd.Options,
-	}
-	if wantChangeURL {
-		req.Include |= list.IncludeChangeURL
+		Include: list.IncludeChangeURL,
 	}
 	if wantChangeState {
 		req.Include |= list.IncludeChangeState
