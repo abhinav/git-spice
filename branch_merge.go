@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -57,6 +58,7 @@ func (cmd *branchMergeCmd) Run(
 	svc *spice.Service,
 	forgeRepo forge.Repository,
 	mergeHandler MergeHandler,
+	log *silog.Logger,
 ) error {
 	branch, err := cmd.resolveBranch(ctx, wt)
 	if err != nil {
@@ -68,7 +70,7 @@ func (cmd *branchMergeCmd) Run(
 	}
 
 	if err := cmd.checkDownstack(
-		ctx, svc, forgeRepo, branch,
+		ctx, svc, forgeRepo, log, branch,
 	); err != nil {
 		return err
 	}
@@ -97,6 +99,7 @@ func (cmd *branchMergeCmd) checkDownstack(
 	ctx context.Context,
 	svc *spice.Service,
 	forgeRepo forge.Repository,
+	log *silog.Logger,
 	branch string,
 ) error {
 	if cmd.NoBranchCheck {
@@ -108,15 +111,26 @@ func (cmd *branchMergeCmd) checkDownstack(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
-	err = spice.ValidateDownstack(ctx, graph, forgeRepo, branch)
-	var staleErr *spice.StaleBaseError
-	if errors.As(err, &staleErr) {
-		return fmt.Errorf(
-			"%s has stale base %s (already merged); "+
-				"run 'gs repo sync' first, "+
-				"or use --no-branch-check to bypass",
-			staleErr.Branch, staleErr.Base,
+	staleBases, err := spice.FindStaleBases(
+		ctx, graph, forgeRepo, []string{branch},
+	)
+	if err != nil {
+		return err
+	}
+	if len(staleBases) == 0 {
+		return nil
+	}
+
+	for _, staleBase := range staleBases {
+		log.Warn("Branch has stale base",
+			"branch", staleBase.Branch,
+			"base", staleBase.Base,
 		)
 	}
-	return err
+	return fmt.Errorf(
+		"%d branches with stale bases were found; "+
+			"run 'gs repo sync' first, "+
+			"or use --no-branch-check to merge anyway",
+		len(staleBases),
+	)
 }

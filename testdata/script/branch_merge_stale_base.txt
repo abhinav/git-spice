@@ -33,7 +33,10 @@ shamhub merge alice/example 1
 
 # gs branch merge should block: feature2's base is stale
 ! gs branch merge
-stderr 'stale base feature1'
+stderr 'Branch has stale base'
+stderr 'branch=feature2'
+stderr 'base=feature1'
+stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
 stderr 'no-branch-check'
 
