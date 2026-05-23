@@ -1,3 +1,3 @@
 kind: Fixed
-body: 'log: Avoid warning about missing remote metadata when listing local-only repositories.'
+body: 'log: Avoid warning about unavailable remote metadata when listing local-only repositories.'
 time: 2026-05-23T11:24:29.04097-07:00

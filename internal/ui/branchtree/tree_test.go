@@ -328,6 +328,29 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+func TestWrite_hyperlinks(t *testing.T) {
+	const url = "https://github.com/owner/repo/pull/123"
+
+	g := Graph{
+		Items: []*Item{{
+			Branch:    "feat1",
+			ChangeID:  "#123",
+			ChangeURL: url,
+		}},
+		Roots: []int{0},
+	}
+
+	var sb strings.Builder
+	require.NoError(t, Write(&sb, g, &GraphOptions{
+		Style: plainStyle(),
+	}))
+
+	got := sb.String()
+	assert.Contains(t, got, "\x1b]8;;"+url+"\x07")
+	assert.Contains(t, got, "#123")
+	assert.Contains(t, got, "\x1b]8;;\x07")
+}
+
 func TestBranchTreeRenderer_worktree(t *testing.T) {
 	p := filepath.FromSlash
 
