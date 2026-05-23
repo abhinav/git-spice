@@ -24,14 +24,7 @@ func (h *Handler) checkStaleSubmissionBases(
 		return nil
 	}
 
-	remoteRepo, err := h.upstreamRepository(ctx)
-	if err != nil {
-		return fmt.Errorf("open remote repository: %w", err)
-	}
-
-	staleBases, err := spice.FindStaleBases(
-		ctx, graph, remoteRepo, branches,
-	)
+	staleBases, err := spice.FindStaleBases(ctx, graph, h.upstreamRepository, branches)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ type StaleBase struct {
 func FindStaleBases(
 	ctx context.Context,
 	graph *BranchGraph,
-	forgeRepo forge.Repository,
+	openForgeRepo func(context.Context) (forge.Repository, error),
 	branches []string,
 ) ([]StaleBase, error) {
 	candidates := staleBaseCandidates(graph, branches)
@@ -37,6 +37,11 @@ func FindStaleBases(
 	ids := make([]forge.ChangeID, len(candidates))
 	for i, c := range candidates {
 		ids[i] = c.ChangeID
+	}
+
+	forgeRepo, err := openForgeRepo(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	statuses, err := forgeRepo.ChangeStatuses(ctx, ids)

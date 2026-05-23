@@ -111,9 +111,9 @@ func (cmd *branchMergeCmd) checkDownstack(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
-	staleBases, err := spice.FindStaleBases(
-		ctx, graph, forgeRepo, []string{branch},
-	)
+	staleBases, err := spice.FindStaleBases(ctx, graph, func(context.Context) (forge.Repository, error) {
+		return forgeRepo, nil
+	}, []string{branch})
 	if err != nil {
 		return err
 	}

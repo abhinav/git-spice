@@ -38,7 +38,7 @@ func TestFindStaleBases_healthy(t *testing.T) {
 				Change: staleBaseFakeChange("pr-2"),
 			},
 		}),
-		mockRepo,
+		staleBaseRepoOpener(mockRepo),
 		[]string{"feat2"},
 	)
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestFindStaleBases_staleBase(t *testing.T) {
 				Change: staleBaseFakeChange("pr-2"),
 			},
 		}),
-		mockRepo,
+		staleBaseRepoOpener(mockRepo),
 		[]string{"feat2"},
 	)
 
@@ -81,8 +81,6 @@ func TestFindStaleBases_staleBase(t *testing.T) {
 }
 
 func TestFindStaleBases_baseWithoutChange(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
 	got, err := spice.FindStaleBases(
 		t.Context(),
 		buildStaleBaseTestGraph(t, "main", []spice.LoadBranchItem{
@@ -93,7 +91,7 @@ func TestFindStaleBases_baseWithoutChange(t *testing.T) {
 				Change: staleBaseFakeChange("pr-2"),
 			},
 		}),
-		forgetest.NewMockRepository(ctrl),
+		staleBaseUnexpectedRepoOpener(t),
 		[]string{"feat2"},
 	)
 	require.NoError(t, err)
@@ -101,8 +99,6 @@ func TestFindStaleBases_baseWithoutChange(t *testing.T) {
 }
 
 func TestFindStaleBases_singleBranch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
 	got, err := spice.FindStaleBases(
 		t.Context(),
 		buildStaleBaseTestGraph(t, "main", []spice.LoadBranchItem{
@@ -112,7 +108,7 @@ func TestFindStaleBases_singleBranch(t *testing.T) {
 				Change: staleBaseFakeChange("pr-1"),
 			},
 		}),
-		forgetest.NewMockRepository(ctrl),
+		staleBaseUnexpectedRepoOpener(t),
 		[]string{"feat1"},
 	)
 	require.NoError(t, err)
@@ -146,7 +142,7 @@ func TestFindStaleBases_deepStack(t *testing.T) {
 			{Name: "B", Base: "A", Change: staleBaseFakeChange("pr-B")},
 			{Name: "C", Base: "B", Change: staleBaseFakeChange("pr-C")},
 		}),
-		mockRepo,
+		staleBaseRepoOpener(mockRepo),
 		[]string{"C"},
 	)
 
@@ -189,7 +185,7 @@ func TestFindStaleBases_deduplicatesBaseStatuses(t *testing.T) {
 				Change: staleBaseFakeChange("pr-3"),
 			},
 		}),
-		mockRepo,
+		staleBaseRepoOpener(mockRepo),
 		[]string{"feat3", "feat2"},
 	)
 	require.NoError(t, err)
@@ -206,6 +202,22 @@ func buildStaleBaseTestGraph(
 		Trunk:    trunk,
 		Branches: branches,
 	})
+}
+
+func staleBaseRepoOpener(repo forge.Repository) func(context.Context) (forge.Repository, error) {
+	return func(context.Context) (forge.Repository, error) {
+		return repo, nil
+	}
+}
+
+func staleBaseUnexpectedRepoOpener(
+	t *testing.T,
+) func(context.Context) (forge.Repository, error) {
+	t.Helper()
+	return func(context.Context) (forge.Repository, error) {
+		require.FailNow(t, "forge repository should not be opened")
+		return nil, nil
+	}
 }
 
 type staleBaseFakeChangeID string
