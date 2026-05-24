@@ -166,6 +166,20 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 		}
 	}
 
+	// A branch retargeted without rebasing preserves its old base hash
+	// as the upstream boundary for the next explicit restack.
+	// Do not treat that as stale metadata just because the new base
+	// is already an ancestor of the branch head.
+	if b.BaseHash != baseHash &&
+		!b.BaseHash.IsZero() &&
+		s.repo.IsAncestor(ctx, baseHash, b.BaseHash) &&
+		s.repo.IsAncestor(ctx, b.BaseHash, b.Head) {
+		return git.ZeroHash, &BranchNeedsRestackError{
+			Base:     b.Base,
+			BaseHash: baseHash,
+		}
+	}
+
 	// Branch does not need to be restacked
 	// but the base hash stored in state may be out of date.
 	if b.BaseHash != baseHash {
