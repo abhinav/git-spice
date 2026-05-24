@@ -8,9 +8,9 @@ import (
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
-// ChangeChecksStatus reports the aggregate CI pipeline state
+// ChangeChecksState reports the aggregate CI pipeline state
 // for the given merge request.
-func (r *Repository) ChangeChecksStatus(
+func (r *Repository) ChangeChecksState(
 	ctx context.Context, fid forge.ChangeID,
 ) (forge.ChecksState, error) {
 	id := mustMR(fid)
@@ -32,9 +32,9 @@ func pipelineState(
 	}
 
 	switch pipeline.Status {
-	case "success", "skipped":
+	case gitlab.PipelineStatusSuccess, gitlab.PipelineStatusSkipped:
 		return forge.ChecksPassed
-	case "failed", "canceled":
+	case gitlab.PipelineStatusFailed, gitlab.PipelineStatusCanceled:
 		return forge.ChecksFailed
 	default:
 		return forge.ChecksPending

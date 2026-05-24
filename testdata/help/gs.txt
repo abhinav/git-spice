@@ -40,6 +40,7 @@ Stack
   upstack (us) delete (d)       Delete all branches above the current branch
   downstack (ds) track (tr)     Track all untracked branches below a branch
   downstack (ds) submit (s)     Submit a branch and those below it
+  downstack (ds) merge (m)      Merge a branch and those below it
   downstack (ds) edit (e)       Edit the order of branches below a branch
   downstack (ds) restack (r)    Restack a branch and its downstack
 
@@ -58,7 +59,6 @@ Branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
   branch (b) submit (s)        Submit a branch
-  branch (b) merge (m)         Merge a branch and its downstack
 
 Commit
   commit (c) create (c)    Create a new commit

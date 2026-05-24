@@ -296,23 +296,6 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				})
 			}
 			log.Infof("%v: moved upstack onto %v", above, base)
-
-			// Restack all descendants of the moved branch
-			// so the entire chain is up to date.
-			if !skipRebase {
-				deleteSet := make(map[string]struct{},
-					len(branchesToDelete))
-				for name := range branchesToDelete {
-					deleteSet[name] = struct{}{}
-				}
-				if err := h.restackDescendants(
-					ctx, branchGraph, above, deleteSet,
-					branchWorktrees, currentBranch,
-					req, checkoutTarget,
-				); err != nil {
-					return err
-				}
-			}
 		}
 	}
 
@@ -384,72 +367,5 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 		return fmt.Errorf("update state: %w", err)
 	}
 
-	return nil
-}
-
-// restackDescendants restacks all branches above 'start'
-// that were left with stale base hashes
-// after 'start' was moved onto a new base.
-func (h *Handler) restackDescendants(
-	ctx context.Context,
-	branchGraph *spice.BranchGraph,
-	start string,
-	deletingNames map[string]struct{},
-	branchWorktrees map[string]string,
-	currentBranch string,
-	req *Request,
-	checkoutTarget string,
-) error {
-	log := h.Log
-
-	// Skip the first element (start itself,
-	// which was already moved by BranchOnto).
-	for descendant := range branchGraph.Upstack(start) {
-		if descendant == start {
-			continue
-		}
-
-		if _, ok := deletingNames[descendant]; ok {
-			continue
-		}
-
-		// Skip branches checked out in other worktrees.
-		if descendant != currentBranch {
-			if wt, ok := branchWorktrees[descendant]; ok {
-				log.Warnf("%v: checked out in another"+
-					" worktree (%v), skipping restack",
-					descendant, wt)
-				continue
-			}
-		}
-
-		res, err := h.Service.Restack(ctx, descendant)
-		if errors.Is(err, spice.ErrAlreadyRestacked) {
-			continue
-		}
-		if err != nil {
-			var rebaseErr *git.RebaseInterruptError
-			if errors.As(err, &rebaseErr) {
-				contCmd := []string{"branch", "delete"}
-				if req.Force {
-					contCmd = append(contCmd, "--force")
-				}
-				contCmd = append(contCmd, req.Branches...)
-				return h.Service.RebaseRescue(ctx,
-					spice.RebaseRescueRequest{
-						Err:     rebaseErr,
-						Command: contCmd,
-						Branch:  checkoutTarget,
-						Message: fmt.Sprintf(
-							"interrupted: restacking %v",
-							descendant),
-					})
-			}
-			return fmt.Errorf("restack %v: %w",
-				descendant, err)
-		}
-		log.Infof("%v: restacked on %v",
-			descendant, res.Base)
-	}
 	return nil
 }

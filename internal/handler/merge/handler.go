@@ -1,4 +1,4 @@
-// Package merge implements the branch merge command.
+// Package merge implements the downstack merge command.
 package merge
 
 import (
@@ -25,6 +25,10 @@ type Store interface {
 
 // Service provides branch graph operations.
 type Service interface {
+	BranchGraph(
+		context.Context,
+		*spice.BranchGraphOptions,
+	) (*spice.BranchGraph, error)
 	ListDownstack(ctx context.Context, start string) ([]string, error)
 	LookupBranch(
 		ctx context.Context, name string,
@@ -61,6 +65,9 @@ type Request struct {
 	// Retargeting and cleanup still happen.
 	NoWait bool
 
+	// NoBranchCheck skips stale base validation.
+	NoBranchCheck bool
+
 	// BuildTimeout is the maximum time to wait
 	// for CI checks to pass before each merge.
 	// Zero means check once and fail if not ready.
@@ -86,7 +93,7 @@ type Handler struct {
 func (h *Handler) MergeDownstack(
 	ctx context.Context, req *Request,
 ) error {
-	plan, err := h.buildPlan(ctx, req.Branch)
+	plan, err := h.buildPlan(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -115,9 +122,9 @@ type mergeItem struct {
 }
 
 func (h *Handler) buildPlan(
-	ctx context.Context, branch string,
+	ctx context.Context, req *Request,
 ) ([]mergeItem, error) {
-	downstack, err := h.Service.ListDownstack(ctx, branch)
+	downstack, err := h.Service.ListDownstack(ctx, req.Branch)
 	if err != nil {
 		return nil, fmt.Errorf("list downstack: %w", err)
 	}
@@ -127,16 +134,22 @@ func (h *Handler) buildPlan(
 
 	items, err := h.resolveChanges(ctx, downstack)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolve changes: %w", err)
 	}
 
 	plan, err := h.filterMerged(ctx, items)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("filter merged changes: %w", err)
 	}
 
 	if err := h.validateSynced(ctx, plan); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate branch sync: %w", err)
+	}
+
+	if !req.NoBranchCheck {
+		if err := h.validateFreshBases(ctx, req.Branch); err != nil {
+			return nil, fmt.Errorf("validate stale bases: %w", err)
+		}
 	}
 
 	return plan, nil
@@ -288,6 +301,10 @@ func (h *Handler) validateSynced(
 }
 
 func (h *Handler) confirm(plan []mergeItem) error {
+	if !ui.Interactive(h.View) {
+		return nil
+	}
+
 	var desc strings.Builder
 	for _, item := range plan {
 		fmt.Fprintf(&desc,
@@ -323,57 +340,37 @@ func (h *Handler) executePlan(
 	if err := h.ensureTargetsTrunk(
 		ctx, plan[0], trunk,
 	); err != nil {
-		return err
+		return fmt.Errorf("ensure first change targets trunk: %w", err)
 	}
 
 	for i := range plan {
-		if err := h.mergeOne(
-			ctx, plan, i, trunk, req,
+		if err := h.awaitChecks(
+			ctx, plan[i], req.BuildTimeout,
 		); err != nil {
-			return err
+			return fmt.Errorf(
+				"wait for checks on %q: %w",
+				plan[i].branch, err,
+			)
+		}
+
+		h.Log.Infof(
+			"Merging %s (%v)...", plan[i].branch, plan[i].changeID,
+		)
+		if err := h.RemoteRepository.MergeChange(
+			ctx, plan[i].changeID,
+			forge.MergeChangeOptions{HeadHash: plan[i].headHash},
+		); err != nil {
+			return fmt.Errorf("merge %q: %w", plan[i].branch, err)
+		}
+
+		if err := h.postMerge(
+			ctx, plan, i, trunk, req.NoWait,
+		); err != nil {
+			return fmt.Errorf("post-merge %q: %w", plan[i].branch, err)
 		}
 	}
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
-	return nil
-}
-
-func (h *Handler) mergeOne(
-	ctx context.Context,
-	plan []mergeItem,
-	idx int,
-	trunk string,
-	req *Request,
-) error {
-	if err := h.waitAndMerge(
-		ctx, plan[idx], req.BuildTimeout,
-	); err != nil {
-		return err
-	}
-
-	return h.postMerge(ctx, plan, idx, trunk, req.NoWait)
-}
-
-func (h *Handler) waitAndMerge(
-	ctx context.Context,
-	item mergeItem,
-	buildTimeout time.Duration,
-) error {
-	if err := h.awaitChecks(
-		ctx, item, buildTimeout,
-	); err != nil {
-		return err
-	}
-
-	h.Log.Infof(
-		"Merging %s (%v)...", item.branch, item.changeID,
-	)
-	if err := h.RemoteRepository.MergeChange(
-		ctx, item.changeID,
-		forge.MergeChangeOptions{HeadHash: item.headHash},
-	); err != nil {
-		return fmt.Errorf("merge %q: %w", item.branch, err)
-	}
 	return nil
 }
 
@@ -399,6 +396,9 @@ func (h *Handler) postMerge(
 	// the just-merged commit.
 	// Without this, cleanup would rebase upstack branches
 	// onto a stale trunk, dropping the merged changes.
+	// TODO: Use sync.Handler for this cleanup flow after
+	// https://github.com/abhinav/git-spice/issues/1134 is fixed.
+	// Until then, avoid transparent restacking here.
 	if err := h.fetchTrunk(ctx, trunk); err != nil {
 		h.Log.Warn("Unable to fetch trunk after merge",
 			"error", err)
@@ -426,6 +426,39 @@ func (h *Handler) postMerge(
 	return nil
 }
 
+func (h *Handler) validateFreshBases(
+	ctx context.Context, branch string,
+) error {
+	graph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	staleBases, err := spice.FindStaleBases(ctx, graph,
+		func(context.Context) (forge.Repository, error) {
+			return h.RemoteRepository, nil
+		}, []string{branch})
+	if err != nil {
+		return fmt.Errorf("find stale bases: %w", err)
+	}
+	if len(staleBases) == 0 {
+		return nil
+	}
+
+	for _, staleBase := range staleBases {
+		h.Log.Warn("Branch has stale base",
+			"branch", staleBase.Branch,
+			"base", staleBase.Base,
+		)
+	}
+	return fmt.Errorf(
+		"%d branches with stale bases were found; "+
+			"run 'gs repo sync' first, "+
+			"or use --no-branch-check to merge anyway",
+		len(staleBases),
+	)
+}
+
 // awaitChecks polls until CI checks pass for the given change.
 // Uses truncated exponential backoff.
 func (h *Handler) awaitChecks(
@@ -438,9 +471,11 @@ func (h *Handler) awaitChecks(
 		_maxDelay  = 30 * time.Second
 	)
 
-	state, err := h.checkOnce(ctx, item)
+	state, err := h.RemoteRepository.ChangeChecksState(
+		ctx, item.changeID,
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("query checks: %w", err)
 	}
 	if state == forge.ChecksPassed {
 		return nil
@@ -482,9 +517,11 @@ func (h *Handler) pollChecks(
 			)
 		}
 
-		state, err := h.checkOnce(ctx, item)
+		state, err := h.RemoteRepository.ChangeChecksState(
+			ctx, item.changeID,
+		)
 		if err != nil {
-			return err
+			return fmt.Errorf("query checks: %w", err)
 		}
 		if state == forge.ChecksPassed {
 			return nil
@@ -497,20 +534,6 @@ func (h *Handler) pollChecks(
 
 		delay = min(delay*2, maxDelay)
 	}
-}
-
-func (h *Handler) checkOnce(
-	ctx context.Context, item mergeItem,
-) (forge.ChecksState, error) {
-	state, err := h.RemoteRepository.ChangeChecksStatus(
-		ctx, item.changeID,
-	)
-	if err != nil {
-		return 0, fmt.Errorf(
-			"query checks for %q: %w", item.branch, err,
-		)
-	}
-	return state, nil
 }
 
 // ensureTargetsTrunk verifies a change targets trunk
@@ -550,6 +573,10 @@ func (h *Handler) awaitMerged(
 	ctx, cancel := context.WithTimeout(ctx, _timeout)
 	defer cancel()
 
+	// TODO: This only waits for the immediate change to reach
+	// the merged state.
+	// Server-side merge queues and richer merge workflows
+	// need a more expressive wait state.
 	delay := _initialDelay
 	for {
 		statuses, err := h.RemoteRepository.ChangeStatuses(
@@ -611,6 +638,9 @@ func (h *Handler) fetchTrunk(
 func (h *Handler) cleanupMerged(
 	ctx context.Context, item mergeItem,
 ) {
+	// TODO: Replace this with sync.Handler cleanup
+	// once it can be used without transparently restacking
+	// after a merge.
 	h.Log.Infof("Cleaning up %s...", item.branch)
 
 	err := h.Delete.DeleteBranches(ctx, &branchdel.Request{
@@ -655,10 +685,8 @@ func (h *Handler) deleteRemoteTracking(
 }
 
 func sleep(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
 	select {
-	case <-timer.C:
+	case <-time.After(d):
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

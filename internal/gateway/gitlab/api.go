@@ -491,6 +491,23 @@ type Pipeline struct {
 	Status string `json:"status"`
 }
 
+// GitLab pipeline status values.
+//
+// https://docs.gitlab.com/api/pipelines/
+const (
+	PipelineStatusCreated            = "created"
+	PipelineStatusWaitingForResource = "waiting_for_resource"
+	PipelineStatusPreparing          = "preparing"
+	PipelineStatusPending            = "pending"
+	PipelineStatusRunning            = "running"
+	PipelineStatusSuccess            = "success"
+	PipelineStatusFailed             = "failed"
+	PipelineStatusCanceled           = "canceled"
+	PipelineStatusSkipped            = "skipped"
+	PipelineStatusManual             = "manual"
+	PipelineStatusScheduled          = "scheduled"
+)
+
 // NoteAuthor matches the nested author object in note responses.
 //
 // GitLab notes API:

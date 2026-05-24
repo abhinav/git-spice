@@ -1,4 +1,5 @@
-# 'branch merge' blocks when a downstack base has already been merged.
+# 'downstack merge --no-wait' skips merge-propagation polling
+# but still retargets and cleans up local branches.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -28,26 +29,17 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# merge feature1 externally
-shamhub merge alice/example 1
-
-# gs branch merge should block: feature2's base is stale
-! gs branch merge
-stderr 'Branch has stale base'
-stderr 'branch=feature2'
-stderr 'base=feature1'
-stderr '1 branches with stale bases were found'
-stderr 'gs repo sync'
-stderr 'no-branch-check'
-
-# --no-branch-check bypasses the stale base check.
-# feature2's PR base is retargeted from feature1 to main.
+# merge with --no-wait: retargets and cleans up,
+# but does not poll for merge propagation.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge --no-branch-check
+gs downstack merge --no-wait
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
-stderr 'already merged, skipping'
+stderr 'Merging feature1'
+stderr 'Cleaning up feature1'
 stderr 'Retargeting feature2 to main'
 stderr 'Merging feature2'
+stderr 'Cleaning up feature2'
+stderr 'All 2 change.s. merged.'
 
 -- repo/feature1.txt --
 This is feature 1
@@ -55,6 +47,7 @@ This is feature 1
 This is feature 2
 -- robot-merge.golden --
 ===
-> Merge 1 change(s) bottom-up?: [Y/n]
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
 >   feature2 (#2)
 true

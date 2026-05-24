@@ -6,7 +6,6 @@
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
 | gs be | [gs branch edit](/cli/reference.md#gs-branch-edit) |
 | gs bfo | [gs branch fold](/cli/reference.md#gs-branch-fold) |
-| gs bm | [gs branch merge](/cli/reference.md#gs-branch-merge) |
 | gs bon | [gs branch onto](/cli/reference.md#gs-branch-onto) |
 | gs br | [gs branch restack](/cli/reference.md#gs-branch-restack) |
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
@@ -21,6 +20,7 @@
 | gs cp | [gs commit pick](/cli/reference.md#gs-commit-pick) |
 | gs csp | [gs commit split](/cli/reference.md#gs-commit-split) |
 | gs dse | [gs downstack edit](/cli/reference.md#gs-downstack-edit) |
+| gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |

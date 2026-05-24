@@ -88,7 +88,7 @@ func TestAwaitChecks_passed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksStatus(
+		ChangeChecksState(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
 		Return(forge.ChecksPassed, nil)
@@ -110,7 +110,7 @@ func TestAwaitChecks_failed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksStatus(
+		ChangeChecksState(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
 		Return(forge.ChecksFailed, nil)
@@ -133,7 +133,7 @@ func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksStatus(
+		ChangeChecksState(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
 		Return(forge.ChecksPending, nil)
@@ -157,12 +157,12 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	first := mockRepo.EXPECT().
-		ChangeChecksStatus(
+		ChangeChecksState(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
 		Return(forge.ChecksPending, nil)
 	mockRepo.EXPECT().
-		ChangeChecksStatus(
+		ChangeChecksState(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
 		Return(forge.ChecksPassed, nil).
@@ -803,7 +803,7 @@ func expectChecksAndMerge(
 	id fakeChangeID,
 ) {
 	mockForge.EXPECT().
-		ChangeChecksStatus(gomock.Any(), id).
+		ChangeChecksState(gomock.Any(), id).
 		Return(forge.ChecksPassed, nil)
 
 	mockForge.EXPECT().

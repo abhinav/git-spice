@@ -1,5 +1,5 @@
-# 'branch merge' restacks the entire upstack chain,
-# not just the immediate child of the merged branch.
+# 'downstack merge' moves the immediate upstack after deleting
+# the merged branch, but does not restack the entire descendant chain.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -35,11 +35,10 @@ stderr 'Created #3'
 # merge only feat1
 gs bco feat1
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge
+gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feat1'
 stderr 'feat2: moved upstack onto main'
-stderr 'feat3: restacked on feat2'
 stderr 'Cleaning up feat1'
 
 # verify all files are present on feat3
@@ -51,9 +50,13 @@ stdout 'feature 2'
 exec cat feat3.txt
 stdout 'feature 3'
 
-# no branch should need restacking
+# The immediate upstack was rebased during deletion.
 gs branch restack --branch feat2
 stderr 'does not need to be restacked'
+
+# Descendants are left for an explicit restack.
+gs branch restack --branch feat3
+stderr 'feat3: restacked on feat2'
 gs branch restack --branch feat3
 stderr 'does not need to be restacked'
 

@@ -8,17 +8,9 @@ import (
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
-// Bitbucket build status states.
-const (
-	buildSuccessful = "SUCCESSFUL"
-	buildInProgress = "INPROGRESS"
-	buildFailed     = "FAILED"
-	buildStopped    = "STOPPED"
-)
-
-// ChangeChecksStatus reports the aggregate build status
+// ChangeChecksState reports the aggregate build status
 // for the given pull request.
-func (r *Repository) ChangeChecksStatus(
+func (r *Repository) ChangeChecksState(
 	ctx context.Context, fid forge.ChangeID,
 ) (forge.ChecksState, error) {
 	id := mustPR(fid)
@@ -55,9 +47,10 @@ func aggregateStatuses(
 
 	for _, s := range statuses {
 		switch s.State {
-		case buildFailed, buildStopped:
+		case bitbucket.CommitStatusFailed,
+			bitbucket.CommitStatusStopped:
 			return forge.ChecksFailed
-		case buildInProgress:
+		case bitbucket.CommitStatusInProgress:
 			return forge.ChecksPending
 		}
 	}

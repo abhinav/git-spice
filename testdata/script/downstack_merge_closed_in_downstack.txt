@@ -1,4 +1,4 @@
-# 'branch merge' fails when a downstack branch's PR was closed (not merged).
+# 'downstack merge' fails when a downstack branch's PR was closed (not merged).
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -31,8 +31,8 @@ stderr 'Created #2'
 # close feature1 without merging
 shamhub reject alice/example 1
 
-# branch merge should fail: feature1 is closed
-! gs branch merge
+# downstack merge should fail: feature1 is closed
+! gs downstack merge
 stderr 'is closed, cannot merge'
 
 -- repo/feature1.txt --

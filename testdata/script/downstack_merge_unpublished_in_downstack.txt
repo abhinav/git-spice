@@ -1,0 +1,39 @@
+# 'downstack merge' fails when a downstack branch has no published CR.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# push feature1 to remote (without creating a CR)
+# then submit only feature2
+git push origin feature1
+gs bs --fill
+stderr 'Created #1'
+
+# downstack merge should fail: feature1 has no published CR
+! gs downstack merge
+stderr 'has no published change request'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2

@@ -1,4 +1,4 @@
-# 'branch merge --branch' merges a named branch from any location.
+# 'downstack merge' skips branches that are already merged.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -28,15 +28,19 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# switch to trunk and merge via --branch
-gs trunk
+# merge feature1 externally
+shamhub merge alice/example 1
+
+# now merge from feature2 — feature1 should be skipped.
+# Use --no-branch-check because feature1's merged state
+# would otherwise trigger stale base validation.
+# feature2's PR base is retargeted from feature1 to main.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge --branch feature2
+gs downstack merge --no-branch-check
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
-stderr 'Merging feature1'
+stderr 'already merged, skipping'
 stderr 'Retargeting feature2 to main'
 stderr 'Merging feature2'
-stderr 'All 2 change.s. merged.'
 
 -- repo/feature1.txt --
 This is feature 1
@@ -44,7 +48,6 @@ This is feature 1
 This is feature 2
 -- robot-merge.golden --
 ===
-> Merge 2 change(s) bottom-up?: [Y/n]
->   feature1 (#1)
+> Merge 1 change(s) bottom-up?: [Y/n]
 >   feature2 (#2)
 true

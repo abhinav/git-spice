@@ -385,6 +385,16 @@ type CommitStatus struct {
 	State string `json:"state"`
 }
 
+// Bitbucket Cloud build status states.
+//
+// https://developer.atlassian.com/cloud/bitbucket/rest/api-group-commit-statuses/
+const (
+	CommitStatusSuccessful = "SUCCESSFUL"
+	CommitStatusInProgress = "INPROGRESS"
+	CommitStatusFailed     = "FAILED"
+	CommitStatusStopped    = "STOPPED"
+)
+
 // CommitStatusList is the response for listing commit statuses.
 type CommitStatusList struct {
 	Values []CommitStatus `json:"values"`

@@ -1,5 +1,4 @@
-# 'branch merge' refuses to merge branches
-# with unpushed local commits.
+# 'downstack merge --branch' merges a named branch from any location.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -24,28 +23,28 @@ gs bc feature1 -m 'Add feature 1'
 git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
 
-# submit the stack (pushes to remote)
+# submit the stack
 gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# add an unpushed commit on feature1
-gs bco feature1
-cp $WORK/extra.txt extra.txt
-git add extra.txt
-git commit -m 'Add extra (not pushed)'
-gs bco feature2
-
-# merge should fail because feature1 has unpushed commits
-! gs branch merge
-stderr 'out of sync'
-stderr 'feature1'
-stderr 'gs branch submit'
-stderr 'git reset --hard'
+# switch to trunk and merge via --branch
+gs trunk
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs downstack merge --branch feature2
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'Merging feature1'
+stderr 'Retargeting feature2 to main'
+stderr 'Merging feature2'
+stderr 'All 2 change.s. merged.'
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
--- extra.txt --
-This is an unpushed change
+-- robot-merge.golden --
+===
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+true

@@ -1,4 +1,4 @@
-# 'branch merge' gracefully handles a single-branch stack
+# 'downstack merge' gracefully handles a single-branch stack
 # where the branch is already merged.
 
 as 'Test <test@example.com>'
@@ -27,8 +27,8 @@ gs bs --fill
 stderr 'Created #1'
 shamhub merge alice/example 1
 
-# branch merge should find nothing to do
-gs branch merge
+# downstack merge should find nothing to do
+gs downstack merge
 stderr 'already merged, skipping'
 stderr 'No open changes to merge'
 

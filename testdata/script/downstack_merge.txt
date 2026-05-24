@@ -1,4 +1,4 @@
-# Merge a stack of branches bottom-up with 'branch merge'.
+# Merge a stack of branches bottom-up with 'downstack merge'.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -38,7 +38,7 @@ stdout '"state": "open"'
 
 # merge the stack from the top
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge
+gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
 stderr 'Cleaning up feature1'

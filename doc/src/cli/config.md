@@ -369,7 +369,7 @@ whether the branch is in sync with its pushed counterpart.
 
 <!-- gs:version unreleased -->
 
-Maximum time $$gs branch merge$$ waits for CI checks to pass
+Maximum time $$gs downstack merge$$ waits for CI checks to pass
 before merging each branch in the stack.
 
 The value must be a duration string such as

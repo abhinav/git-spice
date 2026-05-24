@@ -1,9 +1,21 @@
-Usage: gs branch (b) merge (m) [flags]
+Usage: gs downstack (ds) merge (m) [flags]
 
-Merge a branch and its downstack
+Merge a branch and those below it
 
 Merges the current branch and all branches below it into trunk via the forge
 API, bottom-up. Use --branch to start at a different branch.
+
+This command acts as a local merge queue: it merges one Change Request,
+waits for that merge to finish, retargets the next Change Request to trunk,
+and then repeats the process.
+
+For a stack like this:
+
+    main <- feature1 <- feature2 <- feature3
+
+Running from feature3 merges in this order:
+
+    feature1, feature2, feature3
 
 Already-merged branches are skipped automatically. Branches must have an open
 Change Request to be merged.
@@ -19,7 +31,7 @@ PR to trunk, and cleans up the merged local branch. Use --no-wait to skip the
 propagation polling.
 
 Flags:
-  --branch=NAME          Branch to merge
+  --branch=NAME          Branch to start merging from
   --no-wait              Skip polling for each merge to propagate (still
                          retargets and cleans up).
   --no-branch-check      Skip stale base validation before merging.

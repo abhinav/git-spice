@@ -1,4 +1,4 @@
-# 'branch merge' fetches trunk after merge,
+# 'downstack merge' fetches trunk after merge,
 # ensuring upstack branches are rebased onto the updated trunk
 # and retain the merged branch's changes.
 
@@ -35,7 +35,7 @@ stderr 'Created #2'
 # merge only feature1 from feature1
 gs bco feature1
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge
+gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
 stderr 'feature2: moved upstack onto main'

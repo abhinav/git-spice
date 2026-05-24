@@ -8,9 +8,20 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// ChangeChecksStatus reports the aggregate CI/checks state
+// GitHub StatusState values.
+//
+// https://docs.github.com/en/graphql/reference/enums#statusstate
+const (
+	statusStateError    = "ERROR"
+	statusStateExpected = "EXPECTED"
+	statusStateFailure  = "FAILURE"
+	statusStatePending  = "PENDING"
+	statusStateSuccess  = "SUCCESS"
+)
+
+// ChangeChecksState reports the aggregate CI/checks state
 // for the given pull request.
-func (r *Repository) ChangeChecksStatus(
+func (r *Repository) ChangeChecksState(
 	ctx context.Context, fid forge.ChangeID,
 ) (forge.ChecksState, error) {
 	pr := mustPR(fid)
@@ -48,33 +59,24 @@ func (r *Repository) queryChecksRollup(
 		return 0, fmt.Errorf("query status checks: %w", err)
 	}
 
-	return parseRollupState(q.Node.PullRequest.Commits.Nodes), nil
-}
-
-func parseRollupState(
-	commits []struct {
-		Commit struct {
-			StatusCheckRollup *struct {
-				State string
-			}
-		}
-	},
-) forge.ChecksState {
+	commits := q.Node.PullRequest.Commits.Nodes
 	if len(commits) == 0 {
-		return forge.ChecksPassed
+		return forge.ChecksPassed, nil
 	}
 
 	rollup := commits[0].Commit.StatusCheckRollup
 	if rollup == nil {
-		return forge.ChecksPassed // no checks configured
+		return forge.ChecksPassed, nil // no checks configured
 	}
 
 	switch rollup.State {
-	case "SUCCESS", "EXPECTED":
-		return forge.ChecksPassed
-	case "PENDING":
-		return forge.ChecksPending
+	case statusStateSuccess:
+		return forge.ChecksPassed, nil
+	case statusStatePending, statusStateExpected:
+		return forge.ChecksPending, nil
+	case statusStateError, statusStateFailure:
+		return forge.ChecksFailed, nil
 	default:
-		return forge.ChecksFailed
+		return forge.ChecksFailed, nil
 	}
 }

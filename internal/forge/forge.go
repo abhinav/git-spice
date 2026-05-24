@@ -250,13 +250,13 @@ type Repository interface {
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 
-	// ChangeChecksStatus reports the aggregate CI/checks
+	// ChangeChecksState reports the aggregate CI/checks
 	// state for the given change.
 	//
 	// If the forge has no CI/checks integration
 	// or the change has no required checks,
 	// implementations should return ChecksPassed.
-	ChangeChecksStatus(ctx context.Context, id ChangeID) (ChecksState, error)
+	ChangeChecksState(ctx context.Context, id ChangeID) (ChecksState, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -600,6 +600,9 @@ func (s *ChangeState) UnmarshalText(b []byte) error {
 
 // ChecksState represents the aggregate CI/checks
 // status for a change.
+//
+// TODO: Teach this type the names of individual statuses
+// so merge failures can report exactly what's blocking the user.
 type ChecksState int
 
 const (

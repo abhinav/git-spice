@@ -6,9 +6,9 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// ChangeChecksStatus always reports ChecksPassed.
+// ChangeChecksState always reports ChecksPassed.
 // ShamHub does not simulate CI/checks.
-func (r *forgeRepository) ChangeChecksStatus(
+func (r *forgeRepository) ChangeChecksState(
 	_ context.Context, _ forge.ChangeID,
 ) (forge.ChecksState, error) {
 	return forge.ChecksPassed, nil
