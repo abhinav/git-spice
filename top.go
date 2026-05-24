@@ -75,7 +75,7 @@ func (cmd *topCmd) Run(
 		}
 	}
 
-	if branch == current && !cmd.DryRun {
+	if branch == current && !cmd.DryRun && !cmd.Detach {
 		log.Info("Already on the top-most branch in this stack")
 		return nil
 	}
