@@ -1,6 +1,6 @@
 # Conflict with restacking remaining branches
 # after a base branch is merged
-# is properly handled by 'repo sync'
+# is deferred until an explicit restack.
 
 as 'Test <test@example.com>'
 at '2025-01-17T05:06:07Z'
@@ -49,8 +49,11 @@ git push origin main
 
 cd ../repo
 gs bco feat2
-! gs repo sync
+gs repo sync
 stderr '#1 was merged'
+stderr 'feat2: retargeted upstack onto main'
+
+! gs branch restack
 stderr 'There was a conflict while rebasing'
 
 cp $WORK/extra/feat2-resolved.txt feat2.txt
