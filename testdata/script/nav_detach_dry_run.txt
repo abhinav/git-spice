@@ -54,6 +54,12 @@ gs top --detach
 git branch
 cmp stdout $WORK/golden/feat5_branch.txt
 
+# top should still honor --detach when already on the top branch.
+gs bco feat5
+gs top --detach
+git branch
+cmp stdout $WORK/golden/feat5_branch.txt
+
 gs trunk --detach
 git branch
 cmp stdout $WORK/golden/trunk_branch.txt
