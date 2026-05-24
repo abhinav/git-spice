@@ -42,6 +42,45 @@ checksum = "sha256:4a90748c1da0179afe282599b562e75ef2cb5ce34e25d5f67e70ef20725b9
 url = "https://github.com/miniscruff/changie/releases/download/v1.24.0/changie_1.24.0_windows_amd64.zip"
 url_api = "https://api.github.com/repos/miniscruff/changie/releases/assets/319542125"
 
+[[tools."github:abhinav/gotestsum"]]
+version = "v1.14.0-beta.1+github-actions-fails"
+backend = "github:abhinav/gotestsum"
+
+[tools."github:abhinav/gotestsum"."platforms.linux-arm64"]
+checksum = "sha256:fa961de48575b038a6a6afa1d9ba877bdf42960e7376df30377640f6335e7615"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166816"
+
+[tools."github:abhinav/gotestsum"."platforms.linux-arm64-musl"]
+checksum = "sha256:fa961de48575b038a6a6afa1d9ba877bdf42960e7376df30377640f6335e7615"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166816"
+
+[tools."github:abhinav/gotestsum"."platforms.linux-x64"]
+checksum = "sha256:4a193038f8277411004bc26e18e568733904c832e85eacd7e48b3c314de0d1d1"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166817"
+
+[tools."github:abhinav/gotestsum"."platforms.linux-x64-musl"]
+checksum = "sha256:4a193038f8277411004bc26e18e568733904c832e85eacd7e48b3c314de0d1d1"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166817"
+
+[tools."github:abhinav/gotestsum"."platforms.macos-arm64"]
+checksum = "sha256:40cf41a260c2036ec3239fdf7e40179a237fbb05e090a1e3601b52226a31d527"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166812"
+
+[tools."github:abhinav/gotestsum"."platforms.macos-x64"]
+checksum = "sha256:6405031b835b55e3429082a6b25ef7361f27390465b338e83d938dc63b7ce35c"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_darwin_amd64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166828"
+
+[tools."github:abhinav/gotestsum"."platforms.windows-x64"]
+checksum = "sha256:54b8a6d80741dd6faf0a64296446e14e52bfb3411c88762afd46327b8716115e"
+url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bgithub-actions-fails/gotestsum_1.14.0-beta.1%2Bgithub-actions-fails_windows_amd64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166818"
+
 [[tools.go]]
 version = "1.26.3"
 backend = "core:go"
@@ -112,38 +151,6 @@ provenance = "github-attestations"
 checksum = "sha256:bd42e3ebc8cb4ececb86941983baaf1dc221bbb04d838e94ce63b49cc91e02bb"
 url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-windows-amd64.zip"
 provenance = "github-attestations"
-
-[[tools.gotestsum]]
-version = "1.13.0"
-backend = "aqua:gotestyourself/gotestsum"
-
-[tools.gotestsum."platforms.linux-arm64"]
-checksum = "sha256:7644a4c5cd1bb978d56245aeab25a586ac5ac62adebed20a399548867c13499d"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_arm64.tar.gz"
-
-[tools.gotestsum."platforms.linux-arm64-musl"]
-checksum = "sha256:7644a4c5cd1bb978d56245aeab25a586ac5ac62adebed20a399548867c13499d"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_arm64.tar.gz"
-
-[tools.gotestsum."platforms.linux-x64"]
-checksum = "sha256:11ccddeaf708ef228889f9fe2f68291a75b27013ddfc3b18156e094f5f40e8ee"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_amd64.tar.gz"
-
-[tools.gotestsum."platforms.linux-x64-musl"]
-checksum = "sha256:11ccddeaf708ef228889f9fe2f68291a75b27013ddfc3b18156e094f5f40e8ee"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_linux_amd64.tar.gz"
-
-[tools.gotestsum."platforms.macos-arm64"]
-checksum = "sha256:509cb27aef747f48faf9bce424f59dcf79572c905204b990ee935bbfcc7fa0e9"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_darwin_arm64.tar.gz"
-
-[tools.gotestsum."platforms.macos-x64"]
-checksum = "sha256:99529350f4c7b780b1efc543ca0d9721b09f0a4228f0efa9281261f58fefa05a"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_darwin_amd64.tar.gz"
-
-[tools.gotestsum."platforms.windows-x64"]
-checksum = "sha256:fd5a6dc69e46a0970593e70d85a7e75f16714e9c61d6d72ccc324eb82df5bb8a"
-url = "https://github.com/gotestyourself/gotestsum/releases/download/v1.13.0/gotestsum_1.13.0_windows_amd64.tar.gz"
 
 [[tools.requiredfield]]
 version = "0.9.0"
