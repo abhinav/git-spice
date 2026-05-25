@@ -40,10 +40,14 @@ stderr 'gs repo sync'
 # recover by syncing
 gs repo sync
 stderr 'feature1: #1 was merged'
+stderr 'feature2: retargeted upstack onto main'
 
-# feature2 is now restacked onto main.
-# switch to feature2 and submit — should succeed
+# feature2 is now retargeted onto main.
+# Restack feature2 explicitly, then submit.
 gs bco feature2
+stderr 'feature2: needs to be restacked'
+gs branch restack
+stderr 'feature2: restacked on main'
 gs ss --fill
 stderr 'Updated #2'
 

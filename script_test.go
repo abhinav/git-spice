@@ -61,8 +61,6 @@ func TestScript(t *testing.T) {
 				continue
 			}
 
-			t.Logf("Selected script: %s", script)
-
 			bs, err := os.ReadFile(script)
 			require.NoError(t, err)
 			dst := filepath.Join(shardScriptDir, filepath.Base(script))

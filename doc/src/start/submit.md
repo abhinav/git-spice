@@ -205,7 +205,8 @@ it will prompt you to create a CR for it.
 - [x] $$gs branch submit$$ creates or updates a CR for the current branch.
 - [x] $$gs stack submit$$ creates or updates CRs for the entire stack.
 - [x] $$gs repo sync$$ syncs the stack with the trunk branch,
-      deletes merged branches, and rebases the remaining branches.
+      deletes merged branches,
+      and retargets the remaining branches without rebasing them.
 
 ## Next steps
 

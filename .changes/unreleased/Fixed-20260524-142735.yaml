@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'restack: Branches retargeted without rebasing are now correctly detected as needing restack when their old base remains in history.'
+time: 2026-05-24T14:27:35.419155-07:00
