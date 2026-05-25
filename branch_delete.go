@@ -16,7 +16,7 @@ type branchDeleteCmd struct {
 	BranchPromptConfig
 
 	Force    bool              `help:"Force deletion of the branch"`
-	Restack  spice.RestackMode `default:"none" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
+	Restack  spice.RestackMode `default:"none" config:"branchDelete.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
 	Branches []string          `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
 }
 

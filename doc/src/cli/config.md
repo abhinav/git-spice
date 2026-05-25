@@ -124,6 +124,24 @@ Commonly used values are:
 - `<name>/`: the committer's name
 - `<username>/`: the committer's username
 
+### spice.branchDelete.restack
+
+<!-- gs:version unreleased -->
+
+Controls how $$gs branch delete$$ restacks branches above deleted branches.
+
+Supported values are:
+
+- `none` (default): retarget branches above deleted branches,
+  so they can be restacked later
+- `aboves`: restack only direct branches above deleted branches
+- `upstack`: restack all upstack branches above deleted branches
+
+Passing `gs branch delete --restack`,
+`gs branch delete --restack=aboves`,
+or `gs branch delete --restack=none`
+overrides this configuration for that command.
+
 ### spice.branchCreate.generatedBranchNameLimit
 
 <!-- gs:version v0.20.0 -->
