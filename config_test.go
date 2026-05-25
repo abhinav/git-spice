@@ -16,9 +16,11 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/gittest"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/text"
 )
 
 // List of Git configuration sections besides "spice."
@@ -392,6 +394,14 @@ func TestBranchDeleteRestackFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+				git init
+				git commit --allow-empty -m 'Initial commit'
+			`)))
+			require.NoError(t, err)
+			t.Cleanup(fixture.Cleanup)
+			t.Chdir(fixture.Dir())
+
 			spicecfg := loadTestSpiceConfig(t, tt.config)
 
 			var cmd mainCmd
