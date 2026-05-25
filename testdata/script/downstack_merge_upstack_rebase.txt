@@ -1,6 +1,6 @@
 # 'downstack merge' fetches trunk after merge,
-# ensuring upstack branches are rebased onto the updated trunk
-# and retain the merged branch's changes.
+# ensuring upstack branches are retargeted onto the updated trunk
+# and retain the merged branch's changes for an explicit restack.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -38,7 +38,7 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
-stderr 'feature2: moved upstack onto main'
+stderr 'feature2: retargeted upstack onto main'
 stderr 'Cleaning up feature1'
 
 # Switch to feature2 and verify it contains feature1's changes.
@@ -50,10 +50,9 @@ stdout 'This is feature 1'
 exec cat feature2.txt
 stdout 'This is feature 2'
 
-# Restack should be a no-op:
-# feature2 should already be correctly stacked.
+# The upstack branch is left for an explicit restack.
 gs branch restack
-stderr 'does not need to be restacked'
+stderr 'feature2: restacked on main'
 
 -- repo/feature1.txt --
 This is feature 1

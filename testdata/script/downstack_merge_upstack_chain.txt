@@ -1,5 +1,5 @@
-# 'downstack merge' moves the immediate upstack after deleting
-# the merged branch, but does not restack the entire descendant chain.
+# 'downstack merge' retargets the immediate upstack after deleting
+# the merged branch, but leaves replay for an explicit restack.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -38,7 +38,7 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feat1'
-stderr 'feat2: moved upstack onto main'
+stderr 'feat2: retargeted upstack onto main'
 stderr 'Cleaning up feat1'
 
 # verify all files are present on feat3
@@ -50,9 +50,10 @@ stdout 'feature 2'
 exec cat feat3.txt
 stdout 'feature 3'
 
-# The immediate upstack was rebased during deletion.
+# The immediate upstack is retargeted during deletion,
+# but replay is left for an explicit restack.
 gs branch restack --branch feat2
-stderr 'does not need to be restacked'
+stderr 'feat2: restacked on main'
 
 # Descendants are left for an explicit restack.
 gs branch restack --branch feat3

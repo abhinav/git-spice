@@ -396,9 +396,8 @@ func (h *Handler) postMerge(
 	// the just-merged commit.
 	// Without this, cleanup would rebase upstack branches
 	// onto a stale trunk, dropping the merged changes.
-	// TODO: Use sync.Handler for this cleanup flow after
-	// https://github.com/abhinav/git-spice/issues/1134 is fixed.
-	// Until then, avoid transparent restacking here.
+	// TODO: Use sync.Handler for this cleanup flow
+	// once it exposes a targeted post-merge cleanup operation.
 	if err := h.fetchTrunk(ctx, trunk); err != nil {
 		h.Log.Warn("Unable to fetch trunk after merge",
 			"error", err)
@@ -639,8 +638,7 @@ func (h *Handler) cleanupMerged(
 	ctx context.Context, item mergeItem,
 ) {
 	// TODO: Replace this with sync.Handler cleanup
-	// once it can be used without transparently restacking
-	// after a merge.
+	// once it exposes a targeted post-merge cleanup operation.
 	h.Log.Infof("Cleaning up %s...", item.branch)
 
 	err := h.Delete.DeleteBranches(ctx, &branchdel.Request{
