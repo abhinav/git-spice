@@ -49,7 +49,7 @@ cp $WORK/extra/feature3_dirty.txt feature3.txt
 
 # merge feature1's PR server side and sync.
 shamhub merge alice/example 1
-gs repo sync
+gs repo sync --restack=aboves
 stderr 'feature1: #1 was merged'
 
 # dirty changes should still be present on feature3
