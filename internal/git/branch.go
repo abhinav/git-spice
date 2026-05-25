@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"strings"
 )
 
 // LocalBranch represents a local branch in a repository.
@@ -88,6 +89,36 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 				Worktree: string(bytes.TrimSpace(worktree)),
 			}
 			if !yield(localBranch, nil) {
+				return
+			}
+		}
+	}
+}
+
+// BranchesAtCommitish reports local branches that point at commitish.
+func (r *Repository) BranchesAtCommitish(
+	ctx context.Context,
+	commitish string,
+) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		cmd := r.gitCmd(
+			ctx,
+			"for-each-ref",
+			"--format=%(refname:short)",
+			"--points-at", commitish,
+			"refs/heads/",
+		)
+		for line, err := range cmd.Lines() {
+			if err != nil {
+				yield("", fmt.Errorf("git for-each-ref: %w", err))
+				return
+			}
+
+			name := strings.TrimSpace(string(line))
+			if name == "" {
+				continue
+			}
+			if !yield(name, nil) {
 				return
 			}
 		}
