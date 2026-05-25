@@ -610,3 +610,9 @@ on the next release.
   This requires breaking lines at natural grammatical boundaries
   (such as after complete sentences, clauses, or list items),
   while remaining within the 80-character limit.
+- Use the `$$...$$` shorthand only for command names
+  and configuration names that `doc/hooks/cliref.py` can link.
+  Examples: `$$gs repo sync$$` and `$$spice.repoSync.restack$$`.
+  Never include flags inside `$$...$$`;
+  write full command invocations with flags as inline code instead.
+  For example, write `gs repo sync --restack`.

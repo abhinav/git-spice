@@ -254,6 +254,21 @@ This will update the trunk branch (e.g. `main`)
 with the latest changes from the upstream repository,
 and delete any local branches whose PRs have been merged.
 
+If merged branches had other branches stacked on top of them,
+$$gs repo sync$$ will retarget those surviving branches
+onto the next available branch downstack,
+or onto trunk.
+It does not rebase them by default,
+so those branches may need an explicit $$gs branch restack$$
+before they can be submitted.
+
+To sync and restack all surviving branches above deleted merged branches
+in one step, use the `--restack` flag:
+
+```freeze language="terminal"
+{green}${reset} gs repo sync --restack
+```
+
 ### Handling closed Change Requests
 
 When running $$gs repo sync$$, if a Change Request was closed

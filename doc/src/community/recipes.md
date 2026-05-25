@@ -163,6 +163,8 @@ there are some options that can help your workflow.
 
 - $$gs repo sync$$ will detect branches that were merged
   with merge commits or fast-forwards, and delete them locally.
+  Use `gs repo sync --restack` to also restack surviving branches
+  above the deleted merged branches.
   For branches that were merged by rebasing or squashing,
   you'll need to manually delete merged branches with $$gs branch delete$$.
 

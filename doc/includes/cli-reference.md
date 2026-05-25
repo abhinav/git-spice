@@ -156,11 +156,17 @@ The repository must have a remote associated for syncing.
 A prompt will ask for one if the repository
 was not initialized with a remote.
 
+Branches above merged and deleted branches
+are retargeted to the trunk branch.
+Run with --restack to also restack them and their upstacks.
+Run with --restack=aboves to only restack direct upstacks
+of deleted branches, leaving higher branches in place.
+
 **Flags**
 
-* `--restack`: Restack the current stack after syncing
+* `--restack` ([:material-wrench:{ .middle title="spice.repoSync.restack" }](/cli/config.md#spicereposyncrestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges)
+**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges), [spice.repoSync.restack](/cli/config.md#spicereposyncrestack)
 
 ### git-spice repo restack {#gs-repo-restack}
 
