@@ -791,9 +791,9 @@ Use --force to delete the branch regardless of unmerged changes.
 **Flags**
 
 * `--force`: Force deletion of the branch
-* `--restack`: How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
+* `--restack` ([:material-wrench:{ .middle title="spice.branchDelete.restack" }](/cli/config.md#spicebranchdeleterestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchDelete.restack](/cli/config.md#spicebranchdeleterestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch fold {#gs-branch-fold}
 

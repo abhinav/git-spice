@@ -20,7 +20,7 @@ Arguments:
 Flags:
   --force      Force deletion of the branch
   --restack    How to restack branches above deleted branches. One of 'none',
-               'aboves', and 'upstack'.
+               'aboves', and 'upstack'. (🔧 spice.branchDelete.restack)
 
 Global Flags:
   -h, --help           Show help for the command

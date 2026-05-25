@@ -643,6 +643,7 @@ are retargeted onto the deleted branch's original base branch.
 Branches upstack from deleted branches are not rebased by default,
 so you must run $$gs branch restack$$ later to replay the surviving branches,
 or use `gs branch delete --restack` to rebase them as part of the operation.
+Set $$spice.branchDelete.restack$$ to change the default mode.
 
 <div class="grid" markdown>
 

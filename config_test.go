@@ -375,6 +375,24 @@ func TestBranchDeleteRestackFlag(t *testing.T) {
 			want: spice.RestackUpstack,
 		},
 		{
+			name: "Config",
+			config: joinLines(
+				`[spice "branchDelete"]`,
+				`  restack = aboves`,
+			),
+			args: []string{"branch", "delete", "feature"},
+			want: spice.RestackAboves,
+		},
+		{
+			name: "FlagOverridesConfig",
+			config: joinLines(
+				`[spice "branchDelete"]`,
+				`  restack = upstack`,
+			),
+			args: []string{"branch", "delete", "--restack=none", "feature"},
+			want: spice.RestackNone,
+		},
+		{
 			name: "RepoSyncConfigIgnored",
 			config: joinLines(
 				`[spice "repoSync"]`,
