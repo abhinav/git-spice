@@ -127,6 +127,10 @@ type MergeChangeRequest struct {
 	// should be deleted after the merge.
 	DeleteBranch bool
 
+	// MergeMethod controls how the CR is merged.
+	// If empty, MergeChange uses the normal merge commit behavior.
+	MergeMethod MergeMethod
+
 	// Squash requests that the CR be merged
 	// as a single squashed commit with the PR subject/body
 	// instead of a merge commit.
@@ -135,6 +139,30 @@ type MergeChangeRequest struct {
 	// HeadHash, if non-empty, causes the merge to fail
 	// if the change's head doesn't match this hash.
 	HeadHash string
+}
+
+// MergeMethod names a server-side merge strategy.
+type MergeMethod string
+
+const (
+	// MergeMethodMerge creates a two-parent merge commit.
+	MergeMethodMerge MergeMethod = "merge"
+
+	// MergeMethodSquash creates a single-parent squashed commit.
+	MergeMethodSquash MergeMethod = "squash"
+)
+
+func parseMergeMethod(value string) (MergeMethod, error) {
+	switch MergeMethod(value) {
+	case MergeMethodMerge, MergeMethodSquash:
+		return MergeMethod(value), nil
+	default:
+		return "", fmt.Errorf("unsupported mergeMethod %q", value)
+	}
+}
+
+func (m MergeMethod) squash() bool {
+	return m == MergeMethodSquash
 }
 
 // MergeChange merges an open change against this forge.
@@ -148,6 +176,15 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 	if req.CommitterEmail == "" {
 		req.CommitterEmail = "shamhub@example.com"
+	}
+	if req.MergeMethod == "" {
+		req.MergeMethod = MergeMethodMerge
+	}
+	if req.Squash {
+		req.MergeMethod = MergeMethodSquash
+	}
+	if _, err := parseMergeMethod(string(req.MergeMethod)); err != nil {
+		return err
 	}
 
 	commitEnv := []string{
@@ -252,7 +289,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 		var msg string
 		args := []string{"commit-tree", "-p", baseRef.Name}
-		if req.Squash {
+		if req.MergeMethod.squash() {
 			msg = fmt.Sprintf("%s (#%d)\n\n%s",
 				change.Subject,
 				req.Number,
@@ -329,10 +366,11 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 // REST endpoint: merge a change.
 
 type mergeChangeRequest struct {
-	Owner    string `path:"owner" json:"-"`
-	Repo     string `path:"repo" json:"-"`
-	Number   int    `path:"number" json:"-"`
-	HeadHash string `json:"headHash,omitempty"`
+	Owner       string `path:"owner" json:"-"`
+	Repo        string `path:"repo" json:"-"`
+	Number      int    `path:"number" json:"-"`
+	HeadHash    string `json:"headHash,omitempty"`
+	MergeMethod string `json:"mergeMethod,omitempty"`
 }
 
 type mergeChangeResponse struct{}
@@ -345,11 +383,21 @@ var _ = shamhubRESTHandler(
 func (sh *ShamHub) handleMergeChange(
 	_ context.Context, req *mergeChangeRequest,
 ) (*mergeChangeResponse, error) {
+	mergeMethod := MergeMethod(req.MergeMethod)
+	if mergeMethod == "" {
+		sh.mu.RLock()
+		mergeMethod = sh.defaultMergeMethod
+		sh.mu.RUnlock()
+	} else if _, err := parseMergeMethod(string(mergeMethod)); err != nil {
+		return nil, badRequestErrorf("%s", err)
+	}
+
 	err := sh.MergeChange(MergeChangeRequest{
-		Owner:    req.Owner,
-		Repo:     req.Repo,
-		Number:   req.Number,
-		HeadHash: req.HeadHash,
+		Owner:       req.Owner,
+		Repo:        req.Repo,
+		Number:      req.Number,
+		HeadHash:    req.HeadHash,
+		MergeMethod: mergeMethod,
 	})
 	if err != nil {
 		return nil, err

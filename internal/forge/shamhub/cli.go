@@ -249,6 +249,30 @@ runCommand:
 
 		ts.Logf("Forked %s/%s to %s", owner, repo, sh.RepoURL(forkOwner, repo))
 
+	case "config":
+		if len(args) != 2 {
+			ts.Fatalf("usage: shamhub config <key> <value>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		key, value := args[0], args[1]
+		switch key {
+		case "mergeMethod":
+			mergeMethod, err := parseMergeMethod(value)
+			if err != nil {
+				ts.Fatalf("%s", err)
+			}
+
+			sh.mu.Lock()
+			sh.defaultMergeMethod = mergeMethod
+			sh.mu.Unlock()
+
+		default:
+			ts.Fatalf("unknown shamhub config key: %s", key)
+		}
+
 	case "merge":
 		if sh == nil {
 			ts.Fatalf("ShamHub not initialized")
