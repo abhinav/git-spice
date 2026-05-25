@@ -6,6 +6,7 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -14,16 +15,20 @@ import (
 type branchDeleteCmd struct {
 	BranchPromptConfig
 
-	Force    bool     `help:"Force deletion of the branch"`
-	Branches []string `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
+	Force    bool              `help:"Force deletion of the branch"`
+	Restack  spice.RestackMode `default:"none" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
+	Branches []string          `arg:"" optional:"" help:"Names of the branches to delete" predictor:"branches"`
 }
 
 func (*branchDeleteCmd) Help() string {
 	return text.Dedent(`
 		The deleted branches and their commits are removed from the stack.
-		Branches above the deleted branches are first rebased onto
+		Branches above the deleted branches are retargeted onto
 		the next branches available downstack,
 		or onto trunk if there are no branches available below.
+
+		Use --restack to rebase those branches and their upstacks
+		immediately after retargeting.
 
 		Without any arguments,
 		a prompt will allow selecting the branch to delete.
@@ -82,8 +87,8 @@ func (cmd *branchDeleteCmd) Run(
 	handler DeleteHandler,
 ) error {
 	return handler.DeleteBranches(ctx, &delete.Request{
-		Branches:      cmd.Branches,
-		Force:         cmd.Force,
-		UpstackPolicy: delete.UpstackRestackAboves,
+		Branches: cmd.Branches,
+		Force:    cmd.Force,
+		Restack:  cmd.Restack,
 	})
 }

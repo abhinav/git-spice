@@ -1,8 +1,7 @@
-# 'gs branch delete' retargets upstacks by default.
-# The deleted branch's changes are removed after an explicit restack.
+# 'gs branch delete --restack' restacks the affected branch's full upstack.
 
 as 'Test <test@example.com>'
-at '2024-03-30T14:59:32Z'
+at '2026-05-26T10:00:00Z'
 
 cd repo
 git init
@@ -18,15 +17,11 @@ gs bc -m feature2
 git add feature3.txt
 gs bc -m feature3
 
-gs branch delete feature2 --force
+gs branch delete --force --restack feature1
 gs branch checkout feature3
 
-exists feature1.txt feature2.txt feature3.txt
-
-gs branch restack
-
-exists feature1.txt feature3.txt
-! exists feature2.txt
+exists feature2.txt feature3.txt
+! exists feature1.txt
 
 git graph --branches
 cmp stdout $WORK/golden/branches.txt
@@ -39,6 +34,6 @@ feature 2
 feature 3
 
 -- golden/branches.txt --
-* 7ed7e4b (HEAD -> feature3) feature3
-* 0ad3bcf (feature1) feature1
-* 3b9a56f (main) initial commit
+* 9f62b28 (HEAD -> feature3) feature3
+* 6ee6545 (feature2) feature2
+* 8709cff (main) initial commit

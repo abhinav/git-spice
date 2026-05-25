@@ -169,8 +169,8 @@ func (c ClosedChanges) String() string {
 type TrunkOptions struct {
 	// TODO: flag to not delete merged branches?
 
-	Restack       RestackMode   `default:"none" config:"repoSync.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
-	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
+	Restack       spice.RestackMode `default:"none" config:"repoSync.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
+	ClosedChanges ClosedChanges     `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,
@@ -933,11 +933,11 @@ type branchDeletion struct {
 type deletedBranchRestackPlan map[string][]string // branch => surviving aboves
 
 func planDeletedBranchRestacks(
-	mode RestackMode,
+	mode spice.RestackMode,
 	branchesToDelete []branchDeletion,
 	branchGraph *spice.BranchGraph,
 ) deletedBranchRestackPlan {
-	if mode == RestackNone || len(branchesToDelete) == 0 {
+	if !mode.Includes(spice.RestackAboves) || len(branchesToDelete) == 0 {
 		return nil
 	}
 
@@ -978,19 +978,19 @@ func (p deletedBranchRestackPlan) targets(deletedBranches []string) []string {
 
 func (h *Handler) restackDeletedBranchUpstack(
 	ctx context.Context,
-	mode RestackMode,
+	mode spice.RestackMode,
 	target string,
 ) error {
-	switch mode {
-	case RestackAboves:
-		if err := h.Restack.RestackBranch(ctx, target); err != nil {
-			return fmt.Errorf("restack branch %q: %w", target, err)
-		}
-	case RestackUpstack:
+	switch {
+	case mode.Includes(spice.RestackUpstack):
 		if err := h.Restack.RestackUpstack(ctx, target, nil); err != nil {
 			return fmt.Errorf("restack upstack %q: %w", target, err)
 		}
-	case RestackNone:
+	case mode.Includes(spice.RestackAboves):
+		if err := h.Restack.RestackBranch(ctx, target); err != nil {
+			return fmt.Errorf("restack branch %q: %w", target, err)
+		}
+	case mode.Includes(spice.RestackNone):
 		return nil
 	default:
 		return fmt.Errorf("unknown restack mode: %v", mode)

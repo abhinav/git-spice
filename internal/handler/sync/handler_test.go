@@ -302,7 +302,7 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Remote:     "origin",
 		}
 
-		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{Restack: RestackUpstack}))
+		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{Restack: spice.RestackUpstack}))
 		assert.Equal(t, 1, cleanupCalls)
 		assert.Equal(t, "main", rescueBranch)
 	})
@@ -394,7 +394,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 		}
 
 		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
-			Restack: RestackAboves,
+			Restack: spice.RestackAboves,
 		}))
 	})
 
@@ -483,7 +483,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 		}
 
 		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
-			Restack: RestackUpstack,
+			Restack: spice.RestackUpstack,
 		}))
 	})
 
@@ -577,7 +577,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 		}
 
 		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
-			Restack: RestackUpstack,
+			Restack: spice.RestackUpstack,
 		}))
 	})
 
@@ -661,7 +661,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 		}
 
 		require.NoError(t, handler.SyncTrunk(t.Context(), &TrunkOptions{
-			Restack: RestackUpstack,
+			Restack: spice.RestackUpstack,
 		}))
 	})
 }

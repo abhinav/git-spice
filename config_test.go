@@ -16,7 +16,6 @@ import (
 	"go.abhg.dev/gs/internal/cli/experiment"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
@@ -230,43 +229,43 @@ func TestRepoSyncRestackConfig(t *testing.T) {
 		name    string
 		config  string
 		args    []string
-		want    sync.RestackMode
+		want    spice.RestackMode
 		wantErr []string
 	}{
 		{
 			name: "Default",
 			args: []string{"repo", "sync"},
-			want: sync.RestackNone,
+			want: spice.RestackNone,
 		},
 		{
 			name: "FlagWithoutValue",
 			args: []string{"repo", "sync", "--restack"},
-			want: sync.RestackUpstack,
+			want: spice.RestackUpstack,
 		},
 		{
 			name: "FlagTrue",
 			args: []string{"repo", "sync", "--restack=true"},
-			want: sync.RestackUpstack,
+			want: spice.RestackUpstack,
 		},
 		{
 			name: "FlagFalse",
 			args: []string{"repo", "sync", "--restack=false"},
-			want: sync.RestackNone,
+			want: spice.RestackNone,
 		},
 		{
 			name: "FlagNone",
 			args: []string{"repo", "sync", "--restack=none"},
-			want: sync.RestackNone,
+			want: spice.RestackNone,
 		},
 		{
 			name: "FlagUpstack",
 			args: []string{"repo", "sync", "--restack=upstack"},
-			want: sync.RestackUpstack,
+			want: spice.RestackUpstack,
 		},
 		{
 			name: "FlagAboves",
 			args: []string{"repo", "sync", "--restack=aboves"},
-			want: sync.RestackAboves,
+			want: spice.RestackAboves,
 		},
 		{
 			name: "Config",
@@ -275,7 +274,7 @@ func TestRepoSyncRestackConfig(t *testing.T) {
 				`  restack = aboves`,
 			),
 			args: []string{"repo", "sync"},
-			want: sync.RestackAboves,
+			want: spice.RestackAboves,
 		},
 		{
 			name: "FlagOverridesConfig",
@@ -284,7 +283,7 @@ func TestRepoSyncRestackConfig(t *testing.T) {
 				`  restack = aboves`,
 			),
 			args: []string{"repo", "sync", "--restack=none"},
-			want: sync.RestackNone,
+			want: spice.RestackNone,
 		},
 		{
 			name: "Invalid",
@@ -326,6 +325,102 @@ func TestRepoSyncRestackConfig(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, cmd.Repo.Sync.Restack)
+		})
+	}
+}
+
+func TestBranchDeleteRestackFlag(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		args    []string
+		want    spice.RestackMode
+		wantErr []string
+	}{
+		{
+			name: "Default",
+			args: []string{"branch", "delete", "feature"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "FlagWithoutValue",
+			args: []string{"branch", "delete", "--restack", "feature"},
+			want: spice.RestackUpstack,
+		},
+		{
+			name: "FlagTrue",
+			args: []string{"branch", "delete", "--restack=true", "feature"},
+			want: spice.RestackUpstack,
+		},
+		{
+			name: "FlagFalse",
+			args: []string{"branch", "delete", "--restack=false", "feature"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "FlagNone",
+			args: []string{"branch", "delete", "--restack=none", "feature"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "FlagAboves",
+			args: []string{"branch", "delete", "--restack=aboves", "feature"},
+			want: spice.RestackAboves,
+		},
+		{
+			name: "FlagUpstack",
+			args: []string{"branch", "delete", "--restack=upstack", "feature"},
+			want: spice.RestackUpstack,
+		},
+		{
+			name: "RepoSyncConfigIgnored",
+			config: joinLines(
+				`[spice "repoSync"]`,
+				`  restack = upstack`,
+			),
+			args: []string{"branch", "delete", "feature"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "Invalid",
+			args: []string{"branch", "delete", "--restack=invalid", "feature"},
+			wantErr: []string{
+				`--restack: invalid value "invalid": expected none, aboves, or upstack`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(tt.args)
+			if len(tt.wantErr) > 0 {
+				require.Error(t, err)
+				for _, msg := range tt.wantErr {
+					assert.ErrorContains(t, err, msg)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Branch.Delete.Restack)
 		})
 	}
 }
