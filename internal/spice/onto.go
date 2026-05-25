@@ -127,13 +127,13 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 
 	branchTx := s.store.BeginBranchTx()
 
-	// When SkipRebase is true, we update the base branch name
-	// but preserve the old base hash.
-	// This leaves the branch in a "needs restack" state
-	// that can be detected and corrected later.
+	// When SkipRebase is true, update the base branch name
+	// but preserve the upstream boundary for a future restack.
+	// This is usually the old recorded base hash, but may be the old
+	// base's actual head if that is already reachable from this branch.
 	baseHash := ontoHash
 	if req.SkipRebase {
-		baseHash = branch.BaseHash
+		baseHash = fromHash
 	}
 
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
