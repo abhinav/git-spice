@@ -573,7 +573,8 @@ Use --branch to start at a different branch.
 This command acts as a local merge queue:
 it merges one Change Request,
 waits for that merge to finish,
-retargets the next Change Request to trunk,
+restacks and updates the next Change Request,
+waits for its CI checks to pass,
 and then repeats the process.
 
 For a stack like this:
@@ -596,9 +597,11 @@ Use --build-timeout to configure the maximum wait
 (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge
-to complete, retargets the next PR to trunk,
+to complete, restacks and updates the next PR,
+waits for CI checks on the updated PR,
 and cleans up the merged local branch.
-Use --no-wait to skip the propagation polling.
+Use --no-wait to skip the propagation polling
+and the between-merge restack/update step.
 
 **Flags**
 

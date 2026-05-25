@@ -596,6 +596,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			forges *forge.Registry,
 			repo *git.Repository,
 			deleteHandler DeleteHandler,
+			restackHandler RestackHandler,
+			submitHandler SubmitHandler,
+			syncHandler SyncHandler,
 		) (MergeHandler, error) {
 			remote, err := ensureRemote(
 				ctx, repo, store, log, view,
@@ -626,6 +629,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Store:            store,
 				Service:          svc,
 				RemoteRepository: remoteRepo,
+				Restack:          restackHandler,
+				Submit:           submitHandler,
+				Sync:             syncHandler,
 				Delete:           deleteHandler,
 				Repository:       repo,
 				Remote:           remote.Upstream,

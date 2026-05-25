@@ -10,6 +10,8 @@ import (
 	"time"
 
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/handler/sync"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
@@ -40,6 +42,21 @@ type DeleteHandler interface {
 	DeleteBranches(context.Context, *branchdel.Request) error
 }
 
+// RestackHandler restacks branches after their bases are merged.
+type RestackHandler interface {
+	RestackBranch(context.Context, string) error
+}
+
+// SubmitHandler updates change requests after branch restacks.
+type SubmitHandler interface {
+	Submit(context.Context, *submit.Request) error
+}
+
+// SyncHandler updates trunk after each queue item merges.
+type SyncHandler interface {
+	SyncTrunk(context.Context, *sync.TrunkOptions) error
+}
+
 // GitRepository provides access to the Git repository.
 type GitRepository interface {
 	PeelToCommit(
@@ -48,9 +65,6 @@ type GitRepository interface {
 	DeleteBranch(
 		ctx context.Context, branch string,
 		opts git.BranchDeleteOptions,
-	) error
-	Fetch(
-		ctx context.Context, opts git.FetchOptions,
 	) error
 	CommitAheadBehind(
 		ctx context.Context, upstream, head string,
@@ -81,6 +95,9 @@ type Handler struct {
 	Store            Store            // required
 	Service          Service          // required
 	RemoteRepository forge.Repository // required
+	Restack          RestackHandler   // required
+	Submit           SubmitHandler    // required
+	Sync             SyncHandler      // required
 
 	// Cleanup dependencies:
 	Delete     DeleteHandler // required
@@ -119,6 +136,10 @@ type mergeItem struct {
 	// headHash is set by verifySynced right before the merge.
 	// It is passed to MergeChange for server-side assertion.
 	headHash git.Hash
+
+	// checksReady is true after the local merge queue has already
+	// waited for this item's checks following a restack and submit.
+	checksReady bool
 }
 
 func (h *Handler) buildPlan(
@@ -344,13 +365,15 @@ func (h *Handler) executePlan(
 	}
 
 	for i := range plan {
-		if err := h.awaitChecks(
-			ctx, plan[i], req.BuildTimeout,
-		); err != nil {
-			return fmt.Errorf(
-				"wait for checks on %q: %w",
-				plan[i].branch, err,
-			)
+		if !plan[i].checksReady {
+			if err := h.awaitChecks(
+				ctx, plan[i], req.BuildTimeout,
+			); err != nil {
+				return fmt.Errorf(
+					"wait for checks on %q: %w",
+					plan[i].branch, err,
+				)
+			}
 		}
 
 		h.Log.Infof(
@@ -364,7 +387,7 @@ func (h *Handler) executePlan(
 		}
 
 		if err := h.postMerge(
-			ctx, plan, i, trunk, req.NoWait,
+			ctx, plan, i, trunk, req,
 		); err != nil {
 			return fmt.Errorf("post-merge %q: %w", plan[i].branch, err)
 		}
@@ -379,31 +402,32 @@ func (h *Handler) postMerge(
 	plan []mergeItem,
 	idx int,
 	trunk string,
-	noWait bool,
+	req *Request,
 ) error {
 	item := plan[idx]
 	lastItem := idx == len(plan)-1
 
 	// Wait for merge to propagate (unless --no-wait).
-	if !noWait {
+	if !req.NoWait {
 		if err := h.awaitMerged(ctx, item); err != nil {
 			return fmt.Errorf("await merge of %q: %w",
 				item.branch, err)
 		}
 	}
 
-	// Fetch trunk so that the local ref includes
-	// the just-merged commit.
-	// Without this, cleanup would rebase upstack branches
-	// onto a stale trunk, dropping the merged changes.
-	// TODO: Use sync.Handler for this cleanup flow
-	// once it exposes a targeted post-merge cleanup operation.
-	if err := h.fetchTrunk(ctx, trunk); err != nil {
-		h.Log.Warn("Unable to fetch trunk after merge",
+	h.cleanupMerged(ctx, item)
+
+	// Sync trunk so that the local ref includes
+	// the just-merged commit before the next branch is restacked.
+	if err := h.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
+		ClosedChanges: sync.ClosedChangesIgnore,
+	}); err != nil {
+		if !lastItem && !req.NoWait {
+			return fmt.Errorf("sync trunk: %w", err)
+		}
+		h.Log.Warn("Unable to sync trunk after merge",
 			"error", err)
 	}
-
-	h.cleanupMerged(ctx, item)
 
 	if lastItem {
 		return nil
@@ -412,17 +436,16 @@ func (h *Handler) postMerge(
 	// Retarget next PR to trunk.
 	// If --no-wait, merge may not have propagated yet;
 	// log a warning on failure instead of aborting.
-	if err := h.retargetChange(
-		ctx, plan[idx+1], trunk,
-	); err != nil && noWait {
-		h.Log.Warn("Retarget may have failed "+
-			"(merge may not have propagated yet)",
-			"branch", plan[idx+1].branch, "error", err)
+	next := &plan[idx+1]
+	if req.NoWait {
+		if err := h.retargetChange(ctx, *next, trunk); err != nil {
+			h.Log.Warn("Retarget may have failed "+
+				"(merge may not have propagated yet)",
+				"branch", next.branch, "error", err)
+		}
 		return nil
-	} else if err != nil {
-		return err
 	}
-	return nil
+	return h.prepareNext(ctx, next, req)
 }
 
 func (h *Handler) validateFreshBases(
@@ -456,6 +479,46 @@ func (h *Handler) validateFreshBases(
 			"or use --no-branch-check to merge anyway",
 		len(staleBases),
 	)
+}
+
+// prepareNext advances the next item in the local merge queue.
+//
+// This is intentionally outside delete cleanup:
+// the merge queue owns the user-visible restack, submit,
+// and CI wait needed before the next branch can be merged.
+func (h *Handler) prepareNext(
+	ctx context.Context,
+	next *mergeItem,
+	req *Request,
+) error {
+	h.Log.Infof("Restacking %s after merge...", next.branch)
+	if err := h.Restack.RestackBranch(ctx, next.branch); err != nil {
+		return fmt.Errorf("restack branch: %w", err)
+	}
+
+	if err := h.Submit.Submit(ctx, &submit.Request{
+		Branch: next.branch,
+		Options: &submit.Options{
+			Publish:    true,
+			UpdateOnly: new(true),
+		},
+	}); err != nil {
+		return fmt.Errorf("submit branch update: %w", err)
+	}
+
+	head, err := h.Repository.PeelToCommit(ctx, next.branch)
+	if err != nil {
+		return fmt.Errorf("resolve updated head: %w", err)
+	}
+	next.headHash = head
+
+	if err := h.awaitChecks(
+		ctx, *next, req.BuildTimeout,
+	); err != nil {
+		return fmt.Errorf("wait for checks: %w", err)
+	}
+	next.checksReady = true
+	return nil
 }
 
 // awaitChecks polls until CI checks pass for the given change.
@@ -617,19 +680,6 @@ func (h *Handler) retargetChange(
 			item.branch, trunk, err)
 	}
 	return nil
-}
-
-// fetchTrunk fetches the trunk branch from the remote,
-// updating the local ref to include newly merged commits.
-func (h *Handler) fetchTrunk(
-	ctx context.Context, trunk string,
-) error {
-	return h.Repository.Fetch(ctx, git.FetchOptions{
-		Remote: h.Remote,
-		Refspecs: []git.Refspec{
-			git.Refspec(trunk + ":" + trunk),
-		},
-	})
 }
 
 // cleanupMerged deletes the local and remote tracking

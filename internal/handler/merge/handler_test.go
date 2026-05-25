@@ -2,6 +2,7 @@ package merge
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"testing"
@@ -12,6 +13,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/handler/sync"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
@@ -20,7 +23,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-//go:generate mockgen -destination=mocks_test.go -package=merge -write_package_comment=false -typed=true . Service,Store,DeleteHandler,GitRepository
+//go:generate mockgen -destination=mocks_test.go -package=merge -write_package_comment=false -typed=true . Service,Store,DeleteHandler,RestackHandler,SubmitHandler,SyncHandler,GitRepository
 
 // fakeChangeID is a simple string-based ChangeID for testing.
 type fakeChangeID string
@@ -203,21 +206,29 @@ func TestExecutePlan_retargets(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResult("main"), nil)
 
-	// Each merge: checks -> merge -> awaitMerged -> cleanup
-	// -> retarget next (except last).
+	// Each merge: checks -> merge -> awaitMerged -> cleanup -> sync
+	// -> prepare next (except last).
 	expectMergeItem(mockForge, pr1)
-	expectMergeItem(mockForge, pr2)
-	expectMergeItem(mockForge, pr3)
+	expectPreparedNext(t, mockForge, pr2)
+	expectMergePreparedItem(mockForge, pr2)
+	expectPreparedNext(t, mockForge, pr3)
+	expectMergePreparedItem(mockForge, pr3)
 
-	// Retarget pr-2 and pr-3 to main.
-	mockForge.EXPECT().
-		EditChange(gomock.Any(), pr2,
-			forge.EditChangeOptions{Base: "main"}).
+	mockRestack := NewMockRestackHandler(ctrl)
+	mockRestack.EXPECT().
+		RestackBranch(gomock.Any(), "feat2").
 		Return(nil)
-	mockForge.EXPECT().
-		EditChange(gomock.Any(), pr3,
-			forge.EditChangeOptions{Base: "main"}).
+	mockRestack.EXPECT().
+		RestackBranch(gomock.Any(), "feat3").
 		Return(nil)
+
+	mockSubmit := NewMockSubmitHandler(ctrl)
+	mockSubmit.EXPECT().
+		Submit(gomock.Any(), gomock.Any()).
+		DoAndReturn(assertSubmitUpdate(t, "feat2"))
+	mockSubmit.EXPECT().
+		Submit(gomock.Any(), gomock.Any()).
+		DoAndReturn(assertSubmitUpdate(t, "feat3"))
 
 	mockDelete := NewMockDeleteHandler(ctrl)
 	mockDelete.EXPECT().
@@ -227,11 +238,25 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	mockGit := NewMockGitRepository(ctrl)
 	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), gomock.Any()).
-		Return("", errors.New("not found")).
-		Times(3)
+		PeelToCommit(gomock.Any(), "origin/feat1").
+		Return("", errors.New("not found"))
 	mockGit.EXPECT().
-		Fetch(gomock.Any(), gomock.Any()).
+		PeelToCommit(gomock.Any(), "origin/feat2").
+		Return("", errors.New("not found"))
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "origin/feat3").
+		Return("", errors.New("not found")).
+		AnyTimes()
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat3").
+		Return(git.Hash("head3"), nil)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
 		Return(nil).
 		Times(3)
 
@@ -240,6 +265,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 		store:     mockStore,
 		delete:    mockDelete,
 		gitRepo:   mockGit,
+		restack:   mockRestack,
+		submit:    mockSubmit,
+		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
@@ -256,9 +284,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	output := logBuffer.String()
 	assert.Contains(t, output, "Merging feat1")
-	assert.Contains(t, output, "Retargeting feat2 to main")
+	assert.Contains(t, output, "Restacking feat2 after merge")
 	assert.Contains(t, output, "Merging feat2")
-	assert.Contains(t, output, "Retargeting feat3 to main")
+	assert.Contains(t, output, "Restacking feat3 after merge")
 	assert.Contains(t, output, "Merging feat3")
 	assert.Contains(t, output, "All 3 change(s) merged")
 }
@@ -302,8 +330,10 @@ func TestExecutePlan_noWait(t *testing.T) {
 		PeelToCommit(gomock.Any(), gomock.Any()).
 		Return("", errors.New("not found")).
 		Times(2)
-	mockGit.EXPECT().
-		Fetch(gomock.Any(), gomock.Any()).
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
 		Return(nil).
 		Times(2)
 
@@ -312,6 +342,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 		store:     mockStore,
 		delete:    mockDelete,
 		gitRepo:   mockGit,
+		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
@@ -359,8 +390,10 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 	mockGit.EXPECT().
 		PeelToCommit(gomock.Any(), gomock.Any()).
 		Return("", errors.New("not found"))
-	mockGit.EXPECT().
-		Fetch(gomock.Any(), gomock.Any()).
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
 		Return(nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -368,6 +401,7 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 		store:     mockStore,
 		delete:    mockDelete,
 		gitRepo:   mockGit,
+		sync:      mockSync,
 	})
 
 	err := h.executePlan(t.Context(), []mergeItem{
@@ -408,8 +442,10 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 	mockGit.EXPECT().
 		PeelToCommit(gomock.Any(), gomock.Any()).
 		Return("", errors.New("not found"))
-	mockGit.EXPECT().
-		Fetch(gomock.Any(), gomock.Any()).
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
 		Return(nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -417,6 +453,7 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 		store:     mockStore,
 		delete:    mockDelete,
 		gitRepo:   mockGit,
+		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
@@ -456,8 +493,10 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	mockGit.EXPECT().
 		PeelToCommit(gomock.Any(), gomock.Any()).
 		Return("", errors.New("not found"))
-	mockGit.EXPECT().
-		Fetch(gomock.Any(), gomock.Any()).
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
 		Return(nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -465,6 +504,7 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 		store:     mockStore,
 		delete:    mockDelete,
 		gitRepo:   mockGit,
+		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
@@ -695,6 +735,9 @@ type testHandlerOpts struct {
 	forgeRepo *forgetest.MockRepository
 	store     *MockStore
 	delete    *MockDeleteHandler
+	restack   *MockRestackHandler
+	submit    *MockSubmitHandler
+	sync      SyncHandler
 	gitRepo   *MockGitRepository
 	logBuffer *bytes.Buffer
 }
@@ -716,6 +759,9 @@ func newTestHandler(
 		Store:            testStore(ctrl, opts.store),
 		Service:          NewMockService(ctrl),
 		Delete:           testDelete(ctrl, opts.delete),
+		Restack:          testRestack(ctrl, opts.restack),
+		Submit:           testSubmit(ctrl, opts.submit),
+		Sync:             testSync(opts.sync),
 		Repository:       testGitRepo(ctrl, opts.gitRepo),
 	}
 }
@@ -755,6 +801,48 @@ func testDelete(
 	return NewMockDeleteHandler(ctrl)
 }
 
+func testRestack(
+	ctrl *gomock.Controller, mock *MockRestackHandler,
+) RestackHandler {
+	if mock != nil {
+		return mock
+	}
+	return NewMockRestackHandler(ctrl)
+}
+
+func testSubmit(
+	ctrl *gomock.Controller, mock *MockSubmitHandler,
+) SubmitHandler {
+	if mock != nil {
+		return mock
+	}
+	return NewMockSubmitHandler(ctrl)
+}
+
+type syncHandlerFunc func(context.Context, *sync.TrunkOptions) error
+
+func (f syncHandlerFunc) SyncTrunk(
+	ctx context.Context,
+	opts *sync.TrunkOptions,
+) error {
+	return f(ctx, opts)
+}
+
+func testSync(syncHandler SyncHandler) SyncHandler {
+	if syncHandler != nil {
+		return syncHandler
+	}
+	return syncHandlerFunc(func(context.Context, *sync.TrunkOptions) error {
+		return nil
+	})
+}
+
+func syncTrunkOptions() *sync.TrunkOptions {
+	return &sync.TrunkOptions{
+		ClosedChanges: sync.ClosedChangesIgnore,
+	}
+}
+
 func testGitRepo(
 	ctrl *gomock.Controller, mock *MockGitRepository,
 ) GitRepository {
@@ -787,13 +875,58 @@ func expectMergeItem(
 	id fakeChangeID,
 ) {
 	expectChecksAndMerge(mockForge, id)
+	expectMerged(mockForge, id)
+}
 
+func expectMergePreparedItem(
+	mockForge *forgetest.MockRepository,
+	id fakeChangeID,
+) {
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), id, gomock.Any()).
+		Return(nil)
+
+	expectMerged(mockForge, id)
+}
+
+func expectMerged(
+	mockForge *forgetest.MockRepository,
+	id fakeChangeID,
+) {
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(),
 			[]forge.ChangeID{id}).
 		Return(
 			[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
 		)
+}
+
+func expectPreparedNext(
+	t *testing.T,
+	mockForge *forgetest.MockRepository,
+	id fakeChangeID,
+) {
+	t.Helper()
+
+	mockForge.EXPECT().
+		ChangeChecksState(gomock.Any(), id).
+		Return(forge.ChecksPassed, nil)
+}
+
+func assertSubmitUpdate(
+	t *testing.T,
+	branch string,
+) func(context.Context, *submit.Request) error {
+	t.Helper()
+
+	return func(_ context.Context, req *submit.Request) error {
+		assert.Equal(t, branch, req.Branch)
+		require.NotNil(t, req.Options)
+		assert.True(t, req.Options.Publish)
+		require.NotNil(t, req.Options.UpdateOnly)
+		assert.True(t, *req.Options.UpdateOnly)
+		return nil
+	}
 }
 
 // expectChecksAndMerge sets up mock expectations for
