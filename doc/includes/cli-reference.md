@@ -963,8 +963,11 @@ Commits of the current branch
 are transplanted onto another branch
 while leaving the rest of the stack intact.
 That is, branches above the current branch
-are first rebased onto its original base,
+are retargeted onto its original base,
 and then the current branch is moved onto the new base.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 A prompt will allow selecting the new base for the branch.
 Provide an argument to skip the prompt.
@@ -990,8 +993,9 @@ Use 'gs upstack onto' to also move the upstack branches.
 **Flags**
 
 * `--branch=NAME`: Branch to move
+* `--restack` ([:material-wrench:{ .middle title="spice.branchOnto.restack" }](/cli/config.md#spicebranchontorestack)): How to restack branches above the moved branch. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchOnto.restack](/cli/config.md#spicebranchontorestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch diff {#gs-branch-diff}
 

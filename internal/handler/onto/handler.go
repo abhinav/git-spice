@@ -38,15 +38,21 @@ type BranchRequest struct {
 	// Onto is the destination branch.
 	Onto string // required
 
+	// Restack decides how branches above Branch are replayed
+	// after being retargeted onto Branch's original base.
+	Restack spice.RestackMode
+
 	// ContinueCommand resumes the operation after a rebase rescue.
 	ContinueCommand []string
 }
 
 // BranchOnto moves one branch onto another branch.
 //
-// Branches directly above the moved branch are first moved onto the moved
-// branch's original base,
-// preserving the command's historical behavior.
+// Branches directly above the moved branch are first retargeted onto the
+// moved branch's original base.
+// The request's restack mode decides whether those direct aboves,
+// and their own upstacks,
+// are also rebased immediately.
 func (h *Handler) BranchOnto(ctx context.Context, req *BranchRequest) error {
 	branch, err := h.Service.LookupBranch(ctx, req.Branch)
 	if err != nil {
@@ -61,15 +67,36 @@ func (h *Handler) BranchOnto(ctx context.Context, req *BranchRequest) error {
 		return fmt.Errorf("list branches above %s: %w", req.Branch, err)
 	}
 
+	ontoMode := spice.BranchOntoRetargetOnly
+	if req.Restack.Includes(spice.RestackAboves) {
+		ontoMode = spice.BranchOntoRebase
+	}
+
 	for _, above := range aboves {
-		if err := h.UpstackOnto(ctx, &UpstackRequest{
+		if err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
 			Branch: above,
 			Onto:   branch.Base,
-			ContinueCommand: []string{
-				"upstack",
-				"onto",
-				branch.Base,
-			},
+			Mode:   ontoMode,
+		}); err != nil {
+			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     err,
+				Command: req.ContinueCommand,
+				Branch:  req.Branch,
+				Message: fmt.Sprintf("interrupted: %s: branch onto %s", req.Branch, req.Onto),
+			})
+		}
+		if req.Restack.None() {
+			h.Log.Infof("%s: retargeted upstack onto %s", above, branch.Base)
+			continue
+		}
+
+		h.Log.Infof("%s: moved upstack onto %s", above, branch.Base)
+		if !req.Restack.Includes(spice.RestackUpstack) {
+			continue
+		}
+
+		if err := h.Restack.RestackUpstack(ctx, above, &restack.UpstackOptions{
+			SkipStart: true,
 		}); err != nil {
 			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,

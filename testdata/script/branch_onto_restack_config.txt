@@ -1,0 +1,86 @@
+# branch onto supports the spice.branchOnto.restack config.
+
+as 'Test <test@example.com>'
+at '2026-05-26T10:45:00Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git config spice.branchOnto.restack aboves
+
+git add base1.txt
+gs bc -m base1
+
+git add move1.txt
+gs bc -m move1
+
+git add above1.txt
+gs bc -m above1
+
+# With branchOnto.restack=aboves,
+# branch onto restacks the direct branch above the moved branch.
+git checkout move1
+gs branch onto main
+stderr 'above1: moved upstack onto base1'
+stderr 'move1: moved onto main'
+
+gs ll -a
+cmp stderr $WORK/golden/config-ll.txt
+
+# An explicit CLI flag overrides the configured restack mode.
+git checkout main
+git add base2.txt
+gs bc -m base2
+
+git add move2.txt
+gs bc -m move2
+
+git add above2.txt
+gs bc -m above2
+
+git checkout move2
+gs branch onto --restack=none main
+stderr 'above2: retargeted upstack onto base2'
+! stderr 'above2: moved upstack onto base2'
+stderr 'move2: moved onto main'
+
+gs ll -a
+cmp stderr $WORK/golden/override-ll.txt
+
+-- repo/base1.txt --
+Base 1
+-- repo/move1.txt --
+Move 1
+-- repo/above1.txt --
+Above 1
+-- repo/base2.txt --
+Base 2
+-- repo/move2.txt --
+Move 2
+-- repo/above2.txt --
+Above 2
+-- golden/config-ll.txt --
+  ┏━□ above1
+  ┃   35e266d above1 (now)
+┏━┻□ base1
+┃    18643f6 base1 (now)
+┣━■ move1 ◀
+┃   5ee462d move1 (now)
+main
+-- golden/override-ll.txt --
+  ┏━□ above1
+  ┃   35e266d above1 (now)
+┏━┻□ base1
+┃    18643f6 base1 (now)
+┃ ┏━□ above2 (needs restack)
+┃ ┃   89eb1d3 above2 (now)
+┣━┻□ base2
+┃    239cefd base2 (now)
+┣━□ move1
+┃   5ee462d move1 (now)
+┣━■ move2 ◀
+┃   122e24b move2 (now)
+main
