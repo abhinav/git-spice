@@ -1,0 +1,3 @@
+kind: Added
+body: 'navigation: Allow up, down, top, and bottom to navigate from a detached HEAD when it points at exactly one local branch.'
+time: 2026-05-24T18:05:20.72981-07:00

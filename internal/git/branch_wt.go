@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"strings"
 )
 
@@ -26,6 +27,26 @@ func (w *Worktree) CurrentBranch(ctx context.Context) (string, error) {
 		return "", ErrDetachedHead
 	}
 	return name, nil
+}
+
+// BranchesAtHead reports local branches that point at the worktree's HEAD.
+func (w *Worktree) BranchesAtHead(ctx context.Context) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		head, err := w.Head(ctx)
+		if err != nil {
+			yield("", fmt.Errorf("get HEAD: %w", err))
+			return
+		}
+
+		for branch, err := range w.repo.BranchesAtCommitish(ctx, head.String()) {
+			if !yield(branch, err) {
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}
 }
 
 // DetachHead detaches the HEAD from the current branch
