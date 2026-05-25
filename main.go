@@ -475,6 +475,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			store *state.Store,
 			wt *git.Worktree,
 			svc *spice.Service,
+			restackHandler RestackHandler,
 		) (DeleteHandler, error) {
 			return &delete.Handler{
 				Log:        log,
@@ -483,6 +484,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
+				Restack:    restackHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

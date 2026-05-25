@@ -1,0 +1,7 @@
+kind: Changed
+body: >-
+  branch delete:
+  Branches above deleted branches are now retargeted without being restacked unless --restack is used.
+  --restack defaults to restacking all upstack branches of deleted branches.
+  Use --restack=aboves to restack only the branches directly above.
+time: 2026-05-24T21:31:58.061514-07:00

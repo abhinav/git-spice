@@ -1,4 +1,4 @@
-package sync
+package spice
 
 import (
 	"encoding"
@@ -8,22 +8,25 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-// RestackMode specifies how repo sync restacks branches
-// after deleting merged branches.
+// RestackMode specifies how a command should restack branches affected by an
+// operation that moves or removes their downstack branches.
 type RestackMode int
 
 const (
 	// RestackNone leaves surviving upstacks retargeted in state
 	// for a later explicit restack.
-	RestackNone RestackMode = iota
+	RestackNone RestackMode = 0
+)
+
+const (
+	// RestackAboves restacks only surviving direct upstacks.
+	RestackAboves RestackMode = 1 << iota
+
+	restackUpstackBranches
 
 	// RestackUpstack restacks each surviving direct upstack
-	// of a deleted branch, plus everything above it.
-	RestackUpstack
-
-	// RestackAboves restacks only surviving direct upstacks
-	// of deleted branches.
-	RestackAboves
+	// plus everything above it.
+	RestackUpstack = RestackAboves | restackUpstackBranches
 )
 
 var (
@@ -32,9 +35,17 @@ var (
 	_ encoding.TextMarshaler   = RestackMode(0)
 )
 
+// Includes reports whether this mode includes all behavior in scope.
+func (m RestackMode) Includes(scope RestackMode) bool {
+	if scope == RestackNone {
+		return m == RestackNone
+	}
+	return m&scope == scope
+}
+
 // Decode decodes RestackMode from a Kong flag value.
 //
-// It behaves like a bool flag for compatibility with the old --restack:
+// It behaves like a bool flag for compatibility with legacy --restack flags:
 // omitting the value means true/upstack,
 // and explicit true/false values map to upstack/none.
 func (m *RestackMode) Decode(ctx *kong.DecodeContext) error {

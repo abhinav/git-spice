@@ -1,4 +1,4 @@
-package sync
+package spice
 
 import (
 	"testing"
@@ -77,4 +77,14 @@ func TestRestackMode_String(t *testing.T) {
 			assert.Equal(t, tt.want, tt.give.String())
 		})
 	}
+}
+
+func TestRestackMode_Includes(t *testing.T) {
+	assert.True(t, RestackNone.Includes(RestackNone))
+	assert.False(t, RestackAboves.Includes(RestackNone))
+
+	assert.True(t, RestackAboves.Includes(RestackAboves))
+	assert.True(t, RestackUpstack.Includes(RestackAboves))
+	assert.True(t, RestackUpstack.Includes(RestackUpstack))
+	assert.False(t, RestackAboves.Includes(RestackUpstack))
 }

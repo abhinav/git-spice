@@ -770,9 +770,12 @@ gs branch (b) delete (d,rm) [<branches> ...] [flags]
 Delete branches
 
 The deleted branches and their commits are removed from the stack.
-Branches above the deleted branches are first rebased onto
+Branches above the deleted branches are retargeted onto
 the next branches available downstack,
 or onto trunk if there are no branches available below.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 Without any arguments,
 a prompt will allow selecting the branch to delete.
@@ -788,6 +791,7 @@ Use --force to delete the branch regardless of unmerged changes.
 **Flags**
 
 * `--force`: Force deletion of the branch
+* `--restack`: How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
 **Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
