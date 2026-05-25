@@ -7,7 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -49,6 +49,14 @@ func (*branchOntoCmd) Help() string {
 		Use '%[1]s upstack onto' to also move the upstack branches.
 	`, name))
 }
+
+// OntoHandler coordinates branch and upstack base changes.
+type OntoHandler interface {
+	BranchOnto(context.Context, *onto.BranchRequest) error
+	UpstackOnto(context.Context, *onto.UpstackRequest) error
+}
+
+var _ OntoHandler = (*onto.Handler)(nil)
 
 func (cmd *branchOntoCmd) AfterApply(
 	ctx context.Context,
@@ -104,58 +112,11 @@ func (cmd *branchOntoCmd) AfterApply(
 
 func (cmd *branchOntoCmd) Run(
 	ctx context.Context,
-	log *silog.Logger,
-	wt *git.Worktree,
-	svc *spice.Service,
-	restackHandler RestackHandler,
+	handler OntoHandler,
 ) error {
-	branch, err := svc.LookupBranch(ctx, cmd.Branch)
-	if err != nil {
-		if errors.Is(err, state.ErrNotExist) {
-			return fmt.Errorf("branch not tracked: %s", cmd.Branch)
-		}
-		return fmt.Errorf("get branch: %w", err)
-	}
-
-	aboves, err := svc.ListAbove(ctx, cmd.Branch)
-	if err != nil {
-		return fmt.Errorf("list branches above %s: %w", cmd.Branch, err)
-	}
-
-	// As long as there are any branches above this one,
-	// they need to be grafted onto this branch's original base.
-	// However, this move operation will be an 'upstack onto'
-	// as for each of these branches, we want to keep *their* upstacks.
-	for _, above := range aboves {
-		if err := (&upstackOntoCmd{
-			Branch: above,
-			Onto:   branch.Base,
-		}).Run(ctx, log, svc, restackHandler); err != nil {
-			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-				Err:     err,
-				Command: []string{"branch", "onto", cmd.Onto},
-				Branch:  cmd.Branch,
-				Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
-			})
-		}
-	}
-
-	// Only after the upstacks have been moved
-	// will we move the branch itself and update its internal state.
-	if err := svc.BranchOnto(ctx, &spice.BranchOntoRequest{
-		Branch: cmd.Branch,
-		Onto:   cmd.Onto,
-	}); err != nil {
-		// If the rebase is interrupted,
-		// we'll just re-run this command again later.
-		return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
-			Err:     err,
-			Command: []string{"branch", "onto", cmd.Onto},
-			Branch:  cmd.Branch,
-			Message: fmt.Sprintf("interrupted: %s: branch onto %s", cmd.Branch, cmd.Onto),
-		})
-	}
-
-	log.Infof("%s: moved onto %s", cmd.Branch, cmd.Onto)
-	return wt.CheckoutBranch(ctx, cmd.Branch)
+	return handler.BranchOnto(ctx, &onto.BranchRequest{
+		Branch:          cmd.Branch,
+		Onto:            cmd.Onto,
+		ContinueCommand: []string{"branch", "onto", cmd.Onto},
+	})
 }

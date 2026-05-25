@@ -283,10 +283,13 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			// The restack mode decides whether this worktree also rebases
 			// branches whose downstack base is being removed.
 			restackAbove := req.Restack.Includes(spice.RestackAboves)
-			skipRebase := !restackAbove
+			ontoMode := spice.BranchOntoRebase
+			if !restackAbove {
+				ontoMode = spice.BranchOntoRetargetOnly
+			}
 			if restackAbove && above != currentBranch {
 				if worktreePath, ok := branchWorktrees[above]; ok {
-					skipRebase = true
+					ontoMode = spice.BranchOntoRetargetOnly
 					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
 					log.Warnf("%v: Run '%s branch restack' from that worktree to complete the rebase", above, cli.Name())
 				}
@@ -295,9 +298,9 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			log.Debug("Changing upstack branch to a new base",
 				"branch", above, "base", base)
 			if err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
-				Branch:     above,
-				Onto:       base,
-				SkipRebase: skipRebase,
+				Branch: above,
+				Onto:   base,
+				Mode:   ontoMode,
 			}); err != nil {
 				return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 					Err:     err,
@@ -306,7 +309,7 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 					Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
 				})
 			}
-			if skipRebase {
+			if ontoMode == spice.BranchOntoRetargetOnly {
 				log.Infof("%v: retargeted upstack onto %v", above, base)
 				continue
 			}

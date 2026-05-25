@@ -112,9 +112,9 @@ func TestService_BranchOnto_skipRebasePreservesActualBaseBoundary(t *testing.T) 
 	}))
 
 	require.NoError(t, svc.BranchOnto(ctx, &BranchOntoRequest{
-		Branch:     "stacked",
-		Onto:       "main",
-		SkipRebase: true,
+		Branch: "stacked",
+		Onto:   "main",
+		Mode:   BranchOntoRetargetOnly,
 	}))
 
 	retargeted, err := svc.LookupBranch(ctx, "stacked")
