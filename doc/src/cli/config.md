@@ -142,6 +142,24 @@ Passing `gs branch delete --restack`,
 or `gs branch delete --restack=none`
 overrides this configuration for that command.
 
+### spice.branchOnto.restack
+
+<!-- gs:version unreleased -->
+
+Controls how `gs branch onto` restacks branches above the moved branch.
+
+Supported values are:
+
+- `none` (default): retarget branches above the moved branch,
+  so they can be restacked later
+- `aboves`: restack only direct branches above the moved branch
+- `upstack`: restack all upstack branches above the moved branch
+
+Passing `gs branch onto --restack`,
+`gs branch onto --restack=aboves`,
+or `gs branch onto --restack=none`
+overrides this configuration for that command.
+
 ### spice.branchCreate.generatedBranchNameLimit
 
 <!-- gs:version v0.20.0 -->

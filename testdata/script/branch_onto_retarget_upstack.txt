@@ -1,0 +1,60 @@
+# 'branch onto' retargets branches above the moved branch by default.
+
+as 'Test <test@example.com>'
+at '2026-05-26T10:30:00Z'
+
+# set up
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+git add feature3.txt
+gs bc -m feature3
+
+# Move feature2 onto main.
+# feature3 is retargeted in state,
+# and can be restacked explicitly later.
+git checkout feature2
+gs branch onto main
+stderr 'feature3: retargeted upstack onto feature1'
+! stderr 'feature3: moved upstack onto feature1'
+stderr 'feature2: moved onto main'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after-onto.txt
+
+gs branch restack --branch feature3
+stderr 'feature3: restacked on feature1'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after-restack.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- repo/feature3.txt --
+Feature 3
+-- golden/ll-after-onto.txt --
+  ┏━□ feature3 (needs restack)
+  ┃   cda485e feature3 (now)
+┏━┻□ feature1
+┃    33bdea5 feature1 (now)
+┣━■ feature2 ◀
+┃   879767a feature2 (now)
+main
+-- golden/ll-after-restack.txt --
+  ┏━■ feature3 ◀
+  ┃   4723867 feature3 (now)
+┏━┻□ feature1
+┃    33bdea5 feature1 (now)
+┣━□ feature2
+┃   879767a feature2 (now)
+main

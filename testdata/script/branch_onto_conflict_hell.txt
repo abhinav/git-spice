@@ -50,7 +50,7 @@ gs bc -m feature0
 env EDITOR=true GIT_SPICE_VERBOSE=1
 
 gs bco feature1
-! gs branch onto feature0
+! gs branch onto --restack=aboves feature0
 
 # feature2 conflict
 stderr 'There was a conflict while rebasing'

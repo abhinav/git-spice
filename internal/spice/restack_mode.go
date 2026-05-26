@@ -16,17 +16,13 @@ const (
 	// RestackNone leaves surviving upstacks retargeted in state
 	// for a later explicit restack.
 	RestackNone RestackMode = 0
-)
 
-const (
 	// RestackAboves restacks only surviving direct upstacks.
-	RestackAboves RestackMode = 1 << iota
-
-	restackUpstackBranches
+	RestackAboves RestackMode = 0b01
 
 	// RestackUpstack restacks each surviving direct upstack
 	// plus everything above it.
-	RestackUpstack = RestackAboves | restackUpstackBranches
+	RestackUpstack RestackMode = 0b11
 )
 
 var (
@@ -34,6 +30,11 @@ var (
 	_ encoding.TextUnmarshaler = (*RestackMode)(nil)
 	_ encoding.TextMarshaler   = RestackMode(0)
 )
+
+// None reports whether this mode retargets without restacking.
+func (m RestackMode) None() bool {
+	return m == RestackNone
+}
 
 // Includes reports whether this mode includes all behavior in scope.
 func (m RestackMode) Includes(scope RestackMode) bool {

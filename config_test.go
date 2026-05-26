@@ -453,6 +453,104 @@ func TestBranchDeleteRestackFlag(t *testing.T) {
 	}
 }
 
+func TestBranchOntoRestackConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		args    []string
+		want    spice.RestackMode
+		wantErr []string
+	}{
+		{
+			name: "Default",
+			args: []string{"branch", "onto", "--branch", "feature", "main"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "FlagWithoutValue",
+			args: []string{"branch", "onto", "--branch", "feature", "--restack", "main"},
+			want: spice.RestackUpstack,
+		},
+		{
+			name: "FlagFalse",
+			args: []string{"branch", "onto", "--branch", "feature", "--restack=false", "main"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "FlagAboves",
+			args: []string{"branch", "onto", "--branch", "feature", "--restack=aboves", "main"},
+			want: spice.RestackAboves,
+		},
+		{
+			name: "Config",
+			config: joinLines(
+				`[spice "branchOnto"]`,
+				`  restack = aboves`,
+			),
+			args: []string{"branch", "onto", "--branch", "feature", "main"},
+			want: spice.RestackAboves,
+		},
+		{
+			name: "FlagOverridesConfig",
+			config: joinLines(
+				`[spice "branchOnto"]`,
+				`  restack = upstack`,
+			),
+			args: []string{"branch", "onto", "--branch", "feature", "--restack=none", "main"},
+			want: spice.RestackNone,
+		},
+		{
+			name: "Invalid",
+			args: []string{"branch", "onto", "--branch", "feature", "--restack=invalid", "main"},
+			wantErr: []string{
+				`--restack: invalid value "invalid": expected none, aboves, or upstack`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+				git init
+				git commit --allow-empty -m 'Initial commit'
+			`)))
+			require.NoError(t, err)
+			t.Cleanup(fixture.Cleanup)
+			t.Chdir(fixture.Dir())
+
+			spicecfg := loadTestSpiceConfig(t, tt.config)
+
+			var cmd mainCmd
+			logger := silogtest.New(t)
+			var (
+				forges   forge.Registry
+				sigStack sigstack.Stack
+			)
+			parser, err := kong.New(
+				&cmd,
+				kong.Resolvers(spicecfg),
+				kong.Bind(logger, &forges, &sigStack),
+				kong.BindTo(t.Context(), (*context.Context)(nil)),
+				kong.BindTo(spicecfg, (*experiment.Enabler)(nil)),
+				kong.Vars{"defaultPrompt": "false"},
+			)
+			require.NoError(t, err)
+
+			_, err = parser.Parse(tt.args)
+			if len(tt.wantErr) > 0 {
+				require.Error(t, err)
+				for _, msg := range tt.wantErr {
+					assert.ErrorContains(t, err, msg)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, cmd.Branch.Onto.Restack)
+		})
+	}
+}
+
 func loadTestSpiceConfig(t *testing.T, cfg string) *spice.Config {
 	t.Helper()
 

@@ -589,6 +589,12 @@ and move it to a different base branch,
 while leaving the upstack branches where they are.
 
 Use $$gs branch onto$$ for this purpose.
+Branches above the moved branch are retargeted in git-spice state
+and can be restacked later with $$gs branch restack$$,
+$$gs upstack restack$$,
+or another restack command.
+Use `gs branch onto --restack`
+to rebase those branches and their upstacks during the move.
 
 <div class="grid" markdown>
 

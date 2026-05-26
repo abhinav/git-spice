@@ -17,8 +17,9 @@ import (
 type branchOntoCmd struct {
 	BranchPromptConfig
 
-	Branch string `help:"Branch to move" placeholder:"NAME" predictor:"trackedBranches"`
-	Onto   string `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
+	Branch  string            `help:"Branch to move" placeholder:"NAME" predictor:"trackedBranches"`
+	Restack spice.RestackMode `default:"none" config:"branchOnto.restack" enum:"none,aboves,upstack" help:"How to restack branches above the moved branch. One of 'none', 'aboves', and 'upstack'."`
+	Onto    string            `arg:"" optional:"" help:"Destination branch" predictor:"trackedBranches"`
 }
 
 func (*branchOntoCmd) Help() string {
@@ -28,8 +29,11 @@ func (*branchOntoCmd) Help() string {
 		are transplanted onto another branch
 		while leaving the rest of the stack intact.
 		That is, branches above the current branch
-		are first rebased onto its original base,
+		are retargeted onto its original base,
 		and then the current branch is moved onto the new base.
+
+		Use --restack to rebase those branches and their upstacks
+		immediately after retargeting.
 
 		A prompt will allow selecting the new base for the branch.
 		Provide an argument to skip the prompt.
@@ -117,6 +121,15 @@ func (cmd *branchOntoCmd) Run(
 	return handler.BranchOnto(ctx, &onto.BranchRequest{
 		Branch:          cmd.Branch,
 		Onto:            cmd.Onto,
-		ContinueCommand: []string{"branch", "onto", cmd.Onto},
+		Restack:         cmd.Restack,
+		ContinueCommand: cmd.continueCommand(),
 	})
+}
+
+func (cmd *branchOntoCmd) continueCommand() []string {
+	contCmd := []string{"branch", "onto", "--branch", cmd.Branch}
+	if !cmd.Restack.Includes(spice.RestackNone) {
+		contCmd = append(contCmd, "--restack="+cmd.Restack.String())
+	}
+	return append(contCmd, cmd.Onto)
 }
