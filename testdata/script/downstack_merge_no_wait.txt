@@ -1,5 +1,5 @@
 # 'downstack merge --no-wait' skips merge-propagation polling
-# but still retargets and cleans up local branches.
+# only for a single branch.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -29,17 +29,23 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# merge with --no-wait: retargets and cleans up,
-# but does not poll for merge propagation.
+# --no-wait is rejected for multiple branches
+# because it cannot run the local merge queue without waiting.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs downstack merge --no-wait
+stderr '--no-wait can merge only one branch'
+
+# merge a single branch with --no-wait:
+# the merge request is sent,
+# but the command does not poll for merge propagation.
+gs bco feature1
 gs downstack merge --no-wait
-cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
-stderr 'Cleaning up feature1'
-stderr 'Retargeting feature2 to main'
-stderr 'Merging feature2'
-stderr 'Cleaning up feature2'
-stderr 'All 2 change.s. merged.'
+stderr 'All 1 change.s. merged.'
+git branch --list feature1
+stdout 'feature1'
+git branch --list feature2
+stdout 'feature2'
 
 -- repo/feature1.txt --
 This is feature 1
@@ -47,7 +53,6 @@ This is feature 1
 This is feature 2
 -- robot-merge.golden --
 ===
-> Merge 2 change(s) bottom-up?: [Y/n]
+> Merge 1 change(s) bottom-up?: [Y/n]
 >   feature1 (#1)
->   feature2 (#2)
 true

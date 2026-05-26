@@ -42,10 +42,12 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
-stderr 'Cleaning up feature1'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
 stderr 'Merging feature2'
 stderr 'feature3: retargeted upstack onto main'
-stderr 'Cleaning up feature2'
+stderr 'feature2: #2 was merged'
+stderr 'feature2: deleted'
 
 # feature3 still has the full file content before replay.
 gs bco feature3

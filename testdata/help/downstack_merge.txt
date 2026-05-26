@@ -27,14 +27,15 @@ Before each merge, waits for CI checks to pass. Use --build-timeout to configure
 the maximum wait (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge to complete, restacks and
-updates the next PR, waits for CI checks on the updated PR, and cleans up the
-merged local branch. Use --no-wait to skip the propagation polling and the
-between-merge restack/update step.
+updates the next PR, waits for CI checks on the updated PR, and syncs merged
+branch cleanup.
+
+Use --no-wait for single branch merging when you don't want to wait for the
+merge to propagate. --no-wait is rejected for multi-branch merges.
 
 Flags:
   --branch=NAME          Branch to start merging from
-  --no-wait              Skip polling for each merge to propagate (still
-                         retargets and cleans up).
+  --no-wait              Skip polling for a single branch merge to propagate.
   --no-branch-check      Skip stale base validation before merging.
   --build-timeout=30m    Max time to wait for CI checks before each merge.
                          0 means check once. (🔧 spice.merge.buildTimeout)

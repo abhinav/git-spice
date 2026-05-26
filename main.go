@@ -595,7 +595,6 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			secretStash secret.Stash,
 			forges *forge.Registry,
 			repo *git.Repository,
-			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
 			submitHandler SubmitHandler,
 			syncHandler SyncHandler,
@@ -632,7 +631,6 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Restack:          restackHandler,
 				Submit:           submitHandler,
 				Sync:             syncHandler,
-				Delete:           deleteHandler,
 				Repository:       repo,
 				Remote:           remote.Upstream,
 			}, nil

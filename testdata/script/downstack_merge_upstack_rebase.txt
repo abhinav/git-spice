@@ -39,7 +39,8 @@ gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
 stderr 'feature2: retargeted upstack onto main'
-stderr 'Cleaning up feature1'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
 
 # Switch to feature2 and verify it contains feature1's changes.
 # If trunk was not fetched before the upstack rebase,

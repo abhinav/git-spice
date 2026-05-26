@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	branchdel "go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 
@@ -23,7 +22,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-//go:generate mockgen -destination=mocks_test.go -package=merge -write_package_comment=false -typed=true . Service,Store,DeleteHandler,RestackHandler,SubmitHandler,SyncHandler,GitRepository
+//go:generate mockgen -destination=mocks_test.go -package=merge -write_package_comment=false -typed=true . Service,Store,RestackHandler,SubmitHandler,SyncHandler,GitRepository
 
 // fakeChangeID is a simple string-based ChangeID for testing.
 type fakeChangeID string
@@ -206,7 +205,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResult("main"), nil)
 
-	// Each merge: checks -> merge -> awaitMerged -> cleanup -> sync
+	// Each merge: checks -> merge -> awaitMerged -> sync
 	// -> prepare next (except last).
 	expectMergeItem(mockForge, pr1)
 	expectPreparedNext(t, mockForge, pr2)
@@ -230,23 +229,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 		Submit(gomock.Any(), gomock.Any()).
 		DoAndReturn(assertSubmitUpdate(t, "feat3"))
 
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil).
-		Times(3)
-
 	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "origin/feat1").
-		Return("", errors.New("not found"))
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "origin/feat2").
-		Return("", errors.New("not found"))
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "origin/feat3").
-		Return("", errors.New("not found")).
-		AnyTimes()
 	mockGit.EXPECT().
 		PeelToCommit(gomock.Any(), "feat2").
 		Return(git.Hash("head2"), nil)
@@ -263,7 +246,6 @@ func TestExecutePlan_retargets(t *testing.T) {
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
-		delete:    mockDelete,
 		gitRepo:   mockGit,
 		restack:   mockRestack,
 		submit:    mockSubmit,
@@ -300,69 +282,35 @@ func TestExecutePlan_noWait(t *testing.T) {
 	mockStore.EXPECT().Trunk().Return("main")
 
 	pr1 := fakeChangeID("pr-1")
-	pr2 := fakeChangeID("pr-2")
 
 	// Pre-check: pr-1 already targets main.
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResult("main"), nil)
 
-	// Checks and merge for each item.
 	expectChecksAndMerge(mockForge, pr1)
-	expectChecksAndMerge(mockForge, pr2)
 	// No ChangesStates polling (awaitMerged skipped).
-
-	// Retarget pr-2 to main (--no-wait still retargets).
-	mockForge.EXPECT().
-		EditChange(gomock.Any(), pr2,
-			forge.EditChangeOptions{Base: "main"}).
-		Return(nil)
-
-	// Cleanup always runs.
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil).
-		Times(2)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), gomock.Any()).
-		Return("", errors.New("not found")).
-		Times(2)
-
-	mockSync := NewMockSyncHandler(ctrl)
-	mockSync.EXPECT().
-		SyncTrunk(gomock.Any(), syncTrunkOptions()).
-		Return(nil).
-		Times(2)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
-		delete:    mockDelete,
-		gitRepo:   mockGit,
-		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
 	plan := []mergeItem{
 		{branch: "feat1", changeID: pr1},
-		{branch: "feat2", changeID: pr2},
 	}
 
 	err := h.executePlan(t.Context(), plan, &Request{
-		Branch: "feat2",
+		Branch: "feat1",
 		NoWait: true,
 	})
 	require.NoError(t, err)
 
 	output := logBuffer.String()
 	assert.Contains(t, output, "Merging feat1")
-	assert.Contains(t, output, "Merging feat2")
-	assert.Contains(t, output, "Retargeting feat2 to main")
-	assert.Contains(t, output, "Cleaning up feat1")
-	assert.Contains(t, output, "Cleaning up feat2")
+	assert.Contains(t, output, "All 1 change(s) merged")
+	assert.NotContains(t, output, "Cleaning up")
 }
 
 func TestExecutePlan_singleBranch(t *testing.T) {
@@ -381,16 +329,6 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 
 	expectMergeItem(mockForge, pr1)
 
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), gomock.Any()).
-		Return("", errors.New("not found"))
-
 	mockSync := NewMockSyncHandler(ctrl)
 	mockSync.EXPECT().
 		SyncTrunk(gomock.Any(), syncTrunkOptions()).
@@ -399,8 +337,6 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
-		delete:    mockDelete,
-		gitRepo:   mockGit,
 		sync:      mockSync,
 	})
 
@@ -433,16 +369,6 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 
 	expectMergeItem(mockForge, pr1)
 
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), gomock.Any()).
-		Return("", errors.New("not found"))
-
 	mockSync := NewMockSyncHandler(ctrl)
 	mockSync.EXPECT().
 		SyncTrunk(gomock.Any(), syncTrunkOptions()).
@@ -451,8 +377,6 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
-		delete:    mockDelete,
-		gitRepo:   mockGit,
 		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
@@ -484,16 +408,6 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 
 	expectMergeItem(mockForge, pr1)
 
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), gomock.Any()).
-		Return("", errors.New("not found"))
-
 	mockSync := NewMockSyncHandler(ctrl)
 	mockSync.EXPECT().
 		SyncTrunk(gomock.Any(), syncTrunkOptions()).
@@ -502,8 +416,6 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
-		delete:    mockDelete,
-		gitRepo:   mockGit,
 		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
@@ -515,78 +427,6 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 
 	assert.NotContains(t,
 		logBuffer.String(), "Retargeting")
-}
-
-func TestCleanupMerged_deletesRemoteTracking(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	var logBuffer bytes.Buffer
-
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), &branchdel.Request{
-			Branches: []string{"feat1"},
-			Force:    true,
-		}).
-		Return(nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "origin/feat1").
-		Return("abc123", nil)
-	mockGit.EXPECT().
-		DeleteBranch(
-			gomock.Any(), "origin/feat1",
-			git.BranchDeleteOptions{Remote: true},
-		).
-		Return(nil)
-
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		delete:    mockDelete,
-		gitRepo:   mockGit,
-		logBuffer: &logBuffer,
-	})
-
-	h.cleanupMerged(t.Context(), mergeItem{
-		branch:   "feat1",
-		changeID: fakeChangeID("pr-1"),
-	})
-
-	assert.Contains(t,
-		logBuffer.String(), "Cleaning up feat1")
-}
-
-func TestCleanupMerged_usesUpstreamBranch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	mockDelete := NewMockDeleteHandler(ctrl)
-	mockDelete.EXPECT().
-		DeleteBranches(gomock.Any(), gomock.Any()).
-		Return(nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	// Uses upstream name, not local branch name.
-	mockGit.EXPECT().
-		PeelToCommit(
-			gomock.Any(), "origin/ed/feat1",
-		).
-		Return("abc123", nil)
-	mockGit.EXPECT().
-		DeleteBranch(
-			gomock.Any(), "origin/ed/feat1",
-			git.BranchDeleteOptions{Remote: true},
-		).
-		Return(nil)
-
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		delete:  mockDelete,
-		gitRepo: mockGit,
-	})
-
-	h.cleanupMerged(t.Context(), mergeItem{
-		branch:         "feat1",
-		changeID:       fakeChangeID("pr-1"),
-		upstreamBranch: "ed/feat1",
-	})
 }
 
 func TestValidateSynced_allInSync(t *testing.T) {
@@ -734,7 +574,6 @@ func TestValidateSynced_errorSkipped(t *testing.T) {
 type testHandlerOpts struct {
 	forgeRepo *forgetest.MockRepository
 	store     *MockStore
-	delete    *MockDeleteHandler
 	restack   *MockRestackHandler
 	submit    *MockSubmitHandler
 	sync      SyncHandler
@@ -758,7 +597,6 @@ func newTestHandler(
 		RemoteRepository: testForgeRepo(ctrl, opts.forgeRepo),
 		Store:            testStore(ctrl, opts.store),
 		Service:          NewMockService(ctrl),
-		Delete:           testDelete(ctrl, opts.delete),
 		Restack:          testRestack(ctrl, opts.restack),
 		Submit:           testSubmit(ctrl, opts.submit),
 		Sync:             testSync(opts.sync),
@@ -790,15 +628,6 @@ func testStore(
 		return mock
 	}
 	return NewMockStore(ctrl)
-}
-
-func testDelete(
-	ctrl *gomock.Controller, mock *MockDeleteHandler,
-) DeleteHandler {
-	if mock != nil {
-		return mock
-	}
-	return NewMockDeleteHandler(ctrl)
 }
 
 func testRestack(

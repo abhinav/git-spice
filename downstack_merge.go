@@ -14,7 +14,7 @@ import (
 
 type downstackMergeCmd struct {
 	Branch        string        `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
-	NoWait        bool          `help:"Skip polling for each merge to propagate (still retargets and cleans up)."`
+	NoWait        bool          `help:"Skip polling for a single branch merge to propagate."`
 	NoBranchCheck bool          `help:"Skip stale base validation before merging."`
 	BuildTimeout  time.Duration `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
 }
@@ -54,9 +54,11 @@ func (*downstackMergeCmd) Help() string {
 		Between merges, the command waits for each merge
 		to complete, restacks and updates the next PR,
 		waits for CI checks on the updated PR,
-		and cleans up the merged local branch.
-		Use --no-wait to skip the propagation polling
-		and the between-merge restack/update step.
+		and syncs merged branch cleanup.
+
+		Use --no-wait for single branch merging
+		when you don't want to wait for the merge to propagate.
+		--no-wait is rejected for multi-branch merges.
 	`)
 }
 

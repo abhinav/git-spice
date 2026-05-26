@@ -41,15 +41,18 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
-stderr 'Cleaning up feature1'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
 stderr 'Restacking feature2 after merge'
 stderr 'Updated #2'
 stderr 'Merging feature2'
-stderr 'Cleaning up feature2'
+stderr 'feature2: #2 was merged'
+stderr 'feature2: deleted'
 stderr 'Restacking feature3 after merge'
 stderr 'Updated #3'
 stderr 'Merging feature3'
-stderr 'Cleaning up feature3'
+stderr 'feature3: #3 was merged'
+stderr 'feature3: deleted'
 stderr 'All 3 change.s. merged.'
 
 # verify all three changes are now merged

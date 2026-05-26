@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	branchdel "go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 
@@ -37,11 +36,6 @@ type Service interface {
 	) (*spice.LookupBranchResponse, error)
 }
 
-// DeleteHandler allows deleting branches.
-type DeleteHandler interface {
-	DeleteBranches(context.Context, *branchdel.Request) error
-}
-
 // RestackHandler restacks branches after their bases are merged.
 type RestackHandler interface {
 	RestackBranch(context.Context, string) error
@@ -62,10 +56,6 @@ type GitRepository interface {
 	PeelToCommit(
 		ctx context.Context, ref string,
 	) (git.Hash, error)
-	DeleteBranch(
-		ctx context.Context, branch string,
-		opts git.BranchDeleteOptions,
-	) error
 	CommitAheadBehind(
 		ctx context.Context, upstream, head string,
 	) (ahead, behind int, err error)
@@ -76,7 +66,8 @@ type Request struct {
 	Branch string // required
 
 	// NoWait skips polling for each merge to propagate.
-	// Retargeting and cleanup still happen.
+	// Retargeting still happens on a best-effort basis,
+	// but server-dependent cleanup is left to a later sync.
 	NoWait bool
 
 	// NoBranchCheck skips stale base validation.
@@ -100,7 +91,6 @@ type Handler struct {
 	Sync             SyncHandler      // required
 
 	// Cleanup dependencies:
-	Delete     DeleteHandler // required
 	Repository GitRepository // required
 	Remote     string        // required
 }
@@ -161,6 +151,13 @@ func (h *Handler) buildPlan(
 	plan, err := h.filterMerged(ctx, items)
 	if err != nil {
 		return nil, fmt.Errorf("filter merged changes: %w", err)
+	}
+	if req.NoWait && len(plan) > 1 {
+		return nil, fmt.Errorf(
+			"--no-wait can merge only one branch; "+
+				"got %d branches",
+			len(plan),
+		)
 	}
 
 	if err := h.validateSynced(ctx, plan); err != nil {
@@ -415,14 +412,27 @@ func (h *Handler) postMerge(
 		}
 	}
 
-	h.cleanupMerged(ctx, item)
+	if req.NoWait {
+		if lastItem {
+			return nil
+		}
 
-	// Sync trunk so that the local ref includes
-	// the just-merged commit before the next branch is restacked.
+		next := &plan[idx+1]
+		if err := h.retargetChange(ctx, *next, trunk); err != nil {
+			h.Log.Warn("Retarget may have failed "+
+				"(merge may not have propagated yet)",
+				"branch", next.branch, "error", err)
+		}
+		return nil
+	}
+
+	// Sync trunk after the merge settles.
+	// This also lets repo sync own merged branch cleanup
+	// and merged-downstack bookkeeping.
 	if err := h.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
 		ClosedChanges: sync.ClosedChangesIgnore,
 	}); err != nil {
-		if !lastItem && !req.NoWait {
+		if !lastItem {
 			return fmt.Errorf("sync trunk: %w", err)
 		}
 		h.Log.Warn("Unable to sync trunk after merge",
@@ -433,18 +443,7 @@ func (h *Handler) postMerge(
 		return nil
 	}
 
-	// Retarget next PR to trunk.
-	// If --no-wait, merge may not have propagated yet;
-	// log a warning on failure instead of aborting.
 	next := &plan[idx+1]
-	if req.NoWait {
-		if err := h.retargetChange(ctx, *next, trunk); err != nil {
-			h.Log.Warn("Retarget may have failed "+
-				"(merge may not have propagated yet)",
-				"branch", next.branch, "error", err)
-		}
-		return nil
-	}
 	return h.prepareNext(ctx, next, req)
 }
 
@@ -680,56 +679,6 @@ func (h *Handler) retargetChange(
 			item.branch, trunk, err)
 	}
 	return nil
-}
-
-// cleanupMerged deletes the local and remote tracking
-// branches for a branch that was just merged.
-func (h *Handler) cleanupMerged(
-	ctx context.Context, item mergeItem,
-) {
-	// TODO: Replace this with sync.Handler cleanup
-	// once it exposes a targeted post-merge cleanup operation.
-	h.Log.Infof("Cleaning up %s...", item.branch)
-
-	err := h.Delete.DeleteBranches(ctx, &branchdel.Request{
-		Branches: []string{item.branch},
-		Force:    true,
-	})
-	if err != nil {
-		h.Log.Warn("Unable to delete local branch",
-			"branch", item.branch, "error", err)
-	}
-
-	h.deleteRemoteTracking(ctx, item)
-}
-
-// deleteRemoteTracking removes the remote tracking ref
-// for the given branch if it exists.
-func (h *Handler) deleteRemoteTracking(
-	ctx context.Context, item mergeItem,
-) {
-	upstream := item.upstreamBranch
-	if upstream == "" {
-		upstream = item.branch
-	}
-
-	remoteBranch := h.Remote + "/" + upstream
-	if _, err := h.Repository.PeelToCommit(
-		ctx, remoteBranch,
-	); err != nil {
-		return // does not exist
-	}
-
-	err := h.Repository.DeleteBranch(
-		ctx, remoteBranch,
-		git.BranchDeleteOptions{Remote: true},
-	)
-	if err != nil {
-		h.Log.Warn(
-			"Unable to delete remote tracking branch",
-			"branch", remoteBranch, "error", err,
-		)
-	}
 }
 
 func sleep(ctx context.Context, d time.Duration) error {

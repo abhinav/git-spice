@@ -39,7 +39,8 @@ gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feat1'
 stderr 'feat2: retargeted upstack onto main'
-stderr 'Cleaning up feat1'
+stderr 'feat1: #1 was merged'
+stderr 'feat1: deleted'
 
 # verify all files are present on feat3
 gs bco feat3
