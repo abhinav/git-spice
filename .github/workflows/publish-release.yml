@@ -35,6 +35,13 @@ on:
         required: false
         default: '1'
         type: string
+      ppa_series:
+        description: >-
+          Comma-separated Ubuntu series for PPA publishing.
+          Set this to resume a partial PPA upload.
+        required: false
+        default: noble,plucky,questing,resolute
+        type: string
 
 permissions:
   contents: write
@@ -216,7 +223,7 @@ jobs:
         go run ./tools/ci/launchpad-ppa \
           -version "v${VERSION}" \
           -ref "${REF}" \
-          -series noble,plucky,questing,resolute \
+          -series "${PPA_SERIES}" \
           -ppa-revision "${PPA_REVISION}" \
           -sign \
           -dput
@@ -224,4 +231,5 @@ jobs:
         LAUNCHPAD_GPG_KEY_ID: ${{ secrets.LAUNCHPAD_GPG_KEY_ID }}
         LAUNCHPAD_GPG_PASSPHRASE: ${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}
         PPA_REVISION: ${{ inputs.ppa_revision }}
+        PPA_SERIES: ${{ inputs.ppa_series }}
         REF: ${{ inputs.ref }}

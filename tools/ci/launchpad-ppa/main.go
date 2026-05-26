@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -160,7 +161,11 @@ func run(log *silog.Logger, req publishRequest) error {
 		workDir,
 		fmt.Sprintf("%s_%s.orig.tar.gz", _packageName, plan.UpstreamVersion),
 	)
-	if err := writeOrigTar(log, sourceDir, origTar); err != nil {
+	mtime, err := sourceModTime(ctx, log, root, plan.Ref)
+	if err != nil {
+		return fmt.Errorf("resolve source modification time: %w", err)
+	}
+	if err := writeOrigTar(log, sourceDir, origTar, mtime); err != nil {
 		return fmt.Errorf("write orig tarball: %w", err)
 	}
 
@@ -185,7 +190,7 @@ func run(log *silog.Logger, req publishRequest) error {
 
 		if plan.Dput {
 			log.Info("Uploading source package", "series", series, "changes", changes)
-			if err := xec.Command(ctx, log, "dput", plan.DputTarget, changes).
+			if err := xec.Command(ctx, log, "dput", "--unchecked", plan.DputTarget, changes).
 				Run(); err != nil {
 				return fmt.Errorf("dput %s: %w", series, err)
 			}
@@ -379,7 +384,41 @@ func exportSource(
 	return nil
 }
 
-func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
+func sourceModTime(
+	ctx context.Context,
+	log *silog.Logger,
+	root string,
+	ref string,
+) (time.Time, error) {
+	out, err := xec.Command(
+		ctx,
+		log,
+		"git",
+		"log",
+		"-1",
+		"--format=%ct",
+		ref,
+	).
+		WithDir(root).
+		OutputChomp()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read commit timestamp: %w", err)
+	}
+
+	sec, err := strconv.ParseInt(out, 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("parse commit timestamp %q: %w", out, err)
+	}
+
+	return time.Unix(sec, 0).UTC(), nil
+}
+
+func writeOrigTar(
+	log *silog.Logger,
+	sourceDir string,
+	dest string,
+	mtime time.Time,
+) error {
 	log.Info("Writing deterministic orig tarball", "path", dest)
 
 	f, err := os.Create(dest)
@@ -393,10 +432,10 @@ func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
 		return fmt.Errorf("create gzip writer: %w", err)
 	}
 	gz.Name = ""
-	gz.ModTime = time.Unix(0, 0).UTC()
+	gz.ModTime = mtime
 
 	tw := tar.NewWriter(gz)
-	if err := writeTarTree(tw, sourceDir); err != nil {
+	if err := writeTarTree(tw, sourceDir, mtime); err != nil {
 		_ = tw.Close()
 		_ = gz.Close()
 		return err
@@ -412,7 +451,7 @@ func writeOrigTar(log *silog.Logger, sourceDir string, dest string) error {
 	return nil
 }
 
-func writeTarTree(tw *tar.Writer, sourceDir string) error {
+func writeTarTree(tw *tar.Writer, sourceDir string, mtime time.Time) error {
 	return filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -452,9 +491,9 @@ func writeTarTree(tw *tar.Writer, sourceDir string) error {
 			return fmt.Errorf("create tar header for %s: %w", path, err)
 		}
 		header.Name = name
-		header.ModTime = time.Unix(0, 0).UTC()
-		header.AccessTime = time.Unix(0, 0).UTC()
-		header.ChangeTime = time.Unix(0, 0).UTC()
+		header.ModTime = mtime
+		header.AccessTime = mtime
+		header.ChangeTime = mtime
 		header.Uid = 0
 		header.Gid = 0
 		header.Uname = ""

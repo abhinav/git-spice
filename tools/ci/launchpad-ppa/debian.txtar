@@ -60,6 +60,7 @@ _build/git-spice usr/bin
 export GO111MODULE := on
 export GOFLAGS := -mod=vendor -trimpath
 export GOTOOLCHAIN := local
+export GOCACHE := $(CURDIR)/_build/go-cache
 
 VERSION := $(shell dpkg-parsechangelog -S Version | sed 's/-.*//')
 
