@@ -218,6 +218,8 @@ The current package recipe targets Ubuntu Noble and newer series.
 It requires a Go 1.26 toolchain package
 from the configured Launchpad build dependencies
 for each target series.
+When building source packages locally,
+install `debhelper`, `devscripts`, and `dput` first.
 
 For GitHub Actions publishing,
 configure these secrets in the release environment:

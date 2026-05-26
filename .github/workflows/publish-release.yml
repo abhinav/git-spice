@@ -196,7 +196,7 @@ jobs:
     - name: Install Debian upload tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y devscripts dput
+        sudo apt-get install -y debhelper devscripts dput
 
     - name: Import Launchpad signing key
       run: |
