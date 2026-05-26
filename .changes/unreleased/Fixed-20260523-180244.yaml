@@ -1,4 +1,0 @@
-kind: Fixed
-body: >-
-  top: Fix --detach not being honored when already on the top-most branch.
-time: 2026-05-23T18:02:44.277084-07:00

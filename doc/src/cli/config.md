@@ -126,7 +126,7 @@ Commonly used values are:
 
 ### spice.branchDelete.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Controls how $$gs branch delete$$ restacks branches above deleted branches.
 
@@ -144,7 +144,7 @@ overrides this configuration for that command.
 
 ### spice.branchOnto.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Controls how `gs branch onto` restacks branches above the moved branch.
 
@@ -476,7 +476,7 @@ will be combined with the configured labels.
 
 ### spice.submit.label.addWhen
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Controls when $$spice.submit.label$$ are added to change requests.
 
@@ -701,7 +701,7 @@ regardless of this setting.
 
 ### spice.repoSync.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Which branches to restack after syncing trunk
 and deleting merged branches with $$gs repo sync$$.

@@ -645,7 +645,7 @@ and delete it from the repository.
 Branches that are upstack from the deleted branch
 are retargeted onto the deleted branch's original base branch.
 
-<!-- gs:version unreleased -->,
+<!-- gs:version v0.29.0 -->,
 Branches upstack from deleted branches are not rebased by default,
 so you must run $$gs branch restack$$ later to replay the surviving branches,
 or use `gs branch delete --restack` to rebase them as part of the operation.
