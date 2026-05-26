@@ -156,7 +156,7 @@ type Style struct {
 	PushStatus ui.Style
 
 	// NeedsRestack styles the needs-restack indicator.
-	// Must include the text " (needs restack)" via SetString.
+	// Must include the text "(needs restack)" via SetString.
 	NeedsRestack ui.Style
 
 	// NodeMarker is the default node marker style.
@@ -210,7 +210,7 @@ var DefaultStyle = Style{
 	CommentCountsResolved: ui.NewStyle().Foreground(ui.Green),
 	Worktree:              ui.NewStyle().Faint(true),
 	PushStatus:            ui.NewStyle().Foreground(ui.Yellow).Faint(true),
-	NeedsRestack:          ui.NewStyle().Foreground(ui.Gray).SetString(" (needs restack)"), // TODO: drop leading space
+	NeedsRestack:          ui.NewStyle().Foreground(ui.Gray).SetString("(needs restack)"),
 	NodeMarker:            fliptree.DefaultNodeMarker,
 	NodeMarkerHighlighted: fliptree.DefaultNodeMarker.SetString("■"),
 	NodeMarkerDisabled:    fliptree.DefaultNodeMarker.Faint(true),
@@ -342,6 +342,7 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 	}
 
 	if item.NeedsRestack {
+		sb.WriteString(" ")
 		sb.WriteString(r.Style.NeedsRestack.String())
 	}
 

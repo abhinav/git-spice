@@ -584,7 +584,7 @@ func plainStyle() *Style {
 		},
 		Worktree:              ui.NewStyle(),
 		PushStatus:            ui.NewStyle(),
-		NeedsRestack:          ui.NewStyle().SetString(" (needs restack)"),
+		NeedsRestack:          ui.NewStyle().SetString("(needs restack)"),
 		NodeMarker:            ui.NewStyle().SetString("□"),
 		NodeMarkerHighlighted: ui.NewStyle().SetString("■"),
 		NodeMarkerDisabled:    ui.NewStyle().SetString("□"),
