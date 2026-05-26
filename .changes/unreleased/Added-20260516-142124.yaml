@@ -1,6 +1,0 @@
-kind: Added
-body: >-
-  commit fixup: Add --edit flag to allow editing commit messages.
-  This runs appropriate Git message hooks by default.
-  The commit-msg hook may be skipped with the --no-verify flag.
-time: 2026-05-16T14:21:24.899976-07:00

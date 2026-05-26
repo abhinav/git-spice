@@ -83,7 +83,7 @@ yay -S git-spice-bin
 
 ### Ubuntu PPA
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 If you're using Ubuntu,
 install git-spice from the official PPA:
