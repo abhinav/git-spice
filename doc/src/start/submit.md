@@ -188,8 +188,10 @@ it will prompt you to create a CR for it.
     gs repo sync
     ```
 
-    This will delete `feat1` locally,
-    and rebase `feat2` on top of `main`.
+    This will delete `feat1` locally
+    and retarget `feat2` onto `main`.
+    To rebase `feat2` immediately,
+    run `gs repo sync --restack` instead.
 
 3. Submit the CR for `feat2` to update the pull request
    if necessary.

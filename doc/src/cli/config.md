@@ -124,6 +124,42 @@ Commonly used values are:
 - `<name>/`: the committer's name
 - `<username>/`: the committer's username
 
+### spice.branchDelete.restack
+
+<!-- gs:version unreleased -->
+
+Controls how $$gs branch delete$$ restacks branches above deleted branches.
+
+Supported values are:
+
+- `none` (default): retarget branches above deleted branches,
+  so they can be restacked later
+- `aboves`: restack only direct branches above deleted branches
+- `upstack`: restack all upstack branches above deleted branches
+
+Passing `gs branch delete --restack`,
+`gs branch delete --restack=aboves`,
+or `gs branch delete --restack=none`
+overrides this configuration for that command.
+
+### spice.branchOnto.restack
+
+<!-- gs:version unreleased -->
+
+Controls how `gs branch onto` restacks branches above the moved branch.
+
+Supported values are:
+
+- `none` (default): retarget branches above the moved branch,
+  so they can be restacked later
+- `aboves`: restack only direct branches above the moved branch
+- `upstack`: restack all upstack branches above the moved branch
+
+Passing `gs branch onto --restack`,
+`gs branch onto --restack=aboves`,
+or `gs branch onto --restack=none`
+overrides this configuration for that command.
+
 ### spice.branchCreate.generatedBranchNameLimit
 
 <!-- gs:version v0.20.0 -->
@@ -675,6 +711,23 @@ When the check is skipped,
 a warning is logged to indicate that the branch is outdated.
 The `--force` flag always bypasses the check
 regardless of this setting.
+
+### spice.repoSync.restack
+
+<!-- gs:version unreleased -->
+
+Which branches to restack after syncing trunk
+and deleting merged branches with $$gs repo sync$$.
+
+**Accepted values:**
+
+- `none` (default): do not restack anything
+- `aboves`: restack only direct upstacks of deleted branches
+- `upstack`: restack all upstacks of deleted branches
+
+The command-line flag uses the same values.
+Bare `gs repo sync --restack` selects `upstack`.
+`gs repo sync --restack=false` selects `none`.
 
 ### spice.repoSync.closedChanges
 

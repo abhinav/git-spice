@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 
 	t.Run("SingleDeletion", func(t *testing.T) {
 		// main -> A -> B; A deleted, B survives with change.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "A"}},
 			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
@@ -49,7 +50,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
 			}),
-		)
+		))
 
 		assert.Equal(t, []retargetCandidate{
 			{branch: "B", changeID: fakeChangeID("pr-2"), newBase: "main"},
@@ -58,7 +59,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 
 	t.Run("MultiLevel", func(t *testing.T) {
 		// main -> A -> B -> C; A and B deleted, C survives.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{
 				{BranchName: "A"},
 				{BranchName: "B"},
@@ -72,7 +73,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
 			}),
-		)
+		))
 
 		assert.Equal(t, []retargetCandidate{
 			{branch: "C", changeID: fakeChangeID("pr-3"), newBase: "main"},
@@ -81,20 +82,20 @@ func TestCollectRetargetCandidates(t *testing.T) {
 
 	t.Run("NoChange", func(t *testing.T) {
 		// A deleted, B survives but has no published change.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "A"}},
 			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
 				{Name: "B", Base: "A"},
 			}),
-		)
+		))
 
 		assert.Empty(t, got)
 	})
 
 	t.Run("UpstackAlsoDeleted", func(t *testing.T) {
 		// A and B both deleted — no retarget candidates.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{
 				{BranchName: "A"},
 				{BranchName: "B"},
@@ -107,14 +108,14 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
 			}),
-		)
+		))
 
 		assert.Empty(t, got)
 	})
 
 	t.Run("BaseNotDeleted", func(t *testing.T) {
 		// A is not deleted; B's base is not in the deletion set.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "X"}},
 			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
@@ -124,7 +125,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-2")},
 				},
 			}),
-		)
+		))
 
 		assert.Empty(t, got)
 	})
@@ -132,7 +133,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 	t.Run("CyclicBases", func(t *testing.T) {
 		// A -> B -> A (cycle), both deleted, C survives.
 		// Should fall back to trunk instead of looping.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{
 				{BranchName: "A"},
 				{BranchName: "B"},
@@ -146,7 +147,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
 			}),
-		)
+		))
 
 		assert.Equal(t, []retargetCandidate{
 			{branch: "C", changeID: fakeChangeID("pr-3"), newBase: "main"},
@@ -156,7 +157,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 	t.Run("SurvivingNonTrunkAncestor", func(t *testing.T) {
 		// main -> A -> B -> C; B deleted, A survives.
 		// C should retarget to A, not main.
-		got := collectRetargetCandidates(
+		got := slices.Collect(collectRetargetCandidates(
 			[]branchDeletion{{BranchName: "B"}},
 			branchGraph([]spice.LoadBranchItem{
 				{Name: "A", Base: "main"},
@@ -167,7 +168,7 @@ func TestCollectRetargetCandidates(t *testing.T) {
 					Change: &fakeChangeMetadata{id: fakeChangeID("pr-3")},
 				},
 			}),
-		)
+		))
 
 		assert.Equal(t, []retargetCandidate{
 			{branch: "C", changeID: fakeChangeID("pr-3"), newBase: "A"},

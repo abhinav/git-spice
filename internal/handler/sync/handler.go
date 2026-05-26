@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"maps"
 	"runtime"
 	"slices"
 	"sort"
@@ -20,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/handler/autostash"
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -74,9 +76,11 @@ type DeleteHandler interface {
 	DeleteBranches(context.Context, *branchdel.Request) error
 }
 
-// RestackHandler allows restacking the current stack.
+// RestackHandler allows restacking branches after sync
+// has removed their downstack branches.
 type RestackHandler interface {
-	RestackStack(ctx context.Context, branch string) error
+	RestackBranch(ctx context.Context, branch string) error
+	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
 }
 
 // AutostashHandler is a subset of the autostash.Handler interface.
@@ -165,8 +169,8 @@ func (c ClosedChanges) String() string {
 type TrunkOptions struct {
 	// TODO: flag to not delete merged branches?
 
-	Restack       bool          `help:"Restack the current stack after syncing"`
-	ClosedChanges ClosedChanges `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
+	Restack       spice.RestackMode `default:"none" config:"repoSync.restack" enum:"none,aboves,upstack" help:"How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'."`
+	ClosedChanges ClosedChanges     `default:"ask" config:"repoSync.closedChanges" enum:"ask,ignore" help:"How to handle closed change requests. One of 'ask' and 'ignore'." hidden:""`
 }
 
 // SyncTrunk syncs the trunk branch with the remote repository,
@@ -185,13 +189,13 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		currentBranch = "" // detached head
 	}
 
-	autostashCleanupOptions := autostash.CleanupOptions{
-		RescueBranch: currentBranch,
-	}
+	autostashRescueBranch := currentBranch
 	var autostashCleanup func(*error, *autostash.CleanupOptions)
 	defer func() {
 		if autostashCleanup != nil {
-			autostashCleanup(&retErr, &autostashCleanupOptions)
+			autostashCleanup(&retErr, &autostash.CleanupOptions{
+				RescueBranch: autostashRescueBranch,
+			})
 		}
 	}()
 
@@ -403,64 +407,69 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	}
 
-	if len(branchesToDelete) > 0 {
-		if err := beginAutostash(); err != nil {
-			return err
-		}
+	if len(branchesToDelete) == 0 {
+		return nil
+	}
 
-		// If sync deletes the branch we started on,
-		// a later rescued rebase cannot resume on that branch.
-		// Point autostash rescue
-		// at the branch sync intends to leave us on after deletion instead:
-		// trunk in the usual case,
-		// or no branch at all if trunk is checked out
-		// in another worktree
-		// and deletion leaves this worktree detached.
-		//
-		// If the current branch is not being deleted,
-		// keep rescuing onto that branch.
-		deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
-			return b.BranchName == currentBranch
-		})
-		if deletingCurrentBranch {
-			if trunkCheckedOutElsewhere {
-				autostashCleanupOptions.RescueBranch = ""
-			} else {
-				autostashCleanupOptions.RescueBranch = trunk
-			}
+	// Build the restack plan before deletion,
+	// while the branch graph still contains the soon-to-be-deleted bases.
+	// The plan is filtered after deletion
+	// because branches checked out in other worktrees are skipped.
+	restackPlan := planDeletedBranchRestacks(opts.Restack, branchesToDelete, branchGraph)
+
+	if err := beginAutostash(); err != nil {
+		return err
+	}
+
+	// If sync deletes the branch we started on,
+	// a later rescued operation cannot resume there.
+	// Rescue onto the branch sync intends to leave checked out instead:
+	// trunk in the usual case,
+	// or no branch if trunk is checked out elsewhere.
+	// Otherwise, keep rescuing onto the original current branch.
+	branchAfterDelete := currentBranch
+	deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
+		return b.BranchName == currentBranch
+	})
+	if deletingCurrentBranch {
+		if trunkCheckedOutElsewhere {
+			branchAfterDelete = ""
 		} else {
-			autostashCleanupOptions.RescueBranch = currentBranch
+			branchAfterDelete = trunk
 		}
+	}
+	autostashRescueBranch = branchAfterDelete
 
-		if err := h.deleteBranches(ctx, branchesToDelete); err != nil {
-			return err
-		}
+	deletedBranchNames, err := h.deleteBranches(ctx, branchesToDelete)
+	if err != nil {
+		return err
 	}
 
 	// Retarget surviving upstack PRs on the forge
 	// around branches that are finished there.
 	if h.RemoteRepository != nil {
 		h.retargetUpstackChanges(ctx,
-			collectRetargetCandidates(
-				branchesToDelete, branchGraph,
-			))
+			collectRetargetCandidates(branchesToDelete, branchGraph))
 	}
 
-	if opts.Restack {
-		if err := beginAutostash(); err != nil {
-			return err
+	if targets := restackPlan.targets(deletedBranchNames); len(targets) > 0 {
+		for _, target := range targets {
+			// Autostash cleanup records the rescue branch
+			// if this restack is interrupted.
+			// Keep it aligned with the restack target currently in flight,
+			// not merely the first target in the plan.
+			autostashRescueBranch = target
+			if err := h.restackDeletedBranchUpstack(ctx, opts.Restack, target); err != nil {
+				return err
+			}
 		}
-
-		// current branch may have changed after deletion
-		// of merged branches.
-		currentBranch, err := h.Worktree.CurrentBranch(ctx)
-		if err != nil {
-			log.Warn("Failed to get current branch, skipping restack", "error", err)
-		} else {
-			autostashCleanupOptions.RescueBranch = currentBranch
-			// TODO: if the merged branch leaves us on trunk
-			// --restack will end up restacking all known branches.
-			return h.Restack.RestackStack(ctx, currentBranch)
+		// Successful restacks may leave us on the final target.
+		// Return to the branch that sync would have selected after deletion.
+		if branchAfterDelete != "" && branchAfterDelete != targets[len(targets)-1] {
+			autostashRescueBranch = branchAfterDelete
+			if err := h.Worktree.CheckoutBranch(ctx, branchAfterDelete); err != nil {
+				return fmt.Errorf("checkout branch %v: %w", branchAfterDelete, err)
+			}
 		}
 	}
 
@@ -903,14 +912,95 @@ func mergedChangeHeadCheck(
 	return mergedChangeHeadMismatch
 }
 
+// branchDeletion describes a local branch that repo sync may delete
+// because its upstream change is finished
+// or its commits are already reachable from trunk.
 type branchDeletion struct {
-	BranchName   string
+	// BranchName is the local branch to delete.
+	BranchName string
+
+	// UpstreamName is the remote-tracking branch to delete with it,
+	// when one exists.
 	UpstreamName string
 }
 
-func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion) error {
-	if len(branchesToDelete) == 0 {
+// deletedBranchRestackPlan records direct upstacks that survive deletion.
+//
+// The map is keyed by deletion candidate,
+// not by branches that were actually deleted.
+// This keeps planning separate from worktree-safety filtering:
+// targets applies the delete handler's result before restacking.
+type deletedBranchRestackPlan map[string][]string // branch => surviving aboves
+
+func planDeletedBranchRestacks(
+	mode spice.RestackMode,
+	branchesToDelete []branchDeletion,
+	branchGraph *spice.BranchGraph,
+) deletedBranchRestackPlan {
+	if !mode.Includes(spice.RestackAboves) || len(branchesToDelete) == 0 {
 		return nil
+	}
+
+	deleted := make(map[string]struct{}, len(branchesToDelete))
+	for _, branch := range branchesToDelete {
+		deleted[branch.BranchName] = struct{}{}
+	}
+
+	plan := make(deletedBranchRestackPlan, len(branchesToDelete))
+	for _, branch := range branchesToDelete {
+		for above := range branchGraph.Aboves(branch.BranchName) {
+			if _, ok := deleted[above]; ok {
+				continue
+			}
+			plan[branch.BranchName] = append(plan[branch.BranchName], above)
+		}
+	}
+	return plan
+}
+
+func (p deletedBranchRestackPlan) targets(deletedBranches []string) []string {
+	if len(p) == 0 || len(deletedBranches) == 0 {
+		return nil
+	}
+
+	// Multiple adjacent deletions can point at the same surviving branch.
+	// For example, deleting both a and b in a -> b -> c
+	// should restack only from c.
+	targetSet := make(map[string]struct{})
+	for _, branch := range deletedBranches {
+		for _, above := range p[branch] {
+			targetSet[above] = struct{}{}
+		}
+	}
+
+	return slices.Sorted(maps.Keys(targetSet))
+}
+
+func (h *Handler) restackDeletedBranchUpstack(
+	ctx context.Context,
+	mode spice.RestackMode,
+	target string,
+) error {
+	switch {
+	case mode.Includes(spice.RestackUpstack):
+		if err := h.Restack.RestackUpstack(ctx, target, nil); err != nil {
+			return fmt.Errorf("restack upstack %q: %w", target, err)
+		}
+	case mode.Includes(spice.RestackAboves):
+		if err := h.Restack.RestackBranch(ctx, target); err != nil {
+			return fmt.Errorf("restack branch %q: %w", target, err)
+		}
+	case mode.Includes(spice.RestackNone):
+		return nil
+	default:
+		return fmt.Errorf("unknown restack mode: %v", mode)
+	}
+	return nil
+}
+
+func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchDeletion) ([]string, error) {
+	if len(branchesToDelete) == 0 {
+		return nil, nil
 	}
 
 	allBranchNames := make([]string, len(branchesToDelete))
@@ -943,7 +1033,7 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 		Force:    true,
 	})
 	if err != nil {
-		return fmt.Errorf("delete merged branches: %w", err)
+		return nil, fmt.Errorf("delete merged branches: %w", err)
 	}
 
 	// Also delete the remote tracking branch for this branch
@@ -964,7 +1054,7 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 		}
 	}
 
-	return nil
+	return deleteBranchNames, nil
 }
 
 // retargetCandidate is a branch whose forge change
@@ -985,43 +1075,42 @@ type retargetCandidate struct {
 func collectRetargetCandidates(
 	deletions []branchDeletion,
 	branchGraph *spice.BranchGraph,
-) []retargetCandidate {
-	deletedNames := make(map[string]struct{}, len(deletions))
-	for _, d := range deletions {
-		deletedNames[d.BranchName] = struct{}{}
-	}
-
-	var result []retargetCandidate
-	for c := range branchGraph.All() {
-		if _, deleted := deletedNames[c.Name]; deleted {
-			continue
-		}
-		if c.Change == nil {
-			continue
-		}
-		if _, baseDeleted := deletedNames[c.Base]; !baseDeleted {
-			continue
+) iter.Seq[retargetCandidate] {
+	return func(yield func(retargetCandidate) bool) {
+		deletedNames := make(map[string]struct{}, len(deletions))
+		for _, d := range deletions {
+			deletedNames[d.BranchName] = struct{}{}
 		}
 
-		result = append(result, retargetCandidate{
-			branch:   c.Name,
-			changeID: c.Change.ChangeID(),
-			newBase: branchGraph.NextBase(c.Name, func(branch string) bool {
-				_, deleted := deletedNames[branch]
-				return deleted
-			}),
-		})
+		for c := range branchGraph.All() {
+			if _, deleted := deletedNames[c.Name]; deleted {
+				continue
+			}
+			if c.Change == nil {
+				continue
+			}
+			if _, baseDeleted := deletedNames[c.Base]; !baseDeleted {
+				continue
+			}
+
+			if !yield(retargetCandidate{
+				branch:   c.Name,
+				changeID: c.Change.ChangeID(),
+				newBase: branchGraph.NextBase(c.Name, func(branch string) bool {
+					_, deleted := deletedNames[branch]
+					return deleted
+				}),
+			}) {
+				return
+			}
+		}
 	}
-	return result
 }
 
 // retargetUpstackChanges retargets forge changes
 // for upstack branches surviving deletion.
-func (h *Handler) retargetUpstackChanges(
-	ctx context.Context,
-	candidates []retargetCandidate,
-) {
-	for _, c := range candidates {
+func (h *Handler) retargetUpstackChanges(ctx context.Context, candidates iter.Seq[retargetCandidate]) {
+	for c := range candidates {
 		h.Log.Infof("Retargeting %s to %s...",
 			c.branch, c.newBase)
 		err := h.RemoteRepository.EditChange(

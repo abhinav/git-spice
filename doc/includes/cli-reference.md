@@ -156,11 +156,17 @@ The repository must have a remote associated for syncing.
 A prompt will ask for one if the repository
 was not initialized with a remote.
 
+Branches above merged and deleted branches
+are retargeted to the trunk branch.
+Run with --restack to also restack them and their upstacks.
+Run with --restack=aboves to only restack direct upstacks
+of deleted branches, leaving higher branches in place.
+
 **Flags**
 
-* `--restack`: Restack the current stack after syncing
+* `--restack` ([:material-wrench:{ .middle title="spice.repoSync.restack" }](/cli/config.md#spicereposyncrestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges)
+**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges), [spice.repoSync.restack](/cli/config.md#spicereposyncrestack)
 
 ### git-spice repo restack {#gs-repo-restack}
 
@@ -820,9 +826,12 @@ gs branch (b) delete (d,rm) [<branches> ...] [flags]
 Delete branches
 
 The deleted branches and their commits are removed from the stack.
-Branches above the deleted branches are first rebased onto
+Branches above the deleted branches are retargeted onto
 the next branches available downstack,
 or onto trunk if there are no branches available below.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 Without any arguments,
 a prompt will allow selecting the branch to delete.
@@ -838,8 +847,9 @@ Use --force to delete the branch regardless of unmerged changes.
 **Flags**
 
 * `--force`: Force deletion of the branch
+* `--restack` ([:material-wrench:{ .middle title="spice.branchDelete.restack" }](/cli/config.md#spicebranchdeleterestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchDelete.restack](/cli/config.md#spicebranchdeleterestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch fold {#gs-branch-fold}
 
@@ -1009,8 +1019,11 @@ Commits of the current branch
 are transplanted onto another branch
 while leaving the rest of the stack intact.
 That is, branches above the current branch
-are first rebased onto its original base,
+are retargeted onto its original base,
 and then the current branch is moved onto the new base.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 A prompt will allow selecting the new base for the branch.
 Provide an argument to skip the prompt.
@@ -1036,8 +1049,9 @@ Use 'gs upstack onto' to also move the upstack branches.
 **Flags**
 
 * `--branch=NAME`: Branch to move
+* `--restack` ([:material-wrench:{ .middle title="spice.branchOnto.restack" }](/cli/config.md#spicebranchontorestack)): How to restack branches above the moved branch. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchOnto.restack](/cli/config.md#spicebranchontorestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch diff {#gs-branch-diff}
 

@@ -10,6 +10,21 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
+// BranchOntoMode specifies how BranchOnto moves one branch to its new base.
+type BranchOntoMode int
+
+const (
+	// BranchOntoRebase updates state and rebases the branch's own commits.
+	BranchOntoRebase BranchOntoMode = iota
+
+	// BranchOntoRetargetOnly updates state
+	// without rebasing the branch's commits.
+	//
+	// The old upstream boundary is preserved
+	// so a future restack can replay the branch correctly.
+	BranchOntoRetargetOnly
+)
+
 // BranchOntoRequest is a request to move a branch onto another branch.
 type BranchOntoRequest struct {
 	// Branch is the branch to move.
@@ -23,11 +38,9 @@ type BranchOntoRequest struct {
 	// MergedDownstack for [Branch], if any.
 	MergedDownstack *[]json.RawMessage
 
-	// SkipRebase indicates that the branch's base should be updated,
-	// but no rebase should be performed.
-	// The old base hash is preserved to allow future restack operations
-	// to correctly rebase the branch.
-	SkipRebase bool
+	// Mode controls whether Branch's commits are rebased immediately
+	// or only retargeted in git-spice state.
+	Mode BranchOntoMode
 }
 
 // BranchOnto moves the commits of a branch onto a different base branch,
@@ -127,13 +140,15 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 
 	branchTx := s.store.BeginBranchTx()
 
-	// When SkipRebase is true, we update the base branch name
-	// but preserve the old base hash.
-	// This leaves the branch in a "needs restack" state
-	// that can be detected and corrected later.
 	baseHash := ontoHash
-	if req.SkipRebase {
-		baseHash = branch.BaseHash
+	rebaseBranch := true
+	switch req.Mode {
+	case BranchOntoRebase:
+	case BranchOntoRetargetOnly:
+		baseHash = fromHash
+		rebaseBranch = false
+	default:
+		must.Failf("unknown branch onto mode: %v", req.Mode)
 	}
 
 	if err := branchTx.Upsert(ctx, state.UpsertRequest{
@@ -145,7 +160,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		return fmt.Errorf("set base of branch %s to %s: %w", req.Branch, req.Onto, err)
 	}
 
-	if !req.SkipRebase {
+	if rebaseBranch {
 		if err := s.wt.Rebase(ctx, git.RebaseRequest{
 			Branch:    req.Branch,
 			Upstream:  string(fromHash),

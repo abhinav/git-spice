@@ -1,0 +1,101 @@
+# 'repo sync --restack' restores autostashed changes
+# on the restack target that was interrupted.
+
+as 'Test <test@example.com>'
+at '2026-05-24T12:00:00Z'
+
+# Set up a repository with a ShamHub remote.
+cd repo
+git init
+git add conflict.txt dirty.txt
+git commit -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create two independent stacks:
+#
+#   main -> a -> x
+#   main -> b -> y
+#
+# The final sync will delete a and b, then restack x followed by y.
+git add a.txt
+gs bc a -m 'Add a'
+git add x.txt
+gs bc x -m 'Add x'
+
+gs trunk
+git add b.txt
+gs bc b -m 'Add b'
+cp $WORK/extra/y-conflict.txt conflict.txt
+git add conflict.txt
+gs bc y -m 'Change conflict in y'
+
+# Move main forward and merge a and b through the forge.
+# y's change to conflict.txt will conflict when replayed onto main.
+gs branch submit --branch a --fill
+gs branch submit --branch b --fill
+
+gs trunk
+cp $WORK/extra/main-conflict.txt conflict.txt
+git add conflict.txt
+git commit -m 'Change conflict on main'
+git push origin main
+shamhub merge alice/example 1
+shamhub merge alice/example 2
+
+# Start on y with dirty changes that repo sync must autostash.
+gs bco y
+cp $WORK/extra/dirty-change.txt dirty.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-before.txt
+
+! gs repo sync --restack
+stderr 'There was a conflict while rebasing'
+stderr 'rebase of y interrupted by a conflict'
+
+# The dirty change is stashed while the rebase conflict is active.
+git status --porcelain
+cmp stdout $WORK/golden/conflict-status.txt
+
+# Resolve y's conflict and continue.
+# The autostash continuation should restore on y.
+cp $WORK/extra/resolved-conflict.txt conflict.txt
+git add conflict.txt
+gs rebase continue --no-edit
+
+git branch --show-current
+stdout 'y'
+git status --porcelain
+cmp stdout $WORK/golden/dirty-after.txt
+cmp dirty.txt $WORK/extra/dirty-change.txt
+
+-- repo/conflict.txt --
+base conflict
+-- repo/dirty.txt --
+clean dirty file
+-- repo/a.txt --
+a
+-- repo/x.txt --
+x
+-- repo/b.txt --
+b
+-- extra/y-conflict.txt --
+y conflict
+-- extra/main-conflict.txt --
+main conflict
+-- extra/resolved-conflict.txt --
+resolved conflict
+-- extra/dirty-change.txt --
+dirty change
+-- golden/dirty-before.txt --
+ M dirty.txt
+-- golden/conflict-status.txt --
+UU conflict.txt
+-- golden/dirty-after.txt --
+ M dirty.txt

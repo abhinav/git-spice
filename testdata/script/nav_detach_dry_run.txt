@@ -32,9 +32,13 @@ gs down --detach
 git branch
 cmp stdout $WORK/golden/feat4_branch.txt
 
-# TODO: maybe we can match detached head to branch in the future.
-! gs up
-stderr 'in detached HEAD state'
+gs up
+git branch
+cmp stdout $WORK/golden/feat5_checked_out.txt
+
+gs down --detach
+gs down -n
+stdout '^feat3$'
 
 gs bco feat1 -n
 stdout '^feat1$'
@@ -53,6 +57,16 @@ stdout '^feat5$'
 gs top --detach
 git branch
 cmp stdout $WORK/golden/feat5_branch.txt
+gs top
+git branch
+cmp stdout $WORK/golden/feat5_checked_out.txt
+gs top --detach
+git branch
+cmp stdout $WORK/golden/feat5_branch.txt
+gs bottom -n
+stdout '^feat1$'
+gs top -n
+stdout '^feat5$'
 
 # top should still honor --detach when already on the top branch.
 gs bco feat5
@@ -63,6 +77,11 @@ cmp stdout $WORK/golden/feat5_branch.txt
 gs trunk --detach
 git branch
 cmp stdout $WORK/golden/trunk_branch.txt
+
+git branch feat5-copy feat5
+gs bco feat5 --detach
+! gs top -n
+stderr 'detached HEAD points at multiple local branches: feat5, feat5-copy'
 
 -- golden/feat5_graph.txt --
 * 372d1de (HEAD -> feat5) feat5
@@ -94,6 +113,13 @@ cmp stdout $WORK/golden/trunk_branch.txt
   feat3
   feat4
   feat5
+  main
+-- golden/feat5_checked_out.txt --
+  feat1
+  feat2
+  feat3
+  feat4
+* feat5
   main
 -- golden/trunk_branch.txt --
 * (HEAD detached at refs/heads/main)

@@ -35,10 +35,9 @@ func (cmd *topCmd) Run(
 	svc *spice.Service,
 	checkoutHandler CheckoutHandler,
 ) error {
-	current, err := wt.CurrentBranch(ctx)
+	current, attached, err := currentBranchForNavigation(ctx, wt)
 	if err != nil {
-		// TODO: handle not a branch
-		return fmt.Errorf("get current branch: %w", err)
+		return err
 	}
 
 	tops, err := svc.FindTop(ctx, current)
@@ -75,7 +74,7 @@ func (cmd *topCmd) Run(
 		}
 	}
 
-	if branch == current && !cmd.DryRun && !cmd.Detach {
+	if branch == current && attached && !cmd.DryRun && !cmd.Detach {
 		log.Info("Already on the top-most branch in this stack")
 		return nil
 	}

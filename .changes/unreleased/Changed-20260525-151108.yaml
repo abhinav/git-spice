@@ -1,0 +1,3 @@
+kind: Changed
+body: 'branch onto: Branches above moved branches are now retargeted without being restacked unless --restack is used. --restack defaults to restacking all upstack branches above moved branches. Use --restack=aboves to restack only the branches directly above. Change the default by setting the ''spice.branchOnto.restack'' configuration option.'
+time: 2026-05-25T15:11:08.777717-07:00

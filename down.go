@@ -40,10 +40,9 @@ func (cmd *downCmd) Run(
 		return errors.New("number of branches must be positive")
 	}
 
-	current, err := wt.CurrentBranch(ctx)
+	current, _, err := currentBranchForNavigation(ctx, wt)
 	if err != nil {
-		// TODO: handle not a branch
-		return fmt.Errorf("get current branch: %w", err)
+		return err
 	}
 
 	var below string

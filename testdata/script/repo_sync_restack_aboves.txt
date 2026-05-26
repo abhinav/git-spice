@@ -1,0 +1,65 @@
+# 'repo sync --restack=aboves' restacks only direct upstacks
+# of deleted merged branches.
+
+as 'Test <test@example.com>'
+at '2026-05-09T12:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a stack: main -> a -> b -> c.
+git add a.txt
+gs bc -m 'Add a' a
+git add b.txt
+gs bc -m 'Add b' b
+git add c.txt
+gs bc -m 'Add c' c
+gs stack submit --fill
+
+# Merge the bottom branch server-side. Aboves mode should restack b,
+# but leave c needing restack because c is not directly above a.
+shamhub merge alice/example 1
+gs repo sync --restack=aboves
+stderr 'a: #1 was merged'
+stderr 'b: restacked on main'
+! stderr 'c: restacked'
+
+gs ll -a
+cmp stderr $WORK/golden/ll-after-sync.txt
+
+git graph --branches
+cmp stdout $WORK/golden/graph-after-sync.txt
+
+-- repo/a.txt --
+a
+-- repo/b.txt --
+b
+-- repo/c.txt --
+c
+-- golden/ll-after-sync.txt --
+  ┏━■ c (#3) (needs restack) ◀
+  ┃   b62d5a6 Add c (now)
+┏━┻□ b (#2) (needs push)
+┃    a0b8ffd Add b (now)
+main
+-- golden/graph-after-sync.txt --
+* a0b8ffd (b) Add b
+*   c82f7b8 (origin/main, main) Merge change #1
+|\  
+| | * b62d5a6 (HEAD -> c, origin/c) Add c
+| | * 68ce96f (origin/b) Add b
+| |/  
+| * aa6c339 Add a
+|/  
+* 72e2705 Initial commit

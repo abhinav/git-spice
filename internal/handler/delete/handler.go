@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graph"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -59,14 +60,22 @@ type Service interface {
 
 var _ Service = (*spice.Service)(nil)
 
+// RestackHandler restacks branches after branch deletion has moved their base.
+type RestackHandler interface {
+	Restack(ctx context.Context, req *restack.Request) (int, error)
+}
+
+var _ RestackHandler = (*restack.Handler)(nil)
+
 // Handler implements support for branch deletion with git-spice.
 type Handler struct {
-	Log        *silog.Logger // required
-	View       ui.View       // required
-	Repository GitRepository // required
-	Worktree   GitWorktree   // required
-	Store      Store         // required
-	Service    Service       // required
+	Log        *silog.Logger  // required
+	View       ui.View        // required
+	Repository GitRepository  // required
+	Worktree   GitWorktree    // required
+	Store      Store          // required
+	Service    Service        // required
+	Restack    RestackHandler // required
 }
 
 // Request is a request to delete one or more branches.
@@ -75,24 +84,12 @@ type Request struct {
 
 	Force bool
 
-	// UpstackPolicy controls how surviving upstacks are moved
+	// Restack controls how surviving upstacks are moved
 	// after their base branches are deleted.
 	//
 	// The zero value leaves upstacks for an explicit restack later.
-	UpstackPolicy UpstackPolicy
+	Restack spice.RestackMode
 }
-
-// UpstackPolicy controls how branch deletion handles surviving upstacks.
-type UpstackPolicy int
-
-const (
-	// UpstackDoNothing moves surviving upstacks by updating state only.
-	UpstackDoNothing UpstackPolicy = iota
-
-	// UpstackRestackAboves moves surviving upstacks
-	// by replaying their commits immediately.
-	UpstackRestackAboves
-)
 
 // DeleteBranches deletes the specified branches from the repository,
 // updating all internal state as necessary.
@@ -283,14 +280,17 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 				continue
 			}
 
-			// Skip the rebase if the caller requested bookkeeping-only
-			// retargeting, or if the upstack branch cannot be rebased
-			// from this worktree.
-			restackAbove := req.UpstackPolicy == UpstackRestackAboves
-			skipRebase := !restackAbove
-			if !skipRebase && above != currentBranch {
+			// BranchOnto always updates git-spice state.
+			// The restack mode decides whether this worktree also rebases
+			// branches whose downstack base is being removed.
+			restackAbove := req.Restack.Includes(spice.RestackAboves)
+			ontoMode := spice.BranchOntoRebase
+			if !restackAbove {
+				ontoMode = spice.BranchOntoRetargetOnly
+			}
+			if restackAbove && above != currentBranch {
 				if worktreePath, ok := branchWorktrees[above]; ok {
-					skipRebase = true
+					ontoMode = spice.BranchOntoRetargetOnly
 					log.Warnf("%v: checked out in another worktree (%v), skipping rebase", above, worktreePath)
 					log.Warnf("%v: Run '%s branch restack' from that worktree to complete the rebase", above, cli.Name())
 				}
@@ -299,26 +299,35 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 			log.Debug("Changing upstack branch to a new base",
 				"branch", above, "base", base)
 			if err := h.Service.BranchOnto(ctx, &spice.BranchOntoRequest{
-				Branch:     above,
-				Onto:       base,
-				SkipRebase: skipRebase,
+				Branch: above,
+				Onto:   base,
+				Mode:   ontoMode,
 			}); err != nil {
-				contCmd := []string{"branch", "delete"}
-				if req.Force {
-					contCmd = append(contCmd, "--force")
-				}
-				contCmd = append(contCmd, req.Branches...)
 				return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 					Err:     err,
-					Command: contCmd,
+					Command: req.continueCommand(),
 					Branch:  checkoutTarget,
 					Message: fmt.Sprintf("interrupted: %v: deleting branch", branch),
 				})
 			}
-			if restackAbove {
-				log.Infof("%v: moved upstack onto %v", above, base)
-			} else {
+			if ontoMode == spice.BranchOntoRetargetOnly {
 				log.Infof("%v: retargeted upstack onto %v", above, base)
+				continue
+			}
+
+			log.Infof("%v: moved upstack onto %v", above, base)
+
+			if req.Restack.Includes(spice.RestackUpstack) {
+				// The direct upstack has already been rebased above.
+				// Restack only branches above it so the old branch-delete
+				// continuation command remains the recovery path.
+				if _, err := h.Restack.Restack(ctx, &restack.Request{
+					Branch:          above,
+					ContinueCommand: req.continueCommand(),
+					Scope:           restack.ScopeUpstackExclusive,
+				}); err != nil {
+					return fmt.Errorf("restack upstack above %q: %w", above, err)
+				}
 			}
 		}
 	}
@@ -392,4 +401,15 @@ func (h *Handler) DeleteBranches(ctx context.Context, req *Request) error {
 	}
 
 	return nil
+}
+
+func (req *Request) continueCommand() []string {
+	contCmd := []string{"branch", "delete"}
+	if req.Force {
+		contCmd = append(contCmd, "--force")
+	}
+	if !req.Restack.Includes(spice.RestackNone) {
+		contCmd = append(contCmd, "--restack="+req.Restack.String())
+	}
+	return append(contCmd, req.Branches...)
 }

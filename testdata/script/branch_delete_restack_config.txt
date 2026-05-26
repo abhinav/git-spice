@@ -1,0 +1,73 @@
+# 'spice.branchDelete.restack' configures branch delete restack behavior.
+
+as 'Test <test@example.com>'
+at '2026-05-26T10:00:00Z'
+
+# Configured aboves mode preserves the old direct-above rebase behavior.
+cd repo
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+git add feature3.txt
+gs bc -m feature3
+
+git config spice.branchDelete.restack aboves
+gs branch delete --force feature1
+stderr 'feature2: moved upstack onto main'
+! stderr 'feature3: restacked'
+
+gs branch checkout feature3
+exists feature1.txt feature2.txt feature3.txt
+
+gs branch restack
+exists feature2.txt feature3.txt
+! exists feature1.txt
+
+# CLI flags override the configured mode.
+cd ../repo-override
+git init
+git commit --allow-empty -m 'initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m feature1
+
+git add feature2.txt
+gs bc -m feature2
+
+git add feature3.txt
+gs bc -m feature3
+
+git config spice.branchDelete.restack upstack
+gs branch delete --force --restack=none feature1
+stderr 'feature2: retargeted upstack onto main'
+! stderr 'moved upstack'
+
+gs branch checkout feature2
+stderr 'feature2: needs to be restacked'
+exists feature1.txt feature2.txt
+
+gs branch restack
+exists feature2.txt
+! exists feature1.txt
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3
+
+-- repo-override/feature1.txt --
+feature 1
+-- repo-override/feature2.txt --
+feature 2
+-- repo-override/feature3.txt --
+feature 3

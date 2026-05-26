@@ -29,6 +29,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
 	"go.abhg.dev/gs/internal/handler/merge"
+	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
@@ -473,9 +474,23 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			wt *git.Worktree,
+			svc *spice.Service,
+			restackHandler RestackHandler,
+		) (OntoHandler, error) {
+			return &onto.Handler{
+				Log:      log,
+				Worktree: wt,
+				Service:  svc,
+				Restack:  restackHandler,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
 			store *state.Store,
 			wt *git.Worktree,
 			svc *spice.Service,
+			restackHandler RestackHandler,
 		) (DeleteHandler, error) {
 			return &delete.Handler{
 				Log:        log,
@@ -484,6 +499,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
+				Restack:    restackHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

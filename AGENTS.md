@@ -566,6 +566,20 @@ NEVER do the following:
   value := computeValue() // compute the value
   ```
 
+- Add comments to struct fields
+  when the field's meaning,
+  source,
+  valid values,
+  or caller obligations are not obvious
+  from its name and type.
+
+- For request structs,
+  handler structs,
+  and other structs with required fields,
+  use inline `// required` comments
+  when that contract is useful to callers
+  or enforced by tooling.
+
 - Never add comments that merely repeat the code.
 
   ```go
@@ -610,3 +624,9 @@ on the next release.
   This requires breaking lines at natural grammatical boundaries
   (such as after complete sentences, clauses, or list items),
   while remaining within the 80-character limit.
+- Use the `$$...$$` shorthand only for command names
+  and configuration names that `doc/hooks/cliref.py` can link.
+  Examples: `$$gs repo sync$$` and `$$spice.repoSync.restack$$`.
+  Never include flags inside `$$...$$`;
+  write full command invocations with flags as inline code instead.
+  For example, write `gs repo sync --restack`.

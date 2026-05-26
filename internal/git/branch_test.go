@@ -2,6 +2,7 @@ package git_test
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -109,6 +110,47 @@ func TestIntegrationBranches(t *testing.T) {
 
 		_, err := wt.CurrentBranch(t.Context())
 		assert.ErrorIs(t, err, git.ErrDetachedHead)
+	})
+
+	t.Run("BranchesAtCommitish", func(t *testing.T) {
+		branches, err := sliceutil.CollectErr(
+			repo.BranchesAtCommitish(t.Context(), "feature1"))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1"}, branches)
+	})
+
+	t.Run("BranchesAtHead", func(t *testing.T) {
+		t.Cleanup(func() {
+			assert.NoError(t,
+				wt.CheckoutBranch(context.WithoutCancel(t.Context()), "main"))
+		})
+
+		require.NoError(t, wt.DetachHead(t.Context(), "feature1"))
+
+		branches, err := sliceutil.CollectErr(wt.BranchesAtHead(t.Context()))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1"}, branches)
+	})
+
+	t.Run("BranchesAtHead_ambiguous", func(t *testing.T) {
+		require.NoError(t, repo.CreateBranch(t.Context(), git.CreateBranchRequest{
+			Name: "feature1-copy",
+			Head: "feature1",
+		}))
+		t.Cleanup(func() {
+			ctx := context.WithoutCancel(t.Context())
+			assert.NoError(t, wt.CheckoutBranch(ctx, "main"))
+			assert.NoError(t,
+				repo.DeleteBranch(ctx, "feature1-copy", git.BranchDeleteOptions{
+					Force: true,
+				}))
+		})
+
+		require.NoError(t, wt.DetachHead(t.Context(), "feature1"))
+
+		branches, err := sliceutil.CollectErr(wt.BranchesAtHead(t.Context()))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"feature1", "feature1-copy"}, branches)
 	})
 
 	t.Run("CreateBranch", func(t *testing.T) {

@@ -37,7 +37,7 @@ cmp stderr $WORK/golden/ll-before.txt
 # That will first try to move three onto main
 # and fail.
 git checkout two
-! gs branch onto one
+! gs branch onto --restack=aboves one
 stderr 'There was a conflict'
 stderr 'rebase of three interrupted'
 cp $WORK/extra/three.txt value.txt
@@ -56,7 +56,7 @@ cmp stderr $WORK/golden/ll-after-two-onto-one.txt
 
 # Now move three onto two.
 git checkout three
-! gs branch onto two
+! gs branch onto --restack=aboves two
 stderr 'There was a conflict'
 stderr 'rebase of three interrupted'
 cp $WORK/extra/three.txt value.txt
