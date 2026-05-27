@@ -26,11 +26,15 @@ gs branch create feature3 -m 'Add feature 3'
 env SHAMHUB_USERNAME=alice
 gs auth login
 
+# The old singular key remains a deprecated compatibility alias.
 git config spice.submit.label spice
 
 # submit the entire stack from the middle.
 git checkout feature1
 gs stack submit --fill --label label1 --label label2,label3
+stderr 'configuration option'
+stderr 'spice.submit.label'
+stderr 'spice.submit.labels'
 stderr 'Created #1'
 stderr 'Created #2'
 stderr 'Created #3'
@@ -210,4 +214,3 @@ This is feature 3
     "labels": ["label1", "label2", "label3", "spice", "label4"]
   }
 ]
-

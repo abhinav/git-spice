@@ -297,16 +297,18 @@ with the `-l`/`--label` flag.
 ```
 
 You can also configure default labels
-with the $$spice.submit.label$$ configuration option.
+with the $$spice.submit.labels$$ configuration option.
 Labels specified with the `--label` flag
 will be combined with configured labels.
 
 ```freeze language="terminal"
-{green}${reset} git config {red}spice.submit.label{reset} {mag}'needs-review'{reset}
+{green}${reset} git config {red}spice.submit.labels{reset} {mag}'needs-review'{reset}
 ```
 
 When updating existing change requests,
 new labels are added to any existing labels on the CR.
+Use $$spice.submit.labels.addWhen$$
+to add configured labels only when creating a change request.
 
 ## Requesting reviews
 

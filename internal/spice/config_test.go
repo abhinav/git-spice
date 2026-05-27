@@ -1,6 +1,7 @@
 package spice_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	reflect "reflect"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
@@ -162,6 +164,27 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 			}{Level: "hot"},
 		},
 		{
+			name: "DeprecatedAlias",
+			config: text.Dedent(`
+				[spice]
+				oldName = foo
+			`),
+			want: struct {
+				Value string `config:"newName" configDeprecated:"oldName"`
+			}{Value: "foo"},
+		},
+		{
+			name: "DeprecatedAlias/CanonicalWins",
+			config: text.Dedent(`
+				[spice]
+				oldName = foo
+				newName = bar
+			`),
+			want: struct {
+				Value string `config:"newName" configDeprecated:"oldName"`
+			}{Value: "bar"},
+		},
+		{
 			name: "Shorthands",
 			config: text.Dedent(`
 				[spice.shorthand]
@@ -239,6 +262,97 @@ func TestIntegrationConfig_loadFromGit(t *testing.T) {
 			assert.Equal(t, tt.shorthands, gotShorthands)
 		})
 	}
+}
+
+func TestIntegrationConfig_deprecatedConfigAliasWarning(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	home := t.TempDir()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(home, ".gitconfig"),
+		[]byte(text.Dedent(`
+			[spice]
+			oldName = foo
+		`)),
+		0o600,
+	), "write configuration file")
+
+	ctx := t.Context()
+	gitCfg := git.NewConfig(git.ConfigOptions{
+		Log: silogtest.New(t),
+		Dir: home,
+		Env: []string{
+			"HOME=" + home,
+			"USER=testuser",
+			"GIT_CONFIG_NOSYSTEM=1",
+		},
+	})
+
+	var logBuffer bytes.Buffer
+	spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+		Log: silog.New(&logBuffer, nil),
+	})
+	require.NoError(t, err, "load configuration")
+
+	var got struct {
+		Value string `config:"newName" configDeprecated:"oldName"`
+	}
+	cli, err := kong.New(&got, kong.Resolvers(spicecfg))
+	require.NoError(t, err, "create app")
+
+	_, err = cli.Parse([]string{})
+	require.NoError(t, err, "parse flags")
+
+	assert.Equal(t, "foo", got.Value)
+	assert.Contains(t, logBuffer.String(),
+		"configuration option 'spice.oldname' is deprecated: "+
+			"use 'spice.newname' instead")
+}
+
+func TestIntegrationConfig_deprecatedConfigAliasNoWarningForCanonical(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	home := t.TempDir()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(home, ".gitconfig"),
+		[]byte(text.Dedent(`
+			[spice]
+			oldName = foo
+			newName = bar
+		`)),
+		0o600,
+	), "write configuration file")
+
+	ctx := t.Context()
+	gitCfg := git.NewConfig(git.ConfigOptions{
+		Log: silogtest.New(t),
+		Dir: home,
+		Env: []string{
+			"HOME=" + home,
+			"USER=testuser",
+			"GIT_CONFIG_NOSYSTEM=1",
+		},
+	})
+
+	var logBuffer bytes.Buffer
+	spicecfg, err := spice.LoadConfig(ctx, gitCfg, spice.ConfigOptions{
+		Log: silog.New(&logBuffer, nil),
+	})
+	require.NoError(t, err, "load configuration")
+
+	var got struct {
+		Value string `config:"newName" configDeprecated:"oldName"`
+	}
+	cli, err := kong.New(&got, kong.Resolvers(spicecfg))
+	require.NoError(t, err, "create app")
+
+	_, err = cli.Parse([]string{})
+	require.NoError(t, err, "parse flags")
+
+	assert.Equal(t, "bar", got.Value)
+	assert.NotContains(t, logBuffer.String(), "configuration option")
 }
 
 func TestConfig_ShellCommand(t *testing.T) {

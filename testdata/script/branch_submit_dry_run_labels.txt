@@ -18,7 +18,7 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-git config spice.submit.label label1
+git config spice.submit.labels label1
 
 # Create and submit a branch with label1
 git add feature.txt
