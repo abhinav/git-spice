@@ -204,7 +204,7 @@ run:
 ```bash
 go run ./tools/ci/launchpad-ppa \
   -version vX.Y.Z \
-  -series noble,plucky,questing,resolute
+  -series noble,questing,resolute
 ```
 
 The `-series` flag may be repeated
@@ -240,7 +240,7 @@ run:
 ```bash
 go run ./tools/ci/launchpad-ppa \
   -version vX.Y.Z \
-  -series noble,plucky,questing,resolute \
+  -series noble,questing,resolute \
   -sign \
   -dput
 ```

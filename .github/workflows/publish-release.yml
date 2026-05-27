@@ -40,7 +40,14 @@ on:
           Comma-separated Ubuntu series for PPA publishing.
           Set this to resume a partial PPA upload.
         required: false
-        default: noble,plucky,questing,resolute
+        default: noble,questing,resolute
+        type: string
+      ppa_source_date_epoch:
+        description: >-
+          Unix timestamp for reproducible PPA source package outputs.
+          Leave unset to use the release ref commit timestamp.
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -203,7 +210,7 @@ jobs:
     - name: Install Debian upload tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y debhelper devscripts dput
+        sudo apt-get install -y debhelper devscripts distro-info dput
 
     - name: Import Launchpad signing key
       run: |
@@ -220,16 +227,23 @@ jobs:
 
     - name: Publish source packages
       run: |
-        go run ./tools/ci/launchpad-ppa \
-          -version "v${VERSION}" \
-          -ref "${REF}" \
-          -series "${PPA_SERIES}" \
-          -ppa-revision "${PPA_REVISION}" \
-          -sign \
+        args=(
+          -version "v${VERSION}"
+          -ref "${REF}"
+          -series "${PPA_SERIES}"
+          -ppa-revision "${PPA_REVISION}"
+          -sign
           -dput
+        )
+        if [[ -n "$PPA_SOURCE_DATE_EPOCH" ]]; then
+          args+=(-source-date-epoch "$PPA_SOURCE_DATE_EPOCH")
+        fi
+
+        go run ./tools/ci/launchpad-ppa "${args[@]}"
       env:
         LAUNCHPAD_GPG_KEY_ID: ${{ secrets.LAUNCHPAD_GPG_KEY_ID }}
         LAUNCHPAD_GPG_PASSPHRASE: ${{ secrets.LAUNCHPAD_GPG_PASSPHRASE }}
         PPA_REVISION: ${{ inputs.ppa_revision }}
         PPA_SERIES: ${{ inputs.ppa_series }}
+        PPA_SOURCE_DATE_EPOCH: ${{ inputs.ppa_source_date_epoch }}
         REF: ${{ inputs.ref }}
