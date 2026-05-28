@@ -44,8 +44,14 @@ run = [
 [tasks.generate]
 depends = ["tools"]
 description = "Update generated code"
+# Run mock generation before any other directive that needs to compile
+# tests (e.g. help_test.go's `go test -run TestHelp -update`). All
+# //go:generate mockgen directives live under internal/, so generating
+# that subtree first lets the root-package directives see fresh mocks
+# when their build runs.
 run = [
-  "go generate -x ./...",
+  "go generate -x ./internal/...",
+  "go generate -x .",
   "(cd doc && mise run generate)",
 ]
 
