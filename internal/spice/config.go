@@ -17,6 +17,7 @@ import (
 
 const (
 	_configTag            = "config"
+	_configDeprecatedTag  = "configDeprecated"
 	_spiceSection         = "spice"
 	_shorthandSubsection  = "shorthand"
 	_experimentSubsection = "experiment"
@@ -75,6 +76,13 @@ var _ GitConfigLister = (*git.Config)(nil)
 //	}
 //
 // This will read the configuration key "core.commentString" from git-config.
+//
+// Deprecated fallback keys may be declared
+// with `configDeprecated:"oldKey"`.
+// The canonical key named by `config` takes precedence if it is configured;
+// otherwise, deprecated keys are considered in tag order.
+// Deprecated keys resolve the same way as canonical keys,
+// but warn the user to move to the canonical key.
 type Config struct {
 	// items is a map from configuration key (without the "spice." prefix)
 	// to list of values for that field.
@@ -91,6 +99,12 @@ type Config struct {
 
 	// experiments is a set of enabled experimental features.
 	experiments map[string]struct{}
+
+	// log receives user-facing diagnostics for configuration migration.
+	log *silog.Logger
+
+	// warnedDeprecatedAliases tracks deprecated aliases already reported.
+	warnedDeprecatedAliases map[git.ConfigKey]struct{}
 }
 
 // ConfigOptions specifies options for the [Config].
@@ -188,10 +202,12 @@ func LoadConfig(ctx context.Context, cfg GitConfigLister, opts ConfigOptions) (*
 	}
 
 	return &Config{
-		items:         items,
-		shorthands:    shorthands,
-		shellCommands: shellCommands,
-		experiments:   experiments,
+		items:                   items,
+		shorthands:              shorthands,
+		shellCommands:           shellCommands,
+		experiments:             experiments,
+		log:                     opts.Log,
+		warnedDeprecatedAliases: make(map[git.ConfigKey]struct{}),
 	}, nil
 }
 
@@ -231,16 +247,25 @@ func (c *Config) Resolve(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, e
 		return nil, nil
 	}
 
-	var key git.ConfigKey
-	if gitKey, ok := strings.CutPrefix(k, "@"); ok {
-		key = git.ConfigKey(gitKey).Canonical()
-	} else {
-		// If the key does not start with '@',
-		// it is a spice configuration key.
-		key = git.ConfigKey(_spiceSection + "." + k).Canonical()
+	key := canonicalConfigKey(k)
+	values := c.items[key]
+	for alias := range strings.SplitSeq(flag.Tag.Get(_configDeprecatedTag), ",") {
+		if len(values) > 0 {
+			break
+		}
+
+		alias = strings.TrimSpace(alias)
+		if alias == "" {
+			continue
+		}
+
+		key = canonicalConfigKey(alias)
+		values = c.items[key]
+		if len(values) > 0 {
+			c.warnDeprecatedAlias(key, canonicalConfigKey(k))
+		}
 	}
 
-	values := c.items[key]
 	switch len(values) {
 	case 0:
 		return nil, nil
@@ -263,4 +288,27 @@ func (c *Config) Resolve(_ *kong.Context, _ *kong.Path, flag *kong.Flag) (any, e
 		// for a single-valued flag.
 		return values[len(values)-1], nil
 	}
+}
+
+func (c *Config) warnDeprecatedAlias(oldKey, newKey git.ConfigKey) {
+	if _, ok := c.warnedDeprecatedAliases[oldKey]; ok {
+		return
+	}
+	c.warnedDeprecatedAliases[oldKey] = struct{}{}
+
+	c.log.Warnf(
+		"configuration option '%v' is deprecated: use '%v' instead",
+		oldKey,
+		newKey,
+	)
+}
+
+func canonicalConfigKey(k string) git.ConfigKey {
+	if gitKey, ok := strings.CutPrefix(k, "@"); ok {
+		return git.ConfigKey(gitKey).Canonical()
+	}
+
+	// If the key does not start with '@',
+	// it is a spice configuration key.
+	return git.ConfigKey(_spiceSection + "." + k).Canonical()
 }

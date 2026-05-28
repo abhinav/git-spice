@@ -1,4 +1,4 @@
-# With spice.submit.label.addWhen=create
+# With spice.submit.labels.addWhen=create
 # configured labels are applied only while creating CRs,
 # but labels passed with --label are still applied to updates.
 
@@ -25,8 +25,8 @@ gs branch submit --fill
 
 # Configured labels should not be added when updating the existing CR,
 # but an explicit --label should still be honored.
-git config spice.submit.label skip-ci
-git config spice.submit.label.addWhen create
+git config spice.submit.labels skip-ci
+git config spice.submit.labels.addWhen create
 
 cp $WORK/extra/feature-modified.txt feature.txt
 git add -u
