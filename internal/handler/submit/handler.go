@@ -684,9 +684,6 @@ func (h *Handler) submitBranch(
 		// If the branch doesn't have a CR associated with it,
 		// we'll probably need to create one,
 		// but verify that there isn't already one open.
-		// If the branch doesn't have a CR associated with it,
-		// we'll probably need to create one,
-		// but verify that there isn't already one open.
 		remoteRepo, err := h.upstreamRepository(ctx)
 		if err != nil {
 			return status, fmt.Errorf("discover CR for %s: %w", branchToSubmit, err)
