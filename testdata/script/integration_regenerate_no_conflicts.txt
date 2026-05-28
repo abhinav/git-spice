@@ -1,0 +1,51 @@
+# When a rebuild produces no derived-file conflicts, gs must NOT
+# invoke .gs/integration-regenerate even if it exists. Verified via a
+# sentinel file the script would touch.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+chmod 700 $WORK/regenerate.sh
+
+cd repo
+git init
+git add file.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Two non-conflicting tips: each touches a distinct file. No merges
+# will conflict and therefore the regenerate driver is never invoked
+# and nothing gets logged.
+git checkout -b feat-a
+git add a.txt
+gs branch track --base main
+git commit -m 'feat-a adds a.txt'
+
+git checkout main
+git checkout -b feat-b
+git add b.txt
+gs branch track --base main
+git commit -m 'feat-b adds b.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+mkdir .gs
+cp $WORK/regenerate.sh .gs/integration-regenerate
+chmod 700 .gs/integration-regenerate
+
+gs integration rebuild
+stderr 'rebuilt with 2 tip\(s\)'
+
+# Sentinel must NOT exist — regenerator should not have been invoked.
+! exists $WORK/repo/sentinel
+
+-- repo/file.txt --
+base
+-- repo/a.txt --
+a content
+-- repo/b.txt --
+b content
+-- regenerate.sh --
+#!/bin/sh
+touch sentinel

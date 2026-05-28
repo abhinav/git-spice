@@ -276,6 +276,103 @@ then run $$gs integration rebuild$$ again. If `rerere` has recorded
 an incorrect resolution from an earlier run, `git rerere clear` wipes
 the cache.
 
+## Regenerating derived files
+
+<!-- gs:version unreleased -->
+
+Repositories often have files that are *derived* from source — CLI
+documentation, mockgen output, recorded test fixtures — where two
+integration tips' changes might conflict not because of meaningful
+disagreement but because the same generator was re-run on each
+branch with different stochastic IDs or with different inputs. A
+classic merge driver can't handle these correctly because regenerating
+during a merge would side-effect the worktree, and `git add` from
+inside a merge driver fails (the index is locked).
+
+git-spice handles this with a two-piece arrangement:
+
+1. **A take-incoming git merge driver** registered for the path
+   patterns you mark in `.gitattributes`. On conflict, it silently
+   copies the incoming version into place AND appends the path to
+   a log file whose location it reads from the
+   `GS_INTEGRATION_REGEN_LOG` environment variable.
+2. **A project-level regenerator script** at
+   `.gs/integration-regenerate` (relative to repo root). After every
+   successful $$gs integration rebuild$$, git-spice invokes this
+   script with the deduplicated list of paths the merge driver
+   handled, then folds the script's worktree output into the final
+   merge commit.
+
+### Setting it up in a new repo
+
+Tag the derived paths in `.gitattributes`:
+
+```gitattributes
+doc/includes/cli-reference.md   merge=regenerate
+testdata/help/*.txt             merge=regenerate
+**/mocks_test.go                merge=regenerate
+```
+
+Register the merge driver. The driver itself is trivially small:
+
+```sh
+git config merge.regenerate.driver \
+    "$(git rev-parse --git-path info)/merge-regenerate %O %A %B %P"
+cat > "$(git rev-parse --git-path info)/merge-regenerate" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+cp -f "$3" "$2"
+if [ -n "${GS_INTEGRATION_REGEN_LOG:-}" ]; then
+    printf '%s\n' "$4" >> "$GS_INTEGRATION_REGEN_LOG"
+fi
+EOF
+chmod +x "$(git rev-parse --git-path info)/merge-regenerate"
+```
+
+Add `.gs/integration-regenerate` to your repo (committed,
+executable) with project-specific dispatch logic:
+
+```sh
+#!/bin/sh
+# .gs/integration-regenerate
+set -eu
+
+# stdin is a deduplicated newline-separated list of paths whose
+# conflicts the merge driver auto-resolved.
+files=$(cat)
+
+# Only run the slow mockgen pass if a mock was actually in the list.
+if printf '%s\n' "$files" | grep -qE 'mocks?(_test)?\.go'; then
+    go generate ./...
+fi
+
+# Only update help fixtures if a help file was in the list.
+if printf '%s\n' "$files" | grep -q '^testdata/help/'; then
+    go test -run TestHelp . -update
+fi
+```
+
+The conditional dispatch keeps the steady-state cost low — a rebuild
+with no derived-file conflicts pays one process spawn and exits.
+
+### Contract
+
+| Aspect | Value |
+|--------|-------|
+| Script path | `.gs/integration-regenerate` relative to repo root |
+| Executable bit | required (`chmod +x`) |
+| Input | newline-separated deduplicated paths on stdin |
+| Working directory | repo root |
+| Exit 0 | success; worktree changes folded into the last merge commit |
+| Exit non-zero | warning logged; rebuild still considered successful |
+| Absent | silently skipped (no-op) |
+
+The path list is automatically allow-listed: only files whose
+conflicts the `regenerate` merge driver actually handled appear in
+the list. Conflicts on un-tagged files (regular source code) are
+resolved through the usual channels and do *not* leak into the
+regenerator.
+
 ## Removing the configuration
 
 Use $$gs integration delete$$ to remove the configuration. The

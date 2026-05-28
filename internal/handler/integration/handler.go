@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"os"
 	"slices"
 	"strings"
 
@@ -22,7 +23,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -typed -destination mocks_test.go -package integration -write_package_comment=false . GitRepository,GitWorktree,Store,Service,Resolver,QuestionPrompter
+//go:generate mockgen -typed -destination mocks_test.go -package integration -write_package_comment=false . GitRepository,GitWorktree,Store,Service,Resolver,QuestionPrompter,Regenerator
 
 // GitRepository is the subset of [git.Repository] used by the handler.
 type GitRepository interface {
@@ -39,6 +40,7 @@ type GitWorktree interface {
 	CheckoutNewBranch(ctx context.Context, req git.CheckoutNewBranchRequest) error
 	Merge(ctx context.Context, opts git.MergeOptions) error
 	MergeContinue(ctx context.Context, paths []string, message string) error
+	AmendCommitAll(ctx context.Context) error
 	IsClean(ctx context.Context) (bool, error)
 	Push(ctx context.Context, opts git.PushOptions) error
 }
@@ -97,6 +99,13 @@ type Handler struct {
 	// Config.ScriptResolveMaxIterations. A non-positive value falls
 	// back to the package default.
 	MaxResolveIterations int
+
+	// Regenerator, if non-nil, is invoked after all tip merges in a
+	// rebuild succeed AND at least one path was logged via the
+	// regenerate merge driver. It re-derives project-specific files
+	// (mocks, CLI docs, test fixtures) that the take-incoming driver
+	// could not merge correctly. nil disables the step entirely.
+	Regenerator Regenerator
 }
 
 // defaultMaxResolveIterations is the fallback when
@@ -494,16 +503,39 @@ func (h *Handler) runMerges(
 	originalBranch string,
 	opts *RebuildOptions,
 ) (*RebuildResult, error) {
+	// Accumulate paths whose conflicts the regenerate merge driver
+	// resolved across all tip merges in this rebuild. After the loop
+	// succeeds, gs hands the deduped list to the Regenerator (if any).
+	var regenPaths []string
+
 	for i := start; i < len(tips); i++ {
 		tip := tips[i]
 		mergeMsg := fmt.Sprintf("Merge %s into %s", tip.Name, info.Name)
-		err := h.Worktree.Merge(ctx, git.MergeOptions{
+
+		// Set up a per-merge log file. The merge driver writes one
+		// line per take-incoming resolution it performs.
+		logFile, err := os.CreateTemp("", "gs-regen-log-*")
+		if err != nil {
+			return nil, fmt.Errorf("create regen log: %w", err)
+		}
+		logPath := logFile.Name()
+		_ = logFile.Close()
+		mergeEnv := []string{regenLogEnvVar + "=" + logPath}
+
+		err = h.Worktree.Merge(ctx, git.MergeOptions{
 			Refs:          []string{tip.Hash.String()},
 			NoFF:          true,
 			Message:       mergeMsg,
 			EnableRerere:  true,
 			LeaveConflict: true,
+			Env:           mergeEnv,
 		})
+
+		// Always drain + clean up the log file, regardless of merge
+		// outcome.
+		regenPaths = appendRegenLog(regenPaths, logPath)
+		_ = os.Remove(logPath)
+
 		if err == nil {
 			continue
 		}
@@ -537,6 +569,23 @@ func (h *Handler) runMerges(
 		return nil, &ConflictError{Tip: tip.Name, Paths: conflict.ConflictPaths}
 	}
 
+	// All tip merges succeeded. If any derived files were take-incoming
+	// resolved AND a regenerator is configured, run it and fold any
+	// resulting worktree changes into the last merge commit. AmendCommitAll
+	// runs even if the regenerator exits non-zero: a partial run may have
+	// written real updates that must not be left dirty in the worktree, and
+	// `git commit --amend --no-edit --allow-empty` is a safe no-op when no
+	// changes are present.
+	deduped := dedupStrings(regenPaths)
+	if h.Regenerator != nil && len(deduped) > 0 {
+		if err := h.Regenerator.Regenerate(ctx, deduped); err != nil {
+			h.Log.Warnf("regenerator: %v", err)
+		}
+		if err := h.Worktree.AmendCommitAll(ctx); err != nil {
+			return nil, fmt.Errorf("amend with regen output: %w", err)
+		}
+	}
+
 	info.Tips = tips
 	if err := h.Store.SetIntegration(ctx, info); err != nil {
 		return nil, fmt.Errorf("save integration state: %w", err)
@@ -559,6 +608,44 @@ func (h *Handler) runMerges(
 		Name:      info.Name,
 		TipHashes: hashes,
 	}, nil
+}
+
+// regenLogEnvVar is the environment variable name the regenerate merge
+// driver reads to find its append-only log file.
+const regenLogEnvVar = "GS_INTEGRATION_REGEN_LOG"
+
+// appendRegenLog reads each newline-separated path from the given log
+// file (if any) and appends to dst. Missing or unreadable files are
+// silently treated as empty.
+func appendRegenLog(dst []string, logPath string) []string {
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		return dst
+	}
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			dst = append(dst, line)
+		}
+	}
+	return dst
+}
+
+// dedupStrings returns ss without duplicates, preserving first
+// occurrence order.
+func dedupStrings(ss []string) []string {
+	if len(ss) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(ss))
+	out := make([]string, 0, len(ss))
+	for _, s := range ss {
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
 }
 
 // PushRejectedError indicates that [Handler.Submit] could not push

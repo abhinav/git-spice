@@ -32,6 +32,12 @@ type MergeOptions struct {
 	// worktree (with unmerged paths) rather than aborting it. The
 	// caller is then responsible for resolving or aborting the merge.
 	LeaveConflict bool
+
+	// Env lists additional environment variables to set on the git
+	// merge process. Each entry is "KEY=VALUE". These are inherited
+	// by any merge drivers git invokes. Useful for passing per-merge
+	// state to a custom driver (e.g., a log file path).
+	Env []string
 }
 
 // MergeConflictError indicates that a [Worktree.Merge] could not be
@@ -85,6 +91,9 @@ func (w *Worktree) Merge(ctx context.Context, opts MergeOptions) error {
 			"-c", "rerere.autoupdate=true",
 		}
 		cmd = cmd.WithArgs(append(prefix, cmd.Args()...)...)
+	}
+	if len(opts.Env) > 0 {
+		cmd = cmd.AppendEnv(opts.Env...)
 	}
 
 	err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd { return cmd })
@@ -167,6 +176,25 @@ func (w *Worktree) MergeContinue(
 	}
 	if err := w.gitCmd(ctx, "commit", "--no-edit", "-m", message).Run(); err != nil {
 		return fmt.Errorf("git commit: %w", err)
+	}
+	return nil
+}
+
+// AmendCommitAll stages all worktree changes (additions, modifications,
+// deletions) and amends HEAD with --no-edit. Preserves merge-commit
+// parentage.
+//
+// Used after a post-merge step (e.g., a regenerator) writes additional
+// content that should be folded into the just-made commit, rather than
+// added as a separate commit on top.
+func (w *Worktree) AmendCommitAll(ctx context.Context) error {
+	if err := w.gitCmd(ctx, "add", "-A").Run(); err != nil {
+		return fmt.Errorf("git add: %w", err)
+	}
+	if err := w.gitCmd(ctx,
+		"commit", "--amend", "--no-edit", "--allow-empty",
+	).Run(); err != nil {
+		return fmt.Errorf("git commit --amend: %w", err)
 	}
 	return nil
 }

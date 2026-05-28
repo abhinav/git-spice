@@ -1,0 +1,46 @@
+#!/bin/sh
+# .gs/integration-regenerate — project-level regenerator for
+# git-spice's integration-branch rebuild.
+#
+# Invoked by `gs integration rebuild` after all tip merges succeed,
+# with the newline-separated list of paths whose conflicts the
+# `regenerate` git merge driver resolved via take-incoming. We
+# dispatch the project's actual generators based on which categories
+# of derived files appear in the input list. Generators that touch
+# many files are only invoked when at least one file in their output
+# set appeared in the conflict list — so a rebuild with no derived
+# conflicts pays nothing, and rebuilds that conflict only on (say)
+# CLI docs don't gratuitously rewrite mocks.
+#
+# The contract:
+#   - stdin: newline-separated, deduplicated file paths (allow-listed
+#     to those tagged `merge=regenerate` in .gitattributes).
+#   - cwd: repo root.
+#   - exit 0: success.
+#   - exit non-zero: warning logged by gs; rebuild still succeeds, but
+#     derived files may be stale until the next rebuild.
+#
+# When changing the dispatch logic here, consider keeping the
+# steady-state cost low: every condition that runs a generator should
+# be guarded by a path-match check.
+set -eu
+
+files=$(cat)
+
+# Mocks (mockgen output) — regenerate via go generate. Same task also
+# rebuilds CLI docs (cli-reference.md, cli-shorthands.md), so we use
+# this single check for both categories.
+if printf '%s\n' "$files" | grep -qE 'mocks?(_test)?\.go|mock_.*\.go|^doc/includes/cli-'; then
+    mise run generate
+fi
+
+# Help fixtures (testdata/help/*.txt) — TestHelp regenerates them all
+# in one pass.
+if printf '%s\n' "$files" | grep -q '^testdata/help/'; then
+    go test -run TestHelp . -update
+fi
+
+# ShamHub integration test fixtures.
+if printf '%s\n' "$files" | grep -q '^internal/forge/shamhub/testdata/'; then
+    go test -run TestIntegration ./internal/forge/shamhub/ -update
+fi
