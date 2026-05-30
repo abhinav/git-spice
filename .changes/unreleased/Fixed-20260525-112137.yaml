@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'repo sync: Fixed retargeted branches replaying already-present downstack commits during restack.'
-time: 2026-05-25T11:21:37-07:00

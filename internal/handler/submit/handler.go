@@ -228,8 +228,8 @@ type Options struct {
 	// - reviewers
 
 	Labels           []string      `name:"label" short:"l" help:"Add labels to the change request. Pass multiple times or separate with commas."`
-	ConfiguredLabels []string      `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.label"`
-	LabelsAddWhen    LabelsAddWhen `name:"labels-add-when" help:"When to add configured labels." hidden:"" config:"submit.label.addWhen" default:"always"`
+	ConfiguredLabels []string      `name:"configured-labels" help:"Default labels to add to change requests." hidden:"" config:"submit.labels" configDeprecated:"submit.label"`
+	LabelsAddWhen    LabelsAddWhen `name:"labels-add-when" help:"When to add configured labels." hidden:"" config:"submit.labels.addWhen" configDeprecated:"submit.label.addWhen" default:"always"`
 
 	Reviewers           []string         `short:"r" name:"reviewer" help:"Add reviewers to the change request. Pass multiple times or separate with commas." released:"v0.21.0"`
 	ConfiguredReviewers []string         `name:"configured-reviewers" help:"Default reviewers to add to change requests." hidden:"" config:"submit.reviewers" released:"v0.21.0"`
@@ -681,9 +681,6 @@ func (h *Handler) submitBranch(
 
 	var existingChange *forge.FindChangeItem
 	if branch.Change == nil && opts.Publish {
-		// If the branch doesn't have a CR associated with it,
-		// we'll probably need to create one,
-		// but verify that there isn't already one open.
 		// If the branch doesn't have a CR associated with it,
 		// we'll probably need to create one,
 		// but verify that there isn't already one open.

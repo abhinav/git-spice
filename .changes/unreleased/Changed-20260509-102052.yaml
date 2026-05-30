@@ -1,8 +1,0 @@
-kind: Changed
-body: >-
-  repo sync:
-  --restack option now runs in 'upstack' mode: all upstack branches of deleted merged branches will be restacked.
-  Override with --restack=aboves to restack only the branches directly above,
-  or --restack=none to disable restacking (this is the default behavior).
-  Change the default by setting the 'spice.repoSync.restack' configuration option.
-time: 2026-05-09T10:20:52.268442-07:00

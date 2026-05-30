@@ -126,7 +126,7 @@ Commonly used values are:
 
 ### spice.branchDelete.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Controls how $$gs branch delete$$ restacks branches above deleted branches.
 
@@ -144,7 +144,7 @@ overrides this configuration for that command.
 
 ### spice.branchOnto.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Controls how `gs branch onto` restacks branches above the moved branch.
 
@@ -473,9 +473,9 @@ The value must be a comma-separated list of usernames.
 Assignees specified with the `--assign` flag
 will be combined with the configured assignees.
 
-### spice.submit.label
+### spice.submit.labels
 
-<!-- gs:version v0.16.0 -->
+<!-- gs:version unreleased -->
 
 Add the configured labels to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
@@ -485,13 +485,18 @@ The value must be a comma-separated list of labels.
 Labels specified with the `-l`/`--label` flags
 will be combined with the configured labels.
 
-<!-- TODO(abhinav): oops, "label" should've been "labels" -->
+### spice.submit.label
 
-### spice.submit.label.addWhen
+<!-- gs:version v0.16.0 -->
+
+Deprecated in favor of $$spice.submit.labels$$ in <!-- gs:version unreleased -->.
+
+### spice.submit.labels.addWhen
 
 <!-- gs:version unreleased -->
 
-Controls when $$spice.submit.label$$ are added to change requests.
+Controls when labels from $$spice.submit.labels$$
+are added to change requests.
 
 When set to `create`, configured labels are skipped
 when updating existing CRs,
@@ -501,6 +506,12 @@ except when added explicitly via the `-l`/`--label` flag.
 
 - `always` (default): add configured labels to all CRs
 - `create`: only add configured labels when creating a CR
+
+### spice.submit.label.addWhen
+
+<!-- gs:version v0.29.0 -->
+
+Deprecated in favor of $$spice.submit.labels.addWhen$$ in <!-- gs:version unreleased -->.
 
 ### spice.submit.reviewers
 
@@ -714,7 +725,7 @@ regardless of this setting.
 
 ### spice.repoSync.restack
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.29.0 -->
 
 Which branches to restack after syncing trunk
 and deleting merged branches with $$gs repo sync$$.
