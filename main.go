@@ -608,36 +608,13 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			view ui.View,
 			store *state.Store,
 			svc *spice.Service,
-			secretStash secret.Stash,
-			forges *forge.Registry,
 			repo *git.Repository,
+			remote state.Remote,
+			remoteRepo forge.Repository,
 			restackHandler RestackHandler,
 			submitHandler SubmitHandler,
 			syncHandler SyncHandler,
 		) (MergeHandler, error) {
-			remote, err := ensureRemote(
-				ctx, repo, store, log, view,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("resolve remote: %w", err)
-			}
-
-			f, repoID, err := resolveRemoteRepository(
-				ctx, log, forges, repo, remote.Upstream,
-			)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"resolve remote repository %q: %w",
-					remote.Upstream, err,
-				)
-			}
-			remoteRepo, err := openRepository(
-				ctx, log, secretStash, f, repoID,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("open remote repository: %w", err)
-			}
-
 			return &merge.Handler{
 				Log:              log,
 				View:             view,
@@ -653,16 +630,11 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
-			view ui.View,
-			store *state.Store,
 			secretStash secret.Stash,
 			forges *forge.Registry,
 			repo *git.Repository,
+			remote state.Remote,
 		) (forge.Repository, error) {
-			remote, err := ensureRemote(ctx, repo, store, log, view)
-			if err != nil {
-				return nil, fmt.Errorf("resolve remote: %w", err)
-			}
 			f, repoID, err := resolveRemoteRepository(
 				ctx, log, forges, repo, remote.Upstream,
 			)
@@ -680,6 +652,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			}
 			return remoteRepo, nil
 		}),
+		kctx.BindSingletonProvider(ensureRemote),
 	)
 }
 
