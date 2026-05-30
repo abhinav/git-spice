@@ -40,7 +40,8 @@ type ShamHub struct {
 	comments []shamComment // all comments
 	repos    []shamRepo    // all repositories
 
-	tokens map[string]string // token -> username
+	tokens             map[string]string // token -> username
+	defaultMergeMethod MergeMethod       // used when API merge requests omit a method
 }
 
 // Config configures a ShamHub server.
@@ -74,10 +75,11 @@ func New(cfg Config) (*ShamHub, error) {
 	}
 
 	sh := ShamHub{
-		log:     cfg.Log.With("module", "shamhub"),
-		gitRoot: gitRoot,
-		gitExe:  cfg.Git,
-		tokens:  make(map[string]string),
+		log:                cfg.Log.With("module", "shamhub"),
+		gitRoot:            gitRoot,
+		gitExe:             cfg.Git,
+		tokens:             make(map[string]string),
+		defaultMergeMethod: MergeMethodMerge,
 	}
 	sh.apiServer = httptest.NewServer(sh.apiHandler())
 	sh.gitServer = httptest.NewServer(&cgi.Handler{

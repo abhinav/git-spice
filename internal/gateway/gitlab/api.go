@@ -480,7 +480,33 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
+	HeadPipeline *Pipeline `json:"head_pipeline,omitempty"`
 }
+
+// Pipeline is a GitLab CI pipeline status summary.
+//
+// GitLab pipelines API:
+// https://docs.gitlab.com/api/pipelines/
+type Pipeline struct {
+	Status string `json:"status"`
+}
+
+// GitLab pipeline status values.
+//
+// https://docs.gitlab.com/api/pipelines/
+const (
+	PipelineStatusCreated            = "created"
+	PipelineStatusWaitingForResource = "waiting_for_resource"
+	PipelineStatusPreparing          = "preparing"
+	PipelineStatusPending            = "pending"
+	PipelineStatusRunning            = "running"
+	PipelineStatusSuccess            = "success"
+	PipelineStatusFailed             = "failed"
+	PipelineStatusCanceled           = "canceled"
+	PipelineStatusSkipped            = "skipped"
+	PipelineStatusManual             = "manual"
+	PipelineStatusScheduled          = "scheduled"
+)
 
 // NoteAuthor matches the nested author object in note responses.
 //
@@ -617,7 +643,8 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 
 // AcceptMergeRequestOptions configures merge-request acceptance.
 type AcceptMergeRequestOptions struct {
-	ShouldRemoveSourceBranch *bool `json:"should_remove_source_branch,omitempty"`
+	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
+	SHA                      *string `json:"sha,omitempty"`
 }
 
 // CreateMergeRequestNoteOptions configures note creation.
