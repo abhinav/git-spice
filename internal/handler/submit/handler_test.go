@@ -15,6 +15,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
 	gomock "go.uber.org/mock/gomock"
@@ -141,8 +142,9 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 			{State: forge.ChangeMerged},
 		}, nil)
 
+	var logBuffer bytes.Buffer
 	handler := &Handler{
-		Log:        silog.Nop(),
+		Log:        silog.New(&logBuffer, nil),
 		View:       ui.NewFileView(&bytes.Buffer{}),
 		Repository: nil,
 		Worktree:   nil,
@@ -178,6 +180,9 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 	assert.ErrorContains(t, err, "1 branches with stale bases were found")
 	assert.ErrorContains(t, err, "gs repo sync")
 	assert.ErrorContains(t, err, "--force")
+	assert.Contains(t, logBuffer.String(), "Branch has stale base")
+	assert.Contains(t, logBuffer.String(), "branch=feat2")
+	assert.Contains(t, logBuffer.String(), "base=feat1")
 }
 
 func TestHandler_checkStaleSubmissionBases_forceSkipsValidation(t *testing.T) {
@@ -513,4 +518,16 @@ func (id submitFakeChangeID) String() string { return string(id) }
 
 func submitFakeChange(id string) forge.ChangeMetadata {
 	return &submitFakeChangeMetadata{id: submitFakeChangeID(id)}
+}
+
+func buildStaleBaseTestGraph(
+	t *testing.T,
+	trunk string,
+	branches []spice.LoadBranchItem,
+) *spice.BranchGraph {
+	t.Helper()
+	return spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk:    trunk,
+		Branches: branches,
+	})
 }
