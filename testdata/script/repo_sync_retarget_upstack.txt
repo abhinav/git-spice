@@ -40,7 +40,7 @@ shamhub merge alice/example 1
 # and retarget feature2's PR to main.
 gs repo sync
 stderr 'feature1: #1 was merged'
-stderr 'Retargeting feature2 to main'
+stderr 'feature2: retargeting #2 onto main'
 
 # verify feature2's PR now targets main
 shamhub dump change 2

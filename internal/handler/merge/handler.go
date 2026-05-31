@@ -386,7 +386,7 @@ func (h *Handler) executePlan(
 		if err := h.postMerge(
 			ctx, plan, i, trunk, req,
 		); err != nil {
-			return fmt.Errorf("post-merge %q: %w", plan[i].branch, err)
+			return err
 		}
 	}
 
@@ -490,7 +490,6 @@ func (h *Handler) prepareNext(
 	next *mergeItem,
 	req *Request,
 ) error {
-	h.Log.Infof("Restacking %s after merge...", next.branch)
 	if err := h.Restack.RestackBranch(ctx, next.branch); err != nil {
 		return fmt.Errorf("restack branch: %w", err)
 	}
@@ -514,7 +513,7 @@ func (h *Handler) prepareNext(
 	if err := h.awaitChecks(
 		ctx, *next, req.BuildTimeout,
 	); err != nil {
-		return fmt.Errorf("wait for checks: %w", err)
+		return fmt.Errorf("wait for checks on %q: %w", next.branch, err)
 	}
 	next.checksReady = true
 	return nil

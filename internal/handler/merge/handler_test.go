@@ -266,11 +266,11 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	output := logBuffer.String()
 	assert.Contains(t, output, "Merging feat1")
-	assert.Contains(t, output, "Restacking feat2 after merge")
 	assert.Contains(t, output, "Merging feat2")
-	assert.Contains(t, output, "Restacking feat3 after merge")
 	assert.Contains(t, output, "Merging feat3")
 	assert.Contains(t, output, "All 3 change(s) merged")
+	assert.NotContains(t, output, "Restacking feat2 after merge")
+	assert.NotContains(t, output, "Restacking feat3 after merge")
 }
 
 func TestExecutePlan_noWait(t *testing.T) {

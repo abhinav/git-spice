@@ -34,7 +34,7 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge --branch feature2
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'Merging feature1'
-stderr 'Restacking feature2 after merge'
+stderr 'feature2: restacked on main'
 stderr 'Updated #2'
 stderr 'Merging feature2'
 stderr 'All 2 change.s. merged.'
