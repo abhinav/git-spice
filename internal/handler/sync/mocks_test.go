@@ -695,45 +695,6 @@ func (c *MockServiceBranchGraphCall) DoAndReturn(f func(context.Context, *spice.
 	return c
 }
 
-// ListAbove mocks base method.
-func (m *MockService) ListAbove(ctx context.Context, name string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAbove", ctx, name)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAbove indicates an expected call of ListAbove.
-func (mr *MockServiceMockRecorder) ListAbove(ctx, name any) *MockServiceListAboveCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAbove", reflect.TypeOf((*MockService)(nil).ListAbove), ctx, name)
-	return &MockServiceListAboveCall{Call: call}
-}
-
-// MockServiceListAboveCall wrap *gomock.Call
-type MockServiceListAboveCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockServiceListAboveCall) Return(arg0 []string, arg1 error) *MockServiceListAboveCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockServiceListAboveCall) Do(f func(context.Context, string) ([]string, error)) *MockServiceListAboveCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceListAboveCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockServiceListAboveCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // MockDeleteHandler is a mock of DeleteHandler interface.
 type MockDeleteHandler struct {
 	ctrl     *gomock.Controller
