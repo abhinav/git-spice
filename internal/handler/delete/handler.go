@@ -54,7 +54,6 @@ type Service interface {
 	LookupBranch(ctx context.Context, name string) (*spice.LookupBranchResponse, error)
 	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
 	BranchOnto(ctx context.Context, req *spice.BranchOntoRequest) error
-	Restack(ctx context.Context, name string) (*spice.RestackResponse, error)
 	RebaseRescue(ctx context.Context, req spice.RebaseRescueRequest) error
 }
 
