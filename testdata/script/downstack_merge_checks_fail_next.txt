@@ -1,0 +1,115 @@
+# 'downstack merge' waits for checks on the next branch after restacking.
+
+as 'Test <test@example.com>'
+at '2026-05-31T08:07:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack, pass feature1, and fail feature2.
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+shamhub set-status alice/example 1 passed
+shamhub set-status alice/example 2 failed
+
+# The queue should merge feature1, update feature2, then stop before
+# merging feature2 because the updated PR's checks are failed.
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs downstack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+cmpenv stderr $WORK/golden/merge-stderr.txt
+
+# Feature1 merged, but feature2 remains open.
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/change-1.json
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/change-2.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- robot-merge.golden --
+===
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+true
+-- golden/merge-stderr.txt --
+INF Merging feature1 (#1)...
+INF main: pulled 2 new commit(s)
+INF feature1: #1 was merged
+INF feature2: retargeted upstack onto main
+INF feature1: deleted (was dc8aa3d)
+INF Retargeting feature2 to main...
+INF Restacking feature2 after merge...
+INF feature2: restacked on main
+INF Updated #2: $SHAMHUB_URL/alice/example/change/2
+FTL gs: post-merge "feature1": wait for checks: CI checks failed for "feature2"
+-- golden/change-1.json --
+{
+  "number": 1,
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "state": "closed",
+  "merged": true,
+  "title": "Add feature 1",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "d01baea052dab09a3867f8cfb2ff2b528f26377c"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "dc8aa3d0b8c73628ce72d6d40d0defa65b5baa8c"
+  }
+}
+-- golden/change-2.json --
+{
+  "number": 2,
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "state": "open",
+  "title": "Add feature 2",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "d01baea052dab09a3867f8cfb2ff2b528f26377c"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "a58aaea503e21f48c0a0460e819a5631ef8b294d"
+  }
+}

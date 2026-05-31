@@ -1,0 +1,71 @@
+# 'downstack merge' refuses pending CI checks when build-timeout is zero.
+
+as 'Test <test@example.com>'
+at '2026-05-31T08:06:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch and mark its checks pending
+gs downstack submit --fill
+stderr 'Created #1'
+shamhub set-status alice/example 1 pending
+
+# With build-timeout=0, pending checks fail immediately.
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs downstack merge --build-timeout=0
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+cmp stderr $WORK/golden/merge-stderr.txt
+
+# The change remains open because it was never merged.
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/change-1.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/merge-stderr.txt --
+FTL gs: wait for checks on "feature1": CI checks pending for "feature1" (build-timeout=0)
+-- golden/change-1.json --
+{
+  "number": 1,
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "ce4327bec5cf5eecf21c061a0ae1e7337b4c0b94"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "e17eba8fee97848e6f17002f39de101206f793b1"
+  }
+}
