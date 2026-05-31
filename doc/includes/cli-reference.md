@@ -570,7 +570,7 @@ only if there are multiple CRs in the stack.
 gs downstack (ds) merge (m) [flags]
 ```
 
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[downstackMerge](/cli/experiments.md#downstackmerge)</span></span>
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
 
 Merge a branch and those below it
 
