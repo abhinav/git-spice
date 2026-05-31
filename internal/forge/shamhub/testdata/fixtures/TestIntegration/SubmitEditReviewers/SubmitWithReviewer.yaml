@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:58759
-        body: '{"subject":"Testing E0vn4LsV","body":"Test PR with reviewer","base":"main","head":"E0vn4LsV","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes
+        host: 127.0.0.1:56373
+        body: '{"subject":"Testing 4oj7KI1p","body":"Test PR with reviewer","base":"main","head":"4oj7KI1p","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 82
         body: |
             {
-              "number": 14,
-              "url": "http://127.0.0.1:58760/abhinav/test-repo/change/14"
+              "number": 13,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/13"
             }
         headers:
             Content-Length:
@@ -28,20 +28,20 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 23.823333ms
+        duration: 23.097875ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:58759
+        host: 127.0.0.1:56373
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:58759/abhinav/test-repo/changes/by-branch/E0vn4LsV?limit=10&state=all
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/4oj7KI1p?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
@@ -51,10 +51,10 @@ interactions:
         body: |
             [
               {
-                "number": 14,
-                "html_url": "http://127.0.0.1:58760/abhinav/test-repo/change/14",
+                "number": 13,
+                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/13",
                 "state": "open",
-                "title": "Testing E0vn4LsV",
+                "title": "Testing 4oj7KI1p",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "ab081f41b2e6a172f2b938d18331f8bb4a50f76d"
+                  "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "E0vn4LsV",
-                  "sha": "fea0709b1c947152b9fbf9ed0cb3d22a0e8679c4"
+                  "ref": "4oj7KI1p",
+                  "sha": "d42a7e9d935c9911190197ad4e04542af2500250"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -85,4 +85,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 18.551333ms
+        duration: 23.390833ms

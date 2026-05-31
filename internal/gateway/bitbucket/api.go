@@ -385,6 +385,14 @@ type CommitStatus struct {
 	State string `json:"state"`
 }
 
+// CommitStatusCreateRequest is the request body for creating a build status.
+type CommitStatusCreateRequest struct {
+	Key         string `json:"key"`
+	State       string `json:"state"`
+	Description string `json:"description,omitempty"`
+	URL         string `json:"url,omitempty"`
+}
+
 // Bitbucket Cloud build status states.
 //
 // https://developer.atlassian.com/cloud/bitbucket/rest/api-group-commit-statuses/
@@ -416,6 +424,29 @@ func (c *Client) CommitStatusList(
 			workspace, repo, commitHash,
 		),
 		nil, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// CommitStatusCreate creates or updates a build status for a commit.
+func (c *Client) CommitStatusCreate(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	commitHash string,
+	req *CommitStatusCreateRequest,
+) (*CommitStatus, *Response, error) {
+	var response CommitStatus
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf(
+			"/repositories/%s/%s/commit/%s/statuses/build",
+			workspace, repo, commitHash,
+		),
+		nil, req, &response,
 	)
 	if err != nil {
 		return nil, resp, err

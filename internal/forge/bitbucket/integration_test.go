@@ -102,6 +102,24 @@ func TestIntegration(t *testing.T) {
 					change.(*bitbucket.PR),
 				))
 		},
+		// TODO: record fixtures for BitBucket
+		//
+		// SetChangeChecksState: func(
+		// 	t *testing.T,
+		// 	_ *http.Client,
+		// 	repo forge.Repository,
+		// 	_ forge.ChangeID,
+		// 	headHash git.Hash,
+		// 	state forge.ChecksState,
+		// ) {
+		// 	require.NoError(t,
+		// 		bitbucket.SetChangeChecksState(
+		// 			t.Context(),
+		// 			repo.(*bitbucket.Repository),
+		// 			headHash,
+		// 			state,
+		// 		))
+		// },
 		SetCommentsPageSize: bitbucket.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{},

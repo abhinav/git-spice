@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+
+	"go.abhg.dev/gs/internal/forge"
+	bitbucketapi "go.abhg.dev/gs/internal/gateway/bitbucket"
+	"go.abhg.dev/gs/internal/git"
 )
 
 func prActionPath(
@@ -34,6 +38,44 @@ func MergeChange(
 	}
 	repo.log.Debug("Merged pull request", "pr", id.Number)
 	return nil
+}
+
+// SetChangeChecksState sets a synthetic build status
+// for integration tests.
+func SetChangeChecksState(
+	ctx context.Context,
+	repo *Repository,
+	headHash git.Hash,
+	state forge.ChecksState,
+) error {
+	_, _, err := repo.client.CommitStatusCreate(
+		ctx,
+		repo.workspace,
+		repo.repo,
+		headHash.String(),
+		&bitbucketapi.CommitStatusCreateRequest{
+			Key:         "git-spice-integration",
+			State:       bitbucketStatusState(state),
+			Description: "Synthetic status for git-spice integration tests",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("set commit status: %w", err)
+	}
+	return nil
+}
+
+func bitbucketStatusState(state forge.ChecksState) string {
+	switch state {
+	case forge.ChecksPending:
+		return bitbucketapi.CommitStatusInProgress
+	case forge.ChecksPassed:
+		return bitbucketapi.CommitStatusSuccessful
+	case forge.ChecksFailed:
+		return bitbucketapi.CommitStatusFailed
+	default:
+		return bitbucketapi.CommitStatusFailed
+	}
 }
 
 func approvePR(
