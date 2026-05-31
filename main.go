@@ -652,7 +652,15 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			}
 			return remoteRepo, nil
 		}),
-		kctx.BindSingletonProvider(ensureRemote),
+		kctx.BindSingletonProvider(func(
+			ctx context.Context,
+			repo *git.Repository,
+			store *state.Store,
+			log *silog.Logger,
+			view ui.View,
+		) (state.Remote, error) {
+			return ensureRemote(ctx, repo, store, log, view)
+		}),
 	)
 }
 
