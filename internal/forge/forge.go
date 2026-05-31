@@ -234,9 +234,21 @@ type Repository interface {
 	SubmitChange(ctx context.Context, req SubmitChangeRequest) (SubmitChangeResult, error)
 
 	EditChange(ctx context.Context, id ChangeID, opts EditChangeOptions) error
+
+	// MergeChange merges an open change into its base branch.
+	MergeChange(ctx context.Context, id ChangeID, opts MergeChangeOptions) error
+
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
+
+	// ChangeChecksState reports the aggregate CI/checks
+	// state for the given change.
+	//
+	// If the forge has no CI/checks integration
+	// or the change has no required checks,
+	// implementations should return ChecksPassed.
+	ChangeChecksState(ctx context.Context, id ChangeID) (ChecksState, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -430,6 +442,18 @@ type EditChangeOptions struct {
 	AddAssignees []string
 }
 
+// MergeChangeOptions specifies options for a merge operation.
+type MergeChangeOptions struct {
+	// HeadHash, if non-empty, causes the merge to fail
+	// if the change's current head commit doesn't match.
+	// This prevents merging a change whose content
+	// has changed since the caller last inspected it.
+	//
+	// Not all forges support this; unsupported forges
+	// ignore the field.
+	HeadHash git.Hash
+}
+
 // FindChangeItem is a single result from searching for changes in the
 // repository.
 type FindChangeItem struct {
@@ -564,4 +588,49 @@ func (s *ChangeState) UnmarshalText(b []byte) error {
 		return fmt.Errorf("unknown change state: %q", b)
 	}
 	return nil
+}
+
+// ChecksState represents the aggregate CI/checks
+// status for a change.
+//
+// TODO: Teach this type the names of individual statuses
+// so merge failures can report exactly what's blocking the user.
+type ChecksState int
+
+const (
+	// ChecksPending indicates checks are still running.
+	ChecksPending ChecksState = iota + 1
+
+	// ChecksPassed indicates all checks have passed.
+	ChecksPassed
+
+	// ChecksFailed indicates one or more checks failed.
+	ChecksFailed
+)
+
+func (s ChecksState) String() string {
+	switch s {
+	case ChecksPending:
+		return "pending"
+	case ChecksPassed:
+		return "passed"
+	case ChecksFailed:
+		return "failed"
+	default:
+		return fmt.Sprintf("ChecksState(%d)", int(s))
+	}
+}
+
+// GoString returns a Go-syntax representation.
+func (s ChecksState) GoString() string {
+	switch s {
+	case ChecksPending:
+		return "ChecksPending"
+	case ChecksPassed:
+		return "ChecksPassed"
+	case ChecksFailed:
+		return "ChecksFailed"
+	default:
+		return fmt.Sprintf("ChecksState(%d)", int(s))
+	}
 }

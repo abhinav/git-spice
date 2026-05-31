@@ -176,6 +176,30 @@ func (c *Client) MergeRequestAccept(
 	return &response, resp, nil
 }
 
+// CommitStatusSet sets a commit status.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/commits/#set-commit-pipeline-status
+func (c *Client) CommitStatusSet(
+	ctx context.Context,
+	projectID int64,
+	sha string,
+	opt *SetCommitStatusOptions,
+) (*Pipeline, *Response, error) {
+	var response Pipeline
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf("projects/%d/statuses/%s", projectID, sha),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
 // MergeRequestNoteCreate creates a merge request note.
 //
 // GitLab API:
@@ -480,7 +504,33 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
+	HeadPipeline *Pipeline `json:"head_pipeline,omitempty"`
 }
+
+// Pipeline is a GitLab CI pipeline status summary.
+//
+// GitLab pipelines API:
+// https://docs.gitlab.com/api/pipelines/
+type Pipeline struct {
+	Status string `json:"status"`
+}
+
+// GitLab pipeline status values.
+//
+// https://docs.gitlab.com/api/pipelines/
+const (
+	PipelineStatusCreated            = "created"
+	PipelineStatusWaitingForResource = "waiting_for_resource"
+	PipelineStatusPreparing          = "preparing"
+	PipelineStatusPending            = "pending"
+	PipelineStatusRunning            = "running"
+	PipelineStatusSuccess            = "success"
+	PipelineStatusFailed             = "failed"
+	PipelineStatusCanceled           = "canceled"
+	PipelineStatusSkipped            = "skipped"
+	PipelineStatusManual             = "manual"
+	PipelineStatusScheduled          = "scheduled"
+)
 
 // NoteAuthor matches the nested author object in note responses.
 //
@@ -617,7 +667,23 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 
 // AcceptMergeRequestOptions configures merge-request acceptance.
 type AcceptMergeRequestOptions struct {
-	ShouldRemoveSourceBranch *bool `json:"should_remove_source_branch,omitempty"`
+	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
+	SHA                      *string `json:"sha,omitempty"`
+}
+
+// SetCommitStatusOptions configures commit status creation.
+type SetCommitStatusOptions struct {
+	// State is the commit status to report.
+	//
+	// Supported values include pending, running, success,
+	// failed, canceled, and skipped.
+	State *string `json:"state,omitempty"`
+
+	// Name identifies the status context shown in GitLab.
+	Name *string `json:"name,omitempty"`
+
+	// Description explains the status result.
+	Description *string `json:"description,omitempty"`
 }
 
 // CreateMergeRequestNoteOptions configures note creation.

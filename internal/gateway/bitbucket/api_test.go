@@ -91,6 +91,25 @@ func TestClient_PullRequestGet(t *testing.T) {
 	assert.Equal(t, "main", pr.Destination.Branch.Name)
 }
 
+func TestClient_PullRequestMerge(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/2.0/repositories/engineering/warp-core/pullrequests/55/merge", r.URL.Path)
+		writeJSON(t, w, http.StatusOK, PullRequest{
+			ID:    55,
+			State: "MERGED",
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	pr, _, err := client.PullRequestMerge(
+		t.Context(), "engineering", "warp-core", 55,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "MERGED", pr.State)
+}
+
 func TestClient_PullRequestUpdate(t *testing.T) {
 	title := "Draft: Stabilize nacelles"
 	base := "release"
@@ -158,6 +177,59 @@ func TestClient_PullRequestList(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, prs.Values, 2)
 	assert.Equal(t, int64(56), prs.Values[1].ID)
+}
+
+func TestClient_CommitStatusList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/2.0/repositories/engineering/warp-core/commit/abc123/statuses", r.URL.Path)
+		writeJSON(t, w, http.StatusOK, CommitStatusList{
+			Values: []CommitStatus{
+				{State: CommitStatusInProgress},
+				{State: CommitStatusSuccessful},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	statuses, _, err := client.CommitStatusList(
+		t.Context(), "engineering", "warp-core", "abc123",
+	)
+	require.NoError(t, err)
+	require.Len(t, statuses.Values, 2)
+	assert.Equal(t, CommitStatusInProgress, statuses.Values[0].State)
+}
+
+func TestClient_CommitStatusCreate(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/2.0/repositories/engineering/warp-core/commit/abc123/statuses/build", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"key":"git-spice",
+			"state":"SUCCESSFUL",
+			"description":"Warp core stable"
+		}`)
+		writeJSON(t, w, http.StatusOK, CommitStatus{
+			State: CommitStatusSuccessful,
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	status, _, err := client.CommitStatusCreate(
+		t.Context(),
+		"engineering",
+		"warp-core",
+		"abc123",
+		&CommitStatusCreateRequest{
+			Key:         "git-spice",
+			State:       CommitStatusSuccessful,
+			Description: "Warp core stable",
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, CommitStatusSuccessful, status.State)
 }
 
 func TestClient_CommentMethods(t *testing.T) {

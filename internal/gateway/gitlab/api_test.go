@@ -286,6 +286,66 @@ func TestClient_MergeRequestAccept(t *testing.T) {
 	assert.Equal(t, "merged", mr.State)
 }
 
+func TestClient_MergeRequestAccept_withSHA(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPut, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
+		assertJSONBody(t, r, `{"sha":"abc123"}`)
+		writeJSON(t, w, http.StatusOK, MergeRequest{
+			BasicMergeRequest: BasicMergeRequest{
+				IID:   55,
+				State: "merged",
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	mr, _, err := client.MergeRequestAccept(
+		t.Context(),
+		int64(42),
+		55,
+		&AcceptMergeRequestOptions{
+			SHA: new("abc123"),
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "merged", mr.State)
+}
+
+func TestClient_CommitStatusSet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/statuses/abc123", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"state":"success",
+			"name":"git-spice",
+			"description":"Warp core stable"
+		}`)
+		writeJSON(t, w, http.StatusCreated, Pipeline{
+			Status: PipelineStatusSuccess,
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	status := PipelineStatusSuccess
+	name := "git-spice"
+	description := "Warp core stable"
+	pipeline, _, err := client.CommitStatusSet(
+		t.Context(),
+		int64(42),
+		"abc123",
+		&SetCommitStatusOptions{
+			State:       &status,
+			Name:        &name,
+			Description: &description,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, PipelineStatusSuccess, pipeline.Status)
+}
+
 func TestClient_MergeRequestNoteCreate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)

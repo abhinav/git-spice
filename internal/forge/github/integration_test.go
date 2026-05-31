@@ -1,8 +1,12 @@
 package github_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"testing"
 
@@ -13,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/github"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/graphqlutil"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
@@ -120,6 +125,23 @@ func TestIntegration(t *testing.T) {
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, github.CloseChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
 		},
+		SetChangeChecksState: func(
+			t *testing.T,
+			httpClient *http.Client,
+			_ forge.Repository,
+			_ forge.ChangeID,
+			headHash git.Hash,
+			state forge.ChecksState,
+		) {
+			require.NoError(t, setGitHubChangeChecksState(
+				t.Context(),
+				httpClient,
+				cfg.Owner,
+				cfg.Repo,
+				headHash,
+				state,
+			))
+		},
 		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{cfg.Assignee},
@@ -211,4 +233,74 @@ func randomString(n int) string {
 		b[i] = _alnum[idx]
 	}
 	return string(b)
+}
+
+func setGitHubChangeChecksState(
+	ctx context.Context,
+	httpClient *http.Client,
+	owner string,
+	repo string,
+	headHash git.Hash,
+	state forge.ChecksState,
+) error {
+	// GitHub's GraphQL schema exposes the status rollup we read,
+	// but commit status creation remains a REST API operation.
+	// Check runs are a separate GitHub App-authenticated mechanism,
+	// so these tests create classic commit statuses instead.
+	body, err := json.Marshal(gitHubStatusRequest{
+		State:       gitHubStatusState(state),
+		Context:     "git-spice integration",
+		Description: "Synthetic status for git-spice integration tests",
+	})
+	if err != nil {
+		return fmt.Errorf("marshal status: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/statuses/%s",
+			owner, repo, headHash,
+		),
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("post status: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("post status: %s: %s", resp.Status, body)
+	}
+	return nil
+}
+
+type gitHubStatusRequest struct {
+	State       string `json:"state"`
+	Context     string `json:"context"`
+	Description string `json:"description"`
+}
+
+func gitHubStatusState(state forge.ChecksState) string {
+	switch state {
+	case forge.ChecksPending:
+		return "pending"
+	case forge.ChecksPassed:
+		return "success"
+	case forge.ChecksFailed:
+		return "failure"
+	default:
+		return "error"
+	}
 }
