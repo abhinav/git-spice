@@ -187,19 +187,6 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		return err
 	}
 
-	commitEnv := []string{
-		"GIT_COMMITTER_NAME=" + req.CommitterName,
-		"GIT_COMMITTER_EMAIL=" + req.CommitterEmail,
-		"GIT_AUTHOR_NAME=" + req.CommitterName,
-		"GIT_AUTHOR_EMAIL=" + req.CommitterEmail,
-	}
-	if !req.Time.IsZero() {
-		commitEnv = append(commitEnv,
-			"GIT_COMMITTER_DATE="+req.Time.Format(time.RFC3339),
-			"GIT_AUTHOR_DATE="+req.Time.Format(time.RFC3339),
-		)
-	}
-
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
@@ -230,6 +217,32 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	if req.Time.IsZero() {
+		out, err := xec.Command(
+			ctx, sh.log, sh.gitExe,
+			"log", "-1", "--format=%cI", headRef.Name,
+		).
+			WithDir(sh.repoDir(headRef.Owner, headRef.Repo)).
+			Output()
+		if err != nil {
+			return fmt.Errorf("read head commit time: %w", err)
+		}
+
+		req.Time, err = time.Parse(time.RFC3339, strings.TrimSpace(string(out)))
+		if err != nil {
+			return fmt.Errorf("parse head commit time: %w", err)
+		}
+	}
+
+	commitEnv := []string{
+		"GIT_COMMITTER_NAME=" + req.CommitterName,
+		"GIT_COMMITTER_EMAIL=" + req.CommitterEmail,
+		"GIT_AUTHOR_NAME=" + req.CommitterName,
+		"GIT_AUTHOR_EMAIL=" + req.CommitterEmail,
+		"GIT_COMMITTER_DATE=" + req.Time.Format(time.RFC3339),
+		"GIT_AUTHOR_DATE=" + req.Time.Format(time.RFC3339),
+	}
 
 	// If a HeadHash is provided, verify the head matches.
 	if req.HeadHash != "" {

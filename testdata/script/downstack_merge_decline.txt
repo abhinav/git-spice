@@ -1,12 +1,12 @@
-# 'repo sync' retargets upstack PRs on the forge
-# after deleting merged branches.
+# 'downstack merge' does nothing when the user declines the prompt.
 
 as 'Test <test@example.com>'
-at '2026-03-04T18:00:00Z'
+at '2024-04-05T16:40:32Z'
 
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -29,24 +29,24 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# verify feature2 targets feature1 initially
-shamhub dump change 2
-stdout '"ref": "feature1"'
+# decline the merge prompt
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs downstack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'merge aborted'
 
-# merge feature1 externally
-shamhub merge alice/example 1
-
-# sync should detect the merge, delete feature1,
-# and retarget feature2's PR to main.
-gs repo sync
-stderr 'feature1: #1 was merged'
-stderr 'feature2: retargeting #2 onto main'
-
-# verify feature2's PR now targets main
-shamhub dump change 2
-stdout '"ref": "main"'
+# verify both PRs are still open
+shamhub dump changes
+stdout '"state": "open"'
+! stdout '"merged": true'
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
+-- robot-merge.golden --
+===
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+false

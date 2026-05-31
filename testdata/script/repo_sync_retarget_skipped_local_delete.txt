@@ -44,7 +44,7 @@ shamhub merge alice/example 1
 gs repo sync
 stderr 'feature1: #1 was merged'
 stderr 'feature1: checked out in another worktree.*skipping deletion'
-stderr 'Retargeting feature2 to main'
+stderr 'feature2: retargeting #2 onto main'
 
 git rev-parse --verify feature1
 

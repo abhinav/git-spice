@@ -1,0 +1,82 @@
+# 'downstack merge' handles server-side squash merges.
+
+as 'Test <test@example.com>'
+at '2026-05-24T19:33:15Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.downstackMerge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub config mergeMethod squash
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2 -> feature3
+cp $WORK/extra/stack-feature1.txt stack.txt
+git add stack.txt
+gs bc feature1 -m 'Add feature 1'
+cp $WORK/extra/stack-feature2.txt stack.txt
+git add stack.txt
+gs bc feature2 -m 'Add feature 2'
+cp $WORK/extra/stack-feature3.txt stack.txt
+git add stack.txt
+gs bc feature3 -m 'Add feature 3'
+
+# submit the stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# merge feature1 and feature2 from feature2.
+# ShamHub will squash the merge because of the server-side default above.
+gs bco feature2
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs downstack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
+stderr 'feature2: merging #2:'
+stderr 'feature3: retargeted upstack onto main'
+stderr 'feature2: #2 was merged'
+stderr 'feature2: deleted'
+
+# feature3 still has the full file content before replay.
+gs bco feature3
+cmp stack.txt $WORK/extra/stack-feature3.txt
+
+# Explicit restack should replay only the surviving upstack change
+# on top of the squashed trunk commit.
+gs branch restack
+stderr 'feature3: restacked on main'
+cmp stack.txt $WORK/extra/stack-feature3.txt
+git log --format=%s main..feature3
+cmp stdout $WORK/golden/feature3-log.txt
+
+-- extra/stack-feature1.txt --
+feature 1
+-- extra/stack-feature2.txt --
+feature 1
+feature 2
+-- extra/stack-feature3.txt --
+feature 1
+feature 2
+feature 3
+-- repo/.keep --
+-- golden/feature3-log.txt --
+Add feature 3
+-- robot-merge.golden --
+===
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+true

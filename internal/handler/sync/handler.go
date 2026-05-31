@@ -1104,8 +1104,8 @@ func collectRetargetCandidates(
 // for upstack branches surviving deletion.
 func (h *Handler) retargetUpstackChanges(ctx context.Context, candidates iter.Seq[retargetCandidate]) {
 	for c := range candidates {
-		h.Log.Infof("Retargeting %s to %s...",
-			c.branch, c.newBase)
+		h.Log.Infof("%s: retargeting %v onto %s...",
+			c.branch, c.changeID, c.newBase)
 		err := h.RemoteRepository.EditChange(
 			ctx, c.changeID,
 			forge.EditChangeOptions{Base: c.newBase},

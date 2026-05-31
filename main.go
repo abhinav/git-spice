@@ -28,6 +28,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/split"
@@ -601,6 +602,64 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				RemoteRepository: remoteRepo,
 				PushRepository:   pushRepository,
 			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			store *state.Store,
+			svc *spice.Service,
+			repo *git.Repository,
+			remote state.Remote,
+			remoteRepo forge.Repository,
+			restackHandler RestackHandler,
+			submitHandler SubmitHandler,
+			syncHandler SyncHandler,
+		) (MergeHandler, error) {
+			return &merge.Handler{
+				Log:              log,
+				View:             view,
+				Store:            store,
+				Service:          svc,
+				RemoteRepository: remoteRepo,
+				Restack:          restackHandler,
+				Submit:           submitHandler,
+				Sync:             syncHandler,
+				Repository:       repo,
+				Remote:           remote.Upstream,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			secretStash secret.Stash,
+			forges *forge.Registry,
+			repo *git.Repository,
+			remote state.Remote,
+		) (forge.Repository, error) {
+			f, repoID, err := resolveRemoteRepository(
+				ctx, log, forges, repo, remote.Upstream,
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"resolve remote repository %q: %w",
+					remote.Upstream, err,
+				)
+			}
+			remoteRepo, err := openRepository(
+				ctx, log, secretStash, f, repoID,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("open remote repository: %w", err)
+			}
+			return remoteRepo, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			ctx context.Context,
+			repo *git.Repository,
+			store *state.Store,
+			log *silog.Logger,
+			view ui.View,
+		) (state.Remote, error) {
+			return ensureRemote(ctx, repo, store, log, view)
 		}),
 	)
 }

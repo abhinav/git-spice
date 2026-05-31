@@ -564,6 +564,64 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
+### git-spice downstack merge {#gs-downstack-merge}
+
+```
+gs downstack (ds) merge (m) [flags]
+```
+
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[downstackMerge](/cli/experiments.md#downstackmerge)</span></span>
+
+Merge a branch and those below it
+
+Merges the current branch and all branches below it
+into trunk via the forge API, bottom-up.
+Use --branch to start at a different branch.
+
+This command acts as a local merge queue:
+it merges one Change Request,
+waits for that merge to finish,
+restacks and updates the next Change Request,
+waits for its CI checks to pass,
+and then repeats the process.
+
+For a stack like this:
+
+    main <- feature1 <- feature2 <- feature3
+
+Running from feature3 merges in this order:
+
+    feature1, feature2, feature3
+
+Already-merged branches are skipped automatically.
+Branches must have an open Change Request to be merged.
+
+Before merging, the downstack is checked for branches
+whose base PR was already merged on the forge.
+Use --no-branch-check to skip this validation.
+
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
+(default: 30m, 0 means fail immediately if not ready).
+
+Between merges, the command waits for each merge
+to complete, restacks and updates the next PR,
+waits for CI checks on the updated PR,
+and syncs merged branch cleanup.
+
+Use --no-wait for single branch merging
+when you don't want to wait for the merge to propagate.
+--no-wait is rejected for multi-branch merges.
+
+**Flags**
+
+* `--branch=NAME`: Branch to start merging from
+* `--no-wait`: Skip polling for a single branch merge to propagate.
+* `--no-branch-check`: Skip stale base validation before merging.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout)
+
 ### git-spice downstack edit {#gs-downstack-edit}
 
 ```

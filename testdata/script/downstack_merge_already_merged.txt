@@ -1,12 +1,12 @@
-# 'repo sync' retargets upstack PRs on the forge
-# after deleting merged branches.
+# 'downstack merge' skips branches that are already merged.
 
 as 'Test <test@example.com>'
-at '2026-03-04T18:00:00Z'
+at '2024-04-05T16:40:32Z'
 
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -29,24 +29,26 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# verify feature2 targets feature1 initially
-shamhub dump change 2
-stdout '"ref": "feature1"'
-
 # merge feature1 externally
 shamhub merge alice/example 1
 
-# sync should detect the merge, delete feature1,
-# and retarget feature2's PR to main.
-gs repo sync
-stderr 'feature1: #1 was merged'
+# now merge from feature2 — feature1 should be skipped.
+# Use --no-branch-check because feature1's merged state
+# would otherwise trigger stale base validation.
+# feature2's PR base is retargeted from feature1 to main.
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs downstack merge --no-branch-check
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'already merged, skipping'
 stderr 'feature2: retargeting #2 onto main'
-
-# verify feature2's PR now targets main
-shamhub dump change 2
-stdout '"ref": "main"'
+stderr 'feature2: merging #2:'
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature2 (#2)
+true

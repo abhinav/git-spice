@@ -294,6 +294,14 @@ then run the test script with the `--update` flag to auto-update them.
     (`$FOO` placeholders in the golden JSON file
     will be replaced with their actual values from the test environment.)
 
+    For ShamHub JSON dump fixtures,
+    start with a plain `cmp` assertion,
+    run the script with `--update`,
+    and then replace volatile ShamHub URLs
+    such as `http://127.0.0.1:<port>` with `$SHAMHUB_URL`
+    in the generated golden file.
+    After that, change the assertion to `cmpenvJSON`.
+
 ### Testing Interactive Prompts
 
 For commands with interactive prompts,

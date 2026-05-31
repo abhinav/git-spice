@@ -1,0 +1,67 @@
+# 'downstack merge' fetches trunk after merge,
+# ensuring upstack branches are retargeted onto the updated trunk
+# and retain the merged branch's changes for an explicit restack.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.downstackMerge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+# feature2 modifies the same file as feature1
+# to demonstrate that the merge doesn't lose feature1's changes.
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# merge only feature1 from feature1
+gs bco feature1
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs downstack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature2: retargeted upstack onto main'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
+
+# Switch to feature2 and verify it contains feature1's changes.
+# If trunk was not fetched before the upstack rebase,
+# feature1.txt would be missing from feature2.
+gs bco feature2
+exec cat feature1.txt
+stdout 'This is feature 1'
+exec cat feature2.txt
+stdout 'This is feature 2'
+
+# The upstack branch is left for an explicit restack.
+gs branch restack
+stderr 'feature2: restacked on main'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true

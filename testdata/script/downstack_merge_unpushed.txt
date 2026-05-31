@@ -1,12 +1,13 @@
-# 'repo sync' retargets upstack PRs on the forge
-# after deleting merged branches.
+# 'downstack merge' refuses to merge branches
+# with unpushed local commits.
 
 as 'Test <test@example.com>'
-at '2026-03-04T18:00:00Z'
+at '2024-04-05T16:40:32Z'
 
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -24,29 +25,28 @@ gs bc feature1 -m 'Add feature 1'
 git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
 
-# submit the stack
+# submit the stack (pushes to remote)
 gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# verify feature2 targets feature1 initially
-shamhub dump change 2
-stdout '"ref": "feature1"'
+# add an unpushed commit on feature1
+gs bco feature1
+cp $WORK/extra.txt extra.txt
+git add extra.txt
+git commit -m 'Add extra (not pushed)'
+gs bco feature2
 
-# merge feature1 externally
-shamhub merge alice/example 1
-
-# sync should detect the merge, delete feature1,
-# and retarget feature2's PR to main.
-gs repo sync
-stderr 'feature1: #1 was merged'
-stderr 'feature2: retargeting #2 onto main'
-
-# verify feature2's PR now targets main
-shamhub dump change 2
-stdout '"ref": "main"'
+# merge should fail because feature1 has unpushed commits
+! gs downstack merge
+stderr 'out of sync'
+stderr 'feature1'
+stderr 'gs branch submit'
+stderr 'git reset --hard'
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
+-- extra.txt --
+This is an unpushed change
