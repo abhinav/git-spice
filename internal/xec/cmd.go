@@ -316,8 +316,7 @@ func outputLogWriter(name string, logger *prefixLogger) (w io.Writer, wrap func(
 		}
 	}
 
-	// Otherwise, buffer it all in-memory to put into the error.
-	var buf bytes.Buffer // TODO: Use a bounded buffer
+	buf := prefixSuffixWriter{N: 32 * 1024}
 	return &buf, func(err error) error {
 		if err == nil {
 			return err
@@ -336,6 +335,134 @@ func outputLogWriter(name string, logger *prefixLogger) (w io.Writer, wrap func(
 
 		return errors.Join(err, fmt.Errorf("%s:\n%s", name, output))
 	}
+}
+
+// prefixSuffixWriter stores the beginning and end of an output stream.
+//
+// It protects command error reporting from unbounded subprocess output
+// while preserving the context where diagnostics usually identify themselves:
+// the command invocation near the beginning,
+// and the final failure near the end.
+//
+// The first N bytes written are stored in prefix.
+// All later bytes compete for suffix,
+// which always represents the most recent N bytes after prefix.
+type prefixSuffixWriter struct {
+	// N is the maximum number of bytes retained in each side.
+	N int
+
+	// prefix contains the first N bytes written.
+	prefix []byte
+
+	// suffix is a ring buffer for bytes written after prefix is full.
+	//
+	// While len(suffix) < N,
+	// suffix is still in chronological order.
+	// Once full,
+	// suffixStart points at the oldest byte in the ring,
+	// so the chronological suffix is:
+	//
+	//	suffix[suffixStart:] + suffix[:suffixStart]
+	suffix []byte
+
+	// suffixStart is the offset of the oldest byte in a full suffix ring.
+	//
+	// It is zero while the ring is not full.
+	// Each overwrite advances suffixStart past the bytes that were replaced.
+	suffixStart int
+
+	// total is the total number of bytes written.
+	total int64
+}
+
+func (w *prefixSuffixWriter) Write(bs []byte) (int, error) {
+	n := len(bs)
+	w.total += int64(n)
+	if w.N <= 0 {
+		return n, nil
+	}
+
+	// Fill prefix first because Bytes must reproduce the input exactly
+	// until the total stream grows beyond prefix plus suffix capacity.
+	if len(w.prefix) < w.N {
+		remaining := min(w.N-len(w.prefix), len(bs))
+		w.prefix = append(w.prefix, bs[:remaining]...)
+		bs = bs[remaining:]
+	}
+
+	// All bytes after prefix flow through the suffix ring.
+	// If the total stream never exceeds 2*N,
+	// suffixBytes appends these bytes after prefix unchanged.
+	// If it does exceed 2*N,
+	// the ring has retained only the final N bytes
+	// and Bytes reports the skipped middle section.
+	w.writeSuffix(bs)
+	return n, nil
+}
+
+func (w *prefixSuffixWriter) Bytes() []byte {
+	if w.total <= int64(2*w.N) {
+		out := make([]byte, 0, int(w.total))
+		out = append(out, w.prefix...)
+		return w.appendSuffixBytes(out)
+	}
+
+	out := make([]byte, 0, len(w.prefix)+len(w.suffix)+64)
+	out = append(out, w.prefix...)
+	out = fmt.Appendf(out,
+		"\n...%d bytes skipped...\n",
+		w.total-int64(len(w.prefix))-int64(len(w.suffix)))
+	return w.appendSuffixBytes(out)
+}
+
+func (w *prefixSuffixWriter) writeSuffix(bs []byte) {
+	if len(bs) == 0 || w.N <= 0 {
+		return
+	}
+
+	// A single write that is at least as large as the suffix capacity
+	// replaces the whole ring with that write's tail.
+	// There are no older suffix bytes that can survive this write.
+	if len(bs) >= w.N {
+		w.suffix = append(w.suffix[:0], bs[len(bs)-w.N:]...)
+		w.suffixStart = 0
+		return
+	}
+
+	// Until suffix reaches max bytes,
+	// append keeps the ring in ordinary chronological order.
+	// If this write also fills the ring and has bytes left over,
+	// the leftover bytes are handled by the overwrite path below.
+	if free := w.N - len(w.suffix); free > 0 {
+		free = min(free, len(bs))
+		w.suffix = append(w.suffix, bs[:free]...)
+		bs = bs[free:]
+		if len(bs) == 0 {
+			return
+		}
+	}
+
+	// suffix is full.
+	// Overwrite starting at suffixStart because that offset is the oldest byte.
+	// Advancing suffixStart by the number of bytes written makes the next
+	// oldest surviving byte the start of chronological output.
+	first := copy(w.suffix[w.suffixStart:], bs)
+	second := copy(w.suffix, bs[first:])
+	w.suffixStart = (w.suffixStart + first + second) % w.N
+}
+
+func (w *prefixSuffixWriter) appendSuffixBytes(out []byte) []byte {
+	if len(w.suffix) == 0 {
+		return out
+	}
+	if len(w.suffix) < w.N || w.suffixStart == 0 {
+		return append(out, w.suffix...)
+	}
+
+	// A full ring with non-zero suffixStart wraps physically,
+	// so rebuild the logical byte order before reporting it.
+	out = append(out, w.suffix[w.suffixStart:]...)
+	return append(out, w.suffix[:w.suffixStart]...)
 }
 
 type prefixLogger struct {
