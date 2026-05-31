@@ -261,7 +261,12 @@ func (h *Handler) validateSynced(
 		)
 		if err != nil {
 			// Remote ref may not exist (e.g., pruned).
-			// Skip rather than false-positive.
+			// Skip rather than false-positive,
+			// but report that the push-safety check was incomplete.
+			h.Log.Warn("Unable to verify branch push status",
+				"branch", item.branch,
+				"remoteRef", remoteRef,
+				"error", err)
 			continue
 		}
 
