@@ -1,0 +1,4 @@
+kind: Changed
+body: >-
+  Limit captured output from subprocesses in errors to prevent unbounded memory use.
+time: 2026-05-30T18:03:33.626826-07:00

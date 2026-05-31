@@ -17,6 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec/xectest"
 	"go.uber.org/mock/gomock"
+	"pgregory.net/rapid"
 )
 
 var _testBinary string
@@ -422,6 +423,131 @@ func TestCmd_CaptureStdout(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "stdout:")
 	assert.ErrorContains(t, err, "stdout message")
+}
+
+func TestPrefixSuffixWriter(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		var w prefixSuffixWriter
+		assert.Empty(t, w.Bytes())
+	})
+
+	t.Run("ShorterThanMax", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		_, err := w.Write([]byte("abc"))
+		require.NoError(t, err)
+		assert.Equal(t, []byte("abc"), w.Bytes())
+	})
+
+	t.Run("ExactlyMax", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		_, err := w.Write([]byte("abcd"))
+		require.NoError(t, err)
+		assert.Equal(t, []byte("abcd"), w.Bytes())
+	})
+
+	t.Run("BetweenMaxAndDoubleMax", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		_, err := w.Write([]byte("abcdef"))
+		require.NoError(t, err)
+		assert.Equal(t, []byte("abcdef"), w.Bytes())
+	})
+
+	t.Run("ExactlyDoubleMax", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		_, err := w.Write([]byte("abcdefgh"))
+		require.NoError(t, err)
+		assert.Equal(t, []byte("abcdefgh"), w.Bytes())
+	})
+
+	t.Run("LargerThanDoubleMax", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		_, err := w.Write([]byte("abcdefghijkl"))
+		require.NoError(t, err)
+		assert.Equal(t,
+			[]byte("abcd\n...4 bytes skipped...\nijkl"),
+			w.Bytes())
+	})
+
+	t.Run("SmallWritesAcrossBoundaries", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		for _, chunk := range []string{"a", "bc", "def", "ghi", "jkl"} {
+			_, err := w.Write([]byte(chunk))
+			require.NoError(t, err)
+		}
+		assert.Equal(t,
+			[]byte("abcd\n...4 bytes skipped...\nijkl"),
+			w.Bytes())
+	})
+
+	t.Run("LargeWriteAcrossBoundaries", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		for _, chunk := range []string{"ab", "cdefghijkl"} {
+			_, err := w.Write([]byte(chunk))
+			require.NoError(t, err)
+		}
+		assert.Equal(t,
+			[]byte("abcd\n...4 bytes skipped...\nijkl"),
+			w.Bytes())
+	})
+
+	t.Run("SuffixRingWraparound", func(t *testing.T) {
+		w := prefixSuffixWriter{N: 4}
+		for _, chunk := range []string{"abcd", "efgh", "ij", "kl"} {
+			_, err := w.Write([]byte(chunk))
+			require.NoError(t, err)
+		}
+		assert.Equal(t,
+			[]byte("abcd\n...4 bytes skipped...\nijkl"),
+			w.Bytes())
+	})
+}
+
+func TestPrefixSuffixWriterRapidExact(t *testing.T) {
+	rapid.Check(t, testPrefixSuffixWriterRapidExact)
+}
+
+func testPrefixSuffixWriterRapidExact(t *rapid.T) {
+	limit := rapid.IntRange(1, 64).Draw(t, "limit")
+	input := rapid.SliceOfN(rapid.Byte(), 0, 2*limit).Draw(t, "input")
+
+	w := prefixSuffixWriter{N: limit}
+	for pos := 0; pos < len(input); {
+		remaining := len(input) - pos
+		chunkSize := rapid.IntRange(1, remaining).
+			Draw(t, fmt.Sprintf("chunkSize/%d", pos))
+		_, err := w.Write(input[pos : pos+chunkSize])
+		require.NoError(t, err)
+		pos += chunkSize
+	}
+
+	assert.Equal(t, input, w.Bytes())
+}
+
+func TestPrefixSuffixWriterRapidTruncated(t *testing.T) {
+	rapid.Check(t, testPrefixSuffixWriterRapidTruncated)
+}
+
+func testPrefixSuffixWriterRapidTruncated(t *rapid.T) {
+	limit := rapid.IntRange(1, 64).Draw(t, "limit")
+	input := rapid.SliceOfN(
+		rapid.Byte(),
+		2*limit+1,
+		4*limit+128,
+	).Draw(t, "input")
+
+	w := prefixSuffixWriter{N: limit}
+	for pos := 0; pos < len(input); {
+		remaining := len(input) - pos
+		chunkSize := rapid.IntRange(1, remaining).
+			Draw(t, fmt.Sprintf("chunkSize/%d", pos))
+		_, err := w.Write(input[pos : pos+chunkSize])
+		require.NoError(t, err)
+		pos += chunkSize
+	}
+
+	got := w.Bytes()
+	assert.Equal(t, input[:limit], got[:limit])
+	assert.Equal(t, input[len(input)-limit:], got[len(got)-limit:])
 }
 
 func TestCmd_StderrHandling(t *testing.T) {
