@@ -107,6 +107,9 @@ type shamChange struct {
 
 	// Assignees are users assigned to the change.
 	Assignees []string
+
+	// ChecksState is the aggregate CI/checks state for the change.
+	ChecksState forge.ChecksState
 }
 
 // Change is a change proposal against a repository.

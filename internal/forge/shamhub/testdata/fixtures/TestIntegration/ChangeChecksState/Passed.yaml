@@ -1,0 +1,82 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 88
+        host: 127.0.0.1:56373
+        body: '{"subject":"Checks f0XMOiaa","body":"Checks state test","base":"main","head":"f0XMOiaa"}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 9,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/9"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 27.135375ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 18
+        host: 127.0.0.1:56373
+        body: '{"state":"passed"}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/change/9/checks
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 3
+        body: |
+            {}
+        headers:
+            Content-Length:
+                - "3"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 2.757584ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        url: http://127.0.0.1:56373/abhinav/test-repo/change/9/checks
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 24
+        body: |
+            {
+              "state": "passed"
+            }
+        headers:
+            Content-Length:
+                - "24"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 1.189959ms

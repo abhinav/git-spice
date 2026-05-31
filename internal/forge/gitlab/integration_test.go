@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,6 +119,37 @@ func TestIntegration(t *testing.T) {
 		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
+		},
+		SetChangeChecksState: func(
+			t *testing.T,
+			httpClient *http.Client,
+			repo forge.Repository,
+			_ forge.ChangeID,
+			headHash git.Hash,
+			state forge.ChecksState,
+		) {
+			client := newGitLabClient(t, httpClient)
+			name := "git-spice integration"
+			description := "Synthetic status for git-spice integration tests"
+			status := gitLabStatusState(state)
+			_, _, err := client.CommitStatusSet(
+				t.Context(),
+				gitlabforge.RepositoryProjectID(
+					repo.(*gitlabforge.Repository),
+				),
+				headHash.String(),
+				&gitlab.SetCommitStatusOptions{
+					State:       &status,
+					Name:        &name,
+					Description: &description,
+				},
+			)
+			require.NoError(t, err)
+			if forgetest.Update() {
+				// GitLab accepts external commit statuses before the
+				// merge-request head_pipeline field reflects them.
+				time.Sleep(2 * time.Second)
+			}
 		},
 		SetCommentsPageSize:   gitlabforge.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
@@ -249,4 +281,17 @@ func randomString(n int) string {
 		b[i] = _alnum[idx]
 	}
 	return string(b)
+}
+
+func gitLabStatusState(state forge.ChecksState) string {
+	switch state {
+	case forge.ChecksPending:
+		return gitlab.PipelineStatusPending
+	case forge.ChecksPassed:
+		return gitlab.PipelineStatusSuccess
+	case forge.ChecksFailed:
+		return gitlab.PipelineStatusFailed
+	default:
+		return gitlab.PipelineStatusFailed
+	}
 }

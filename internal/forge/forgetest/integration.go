@@ -221,6 +221,17 @@ type (
 		repo forge.Repository,
 		changeID forge.ChangeID,
 	)
+
+	// SetChangeChecksStateFunc sets the aggregate checks state
+	// that a forge reports for a change.
+	SetChangeChecksStateFunc func(
+		t *testing.T,
+		httpClient *http.Client,
+		repo forge.Repository,
+		changeID forge.ChangeID,
+		headHash git.Hash,
+		state forge.ChecksState,
+	)
 )
 
 // IntegrationConfig configures a forge integration test run.
@@ -247,6 +258,9 @@ type IntegrationConfig struct {
 
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc // required
+
+	// SetChangeChecksState sets checks state for a change.
+	SetChangeChecksState SetChangeChecksStateFunc // optional
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string // required
@@ -316,6 +330,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		openRepository:        config.OpenRepository,
 		MergeChange:           config.MergeChange,
 		CloseChange:           config.CloseChange,
+		SetChangeChecksState:  config.SetChangeChecksState,
 		Reviewers:             config.Reviewers,
 		Assignees:             config.Assignees,
 		SetCommentsPageSize:   config.SetCommentsPageSize,
@@ -352,6 +367,14 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			t.Parallel()
 
 			suite.TestChangeStates(t)
+		})
+	}
+
+	if config.SetChangeChecksState != nil {
+		t.Run("ChangeChecksState", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestChangeChecksState(t)
 		})
 	}
 
@@ -445,6 +468,9 @@ type integrationSuite struct {
 
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc
+
+	// SetChangeChecksState sets checks state for a change.
+	SetChangeChecksState SetChangeChecksStateFunc
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string
@@ -784,6 +810,72 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 	assert.NotEmpty(t, statuses[0].HeadHash)
 	assert.NotEmpty(t, statuses[1].HeadHash)
 	assert.NotEmpty(t, statuses[2].HeadHash)
+}
+
+// TestChangeChecksState verifies that forges report aggregate checks state
+// for newly submitted changes.
+func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
+	tests := []struct {
+		name string
+		want forge.ChecksState
+	}{
+		{name: "Pending", want: forge.ChecksPending},
+		{name: "Passed", want: forge.ChecksPassed},
+		{name: "Failed", want: forge.ChecksFailed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			branchFixture := fixturetest.New(s.Fixtures, "branch", func() string {
+				return randomString(8)
+			})
+			headHashFixture, setHeadHash := fixturetest.Stored[string](
+				s.Fixtures,
+				"headHash",
+			)
+
+			branch := branchFixture.Get(t)
+			if Update() {
+				testRepo := newTestRepository(t, s.RemoteURL)
+				testRepo.CheckoutBranch("main")
+				testRepo.CreateBranch(branch)
+				testRepo.CheckoutBranch(branch)
+				testRepo.WriteFile(branch+".txt", randomString(32))
+				hash := testRepo.AddAllAndCommit("commit for checks " + tt.name)
+				testRepo.Push(branch)
+				setHeadHash(hash.String())
+
+				t.Cleanup(func() {
+					testRepo.DeleteRemoteBranch(branch)
+				})
+			}
+
+			httpClient := s.HTTPClient(t)
+			repo := s.openRepository(t, httpClient)
+			headHash := git.Hash(headHashFixture.Get(t))
+
+			change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+				Subject: "Checks " + branch,
+				Body:    "Checks state test",
+				Base:    "main",
+				Head:    branch,
+			})
+			require.NoError(t, err, "error creating change")
+
+			s.SetChangeChecksState(
+				t,
+				httpClient,
+				repo,
+				change.ID,
+				headHash,
+				tt.want,
+			)
+
+			got, err := repo.ChangeChecksState(t.Context(), change.ID)
+			require.NoError(t, err, "error fetching checks")
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 // FindChangesByBranch returns no error, and an empty slice
