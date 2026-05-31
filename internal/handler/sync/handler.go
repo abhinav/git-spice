@@ -66,7 +66,6 @@ var _ Store = (*state.Store)(nil)
 // Service is a subset of the spice.Service interface.
 type Service interface {
 	BranchGraph(ctx context.Context, opts *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	ListAbove(ctx context.Context, name string) ([]string, error)
 }
 
 var _ Service = (*spice.Service)(nil)
@@ -401,7 +400,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = h.findForgeFinishedBranches(ctx, candidates, opts.ClosedChanges)
+		branchesToDelete, err = h.findForgeFinishedBranches(ctx, branchGraph, candidates, opts.ClosedChanges)
 		if err != nil {
 			return fmt.Errorf("find finished CRs: %w", err)
 		}
@@ -504,6 +503,7 @@ func (h *Handler) findLocalMergedBranches(
 
 func (h *Handler) findForgeFinishedBranches(
 	ctx context.Context,
+	branchGraph *spice.BranchGraph,
 	knownBranches []spice.LoadBranchItem,
 	closedChangeHandling ClosedChanges,
 ) ([]branchDeletion, error) {
@@ -773,13 +773,6 @@ func (h *Handler) findForgeFinishedBranches(
 		must.Bef(ok, "topologically sorted branch %q must be finished", name)
 		must.Bef(branch.Merged, "topologically sorted branch %q must be merged", name)
 
-		aboves, err := h.Service.ListAbove(ctx, name)
-		if err != nil {
-			h.Log.Warn("Unable to query merged branch's upstacks. Not propagating to merge history.",
-				"branch", name, "error", err)
-			continue
-		}
-
 		changeIDJSON, err := h.RemoteRepository.Forge().MarshalChangeID(branch.ChangeID)
 		if err != nil {
 			h.Log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
@@ -787,7 +780,7 @@ func (h *Handler) findForgeFinishedBranches(
 			continue
 		}
 
-		for _, above := range aboves {
+		for above := range branchGraph.Aboves(name) {
 			// MergedDownstack for the upstack of the branch being merged
 			// is the branch's own merged downstack and the branch itself.
 			var newHistory []json.RawMessage

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
@@ -45,35 +46,22 @@ func (cmd *downCmd) Run(
 		return err
 	}
 
+	graph, err := svc.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("load branch graph: %w", err)
+	}
+
+	downstack := slices.Collect(graph.Downstack(current))
+	if len(downstack) == 0 {
+		return fmt.Errorf("%v: no branches found downstack", current)
+	}
+
 	var below string
-outer:
-	for range cmd.N {
-		downstack, err := svc.ListDownstack(ctx, current)
-		if err != nil {
-			return fmt.Errorf("list downstacks: %w", err)
-		}
-
-		switch len(downstack) {
-		case 0:
-			if below != "" {
-				// If we've already moved up once,
-				// and there are no branches above the current one,
-				// we're done.
-				break outer
-			}
-			return fmt.Errorf("%v: no branches found downstack", current)
-
-		case 1:
-			// Current branch is bottom of stack.
-			// Move to trunk.
-			log.Info("moving to trunk: end of stack")
-			below = store.Trunk()
-
-		default:
-			below = downstack[1]
-		}
-
-		current = below
+	if cmd.N >= len(downstack) {
+		log.Info("moving to trunk: end of stack")
+		below = store.Trunk()
+	} else {
+		below = downstack[cmd.N]
 	}
 
 	return checkoutHandler.CheckoutBranch(ctx, &checkout.Request{
