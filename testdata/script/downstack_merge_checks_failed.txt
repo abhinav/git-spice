@@ -6,7 +6,7 @@ at '2026-05-31T08:05:00Z'
 # setup
 cd repo
 git init
-git config spice.experiment.downstackMerge true
+git config spice.experiment.merge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
