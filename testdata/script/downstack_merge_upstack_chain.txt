@@ -7,6 +7,7 @@ at '2024-04-05T16:40:32Z'
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -37,7 +38,7 @@ gs bco feat1
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
-stderr 'Merging feat1'
+stderr 'feat1: merging #1:'
 stderr 'feat2: retargeted upstack onto main'
 stderr 'feat1: #1 was merged'
 stderr 'feat1: deleted'

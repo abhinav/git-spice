@@ -30,10 +30,7 @@ type Service interface {
 		context.Context,
 		*spice.BranchGraphOptions,
 	) (*spice.BranchGraph, error)
-	ListDownstack(ctx context.Context, start string) ([]string, error)
-	LookupBranch(
-		ctx context.Context, name string,
-	) (*spice.LookupBranchResponse, error)
+	VerifyRestacked(ctx context.Context, name string) error
 }
 
 // RestackHandler restacks branches after their bases are merged.
@@ -65,9 +62,8 @@ type GitRepository interface {
 type Request struct {
 	Branch string // required
 
-	// NoWait skips polling for each merge to propagate.
-	// Retargeting still happens on a best-effort basis,
-	// but server-dependent cleanup is left to a later sync.
+	// NoWait skips polling for the merge to propagate.
+	// Server-dependent cleanup is left to a later sync.
 	NoWait bool
 
 	// NoBranchCheck skips stale base validation.
@@ -117,96 +113,64 @@ func (h *Handler) MergeDownstack(
 	return h.executePlan(ctx, plan, req)
 }
 
-// mergeItem is a single branch+change to merge.
+// mergeItem is one queue item in a downstack merge plan.
+//
+// buildPlan fills branch, changeID, and upstreamBranch from the branch graph.
+// validateSynced later fills headHash after it verifies the local branch
+// matches its upstream ref.
 type mergeItem struct {
-	branch         string
-	changeID       forge.ChangeID
-	upstreamBranch string // name pushed to remote
+	// branch is the local branch to merge.
+	branch string
 
-	// headHash is set by verifySynced right before the merge.
-	// It is passed to MergeChange for server-side assertion.
+	// changeID identifies the forge Change Request to merge.
+	changeID forge.ChangeID
+
+	// upstreamBranch is the remote branch used for push-safety checks.
+	upstreamBranch string
+
+	// headHash is passed to MergeChange for server-side assertion.
 	headHash git.Hash
-
-	// checksReady is true after the local merge queue has already
-	// waited for this item's checks following a restack and submit.
-	checksReady bool
 }
 
+// buildPlan snapshots repository state into the local merge queue.
+//
+// The plan is ordered bottom-up,
+// contains only open Change Requests,
+// and has local push-safety metadata ready for execution.
 func (h *Handler) buildPlan(
 	ctx context.Context, req *Request,
-) ([]mergeItem, error) {
-	downstack, err := h.Service.ListDownstack(ctx, req.Branch)
+) ([]*mergeItem, error) {
+	graph, err := h.Service.BranchGraph(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("list downstack: %w", err)
+		return nil, fmt.Errorf("build branch graph: %w", err)
 	}
 
-	// ListDownstack returns top-first; reverse for bottom-up.
+	// Build the queue bottom-up because each merge changes
+	// the base of the branch above it.
+	downstack := slices.Collect(graph.Downstack(req.Branch))
 	slices.Reverse(downstack)
 
-	items, err := h.resolveChanges(ctx, downstack)
-	if err != nil {
-		return nil, fmt.Errorf("resolve changes: %w", err)
-	}
-
-	plan, err := h.filterMerged(ctx, items)
-	if err != nil {
-		return nil, fmt.Errorf("filter merged changes: %w", err)
-	}
-	if req.NoWait && len(plan) > 1 {
-		return nil, fmt.Errorf(
-			"--no-wait can merge only one branch; "+
-				"got %d branches",
-			len(plan),
-		)
-	}
-
-	if err := h.validateSynced(ctx, plan); err != nil {
-		return nil, fmt.Errorf("validate branch sync: %w", err)
-	}
-
-	if !req.NoBranchCheck {
-		if err := h.validateFreshBases(ctx, req.Branch); err != nil {
-			return nil, fmt.Errorf("validate stale bases: %w", err)
+	items := make([]*mergeItem, 0, len(downstack))
+	ids := make([]forge.ChangeID, 0, len(downstack))
+	for _, name := range downstack {
+		branch, ok := graph.Lookup(name)
+		if !ok {
+			return nil, fmt.Errorf("branch %q is not tracked", name)
 		}
-	}
-
-	return plan, nil
-}
-
-func (h *Handler) resolveChanges(
-	ctx context.Context, branches []string,
-) ([]mergeItem, error) {
-	var items []mergeItem
-	for _, name := range branches {
-		resp, err := h.Service.LookupBranch(ctx, name)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"lookup branch %q: %w", name, err,
-			)
-		}
-
-		if resp.Change == nil {
+		if branch.Change == nil {
 			return nil, fmt.Errorf(
 				"branch %q has no published change request",
 				name,
 			)
 		}
 
-		items = append(items, mergeItem{
+		item := &mergeItem{
 			branch:         name,
-			changeID:       resp.Change.ChangeID(),
-			upstreamBranch: resp.UpstreamBranch,
-		})
-	}
-	return items, nil
-}
-
-func (h *Handler) filterMerged(
-	ctx context.Context, items []mergeItem,
-) ([]mergeItem, error) {
-	ids := make([]forge.ChangeID, len(items))
-	for i, item := range items {
-		ids[i] = item.changeID
+			changeID:       branch.Change.ChangeID(),
+			upstreamBranch: branch.UpstreamBranch,
+		}
+		items = append(items, item)
+		ids = append(ids, item.changeID)
 	}
 
 	statuses, err := h.RemoteRepository.ChangeStatuses(ctx, ids)
@@ -214,7 +178,9 @@ func (h *Handler) filterMerged(
 		return nil, fmt.Errorf("query change states: %w", err)
 	}
 
-	var plan []mergeItem
+	// Drop already-merged changes from the queue,
+	// but stop if any downstack Change Request was closed without merging.
+	plan := items[:0]
 	for i, item := range items {
 		switch statuses[i].State {
 		case forge.ChangeMerged:
@@ -229,6 +195,25 @@ func (h *Handler) filterMerged(
 			plan = append(plan, item)
 		}
 	}
+
+	if req.NoWait && len(plan) > 1 {
+		return nil, fmt.Errorf(
+			"--no-wait can merge only one branch; "+
+				"got %d branches",
+			len(plan),
+		)
+	}
+
+	if err := h.validateSynced(ctx, plan); err != nil {
+		return nil, fmt.Errorf("validate branch sync: %w", err)
+	}
+
+	if !req.NoBranchCheck {
+		if err := h.validateFreshBases(ctx, graph, req.Branch); err != nil {
+			return nil, fmt.Errorf("validate stale bases: %w", err)
+		}
+	}
+
 	return plan, nil
 }
 
@@ -241,7 +226,7 @@ func (h *Handler) filterMerged(
 // their headHash is captured for use as the expected SHA
 // in the forge merge request.
 func (h *Handler) validateSynced(
-	ctx context.Context, items []mergeItem,
+	ctx context.Context, items []*mergeItem,
 ) error {
 	type outOfSync struct {
 		name          string
@@ -249,8 +234,7 @@ func (h *Handler) validateSynced(
 	}
 
 	var problems []outOfSync
-	for i := range items {
-		item := &items[i]
+	for _, item := range items {
 		if item.upstreamBranch == "" {
 			continue
 		}
@@ -323,7 +307,7 @@ func (h *Handler) validateSynced(
 	return errors.New(msg.String())
 }
 
-func (h *Handler) confirm(plan []mergeItem) error {
+func (h *Handler) confirm(plan []*mergeItem) error {
 	if !ui.Interactive(h.View) {
 		return nil
 	}
@@ -355,43 +339,77 @@ func (h *Handler) confirm(plan []mergeItem) error {
 }
 
 func (h *Handler) executePlan(
-	ctx context.Context, plan []mergeItem, req *Request,
+	ctx context.Context, plan []*mergeItem, req *Request,
 ) error {
 	trunk := h.Store.Trunk()
 
-	// Verify the first item targets trunk before merging.
-	if err := h.ensureTargetsTrunk(
-		ctx, plan[0], trunk,
-	); err != nil {
-		return fmt.Errorf("ensure first change targets trunk: %w", err)
-	}
+	for i, item := range plan {
+		lastItem := i == len(plan)-1
 
-	for i := range plan {
-		if !plan[i].checksReady {
-			if err := h.awaitChecks(
-				ctx, plan[i], req.BuildTimeout,
-			); err != nil {
-				return fmt.Errorf(
-					"wait for checks on %q: %w",
-					plan[i].branch, err,
-				)
+		// After each lower branch merges,
+		// prepare the next branch on top of updated trunk state.
+		if i > 0 {
+			if err := h.prepareForMerge(ctx, item); err != nil {
+				return fmt.Errorf("prepare %q: %w", item.branch, err)
 			}
 		}
 
-		h.Log.Infof(
-			"Merging %s (%v)...", plan[i].branch, plan[i].changeID,
+		// The forge will only merge a change that targets trunk.
+		// Re-check immediately before each merge because prior queue items
+		// and repo sync may have changed the server-side base.
+		change, err := h.ensureTargetsTrunk(
+			ctx, item, trunk,
 		)
-		if err := h.RemoteRepository.MergeChange(
-			ctx, plan[i].changeID,
-			forge.MergeChangeOptions{HeadHash: plan[i].headHash},
-		); err != nil {
-			return fmt.Errorf("merge %q: %w", plan[i].branch, err)
+		if err != nil {
+			return fmt.Errorf(
+				"ensure %q targets trunk: %w",
+				item.branch, err,
+			)
 		}
 
-		if err := h.postMerge(
-			ctx, plan, i, trunk, req,
+		// CI is checked after retargeting and restacking
+		// so each merge waits on the exact change being merged.
+		if err := h.awaitChecks(
+			ctx, item, req.BuildTimeout,
 		); err != nil {
-			return err
+			return fmt.Errorf(
+				"wait for checks on %q: %w",
+				item.branch, err,
+			)
+		}
+
+		h.Log.Infof(
+			"%s: merging %v: %s",
+			item.branch, item.changeID, change.URL,
+		)
+		if err := h.RemoteRepository.MergeChange(
+			ctx, item.changeID,
+			forge.MergeChangeOptions{HeadHash: item.headHash},
+		); err != nil {
+			return fmt.Errorf("merge %q: %w", item.branch, err)
+		}
+
+		if req.NoWait {
+			continue
+		}
+
+		// Wait until the forge reports the merge.
+		if err := h.awaitMerged(ctx, item); err != nil {
+			return fmt.Errorf("await merge of %q: %w",
+				item.branch, err)
+		}
+
+		// SyncTrunk updates trunk,
+		// deletes merged branches,
+		// and retargets their upstacks.
+		if err := h.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
+			ClosedChanges: sync.ClosedChangesIgnore,
+		}); err != nil {
+			if !lastItem {
+				return fmt.Errorf("sync trunk: %w", err)
+			}
+			h.Log.Warn("Unable to sync trunk after merge",
+				"error", err)
 		}
 	}
 
@@ -399,67 +417,11 @@ func (h *Handler) executePlan(
 	return nil
 }
 
-func (h *Handler) postMerge(
-	ctx context.Context,
-	plan []mergeItem,
-	idx int,
-	trunk string,
-	req *Request,
-) error {
-	item := plan[idx]
-	lastItem := idx == len(plan)-1
-
-	// Wait for merge to propagate (unless --no-wait).
-	if !req.NoWait {
-		if err := h.awaitMerged(ctx, item); err != nil {
-			return fmt.Errorf("await merge of %q: %w",
-				item.branch, err)
-		}
-	}
-
-	if req.NoWait {
-		if lastItem {
-			return nil
-		}
-
-		next := &plan[idx+1]
-		if err := h.retargetChange(ctx, *next, trunk); err != nil {
-			h.Log.Warn("Retarget may have failed "+
-				"(merge may not have propagated yet)",
-				"branch", next.branch, "error", err)
-		}
-		return nil
-	}
-
-	// Sync trunk after the merge settles.
-	// This also lets repo sync own merged branch cleanup
-	// and merged-downstack bookkeeping.
-	if err := h.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
-		ClosedChanges: sync.ClosedChangesIgnore,
-	}); err != nil {
-		if !lastItem {
-			return fmt.Errorf("sync trunk: %w", err)
-		}
-		h.Log.Warn("Unable to sync trunk after merge",
-			"error", err)
-	}
-
-	if lastItem {
-		return nil
-	}
-
-	next := &plan[idx+1]
-	return h.prepareNext(ctx, next, req)
-}
-
 func (h *Handler) validateFreshBases(
-	ctx context.Context, branch string,
+	ctx context.Context,
+	graph *spice.BranchGraph,
+	branch string,
 ) error {
-	graph, err := h.Service.BranchGraph(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("build branch graph: %w", err)
-	}
-
 	staleBases, err := spice.FindStaleBases(ctx, graph,
 		func(context.Context) (forge.Repository, error) {
 			return h.RemoteRepository, nil
@@ -485,42 +447,45 @@ func (h *Handler) validateFreshBases(
 	)
 }
 
-// prepareNext advances the next item in the local merge queue.
+// prepareForMerge advances an item in the local merge queue
+// before it is merged.
 //
 // This is intentionally outside delete cleanup:
-// the merge queue owns the user-visible restack, submit,
-// and CI wait needed before the next branch can be merged.
-func (h *Handler) prepareNext(
+// the merge queue owns the user-visible restack and submit
+// needed before the branch can be merged.
+func (h *Handler) prepareForMerge(
 	ctx context.Context,
-	next *mergeItem,
-	req *Request,
+	item *mergeItem,
 ) error {
-	if err := h.Restack.RestackBranch(ctx, next.branch); err != nil {
-		return fmt.Errorf("restack branch: %w", err)
+	if err := h.Service.VerifyRestacked(ctx, item.branch); err != nil {
+		var restackErr *spice.BranchNeedsRestackError
+		if !errors.As(err, &restackErr) {
+			return fmt.Errorf("verify restacked: %w", err)
+		}
+
+		if err := h.Restack.RestackBranch(ctx, item.branch); err != nil {
+			return fmt.Errorf("restack branch: %w", err)
+		}
+
+		if err := h.Submit.Submit(ctx, &submit.Request{
+			Branch: item.branch,
+			Options: &submit.Options{
+				// Publish keeps this on the normal Change Request update path.
+				// UpdateOnly still prevents creating a new Change Request.
+				Publish: true,
+
+				UpdateOnly: new(true),
+			},
+		}); err != nil {
+			return fmt.Errorf("submit branch update: %w", err)
+		}
 	}
 
-	if err := h.Submit.Submit(ctx, &submit.Request{
-		Branch: next.branch,
-		Options: &submit.Options{
-			Publish:    true,
-			UpdateOnly: new(true),
-		},
-	}); err != nil {
-		return fmt.Errorf("submit branch update: %w", err)
-	}
-
-	head, err := h.Repository.PeelToCommit(ctx, next.branch)
+	head, err := h.Repository.PeelToCommit(ctx, item.branch)
 	if err != nil {
 		return fmt.Errorf("resolve updated head: %w", err)
 	}
-	next.headHash = head
-
-	if err := h.awaitChecks(
-		ctx, *next, req.BuildTimeout,
-	); err != nil {
-		return fmt.Errorf("wait for checks on %q: %w", next.branch, err)
-	}
-	next.checksReady = true
+	item.headHash = head
 	return nil
 }
 
@@ -528,7 +493,7 @@ func (h *Handler) prepareNext(
 // Uses truncated exponential backoff.
 func (h *Handler) awaitChecks(
 	ctx context.Context,
-	item mergeItem,
+	item *mergeItem,
 	timeout time.Duration,
 ) error {
 	const (
@@ -536,52 +501,18 @@ func (h *Handler) awaitChecks(
 		_maxDelay  = 30 * time.Second
 	)
 
-	state, err := h.RemoteRepository.ChangeChecksState(
-		ctx, item.changeID,
+	return h.awaitChecksWithDelay(
+		ctx, item, timeout, _baseDelay, _maxDelay,
 	)
-	if err != nil {
-		return fmt.Errorf("query checks: %w", err)
-	}
-	if state == forge.ChecksPassed {
-		return nil
-	}
-	if state == forge.ChecksFailed {
-		return fmt.Errorf(
-			"CI checks failed for %q", item.branch,
-		)
-	}
-
-	// Checks are pending. If timeout is zero, fail immediately.
-	if timeout == 0 {
-		return fmt.Errorf(
-			"CI checks pending for %q (build-timeout=0)",
-			item.branch,
-		)
-	}
-
-	return h.pollChecks(ctx, item, timeout, _baseDelay, _maxDelay)
 }
 
-func (h *Handler) pollChecks(
+func (h *Handler) awaitChecksWithDelay(
 	ctx context.Context,
-	item mergeItem,
+	item *mergeItem,
 	timeout, baseDelay, maxDelay time.Duration,
 ) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
 	delay := baseDelay
-	for {
-		h.Log.Infof(
-			"Waiting for CI checks on %s...", item.branch,
-		)
-		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for CI on %q",
-				item.branch,
-			)
-		}
-
+	for attempt := 0; ; attempt++ {
 		state, err := h.RemoteRepository.ChangeChecksState(
 			ctx, item.changeID,
 		)
@@ -597,6 +528,25 @@ func (h *Handler) pollChecks(
 			)
 		}
 
+		if timeout == 0 {
+			return fmt.Errorf(
+				"CI checks pending for %q (build-timeout=0)",
+				item.branch,
+			)
+		}
+		if attempt == 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+
+		h.Log.Infof("%s: waiting for CI checks", item.branch)
+		if err := sleep(ctx, delay); err != nil {
+			return fmt.Errorf(
+				"timed out waiting for CI on %q",
+				item.branch,
+			)
+		}
 		delay = min(delay*2, maxDelay)
 	}
 }
@@ -605,29 +555,32 @@ func (h *Handler) pollChecks(
 // on the forge, retargeting if needed.
 func (h *Handler) ensureTargetsTrunk(
 	ctx context.Context,
-	item mergeItem,
+	item *mergeItem,
 	trunk string,
-) error {
+) (*forge.FindChangeItem, error) {
 	change, err := h.RemoteRepository.FindChangeByID(
 		ctx, item.changeID,
 	)
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"check base of %q: %w", item.branch, err,
 		)
 	}
 
 	if change.BaseName == trunk {
-		return nil
+		return change, nil
 	}
 
-	return h.retargetChange(ctx, item, trunk)
+	if err := h.retargetChange(ctx, item, trunk); err != nil {
+		return nil, err
+	}
+	return change, nil
 }
 
 // awaitMerged polls until the given change shows as merged.
 // Uses exponential backoff starting at 500ms, capped at 8s.
 func (h *Handler) awaitMerged(
-	ctx context.Context, item mergeItem,
+	ctx context.Context, item *mergeItem,
 ) error {
 	const (
 		_initialDelay = 500 * time.Millisecond
@@ -655,7 +608,7 @@ func (h *Handler) awaitMerged(
 			return nil
 		}
 
-		h.Log.Debugf("Waiting for %s to settle...",
+		h.Log.Debugf("%s: waiting for merge to settle",
 			item.branch)
 		if err := sleep(ctx, delay); err != nil {
 			return fmt.Errorf(
@@ -670,10 +623,10 @@ func (h *Handler) awaitMerged(
 
 // retargetChange updates a change's base to trunk.
 func (h *Handler) retargetChange(
-	ctx context.Context, item mergeItem, trunk string,
+	ctx context.Context, item *mergeItem, trunk string,
 ) error {
-	h.Log.Infof("Retargeting %s to %s...",
-		item.branch, trunk)
+	h.Log.Infof("%s: retargeting %v onto %s",
+		item.branch, item.changeID, trunk)
 	err := h.RemoteRepository.EditChange(
 		ctx, item.changeID,
 		forge.EditChangeOptions{Base: trunk},

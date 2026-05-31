@@ -54,3 +54,13 @@ Enables the $$gs commit pick$$ command.
 This command is a stack-aware variant of `git cherry-pick`.
 It will automatically restack upstack branches
 after cherry-picking a commit.
+
+### downstackMerge
+
+**Added**: <!-- gs:version unreleased -->
+<!-- TODO: **Removed**: -->
+
+Enables the $$gs downstack merge$$ command.
+This command acts as a local merge queue
+that merges a stack of Change Requests
+from the bottom up.

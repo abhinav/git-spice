@@ -19,6 +19,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -47,7 +48,7 @@ func TestAwaitMerged_immediate(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitMerged(t.Context(), mergeItem{
+	err := h.awaitMerged(t.Context(), &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
 	})
@@ -78,7 +79,7 @@ func TestAwaitMerged_afterPolling(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitMerged(t.Context(), mergeItem{
+	err := h.awaitMerged(t.Context(), &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
 	})
@@ -100,7 +101,7 @@ func TestAwaitChecks_passed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitChecks(t.Context(), mergeItem{
+	err := h.awaitChecks(t.Context(), &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
 	}, 30*time.Minute)
@@ -122,7 +123,7 @@ func TestAwaitChecks_failed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitChecks(t.Context(), mergeItem{
+	err := h.awaitChecks(t.Context(), &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
 	}, 30*time.Minute)
@@ -146,7 +147,7 @@ func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
 	})
 
 	// timeout=0 means fail immediately if pending.
-	err := h.awaitChecks(t.Context(), mergeItem{
+	err := h.awaitChecks(t.Context(), &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
 	}, 0)
@@ -175,9 +176,9 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.pollChecks(
+	err := h.awaitChecksWithDelay(
 		t.Context(),
-		mergeItem{
+		&mergeItem{
 			branch:   "feat1",
 			changeID: fakeChangeID("pr-1"),
 		},
@@ -196,6 +197,14 @@ func TestExecutePlan_retargets(t *testing.T) {
 	mockStore := NewMockStore(ctrl)
 	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
 
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(&spice.BranchNeedsRestackError{Base: "main"})
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat3").
+		Return(&spice.BranchNeedsRestackError{Base: "main"})
+
 	pr1 := fakeChangeID("pr-1")
 	pr2 := fakeChangeID("pr-2")
 	pr3 := fakeChangeID("pr-3")
@@ -203,6 +212,12 @@ func TestExecutePlan_retargets(t *testing.T) {
 	// Pre-check: pr-1 already targets main.
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResult("main"), nil)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr2).
+		Return(fakeFindResult("main"), nil)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr3).
 		Return(fakeFindResult("main"), nil)
 
 	// Each merge: checks -> merge -> awaitMerged -> sync
@@ -246,6 +261,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
+		service:   mockService,
 		gitRepo:   mockGit,
 		restack:   mockRestack,
 		submit:    mockSubmit,
@@ -253,7 +269,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	plan := []mergeItem{
+	plan := []*mergeItem{
 		{branch: "feat1", changeID: pr1},
 		{branch: "feat2", changeID: pr2},
 		{branch: "feat3", changeID: pr3},
@@ -265,9 +281,9 @@ func TestExecutePlan_retargets(t *testing.T) {
 	require.NoError(t, err)
 
 	output := logBuffer.String()
-	assert.Contains(t, output, "Merging feat1")
-	assert.Contains(t, output, "Merging feat2")
-	assert.Contains(t, output, "Merging feat3")
+	assert.Contains(t, output, "feat1: merging pr-1: http://example.com/1")
+	assert.Contains(t, output, "feat2: merging pr-2: http://example.com/1")
+	assert.Contains(t, output, "feat3: merging pr-3: http://example.com/1")
 	assert.Contains(t, output, "All 3 change(s) merged")
 	assert.NotContains(t, output, "Restacking feat2 after merge")
 	assert.NotContains(t, output, "Restacking feat3 after merge")
@@ -297,7 +313,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	plan := []mergeItem{
+	plan := []*mergeItem{
 		{branch: "feat1", changeID: pr1},
 	}
 
@@ -308,7 +324,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 	require.NoError(t, err)
 
 	output := logBuffer.String()
-	assert.Contains(t, output, "Merging feat1")
+	assert.Contains(t, output, "feat1: merging pr-1: http://example.com/1")
 	assert.Contains(t, output, "All 1 change(s) merged")
 	assert.NotContains(t, output, "Cleaning up")
 }
@@ -340,7 +356,7 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 		sync:      mockSync,
 	})
 
-	err := h.executePlan(t.Context(), []mergeItem{
+	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
 	}, &Request{Branch: "feat1"})
 	require.NoError(t, err)
@@ -381,14 +397,14 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	err := h.executePlan(t.Context(), []mergeItem{
+	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
 	}, &Request{Branch: "feat1"})
 	require.NoError(t, err)
 
 	output := logBuffer.String()
-	assert.Contains(t, output, "Retargeting feat1 to main")
-	assert.Contains(t, output, "Merging feat1")
+	assert.Contains(t, output, "feat1: retargeting pr-1 onto main")
+	assert.Contains(t, output, "feat1: merging pr-1: http://example.com/1")
 }
 
 func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
@@ -420,13 +436,13 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	err := h.executePlan(t.Context(), []mergeItem{
+	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
 	}, &Request{Branch: "feat1"})
 	require.NoError(t, err)
 
 	assert.NotContains(t,
-		logBuffer.String(), "Retargeting")
+		logBuffer.String(), "retargeting")
 }
 
 func TestValidateSynced_allInSync(t *testing.T) {
@@ -446,7 +462,7 @@ func TestValidateSynced_allInSync(t *testing.T) {
 		gitRepo: mockGit,
 	})
 
-	items := []mergeItem{
+	items := []*mergeItem{
 		{
 			branch:         "feat1",
 			upstreamBranch: "feat1",
@@ -471,7 +487,7 @@ func TestValidateSynced_unpushed(t *testing.T) {
 		gitRepo: mockGit,
 	})
 
-	err := h.validateSynced(t.Context(), []mergeItem{
+	err := h.validateSynced(t.Context(), []*mergeItem{
 		{
 			branch:         "feat1",
 			upstreamBranch: "feat1",
@@ -497,7 +513,7 @@ func TestValidateSynced_behind(t *testing.T) {
 		gitRepo: mockGit,
 	})
 
-	err := h.validateSynced(t.Context(), []mergeItem{
+	err := h.validateSynced(t.Context(), []*mergeItem{
 		{
 			branch:         "feat1",
 			upstreamBranch: "feat1",
@@ -535,7 +551,7 @@ func TestValidateSynced_multiple(t *testing.T) {
 		gitRepo: mockGit,
 	})
 
-	err := h.validateSynced(t.Context(), []mergeItem{
+	err := h.validateSynced(t.Context(), []*mergeItem{
 		{branch: "feat1", upstreamBranch: "feat1"},
 		{branch: "feat2", upstreamBranch: "feat2"},
 		{branch: "feat3", upstreamBranch: "feat3"},
@@ -560,7 +576,7 @@ func TestValidateSynced_errorSkipped(t *testing.T) {
 		gitRepo: mockGit,
 	})
 
-	err := h.validateSynced(t.Context(), []mergeItem{
+	err := h.validateSynced(t.Context(), []*mergeItem{
 		{
 			branch:         "feat1",
 			upstreamBranch: "feat1",
@@ -574,6 +590,7 @@ func TestValidateSynced_errorSkipped(t *testing.T) {
 type testHandlerOpts struct {
 	forgeRepo *forgetest.MockRepository
 	store     *MockStore
+	service   *MockService
 	restack   *MockRestackHandler
 	submit    *MockSubmitHandler
 	sync      SyncHandler
@@ -590,13 +607,18 @@ func newTestHandler(
 ) *Handler {
 	t.Helper()
 
+	service := Service(NewMockService(ctrl))
+	if opts.service != nil {
+		service = opts.service
+	}
+
 	return &Handler{
 		Log:              testLog(opts.logBuffer),
 		View:             ui.NewFileView(io.Discard),
 		Remote:           "origin",
 		RemoteRepository: testForgeRepo(ctrl, opts.forgeRepo),
 		Store:            testStore(ctrl, opts.store),
-		Service:          NewMockService(ctrl),
+		Service:          service,
 		Restack:          testRestack(ctrl, opts.restack),
 		Submit:           testSubmit(ctrl, opts.submit),
 		Sync:             testSync(opts.sync),

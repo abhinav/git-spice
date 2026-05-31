@@ -82,80 +82,40 @@ func (c *MockServiceBranchGraphCall) DoAndReturn(f func(context.Context, *spice.
 	return c
 }
 
-// ListDownstack mocks base method.
-func (m *MockService) ListDownstack(ctx context.Context, start string) ([]string, error) {
+// VerifyRestacked mocks base method.
+func (m *MockService) VerifyRestacked(ctx context.Context, name string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDownstack", ctx, start)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "VerifyRestacked", ctx, name)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// ListDownstack indicates an expected call of ListDownstack.
-func (mr *MockServiceMockRecorder) ListDownstack(ctx, start any) *MockServiceListDownstackCall {
+// VerifyRestacked indicates an expected call of VerifyRestacked.
+func (mr *MockServiceMockRecorder) VerifyRestacked(ctx, name any) *MockServiceVerifyRestackedCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDownstack", reflect.TypeOf((*MockService)(nil).ListDownstack), ctx, start)
-	return &MockServiceListDownstackCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyRestacked", reflect.TypeOf((*MockService)(nil).VerifyRestacked), ctx, name)
+	return &MockServiceVerifyRestackedCall{Call: call}
 }
 
-// MockServiceListDownstackCall wrap *gomock.Call
-type MockServiceListDownstackCall struct {
+// MockServiceVerifyRestackedCall wrap *gomock.Call
+type MockServiceVerifyRestackedCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockServiceListDownstackCall) Return(arg0 []string, arg1 error) *MockServiceListDownstackCall {
-	c.Call = c.Call.Return(arg0, arg1)
+func (c *MockServiceVerifyRestackedCall) Return(arg0 error) *MockServiceVerifyRestackedCall {
+	c.Call = c.Call.Return(arg0)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockServiceListDownstackCall) Do(f func(context.Context, string) ([]string, error)) *MockServiceListDownstackCall {
+func (c *MockServiceVerifyRestackedCall) Do(f func(context.Context, string) error) *MockServiceVerifyRestackedCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceListDownstackCall) DoAndReturn(f func(context.Context, string) ([]string, error)) *MockServiceListDownstackCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// LookupBranch mocks base method.
-func (m *MockService) LookupBranch(ctx context.Context, name string) (*spice.LookupBranchResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LookupBranch", ctx, name)
-	ret0, _ := ret[0].(*spice.LookupBranchResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LookupBranch indicates an expected call of LookupBranch.
-func (mr *MockServiceMockRecorder) LookupBranch(ctx, name any) *MockServiceLookupBranchCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockService)(nil).LookupBranch), ctx, name)
-	return &MockServiceLookupBranchCall{Call: call}
-}
-
-// MockServiceLookupBranchCall wrap *gomock.Call
-type MockServiceLookupBranchCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockServiceLookupBranchCall) Return(arg0 *spice.LookupBranchResponse, arg1 error) *MockServiceLookupBranchCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockServiceLookupBranchCall) Do(f func(context.Context, string) (*spice.LookupBranchResponse, error)) *MockServiceLookupBranchCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceLookupBranchCall) DoAndReturn(f func(context.Context, string) (*spice.LookupBranchResponse, error)) *MockServiceLookupBranchCall {
+func (c *MockServiceVerifyRestackedCall) DoAndReturn(f func(context.Context, string) error) *MockServiceVerifyRestackedCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

@@ -6,6 +6,7 @@ at '2026-05-31T08:07:00Z'
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -54,7 +55,7 @@ This is feature 2
 >   feature2 (#2)
 true
 -- golden/merge-stderr.txt --
-INF Merging feature1 (#1)...
+INF feature1: merging #1: $SHAMHUB_URL/alice/example/change/1
 INF main: pulled 2 new commit(s)
 INF feature1: #1 was merged
 INF feature2: retargeted upstack onto main

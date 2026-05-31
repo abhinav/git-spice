@@ -6,6 +6,7 @@ at '2024-04-05T16:40:32Z'
 # setup
 cd repo
 git init
+git config spice.experiment.downstackMerge true
 git commit --allow-empty -m 'Initial commit'
 
 # set up a fake GitHub remote
@@ -39,8 +40,8 @@ env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 gs downstack merge --no-branch-check
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 stderr 'already merged, skipping'
-stderr 'Retargeting feature2 to main'
-stderr 'Merging feature2'
+stderr 'feature2: retargeting #2 onto main'
+stderr 'feature2: merging #2:'
 
 -- repo/feature1.txt --
 This is feature 1
