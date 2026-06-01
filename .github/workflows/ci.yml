@@ -103,7 +103,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v6.0.0
+      uses: codecov/codecov-action@v6.0.1
       if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out
