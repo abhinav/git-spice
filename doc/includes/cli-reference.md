@@ -1470,14 +1470,19 @@ This command requires at least Git 2.45.
 ### git-spice review comment {#gs-review-comment}
 
 ```
-gs review comment <file-and-line> [flags]
+gs review comment [<anchor>] [flags]
 ```
 
 Draft or post a review comment
 
 Adds a review comment to the change request
 for the current branch.
-Provide the file and line number as file.go:42.
+The anchor controls the comment scope:
+
+  file.go:42       anchored to that line
+  file.go:42-50    anchored to that line range
+  file.go          anchored to the file
+  (empty) + --pr   not anchored to a file
 
 Comments are saved as local drafts by default.
 Use --no-draft to post immediately.
@@ -1486,11 +1491,12 @@ If no message is given with -m, an editor is opened.
 
 **Arguments**
 
-* `file-and-line`: File and line in the form file.go:42.
+* `anchor`: Comment anchor: file.go, file.go:42, or file.go:42-50. Omit with --pr.
 
 **Flags**
 
 * `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--pr`: Post an unanchored change request comment.
 * `--[no-]draft`: Save the comment as a local draft instead of posting it.
 * `-b`, `--branch=BRANCH`: Branch to comment on. Defaults to the current branch.
 
