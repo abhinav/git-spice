@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -145,6 +147,7 @@ func (cmd *branchCheckoutCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	view ui.View,
+	store *state.Store,
 	handler CheckoutHandler,
 ) error {
 	mode := cmd.TrackUntracked
@@ -161,10 +164,27 @@ func (cmd *branchCheckoutCmd) Run(
 		log.Warnf("Please use spice.branchCheckout.trackUntracked=%v instead", mode.String())
 	}
 
+	// The integration branch is a deliberately-untracked singleton; the
+	// generic "branch not tracked" prompt is confusing for it. Detect
+	// the case once up front so ShouldTrack can short-circuit and the
+	// user gets a single, targeted warning that the branch is
+	// throwaway.
+	isIntegration := false
+	if info, err := store.Integration(ctx); err == nil && info.Name == cmd.Branch {
+		isIntegration = true
+		log.Warnf("%v: integration branch is throwaway and not tracked by git-spice", cmd.Branch)
+	} else if err != nil && !errors.Is(err, state.ErrNotExist) {
+		log.Warn("Could not load integration branch configuration", "error", err)
+	}
+
 	return handler.CheckoutBranch(ctx, &checkout.Request{
 		Branch:  cmd.Branch,
 		Options: &cmd.Options,
 		ShouldTrack: func(branch string) (bool, error) {
+			if isIntegration {
+				return false, nil
+			}
+
 			switch mode {
 			case trackUntrackedAlways:
 				log.Infof("%v: automatically tracking branch", branch)
