@@ -1,0 +1,38 @@
+# Verifies 'gs branch checkout <integration>' is a no-friction
+# shortcut to the integration branch: it switches without prompting
+# to track the branch and warns once that the branch is throwaway.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+gs trunk
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+# After rebuild, the worktree is back on the previously checked-out
+# branch (main). Switching to the integration branch by name should
+# just work, without the 'branch not tracked' prompt path.
+gs bco preview
+stderr 'integration branch is throwaway'
+stderr 'switched to branch: preview'
+
+# Sanity: HEAD now points at the integration branch.
+git symbolic-ref HEAD
+cmp stdout $WORK/golden/head.txt
+
+# Sanity: tracking is not implicitly added.
+! gs branch track preview
+stderr 'cannot track integration branch'
+
+-- repo/feat-a.txt --
+feature a
+-- golden/head.txt --
+refs/heads/preview
