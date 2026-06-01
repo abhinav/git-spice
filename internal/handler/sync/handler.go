@@ -400,7 +400,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		}
 	} else {
 		// Supported forge. Check for merged CRs and upstream branches.
-		branchesToDelete, err = h.findForgeFinishedBranches(ctx, branchGraph, candidates, opts.ClosedChanges)
+		branchesToDelete, err = h.findForgeFinishedBranches(ctx, branchGraph, candidates, trunkEndHash, opts.ClosedChanges)
 		if err != nil {
 			return fmt.Errorf("find finished CRs: %w", err)
 		}
@@ -475,6 +475,24 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 	return nil
 }
 
+// localAncestorMergedSet returns the names of branches whose head commits
+// are reachable from trunkHash. These branches have been merged locally,
+// whether by a forge merge that landed on the local trunk
+// or by a direct push to trunk that bypassed the forge.
+func (h *Handler) localAncestorMergedSet(
+	ctx context.Context,
+	knownBranches []spice.LoadBranchItem,
+	trunkHash git.Hash,
+) map[string]struct{} {
+	merged := make(map[string]struct{})
+	for _, b := range knownBranches {
+		if h.Repository.IsAncestor(ctx, b.Head, trunkHash) {
+			merged[b.Name] = struct{}{}
+		}
+	}
+	return merged
+}
+
 // findLocalMergedBranches finds branches that have been merged
 // by inspecting what's reachable from the trunk.
 //
@@ -485,19 +503,22 @@ func (h *Handler) findLocalMergedBranches(
 	knownBranches []spice.LoadBranchItem,
 	trunkHash git.Hash,
 ) ([]branchDeletion, error) {
-	// Find branches that have been merged by checking
-	// if they are reachable from the trunk.
-	var branchesToDelete []branchDeletion
-	for _, b := range knownBranches {
-		if h.Repository.IsAncestor(ctx, b.Head, trunkHash) {
-			h.Log.Infof("%v was merged", b.Name)
-			branchesToDelete = append(branchesToDelete, branchDeletion{
-				BranchName:   b.Name,
-				UpstreamName: b.UpstreamBranch,
-			})
-		}
+	merged := h.localAncestorMergedSet(ctx, knownBranches, trunkHash)
+	if len(merged) == 0 {
+		return nil, nil
 	}
 
+	branchesToDelete := make([]branchDeletion, 0, len(merged))
+	for _, b := range knownBranches {
+		if _, ok := merged[b.Name]; !ok {
+			continue
+		}
+		h.Log.Infof("%v was merged", b.Name)
+		branchesToDelete = append(branchesToDelete, branchDeletion{
+			BranchName:   b.Name,
+			UpstreamName: b.UpstreamBranch,
+		})
+	}
 	return branchesToDelete, nil
 }
 
@@ -505,6 +526,7 @@ func (h *Handler) findForgeFinishedBranches(
 	ctx context.Context,
 	branchGraph *spice.BranchGraph,
 	knownBranches []spice.LoadBranchItem,
+	trunkHash git.Hash,
 	closedChangeHandling ClosedChanges,
 ) ([]branchDeletion, error) {
 	type submittedBranch struct {
@@ -740,6 +762,49 @@ func (h *Handler) findForgeFinishedBranches(
 		}
 	}
 
+	// Fallback: a branch whose head is already reachable from trunk
+	// has been merged locally, regardless of forge state.
+	// This catches direct pushes to trunk that bypassed the CR flow,
+	// and unsubmitted branches whose commits landed on trunk
+	// via some other path.
+	if locallyMerged := h.localAncestorMergedSet(ctx, knownBranches, trunkHash); len(locallyMerged) > 0 {
+		submittedByName := make(map[string]*submittedBranch, len(submittedBranches))
+		for _, b := range submittedBranches {
+			submittedByName[b.Name] = b
+		}
+
+		for _, b := range knownBranches {
+			if _, ok := locallyMerged[b.Name]; !ok {
+				continue
+			}
+			if _, ok := finishedBranches[b.Name]; ok {
+				continue
+			}
+
+			upstreamBranch := b.UpstreamBranch
+			if upstreamBranch == "" {
+				upstreamBranch = b.Name
+			}
+
+			var changeID forge.ChangeID
+			if sb, ok := submittedByName[b.Name]; ok {
+				changeID = sb.Change
+				h.Log.Infof("%v: %v was merged", b.Name, changeID)
+			} else {
+				h.Log.Infof("%v: merged into trunk locally", b.Name)
+			}
+
+			finishedBranches[b.Name] = finishedBranch{
+				Name:           b.Name,
+				Base:           b.Base,
+				UpstreamBranch: upstreamBranch,
+				ChangeID:       changeID,
+				Merged:         true,
+			}
+			mergedDownstacks[b.Name] = b.MergedDownstack
+		}
+	}
+
 	if len(finishedBranches) == 0 {
 		return nil, nil
 	}
@@ -776,11 +841,19 @@ func (h *Handler) findForgeFinishedBranches(
 		must.Bef(ok, "topologically sorted branch %q must be finished", name)
 		must.Bef(branch.Merged, "topologically sorted branch %q must be merged", name)
 
-		changeIDJSON, err := h.RemoteRepository.Forge().MarshalChangeID(branch.ChangeID)
-		if err != nil {
-			h.Log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
-				"branch", name, "changeID", branch.ChangeID, "error", err)
-			continue
+		// A branch detected as locally merged may not have a ChangeID
+		// because it was never submitted to the forge.
+		// Skip its own contribution to the merge history,
+		// but still propagate any downstack history it carries.
+		var changeIDJSON json.RawMessage
+		if branch.ChangeID != nil {
+			marshaled, err := h.RemoteRepository.Forge().MarshalChangeID(branch.ChangeID)
+			if err != nil {
+				h.Log.Warn("Unable to serialize ChangeID for merged branch. Not propagating to merge history.",
+					"branch", name, "changeID", branch.ChangeID, "error", err)
+				continue
+			}
+			changeIDJSON = marshaled
 		}
 
 		for above := range branchGraph.Aboves(name) {
@@ -788,7 +861,9 @@ func (h *Handler) findForgeFinishedBranches(
 			// is the branch's own merged downstack and the branch itself.
 			var newHistory []json.RawMessage
 			newHistory = append(newHistory, mergedDownstacks[name]...)
-			newHistory = append(newHistory, changeIDJSON)
+			if changeIDJSON != nil {
+				newHistory = append(newHistory, changeIDJSON)
+			}
 			// Combine with anything else already in the merged downstack.
 			// (Normally this will be empty.)
 			newHistory = append(newHistory, mergedDownstacks[above]...)
