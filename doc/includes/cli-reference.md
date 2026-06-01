@@ -245,11 +245,9 @@ Change Requests are created or updated
 for all branches in the current stack.
 
 When invoked from the configured integration branch, the
-"current stack" is the union of each configured tip's
-downstack (the tip and the branches below it), and the
-integration branch itself is pushed afterward. Branches
-above a tip are deliberately left alone: they are work in
-progress that has not been promoted to a tip yet.
+"current stack" is the union of every tip's full stack
+(upstack and downstack), and the integration branch itself
+is pushed afterward.
 
 Use --dry-run to print what would be submitted without submitting it.
 
@@ -1531,6 +1529,24 @@ gs integration (int) tip list (l,ls)
 ```
 
 List the configured integration tips
+
+### git-spice integration tip clean {#gs-integration-tip-clean}
+
+```
+gs integration (int) tip clean (prune)
+```
+
+Remove tips whose upstack already contains another tip
+
+Removes tips whose upstack chain already contains another
+configured tip. The higher tip's merge into the integration
+branch captures the lower tip's content, so keeping both
+costs an extra merge without changing the result.
+
+For each subsumed tip, the message reports which higher tip
+subsumes it. A second run is a no-op once nothing remains
+to prune. Existing tips with no upstack-tip relationship
+are left alone.
 
 ## Rebase
 
