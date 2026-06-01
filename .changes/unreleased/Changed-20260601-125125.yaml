@@ -1,0 +1,3 @@
+kind: Changed
+body: '''stack submit'': From the integration branch, submits the full stack of every configured tip (upstack + downstack) and then pushes the integration branch.'
+time: 2026-06-01T12:51:25.554189-04:00
