@@ -180,6 +180,25 @@ func (w *Worktree) MergeContinue(
 	return nil
 }
 
+// CheckoutTheirs replaces the given paths in the worktree with their
+// "theirs" (MERGE_HEAD) version. Intended as a final-stage fallback
+// during integration rebuild: after merge drivers and an optional
+// resolver have run, any paths still conflicting fall through to this
+// take-incoming step so the merge can complete.
+//
+// The caller is responsible for staging the paths and committing.
+// See [Worktree.MergeContinue].
+func (w *Worktree) CheckoutTheirs(ctx context.Context, paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	args := append([]string{"--theirs", "--"}, paths...)
+	if err := w.gitCmd(ctx, "checkout", args...).Run(); err != nil {
+		return fmt.Errorf("git checkout --theirs: %w", err)
+	}
+	return nil
+}
+
 // AmendCommitAll stages all worktree changes (additions, modifications,
 // deletions) and amends HEAD with --no-edit. Preserves merge-commit
 // parentage.

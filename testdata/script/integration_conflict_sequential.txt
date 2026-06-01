@@ -30,7 +30,9 @@ git checkout main
 gs integration create preview --tip feat-a --tip feat-b --tip feat-c
 
 # First rebuild merges feat-a, then conflicts on feat-b.
-! gs integration rebuild
+# Disable the accept-incoming fallback to exercise the manual
+# resolve-and-resume flow this test cares about.
+! gs integration rebuild --no-accept-incoming
 stderr 'Merge conflict in tip feat-b'
 stderr 'git merge --continue'
 
