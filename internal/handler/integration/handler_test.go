@@ -927,6 +927,84 @@ func TestHandler_Rebuild_autoResolveAssumptions(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestHandler_Rebuild_acceptIncomingFallback(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	h.Resolver = nil // no resolver configured
+	mergeMsg := setupConflictMerge(t, mocks)
+
+	mocks.Worktree.EXPECT().
+		CheckoutTheirs(gomock.Any(), []string{"shared.txt"}).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
+		Return(nil)
+
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+
+	res, err := h.Rebuild(t.Context(),
+		&RebuildOptions{AcceptIncoming: boolPtr(true)})
+	require.NoError(t, err)
+	assert.Equal(t, "preview", res.Name)
+}
+
+func TestHandler_Rebuild_acceptIncomingAfterResolverFailure(t *testing.T) {
+	h, mocks, resolver, _ := newHandlerWithResolver(t)
+	mergeMsg := setupConflictMerge(t, mocks)
+
+	resolver.EXPECT().
+		Resolve(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("resolver crashed"))
+
+	mocks.Worktree.EXPECT().
+		CheckoutTheirs(gomock.Any(), []string{"shared.txt"}).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
+		Return(nil)
+
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), &RebuildOptions{
+		AutoResolve:    boolPtr(true),
+		AcceptIncoming: boolPtr(true),
+	})
+	require.NoError(t, err)
+}
+
+func TestHandler_Rebuild_acceptIncomingDisabled(t *testing.T) {
+	h, mocks, _, _ := newHandlerWithResolver(t)
+	h.Resolver = nil
+	h.DefaultAcceptIncoming = true
+	setupConflictMerge(t, mocks)
+
+	mocks.Store.EXPECT().
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(),
+		&RebuildOptions{AcceptIncoming: boolPtr(false)})
+	require.Error(t, err)
+	var conflictErr *ConflictError
+	require.True(t, errors.As(err, &conflictErr))
+	assert.Equal(t, "feat-a", conflictErr.Tip)
+}
+
 func TestHandler_OnBranchRemoved(t *testing.T) {
 	h, mocks, _, _ := newHandlerWithResolver(t)
 	// No integration configured -> tip pruning is a no-op.

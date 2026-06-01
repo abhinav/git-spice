@@ -12,8 +12,9 @@ import (
 )
 
 type integrationRebuildCmd struct {
-	Push        bool `name:"push" help:"Also push the integration branch after rebuilding"`
-	AutoResolve bool `name:"auto-resolve" negatable:"" config:"integration.autoResolve" help:"Auto-resolve merge conflicts using the configured resolver script"`
+	Push           bool `name:"push" help:"Also push the integration branch after rebuilding"`
+	AutoResolve    bool `name:"auto-resolve" negatable:"" config:"integration.autoResolve" help:"Auto-resolve merge conflicts using the configured resolver script"`
+	AcceptIncoming bool `name:"accept-incoming" negatable:"" default:"true" config:"integration.acceptIncoming" help:"Final-stage fallback: take the incoming tip's version for any remaining conflicts so the rebuild completes without manual intervention"`
 }
 
 func (*integrationRebuildCmd) Help() string {
@@ -31,6 +32,12 @@ func (*integrationRebuildCmd) Help() string {
 		configured resolver script is invoked to attempt automatic
 		resolution before surfacing conflicts. See the recipe for
 		details on the JSON protocol the script must implement.
+
+		Any conflicts that survive the merge drivers and the resolver
+		are auto-resolved by taking the incoming tip's version. Pass
+		--no-accept-incoming (or set spice.integration.acceptIncoming
+		=false) to disable that final fallback and surface conflicts
+		for manual resolution instead.
 	`)
 }
 
@@ -40,7 +47,8 @@ func (cmd *integrationRebuildCmd) Run(
 	handler IntegrationHandler,
 ) error {
 	res, err := handler.Rebuild(ctx, &integration.RebuildOptions{
-		AutoResolve: &cmd.AutoResolve,
+		AutoResolve:    &cmd.AutoResolve,
+		AcceptIncoming: &cmd.AcceptIncoming,
 	})
 	if err != nil {
 		conflict := new(integration.ConflictError)
