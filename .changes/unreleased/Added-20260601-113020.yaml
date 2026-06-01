@@ -1,0 +1,3 @@
+kind: Added
+body: '''log'': Display the configured integration branch as a top row in ''gs ls''/''gs ll'', and mark each configured tip with ''[integration-tip]''.'
+time: 2026-06-01T11:30:20.430333-04:00
