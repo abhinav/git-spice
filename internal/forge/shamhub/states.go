@@ -432,6 +432,17 @@ func (r *forgeRepository) MergeChange(
 	body := mergeChangeRequest{
 		HeadHash: string(opts.HeadHash),
 	}
+	switch opts.Method {
+	case forge.MergeMethodMerge, forge.MergeMethodSquash:
+		body.MergeMethod = opts.Method.String()
+	case forge.MergeMethodDefault:
+	default:
+		r.log.Warn(
+			"Unsupported merge method; using forge default",
+			"method", opts.Method,
+		)
+	}
+
 	var res mergeChangeResponse
 	if err := r.client.Post(ctx, u.String(), body, &res); err != nil {
 		return fmt.Errorf("merge change: %w", err)

@@ -20,6 +20,14 @@ func (r *Repository) MergeChange(
 		sha := string(opts.HeadHash)
 		mrOpts.SHA = &sha
 	}
+	if opts.Method == forge.MergeMethodSquash {
+		mrOpts.Squash = new(true)
+	} else if opts.Method != forge.MergeMethodDefault {
+		r.log.Warn(
+			"Unsupported merge method; using forge default",
+			"method", opts.Method,
+		)
+	}
 
 	if _, _, err := r.client.MergeRequestAccept(
 		ctx, r.repoID, id.Number, mrOpts,

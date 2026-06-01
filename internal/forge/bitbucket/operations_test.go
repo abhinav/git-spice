@@ -95,6 +95,69 @@ func TestPostChangeComment(t *testing.T) {
 	assert.Equal(t, int64(42), prComment.ID)
 }
 
+func TestMergeChange_method(t *testing.T) {
+	tests := []struct {
+		name         string
+		method       forge.MergeMethod
+		wantStrategy any
+	}{
+		{
+			name:         "Default",
+			method:       forge.MergeMethodDefault,
+			wantStrategy: nil,
+		},
+		{
+			name:         "Merge",
+			method:       forge.MergeMethodMerge,
+			wantStrategy: "merge_commit",
+		},
+		{
+			name:         "Squash",
+			method:       forge.MergeMethodSquash,
+			wantStrategy: "squash",
+		},
+		{
+			name:         "Rebase",
+			method:       forge.MergeMethodRebase,
+			wantStrategy: "rebase_merge",
+		},
+		{
+			name:   "Unsupported",
+			method: forge.MergeMethod(99),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var merged bool
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Contains(t, r.URL.Path, "/pullrequests/1/merge")
+
+				var body map[string]any
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				if tt.wantStrategy == nil {
+					assert.NotContains(t, body, "merge_strategy")
+				} else {
+					assert.Equal(t, tt.wantStrategy, body["merge_strategy"])
+				}
+				merged = true
+
+				resp := bitbucket.PullRequest{ID: 1, State: "MERGED"}
+				assert.NoError(t, json.NewEncoder(w).Encode(resp))
+			}))
+			defer srv.Close()
+
+			repo := newTestRepository(srv.URL)
+			err := repo.MergeChange(t.Context(), &PR{Number: 1}, forge.MergeChangeOptions{
+				Method: tt.method,
+			})
+			require.NoError(t, err)
+			assert.True(t, merged)
+		})
+	}
+}
+
 func TestUpdateChangeComment(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

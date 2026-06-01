@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -95,6 +96,29 @@ func TestClient_PullRequestMerge(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "/2.0/repositories/engineering/warp-core/pullrequests/55/merge", r.URL.Path)
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		assert.Empty(t, body)
+		writeJSON(t, w, http.StatusOK, PullRequest{
+			ID:    55,
+			State: "MERGED",
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	pr, _, err := client.PullRequestMerge(
+		t.Context(), "engineering", "warp-core", 55, nil,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "MERGED", pr.State)
+}
+
+func TestClient_PullRequestMerge_strategy(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/2.0/repositories/engineering/warp-core/pullrequests/55/merge", r.URL.Path)
+		assertJSONBody(t, r, `{"merge_strategy":"squash"}`)
 		writeJSON(t, w, http.StatusOK, PullRequest{
 			ID:    55,
 			State: "MERGED",
@@ -105,6 +129,7 @@ func TestClient_PullRequestMerge(t *testing.T) {
 	client := newTestClient(t, srv)
 	pr, _, err := client.PullRequestMerge(
 		t.Context(), "engineering", "warp-core", 55,
+		&PullRequestMergeRequest{Strategy: "squash"},
 	)
 	require.NoError(t, err)
 	assert.Equal(t, "MERGED", pr.State)

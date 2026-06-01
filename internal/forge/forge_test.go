@@ -123,3 +123,55 @@ func TestChangeState(t *testing.T) {
 		})
 	})
 }
+
+func TestMergeMethod(t *testing.T) {
+	tests := []struct {
+		method forge.MergeMethod
+		text   string
+	}{
+		{forge.MergeMethodDefault, "default"},
+		{forge.MergeMethodMerge, "merge"},
+		{forge.MergeMethodSquash, "squash"},
+		{forge.MergeMethodRebase, "rebase"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.method.String(), func(t *testing.T) {
+			t.Run("Marshal", func(t *testing.T) {
+				got, err := tt.method.MarshalText()
+				require.NoError(t, err)
+				assert.Equal(t, tt.text, string(got))
+			})
+
+			t.Run("Unmarshal", func(t *testing.T) {
+				var got forge.MergeMethod
+				require.NoError(t, got.UnmarshalText([]byte(tt.text)))
+				assert.Equal(t, tt.method, got)
+			})
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		method := forge.MergeMethod(42)
+
+		t.Run("String", func(t *testing.T) {
+			assert.Equal(t, "MergeMethod(42)", method.String())
+		})
+
+		t.Run("Marshal", func(t *testing.T) {
+			_, err := method.MarshalText()
+			assert.Error(t, err)
+		})
+
+		t.Run("Unmarshal", func(t *testing.T) {
+			err := method.UnmarshalText([]byte("fast-forward"))
+			assert.Error(t, err)
+		})
+	})
+
+	t.Run("emptyDefault", func(t *testing.T) {
+		var got forge.MergeMethod
+		require.NoError(t, got.UnmarshalText(nil))
+		assert.Equal(t, forge.MergeMethodDefault, got)
+	})
+}

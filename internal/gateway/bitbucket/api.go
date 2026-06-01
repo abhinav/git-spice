@@ -53,6 +53,12 @@ type PullRequestUpdateRequest struct {
 	Draft       *bool      `json:"draft,omitempty"`
 }
 
+// PullRequestMergeRequest is the request body for merging a pull request.
+type PullRequestMergeRequest struct {
+	// Strategy selects one of Bitbucket Cloud's supported merge strategies.
+	Strategy string `json:"merge_strategy,omitempty"`
+}
+
 // PullRequestList is the paginated response for listing pull requests.
 type PullRequestList struct {
 	Values []PullRequest `json:"values"`
@@ -364,7 +370,13 @@ func (c *Client) PullRequestMerge(
 	workspace string,
 	repo string,
 	prID int64,
+	req *PullRequestMergeRequest,
 ) (*PullRequest, *Response, error) {
+	var body any
+	if req != nil {
+		body = req
+	}
+
 	var response PullRequest
 	resp, err := c.post(
 		ctx,
@@ -372,7 +384,7 @@ func (c *Client) PullRequestMerge(
 			"/repositories/%s/%s/pullrequests/%d/merge",
 			workspace, repo, prID,
 		),
-		nil, nil, &response,
+		nil, body, &response,
 	)
 	if err != nil {
 		return nil, resp, err
