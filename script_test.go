@@ -73,7 +73,7 @@ func TestScript(t *testing.T) {
 
 	testscript.Run(t, testscript.Params{
 		Dir:                scriptDir,
-		UpdateScripts:      *_update,
+		UpdateScripts:      updateFlag(),
 		RequireUniqueNames: true,
 		Setup: func(e *testscript.Env) error {
 			t := e.T().(testing.TB)

@@ -30,6 +30,60 @@ func (e *notLoggedInError) Error() string {
 	return "not logged in to " + e.Forge.ID()
 }
 
+// remoteURLer reads Git's resolved URL for a named remote.
+type remoteURLer interface {
+	// RemoteURL accepts a Git remote name and returns the URL that Git uses
+	// after applying its remote URL rewriting rules.
+	//
+	// It is equivalent to `git remote get-url <name>`.
+	RemoteURL(context.Context, string) (string, error)
+}
+
+var _ remoteURLer = (*git.Repository)(nil)
+
+// remoteResolver resolves git-spice remotes to forge repository identities.
+type remoteResolver struct {
+	// Forges is the registry of forge implementations that may own a remote.
+	Forges *forge.Registry
+
+	// Repository is the Git repository whose remotes should be resolved.
+	Repository remoteURLer
+}
+
+// Resolve identifies the forge and repository for a configured Git remote.
+func (r *remoteResolver) Resolve(
+	ctx context.Context,
+	remote string,
+) (forge.Forge, forge.RepositoryID, error) {
+	remoteURL, err := r.Repository.RemoteURL(ctx, remote)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get remote URL: %w", err)
+	}
+
+	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
+	}
+
+	f, repoID, ok := forge.FromRemoteURL(r.Forges, parsedRemoteURL)
+	if !ok {
+		return nil, nil, &unsupportedForgeError{
+			Remote:    remote,
+			RemoteURL: remoteURL,
+		}
+	}
+	return f, repoID, nil
+}
+
+// ResolveID identifies the repository for a configured Git remote.
+func (r *remoteResolver) ResolveID(
+	ctx context.Context,
+	remote string,
+) (forge.RepositoryID, error) {
+	_, repoID, err := r.Resolve(ctx, remote)
+	return repoID, err
+}
+
 // Attempts to open the forge.Repository associated with the given Git remote.
 //
 // Does not print any error messages to the user.
@@ -45,7 +99,10 @@ func openRemoteRepositorySilent(
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.Repository, error) {
-	f, repoID, err := resolveRemoteRepositorySilent(ctx, forges, gitRepo, remote)
+	f, repoID, err := (&remoteResolver{
+		Forges:     forges,
+		Repository: gitRepo,
+	}).Resolve(ctx, remote)
 	if err != nil {
 		return nil, err
 	}
@@ -59,21 +116,10 @@ func resolveRemoteRepositoryID(
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.RepositoryID, error) {
-	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
-	if err != nil {
-		return nil, fmt.Errorf("get remote URL: %w", err)
-	}
-
-	parsedRemoteURL, err := giturl.Parse(remoteURL)
-	if err != nil {
-		return nil, fmt.Errorf("parse remote URL: %w", err)
-	}
-
-	_, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
-	if !ok {
-		return nil, fmt.Errorf("no forge matches remote URL %q", remoteURL)
-	}
-	return repoID, nil
+	return (&remoteResolver{
+		Forges:     forges,
+		Repository: gitRepo,
+	}).ResolveID(ctx, remote)
 }
 
 func resolveRemoteRepositorySilent(
@@ -82,24 +128,10 @@ func resolveRemoteRepositorySilent(
 	gitRepo *git.Repository,
 	remote string,
 ) (forge.Forge, forge.RepositoryID, error) {
-	remoteURL, err := gitRepo.RemoteURL(ctx, remote)
-	if err != nil {
-		return nil, nil, fmt.Errorf("get remote URL: %w", err)
-	}
-
-	parsedRemoteURL, err := giturl.Parse(remoteURL)
-	if err != nil {
-		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
-	}
-
-	f, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
-	if !ok {
-		return nil, nil, &unsupportedForgeError{
-			Remote:    remote,
-			RemoteURL: remoteURL,
-		}
-	}
-	return f, repoID, nil
+	return (&remoteResolver{
+		Forges:     forges,
+		Repository: gitRepo,
+	}).Resolve(ctx, remote)
 }
 
 func openForgeRepository(
