@@ -15,10 +15,19 @@ resolver script is invoked to attempt automatic resolution before surfacing
 conflicts. See the recipe for details on the JSON protocol the script must
 implement.
 
+Any conflicts that survive the merge drivers and the resolver are auto-resolved
+by taking the incoming tip's version. Pass --no-accept-incoming (or set
+spice.integration.acceptIncoming =false) to disable that final fallback and
+surface conflicts for manual resolution instead.
+
 Flags:
-  --push                 Also push the integration branch after rebuilding
-  --[no-]auto-resolve    Auto-resolve merge conflicts using the configured
-                         resolver script (🔧 spice.integration.autoResolve)
+  --push                    Also push the integration branch after rebuilding
+  --[no-]auto-resolve       Auto-resolve merge conflicts using the configured
+                            resolver script (🔧 spice.integration.autoResolve)
+  --[no-]accept-incoming    Final-stage fallback: take the incoming tip's
+                            version for any remaining conflicts so the
+                            rebuild completes without manual intervention (🔧
+                            spice.integration.acceptIncoming)
 
 Global Flags:
   -h, --help           Show help for the command

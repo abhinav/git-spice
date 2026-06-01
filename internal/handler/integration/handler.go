@@ -40,6 +40,7 @@ type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
 	CheckoutBranch(ctx context.Context, branch string) error
 	CheckoutNewBranch(ctx context.Context, req git.CheckoutNewBranchRequest) error
+	CheckoutTheirs(ctx context.Context, paths []string) error
 	Merge(ctx context.Context, opts git.MergeOptions) error
 	MergeContinue(ctx context.Context, paths []string, message string) error
 	AmendCommitAll(ctx context.Context) error
@@ -108,6 +109,17 @@ type Handler struct {
 	// (mocks, CLI docs, test fixtures) that the take-incoming driver
 	// could not merge correctly. nil disables the step entirely.
 	Regenerator Regenerator
+
+	// DefaultAcceptIncoming sets the default behavior when
+	// [RebuildOptions.AcceptIncoming] is nil. Typically populated
+	// from spice.integration.acceptIncoming.
+	//
+	// When true, conflicts that survive the merge drivers AND any
+	// configured resolver are resolved by taking the incoming tip's
+	// version, so the rebuild can complete without user intervention.
+	// When false, surviving conflicts surface as a [ConflictError]
+	// and the rebuild halts for manual resolution.
+	DefaultAcceptIncoming bool
 }
 
 // defaultMaxResolveIterations is the fallback when
@@ -357,6 +369,12 @@ type RebuildOptions struct {
 	// for this invocation. A true value enables the configured
 	// resolver; a false value disables it even when configured.
 	AutoResolve *bool
+
+	// AcceptIncoming, if non-nil, overrides
+	// [Handler.DefaultAcceptIncoming] for this invocation. When true,
+	// conflicts that remain after the resolver are auto-resolved by
+	// taking the incoming tip's version.
+	AcceptIncoming *bool
 }
 
 // Rebuild regenerates the integration branch by sequentially merging
@@ -484,6 +502,14 @@ func (h *Handler) shouldAutoResolve(opts *RebuildOptions) bool {
 		return *opts.AutoResolve
 	}
 	return h.DefaultAutoResolve
+}
+
+// shouldAcceptIncoming resolves opts against DefaultAcceptIncoming.
+func (h *Handler) shouldAcceptIncoming(opts *RebuildOptions) bool {
+	if opts != nil && opts.AcceptIncoming != nil {
+		return *opts.AcceptIncoming
+	}
+	return h.DefaultAcceptIncoming
 }
 
 func (h *Handler) freshRebuild(
@@ -628,8 +654,25 @@ func (h *Handler) runMerges(
 			case resolveErr != nil:
 				h.Log.Warnf("Auto-resolve failed for tip %q: %v",
 					tip.Name, resolveErr)
-				// fall through to conflict-surfacing
+				// fall through to accept-incoming / conflict-surfacing
 			case resolved:
+				continue
+			}
+		}
+
+		// Final fallback: accept the incoming tip's version of any
+		// still-conflicted paths. This is the layer that lets a rebuild
+		// complete without user intervention when no resolver script is
+		// configured or the resolver could not resolve everything.
+		if h.shouldAcceptIncoming(opts) && len(conflict.ConflictPaths) > 0 {
+			if acceptErr := h.acceptIncoming(ctx, conflict.ConflictPaths, mergeMsg); acceptErr != nil {
+				h.Log.Warnf("Accept-incoming failed for tip %q: %v",
+					tip.Name, acceptErr)
+				// fall through to conflict-surfacing
+			} else {
+				h.Log.Infof("Tip %q: accepted incoming for %d conflicted path(s): %s",
+					tip.Name, len(conflict.ConflictPaths),
+					strings.Join(conflict.ConflictPaths, ", "))
 				continue
 			}
 		}
@@ -934,6 +977,22 @@ func (h *Handler) MaybeRebuild(ctx context.Context) error {
 			return nil
 		}
 		return err
+	}
+	return nil
+}
+
+// acceptIncoming completes an in-progress merge by taking the incoming
+// tip's version for every conflicted path and committing the merge.
+// Used as a final, non-interactive fallback when no resolver is
+// configured or the resolver leaves residual conflicts.
+func (h *Handler) acceptIncoming(
+	ctx context.Context, paths []string, mergeMsg string,
+) error {
+	if err := h.Worktree.CheckoutTheirs(ctx, paths); err != nil {
+		return fmt.Errorf("checkout theirs: %w", err)
+	}
+	if err := h.Worktree.MergeContinue(ctx, paths, mergeMsg); err != nil {
+		return fmt.Errorf("commit merge: %w", err)
 	}
 	return nil
 }
