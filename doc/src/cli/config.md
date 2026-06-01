@@ -215,7 +215,7 @@ the repository path.
 ```
 
 Accepted values are registered forge IDs,
-including `github`, `gitlab`, `bitbucket`, and `gitea`.
+including `github`, `gitlab`, `bitbucket`, `gitea`, and `forgejo`.
 Test repositories may also use `shamhub`.
 
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
@@ -319,6 +319,26 @@ for git-spice to detect and connect to your instance.
 ```
 
 See also [Gitea](../setup/auth.md#gitea).
+
+### spice.forge.forgejo.apiURL
+
+<!-- gs:version unreleased -->
+
+URL at which the Forgejo API is available.
+Defaults to `$FORGEJO_API_URL` if set,
+or the Forgejo URL otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
+
+### spice.forge.forgejo.url
+
+<!-- gs:version unreleased -->
+
+URL of the Forgejo instance used for Forgejo requests.
+Defaults to `$FORGEJO_URL` if set,
+or `https://codeberg.org` otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
 
 ### spice.git.indexLockTimeout
 

@@ -15,6 +15,8 @@ description: >-
     - <!-- gs:github -->
     - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
     - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
+    - <!-- gs:gitea --> (<!-- gs:version unreleased -->)
+    - <!-- gs:forgejo --> (<!-- gs:version unreleased -->)
 
     If you're using a different service,
     you can still use git-spice,
@@ -30,7 +32,7 @@ description: >-
 !!! info
 
     git-spice uses the term *Change Request* to refer to submitted branches.
-    These correspond to Pull Requests on GitHub and Bitbucket,
+    These correspond to Pull Requests on GitHub, Bitbucket, Gitea, and Forgejo,
     and to Merge Requests on GitLab.
 
 When your local changes are ready,

@@ -16,14 +16,21 @@ import (
 // This configuration is loaded from testconfig.yaml in update mode,
 // and uses canonical placeholders in replay mode.
 type TestConfig struct {
-	GitHub    ForgeConfig `yaml:"github"`
-	GitLab    ForgeConfig `yaml:"gitlab"`
-	Bitbucket ForgeConfig `yaml:"bitbucket"`
-	Gitea     GiteaConfig `yaml:"gitea"`
+	GitHub    ForgeConfig   `yaml:"github"`
+	GitLab    ForgeConfig   `yaml:"gitlab"`
+	Bitbucket ForgeConfig   `yaml:"bitbucket"`
+	Gitea     GiteaConfig   `yaml:"gitea"`
+	Forgejo   ForgejoConfig `yaml:"forgejo"`
 }
 
 // GiteaConfig holds Gitea-specific test configuration.
 type GiteaConfig struct {
+	ForgeConfig `yaml:",inline"`
+	URL         string `yaml:"url"`
+}
+
+// ForgejoConfig holds Forgejo-specific test configuration.
+type ForgejoConfig struct {
 	ForgeConfig `yaml:",inline"`
 	URL         string `yaml:"url"`
 }
@@ -88,6 +95,7 @@ func canonicalConfig() *TestConfig {
 		GitLab:    CanonicalGitLabConfig(),
 		Bitbucket: CanonicalBitbucketConfig(),
 		Gitea:     CanonicalGiteaConfig(),
+		Forgejo:   CanonicalForgejoConfig(),
 	}
 }
 
@@ -150,6 +158,21 @@ func CanonicalGiteaConfig() GiteaConfig {
 	}
 }
 
+// CanonicalForgejoConfig returns canonical placeholders for Forgejo fixtures.
+func CanonicalForgejoConfig() ForgejoConfig {
+	return ForgejoConfig{
+		URL: "https://codeberg.org",
+		ForgeConfig: ForgeConfig{
+			Owner:     CanonicalOwner,
+			Repo:      CanonicalRepo,
+			ForkOwner: "test-fork-owner",
+			ForkRepo:  CanonicalRepo,
+			Reviewer:  "test-reviewer",
+			Assignee:  "test-assignee",
+		},
+	}
+}
+
 // loadConfig loads the test configuration from testconfig.yaml.
 func loadConfig() (*TestConfig, error) {
 	configPath := configFilePath()
@@ -202,6 +225,24 @@ func ConfigSanitizers(cfg ForgeConfig, canonical ForgeConfig) []Sanitizer {
 
 // GiteaConfigSanitizers returns sanitizers for Gitea test configuration.
 func GiteaConfigSanitizers(cfg GiteaConfig, canonical GiteaConfig) []Sanitizer {
+	sanitizers := ConfigSanitizers(cfg.ForgeConfig, canonical.ForgeConfig)
+	if cfg.URL != "" && cfg.URL != canonical.URL {
+		sanitizers = append(sanitizers, Sanitizer{
+			Replace: cfg.URL,
+			With:    canonical.URL,
+		})
+		sortSanitizers(sanitizers)
+	}
+
+	return sanitizers
+}
+
+// ForgejoConfigSanitizers returns sanitizers
+// for Forgejo test configuration.
+func ForgejoConfigSanitizers(
+	cfg ForgejoConfig,
+	canonical ForgejoConfig,
+) []Sanitizer {
 	sanitizers := ConfigSanitizers(cfg.ForgeConfig, canonical.ForgeConfig)
 	if cfg.URL != "" && cfg.URL != canonical.URL {
 		sanitizers = append(sanitizers, Sanitizer{

@@ -270,8 +270,7 @@ type IntegrationConfig struct {
 	// SkipMergeability skips shared mergeability integration tests.
 	//
 	// The tests are enabled by default.
-	// Set to true while a provider branch is still adding mergeability support
-	// or cannot record the required fixtures.
+	// Set to true only for forges that do not support mergeability.
 	SkipMergeability bool // optional
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.

@@ -64,3 +64,19 @@ gitea:
   reviewer: "test-reviewer"
   # User who can be assigned to pull requests.
   assignee: "test-reviewer"
+
+forgejo:
+  # Base URL of the Forgejo instance used for recording fixtures.
+  url: "http://127.0.0.1:3000"
+  # Repository owner.
+  owner: "test-owner"
+  # Test repository name.
+  repo: "test-repo"
+  # Fork repository owner for cross-repository pull request tests.
+  forkOwner: "test-fork-owner"
+  # Fork repository name for cross-repository pull request tests.
+  forkRepo: "test-repo"
+  # User who can be added as a reviewer.
+  reviewer: "test-reviewer"
+  # User who can be assigned to pull requests.
+  assignee: "test-assignee"

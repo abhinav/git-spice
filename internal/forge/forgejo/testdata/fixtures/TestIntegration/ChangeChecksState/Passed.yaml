@@ -1,0 +1,174 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/repos/test-owner/test-repo
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":34,"language":"","languages_url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/languages","html_url":"https://codeberg.org/test-owner/test-repo","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"ssh://git@localhost/test-owner/test-repo.git","clone_url":"https://codeberg.org/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":6,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-24T04:19:01Z","updated_at":"2026-06-24T04:19:06Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"wiki_branch":"main","globally_editable_wiki":false,"has_pull_requests":true,"has_projects":true,"has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"default_update_style":"merge","avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null,"topics":null}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 440.090875ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/user
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 551
+        body: |
+            {"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":true,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"}
+        headers:
+            Content-Length:
+                - "551"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 43.962833ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 86
+        host: 127.0.0.1:3000
+        body: '{"title":"Checks cbLqUmCd","body":"Checks state test","head":"cbLqUmCd","base":"main"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/repos/test-owner/test-repo/pulls
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":12,"url":"https://codeberg.org/test-owner/test-repo/pulls/12","number":12,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":true,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Checks cbLqUmCd","body":"Checks state test","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":[],"requested_reviewers_teams":[],"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"https://codeberg.org/test-owner/test-repo/pulls/12","diff_url":"https://codeberg.org/test-owner/test-repo/pulls/12.diff","patch_url":"https://codeberg.org/test-owner/test-repo/pulls/12.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"38c09403a506514a92fd71d2cf98d2f4de645dd0","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":34,"language":"","languages_url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/languages","html_url":"https://codeberg.org/test-owner/test-repo","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"ssh://git@localhost/test-owner/test-repo.git","clone_url":"https://codeberg.org/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":6,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-24T04:19:01Z","updated_at":"2026-06-24T04:19:07Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"wiki_branch":"main","globally_editable_wiki":false,"has_pull_requests":true,"has_projects":true,"has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"default_update_style":"merge","avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null,"topics":null}},"head":{"label":"cbLqUmCd","ref":"cbLqUmCd","sha":"8af8f7e3be853225c59fc422cfa9b23299d70203","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":34,"language":"","languages_url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/languages","html_url":"https://codeberg.org/test-owner/test-repo","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"ssh://git@localhost/test-owner/test-repo.git","clone_url":"https://codeberg.org/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":6,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-24T04:19:01Z","updated_at":"2026-06-24T04:19:07Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"wiki_branch":"main","globally_editable_wiki":false,"has_pull_requests":true,"has_projects":true,"has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"default_update_style":"merge","avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null,"topics":null}},"merge_base":"38c09403a506514a92fd71d2cf98d2f4de645dd0","due_date":null,"created_at":"2026-06-24T04:19:07Z","updated_at":"2026-06-24T04:19:07Z","closed_at":null,"pin_order":0,"flow":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 417.929833ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 125
+        host: 127.0.0.1:3000
+        body: '{"state":"success","description":"Synthetic status for git-spice integration tests","context":"git-spice integration passed"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/repos/test-owner/test-repo/statuses/8af8f7e3be853225c59fc422cfa9b23299d70203
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 909
+        body: |
+            {"id":1,"status":"success","target_url":"","description":"Synthetic status for git-spice integration tests","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/statuses/8af8f7e3be853225c59fc422cfa9b23299d70203","context":"git-spice integration passed","creator":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"created_at":"2026-06-24T04:19:07Z","updated_at":"2026-06-24T04:19:07Z"}
+        headers:
+            Content-Length:
+                - "909"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 386.014459ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/repos/test-owner/test-repo/pulls/12
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":12,"url":"https://codeberg.org/test-owner/test-repo/pulls/12","number":12,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":true,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Checks cbLqUmCd","body":"Checks state test","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":[],"requested_reviewers_teams":[],"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"https://codeberg.org/test-owner/test-repo/pulls/12","diff_url":"https://codeberg.org/test-owner/test-repo/pulls/12.diff","patch_url":"https://codeberg.org/test-owner/test-repo/pulls/12.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"38c09403a506514a92fd71d2cf98d2f4de645dd0","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":38,"language":"","languages_url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/languages","html_url":"https://codeberg.org/test-owner/test-repo","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"ssh://git@localhost/test-owner/test-repo.git","clone_url":"https://codeberg.org/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-24T04:19:01Z","updated_at":"2026-06-24T04:19:07Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"wiki_branch":"main","globally_editable_wiki":false,"has_pull_requests":true,"has_projects":true,"has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"default_update_style":"merge","avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null,"topics":null}},"head":{"label":"cbLqUmCd","ref":"cbLqUmCd","sha":"8af8f7e3be853225c59fc422cfa9b23299d70203","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":38,"language":"","languages_url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/languages","html_url":"https://codeberg.org/test-owner/test-repo","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"ssh://git@localhost/test-owner/test-repo.git","clone_url":"https://codeberg.org/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-24T04:19:01Z","updated_at":"2026-06-24T04:19:07Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"wiki_branch":"main","globally_editable_wiki":false,"has_pull_requests":true,"has_projects":true,"has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"default_update_style":"merge","avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null,"topics":null}},"merge_base":"38c09403a506514a92fd71d2cf98d2f4de645dd0","due_date":null,"created_at":"2026-06-24T04:19:07Z","updated_at":"2026-06-24T04:19:07Z","closed_at":null,"pin_order":0,"flow":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 77.684792ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        form:
+            limit:
+                - "100"
+        headers:
+            User-Agent:
+                - git-spice
+        url: https://codeberg.org/api/v1/repos/test-owner/test-repo/statuses/8af8f7e3be853225c59fc422cfa9b23299d70203?limit=100
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 911
+        body: |
+            [{"id":1,"status":"success","target_url":"","description":"Synthetic status for git-spice integration tests","url":"https://codeberg.org/api/v1/repos/test-owner/test-repo/statuses/8af8f7e3be853225c59fc422cfa9b23299d70203","context":"git-spice integration passed","creator":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"https://codeberg.org/avatars/36860231b886b0334428e81f0084a86a","html_url":"https://codeberg.org/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-24T04:18:59Z","restricted":false,"active":false,"prohibit_login":false,"location":"","pronouns":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"created_at":"2026-06-24T04:19:07Z","updated_at":"2026-06-24T04:19:07Z"}]
+        headers:
+            Content-Length:
+                - "911"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 200.676ms
