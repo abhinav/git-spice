@@ -1,0 +1,70 @@
+# Verifies the three comment scopes: line, file, and pr.
+# Each scope corresponds to a different positional-argument form on
+# 'gs review comment', and surfaces through the review-thread API
+# the extension uses.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+gs repo init
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Line scope: existing form.
+gs review comment main.go:4 -m 'Line-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# File scope: path with no ':'.
+gs review comment main.go -m 'File-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# PR scope: --pr flag, no positional argument.
+gs review comment --pr -m 'PR-scope comment.' --no-draft
+stderr 'Posted comment'
+
+# Thread comments are listed with the right anchor fields:
+#   - line-scope: path + line
+#   - file-scope: path, no line
+#
+# The text-mode output makes the missing-line / missing-path
+# distinction easiest to assert: line entries print as
+# "path:line", and file entries print as "path:0".
+#
+# PR-scope comments are review bodies, not review threads. The forge
+# API can submit them but does not include them in ListReviewThreads.
+gs review list
+stderr 'main\.go:4'
+stderr 'main\.go:0'
+stderr 'Line-scope comment'
+stderr 'File-scope comment'
+! stderr 'PR-scope comment'
+
+# --pr with a positional argument is rejected.
+! gs review comment --pr unwanted.go -m 'oops' --no-draft
+stderr '--pr takes no anchor argument'
+
+# Missing anchor without --pr is rejected.
+! gs review comment -m 'oops' --no-draft
+stderr 'comment anchor is required'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}
