@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -141,7 +142,10 @@ func TestIntegration(t *testing.T) {
 		PushRemoteURL: pushRepoURL,
 		Forge:         shamForge,
 		OpenRepository: func(t *testing.T, httpClient *http.Client) forge.Repository {
-			repoID, err := shamForge.ParseRemoteURL(repoURL)
+			remoteURL, err := giturl.Parse(repoURL)
+			require.NoError(t, err)
+
+			repoID, err := shamForge.ParseRepositoryPath(remoteURL.Path)
 			require.NoError(t, err)
 
 			repo, err := newRepository(

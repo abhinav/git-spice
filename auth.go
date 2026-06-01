@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -142,7 +143,12 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 		return nil, nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	forge, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
+	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
+	}
+
+	forge, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
 	if !ok {
 		return nil, nil, fmt.Errorf("no forge found for %s", remoteURL)
 	}

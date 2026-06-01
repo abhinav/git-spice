@@ -10,7 +10,6 @@ import (
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/forgeurl"
 	"go.abhg.dev/gs/internal/silog"
 	"golang.org/x/oauth2"
 )
@@ -61,6 +60,11 @@ func (f *Forge) URL() string {
 	return cmp.Or(f.Options.URL, DefaultURL)
 }
 
+// BaseURL reports the GitHub web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.URL()
+}
+
 // APIURL returns the base API URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) APIURL() string {
@@ -86,10 +90,10 @@ func (*Forge) ID() string { return "github" }
 // CLIPlugin returns the CLI plugin for the GitHub Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// ParseRemoteURL parses a GitHub remote URL and returns a [RepositoryID]
-// if the URL matches.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
-	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+// ParseRepositoryPath parses a GitHub repository path and returns a [RepositoryID]
+// if the path identifies a repository.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	owner, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -156,30 +160,11 @@ func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.To
 	return newGitHubEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
-func extractRepoInfo(githubURL, remoteURL string) (owner, repo string, err error) {
-	baseURL, err := url.Parse(githubURL)
-	if err != nil {
-		return "", "", fmt.Errorf("bad base URL: %w", err)
-	}
-
-	u, err := forgeurl.Parse(remoteURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	forgeurl.StripDefaultPort(baseURL, u)
-
-	if !forgeurl.MatchesHost(baseURL, u) {
-		return "", "", fmt.Errorf(
-			"%v is not a GitHub URL: expected host %q, got %q",
-			u, baseURL.Host, u.Host,
-		)
-	}
-
-	owner, repo, ok := forgeurl.ExtractPath(u.Path)
+func extractRepoInfo(path string) (owner, repo string, err error) {
+	owner, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
 		return "", "", fmt.Errorf(
-			"path %q does not contain a GitHub repository", u.Path,
+			"path %q does not contain a GitHub repository", path,
 		)
 	}
 

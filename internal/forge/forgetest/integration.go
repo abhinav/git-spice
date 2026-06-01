@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog/silogtest"
@@ -918,7 +919,10 @@ func (s *integrationSuite) TestSubmitChangeFromPushRepository(t *testing.T) {
 	}
 	commitHash := commitHashFixture.Get(t)
 
-	pushRepository, err := s.Forge.ParseRemoteURL(s.PushRemoteURL)
+	remoteURL, err := giturl.Parse(s.PushRemoteURL)
+	require.NoError(t, err, "parse push repository URL")
+
+	pushRepository, err := s.Forge.ParseRepositoryPath(remoteURL.Path)
 	require.NoError(t, err, "parse push repository URL")
 
 	repo := s.OpenRepository(t)

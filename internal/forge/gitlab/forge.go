@@ -6,10 +6,8 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/forgeurl"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -67,6 +65,11 @@ func (f *Forge) URL() string {
 	return cmp.Or(f.Options.URL, DefaultURL)
 }
 
+// BaseURL reports the GitLab web URL used for host matching and links.
+func (f *Forge) BaseURL() string {
+	return f.URL()
+}
+
 // APIURL returns the base API URL configured for the GitHub Forge
 // or the default URL if none is set.
 func (f *Forge) APIURL() string {
@@ -79,12 +82,12 @@ func (*Forge) ID() string { return "gitlab" }
 // CLIPlugin returns the CLI plugin for the GitLab Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
 
-// ParseRemoteURL parses the given  remote URL and returns a [RepositoryID]
-// for the GitLab repository it points to.
+// ParseRepositoryPath parses a GitLab repository path and returns a [RepositoryID]
+// for the GitLab repository it identifies.
 //
-// It returns [ErrUnsupportedURL] if the remote URL is not a valid GitLab URL.
-func (f *Forge) ParseRemoteURL(remoteURL string) (forge.RepositoryID, error) {
-	owner, repo, err := extractRepoInfo(f.URL(), remoteURL)
+// It returns [ErrUnsupportedURL] if the path is not a valid GitLab path.
+func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	owner, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
@@ -144,30 +147,11 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/-/merge_requests/%v", rid.url, owner, repo, mrNum)
 }
 
-func extractRepoInfo(gitlabURL, remoteURL string) (owner, repo string, err error) {
-	baseURL, err := url.Parse(gitlabURL)
-	if err != nil {
-		return "", "", fmt.Errorf("bad base URL: %w", err)
-	}
-
-	u, err := forgeurl.Parse(remoteURL)
-	if err != nil {
-		return "", "", err
-	}
-
-	forgeurl.StripDefaultPort(baseURL, u)
-
-	if !forgeurl.MatchesHost(baseURL, u) {
-		return "", "", fmt.Errorf(
-			"%v is not a GitLab URL: expected host %q, got %q",
-			u, baseURL.Host, u.Host,
-		)
-	}
-
-	owner, repo, ok := forgeurl.ExtractPath(u.Path)
+func extractRepoInfo(path string) (owner, repo string, err error) {
+	owner, repo, ok := forge.SplitRepositoryPath(path)
 	if !ok {
 		return "", "", fmt.Errorf(
-			"path %q does not contain a GitLab repository", u.Path,
+			"path %q does not contain a GitLab repository", path,
 		)
 	}
 

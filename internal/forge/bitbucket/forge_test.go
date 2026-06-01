@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 )
 
 func TestForge_ID(t *testing.T) {
@@ -69,12 +70,11 @@ func TestForge_APIURL(t *testing.T) {
 	}
 }
 
-func TestForge_ParseRemoteURL(t *testing.T) {
+func TestForge_ParseRepositoryPath(t *testing.T) {
 	tests := []struct {
 		name      string
 		remoteURL string
 		want      string
-		wantErr   error
 	}{
 		{
 			name:      "HTTPS",
@@ -111,35 +111,30 @@ func TestForge_ParseRemoteURL(t *testing.T) {
 			remoteURL: "git+ssh://git@bitbucket.org/workspace/repo.git",
 			want:      "workspace/repo",
 		},
-		{
-			name:      "WrongHost",
-			remoteURL: "https://github.com/owner/repo.git",
-			wantErr:   forge.ErrUnsupportedURL,
-		},
-		{
-			name:      "NoRepo",
-			remoteURL: "https://bitbucket.org/workspace",
-			wantErr:   forge.ErrUnsupportedURL,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &Forge{}
-			rid, err := f.ParseRemoteURL(tt.remoteURL)
-
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-				return
-			}
-
+			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
+
+			rid, err := f.ParseRepositoryPath(remoteURL.Path)
+			require.NoError(t, err)
+
 			assert.Equal(t, tt.want, rid.String())
 		})
 	}
 }
 
-func TestForge_ParseRemoteURL_CustomURL(t *testing.T) {
+func TestForge_ParseRepositoryPath_errors(t *testing.T) {
+	f := &Forge{}
+	_, err := f.ParseRepositoryPath("/workspace")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, forge.ErrUnsupportedURL)
+}
+
+func TestForge_ParseRepositoryPath_CustomURL(t *testing.T) {
 	f := &Forge{
 		Options: Options{
 			URL: "https://bitbucket.example.com",
@@ -150,7 +145,6 @@ func TestForge_ParseRemoteURL_CustomURL(t *testing.T) {
 		name      string
 		remoteURL string
 		want      string
-		wantErr   error
 	}{
 		{
 			name:      "HTTPS",
@@ -162,26 +156,33 @@ func TestForge_ParseRemoteURL_CustomURL(t *testing.T) {
 			remoteURL: "git@bitbucket.example.com:workspace/repo.git",
 			want:      "workspace/repo",
 		},
-		{
-			name:      "WrongHost",
-			remoteURL: "https://bitbucket.org/workspace/repo.git",
-			wantErr:   forge.ErrUnsupportedURL,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rid, err := f.ParseRemoteURL(tt.remoteURL)
-
-			if tt.wantErr != nil {
-				require.ErrorIs(t, err, tt.wantErr)
-				return
-			}
-
+			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
+
+			rid, err := f.ParseRepositoryPath(remoteURL.Path)
+			require.NoError(t, err)
+
 			assert.Equal(t, tt.want, rid.String())
 		})
 	}
+}
+
+func TestForge_ParseRepositoryPath_knownForge(t *testing.T) {
+	f := &Forge{}
+	remoteURL, err := giturl.Parse("git@bitbucket-alias:workspace/repo.git")
+	require.NoError(t, err)
+
+	rid, err := f.ParseRepositoryPath(remoteURL.Path)
+	require.NoError(t, err)
+
+	assert.Equal(t, "workspace/repo", rid.String())
+	assert.Equal(t,
+		"https://bitbucket.org/workspace/repo/pull-requests/42",
+		rid.ChangeURL(&PR{Number: 42}))
 }
 
 func TestRepositoryID_ChangeURL(t *testing.T) {

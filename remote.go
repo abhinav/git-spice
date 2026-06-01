@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -63,7 +64,12 @@ func resolveRemoteRepositoryID(
 		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	_, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
+	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse remote URL: %w", err)
+	}
+
+	_, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
 	if !ok {
 		return nil, fmt.Errorf("no forge matches remote URL %q", remoteURL)
 	}
@@ -81,7 +87,12 @@ func resolveRemoteRepositorySilent(
 		return nil, nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	f, repoID, ok := forge.MatchRemoteURL(forges, remoteURL)
+	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
+	}
+
+	f, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,

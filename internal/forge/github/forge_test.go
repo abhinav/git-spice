@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git/giturl"
 )
 
 func TestURLs(t *testing.T) {
@@ -130,60 +131,62 @@ func TestExtractRepoInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := Forge{Options: Options{URL: tt.githubURL}}
-			owner, repo, err := extractRepoInfo(f.URL(), tt.give)
+			remoteURL, err := giturl.Parse(tt.give)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.wantOwner, owner, "owner")
-			assert.Equal(t, tt.wantRepo, repo, "repo")
+			rid, err := f.ParseRepositoryPath(remoteURL.Path)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				tt.wantOwner+"/"+tt.wantRepo,
+				rid.String(),
+				"repository ID")
 		})
 	}
 }
 
 func TestExtractRepoInfoErrors(t *testing.T) {
 	tests := []struct {
-		name      string
-		give      string
-		githubURL string
-
-		wantErr []string
+		name string
+		give string
 	}{
 		{
-			name:      "bad github URL",
-			give:      "https://github.com/example/repo",
-			githubURL: "NOT\tA\nVALID URL",
-			wantErr:   []string{"bad base URL"},
+			name: "no owner",
+			give: "/repo",
 		},
 		{
-			name:    "bad remote URL",
-			give:    "NOT\tA\nVALID URL",
-			wantErr: []string{"parse remote URL"},
-		},
-		{
-			name: "host mismatch",
-			give: "https://example.com/example/repo",
-			wantErr: []string{
-				"not a GitHub URL",
-				`expected host "github.com"`,
-			},
-		},
-		{
-			name:    "no owner",
-			give:    "https://github.com/repo",
-			wantErr: []string{"does not contain a GitHub repository"},
+			name: "empty",
+			give: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := Forge{Options: Options{URL: tt.githubURL}}
-			_, _, err := extractRepoInfo(f.URL(), tt.give)
+			f := Forge{}
+			_, err := f.ParseRepositoryPath(tt.give)
 			require.Error(t, err)
-
-			for _, want := range tt.wantErr {
-				assert.ErrorContains(t, err, want)
-			}
 		})
 	}
+}
+
+func TestExtractRepoInfoErrors_badRemoteURL(t *testing.T) {
+	_, err := giturl.Parse("NOT\tA\nVALID URL")
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "parse remote URL")
+}
+
+func TestForge_ParseRepositoryPath_knownForge(t *testing.T) {
+	f := Forge{}
+	remoteURL, err := giturl.Parse("git@githubaccount1:example/repo.git")
+	require.NoError(t, err)
+
+	rid, err := f.ParseRepositoryPath(remoteURL.Path)
+	require.NoError(t, err)
+
+	assert.Equal(t, "example/repo", rid.String())
+	assert.Equal(t,
+		"https://github.com/example/repo/pull/123",
+		rid.ChangeURL(&PR{Number: 123}))
 }
 
 func TestChangeURL(t *testing.T) {
