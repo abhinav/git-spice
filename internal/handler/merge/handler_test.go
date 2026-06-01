@@ -362,6 +362,47 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestExecutePlan_mergeMethod(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main")
+
+	pr1 := fakeChangeID("pr-1")
+
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResult("main"), nil)
+	mockForge.EXPECT().
+		ChangeChecksState(gomock.Any(), pr1).
+		Return(forge.ChecksPassed, nil)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr1, forge.MergeChangeOptions{
+			Method:   forge.MergeMethodSquash,
+			HeadHash: git.Hash("head1"),
+		}).
+		Return(nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+	})
+
+	err := h.executePlan(t.Context(), []*mergeItem{
+		{
+			branch:   "feat1",
+			changeID: pr1,
+			headHash: git.Hash("head1"),
+		},
+	}, &Request{
+		Branch: "feat1",
+		Method: forge.MergeMethodSquash,
+		NoWait: true,
+	})
+	require.NoError(t, err)
+}
+
 func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var logBuffer bytes.Buffer

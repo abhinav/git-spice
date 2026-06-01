@@ -42,6 +42,20 @@ func (r *Repository) mergePullRequest(
 		oid := githubv4.GitObjectID(opts.HeadHash)
 		input.ExpectedHeadOid = &oid
 	}
+	switch opts.Method {
+	case forge.MergeMethodDefault:
+	case forge.MergeMethodMerge:
+		input.MergeMethod = new(githubv4.PullRequestMergeMethodMerge)
+	case forge.MergeMethodSquash:
+		input.MergeMethod = new(githubv4.PullRequestMergeMethodSquash)
+	case forge.MergeMethodRebase:
+		input.MergeMethod = new(githubv4.PullRequestMergeMethodRebase)
+	default:
+		r.log.Warn(
+			"Unsupported merge method; using forge default",
+			"method", opts.Method,
+		)
+	}
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("merge pull request: %w", err)
 	}

@@ -414,6 +414,23 @@ Set to `0` to fail immediately if checks aren't already passing.
 
 Defaults to `30m`.
 
+### spice.merge.method
+
+<!-- gs:version unreleased -->
+
+Preferred merge method for $$gs downstack merge$$.
+If unset, git-spice lets the forge use its default merge method.
+
+Merge methods are forge-specific.
+If the selected forge does not recognize the configured method,
+git-spice warns and lets the forge use its default merge method.
+
+**Accepted values:**
+
+- `merge`: create a merge commit
+- `squash`: squash commits before merging
+- `rebase`: rebase commits before merging
+
 ### spice.rebaseContinue.edit
 
 <!-- gs:version v0.10.0 -->

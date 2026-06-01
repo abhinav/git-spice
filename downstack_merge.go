@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -13,10 +14,11 @@ import (
 )
 
 type downstackMergeCmd struct {
-	Branch        string        `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
-	NoWait        bool          `help:"Skip polling for a single branch merge to propagate."`
-	NoBranchCheck bool          `help:"Skip stale base validation before merging."`
-	BuildTimeout  time.Duration `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
+	Branch        string            `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
+	NoWait        bool              `help:"Skip polling for a single branch merge to propagate."`
+	NoBranchCheck bool              `help:"Skip stale base validation before merging."`
+	Method        forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
+	BuildTimeout  time.Duration     `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
 }
 
 func (*downstackMergeCmd) Help() string {
@@ -95,6 +97,7 @@ func (cmd *downstackMergeCmd) Run(
 		Branch:        cmd.Branch,
 		NoWait:        cmd.NoWait,
 		NoBranchCheck: cmd.NoBranchCheck,
+		Method:        cmd.Method,
 		BuildTimeout:  cmd.BuildTimeout,
 	})
 }

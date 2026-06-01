@@ -669,6 +669,7 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 type AcceptMergeRequestOptions struct {
 	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
 	SHA                      *string `json:"sha,omitempty"`
+	Squash                   *bool   `json:"squash,omitempty"`
 }
 
 // SetCommitStatusOptions configures commit status creation.

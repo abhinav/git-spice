@@ -69,6 +69,10 @@ type Request struct {
 	// NoBranchCheck skips stale base validation.
 	NoBranchCheck bool
 
+	// Method selects the forge merge strategy.
+	// Empty means use the forge default.
+	Method forge.MergeMethod
+
 	// BuildTimeout is the maximum time to wait
 	// for CI checks to pass before each merge.
 	// Zero means check once and fail if not ready.
@@ -384,7 +388,10 @@ func (h *Handler) executePlan(
 		)
 		if err := h.RemoteRepository.MergeChange(
 			ctx, item.changeID,
-			forge.MergeChangeOptions{HeadHash: item.headHash},
+			forge.MergeChangeOptions{
+				Method:   req.Method,
+				HeadHash: item.headHash,
+			},
 		); err != nil {
 			return fmt.Errorf("merge %q: %w", item.branch, err)
 		}

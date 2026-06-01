@@ -313,6 +313,34 @@ func TestClient_MergeRequestAccept_withSHA(t *testing.T) {
 	assert.Equal(t, "merged", mr.State)
 }
 
+func TestClient_MergeRequestAccept_withSquash(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPut, r.Method)
+		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
+		assertJSONBody(t, r, `{"squash":true}`)
+		writeJSON(t, w, http.StatusOK, MergeRequest{
+			BasicMergeRequest: BasicMergeRequest{
+				IID:   55,
+				State: "merged",
+			},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	squash := true
+	mr, _, err := client.MergeRequestAccept(
+		t.Context(),
+		int64(42),
+		55,
+		&AcceptMergeRequestOptions{
+			Squash: &squash,
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "merged", mr.State)
+}
+
 func TestClient_CommitStatusSet(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
