@@ -764,14 +764,72 @@ func (s ChecksState) GoString() string {
 
 // Inline comment types and optional interfaces
 
-// InlineCommentRequest describes a new inline comment
-// to post on a change diff.
+// CommentScope describes how a comment is anchored to a change.
+type CommentScope int
+
+const (
+	// CommentScopeUnknown is the zero value; treated by JSON
+	// output as [CommentScopeLine] for legacy callers that did
+	// not set Scope.
+	CommentScopeUnknown CommentScope = iota
+
+	// CommentScopeLine indicates the comment is anchored
+	// to a specific line (or range) in a file diff.
+	CommentScopeLine
+
+	// CommentScopeFile indicates the comment is anchored
+	// to a file but not to a specific line.
+	CommentScopeFile
+
+	// CommentScopePR indicates the comment is at the
+	// change-request level: not anchored to a file or line.
+	CommentScopePR
+)
+
+// String returns the canonical lowercase representation
+// used in JSON output ("pr"|"file"|"line").
+func (s CommentScope) String() string {
+	switch s {
+	case CommentScopePR:
+		return "pr"
+	case CommentScopeFile:
+		return "file"
+	case CommentScopeLine, CommentScopeUnknown:
+		return "line"
+	default:
+		return "line"
+	}
+}
+
+// CommentRange describes the inclusive line range a
+// multi-line comment spans.
+type CommentRange struct {
+	// Start is the first line of the range.
+	Start int
+
+	// End is the last line of the range (inclusive).
+	End int
+}
+
+// InlineCommentRequest describes a new comment to post on a
+// change. The "inline" name is historical: comments may be
+// pr-, file-, or line-scoped depending on [Scope].
 type InlineCommentRequest struct {
+	// Scope distinguishes pr-level, file-level, and line-level
+	// comments. Zero value is treated as [CommentScopeLine].
+	Scope CommentScope
+
 	// Path is the file path relative to the repository root.
+	// Empty for [CommentScopePR].
 	Path string
 
 	// Line is the line number in the new version of the file.
+	// Zero for [CommentScopePR] and [CommentScopeFile].
 	Line int
+
+	// Range is non-nil for multi-line comments. When nil, the
+	// comment is anchored to a single [Line].
+	Range *CommentRange
 
 	// Body is the markdown body of the comment.
 	Body string
@@ -786,7 +844,9 @@ type InlineCommentRequest struct {
 	ThreadID string
 }
 
-// InlineComment is a comment on a specific line of a diff.
+// InlineComment is a comment managed by the change's inline-
+// comments API. Despite the historical name, comments may be
+// pr-, file-, or line-scoped depending on [Scope].
 type InlineComment struct {
 	// ID is the forge-specific comment identifier.
 	ID ChangeCommentID
@@ -794,11 +854,26 @@ type InlineComment struct {
 	// ThreadID is the forge-specific thread identifier.
 	ThreadID string
 
+	// Scope reports how the comment is anchored to the change.
+	// Zero value is treated as [CommentScopeLine].
+	Scope CommentScope
+
 	// Path is the file path relative to the repository root.
+	// Empty for [CommentScopePR].
 	Path string
 
 	// Line is the line number in the diff.
+	// Zero for [CommentScopePR] and [CommentScopeFile].
 	Line int
+
+	// Range is non-nil for multi-line comments. When nil, the
+	// comment is anchored to a single line ([Line]).
+	Range *CommentRange
+
+	// Side indicates which side of the diff the comment applies
+	// to: "LEFT" for the old version, "RIGHT" for the new
+	// version. Empty for non-line scopes.
+	Side string
 
 	// Body is the markdown body of the comment.
 	Body string
