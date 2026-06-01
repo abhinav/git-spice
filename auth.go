@@ -32,9 +32,10 @@ func (c *authCmd) AfterApply(
 	kctx *kong.Context,
 	log *silog.Logger,
 	forges *forge.Registry,
+	cmd *mainCmd,
 	view ui.View,
 ) error {
-	f, err := resolveForge(ctx, forges, log, view, c.Forge)
+	f, err := resolveForge(ctx, forges, log, view, c.Forge, cmd.Forge.Kind)
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,14 @@ func (c *authCmd) AfterApply(
 // repository's remote URL.
 // If the forge cannot be guessed, it will prompt the user to select one
 // if we're in interactive mode.
-func resolveForge(ctx context.Context, forges *forge.Registry, log *silog.Logger, view ui.View, forgeID string) (forge.Forge, error) {
+func resolveForge(
+	ctx context.Context,
+	forges *forge.Registry,
+	log *silog.Logger,
+	view ui.View,
+	forgeID string,
+	configuredKind string,
+) (forge.Forge, error) {
 	if forgeID != "" {
 		f, ok := forges.Lookup(forgeID)
 		if !ok {
@@ -62,6 +70,10 @@ func resolveForge(ctx context.Context, forges *forge.Registry, log *silog.Logger
 			return nil, fmt.Errorf("unknown forge: %s", forgeID)
 		}
 		return f, nil
+	}
+
+	if configuredKind != "" {
+		return lookupForgeKind(forges, configuredKind)
 	}
 
 	f, _, err := guessCurrentForge(ctx, forges, log)

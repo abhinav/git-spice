@@ -14,7 +14,6 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
@@ -50,11 +49,17 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler implements the business logic for git-spice's log commands.
 type Handler struct {
-	Log        *silog.Logger   // required
-	Repository GitRepository   // required
-	Store      Store           // required
-	Service    Service         // required
-	Forges     *forge.Registry // required
+	Log        *silog.Logger // required
+	Repository GitRepository // required
+	Store      Store         // required
+	Service    Service       // required
+
+	// ResolveRepository resolves an upstream remote
+	// to its forge repository identity.
+	ResolveRepository func(
+		context.Context,
+		string,
+	) (forge.Forge, forge.RepositoryID, error) // required
 
 	// OpenRemoteRepository opens the remote repository
 	// for the given remote URL.
@@ -197,23 +202,9 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				return nil
 			}
 
-			remoteURL, err := h.Repository.RemoteURL(ctx, remote.Upstream)
-			if err != nil {
-				return fmt.Errorf("get remote URL: %w", err)
-			}
-
-			parsedRemoteURL, err := giturl.Parse(remoteURL)
-			if err != nil {
-				return fmt.Errorf("parse remote URL: %w", err)
-			}
-
-			var ok bool
-			remoteForge, remoteRepoID, ok = forge.FromRemoteURL(h.Forges, parsedRemoteURL)
-			if !ok {
-				return nil
-			}
-
-			return nil
+			var err error
+			remoteForge, remoteRepoID, err = h.ResolveRepository(ctx, remote.Upstream)
+			return err
 		}()
 		if err != nil {
 			log.Warn("Could not find information about the remote", "error", err)

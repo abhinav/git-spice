@@ -196,6 +196,31 @@ should print a message when switching branches.
 - `true` (default)
 - `false`
 
+### spice.forge.kind
+
+<!-- gs:version unreleased -->
+
+The forge kind to use when a remote URL does not identify the forge by host.
+
+By default, git-spice infers the forge from the remote URL.
+For example, `https://github.com/OWNER/REPO.git` identifies GitHub.
+If the remote uses an SSH host alias,
+such as `git@github-work:OWNER/REPO.git`,
+the host may not identify a supported forge.
+Set this option to tell git-spice which forge implementation should parse
+the repository path.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.kind{reset} {mag}github{reset}
+```
+
+Accepted values are registered forge IDs,
+including `github`, `gitlab`, and `bitbucket`.
+Test repositories may also use `shamhub`.
+
+Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
+environment variable.
+
 ### spice.forge.github.apiUrl
 
 URL at which the GitHub API is available.

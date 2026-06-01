@@ -1,0 +1,51 @@
+# Configured forge kind allows submit to use an aliased Git remote host.
+
+as 'Test <test@example.com>'
+at '2026-05-17T10:12:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+# The configured remote URL uses an alias host that does not identify ShamHub,
+# while Git still rewrites the URL to the real ShamHub endpoint for transport.
+git remote set-url origin ssh://shamhub-alias/alice/example.git
+git config url.$SHAMHUB_URL/.insteadOf ssh://shamhub-alias/
+
+gs repo init
+
+env SHAMHUB_USERNAME=alice
+gs auth login --forge shamhub
+
+# Without an explicit forge kind, the alias host is not enough to identify
+# the forge. The diagnostic points at the escape hatch.
+git add no-config.txt
+gs branch create no-config -m 'No config feature'
+! gs branch submit --fill
+stderr 'Could not guess repository from remote URL'
+stderr 'git config spice.forge.kind <forge>'
+
+# With the Git config escape hatch, the same alias-host remote submits
+# successfully and reports the real ShamHub change URL.
+git config spice.forge.kind shamhub
+gs branch submit --fill
+stderr $SHAMHUB_URL/alice/example/change/1
+
+# The environment variable works as the same escape hatch when the Git config
+# value is absent.
+git config --unset spice.forge.kind
+git add env-kind.txt
+gs branch create env-kind --target main -m 'Environment kind feature'
+env GIT_SPICE_FORGE_KIND=shamhub
+gs branch submit --fill
+stderr $SHAMHUB_URL/alice/example/change/2
+
+-- repo/no-config.txt --
+configured forge kind
+-- repo/env-kind.txt --
+environment forge kind

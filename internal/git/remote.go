@@ -46,6 +46,18 @@ func (r *Repository) RemoteURL(ctx context.Context, remote string) (string, erro
 	return url, nil
 }
 
+// RemoteConfigURL reports the URL stored in Git configuration for a remote.
+//
+// Unlike [Repository.RemoteURL],
+// this does not apply Git's url.*.insteadOf rewriting.
+func (r *Repository) RemoteConfigURL(ctx context.Context, remote string) (string, error) {
+	url, err := r.gitCmd(ctx, "config", "--get", "remote."+remote+".url").OutputChomp()
+	if err != nil {
+		return "", fmt.Errorf("config get remote.%s.url: %w", remote, err)
+	}
+	return url, nil
+}
+
 // RemoteDefaultBranch reports the default branch of a remote.
 // The remote must be known to the repository.
 func (r *Repository) RemoteDefaultBranch(ctx context.Context, remote string) (string, error) {
