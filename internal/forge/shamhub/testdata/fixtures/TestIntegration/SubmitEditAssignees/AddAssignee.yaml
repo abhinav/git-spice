@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:53569
-        body: '{"subject":"Testing 4D8sFmyC","body":"Test PR without assignees","base":"main","head":"4D8sFmyC"}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/changes
+        host: 127.0.0.1:65023
+        body: '{"subject":"Testing cLBCoQhN","body":"Test PR without assignees","base":"main","head":"cLBCoQhN"}'
+        url: http://127.0.0.1:65023/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 82
         body: |
             {
-              "number": 10,
-              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/10"
+              "number": 17,
+              "url": "http://127.0.0.1:65024/abhinav/test-repo/change/17"
             }
         headers:
             Content-Length:
@@ -28,15 +28,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 29.755416ms
+        duration: 89.386125ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:53569
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/10
+        host: 127.0.0.1:65023
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/17
         method: GET
       response:
         proto: HTTP/1.1
@@ -45,10 +45,10 @@ interactions:
         content_length: 518
         body: |
             {
-              "number": 10,
-              "html_url": "http://127.0.0.1:53570/abhinav/test-repo/change/10",
+              "number": 17,
+              "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/17",
               "state": "open",
-              "title": "Testing 4D8sFmyC",
+              "title": "Testing cLBCoQhN",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -56,15 +56,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "c17a304a06b281e76d193f8a86a8ab71585b64e3"
+                "sha": "822b12d04865ab61606efc7c3b21439c79070762"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "4D8sFmyC",
-                "sha": "3dce9a05f05fb11263d1482ecd4125949e747389"
+                "ref": "cLBCoQhN",
+                "sha": "02f7e188612cb6aa664f90fd772316a73cee2a5e"
               }
             }
         headers:
@@ -74,16 +74,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 27.52675ms
+        duration: 31.104791ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 39
-        host: 127.0.0.1:53569
+        host: 127.0.0.1:65023
         body: '{"assignees":["assignee1","assignee2"]}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/10
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/17
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -99,15 +99,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 224.75µs
+        duration: 219.083µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:53569
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/10
+        host: 127.0.0.1:65023
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/17
         method: GET
       response:
         proto: HTTP/1.1
@@ -116,10 +116,10 @@ interactions:
         content_length: 573
         body: |
             {
-              "number": 10,
-              "html_url": "http://127.0.0.1:53570/abhinav/test-repo/change/10",
+              "number": 17,
+              "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/17",
               "state": "open",
-              "title": "Testing 4D8sFmyC",
+              "title": "Testing cLBCoQhN",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -127,15 +127,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "c17a304a06b281e76d193f8a86a8ab71585b64e3"
+                "sha": "822b12d04865ab61606efc7c3b21439c79070762"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "4D8sFmyC",
-                "sha": "3dce9a05f05fb11263d1482ecd4125949e747389"
+                "ref": "cLBCoQhN",
+                "sha": "02f7e188612cb6aa664f90fd772316a73cee2a5e"
               },
               "assignees": [
                 "assignee1",
@@ -149,4 +149,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 29.249833ms
+        duration: 26.232292ms
