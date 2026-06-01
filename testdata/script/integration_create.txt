@@ -25,7 +25,8 @@ gs integration create preview --tip feat-a --tip feat-b
 gs integration show
 cmp stdout $WORK/golden/show.txt
 
-# The integration branch is not tracked by 'gs branch checkout' / 'gs ll'.
+# The integration is surfaced as a top row in 'gs ll' even before
+# its branch has been materialized, with each configured tip marked.
 gs ls
 cmp stderr $WORK/golden/ls.txt
 
@@ -44,6 +45,7 @@ Tips:
   - feat-a (pending rebuild)
   - feat-b (pending rebuild)
 -- golden/ls.txt --
-┏━□ feat-a
-┣━□ feat-b
+◆ preview [integration: 2 tips]
+┏━□ feat-a [integration-tip]
+┣━□ feat-b [integration-tip]
 main ◀

@@ -1,5 +1,8 @@
 # Verifies that the integration branch is invisible to 'gs branch'
 # commands: it is not tracked, and an attempt to track it is rejected.
+# (The branch still surfaces in 'gs ls'/'gs ll' as the integration
+# row, but that is purely informational and does not make the branch
+# trackable.)
 
 as 'Test <test@example.com>'
 at '2025-01-01T00:00:00Z'
@@ -16,7 +19,8 @@ git checkout main
 gs integration create preview --tip feat-a
 gs integration rebuild
 
-# 'gs ll' does not include preview.
+# 'gs ls' shows the integration branch as a top row with the tip
+# marked, but the integration row is not a regular tracked branch.
 gs ls
 cmp stderr $WORK/golden/ls.txt
 
@@ -28,5 +32,6 @@ stderr 'cannot track integration branch'
 -- repo/feat-a.txt --
 feature a
 -- golden/ls.txt --
-┏━□ feat-a
+◆ preview [integration: 1 tip]
+┏━□ feat-a [integration-tip]
 main ◀
