@@ -7,37 +7,37 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:65023
-        body: '{"subject":"Testing mrsfBxAT","body":"Test PR without assignees","base":"main","head":"mrsfBxAT"}'
-        url: http://127.0.0.1:65023/abhinav/test-repo/changes
+        host: 127.0.0.1:49154
+        body: '{"subject":"Testing jQZfTJNw","body":"Test PR without assignees","base":"main","head":"jQZfTJNw"}'
+        url: http://127.0.0.1:49154/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
+        content_length: 80
         body: |
             {
-              "number": 18,
-              "url": "http://127.0.0.1:65024/abhinav/test-repo/change/18"
+              "number": 7,
+              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/7"
             }
         headers:
             Content-Length:
-                - "82"
+                - "80"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 103.338917ms
+        duration: 45.607667ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:65023
+        host: 127.0.0.1:49154
         body: '{"assignees":["assignee1"]}'
-        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
+        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -53,16 +53,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 2.698958ms
+        duration: 957.209µs
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:65023
+        host: 127.0.0.1:49154
         body: '{"assignees":["assignee2"]}'
-        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
+        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -78,27 +78,27 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 757.208µs
+        duration: 254.833µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:65023
-        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
+        host: 127.0.0.1:49154
+        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 573
+        content_length: 571
         body: |
             {
-              "number": 18,
-              "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/18",
+              "number": 7,
+              "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/7",
               "state": "open",
-              "title": "Testing mrsfBxAT",
+              "title": "Testing jQZfTJNw",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -106,15 +106,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "822b12d04865ab61606efc7c3b21439c79070762"
+                "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "mrsfBxAT",
-                "sha": "037decf9634d9ef000d3338a1118a12c30f508f9"
+                "ref": "jQZfTJNw",
+                "sha": "518a98cdc5d9b0550bf90ade166de7da1f3f215e"
               },
               "assignees": [
                 "assignee1",
@@ -123,9 +123,9 @@ interactions:
             }
         headers:
             Content-Length:
-                - "573"
+                - "571"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 28.944958ms
+        duration: 46.775334ms
