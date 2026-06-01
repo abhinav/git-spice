@@ -1,0 +1,47 @@
+# 'repo sync' must detect a stack that was self-merged by pushing
+# the stack tip directly to trunk on the remote,
+# even when no change requests were submitted.
+
+as 'Test <test@example.com>'
+at '2026-06-01T12:00:00Z'
+
+# Setup.
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up a fake GitHub remote.
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Build a local stack main -> feat1 -> feat2 without submitting PRs.
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+
+git add feat2.txt
+gs bc -m 'Add feat2' feat2
+
+# Self-merge by pushing the stack tip straight to trunk on the remote.
+git push origin feat2:main
+
+# Move off the stack tip so 'repo sync' can advance trunk freely.
+gs trunk
+
+# Sync. Both branches should be detected as merged into trunk locally,
+# even though no PRs were ever submitted for them.
+gs repo sync
+stderr 'feat1: merged into trunk locally'
+stderr 'feat2: merged into trunk locally'
+
+! git rev-parse --verify feat1
+! git rev-parse --verify feat2
+
+-- repo/feat1.txt --
+Contents of feat1
+-- repo/feat2.txt --
+Contents of feat2
