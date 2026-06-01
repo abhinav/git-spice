@@ -31,7 +31,6 @@ Log
 
 Stack
   stack (s) submit (s)          Submit a stack
-  stack (s) merge (m)           Merge a stack
   stack (s) restack (r)         Restack a stack
   stack (s) edit (e)            Edit the order of branches in a stack
   stack (s) delete (d)          Delete all branches in a stack
@@ -59,7 +58,6 @@ Branch
   branch (b) restack (r)       Restack a branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
-  branch (b) merge (m)         Merge a branch into trunk
   branch (b) submit (s)        Submit a branch
 
 Commit
@@ -89,6 +87,8 @@ Integration
   integration (int) tip clean (prune)
                                    Remove tips whose upstack already contains
                                    another tip
+  integration (int) tip advance    Move tips to the topmost branches of their
+                                   upstacks
 
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
