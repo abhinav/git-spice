@@ -215,7 +215,7 @@ the repository path.
 ```
 
 Accepted values are registered forge IDs,
-including `github`, `gitlab`, and `bitbucket`.
+including `github`, `gitlab`, `bitbucket`, and `forgejo`.
 Test repositories may also use `shamhub`.
 
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
@@ -293,6 +293,26 @@ Whether to remove the source branch when a Merge Request is merged.
 
 - `true` (default)
 - `false`
+
+### spice.forge.forgejo.apiURL
+
+<!-- gs:version unreleased -->
+
+URL at which the Forgejo API is available.
+Defaults to `$FORGEJO_API_URL` if set,
+or the Forgejo URL otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
+
+### spice.forge.forgejo.url
+
+<!-- gs:version unreleased -->
+
+URL of the Forgejo instance used for Forgejo requests.
+Defaults to `$FORGEJO_URL` if set,
+or `https://codeberg.org` otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
 
 ### spice.git.indexLockTimeout
 

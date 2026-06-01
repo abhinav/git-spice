@@ -52,3 +52,17 @@ bitbucket:
   reviewer: "another-bitbucket-user"
   # Bitbucket does not support assignees, leave empty
   assignee: ""
+
+forgejo:
+  # Repository owner (your Forgejo username or organization)
+  owner: "your-forgejo-username"
+  # Test repository name
+  repo: "your-test-repo"
+  # Fork repository owner for cross-repository pull request tests
+  forkOwner: "your-forgejo-username"
+  # Fork repository name for cross-repository pull request tests
+  forkRepo: "your-test-repo-fork"
+  # A Forgejo user who can be added as a reviewer
+  reviewer: "another-forgejo-user"
+  # A Forgejo user who can be assigned to PRs
+  assignee: "another-forgejo-user"
