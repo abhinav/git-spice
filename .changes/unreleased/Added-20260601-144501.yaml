@@ -1,0 +1,3 @@
+kind: Added
+body: '''branch comment add'': Support PR-level (--pr) and file-level (just a path with no '':'') comment scopes alongside the existing line-scope form.'
+time: 2026-06-01T14:45:01.324318-04:00

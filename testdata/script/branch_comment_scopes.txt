@@ -1,0 +1,69 @@
+# Verifies the three comment scopes: line, file, and pr.
+# Each scope corresponds to a different positional-arg form on
+# 'gs branch comment add', and surfaces via the inline-list API
+# the extension uses.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Line scope: existing form.
+gs branch comment add main.go:4 -m 'Line-scope comment.'
+stderr 'Posted comment'
+
+# File scope: path with no ':'.
+gs branch comment add main.go -m 'File-scope comment.'
+stderr 'Posted comment'
+
+# PR scope: --pr flag, no positional argument.
+gs branch comment add --pr -m 'PR-scope comment.'
+stderr 'Posted comment'
+
+# All three comments are listed; each carries the right anchor
+# fields:
+#   - line-scope: path + line
+#   - file-scope: path, no line
+#   - pr-scope:   no path, no line
+#
+# The text-mode output makes the missing-line / missing-path
+# distinction easiest to assert: line entries print as
+# "path:line", file entries print as "path:0", and PR entries
+# print as ":0".
+gs branch comment list
+stderr 'main\.go:4'
+stderr 'main\.go:0'
+stderr 'Line-scope comment'
+stderr 'File-scope comment'
+stderr 'PR-scope comment'
+
+# --pr with a positional argument is rejected.
+! gs branch comment add --pr unwanted.go -m 'oops'
+stderr '--pr takes no anchor argument'
+
+# Missing anchor without --pr or --respond is rejected.
+! gs branch comment add -m 'oops'
+stderr 'anchor argument is required'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}

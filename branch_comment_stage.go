@@ -124,25 +124,60 @@ func (cmd *branchCommentStageCmd) Run(
 // parseFileAndLine parses a "file.go:42" argument
 // into file and line components.
 func parseFileAndLine(s string) (string, int, error) {
+	file, start, _, err := parseFileAndRange(s)
+	return file, start, err
+}
+
+// parseFileAndRange parses "file.go:42" or "file.go:42-50".
+// In single-line form, end is zero; in range form, end > start.
+func parseFileAndRange(s string) (file string, start, end int, err error) {
 	idx := strings.LastIndex(s, ":")
 	if idx < 0 {
-		return "", 0, fmt.Errorf(
-			"expected file:line format, got %q", s,
+		return "", 0, 0, fmt.Errorf(
+			"expected file:line or file:start-end, got %q", s,
 		)
 	}
-	file := s[:idx]
-	line, err := strconv.Atoi(s[idx+1:])
+	file = s[:idx]
+	lineSpec := s[idx+1:]
+
+	if before, after, ok := strings.Cut(lineSpec, "-"); ok {
+		start, err = strconv.Atoi(before)
+		if err != nil {
+			return "", 0, 0, fmt.Errorf(
+				"invalid range start in %q: %w", s, err,
+			)
+		}
+		end, err = strconv.Atoi(after)
+		if err != nil {
+			return "", 0, 0, fmt.Errorf(
+				"invalid range end in %q: %w", s, err,
+			)
+		}
+		if start <= 0 || end <= 0 {
+			return "", 0, 0, fmt.Errorf(
+				"line numbers must be positive in %q", s,
+			)
+		}
+		if end <= start {
+			return "", 0, 0, fmt.Errorf(
+				"range end must be greater than start in %q", s,
+			)
+		}
+		return file, start, end, nil
+	}
+
+	start, err = strconv.Atoi(lineSpec)
 	if err != nil {
-		return "", 0, fmt.Errorf(
+		return "", 0, 0, fmt.Errorf(
 			"invalid line number in %q: %w", s, err,
 		)
 	}
-	if line <= 0 {
-		return "", 0, fmt.Errorf(
-			"line number must be positive, got %d", line,
+	if start <= 0 {
+		return "", 0, 0, fmt.Errorf(
+			"line number must be positive, got %d", start,
 		)
 	}
-	return file, line, nil
+	return file, start, 0, nil
 }
 
 // editCommentBody opens an editor for the user
