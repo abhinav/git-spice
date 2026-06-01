@@ -7,54 +7,54 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:53569
-        body: '{"subject":"Testing df7WoDco","body":"Test PR with reviewer","base":"main","head":"df7WoDco","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/changes
+        host: 127.0.0.1:65023
+        body: '{"subject":"Testing 3wsEeIkE","body":"Test PR with reviewer","base":"main","head":"3wsEeIkE","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:65023/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
+        content_length: 80
         body: |
             {
-              "number": 12,
-              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/12"
+              "number": 3,
+              "url": "http://127.0.0.1:65024/abhinav/test-repo/change/3"
             }
         headers:
             Content-Length:
-                - "82"
+                - "80"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 30.764459ms
+        duration: 43.853542ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:53569
+        host: 127.0.0.1:65023
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:53569/abhinav/test-repo/changes/by-branch/df7WoDco?limit=10&state=all
+        url: http://127.0.0.1:65023/abhinav/test-repo/changes/by-branch/3wsEeIkE?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 637
+        content_length: 635
         body: |
             [
               {
-                "number": 12,
-                "html_url": "http://127.0.0.1:53570/abhinav/test-repo/change/12",
+                "number": 3,
+                "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/3",
                 "state": "open",
-                "title": "Testing df7WoDco",
+                "title": "Testing 3wsEeIkE",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "c17a304a06b281e76d193f8a86a8ab71585b64e3"
+                  "sha": "3f0e08369ff67b1c0df49de949a61a36b0f0d258"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "df7WoDco",
-                  "sha": "6cca56449280db9fd8954bd6d01d3b30ca7a474c"
+                  "ref": "3wsEeIkE",
+                  "sha": "5fab980ca1556d04c0dcbb005c5372ba48534139"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -80,9 +80,9 @@ interactions:
             ]
         headers:
             Content-Length:
-                - "637"
+                - "635"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 28.513791ms
+        duration: 38.093459ms
