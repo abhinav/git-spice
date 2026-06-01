@@ -20,17 +20,23 @@ import (
 )
 
 type reviewCommentCmd struct {
-	FileAndLine string `arg:"" help:"File and line in the form file.go:42."`
-	Message     string `short:"m" placeholder:"MSG" help:"Comment body. Opens editor if not provided."`
-	Draft       bool   `negatable:"" default:"true" help:"Save the comment as a local draft instead of posting it."`
-	Branch      string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to comment on. Defaults to the current branch."`
+	Anchor  string `arg:"" optional:"" help:"Comment anchor: file.go, file.go:42, or file.go:42-50. Omit with --pr."`
+	Message string `short:"m" placeholder:"MSG" help:"Comment body. Opens editor if not provided."`
+	PR      bool   `name:"pr" help:"Post an unanchored change request comment."`
+	Draft   bool   `negatable:"" default:"true" help:"Save the comment as a local draft instead of posting it."`
+	Branch  string `short:"b" placeholder:"BRANCH" predictor:"trackedBranches" help:"Branch to comment on. Defaults to the current branch."`
 }
 
 func (*reviewCommentCmd) Help() string {
 	return text.Dedent(`
 		Adds a review comment to the change request
 		for the current branch.
-		Provide the file and line number as file.go:42.
+		The anchor controls the comment scope:
+
+		  file.go:42       anchored to that line
+		  file.go:42-50    anchored to that line range
+		  file.go          anchored to the file
+		  (empty) + --pr   not anchored to a file
 
 		Comments are saved as local drafts by default.
 		Use --no-draft to post immediately.
@@ -53,7 +59,7 @@ func (cmd *reviewCommentCmd) Run(
 		return err
 	}
 
-	file, line, err := parseFileAndLine(cmd.FileAndLine)
+	anchor, err := parseReviewCommentAnchor(cmd.Anchor, cmd.PR)
 	if err != nil {
 		return err
 	}
@@ -63,9 +69,14 @@ func (cmd *reviewCommentCmd) Run(
 	}
 
 	if cmd.Draft {
+		if anchor.PR || anchor.StartLine == 0 || anchor.StartLine != anchor.EndLine {
+			return errors.New(
+				"draft comments require a single-line file:line anchor",
+			)
+		}
 		return saveReviewDraft(ctx, log, store, branch, state.StagedComment{
-			File: file,
-			Line: line,
+			File: anchor.Path,
+			Line: anchor.StartLine,
 			Body: body,
 		})
 	}
@@ -76,20 +87,48 @@ func (cmd *reviewCommentCmd) Run(
 	if err != nil {
 		return err
 	}
-	diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
-	if err != nil {
-		return fmt.Errorf("get diff: %w", err)
+	if anchor.PR {
+		if _, err := reviewRepo.SubmitReview(
+			ctx,
+			b.Change.ChangeID(),
+			forge.SubmitReviewRequest{Body: body},
+		); err != nil {
+			return fmt.Errorf("post review comment: %w", err)
+		}
+		log.Infof("Posted comment on %s.", b.Change.ChangeID())
+		return nil
 	}
-	patch, err := reviewdiff.Parse(diff)
-	if err != nil {
-		return fmt.Errorf("parse diff: %w", err)
+
+	comment := forge.SubmitReviewCommentRequest{
+		Path: anchor.Path,
+		Body: body,
 	}
-	if !patch.ContainsLine(file, line) {
-		return fmt.Errorf(
-			"review diff does not contain %s:%d",
-			file,
-			line,
-		)
+	if anchor.StartLine > 0 {
+		diff, err := wt.DiffBranchBytes(ctx, b.Base, branch)
+		if err != nil {
+			return fmt.Errorf("get diff: %w", err)
+		}
+		patch, err := reviewdiff.Parse(diff)
+		if err != nil {
+			return fmt.Errorf("parse diff: %w", err)
+		}
+		if !patch.ContainsLineRange(
+			anchor.Path,
+			anchor.StartLine,
+			anchor.EndLine,
+		) {
+			return fmt.Errorf(
+				"review diff does not contain %s:%d-%d",
+				anchor.Path,
+				anchor.StartLine,
+				anchor.EndLine,
+			)
+		}
+		comment.Range = forge.ReviewThreadRange{
+			StartLine: anchor.StartLine,
+			EndLine:   anchor.EndLine,
+		}
+		comment.Side = forge.ReviewThreadSideRight
 	}
 
 	return postReviewComment(
@@ -97,13 +136,50 @@ func (cmd *reviewCommentCmd) Run(
 		log,
 		reviewRepo,
 		b.Change.ChangeID(),
-		forge.SubmitReviewCommentRequest{
-			Path:  file,
-			Range: forge.ReviewThreadLine(line),
-			Body:  body,
-			Side:  forge.ReviewThreadSideRight,
-		},
+		comment,
 	)
+}
+
+// reviewCommentAnchor is the parsed location accepted by review comment.
+// PR distinguishes an unanchored review body from a file-level thread, whose
+// line range is also zero.
+type reviewCommentAnchor struct {
+	PR        bool
+	Path      string
+	StartLine int
+	EndLine   int
+}
+
+func parseReviewCommentAnchor(
+	value string,
+	pr bool,
+) (reviewCommentAnchor, error) {
+	if pr {
+		if value != "" {
+			return reviewCommentAnchor{}, fmt.Errorf(
+				"--pr takes no anchor argument, got %q", value,
+			)
+		}
+		return reviewCommentAnchor{PR: true}, nil
+	}
+	if value == "" {
+		return reviewCommentAnchor{}, errors.New(
+			"comment anchor is required unless --pr is used",
+		)
+	}
+	if !strings.Contains(value, ":") {
+		return reviewCommentAnchor{Path: value}, nil
+	}
+
+	file, start, end, err := parseFileAndRange(value)
+	if err != nil {
+		return reviewCommentAnchor{}, err
+	}
+	return reviewCommentAnchor{
+		Path:      file,
+		StartLine: start,
+		EndLine:   end,
+	}, nil
 }
 
 func reviewBranch(
@@ -233,6 +309,61 @@ func parseFileAndLine(value string) (string, int, error) {
 		)
 	}
 	return file, line, nil
+}
+
+// parseFileAndRange parses file.go:42 or file.go:42-50.
+// The returned end equals start for a single-line anchor.
+func parseFileAndRange(
+	value string,
+) (file string, start, end int, err error) {
+	idx := strings.LastIndex(value, ":")
+	if idx < 0 {
+		return "", 0, 0, fmt.Errorf(
+			"expected file:line or file:start-end, got %q", value,
+		)
+	}
+	file = value[:idx]
+	lineSpec := value[idx+1:]
+
+	before, after, hasRange := strings.Cut(lineSpec, "-")
+	if !hasRange {
+		start, err = strconv.Atoi(lineSpec)
+		if err != nil {
+			return "", 0, 0, fmt.Errorf(
+				"invalid line number in %q: %w", value, err,
+			)
+		}
+		if start <= 0 {
+			return "", 0, 0, fmt.Errorf(
+				"line number must be positive, got %d", start,
+			)
+		}
+		return file, start, start, nil
+	}
+
+	start, err = strconv.Atoi(before)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf(
+			"invalid range start in %q: %w", value, err,
+		)
+	}
+	end, err = strconv.Atoi(after)
+	if err != nil {
+		return "", 0, 0, fmt.Errorf(
+			"invalid range end in %q: %w", value, err,
+		)
+	}
+	if start <= 0 || end <= 0 {
+		return "", 0, 0, fmt.Errorf(
+			"line numbers must be positive in %q", value,
+		)
+	}
+	if end <= start {
+		return "", 0, 0, fmt.Errorf(
+			"range end must be greater than start in %q", value,
+		)
+	}
+	return file, start, end, nil
 }
 
 // editReviewCommentBody opens the configured editor with initial as its
