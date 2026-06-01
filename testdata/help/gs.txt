@@ -87,6 +87,8 @@ Integration
   integration (int) tip clean (prune)
                                    Remove tips whose upstack already contains
                                    another tip
+  integration (int) tip advance    Move tips to the topmost branches of their
+                                   upstacks
 
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation
