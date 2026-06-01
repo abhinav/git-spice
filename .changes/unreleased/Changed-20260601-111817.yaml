@@ -1,0 +1,3 @@
+kind: Changed
+body: '''integration submit'': Also submits the downstack branches of each configured tip, so a single ''gs ints'' publishes the full integration.'
+time: 2026-06-01T11:18:17.074573-04:00
