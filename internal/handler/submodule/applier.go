@@ -16,7 +16,9 @@ import (
 type ApplierGitWorktree interface {
 	Submodules(ctx context.Context) ([]git.Submodule, error)
 	SubmoduleStatus(ctx context.Context, path string) (*git.SubmoduleStatus, error)
+	SubmoduleHead(ctx context.Context, path string) (git.Hash, error)
 	SubmoduleWorktree(ctx context.Context, path string) (*git.Worktree, error)
+	UpdateSubmodulePointer(ctx context.Context, path string, hash git.Hash) error
 }
 
 var _ ApplierGitWorktree = (*git.Worktree)(nil)
