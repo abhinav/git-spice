@@ -303,6 +303,9 @@ Use --branch to rebase the stack of a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to restack the stack of
+* `--[no-]recurse-submodules` ([:material-wrench:{ .middle title="spice.submodule.recurse" }](/cli/config.md#spicesubmodulerecurse)): Also restack tracked submodules
+
+**Configuration**: [spice.submodule.recurse](/cli/config.md#spicesubmodulerecurse)
 
 ### git-spice stack edit {#gs-stack-edit}
 
