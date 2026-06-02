@@ -1,0 +1,44 @@
+# 'branch create' when trunk is checked out in another worktree.
+# Creating a new branch based on trunk should work
+# even if trunk is checked out elsewhere.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create feature1 off of main
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+
+# create a worktree for main
+git worktree add ../wt-main main
+
+# From feature1 in the main repo,
+# create a new branch based on trunk.
+# This should succeed even though main
+# is checked out in another worktree.
+git add feature2.txt
+gs bc feature2 --target main -m 'Add feature2'
+
+# Verify the branch was created with the correct base.
+gs ls -a
+stderr 'feature2'
+
+# Verify the branch graph.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- golden/graph.txt --
+* d1dd13f (feature1) Add feature1
+| * 1d740bb (HEAD -> feature2) Add feature2
+|/  
+* e2cefa6 (main) Initial commit

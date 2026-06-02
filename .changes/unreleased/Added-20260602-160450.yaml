@@ -1,0 +1,3 @@
+kind: Added
+body: 'worktree: Add ''gs worktree create'' and ''gs worktree list'' commands, plus ''-w/--worktree'' flag for ''log short'' and ''repo restack'' to scope operations to stacks checked out in the current worktree.'
+time: 2026-06-02T16:04:50.426069-04:00

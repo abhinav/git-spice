@@ -1,12 +1,9 @@
-Usage: gs repo (r) restack (r) [flags]
+Usage: gs worktree (wt) list (ls)
 
-Restack all tracked branches
+List worktrees and their branches
 
-All tracked branches in the repository are rebased on top of their respective
-bases in dependency order, ensuring a linear history.
-
-Flags:
-  -w, --worktree    Only restack branches in the current worktree.
+Lists all worktrees associated with the repository. For each worktree, shows the
+checked-out branch and any tracked branches in its stack.
 
 Global Flags:
   -h, --help           Show help for the command

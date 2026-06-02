@@ -72,7 +72,8 @@ type Handler struct {
 
 // Options holds command line options for the log command.
 type Options struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	All      bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	Worktree bool `short:"w" long:"worktree" help:"Filter to branches in the current worktree. Implies --all."`
 }
 
 // Include specifies what additional information to include in the response.
@@ -111,6 +112,11 @@ type BranchesRequest struct {
 	//
 	// If Options.All is set, this is ignored and all tracked branches
 	Branch string // required
+
+	// CurrentWorktree is the absolute path
+	// to the current worktree root.
+	// Required when Options.Worktree is set.
+	CurrentWorktree string
 
 	Options *Options
 	Include Include
@@ -322,9 +328,25 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	var branchesToLog iter.Seq[string]
-	if req.Options.All {
+	switch {
+	case req.Options.Worktree:
+		// Filter to branches in the current worktree.
+		// Include the full stack if any branch in it
+		// is checked out in the current worktree.
+		branchesToLog = func(yield func(string) bool) {
+			for stack := range branchGraph.StacksInWorktree(
+				req.CurrentWorktree,
+			) {
+				for _, branch := range stack {
+					if !yield(branch) {
+						return
+					}
+				}
+			}
+		}
+	case req.Options.All:
 		branchesToLog = branchGraph.Names()
-	} else {
+	default:
 		// If req.Branch is not tracked,
 		// we still want to list all branches.
 		if _, ok := branchGraph.Lookup(req.Branch); !ok {
