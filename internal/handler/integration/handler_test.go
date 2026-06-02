@@ -790,8 +790,8 @@ func TestHandler_Rebuild_autoResolveResolverError(t *testing.T) {
 
 	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
 	require.Error(t, err)
-	var conflictErr *ConflictError
-	require.True(t, errors.As(err, &conflictErr))
+	var resolverFail *ResolverFailedError
+	require.ErrorAs(t, err, &resolverFail)
 }
 
 func TestHandler_Rebuild_autoResolveDisabledByOpts(t *testing.T) {
@@ -844,8 +844,8 @@ func TestHandler_Rebuild_autoResolveIterationCap(t *testing.T) {
 
 	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
 	require.Error(t, err)
-	var conflictErr *ConflictError
-	require.True(t, errors.As(err, &conflictErr))
+	var resolverFail *ResolverFailedError
+	require.ErrorAs(t, err, &resolverFail)
 }
 
 func TestHandler_Rebuild_autoResolveAssumptions(t *testing.T) {
@@ -903,36 +903,28 @@ func TestHandler_Rebuild_acceptIncomingFallback(t *testing.T) {
 	assert.Equal(t, "preview", res.Name)
 }
 
-func TestHandler_Rebuild_acceptIncomingAfterResolverFailure(t *testing.T) {
+func TestHandler_Rebuild_haltOnResolverFailure(t *testing.T) {
 	h, mocks, resolver, _ := newHandlerWithResolver(t)
-	mergeMsg := setupConflictMerge(t, mocks)
+	_ = setupConflictMerge(t, mocks)
 
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any()).
 		Return(nil, errors.New("resolver crashed"))
 
-	mocks.Worktree.EXPECT().
-		CheckoutTheirs(gomock.Any(), []string{"shared.txt"}).
-		Return(nil)
-	mocks.Worktree.EXPECT().
-		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
-		Return(nil)
-
 	mocks.Store.EXPECT().
-		SetIntegration(gomock.Any(), gomock.Any()).
-		Return(nil)
-	mocks.Store.EXPECT().
-		ClearPendingIntegrationRebuild(gomock.Any()).
-		Return(nil)
-	mocks.Worktree.EXPECT().
-		CheckoutBranch(gomock.Any(), "main").
+		SetPendingIntegrationRebuild(gomock.Any(), gomock.Any()).
 		Return(nil)
 
 	_, err := h.Rebuild(t.Context(), &RebuildOptions{
 		AutoResolve:    boolPtr(true),
 		AcceptIncoming: boolPtr(true),
 	})
-	require.NoError(t, err)
+	require.Error(t, err)
+	var resolverFail *ResolverFailedError
+	require.ErrorAs(t, err, &resolverFail)
+	assert.Equal(t, "feat-a", resolverFail.Tip)
+	assert.Equal(t, []string{"shared.txt"}, resolverFail.Paths)
+	assert.ErrorContains(t, resolverFail.Cause, "resolver crashed")
 }
 
 func TestHandler_Rebuild_acceptIncomingDisabled(t *testing.T) {

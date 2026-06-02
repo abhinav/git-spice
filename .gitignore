@@ -8,3 +8,16 @@ cover.html
 
 # Test configuration (contains environment-specific values)
 internal/forge/forgetest/testconfig.yaml
+
+# Transient state from 'gs integration rebuild'. Held only for the
+# life of the rebuild and removed on exit; should never be committed.
+# Was previously swept up by AmendCommitAll's 'git add -A' and baked
+# into the integration branch's merge commit on every rebuild.
+.spice_rebuild.lock
+
+# Per-repo resolver state for 'gs integration rebuild'. Carries the
+# current_merge pointer (rewritten before each resolver call) and any
+# Q&A history the user has answered. The resolver-recipe docs already
+# instruct users to gitignore it; same AmendCommitAll path was also
+# baking it into integration's merge commits.
+.integration_resolution.json
