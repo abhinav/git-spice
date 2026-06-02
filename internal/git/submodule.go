@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"go.abhg.dev/gs/internal/xec"
 )
 
 // Submodule describes a git submodule
@@ -253,6 +255,34 @@ func (w *Worktree) SubmoduleHasGsStore(
 		return false, nil //nolint:nilerr
 	}
 	return true, nil
+}
+
+// AddUpdate stages updates to all tracked files in the worktree
+// (`git add -u`). Untracked files are not affected.
+func (w *Worktree) AddUpdate(ctx context.Context) error {
+	if err := w.gitCmd(ctx, "add", "-u").Run(); err != nil {
+		return fmt.Errorf("git add -u: %w", err)
+	}
+	return nil
+}
+
+// HasStagedChanges reports whether the worktree's index differs
+// from HEAD (i.e., there is staged content waiting to be committed).
+func (w *Worktree) HasStagedChanges(ctx context.Context) (bool, error) {
+	// `git diff --cached --quiet` exits 0 when there are no staged
+	// changes, 1 when there are, and other non-zero values on error.
+	err := w.gitCmd(ctx,
+		"diff", "--cached", "--quiet",
+	).Run()
+	if err == nil {
+		return false, nil
+	}
+	// Exit code 1 means "differences present" — not an error.
+	var exitErr *xec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return true, nil
+	}
+	return false, fmt.Errorf("git diff --cached: %w", err)
 }
 
 // HeadSnapshot captures the HEAD state of a worktree
