@@ -875,6 +875,10 @@ type InlineComment struct {
 	// version. Empty for non-line scopes.
 	Side string
 
+	// CommitSHA is the commit the comment was authored against.
+	// Empty when the forge does not track per-commit comments.
+	CommitSHA string
+
 	// Body is the markdown body of the comment.
 	Body string
 
@@ -884,7 +888,9 @@ type InlineComment struct {
 	// Resolved indicates the comment thread is resolved.
 	Resolved bool
 
-	// Outdated indicates the comment is on an outdated diff.
+	// Outdated indicates the comment is on an outdated diff:
+	// the anchored line is no longer present in the change's
+	// current head diff. Surfaced to the extension as "stale".
 	Outdated bool
 
 	// CreatedAt is the time the comment was created.
