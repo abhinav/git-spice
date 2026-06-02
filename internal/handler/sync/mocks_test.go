@@ -632,6 +632,44 @@ func (c *MockStoreTrunkCall) DoAndReturn(f func() string) *MockStoreTrunkCall {
 	return c
 }
 
+// TrunkFor mocks base method.
+func (m *MockStore) TrunkFor(worktreePath string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TrunkFor", worktreePath)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// TrunkFor indicates an expected call of TrunkFor.
+func (mr *MockStoreMockRecorder) TrunkFor(worktreePath any) *MockStoreTrunkForCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrunkFor", reflect.TypeOf((*MockStore)(nil).TrunkFor), worktreePath)
+	return &MockStoreTrunkForCall{Call: call}
+}
+
+// MockStoreTrunkForCall wrap *gomock.Call
+type MockStoreTrunkForCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockStoreTrunkForCall) Return(arg0 string) *MockStoreTrunkForCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockStoreTrunkForCall) Do(f func(string) string) *MockStoreTrunkForCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockStoreTrunkForCall) DoAndReturn(f func(string) string) *MockStoreTrunkForCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // MockService is a mock of Service interface.
 type MockService struct {
 	ctrl     *gomock.Controller

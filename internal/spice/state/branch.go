@@ -242,7 +242,7 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		return errors.New("branch name is required")
 	}
 
-	if req.Name == tx.store.trunk {
+	if tx.store.IsTrunk(req.Name) {
 		return ErrTrunk
 	}
 
@@ -263,7 +263,7 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 	}
 
 	if req.Base != "" {
-		if req.Base != tx.store.trunk {
+		if !tx.store.IsTrunk(req.Base) {
 			// Base must already be tracked for name->base to be valid.
 			if _, err := tx.state(ctx, req.Base); err != nil {
 				if errors.Is(err, ErrNotExist) {
@@ -328,7 +328,7 @@ func (tx *BranchTx) Delete(ctx context.Context, name string) error {
 	if name == "" {
 		return errors.New("branch name is required")
 	}
-	if name == tx.store.trunk {
+	if tx.store.IsTrunk(name) {
 		return ErrTrunk
 	}
 
@@ -461,8 +461,8 @@ func (tx *BranchTx) path(ctx context.Context, from, to string) ([]string, error)
 	seen := make(map[string]struct{})
 	var p []string
 	for cur := from; cur != to; {
-		if cur == tx.store.trunk {
-			// There can never be a path from trunk to any other branch.
+		if tx.store.IsTrunk(cur) {
+			// There can never be a path from a trunk to any other branch.
 			return nil, nil
 		}
 

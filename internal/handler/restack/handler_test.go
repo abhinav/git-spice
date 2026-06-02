@@ -894,6 +894,10 @@ func (b *branchLoaderStub) Trunk() string {
 	return b.trunk
 }
 
+func (b *branchLoaderStub) AnchorBranches() []string {
+	return nil
+}
+
 func (b *branchLoaderStub) LoadBranches(context.Context) ([]spice.LoadBranchItem, error) {
 	return slices.Clone(b.items), nil
 }

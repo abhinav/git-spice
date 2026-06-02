@@ -96,11 +96,13 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 		mockAutostash := NewMockAutostashHandler(ctrl)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("feature", nil)
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -151,6 +153,7 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Times(1)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("feature", nil)
@@ -160,6 +163,7 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			AnyTimes()
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -231,6 +235,7 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Times(1)
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("feature", nil)
@@ -243,6 +248,7 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 			Return(nil)
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -320,6 +326,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			Return(branchIter(git.LocalBranch{Name: "feature"}))
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("feature", nil)
@@ -332,6 +339,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			Return(nil)
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -409,6 +417,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			Return(branchIter(git.LocalBranch{Name: "feature"}))
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("feature", nil)
@@ -421,6 +430,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			Return(nil)
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -501,6 +511,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			))
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("c", nil)
@@ -510,6 +521,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			AnyTimes()
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")
@@ -595,6 +607,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			}))
 
 		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().RootDir().Return("/repo").AnyTimes()
 		mockWorktree.EXPECT().
 			CurrentBranch(gomock.Any()).
 			Return("child", nil)
@@ -604,6 +617,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 			AnyTimes()
 
 		mockStore := NewMockStore(ctrl)
+		mockStore.EXPECT().TrunkFor(gomock.Any()).Return("main").AnyTimes()
 		mockStore.EXPECT().
 			Trunk().
 			Return("main")

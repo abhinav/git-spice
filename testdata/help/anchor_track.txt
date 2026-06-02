@@ -1,0 +1,28 @@
+Usage: gs anchor track (tr) [flags]
+
+Track an existing worktree as an anchor
+
+Registers an existing worktree's anchor branch with git-spice.
+
+Use this to adopt a worktree created outside of 'gs anchor create' (for example,
+with 'git worktree add'): it records the worktree's anchor branch so that
+'gs repo sync', restacks, and stack listings treat that branch as an anchor,
+rooting the worktree's stacks at it instead of the shared canonical trunk.
+
+By default, the branch checked out in the current worktree is registered.
+Use --name to register a different existing branch.
+
+If the branch has no upstream, it is set to track the same remote ref as the
+canonical trunk, so that 'gs repo sync' in the worktree updates it from the
+remote.
+
+Flags:
+  --name=BRANCH    Branch to register as this worktree's anchor (defaults to the
+                   branch checked out in the current worktree)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
