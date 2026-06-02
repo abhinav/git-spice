@@ -1,0 +1,46 @@
+# When --no-auto-resolve overrides the configured default, the
+# rebase conflict surfaces normally (RebaseRescue path) even though
+# spice.restack.autoResolve=true.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+gs bco feat-a
+! gs branch restack --no-auto-resolve
+stderr 'gs rebase continue'
+
+# Worktree should be left in conflict state so the user can resolve
+# by hand.
+stderr 'conflict'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- golden/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+echo 'resolver should not have run' >&2
+exit 99

@@ -11,8 +11,10 @@ package restack
 
 import (
 	context "context"
+	iter "iter"
 	reflect "reflect"
 
+	git "go.abhg.dev/gs/internal/git"
 	spice "go.abhg.dev/gs/internal/spice"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -70,6 +72,34 @@ func (mr *MockGitWorktreeMockRecorder) CurrentBranch(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBranch", reflect.TypeOf((*MockGitWorktree)(nil).CurrentBranch), ctx)
 }
 
+// ListFilesPaths mocks base method.
+func (m *MockGitWorktree) ListFilesPaths(ctx context.Context, opts *git.ListFilesOptions) iter.Seq2[string, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFilesPaths", ctx, opts)
+	ret0, _ := ret[0].(iter.Seq2[string, error])
+	return ret0
+}
+
+// ListFilesPaths indicates an expected call of ListFilesPaths.
+func (mr *MockGitWorktreeMockRecorder) ListFilesPaths(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFilesPaths", reflect.TypeOf((*MockGitWorktree)(nil).ListFilesPaths), ctx, opts)
+}
+
+// RebaseContinue mocks base method.
+func (m *MockGitWorktree) RebaseContinue(ctx context.Context, opts *git.RebaseContinueOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RebaseContinue", ctx, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RebaseContinue indicates an expected call of RebaseContinue.
+func (mr *MockGitWorktreeMockRecorder) RebaseContinue(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebaseContinue", reflect.TypeOf((*MockGitWorktree)(nil).RebaseContinue), ctx, opts)
+}
+
 // RootDir mocks base method.
 func (m *MockGitWorktree) RootDir() string {
 	m.ctrl.T.Helper()
@@ -82,6 +112,20 @@ func (m *MockGitWorktree) RootDir() string {
 func (mr *MockGitWorktreeMockRecorder) RootDir() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RootDir", reflect.TypeOf((*MockGitWorktree)(nil).RootDir))
+}
+
+// StageFiles mocks base method.
+func (m *MockGitWorktree) StageFiles(ctx context.Context, paths []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StageFiles", ctx, paths)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StageFiles indicates an expected call of StageFiles.
+func (mr *MockGitWorktreeMockRecorder) StageFiles(ctx, paths any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StageFiles", reflect.TypeOf((*MockGitWorktree)(nil).StageFiles), ctx, paths)
 }
 
 // MockService is a mock of Service interface.
@@ -121,6 +165,21 @@ func (m *MockService) BranchGraph(ctx context.Context, opts *spice.BranchGraphOp
 func (mr *MockServiceMockRecorder) BranchGraph(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchGraph", reflect.TypeOf((*MockService)(nil).BranchGraph), ctx, opts)
+}
+
+// LookupBranch mocks base method.
+func (m *MockService) LookupBranch(ctx context.Context, name string) (*spice.LookupBranchResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LookupBranch", ctx, name)
+	ret0, _ := ret[0].(*spice.LookupBranchResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LookupBranch indicates an expected call of LookupBranch.
+func (mr *MockServiceMockRecorder) LookupBranch(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockService)(nil).LookupBranch), ctx, name)
 }
 
 // RebaseRescue mocks base method.

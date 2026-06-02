@@ -1,0 +1,62 @@
+# Auto-resolve completes a single-conflict rebase in one iteration
+# when the resolver script writes the resolved file and emits an
+# empty JSON response.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Create feat-a on top of main with its version of shared.txt.
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+# Move main forward with a conflicting change to the same line, so
+# rebasing feat-a onto main will conflict.
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+# Configure the resolver and turn auto-resolve on. The resolver is a
+# shebang script in the WORK dir that copies the canonical resolved
+# content over the conflicted file and emits '{}' on stdout to
+# signal "everything resolved".
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+# The branch's recorded base hash is now stale relative to main, so
+# 'branch restack' rebases feat-a onto the new main HEAD. With
+# auto-resolve on, the rebase conflict is intercepted, the resolver
+# fixes shared.txt, and the rebase resumes.
+gs bco feat-a
+gs branch restack
+stderr 'restacked on main'
+
+# feat-a now has the canonical resolved content on top of the new
+# main HEAD.
+git show feat-a:shared.txt
+cmp stdout $WORK/golden/resolved.txt
+
+# Resolution file written under .spice/resolutions/.
+exists $WORK/repo/.spice/resolutions/restack.json
+! exists $WORK/repo/.spice_resolution.json
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- golden/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+cp "$WORK/golden/resolved.txt" shared.txt
+echo '{}'
