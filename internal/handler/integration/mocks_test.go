@@ -44,6 +44,44 @@ func (m *MockGitRepository) EXPECT() *MockGitRepositoryMockRecorder {
 	return m.recorder
 }
 
+// GitDir mocks base method.
+func (m *MockGitRepository) GitDir() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GitDir")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GitDir indicates an expected call of GitDir.
+func (mr *MockGitRepositoryMockRecorder) GitDir() *MockGitRepositoryGitDirCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GitDir", reflect.TypeOf((*MockGitRepository)(nil).GitDir))
+	return &MockGitRepositoryGitDirCall{Call: call}
+}
+
+// MockGitRepositoryGitDirCall wrap *gomock.Call
+type MockGitRepositoryGitDirCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryGitDirCall) Return(arg0 string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryGitDirCall) Do(f func() string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryGitDirCall) DoAndReturn(f func() string) *MockGitRepositoryGitDirCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ListRemoteRefs mocks base method.
 func (m *MockGitRepository) ListRemoteRefs(ctx context.Context, remote string, opts *git.ListRemoteRefsOptions) iter.Seq2[git.RemoteRef, error] {
 	m.ctrl.T.Helper()

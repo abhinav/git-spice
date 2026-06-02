@@ -10,8 +10,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"iter"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -30,6 +32,7 @@ type GitRepository interface {
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	ListRemoteRefs(ctx context.Context, remote string, opts *git.ListRemoteRefsOptions) iter.Seq2[git.RemoteRef, error]
 	Worktrees(ctx context.Context) iter.Seq2[*git.WorktreeListItem, error]
+	GitDir() string
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -346,6 +349,15 @@ type RebuildResult struct {
 
 	// TipHashes holds the hash of each tip used in the rebuild.
 	TipHashes []git.Hash
+
+	// RegeneratorError is the error from the post-merge regenerator,
+	// if one ran and failed. The rebuild itself succeeded (all tip
+	// merges committed) and the partial regenerator output, if any,
+	// was folded into the final merge commit — but the generated
+	// files in the worktree may no longer match the merged source.
+	// The CLI surfaces this so "rebuilt with N tips" does not paper
+	// over a regen failure that leaves the integration build broken.
+	RegeneratorError error
 }
 
 // ConflictError indicates that a rebuild was interrupted by a merge
@@ -363,6 +375,47 @@ func (e *ConflictError) Error() string {
 	return fmt.Sprintf("merge of tip %q conflicted in %d file(s)", e.Tip, len(e.Paths))
 }
 
+// ResolverFailedError indicates that the configured auto-resolver was
+// invoked but produced corrupt or unusable output (e.g., script exit
+// failure, malformed JSON, missing required fields). The merge is
+// left in the worktree for the user to resolve manually, and pending
+// rebuild state is saved so the rebuild can be resumed.
+//
+// Halting here — rather than falling through to accept-incoming — is
+// deliberate. Modern LLMs reliably produce conforming output when
+// prompted correctly; a corrupt response is a signal that the prompt,
+// the model, or the resolver script itself needs attention. Silently
+// accepting "theirs" instead would routinely drop integration-side
+// API surface (methods, getters, fields) and bake the loss into a
+// recorded rerere entry.
+type ResolverFailedError struct {
+	// Tip is the name of the tip whose merge invoked the resolver.
+	Tip string
+
+	// Paths are the files that were passed to the resolver.
+	Paths []string
+
+	// Cause is the underlying error returned by the resolver.
+	Cause error
+}
+
+func (e *ResolverFailedError) Error() string {
+	return fmt.Sprintf(
+		"resolver failed for tip %q (%d conflicted file(s)): %v",
+		e.Tip, len(e.Paths), e.Cause)
+}
+
+func (e *ResolverFailedError) Unwrap() error { return e.Cause }
+
+// errResolverUnresolved is the sentinel returned by autoResolveLoop
+// when the resolver responded with a valid structured "give up" —
+// non-empty unresolved_files and no questions to ask. It is wrapped
+// (via fmt.Errorf %w) so the caller can distinguish a structural
+// surrender from a corrupt-output failure: the former drops to
+// manual conflict resolution, the latter halts with a
+// [*ResolverFailedError].
+var errResolverUnresolved = errors.New("resolver reported unresolved files with no questions")
+
 // RebuildOptions allows callers to override per-invocation behavior.
 type RebuildOptions struct {
 	// AutoResolve, if non-nil, overrides [Handler.DefaultAutoResolve]
@@ -375,6 +428,29 @@ type RebuildOptions struct {
 	// conflicts that remain after the resolver are auto-resolved by
 	// taking the incoming tip's version.
 	AcceptIncoming *bool
+
+	// NoRerere, when true, disables rerere replay and recording for
+	// this invocation. Use when a previous rebuild may have cached
+	// a bad resolution that should not be replayed.
+	NoRerere bool
+
+	// ResetResolutionFile, when true, deletes the resolution file
+	// (.integration_resolution.json) before starting the rebuild so
+	// stale Q&A history is not carried into a fresh run.
+	ResetResolutionFile bool
+
+	// ResetPending, when true, clears any pending integration
+	// rebuild state before starting so the rebuild starts from
+	// trunk regardless of where a prior halted rebuild left off.
+	ResetPending bool
+
+	// ResetRerereCache, when true, deletes the rerere cache
+	// directory before starting the rebuild. Distinct from
+	// NoRerere: rerere stays enabled during the rebuild so the
+	// fresh resolutions get recorded — the wipe just clears any
+	// bad cached postimages from previous runs that would
+	// otherwise be replayed silently.
+	ResetRerereCache bool
 }
 
 // Rebuild regenerates the integration branch by sequentially merging
@@ -392,10 +468,43 @@ type RebuildOptions struct {
 // or [Handler.DefaultAutoResolve]), Rebuild attempts to resolve
 // conflicts automatically before surfacing them.
 //
+// A repo-scoped file lock at .spice_rebuild.lock ensures that two
+// concurrent rebuild invocations (deliberate or otherwise — most
+// often a user runs gs intrb in two shells before the first
+// completes) cannot race on the worktree, the pending state, or
+// the regen log. The second invocation fails fast with a clear
+// message instead of corrupting state by interleaving with the
+// first.
+//
 // opts may be nil to accept defaults.
 func (h *Handler) Rebuild(
 	ctx context.Context, opts *RebuildOptions,
 ) (*RebuildResult, error) {
+	release, err := acquireRebuildLock(h.RepoRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
+	if opts != nil && opts.ResetResolutionFile {
+		if err := h.removeResolutionFile(); err != nil {
+			return nil, fmt.Errorf("reset resolution file: %w", err)
+		}
+	}
+
+	if opts != nil && opts.ResetPending {
+		if err := h.Store.ClearPendingIntegrationRebuild(ctx); err != nil &&
+			!errors.Is(err, state.ErrNotExist) {
+			return nil, fmt.Errorf("reset pending rebuild: %w", err)
+		}
+	}
+
+	if opts != nil && opts.ResetRerereCache {
+		if err := h.resetRerereCache(); err != nil {
+			return nil, fmt.Errorf("reset rerere cache: %w", err)
+		}
+	}
+
 	info, err := h.loadConfigured(ctx)
 	if err != nil {
 		return nil, err
@@ -496,6 +605,53 @@ func (h *Handler) ensureWorktreeSafe(
 	return nil
 }
 
+// rebuildLockFileName is the well-known name of the rebuild lock
+// file at the repository root.
+const rebuildLockFileName = ".spice_rebuild.lock"
+
+// acquireRebuildLock takes an exclusive on-disk lock at
+// .spice_rebuild.lock relative to repoRoot. Returns a release
+// function that the caller must defer.
+//
+// If the lock file already exists, returns an error naming the lock
+// path and the PID recorded in the file (if any) so the user can
+// either wait for the other rebuild to finish or remove the stale
+// lock by hand. The lock is not crash-safe by design: it is better
+// to require a manual cleanup after a hang than to risk two
+// concurrent rebuilds clobbering each other.
+func acquireRebuildLock(repoRoot string) (func(), error) {
+	if repoRoot == "" {
+		// Without a known root, just no-op the lock. Callers that
+		// rely on it for safety (the CLI command path) always set
+		// RepoRoot; tests that don't can opt out.
+		return func() {}, nil
+	}
+	path := filepath.Join(repoRoot, rebuildLockFileName)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			holder := "unknown"
+			if data, readErr := os.ReadFile(path); readErr == nil {
+				holder = strings.TrimSpace(string(data))
+			}
+			return nil, fmt.Errorf(
+				"another integration rebuild is in progress (held by pid %s); "+
+					"if it has exited unexpectedly, remove %s and retry",
+				holder, path)
+		}
+		return nil, fmt.Errorf("acquire rebuild lock: %w", err)
+	}
+	_, _ = fmt.Fprintln(file, os.Getpid())
+	_ = file.Close()
+	return func() {
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			// Best-effort: a leftover lock blocks future rebuilds,
+			// but we cannot do better here without panicking.
+			_ = err
+		}
+	}, nil
+}
+
 // shouldAutoResolve resolves opts against DefaultAutoResolve.
 func (h *Handler) shouldAutoResolve(opts *RebuildOptions) bool {
 	if opts != nil && opts.AutoResolve != nil {
@@ -565,6 +721,27 @@ func (h *Handler) resumeRebuild(
 	pending *state.IntegrationRebuild,
 	opts *RebuildOptions,
 ) (*RebuildResult, error) {
+	// Pending state can advance past the last tip when an earlier
+	// rebuild's auto-resolve loop committed the final merge but the
+	// process was killed (or beaten to it by a concurrent run)
+	// before the post-loop cleanup cleared the pending entry. In
+	// that case there is genuinely nothing left to merge — just
+	// clear the stale entry and report it explicitly so the user
+	// doesn't see the meaningless "Resuming at tip N+1 of N" log.
+	if pending.NextTipIndex >= len(pending.Tips) {
+		h.Log.Infof(
+			"Discarding pending rebuild state: all %d tip(s) already merged",
+			len(pending.Tips))
+		if err := h.Store.ClearPendingIntegrationRebuild(ctx); err != nil {
+			h.Log.Warnf("clear pending rebuild: %v", err)
+		}
+		hashes := make([]git.Hash, len(pending.Tips))
+		for i, t := range pending.Tips {
+			hashes[i] = t.Hash
+		}
+		return &RebuildResult{Name: info.Name, TipHashes: hashes}, nil
+	}
+
 	clean, err := h.Worktree.IsClean(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("check worktree: %w", err)
@@ -609,6 +786,11 @@ func (h *Handler) runMerges(
 	// succeeds, gs hands the deduped list to the Regenerator (if any).
 	var regenPaths []string
 
+	enableRerere := opts == nil || !opts.NoRerere
+	if !enableRerere {
+		h.Log.Info("Rerere replay and recording disabled for this rebuild")
+	}
+
 	for i := start; i < len(tips); i++ {
 		tip := tips[i]
 		mergeMsg := fmt.Sprintf("Merge %s into %s", tip.Name, info.Name)
@@ -623,14 +805,27 @@ func (h *Handler) runMerges(
 		_ = logFile.Close()
 		mergeEnv := []string{regenLogEnvVar + "=" + logPath}
 
+		var rerereReplays []string
+		onRerereReplay := func(path string) {
+			rerereReplays = append(rerereReplays, path)
+		}
+
 		err = h.Worktree.Merge(ctx, git.MergeOptions{
-			Refs:          []string{tip.Hash.String()},
-			NoFF:          true,
-			Message:       mergeMsg,
-			EnableRerere:  true,
-			LeaveConflict: true,
-			Env:           mergeEnv,
+			Refs:           []string{tip.Hash.String()},
+			NoFF:           true,
+			Message:        mergeMsg,
+			EnableRerere:   enableRerere,
+			LeaveConflict:  true,
+			Env:            mergeEnv,
+			OnRerereReplay: onRerereReplay,
 		})
+
+		if len(rerereReplays) > 0 {
+			h.Log.Infof(
+				"Tip %q: rerere replayed cached resolution for %d path(s): %s",
+				tip.Name, len(rerereReplays),
+				strings.Join(rerereReplays, ", "))
+		}
 
 		// Always drain + clean up the log file, regardless of merge
 		// outcome.
@@ -648,13 +843,51 @@ func (h *Handler) runMerges(
 
 		// Try the auto-resolver if enabled and configured.
 		if h.shouldAutoResolve(opts) && h.Resolver != nil {
+			h.Log.Infof(
+				"Tip %q: invoking resolver for %d conflicted path(s): %s",
+				tip.Name, len(conflict.ConflictPaths),
+				strings.Join(conflict.ConflictPaths, ", "))
 			resolved, resolveErr := h.autoResolveLoop(
 				ctx, info.Name, tip.Name, conflict.ConflictPaths, mergeMsg)
 			switch {
 			case resolveErr != nil:
-				h.Log.Warnf("Auto-resolve failed for tip %q: %v",
-					tip.Name, resolveErr)
-				// fall through to accept-incoming / conflict-surfacing
+				// Both branches save pending state and return so the
+				// rebuild can be resumed after the user addresses the
+				// underlying issue. Accept-incoming is bypassed in
+				// both cases — silently picking "theirs" is exactly
+				// the failure mode that motivated this whole flow.
+				if saveErr := h.Store.SetPendingIntegrationRebuild(ctx, &state.IntegrationRebuild{
+					Integration:  info.Name,
+					Tips:         tips,
+					NextTipIndex: i + 1,
+				}); saveErr != nil {
+					h.Log.Warnf("save pending rebuild: %v", saveErr)
+				}
+
+				// Structural "give up" from the resolver: valid JSON
+				// with unresolved_files and no questions. The
+				// resolver did its job; surface the conflict for
+				// manual resolution.
+				if errors.Is(resolveErr, errResolverUnresolved) {
+					h.Log.Warnf(
+						"Tip %q: resolver could not resolve: %v",
+						tip.Name, resolveErr)
+					return nil, &ConflictError{
+						Tip:   tip.Name,
+						Paths: conflict.ConflictPaths,
+					}
+				}
+
+				// Corrupt or unusable resolver response (parse error,
+				// non-zero exit, missing markers, iteration cap).
+				// Halt with a distinct error so the caller knows the
+				// prompt/model/script needs attention rather than
+				// just a manual merge.
+				return nil, &ResolverFailedError{
+					Tip:   tip.Name,
+					Paths: conflict.ConflictPaths,
+					Cause: resolveErr,
+				}
 			case resolved:
 				continue
 			}
@@ -670,7 +903,10 @@ func (h *Handler) runMerges(
 					tip.Name, acceptErr)
 				// fall through to conflict-surfacing
 			} else {
-				h.Log.Infof("Tip %q: accepted incoming for %d conflicted path(s): %s",
+				h.Log.Warnf(
+					"Tip %q: accepted incoming for %d conflicted path(s) "+
+						"(may have dropped declarations from the integration "+
+						"side): %s",
 					tip.Name, len(conflict.ConflictPaths),
 					strings.Join(conflict.ConflictPaths, ", "))
 				continue
@@ -694,10 +930,26 @@ func (h *Handler) runMerges(
 	// written real updates that must not be left dirty in the worktree, and
 	// `git commit --amend --no-edit --allow-empty` is a safe no-op when no
 	// changes are present.
+	//
+	// regeneratorErr is preserved on [RebuildResult.RegeneratorError] so
+	// the CLI surfaces it alongside the success summary; "rebuilt with N
+	// tips" silently hiding a broken regen output is exactly what
+	// confused users in earlier runs.
+	var regeneratorErr error
 	deduped := dedupStrings(regenPaths)
 	if h.Regenerator != nil && len(deduped) > 0 {
+		h.Log.Infof(
+			"Invoking regenerator for %d take-incoming path(s): %s",
+			len(deduped), strings.Join(deduped, ", "))
 		if err := h.Regenerator.Regenerate(ctx, deduped); err != nil {
-			h.Log.Warnf("regenerator: %v", err)
+			regeneratorErr = err
+			h.Log.Errorf(
+				"Regenerator failed: %v. Integration branch still "+
+					"contains the merged source, but its generated "+
+					"files may be out of sync — your build will need "+
+					"a manual 'mise run generate' (or your "+
+					"project equivalent) before it compiles.",
+				err)
 		}
 		if err := h.Worktree.AmendCommitAll(ctx); err != nil {
 			return nil, fmt.Errorf("amend with regen output: %w", err)
@@ -723,8 +975,9 @@ func (h *Handler) runMerges(
 		hashes[i] = t.Hash
 	}
 	return &RebuildResult{
-		Name:      info.Name,
-		TipHashes: hashes,
+		Name:             info.Name,
+		TipHashes:        hashes,
+		RegeneratorError: regeneratorErr,
 	}, nil
 }
 
@@ -1044,7 +1297,7 @@ func (h *Handler) autoResolveLoop(
 
 		if len(resp.UnresolvedFiles) > 0 {
 			return false, fmt.Errorf(
-				"resolver reported unresolved files with no questions: %s",
+				"%w: %s", errResolverUnresolved,
 				strings.Join(resp.UnresolvedFiles, ", "))
 		}
 
@@ -1058,6 +1311,35 @@ func (h *Handler) autoResolveLoop(
 	return false, fmt.Errorf(
 		"resolver exceeded iteration cap (%d); investigate manually",
 		maxIters)
+}
+
+// resetRerereCache deletes the rerere cache directory inside the
+// git dir. Subsequent rerere recording during the rebuild repopulates
+// it from scratch — that's the point: stale bad postimages from a
+// prior run are gone, but rerere is still on so good resolutions
+// from this rebuild get cached for the next one.
+//
+// Missing cache directory is a no-op (rerere may never have run).
+func (h *Handler) resetRerereCache() error {
+	path := filepath.Join(h.Repository.GitDir(), "rr-cache")
+	if err := os.RemoveAll(path); err != nil {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+	h.Log.Infof("Rerere cache cleared: %s", path)
+	return nil
+}
+
+// removeResolutionFile deletes the resolution file under .spice/
+// if one exists. Missing root or missing file are no-ops.
+func (h *Handler) removeResolutionFile() error {
+	if h.RepoRoot == "" {
+		return nil
+	}
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
+	if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+	return nil
 }
 
 // appendQAToFile appends the given question/answer pairs to the

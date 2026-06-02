@@ -293,48 +293,6 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### git-spice stack merge {#gs-stack-merge}
-
-```
-gs stack (s) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a stack
-
-Merges the CRs for the current branch's stack into trunk.
-Use --branch to merge a different branch's stack.
-
-The stack includes the selected branch,
-its downstack branches down to trunk,
-and every upstack branch.
-
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
-
-Before merging, the stack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
-
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
-before failing if checks are not ready.
-
-By default, a branch failure skips that branch's upstack descendants,
-but independent sibling branches continue.
-Use --fail-fast to stop the queue after the first branch failure.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--no-branch-check`: Skip stale base validation before merging.
-* `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
-
 ### git-spice stack restack {#gs-stack-restack}
 
 ```
@@ -664,11 +622,11 @@ when you don't want to wait for the merge to propagate.
 
 **Flags**
 
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--branch=NAME`: Branch to start merging from
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 
 **Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
@@ -1124,33 +1082,6 @@ Use --branch to target a different branch.
 
 * `--branch=NAME`: Branch to diff
 
-### git-spice branch merge {#gs-branch-merge}
-
-```
-gs branch (b) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a branch into trunk
-
-Merges the CR for the current branch into trunk.
-Use --branch to merge a different branch.
-
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
-
-Before merging, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
-
 ### git-spice branch submit {#gs-branch-submit}
 
 ```
@@ -1454,17 +1385,43 @@ configured resolver script is invoked to attempt automatic
 resolution before surfacing conflicts. See the recipe for
 details on the JSON protocol the script must implement.
 
-Any conflicts that survive the merge drivers and the resolver
-are auto-resolved by taking the incoming tip's version. Pass
---no-accept-incoming (or set spice.integration.acceptIncoming
-=false) to disable that final fallback and surface conflicts
-for manual resolution instead.
+If the resolver produces corrupt or unusable output (script
+exit failure, malformed JSON, missing markers) the rebuild
+halts rather than falling through to accept-incoming. The
+usual cause is a prompt, model, or script issue that needs
+to be fixed, not glossed over by silently picking 'theirs'.
+
+Conflicts that survive the merge drivers and a successful
+resolver run are auto-resolved by taking the incoming tip's
+version. Pass --no-accept-incoming (or set
+spice.integration.acceptIncoming=false) to disable that
+final fallback and surface conflicts for manual resolution
+instead.
+
+If a bad resolution was silently cached (in rerere, in the
+resolution file, or in pending rebuild state) and is being
+replayed on every rebuild, use --reset-rerere-cache to wipe
+stale postimages (while still recording fresh ones),
+--reset-resolution-file to wipe the Q&A history,
+--reset-pending to drop any stale resume point, or
+--from-scratch for all three.
+
+--no-rerere is a stronger diagnostic mode: it disables
+rerere recording too, so the rebuild produces nothing
+cached for next time. Use it only when you suspect rerere
+itself is misbehaving — otherwise --reset-rerere-cache is
+what you want.
 
 **Flags**
 
 * `--push`: Also push the integration branch after rebuilding
 * `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.integration.autoResolve" }](/cli/config.md#spiceintegrationautoresolve)): Auto-resolve merge conflicts using the configured resolver script
 * `--[no-]accept-incoming` ([:material-wrench:{ .middle title="spice.integration.acceptIncoming" }](/cli/config.md#spiceintegrationacceptincoming)): Final-stage fallback: take the incoming tip's version for any remaining conflicts so the rebuild completes without manual intervention
+* `--no-rerere`: Disable rerere entirely (no replay AND no recording) for this rebuild. Diagnostic mode — prefer --reset-rerere-cache when you want fresh resolutions cached for next time.
+* `--reset-rerere-cache`: Wipe the rerere cache (.git/rr-cache) before starting so stale cached resolutions are not replayed. Rerere stays enabled so the rebuild's fresh resolutions are recorded.
+* `--reset-resolution-file`: Delete the resolution file (.integration_resolution.json) before starting so stale Q&A history is not carried into this rebuild.
+* `--reset-pending`: Clear any pending rebuild state before starting. Use when a prior halted rebuild left stale state that should not be resumed.
+* `--from-scratch`: Shorthand: implies --reset-rerere-cache, --reset-resolution-file, and --reset-pending. Use after a bad rebuild left stale state in any cache; rerere stays enabled so good resolutions get recorded.
 
 **Configuration**: [spice.integration.acceptIncoming](/cli/config.md#spiceintegrationacceptincoming), [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
 
