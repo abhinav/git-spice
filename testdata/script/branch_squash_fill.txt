@@ -1,0 +1,35 @@
+# 'gs branch squash --fill' uses the configured message generator
+# to produce the squash commit message.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo i
+
+# Create a branch with two commits
+git add feature1.txt
+gs branch create feature-1 -m 'First commit'
+git add feature2.txt
+git commit -m 'Second commit'
+
+# configure the message generator (emits the shared JSON protocol)
+chmod 755 $WORK/gen.sh
+git config spice.message.generator $WORK/gen.sh
+
+# squash with --fill
+gs branch squash --fill
+
+# verify the commit message
+git log -1 --format=%s
+stdout 'generated squash message'
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- gen.sh --
+#!/bin/sh
+printf '{"title":"generated squash message"}'

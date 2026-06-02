@@ -457,6 +457,71 @@ func TestConfig_ShellCommand(t *testing.T) {
 	}
 }
 
+func TestConfig_MessageGenerator(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{
+			name:   "Empty",
+			config: "",
+		},
+		{
+			name: "Set",
+			config: text.Dedent(`
+				[spice "message"]
+				generator = echo gen
+			`),
+			want: "echo gen",
+		},
+		{
+			name: "LastWins",
+			config: text.Dedent(`
+				[spice "message"]
+				generator = first
+				generator = second
+			`),
+			want: "second",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			home := t.TempDir()
+			require.NoError(t, os.WriteFile(
+				filepath.Join(home, ".gitconfig"),
+				[]byte(tt.config),
+				0o600,
+			))
+
+			gitCfg := git.NewConfig(git.ConfigOptions{
+				Log: silogtest.New(t),
+				Dir: home,
+				Env: []string{
+					"HOME=" + home,
+					"USER=testuser",
+					"GIT_CONFIG_NOSYSTEM=1",
+				},
+			})
+			cfg, err := spice.LoadConfig(
+				t.Context(), gitCfg, spice.ConfigOptions{
+					Log: silogtest.New(t),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.want,
+				cfg.MessageGenerator())
+		})
+	}
+}
+
 func TestConfig_ScriptResolveMaxIterations(t *testing.T) {
 	tests := []struct {
 		name   string

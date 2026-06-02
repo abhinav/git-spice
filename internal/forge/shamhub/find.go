@@ -155,6 +155,7 @@ func (r *forgeRepository) toFindChangeItem(c *Change) *forge.FindChangeItem {
 		ID:        ChangeID(c.Number),
 		URL:       c.URL,
 		Subject:   c.Subject,
+		Body:      c.Body,
 		HeadHash:  git.Hash(c.Head.Hash),
 		BaseName:  c.Base.Name,
 		Draft:     c.Draft,
