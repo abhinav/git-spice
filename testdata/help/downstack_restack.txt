@@ -8,7 +8,9 @@ their respective bases, ensuring a linear history.
 Use --branch to start at a different branch.
 
 Flags:
-  --branch=NAME    Branch to restack the downstack of
+  --[no-]auto-resolve    Auto-resolve rebase conflicts using the configured
+                         resolver script (🔧 spice.restack.autoResolve)
+  --branch=NAME          Branch to restack the downstack of
 
 Global Flags:
   -h, --help           Show help for the command

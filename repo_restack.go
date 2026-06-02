@@ -12,7 +12,9 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type repoRestackCmd struct{}
+type repoRestackCmd struct {
+	AutoResolve bool `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
+}
 
 func (*repoRestackCmd) Help() string {
 	return text.Dedent(`
@@ -21,7 +23,7 @@ func (*repoRestackCmd) Help() string {
 	`)
 }
 
-func (*repoRestackCmd) Run(
+func (cmd *repoRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
@@ -48,6 +50,7 @@ func (*repoRestackCmd) Run(
 		Branch:          store.Trunk(),
 		Scope:           restack.ScopeUpstackExclusive,
 		ContinueCommand: []string{"repo", "restack"},
+		AutoResolve:     &cmd.AutoResolve,
 	})
 	if err != nil {
 		return err

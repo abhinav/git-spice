@@ -1,0 +1,43 @@
+# When the resolver reports unresolved files but no questions, the
+# loop cannot make progress: a warn message names the unresolved files
+# and the conflict is surfaced via RebaseRescue for manual handling.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+gs bco feat-a
+! gs branch restack
+stderr 'auto-resolve: resolver reported unresolved files with no questions'
+stderr 'shared.txt'
+stderr 'gs rebase continue'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- resolver.sh --
+#!/bin/sh
+cat <<'EOF'
+{"unresolved_files": ["shared.txt"]}
+EOF
