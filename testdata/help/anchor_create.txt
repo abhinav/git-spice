@@ -1,0 +1,39 @@
+Usage: gs anchor create (c) <path> [flags]
+
+Create a new worktree anchored at a branch
+
+Creates a new Git worktree at the given path, anchored at a branch.
+
+By default the worktree gets a root anchor: a per-worktree pointer branch (named
+after the worktree directory, or set with --name) that tracks the same remote
+trunk as the main checkout. Stacks created in the worktree are based on this
+anchor, so 'gs repo sync' and restacks in different worktrees never contend on a
+single shared trunk checkout.
+
+Use --anchor to instead pin the worktree at an existing tracked branch:
+a dependent worktree, for building on top of another worktree's work.
+
+Use -b/--branch to also create a tracked branch stacked on the anchor.
+
+Use --no-anchor to instead start the worktree in detached HEAD state at the
+current trunk commit.
+
+Arguments:
+  <path>    Path for the new worktree
+
+Flags:
+      --name=BRANCH      Name of the anchor branch to create (defaults to the
+                         worktree directory name)
+      --anchor=BRANCH    Anchor on an existing tracked branch (a dependent
+                         worktree) instead of the remote trunk
+      --no-anchor        Do not create an anchor; start in detached HEAD at
+                         trunk
+  -b, --branch=BRANCH    Create and check out a new tracked branch stacked on
+                         the anchor
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

@@ -138,9 +138,10 @@ func (cmd *branchLogCmd) run(
 	}
 
 	req := list.BranchesRequest{
-		Branch:  currentBranch,
-		Options: &cmd.Options,
-		Include: list.IncludeChangeURL,
+		Branch:          currentBranch,
+		CurrentWorktree: wt.RootDir(),
+		Options:         &cmd.Options,
+		Include:         list.IncludeChangeURL,
 	}
 	if wantChangeState {
 		req.Include |= list.IncludeChangeState

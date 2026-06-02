@@ -288,6 +288,26 @@ func TestBranchGraph_NextBase_partialGraph(t *testing.T) {
 	assert.Equal(t, "survivor", got)
 }
 
+func TestBranchGraph_anchorIsRoot(t *testing.T) {
+	graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk:   "main",
+		Anchors: []string{"wt-a"},
+		Branches: []spice.LoadBranchItem{
+			{Name: "feat1", Base: "wt-a"},
+			{Name: "feat2", Base: "feat1"},
+			{Name: "other", Base: "main"},
+		},
+	})
+
+	// Traversals terminate at the worktree trunk just like the canonical
+	// trunk: the stack rooted at wt-a does not bleed into main.
+	assert.Equal(t, "feat1", graph.Bottom("feat2"))
+	assert.Equal(t, []string{"feat2", "feat1"},
+		slices.Collect(graph.Downstack("feat2")))
+	assert.Equal(t, "other", graph.Bottom("other"))
+	assert.Empty(t, slices.Collect(graph.Downstack("wt-a")))
+}
+
 func TestBranchGraphRapid(t *testing.T) {
 	rapid.Check(t, testBranchGraphRapid)
 }

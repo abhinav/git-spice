@@ -1,0 +1,39 @@
+# 'gs anchor list' shows all worktrees
+# with their checked-out branches and stack info.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a stack: main -> feat1 -> feat2
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+
+# Create a worktree for feat1
+git worktree add ../wt1 feat1
+
+# List worktrees from the main repo
+gs anchor list
+stderr 'repo'
+stderr 'feat2'
+stderr 'wt1'
+stderr 'feat1'
+
+# List worktrees from wt1
+cd ../wt1
+gs anchor ls
+stderr 'repo'
+stderr 'wt1'
+stderr 'feat1'
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2

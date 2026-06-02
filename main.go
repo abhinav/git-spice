@@ -312,6 +312,7 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
+	Anchor anchorCmd `cmd:"" group:"Anchor"`
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
 	// Navigation

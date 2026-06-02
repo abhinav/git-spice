@@ -35,6 +35,10 @@ var _ GitRepository = (*git.Repository)(nil)
 type Store interface {
 	Remote() (state.Remote, error)
 	Trunk() string
+
+	// TrunkFor returns the trunk branch for the given worktree root:
+	// the worktree's registered trunk if any, else the canonical trunk.
+	TrunkFor(worktreePath string) string
 }
 
 var _ Store = (*state.Store)(nil)
@@ -72,7 +76,8 @@ type Handler struct {
 
 // Options holds command line options for the log command.
 type Options struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	All      bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	Worktree bool `short:"w" long:"worktree" help:"Filter to branches in the current worktree. Implies --all."`
 }
 
 // Include specifies what additional information to include in the response.
@@ -111,6 +116,11 @@ type BranchesRequest struct {
 	//
 	// If Options.All is set, this is ignored and all tracked branches
 	Branch string // required
+
+	// CurrentWorktree is the absolute path
+	// to the current worktree root.
+	// Required when Options.Worktree is set.
+	CurrentWorktree string
 
 	Options *Options
 	Include Include
@@ -221,6 +231,12 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		return remoteRepoID.ChangeURL(changeID)
 	}
 
+	// displayTrunk is the trunk shown as the root of the listing. In a
+	// linked worktree with its own trunk, that is the worktree's local
+	// trunk so the stacks based on it render under it; elsewhere it is
+	// the canonical trunk.
+	displayTrunk := h.Store.TrunkFor(req.CurrentWorktree)
+
 	var itemsMu sync.Mutex
 	items := make([]*BranchItem, 0, branchGraph.Count()+1)   // +1 for trunk
 	itemByName := make(map[string]*BranchItem, len(items)+1) // name -> item
@@ -234,7 +250,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	for range runtime.GOMAXPROCS(0) {
 		wg.Go(func() {
 			for entry := range entryc {
-				if entry.Name == branchGraph.Trunk() {
+				if entry.Name == displayTrunk {
 					// Trunk is added at the end manually.
 					continue
 				}
@@ -322,9 +338,25 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	var branchesToLog iter.Seq[string]
-	if req.Options.All {
+	switch {
+	case req.Options.Worktree:
+		// Filter to branches in the current worktree.
+		// Include the full stack if any branch in it
+		// is checked out in the current worktree.
+		branchesToLog = func(yield func(string) bool) {
+			for stack := range branchGraph.StacksInWorktree(
+				req.CurrentWorktree,
+			) {
+				for _, branch := range stack {
+					if !yield(branch) {
+						return
+					}
+				}
+			}
+		}
+	case req.Options.All:
 		branchesToLog = branchGraph.Names()
-	} else {
+	default:
 		// If req.Branch is not tracked,
 		// we still want to list all branches.
 		if _, ok := branchGraph.Lookup(req.Branch); !ok {
@@ -340,7 +372,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	wg.Wait()
 
 	// Add trunk.
-	trunkItem := &BranchItem{Name: h.Store.Trunk()}
+	trunkItem := &BranchItem{Name: displayTrunk}
 	items = append(items, trunkItem)
 	itemByName[trunkItem.Name] = trunkItem
 
@@ -351,7 +383,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	// Connect the Above relationships.
 	var trunkIdx int
 	for idx, item := range items {
-		if item.Name == branchGraph.Trunk() {
+		if item.Name == displayTrunk {
 			trunkIdx = idx
 			continue
 		}

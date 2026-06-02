@@ -29,6 +29,10 @@ type BranchGraphConfig struct {
 	// Trunk is the repository trunk branch.
 	Trunk string
 
+	// Anchors are branches registered as anchors (per-worktree
+	// trunks): graph roots owned by linked worktrees. Optional.
+	Anchors []string
+
 	// Branches are the tracked branches in the graph.
 	Branches []spice.LoadBranchItem
 
@@ -47,6 +51,7 @@ func NewBranchGraph(t T, cfg BranchGraphConfig) *spice.BranchGraph {
 		t.Context(),
 		&branchLoader{
 			trunk:     cfg.Trunk,
+			anchors:   cfg.Anchors,
 			branches:  cfg.Branches,
 			worktrees: cfg.Worktrees,
 		},
@@ -60,6 +65,7 @@ func NewBranchGraph(t T, cfg BranchGraphConfig) *spice.BranchGraph {
 
 type branchLoader struct {
 	trunk     string
+	anchors   []string
 	branches  []spice.LoadBranchItem
 	worktrees map[string]string
 }
@@ -68,6 +74,10 @@ var _ spice.BranchLoader = (*branchLoader)(nil)
 
 func (l *branchLoader) Trunk() string {
 	return l.trunk
+}
+
+func (l *branchLoader) AnchorBranches() []string {
+	return slices.Clone(l.anchors)
 }
 
 func (l *branchLoader) LoadBranches(

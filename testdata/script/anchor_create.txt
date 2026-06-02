@@ -1,0 +1,46 @@
+# 'gs anchor create' creates a new worktree anchored at a branch.
+# By default the anchor is a root anchor: a per-worktree pointer
+# branch tracking the same remote trunk as the main checkout.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Default: a root anchor named after the worktree directory.
+gs anchor create $WORK/wt1
+stderr 'Created worktree'
+stderr 'Created anchor wt1'
+
+# The worktree has the anchor branch checked out (not detached).
+cd $WORK/wt1
+git branch --show-current
+stdout 'wt1'
+
+# --no-anchor preserves the legacy detached-HEAD behavior.
+cd $WORK/repo
+gs anchor create --no-anchor $WORK/wt-detached
+cd $WORK/wt-detached
+git rev-parse --abbrev-ref HEAD
+stdout 'HEAD'
+
+# --name overrides the anchor branch name, and -b creates a
+# tracked branch stacked on the anchor.
+cd $WORK/repo
+gs anchor create $WORK/wt2 --name dev -b feat1
+stderr 'Created anchor dev'
+stderr 'Created and checked out branch feat1'
+
+# Verify the branch in wt2 is feat1, stacked on the dev anchor.
+cd $WORK/wt2
+git branch --show-current
+stdout 'feat1'
+gs ls
+stderr 'feat1'
+
+-- repo/dummy.txt --
+dummy
