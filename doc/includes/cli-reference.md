@@ -140,6 +140,7 @@ and untrack all branches.
 * `--remote=NAME`: Name of the remote to push submitted branches to
 * `--upstream=NAME`: Name of the remote to open change requests against
 * `--reset`: Forget all information about the repository
+* `--[no-]recurse-submodules`: Also initialize tracked submodules. Prompts when unset and submodules are present.
 
 ### git-spice repo sync {#gs-repo-sync}
 
@@ -285,48 +286,6 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
-
-### git-spice stack merge {#gs-stack-merge}
-
-```
-gs stack (s) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a stack
-
-Merges the CRs for the current branch's stack into trunk.
-Use --branch to merge a different branch's stack.
-
-The stack includes the selected branch,
-its downstack branches down to trunk,
-and every upstack branch.
-
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
-
-Before merging, the stack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
-
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
-before failing if checks are not ready.
-
-By default, a branch failure skips that branch's upstack descendants,
-but independent sibling branches continue.
-Use --fail-fast to stop the queue after the first branch failure.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--no-branch-check`: Skip stale base validation before merging.
-* `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -657,11 +616,11 @@ when you don't want to wait for the merge to propagate.
 
 **Flags**
 
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--branch=NAME`: Branch to start merging from
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 
 **Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
@@ -1118,33 +1077,6 @@ Use --branch to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to diff
-
-### git-spice branch merge {#gs-branch-merge}
-
-```
-gs branch (b) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a branch into trunk
-
-Merges the CR for the current branch into trunk.
-Use --branch to merge a different branch.
-
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
-
-Before merging, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice branch submit {#gs-branch-submit}
 
