@@ -107,6 +107,31 @@ func TestStore(t *testing.T) {
 		assert.JSONEq(t, `{"id": 44}`, string(res.ChangeMetadata))
 	})
 
+	t.Run("submodule associations", func(t *testing.T) {
+		ctx := t.Context()
+		err := statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+			Upserts: []state.UpsertRequest{{
+				Name:     "with-subs",
+				Base:     "main",
+				BaseHash: "abcdef",
+				Submodules: map[string]string{
+					"libs/core": "feature-x",
+					"libs/util": "fix-y",
+				},
+			}},
+		})
+		require.NoError(t, err)
+
+		res, err := store.LookupBranch(ctx, "with-subs")
+		require.NoError(t, err)
+
+		assert.Equal(t, "main", res.Base)
+		assert.Equal(t, map[string]string{
+			"libs/core": "feature-x",
+			"libs/util": "fix-y",
+		}, res.Submodules)
+	})
+
 	t.Run("upstream branch", func(t *testing.T) {
 		ctx := t.Context()
 		upstream := "remoteBranch"
