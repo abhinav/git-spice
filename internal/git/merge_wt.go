@@ -23,9 +23,18 @@ type MergeOptions struct {
 	// If empty, Git's default message is used.
 	Message string
 
-	// EnableRerere enables rerere.enabled and rerere.autoupdate
-	// for this merge invocation only.
-	// User git config is not modified.
+	// EnableRerere forces rerere's enabled state for this merge
+	// invocation only. User git config is not modified.
+	//
+	// When true: rerere.enabled and rerere.autoupdate are passed as
+	// -c overrides so rerere replays cached resolutions and
+	// auto-stages them after replay.
+	//
+	// When false: rerere.enabled=false is passed as a -c override.
+	// This is a force-off, not a "leave alone" — otherwise a user-
+	// level rerere.enabled=true would keep rerere replaying cached
+	// resolutions even when the caller explicitly asked for it off
+	// (e.g., 'gs integration rebuild --no-rerere').
 	EnableRerere bool
 
 	// LeaveConflict, when true, leaves a conflicting merge in the
@@ -38,6 +47,15 @@ type MergeOptions struct {
 	// by any merge drivers git invokes. Useful for passing per-merge
 	// state to a custom driver (e.g., a log file path).
 	Env []string
+
+	// OnRerereReplay, if non-nil, is called once for each path whose
+	// conflict was silently resolved from the rr-cache during this
+	// merge. The path is taken from git's stderr line
+	// "Resolved 'PATH' using previous resolution." Useful for
+	// surfacing that an otherwise-clean merge actually replayed a
+	// cached resolution — silent replays of stale entries are a
+	// known footgun.
+	OnRerereReplay func(path string)
 }
 
 // MergeConflictError indicates that a [Worktree.Merge] could not be
@@ -85,15 +103,28 @@ func (w *Worktree) Merge(ctx context.Context, opts MergeOptions) error {
 	mergeArgs = append(mergeArgs, opts.Refs...)
 
 	cmd := w.gitCmd(ctx, "merge", mergeArgs[1:]...)
+	// EnableRerere is a force, not a hint. When true, override user
+	// config to enable rerere AND autoupdate. When false, override to
+	// disable — otherwise a user-level rerere.enabled=true would keep
+	// rerere replaying cached resolutions even when the caller
+	// explicitly asked for it off.
+	var rerereCfg []string
 	if opts.EnableRerere {
-		prefix := []string{
+		rerereCfg = []string{
 			"-c", "rerere.enabled=true",
 			"-c", "rerere.autoupdate=true",
 		}
-		cmd = cmd.WithArgs(append(prefix, cmd.Args()...)...)
+	} else {
+		rerereCfg = []string{
+			"-c", "rerere.enabled=false",
+		}
 	}
+	cmd = cmd.WithArgs(append(rerereCfg, cmd.Args()...)...)
 	if len(opts.Env) > 0 {
 		cmd = cmd.AppendEnv(opts.Env...)
+	}
+	if opts.OnRerereReplay != nil {
+		cmd.cmd.TeeStderr(&rerereReplayObserver{cb: opts.OnRerereReplay})
 	}
 
 	err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd { return cmd })
