@@ -1,0 +1,38 @@
+# 'gs stack restack --recurse-submodules' restacks the parent's stack
+# and then the sub's stack too.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a gs-initialized submodule.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial'
+gs repo init
+git add a.txt
+gs branch create sub-feat -m 'Sub feat'
+
+# Set up parent with recurse-submodules at init time.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial'
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+gs repo init --trunk=main --recurse-submodules
+
+# Switch sub to sub-feat; create a parent branch.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add parent.txt
+gs branch create feat-x -m 'Add parent'
+
+# Validate that gs stack restack --recurse-submodules runs without
+# error even when there's nothing to restack.
+gs stack restack --recurse-submodules
+
+-- sub-repo/a.txt --
+sub a
+-- repo/parent.txt --
+parent
+-- repo/.keep --
