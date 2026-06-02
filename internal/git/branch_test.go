@@ -335,6 +335,76 @@ func TestIntegrationLocalBranchesWorktrees(t *testing.T) {
 	}, bs)
 }
 
+// Verifies that LocalBranches returns the correct worktree path
+// for branches inside a submodule with an absorbed gitdir.
+//
+// Git reports %(worktreepath) as the gitdir path
+// for the main worktree of a submodule,
+// rather than the actual working tree directory.
+// LocalBranches must resolve this to the real worktree path.
+func TestIntegrationLocalBranchesSubmodule(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	log := silogtest.New(t)
+
+	// Resolve symlinks for macOS /var -> /private/var.
+	evalDir := func(t *testing.T, dir string) string {
+		t.Helper()
+		resolved, err := filepath.EvalSymlinks(dir)
+		require.NoError(t, err)
+		return resolved
+	}
+
+	// Set up a child repo that will be added as a submodule.
+	childDir := evalDir(t, t.TempDir())
+	initGitRepo(t, childDir)
+	runGit(t, childDir, "checkout", "-b", "feature")
+	runGit(t, childDir, "commit", "--allow-empty", "-m", "feature")
+
+	// Set up a parent repo with the child as a submodule.
+	parentDir := evalDir(t, t.TempDir())
+	initGitRepo(t, parentDir)
+	addSubmodule(t, parentDir, childDir, "child")
+	runGit(t, parentDir, "commit", "-m", "add submodule")
+
+	// Open the submodule's worktree via the parent.
+	subDir := filepath.Join(parentDir, "child")
+	subWt, err := git.OpenWorktree(ctx, subDir, git.OpenOptions{
+		Log: log,
+	})
+	require.NoError(t, err)
+
+	// Verify the worktree root is the submodule directory,
+	// not the absorbed gitdir.
+	assert.Equal(t, joinSlash(subDir), joinSlash(subWt.RootDir()))
+
+	subRepo := subWt.Repository()
+	bs, err := sliceutil.CollectErr(
+		subRepo.LocalBranches(ctx, nil),
+	)
+	require.NoError(t, err)
+
+	// The checked-out branch ("feature") must have
+	// the submodule's working directory as its worktree path,
+	// not the absorbed gitdir
+	// (e.g., parent/.git/modules/child).
+	var featureBranch git.LocalBranch
+	for _, b := range bs {
+		if b.Name == "feature" {
+			featureBranch = b
+			break
+		}
+	}
+	require.NotEmpty(t, featureBranch.Name,
+		"feature branch not found")
+	assert.Equal(t,
+		joinSlash(subDir),
+		featureBranch.Worktree,
+		"worktree path should be the submodule directory, "+
+			"not the absorbed gitdir",
+	)
+}
+
 func TestIntegrationRemoteBranches(t *testing.T) {
 	t.Parallel()
 

@@ -215,6 +215,8 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 			}
 		}
 
+		item.Submodules = b.Submodules
+
 		if s := b.PushStatus; s != nil {
 			item.PushStatus = branchtree.PushStatus{
 				Ahead:     s.Ahead,
@@ -350,6 +352,8 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 			logBranch.Worktree = wt
 		}
 
+		logBranch.Submodules = branch.Submodules
+
 		if err := enc.Encode(logBranch); err != nil {
 			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
 		}
@@ -397,6 +401,10 @@ type jsonLogBranch struct {
 	// in any worktree,
 	// or if it's the current branch (current is true).
 	Worktree string `json:"worktree,omitempty"`
+
+	// Submodules maps submodule paths to associated
+	// branch names. Omitted when empty.
+	Submodules map[string]string `json:"submodules,omitempty"`
 }
 
 type jsonLogDown struct {
