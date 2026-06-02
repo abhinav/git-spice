@@ -331,6 +331,40 @@ func (c *Config) warnDeprecatedAlias(oldKey, newKey git.ConfigKey) {
 	)
 }
 
+// RestackResolver returns the configured script for auto-resolving
+// rebase conflicts during restack operations, or empty if none is
+// set.
+//
+// Read from spice.restack.resolver.
+func (c *Config) RestackResolver() string {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".restack.resolver",
+	).Canonical()]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[len(values)-1]
+}
+
+// RestackAutoResolve reports whether the configured resolver
+// should run automatically during restack operations.
+//
+// Read from spice.restack.autoResolve. Defaults to false.
+// Unparseable values are treated as false.
+func (c *Config) RestackAutoResolve() bool {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".restack.autoResolve",
+	).Canonical()]
+	if len(values) == 0 {
+		return false
+	}
+	v, err := strconv.ParseBool(values[len(values)-1])
+	if err != nil {
+		return false
+	}
+	return v
+}
+
 func canonicalConfigKey(k string) git.ConfigKey {
 	if gitKey, ok := strings.CutPrefix(k, "@"); ok {
 		return git.ConfigKey(gitKey).Canonical()

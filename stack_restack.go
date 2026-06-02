@@ -7,6 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -14,7 +15,8 @@ import (
 )
 
 type stackRestackCmd struct {
-	Branch string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+	AutoResolve bool   `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
+	Branch      string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
 }
 
 func (*stackRestackCmd) Help() string {
@@ -88,5 +90,7 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch, nil)
+	return handler.RestackStack(ctx, cmd.Branch, &restack.Options{
+		AutoResolve: &cmd.AutoResolve,
+	})
 }

@@ -1,0 +1,55 @@
+# The shared env contract (GS_OPERATION, GS_BRANCH, GS_BASE) is set
+# for the resolver. Verified by having the resolver echo the values
+# back as assumptions.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+gs bco feat-a
+gs branch restack
+stderr 'Auto-resolve: GS_OPERATION=branch-restack'
+stderr 'Auto-resolve: GS_BRANCH=feat-a'
+stderr 'Auto-resolve: GS_BASE=main'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- repo/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+cp resolved.txt shared.txt
+op="${GS_OPERATION:-}"
+br="${GS_BRANCH:-}"
+ba="${GS_BASE:-}"
+cat <<EOF
+{
+  "assumptions": [
+    "GS_OPERATION=$op",
+    "GS_BRANCH=$br",
+    "GS_BASE=$ba"
+  ]
+}
+EOF

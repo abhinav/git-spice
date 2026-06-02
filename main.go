@@ -36,6 +36,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -171,7 +172,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
 		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
@@ -494,15 +495,35 @@ func (cmd *mainCmd) AfterApply(
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			view ui.View,
 			worktree *git.Worktree,
 			store *state.Store,
 			svc *spice.Service,
+			cfg *spice.Config,
 		) (RestackHandler, error) {
+			repoRoot := worktree.RootDir()
+			var resolver restack.Resolver
+			if script := cfg.RestackResolver(); script != "" {
+				resolver = &restack.ScriptResolver{
+					Log:    log,
+					Script: script,
+					Runner: &scriptrun.Runner{
+						Log:  log,
+						Args: os.Args,
+					},
+					RepoRoot: repoRoot,
+				}
+			}
 			return &restack.Handler{
-				Log:      log,
-				Worktree: worktree,
-				Store:    store,
-				Service:  svc,
+				Log:                  log,
+				Worktree:             worktree,
+				Store:                store,
+				Service:              svc,
+				Resolver:             resolver,
+				Prompter:             restack.NewViewPrompter(view),
+				DefaultAutoResolve:   cfg.RestackAutoResolve(),
+				RepoRoot:             repoRoot,
+				MaxResolveIterations: cfg.ScriptResolveMaxIterations(),
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
