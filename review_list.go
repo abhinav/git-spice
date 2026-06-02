@@ -313,14 +313,18 @@ func (cmd *reviewListCmd) writeJSON(
 }
 
 func stagedToJSON(c *state.StagedComment) jsonComment {
-	return jsonComment{
+	comment := jsonComment{
 		Kind:     "draft",
 		ID:       fmt.Sprintf("%d", c.ID),
-		Path:     c.File,
-		Line:     c.Line,
 		Body:     c.Body,
 		ThreadID: c.ThreadID,
 	}
+	if c.ThreadID == "" {
+		comment.Scope = "line"
+		comment.Path = c.File
+		comment.Line = c.Line
+	}
+	return comment
 }
 
 func forgeToJSON(c *listedReviewComment) jsonComment {
@@ -328,17 +332,36 @@ func forgeToJSON(c *listedReviewComment) jsonComment {
 	if !c.Comment.CreatedAt.IsZero() {
 		createdAt = &c.Comment.CreatedAt
 	}
-	return jsonComment{
+
+	scope := "line"
+	if c.Thread.Range.IsZero() {
+		scope = "file"
+	}
+	comment := jsonComment{
 		Kind:      "forge",
 		ID:        c.Comment.ID.String(),
+		Scope:     scope,
 		Path:      c.Thread.Path,
 		Line:      c.Thread.Range.StartLine,
+		CommitSHA: c.Thread.CommitHash.String(),
 		Body:      c.Comment.Body,
 		ThreadID:  c.Thread.ID.String(),
 		Author:    c.Comment.Author,
+		Resolved:  c.Thread.Resolved,
+		Stale:     c.Thread.Outdated,
 		Status:    commentStatus(c),
 		CreatedAt: createdAt,
 	}
+	if scope == "line" {
+		comment.Side = c.Thread.Side.String()
+		if c.Thread.Range.StartLine != c.Thread.Range.EndLine {
+			comment.Range = &jsonCommentRange{
+				Start: c.Thread.Range.StartLine,
+				End:   c.Thread.Range.EndLine,
+			}
+		}
+	}
+	return comment
 }
 
 // jsonComment is the JSON representation
@@ -352,11 +375,25 @@ type jsonComment struct {
 	// For forge comments: forge-specific ID.
 	ID string `json:"id"`
 
+	// Scope is "file" or "line".
+	// It is omitted for draft replies, which inherit their thread's scope.
+	Scope string `json:"scope,omitempty"`
+
 	// Path is the file path relative to the repo root.
 	Path string `json:"path,omitempty"`
 
 	// Line is the line number in the file.
 	Line int `json:"line,omitempty"`
+
+	// Range is set when a line comment spans more than one line.
+	Range *jsonCommentRange `json:"range,omitempty"`
+
+	// Side is the diff side for a line comment.
+	Side string `json:"side,omitempty"`
+
+	// CommitSHA is the reviewed revision against which the thread was created.
+	// It is empty when the forge does not expose that revision.
+	CommitSHA string `json:"commitSHA,omitempty"`
 
 	// Body is the full markdown body of the comment.
 	Body string `json:"body"`
@@ -368,6 +405,14 @@ type jsonComment struct {
 	// Only set for forge comments.
 	Author string `json:"author,omitempty"`
 
+	// Resolved reports whether the thread is resolved.
+	// It is omitted when the forge does not expose resolution state.
+	Resolved *bool `json:"resolved,omitempty"`
+
+	// Stale reports whether the thread belongs to an earlier revision.
+	// It is omitted when the forge does not expose outdated state.
+	Stale *bool `json:"stale,omitempty"`
+
 	// Status is "open", "resolved", or "outdated".
 	// Only set for forge comments.
 	Status string `json:"status,omitempty"`
@@ -375,4 +420,10 @@ type jsonComment struct {
 	// CreatedAt is the time the comment was created.
 	// Only set for forge comments.
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
+}
+
+// jsonCommentRange is an inclusive multi-line range in JSON output.
+type jsonCommentRange struct {
+	Start int `json:"start"`
+	End   int `json:"end"`
 }

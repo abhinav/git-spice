@@ -1,0 +1,78 @@
+# Verifies the extended 'gs review list --json' shape that
+# the VSCode extension consumes. Covers:
+#  - scope, side, resolved (always emitted as bool), stale,
+#    range (multi-line), kind, status (legacy)
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+gs repo init
+shamhub-setup
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Post a single-line comment.
+gs review comment main.go:3 -m 'Single-line comment.' --no-draft
+stderr 'Posted comment'
+
+# Post a multi-line range comment spanning lines 4-5.
+gs review comment main.go:4-5 -m 'Range comment.' --no-draft
+stderr 'Posted comment'
+
+# Single-line comment: scope, side, resolved (false), stale (false).
+gs review list --json
+stdout '"scope":"line"'
+stdout '"side":"right"'
+stdout '"commitSHA":"[0-9a-f]{40}"'
+stdout '"resolved":false'
+stdout '"stale":false'
+stdout '"status":"open"'
+stdout '"body":"Single-line comment."'
+stdout '"body":"Range comment."'
+
+# Range comment: range:{start,end} present.
+gs review list --json
+stdout '"range":{"start":4,"end":5}'
+
+# Resolve the first review thread.
+gs review resolve thread-2
+gs review list --json
+stdout '"resolved":true'
+stdout '"status":"resolved"'
+
+# Change a line covered by the second comment, then update the change.
+cp $WORK/extra/main-edited.go main.go
+git add main.go
+gs ca --no-edit
+gs branch submit --force
+gs review list --json
+stdout '"stale":true'
+stdout '"status":"outdated"'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}
+-- extra/main-edited.go --
+package main
+
+func main() {
+	println("greetings")
+	println("world")
+}

@@ -61,4 +61,4 @@ func main() {
 }
 
 -- golden/draft_only.json --
-{"kind":"draft","id":"1","path":"main.go","line":5,"body":"Add error handling here."}
+{"kind":"draft","id":"1","scope":"line","path":"main.go","line":5,"body":"Add error handling here."}
