@@ -61,10 +61,20 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// submoduleBranch records which branch a submodule
+// should be on when this parent branch is checked out.
+type submoduleBranch struct {
+	Branch string `json:"branch"`
+}
+
 type branchState struct {
 	Base     branchStateBase      `json:"base"`
 	Upstream *branchUpstreamState `json:"upstream,omitempty"`
 	Change   *branchChangeState   `json:"change,omitempty"`
+
+	// Submodules maps submodule paths to their
+	// associated branch in the submodule repo.
+	Submodules map[string]*submoduleBranch `json:"submodules,omitempty"`
 
 	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
 }
@@ -99,6 +109,11 @@ type LookupResponse struct {
 	// or an empty string if the branch is not tracking an upstream branch.
 	UpstreamBranch string
 
+	// Submodules maps submodule paths to their
+	// associated branch name in the submodule repo.
+	// Empty when no submodule associations exist.
+	Submodules map[string]string
+
 	// MergedDownstack holds information about branches
 	// that were previously downstack from this branch
 	// that have since been merged into trunk.
@@ -130,6 +145,13 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 
 	if upstream := state.Upstream; upstream != nil {
 		res.UpstreamBranch = upstream.Branch
+	}
+
+	if len(state.Submodules) > 0 {
+		res.Submodules = make(map[string]string, len(state.Submodules))
+		for path, sub := range state.Submodules {
+			res.Submodules[path] = sub.Branch
+		}
 	}
 
 	return res, nil
@@ -229,6 +251,13 @@ type UpsertRequest struct {
 	// Leave nil to leave it unchanged, or set to an empty string to clear it.
 	UpstreamBranch *string
 
+	// Submodules maps submodule paths to associated branch names.
+	// nil = leave unchanged.
+	// Non-nil = merge into existing:
+	// non-empty values set an entry,
+	// empty string values remove that entry.
+	Submodules map[string]string
+
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
 	MergedDownstack *[]json.RawMessage
@@ -307,6 +336,28 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 			state.Upstream = &branchUpstreamState{
 				Branch: *req.UpstreamBranch,
 			}
+		}
+	}
+
+	if req.Submodules != nil {
+		if state.Submodules == nil {
+			state.Submodules = make(
+				map[string]*submoduleBranch,
+				len(req.Submodules),
+			)
+		}
+		for path, branch := range req.Submodules {
+			if branch == "" {
+				delete(state.Submodules, path)
+			} else {
+				state.Submodules[path] = &submoduleBranch{
+					Branch: branch,
+				}
+			}
+		}
+		// Clear the map entirely if all entries were removed.
+		if len(state.Submodules) == 0 {
+			state.Submodules = nil
 		}
 	}
 

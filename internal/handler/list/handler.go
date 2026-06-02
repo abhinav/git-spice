@@ -150,6 +150,10 @@ type BranchItem struct {
 	// NeedsRestack indicates whether this branch needs to be restacked
 	// on top of its base branch.
 	NeedsRestack bool
+
+	// Submodules maps submodule paths
+	// to associated branch names.
+	Submodules map[string]string
 }
 
 // PushStatus contains push-related information
@@ -278,6 +282,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				}
 
 				item.Base = branch.Base
+				item.Submodules = branch.Submodules
 
 				if branch.Change != nil {
 					item.ChangeID = branch.Change.ChangeID()

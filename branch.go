@@ -38,6 +38,9 @@ type branchCmd struct {
 	// Pull request management
 	Merge  branchMergeCmd  `cmd:"" aliases:"m" experiment:"merge" help:"Merge a branch into trunk"`
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
+
+	// Submodule management
+	Submodule branchSubmoduleCmd `cmd:"" aliases:"sm" help:"Manage submodule branch associations"`
 }
 
 // BranchPromptConfig defines configuration for the branch tree prompt

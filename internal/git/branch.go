@@ -59,6 +59,37 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 		args = append(args, "refs/heads/")
 	}
 
+	// Lazily resolve the main worktree path
+	// for submodules with absorbed gitdirs.
+	// Git reports %(worktreepath) as the gitdir
+	// for the main worktree of a submodule
+	// instead of the actual working directory.
+	var mainWorktreeResolved bool
+	var mainWorktreePath string
+	resolveWorktree := func(wt string) string {
+		if wt != r.gitDir {
+			return wt
+		}
+
+		// %(worktreepath) matches our gitDir,
+		// which happens for submodules
+		// with absorbed gitdirs.
+		// Resolve the actual worktree path.
+		if !mainWorktreeResolved {
+			mainWorktreeResolved = true
+			if resolved, err := r.gitCmd(ctx,
+				"rev-parse", "--show-toplevel",
+			).OutputChomp(); err == nil {
+				mainWorktreePath = resolved
+			}
+		}
+
+		if mainWorktreePath != "" {
+			return mainWorktreePath
+		}
+		return wt
+	}
+
 	return func(yield func(LocalBranch, error) bool) {
 		cmd := r.gitCmd(ctx, "for-each-ref", args...)
 		for bs, err := range cmd.Lines() {
@@ -83,10 +114,15 @@ func (r *Repository) LocalBranches(ctx context.Context, opts *LocalBranchesOptio
 				continue
 			}
 
+			wtPath := string(bytes.TrimSpace(worktree))
+			if wtPath != "" {
+				wtPath = resolveWorktree(wtPath)
+			}
+
 			localBranch := LocalBranch{
 				Name:     string(branchName),
 				Hash:     Hash(hash),
-				Worktree: string(bytes.TrimSpace(worktree)),
+				Worktree: wtPath,
 			}
 			if !yield(localBranch, nil) {
 				return

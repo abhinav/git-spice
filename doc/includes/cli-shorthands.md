@@ -6,11 +6,11 @@
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
 | gs be | [gs branch edit](/cli/reference.md#gs-branch-edit) |
 | gs bfo | [gs branch fold](/cli/reference.md#gs-branch-fold) |
-| gs bm | [gs branch merge](/cli/reference.md#gs-branch-merge) |
 | gs bon | [gs branch onto](/cli/reference.md#gs-branch-onto) |
 | gs br | [gs branch restack](/cli/reference.md#gs-branch-restack) |
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
 | gs bs | [gs branch submit](/cli/reference.md#gs-branch-submit) |
+| gs bsmls | [gs branch submodule list](/cli/reference.md#gs-branch-submodule-list) |
 | gs bsp | [gs branch split](/cli/reference.md#gs-branch-split) |
 | gs bsq | [gs branch squash](/cli/reference.md#gs-branch-squash) |
 | gs btr | [gs branch track](/cli/reference.md#gs-branch-track) |
@@ -34,7 +34,6 @@
 | gs rs | [gs repo sync](/cli/reference.md#gs-repo-sync) |
 | gs sd | [gs stack delete](/cli/reference.md#gs-stack-delete) |
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |
-| gs sm | [gs stack merge](/cli/reference.md#gs-stack-merge) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
 | gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |

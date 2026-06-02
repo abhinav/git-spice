@@ -61,6 +61,7 @@ func (cmd *commitAmendCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	submoduleTracker SubmoduleTracker,
 	restackHandler RestackHandler,
 ) error {
 	var detachedHead bool
@@ -128,7 +129,7 @@ func (cmd *commitAmendCmd) Run(
 					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
-				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
+				}).Run(ctx, log, repo, wt, store, svc, submoduleTracker, restackHandler)
 			}
 		}
 	}
@@ -239,6 +240,13 @@ func (cmd *commitAmendCmd) Run(
 	if detachedHead {
 		log.Debug("HEAD is detached, skipping restack")
 		return nil
+	}
+
+	if err := submoduleTracker.RecordBranchState(
+		ctx, currentBranch,
+	); err != nil {
+		log.Warn("Could not record submodule associations",
+			"error", err)
 	}
 
 	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
