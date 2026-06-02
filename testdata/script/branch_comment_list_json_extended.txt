@@ -1,0 +1,66 @@
+# Verifies the extended 'gs branch comment list --json' shape that
+# the VSCode extension consumes. Covers:
+#  - scope, side, resolved (always emitted as bool), stale,
+#    range (multi-line), kind, status (legacy)
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# Post a single-line comment.
+gs branch comment add main.go:3 -m 'Single-line comment.'
+stderr 'Posted comment'
+
+# Post a multi-line range comment spanning lines 3-5.
+gs branch comment add main.go:3-5 -m 'Range comment.'
+stderr 'Posted comment'
+
+# Single-line comment: scope, side, resolved (false), stale (false).
+gs branch comment list --json
+stdout '"scope":"line"'
+stdout '"side":"RIGHT"'
+stdout '"resolved":false'
+stdout '"stale":false'
+stdout '"status":"open"'
+stdout '"body":"Single-line comment."'
+stdout '"body":"Range comment."'
+
+# Range comment: range:{start,end} present.
+gs branch comment list --json
+stdout '"range":{"start":3,"end":5}'
+
+# Resolve the first inline comment's thread.
+shamhub comment edit -resolved=true 2
+gs branch comment list --json
+stdout '"resolved":true'
+stdout '"status":"resolved"'
+
+# Mark the second comment outdated/stale.
+shamhub comment edit -outdated=true 3
+gs branch comment list --json
+stdout '"stale":true'
+stdout '"status":"outdated"'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+	println("world")
+}
