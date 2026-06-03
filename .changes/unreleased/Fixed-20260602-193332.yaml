@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: Branches submitted with --no-publish are now updated by --update-only.'
+time: 2026-06-02T19:33:32.583799-07:00
