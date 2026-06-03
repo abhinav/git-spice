@@ -133,16 +133,17 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
-	// Check if we're in the middle of a rebase with unmerged paths
+	// Check if we're in the middle of a rebase conflict resolution.
 	var rebasing bool
 	if _, err := wt.RebaseState(ctx); err == nil {
 		rebasing = true
 
 		// If we're in the middle of a rebase,
-		// and there are unmerged paths,
+		// and the rebase stopped for conflict resolution,
 		// what the user likely wants is 'git add' and 'git-spice rebase continue'.
 		//
-		// (If there are no unmerged paths, amending is fine.)
+		// (If the rebase stopped deliberately for edit/break,
+		// and there are no unmerged paths, amending is fine.)
 		var numUnmerged int
 		for _, err := range wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}) {
 			if err == nil {
@@ -150,36 +151,77 @@ func (cmd *commitAmendCmd) Run(
 			}
 		}
 
-		if numUnmerged > 0 {
-			if !ui.Interactive(view) {
-				log.Warnf("You are in the middle of a rebase with unmerged paths.")
-				log.Warnf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name())
-			} else {
-				var continueAmend bool
-				fields := []ui.Field{
-					ui.NewList[bool]().
-						WithTitle("Do you want to amend the commit?").
-						WithDescription(fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
-							"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name())).
-						WithItems(
-							ui.ListItem[bool]{
-								Title:       "Yes",
-								Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
-								Value:       true,
-							},
-							ui.ListItem[bool]{
-								Title:       "No",
-								Description: func(ui.Theme, bool) string { return "Abort the operation" },
-								Value:       false,
-							},
-						).
-						WithValue(&continueAmend),
+		stopReason := git.RebaseInterruptConflict
+		if r, err := wt.RebaseStopReason(ctx); err == nil {
+			stopReason = r
+		}
+
+		conflictResolution := stopReason == git.RebaseInterruptConflict
+		shouldWarn := numUnmerged > 0 || conflictResolution
+		if shouldWarn {
+			if numUnmerged > 0 {
+				if !ui.Interactive(view) {
+					log.Warnf("You are in the middle of a rebase with unmerged paths.")
+					log.Warnf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name())
+				} else {
+					var continueAmend bool
+					fields := []ui.Field{
+						ui.NewList[bool]().
+							WithTitle("Do you want to amend the commit?").
+							WithDescription(fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
+								"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name())).
+							WithItems(
+								ui.ListItem[bool]{
+									Title:       "Yes",
+									Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
+									Value:       true,
+								},
+								ui.ListItem[bool]{
+									Title:       "No",
+									Description: func(ui.Theme, bool) string { return "Abort the operation" },
+									Value:       false,
+								},
+							).
+							WithValue(&continueAmend),
+					}
+					if err := ui.Run(view, fields...); err != nil {
+						return fmt.Errorf("run prompt: %w", err)
+					}
+					if !continueAmend {
+						return errors.New("operation aborted")
+					}
 				}
-				if err := ui.Run(view, fields...); err != nil {
-					return fmt.Errorf("run prompt: %w", err)
-				}
-				if !continueAmend {
-					return errors.New("operation aborted")
+			} else if conflictResolution {
+				if !ui.Interactive(view) {
+					log.Warnf("You appear to have resolved a rebase conflict.")
+					log.Warnf(`You probably want "%s rebase continue" instead of amending.`, cli.Name())
+				} else {
+					var continueAmend bool
+					fields := []ui.Field{
+						ui.NewList[bool]().
+							WithTitle("Do you want to amend the commit?").
+							WithDescription(fmt.Sprintf("You appear to have resolved a rebase conflict.\n"+
+								"You might want to run '%s rebase continue' instead of amending.", cli.Name())).
+							WithItems(
+								ui.ListItem[bool]{
+									Title:       "Yes",
+									Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
+									Value:       true,
+								},
+								ui.ListItem[bool]{
+									Title:       "No",
+									Description: func(ui.Theme, bool) string { return "Abort the operation" },
+									Value:       false,
+								},
+							).
+							WithValue(&continueAmend),
+					}
+					if err := ui.Run(view, fields...); err != nil {
+						return fmt.Errorf("run prompt: %w", err)
+					}
+					if !continueAmend {
+						return errors.New("operation aborted")
+					}
 				}
 			}
 		}
