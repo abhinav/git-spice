@@ -1,0 +1,49 @@
+# Regression test for #1156:
+# branch submit --update-only updates branches submitted with --no-publish.
+
+as 'Test <test@example.com>'
+at '2026-06-02T18:30:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.txt
+gs branch create -m feature
+gs branch submit --no-publish
+stderr 'Pushed feature'
+
+cp $WORK/extra/feature-new.txt feature.txt
+git add feature.txt
+gs commit create -m 'update feature'
+
+gs branch submit --update-only --fill
+stderr 'Pushed feature'
+
+shamhub dump changes
+cmp stdout $WORK/golden/no-changes.txt
+
+cd ..
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git graph --branches --remotes
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/feature.txt --
+feature
+-- extra/feature-new.txt --
+feature new
+-- golden/no-changes.txt --
+[]
+-- golden/graph.txt --
+* f9bc080 (origin/feature) update feature
+* cc878e1 feature
+* 95c3588 (HEAD -> main, origin/main) Initial commit

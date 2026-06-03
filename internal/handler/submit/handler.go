@@ -840,6 +840,17 @@ func (h *Handler) submitBranch(
 
 	// At this point, existingChange is nil only if we need to create a new CR.
 	if existingChange == nil {
+		if opts.UpdateOnly != nil && *opts.UpdateOnly {
+			if branch.Change != nil || storedUpstream == "" {
+				if !opts.DryRun {
+					// TODO: config to disable this message?
+					log.Infof("%v: Skipping unsubmitted branch: --update-only", branchToSubmit)
+				}
+				return status, nil
+			}
+			opts.Publish = false
+		}
+
 		if upstreamBranch == "" {
 			unique, err := svc.UnusedBranchName(ctx, remote.Push, branchToSubmit)
 			if err != nil {
@@ -851,14 +862,6 @@ func (h *Handler) submitBranch(
 				log.Infof("%v: Using upstream name '%v' instead", branchToSubmit, unique)
 			}
 			upstreamBranch = unique
-		}
-
-		if opts.UpdateOnly != nil && *opts.UpdateOnly {
-			if !opts.DryRun {
-				// TODO: config to disable this message?
-				log.Infof("%v: Skipping unsubmitted branch: --update-only", branchToSubmit)
-			}
-			return status, nil
 		}
 	}
 

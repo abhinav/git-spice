@@ -1,0 +1,70 @@
+# Regression test for #1156:
+# branch submit --update-only skips branches without an open change request.
+
+as 'Test <test@example.com>'
+at '2026-06-02T19:00:00Z'
+
+# Set up an initialized repository with a ShamHub remote.
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# A plain Git upstream does not count as a submitted branch.
+git add git-upstream-only.txt
+gs branch create git-upstream-only -m 'git upstream only'
+git push --set-upstream origin git-upstream-only
+
+cp $WORK/extra/git-upstream-only-new.txt git-upstream-only.txt
+git add git-upstream-only.txt
+gs commit create -m 'update git upstream only'
+
+gs branch submit --update-only --fill
+stderr 'git-upstream-only: Skipping unsubmitted branch'
+
+# A branch whose change was closed also has no open change request to update.
+gs bco main
+
+git add closed-change.txt
+gs branch create closed-change -m 'closed change'
+gs branch submit --fill
+stderr 'Created #1'
+
+shamhub reject alice/example 1
+
+cp $WORK/extra/closed-change-new.txt closed-change.txt
+git add closed-change.txt
+gs commit create -m 'update closed change'
+
+gs branch submit --update-only --fill
+stderr 'closed-change: Ignoring CR #1 as it was closed'
+stderr 'closed-change: Skipping unsubmitted branch'
+
+# Verify that neither skipped branch was pushed after its local update.
+cd ..
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git show origin/git-upstream-only:git-upstream-only.txt
+cmp stdout $WORK/golden/git-upstream-only.txt
+git show origin/closed-change:closed-change.txt
+cmp stdout $WORK/golden/closed-change.txt
+
+-- repo/git-upstream-only.txt --
+git upstream only
+-- extra/git-upstream-only-new.txt --
+git upstream only new
+-- repo/closed-change.txt --
+closed change
+-- extra/closed-change-new.txt --
+closed change new
+-- golden/git-upstream-only.txt --
+git upstream only
+-- golden/closed-change.txt --
+closed change
