@@ -382,11 +382,11 @@ func (w *Worktree) RebaseState(context.Context) (*RebaseState, error) {
 //
 // It uses the last non-empty line of the rebase state's "done" file
 // to classify the stop:
-// "break" and "exec" instructions are deliberate interruptions,
+// "pick", "revert", "fixup", "squash", and "merge" apply commits,
+// so stops there are treated as conflicts;
 // "edit" and "reword" instructions are deliberate only if the commit
 // applied cleanly,
-// and commit-applying instructions (pick, merge, revert, fixup, squash, ...)
-// are conflicts that need resolution.
+// and other known instructions are non-conflict interruptions.
 //
 // The "edit" and "reword" cases need extra care: those instructions can
 // also conflict while being applied,
@@ -425,7 +425,9 @@ func (w *Worktree) RebaseStopReason(ctx context.Context) (RebaseInterruptKind, e
 	}
 
 	switch strings.ToLower(lastCommand) {
-	case "break", "exec":
+	case "pick", "revert", "fixup", "squash", "merge":
+		return RebaseInterruptConflict, nil
+	case "break", "exec", "label", "reset", "update-ref", "noop", "drop":
 		return RebaseInterruptDeliberate, nil
 	case "edit", "reword":
 		// A deliberate "edit" or "reword" stop applies the commit first

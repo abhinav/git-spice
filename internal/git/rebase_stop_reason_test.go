@@ -23,27 +23,69 @@ func TestWorktree_RebaseStopReason(t *testing.T) {
 		done       string
 		removeDone bool
 		// withAmend simulates Git's "amend" marker file,
-		// which it writes only for a deliberate "edit" stop
-		// where the commit was applied cleanly.
+		// which Git writes only for deliberate stops where the commit
+		// was applied cleanly and HEAD already holds it.
 		withAmend bool
 		want      git.RebaseInterruptKind
 	}{
 		{
 			name: "Conflict",
-			done: "\n pick cc51432 Add bar\n\n",
+			done: joinLines(
+				"",
+				" pick cc51432 Add bar",
+				"",
+			),
+			want: git.RebaseInterruptConflict,
+		},
+		{
+			name: "Revert",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"revert d62d116 Revert baz",
+			),
+			want: git.RebaseInterruptConflict,
+		},
+		{
+			name: "Fixup",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"fixup d62d116 fixup! Add bar",
+			),
+			want: git.RebaseInterruptConflict,
+		},
+		{
+			name: "Squash",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"squash d62d116 squash! Add bar",
+			),
+			want: git.RebaseInterruptConflict,
+		},
+		{
+			name: "Merge",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"merge -C d62d116 refs/heads/side",
+			),
 			want: git.RebaseInterruptConflict,
 		},
 		{
 			// A deliberate "edit" stop applies the commit and
 			// leaves an "amend" file behind.
-			name:      "Edit",
-			done:      "pick cc51432 Add bar\nedit d62d116 Add baz\n",
+			name: "Edit",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"edit d62d116 Add baz",
+			),
 			withAmend: true,
 			want:      git.RebaseInterruptDeliberate,
 		},
 		{
 			name: "Break",
-			done: "pick cc51432 Add bar\nbreak\n",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"break",
+			),
 			want: git.RebaseInterruptDeliberate,
 		},
 		{
@@ -51,10 +93,87 @@ func TestWorktree_RebaseStopReason(t *testing.T) {
 			// being applied leaves "edit ..." as the last done line
 			// but no "amend" file, since the commit never applied.
 			// That must still be treated as a conflict.
-			name:      "EditConflict",
-			done:      "pick cc51432 Add bar\nedit d62d116 Add baz\n",
+			name: "EditConflict",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"edit d62d116 Add baz",
+			),
 			withAmend: false,
 			want:      git.RebaseInterruptConflict,
+		},
+		{
+			name: "Reword",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"reword d62d116 Add baz",
+			),
+			withAmend: true,
+			want:      git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "RewordConflict",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"reword d62d116 Add baz",
+			),
+			withAmend: false,
+			want:      git.RebaseInterruptConflict,
+		},
+		{
+			name: "Exec",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"exec make test",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "Label",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"label branch-point",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "Reset",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"reset branch-point",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "UpdateRef",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"update-ref refs/heads/feature",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "Noop",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"noop",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "Drop",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"drop d62d116 Add baz",
+			),
+			want: git.RebaseInterruptDeliberate,
+		},
+		{
+			name: "UnknownCommand",
+			done: joinLines(
+				"pick cc51432 Add bar",
+				"unknown d62d116 Add baz",
+			),
+			want: git.RebaseInterruptConflict,
 		},
 		{
 			name:       "MissingDone",
