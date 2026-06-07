@@ -92,12 +92,12 @@ linters:
 
       - linters: [depguard]
         text: "import 'os/exec' is not allowed"
-        path: ^internal/xec/
+        path: (^|.*/)internal/xec/
 
       # termtest needs the raw os/exec to spawn PTYs for testing.
       - linters: [depguard]
         text: "import 'os/exec' is not allowed"
-        path: ^internal/termtest/
+        path: (^|.*/)internal/termtest/
 
 formatters:
   enable:
