@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,10 +49,14 @@ func TestAwaitMerged_immediate(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitMerged(t.Context(), &mergeItem{
+	item := &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
-	})
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitMerged(t.Context(), item)
 	require.NoError(t, err)
 }
 
@@ -79,10 +84,14 @@ func TestAwaitMerged_afterPolling(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitMerged(t.Context(), &mergeItem{
+	item := &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
-	})
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitMerged(t.Context(), item)
 	require.NoError(t, err)
 }
 
@@ -101,10 +110,14 @@ func TestAwaitChecks_passed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitChecks(t.Context(), &mergeItem{
+	item := &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
-	}, 30*time.Minute)
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitChecks(t.Context(), item)
 	require.NoError(t, err)
 }
 
@@ -123,10 +136,14 @@ func TestAwaitChecks_failed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitChecks(t.Context(), &mergeItem{
+	item := &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
-	}, 30*time.Minute)
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitChecks(t.Context(), item)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CI checks failed")
 }
@@ -147,10 +164,15 @@ func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
 	})
 
 	// timeout=0 means fail immediately if pending.
-	err := h.awaitChecks(t.Context(), &mergeItem{
+	item := &mergeItem{
 		branch:   "feat1",
 		changeID: fakeChangeID("pr-1"),
-	}, 0)
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	executor.BuildTimeout = 0
+	err := executor.awaitChecks(t.Context(), item)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CI checks pending")
 }
@@ -176,12 +198,16 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 		logBuffer: nil,
 	})
 
-	err := h.awaitChecksWithDelay(
+	item := &mergeItem{
+		branch:   "feat1",
+		changeID: fakeChangeID("pr-1"),
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitChecksWithDelay(
 		t.Context(),
-		&mergeItem{
-			branch:   "feat1",
-			changeID: fakeChangeID("pr-1"),
-		},
+		item,
 		5*time.Second,      // timeout
 		1*time.Millisecond, // base delay (fast for test)
 		2*time.Millisecond, // max delay
@@ -362,6 +388,39 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main")
+
+	pr1 := fakeChangeID("pr-1")
+
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResult("main"), nil)
+
+	expectMergeItem(mockForge, pr1)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(errors.New("sync failed"))
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		sync:      mockSync,
+	})
+
+	err := h.executePlan(t.Context(), []*mergeItem{
+		{branch: "feat1", changeID: pr1},
+	}, &Request{Branch: "feat1"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sync trunk")
+}
+
 func TestExecutePlan_mergeMethod(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -484,6 +543,81 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 
 	assert.NotContains(t,
 		logBuffer.String(), "retargeting")
+}
+
+func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
+	var logBuffer bytes.Buffer
+	progress := newLogMergeProgress(silog.New(&logBuffer, nil))
+	item := &mergeItem{
+		branch:   "feat1",
+		changeID: fakeChangeID("pr-1"),
+	}
+
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressRetargeting,
+		Item: item,
+		Base: "main",
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressRetargeting,
+		Item: item,
+		Base: "main",
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressWaitingForChecks,
+		Item: item,
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressWaitingForChecks,
+		Item: item,
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressMerging,
+		Item: item,
+		URL:  "http://example.com/1",
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressMerging,
+		Item: item,
+		URL:  "http://example.com/1",
+	})
+
+	output := logBuffer.String()
+	assert.Equal(t, 1, strings.Count(output,
+		"feat1: retargeting pr-1 onto main"))
+	assert.Equal(t, 1, strings.Count(output,
+		"feat1: waiting for CI checks"))
+	assert.Equal(t, 1, strings.Count(output,
+		"feat1: merging pr-1: http://example.com/1"))
+}
+
+func TestLogMergeProgress_waitingForMergeIsDebug(t *testing.T) {
+	item := &mergeItem{
+		branch:   "feat1",
+		changeID: fakeChangeID("pr-1"),
+	}
+
+	var infoBuffer bytes.Buffer
+	infoProgress := newLogMergeProgress(silog.New(&infoBuffer, nil))
+	infoProgress.Event(mergeProgressEvent{
+		Kind: mergeProgressWaitingForMerge,
+		Item: item,
+	})
+	assert.NotContains(t, infoBuffer.String(),
+		"feat1: waiting for merge")
+
+	var debugBuffer bytes.Buffer
+	debugProgress := newLogMergeProgress(
+		silog.New(&debugBuffer, &silog.Options{
+			Level: silog.LevelDebug,
+		}),
+	)
+	debugProgress.Event(mergeProgressEvent{
+		Kind: mergeProgressWaitingForMerge,
+		Item: item,
+	})
+	assert.Contains(t, debugBuffer.String(),
+		"feat1: waiting for merge")
 }
 
 func TestValidateSynced_allInSync(t *testing.T) {
@@ -672,6 +806,27 @@ func testLog(buf *bytes.Buffer) *silog.Logger {
 		return silog.New(buf, nil)
 	}
 	return silog.Nop()
+}
+
+func newTestMergePlanExecutor(
+	h *Handler,
+	progress mergeProgress,
+) *mergePlanExecutor {
+	return &mergePlanExecutor{
+		RemoteRepository: h.RemoteRepository,
+		Repository:       h.Repository,
+
+		Service: h.Service,
+		Restack: h.Restack,
+		Submit:  h.Submit,
+		Sync:    h.Sync,
+
+		Progress: progress,
+
+		Trunk:        "main",
+		BuildTimeout: 30 * time.Minute,
+		Method:       forge.MergeMethodDefault,
+	}
 }
 
 func testForgeRepo(
