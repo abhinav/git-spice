@@ -1,4 +1,4 @@
-package bitbucket
+package cloud
 
 import (
 	"encoding/json"

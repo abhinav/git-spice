@@ -2,58 +2,37 @@ package bitbucket
 
 import (
 	"context"
-	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
-// ChangeChecksState reports the aggregate build status
-// for the given pull request.
+// ChangeChecksState reports failed > pending > passed for a pull request.
 func (r *Repository) ChangeChecksState(
-	ctx context.Context, fid forge.ChangeID,
+	ctx context.Context,
+	id forge.ChangeID,
 ) (forge.ChecksState, error) {
-	id := mustPR(fid)
-	pr, err := r.getPullRequest(ctx, id.Number)
+	pr, err := r.gw.GetChange(ctx, mustPR(id).Number)
 	if err != nil {
-		return 0, fmt.Errorf("get pull request: %w", err)
+		return 0, err
 	}
 
-	if pr.Source.Commit == nil {
+	if pr.HeadHash == "" {
 		return forge.ChecksPassed, nil
 	}
-	return r.commitChecksState(ctx, pr.Source.Commit.Hash)
-}
 
-func (r *Repository) commitChecksState(
-	ctx context.Context, commitHash string,
-) (forge.ChecksState, error) {
-	statuses, _, err := r.client.CommitStatusList(
-		ctx, r.workspace, r.repo, commitHash,
-	)
+	checks, err := r.gw.ListCommitChecks(ctx, pr.HeadHash)
 	if err != nil {
-		return 0, fmt.Errorf("get commit statuses: %w", err)
+		return 0, err
 	}
 
-	return aggregateStatuses(statuses.Values), nil
-}
-
-func aggregateStatuses(
-	statuses []bitbucket.CommitStatus,
-) forge.ChecksState {
-	if len(statuses) == 0 {
-		return forge.ChecksPassed // no checks configured
-	}
-
-	for _, s := range statuses {
-		switch s.State {
-		case bitbucket.CommitStatusFailed,
-			bitbucket.CommitStatusStopped:
-			return forge.ChecksFailed
-		case bitbucket.CommitStatusInProgress:
-			return forge.ChecksPending
+	result := forge.ChecksPassed
+	for _, check := range checks {
+		switch check {
+		case forge.ChecksFailed:
+			return forge.ChecksFailed, nil
+		case forge.ChecksPending:
+			result = forge.ChecksPending
 		}
 	}
-
-	return forge.ChecksPassed
+	return result, nil
 }

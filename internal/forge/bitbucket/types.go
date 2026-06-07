@@ -36,6 +36,10 @@ type PRComment struct {
 	// PRID is the pull request ID this comment belongs to.
 	// Required for updating comments via the Bitbucket API.
 	PRID int64 `json:"pr_id,omitempty"`
+
+	// Version is the Data Center optimistic-locking version.
+	// It is zero for Bitbucket Cloud comments.
+	Version int `json:"version,omitempty"`
 }
 
 var _ forge.ChangeCommentID = (*PRComment)(nil)

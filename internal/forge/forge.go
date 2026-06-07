@@ -246,6 +246,21 @@ func GetDisplayName(f Forge) string {
 	return f.ID()
 }
 
+// RemoteURLConfigurer is an optional interface implemented by forges
+// that can configure themselves from a repository's Git remote URL
+// when no explicit instance URL is configured.
+//
+// It is invoked only when configuration explicitly selects the forge,
+// before the forge parses repository paths or loads credentials.
+type RemoteURLConfigurer interface {
+	// ConfigureFromRemoteURL configures the forge to serve
+	// the repository at the given Git remote URL.
+	//
+	// Implementations must treat explicit user configuration
+	// as authoritative and leave it unchanged.
+	ConfigureFromRemoteURL(u *giturl.URL)
+}
+
 // AuthenticationToken is a secret that results from a successful login.
 // It will be persisted in a safe place,
 // and re-used for future authentication with the forge.

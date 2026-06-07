@@ -1,6 +1,6 @@
-// Package bitbucket provides a narrow Bitbucket REST client
+// Package cloud provides a narrow Bitbucket REST client
 // for the endpoints git-spice uses.
-package bitbucket
+package cloud
 
 import (
 	"bytes"
@@ -221,33 +221,13 @@ func (c *Client) do(
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", _userAgent)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	header, err := c.authHeader(ctx)
+	httpResp, bodyBytes, err := c.send(req)
 	if err != nil {
 		return nil, err
-	}
-	for key, values := range header {
-		for _, value := range values {
-			req.Header.Add(key, value)
-		}
-	}
-
-	httpResp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("send request: %w", err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, httpResp.Body)
-		_ = httpResp.Body.Close()
-	}()
-
-	bodyBytes, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
 	}
 
 	resp := &Response{
@@ -268,6 +248,70 @@ func (c *Client) do(
 		return resp, fmt.Errorf("decode response: %w", err)
 	}
 	return resp, nil
+}
+
+// getRaw sends a GET request for a resource that is not JSON-encoded
+// and returns the raw response body.
+func (c *Client) getRaw(
+	ctx context.Context,
+	resourcePath string,
+) ([]byte, *Response, error) {
+	reqURL, err := c.resolveRequestURL(resourcePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("build request: %w", err)
+	}
+
+	httpResp, bodyBytes, err := c.send(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp := &Response{
+		Header:     httpResp.Header.Clone(),
+		StatusCode: httpResp.StatusCode,
+	}
+	if err := checkResponse(httpResp, bodyBytes); err != nil {
+		return nil, resp, err
+	}
+	return bodyBytes, resp, nil
+}
+
+// send applies the User-Agent and authentication headers,
+// sends the request, and returns the response
+// with its body fully read and closed.
+func (c *Client) send(req *http.Request) (*http.Response, []byte, error) {
+	req.Header.Set("User-Agent", _userAgent)
+
+	header, err := c.authHeader(req.Context())
+	if err != nil {
+		return nil, nil, err
+	}
+	for key, values := range header {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
+	}
+
+	httpResp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("send request: %w", err)
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, httpResp.Body)
+		_ = httpResp.Body.Close()
+	}()
+
+	bodyBytes, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read response: %w", err)
+	}
+
+	return httpResp, bodyBytes, nil
 }
 
 func (c *Client) resolveRequestURL(resourcePath string) (string, error) {

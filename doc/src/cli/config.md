@@ -218,6 +218,10 @@ Accepted values are registered forge IDs,
 including `github`, `gitlab`, and `bitbucket`.
 Test repositories may also use `shamhub`.
 
+With `bitbucket`, the instance URL is derived from the remote URL
+when $$spice.forge.bitbucket.url$$ is not set,
+so this option alone supports self-hosted Bitbucket instances.
+
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
 environment variable.
 
@@ -244,6 +248,34 @@ URL at which the Bitbucket API is available.
 Defaults to `$BITBUCKET_API_URL` if set,
 or `https://api.bitbucket.org/2.0` otherwise.
 
+<!-- gs:version unreleased -->
+For Bitbucket Data Center instances,
+the API URL defaults to the instance URL
+with `/rest/api/1.0` appended.
+
+### spice.forge.bitbucket.kind
+
+<!-- gs:version unreleased -->
+
+The kind of Bitbucket instance that $$spice.forge.bitbucket.url$$ points to.
+
+By default, git-spice infers the kind from the instance URL:
+`bitbucket.org` selects Bitbucket Cloud,
+and any other URL selects Bitbucket Data Center / Server.
+Set this option to override the inference,
+e.g. to use the Cloud API behind a custom URL.
+
+**Accepted values:**
+
+- `cloud`: Bitbucket Cloud (REST API 2.0)
+- `datacenter` (aliases: `data-center`, `server`): Bitbucket Data Center / Server (REST API 1.0)
+
+Alternatively, set this option with the `BITBUCKET_KIND`
+environment variable.
+
+See also
+[Bitbucket Data Center / Server](../setup/auth.md#bitbucket-data-center-server).
+
 ### spice.forge.bitbucket.url
 
 <!-- gs:version v0.25.0 -->
@@ -251,6 +283,14 @@ or `https://api.bitbucket.org/2.0` otherwise.
 URL of the Bitbucket instance used for Bitbucket requests.
 Defaults to `$BITBUCKET_URL` if set,
 or `https://bitbucket.org` otherwise.
+
+<!-- gs:version unreleased -->
+A custom URL selects a self-hosted Bitbucket Data Center / Server instance
+and its REST 1.0 API automatically.
+Set $$spice.forge.bitbucket.kind$$ to `cloud` to keep the Cloud API.
+
+See also
+[Bitbucket Data Center / Server](../setup/auth.md#bitbucket-data-center-server).
 
 ### spice.forge.gitlab.url
 

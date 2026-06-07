@@ -6,22 +6,25 @@ import (
 	"net/http"
 
 	"go.abhg.dev/gs/internal/forge"
-	bitbucketapi "go.abhg.dev/gs/internal/gateway/bitbucket"
+	bitbucketapi "go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/gs/internal/git"
 )
+
+func cloudGW(repo *Repository) *testCloudGateway {
+	return repo.gw.(*testCloudGateway)
+}
 
 func prActionPath(
 	repo *Repository, prID int64, action string,
 ) string {
+	gw := cloudGW(repo)
 	return fmt.Sprintf(
 		"/repositories/%s/%s/pullrequests/%d/%s",
-		repo.workspace, repo.repo, prID, action,
+		gw.workspace, gw.repo, prID, action,
 	)
 }
 
-// MergeChange merges a pull request.
-// This is used by integration tests
-// to put PRs in different states.
+// MergeChange merges a pull request for integration tests.
 func MergeChange(
 	ctx context.Context, repo *Repository, id *PR,
 ) error {
@@ -40,18 +43,18 @@ func MergeChange(
 	return nil
 }
 
-// SetChangeChecksState sets a synthetic build status
-// for integration tests.
+// SetChangeChecksState sets a synthetic build status for integration tests.
 func SetChangeChecksState(
 	ctx context.Context,
 	repo *Repository,
 	headHash git.Hash,
 	state forge.ChecksState,
 ) error {
-	_, _, err := repo.client.CommitStatusCreate(
+	gw := cloudGW(repo)
+	_, _, err := gw.client.CommitStatusCreate(
 		ctx,
-		repo.workspace,
-		repo.repo,
+		gw.workspace,
+		gw.repo,
 		headHash.String(),
 		&bitbucketapi.CommitStatusCreateRequest{
 			Key:         "git-spice-integration",
@@ -88,9 +91,7 @@ func approvePR(
 	return nil
 }
 
-// CloseChange declines (closes) a pull request
-// without merging. This is used by integration tests
-// to put PRs in different states.
+// CloseChange declines a pull request for integration tests.
 func CloseChange(
 	ctx context.Context, repo *Repository, id *PR,
 ) error {
@@ -109,17 +110,18 @@ func doTestAction(
 	repo *Repository,
 	path string,
 ) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, repo.forge.APIURL()+path, nil)
+	gw := cloudGW(repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gw.apiURL+path, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "git-spice")
-	if repo.token != nil && repo.token.AccessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+repo.token.AccessToken)
+	if gw.token != nil && gw.token.AccessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+gw.token.AccessToken)
 	}
 
-	httpClient := repo.http
+	httpClient := gw.http
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
