@@ -416,7 +416,7 @@ func (w *Worktree) RebaseStopReason(ctx context.Context) (RebaseInterruptKind, e
 	}
 
 	var lastCommand string
-	for _, line := range strings.Split(string(done), "\n") {
+	for line := range strings.SplitSeq(string(done), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
