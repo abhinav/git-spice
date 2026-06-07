@@ -133,17 +133,21 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
-	// Check if we're in the middle of a rebase conflict resolution.
+	// rebaseAmendWarning carries the text for one warning before amend.
+	type rebaseAmendWarning struct {
+		logTitle          string
+		logSuggestion     string
+		promptDescription string
+	}
+
+	var rebaseWarning *rebaseAmendWarning
 	var rebasing bool
 	if _, err := wt.RebaseState(ctx); err == nil {
 		rebasing = true
 
-		// If we're in the middle of a rebase,
-		// and the rebase stopped for conflict resolution,
-		// what the user likely wants is 'git add' and 'git-spice rebase continue'.
-		//
-		// (If the rebase stopped deliberately for edit/break,
-		// and there are no unmerged paths, amending is fine.)
+		// If we're in the middle of a rebase and Git still has
+		// unmerged paths, the user likely wants to resolve conflicts,
+		// stage them, and run 'git-spice rebase continue'.
 		var numUnmerged int
 		for _, err := range wt.ListFilesPaths(ctx, &git.ListFilesOptions{Unmerged: true}) {
 			if err == nil {
@@ -151,78 +155,65 @@ func (cmd *commitAmendCmd) Run(
 			}
 		}
 
-		stopReason := git.RebaseInterruptConflict
-		if r, err := wt.RebaseStopReason(ctx); err == nil {
-			stopReason = r
+		if numUnmerged > 0 {
+			rebaseWarning = &rebaseAmendWarning{
+				logTitle:      "You are in the middle of a rebase with unmerged paths.",
+				logSuggestion: fmt.Sprintf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name()),
+				promptDescription: fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
+					"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name()),
+			}
+		} else {
+			// Once conflicts have been staged,
+			// unmerged paths are gone but the rebase is still waiting
+			// for 'git-spice rebase continue'.
+			//
+			// Deliberate stops like edit, reword, break, or exec are
+			// allowed to amend here; RebaseStopReason separates those
+			// from conflict-resolution stops.
+			stopReason := git.RebaseInterruptConflict
+			if r, err := wt.RebaseStopReason(ctx); err == nil {
+				stopReason = r
+			}
+			if stopReason == git.RebaseInterruptConflict {
+				rebaseWarning = &rebaseAmendWarning{
+					logTitle:      "You appear to have resolved a rebase conflict.",
+					logSuggestion: fmt.Sprintf(`You probably want "%s rebase continue" instead of amending.`, cli.Name()),
+					promptDescription: fmt.Sprintf("You appear to have resolved a rebase conflict.\n"+
+						"You might want to run '%s rebase continue' instead of amending.", cli.Name()),
+				}
+			}
 		}
+	}
 
-		conflictResolution := stopReason == git.RebaseInterruptConflict
-		shouldWarn := numUnmerged > 0 || conflictResolution
-		if shouldWarn {
-			if numUnmerged > 0 {
-				if !ui.Interactive(view) {
-					log.Warnf("You are in the middle of a rebase with unmerged paths.")
-					log.Warnf(`You probably want resolve the conflicts and run "git add", then "%s rebase continue" instead.`, cli.Name())
-				} else {
-					var continueAmend bool
-					fields := []ui.Field{
-						ui.NewList[bool]().
-							WithTitle("Do you want to amend the commit?").
-							WithDescription(fmt.Sprintf("You are in the middle of a rebase with unmerged paths.\n"+
-								"You might want to resolve the conflicts and run 'git add', then '%s rebase continue' instead.", cli.Name())).
-							WithItems(
-								ui.ListItem[bool]{
-									Title:       "Yes",
-									Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
-									Value:       true,
-								},
-								ui.ListItem[bool]{
-									Title:       "No",
-									Description: func(ui.Theme, bool) string { return "Abort the operation" },
-									Value:       false,
-								},
-							).
-							WithValue(&continueAmend),
-					}
-					if err := ui.Run(view, fields...); err != nil {
-						return fmt.Errorf("run prompt: %w", err)
-					}
-					if !continueAmend {
-						return errors.New("operation aborted")
-					}
-				}
-			} else if conflictResolution {
-				if !ui.Interactive(view) {
-					log.Warnf("You appear to have resolved a rebase conflict.")
-					log.Warnf(`You probably want "%s rebase continue" instead of amending.`, cli.Name())
-				} else {
-					var continueAmend bool
-					fields := []ui.Field{
-						ui.NewList[bool]().
-							WithTitle("Do you want to amend the commit?").
-							WithDescription(fmt.Sprintf("You appear to have resolved a rebase conflict.\n"+
-								"You might want to run '%s rebase continue' instead of amending.", cli.Name())).
-							WithItems(
-								ui.ListItem[bool]{
-									Title:       "Yes",
-									Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
-									Value:       true,
-								},
-								ui.ListItem[bool]{
-									Title:       "No",
-									Description: func(ui.Theme, bool) string { return "Abort the operation" },
-									Value:       false,
-								},
-							).
-							WithValue(&continueAmend),
-					}
-					if err := ui.Run(view, fields...); err != nil {
-						return fmt.Errorf("run prompt: %w", err)
-					}
-					if !continueAmend {
-						return errors.New("operation aborted")
-					}
-				}
+	if rebaseWarning != nil {
+		if !ui.Interactive(view) {
+			log.Warnf("%s", rebaseWarning.logTitle)
+			log.Warnf("%s", rebaseWarning.logSuggestion)
+		} else {
+			var continueAmend bool
+			fields := []ui.Field{
+				ui.NewList[bool]().
+					WithTitle("Do you want to amend the commit?").
+					WithDescription(rebaseWarning.promptDescription).
+					WithItems(
+						ui.ListItem[bool]{
+							Title:       "Yes",
+							Description: func(ui.Theme, bool) string { return "Continue with commit amend" },
+							Value:       true,
+						},
+						ui.ListItem[bool]{
+							Title:       "No",
+							Description: func(ui.Theme, bool) string { return "Abort the operation" },
+							Value:       false,
+						},
+					).
+					WithValue(&continueAmend),
+			}
+			if err := ui.Run(view, fields...); err != nil {
+				return fmt.Errorf("run prompt: %w", err)
+			}
+			if !continueAmend {
+				return errors.New("operation aborted")
 			}
 		}
 	}
