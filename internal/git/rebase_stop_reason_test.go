@@ -2,14 +2,18 @@ package git_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -119,4 +123,116 @@ func TestWorktree_RebaseStopReason(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestWorktree_RebaseStopReason_rewordAwaitingAmend(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2026-06-03T08:00:00-07:00'
+
+		git init
+		git config commit.gpgsign false
+		git commit --allow-empty -m 'Initial commit'
+
+		git add one.txt
+		git commit -m 'Add one'
+
+		-- one.txt --
+		Contents of one
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	head, err := wt.Head(t.Context())
+	require.NoError(t, err)
+
+	// Use mockedit only for the rebase todo editor.
+	// The commit-message editor must fail so Git stops after applying the
+	// reworded commit and writes the amend marker.
+	t.Setenv("GIT_SEQUENCE_EDITOR", "mockedit")
+	t.Setenv("GIT_EDITOR", "false")
+	mockedit.Expect(t).GiveLines("reword " + string(head) + " Add one")
+
+	err = wt.Rebase(t.Context(), git.RebaseRequest{
+		Upstream:    "HEAD~1",
+		Interactive: true,
+	})
+	require.Error(t, err)
+	defer func() {
+		assert.NoError(t, wt.RebaseAbort(t.Context()))
+	}()
+
+	stateDir := filepath.Join(fixture.Dir(), ".git", "rebase-merge")
+	done, err := os.ReadFile(filepath.Join(stateDir, "done"))
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(string(done), "reword "))
+
+	_, err = os.Stat(filepath.Join(stateDir, "amend"))
+	require.NoError(t, err)
+
+	unmergedFiles, err := sliceutil.CollectErr(
+		wt.ListFilesPaths(t.Context(), &git.ListFilesOptions{Unmerged: true}))
+	require.NoError(t, err)
+	assert.Empty(t, unmergedFiles)
+
+	got, err := wt.RebaseStopReason(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, git.RebaseInterruptDeliberate, got)
+}
+
+func TestWorktree_RebaseStopReason_failedExec(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2026-06-03T08:00:00-07:00'
+
+		git init
+		git config commit.gpgsign false
+		git commit --allow-empty -m 'Initial commit'
+
+		git add one.txt
+		git commit -m 'Add one'
+
+		-- one.txt --
+		Contents of one
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	// Use Git directly because Worktree.Rebase does not expose --exec.
+	// This leaves the real sequencer state for a failed exec stop.
+	cmd := exec.Command("git", "rebase", "-i", "--exec", "false", "HEAD~1")
+	cmd.Dir = fixture.Dir()
+	cmd.Env = append(os.Environ(), "GIT_SEQUENCE_EDITOR=true")
+	err = cmd.Run()
+	require.Error(t, err)
+	defer func() {
+		assert.NoError(t, wt.RebaseAbort(t.Context()))
+	}()
+
+	stateDir := filepath.Join(fixture.Dir(), ".git", "rebase-merge")
+	done, err := os.ReadFile(filepath.Join(stateDir, "done"))
+	require.NoError(t, err)
+	assert.True(t, strings.HasSuffix(strings.TrimSpace(string(done)), "exec false"))
+
+	_, err = os.Stat(filepath.Join(stateDir, "amend"))
+	require.ErrorIs(t, err, os.ErrNotExist)
+
+	unmergedFiles, err := sliceutil.CollectErr(
+		wt.ListFilesPaths(t.Context(), &git.ListFilesOptions{Unmerged: true}))
+	require.NoError(t, err)
+	assert.Empty(t, unmergedFiles)
+
+	got, err := wt.RebaseStopReason(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, git.RebaseInterruptDeliberate, got)
 }
