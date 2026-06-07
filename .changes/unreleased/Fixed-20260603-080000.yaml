@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'commit amend: Prompt before amending when a rebase stopped to resolve a conflict, even after the conflict has been staged.'
+time: 2026-06-03T08:00:00.000000-07:00

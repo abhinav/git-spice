@@ -1,0 +1,53 @@
+# commit amend during a deliberate 'edit' rebase stop should not prompt:
+# the user intentionally paused to amend, so amending is correct.
+
+as 'Test <test@example.com>'
+at '2024-05-27T13:57:09Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feature1.txt
+gs bc -m 'Add feature 1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature 2' feature2
+
+gs bottom
+
+# Run a 'gs branch edit' that stops at an 'edit' instruction
+# for the current commit. This is a deliberate, conflict-free stop.
+env EDITOR=mockedit MOCKEDIT_GIVE=$WORK/input/rebase-todo.txt
+! gs branch edit
+stderr 'The rebase operation was interrupted'
+
+# 'gs commit amend' must NOT prompt here, even interactively:
+# there are no unmerged paths and the stop was deliberate.
+# If a prompt were shown, it would consume robot input and the
+# golden comparison below would differ.
+env ROBOT_INPUT=$WORK/golden/robot.txt ROBOT_OUTPUT=$WORK/robot.actual
+gs commit amend --no-edit -m 'Add feature 1 (amended)'
+cmp $WORK/robot.actual $WORK/golden/robot.txt
+
+gs rebase continue
+stderr 'feature2: restacked'
+
+git graph --branches
+cmp stdout $WORK/golden/branches.txt
+
+-- repo/feature1.txt --
+Contents of feature 1.
+
+-- repo/feature2.txt --
+Contents of feature 2.
+
+-- input/rebase-todo.txt --
+edit 3972713 Add feature 1
+
+-- golden/robot.txt --
+-- golden/branches.txt --
+* eaa2c2d (feature2) Add feature 2
+* 2d8d05c (HEAD -> feature1) Add feature 1 (amended)
+* a798a87 (main) Initial commit
