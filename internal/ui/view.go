@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"cmp"
 	"errors"
 	"io"
 	"os"
 	"sync"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
 )
 
@@ -35,6 +37,14 @@ type InteractiveView interface {
 
 	// Prompt prompts the user for input with the given interactive fields.
 	Prompt(...Field) error
+}
+
+// ModelView is a view that can run a Bubble Tea model.
+type ModelView interface {
+	View
+
+	// RunModel runs the given Bubble Tea model against this view.
+	RunModel(tea.Model, *RunOptions) error
 }
 
 // Interactive reports whether the given view is interactive.
@@ -112,4 +122,22 @@ func (tv *TerminalView) Prompt(fields ...Field) error {
 		Output: tv.w,
 		Theme:  tv.theme(),
 	})
+}
+
+// RunModel runs the given Bubble Tea model against the terminal.
+func (tv *TerminalView) RunModel(
+	model tea.Model,
+	opts *RunOptions,
+) error {
+	opts = cmp.Or(opts, &RunOptions{})
+	if opts.Input == nil {
+		opts.Input = tv.r
+	}
+	if opts.Output == nil {
+		opts.Output = tv.w
+	}
+	if opts.Theme == (Theme{}) {
+		opts.Theme = tv.theme()
+	}
+	return RunModel(model, opts)
 }
