@@ -25,12 +25,14 @@ import (
 type GitRepository interface {
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	ListRemoteRefs(ctx context.Context, remote string, opts *git.ListRemoteRefsOptions) iter.Seq2[git.RemoteRef, error]
+	Worktrees(ctx context.Context) iter.Seq2[*git.WorktreeListItem, error]
 }
 
 var _ GitRepository = (*git.Repository)(nil)
 
 // GitWorktree is the subset of [git.Worktree] used by the handler.
 type GitWorktree interface {
+	RootDir() string
 	CurrentBranch(ctx context.Context) (string, error)
 	CheckoutBranch(ctx context.Context, branch string) error
 	CheckoutNewBranch(ctx context.Context, req git.CheckoutNewBranchRequest) error
@@ -314,6 +316,10 @@ func (h *Handler) Rebuild(ctx context.Context) (*RebuildResult, error) {
 		return nil, err
 	}
 
+	if err := h.ensureWorktreeSafe(ctx, info); err != nil {
+		return nil, err
+	}
+
 	pending, err := h.Store.PendingIntegrationRebuild(ctx)
 	switch {
 	case err == nil:
@@ -334,6 +340,75 @@ func (h *Handler) Rebuild(ctx context.Context) (*RebuildResult, error) {
 		return h.resumeRebuild(ctx, info, pending)
 	}
 	return h.freshRebuild(ctx, info)
+}
+
+// ensureWorktreeSafe refuses to run an integration rebuild in a worktree
+// it does not own.
+//
+// Rebuild force-checks-out the integration branch in the current worktree,
+// merges the tips, and restores the original branch on completion. Doing
+// that in a linked worktree that holds a tracked feature branch silently
+// reverts that worktree's working tree to trunk content (observed as an
+// AUTO_MERGE artifact plus a reset-to-HEAD in the worktree's gitdir).
+//
+// Two cases are rejected:
+//
+//   - The integration branch is checked out in a different worktree.
+//     That worktree owns it; rebuilding here would either steal it
+//     (failing opaquely inside git) or clobber it.
+//   - We are in a multi-worktree repository and the current worktree has
+//     a tracked feature branch checked out. Borrowing and restoring it
+//     would revert that worktree. A single-worktree repository is always
+//     safe to borrow, which is the normal interactive flow.
+func (h *Handler) ensureWorktreeSafe(
+	ctx context.Context,
+	info *state.IntegrationInfo,
+) error {
+	currentWT := h.Worktree.RootDir()
+
+	var integrationWT, currentBranch string
+	var nonBare int
+	for item, err := range h.Repository.Worktrees(ctx) {
+		if err != nil {
+			return fmt.Errorf("list worktrees: %w", err)
+		}
+		if item.Bare {
+			continue
+		}
+		nonBare++
+		if item.Branch == info.Name {
+			integrationWT = item.Path
+		}
+		if item.Path == currentWT {
+			currentBranch = item.Branch
+		}
+	}
+
+	if integrationWT != "" && integrationWT != currentWT {
+		return fmt.Errorf(
+			"integration branch %q is checked out in another worktree (%s); "+
+				"run the rebuild from there",
+			info.Name, integrationWT)
+	}
+
+	// In a multi-worktree repo, refuse to hijack a worktree that has a
+	// tracked feature branch checked out. An untracked or detached
+	// checkout (currentBranch matched no branch / trunk) stays borrowable.
+	if nonBare > 1 && integrationWT == "" &&
+		currentBranch != "" &&
+		currentBranch != info.Name &&
+		currentBranch != h.Store.Trunk() {
+		if _, err := h.Service.LookupBranch(ctx, currentBranch); err == nil {
+			return fmt.Errorf(
+				"refusing to rebuild integration branch %q here: "+
+					"tracked branch %q is checked out in this worktree and "+
+					"would be reverted; run the rebuild from the trunk or the "+
+					"primary worktree, or check out %[1]q first",
+				info.Name, currentBranch)
+		}
+	}
+
+	return nil
 }
 
 func (h *Handler) freshRebuild(ctx context.Context, info *state.IntegrationInfo) (*RebuildResult, error) {
