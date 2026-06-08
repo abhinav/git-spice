@@ -15,12 +15,13 @@ gs bc -m 'feat-b' feat-b
 git checkout main
 gs integration create preview --tip feat-a --tip feat-b
 
-cp $WORK/golden/resolution-before.json .integration_resolution.json
+mkdir .spice/resolutions
+cp $WORK/golden/resolution-before.json .spice/resolutions/integration.json
 
 gs branch untrack feat-a
 
 # After untrack, the file should no longer reference feat-a.
-cmpenvJSON .integration_resolution.json $WORK/golden/resolution-after.json
+cmpenvJSON .spice/resolutions/integration.json $WORK/golden/resolution-after.json
 
 -- repo/.placeholder --
 -- golden/resolution-before.json --

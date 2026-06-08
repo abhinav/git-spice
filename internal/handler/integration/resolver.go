@@ -1,15 +1,13 @@
 package integration
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 )
 
 // Resolver attempts to resolve the in-progress merge conflict.
@@ -18,7 +16,7 @@ import (
 // well-formed response. The shape of the response indicates whether
 // the conflict was actually resolved.
 type Resolver interface {
-	Resolve(ctx context.Context, req *ResolveRequest) (*ResolveResponse, error)
+	Resolve(ctx context.Context, req *ResolveRequest) (*scriptrun.ResolveResponse, error)
 }
 
 // ResolveRequest describes the conflict that the resolver should
@@ -31,27 +29,6 @@ type ResolveRequest struct {
 	// TipName is the branch name being merged into the integration
 	// branch (also known as "theirs").
 	TipName string
-}
-
-// ResolveResponse is the parsed JSON output of the resolver script.
-//
-// All fields are optional; an empty response means "everything
-// resolved cleanly, no remarks."
-type ResolveResponse struct {
-	// Assumptions are informational notes the resolver made during
-	// its work. Logged at info level by the caller.
-	Assumptions []string `json:"assumptions,omitempty"`
-
-	// Questions are unresolved decisions the resolver wants the user
-	// to answer. The caller prompts the user, appends Q&A to the
-	// resolution file, and re-invokes the resolver.
-	Questions []string `json:"questions,omitempty"`
-
-	// UnresolvedFiles lists paths the resolver could not resolve.
-	// Combined with Questions, the caller may iterate. With no
-	// Questions, the caller surfaces an error and asks the user to
-	// investigate manually.
-	UnresolvedFiles []string `json:"unresolved_files,omitempty"`
 }
 
 // ScriptRunner is the subset of [scriptrun.Runner] used by the
@@ -117,7 +94,7 @@ func (e *ScriptResolveError) Unwrap() error { return e.Err }
 // invokes the script, and parses its stdout as JSON.
 func (r *ScriptResolver) Resolve(
 	ctx context.Context, req *ResolveRequest,
-) (*ResolveResponse, error) {
+) (*scriptrun.ResolveResponse, error) {
 	if req == nil {
 		return nil, errors.New("nil resolve request")
 	}
@@ -133,6 +110,11 @@ func (r *ScriptResolver) Resolve(
 	res, err := r.Runner.Run(ctx, &scriptrun.RunRequest{
 		Script: r.Script,
 		Dir:    r.RepoRoot,
+		Env: scriptrun.EnvFor(
+			scriptrun.OpIntegrationRebuild,
+			req.TipName,        // GS_BRANCH = the tip being merged in
+			req.IntegrationName, // GS_BASE   = the integration branch
+		),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("run resolver: %w", err)
@@ -147,21 +129,8 @@ func (r *ScriptResolver) Resolve(
 		}
 	}
 
-	stdout := bytes.TrimSpace(res.Stdout)
-	if len(stdout) == 0 {
-		return nil, &ScriptResolveError{
-			Stage:    "parse",
-			ExitCode: res.ExitCode,
-			Stdout:   res.Stdout,
-			Stderr:   res.Stderr,
-			Err:      errors.New("empty output"),
-		}
-	}
-
-	var resp ResolveResponse
-	dec := json.NewDecoder(bytes.NewReader(stdout))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&resp); err != nil {
+	resp, err := scriptrun.ParseResponse(res.Stdout)
+	if err != nil {
 		return nil, &ScriptResolveError{
 			Stage:    "parse",
 			ExitCode: res.ExitCode,
@@ -170,20 +139,22 @@ func (r *ScriptResolver) Resolve(
 			Err:      err,
 		}
 	}
-
-	return &resp, nil
+	return resp, nil
 }
 
 // writeCurrentMerge updates the resolution file's current_merge
 // pointer to pair, preserving existing resolutions. Creates the file
-// if it does not exist.
+// (and the parent .spice/resolutions directory) if absent.
 func (r *ScriptResolver) writeCurrentMerge(pair MergePair) error {
-	path := filepath.Join(r.RepoRoot, ResolutionFileName)
+	if err := spicedir.EnsureResolutionsDir(r.RepoRoot); err != nil {
+		return err
+	}
+	path := spicedir.ResolutionPath(r.RepoRoot, ResolutionFeatureName)
 	file, err := LoadResolutionFile(path)
 	if err != nil {
 		return err
 	}
 	file.CurrentMerge = &pair
-	file.EnsureEntry(pair) // make sure an entry exists for the script.
+	file.EnsureEntry(pair)
 	return file.Save(path)
 }

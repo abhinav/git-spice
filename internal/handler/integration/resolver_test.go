@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/integration"
 	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 )
 
 // fakeRunner is a minimal in-memory ScriptRunner used by resolver tests.
@@ -109,7 +109,7 @@ func TestScriptResolver_Resolve_currentMergeWritten(t *testing.T) {
 	require.NoError(t, err)
 
 	file, err := integration.LoadResolutionFile(
-		filepath.Join(dir, integration.ResolutionFileName))
+		spicedir.ResolutionPath(dir, integration.ResolutionFeatureName))
 	require.NoError(t, err)
 	require.NotNil(t, file.CurrentMerge)
 	assert.Equal(t, "preview", file.CurrentMerge.Ours)
@@ -125,7 +125,7 @@ func TestScriptResolver_Resolve_currentMergeWritten(t *testing.T) {
 
 func TestScriptResolver_Resolve_existingEntryPreserved(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, integration.ResolutionFileName)
+	path := spicedir.ResolutionPath(dir, integration.ResolutionFeatureName)
 
 	// Pre-seed file with a Q&A entry for (preview, feat-a).
 	seed := &integration.ResolutionFile{
@@ -134,7 +134,7 @@ func TestScriptResolver_Resolve_existingEntryPreserved(t *testing.T) {
 				MergingBranches: integration.MergePair{
 					Ours: "preview", Theirs: "feat-a",
 				},
-				ResolutionInstructions: []integration.QAPair{
+				ResolutionInstructions: []scriptrun.QAPair{
 					{Question: "prior Q", Answer: "prior A"},
 				},
 			},
@@ -277,9 +277,12 @@ func TestScriptResolver_Resolve_runnerError(t *testing.T) {
 	assert.Contains(t, err.Error(), "could not spawn")
 }
 
-func TestScriptResolver_Resolve_unknownField(t *testing.T) {
+func TestScriptResolver_Resolve_unknownFieldIgnored(t *testing.T) {
 	dir := t.TempDir()
 
+	// Per the shared script protocol (doc/src/guide/scripts.md),
+	// extra fields are ignored. A document with only an unknown
+	// field parses as an empty response.
 	runner := &fakeRunner{
 		result: &scriptrun.RunResult{
 			ExitCode: 0,
@@ -293,12 +296,12 @@ func TestScriptResolver_Resolve_unknownField(t *testing.T) {
 		RepoRoot: dir,
 	}
 
-	_, err := r.Resolve(t.Context(), &integration.ResolveRequest{
+	resp, err := r.Resolve(t.Context(), &integration.ResolveRequest{
 		IntegrationName: "preview",
 		TipName:         "feat-a",
 	})
-	require.Error(t, err)
-	var sre *integration.ScriptResolveError
-	require.True(t, errors.As(err, &sre))
-	assert.Equal(t, "parse", sre.Stage)
+	require.NoError(t, err)
+	assert.Empty(t, resp.Assumptions)
+	assert.Empty(t, resp.Questions)
+	assert.Empty(t, resp.UnresolvedFiles)
 }

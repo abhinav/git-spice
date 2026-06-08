@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 	"go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -687,7 +689,7 @@ func TestHandler_Rebuild_autoResolveSuccess(t *testing.T) {
 			return req.IntegrationName == "preview" &&
 				req.TipName == "feat-a"
 		})).
-		Return(&ResolveResponse{}, nil)
+		Return(&scriptrun.ResolveResponse{}, nil)
 	mocks.Worktree.EXPECT().
 		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
 		Return(nil)
@@ -713,7 +715,7 @@ func TestHandler_Rebuild_autoResolveQuestions(t *testing.T) {
 
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any()).
-		Return(&ResolveResponse{
+		Return(&scriptrun.ResolveResponse{
 			Questions: []string{"Should feat-a win?"},
 		}, nil)
 	prompter.EXPECT().
@@ -722,7 +724,7 @@ func TestHandler_Rebuild_autoResolveQuestions(t *testing.T) {
 
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any()).
-		Return(&ResolveResponse{}, nil)
+		Return(&scriptrun.ResolveResponse{}, nil)
 	mocks.Worktree.EXPECT().
 		MergeContinue(gomock.Any(), []string{"shared.txt"}, mergeMsg).
 		Return(nil)
@@ -740,7 +742,7 @@ func TestHandler_Rebuild_autoResolveQuestions(t *testing.T) {
 	_, err := h.Rebuild(t.Context(), &RebuildOptions{AutoResolve: boolPtr(true)})
 	require.NoError(t, err)
 
-	file, err := LoadResolutionFile(h.RepoRoot + "/" + ResolutionFileName)
+	file, err := LoadResolutionFile(spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName))
 	require.NoError(t, err)
 	require.Len(t, file.Resolutions, 1)
 	require.Len(t, file.Resolutions[0].ResolutionInstructions, 1)
@@ -756,7 +758,7 @@ func TestHandler_Rebuild_autoResolveUnresolvedNoQuestions(t *testing.T) {
 
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any()).
-		Return(&ResolveResponse{
+		Return(&scriptrun.ResolveResponse{
 			UnresolvedFiles: []string{"shared.txt"},
 		}, nil)
 
@@ -822,10 +824,10 @@ func TestHandler_Rebuild_autoResolveIterationCap(t *testing.T) {
 	h, mocks, resolver, prompter := newHandlerWithResolver(t)
 	setupConflictMerge(t, mocks)
 
-	for range maxAutoResolveIterations {
+	for range defaultMaxResolveIterations {
 		resolver.EXPECT().
 			Resolve(gomock.Any(), gomock.Any()).
-			Return(&ResolveResponse{
+			Return(&scriptrun.ResolveResponse{
 				Questions: []string{"stuck question"},
 			}, nil)
 		prompter.EXPECT().
@@ -849,7 +851,7 @@ func TestHandler_Rebuild_autoResolveAssumptions(t *testing.T) {
 
 	resolver.EXPECT().
 		Resolve(gomock.Any(), gomock.Any()).
-		Return(&ResolveResponse{
+		Return(&scriptrun.ResolveResponse{
 			Assumptions: []string{"picked feat-a per commit timestamp"},
 		}, nil)
 	mocks.Worktree.EXPECT().
@@ -877,7 +879,7 @@ func TestHandler_OnBranchRemoved(t *testing.T) {
 		Integration(gomock.Any()).
 		Return(nil, state.ErrNotExist)
 
-	path := h.RepoRoot + "/" + ResolutionFileName
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
 	seed := &ResolutionFile{
 		Resolutions: []ResolutionEntry{
 			{MergingBranches: MergePair{Ours: "preview", Theirs: "feat-a"}},
@@ -908,7 +910,7 @@ func TestHandler_OnBranchRemoved_noMatchingEntries(t *testing.T) {
 		Integration(gomock.Any()).
 		Return(nil, state.ErrNotExist)
 
-	path := h.RepoRoot + "/" + ResolutionFileName
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
 	seed := &ResolutionFile{
 		Resolutions: []ResolutionEntry{
 			{MergingBranches: MergePair{Ours: "preview", Theirs: "feat-a"}},
