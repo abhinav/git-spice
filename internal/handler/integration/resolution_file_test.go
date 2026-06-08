@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/handler/integration"
+	"go.abhg.dev/gs/internal/scriptrun"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 )
 
 func TestLoadResolutionFile_absent(t *testing.T) {
@@ -33,7 +35,7 @@ func TestLoadResolutionFile_malformed(t *testing.T) {
 
 func TestLoadResolutionFile_roundTrip(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, integration.ResolutionFileName)
+	path := spicedir.ResolutionPath(dir, integration.ResolutionFeatureName)
 
 	want := &integration.ResolutionFile{
 		CurrentMerge: &integration.MergePair{
@@ -46,7 +48,7 @@ func TestLoadResolutionFile_roundTrip(t *testing.T) {
 					Ours:   "preview",
 					Theirs: "feat-a",
 				},
-				ResolutionInstructions: []integration.QAPair{
+				ResolutionInstructions: []scriptrun.QAPair{
 					{Question: "q1", Answer: "a1"},
 					{Question: "q2", Answer: "a2"},
 				},
@@ -62,7 +64,7 @@ func TestLoadResolutionFile_roundTrip(t *testing.T) {
 
 func TestResolutionFile_Save_atomic(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, integration.ResolutionFileName)
+	path := spicedir.ResolutionPath(dir, integration.ResolutionFeatureName)
 
 	f := &integration.ResolutionFile{
 		Resolutions: []integration.ResolutionEntry{
@@ -71,7 +73,7 @@ func TestResolutionFile_Save_atomic(t *testing.T) {
 					Ours:   "a",
 					Theirs: "b",
 				},
-				ResolutionInstructions: []integration.QAPair{},
+				ResolutionInstructions: []scriptrun.QAPair{},
 			},
 		},
 	}
@@ -113,7 +115,7 @@ func TestResolutionFile_EntryFor(t *testing.T) {
 					Ours:   "preview",
 					Theirs: "feat-a",
 				},
-				ResolutionInstructions: []integration.QAPair{
+				ResolutionInstructions: []scriptrun.QAPair{
 					{Question: "q", Answer: "a"},
 				},
 			},
@@ -138,9 +140,9 @@ func TestResolutionFile_AppendInstructions(t *testing.T) {
 	p := integration.MergePair{Ours: "preview", Theirs: "feat-a"}
 
 	f.AppendInstructions(p,
-		integration.QAPair{Question: "q1", Answer: "a1"})
+		scriptrun.QAPair{Question: "q1", Answer: "a1"})
 	f.AppendInstructions(p,
-		integration.QAPair{Question: "q2", Answer: "a2"})
+		scriptrun.QAPair{Question: "q2", Answer: "a2"})
 
 	e := f.EntryFor(p)
 	require.NotNil(t, e)

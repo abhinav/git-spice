@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+
+	"go.abhg.dev/gs/internal/scriptrun"
 )
 
-// ResolutionFileName is the well-known name of the resolution file
-// at the repository root.
-const ResolutionFileName = ".integration_resolution.json"
+// ResolutionFeatureName is the feature key used in the resolution
+// file path: .spice/resolutions/integration.json.
+const ResolutionFeatureName = "integration"
 
 // MergePair identifies a single in-progress merge by branch names.
 type MergePair struct {
@@ -20,17 +22,11 @@ type MergePair struct {
 	Theirs string `json:"theirs"`
 }
 
-// QAPair is a single question from the resolver and its answer.
-type QAPair struct {
-	Question string `json:"question"`
-	Answer   string `json:"answer"`
-}
-
 // ResolutionEntry holds the accumulated resolution instructions for a
 // specific (ours, theirs) pair.
 type ResolutionEntry struct {
-	MergingBranches        MergePair `json:"merging_branches"`
-	ResolutionInstructions []QAPair  `json:"resolution_instructions"`
+	MergingBranches        MergePair          `json:"merging_branches"`
+	ResolutionInstructions []scriptrun.QAPair `json:"resolution_instructions"`
 }
 
 // ResolutionFile is the on-disk format of the resolution state file.
@@ -67,7 +63,7 @@ func LoadResolutionFile(path string) (*ResolutionFile, error) {
 
 // Save writes the resolution file to path atomically: contents are
 // written to a temporary file in the same directory and then renamed
-// into place.
+// into place. The parent directory is created if missing.
 func (f *ResolutionFile) Save(path string) error {
 	data, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
@@ -76,7 +72,10 @@ func (f *ResolutionFile) Save(path string) error {
 	data = append(data, '\n')
 
 	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".integration_resolution.*.json.tmp")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create parent dir: %w", err)
+	}
+	tmp, err := os.CreateTemp(dir, "integration-resolution.*.json.tmp")
 	if err != nil {
 		return fmt.Errorf("create temp: %w", err)
 	}
@@ -117,14 +116,14 @@ func (f *ResolutionFile) EnsureEntry(p MergePair) *ResolutionEntry {
 	}
 	f.Resolutions = append(f.Resolutions, ResolutionEntry{
 		MergingBranches:        p,
-		ResolutionInstructions: []QAPair{},
+		ResolutionInstructions: []scriptrun.QAPair{},
 	})
 	return &f.Resolutions[len(f.Resolutions)-1]
 }
 
 // AppendInstructions appends Q&A pairs to the entry matching p. The
 // entry is created if it does not exist.
-func (f *ResolutionFile) AppendInstructions(p MergePair, qa ...QAPair) {
+func (f *ResolutionFile) AppendInstructions(p MergePair, qa ...scriptrun.QAPair) {
 	e := f.EnsureEntry(p)
 	e.ResolutionInstructions = append(e.ResolutionInstructions, qa...)
 }

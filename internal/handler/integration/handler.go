@@ -11,13 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -91,14 +92,27 @@ type Handler struct {
 
 	// RepoRoot is the directory containing the resolution file.
 	RepoRoot string
+
+	// MaxResolveIterations bounds how many times the resolver may be
+	// invoked for a single tip merge. Typically populated from
+	// spice.scriptResolve.maxIterations via
+	// Config.ScriptResolveMaxIterations. A non-positive value falls
+	// back to the package default.
+	MaxResolveIterations int
 }
 
-// maxAutoResolveIterations bounds how many times the resolver may be
-// invoked for a single tip merge. Each iteration potentially asks the
-// user a batch of questions; ten iterations is enough for several
-// rounds of clarification while preventing runaway loops on
-// pathological resolver scripts.
-const maxAutoResolveIterations = 10
+// defaultMaxResolveIterations is the fallback when
+// Handler.MaxResolveIterations is non-positive. Matches
+// DefaultScriptResolveMaxIterations in internal/spice.
+const defaultMaxResolveIterations = 10
+
+// resolveIterationCap returns the effective per-tip iteration cap.
+func (h *Handler) resolveIterationCap() int {
+	if h.MaxResolveIterations > 0 {
+		return h.MaxResolveIterations
+	}
+	return defaultMaxResolveIterations
+}
 
 // ErrNotConfigured indicates that no integration branch is configured.
 var ErrNotConfigured = errors.New("no integration branch configured")
@@ -853,7 +867,8 @@ func (h *Handler) autoResolveLoop(
 		TipName:         tipName,
 	}
 
-	for iter := range maxAutoResolveIterations {
+	maxIters := h.resolveIterationCap()
+	for iter := range maxIters {
 		resp, resErr := h.Resolver.Resolve(ctx, req)
 		if resErr != nil {
 			return false, fmt.Errorf("resolver: %w", resErr)
@@ -896,7 +911,7 @@ func (h *Handler) autoResolveLoop(
 
 	return false, fmt.Errorf(
 		"resolver exceeded iteration cap (%d); investigate manually",
-		maxAutoResolveIterations)
+		maxIters)
 }
 
 // appendQAToFile appends the given question/answer pairs to the
@@ -904,20 +919,23 @@ func (h *Handler) autoResolveLoop(
 func (h *Handler) appendQAToFile(
 	ours, theirs string, questions, answers []string,
 ) error {
-	path := filepath.Join(h.RepoRoot, ResolutionFileName)
+	if err := spicedir.EnsureResolutionsDir(h.RepoRoot); err != nil {
+		return err
+	}
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
 	file, err := LoadResolutionFile(path)
 	if err != nil {
 		return err
 	}
 
 	pair := MergePair{Ours: ours, Theirs: theirs}
-	qa := make([]QAPair, 0, len(questions))
+	qa := make([]scriptrun.QAPair, 0, len(questions))
 	for i, q := range questions {
 		a := ""
 		if i < len(answers) {
 			a = answers[i]
 		}
-		qa = append(qa, QAPair{Question: q, Answer: a})
+		qa = append(qa, scriptrun.QAPair{Question: q, Answer: a})
 	}
 	file.AppendInstructions(pair, qa...)
 	return file.Save(path)
@@ -943,7 +961,7 @@ func (h *Handler) OnBranchRemoved(ctx context.Context, branch string) error {
 		// Cannot prune resolution file without a known root; treat as no-op.
 		return nil
 	}
-	path := filepath.Join(h.RepoRoot, ResolutionFileName)
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
 
 	file, err := LoadResolutionFile(path)
 	if err != nil {
