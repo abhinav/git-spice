@@ -28,14 +28,15 @@ git config spice.integration.resolver $WORK/resolver.sh
 git config spice.integration.autoResolve true
 
 # Pre-seed the resolution file with a Q&A for (preview, feat-b).
-cp $WORK/golden/resolution.json .integration_resolution.json
+mkdir .spice/resolutions
+cp $WORK/golden/resolution.json .spice/resolutions/integration.json
 
 gs integration rebuild
 stderr 'rebuilt with 1 tip\(s\)'
 
 # Resolution file should still carry the pre-seeded entry (with
 # instruction count unchanged).
-exists $WORK/repo/.integration_resolution.json
+exists $WORK/repo/.spice/resolutions/integration.json
 
 -- repo/shared.txt --
 base content
@@ -57,7 +58,7 @@ feat-b content
 -- resolver.sh --
 #!/bin/sh
 # Verify the pre-seeded Q&A reached us through the file.
-grep -q 'which version wins' .integration_resolution.json || exit 1
-grep -q 'feat-b' .integration_resolution.json || exit 1
+grep -q 'which version wins' .spice/resolutions/integration.json || exit 1
+grep -q 'feat-b' .spice/resolutions/integration.json || exit 1
 cp feat-b-version.txt shared.txt
 echo '{}'

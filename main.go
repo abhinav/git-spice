@@ -717,15 +717,16 @@ func (cmd *mainCmd) AfterApply(
 				}
 			}
 			return &integration.Handler{
-				Log:                log,
-				Repository:         repo,
-				Worktree:           wt,
-				Store:              store,
-				Service:            svc,
-				Resolver:           resolver,
-				Prompter:           integration.NewViewPrompter(view),
-				DefaultAutoResolve: cfg.IntegrationAutoResolve(),
-				RepoRoot:           repoRoot,
+				Log:                  log,
+				Repository:           repo,
+				Worktree:             wt,
+				Store:                store,
+				Service:              svc,
+				Resolver:             resolver,
+				Prompter:             integration.NewViewPrompter(view),
+				DefaultAutoResolve:   cfg.IntegrationAutoResolve(),
+				RepoRoot:             repoRoot,
+				MaxResolveIterations: cfg.ScriptResolveMaxIterations(),
 			}, nil
 		}),
 	)

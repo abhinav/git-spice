@@ -1,6 +1,6 @@
-# Auto-resolve completes a single-tip conflict in one iteration when
-# the resolver script writes the resolved file and emits an empty JSON
-# response.
+# The shared env contract (GS_OPERATION, GS_BRANCH, GS_BASE) is set
+# for the resolver during an integration rebuild. Verified by having
+# the resolver echo the values back as assumptions.
 
 as 'Test <test@example.com>'
 at '2025-01-01T00:00:00Z'
@@ -23,23 +23,14 @@ gs bc feat-b -m 'feat-b changes shared.txt'
 git checkout main
 gs integration create preview --tip feat-a --tip feat-b
 
-# Configure the resolver: it's a shebang script in the WORK dir that
-# copies the canonical resolved content and emits '{}' on stdout.
 chmod 700 $WORK/resolver.sh
 git config spice.integration.resolver $WORK/resolver.sh
 git config spice.integration.autoResolve true
 
 gs integration rebuild
-stderr 'rebuilt with 2 tip\(s\)'
-
-# preview branch should have the resolved content.
-git show preview:shared.txt
-cmp stdout $WORK/golden/resolved.txt
-
-# Resolution file should have been written with current_merge cleared
-# after the last invocation… actually current_merge persists per spec.
-# Just verify the file exists.
-exists $WORK/repo/.spice/resolutions/integration.json
+stderr 'GS_OPERATION=integration-rebuild'
+stderr 'GS_BRANCH=feat-b'
+stderr 'GS_BASE=preview'
 
 -- repo/shared.txt --
 base content
@@ -47,9 +38,20 @@ base content
 feat-a content
 -- repo/feat-b-version.txt --
 feat-b content
--- golden/resolved.txt --
+-- repo/resolved.txt --
 resolved content
 -- resolver.sh --
 #!/bin/sh
-cp "$WORK/golden/resolved.txt" shared.txt
-echo '{}'
+cp resolved.txt shared.txt
+op="${GS_OPERATION:-}"
+br="${GS_BRANCH:-}"
+ba="${GS_BASE:-}"
+cat <<EOF
+{
+  "assumptions": [
+    "GS_OPERATION=$op",
+    "GS_BRANCH=$br",
+    "GS_BASE=$ba"
+  ]
+}
+EOF
