@@ -245,9 +245,11 @@ Change Requests are created or updated
 for all branches in the current stack.
 
 When invoked from the configured integration branch, the
-"current stack" is the union of every tip's full stack
-(upstack and downstack), and the integration branch itself
-is pushed afterward.
+"current stack" is the union of each configured tip's
+downstack (the tip and the branches below it), and the
+integration branch itself is pushed afterward. Branches
+above a tip are deliberately left alone: they are work in
+progress that has not been promoted to a tip yet.
 
 Use --dry-run to print what would be submitted without submitting it.
 
