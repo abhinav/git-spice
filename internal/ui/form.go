@@ -150,8 +150,8 @@ func NewForm(fields ...Field) *Form {
 	}
 }
 
-// FormRunOptions specifies options for [Form.Run].
-type FormRunOptions struct {
+// RunOptions specifies options for running a Bubble Tea model.
+type RunOptions struct {
 	// Input is the input source.
 	//
 	// Defaults to os.Stdin.
@@ -181,11 +181,12 @@ type FormRunOptions struct {
 	WithoutSignals bool
 }
 
-// Run runs the form and blocks until it's accepted or canceled.
-// It returns a combination of all errors returned by the fields.
-func (f *Form) Run(opts *FormRunOptions) error {
-	opts = cmp.Or(opts, &FormRunOptions{})
-	f.theme = opts.Theme
+// FormRunOptions specifies options for [Form.Run].
+type FormRunOptions = RunOptions
+
+// RunModel runs the given Bubble Tea model.
+func RunModel(model tea.Model, opts *RunOptions) error {
+	opts = cmp.Or(opts, &RunOptions{})
 
 	var teaOpts []tea.ProgramOption
 	if i := opts.Input; i != nil {
@@ -205,11 +206,21 @@ func (f *Form) Run(opts *FormRunOptions) error {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
 	}
 
-	prog := tea.NewProgram(f, teaOpts...)
+	program := tea.NewProgram(model, teaOpts...)
 	if msg := opts.SendMsg; msg != nil {
-		go prog.Send(msg)
+		go program.Send(msg)
 	}
-	if _, err := prog.Run(); err != nil {
+	_, err := program.Run()
+	return err
+}
+
+// Run runs the form and blocks until it's accepted or canceled.
+// It returns a combination of all errors returned by the fields.
+func (f *Form) Run(opts *FormRunOptions) error {
+	opts = cmp.Or(opts, &FormRunOptions{})
+	f.theme = opts.Theme
+
+	if err := RunModel(f, opts); err != nil {
 		return err
 	}
 
