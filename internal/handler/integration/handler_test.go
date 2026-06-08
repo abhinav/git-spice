@@ -14,7 +14,18 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// newHandler returns a handler whose worktree-safety guard is satisfied by
+// a single, borrowable worktree (the common case). Tests that need a
+// different worktree topology use newHandlerRaw and wire Worktrees/RootDir
+// themselves.
 func newHandler(t *testing.T) (*Handler, *handlerMocks) {
+	t.Helper()
+	h, mocks := newHandlerRaw(t)
+	expectBorrowableWorktree(mocks)
+	return h, mocks
+}
+
+func newHandlerRaw(t *testing.T) (*Handler, *handlerMocks) {
 	t.Helper()
 	mockCtrl := gomock.NewController(t)
 	mocks := &handlerMocks{
@@ -603,6 +614,46 @@ func TestHandler_Rebuild(t *testing.T) {
 		_, err := h.Rebuild(t.Context())
 		require.NoError(t, err)
 	})
+
+	t.Run("RefusesWhenIntegrationBranchInAnotherWorktree", func(t *testing.T) {
+		h, mocks := newHandlerRaw(t)
+		mocks.Store.EXPECT().
+			Integration(gomock.Any()).
+			Return(&state.IntegrationInfo{Name: "preview"}, nil)
+		mocks.Worktree.EXPECT().RootDir().Return("/repo").AnyTimes()
+		mocks.Repository.EXPECT().
+			Worktrees(gomock.Any()).
+			Return(worktreesSeq(
+				&git.WorktreeListItem{Path: "/repo", Branch: "main"},
+				&git.WorktreeListItem{Path: "/wt/preview", Branch: "preview"},
+			))
+
+		_, err := h.Rebuild(t.Context())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "another worktree")
+	})
+
+	t.Run("RefusesWhenHijackingFeatureWorktree", func(t *testing.T) {
+		h, mocks := newHandlerRaw(t)
+		mocks.Store.EXPECT().
+			Integration(gomock.Any()).
+			Return(&state.IntegrationInfo{Name: "preview"}, nil)
+		mocks.Store.EXPECT().Trunk().Return("main").AnyTimes()
+		mocks.Worktree.EXPECT().RootDir().Return("/wt/feat").AnyTimes()
+		mocks.Repository.EXPECT().
+			Worktrees(gomock.Any()).
+			Return(worktreesSeq(
+				&git.WorktreeListItem{Path: "/repo", Branch: "main"},
+				&git.WorktreeListItem{Path: "/wt/feat", Branch: "feat-x"},
+			))
+		mocks.Service.EXPECT().
+			LookupBranch(gomock.Any(), "feat-x").
+			Return(&spice.LookupBranchResponse{}, nil)
+
+		_, err := h.Rebuild(t.Context())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "would be reverted")
+	})
 }
 
 func TestHandler_Submit(t *testing.T) {
@@ -874,6 +925,28 @@ func TestHandler_MaybeRebuildAndSubmit_skipsWhenNotPreviouslyPushed(t *testing.T
 		}, nil)
 
 	require.NoError(t, h.MaybeRebuildAndSubmit(t.Context()))
+}
+
+// worktreesSeq returns an iter.Seq2 yielding the given worktree items,
+// for mocking GitRepository.Worktrees.
+func worktreesSeq(items ...*git.WorktreeListItem) iter.Seq2[*git.WorktreeListItem, error] {
+	return func(yield func(*git.WorktreeListItem, error) bool) {
+		for _, it := range items {
+			if !yield(it, nil) {
+				return
+			}
+		}
+	}
+}
+
+// expectBorrowableWorktree wires the worktree-safety guard for a
+// single-worktree (always borrowable) repository rooted at /repo.
+func expectBorrowableWorktree(mocks *handlerMocks) {
+	mocks.Worktree.EXPECT().RootDir().Return("/repo").AnyTimes()
+	mocks.Repository.EXPECT().
+		Worktrees(gomock.Any()).
+		Return(worktreesSeq(&git.WorktreeListItem{Path: "/repo"})).
+		AnyTimes()
 }
 
 // emptyRemoteRefs returns an empty iter.Seq2 for use as a mock return
