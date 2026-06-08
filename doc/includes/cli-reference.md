@@ -12,7 +12,7 @@ git-spice is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.secret.backend](/cli/config.md#spicesecretbackend)
+**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.kind](/cli/config.md#spiceforgekind), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.secret.backend](/cli/config.md#spicesecretbackend)
 
 ## Shell
 
@@ -156,11 +156,17 @@ The repository must have a remote associated for syncing.
 A prompt will ask for one if the repository
 was not initialized with a remote.
 
+Branches above merged and deleted branches
+are retargeted to the trunk branch.
+Run with --restack to also restack them and their upstacks.
+Run with --restack=aboves to only restack direct upstacks
+of deleted branches, leaving higher branches in place.
+
 **Flags**
 
-* `--restack`: Restack the current stack after syncing
+* `--restack` ([:material-wrench:{ .middle title="spice.repoSync.restack" }](/cli/config.md#spicereposyncrestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges)
+**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges), [spice.repoSync.restack](/cli/config.md#spicereposyncrestack)
 
 ### git-spice repo restack {#gs-repo-restack}
 
@@ -278,7 +284,7 @@ only if there are multiple CRs in the stack.
 * `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -401,7 +407,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice upstack restack {#gs-upstack-restack}
 
@@ -556,7 +562,66 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice downstack merge {#gs-downstack-merge}
+
+```
+gs downstack (ds) merge (m) [flags]
+```
+
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
+
+Merge a branch and those below it
+
+Merges the current branch and all branches below it
+into trunk via the forge API, bottom-up.
+Use --branch to start at a different branch.
+
+This command acts as a local merge queue:
+it merges one Change Request,
+waits for that merge to finish,
+restacks and updates the next Change Request,
+waits for its CI checks to pass,
+and then repeats the process.
+
+For a stack like this:
+
+    main <- feature1 <- feature2 <- feature3
+
+Running from feature3 merges in this order:
+
+    feature1, feature2, feature3
+
+Already-merged branches are skipped automatically.
+Branches must have an open Change Request to be merged.
+
+Before merging, the downstack is checked for branches
+whose base PR was already merged on the forge.
+Use --no-branch-check to skip this validation.
+
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
+(default: 30m, 0 means fail immediately if not ready).
+
+Between merges, the command waits for each merge
+to complete, restacks and updates the next PR,
+waits for CI checks on the updated PR,
+and syncs merged branch cleanup.
+
+Use --no-wait for single branch merging
+when you don't want to wait for the merge to propagate.
+--no-wait is rejected for multi-branch merges.
+
+**Flags**
+
+* `--branch=NAME`: Branch to start merging from
+* `--no-wait`: Skip polling for a single branch merge to propagate.
+* `--no-branch-check`: Skip stale base validation before merging.
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -764,9 +829,12 @@ gs branch (b) delete (d,rm) [<branches> ...] [flags]
 Delete branches
 
 The deleted branches and their commits are removed from the stack.
-Branches above the deleted branches are first rebased onto
+Branches above the deleted branches are retargeted onto
 the next branches available downstack,
 or onto trunk if there are no branches available below.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 Without any arguments,
 a prompt will allow selecting the branch to delete.
@@ -782,8 +850,9 @@ Use --force to delete the branch regardless of unmerged changes.
 **Flags**
 
 * `--force`: Force deletion of the branch
+* `--restack` ([:material-wrench:{ .middle title="spice.branchDelete.restack" }](/cli/config.md#spicebranchdeleterestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchDelete.restack](/cli/config.md#spicebranchdeleterestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch fold {#gs-branch-fold}
 
@@ -954,8 +1023,11 @@ Commits of the current branch
 are transplanted onto another branch
 while leaving the rest of the stack intact.
 That is, branches above the current branch
-are first rebased onto its original base,
+are retargeted onto its original base,
 and then the current branch is moved onto the new base.
+
+Use --restack to rebase those branches and their upstacks
+immediately after retargeting.
 
 A prompt will allow selecting the new base for the branch.
 Provide an argument to skip the prompt.
@@ -981,8 +1053,9 @@ Use 'gs upstack onto' to also move the upstack branches.
 **Flags**
 
 * `--branch=NAME`: Branch to move
+* `--restack` ([:material-wrench:{ .middle title="spice.branchOnto.restack" }](/cli/config.md#spicebranchontorestack)): How to restack branches above the moved branch. One of 'none', 'aboves', and 'upstack'.
 
-**Configuration**: [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
+**Configuration**: [spice.branchOnto.restack](/cli/config.md#spicebranchontorestack), [spice.branchPrompt.sort](/cli/config.md#spicebranchpromptsort)
 
 ### git-spice branch diff {#gs-branch-diff}
 
@@ -1056,7 +1129,7 @@ only if there are multiple CRs in the stack.
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.label](/cli/config.md#spicesubmitlabel), [spice.submit.label.addWhen](/cli/config.md#spicesubmitlabeladdwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice branch submodule list {#gs-branch-submodule-list}
 
