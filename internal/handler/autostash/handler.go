@@ -186,11 +186,11 @@ func (h *Handler) BeginAutostash(
 			return
 		}
 
-		var rebaseErr *git.RebaseInterruptError
-		// Only rebase interruptions can safely defer autostash restoration.
+		// Only an interrupted rebase or merge, possibly already rescued,
+		// can safely defer autostash restoration.
 		// Other failures have no continuation path,
 		// so restore the stash before returning the original error.
-		if !errors.As(*errPtr, &rebaseErr) && !spice.IsRebaseRescue(*errPtr) {
+		if _, ok := errors.AsType[git.InterruptError](*errPtr); !ok {
 			if err := h.RestoreAutostash(ctx, stashHash.String()); err != nil {
 				*errPtr = errors.Join(*errPtr, err)
 			}
@@ -216,10 +216,47 @@ func (h *Handler) BeginAutostash(
 		// Failure: schedule stash restoration via RebaseRescue.
 		*errPtr = h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 			Err:     *errPtr,
-			Command: []string{"internal", "autostash-pop", stashHash.String()},
+			Command: RestoreCommand(stashHash.String()),
 			Branch:  rescueBranch,
 			Message: fmt.Sprintf("interrupted: restore stashed changes %q", stashHash),
 		})
+	}, nil
+}
+
+// RestoreCommand returns the continuation command line
+// that restores the autostash with the given hash.
+func RestoreCommand(stashHash string) []string {
+	return []string{"internal", "autostash-pop", stashHash}
+}
+
+// IsRestoreCommand reports whether cmd is a command line
+// produced by [RestoreCommand].
+func IsRestoreCommand(cmd []string) bool {
+	return len(cmd) == 3 && cmd[0] == "internal" && cmd[1] == "autostash-pop"
+}
+
+// BeginMergeAutostash stashes uncommitted changes
+// for a merge-method restack or onto operation,
+// which checks out branches and so needs a clean worktree.
+// It is a no-op unless method is [spice.RestackMethodMerge].
+// On failure, the returned cleanup resumes on opts.Branch.
+func (h *Handler) BeginMergeAutostash(
+	ctx context.Context,
+	method spice.RestackMethod,
+	opts *Options,
+) (func(*error), error) {
+	if method != spice.RestackMethodMerge {
+		return func(*error) {}, nil
+	}
+
+	cleanup, err := h.BeginAutostash(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	branch := opts.Branch
+	return func(errPtr *error) {
+		cleanup(errPtr, &CleanupOptions{RescueBranch: branch})
 	}, nil
 }
 

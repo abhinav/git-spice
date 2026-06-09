@@ -1,0 +1,149 @@
+# Switching from the merge to the rebase restack method
+# replays only the branch's own commits onto its base:
+# no merge commit and no duplicated base content.
+# Covered after trunk advances and after trunk is amended.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch that doesn't conflict with trunk.
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs bc -m feature
+
+# advance trunk and merge-restack feature onto it.
+gs trunk
+cp $WORK/extra/init.v2.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+git config spice.restack.method merge
+gs branch restack
+
+# feature now has a merge commit with trunk as its second parent.
+git graph --branches
+cmp stdout $WORK/golden/graph.merge1.txt
+
+# advance trunk again with an ordinary new commit,
+# then switch back to the rebase method and restack.
+gs trunk
+cp $WORK/extra/init.v3.txt init.txt
+git add init.txt
+git commit -m 'Change init again'
+
+gs up
+git config spice.restack.method rebase
+gs branch restack
+
+# feature is a linear rebase of its own commit onto trunk:
+# no merge commit, and trunk's commits were not duplicated onto it.
+git graph --branches
+cmp stdout $WORK/golden/graph.rebase1.txt
+git log --format='%s' feature
+cmp stdout $WORK/golden/log.rebase1.txt
+
+gs ll -a
+cmp stderr $WORK/golden/ll1.txt
+
+cmp feature.txt $WORK/extra/feature.txt
+cmp init.txt $WORK/extra/init.v3.txt
+
+# repeat, but amend trunk instead of advancing it before the rebase restack.
+gs trunk
+cp $WORK/extra/init.v3b.txt init.txt
+git add init.txt
+git commit -m 'Change init once more'
+
+gs up
+git config spice.restack.method merge
+gs branch restack
+
+git graph --branches
+cmp stdout $WORK/golden/graph.merge2.txt
+
+gs trunk
+cp $WORK/extra/init.v4.txt init.txt
+git add init.txt
+git commit --amend -m 'Change init once more (amended)'
+
+gs up
+git config spice.restack.method rebase
+gs branch restack
+
+# feature is still a linear rebase of only its own commit,
+# now onto the rewritten trunk commit.
+git graph --branches
+cmp stdout $WORK/golden/graph.rebase2.txt
+git log --format='%s' feature
+cmp stdout $WORK/golden/log.rebase2.txt
+
+cmp feature.txt $WORK/extra/feature.txt
+cmp init.txt $WORK/extra/init.v4.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.v2.txt --
+changed init
+
+-- extra/init.v3.txt --
+changed init again
+
+-- extra/init.v3b.txt --
+changed init once more
+
+-- extra/init.v4.txt --
+changed init once more (amended)
+
+-- golden/graph.merge1.txt --
+*   f1d0d64 (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 57ab3b0 (main) Change init
+* | 408904f feature
+|/  
+* d692027 Initial commit
+-- golden/graph.rebase1.txt --
+* ccb1cf1 (HEAD -> feature) feature
+* ded3954 (main) Change init again
+* 57ab3b0 Change init
+* d692027 Initial commit
+-- golden/log.rebase1.txt --
+feature
+Change init again
+Change init
+Initial commit
+-- golden/ll1.txt --
+┏━━■ feature ◀
+┃    ccb1cf1 feature (now)
+main
+-- golden/graph.merge2.txt --
+*   1523f9e (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 1a87d27 (main) Change init once more
+* | ccb1cf1 feature
+|/  
+* ded3954 Change init again
+* 57ab3b0 Change init
+* d692027 Initial commit
+-- golden/graph.rebase2.txt --
+* d30f7ac (HEAD -> feature) feature
+* d01c50a (main) Change init once more (amended)
+* ded3954 Change init again
+* 57ab3b0 Change init
+* d692027 Initial commit
+-- golden/log.rebase2.txt --
+feature
+Change init once more (amended)
+Change init again
+Change init
+Initial commit
+-- extra/feature.txt --
+feature contents
