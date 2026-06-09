@@ -14,6 +14,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
@@ -35,7 +36,7 @@ type Service interface {
 
 // RestackHandler restacks branches after their bases are merged.
 type RestackHandler interface {
-	RestackBranch(context.Context, string) error
+	RestackBranch(context.Context, string, *restack.BranchOptions) error
 }
 
 // SubmitHandler updates change requests after branch restacks.
@@ -470,7 +471,7 @@ func (h *Handler) prepareForMerge(
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 
-		if err := h.Restack.RestackBranch(ctx, item.branch); err != nil {
+		if err := h.Restack.RestackBranch(ctx, item.branch, nil); err != nil {
 			return fmt.Errorf("restack branch: %w", err)
 		}
 

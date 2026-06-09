@@ -11,8 +11,9 @@ Use --skip-start to skip the starting branch, but still rebase all branches
 above it.
 
 Flags:
-  --skip-start     Do not restack the starting branch
-  --branch=NAME    Branch to restack the upstack of
+  --skip-start        Do not restack the starting branch
+  --skip-conflicts    Skip branches that cannot be rebased due to conflicts
+  --branch=NAME       Branch to restack the upstack of
 
 Global Flags:
   -h, --help           Show help for the command

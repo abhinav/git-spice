@@ -6,12 +6,15 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type downstackRestackCmd struct {
 	Branch string `help:"Branch to restack the downstack of" placeholder:"NAME" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*downstackRestackCmd) Help() string {
@@ -44,5 +47,7 @@ func (cmd *downstackRestackCmd) Run(
 		return errors.New("nothing to restack below trunk")
 	}
 
-	return handler.RestackDownstack(ctx, cmd.Branch)
+	return handler.RestackDownstack(ctx, cmd.Branch, &restack.DownstackOptions{
+		SkipConflicts: cmd.SkipConflicts,
+	})
 }

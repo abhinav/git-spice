@@ -230,10 +230,10 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(ctrl)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat2").
+		RestackBranch(gomock.Any(), "feat2", nil).
 		Return(nil)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat3").
+		RestackBranch(gomock.Any(), "feat3", nil).
 		Return(nil)
 
 	mockSubmit := NewMockSubmitHandler(ctrl)

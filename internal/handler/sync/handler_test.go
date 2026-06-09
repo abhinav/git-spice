@@ -368,7 +368,7 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackBranch(gomock.Any(), "child").
+			RestackBranch(gomock.Any(), "child", nil).
 			Return(nil)
 
 		mockAutostash := NewMockAutostashHandler(ctrl)

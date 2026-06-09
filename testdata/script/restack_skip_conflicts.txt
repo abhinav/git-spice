@@ -1,0 +1,61 @@
+# 'repo restack --skip-conflicts' skips conflicting branches
+# and continues restacking clean branches.
+
+as 'Test <test@example.com>'
+at '2026-06-09T12:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# feature will conflict with the later trunk change.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs branch create feature -m 'Feature changes init'
+
+# feature2 is upstack from feature and should be skipped.
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+# other is independent from feature and should restack cleanly.
+gs trunk
+git add other.txt
+gs branch create other -m 'Add other'
+
+# Advance trunk with a conflicting change.
+gs trunk
+cp $WORK/extra/init.main.txt init.txt
+git add init.txt
+git commit -m 'Main changes init'
+
+gs repo restack --skip-conflicts
+stderr 'feature: conflict, skipping'
+stderr 'feature2: base branch feature was not restacked, skipping'
+stderr 'other: restacked on main'
+stderr 'Skipped 1 branch\(es\) due to conflicts'
+stderr 'Restacked 1 branches'
+
+# The clean branch restacked, while the conflicting stack did not.
+git merge-base --is-ancestor main other
+! git merge-base --is-ancestor main feature
+git merge-base --is-ancestor feature feature2
+
+git branch --show-current
+stdout '^main$'
+
+git status --porcelain
+! stdout '.'
+
+-- repo/init.txt --
+initial init
+-- repo/feature2.txt --
+feature2
+-- repo/other.txt --
+other
+-- extra/init.feature.txt --
+feature init
+-- extra/init.main.txt --
+main init

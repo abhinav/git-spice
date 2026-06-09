@@ -7,6 +7,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -15,6 +16,8 @@ import (
 
 type stackRestackCmd struct {
 	Branch string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*stackRestackCmd) Help() string {
@@ -23,6 +26,8 @@ func (*stackRestackCmd) Help() string {
 		respective bases, ensuring a linear history.
 
 		Use --branch to rebase the stack of a different branch.
+
+		Use --skip-conflicts to skip branches that cannot be rebased cleanly.
 	`)
 }
 
@@ -88,5 +93,7 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch)
+	return handler.RestackStack(ctx, cmd.Branch, &restack.StackOptions{
+		SkipConflicts: cmd.SkipConflicts,
+	})
 }
