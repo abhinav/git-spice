@@ -1,0 +1,62 @@
+# 'branch restack' with spice.restack.method=merge and
+# spice.restack.mergeAutoResolve=theirs auto-resolves a would-be conflict
+# in favor of the new base, without interrupting the restack.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method, auto-resolving conflicts in favor of the base.
+git config spice.restack.method merge
+git config spice.restack.mergeAutoResolve theirs
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# go back to main and modify the same lines in a way that would
+# normally conflict with the feature branch.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack: the merge completes without interruption because the
+# conflict is auto-resolved.
+gs branch restack
+stderr 'feature: restacked on main'
+! exists .git/MERGE_HEAD
+
+# 'theirs' means the new base (trunk) wins the conflicting hunk.
+cmp init.txt $WORK/extra/init.new.txt
+
+# a merge commit was still recorded on the branch.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- golden/graph.txt --
+*   02844f9 (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 57ab3b0 (main) Change init
+* | 10ab8d9 feature
+|/  
+* d692027 Initial commit

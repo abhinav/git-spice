@@ -38,6 +38,10 @@ type extraConfig struct {
 	MergeConflictStyle string // merge.conflictStyle
 
 	AdviceMergeConflict *bool // advice.mergeConflict
+
+	RerereEnabled *bool // rerere.enabled
+
+	RerereAutoUpdate *bool // rerere.autoupdate (stage resolved files)
 }
 
 // args builds the git -c flags for the configured values.
@@ -52,6 +56,14 @@ func (ec *extraConfig) args() []string {
 	if ec.AdviceMergeConflict != nil {
 		args = append(args, "-c",
 			fmt.Sprintf("advice.mergeConflict=%t", *ec.AdviceMergeConflict))
+	}
+	if ec.RerereEnabled != nil {
+		args = append(args, "-c",
+			fmt.Sprintf("rerere.enabled=%t", *ec.RerereEnabled))
+	}
+	if ec.RerereAutoUpdate != nil {
+		args = append(args, "-c",
+			fmt.Sprintf("rerere.autoupdate=%t", *ec.RerereAutoUpdate))
 	}
 	return args
 }

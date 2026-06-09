@@ -1,0 +1,70 @@
+# 'branch restack' with spice.restack.method=merge can cancel the restack
+# with 'gs abort', restoring the pre-merge state.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# record the branch head before the restack.
+git rev-parse HEAD
+cp stdout $WORK/head-before.txt
+
+# go back to main and modify init in a conflicting way.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack the feature branch: the merge conflicts.
+! gs branch restack
+stderr 'There was a conflict while merging'
+stderr '  gs continue'
+stderr '  gs abort'
+
+# a merge is in progress.
+exists .git/MERGE_HEAD
+
+# abort the operation with 'gs abort'.
+gs abort
+
+# the merge state is gone and the pre-merge state is restored:
+# no merge commit, the branch head is unchanged, and the
+# branch still holds its own content.
+! exists .git/MERGE_HEAD
+git rev-parse HEAD
+cmp stdout $WORK/head-before.txt
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+cmp init.txt $WORK/extra/init.feature.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- golden/graph.txt --
+* 10ab8d9 (HEAD -> feature) feature
+| * 57ab3b0 (main) Change init
+|/  
+* d692027 Initial commit

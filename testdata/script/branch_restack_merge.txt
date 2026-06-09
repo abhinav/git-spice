@@ -1,0 +1,67 @@
+# 'branch restack' with spice.restack.method=merge updates a branch
+# by merging its new base into it, recording a merge commit
+# instead of rebasing.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# create a feature branch that touches a different file than trunk,
+# so the later restack does not conflict.
+cp $WORK/extra/feature.txt feature.txt
+git add feature.txt
+gs bc -m feature
+
+# go back to trunk and advance it with a non-conflicting change.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack with the merge method.
+git config spice.restack.method merge
+gs branch restack
+
+# the branch now has a merge commit with two parents:
+# its original commit and the advanced trunk.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+# the recorded stack state is consistent.
+gs ll -a
+cmp stderr $WORK/golden/ll.txt
+
+# both files are present on the restacked branch.
+cmp feature.txt $WORK/extra/feature.txt
+cmp init.txt $WORK/extra/init.new.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/feature.txt --
+feature contents
+
+-- golden/graph.txt --
+*   5307948 (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 57ab3b0 (main) Change init
+* | 19872d3 feature
+|/  
+* d692027 Initial commit
+-- golden/ll.txt --
+┏━■ feature ◀
+┃   5307948 Merge branch 'main' into feature (now)
+┃   19872d3 feature (now)
+main

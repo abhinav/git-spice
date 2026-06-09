@@ -93,7 +93,7 @@ func TestService_BranchOnto_skipRebasePreservesActualBaseBoundary(t *testing.T) 
 	}))
 	require.NoError(t, tx.Commit(ctx, "setup"))
 
-	svc := NewTestService(repo, wt, store, nil, silogtest.New(t))
+	svc := NewTestService(repo, wt, store, nil, silogtest.New(t), nil)
 
 	// Simulate the user rebasing stacked with plain Git after git-spice
 	// recorded its state. stacked now contains B2 and B3, but git-spice
@@ -129,4 +129,248 @@ func TestService_BranchOnto_skipRebasePreservesActualBaseBoundary(t *testing.T) 
 	require.NoError(t, err)
 	require.Len(t, messages, 1)
 	assert.Equal(t, "Add stacked file", messages[0].Subject)
+}
+
+func TestService_BranchOnto_merge(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git config user.name Test
+		git config user.email test@example.com
+		git config commit.gpgSign false
+		git commit --allow-empty -m 'Initial commit'
+
+		# Two sibling branches off main:
+		#
+		#   main -- B1 (newbase)
+		#    \
+		#     F1 (feature)
+		git checkout -b newbase
+		git add newbase.txt
+		git commit -m 'Add newbase file'
+
+		git checkout main
+		git checkout -b feature
+		git add feature.txt
+		git commit -m 'Add feature file'
+
+		-- newbase.txt --
+		newbase
+		-- feature.txt --
+		feature
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	ctx := t.Context()
+	wt, err := git.OpenWorktree(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	repo := wt.Repository()
+
+	mainHash, err := repo.PeelToCommit(ctx, "main")
+	require.NoError(t, err)
+	newBaseHash, err := repo.PeelToCommit(ctx, "newbase")
+	require.NoError(t, err)
+	oldFeatureHash, err := repo.PeelToCommit(ctx, "feature")
+	require.NoError(t, err)
+
+	store := NewMemoryStore(t)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "newbase",
+		Base:     "main",
+		BaseHash: mainHash,
+	}))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "feature",
+		Base:     "main",
+		BaseHash: mainHash,
+	}))
+	require.NoError(t, tx.Commit(ctx, "setup"))
+
+	svc := NewTestService(repo, wt, store, nil, silogtest.New(t),
+		&ServiceOptions{RestackMethod: RestackMethodMerge})
+
+	require.NoError(t, svc.BranchOnto(ctx, &BranchOntoRequest{
+		Branch: "feature",
+		Onto:   "newbase",
+	}))
+
+	// A merge commit lands on feature with newbase as the second parent.
+	newFeatureHash, err := repo.PeelToCommit(ctx, "feature")
+	require.NoError(t, err)
+	assert.NotEqual(t, oldFeatureHash, newFeatureHash)
+
+	secondParent, err := repo.PeelToCommit(ctx, "feature^2")
+	require.NoError(t, err, "merge commit should have a second parent")
+	assert.Equal(t, newBaseHash, secondParent)
+
+	firstParent, err := repo.PeelToCommit(ctx, "feature^1")
+	require.NoError(t, err)
+	assert.Equal(t, oldFeatureHash, firstParent)
+
+	assert.True(t, repo.IsAncestor(ctx, newBaseHash, newFeatureHash),
+		"feature should contain newbase after the merge")
+
+	// State reflects the new base and base hash.
+	updated, err := svc.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, "newbase", updated.Base)
+	assert.Equal(t, newBaseHash, updated.BaseHash)
+}
+
+func TestService_BranchOnto_merge_alreadyContainedNoOp(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git config user.name Test
+		git config user.email test@example.com
+		git config commit.gpgSign false
+		git commit --allow-empty -m 'Initial commit'
+
+		# feature is stacked on base, which is on main:
+		#
+		#   main -- B1 (base) -- F1 (feature)
+		git checkout -b base
+		git add base.txt
+		git commit -m 'Add base file'
+
+		git checkout -b feature
+		git add feature.txt
+		git commit -m 'Add feature file'
+
+		-- base.txt --
+		base
+		-- feature.txt --
+		feature
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	ctx := t.Context()
+	wt, err := git.OpenWorktree(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	repo := wt.Repository()
+
+	mainHash, err := repo.PeelToCommit(ctx, "main")
+	require.NoError(t, err)
+	baseHash, err := repo.PeelToCommit(ctx, "base")
+	require.NoError(t, err)
+	featureHash, err := repo.PeelToCommit(ctx, "feature")
+	require.NoError(t, err)
+
+	store := NewMemoryStore(t)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "base",
+		Base:     "main",
+		BaseHash: mainHash,
+	}))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "feature",
+		Base:     "base",
+		BaseHash: baseHash,
+	}))
+	require.NoError(t, tx.Commit(ctx, "setup"))
+
+	svc := NewTestService(repo, wt, store, nil, silogtest.New(t),
+		&ServiceOptions{RestackMethod: RestackMethodMerge})
+
+	// Moving feature onto main is a no-op for the merge: main is already
+	// an ancestor of feature, so "git merge" reports "Already up to date"
+	// and creates no merge commit, but state still retargets.
+	require.NoError(t, svc.BranchOnto(ctx, &BranchOntoRequest{
+		Branch: "feature",
+		Onto:   "main",
+	}))
+
+	newFeatureHash, err := repo.PeelToCommit(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, featureHash, newFeatureHash,
+		"feature head should be unchanged after a no-op merge")
+
+	// No merge commit was created: feature has no second parent.
+	_, err = repo.PeelToCommit(ctx, "feature^2")
+	require.Error(t, err, "no-op merge should not create a merge commit")
+
+	updated, err := svc.LookupBranch(ctx, "feature")
+	require.NoError(t, err)
+	assert.Equal(t, "main", updated.Base)
+	assert.Equal(t, mainHash, updated.BaseHash)
+}
+
+func TestService_BranchOnto_merge_conflict(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git config user.name Test
+		git config user.email test@example.com
+		git config commit.gpgSign false
+		git commit --allow-empty -m 'Initial commit'
+
+		# newbase and feature edit the same file with different
+		# contents, so merging newbase into feature conflicts.
+		#
+		#   main -- B1 (newbase, edits shared.txt)
+		#    \
+		#     F1 (feature, edits shared.txt)
+		git checkout -b newbase
+		cp $WORK/extra/newbase-shared.txt shared.txt
+		git add shared.txt
+		git commit -m 'Edit shared file on newbase'
+
+		git checkout main
+		git checkout -b feature
+		cp $WORK/extra/feature-shared.txt shared.txt
+		git add shared.txt
+		git commit -m 'Edit shared file on feature'
+
+		-- extra/newbase-shared.txt --
+		newbase change
+		-- extra/feature-shared.txt --
+		feature change
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	ctx := t.Context()
+	wt, err := git.OpenWorktree(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+	repo := wt.Repository()
+
+	mainHash, err := repo.PeelToCommit(ctx, "main")
+	require.NoError(t, err)
+
+	store := NewMemoryStore(t)
+	tx := store.BeginBranchTx()
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "newbase",
+		Base:     "main",
+		BaseHash: mainHash,
+	}))
+	require.NoError(t, tx.Upsert(ctx, state.UpsertRequest{
+		Name:     "feature",
+		Base:     "main",
+		BaseHash: mainHash,
+	}))
+	require.NoError(t, tx.Commit(ctx, "setup"))
+
+	svc := NewTestService(repo, wt, store, nil, silogtest.New(t),
+		&ServiceOptions{RestackMethod: RestackMethodMerge})
+
+	err = svc.BranchOnto(ctx, &BranchOntoRequest{
+		Branch: "feature",
+		Onto:   "newbase",
+	})
+	require.Error(t, err)
+
+	var mergeErr *git.MergeInterruptError
+	require.ErrorAs(t, err, &mergeErr)
+	assert.Equal(t, "feature", mergeErr.State.Branch)
+
+	// Clean up the in-progress merge so the worktree is restored.
+	assert.NoError(t, wt.MergeAbort(ctx))
 }

@@ -2,6 +2,7 @@
 package spice
 
 import (
+	"cmp"
 	"context"
 	"iter"
 
@@ -56,6 +57,12 @@ type GitWorktree interface {
 	// CurrentBranch returns the name of the current branch.
 	CurrentBranch(ctx context.Context) (string, error)
 	Rebase(context.Context, git.RebaseRequest) error
+
+	// Merge merges a commit-ish into the current branch.
+	Merge(context.Context, git.MergeRequest) error
+
+	// CheckoutBranch switches to an existing branch.
+	CheckoutBranch(ctx context.Context, branch string) error
 }
 
 var (
@@ -91,6 +98,22 @@ type Store interface {
 
 var _ Store = (*state.Store)(nil)
 
+// ServiceOptions customizes the behavior of a [Service].
+// All fields are optional;
+// the zero value selects the default behavior.
+type ServiceOptions struct {
+	// RestackMethod selects how branches are replayed onto a new base
+	// during a restack.
+	// The zero value is [RestackMethodRebase].
+	RestackMethod RestackMethod
+
+	// MergeAutoResolve selects how a merge-based restack
+	// auto-resolves textual conflicts.
+	// The zero value is [MergeAutoResolveNone].
+	// It has no effect when RestackMethod is [RestackMethodRebase].
+	MergeAutoResolve MergeAutoResolve
+}
+
 // Service provides the core functionality of the tool.
 // It combines together lower level pieces like access to the git repository
 // and the spice state.
@@ -100,17 +123,23 @@ type Service struct {
 	store  Store         // required
 	log    *silog.Logger
 	forges *forge.Registry
+
+	restackMethod    RestackMethod
+	mergeAutoResolve MergeAutoResolve
 }
 
 // NewService builds a new service operating on the given repository and store.
+//
+// opts is optional; a nil value selects default behavior.
 func NewService(
 	repo GitRepository,
 	wt GitWorktree,
 	store Store,
 	forges *forge.Registry,
 	log *silog.Logger,
+	opts *ServiceOptions,
 ) *Service {
-	return newService(repo, wt, store, forges, log)
+	return newService(repo, wt, store, forges, log, opts)
 }
 
 func newService(
@@ -119,13 +148,17 @@ func newService(
 	store Store,
 	forges *forge.Registry,
 	log *silog.Logger,
+	opts *ServiceOptions,
 ) *Service {
+	opts = cmp.Or(opts, &ServiceOptions{})
 	return &Service{
-		repo:   repo,
-		wt:     wt,
-		store:  store,
-		log:    log,
-		forges: forges,
+		repo:             repo,
+		wt:               wt,
+		store:            store,
+		log:              log,
+		forges:           forges,
+		restackMethod:    opts.RestackMethod,
+		mergeAutoResolve: opts.MergeAutoResolve,
 	}
 }
 
