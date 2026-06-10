@@ -10,7 +10,6 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 type statesRequest struct {
@@ -208,10 +207,6 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		return fmt.Errorf("change %d (%v/%v) is not open", req.Number, req.Owner, req.Repo)
 	}
 
-	// Determine if this is a cross-fork merge by checking if the head branch
-	// exists in the target repository or needs to be fetched from a fork
-	targetRepoDir := sh.repoDir(req.Owner, req.Repo)
-
 	baseRef := change.Base
 	headRef := change.Head
 
@@ -219,12 +214,10 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	defer cancel()
 
 	if req.Time.IsZero() {
-		out, err := xec.Command(
-			ctx, sh.log, sh.gitExe,
+		out, err := sh.gitCmd(
+			ctx, headRef.Owner, headRef.Repo,
 			"log", "-1", "--format=%cI", headRef.Name,
-		).
-			WithDir(sh.repoDir(headRef.Owner, headRef.Repo)).
-			Output()
+		).Output()
 		if err != nil {
 			return fmt.Errorf("read head commit time: %w", err)
 		}
@@ -246,10 +239,8 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	// If a HeadHash is provided, verify the head matches.
 	if req.HeadHash != "" {
-		headRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
-		out, err := xec.Command(ctx, sh.log, sh.gitExe,
+		out, err := sh.gitCmd(ctx, headRef.Owner, headRef.Repo,
 			"rev-parse", headRef.Name).
-			WithDir(headRepoDir).
 			Output()
 		if err != nil {
 			return fmt.Errorf("resolve head ref: %w", err)
@@ -267,8 +258,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	if headRef.Owner != req.Owner || headRef.Repo != req.Repo {
 		// Fetch the head branch from the fork
 		forkRepoDir := sh.repoDir(headRef.Owner, headRef.Repo)
-		if err := xec.Command(ctx, sh.log, sh.gitExe, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name).
-			WithDir(targetRepoDir).
+		if err := sh.gitCmd(ctx, req.Owner, req.Repo, "fetch", forkRepoDir, headRef.Name+":"+headRef.Name).
 			Run(); err != nil {
 			return fmt.Errorf("fetch from fork: %w", err)
 		}
@@ -284,8 +274,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	//
 	// This requires at least Git 2.38.
 	tree, err := func() (string, error) {
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, "merge-tree", "--write-tree", baseRef.Name, headRef.Name).
-			WithDir(targetRepoDir).
+		out, err := sh.gitCmd(ctx, req.Owner, req.Repo, "merge-tree", "--write-tree", baseRef.Name, headRef.Name).
 			Output()
 		if err != nil {
 			return "", fmt.Errorf("merge-tree: %w", err)
@@ -313,8 +302,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 		}
 		args = append(args, "-m", msg, tree)
 
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, args...).
-			WithDir(sh.repoDir(req.Owner, req.Repo)).
+		out, err := sh.gitCmd(ctx, req.Owner, req.Repo, args...).
 			AppendEnv(commitEnv...).
 			Output()
 		if err != nil {
@@ -328,8 +316,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	}
 
 	headHash, err := func() (string, error) {
-		out, err := xec.Command(ctx, sh.log, sh.gitExe, "rev-parse", headRef.Name).
-			WithDir(sh.repoDir(headRef.Owner, headRef.Repo)).
+		out, err := sh.gitCmd(ctx, headRef.Owner, headRef.Repo, "rev-parse", headRef.Name).
 			Output()
 		if err != nil {
 			return "", fmt.Errorf("rev-parse head: %w", err)
@@ -344,8 +331,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 	// Update the ref to point to the new commit.
 	err = func() error {
 		ref := "refs/heads/" + sh.changes[changeIdx].Base.Name
-		if err := xec.Command(ctx, sh.log, sh.gitExe, "update-ref", ref, commit).
-			WithDir(sh.repoDir(req.Owner, req.Repo)).
+		if err := sh.gitCmd(ctx, req.Owner, req.Repo, "update-ref", ref, commit).
 			Run(); err != nil {
 			return fmt.Errorf("update-ref: %w", err)
 		}
@@ -358,8 +344,7 @@ func (sh *ShamHub) MergeChange(req MergeChangeRequest) error {
 
 	if req.DeleteBranch {
 		err := func() error {
-			if err := xec.Command(ctx, sh.log, sh.gitExe, "branch", "-D", change.Head.Name).
-				WithDir(sh.repoDir(change.Head.Owner, change.Head.Repo)).
+			if err := sh.gitCmd(ctx, change.Head.Owner, change.Head.Repo, "branch", "-D", change.Head.Name).
 				Run(); err != nil {
 				return fmt.Errorf("delete branch: %w", err)
 			}
