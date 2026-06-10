@@ -3,10 +3,12 @@ package github
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog"
+	"golang.org/x/sync/singleflight"
 )
 
 // Repository is a GitHub repository.
@@ -16,6 +18,15 @@ type Repository struct {
 	log         *silog.Logger
 	client      *githubv4.Client
 	forge       *Forge
+
+	userIDsMu sync.Mutex // guards userIDs
+	// userIDs caches successful login lookups for this repository.
+	//
+	// Pull request metadata operations can resolve the same login
+	// through reviewers, assignees, or follow-up edits in one command.
+	userIDs map[string]githubv4.ID
+	// userIDGroup coalesces concurrent misses for the same login.
+	userIDGroup singleflight.Group
 }
 
 var _ forge.Repository = (*Repository)(nil)
@@ -38,12 +49,13 @@ func newRepository(
 	}
 
 	return &Repository{
-		owner:  owner,
-		repo:   repo,
-		log:    log,
-		client: client,
-		repoID: repoID,
-		forge:  forge,
+		owner:   owner,
+		repo:    repo,
+		log:     log,
+		client:  client,
+		repoID:  repoID,
+		forge:   forge,
+		userIDs: make(map[string]githubv4.ID),
 	}, nil
 }
 
@@ -71,6 +83,46 @@ func repositoryGQLID(
 
 // userID looks up a user's GraphQL ID by login.
 func (r *Repository) userID(ctx context.Context, login string) (githubv4.ID, error) {
+	r.userIDsMu.Lock()
+	id, ok := r.userIDs[login]
+	r.userIDsMu.Unlock()
+	if ok {
+		// Another goroutine resolved this login
+		// while the singleflight call was waiting for the lock.
+		return id, nil
+	}
+
+	idAny, err, _ := r.userIDGroup.Do(login, func() (any, error) {
+		r.userIDsMu.Lock()
+		id, ok := r.userIDs[login]
+		r.userIDsMu.Unlock()
+		if ok {
+			// Another goroutine resolved this login
+			// while the singleflight call was waiting for the lock.
+			return id, nil
+		}
+
+		id, err := r.queryUserID(ctx, login)
+		if err != nil {
+			return "", err
+		}
+
+		r.userIDsMu.Lock()
+		if r.userIDs == nil {
+			r.userIDs = make(map[string]githubv4.ID)
+		}
+		r.userIDs[login] = id
+		r.userIDsMu.Unlock()
+
+		return id, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return idAny.(githubv4.ID), nil
+}
+
+func (r *Repository) queryUserID(ctx context.Context, login string) (githubv4.ID, error) {
 	var query struct {
 		User struct {
 			ID githubv4.ID `graphql:"id"`

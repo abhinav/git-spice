@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/shurcooL/githubv4"
@@ -90,4 +92,167 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 	assert.Equal(t,
 		"https://github.com/test-owner/test-repo/pull/55",
 		change.URL)
+}
+
+func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
+	var userQueries int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+
+		var body struct {
+			Query     string `json:"query"`
+			Variables struct {
+				Login string         `json:"login"`
+				Input map[string]any `json:"input"`
+			} `json:"variables"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+
+		switch {
+		case strings.Contains(body.Query, "user(login: $login)"):
+			userQueries++
+			assert.Equal(t, "alice", body.Variables.Login)
+
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"user": map[string]any{
+						"id": "aliceID",
+					},
+				},
+			}))
+
+		case strings.Contains(body.Query, "requestReviews(input:"):
+			assert.Equal(t, "prID", body.Variables.Input["pullRequestId"])
+			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["userIds"])
+
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"requestReviews": map[string]any{
+						"clientMutationId": "reviewMutation",
+					},
+				},
+			}))
+
+		case strings.Contains(body.Query, "addAssigneesToAssignable(input:"):
+			assert.Equal(t, "prID", body.Variables.Input["assignableId"])
+			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["assigneeIds"])
+
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"addAssigneesToAssignable": map[string]any{
+						"clientMutationId": "assigneeMutation",
+					},
+				},
+			}))
+
+		default:
+			t.Fatalf("unexpected query: %s", body.Query)
+		}
+	}))
+	defer srv.Close()
+
+	repo, err := newRepository(
+		t.Context(), new(Forge),
+		"test-owner", "test-repo",
+		silogtest.New(t),
+		githubv4.NewEnterpriseClient(srv.URL, nil),
+		"repoID",
+	)
+	require.NoError(t, err)
+
+	err = repo.addReviewersToPullRequest(
+		t.Context(),
+		[]string{"alice"},
+		githubv4.ID("prID"),
+	)
+	require.NoError(t, err)
+
+	err = repo.addAssigneesToPullRequest(
+		t.Context(),
+		[]string{"alice"},
+		githubv4.ID("prID"),
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, userQueries)
+}
+
+func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
+	var userQueries atomic.Int32
+	firstQueryStarted := make(chan struct{})
+	releaseQuery := make(chan struct{})
+	var releaseOnce sync.Once
+	defer releaseOnce.Do(func() { close(releaseQuery) })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+
+		var body struct {
+			Query     string `json:"query"`
+			Variables struct {
+				Login string `json:"login"`
+			} `json:"variables"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.Contains(t, body.Query, "user(login: $login)")
+		assert.Equal(t, "alice", body.Variables.Login)
+
+		if userQueries.Add(1) == 1 {
+			close(firstQueryStarted)
+		}
+
+		// Hold the first request open
+		// so the second goroutine must join the in-flight lookup
+		// instead of reading from a warmed cache.
+		<-releaseQuery
+		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"user": map[string]any{
+					"id": "aliceID",
+				},
+			},
+		}))
+	}))
+	defer srv.Close()
+
+	repo, err := newRepository(
+		t.Context(), new(Forge),
+		"test-owner", "test-repo",
+		silogtest.New(t),
+		githubv4.NewEnterpriseClient(srv.URL, nil),
+		"repoID",
+	)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+
+	wg.Go(func() {
+		id, err := repo.userID(t.Context(), "alice")
+		if err == nil {
+			assert.Equal(t, githubv4.ID("aliceID"), id)
+		}
+		errs <- err
+	})
+
+	<-firstQueryStarted
+
+	wg.Go(func() {
+		id, err := repo.userID(t.Context(), "alice")
+		if err == nil {
+			assert.Equal(t, githubv4.ID("aliceID"), id)
+		}
+		errs <- err
+	})
+
+	// The second lookup starts while the first request is still blocked,
+	// so a second GraphQL request would mean the miss was not coalesced.
+	releaseOnce.Do(func() { close(releaseQuery) })
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	assert.Equal(t, int32(1), userQueries.Load())
 }
