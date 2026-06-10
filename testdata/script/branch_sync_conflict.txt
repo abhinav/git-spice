@@ -1,0 +1,74 @@
+# 'gs branch sync --rebase' surfaces conflicts as a normal interrupted rebase.
+# 'gs rebase continue' after manual resolution finishes the sync.
+
+as 'Test <test@example.com>'
+at '2026-06-10T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create feat1 and submit
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+gs branch submit --fill
+stderr 'Created #'
+
+# simulate a contributor pushing a conflicting change to feat1.
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+git checkout feat1
+cp $WORK/extra/feat1-remote.txt feat1.txt
+git add feat1.txt
+git commit -m 'remote: tweak feat1'
+git push origin feat1
+
+# locally, make a different change to the same file.
+cd ../repo
+cp $WORK/extra/feat1-local.txt feat1.txt
+git add feat1.txt
+git commit -m 'local: tweak feat1'
+
+# 'gs branch sync --rebase' begins a rebase that conflicts.
+! gs branch sync --rebase
+stderr 'There was a conflict while rebasing'
+
+# resolve the conflict and continue.
+cp $WORK/extra/feat1-resolved.txt feat1.txt
+git add feat1.txt
+env EDITOR=true
+gs rebase continue
+
+# verify final state: the resolution is the committed content.
+cmp feat1.txt $WORK/extra/feat1-resolved.txt
+
+# follow-up submit succeeds.
+gs branch submit
+stderr 'Updated #'
+
+-- repo/feat1.txt --
+line one
+line two
+line three
+-- extra/feat1-remote.txt --
+line one
+line two REMOTE
+line three
+-- extra/feat1-local.txt --
+line one
+line two LOCAL
+line three
+-- extra/feat1-resolved.txt --
+line one
+line two RESOLVED
+line three
