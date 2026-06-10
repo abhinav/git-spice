@@ -25,6 +25,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/autostash"
+	"go.abhg.dev/gs/internal/handler/branchsync"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
@@ -492,6 +493,21 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree: worktree,
 				Store:    store,
 				Service:  svc,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			repo *git.Repository,
+			worktree *git.Worktree,
+			store *state.Store,
+			remote state.Remote,
+		) (*branchsync.Handler, error) {
+			return &branchsync.Handler{
+				Log:        log,
+				Repository: repo,
+				Worktree:   worktree,
+				Store:      store,
+				Remote:     remote.Upstream,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
