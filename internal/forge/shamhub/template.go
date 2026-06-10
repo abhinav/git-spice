@@ -9,7 +9,6 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/scanutil"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 var _changeTemplatePaths = []string{
@@ -49,9 +48,8 @@ func (sh *ShamHub) handleChangeTemplate(ctx context.Context, req *changeTemplate
 
 	var res changeTemplateResponse
 	var matches []matchingTemplatePath
-	treeCmd := xec.Command(ctx, nil, sh.gitExe,
-		"ls-tree", "-r", "-z", "--name-only", "HEAD").
-		WithDir(sh.repoDir(owner, repo))
+	treeCmd := sh.gitCmd(ctx, owner, repo,
+		"ls-tree", "-r", "-z", "--name-only", "HEAD")
 	for treePath, err := range treeCmd.Scan(scanutil.SplitNull) {
 		if err != nil {
 			return nil, nil
@@ -69,9 +67,8 @@ func (sh *ShamHub) handleChangeTemplate(ctx context.Context, req *changeTemplate
 	})
 
 	for _, templatePath := range matches {
-		out, err := xec.Command(ctx, sh.log, sh.gitExe,
+		out, err := sh.gitCmd(ctx, owner, repo,
 			"cat-file", "blob", "HEAD:"+templatePath.filePath).
-			WithDir(sh.repoDir(owner, repo)).
 			Output()
 		if err != nil {
 			continue
