@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/spice/state/statetest"
@@ -285,6 +286,72 @@ func TestBranchTxUpsert_canClearUpstream(t *testing.T) {
 	foo, err = store.LookupBranch(ctx, "foo")
 	require.NoError(t, err)
 	assert.Equal(t, "", foo.UpstreamBranch)
+}
+
+func TestBranchTxUpsert_lastPushedHash(t *testing.T) {
+	ctx := t.Context()
+	db := storage.NewDB(make(storage.MapBackend))
+	store, err := state.InitStore(ctx, state.InitStoreRequest{
+		DB:    db,
+		Trunk: "main",
+	})
+	require.NoError(t, err)
+
+	upstream := "remote-foo"
+	hashA := git.Hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	hashB := git.Hash("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+
+	// Initial upsert with upstream and pushed hash.
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{
+				Name:                   "foo",
+				Base:                   "main",
+				UpstreamBranch:         &upstream,
+				UpstreamLastPushedHash: &hashA,
+			},
+		},
+		Message: "add foo",
+	}))
+
+	foo, err := store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, upstream, foo.UpstreamBranch)
+	assert.Equal(t, hashA, foo.UpstreamLastPushedHash)
+
+	// Update only the pushed hash; upstream unchanged.
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{
+				Name:                   "foo",
+				Base:                   "main",
+				UpstreamLastPushedHash: &hashB,
+			},
+		},
+		Message: "advance pushed hash",
+	}))
+
+	foo, err = store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Equal(t, upstream, foo.UpstreamBranch)
+	assert.Equal(t, hashB, foo.UpstreamLastPushedHash)
+
+	// Clearing the upstream also clears the pushed hash.
+	var empty string
+	require.NoError(t, statetest.UpdateBranch(ctx, store, &statetest.UpdateRequest{
+		Upserts: []state.UpsertRequest{
+			{
+				Name:           "foo",
+				UpstreamBranch: &empty,
+			},
+		},
+		Message: "drop upstream",
+	}))
+
+	foo, err = store.LookupBranch(ctx, "foo")
+	require.NoError(t, err)
+	assert.Empty(t, foo.UpstreamBranch)
+	assert.Empty(t, foo.UpstreamLastPushedHash)
 }
 
 // Uses rapid to run randomized scenarios on the branch state

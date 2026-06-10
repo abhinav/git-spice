@@ -32,6 +32,12 @@ type branchStateBase struct {
 
 type branchUpstreamState struct {
 	Branch string `json:"branch,omitempty"`
+
+	// LastPushedHash is the commit hash that was last successfully pushed
+	// to the upstream branch. Used by `gs branch sync` to determine
+	// whether the remote has new commits since the last push.
+	// Empty if the branch has never been pushed.
+	LastPushedHash string `json:"lastPushedHash,omitempty"`
 }
 
 type branchChangeState struct {
@@ -99,6 +105,11 @@ type LookupResponse struct {
 	// or an empty string if the branch is not tracking an upstream branch.
 	UpstreamBranch string
 
+	// UpstreamLastPushedHash is the commit hash that was last successfully
+	// pushed to the upstream branch. Empty if the branch has never been
+	// pushed or has no upstream configured.
+	UpstreamLastPushedHash git.Hash
+
 	// MergedDownstack holds information about branches
 	// that were previously downstack from this branch
 	// that have since been merged into trunk.
@@ -130,6 +141,7 @@ func (s *Store) LookupBranch(ctx context.Context, name string) (*LookupResponse,
 
 	if upstream := state.Upstream; upstream != nil {
 		res.UpstreamBranch = upstream.Branch
+		res.UpstreamLastPushedHash = git.Hash(upstream.LastPushedHash)
 	}
 
 	return res, nil
@@ -229,6 +241,12 @@ type UpsertRequest struct {
 	// Leave nil to leave it unchanged, or set to an empty string to clear it.
 	UpstreamBranch *string
 
+	// UpstreamLastPushedHash is the commit hash to record as the last
+	// successful push to the upstream branch. Leave nil to leave it
+	// unchanged, or set to the empty hash to clear it. Ignored if the
+	// branch has no upstream after this update.
+	UpstreamLastPushedHash *git.Hash
+
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
 	MergedDownstack *[]json.RawMessage
@@ -304,10 +322,20 @@ func (tx *BranchTx) Upsert(ctx context.Context, req UpsertRequest) error {
 		if *req.UpstreamBranch == "" {
 			state.Upstream = nil
 		} else {
+			// Preserve the existing LastPushedHash if the upstream name
+			// is unchanged; reset to empty if the upstream is new.
+			prev := state.Upstream
 			state.Upstream = &branchUpstreamState{
 				Branch: *req.UpstreamBranch,
 			}
+			if prev != nil && prev.Branch == *req.UpstreamBranch {
+				state.Upstream.LastPushedHash = prev.LastPushedHash
+			}
 		}
+	}
+
+	if req.UpstreamLastPushedHash != nil && state.Upstream != nil {
+		state.Upstream.LastPushedHash = req.UpstreamLastPushedHash.String()
 	}
 
 	if req.MergedDownstack != nil {

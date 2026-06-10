@@ -97,6 +97,41 @@ func TestBranchStateUnmarshal(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "UpstreamWithLastPushedHash",
+			give: `{
+				"base": {"name": "main", "hash": "abc123"},
+				"upstream": {"branch": "feat1", "lastPushedHash": "deadbeefcafe"}
+			}`,
+			want: &branchState{
+				Base: branchStateBase{
+					Name: "main",
+					Hash: "abc123",
+				},
+				Upstream: &branchUpstreamState{
+					Branch:         "feat1",
+					LastPushedHash: "deadbeefcafe",
+				},
+			},
+		},
+
+		{
+			name: "UpstreamWithoutLastPushedHash_RoundTrips",
+			give: `{
+				"base": {"name": "main", "hash": "abc123"},
+				"upstream": {"branch": "feat1"}
+			}`,
+			want: &branchState{
+				Base: branchStateBase{
+					Name: "main",
+					Hash: "abc123",
+				},
+				Upstream: &branchUpstreamState{
+					Branch: "feat1",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -114,4 +149,16 @@ func TestBranchStateUnmarshal(t *testing.T) {
 			assert.Equal(t, tt.want, &got)
 		})
 	}
+}
+
+func TestBranchUpstreamState_LastPushedHashOmittedWhenEmpty(t *testing.T) {
+	state := &branchState{
+		Base:     branchStateBase{Name: "main", Hash: "abc123"},
+		Upstream: &branchUpstreamState{Branch: "feat1"},
+	}
+
+	out, err := json.Marshal(state)
+	require.NoError(t, err)
+	assert.NotContains(t, string(out), "lastPushedHash",
+		"empty LastPushedHash must be omitted to keep existing state files compact")
 }
