@@ -1,0 +1,81 @@
+# 'gs repo sync' pulls remote-side commits on tracked stack branches
+# in addition to trunk. Branches that fast-forward bring their children
+# along by triggering a restack; clean branches with moved parents
+# also restack so the stack stays coherent.
+
+as 'Test <test@example.com>'
+at '2026-06-10T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# build a stack: main -> feat1 -> feat2 -> feat3
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+git add feat2.txt
+gs bc -m 'Add feat2' feat2
+git add feat3.txt
+gs bc -m 'Add feat3' feat3
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# simulate a bot pushing a regen commit to feat1 on the remote.
+# feat2 and feat3 are untouched on the remote.
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+
+git checkout feat1
+cp $WORK/extra/feat1-regen.txt feat1-regen.txt
+git add feat1-regen.txt
+git commit -m 'bot: regenerate feat1'
+git push origin feat1
+
+# back in the main repo
+cd ../repo
+gs bco feat3
+
+# 'gs repo sync' pulls trunk, then each tracked branch in bottom-up order.
+# feat1 fast-forwards, then feat2 and feat3 restack onto the new bases.
+gs repo sync
+stderr 'feat1: fast-forwarded'
+
+# verify all branches now have the bot commit in their history.
+gs bco feat1
+exists feat1-regen.txt
+
+gs bco feat2
+exists feat1-regen.txt
+exists feat2.txt
+
+gs bco feat3
+exists feat1-regen.txt
+exists feat2.txt
+exists feat3.txt
+
+# stack submit succeeds. feat2 and feat3 will show 'Updated #' because
+# their SHAs changed during the restack.
+gs stack submit
+! stderr '\(stale info\)'
+stderr 'Updated #'
+
+-- repo/feat1.txt --
+feat 1
+-- repo/feat2.txt --
+feat 2
+-- repo/feat3.txt --
+feat 3
+-- extra/feat1-regen.txt --
+generated content for feat1
