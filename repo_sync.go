@@ -13,10 +13,18 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
+type pullBranchesMode string
+
+const (
+	pullBranchesOff         pullBranchesMode = "off"
+	pullBranchesFastForward pullBranchesMode = "fastForward"
+	pullBranchesRebase      pullBranchesMode = "rebase"
+)
+
 type repoSyncCmd struct {
 	sync.TrunkOptions
 
-	NoPullBranches bool `name:"no-pull-branches" help:"Skip pulling remote-side commits into tracked stack branches; only sync trunk and prune merged branches."`
+	PullBranches pullBranchesMode `default:"fastForward" config:"repoSync.pullBranches" enum:"off,fastForward,rebase" help:"How to integrate remote-side commits on tracked stack branches. 'off' skips the per-branch pull; 'fastForward' (default) advances safe branches and skips diverged ones; 'rebase' replays diverged branches' local commits on top of the remote."`
 }
 
 func (*repoSyncCmd) Help() string {
@@ -60,9 +68,10 @@ func (cmd *repoSyncCmd) Run(
 		return err
 	}
 
-	if cmd.NoPullBranches {
+	if cmd.PullBranches == pullBranchesOff {
 		return nil
 	}
+	rebase := cmd.PullBranches == pullBranchesRebase
 
 	var branches []string
 	for branch, err := range store.ListBranches(ctx) {
@@ -73,8 +82,13 @@ func (cmd *repoSyncCmd) Run(
 	}
 	slices.Sort(branches)
 
+	mode := branchsync.ModeFastForward
+	if rebase {
+		mode = branchsync.ModeRebase
+	}
+
 	for _, branch := range branches {
-		res, err := branchSyncHandler.Sync(ctx, branchsync.SyncRequest{Branch: branch})
+		res, err := branchSyncHandler.Sync(ctx, branchsync.SyncRequest{Branch: branch, Mode: mode})
 		if err != nil {
 			if errors.Is(err, branchsync.ErrNoUpstream) {
 				continue
