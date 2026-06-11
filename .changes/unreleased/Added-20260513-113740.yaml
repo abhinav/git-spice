@@ -1,0 +1,3 @@
+kind: Added
+body: Add --fill-from parameter to upstack, downstack, and stack commands to allow autofilling of CR titles/bodies when submitting whole stacks.
+time: 2026-05-13T11:37:40.724695-07:00
