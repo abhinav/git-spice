@@ -162,11 +162,19 @@ Run with --restack to also restack them and their upstacks.
 Run with --restack=aboves to only restack direct upstacks
 of deleted branches, leaving higher branches in place.
 
+After the trunk sync, every other tracked branch is also
+checked against its remote: if the remote has new commits
+(typically from a CI bot) and local has not moved past the
+last-pushed hash, the local branch is fast-forwarded so the
+next 'gs submit' will not be rejected with "stale info".
+Pass --no-pull-branches to skip this step.
+
 **Flags**
 
 * `--restack` ([:material-wrench:{ .middle title="spice.repoSync.restack" }](/cli/config.md#spicereposyncrestack)): How to restack branches above deleted branches. One of 'none', 'aboves', and 'upstack'.
+* `--pull-branches="fastForward"` ([:material-wrench:{ .middle title="spice.repoSync.pullBranches" }](/cli/config.md#spicereposyncpullbranches)): How to integrate remote-side commits on tracked stack branches. 'off' skips the per-branch pull; 'fastForward' (default) advances safe branches and skips diverged ones; 'rebase' replays diverged branches' local commits on top of the remote.
 
-**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges), [spice.repoSync.restack](/cli/config.md#spicereposyncrestack)
+**Configuration**: [spice.repoSync.closedChanges](/cli/config.md#spicereposyncclosedchanges), [spice.repoSync.pullBranches](/cli/config.md#spicereposyncpullbranches), [spice.repoSync.restack](/cli/config.md#spicereposyncrestack)
 
 ### git-spice repo restack {#gs-repo-restack}
 
@@ -285,6 +293,25 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice stack sync {#gs-stack-sync}
+
+```
+gs stack (s) sync (sy) [flags]
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span></span>
+
+Pull remote-side commits for every branch in the stack
+
+Pull remote-side commits for every branch in the current
+stack (downstack and upstack of the named branch), bottom-up.
+Use --branch to identify a different stack.
+
+**Flags**
+
+* `--branch=NAME`: Branch to identify the stack
+* `--rebase`: On divergence, replay remote-side commits onto local.
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -408,6 +435,27 @@ only if there are multiple CRs in the stack.
 * `--branch=NAME`: Branch to start at
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice upstack sync {#gs-upstack-sync}
+
+```
+gs upstack (us) sync (sy) [flags]
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span></span>
+
+Pull remote-side commits for a branch and those above it
+
+Pull remote-side commits for the current branch and all
+branches upstack from it. Branches that fast-forward
+(or rebase, with --rebase) trigger an upstack restack of
+their children so the stack stays coherent.
+Use --branch to start at a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to start at
+* `--rebase`: On divergence, replay remote-side commits onto local.
 
 ### git-spice upstack restack {#gs-upstack-restack}
 
@@ -563,6 +611,25 @@ only if there are multiple CRs in the stack.
 * `--branch=NAME`: Branch to start at
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice downstack sync {#gs-downstack-sync}
+
+```
+gs downstack (ds) sync (sy) [flags]
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span></span>
+
+Pull remote-side commits for a branch and those below it
+
+Pull remote-side commits for the current branch and all
+branches downstack from it (excluding trunk).
+Use --branch to start at a different branch.
+
+**Flags**
+
+* `--branch=NAME`: Branch to start at
+* `--rebase`: On divergence, replay remote-side commits onto local.
 
 ### git-spice downstack merge {#gs-downstack-merge}
 
@@ -1129,6 +1196,33 @@ only if there are multiple CRs in the stack.
 * `--branch=NAME`: Branch to submit
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice branch sync {#gs-branch-sync}
+
+```
+gs branch (b) sync (sy) [flags]
+```
+
+<span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span></span>
+
+Pull remote-side commits into a tracked branch
+
+Pull remote-side commits added to a tracked branch since the
+last push (typically by a CI bot like autofix-ci).
+
+The branch is fast-forwarded only if local has no commits past
+the last push and the remote has moved forward. Diverged
+branches (both sides have new commits) are reported and left
+unchanged in this release; use 'gs upstack restack' after
+moving the parent if you need to integrate them manually.
+
+Children of a fast-forwarded branch will need a restack;
+'gs upstack restack' from this branch will pick that up.
+
+**Flags**
+
+* `--branch=NAME`: Branch to sync
+* `--rebase`: On divergence (both local and remote have new commits since the last push), replay remote-side commits onto local. Conflicts surface as a normal interrupted rebase; resume with 'gs rebase --continue'.
 
 ## Commit
 

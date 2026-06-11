@@ -12,6 +12,7 @@
 | gs bs | [gs branch submit](/cli/reference.md#gs-branch-submit) |
 | gs bsp | [gs branch split](/cli/reference.md#gs-branch-split) |
 | gs bsq | [gs branch squash](/cli/reference.md#gs-branch-squash) |
+| gs bsy | [gs branch sync](/cli/reference.md#gs-branch-sync) |
 | gs btr | [gs branch track](/cli/reference.md#gs-branch-track) |
 | gs buntr | [gs branch untrack](/cli/reference.md#gs-branch-untrack) |
 | gs ca | [gs commit amend](/cli/reference.md#gs-commit-amend) |
@@ -23,6 +24,7 @@
 | gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
+| gs dssy | [gs downstack sync](/cli/reference.md#gs-downstack-sync) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |
 | gs ls | [gs log short](/cli/reference.md#gs-log-short) |
@@ -35,7 +37,9 @@
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
+| gs ssy | [gs stack sync](/cli/reference.md#gs-stack-sync) |
 | gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |
+| gs ussy | [gs upstack sync](/cli/reference.md#gs-upstack-sync) |

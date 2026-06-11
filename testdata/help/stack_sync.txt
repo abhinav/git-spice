@@ -1,0 +1,18 @@
+Usage: gs stack (s) sync (sy) [flags]
+
+Pull remote-side commits for every branch in the stack
+
+Pull remote-side commits for every branch in the current stack (downstack and
+upstack of the named branch), bottom-up. Use --branch to identify a different
+stack.
+
+Flags:
+  --branch=NAME    Branch to identify the stack
+  --rebase         On divergence, replay remote-side commits onto local.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
