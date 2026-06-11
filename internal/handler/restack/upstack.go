@@ -9,6 +9,9 @@ import (
 type UpstackOptions struct {
 	// SkipStart indicates that the starting branch should not be restacked.
 	SkipStart bool `help:"Do not restack the starting branch"`
+
+	// SkipConflicts indicates that conflicting branches should be skipped.
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 // RestackUpstack restacks the upstack of the given branch,
@@ -19,6 +22,7 @@ func (h *Handler) RestackUpstack(ctx context.Context, branch string, opts *Upsta
 		Branch:          branch,
 		Scope:           ScopeUpstack,
 		ContinueCommand: []string{"upstack", "restack"},
+		SkipConflicts:   opts.SkipConflicts,
 	}
 	if opts.SkipStart {
 		req.Scope = ScopeUpstackExclusive

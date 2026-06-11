@@ -7,8 +7,11 @@ ensuring a linear history.
 
 Use --branch to rebase the stack of a different branch.
 
+Use --skip-conflicts to skip branches that cannot be rebased cleanly.
+
 Flags:
-  --branch=NAME    Branch to restack the stack of
+  --branch=NAME       Branch to restack the stack of
+  --skip-conflicts    Skip branches that cannot be rebased due to conflicts
 
 Global Flags:
   -h, --help           Show help for the command

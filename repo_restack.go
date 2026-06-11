@@ -12,16 +12,20 @@ import (
 	"go.abhg.dev/gs/internal/text"
 )
 
-type repoRestackCmd struct{}
+type repoRestackCmd struct {
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
+}
 
 func (*repoRestackCmd) Help() string {
 	return text.Dedent(`
 		All tracked branches in the repository are rebased on top of their
 		respective bases in dependency order, ensuring a linear history.
+
+		Use --skip-conflicts to skip branches that cannot be rebased cleanly.
 	`)
 }
 
-func (*repoRestackCmd) Run(
+func (cmd *repoRestackCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
@@ -48,6 +52,7 @@ func (*repoRestackCmd) Run(
 		Branch:          store.Trunk(),
 		Scope:           restack.ScopeUpstackExclusive,
 		ContinueCommand: []string{"repo", "restack"},
+		SkipConflicts:   cmd.SkipConflicts,
 	})
 	if err != nil {
 		return err

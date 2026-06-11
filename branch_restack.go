@@ -5,11 +5,14 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type branchRestackCmd struct {
 	Branch string `placeholder:"NAME" help:"Branch to restack" predictor:"trackedBranches"`
+
+	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
 }
 
 func (*branchRestackCmd) Help() string {
@@ -32,5 +35,7 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
-	return handler.RestackBranch(ctx, cmd.Branch)
+	return handler.RestackBranch(ctx, cmd.Branch, &restack.BranchOptions{
+		SkipConflicts: cmd.SkipConflicts,
+	})
 }

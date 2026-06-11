@@ -171,7 +171,7 @@ of deleted branches, leaving higher branches in place.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -180,6 +180,12 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+Use --skip-conflicts to skip branches that cannot be rebased cleanly.
+
+**Flags**
+
+* `--skip-conflicts`: Skip branches that cannot be rebased due to conflicts
 
 ## Log
 
@@ -299,9 +305,12 @@ respective bases, ensuring a linear history.
 
 Use --branch to rebase the stack of a different branch.
 
+Use --skip-conflicts to skip branches that cannot be rebased cleanly.
+
 **Flags**
 
 * `--branch=NAME`: Branch to restack the stack of
+* `--skip-conflicts`: Skip branches that cannot be rebased due to conflicts
 
 ### git-spice stack edit {#gs-stack-edit}
 
@@ -429,6 +438,7 @@ but still rebase all branches above it.
 **Flags**
 
 * `--skip-start`: Do not restack the starting branch
+* `--skip-conflicts`: Skip branches that cannot be rebased due to conflicts
 * `--branch=NAME`: Branch to restack the upstack of
 
 ### git-spice upstack onto {#gs-upstack-onto}
@@ -664,6 +674,7 @@ Use --branch to start at a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to restack the downstack of
+* `--skip-conflicts`: Skip branches that cannot be rebased due to conflicts
 
 ## Branch
 
@@ -1009,6 +1020,7 @@ Use --branch to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to restack
+* `--skip-conflicts`: Skip branches that cannot be rebased due to conflicts
 
 ### git-spice branch onto {#gs-branch-onto}
 
