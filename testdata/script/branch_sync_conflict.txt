@@ -41,7 +41,7 @@ git commit -m 'local: tweak feat1'
 
 # 'gs branch sync --rebase' begins a rebase that conflicts.
 ! gs branch sync --rebase
-stderr 'There was a conflict while rebasing'
+stderr 'interrupted by a conflict'
 
 # resolve the conflict and continue.
 cp $WORK/extra/feat1-resolved.txt feat1.txt

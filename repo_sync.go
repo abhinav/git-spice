@@ -74,7 +74,7 @@ func (cmd *repoSyncCmd) Run(
 	slices.Sort(branches)
 
 	for _, branch := range branches {
-		res, err := branchSyncHandler.Sync(ctx, branch)
+		res, err := branchSyncHandler.Sync(ctx, branchsync.SyncRequest{Branch: branch})
 		if err != nil {
 			if errors.Is(err, branchsync.ErrNoUpstream) {
 				continue

@@ -12,6 +12,7 @@ import (
 
 type branchSyncCmd struct {
 	Branch string `placeholder:"NAME" help:"Branch to sync" predictor:"trackedBranches"`
+	Rebase bool   `help:"On divergence (both local and remote have new commits since the last push), replay remote-side commits onto local. Conflicts surface as a normal interrupted rebase; resume with 'gs rebase --continue'."`
 }
 
 func (*branchSyncCmd) Help() string {
@@ -46,7 +47,11 @@ func (cmd *branchSyncCmd) Run(
 	log *silog.Logger,
 	handler *branchsync.Handler,
 ) error {
-	res, err := handler.Sync(ctx, cmd.Branch)
+	req := branchsync.SyncRequest{Branch: cmd.Branch}
+	if cmd.Rebase {
+		req.Mode = branchsync.ModeRebase
+	}
+	res, err := handler.Sync(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -56,10 +61,12 @@ func (cmd *branchSyncCmd) Run(
 		log.Infof("%v: already in sync", res.Branch)
 	case branchsync.ActionFastForward:
 		log.Infof("%v: fast-forwarded %s..%s", res.Branch, res.FromHash.Short(), res.ToHash.Short())
+	case branchsync.ActionRebased:
+		log.Infof("%v: rebased onto remote %s", res.Branch, res.ToHash.Short())
 	case branchsync.ActionBehind:
 		log.Infof("%v: ahead of remote; nothing to pull", res.Branch)
 	case branchsync.ActionDiverged:
-		log.Warnf("%v: diverged from remote; both sides have new commits since last push -- skipping (rebase mode not yet supported)", res.Branch)
+		log.Warnf("%v: diverged from remote; pass --rebase to integrate remote-side commits", res.Branch)
 	case branchsync.ActionSkipped:
 		log.Warnf("%v: skipped (%v)", res.Branch, res.SkipReason)
 	}
