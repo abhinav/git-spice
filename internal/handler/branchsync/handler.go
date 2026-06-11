@@ -32,7 +32,10 @@ var _ GitRepository = (*git.Repository)(nil)
 // GitWorktree is the subset of git.Worktree this handler uses.
 type GitWorktree interface {
 	CurrentBranch(ctx context.Context) (string, error)
+	CheckoutBranch(ctx context.Context, branch string) error
 	Pull(ctx context.Context, opts git.PullOptions) error
+	Reset(ctx context.Context, commit string, opts git.ResetOptions) error
+	Rebase(ctx context.Context, req git.RebaseRequest) error
 }
 
 var _ GitWorktree = (*git.Worktree)(nil)
@@ -64,6 +67,10 @@ const (
 
 	// ActionFastForward means the branch was fast-forwarded to its remote.
 	ActionFastForward
+
+	// ActionRebased means local commits were replayed on top of the
+	// remote-side commits brought in from the upstream.
+	ActionRebased
 
 	// ActionBehind means the remote is behind the local branch; the
 	// branch will need to be pushed.
@@ -98,10 +105,32 @@ type SyncResult struct {
 // and therefore cannot be synced.
 var ErrNoUpstream = errors.New("branch has no upstream configured")
 
-// Sync syncs a single tracked branch. Returns the result of the sync.
-// The caller is responsible for restacking any children of the branch
-// when ToHash != FromHash.
-func (h *Handler) Sync(ctx context.Context, branch string) (*SyncResult, error) {
+// Mode controls how diverged branches are handled.
+type Mode int
+
+const (
+	// ModeFastForward is the default: fast-forward when safe; skip when
+	// the branch has diverged from its remote.
+	ModeFastForward Mode = iota
+
+	// ModeRebase replays remote-side commits on top of the local branch
+	// when both sides have new commits since the last push. Conflicts
+	// surface as an interrupted rebase, recoverable with
+	// 'gs rebase --continue'.
+	ModeRebase
+)
+
+// SyncRequest configures a single-branch sync.
+type SyncRequest struct {
+	Branch string
+	Mode   Mode
+}
+
+// Sync syncs a single tracked branch according to the request. Returns
+// the result of the sync. The caller is responsible for restacking any
+// children of the branch when ToHash != FromHash.
+func (h *Handler) Sync(ctx context.Context, req SyncRequest) (*SyncResult, error) {
+	branch := req.Branch
 	log := h.Log.With("branch", branch)
 
 	if branch == h.Store.Trunk() {
@@ -163,9 +192,80 @@ func (h *Handler) Sync(ctx context.Context, branch string) (*SyncResult, error) 
 		return res, nil
 	}
 
-	// Truly diverged. v1 doesn't pull in this case.
-	res.Action = ActionDiverged
+	// Truly diverged.
+	if req.Mode != ModeRebase {
+		res.Action = ActionDiverged
+		return res, nil
+	}
+
+	// Rebase path. Validate that LastPushedHash is in both L and R's
+	// history; otherwise we can't safely identify which commits to pull.
+	if lookup.UpstreamLastPushedHash == "" {
+		res.Action = ActionSkipped
+		res.SkipReason = "no LastPushedHash recorded; push the branch once to establish a baseline"
+		return res, nil
+	}
+	pHash := lookup.UpstreamLastPushedHash
+	if !h.Repository.IsAncestor(ctx, pHash, remoteHash) {
+		res.Action = ActionSkipped
+		res.SkipReason = "remote history has been rewritten since last push; manual recovery required"
+		return res, nil
+	}
+	if !h.Repository.IsAncestor(ctx, pHash, localHash) {
+		res.Action = ActionSkipped
+		res.SkipReason = "local history has been rewritten below the last-pushed hash; manual recovery required"
+		return res, nil
+	}
+
+	if err := h.rebase(ctx, branch, lookup.UpstreamBranch, localHash, remoteHash, pHash); err != nil {
+		return nil, err
+	}
+	if err := h.recordPushedHash(ctx, branch, lookup.UpstreamBranch, remoteHash); err != nil {
+		log.Warn("Could not record pushed hash", "error", err)
+	}
+	// Recompute the post-rebase tip.
+	newHash, err := h.Repository.PeelToCommit(ctx, branch)
+	if err != nil {
+		return nil, fmt.Errorf("resolve post-rebase %v: %w", branch, err)
+	}
+	res.Action = ActionRebased
+	res.ToHash = newHash
 	return res, nil
+}
+
+// rebase replays the remote-only commits (p..R) onto the local tip (L)
+// by checking out the branch, resetting it to R, then running
+// git rebase --onto L p. Conflicts surface as a normal interrupted
+// rebase; the caller can resume with 'gs rebase --continue'.
+func (h *Handler) rebase(ctx context.Context, branch, upstream string, localHash, remoteHash, lastPushed git.Hash) error {
+	_ = upstream // currently unused; reserved for future logging
+
+	currentBranch, err := h.Worktree.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("current branch: %w", err)
+	}
+	if currentBranch != branch {
+		if err := h.Worktree.CheckoutBranch(ctx, branch); err != nil {
+			return fmt.Errorf("checkout %v: %w", branch, err)
+		}
+	}
+
+	// Move HEAD to R so the rebase sees p..R as the commit range.
+	if err := h.Worktree.Reset(ctx, remoteHash.String(), git.ResetOptions{Mode: git.ResetHard}); err != nil {
+		return fmt.Errorf("reset %v to remote: %w", branch, err)
+	}
+
+	// Replay p..R (which is now HEAD since HEAD = R) onto L.
+	if err := h.Worktree.Rebase(ctx, git.RebaseRequest{
+		Branch:    branch,
+		Upstream:  lastPushed.String(),
+		Onto:      localHash.String(),
+		Autostash: true,
+	}); err != nil {
+		return fmt.Errorf("rebase remote commits onto local: %w", err)
+	}
+
+	return nil
 }
 
 // fastForward updates a branch ref to a new (descendant) hash. For a

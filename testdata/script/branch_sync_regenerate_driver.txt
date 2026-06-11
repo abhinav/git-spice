@@ -22,8 +22,10 @@ gs auth login
 # install a custom merge driver named 'regenerate'.
 # the driver script writes a sentinel value to the merged path.
 chmod 755 $WORK/extra/regen-driver.sh
+env REGEN_DRIVER=$WORK/extra/regen-driver.sh
 git config merge.regenerate.name 'Regenerate derived files'
-git config merge.regenerate.driver "$WORK/extra/regen-driver.sh %A %O %B"
+# Driver string includes %A %O %B placeholders for the file paths.
+git config merge.regenerate.driver $REGEN_DRIVER' %A %O %B'
 
 # create a branch with two files:
 # - input.txt: the source file (no merge driver)
