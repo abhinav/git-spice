@@ -58,7 +58,9 @@ func (cmd *stackSyncCmd) Run(
 	}
 
 	trunk := store.Trunk()
-	branches := append(downs, ups...)
+	branches := make([]string, 0, len(downs)+len(ups))
+	branches = append(branches, downs...)
+	branches = append(branches, ups...)
 	branches = slices.DeleteFunc(branches, func(b string) bool { return b == trunk })
 
 	return syncBranches(ctx, log, branchSyncHandler, restackHandler, branches, cmd.Rebase)
