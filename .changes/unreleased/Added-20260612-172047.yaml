@@ -1,0 +1,3 @@
+kind: Added
+body: 'log: Add `--cr-checks` flag and `spice.log.crChecks` config to include forge CI/check rollup, per-run detail, and the checks-page URL in `gs log --json` output.'
+time: 2026-06-12T17:20:47.096322-04:00

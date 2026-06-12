@@ -111,6 +111,39 @@ These objects take the following form:
           // Total number of resolvable comments or threads.
           total: int,
         },
+
+        // Forge CI/check status for the Change Request.
+        // Present only if '--cr-checks=true'
+        // (or 'spice.log.crChecks=true').
+        // <!-- gs:version unreleased -->
+        checks?: {
+          // Rolled-up state across all reported checks.
+          //  - "passed":  all reported checks passed
+          //               (or were intentionally skipped/cancelled)
+          //  - "failed":  one or more checks failed
+          //  - "pending": at least one check is still running
+          //  - "none":    no checks are configured or reported
+          //               for the change
+          rollup: "passed" | "failed" | "pending" | "none",
+
+          // Per-check detail in forge-defined order. May be empty
+          // when rollup is "none".
+          //
+          // state is the forge-native lowercase string (e.g.
+          // "success", "neutral", "in_progress") so consumers can
+          // distinguish nuances the rollup collapses.
+          runs?: [
+            {
+              name: string,
+              state: string,
+              url?: string,
+            },
+          ],
+
+          // URL of the forge's summary page for the change's checks.
+          // May be omitted if the forge has no summary page.
+          url?: string,
+        },
       },
 
       // Push status of the branch.
