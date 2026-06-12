@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	git "go.abhg.dev/gs/internal/git"
+	scriptrun "go.abhg.dev/gs/internal/scriptrun"
 	spice "go.abhg.dev/gs/internal/spice"
 	state "go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
@@ -831,10 +832,10 @@ func (m *MockResolver) EXPECT() *MockResolverMockRecorder {
 }
 
 // Resolve mocks base method.
-func (m *MockResolver) Resolve(ctx context.Context, req *ResolveRequest) (*ResolveResponse, error) {
+func (m *MockResolver) Resolve(ctx context.Context, req *ResolveRequest) (*scriptrun.ResolveResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resolve", ctx, req)
-	ret0, _ := ret[0].(*ResolveResponse)
+	ret0, _ := ret[0].(*scriptrun.ResolveResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -852,19 +853,19 @@ type MockResolverResolveCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockResolverResolveCall) Return(arg0 *ResolveResponse, arg1 error) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) Return(arg0 *scriptrun.ResolveResponse, arg1 error) *MockResolverResolveCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockResolverResolveCall) Do(f func(context.Context, *ResolveRequest) (*ResolveResponse, error)) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) Do(f func(context.Context, *ResolveRequest) (*scriptrun.ResolveResponse, error)) *MockResolverResolveCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockResolverResolveCall) DoAndReturn(f func(context.Context, *ResolveRequest) (*ResolveResponse, error)) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) DoAndReturn(f func(context.Context, *ResolveRequest) (*scriptrun.ResolveResponse, error)) *MockResolverResolveCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
