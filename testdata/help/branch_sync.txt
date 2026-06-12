@@ -1,0 +1,28 @@
+Usage: gs branch (b) sync (sy) [flags]
+
+Pull remote-side commits into a tracked branch
+
+Pull remote-side commits added to a tracked branch since the last push
+(typically by a CI bot like autofix-ci).
+
+The branch is fast-forwarded only if local has no commits past the last push and
+the remote has moved forward. Diverged branches (both sides have new commits)
+are reported and left unchanged in this release; use 'gs upstack restack' after
+moving the parent if you need to integrate them manually.
+
+Children of a fast-forwarded branch will need a restack; 'gs upstack restack'
+from this branch will pick that up.
+
+Flags:
+  --branch=NAME    Branch to sync
+  --rebase         On divergence (both local and remote have new commits since
+                   the last push), replay remote-side commits onto local.
+                   Conflicts surface as a normal interrupted rebase; resume with
+                   'gs rebase --continue'.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

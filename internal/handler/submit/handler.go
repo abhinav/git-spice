@@ -1011,6 +1011,15 @@ func (h *Handler) submitBranch(
 			Name:           branchToSubmit,
 			UpstreamBranch: &upstreamBranch,
 		}
+		// Capture the hash we just pushed so 'gs branch sync' can
+		// detect remote-side commits added later (e.g. by CI bots).
+		if pushedHash, err := h.Repository.PeelToCommit(ctx, branchToSubmit); err == nil {
+			upsert.UpstreamLastPushedHash = &pushedHash
+		} else {
+			log.Warn("Could not record pushed hash; sync will not detect remote-side commits until next push",
+				"branch", branchToSubmit,
+				"error", err)
+		}
 		defer func() {
 			msg := "branch submit " + branchToSubmit
 			tx := h.Store.BeginBranchTx()
@@ -1223,6 +1232,21 @@ func (h *Handler) submitBranch(
 			if err := h.Worktree.Push(ctx, pushOpts); err != nil {
 				log.Error("Push failed. Branch may have been updated by someone else. Try with --force.")
 				return status, fmt.Errorf("push branch: %w", err)
+			}
+
+			// Record the pushed hash so 'gs branch sync' can detect
+			// remote-side commits added later.
+			tx := h.Store.BeginBranchTx()
+			if err := errors.Join(
+				tx.Upsert(ctx, state.UpsertRequest{
+					Name:                   branchToSubmit,
+					UpstreamLastPushedHash: &commitHash,
+				}),
+				tx.Commit(ctx, "branch submit "+branchToSubmit+": record pushed hash"),
+			); err != nil {
+				log.Warn("Could not record pushed hash; sync will not detect remote-side commits until next push",
+					"branch", branchToSubmit,
+					"error", err)
 			}
 		}
 

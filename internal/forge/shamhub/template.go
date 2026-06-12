@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 var _changeTemplatePaths = []string{
@@ -50,8 +49,7 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 	var res changeTemplateResponse
 	for path := range templatePaths {
 		// Try to read as a file (blob objects only).
-		if out, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "blob", "HEAD:"+path).
-			WithDir(sh.repoDir(owner, repo)).
+		if out, err := sh.gitCmd(context.Background(), owner, repo, "cat-file", "blob", "HEAD:"+path).
 			Output(); err == nil {
 			res = append(res, &changeTemplate{
 				Filename: path,
@@ -61,8 +59,7 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 		}
 
 		// Try to read as a directory.
-		lsOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "ls-tree", "--name-only", "HEAD:"+path).
-			WithDir(sh.repoDir(owner, repo)).
+		lsOut, err := sh.gitCmd(context.Background(), owner, repo, "ls-tree", "--name-only", "HEAD:"+path).
 			Output()
 		if err != nil {
 			continue
@@ -75,8 +72,7 @@ func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRe
 			}
 
 			filePath := path + "/" + file
-			if fileOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "-p", "HEAD:"+filePath).
-				WithDir(sh.repoDir(owner, repo)).
+			if fileOut, err := sh.gitCmd(context.Background(), owner, repo, "cat-file", "-p", "HEAD:"+filePath).
 				Output(); err == nil {
 				res = append(res, &changeTemplate{
 					Filename: file,
