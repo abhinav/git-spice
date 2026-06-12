@@ -404,6 +404,13 @@ func (c *Client) PullRequestMerge(
 type CommitStatus struct {
 	Key   string `json:"key"`
 	State string `json:"state"`
+
+	// Name is the human-readable label for the build status, if any.
+	// Falls back to Key when empty.
+	Name string `json:"name,omitempty"`
+
+	// URL links to the build's detail page, if any.
+	URL string `json:"url,omitempty"`
 }
 
 // CommitStatusCreateRequest is the request body for creating a build status.
