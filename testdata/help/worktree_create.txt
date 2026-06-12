@@ -1,0 +1,21 @@
+Usage: gs worktree (wt) create (c) <path> [flags]
+
+Create a new worktree
+
+Creates a new Git worktree at the given path. The worktree starts in detached
+HEAD state at the current trunk commit.
+
+Use -b/--branch to create a new tracked branch in the worktree.
+
+Arguments:
+  <path>    Path for the new worktree
+
+Flags:
+  -b, --branch=BRANCH    Create and check out a new branch in the worktree
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

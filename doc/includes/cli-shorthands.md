@@ -10,7 +10,6 @@
 | gs br | [gs branch restack](/cli/reference.md#gs-branch-restack) |
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
 | gs bs | [gs branch submit](/cli/reference.md#gs-branch-submit) |
-| gs bsmls | [gs branch submodule list](/cli/reference.md#gs-branch-submodule-list) |
 | gs bsp | [gs branch split](/cli/reference.md#gs-branch-split) |
 | gs bsq | [gs branch squash](/cli/reference.md#gs-branch-squash) |
 | gs btr | [gs branch track](/cli/reference.md#gs-branch-track) |
@@ -40,3 +39,5 @@
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |
+| gs wtc | [gs worktree create](/cli/reference.md#gs-worktree-create) |
+| gs wtls | [gs worktree list](/cli/reference.md#gs-worktree-list) |

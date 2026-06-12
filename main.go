@@ -307,7 +307,8 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
-	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
+	Worktree worktreeCmd `cmd:"" aliases:"wt" group:"Worktree"`
+	Rebase   rebaseCmd   `cmd:"" aliases:"rb" group:"Rebase"`
 
 	CI ciCmd `cmd:"" group:"CI" help:"CI/CD integration commands"`
 

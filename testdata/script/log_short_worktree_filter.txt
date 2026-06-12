@@ -1,0 +1,70 @@
+# 'log short -w' filters branches to the current worktree.
+# Full stacks are shown if any branch in the stack
+# is checked out in the current worktree.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create two stacks:
+# Stack 1: main -> feat1 -> feat2
+# Stack 2: main -> feat3 -> feat4
+
+# Stack 1
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+
+# Stack 2
+gs bco main
+git add feat3.txt
+gs bc feat3 -m 'Add feat3'
+git add feat4.txt
+gs bc feat4 -m 'Add feat4'
+
+# Create a worktree for feat1 (part of stack 1)
+git worktree add ../wt1 feat1
+
+# In the main repo, we are on feat4 (stack 2).
+# -w should show only stack 2 (the current worktree's stack).
+gs ls -w
+cmp stderr $WORK/golden/ls-main-repo.txt
+
+# In wt1, we are on feat1 (stack 1).
+# -w should show only stack 1.
+cd ../wt1
+gs ls -w
+cmp stderr $WORK/golden/ls-wt1.txt
+
+# Without -w, -a shows all branches.
+# Use regex matching for the worktree path because its separator
+# can differ between platforms.
+gs ls -a
+stderr '  ┏━□ feat2'
+stderr '┏━┻■ feat1 ◀'
+stderr '┃ ┏━□ feat4 \[wt:.*repo\]'
+stderr '┣━┻□ feat3'
+stderr 'main'
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- repo/feat4.txt --
+feat4
+-- golden/ls-main-repo.txt --
+  ┏━■ feat4 ◀
+┏━┻□ feat3
+main
+-- golden/ls-wt1.txt --
+  ┏━□ feat2
+┏━┻■ feat1 ◀
+main
