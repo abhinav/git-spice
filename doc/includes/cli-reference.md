@@ -140,6 +140,7 @@ and untrack all branches.
 * `--remote=NAME`: Name of the remote to push submitted branches to
 * `--upstream=NAME`: Name of the remote to open change requests against
 * `--reset`: Forget all information about the repository
+* `--[no-]recurse-submodules`: Also initialize tracked submodules. Prompts when unset and submodules are present.
 
 ### git-spice repo sync {#gs-repo-sync}
 
@@ -179,7 +180,7 @@ Pass --no-pull-branches to skip this step.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -188,6 +189,13 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+**Flags**
+
+* `-w`, `--worktree`: Only restack branches in the current worktree.
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Log
 
@@ -209,11 +217,13 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
+* `--[no-]cr-checks` ([:material-wrench:{ .middle title="spice.log.crChecks" }](/cli/config.md#spicelogcrchecks)): Include forge CI/check rollup and per-run detail for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
-**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
+**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crChecks](/cli/config.md#spicelogcrchecks), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
 ### git-spice log long {#gs-log-long}
 
@@ -233,11 +243,13 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
+* `--[no-]cr-checks` ([:material-wrench:{ .middle title="spice.log.crChecks" }](/cli/config.md#spicelogcrchecks)): Include forge CI/check rollup and per-run detail for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
-**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
+**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crChecks](/cli/config.md#spicelogcrchecks), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
 ## Stack
 
@@ -251,6 +263,13 @@ Submit a stack
 
 Change Requests are created or updated
 for all branches in the current stack.
+
+When invoked from the configured integration branch, the
+"current stack" is the union of each configured tip's
+downstack (the tip and the branches below it), and the
+integration branch itself is pushed afterward. Branches
+above a tip are deliberately left alone: they are work in
+progress that has not been promoted to a tip yet.
 
 Use --dry-run to print what would be submitted without submitting it.
 
@@ -279,7 +298,7 @@ only if there are multiple CRs in the stack.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill in the change title and body via the configured message generator. Defaults to spice.message.autoFill.
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -292,7 +311,7 @@ only if there are multiple CRs in the stack.
 * `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
 * `--no-web`: Alias for --web=false.
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.autoFill](/cli/config.md#spicemessageautofill), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice stack sync {#gs-stack-sync}
 
@@ -328,7 +347,11 @@ Use --branch to rebase the stack of a different branch.
 
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the stack of
+* `--[no-]recurse-submodules` ([:material-wrench:{ .middle title="spice.submodule.recurse" }](/cli/config.md#spicesubmodulerecurse)): Also restack tracked submodules
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve), [spice.submodule.recurse](/cli/config.md#spicesubmodulerecurse)
 
 ### git-spice stack edit {#gs-stack-edit}
 
@@ -420,7 +443,7 @@ only if there are multiple CRs in the stack.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill in the change title and body via the configured message generator. Defaults to spice.message.autoFill.
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -434,7 +457,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.autoFill](/cli/config.md#spicemessageautofill), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice upstack sync {#gs-upstack-sync}
 
@@ -477,7 +500,10 @@ but still rebase all branches above it.
 **Flags**
 
 * `--skip-start`: Do not restack the starting branch
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the upstack of
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice upstack onto {#gs-upstack-onto}
 
@@ -596,7 +622,7 @@ only if there are multiple CRs in the stack.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill in the change title and body via the configured message generator. Defaults to spice.message.autoFill.
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -610,7 +636,7 @@ only if there are multiple CRs in the stack.
 * `--no-web`: Alias for --web=false.
 * `--branch=NAME`: Branch to start at
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.autoFill](/cli/config.md#spicemessageautofill), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice downstack sync {#gs-downstack-sync}
 
@@ -730,7 +756,10 @@ Use --branch to start at a different branch.
 
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the downstack of
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Branch
 
@@ -879,13 +908,15 @@ target (A) to the specified branch:
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill the commit message using the configured message generator. Defaults to spice.message.autoFill.
 * `-m`, `--message=MSG`: Commit message
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable)
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
-**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.message.autoFill](/cli/config.md#spicemessageautofill)
 
 ### git-spice branch delete {#gs-branch-delete}
 
@@ -939,6 +970,7 @@ Use the --branch flag to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Name of the branch
+* `--module-branch=PATH=BRANCH`: Per-submodule branch override for fold conflicts (repeatable)
 
 ### git-spice branch split {#gs-branch-split}
 
@@ -1009,6 +1041,7 @@ to specify a commit message without editing.
 
 **Flags**
 
+* `-c`, `--fill`: Fill the commit message using the configured message generator.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 * `-m`, `--message=MSG`: Use the given message as the commit message.
@@ -1073,9 +1106,18 @@ The current branch will be rebased onto its base,
 ensuring a linear history.
 Use --branch to target a different branch.
 
+With --auto-resolve (or spice.restack.autoResolve=true),
+conflicts encountered during the rebase are passed to the
+configured resolver script before the operation is
+interrupted. See the restack auto-resolve guide for the
+JSON protocol the script must implement.
+
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice branch onto {#gs-branch-onto}
 
@@ -1179,7 +1221,7 @@ only if there are multiple CRs in the stack.
 **Flags**
 
 * `-n`, `--dry-run`: Don't actually submit the stack
-* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill in the change title and body via the configured message generator. Defaults to spice.message.autoFill.
 * `--[no-]draft`: Whether to mark change requests as drafts
 * `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
 * `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
@@ -1195,7 +1237,7 @@ only if there are multiple CRs in the stack.
 * `--body=BODY`: Body of the change request
 * `--branch=NAME`: Branch to submit
 
-**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
+**Configuration**: [spice.message.autoFill](/cli/config.md#spicemessageautofill), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice branch sync {#gs-branch-sync}
 
@@ -1223,6 +1265,210 @@ Children of a fast-forwarded branch will need a restack;
 
 * `--branch=NAME`: Branch to sync
 * `--rebase`: On divergence (both local and remote have new commits since the last push), replay remote-side commits onto local. Conflicts surface as a normal interrupted rebase; resume with 'gs rebase --continue'.
+
+### git-spice branch submodule list {#gs-branch-submodule-list}
+
+```
+gs branch (b) submodule (sm) list (ls) [flags]
+```
+
+List submodule branch associations
+
+Shows the submodule branch associations
+recorded for the given branch.
+If no branch is specified,
+the current branch is used.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list associations for. Defaults to current branch.
+
+### git-spice branch submodule repoint {#gs-branch-submodule-repoint}
+
+```
+gs branch (b) submodule (sm) repoint <path> [flags]
+```
+
+Change submodule branch association for the current branch
+
+Changes which submodule branch is associated
+with the current parent branch.
+
+If --branch is not specified,
+the submodule's current branch is used.
+
+**Arguments**
+
+* `path`: Submodule path to repoint.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Submodule branch to associate. Defaults to submodule's current branch.
+
+### git-spice branch comment list {#gs-branch-comment-list}
+
+```
+gs branch (b) comment (cmt) list (ls) [flags]
+```
+
+List comments on a change request
+
+Lists comments on the change request
+associated with the current branch.
+Use --branch to target a different branch.
+
+Staged comments that have not yet been submitted
+are shown with an 'sc-N' prefix.
+
+Use --staged to show only staged comments.
+Use --unresolved to show only unresolved comments.
+
+With --json, prints output to stdout
+as a stream of JSON objects.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list comments for. Defaults to current branch.
+* `--staged`: Show only staged comments.
+* `--unresolved`: Show only unresolved comments.
+* `--json`: Write to stdout as a stream of JSON objects. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag-hidden:{ title="Released in version" }</span><span class="mdx-badge__text">Unreleased</span>
+
+### git-spice branch comment stage {#gs-branch-comment-stage}
+
+```
+gs branch (b) comment (cmt) stage [<file-and-line>] [flags]
+```
+
+Stage an inline comment for batch submission
+
+Stages an inline comment for later batch submission.
+Provide the file and line number as file.go:42.
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread
+instead of starting a new one.
+
+Staged comments are submitted together with
+'gs branch comment submit-staged'.
+
+**Arguments**
+
+* `file-and-line`: File and line in the form file.go:42.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--respond=THREAD_ID`: Thread ID to reply to instead of starting a new thread.
+* `-b`, `--branch=BRANCH`: Branch to stage comment for. Defaults to current branch.
+
+### git-spice branch comment add {#gs-branch-comment-add}
+
+```
+gs branch (b) comment (cmt) add [<anchor>] [flags]
+```
+
+Post an inline comment immediately
+
+Posts a comment immediately on the change request for the
+current branch. The anchor argument controls the scope:
+
+  file.go:42       line-scope: anchored to that line
+  file.go:42-50    line-scope multi-line range
+  file.go          file-scope: anchored to the file
+  (empty) + --pr   pr-scope: not anchored to any file
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread
+instead of starting a new one.
+
+**Arguments**
+
+* `anchor`: What to anchor the comment to: file.go:42 for a line, file.go for a file, or empty for the PR.
+
+**Flags**
+
+* `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--pr`: Post a PR-level comment with no file or line anchor.
+* `--respond=THREAD_ID`: Thread ID to reply to instead of starting a new thread.
+* `-b`, `--branch=BRANCH`: Branch to add comment for. Defaults to current branch.
+
+### git-spice branch comment submit-staged {#gs-branch-comment-submit-staged}
+
+```
+gs branch (b) comment (cmt) submit-staged (ss) [flags]
+```
+
+Submit all staged comments as a review
+
+Submits all staged comments for the current branch
+as a single review on the change request.
+
+Use --approve or --request-changes
+to set the review event type.
+Defaults to a comment-only review.
+
+Use --body to add an overall review body.
+
+**Flags**
+
+* `--body=BODY`: Overall review body.
+* `--approve`: Mark the review as approved.
+* `--request-changes`: Mark the review as requesting changes.
+* `-b`, `--branch=BRANCH`: Branch to submit staged comments for. Defaults to current branch.
+
+### git-spice branch comment resolve {#gs-branch-comment-resolve}
+
+```
+gs branch (b) comment (cmt) resolve <thread-id> [flags]
+```
+
+Resolve or unresolve a review thread
+
+Resolves a review thread on the change request
+for the current branch.
+
+Use --unresolve to mark the thread as unresolved.
+
+The thread ID is shown in 'gs branch comment list'.
+
+**Arguments**
+
+* `thread-id`: Thread ID to resolve.
+
+**Flags**
+
+* `--unresolve`: Unresolve the thread instead of resolving it.
+* `-b`, `--branch=BRANCH`: Branch whose change request contains the thread. Defaults to current branch.
+
+### git-spice branch comment edit {#gs-branch-comment-edit}
+
+```
+gs branch (b) comment (cmt) edit <id> [flags]
+```
+
+Edit a comment
+
+Edits the body of a comment.
+
+For staged comments (sc-N prefix),
+the comment is updated in the local staging area.
+
+For forge comments, the comment is updated
+on the remote forge.
+
+If no message is given with -m, an editor is opened
+with the current comment body pre-filled.
+
+**Arguments**
+
+* `id`: Comment ID to edit. Use 'sc-N' for staged comments or a forge comment ID.
+
+**Flags**
+
+* `-m`, `--message=MSG`: New comment body. Opens editor if not provided.
+* `-b`, `--branch=BRANCH`: Branch whose comments to edit. Defaults to current branch.
 
 ## Commit
 
@@ -1255,13 +1501,15 @@ when you want to apply changes to an older commit.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill the commit message using the configured message generator. Defaults to spice.message.autoFill.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'git-spice commit fixup'.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable)
 
-**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.message.autoFill](/cli/config.md#spicemessageautofill)
 
 ### git-spice commit amend {#gs-commit-amend}
 
@@ -1295,13 +1543,15 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill the commit message using the configured message updater. Defaults to spice.message.autoFill.
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable, non-interactive amend only)
 
-**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.message.autoFill](/cli/config.md#spicemessageautofill)
 
 ### git-spice commit split {#gs-commit-split}
 
@@ -1386,6 +1636,346 @@ This command requires at least Git 2.45.
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
 
+## Worktree
+
+### git-spice worktree list {#gs-worktree-list}
+
+```
+gs worktree (wt) list (ls)
+```
+
+List worktrees and their branches
+
+Lists all worktrees associated with the repository.
+For each worktree, shows the checked-out branch
+and any tracked branches in its stack.
+
+### git-spice worktree create {#gs-worktree-create}
+
+```
+gs worktree (wt) create (c) <path> [flags]
+```
+
+Create a new worktree
+
+Creates a new Git worktree at the given path.
+The worktree starts in detached HEAD state
+at the current trunk commit.
+
+Use -b/--branch to create a new tracked branch
+in the worktree.
+
+**Arguments**
+
+* `path`: Path for the new worktree
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Create and check out a new branch in the worktree
+
+## Integration
+
+### git-spice integration show {#gs-integration-show}
+
+```
+gs integration (int) show
+```
+
+Show the configured integration branch
+
+Displays the configured integration branch and the tip branches
+that compose it. For each tip, shows whether its hash has drifted
+from the hash recorded at the last successful rebuild.
+
+### git-spice integration create {#gs-integration-create}
+
+```
+gs integration (int) create (c) <name> [flags]
+```
+
+Configure the integration branch
+
+Configures the singleton integration branch for this repo.
+The branch is materialized by sequentially merging each
+tip onto trunk; it is never given a PR and is invisible to
+'gs branch' commands.
+
+Use 'gs integration tip add <branch>' to add tips later,
+or pass --tip multiple times here.
+
+**Arguments**
+
+* `name`: Local name of the integration branch
+
+**Flags**
+
+* `--upstream=BRANCH`: Upstream branch name (defaults to local name)
+* `--tip=BRANCH,...`: Tip branches to include (repeat to add more)
+
+### git-spice integration delete {#gs-integration-delete}
+
+```
+gs integration (int) delete (d,rm)
+```
+
+Remove the integration branch configuration
+
+Removes the integration branch configuration. The underlying
+Git branch (if any) is not deleted; only the git-spice config
+that drives auto-rebuild and submit is removed.
+
+### git-spice integration checkout {#gs-integration-checkout}
+
+```
+gs integration (int) checkout (co)
+```
+
+Switch to the integration branch
+
+Switches the worktree to the configured integration branch.
+Fails if no integration is configured, or if the integration
+branch has not yet been materialized (run 'gs integration
+rebuild' first).
+
+### git-spice integration rebuild {#gs-integration-rebuild}
+
+```
+gs integration (int) rebuild (rb) [flags]
+```
+
+Rebuild the integration branch
+
+Regenerates the integration branch by resetting it to trunk
+and sequentially merging each configured tip with --no-ff.
+Rerere is enabled for the duration of these merges so any
+recorded conflict resolutions are replayed automatically.
+
+On conflict, the merge is left in the worktree. Resolve the
+conflicting files, commit with 'git merge --continue', then
+re-run 'gs integration rebuild' (or 'gs intrb') to resume.
+
+With --auto-resolve (or spice.integration.autoResolve=true), a
+configured resolver script is invoked to attempt automatic
+resolution before surfacing conflicts. See the recipe for
+details on the JSON protocol the script must implement.
+
+If the resolver produces corrupt or unusable output (script
+exit failure, malformed JSON, missing markers) the rebuild
+halts rather than falling through to accept-incoming. The
+usual cause is a prompt, model, or script issue that needs
+to be fixed, not glossed over by silently picking 'theirs'.
+
+Conflicts that survive the merge drivers and a successful
+resolver run are auto-resolved by taking the incoming tip's
+version. Pass --no-accept-incoming (or set
+spice.integration.acceptIncoming=false) to disable that
+final fallback and surface conflicts for manual resolution
+instead.
+
+If a bad resolution was silently cached (in rerere, in the
+resolution file, or in pending rebuild state) and is being
+replayed on every rebuild, use --reset-rerere-cache to wipe
+stale postimages (while still recording fresh ones),
+--reset-resolution-file to wipe the Q&A history,
+--reset-pending to drop any stale resume point, or
+--from-scratch for all three.
+
+--no-rerere is a stronger diagnostic mode: it disables
+rerere recording too, so the rebuild produces nothing
+cached for next time. Use it only when you suspect rerere
+itself is misbehaving — otherwise --reset-rerere-cache is
+what you want.
+
+**Flags**
+
+* `--push`: Also push the integration branch after rebuilding
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.integration.autoResolve" }](/cli/config.md#spiceintegrationautoresolve)): Auto-resolve merge conflicts using the configured resolver script
+* `--[no-]accept-incoming` ([:material-wrench:{ .middle title="spice.integration.acceptIncoming" }](/cli/config.md#spiceintegrationacceptincoming)): Final-stage fallback: take the incoming tip's version for any remaining conflicts so the rebuild completes without manual intervention
+* `--no-rerere`: Disable rerere entirely (no replay AND no recording) for this rebuild. Diagnostic mode — prefer --reset-rerere-cache when you want fresh resolutions cached for next time.
+* `--reset-rerere-cache`: Wipe the rerere cache (.git/rr-cache) before starting so stale cached resolutions are not replayed. Rerere stays enabled so the rebuild's fresh resolutions are recorded.
+* `--reset-resolution-file`: Delete the resolution file (.integration_resolution.json) before starting so stale Q&A history is not carried into this rebuild.
+* `--reset-pending`: Clear any pending rebuild state before starting. Use when a prior halted rebuild left stale state that should not be resumed.
+* `--from-scratch`: Shorthand: implies --reset-rerere-cache, --reset-resolution-file, and --reset-pending. Use after a bad rebuild left stale state in any cache; rerere stays enabled so good resolutions get recorded.
+
+**Configuration**: [spice.integration.acceptIncoming](/cli/config.md#spiceintegrationacceptincoming), [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
+
+### git-spice integration submit {#gs-integration-submit}
+
+```
+gs integration (int) submit (s) [flags]
+```
+
+Push the integration branch to the remote
+
+Pushes the integration branch to the configured remote with
+--force-with-lease against the hash recorded at the previous
+successful push.
+
+No change request (PR) is opened for the integration branch
+itself: it is a throwaway artifact. However, the downstack
+branches of each configured tip are also submitted, so any
+branches that need to be pushed or have their CRs created or
+updated are handled in one shot.
+
+Once a manual submit succeeds, 'gs stack submit' and
+'gs upstack submit' will keep the integration branch in sync
+with local rebuilds.
+
+Use --dry-run to print what would be submitted without submitting it.
+
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
+
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
+
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `-c`, `--[no-]fill` ([:material-wrench:{ .middle title="spice.message.autoFill" }](/cli/config.md#spicemessageautofill)): Fill in the change title and body via the configured message generator. Defaults to spice.message.autoFill.
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
+* `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
+* `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `--no-web`: Alias for --web=false.
+
+**Configuration**: [spice.message.autoFill](/cli/config.md#spicemessageautofill), [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice integration mark-pushed {#gs-integration-mark-pushed}
+
+```
+gs integration (int) mark-pushed [<hash>]
+```
+
+Record a hash as the integration branch's last-pushed value
+
+Records the given commit hash as the integration branch's
+last-pushed value in gs's local state. Does not push.
+
+Used to reconcile state after a manual git push of the
+integration branch, or after a "push rejected" error caused by
+a multi-checkout collision or a state reset.
+
+With no argument, the hash is discovered from the configured
+push remote. With an explicit hash, that hash is recorded
+verbatim.
+
+After 'gs integration mark-pushed', the next
+'gs integration submit' uses --force-with-lease against the
+recorded hash. If multiple checkouts are publishing this
+branch, this command will not save you from a collision; it
+just confirms which remote state you accept as your baseline
+before overwriting.
+
+**Arguments**
+
+* `hash`: Commit hash to record as last-pushed. If empty, fetches the configured push remote and uses its current tip.
+
+### git-spice integration tip add {#gs-integration-tip-add}
+
+```
+gs integration (int) tip add (a) <branches> ...
+```
+
+Add a branch to the integration tip list
+
+Adds one or more tracked branches to the integration tip list.
+Each branch must already be tracked by git-spice; this command
+does not track new branches.
+
+Branches are added in order. If one fails to add, the previous
+ones remain in the tip list.
+
+**Arguments**
+
+* `branches`: Branches to add as tips
+
+### git-spice integration tip remove {#gs-integration-tip-remove}
+
+```
+gs integration (int) tip remove (r,rm) <branches> ...
+```
+
+Remove a branch from the integration tip list
+
+**Arguments**
+
+* `branches`: Branches to remove from the tip list
+
+### git-spice integration tip list {#gs-integration-tip-list}
+
+```
+gs integration (int) tip list (l,ls)
+```
+
+List the configured integration tips
+
+### git-spice integration tip clean {#gs-integration-tip-clean}
+
+```
+gs integration (int) tip clean (prune)
+```
+
+Remove tips whose upstack already contains another tip
+
+Removes tips whose upstack chain already contains another
+configured tip. The higher tip's merge into the integration
+branch captures the lower tip's content, so keeping both
+costs an extra merge without changing the result.
+
+For each subsumed tip, the message reports which higher tip
+subsumes it. A second run is a no-op once nothing remains
+to prune. Existing tips with no upstack-tip relationship
+are left alone.
+
+### git-spice integration tip advance {#gs-integration-tip-advance}
+
+```
+gs integration (int) tip advance [<branches> ...]
+```
+
+Move tips to the topmost branches of their upstacks
+
+For each configured tip (or only the named tips, if any are
+given as arguments), replaces the tip with the topmost
+branch(es) in its upstack — the leaves of the tree above it.
+
+If a tip already has no branches above it, it is left alone.
+If a tip's upstack forks, the tip expands to every leaf of
+the fork. Branches that would become duplicates of other
+configured tips are deduplicated.
+
+Useful as a one-shot maintenance step after extending a stack
+above a configured tip: instead of 'tip remove old' + 'tip
+add new', a single 'tip advance' walks each tip to its
+current top.
+
+**Arguments**
+
+* `branches`: Tips to advance; defaults to all configured tips
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}
@@ -1433,6 +2023,43 @@ going back to the state before the rebase.
 
 The command can be used in place of 'git rebase --abort'
 even if a git-spice operation is not currently in progress.
+
+## CI
+
+### git-spice ci merge-guard {#gs-ci-merge-guard}
+
+```
+gs ci merge-guard <number> [flags]
+```
+
+Block merging a PR whose base is not trunk
+
+Checks whether a change request is safe to merge
+by verifying its base branch is trunk.
+
+Use this in forge CI/CD pipelines to prevent
+out-of-order merges in a stacked PR workflow.
+
+By default, only git-spice managed PRs are checked.
+Unmanaged PRs are allowed through.
+Use --all to block any PR whose base is not trunk.
+
+The trunk branch is detected from the git-spice
+navigation comment on the PR.
+Use --trunk to override this detection.
+
+Exit codes:
+  0  PR is safe to merge (base is trunk, or unmanaged)
+  1  PR should not be merged yet
+
+**Arguments**
+
+* `number`: Change request number to check
+
+**Flags**
+
+* `--trunk=STRING`: Override trunk branch name
+* `--all`: Block all non-trunk-based PRs, not just git-spice managed ones
 
 ## Navigation
 

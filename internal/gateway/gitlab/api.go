@@ -201,6 +201,31 @@ func (c *Client) CommitStatusSet(
 	return &response, resp, nil
 }
 
+// PipelineJobsList lists the jobs of a pipeline, in pipeline order.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/jobs/#list-pipeline-jobs
+func (c *Client) PipelineJobsList(
+	ctx context.Context,
+	projectID int64,
+	pipelineID int64,
+) ([]*Job, *Response, error) {
+	var response []*Job
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/pipelines/%d/jobs",
+			projectID, pipelineID,
+		),
+		nil,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
+}
+
 // MergeRequestNoteCreate creates a merge request note.
 //
 // GitLab API:
@@ -633,7 +658,19 @@ type MergeRequestDiffRefs struct {
 // GitLab pipelines API:
 // https://docs.gitlab.com/api/pipelines/
 type Pipeline struct {
+	ID     int64  `json:"id,omitempty"`
 	Status string `json:"status"`
+	WebURL string `json:"web_url,omitempty"`
+}
+
+// Job is a single CI job within a pipeline.
+//
+// GitLab jobs API:
+// https://docs.gitlab.com/api/jobs/
+type Job struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	WebURL string `json:"web_url,omitempty"`
 }
 
 // GitLab pipeline status values.

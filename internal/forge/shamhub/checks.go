@@ -173,7 +173,180 @@ func parseChecksState(value string) (forge.ChecksState, error) {
 		return forge.ChecksPassed, nil
 	case "failed":
 		return forge.ChecksFailed, nil
+	case "none":
+		return forge.ChecksNone, nil
 	default:
 		return 0, fmt.Errorf("unsupported status %q", value)
 	}
+}
+
+// SetChangeChecks records the full per-change checks payload (rollup
+// + runs + URL) for the given change. Used by tests to seed richer
+// check state than [ShamHub.SetChangeChecksState] can.
+func (sh *ShamHub) SetChangeChecks(
+	owner, repo string,
+	number int,
+	checks *forge.ChangeChecks,
+) error {
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+
+	for i, change := range sh.changes {
+		if change.Base.Owner == owner &&
+			change.Base.Repo == repo &&
+			change.Number == number {
+			if checks == nil {
+				sh.changes[i].ChecksState = 0
+				sh.changes[i].ChecksRuns = nil
+				sh.changes[i].ChecksURL = ""
+				return nil
+			}
+			sh.changes[i].ChecksState = checks.Rollup
+			sh.changes[i].ChecksRuns = append(
+				sh.changes[i].ChecksRuns[:0:0], checks.Runs...)
+			sh.changes[i].ChecksURL = checks.URL
+			return nil
+		}
+	}
+
+	return notFoundErrorf("change %d (%v/%v) not found", number, owner, repo)
+}
+
+// ChecksByChange returns the per-change checks payload for each of
+// the given change numbers, in the same order. Returns a nil slot for
+// any unknown change.
+func (sh *ShamHub) ChecksByChange(
+	owner, repo string,
+	numbers []int,
+) ([]*forge.ChangeChecks, error) {
+	sh.mu.RLock()
+	defer sh.mu.RUnlock()
+
+	out := make([]*forge.ChangeChecks, len(numbers))
+	for i, n := range numbers {
+		for _, change := range sh.changes {
+			if change.Base.Owner != owner ||
+				change.Base.Repo != repo ||
+				change.Number != n {
+				continue
+			}
+			rollup := change.ChecksState
+			if rollup == 0 {
+				rollup = forge.ChecksNone
+			}
+			out[i] = &forge.ChangeChecks{
+				Rollup: rollup,
+				Runs:   append([]forge.CheckRun(nil), change.ChecksRuns...),
+				URL:    change.ChecksURL,
+			}
+			break
+		}
+	}
+	return out, nil
+}
+
+type checksByChangeRequest struct {
+	Owner string `path:"owner" json:"-"`
+	Repo  string `path:"repo" json:"-"`
+
+	IDs []ChangeID `json:"ids"`
+}
+
+type checksByChangeResponse struct {
+	Checks []*checksByChangeItem `json:"checks"`
+}
+
+type checksByChangeItem struct {
+	Rollup string              `json:"rollup"`
+	Runs   []checksByChangeRun `json:"runs,omitempty"`
+	URL    string              `json:"url,omitempty"`
+}
+
+type checksByChangeRun struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+	URL   string `json:"url,omitempty"`
+}
+
+var _ = shamhubRESTHandler(
+	"POST /{owner}/{repo}/change/checks-by-change",
+	(*ShamHub).handleChecksByChange,
+)
+
+func (sh *ShamHub) handleChecksByChange(
+	_ context.Context, req *checksByChangeRequest,
+) (*checksByChangeResponse, error) {
+	numbers := make([]int, len(req.IDs))
+	for i, id := range req.IDs {
+		numbers[i] = int(id)
+	}
+
+	checks, err := sh.ChecksByChange(req.Owner, req.Repo, numbers)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*checksByChangeItem, len(checks))
+	for i, c := range checks {
+		if c == nil {
+			continue
+		}
+		runs := make([]checksByChangeRun, len(c.Runs))
+		for j, r := range c.Runs {
+			runs[j] = checksByChangeRun{
+				Name:  r.Name,
+				State: r.State,
+				URL:   r.URL,
+			}
+		}
+		items[i] = &checksByChangeItem{
+			Rollup: c.Rollup.String(),
+			Runs:   runs,
+			URL:    c.URL,
+		}
+	}
+	return &checksByChangeResponse{Checks: items}, nil
+}
+
+// ChecksByChange retrieves per-change rolled-up and per-run check state.
+func (r *forgeRepository) ChecksByChange(
+	ctx context.Context, fids []forge.ChangeID,
+) ([]*forge.ChangeChecks, error) {
+	ids := make([]ChangeID, len(fids))
+	for i, fid := range fids {
+		ids[i] = fid.(ChangeID)
+	}
+
+	u := r.apiURL.JoinPath(r.owner, r.repo, "change", "checks-by-change")
+	req := checksByChangeRequest{IDs: ids}
+
+	var res checksByChangeResponse
+	if err := r.client.Post(ctx, u.String(), req, &res); err != nil {
+		return nil, fmt.Errorf("get checks: %w", err)
+	}
+
+	out := make([]*forge.ChangeChecks, len(res.Checks))
+	for i, c := range res.Checks {
+		if c == nil {
+			continue
+		}
+		rollup, err := parseChecksState(c.Rollup)
+		if err != nil {
+			return nil, fmt.Errorf("checks[%d]: %w", i, err)
+		}
+		runs := make([]forge.CheckRun, len(c.Runs))
+		for j, r := range c.Runs {
+			runs[j] = forge.CheckRun{
+				Name:  r.Name,
+				State: r.State,
+				URL:   r.URL,
+			}
+		}
+		out[i] = &forge.ChangeChecks{
+			Rollup: rollup,
+			Runs:   runs,
+			URL:    c.URL,
+		}
+	}
+	return out, nil
 }

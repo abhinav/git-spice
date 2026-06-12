@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing jQZfTJNw","body":"Test PR without assignees","base":"main","head":"jQZfTJNw"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:57833
+        body: '{"subject":"Testing L9BrzBJ9","body":"Test PR without assignees","base":"main","head":"L9BrzBJ9"}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -19,7 +19,7 @@ interactions:
         body: |
             {
               "number": 7,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/7"
+              "url": "http://127.0.0.1:57834/abhinav/test-repo/change/7"
             }
         headers:
             Content-Length:
@@ -28,16 +28,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 45.607667ms
+        duration: 85.763166ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:57833
         body: '{"assignees":["assignee1"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        url: http://127.0.0.1:57833/abhinav/test-repo/change/7
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -53,16 +53,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 957.209µs
+        duration: 669.25µs
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:57833
         body: '{"assignees":["assignee2"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        url: http://127.0.0.1:57833/abhinav/test-repo/change/7
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -78,15 +78,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 254.833µs
+        duration: 377.833µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        host: 127.0.0.1:57833
+        url: http://127.0.0.1:57833/abhinav/test-repo/change/7
         method: GET
       response:
         proto: HTTP/1.1
@@ -96,9 +96,9 @@ interactions:
         body: |
             {
               "number": 7,
-              "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/7",
+              "html_url": "http://127.0.0.1:57834/abhinav/test-repo/change/7",
               "state": "open",
-              "title": "Testing jQZfTJNw",
+              "title": "Testing L9BrzBJ9",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -106,15 +106,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
+                "sha": "3b062c8cf154438026053eb11d28ead97eba884e"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "jQZfTJNw",
-                "sha": "518a98cdc5d9b0550bf90ade166de7da1f3f215e"
+                "ref": "L9BrzBJ9",
+                "sha": "668b73096fca1ffa16c444535a0cf4b46c0f639d"
               },
               "assignees": [
                 "assignee1",
@@ -128,4 +128,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 46.775334ms
+        duration: 83.9595ms

@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing t9pXp56V","body":"Test PR with reviewer","base":"main","head":"t9pXp56V","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:57833
+        body: '{"subject":"Testing jIBP2lTY","body":"Test PR with reviewer","base":"main","head":"jIBP2lTY","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 82
         body: |
             {
-              "number": 12,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/12"
+              "number": 17,
+              "url": "http://127.0.0.1:57834/abhinav/test-repo/change/17"
             }
         headers:
             Content-Length:
@@ -28,20 +28,20 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 46.645833ms
+        duration: 194.672459ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:57833
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes/by-branch/t9pXp56V?limit=10&state=all
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes/by-branch/jIBP2lTY?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
@@ -51,10 +51,10 @@ interactions:
         body: |
             [
               {
-                "number": 12,
-                "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/12",
+                "number": 17,
+                "html_url": "http://127.0.0.1:57834/abhinav/test-repo/change/17",
                 "state": "open",
-                "title": "Testing t9pXp56V",
+                "title": "Testing jIBP2lTY",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
+                  "sha": "c1f60a21b39c3f122cc8643610a1043cc531cbff"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "t9pXp56V",
-                  "sha": "4fb0917da94bd269275264ac2f6009760583a87c"
+                  "ref": "jIBP2lTY",
+                  "sha": "9df6f99a10f71b85fd324a07d9427377810eb29e"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -85,4 +85,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 38.2285ms
+        duration: 65.640333ms

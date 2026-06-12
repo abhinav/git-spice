@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing Ay4LoeHe","body":"Test PR with assignee","base":"main","head":"Ay4LoeHe","assignees":["assignee1","assignee2"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:57833
+        body: '{"subject":"Testing T08Rw7au","body":"Test PR with assignee","base":"main","head":"T08Rw7au","assignees":["assignee1","assignee2"]}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -19,7 +19,7 @@ interactions:
         body: |
             {
               "number": 1,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/1"
+              "url": "http://127.0.0.1:57834/abhinav/test-repo/change/1"
             }
         headers:
             Content-Length:
@@ -28,15 +28,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 52.113083ms
+        duration: 101.372083ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/1
+        host: 127.0.0.1:57833
+        url: http://127.0.0.1:57833/abhinav/test-repo/change/1
         method: GET
       response:
         proto: HTTP/1.1
@@ -46,9 +46,9 @@ interactions:
         body: |
             {
               "number": 1,
-              "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/1",
+              "html_url": "http://127.0.0.1:57834/abhinav/test-repo/change/1",
               "state": "open",
-              "title": "Testing Ay4LoeHe",
+              "title": "Testing T08Rw7au",
               "body": "Test PR with assignee",
               "base": {
                 "repository": {
@@ -56,15 +56,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
+                "sha": "3b062c8cf154438026053eb11d28ead97eba884e"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "Ay4LoeHe",
-                "sha": "3cccd21109f708bb9e0dec5238cb602096c7c092"
+                "ref": "T08Rw7au",
+                "sha": "4af4c0b4c5801b7bc5c1c9f145fd51134a4d3845"
               },
               "assignees": [
                 "assignee1",
@@ -78,20 +78,20 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 51.162917ms
+        duration: 63.136959ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:57833
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes/by-branch/Ay4LoeHe?limit=10&state=all
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes/by-branch/T08Rw7au?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
@@ -102,9 +102,9 @@ interactions:
             [
               {
                 "number": 1,
-                "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/1",
+                "html_url": "http://127.0.0.1:57834/abhinav/test-repo/change/1",
                 "state": "open",
-                "title": "Testing Ay4LoeHe",
+                "title": "Testing T08Rw7au",
                 "body": "Test PR with assignee",
                 "base": {
                   "repository": {
@@ -112,15 +112,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
+                  "sha": "3b062c8cf154438026053eb11d28ead97eba884e"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "Ay4LoeHe",
-                  "sha": "3cccd21109f708bb9e0dec5238cb602096c7c092"
+                  "ref": "T08Rw7au",
+                  "sha": "4af4c0b4c5801b7bc5c1c9f145fd51134a4d3845"
                 },
                 "assignees": [
                   "assignee1",
@@ -135,4 +135,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 53.195541ms
+        duration: 66.893792ms

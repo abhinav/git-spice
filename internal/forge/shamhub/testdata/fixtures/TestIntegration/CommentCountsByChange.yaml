@@ -7,37 +7,37 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 98
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing W3ei79Xe","body":"Test PR for comment counts","base":"main","head":"W3ei79Xe"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:57833
+        body: '{"subject":"Testing 625ZCYtq","body":"Test PR for comment counts","base":"main","head":"625ZCYtq"}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
+        content_length: 80
         body: |
             {
-              "number": 15,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/15"
+              "number": 4,
+              "url": "http://127.0.0.1:57834/abhinav/test-repo/change/4"
             }
         headers:
             Content-Length:
-                - "82"
+                - "80"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 41.422375ms
+        duration: 79.338583ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 12
-        host: 127.0.0.1:49154
-        body: '{"ids":[15]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/comment-counts
+        content_length: 11
+        host: 127.0.0.1:57833
+        body: '{"ids":[4]}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/change/comment-counts
         method: POST
       response:
         proto: HTTP/1.1
@@ -61,4 +61,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 210.584µs
+        duration: 3.892333ms

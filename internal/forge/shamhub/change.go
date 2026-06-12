@@ -109,6 +109,15 @@ type shamChange struct {
 
 	// ChecksState is the aggregate CI/checks state for the change.
 	ChecksState forge.ChecksState
+
+	// ChecksRuns is the fine-grained per-run check state for the
+	// change. Populated by [ShamHub.SetChangeChecks]; nil when only
+	// [ShamHub.SetChangeChecksState] has been used.
+	ChecksRuns []forge.CheckRun
+
+	// ChecksURL is the forge's summary page for the change's checks.
+	// Empty when no full checks payload has been seeded.
+	ChecksURL string
 }
 
 // Change is a change proposal against a repository.

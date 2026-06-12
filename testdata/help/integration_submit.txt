@@ -35,8 +35,10 @@ the stack.
 
 Flags:
   -n, --dry-run                  Don't actually submit the stack
-  -c, --fill                     Fill in the change title and body from the
-                                 commit messages
+  -c, --[no-]fill                Fill in the change title and body via
+                                 the configured message generator.
+                                 Defaults to spice.message.autoFill.
+                                 (🔧 spice.message.autoFill)
       --[no-]draft               Whether to mark change requests as drafts
       --[no-]publish             Whether to create CRs for pushed branches.
                                  Defaults to true. (🔧 spice.submit.publish)

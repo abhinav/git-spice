@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 106
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing 0CUArRI9","body":"Test PR with non-existent base","base":"41rxLc7B","head":"0CUArRI9"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:57833
+        body: '{"subject":"Testing bQRHwdue","body":"Test PR with non-existent base","base":"fN1UbBRZ","head":"bQRHwdue"}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -25,16 +25,16 @@ interactions:
                 - text/plain; charset=utf-8
         status: 400 Bad Request
         code: 400
-        duration: 30.172708ms
+        duration: 17.1115ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 29
-        host: 127.0.0.1:49154
-        body: '{"ref":"refs/heads/41rxLc7B"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/ref/exists
+        host: 127.0.0.1:57833
+        body: '{"ref":"refs/heads/fN1UbBRZ"}'
+        url: http://127.0.0.1:57833/abhinav/test-repo/ref/exists
         method: POST
       response:
         proto: HTTP/1.1
@@ -52,4 +52,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 30.101875ms
+        duration: 20.701292ms

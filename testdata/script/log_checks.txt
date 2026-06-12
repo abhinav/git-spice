@@ -1,0 +1,67 @@
+# 'gs log --json' emits forge check status when --cr-checks is set.
+
+as 'Test <test@example.com>'
+at '2026-06-12T17:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feat1.txt
+gs bc feat1 -m 'feat1'
+git add feat2.txt
+gs bc feat2 -m 'feat2'
+git add feat3.txt
+gs bc feat3 -m 'feat3'
+
+gs bco feat3
+gs dss --fill
+
+# feat1: failing build with one passed + one failed run.
+shamhub set-checks alice/example 1 '{"rollup":"failed","runs":[{"name":"unit","state":"success","url":"https://ci.example/feat1/unit"},{"name":"lint","state":"failure","url":"https://ci.example/feat1/lint"}],"url":"https://ci.example/feat1"}'
+
+# feat2: passing rollup with one neutral run preserved in the per-run state.
+shamhub set-checks alice/example 2 '{"rollup":"passed","runs":[{"name":"unit","state":"neutral","url":"https://ci.example/feat2/unit"}],"url":"https://ci.example/feat2"}'
+
+# feat3 has no checks seeded -> rollup is "none".
+
+# Without --cr-checks: no checks field in any JSON output.
+gs ls --json --no-cr-checks
+cmpenv stdout $WORK/golden/ls-without-checks.json
+
+# With --cr-checks: checks appear for changes with seeded data.
+gs ls --json --cr-checks
+cmpenv stdout $WORK/golden/ls-with-checks.json
+
+# Config also enables checks.
+git config spice.log.crChecks true
+gs ls --json
+cmpenv stdout $WORK/golden/ls-with-checks.json
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+
+-- golden/ls-without-checks.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
+-- golden/ls-with-checks.json --
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","checks":{"rollup":"failed","runs":[{"name":"unit","state":"success","url":"https://ci.example/feat1/unit"},{"name":"lint","state":"failure","url":"https://ci.example/feat1/lint"}],"url":"https://ci.example/feat1"}},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","checks":{"rollup":"passed","runs":[{"name":"unit","state":"neutral","url":"https://ci.example/feat2/unit"}],"url":"https://ci.example/feat2"}},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","checks":{"rollup":"none"}},"push":{"ahead":0,"behind":0}}
+{"name":"main","ups":[{"name":"feat1"}]}
