@@ -1,0 +1,60 @@
+# Verifies that branch restacking works correctly
+# when running git-spice inside a submodule
+# with an absorbed gitdir.
+#
+# Git reports %(worktreepath) as the gitdir
+# for the main worktree of a submodule,
+# which previously caused git-spice to skip restacking
+# with "checked out in another worktree".
+
+as 'Test <test@example.com>'
+at '2026-03-24T10:00:00Z'
+
+# Set up a submodule repo.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up the parent repo.
+cd $WORK/parent
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Add the submodule and commit.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Work inside the submodule.
+cd libs/core
+gs repo init
+
+# Create a stack: main -> feat-a -> feat-b.
+cp $WORK/extra/a.txt a.txt
+git add a.txt
+gs bc feat-a -m 'Add a'
+cp $WORK/extra/b.txt b.txt
+gs bc feat-b -m 'Add b'
+
+# Go back to feat-a and amend it.
+# 'commit amend' auto-restacks upstack branches.
+# This must succeed without the
+# "checked out in another worktree" error.
+gs bco feat-a
+cp $WORK/extra/a2.txt a.txt
+git add a.txt
+gs commit amend --no-edit
+stderr 'feat-b: restacked on feat-a'
+
+# Verify the stack is intact.
+gs ls
+stderr 'feat-a'
+stderr 'feat-b'
+
+-- sub-repo/dummy.txt --
+-- parent/dummy.txt --
+-- extra/a.txt --
+a content
+-- extra/b.txt --
+b content
+-- extra/a2.txt --
+a content updated

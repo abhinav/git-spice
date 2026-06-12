@@ -8,18 +8,20 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type commitCreateCmd struct {
-	All         bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty  bool   `help:"Create a new commit even if it contains no changes."`
-	Fixup       string `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
-	NoVerify    bool   `help:"Bypass pre-commit and commit-msg hooks."`
-	Signoff     bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	All           bool              `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty    bool              `help:"Create a new commit even if it contains no changes."`
+	Fixup         string            `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
+	Message       string            `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
+	MessageFile   string            `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	NoVerify      bool              `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff       bool              `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	ModuleMessage map[string]string `name:"module-message" placeholder:"PATH=MSG" help:"Per-submodule commit message override (repeatable)"`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -48,8 +50,30 @@ func (cmd *commitCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
+	submoduleTracker SubmoduleTracker,
+	submoduleApplier SubmoduleApplier,
 	restackHandler RestackHandler,
 ) error {
+	// Pre-commit submodule work runs before the parent commit so the
+	// parent commit can include any updated gitlinks in a single commit.
+	// Fixup mode is treated like create (we just commit in subs; the
+	// recursive --fixup propagation is deferred).
+	if cmd.Fixup == "" {
+		currentForState, _ := wt.CurrentBranch(ctx)
+		if currentForState != "" {
+			if _, err := submoduleApplier.PreCommitSubmodules(ctx, currentForState, submodule.CommitModeCreate, submodule.CommitMessageSource{
+				Message:       cmd.Message,
+				MessageFile:   cmd.MessageFile,
+				ModuleMessage: cmd.ModuleMessage,
+				Signoff:       cmd.Signoff,
+				NoVerify:      cmd.NoVerify,
+				All:           cmd.All,
+			}); err != nil {
+				return fmt.Errorf("submodule pre-commit: %w", err)
+			}
+		}
+	}
+
 	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:     cmd.Message,
 		MessageFile: cmd.MessageFile,
@@ -77,6 +101,13 @@ func (cmd *commitCreateCmd) Run(
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if err := submoduleTracker.RecordBranchState(
+		ctx, currentBranch,
+	); err != nil {
+		log.Warn("Could not record submodule associations",
+			"error", err)
 	}
 
 	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{

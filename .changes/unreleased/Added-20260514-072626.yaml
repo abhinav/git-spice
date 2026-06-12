@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: gs branch checkout (and friends) now switch tracked submodules to their recorded branches transactionally — on conflict, parent and already-switched submodules roll back to their original HEADs.'
+time: 2026-05-14T07:26:26.543871-04:00

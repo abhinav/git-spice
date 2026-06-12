@@ -37,6 +37,9 @@ type branchCmd struct {
 
 	// Pull request management
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
+
+	// Submodule management
+	Submodule branchSubmoduleCmd `cmd:"" aliases:"sm" help:"Manage submodule branch associations"`
 }
 
 // BranchPromptConfig defines configuration for the branch tree prompt

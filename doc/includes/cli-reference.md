@@ -140,6 +140,7 @@ and untrack all branches.
 * `--remote=NAME`: Name of the remote to push submitted branches to
 * `--upstream=NAME`: Name of the remote to open change requests against
 * `--reset`: Forget all information about the repository
+* `--[no-]recurse-submodules`: Also initialize tracked submodules. Prompts when unset and submodules are present.
 
 ### git-spice repo sync {#gs-repo-sync}
 
@@ -302,6 +303,9 @@ Use --branch to rebase the stack of a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to restack the stack of
+* `--[no-]recurse-submodules` ([:material-wrench:{ .middle title="spice.submodule.recurse" }](/cli/config.md#spicesubmodulerecurse)): Also restack tracked submodules
+
+**Configuration**: [spice.submodule.recurse](/cli/config.md#spicesubmodulerecurse)
 
 ### git-spice stack edit {#gs-stack-edit}
 
@@ -816,6 +820,7 @@ target (A) to the specified branch:
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable)
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
 **Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
@@ -872,6 +877,7 @@ Use the --branch flag to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Name of the branch
+* `--module-branch=PATH=BRANCH`: Per-submodule branch override for fold conflicts (repeatable)
 
 ### git-spice branch split {#gs-branch-split}
 
@@ -1130,6 +1136,45 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
+### git-spice branch submodule list {#gs-branch-submodule-list}
+
+```
+gs branch (b) submodule (sm) list (ls) [flags]
+```
+
+List submodule branch associations
+
+Shows the submodule branch associations
+recorded for the given branch.
+If no branch is specified,
+the current branch is used.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Branch to list associations for. Defaults to current branch.
+
+### git-spice branch submodule repoint {#gs-branch-submodule-repoint}
+
+```
+gs branch (b) submodule (sm) repoint <path> [flags]
+```
+
+Change submodule branch association for the current branch
+
+Changes which submodule branch is associated
+with the current parent branch.
+
+If --branch is not specified,
+the submodule's current branch is used.
+
+**Arguments**
+
+* `path`: Submodule path to repoint.
+
+**Flags**
+
+* `-b`, `--branch=BRANCH`: Submodule branch to associate. Defaults to submodule's current branch.
+
 ## Commit
 
 ### git-spice commit create {#gs-commit-create}
@@ -1166,6 +1211,7 @@ when you want to apply changes to an older commit.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable)
 
 **Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
@@ -1206,6 +1252,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--module-message=PATH=MSG`: Per-submodule commit message override (repeatable, non-interactive amend only)
 
 **Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
@@ -1339,43 +1386,6 @@ going back to the state before the rebase.
 
 The command can be used in place of 'git rebase --abort'
 even if a git-spice operation is not currently in progress.
-
-## CI
-
-### git-spice ci merge-guard {#gs-ci-merge-guard}
-
-```
-gs ci merge-guard <number> [flags]
-```
-
-Block merging a PR whose base is not trunk
-
-Checks whether a change request is safe to merge
-by verifying its base branch is trunk.
-
-Use this in forge CI/CD pipelines to prevent
-out-of-order merges in a stacked PR workflow.
-
-By default, only git-spice managed PRs are checked.
-Unmanaged PRs are allowed through.
-Use --all to block any PR whose base is not trunk.
-
-The trunk branch is detected from the git-spice
-navigation comment on the PR.
-Use --trunk to override this detection.
-
-Exit codes:
-  0  PR is safe to merge (base is trunk, or unmanaged)
-  1  PR should not be merged yet
-
-**Arguments**
-
-* `number`: Change request number to check
-
-**Flags**
-
-* `--trunk=STRING`: Override trunk branch name
-* `--all`: Block all non-trunk-based PRs, not just git-spice managed ones
 
 ## Navigation
 

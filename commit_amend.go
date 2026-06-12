@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -23,9 +24,10 @@ type commitAmendCmd struct {
 	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
 	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
-	NoEdit   bool `help:"Don't edit the commit message"`
-	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
-	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	NoEdit        bool              `help:"Don't edit the commit message"`
+	NoVerify      bool              `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff       bool              `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	ModuleMessage map[string]string `name:"module-message" placeholder:"PATH=MSG" help:"Per-submodule commit message override (repeatable, non-interactive amend only)"`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -61,6 +63,8 @@ func (cmd *commitAmendCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	submoduleTracker SubmoduleTracker,
+	submoduleApplier SubmoduleApplier,
 	restackHandler RestackHandler,
 ) error {
 	var detachedHead bool
@@ -128,7 +132,7 @@ func (cmd *commitAmendCmd) Run(
 					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
-				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
+				}).Run(ctx, log, repo, wt, store, svc, submoduleTracker, submoduleApplier, restackHandler)
 			}
 		}
 	}
@@ -218,6 +222,26 @@ func (cmd *commitAmendCmd) Run(
 		}
 	}
 
+	// Determine whether this is a non-interactive amend.
+	// Non-interactive: message is provided via -m/-F or --no-edit.
+	nonInteractive := cmd.Message != "" || cmd.MessageFile != "" || cmd.NoEdit
+
+	// Non-interactive: pre-commit sub work runs before the parent
+	// amend so the gitlinks land in a single resulting commit.
+	if nonInteractive && currentBranch != "" {
+		if _, err := submoduleApplier.PreCommitSubmodules(ctx, currentBranch, submodule.CommitModeAmend, submodule.CommitMessageSource{
+			Message:       cmd.Message,
+			MessageFile:   cmd.MessageFile,
+			NoEdit:        cmd.NoEdit,
+			ModuleMessage: cmd.ModuleMessage,
+			Signoff:       cmd.Signoff,
+			NoVerify:      cmd.NoVerify,
+			All:           cmd.All,
+		}); err != nil {
+			return fmt.Errorf("submodule pre-commit: %w", err)
+		}
+	}
+
 	if err := wt.Commit(ctx, git.CommitRequest{
 		Message:     cmd.Message,
 		MessageFile: cmd.MessageFile,
@@ -239,6 +263,33 @@ func (cmd *commitAmendCmd) Run(
 	if detachedHead {
 		log.Debug("HEAD is detached, skipping restack")
 		return nil
+	}
+
+	// Interactive amend (editor opened): handle the gitlink-only path
+	// after the user saved the editor. If any gitlinks were staged
+	// during this step, amend a second time with --no-edit to fold
+	// them in.
+	if !nonInteractive {
+		staged, err := submoduleApplier.PostAmendInteractiveSubmodules(ctx, currentBranch)
+		if err != nil {
+			return fmt.Errorf("submodule post-amend: %w", err)
+		}
+		if len(staged) > 0 {
+			if err := wt.Commit(ctx, git.CommitRequest{
+				Amend:    true,
+				NoEdit:   true,
+				NoVerify: cmd.NoVerify,
+			}); err != nil {
+				return fmt.Errorf("amend gitlinks: %w", err)
+			}
+		}
+	}
+
+	if err := submoduleTracker.RecordBranchState(
+		ctx, currentBranch,
+	); err != nil {
+		log.Warn("Could not record submodule associations",
+			"error", err)
 	}
 
 	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{

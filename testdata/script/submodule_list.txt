@@ -1,0 +1,63 @@
+# 'gs branch submodule list' shows submodule branch associations
+# recorded for a branch.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch in the submodule repo.
+git add feature.txt
+gs branch create sub-feat -m 'Add feature'
+
+# Set up the parent repo.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule to the parent repo.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Check out the feature branch in the submodule.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+
+# Create a branch on the parent, recording submodule state.
+git add file.txt
+gs branch create feat-x -m 'Add file'
+
+# List submodule associations for the current branch.
+gs branch submodule list
+cmp stderr $WORK/golden/list.txt
+
+# List with explicit branch flag.
+gs branch submodule list -b feat-x
+cmp stderr $WORK/golden/list.txt
+
+# Detach the submodule HEAD so no association is recorded.
+cd libs/core
+git checkout --detach HEAD
+cd $WORK/repo
+
+gs trunk
+git add other.txt
+gs branch create no-subs -m 'No submodule changes'
+
+gs branch submodule list
+stderr 'no submodule associations'
+
+-- sub-repo/feature.txt --
+submodule feature
+-- repo/file.txt --
+parent file
+-- repo/other.txt --
+other file
+-- golden/list.txt --
+INF libs/core                      →  sub-feat

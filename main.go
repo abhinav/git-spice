@@ -34,6 +34,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/split"
 	"go.abhg.dev/gs/internal/handler/squash"
 	"go.abhg.dev/gs/internal/handler/submit"
+	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
 	"go.abhg.dev/gs/internal/secret"
@@ -167,7 +168,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
 		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
@@ -445,6 +446,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			wt *git.Worktree,
 			svc *spice.Service,
 			trackHandler TrackHandler,
+			submoduleApplier SubmoduleApplier,
 		) (CheckoutHandler, error) {
 			return &checkout.Handler{
 				Stdout:     kctx.Stdout,
@@ -454,6 +456,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree:   wt,
 				Track:      trackHandler,
 				Service:    svc,
+				Submodule:  submoduleApplier,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -507,6 +510,40 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Worktree: wt,
 				Service:  svc,
 				Restack:  restackHandler,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			wt *git.Worktree,
+			store *state.Store,
+			cfg *spice.Config,
+		) (SubmoduleTracker, error) {
+			var exclude []string
+			if cfg != nil {
+				exclude = cfg.SubmoduleExclusions()
+			}
+			return &submodule.Tracker{
+				Log:      log,
+				Worktree: wt,
+				Store:    store,
+				Exclude:  exclude,
+			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			wt *git.Worktree,
+			store *state.Store,
+			cfg *spice.Config,
+		) (SubmoduleApplier, error) {
+			var exclude []string
+			if cfg != nil {
+				exclude = cfg.SubmoduleExclusions()
+			}
+			return &submodule.Applier{
+				Log:      log,
+				Worktree: wt,
+				Store:    store,
+				Exclude:  exclude,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
