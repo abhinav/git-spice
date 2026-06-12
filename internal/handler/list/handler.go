@@ -100,7 +100,12 @@ const (
 	// branches that have an associated ChangeID.
 	IncludeCommentCounts
 
-	needsRemoteID = IncludeChangeURL | IncludeChangeState | IncludeCommentCounts
+	// IncludeChecks includes per-change rolled-up and per-run check
+	// state for branches that have an associated ChangeID.
+	IncludeChecks
+
+	needsRemoteID = IncludeChangeURL | IncludeChangeState |
+		IncludeCommentCounts | IncludeChecks
 )
 
 // BranchesRequest holds the parameters for the log command.
@@ -141,6 +146,7 @@ type BranchItem struct {
 	ChangeURL     string               // only if IncludeChangeURL is set
 	ChangeState   forge.ChangeState    // populated if RemoteRepository is available
 	CommentCounts *forge.CommentCounts // only if IncludeCommentCounts is set
+	Checks        *forge.ChecksReport  // only if IncludeChecks is set
 	PushStatus    *PushStatus          // only if IncludePushStatus is set
 
 	// Worktree is the absolute path to the worktree where this branch is checked out.
@@ -365,7 +371,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	// If requested and possible, batch-resolve remote change metadata.
-	if req.Include&(IncludeChangeState|IncludeCommentCounts) != 0 && remoteForge != nil {
+	if req.Include&(IncludeChangeState|IncludeCommentCounts|IncludeChecks) != 0 && remoteForge != nil {
 		// Try to load remote metadata, but don't fail the whole operation
 		// if something goes wrong.
 		if err := h.loadRemoteChangeData(ctx, remoteForge, remoteRepoID, req.Include, items); err != nil {
@@ -440,6 +446,24 @@ func (h *Handler) loadRemoteChangeData(
 			counts, err = remoteRepo.CommentCountsByChange(ctx, changeIDs)
 			if err != nil {
 				return fmt.Errorf("retrieve comment counts: %w", err)
+			}
+			return nil
+		})
+	}
+
+	if include&IncludeChecks != 0 {
+		var checks []*forge.ChecksReport
+		updates = append(updates, func() {
+			for j, idx := range branchesIdx {
+				branches[idx].Checks = checks[j]
+			}
+		})
+
+		wg.Go(func() error {
+			var err error
+			checks, err = remoteRepo.ChecksByChange(ctx, changeIDs)
+			if err != nil {
+				return fmt.Errorf("retrieve checks: %w", err)
 			}
 			return nil
 		})
