@@ -6,7 +6,8 @@ All tracked branches in the repository are rebased on top of their respective
 bases in dependency order, ensuring a linear history.
 
 Flags:
-  -w, --worktree    Only restack branches in the current worktree.
+  --[no-]auto-resolve    Auto-resolve rebase conflicts using the configured
+                         resolver script (🔧 spice.restack.autoResolve)
 
 Global Flags:
   -h, --help           Show help for the command

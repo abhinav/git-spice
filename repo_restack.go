@@ -13,7 +13,8 @@ import (
 )
 
 type repoRestackCmd struct {
-	Worktree bool `short:"w" long:"worktree" help:"Only restack branches in the current worktree."`
+	Worktree    bool `short:"w" long:"worktree" help:"Only restack branches in the current worktree."`
+	AutoResolve bool `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
 }
 
 func (*repoRestackCmd) Help() string {
@@ -51,6 +52,7 @@ func (cmd *repoRestackCmd) Run(
 		Scope:           restack.ScopeUpstackExclusive,
 		ContinueCommand: []string{"repo", "restack"},
 		SkipCheckout:    true, // caller handles checkout
+		AutoResolve:     &cmd.AutoResolve,
 	}
 	if cmd.Worktree {
 		req.WorktreeFilter = wt.RootDir()

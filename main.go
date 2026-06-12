@@ -37,6 +37,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submodule"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -493,15 +494,35 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			view ui.View,
 			worktree *git.Worktree,
 			store *state.Store,
 			svc *spice.Service,
+			cfg *spice.Config,
 		) (RestackHandler, error) {
+			repoRoot := worktree.RootDir()
+			var resolver restack.Resolver
+			if script := cfg.RestackResolver(); script != "" {
+				resolver = &restack.ScriptResolver{
+					Log:    log,
+					Script: script,
+					Runner: &scriptrun.Runner{
+						Log:  log,
+						Args: os.Args,
+					},
+					RepoRoot: repoRoot,
+				}
+			}
 			return &restack.Handler{
-				Log:      log,
-				Worktree: worktree,
-				Store:    store,
-				Service:  svc,
+				Log:                  log,
+				Worktree:             worktree,
+				Store:                store,
+				Service:              svc,
+				Resolver:             resolver,
+				Prompter:             restack.NewViewPrompter(view),
+				DefaultAutoResolve:   cfg.RestackAutoResolve(),
+				RepoRoot:             repoRoot,
+				MaxResolveIterations: cfg.ScriptResolveMaxIterations(),
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

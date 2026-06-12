@@ -17,6 +17,7 @@ import (
 )
 
 type stackRestackCmd struct {
+	AutoResolve       bool   `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
 	Branch            string `help:"Branch to restack the stack of" placeholder:"NAME" predictor:"trackedBranches"`
 	RecurseSubmodules bool   `name:"recurse-submodules" negatable:"" config:"submodule.recurse" help:"Also restack tracked submodules"`
 }
@@ -94,7 +95,9 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	if err := handler.RestackStack(ctx, cmd.Branch); err != nil {
+	if err := handler.RestackStack(ctx, cmd.Branch, &restack.Options{
+		AutoResolve: &cmd.AutoResolve,
+	}); err != nil {
 		return err
 	}
 
