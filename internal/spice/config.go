@@ -246,6 +246,71 @@ func (c *Config) SubmoduleExclusions() []string {
 	return c.items[key]
 }
 
+// DefaultScriptResolveMaxIterations is the iteration cap used when
+// spice.scriptResolve.maxIterations is unset or invalid. A script that
+// keeps returning new questions hits this many iterations before
+// git-spice gives up and falls back to manual resolution.
+const DefaultScriptResolveMaxIterations = 10
+
+// ScriptResolveMaxIterations returns the configured iteration cap for
+// script-driven Q&A loops. Read from spice.scriptResolve.maxIterations
+// and defaults to [DefaultScriptResolveMaxIterations]. Non-positive or
+// non-numeric values fall back to the default and emit a warning.
+func (c *Config) ScriptResolveMaxIterations() int {
+	key := git.ConfigKey("spice.scriptResolve.maxIterations").Canonical()
+	values, ok := c.items[key]
+	if !ok || len(values) == 0 {
+		return DefaultScriptResolveMaxIterations
+	}
+	last := strings.TrimSpace(values[len(values)-1])
+	n, err := strconv.Atoi(last)
+	if err != nil || n <= 0 {
+		c.log.Warnf(
+			"invalid value for %v: %q (using default %d)",
+			key, last, DefaultScriptResolveMaxIterations,
+		)
+		return DefaultScriptResolveMaxIterations
+	}
+	return n
+}
+
+// lastValue returns the last value for the given config key,
+// or an empty string if the key is not set.
+func (c *Config) lastValue(key string) string {
+	values := c.items[git.ConfigKey(
+		_spiceSection+"."+key,
+	).Canonical()]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[len(values)-1]
+}
+
+// MessageGenerator returns the configured script
+// for generating or updating messages,
+// or an empty string if not set.
+//
+// The value is read from spice.message.generator.
+func (c *Config) MessageGenerator() string {
+	return c.lastValue("message.generator")
+}
+
+// MessageAutoFill reports whether the message generator should be
+// invoked by default. Read from spice.message.autoFill (bool, default
+// false). When true, `gs commit create` and friends behave as though
+// `--fill` was passed; `--no-fill` opts out.
+func (c *Config) MessageAutoFill() bool {
+	v := c.lastValue("message.autoFill")
+	if v == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return b
+}
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }

@@ -4,18 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/submodule"
+	"go.abhg.dev/gs/internal/msggen"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type commitCreateCmd struct {
 	All           bool              `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty    bool              `help:"Create a new commit even if it contains no changes."`
+	Fill          bool              `short:"c" negatable:"" config:"message.autoFill" help:"Fill the commit message using the configured message generator. Defaults to spice.message.autoFill."`
 	Fixup         string            `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
 	Message       string            `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
 	MessageFile   string            `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
@@ -49,11 +54,36 @@ func (*commitCreateCmd) Help() string {
 func (cmd *commitCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
+	cfg *spice.Config,
 	wt *git.Worktree,
 	submoduleTracker SubmoduleTracker,
 	submoduleApplier SubmoduleApplier,
 	restackHandler RestackHandler,
 ) error {
+	// If --fill is set and no message was provided,
+	// try to generate one using the configured script.
+	if cmd.Fill && cmd.Message == "" {
+		script := cfg.MessageGenerator()
+		if script == "" {
+			return msggen.ErrNoGenerator
+		}
+
+		result, err := (&msggen.Runner{
+			Log:  log,
+			Args: os.Args,
+		}).Run(
+			ctx, script, wt.RootDir(),
+			commitEnv(ctx, wt, scriptrun.OpCommitCreate, false),
+		)
+		if err != nil {
+			log.Warn("Message generator failed, "+
+				"falling back to editor",
+				"error", err)
+		} else {
+			cmd.Message = result.Message()
+		}
+	}
+
 	// Pre-commit submodule work runs before the parent commit so the
 	// parent commit can include any updated gitlinks in a single commit.
 	// Fixup mode is treated like create (we just commit in subs; the
