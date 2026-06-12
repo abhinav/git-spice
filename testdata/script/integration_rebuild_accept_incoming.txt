@@ -1,0 +1,70 @@
+# When no resolver is configured, conflicts that survive the merge
+# drivers are auto-resolved by the accept-incoming fallback so the
+# rebuild completes without user intervention. The incoming tip's
+# version wins for each conflicted path.
+#
+# Also verifies that --no-accept-incoming disables the fallback and
+# surfaces the conflict for manual resolution.
+
+as 'Test <test@example.com>'
+at '2026-06-01T12:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+git add feat-c.txt
+gs bc feat-c -m 'feat-c adds an unrelated file'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b --tip feat-c
+
+# Rebuild completes without prompting:
+# - feat-a merges cleanly
+# - feat-b conflicts on shared.txt; accept-incoming takes feat-b's version
+# - feat-c merges cleanly
+gs integration rebuild
+stderr 'accepted incoming for 1 conflicted path\(s\): shared.txt'
+stderr 'rebuilt with 3 tip\(s\)'
+
+# preview contains both feat-b's resolution and feat-c's file.
+git show preview:shared.txt
+cmp stdout $WORK/golden/feat-b.txt
+
+git show preview:feat-c.txt
+cmp stdout $WORK/golden/feat-c.txt
+
+# With --no-accept-incoming, the conflict surfaces for manual resolution.
+# Clear rerere recordings from the first rebuild so the same conflict
+# surfaces fresh.
+rm -rf .git/rr-cache
+gs integration delete
+gs integration create preview --tip feat-a --tip feat-b
+! gs integration rebuild --no-accept-incoming
+stderr 'Merge conflict in tip feat-b'
+stderr 'git merge --continue'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- repo/feat-c.txt --
+feat-c content
+-- golden/feat-b.txt --
+feat-b content
+-- golden/feat-c.txt --
+feat-c content

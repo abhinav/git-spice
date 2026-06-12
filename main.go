@@ -28,6 +28,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/integration"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/handler/onto"
 	"go.abhg.dev/gs/internal/handler/restack"
@@ -198,6 +199,7 @@ func main() {
 		}),
 		komplete.WithPredictor("branches", komplete.PredictFunc(predictBranches)),
 		komplete.WithPredictor("trackedBranches", komplete.PredictFunc(predictTrackedBranches)),
+		komplete.WithPredictor("integrationTips", komplete.PredictFunc(predictIntegrationTips)),
 		komplete.WithPredictor("remotes", komplete.PredictFunc(predictRemotes)),
 		komplete.WithPredictor("dirs", komplete.PredictFunc(predictDirs)),
 		komplete.WithPredictor("forges", komplete.PredictFunc(predictForges(&forges))),
@@ -308,8 +310,9 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
-	Worktree worktreeCmd `cmd:"" aliases:"wt" group:"Worktree"`
-	Rebase   rebaseCmd   `cmd:"" aliases:"rb" group:"Rebase"`
+	Worktree    worktreeCmd    `cmd:"" aliases:"wt" group:"Worktree"`
+	Integration integrationCmd `cmd:"" aliases:"int" group:"Integration"`
+	Rebase      rebaseCmd      `cmd:"" aliases:"rb" group:"Rebase"`
 
 	CI ciCmd `cmd:"" group:"CI" help:"CI/CD integration commands"`
 
@@ -655,6 +658,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			deleteHandler DeleteHandler,
 			restackHandler RestackHandler,
 			autostashHandler AutostashHandler,
+			integrationHandler IntegrationHandler,
 		) (SyncHandler, error) {
 			remote, err := ensureRemote(ctx, repo, store, log, view)
 			// TODO: move ensure remote to Service
@@ -689,6 +693,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Delete:           deleteHandler,
 				Restack:          restackHandler,
 				Autostash:        autostashHandler,
+				OnBranchRemoved:  integrationHandler.OnBranchRemoved,
 				Remote:           remote.Upstream,
 				RemoteRepository: remoteRepo,
 				PushRepository:   pushRepository,
@@ -750,6 +755,50 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			view ui.View,
 		) (state.Remote, error) {
 			return ensureRemote(ctx, repo, store, log, view)
+		}),
+		kctx.BindSingletonProvider(func(
+			log *silog.Logger,
+			view ui.View,
+			repo *git.Repository,
+			wt *git.Worktree,
+			store *state.Store,
+			svc *spice.Service,
+			cfg *spice.Config,
+		) (IntegrationHandler, error) {
+			repoRoot := wt.RootDir()
+			var resolver integration.Resolver
+			if script := cfg.IntegrationResolver(); script != "" {
+				resolver = &integration.ScriptResolver{
+					Log:    log,
+					Script: script,
+					Runner: &scriptrun.Runner{
+						Log:  log,
+						Args: os.Args,
+					},
+					RepoRoot: repoRoot,
+				}
+			}
+			return &integration.Handler{
+				Log:                   log,
+				Repository:            repo,
+				Worktree:              wt,
+				Store:                 store,
+				Service:               svc,
+				Resolver:              resolver,
+				Prompter:              integration.NewViewPrompter(view),
+				DefaultAutoResolve:    cfg.IntegrationAutoResolve(),
+				DefaultAcceptIncoming: cfg.IntegrationAcceptIncoming(),
+				RepoRoot:              repoRoot,
+				MaxResolveIterations:  cfg.ScriptResolveMaxIterations(),
+				Regenerator: &integration.FileRegenerator{
+					Log: log,
+					Runner: &scriptrun.Runner{
+						Log:  log,
+						Args: os.Args,
+					},
+					RepoRoot: repoRoot,
+				},
+			}, nil
 		}),
 	)
 }

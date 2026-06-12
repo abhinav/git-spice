@@ -1,0 +1,55 @@
+# When .gs/integration-regenerate does not exist, gs silently skips
+# the post-merge regenerator step. The merge driver still resolves
+# conflicts via take-incoming.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+chmod 700 $WORK/driver.sh
+
+cd repo
+git init
+
+git config merge.regenerate.driver $WORK/driver.sh' %O %A %B %P'
+git config merge.regenerate.name 'take incoming + log'
+
+git add derived.txt .gitattributes
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt derived.txt
+git add derived.txt
+gs bc feat-a -m 'feat-a edits derived.txt'
+
+git checkout main
+cp feat-b-version.txt derived.txt
+git add derived.txt
+gs bc feat-b -m 'feat-b edits derived.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+# .gs/integration-regenerate intentionally NOT created.
+
+gs integration rebuild
+stderr 'rebuilt with 2 tip\(s\)'
+
+# Final commit should reflect the take-incoming resolution
+# (feat-b is the second tip merged).
+git show preview:derived.txt
+stdout 'feat-b content'
+
+-- repo/derived.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- repo/.gitattributes --
+derived.txt merge=regenerate
+-- driver.sh --
+#!/bin/sh
+cp -f "$3" "$2"
+if [ -n "${GS_INTEGRATION_REGEN_LOG:-}" ]; then
+    printf '%s\n' "$4" >> "$GS_INTEGRATION_REGEN_LOG"
+fi

@@ -188,11 +188,17 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 	items := make([]*branchtree.Item, len(res.Branches))
 	for i, b := range res.Branches {
 		item := &branchtree.Item{
-			Branch:       b.Name,
-			Worktree:     b.Worktree,
-			NeedsRestack: b.NeedsRestack,
-			Aboves:       b.Aboves,
-			Highlighted:  b.Name == currentBranch,
+			Branch:         b.Name,
+			Worktree:       b.Worktree,
+			NeedsRestack:   b.NeedsRestack,
+			Aboves:         b.Aboves,
+			Highlighted:    b.Name == currentBranch,
+			IntegrationTip: b.IntegrationTip,
+		}
+		if b.Integration != nil {
+			item.Integration = &branchtree.Integration{
+				TipCount: len(b.Integration.Tips),
+			}
 		}
 
 		// Format change ID based on requested format.
@@ -251,9 +257,16 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 		pushFmt = branchtree.PushStatusDisabled
 	}
 
+	// Render integration first when configured, so it appears as the
+	// top row of the output. Each root is its own subtree, so the
+	// integration row stands alone above the trunk tree.
+	roots := []int{res.TrunkIdx}
+	if res.IntegrationIdx >= 0 {
+		roots = []int{res.IntegrationIdx, res.TrunkIdx}
+	}
 	g := branchtree.Graph{
 		Items: items,
-		Roots: []int{res.TrunkIdx},
+		Roots: roots,
 	}
 
 	opts := &branchtree.GraphOptions{
@@ -287,6 +300,13 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 			Name:    branch.Name,
 			Current: branch.Name == currentBranch,
 		}
+
+		if branch.Integration != nil {
+			logBranch.Integration = &jsonLogIntegration{
+				Tips: branch.Integration.Tips,
+			}
+		}
+		logBranch.IntegrationTip = branch.IntegrationTip
 
 		if branch.Base != "" {
 			logBranch.Down = &jsonLogDown{
@@ -371,6 +391,13 @@ type jsonLogBranch struct {
 	// This is false or omitted if this is not the current branch.
 	Current bool `json:"current,omitempty"`
 
+	// Integration is set for the synthetic integration branch row.
+	Integration *jsonLogIntegration `json:"integration,omitempty"`
+
+	// IntegrationTip is true if this branch is a configured tip of
+	// the integration branch.
+	IntegrationTip bool `json:"integrationTip,omitempty"`
+
 	// Down is the base branch onto which this branch is stacked.
 	// This is unset if this branch is trunk.
 	// 'git-spice down' from the current branch will check out this branch.
@@ -406,6 +433,11 @@ type jsonLogBranch struct {
 	// Submodules maps submodule paths to associated
 	// branch names. Omitted when empty.
 	Submodules map[string]string `json:"submodules,omitempty"`
+}
+
+type jsonLogIntegration struct {
+	// Tips lists the configured tip branch names in declaration order.
+	Tips []string `json:"tips"`
 }
 
 type jsonLogDown struct {

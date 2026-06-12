@@ -1,0 +1,29 @@
+# Verifies that renaming a tracked branch via 'gs branch rename' also
+# updates any integration tip that referenced the old name.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+
+# Rename the tip branch.
+gs branch checkout feat-a
+gs branch rename feat-a feat-a-renamed
+
+# Integration tip should now refer to the new name.
+gs integration tip list
+cmp stdout $WORK/golden/tips.txt
+
+-- repo/feat-a.txt --
+feature a
+-- golden/tips.txt --
+feat-a-renamed

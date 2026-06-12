@@ -49,6 +49,48 @@ func TestRepoInfoUnmarshalJSON(t *testing.T) {
 			give: `{"trunk":"main","remote":""}`,
 			want: repoInfo{Trunk: "main"},
 		},
+		{
+			name: "integration full",
+			give: `{
+				"trunk": "main",
+				"integration": {
+					"name": "preview",
+					"upstreamBranch": "preview",
+					"lastPushedHash": "abc123",
+					"tips": [
+						{"name": "feat-a", "hash": "def456"},
+						{"name": "feat-b", "hash": "789abc"}
+					]
+				}
+			}`,
+			want: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name:           "preview",
+					UpstreamBranch: "preview",
+					LastPushedHash: "abc123",
+					Tips: []integrationTipInfo{
+						{Name: "feat-a", Hash: "def456"},
+						{Name: "feat-b", Hash: "789abc"},
+					},
+				},
+			},
+		},
+		{
+			name: "integration minimal",
+			give: `{
+				"trunk": "main",
+				"integration": {
+					"name": "preview"
+				}
+			}`,
+			want: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "preview",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -123,6 +165,77 @@ func TestRepoInfoValidate(t *testing.T) {
 					Push:     "origin",
 				},
 			},
+		},
+		{
+			name: "valid with integration",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "preview",
+					Tips: []integrationTipInfo{
+						{Name: "feat-a"},
+					},
+				},
+			},
+		},
+		{
+			name: "integration empty name",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "",
+				},
+			},
+			wantErr: "integration branch name is empty",
+		},
+		{
+			name: "integration name equals trunk",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "main",
+				},
+			},
+			wantErr: "integration branch name must not equal trunk",
+		},
+		{
+			name: "integration tip empty name",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "preview",
+					Tips: []integrationTipInfo{
+						{Name: ""},
+					},
+				},
+			},
+			wantErr: "integration tip name is empty",
+		},
+		{
+			name: "integration tip equals trunk",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "preview",
+					Tips: []integrationTipInfo{
+						{Name: "main"},
+					},
+				},
+			},
+			wantErr: "integration tip must not equal trunk",
+		},
+		{
+			name: "integration tip equals integration name",
+			give: repoInfo{
+				Trunk: "main",
+				Integration: &integrationInfo{
+					Name: "preview",
+					Tips: []integrationTipInfo{
+						{Name: "preview"},
+					},
+				},
+			},
+			wantErr: "integration tip must not equal integration branch name",
 		},
 	}
 

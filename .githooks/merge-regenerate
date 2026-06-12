@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# merge-regenerate — silent take-incoming merge driver for derived files.
+#
+# Files tagged `merge=regenerate` in .gitattributes have their merge
+# conflicts silently resolved by taking the incoming version. Each
+# invocation logs the conflicted path to $GS_INTEGRATION_REGEN_LOG (if
+# set), so `gs integration rebuild` can invoke a project-level
+# regenerator script after all tip merges complete.
+#
+# Why take-incoming + post-merge regen instead of regen-in-driver:
+# running generators from inside the merge driver dirtied the worktree
+# (`mise generate`, `go test -update` write to many files) and caused
+# subsequent merge steps to abort with "your local changes would be
+# overwritten." The git index is held by the merge for the duration,
+# so `git add` from inside the driver also fails. The fix is to move
+# regeneration out of the merge entirely; see
+# `.gs/integration-regenerate` and the gs integration handler.
+#
+# Args (git merge driver protocol):
+#   $1 = %O  ancestor version (base)
+#   $2 = %A  current version (ours) — also where we must write the result
+#   $3 = %B  incoming version (theirs)
+#   $4 = %P  the path being merged
+set -euo pipefail
+
+cp -f "$3" "$2"
+if [ -n "${GS_INTEGRATION_REGEN_LOG:-}" ]; then
+    printf '%s\n' "$4" >> "$GS_INTEGRATION_REGEN_LOG"
+fi

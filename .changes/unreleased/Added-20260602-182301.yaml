@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration: Restack commands now auto-rebuild the integration branch when configured.'
+time: 2026-06-02T18:23:01.734474-04:00

@@ -4,6 +4,12 @@ Submit a stack
 
 Change Requests are created or updated for all branches in the current stack.
 
+When invoked from the configured integration branch, the "current stack" is the
+union of each configured tip's downstack (the tip and the branches below it),
+and the integration branch itself is pushed afterward. Branches above a tip are
+deliberately left alone: they are work in progress that has not been promoted to
+a tip yet.
+
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata. Use --fill to
@@ -26,10 +32,8 @@ the stack.
 
 Flags:
   -n, --dry-run                  Don't actually submit the stack
-  -c, --[no-]fill                Fill in the change title and body via
-                                 the configured message generator.
-                                 Defaults to spice.message.autoFill.
-                                 (🔧 spice.message.autoFill)
+  -c, --fill                     Fill in the change title and body from the
+                                 commit messages
       --[no-]draft               Whether to mark change requests as drafts
       --[no-]publish             Whether to create CRs for pushed branches.
                                  Defaults to true. (🔧 spice.submit.publish)

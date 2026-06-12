@@ -1,0 +1,76 @@
+# Verifies 'gs integration submit' pushes the integration branch
+# without creating a CR for it, and submits the downstack branches of
+# each configured tip as CRs.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+gs integration submit --fill
+stderr 'Created #1'
+stderr 'Integration branch pushed.'
+
+# Exactly one CR was created (for feat-a, the configured tip).
+# The integration branch itself was pushed without a CR.
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+# Verify both branches appeared on the remote.
+cd ../
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git branch -r
+cmp stdout $WORK/golden/remote-branches.txt
+
+-- repo/feat-a.txt --
+feature a
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feat-a",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "a044690fc011624960e3b0b64961ccc7eb93832e"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feat-a",
+      "sha": "b049cb76e0d5ca3f0b452fef57200741d2b7d1a7"
+    }
+  }
+]
+-- golden/remote-branches.txt --
+  origin/HEAD -> origin/main
+  origin/feat-a
+  origin/main
+  origin/preview

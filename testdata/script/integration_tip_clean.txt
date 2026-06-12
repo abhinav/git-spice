@@ -1,0 +1,68 @@
+# Verifies 'gs integration tip clean' removes tips whose upstack
+# contains another configured tip.
+#
+# A tip whose upstack already contains a configured tip is fully
+# subsumed: merging the higher tip into the integration already
+# captures the lower tip's content. Keeping both inflates the
+# rebuild for no benefit.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Linear stack:  main -> low -> middle -> high
+git add low.txt
+gs branch create low -m 'Add low'
+git add middle.txt
+gs branch create middle -m 'Add middle'
+git add high.txt
+gs branch create high -m 'Add high'
+
+# Independent stack:  main -> side
+gs trunk
+git add side.txt
+gs branch create side -m 'Add side'
+
+# Configure every branch in the linear stack plus the independent
+# 'side' branch as tips. low and middle are subsumed by high; side
+# is independent and stays.
+gs trunk
+gs integration create preview --tip low --tip middle --tip high --tip side
+
+# Clean prunes the subsumed tips. The reported subsumer is the
+# nearest configured tip up the stack, not the topmost: 'low' is
+# subsumed by 'middle' (which is itself subsumed by 'high').
+gs integration tip clean
+stderr 'Removed "low" \(subsumed by "middle"\)'
+stderr 'Removed "middle" \(subsumed by "high"\)'
+stderr 'Pruned 2 tip\(s\)'
+
+# Only the non-subsumed tips remain.
+gs integration tip list
+cmp stdout $WORK/golden/tips.txt
+
+# A second run is a no-op.
+gs integration tip clean
+stderr 'No subsumed tips to prune'
+
+# 'tip prune' is an alias.
+gs integration tip add low
+gs integration tip prune
+stderr 'Removed "low" \(subsumed by "high"\)'
+# Only 'high' remains in low's upstack chain, so it is the subsumer.
+
+-- repo/low.txt --
+low
+-- repo/middle.txt --
+middle
+-- repo/high.txt --
+high
+-- repo/side.txt --
+side
+-- golden/tips.txt --
+high
+side

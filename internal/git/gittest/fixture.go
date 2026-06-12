@@ -80,7 +80,71 @@ func LoadFixtureFile(path string) (_ *Fixture, err error) {
 		must.Failf("fixtureDir must exist: %v", err)
 	}
 
+	// Persist a usable git identity into every git repository created
+	// inside the fixture so that subsequent Go-driven git invocations
+	// (e.g. git merge, git commit) inherit a valid identity even on
+	// CI runners with no global gitconfig.
+	if err := setFixtureIdentity(fixtureDir); err != nil {
+		return nil, fmt.Errorf("set fixture identity: %w", err)
+	}
+
 	return &Fixture{dir: fixtureDir}, nil
+}
+
+// fixtureIdentity is appended to the local config of every git
+// repository discovered inside a fixture.
+const fixtureIdentity = "\n[user]\n" +
+	"\tname = Test\n" +
+	"\temail = test@example.com\n"
+
+// setFixtureIdentity appends a test git identity to the local config
+// of every git repository found inside dir. This includes both
+// non-bare repositories (where the config lives at .git/config) and
+// bare repositories (where the config lives at config).
+func setFixtureIdentity(dir string) error {
+	return filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			return nil
+		}
+
+		// Non-bare repo: identified by a .git directory or file
+		// inside the working tree.
+		if cfg := filepath.Join(path, ".git", "config"); fileExists(cfg) {
+			if err := appendIdentity(cfg); err != nil {
+				return err
+			}
+		}
+
+		// Bare repo: identified by HEAD + config alongside refs.
+		if fileExists(filepath.Join(path, "HEAD")) &&
+			fileExists(filepath.Join(path, "config")) {
+			if err := appendIdentity(filepath.Join(path, "config")); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func appendIdentity(configPath string) error {
+	f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", configPath, err)
+	}
+	defer func() { _ = f.Close() }()
+	if _, err := f.WriteString(fixtureIdentity); err != nil {
+		return fmt.Errorf("write %s: %w", configPath, err)
+	}
+	return nil
 }
 
 // LoadFixtureScript loads a fixture from the testscript.

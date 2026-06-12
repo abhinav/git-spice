@@ -35,6 +35,7 @@ var _ GitRepository = (*git.Repository)(nil)
 type Store interface {
 	Remote() (state.Remote, error)
 	Trunk() string
+	Integration(ctx context.Context) (*state.IntegrationInfo, error)
 }
 
 var _ Store = (*state.Store)(nil)
@@ -126,6 +127,10 @@ type BranchesRequest struct {
 type BranchesResponse struct {
 	Branches []*BranchItem
 	TrunkIdx int
+
+	// IntegrationIdx is the index of the synthetic integration branch
+	// item in Branches, or -1 if no integration branch is configured.
+	IntegrationIdx int
 }
 
 // BranchItem is a single branch in the log output.
@@ -160,6 +165,21 @@ type BranchItem struct {
 	// Submodules maps submodule paths
 	// to associated branch names.
 	Submodules map[string]string
+
+	// IntegrationTip indicates that this branch is a configured tip of
+	// the integration branch.
+	IntegrationTip bool
+
+	// Integration is non-nil for the synthetic integration branch row.
+	// Regular branch rows always have nil Integration.
+	Integration *IntegrationDisplay
+}
+
+// IntegrationDisplay carries presentation-relevant information about
+// the configured integration branch.
+type IntegrationDisplay struct {
+	// Tips lists the configured tip branch names in declaration order.
+	Tips []string
 }
 
 // PushStatus contains push-related information
@@ -371,15 +391,56 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	items = append(items, trunkItem)
 	itemByName[trunkItem.Name] = trunkItem
 
+	// Load the integration branch configuration so the row can be
+	// surfaced alongside regular branches, and tip branches can be
+	// marked. A missing integration is not an error: most repos don't
+	// have one.
+	integration, err := h.Store.Integration(ctx)
+	if errors.Is(err, state.ErrNotExist) {
+		integration = nil
+	} else if err != nil {
+		log.Warn("Could not load integration branch configuration", "error", err)
+		integration = nil
+	}
+
+	// Mark tip rows and synthesize an item for the integration branch
+	// itself. The integration branch is repo-scoped (singleton) and
+	// not tracked, so it has no base and no aboves.
+	if integration != nil {
+		tipNames := make([]string, 0, len(integration.Tips))
+		for _, tip := range integration.Tips {
+			tipNames = append(tipNames, tip.Name)
+			if item, ok := itemByName[tip.Name]; ok {
+				item.IntegrationTip = true
+			}
+		}
+		intItem := &BranchItem{
+			Name: integration.Name,
+			Integration: &IntegrationDisplay{
+				Tips: tipNames,
+			},
+		}
+		items = append(items, intItem)
+		itemByName[intItem.Name] = intItem
+	}
+
 	slices.SortFunc(items, func(a, b *BranchItem) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	// Connect the Above relationships.
-	var trunkIdx int
+	// Connect the Above relationships. Skip the integration row: it is
+	// untracked and never appears as another branch's base.
+	var (
+		trunkIdx       int
+		integrationIdx = -1
+	)
 	for idx, item := range items {
-		if item.Name == branchGraph.Trunk() {
+		switch {
+		case item.Name == branchGraph.Trunk():
 			trunkIdx = idx
+			continue
+		case item.Integration != nil:
+			integrationIdx = idx
 			continue
 		}
 
@@ -401,8 +462,9 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	return &BranchesResponse{
-		TrunkIdx: trunkIdx,
-		Branches: items,
+		TrunkIdx:       trunkIdx,
+		IntegrationIdx: integrationIdx,
+		Branches:       items,
 	}, nil
 }
 

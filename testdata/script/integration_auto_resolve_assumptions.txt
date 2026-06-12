@@ -1,0 +1,46 @@
+# Auto-resolve script returns assumptions; they are logged at info level
+# and the merge completes.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+chmod 700 $WORK/resolver.sh
+git config spice.integration.resolver $WORK/resolver.sh
+git config spice.integration.autoResolve true
+
+gs integration rebuild
+stderr 'Auto-resolve: picked feat-b because it has the newer commit'
+stderr 'rebuilt with 2 tip\(s\)'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- repo/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+cp resolved.txt shared.txt
+cat <<'EOF'
+{"assumptions": ["picked feat-b because it has the newer commit"]}
+EOF

@@ -89,6 +89,13 @@ type AutostashHandler interface {
 
 var _ AutostashHandler = (*autostash.Handler)(nil)
 
+// BranchRemovedHook is invoked once per branch that sync removes from
+// tracking (typically because the change request was merged upstream).
+//
+// Implementations are expected to clean up auxiliary state. Errors are
+// logged and do not abort the sync.
+type BranchRemovedHook func(ctx context.Context, branch string) error
+
 // Handler implements syncing commands.
 type Handler struct {
 	Log        *silog.Logger    // required
@@ -100,6 +107,10 @@ type Handler struct {
 	Delete     DeleteHandler    // required
 	Restack    RestackHandler   // required
 	Autostash  AutostashHandler // required
+
+	// OnBranchRemoved is called after each branch is removed during
+	// merged-branch cleanup. Optional; nil disables the callback.
+	OnBranchRemoved BranchRemovedHook
 
 	Remote string // required
 	// RemoteRepository is set only if remote refers to a supported forge.
@@ -1102,6 +1113,14 @@ func (h *Handler) deleteBranches(ctx context.Context, branchesToDelete []branchD
 	})
 	if err != nil {
 		return nil, fmt.Errorf("delete merged branches: %w", err)
+	}
+
+	if h.OnBranchRemoved != nil {
+		for _, branchName := range deleteBranchNames {
+			if err := h.OnBranchRemoved(ctx, branchName); err != nil {
+				h.Log.Warnf("branch-removed hook: %v", err)
+			}
+		}
 	}
 
 	// Also delete the remote tracking branch for this branch

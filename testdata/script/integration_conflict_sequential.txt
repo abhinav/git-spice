@@ -1,0 +1,66 @@
+# Verifies the conflict-resolution workflow during integration rebuild:
+# the conflict is left in the worktree, pending state is saved, the
+# user resolves and commits via 'git merge --continue', and a follow-up
+# 'gs integration rebuild' picks up where it left off.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+# feat-c does not touch shared.txt so it cannot conflict.
+git checkout main
+git add feat-c.txt
+gs bc feat-c -m 'feat-c adds an unrelated file'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b --tip feat-c
+
+# First rebuild merges feat-a, then conflicts on feat-b.
+# Disable the accept-incoming fallback to exercise the manual
+# resolve-and-resume flow this test cares about.
+! gs integration rebuild --no-accept-incoming
+stderr 'Merge conflict in tip feat-b'
+stderr 'git merge --continue'
+
+# The conflict is still in the worktree (not aborted).
+git status
+stdout 'You have unmerged paths'
+
+# Resolve the conflict and commit the merge.
+cp feat-b-version.txt shared.txt
+git add shared.txt
+git -c core.editor=true merge --continue
+
+# Now resume the rebuild — it should pick up feat-c.
+gs integration rebuild
+stderr 'Resuming integration rebuild'
+stderr 'rebuilt with 3 tip\(s\)'
+
+# preview branch now contains feat-c.txt
+git show preview:feat-c.txt
+cmp stdout $WORK/golden/feat-c.txt
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- repo/feat-c.txt --
+feat-c content
+-- golden/feat-c.txt --
+feat-c content

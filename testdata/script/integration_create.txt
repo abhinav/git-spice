@@ -1,0 +1,51 @@
+# Verifies basic 'gs integration create' wiring:
+# - Creates an integration branch configuration with two tips.
+# - 'gs integration show' reports the configuration.
+# - 'gs branch track' refuses the integration name.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+git add feat-b.txt
+gs bc feat-b -m 'Add feat-b'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+# Configuration is persisted.
+gs integration show
+cmp stdout $WORK/golden/show.txt
+
+# The integration is surfaced as a top row in 'gs ll' even before
+# its branch has been materialized, with each configured tip marked.
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+# Trying to track the integration name as a branch is rejected.
+git checkout -b preview main
+! gs branch track preview
+stderr 'cannot track integration branch'
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-b.txt --
+feature b
+-- golden/show.txt --
+Integration branch: preview
+Tips:
+  - feat-a (pending rebuild)
+  - feat-b (pending rebuild)
+-- golden/ls.txt --
+◆ preview [integration: 2 tips]
+┏━□ feat-a [integration-tip]
+┣━□ feat-b [integration-tip]
+main ◀

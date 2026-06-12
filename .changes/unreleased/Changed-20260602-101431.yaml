@@ -1,0 +1,3 @@
+kind: Changed
+body: 'integration rebuild: Halt with a resolver-failure error when the configured auto-resolver produces corrupt or unusable output (parse error, non-zero exit, iteration cap). Previously the rebuild fell through to accept-incoming, which routinely dropped integration-side declarations.'
+time: 2026-06-02T10:14:31.132085-04:00

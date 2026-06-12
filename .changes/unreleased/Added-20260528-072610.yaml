@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration: Add post-merge regenerator. When .gs/integration-regenerate exists and is executable, gs invokes it after a successful integration rebuild with the list of derived-file conflicts the merge driver auto-resolved, then folds the script''s output into the final merge commit.'
+time: 2026-05-28T07:26:10.749008-04:00
