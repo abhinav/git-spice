@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	git "go.abhg.dev/gs/internal/git"
+	scriptrun "go.abhg.dev/gs/internal/scriptrun"
 	spice "go.abhg.dev/gs/internal/spice"
 	state "go.abhg.dev/gs/internal/spice/state"
 	gomock "go.uber.org/mock/gomock"
@@ -116,6 +117,44 @@ func (c *MockGitRepositoryPeelToCommitCall) Do(f func(context.Context, string) (
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitRepositoryPeelToCommitCall) DoAndReturn(f func(context.Context, string) (git.Hash, error)) *MockGitRepositoryPeelToCommitCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// Worktrees mocks base method.
+func (m *MockGitRepository) Worktrees(ctx context.Context) iter.Seq2[*git.WorktreeListItem, error] {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Worktrees", ctx)
+	ret0, _ := ret[0].(iter.Seq2[*git.WorktreeListItem, error])
+	return ret0
+}
+
+// Worktrees indicates an expected call of Worktrees.
+func (mr *MockGitRepositoryMockRecorder) Worktrees(ctx any) *MockGitRepositoryWorktreesCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Worktrees", reflect.TypeOf((*MockGitRepository)(nil).Worktrees), ctx)
+	return &MockGitRepositoryWorktreesCall{Call: call}
+}
+
+// MockGitRepositoryWorktreesCall wrap *gomock.Call
+type MockGitRepositoryWorktreesCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitRepositoryWorktreesCall) Return(arg0 iter.Seq2[*git.WorktreeListItem, error]) *MockGitRepositoryWorktreesCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitRepositoryWorktreesCall) Do(f func(context.Context) iter.Seq2[*git.WorktreeListItem, error]) *MockGitRepositoryWorktreesCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitRepositoryWorktreesCall) DoAndReturn(f func(context.Context) iter.Seq2[*git.WorktreeListItem, error]) *MockGitRepositoryWorktreesCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -446,6 +485,44 @@ func (c *MockGitWorktreePushCall) Do(f func(context.Context, git.PushOptions) er
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockGitWorktreePushCall) DoAndReturn(f func(context.Context, git.PushOptions) error) *MockGitWorktreePushCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
+// RootDir mocks base method.
+func (m *MockGitWorktree) RootDir() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RootDir")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// RootDir indicates an expected call of RootDir.
+func (mr *MockGitWorktreeMockRecorder) RootDir() *MockGitWorktreeRootDirCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RootDir", reflect.TypeOf((*MockGitWorktree)(nil).RootDir))
+	return &MockGitWorktreeRootDirCall{Call: call}
+}
+
+// MockGitWorktreeRootDirCall wrap *gomock.Call
+type MockGitWorktreeRootDirCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitWorktreeRootDirCall) Return(arg0 string) *MockGitWorktreeRootDirCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitWorktreeRootDirCall) Do(f func() string) *MockGitWorktreeRootDirCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitWorktreeRootDirCall) DoAndReturn(f func() string) *MockGitWorktreeRootDirCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -831,10 +908,10 @@ func (m *MockResolver) EXPECT() *MockResolverMockRecorder {
 }
 
 // Resolve mocks base method.
-func (m *MockResolver) Resolve(ctx context.Context, req *ResolveRequest) (*ResolveResponse, error) {
+func (m *MockResolver) Resolve(ctx context.Context, req *ResolveRequest) (*scriptrun.ResolveResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resolve", ctx, req)
-	ret0, _ := ret[0].(*ResolveResponse)
+	ret0, _ := ret[0].(*scriptrun.ResolveResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -852,19 +929,19 @@ type MockResolverResolveCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockResolverResolveCall) Return(arg0 *ResolveResponse, arg1 error) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) Return(arg0 *scriptrun.ResolveResponse, arg1 error) *MockResolverResolveCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockResolverResolveCall) Do(f func(context.Context, *ResolveRequest) (*ResolveResponse, error)) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) Do(f func(context.Context, *ResolveRequest) (*scriptrun.ResolveResponse, error)) *MockResolverResolveCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockResolverResolveCall) DoAndReturn(f func(context.Context, *ResolveRequest) (*ResolveResponse, error)) *MockResolverResolveCall {
+func (c *MockResolverResolveCall) DoAndReturn(f func(context.Context, *ResolveRequest) (*scriptrun.ResolveResponse, error)) *MockResolverResolveCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
