@@ -1373,6 +1373,7 @@ func newHandlerWithRegenerator(t *testing.T) (*Handler, *handlerMocks, *MockRege
 		Regenerator: regenerator,
 		RepoRoot:    t.TempDir(),
 	}
+	expectBorrowableWorktree(mocks)
 	return h, mocks, regenerator
 }
 
