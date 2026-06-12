@@ -1,6 +1,8 @@
 | **Shorthand** | **Long form** |
 |  --- | --- |
 | gs bc | [gs branch create](/cli/reference.md#gs-branch-create) |
+| gs bcmtls | [gs branch comment list](/cli/reference.md#gs-branch-comment-list) |
+| gs bcmtss | [gs branch comment submit-staged](/cli/reference.md#gs-branch-comment-submit-staged) |
 | gs bco | [gs branch checkout](/cli/reference.md#gs-branch-checkout) |
 | gs bd | [gs branch delete](/cli/reference.md#gs-branch-delete) |
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
@@ -39,5 +41,3 @@
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |
-| gs wtc | [gs worktree create](/cli/reference.md#gs-worktree-create) |
-| gs wtls | [gs worktree list](/cli/reference.md#gs-worktree-list) |

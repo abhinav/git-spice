@@ -8,6 +8,7 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 )
@@ -93,6 +94,12 @@ type EditCommentRequest struct {
 	// Resolved optionally updates the resolved state.
 	// Nil leaves the field unchanged.
 	Resolved *bool
+
+	// Outdated optionally forces the outdated/stale flag, bypassing
+	// the diff-based computation on list. Nil leaves the field
+	// unchanged; tests use this to assert the stale path renders
+	// correctly without setting up a real divergent commit.
+	Outdated *bool
 }
 
 // EditComment updates the state of a comment.
@@ -108,6 +115,9 @@ func (sh *ShamHub) EditComment(req EditCommentRequest) error {
 		updated := comment
 		if req.Resolved != nil {
 			updated.Resolved = *req.Resolved
+		}
+		if req.Outdated != nil {
+			updated.Outdated = *req.Outdated
 		}
 
 		if err := validateCommentState(updated.Resolvable, updated.Resolved); err != nil {
@@ -135,11 +145,55 @@ type shamComment struct {
 	Change int
 	Body   string
 
-	// Resolvable indicates this is a code review comment that can be resolved.
+	// Resolvable indicates this is a code review comment
+	// that can be resolved.
 	Resolvable bool
 
 	// Resolved indicates this comment has been resolved.
 	Resolved bool
+
+	// Inline comment fields (optional).
+
+	// Path is the file path for inline comments.
+	Path string
+
+	// Line is the line number for inline comments.
+	Line int
+
+	// Side is "LEFT" or "RIGHT" for inline comments.
+	Side string
+
+	// ThreadID groups inline comments into threads.
+	ThreadID string
+
+	// Scope is "line", "file", or "pr" for inline-managed
+	// comments. Empty for change-level comments created via
+	// the non-inline endpoint; the inline-list filter uses
+	// non-emptiness as the "include me" signal.
+	Scope string
+
+	// RangeStart and RangeEnd describe a multi-line range
+	// for line-scope comments. Both zero indicates a single-
+	// line comment anchored to Line.
+	RangeStart int
+	RangeEnd   int
+
+	// CommitSHA is the head SHA of the change at the time the
+	// comment was posted. Used to compute whether the comment is
+	// stale relative to the change's current head.
+	// Empty for legacy or test-seeded comments.
+	CommitSHA string
+
+	// Outdated, if true, forces the comment to be reported as
+	// outdated regardless of git state. Tests use this to drive
+	// the stale path without setting up actual diff history.
+	Outdated bool
+
+	// Author is the comment author username.
+	Author string
+
+	// CreatedAt is the comment creation timestamp.
+	CreatedAt time.Time
 }
 
 var (

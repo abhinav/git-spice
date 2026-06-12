@@ -1,0 +1,35 @@
+Usage: gs branch (b) comment (cmt) add [<anchor>] [flags]
+
+Post an inline comment immediately
+
+Posts a comment immediately on the change request for the current branch.
+The anchor argument controls the scope:
+
+    file.go:42       line-scope: anchored to that line
+    file.go:42-50    line-scope multi-line range
+    file.go          file-scope: anchored to the file
+    (empty) + --pr   pr-scope: not anchored to any file
+
+If no message is given with -m, an editor is opened.
+
+Use --respond to reply to an existing thread instead of starting a new one.
+
+Arguments:
+  [<anchor>]    What to anchor the comment to: file.go:42 for a line, file.go
+                for a file, or empty for the PR.
+
+Flags:
+  -m, --message=MSG          Comment body. Opens editor if not provided.
+      --pr                   Post a PR-level comment with no file or line
+                             anchor.
+      --respond=THREAD_ID    Thread ID to reply to instead of starting a new
+                             thread.
+  -b, --branch=BRANCH        Branch to add comment for. Defaults to current
+                             branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

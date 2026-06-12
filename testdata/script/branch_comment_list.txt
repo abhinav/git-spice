@@ -1,0 +1,46 @@
+# List comments on a change request.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# add an inline comment so there is something to list
+gs branch comment add main.go:3 -m 'Consider using a constant.'
+stderr 'Posted comment'
+
+# list should show the comment
+gs branch comment list
+stderr 'Comments:'
+stderr 'main.go:3'
+stderr 'Consider using a constant'
+
+# list on a branch with no CR should say so
+gs bc -m 'Another branch' feature2
+gs branch comment list
+stderr 'No change request'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+}

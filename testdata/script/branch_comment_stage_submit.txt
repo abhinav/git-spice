@@ -1,0 +1,58 @@
+# Stage inline comments and submit them as a review.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add feature.go
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# stage a comment on the file
+gs branch comment stage feature.go:3 -m 'Consider renaming this function.'
+stderr 'Staged comment sc-1 on feature.go:3'
+
+# stage another comment
+gs branch comment stage feature.go:7 -m 'Add error handling here.'
+stderr 'Staged comment sc-2 on feature.go:7'
+
+# list staged comments
+gs branch comment list --staged
+stderr 'sc-1'
+stderr 'feature.go:3'
+stderr 'sc-2'
+stderr 'feature.go:7'
+
+# submit staged comments as a review
+gs branch comment submit-staged
+stderr 'Submitted 2 comment'
+
+# staged comments should be cleared after submit
+gs branch comment list --staged
+stderr 'No staged comments'
+
+-- repo/feature.go --
+package main
+
+func doWork() {
+	// does some work
+}
+
+func handleRequest() {
+	// handles a request
+}
