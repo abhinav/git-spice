@@ -151,6 +151,9 @@ func (cmd *branchCommentAddCmd) Run(
 		req.Line = diffLine
 		req.Side = side
 
+		// For a range comment, also resolve the end line in diff
+		// coordinates so the forge anchors both ends to the same
+		// side.
 		if rangeEnd > 0 {
 			_, endDiffLine, _, err := mapper.Map(file, rangeEnd)
 			if err != nil {

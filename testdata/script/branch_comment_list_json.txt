@@ -60,4 +60,4 @@ func main() {
 }
 
 -- golden/staged_only.json --
-{"kind":"staged","id":"sc-1","path":"main.go","line":5,"body":"Add error handling here."}
+{"kind":"staged","id":"sc-1","scope":"line","path":"main.go","line":5,"body":"Add error handling here."}

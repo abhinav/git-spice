@@ -1,0 +1,3 @@
+kind: Changed
+body: '''branch comment list --json'': Extend output shape with scope, side, range, commitSHA, resolved/stale booleans, and accept multi-line ranges via file:start-end on ''branch comment add''.'
+time: 2026-06-01T13:23:41.325779-04:00
