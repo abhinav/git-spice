@@ -41,7 +41,7 @@ func TestRunner_Run_envVars(t *testing.T) {
 func TestRunner_Run_positionalArgs(t *testing.T) {
 	r := &Runner{
 		Log:  silog.Nop(),
-		Args: []string{"prog", "alpha", "beta"},
+		Args: []string{"alpha", "beta"},
 	}
 
 	res, err := r.Run(t.Context(), &RunRequest{
@@ -108,7 +108,7 @@ func TestRunner_Run_shebangReceivesArgs(t *testing.T) {
 	}
 	r := &Runner{
 		Log:  silog.Nop(),
-		Args: []string{"prog", "first", "second"},
+		Args: []string{"first", "second"},
 	}
 
 	res, err := r.Run(t.Context(), &RunRequest{

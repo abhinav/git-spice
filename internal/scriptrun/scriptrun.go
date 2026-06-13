@@ -3,8 +3,9 @@
 //
 // Scripts are written by the user as small shell programs (typically
 // wrapping an external tool like an editor, AI assistant, or test
-// runner). git-spice invokes them from a known directory with a known
-// environment, then inspects their stdout, stderr, and exit code.
+// runner). git-spice invokes them from a known directory with known
+// arguments and environment, then inspects their stdout, stderr, and
+// exit code.
 //
 // # Execution mode
 //
@@ -12,8 +13,8 @@
 // temporary file (with executable permission) and executed directly,
 // letting the kernel use the interpreter from the shebang.
 //
-// Otherwise, the script is passed to 'sh -c'. The invoking process's
-// argument vector is forwarded as positional parameters ($1, $2, ...).
+// Otherwise, the script is passed to 'sh -c'. Runner.Args are forwarded
+// as positional parameters ($1, $2, ...).
 //
 // # Output handling
 //
@@ -48,9 +49,9 @@ type Runner struct {
 	// Defaults to a no-op logger if nil.
 	Log *silog.Logger
 
-	// Args is the invoking process's argument vector
-	// (typically os.Args). These are forwarded to the script
-	// as positional parameters.
+	// Args is forwarded to the script as positional parameters.
+	//
+	// For example, Args[0] becomes $1 in shell scripts.
 	Args []string
 }
 
@@ -153,8 +154,8 @@ func (r *Runner) buildCmd(
 	if strings.HasPrefix(script, "#!") {
 		return r.buildShebangCmd(ctx, log, script)
 	}
-	args := make([]string, 0, 2+len(r.Args))
-	args = append(args, "-c", script)
+	args := make([]string, 0, 3+len(r.Args))
+	args = append(args, "-c", script, "gs-scriptrun")
 	args = append(args, r.Args...)
 	return xec.Command(ctx, log, "sh", args...), func() {}, nil
 }
@@ -163,7 +164,7 @@ func (r *Runner) buildCmd(
 // command that executes it directly.
 //
 // Positional parameters are aligned with the "sh -c" form: $1 is the
-// first user argument (skipping the program name in r.Args[0]).
+// first Runner argument.
 func (r *Runner) buildShebangCmd(
 	ctx context.Context,
 	log *silog.Logger,
@@ -190,12 +191,5 @@ func (r *Runner) buildShebangCmd(
 		return nil, nil, fmt.Errorf("chmod script: %w", err)
 	}
 
-	// Skip Args[0] (program name) so $1 in the script is the first
-	// user argument, matching the sh -c behavior where $0 receives
-	// Args[0].
-	var args []string
-	if len(r.Args) > 1 {
-		args = append(args, r.Args[1:]...)
-	}
-	return xec.Command(ctx, log, f.Name(), args...), cleanup, nil
+	return xec.Command(ctx, log, f.Name(), r.Args...), cleanup, nil
 }
