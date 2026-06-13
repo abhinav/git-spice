@@ -12,14 +12,17 @@ import (
 	"fmt"
 	"iter"
 	"slices"
+	"strings"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicedir"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -typed -destination mocks_test.go -package integration -write_package_comment=false . GitRepository,GitWorktree,Store,Service
+//go:generate mockgen -typed -destination mocks_test.go -package integration -write_package_comment=false . GitRepository,GitWorktree,Store,Service,Resolver,QuestionPrompter
 
 // GitRepository is the subset of [git.Repository] used by the handler.
 type GitRepository interface {
@@ -35,6 +38,7 @@ type GitWorktree interface {
 	CheckoutBranch(ctx context.Context, branch string) error
 	CheckoutNewBranch(ctx context.Context, req git.CheckoutNewBranchRequest) error
 	Merge(ctx context.Context, opts git.MergeOptions) error
+	MergeContinue(ctx context.Context, paths []string, message string) error
 	IsClean(ctx context.Context) (bool, error)
 	Push(ctx context.Context, opts git.PushOptions) error
 }
@@ -68,6 +72,44 @@ type Handler struct {
 	Worktree   GitWorktree   // required
 	Store      Store         // required
 	Service    Service       // required
+
+	// Resolver is invoked when a merge conflicts and auto-resolve is
+	// enabled. nil means no resolver is configured; conflicts surface
+	// normally.
+	Resolver Resolver
+
+	// Prompter collects user answers when the resolver returns
+	// questions. nil disables the question-iteration loop (questions
+	// become an immediate error).
+	Prompter QuestionPrompter
+
+	// DefaultAutoResolve sets the default behavior when
+	// [RebuildOptions.AutoResolve] is nil. Typically populated from
+	// spice.integration.autoResolve.
+	DefaultAutoResolve bool
+
+	// RepoRoot is the directory containing the resolution file.
+	RepoRoot string
+
+	// MaxResolveIterations bounds how many times the resolver may be
+	// invoked for a single tip merge. Typically populated from
+	// spice.scriptResolve.maxIterations via
+	// Config.ScriptResolveMaxIterations. A non-positive value falls
+	// back to the package default.
+	MaxResolveIterations int
+}
+
+// defaultMaxResolveIterations is the fallback when
+// Handler.MaxResolveIterations is non-positive. Matches
+// DefaultScriptResolveMaxIterations in internal/spice.
+const defaultMaxResolveIterations = 10
+
+// resolveIterationCap returns the effective per-tip iteration cap.
+func (h *Handler) resolveIterationCap() int {
+	if h.MaxResolveIterations > 0 {
+		return h.MaxResolveIterations
+	}
+	return defaultMaxResolveIterations
 }
 
 // ErrNotConfigured indicates that no integration branch is configured.
@@ -298,6 +340,14 @@ func (e *ConflictError) Error() string {
 	return fmt.Sprintf("merge of tip %q conflicted in %d file(s)", e.Tip, len(e.Paths))
 }
 
+// RebuildOptions allows callers to override per-invocation behavior.
+type RebuildOptions struct {
+	// AutoResolve, if non-nil, overrides [Handler.DefaultAutoResolve]
+	// for this invocation. A true value enables the configured
+	// resolver; a false value disables it even when configured.
+	AutoResolve *bool
+}
+
 // Rebuild regenerates the integration branch by sequentially merging
 // each configured tip onto trunk.
 //
@@ -308,7 +358,15 @@ func (e *ConflictError) Error() string {
 // On conflict, the merge is left in the worktree for the user to
 // resolve, and a [*ConflictError] is returned. After resolving and
 // committing the merge, the user re-runs Rebuild to continue.
-func (h *Handler) Rebuild(ctx context.Context) (*RebuildResult, error) {
+//
+// If a resolver is configured and auto-resolve is enabled (via opts
+// or [Handler.DefaultAutoResolve]), Rebuild attempts to resolve
+// conflicts automatically before surfacing them.
+//
+// opts may be nil to accept defaults.
+func (h *Handler) Rebuild(
+	ctx context.Context, opts *RebuildOptions,
+) (*RebuildResult, error) {
 	info, err := h.loadConfigured(ctx)
 	if err != nil {
 		return nil, err
@@ -331,12 +389,24 @@ func (h *Handler) Rebuild(ctx context.Context) (*RebuildResult, error) {
 	}
 
 	if pending != nil {
-		return h.resumeRebuild(ctx, info, pending)
+		return h.resumeRebuild(ctx, info, pending, opts)
 	}
-	return h.freshRebuild(ctx, info)
+	return h.freshRebuild(ctx, info, opts)
 }
 
-func (h *Handler) freshRebuild(ctx context.Context, info *state.IntegrationInfo) (*RebuildResult, error) {
+// shouldAutoResolve resolves opts against DefaultAutoResolve.
+func (h *Handler) shouldAutoResolve(opts *RebuildOptions) bool {
+	if opts != nil && opts.AutoResolve != nil {
+		return *opts.AutoResolve
+	}
+	return h.DefaultAutoResolve
+}
+
+func (h *Handler) freshRebuild(
+	ctx context.Context,
+	info *state.IntegrationInfo,
+	opts *RebuildOptions,
+) (*RebuildResult, error) {
 	currentBranch, err := h.Worktree.CurrentBranch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("current branch: %w", err)
@@ -376,13 +446,14 @@ func (h *Handler) freshRebuild(ctx context.Context, info *state.IntegrationInfo)
 		return nil, fmt.Errorf("create integration branch: %w", err)
 	}
 
-	return h.runMerges(ctx, info, tips, 0, currentBranch)
+	return h.runMerges(ctx, info, tips, 0, currentBranch, opts)
 }
 
 func (h *Handler) resumeRebuild(
 	ctx context.Context,
 	info *state.IntegrationInfo,
 	pending *state.IntegrationRebuild,
+	opts *RebuildOptions,
 ) (*RebuildResult, error) {
 	clean, err := h.Worktree.IsClean(ctx)
 	if err != nil {
@@ -404,25 +475,32 @@ func (h *Handler) resumeRebuild(
 
 	h.Log.Infof("Resuming integration rebuild at tip %d of %d",
 		pending.NextTipIndex+1, len(pending.Tips))
-	return h.runMerges(ctx, info, pending.Tips, pending.NextTipIndex, currentBranch)
+	return h.runMerges(ctx, info, pending.Tips, pending.NextTipIndex, currentBranch, opts)
 }
 
 // runMerges merges tips[start:] onto HEAD, finalizes the rebuild on
 // success, and saves pending state + returns a [*ConflictError] on
 // conflict (without aborting the merge).
+//
+// If auto-resolve is enabled for this invocation and a resolver is
+// configured, conflicts are passed to the resolver before being
+// surfaced. A successful resolve continues to the next tip; a failed
+// one falls through to the original conflict-surfacing path.
 func (h *Handler) runMerges(
 	ctx context.Context,
 	info *state.IntegrationInfo,
 	tips []state.IntegrationTip,
 	start int,
 	originalBranch string,
+	opts *RebuildOptions,
 ) (*RebuildResult, error) {
 	for i := start; i < len(tips); i++ {
 		tip := tips[i]
+		mergeMsg := fmt.Sprintf("Merge %s into %s", tip.Name, info.Name)
 		err := h.Worktree.Merge(ctx, git.MergeOptions{
 			Refs:          []string{tip.Hash.String()},
 			NoFF:          true,
-			Message:       fmt.Sprintf("Merge %s into %s", tip.Name, info.Name),
+			Message:       mergeMsg,
 			EnableRerere:  true,
 			LeaveConflict: true,
 		})
@@ -431,17 +509,32 @@ func (h *Handler) runMerges(
 		}
 
 		conflict := new(git.MergeConflictError)
-		if errors.As(err, &conflict) {
-			if saveErr := h.Store.SetPendingIntegrationRebuild(ctx, &state.IntegrationRebuild{
-				Integration:  info.Name,
-				Tips:         tips,
-				NextTipIndex: i + 1,
-			}); saveErr != nil {
-				h.Log.Warnf("save pending rebuild: %v", saveErr)
-			}
-			return nil, &ConflictError{Tip: tip.Name, Paths: conflict.ConflictPaths}
+		if !errors.As(err, &conflict) {
+			return nil, fmt.Errorf("merge tip %q: %w", tip.Name, err)
 		}
-		return nil, fmt.Errorf("merge tip %q: %w", tip.Name, err)
+
+		// Try the auto-resolver if enabled and configured.
+		if h.shouldAutoResolve(opts) && h.Resolver != nil {
+			resolved, resolveErr := h.autoResolveLoop(
+				ctx, info.Name, tip.Name, conflict.ConflictPaths, mergeMsg)
+			switch {
+			case resolveErr != nil:
+				h.Log.Warnf("Auto-resolve failed for tip %q: %v",
+					tip.Name, resolveErr)
+				// fall through to conflict-surfacing
+			case resolved:
+				continue
+			}
+		}
+
+		if saveErr := h.Store.SetPendingIntegrationRebuild(ctx, &state.IntegrationRebuild{
+			Integration:  info.Name,
+			Tips:         tips,
+			NextTipIndex: i + 1,
+		}); saveErr != nil {
+			h.Log.Warnf("save pending rebuild: %v", saveErr)
+		}
+		return nil, &ConflictError{Tip: tip.Name, Paths: conflict.ConflictPaths}
 	}
 
 	info.Tips = tips
@@ -672,7 +765,7 @@ func (h *Handler) MaybeRebuild(ctx context.Context) error {
 	}
 
 	h.Log.Infof("Rebuilding integration branch %q", info.Name)
-	if _, err := h.Rebuild(ctx); err != nil {
+	if _, err := h.Rebuild(ctx, nil); err != nil {
 		conflict := new(git.MergeConflictError)
 		if errors.As(err, &conflict) {
 			h.Log.Warnf("Integration rebuild failed: %v", err)
@@ -680,6 +773,162 @@ func (h *Handler) MaybeRebuild(ctx context.Context) error {
 		}
 		return err
 	}
+	return nil
+}
+
+// autoResolveLoop drives the resolver iteration for a single tip merge.
+// Returns resolved=true if the merge was completed automatically.
+//
+// On resolver error, partial resolution, or iteration-cap hit, returns
+// resolved=false along with an error describing the failure.
+func (h *Handler) autoResolveLoop(
+	ctx context.Context,
+	integrationName, tipName string,
+	conflictPaths []string,
+	mergeMsg string,
+) (resolved bool, err error) {
+	req := &ResolveRequest{
+		IntegrationName: integrationName,
+		TipName:         tipName,
+	}
+
+	maxIters := h.resolveIterationCap()
+	for iter := range maxIters {
+		resp, resErr := h.Resolver.Resolve(ctx, req)
+		if resErr != nil {
+			return false, fmt.Errorf("resolver: %w", resErr)
+		}
+
+		for _, a := range resp.Assumptions {
+			h.Log.Infof("Auto-resolve: %s", a)
+		}
+
+		if len(resp.Questions) > 0 {
+			if h.Prompter == nil {
+				return false, fmt.Errorf(
+					"resolver returned %d question(s) but no prompter is configured",
+					len(resp.Questions))
+			}
+			answers, askErr := h.Prompter.AskAnswers(ctx, resp.Questions)
+			if askErr != nil {
+				return false, fmt.Errorf("collect answers: %w", askErr)
+			}
+			if err := h.appendQAToFile(integrationName, tipName,
+				resp.Questions, answers); err != nil {
+				return false, fmt.Errorf("append Q&A: %w", err)
+			}
+			_ = iter
+			continue
+		}
+
+		if len(resp.UnresolvedFiles) > 0 {
+			return false, fmt.Errorf(
+				"resolver reported unresolved files with no questions: %s",
+				strings.Join(resp.UnresolvedFiles, ", "))
+		}
+
+		// All resolved. Commit the merge.
+		if err := h.Worktree.MergeContinue(ctx, conflictPaths, mergeMsg); err != nil {
+			return false, fmt.Errorf("commit merge: %w", err)
+		}
+		return true, nil
+	}
+
+	return false, fmt.Errorf(
+		"resolver exceeded iteration cap (%d); investigate manually",
+		maxIters)
+}
+
+// appendQAToFile appends the given question/answer pairs to the
+// resolution file's entry for (ours, theirs).
+func (h *Handler) appendQAToFile(
+	ours, theirs string, questions, answers []string,
+) error {
+	if err := spicedir.EnsureResolutionsDir(h.RepoRoot); err != nil {
+		return err
+	}
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
+	file, err := LoadResolutionFile(path)
+	if err != nil {
+		return err
+	}
+
+	pair := MergePair{Ours: ours, Theirs: theirs}
+	qa := make([]scriptrun.QAPair, 0, len(questions))
+	for i, q := range questions {
+		a := ""
+		if i < len(answers) {
+			a = answers[i]
+		}
+		qa = append(qa, scriptrun.QAPair{Question: q, Answer: a})
+	}
+	file.AppendInstructions(pair, qa...)
+	return file.Save(path)
+}
+
+// OnBranchRemoved prunes references to the removed branch:
+//   - resolution-file entries that name it
+//   - the integration's configured tip list, if it appears there
+//
+// Used as a hook from branch_untrack, branch_delete, and
+// repo_sync's cleanup of merged branches. Skipping the tip-list
+// prune would leave a dangling tip name in state, causing the
+// next 'gs integration rebuild' to fail with "resolve head: does
+// not exist" on a branch the user already chose to delete.
+//
+// Errors are returned; callers may choose to log them as warnings.
+func (h *Handler) OnBranchRemoved(ctx context.Context, branch string) error {
+	if err := h.pruneTipFromIntegration(ctx, branch); err != nil {
+		return err
+	}
+
+	if h.RepoRoot == "" {
+		// Cannot prune resolution file without a known root; treat as no-op.
+		return nil
+	}
+	path := spicedir.ResolutionPath(h.RepoRoot, ResolutionFeatureName)
+
+	file, err := LoadResolutionFile(path)
+	if err != nil {
+		return err
+	}
+	if file.PruneBranch(branch) == 0 {
+		return nil
+	}
+	return file.Save(path)
+}
+
+// pruneTipFromIntegration removes branch from the integration's
+// configured tip list if it appears there. No-op when no
+// integration is configured, when the branch is not a tip, or
+// when state is otherwise unreadable.
+func (h *Handler) pruneTipFromIntegration(
+	ctx context.Context, branch string,
+) error {
+	info, err := h.Store.Integration(ctx)
+	if errors.Is(err, state.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get integration: %w", err)
+	}
+
+	idx := slices.IndexFunc(info.Tips, func(t state.IntegrationTip) bool {
+		return t.Name == branch
+	})
+	if idx < 0 {
+		return nil
+	}
+
+	info.Tips = slices.Delete(info.Tips, idx, idx+1)
+	if err := h.Store.SetIntegration(ctx, info); err != nil {
+		return fmt.Errorf("save integration: %w", err)
+	}
+
+	h.Log.Infof(
+		"Removed %q from integration tips (branch was removed).",
+		branch,
+	)
 	return nil
 }
 

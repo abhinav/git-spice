@@ -173,6 +173,137 @@ func TestWorktree_Merge_conflictLeaveInWorktree(t *testing.T) {
 	require.NoError(t, wt.MergeAbort(t.Context()))
 }
 
+func TestWorktree_MergeContinue(t *testing.T) {
+	t.Parallel()
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-01-01T00:00:00Z'
+
+		git init
+		git add shared.txt
+		git commit -m 'Initial commit'
+
+		git checkout -b feature
+		cp feature.txt shared.txt
+		git add shared.txt
+		git commit -m 'Feature changes shared.txt'
+
+		git checkout main
+		cp main.txt shared.txt
+		git add shared.txt
+		git commit -m 'Main changes shared.txt'
+
+		-- shared.txt --
+		base content
+		-- feature.txt --
+		feature content
+		-- main.txt --
+		main content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	mergeErr := wt.Merge(t.Context(), git.MergeOptions{
+		Refs:          []string{"feature"},
+		NoFF:          true,
+		Message:       "Merge feature",
+		LeaveConflict: true,
+	})
+	require.Error(t, mergeErr)
+	require.True(t, errors.As(mergeErr, new(*git.MergeConflictError)))
+
+	// Simulate an external resolver writing a resolution.
+	require.NoError(t,
+		os.WriteFile(filepath.Join(fixture.Dir(), "shared.txt"),
+			[]byte("resolved content\n"), 0o600))
+
+	require.NoError(t, wt.MergeContinue(t.Context(),
+		[]string{"shared.txt"}, "Merge feature"))
+
+	clean, err := wt.IsClean(t.Context())
+	require.NoError(t, err)
+	assert.True(t, clean, "worktree should be clean after MergeContinue")
+
+	content, err := os.ReadFile(filepath.Join(fixture.Dir(), "shared.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "resolved content", strings.TrimSpace(string(content)))
+}
+
+func TestWorktree_MergeContinue_unmergedRemain(t *testing.T) {
+	t.Parallel()
+
+	// Set up a merge that conflicts on TWO files; pass only one to
+	// MergeContinue. The other remains unmerged and MergeContinue
+	// must refuse to commit.
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		as 'Test <test@example.com>'
+		at '2025-01-01T00:00:00Z'
+
+		git init
+		git add a.txt b.txt
+		git commit -m 'Initial commit'
+
+		git checkout -b feature
+		cp a-feature.txt a.txt
+		cp b-feature.txt b.txt
+		git add a.txt b.txt
+		git commit -m 'feature edits a and b'
+
+		git checkout main
+		cp a-main.txt a.txt
+		cp b-main.txt b.txt
+		git add a.txt b.txt
+		git commit -m 'main edits a and b'
+
+		-- a.txt --
+		base a
+		-- b.txt --
+		base b
+		-- a-feature.txt --
+		feature a
+		-- b-feature.txt --
+		feature b
+		-- a-main.txt --
+		main a
+		-- b-main.txt --
+		main b
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	mergeErr := wt.Merge(t.Context(), git.MergeOptions{
+		Refs:          []string{"feature"},
+		NoFF:          true,
+		Message:       "Merge feature",
+		LeaveConflict: true,
+	})
+	require.Error(t, mergeErr)
+	require.True(t, errors.As(mergeErr, new(*git.MergeConflictError)))
+
+	// Resolve only a.txt; leave b.txt unresolved.
+	require.NoError(t,
+		os.WriteFile(filepath.Join(fixture.Dir(), "a.txt"),
+			[]byte("resolved a\n"), 0o600))
+
+	err = wt.MergeContinue(t.Context(),
+		[]string{"a.txt"}, "Merge feature")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unmerged paths remain")
+
+	require.NoError(t, wt.MergeAbort(t.Context()))
+}
+
 func TestWorktree_Merge_noRefs(t *testing.T) {
 	t.Parallel()
 

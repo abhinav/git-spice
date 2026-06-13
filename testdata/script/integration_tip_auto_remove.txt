@@ -1,0 +1,59 @@
+# Verifies that removing a branch via 'gs branch untrack',
+# 'gs branch delete', or 'gs repo sync' automatically prunes that
+# branch from the integration's configured tip list. Without this,
+# a tip's underlying branch can be deleted (e.g. by sync after
+# upstream merge) while the tip name lingers in state, causing the
+# next 'gs integration rebuild' to fail with "resolve head: does
+# not exist" on a branch the user already chose to delete.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs branch create feat-a -m 'Add feat-a'
+
+gs trunk
+git add feat-b.txt
+gs branch create feat-b -m 'Add feat-b'
+
+gs trunk
+git add feat-c.txt
+gs branch create feat-c -m 'Add feat-c'
+
+gs trunk
+gs integration create preview --tip feat-a --tip feat-b --tip feat-c
+
+# Untracking a configured tip removes it from the tip list.
+gs branch untrack feat-a
+stderr 'Removed "feat-a" from integration tips'
+gs integration tip list
+cmp stdout $WORK/golden/tips-after-untrack.txt
+
+# Deleting a configured tip removes it from the tip list too.
+gs branch delete feat-b --force
+stderr 'Removed "feat-b" from integration tips'
+gs integration tip list
+cmp stdout $WORK/golden/tips-after-delete.txt
+
+# After both cleanups the rebuild succeeds against the remaining
+# tip; before this fix it would have failed when trying to resolve
+# the missing branches.
+gs integration rebuild
+stderr 'rebuilt with 1 tip\(s\)'
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-b.txt --
+feature b
+-- repo/feat-c.txt --
+feature c
+-- golden/tips-after-untrack.txt --
+feat-b
+feat-c
+-- golden/tips-after-delete.txt --
+feat-c
