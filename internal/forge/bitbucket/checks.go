@@ -57,3 +57,15 @@ func aggregateStatuses(
 
 	return forge.ChecksPassed
 }
+
+// ChecksByChange reports per-change rolled-up and per-run build state
+// for each of the given pull requests.
+//
+// TODO: real implementation lands on a follow-up branch.
+// This stub returns one nil per id to satisfy the [forge.Repository]
+// interface while the schema branch lands standalone.
+func (r *Repository) ChecksByChange(
+	_ context.Context, ids []forge.ChangeID,
+) ([]*forge.ChangeChecks, error) {
+	return make([]*forge.ChangeChecks, len(ids)), nil
+}

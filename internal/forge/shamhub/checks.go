@@ -173,7 +173,21 @@ func parseChecksState(value string) (forge.ChecksState, error) {
 		return forge.ChecksPassed, nil
 	case "failed":
 		return forge.ChecksFailed, nil
+	case "none":
+		return forge.ChecksNone, nil
 	default:
 		return 0, fmt.Errorf("unsupported status %q", value)
 	}
+}
+
+// ChecksByChange reports per-change rolled-up and per-run check state
+// for each of the given changes.
+//
+// TODO: real implementation lands on a follow-up branch.
+// This stub returns one nil per id to satisfy the [forge.Repository]
+// interface while the schema branch lands standalone.
+func (r *forgeRepository) ChecksByChange(
+	_ context.Context, ids []forge.ChangeID,
+) ([]*forge.ChangeChecks, error) {
+	return make([]*forge.ChangeChecks, len(ids)), nil
 }
