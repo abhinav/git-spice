@@ -1,0 +1,3 @@
+kind: Added
+body: '''branch checkout'': Treat the integration branch name as a shortcut to the integration branch, with a one-line throwaway warning instead of an untracked-branch prompt.'
+time: 2026-06-01T11:33:12.704475-04:00
