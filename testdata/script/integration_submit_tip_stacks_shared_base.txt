@@ -1,0 +1,131 @@
+# Verifies 'gs integration submit' deduplicates branches when multiple
+# tips' downstacks share a common base.
+#
+# Stack:
+#   main -> shared-base -> tip-a
+#   main -> shared-base -> tip-b
+#
+# Configuring both tip-a and tip-b as tips should still only submit
+# shared-base once, in trunk-first order so that tip-a/tip-b can be
+# stacked on its already-pushed ref.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init
+
+# Build the diverging stack:
+#   main -> shared-base -> tip-a
+#                       -> tip-b
+git add shared-base.txt
+gs branch create shared-base -m 'Add shared-base'
+git add tip-a.txt
+gs branch create tip-a -m 'Add tip-a'
+
+gs branch checkout shared-base
+git add tip-b.txt
+gs branch create tip-b -m 'Add tip-b'
+
+gs trunk
+gs integration create preview --tip tip-a --tip tip-b
+gs integration rebuild
+
+gs integration submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+stderr 'Integration branch pushed.'
+
+# Three CRs (one for each unique branch), not four.
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+-- repo/shared-base.txt --
+shared base
+-- repo/tip-a.txt --
+tip a
+-- repo/tip-b.txt --
+tip b
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add shared-base",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "20c47e7889ce2a42f0262a0a3e826fff131a23cf"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "shared-base",
+      "sha": "908135a997fced8da6f40218fbc6d47849e793c9"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add tip-a",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "shared-base",
+      "sha": "908135a997fced8da6f40218fbc6d47849e793c9"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "tip-a",
+      "sha": "845fd36c180e2948b871e6e45a278b65e4fdd08b"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Add tip-b",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "shared-base",
+      "sha": "908135a997fced8da6f40218fbc6d47849e793c9"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "tip-b",
+      "sha": "ddb28a31cc68562ca734698d169351321167df6a"
+    }
+  }
+]
