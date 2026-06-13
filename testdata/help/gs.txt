@@ -59,6 +59,11 @@ Branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
   branch (b) submit (s)        Submit a branch
+  branch (b) submodule (sm) list (ls)
+                               List submodule branch associations
+  branch (b) submodule (sm) repoint
+                               Change submodule branch association for the
+                               current branch
 
 Commit
   commit (c) create (c)    Create a new commit

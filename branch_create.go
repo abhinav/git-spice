@@ -104,6 +104,7 @@ func (cmd *branchCreateCmd) Run(
 	wt *git.Worktree,
 	store *state.Store,
 	svc *spice.Service,
+	submoduleTracker SubmoduleTracker,
 	restackHandler RestackHandler,
 ) (err error) {
 	// If a message is specified, automatically enable commits
@@ -321,6 +322,18 @@ func (cmd *branchCreateCmd) Run(
 
 	if err := branchTx.Commit(ctx, msg); err != nil {
 		return fmt.Errorf("update branch state: %w", err)
+	}
+
+	// Record submodule associations if a commit was made.
+	if cmd.Commit {
+		if err := submoduleTracker.RecordBranchState(
+			ctx, branchName,
+		); err != nil {
+			log.Warn(
+				"Could not record submodule associations",
+				"error", err,
+			)
+		}
 	}
 
 	if cmd.Below || cmd.Insert {
