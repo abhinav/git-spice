@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -133,4 +134,175 @@ func (w *Worktree) UpdateSubmodulePointer(
 		return fmt.Errorf("update submodule %s: %w", path, err)
 	}
 	return nil
+}
+
+// SubmoduleStatus captures the runtime state of a submodule
+// relative to its parent repository.
+type SubmoduleStatus struct {
+	// Path is the relative path from the parent repo root.
+	Path string
+
+	// HeadHash is the current HEAD commit of the submodule.
+	HeadHash Hash
+
+	// GitlinkHash is the commit hash recorded for this submodule
+	// in the parent's HEAD tree.
+	GitlinkHash Hash
+
+	// Branch is the current branch name of the submodule.
+	// Empty when [SubmoduleStatus.Detached] is true.
+	Branch string
+
+	// Detached is true when the submodule is in a detached HEAD state.
+	Detached bool
+
+	// HasGsStore is true when the submodule has been initialized
+	// with `gs repo init`.
+	HasGsStore bool
+}
+
+// SubmoduleStatus reports the runtime state of the submodule
+// at the given relative path.
+func (w *Worktree) SubmoduleStatus(
+	ctx context.Context, path string,
+) (*SubmoduleStatus, error) {
+	status := &SubmoduleStatus{Path: path}
+
+	branch, err := w.SubmoduleCurrentBranch(ctx, path)
+	switch {
+	case errors.Is(err, ErrDetachedHead):
+		status.Detached = true
+	case err != nil:
+		return nil, fmt.Errorf("current branch: %w", err)
+	default:
+		status.Branch = branch
+	}
+
+	head, err := w.SubmoduleHead(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("head: %w", err)
+	}
+	status.HeadHash = head
+
+	gitlink, err := w.SubmoduleGitlink(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("gitlink: %w", err)
+	}
+	status.GitlinkHash = gitlink
+
+	hasStore, err := w.SubmoduleHasGsStore(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("gs store: %w", err)
+	}
+	status.HasGsStore = hasStore
+
+	return status, nil
+}
+
+// SubmoduleHead reports the HEAD commit hash of the submodule
+// at the given relative path.
+func (w *Worktree) SubmoduleHead(
+	ctx context.Context, path string,
+) (Hash, error) {
+	absPath := filepath.Join(w.rootDir, path)
+	out, err := newGitCmd(ctx, w.log, w.exec,
+		"rev-parse", "HEAD^{commit}",
+	).WithDir(absPath).OutputChomp()
+	if err != nil {
+		return "", fmt.Errorf("submodule %s: %w", path, err)
+	}
+	return Hash(strings.TrimSpace(out)), nil
+}
+
+// SubmoduleGitlink reports the gitlink commit hash recorded
+// for the submodule at the given relative path
+// in the parent's HEAD tree.
+func (w *Worktree) SubmoduleGitlink(
+	ctx context.Context, path string,
+) (Hash, error) {
+	out, err := w.gitCmd(ctx,
+		"ls-tree", "HEAD", "--", path,
+	).OutputChomp()
+	if err != nil {
+		return "", fmt.Errorf("ls-tree %s: %w", path, err)
+	}
+	// Format: <mode> <type> <hash>\t<path>
+	// e.g. "160000 commit abc123\tlibs/core"
+	fields := strings.Fields(out)
+	if len(fields) < 3 {
+		return "", fmt.Errorf(
+			"unexpected ls-tree output for %s: %q",
+			path, out,
+		)
+	}
+	return Hash(fields[2]), nil
+}
+
+// SubmoduleHasGsStore reports whether the submodule
+// at the given relative path has been initialized with git-spice
+// (i.e., the spice data ref exists).
+func (w *Worktree) SubmoduleHasGsStore(
+	ctx context.Context, path string,
+) (bool, error) {
+	absPath := filepath.Join(w.rootDir, path)
+	err := newGitCmd(ctx, w.log, w.exec,
+		"rev-parse", "--verify", "--quiet", "refs/spice/data",
+	).WithDir(absPath).Run()
+	if err != nil {
+		// rev-parse --verify exits non-zero when the ref is absent.
+		return false, nil //nolint:nilerr
+	}
+	return true, nil
+}
+
+// HeadSnapshot captures the HEAD state of a worktree
+// at a point in time, suitable for restoration via [Worktree.RestoreHead].
+type HeadSnapshot struct {
+	// Branch is the name of the branch HEAD was on.
+	// Empty when [HeadSnapshot.Detached] is true.
+	Branch string
+
+	// Hash is the commit hash HEAD pointed at.
+	Hash Hash
+
+	// Detached is true when HEAD was detached.
+	Detached bool
+}
+
+// SnapshotHead captures the current HEAD state of the worktree.
+// It records whether HEAD is attached to a branch or detached,
+// and the commit hash at HEAD.
+func (w *Worktree) SnapshotHead(ctx context.Context) (*HeadSnapshot, error) {
+	snap := &HeadSnapshot{}
+
+	branch, err := w.CurrentBranch(ctx)
+	switch {
+	case errors.Is(err, ErrDetachedHead):
+		snap.Detached = true
+	case err != nil:
+		return nil, fmt.Errorf("current branch: %w", err)
+	default:
+		snap.Branch = branch
+	}
+
+	head, err := w.Head(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("head: %w", err)
+	}
+	snap.Hash = head
+
+	return snap, nil
+}
+
+// RestoreHead returns the worktree to the state captured by snap.
+// If snap was on a branch, the branch is checked out.
+// If snap was detached, HEAD is detached at the captured hash.
+// Working-tree changes are carried per `git checkout`'s normal semantics.
+func (w *Worktree) RestoreHead(
+	ctx context.Context, snap *HeadSnapshot,
+) error {
+	if snap.Detached {
+		return w.DetachHead(ctx, snap.Hash.String())
+	}
+	return w.CheckoutBranch(ctx, snap.Branch)
 }
