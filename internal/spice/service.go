@@ -87,6 +87,14 @@ type Store interface {
 
 	LoadCachedTemplates(context.Context) (string, []*state.CachedTemplate, error)
 	CacheTemplates(context.Context, string, []*state.CachedTemplate) error
+
+	// Integration returns the configured integration branch,
+	// or [state.ErrNotExist] if none is configured.
+	Integration(ctx context.Context) (*state.IntegrationInfo, error)
+
+	// SetIntegration writes the integration branch configuration.
+	// Pass nil to clear.
+	SetIntegration(ctx context.Context, info *state.IntegrationInfo) error
 }
 
 var _ Store = (*state.Store)(nil)

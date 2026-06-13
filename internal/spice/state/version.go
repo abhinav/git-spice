@@ -16,11 +16,12 @@ type Version int
 
 // Supported versions of the storage layout.
 const (
-	VersionOne Version = 1
-	VersionTwo Version = 2
+	VersionOne   Version = 1
+	VersionTwo   Version = 2
+	VersionThree Version = 3
 
 	// LatestVersion refers to the latest supported version.
-	LatestVersion = VersionTwo
+	LatestVersion = VersionThree
 )
 
 // checkVersion verifies that the given version is supported.
@@ -28,7 +29,7 @@ func checkVersion(version Version) error {
 	// If/when we make a breaking change to the storage format,
 	// we'll add migration code here.
 	switch version {
-	case VersionOne, VersionTwo:
+	case VersionOne, VersionTwo, VersionThree:
 		// ok
 
 	default:
