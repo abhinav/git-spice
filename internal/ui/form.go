@@ -10,6 +10,8 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
+	"go.abhg.dev/gs/internal/sigstack"
+	"go.abhg.dev/gs/internal/ui/scrollregion"
 )
 
 // FormKeyMap defines the key bindings for a form.
@@ -179,16 +181,49 @@ type RunOptions struct {
 
 	// WithoutSignals requests that the form not register signal handlers.
 	WithoutSignals bool
+
+	// Signals coordinates signal handling with the rest of the command.
+	Signals *sigstack.Stack
+
+	// ScrollRegionMinHeight and ScrollRegionMaxHeight reserve a bottom
+	// terminal region for the model.
+	//
+	// This is an experimental renderer mode. Ordinary terminal output scrolls
+	// above the reserved rows while the model is redrawn in the reserved rows.
+	// The reserved height follows the model's rendered line count.
+	// MinHeight prevents the region from bouncing when a model briefly renders
+	// fewer lines, and MaxHeight caps future detail sections.
+	ScrollRegionMinHeight int
+	ScrollRegionMaxHeight int
 }
 
 // FormRunOptions specifies options for [Form.Run].
 type FormRunOptions = RunOptions
 
 // RunModel runs the given Bubble Tea model.
-func RunModel(model tea.Model, opts *RunOptions) error {
+func RunModel(model tea.Model, opts *RunOptions) (err error) {
 	opts = cmp.Or(opts, &RunOptions{})
 
 	var teaOpts []tea.ProgramOption
+	startScrollRegion := func(*tea.Program) {}
+	if opts.ScrollRegionMinHeight > 0 || opts.ScrollRegionMaxHeight > 0 {
+		scrollRegion := scrollregion.New(model,
+			cmp.Or(opts.Output, io.Writer(os.Stderr)),
+			&scrollregion.Options{
+				Width:     opts.Width,
+				Height:    opts.Height,
+				MinHeight: opts.ScrollRegionMinHeight,
+				MaxHeight: opts.ScrollRegionMaxHeight,
+				Signals:   opts.Signals,
+			})
+		defer func() {
+			err = errors.Join(err, scrollRegion.Close())
+		}()
+		model = scrollRegion
+		teaOpts = append(teaOpts, tea.WithoutRenderer())
+		startScrollRegion = scrollRegion.Start
+	}
+
 	if i := opts.Input; i != nil {
 		teaOpts = append(teaOpts, tea.WithInput(i))
 	}
@@ -205,12 +240,12 @@ func RunModel(model tea.Model, opts *RunOptions) error {
 	if opts.WithoutSignals {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
 	}
-
 	program := tea.NewProgram(model, teaOpts...)
+	startScrollRegion(program)
 	if msg := opts.SendMsg; msg != nil {
 		go program.Send(msg)
 	}
-	_, err := program.Run()
+	_, err = program.Run()
 	return err
 }
 

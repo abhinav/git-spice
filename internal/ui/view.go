@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/sigstack"
 )
 
 // ErrPrompt indicates that we're not running in interactive mode.
@@ -90,7 +91,8 @@ type TerminalView struct {
 	r io.Reader
 	w io.Writer
 
-	theme func() Theme
+	theme   func() Theme
+	signals *sigstack.Stack
 }
 
 var _ InteractiveView = (*TerminalView)(nil)
@@ -106,6 +108,15 @@ func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
 	}
 }
 
+// WithSignals sets the signal stack used by terminal UI components.
+//
+// If WithSignals is not called,
+// components that need signal handling create private stacks.
+func (tv *TerminalView) WithSignals(signals *sigstack.Stack) *TerminalView {
+	tv.signals = signals
+	return tv
+}
+
 func (tv *TerminalView) Write(p []byte) (int, error) {
 	return tv.w.Write(p)
 }
@@ -118,9 +129,10 @@ func (tv *TerminalView) Theme() Theme {
 // Prompt prompts the user for input with the given interactive fields.
 func (tv *TerminalView) Prompt(fields ...Field) error {
 	return NewForm(fields...).Run(&FormRunOptions{
-		Input:  tv.r,
-		Output: tv.w,
-		Theme:  tv.theme(),
+		Input:   tv.r,
+		Output:  tv.w,
+		Theme:   tv.theme(),
+		Signals: tv.signals,
 	})
 }
 
@@ -138,6 +150,9 @@ func (tv *TerminalView) RunModel(
 	}
 	if opts.Theme == (Theme{}) {
 		opts.Theme = tv.theme()
+	}
+	if opts.Signals == nil {
+		opts.Signals = tv.signals
 	}
 	return RunModel(model, opts)
 }
