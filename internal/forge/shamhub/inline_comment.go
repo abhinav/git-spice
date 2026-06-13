@@ -62,8 +62,12 @@ type listInlineCommentsResponse struct {
 type inlineCommentItem struct {
 	ID        int       `json:"id"`
 	ThreadID  string    `json:"threadID"`
-	Path      string    `json:"path"`
-	Line      int       `json:"line"`
+	Scope     string    `json:"scope,omitempty"`
+	Path      string    `json:"path,omitempty"`
+	Line      int       `json:"line,omitempty"`
+	RangeLo   int       `json:"rangeStart,omitempty"`
+	RangeHi   int       `json:"rangeEnd,omitempty"`
+	Side      string    `json:"side,omitempty"`
 	Body      string    `json:"body"`
 	Author    string    `json:"author"`
 	Resolved  bool      `json:"resolved"`
@@ -92,7 +96,7 @@ func (sh *ShamHub) handleListInlineComments(
 
 	var items []inlineCommentItem
 	for _, c := range sh.comments {
-		if c.Change != req.Change || c.Path == "" {
+		if c.Change != req.Change || c.Scope == "" {
 			continue
 		}
 		outdated := c.Outdated
@@ -106,17 +110,22 @@ func (sh *ShamHub) handleListInlineComments(
 				outdated = stale
 			}
 		}
-		items = append(items, inlineCommentItem{
+		item := inlineCommentItem{
 			ID:        c.ID,
 			ThreadID:  c.ThreadID,
+			Scope:     c.Scope,
 			Path:      c.Path,
 			Line:      c.Line,
+			RangeLo:   c.RangeStart,
+			RangeHi:   c.RangeEnd,
+			Side:      c.Side,
 			Body:      c.Body,
 			Author:    c.Author,
 			Resolved:  c.Resolved,
 			Outdated:  outdated,
 			CreatedAt: c.CreatedAt,
-		})
+		}
+		items = append(items, item)
 	}
 
 	return &listInlineCommentsResponse{Items: items}, nil
@@ -199,19 +208,42 @@ func (r *forgeRepository) ListInlineComments(
 
 	var comments []*forge.InlineComment
 	for _, item := range res.Items {
-		comments = append(comments, &forge.InlineComment{
+		c := &forge.InlineComment{
 			ID:        ChangeCommentID(item.ID),
 			ThreadID:  item.ThreadID,
+			Scope:     parseCommentScope(item.Scope),
 			Path:      item.Path,
 			Line:      item.Line,
+			Side:      item.Side,
 			Body:      item.Body,
 			Author:    item.Author,
 			Resolved:  item.Resolved,
 			Outdated:  item.Outdated,
 			CreatedAt: item.CreatedAt,
-		})
+		}
+		if item.RangeLo != 0 || item.RangeHi != 0 {
+			c.Range = &forge.CommentRange{
+				Start: item.RangeLo,
+				End:   item.RangeHi,
+			}
+		}
+		comments = append(comments, c)
 	}
 	return comments, nil
+}
+
+// parseCommentScope decodes the wire string used by shamhub
+// into the typed [forge.CommentScope].
+func parseCommentScope(s string) forge.CommentScope {
+	switch s {
+	case "pr":
+		return forge.CommentScopePR
+	case "file":
+		return forge.CommentScopeFile
+	case "line", "":
+		return forge.CommentScopeLine
+	}
+	return forge.CommentScopeLine
 }
 
 // Post inline comment
@@ -220,12 +252,15 @@ type postInlineCommentRequest struct {
 	Owner string `path:"owner" json:"-"`
 	Repo  string `path:"repo" json:"-"`
 
-	Change   int    `json:"change"`
-	Path     string `json:"path"`
-	Line     int    `json:"line"`
-	Body     string `json:"body"`
-	Side     string `json:"side"`
-	ThreadID string `json:"threadID,omitempty"`
+	Change     int    `json:"change"`
+	Scope      string `json:"scope,omitempty"`
+	Path       string `json:"path,omitempty"`
+	Line       int    `json:"line,omitempty"`
+	RangeStart int    `json:"rangeStart,omitempty"`
+	RangeEnd   int    `json:"rangeEnd,omitempty"`
+	Body       string `json:"body"`
+	Side       string `json:"side,omitempty"`
+	ThreadID   string `json:"threadID,omitempty"`
 }
 
 type postInlineCommentResponse struct {
@@ -275,6 +310,10 @@ func (sh *ShamHub) handlePostInlineComment(
 		threadID = fmt.Sprintf("thread-%d", len(sh.comments)+1)
 	}
 
+	scope := req.Scope
+	if scope == "" {
+		scope = "line"
+	}
 	now := time.Now()
 	comment := shamComment{
 		ID:         len(sh.comments) + 1,
@@ -282,7 +321,10 @@ func (sh *ShamHub) handlePostInlineComment(
 		Body:       req.Body,
 		Path:       req.Path,
 		Line:       req.Line,
+		RangeStart: req.RangeStart,
+		RangeEnd:   req.RangeEnd,
 		Side:       req.Side,
+		Scope:      scope,
 		CommitSHA:  commitSHA,
 		ThreadID:   threadID,
 		Resolvable: true,
@@ -306,13 +348,22 @@ func (r *forgeRepository) PostInlineComment(
 	u := r.apiURL.JoinPath(
 		r.owner, r.repo, "inline-comments",
 	)
+	scope := req.Scope
+	if scope == forge.CommentScopeUnknown {
+		scope = forge.CommentScopeLine
+	}
 	body := postInlineCommentRequest{
 		Change:   int(id.(ChangeID)),
+		Scope:    scope.String(),
 		Path:     req.Path,
 		Line:     req.Line,
 		Body:     req.Body,
 		Side:     req.Side,
 		ThreadID: req.ThreadID,
+	}
+	if req.Range != nil {
+		body.RangeStart = req.Range.Start
+		body.RangeEnd = req.Range.End
 	}
 
 	var res postInlineCommentResponse
@@ -322,14 +373,23 @@ func (r *forgeRepository) PostInlineComment(
 		return nil, fmt.Errorf("post inline comment: %w", err)
 	}
 
-	return &forge.InlineComment{
+	out := &forge.InlineComment{
 		ID:        ChangeCommentID(res.ID),
 		ThreadID:  res.ThreadID,
+		Scope:     scope,
 		Path:      req.Path,
 		Line:      req.Line,
+		Side:      req.Side,
 		Body:      req.Body,
 		CreatedAt: res.CreatedAt,
-	}, nil
+	}
+	if req.Range != nil {
+		out.Range = &forge.CommentRange{
+			Start: req.Range.Start,
+			End:   req.Range.End,
+		}
+	}
+	return out, nil
 }
 
 // Submit review (batch)
@@ -345,8 +405,9 @@ type submitReviewRequest struct {
 }
 
 type submitReviewCommentRequest struct {
-	Path     string `json:"path"`
-	Line     int    `json:"line"`
+	Scope    string `json:"scope,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Line     int    `json:"line,omitempty"`
 	Body     string `json:"body"`
 	Side     string `json:"side,omitempty"`
 	ThreadID string `json:"threadID,omitempty"`
@@ -373,6 +434,10 @@ func (sh *ShamHub) handleSubmitReview(
 			)
 		}
 
+		scope := c.Scope
+		if scope == "" {
+			scope = "line"
+		}
 		comment := shamComment{
 			ID:         len(sh.comments) + 1,
 			Change:     req.Change,
@@ -380,6 +445,7 @@ func (sh *ShamHub) handleSubmitReview(
 			Path:       c.Path,
 			Line:       c.Line,
 			Side:       c.Side,
+			Scope:      scope,
 			ThreadID:   threadID,
 			Resolvable: true,
 			Author:     "test-user",
@@ -401,7 +467,12 @@ func (r *forgeRepository) SubmitReview(
 
 	var comments []submitReviewCommentRequest
 	for _, c := range req.Comments {
+		scope := c.Scope
+		if scope == forge.CommentScopeUnknown {
+			scope = forge.CommentScopeLine
+		}
 		comments = append(comments, submitReviewCommentRequest{
+			Scope:    scope.String(),
 			Path:     c.Path,
 			Line:     c.Line,
 			Body:     c.Body,
