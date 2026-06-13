@@ -237,6 +237,95 @@ func TestListFilesPaths_specialCharacters(t *testing.T) {
 	assert.ElementsMatch(t, expected, paths)
 }
 
+func TestWorktree_IsClean(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Clean", func(t *testing.T) {
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-01-01T00:00:00Z'
+
+			git init
+			git add file.txt
+			git commit -m 'Initial commit'
+
+			-- file.txt --
+			content
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		clean, err := wt.IsClean(t.Context())
+		require.NoError(t, err)
+		assert.True(t, clean)
+	})
+
+	t.Run("StagedChanges", func(t *testing.T) {
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-01-01T00:00:00Z'
+
+			git init
+			git add file.txt
+			git commit -m 'Initial commit'
+
+			cp $WORK/new.txt staged.txt
+			git add staged.txt
+
+			-- file.txt --
+			content
+			-- new.txt --
+			staged content
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		clean, err := wt.IsClean(t.Context())
+		require.NoError(t, err)
+		assert.False(t, clean)
+	})
+
+	t.Run("UntrackedFilesIgnored", func(t *testing.T) {
+		fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+			as 'Test <test@example.com>'
+			at '2025-01-01T00:00:00Z'
+
+			cd repo
+			git init
+			git add file.txt
+			git commit -m 'Initial commit'
+
+			cp $WORK/untracked.txt extra.txt
+
+			-- repo/file.txt --
+			content
+			-- untracked.txt --
+			untracked
+		`)))
+		require.NoError(t, err)
+		t.Cleanup(fixture.Cleanup)
+
+		wt, err := git.OpenWorktree(t.Context(), filepath.Join(fixture.Dir(), "repo"), git.OpenOptions{
+			Log: silogtest.New(t),
+		})
+		require.NoError(t, err)
+
+		clean, err := wt.IsClean(t.Context())
+		require.NoError(t, err)
+		assert.True(t, clean, "untracked files should not count as dirty")
+	})
+}
+
 func TestWorktree_ListUntrackedFiles(t *testing.T) {
 	t.Parallel()
 
