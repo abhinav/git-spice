@@ -1,0 +1,14 @@
+Usage: gs integration (int) delete (d,rm)
+
+Remove the integration branch configuration
+
+Removes the integration branch configuration. The underlying Git branch (if any)
+is not deleted; only the git-spice config that drives auto-rebuild and submit is
+removed.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

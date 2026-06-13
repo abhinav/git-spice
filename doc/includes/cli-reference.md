@@ -1292,6 +1292,177 @@ This command requires at least Git 2.45.
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
 
+## Integration
+
+### git-spice integration show {#gs-integration-show}
+
+```
+gs integration (int) show
+```
+
+Show the configured integration branch
+
+Displays the configured integration branch and the tip branches
+that compose it. For each tip, shows whether its hash has drifted
+from the hash recorded at the last successful rebuild.
+
+### git-spice integration create {#gs-integration-create}
+
+```
+gs integration (int) create (c) <name> [flags]
+```
+
+Configure the integration branch
+
+Configures the singleton integration branch for this repo.
+The branch is materialized by sequentially merging each
+tip onto trunk; it is never given a PR and is invisible to
+'gs branch' commands.
+
+Use 'gs integration tip add <branch>' to add tips later,
+or pass --tip multiple times here.
+
+**Arguments**
+
+* `name`: Local name of the integration branch
+
+**Flags**
+
+* `--upstream=BRANCH`: Upstream branch name (defaults to local name)
+* `--tip=BRANCH,...`: Tip branches to include (repeat to add more)
+
+### git-spice integration delete {#gs-integration-delete}
+
+```
+gs integration (int) delete (d,rm)
+```
+
+Remove the integration branch configuration
+
+Removes the integration branch configuration. The underlying
+Git branch (if any) is not deleted; only the git-spice config
+that drives auto-rebuild and submit is removed.
+
+### git-spice integration checkout {#gs-integration-checkout}
+
+```
+gs integration (int) checkout (co)
+```
+
+Switch to the integration branch
+
+Switches the worktree to the configured integration branch.
+Fails if no integration is configured, or if the integration
+branch has not yet been materialized (run 'gs integration
+rebuild' first).
+
+### git-spice integration rebuild {#gs-integration-rebuild}
+
+```
+gs integration (int) rebuild (rb) [flags]
+```
+
+Rebuild the integration branch
+
+Regenerates the integration branch by resetting it to trunk
+and sequentially merging each configured tip with --no-ff.
+Rerere is enabled for the duration of these merges so any
+recorded conflict resolutions are replayed automatically.
+
+On conflict, the merge is left in the worktree. Resolve the
+conflicting files, commit with 'git merge --continue', then
+re-run 'gs integration rebuild' (or 'gs intrb') to resume.
+
+**Flags**
+
+* `--push`: Also push the integration branch after rebuilding
+
+### git-spice integration submit {#gs-integration-submit}
+
+```
+gs integration (int) submit (s)
+```
+
+Push the integration branch to the remote
+
+Pushes the integration branch to the configured remote with
+--force-with-lease against the hash recorded at the previous
+successful push.
+
+No change request (PR) is opened: this command only pushes the
+branch. Once a manual submit succeeds, 'gs stack submit' and
+'gs upstack submit' will keep the published branch in sync with
+local rebuilds.
+
+### git-spice integration mark-pushed {#gs-integration-mark-pushed}
+
+```
+gs integration (int) mark-pushed [<hash>]
+```
+
+Record a hash as the integration branch's last-pushed value
+
+Records the given commit hash as the integration branch's
+last-pushed value in gs's local state. Does not push.
+
+Used to reconcile state after a manual git push of the
+integration branch, or after a "push rejected" error caused by
+a multi-checkout collision or a state reset.
+
+With no argument, the hash is discovered from the configured
+push remote. With an explicit hash, that hash is recorded
+verbatim.
+
+After 'gs integration mark-pushed', the next
+'gs integration submit' uses --force-with-lease against the
+recorded hash. If multiple checkouts are publishing this
+branch, this command will not save you from a collision; it
+just confirms which remote state you accept as your baseline
+before overwriting.
+
+**Arguments**
+
+* `hash`: Commit hash to record as last-pushed. If empty, fetches the configured push remote and uses its current tip.
+
+### git-spice integration tip add {#gs-integration-tip-add}
+
+```
+gs integration (int) tip add (a) <branches> ...
+```
+
+Add a branch to the integration tip list
+
+Adds one or more tracked branches to the integration tip list.
+Each branch must already be tracked by git-spice; this command
+does not track new branches.
+
+Branches are added in order. If one fails to add, the previous
+ones remain in the tip list.
+
+**Arguments**
+
+* `branches`: Branches to add as tips
+
+### git-spice integration tip remove {#gs-integration-tip-remove}
+
+```
+gs integration (int) tip remove (r,rm) <branches> ...
+```
+
+Remove a branch from the integration tip list
+
+**Arguments**
+
+* `branches`: Branches to remove from the tip list
+
+### git-spice integration tip list {#gs-integration-tip-list}
+
+```
+gs integration (int) tip list (l,ls)
+```
+
+List the configured integration tips
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}

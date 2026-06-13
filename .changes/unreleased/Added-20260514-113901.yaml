@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration: Add ''gs integration'' command for managing a combined integration branch that merges multiple stack tips onto trunk.'
+time: 2026-05-14T11:39:01.837856-04:00
