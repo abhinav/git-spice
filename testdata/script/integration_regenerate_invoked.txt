@@ -1,0 +1,68 @@
+# Verifies the post-merge regenerator step: when two tips conflict on
+# a path tagged `merge=regenerate` and `.gs/integration-regenerate`
+# exists, gs hands the script the conflict list and folds its output
+# into the final merge commit.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+chmod 700 $WORK/driver.sh
+chmod 700 $WORK/regenerate.sh
+
+cd repo
+git init
+
+# Configure the regenerate merge driver pointing at our take-incoming
+# driver, and tag derived.txt as merge=regenerate.
+env DRIVER_CMD=$WORK/driver.sh' %O %A %B %P'
+git config merge.regenerate.driver $DRIVER_CMD
+git config merge.regenerate.name 'take incoming + log'
+
+git add derived.txt .gitattributes
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt derived.txt
+git add derived.txt
+gs bc feat-a -m 'feat-a edits derived.txt'
+
+git checkout main
+cp feat-b-version.txt derived.txt
+git add derived.txt
+gs bc feat-b -m 'feat-b edits derived.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+# Make .gs/integration-regenerate executable. It writes a marker file
+# (which gs will fold into the merge commit via AmendCommitAll).
+mkdir .gs
+cp $WORK/regenerate.sh .gs/integration-regenerate
+chmod 700 .gs/integration-regenerate
+
+gs integration rebuild
+stderr 'rebuilt with 2 tip\(s\)'
+
+# The marker file should be in HEAD (folded into the last merge
+# commit via amend), and it should record the path the driver logged.
+git show preview:marker.txt
+stdout 'regenerated:derived\.txt'
+
+-- repo/derived.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- repo/.gitattributes --
+derived.txt merge=regenerate
+-- driver.sh --
+#!/bin/sh
+cp -f "$3" "$2"
+if [ -n "${GS_INTEGRATION_REGEN_LOG:-}" ]; then
+    printf '%s\n' "$4" >> "$GS_INTEGRATION_REGEN_LOG"
+fi
+-- regenerate.sh --
+#!/bin/sh
+files=$(cat)
+printf 'regenerated:%s\n' "$files" > marker.txt
