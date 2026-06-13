@@ -143,7 +143,9 @@ func TestRunner_Run_scriptFilePath(t *testing.T) {
 func TestRunner_Run_emptyScript(t *testing.T) {
 	r := &Runner{Log: silog.Nop()}
 
-	_, err := r.Run(t.Context(), &RunRequest{})
+	_, err := r.Run(t.Context(), &RunRequest{
+		Script: "",
+	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "empty script")
 }

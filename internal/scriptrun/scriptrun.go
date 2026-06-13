@@ -175,25 +175,28 @@ func (r *Runner) buildShebangCmd(
 	ctx context.Context,
 	log *silog.Logger,
 	script string,
-) (*xec.Cmd, func(), error) {
+) (cmd *xec.Cmd, cleanup func(), err error) {
 	f, err := os.CreateTemp("", "gs-scriptrun-*.sh")
 	if err != nil {
 		return nil, nil, fmt.Errorf("create temp file: %w", err)
 	}
-	cleanup := func() {
+	cleanup = func() {
 		_ = os.Remove(f.Name())
 	}
+	defer func() {
+		if err != nil {
+			cleanup()
+			cleanup = nil
+		}
+	}()
 
 	if _, err := f.WriteString(script); err != nil {
-		cleanup()
 		return nil, nil, fmt.Errorf("write script: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		cleanup()
 		return nil, nil, fmt.Errorf("close script: %w", err)
 	}
 	if err := os.Chmod(f.Name(), 0o700); err != nil {
-		cleanup()
 		return nil, nil, fmt.Errorf("chmod script: %w", err)
 	}
 
