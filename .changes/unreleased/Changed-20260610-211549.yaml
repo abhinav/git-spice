@@ -1,0 +1,3 @@
+kind: Changed
+body: 'repo sync: After the trunk pull, also pull remote-side commits on tracked stack branches via the new `spice.repoSync.pullBranches` config (default `fastForward`). Closes the common loop where CI bots add a commit and the next `gs submit` is rejected with "stale info".'
+time: 2026-06-10T21:15:49.138568-04:00

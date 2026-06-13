@@ -37,6 +37,7 @@ type branchCmd struct {
 
 	// Pull request management
 	Submit branchSubmitCmd `cmd:"" aliases:"s" help:"Submit a branch"`
+	Sync   branchSyncCmd   `cmd:"" aliases:"sy" help:"Pull remote-side commits into a tracked branch" released:"unreleased"`
 }
 
 // BranchPromptConfig defines configuration for the branch tree prompt

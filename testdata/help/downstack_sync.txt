@@ -1,0 +1,17 @@
+Usage: gs downstack (ds) sync (sy) [flags]
+
+Pull remote-side commits for a branch and those below it
+
+Pull remote-side commits for the current branch and all branches downstack from
+it (excluding trunk). Use --branch to start at a different branch.
+
+Flags:
+  --branch=NAME    Branch to start at
+  --rebase         On divergence, replay remote-side commits onto local.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
