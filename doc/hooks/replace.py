@@ -11,12 +11,15 @@ REPLACEMENTS = {
     '<!-- gs:github -->': ':simple-github: GitHub',
     '<!-- gs:gitlab -->': ':simple-gitlab: GitLab',
     '<!-- gs:bitbucket -->': ':simple-bitbucket: Bitbucket',
+    '<!-- gs:gitea -->': ':simple-gitea: Gitea',
     '<!-- gs:icon:github -->': ':simple-github:',
     '<!-- gs:icon:gitlab -->': ':simple-gitlab:',
     '<!-- gs:icon:bitbucket -->': ':simple-bitbucket:',
+    '<!-- gs:icon:gitea -->': ':simple-gitea:',
     '<!-- gs:badge:github ': '<!-- gs:badge simple-github GitHub ',
     '<!-- gs:badge:gitlab ': '<!-- gs:badge simple-gitlab GitLab ',
     '<!-- gs:badge:bitbucket ': '<!-- gs:badge simple-bitbucket Bitbucket ',
+    '<!-- gs:badge:gitea ': '<!-- gs:badge simple-gitea Gitea ',
 }
 
 

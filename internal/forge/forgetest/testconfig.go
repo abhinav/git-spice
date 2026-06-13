@@ -19,6 +19,13 @@ type TestConfig struct {
 	GitHub    ForgeConfig `yaml:"github"`
 	GitLab    ForgeConfig `yaml:"gitlab"`
 	Bitbucket ForgeConfig `yaml:"bitbucket"`
+	Gitea     GiteaConfig `yaml:"gitea"`
+}
+
+// GiteaConfig holds Gitea-specific test configuration.
+type GiteaConfig struct {
+	ForgeConfig `yaml:",inline"`
+	URL         string `yaml:"url"`
 }
 
 // ForgeConfig holds per-forge test configuration.
@@ -80,6 +87,7 @@ func canonicalConfig() *TestConfig {
 		GitHub:    CanonicalGitHubConfig(),
 		GitLab:    CanonicalGitLabConfig(),
 		Bitbucket: CanonicalBitbucketConfig(),
+		Gitea:     CanonicalGiteaConfig(),
 	}
 }
 
@@ -122,6 +130,23 @@ func CanonicalBitbucketConfig() ForgeConfig {
 		ForkRepo:  "test-fork-repo",
 		Reviewer:  "Test Reviewer",
 		Assignee:  "",
+	}
+}
+
+// CanonicalGiteaConfig returns canonical placeholders for Gitea fixtures.
+// ForkOwner, Reviewer, and Assignee all use "test-reviewer" so that
+// a single Gitea user account can serve all three roles in tests.
+func CanonicalGiteaConfig() GiteaConfig {
+	return GiteaConfig{
+		URL: "http://localhost:3000",
+		ForgeConfig: ForgeConfig{
+			Owner:     CanonicalOwner,
+			Repo:      CanonicalRepo,
+			ForkOwner: "test-reviewer",
+			ForkRepo:  "test-fork-repo",
+			Reviewer:  "test-reviewer",
+			Assignee:  "test-reviewer",
+		},
 	}
 }
 
