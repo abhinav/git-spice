@@ -118,6 +118,28 @@ func TestRunner_Run_shebangReceivesArgs(t *testing.T) {
 	assert.Equal(t, "first=second\n", string(res.Stdout))
 }
 
+func TestRunner_Run_scriptFilePath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("script files are POSIX-only")
+	}
+	path := filepath.Join(t.TempDir(), "script with space.sh")
+	require.NoError(t, os.WriteFile(
+		path,
+		[]byte("#!/bin/sh\necho \"$1:$2\"\n"),
+		0o700,
+	))
+
+	r := &Runner{
+		Log:  silog.Nop(),
+		Args: []string{"one", "two"},
+	}
+	res, err := r.Run(t.Context(), &RunRequest{
+		Script: path,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "one:two\n", string(res.Stdout))
+}
+
 func TestRunner_Run_emptyScript(t *testing.T) {
 	r := &Runner{Log: silog.Nop()}
 

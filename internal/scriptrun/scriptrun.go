@@ -13,6 +13,8 @@
 // temporary file (with executable permission) and executed directly,
 // letting the kernel use the interpreter from the shebang.
 //
+// If a script is the path to a regular file, it is executed directly.
+//
 // Otherwise, the script is passed to 'sh -c'. Runner.Args are forwarded
 // as positional parameters ($1, $2, ...).
 //
@@ -59,7 +61,8 @@ type Runner struct {
 type RunRequest struct {
 	// Script is the script body to execute.
 	// If it starts with "#!", it is executed directly via the
-	// interpreter named in the shebang; otherwise it is passed to
+	// interpreter named in the shebang. If it names a regular file,
+	// that file is executed directly. Otherwise, it is passed to
 	// "sh -c".
 	Script string // required
 
@@ -153,6 +156,9 @@ func (r *Runner) buildCmd(
 ) (*xec.Cmd, func(), error) {
 	if strings.HasPrefix(script, "#!") {
 		return r.buildShebangCmd(ctx, log, script)
+	}
+	if info, err := os.Stat(script); err == nil && info.Mode().IsRegular() {
+		return xec.Command(ctx, log, script, r.Args...), func() {}, nil
 	}
 	args := make([]string, 0, 3+len(r.Args))
 	args = append(args, "-c", script, "gs-scriptrun")
