@@ -4,10 +4,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget/mergeprogress"
 )
@@ -23,8 +26,15 @@ func main() {
 		"feat1: waiting for CI checks",
 		"detail message")
 	flag.BoolVar(&req.animate, "animate", false, "animate progress")
+	flag.BoolVar(&req.logs, "logs", false,
+		"emit synthetic logs while the widget is active")
 	flag.DurationVar(&req.tick, "tick", 750*time.Millisecond, "animation tick")
 	flag.IntVar(&req.width, "width", 0, "initial widget width")
+	flag.IntVar(&req.height, "height", 0, "initial terminal height")
+	flag.IntVar(&req.regionMinHeight, "region-min-height", 4,
+		"minimum bottom rows reserved for the widget")
+	flag.IntVar(&req.regionMaxHeight, "region-max-height", 8,
+		"maximum bottom rows reserved for the widget")
 	flag.BoolVar(&req.dark, "dark", true, "use the dark theme")
 	flag.Parse()
 
@@ -44,9 +54,14 @@ type request struct {
 
 	message string
 	animate bool
+	logs    bool
 	tick    time.Duration
 	width   int
-	dark    bool
+	height  int
+
+	regionMinHeight int
+	regionMaxHeight int
+	dark            bool
 }
 
 func (r *request) run() error {
@@ -64,14 +79,24 @@ func (r *request) run() error {
 			Widget: widget,
 			states: r.states(),
 			tick:   r.tick,
+			log: silog.New(&colorprofile.Writer{
+				Forward: crlfWriter{os.Stdout},
+				Profile: colorprofile.Detect(os.Stdout, os.Environ()),
+			}, &silog.Options{
+				Level: silog.LevelDebug,
+			}),
+			logs: r.logs,
 		}
 	}
 
-	_, err := tea.NewProgram(model,
-		tea.WithInput(os.Stdin),
-		tea.WithOutput(os.Stdout),
-		tea.WithWindowSize(r.width, 20)).Run()
-	if err != nil {
+	if err := ui.RunModel(model, &ui.RunOptions{
+		Input:                 os.Stdin,
+		Output:                os.Stdout,
+		Width:                 r.width,
+		Height:                r.height,
+		ScrollRegionMinHeight: r.regionMinHeight,
+		ScrollRegionMaxHeight: r.regionMaxHeight,
+	}); err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}
 	return nil
@@ -124,6 +149,8 @@ type demoModel struct {
 
 	states []mergeprogress.State
 	tick   time.Duration
+	log    *silog.Logger
+	logs   bool
 }
 
 type tickMsg struct{}
@@ -149,11 +176,13 @@ func (m *demoModel) advance() tea.Cmd {
 		if state == mergeprogress.StateActive {
 			m.states[idx] = mergeprogress.StateMerged
 			itemID := itemID(idx)
+			m.logf("%s: pulled 1 new commit(s)", itemID)
 			_, _ = m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateMerged,
 				Message: itemID + ": merged",
 			})
+			m.logf("%s: deleted (was %s)", itemID, fakeHash(idx))
 			return m.nextTick()
 		}
 	}
@@ -162,11 +191,15 @@ func (m *demoModel) advance() tea.Cmd {
 		if state == mergeprogress.StatePending {
 			m.states[idx] = mergeprogress.StateActive
 			itemID := itemID(idx)
+			m.logf("%s: retargeting #%d onto main...",
+				itemID, changeNumber(idx))
 			_, _ = m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateActive,
 				Message: itemID + ": waiting for CI checks",
 			})
+			m.logf("%s: updated #%d: https://example.test/pull/%d",
+				itemID, changeNumber(idx), changeNumber(idx))
 			return m.nextTick()
 		}
 	}
@@ -180,6 +213,39 @@ func (m *demoModel) nextTick() tea.Cmd {
 	})
 }
 
+func (m *demoModel) logf(format string, args ...any) {
+	if m.logs {
+		m.log.Infof(format, args...)
+	}
+}
+
 func itemID(idx int) string {
 	return fmt.Sprintf("feat%d", idx+1)
+}
+
+func changeNumber(idx int) int {
+	return 1200 + idx + 1
+}
+
+func fakeHash(idx int) string {
+	return fmt.Sprintf("%06x", 0xabc000+idx)
+}
+
+type crlfWriter struct {
+	w io.Writer
+}
+
+func (w crlfWriter) Write(p []byte) (int, error) {
+	for _, b := range p {
+		if b == '\n' {
+			if _, err := w.w.Write([]byte{'\r', '\n'}); err != nil {
+				return 0, err
+			}
+			continue
+		}
+		if _, err := w.w.Write([]byte{b}); err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
 }
