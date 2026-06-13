@@ -48,7 +48,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(context.Background(), "feature"))
+		require.NoError(t, handler.RestackBranch(context.Background(), "feature", nil))
 		assert.Contains(t, logBuffer.String(), "feature: restacked on main")
 	})
 
@@ -83,7 +83,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		require.NoError(t, handler.RestackBranch(context.Background(), "feature"))
+		require.NoError(t, handler.RestackBranch(context.Background(), "feature", nil))
 	})
 
 	t.Run("UntrackedBranch", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		err := handler.RestackBranch(context.Background(), "untracked")
+		err := handler.RestackBranch(context.Background(), "untracked", nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "untracked branch")
 		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run '"+cli.Name()+" branch track")
@@ -147,7 +147,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(context.Background(), "already-restacked"))
+		require.NoError(t, handler.RestackBranch(context.Background(), "already-restacked", nil))
 		assert.Contains(t, logBuffer.String(), "already-restacked: branch does not need to be restacked.")
 	})
 
@@ -178,7 +178,7 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		err := handler.RestackBranch(context.Background(), "feature")
+		err := handler.RestackBranch(context.Background(), "feature", nil)
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "restack branch")
 		assert.ErrorIs(t, err, unexpectedErr)
