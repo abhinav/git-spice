@@ -1,0 +1,115 @@
+# With spice.restack.method=merge, a conflict resolved during one restack
+# does not recur on a later restack: the merge commit records the
+# resolution, so subsequent merges of the base do not replay it.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# stack: main -> a -> b.
+# 'a' modifies init.txt; 'b' adds an independent file.
+cp $WORK/extra/init.a.txt init.txt
+git add init.txt
+gs bc -m a
+
+cp $WORK/extra/b.txt b.txt
+git add b.txt
+gs bc -m b
+
+# advance trunk with a change to init.txt that conflicts with 'a'.
+gs trunk
+cp $WORK/extra/init.trunk1.txt init.txt
+git add init.txt
+git commit -m 'Trunk change 1'
+
+# restack the upstack of 'a': merging trunk into 'a' conflicts.
+gs branch checkout a
+! gs upstack restack
+stderr 'There was a conflict while merging'
+stderr '  gs continue'
+
+# resolve the conflict in 'a' and continue;
+# this drains the continuation and restacks 'b' too.
+cp $WORK/extra/init.resolved.txt init.txt
+git add init.txt
+env EDITOR=true
+gs continue
+
+# both branches are restacked; 'a' carries a merge commit.
+! exists .git/MERGE_HEAD
+gs ls -a
+cmp stderr $WORK/golden/ls-1.txt
+git graph --branches
+cmp stdout $WORK/golden/graph-1.txt
+
+# 'a' holds the resolved content.
+gs branch checkout a
+cmp init.txt $WORK/extra/init.resolved.txt
+
+# Now advance trunk again with a DIFFERENT, non-conflicting change
+# (a brand new file). The previously-resolved init.txt conflict
+# must NOT come back.
+gs trunk
+cp $WORK/extra/extra.txt extra.txt
+git add extra.txt
+git commit -m 'Trunk change 2'
+
+# restack the upstack of 'a' again: this time it completes cleanly,
+# without re-raising the init.txt conflict.
+gs branch checkout a
+gs upstack restack
+stderr 'a: restacked on main'
+stderr 'b: restacked on a'
+
+# no merge was left pending and no conflict prompt was shown.
+! exists .git/MERGE_HEAD
+! stderr 'There was a conflict while merging'
+! stderr 'gs continue'
+
+# the resolved content survived; the new trunk file is present.
+gs branch checkout a
+cmp init.txt $WORK/extra/init.resolved.txt
+exists extra.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.a.txt --
+a's init
+
+-- extra/init.trunk1.txt --
+trunk's init
+
+-- extra/init.resolved.txt --
+resolved init
+
+-- extra/b.txt --
+feature b
+
+-- extra/extra.txt --
+extra trunk file
+
+-- golden/ls-1.txt --
+  ┏━□ b
+┏━┻■ a ◀
+main
+-- golden/graph-1.txt --
+*   23b6c50 (b) Merge branch 'a' into b
+|\  
+| *   1f267af (HEAD -> a) Merge branch 'main' into a
+| |\  
+| | * 0a5d427 (main) Trunk change 1
+* | | 5ca01d1 b
+|/ /  
+* / 3222581 a
+|/  
+* d692027 Initial commit

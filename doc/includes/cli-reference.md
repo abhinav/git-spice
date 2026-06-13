@@ -12,7 +12,7 @@ git-spice is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.kind](/cli/config.md#spiceforgekind), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.secret.backend](/cli/config.md#spicesecretbackend)
+**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.kind](/cli/config.md#spiceforgekind), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.restack.mergeAutoResolve](/cli/config.md#spicerestackmergeautoresolve), [spice.restack.method](/cli/config.md#spicerestackmethod), [spice.secret.backend](/cli/config.md#spicesecretbackend)
 
 ## Shell
 
@@ -1300,7 +1300,7 @@ This command requires at least Git 2.45.
 gs rebase (rb) continue (c) [flags]
 ```
 
-Continue an interrupted operation
+Continue an interrupted operation (rebase or merge)
 
 Continues an ongoing git-spice operation interrupted by
 a git rebase after all conflicts have been resolved.
@@ -1328,7 +1328,7 @@ and use --edit to override it.
 gs rebase (rb) abort (a)
 ```
 
-Abort an operation
+Abort an interrupted operation (rebase or merge)
 
 Cancels an ongoing git-spice operation that was interrupted by
 a git rebase.
@@ -1338,6 +1338,53 @@ cancel the operation with 'gs rebase abort'
 going back to the state before the rebase.
 
 The command can be used in place of 'git rebase --abort'
+even if a git-spice operation is not currently in progress.
+
+### git-spice continue {#gs-continue}
+
+```
+gs continue [flags]
+```
+
+Continue an interrupted operation (rebase or merge)
+
+Continues an ongoing git-spice operation interrupted by
+a git rebase or merge after all conflicts have been resolved.
+For example, if 'gs upstack restack' gets interrupted
+because a conflict arises during the operation,
+you can resolve the conflict and run 'gs continue'
+to continue the operation.
+
+The command can be used in place of 'git rebase --continue'
+or 'git merge --continue'
+even if a git-spice operation is not currently in progress.
+
+Use the --no-edit flag to continue without opening an editor.
+Make --no-edit the default by setting 'spice.rebaseContinue.edit' to false
+and use --edit to override it.
+
+**Flags**
+
+* `--[no-]edit` ([:material-wrench:{ .middle title="spice.rebaseContinue.edit" }](/cli/config.md#spicerebasecontinueedit)): Whether to open an editor to edit the commit message.
+
+**Configuration**: [spice.rebaseContinue.edit](/cli/config.md#spicerebasecontinueedit)
+
+### git-spice abort {#gs-abort}
+
+```
+gs abort [flags]
+```
+
+Abort an interrupted operation (rebase or merge)
+
+Cancels an ongoing git-spice operation that was interrupted by
+a git rebase or merge.
+For example, if 'gs upstack restack' encounters a conflict,
+cancel the operation with 'gs abort',
+going back to the state before the operation.
+
+The command can be used in place of 'git rebase --abort'
+or 'git merge --abort'
 even if a git-spice operation is not currently in progress.
 
 ## Navigation

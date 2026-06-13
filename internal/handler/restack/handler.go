@@ -10,6 +10,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/iterutil"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
@@ -17,7 +18,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -package restack -destination mocks_test.go . GitWorktree,Service
+//go:generate mockgen -package restack -destination mocks_test.go . GitWorktree,Service,AutostashHandler
 
 // GitWorktree is a subet of the git.Worktree interface.
 type GitWorktree interface {
@@ -27,6 +28,13 @@ type GitWorktree interface {
 }
 
 var _ GitWorktree = (*git.Worktree)(nil)
+
+// AutostashHandler is a subset of the autostash.Handler interface.
+type AutostashHandler interface {
+	BeginAutostash(ctx context.Context, opts *autostash.Options) (func(*error, *autostash.CleanupOptions), error)
+}
+
+var _ AutostashHandler = (*autostash.Handler)(nil)
 
 // Store is a subset of the state.Store interface.
 type Store interface {
@@ -46,6 +54,18 @@ type Handler struct {
 	Worktree GitWorktree   // required
 	Store    Store         // required
 	Service  Service       // required
+
+	// RestackMethod selects how branches are replayed onto their bases.
+	//
+	// The zero value is [spice.RestackMethodRebase].
+	RestackMethod spice.RestackMethod
+
+	// Autostash stashes uncommitted changes around the restack loop.
+	//
+	// It is only used by the merge restack method;
+	// rebase relies on Git's per-branch '--autostash'.
+	// May be nil; merge restacks then run against the worktree as-is.
+	Autostash AutostashHandler // optional
 }
 
 // Scope specifies which branches are affected
@@ -96,11 +116,27 @@ type Request struct {
 }
 
 // Restack restacks one or more branches according to the request.
-func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
+func (h *Handler) Restack(ctx context.Context, req *Request) (restackCount int, retErr error) {
 	must.NotBeBlankf(req.Branch, "branch must not be blank")
 	must.NotBeEmptyf(req.ContinueCommand, "continue command must not be set")
 
 	req.Scope = cmp.Or(req.Scope, ScopeBranch) // 0 = ScopeBranch
+
+	// git merge needs a clean worktree to check out each branch in the
+	// loop, so stash around the whole loop; the rebase method gets this
+	// per branch from 'git rebase --autostash'. On a conflict, cleanup
+	// defers stash restoration to the rebase rescue continuation queue.
+	if h.RestackMethod == spice.RestackMethodMerge && h.Autostash != nil {
+		cleanup, err := h.Autostash.BeginAutostash(ctx, &autostash.Options{
+			Message:   "git-spice: autostash before merge restack",
+			ResetMode: autostash.ResetHard,
+			Branch:    req.Branch,
+		})
+		if err != nil {
+			return 0, err
+		}
+		defer cleanup(&retErr, &autostash.CleanupOptions{RescueBranch: req.Branch})
+	}
 
 	branchGraph, err := h.Service.BranchGraph(ctx, &spice.BranchGraphOptions{
 		IncludeWorktrees: true,
@@ -192,18 +228,18 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	}
 	branchesToRestack = branchesToActuallyRestack
 
-	var restackCount int
 loop:
 	for _, branch := range branchesToRestack {
 		res, err := h.Service.Restack(ctx, branch)
 		if err != nil {
-			var rebaseErr *git.RebaseInterruptError
+			_, isInterrupt := errors.AsType[git.InterruptError](err)
 			switch {
-			case errors.As(err, &rebaseErr):
-				// If the rebase is interrupted by a conflict,
+			case isInterrupt:
+				// If the restack is interrupted by a conflict
+				// (rebase or merge),
 				// we'll resume by re-running this command.
 				return 0, h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
-					Err:     rebaseErr,
+					Err:     err,
 					Command: req.ContinueCommand,
 					Branch:  req.Branch,
 					Message: fmt.Sprintf("interrupted: restack branch %q", branch),

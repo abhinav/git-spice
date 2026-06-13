@@ -65,6 +65,15 @@ func (e *RebaseInterruptError) Unwrap() error {
 	return e.Err
 }
 
+// InterruptedBranch reports the branch being rebased.
+func (e *RebaseInterruptError) InterruptedBranch() string {
+	return e.State.Branch
+}
+
+func (*RebaseInterruptError) interruptError() {}
+
+var _ InterruptError = (*RebaseInterruptError)(nil)
+
 var errIndexLockHeld = errors.New("index.lock is still held")
 
 // RebaseRequest is a request to rebase a branch.

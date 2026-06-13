@@ -161,14 +161,41 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	}
 
 	if rebaseBranch {
-		if err := s.wt.Rebase(ctx, git.RebaseRequest{
-			Branch:    req.Branch,
-			Upstream:  string(fromHash),
-			Onto:      ontoHash.String(),
-			Autostash: true,
-			Quiet:     true, // TODO: if verbose, disable this
-		}); err != nil {
-			return fmt.Errorf("rebase: %w", err)
+		switch s.restackMethod {
+		case RestackMethodRebase:
+			if err := s.wt.Rebase(ctx, git.RebaseRequest{
+				Branch:    req.Branch,
+				Upstream:  string(fromHash),
+				Onto:      ontoHash.String(),
+				Autostash: true,
+				Quiet:     true, // TODO: if verbose, disable this
+			}); err != nil {
+				return fmt.Errorf("rebase: %w", err)
+			}
+
+		case RestackMethodMerge:
+			if err := s.ensureCheckedOut(ctx, req.Branch); err != nil {
+				return err
+			}
+
+			// The fromHash narrowing above matters only for rebase:
+			// if ontoHash is already reachable from the branch,
+			// the merge is a no-op
+			// and the state update below still applies.
+			if err := s.wt.Merge(ctx, git.MergeRequest{
+				Commit:         ontoHash.String(),
+				Message:        fmt.Sprintf("Merge branch '%v' into %v", req.Onto, req.Branch),
+				NoEdit:         true,
+				Autostash:      true,
+				Rerere:         true,
+				StrategyOption: s.mergeAutoResolve.StrategyOption(),
+				Quiet:          true,
+			}); err != nil {
+				return fmt.Errorf("merge: %w", err)
+			}
+
+		default:
+			must.Failf("unknown restack method: %v", s.restackMethod)
 		}
 	}
 

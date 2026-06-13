@@ -251,6 +251,41 @@ func TestHandler_AutoStash_options(t *testing.T) {
 			}).Return(nil)
 		cleanup(&conflictErr, &CleanupOptions{RescueBranch: "main"})
 	})
+
+	t.Run("MergeInterruptDefersRestore", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+
+		mockWorktree := NewMockGitWorktree(mockCtrl)
+		stashHash := git.Hash("stashhash")
+		mockWorktree.EXPECT().
+			StashCreate(gomock.Any(), gomock.Any()).
+			Return(stashHash, nil)
+
+		mockService := NewMockService(mockCtrl)
+		cleanup, err := (&Handler{
+			Log:      silogtest.New(t),
+			Worktree: mockWorktree,
+			Service:  mockService,
+		}).BeginAutostash(t.Context(), &Options{
+			Branch:    "feature",
+			ResetMode: ResetNone,
+		})
+		require.NoError(t, err)
+
+		// A merge conflict must defer autostash restoration just like
+		// a rebase conflict: RebaseRescue runs and the stash is NOT
+		// applied here (StashApply is not expected on the worktree).
+		conflictErr := error(&git.MergeInterruptError{
+			State: &git.MergeState{Branch: "feature"},
+			Err:   errors.New("conflict"),
+		})
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), rebaseRescueMatcher{
+				Err:    conflictErr,
+				Branch: "feature",
+			}).Return(nil)
+		cleanup(&conflictErr, nil)
+	})
 }
 
 type rebaseRescueMatcher struct {

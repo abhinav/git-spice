@@ -253,11 +253,11 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		Onto:     newCommit.String(),
 		Upstream: req.TargetHash.String(),
 	}); err != nil {
-		// If the rebase is interrupted by a conflict,
+		// If the operation is interrupted by a conflict,
 		// after it's resolved, just restack the upstack.
-		if rebaseErr, ok := errors.AsType[*git.RebaseInterruptError](err); ok {
+		if _, ok := errors.AsType[git.InterruptError](err); ok {
 			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
-				Err:     rebaseErr,
+				Err:     err,
 				Command: []string{"upstack", "restack", "--skip-start"},
 				Branch:  req.TargetBranch,
 			})

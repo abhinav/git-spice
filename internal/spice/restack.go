@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
@@ -16,6 +17,21 @@ var ErrAlreadyRestacked = errors.New("branch is already restacked")
 // RestackResponse is the response to a restack operation.
 type RestackResponse struct {
 	Base string
+}
+
+// ensureCheckedOut checks out branch unless it is already current.
+// Unlike git rebase, git merge operates on the checked-out branch.
+func (s *Service) ensureCheckedOut(ctx context.Context, branch string) error {
+	cur, err := s.wt.CurrentBranch(ctx)
+	if err != nil {
+		return fmt.Errorf("current branch: %w", err)
+	}
+	if cur != branch {
+		if err := s.wt.CheckoutBranch(ctx, branch); err != nil {
+			return fmt.Errorf("checkout %v: %w", branch, err)
+		}
+	}
+	return nil
 }
 
 // Restack restacks the given branch on top of its base branch,
@@ -83,14 +99,36 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		}
 	}
 
-	if err := s.wt.Rebase(ctx, git.RebaseRequest{
-		Onto:      baseHash.String(),
-		Upstream:  upstream.String(),
-		Branch:    name,
-		Autostash: true,
-		Quiet:     true,
-	}); err != nil {
-		return nil, fmt.Errorf("rebase: %w", err)
+	switch s.restackMethod {
+	case RestackMethodRebase:
+		if err := s.wt.Rebase(ctx, git.RebaseRequest{
+			Onto:      baseHash.String(),
+			Upstream:  upstream.String(),
+			Branch:    name,
+			Autostash: true,
+			Quiet:     true,
+		}); err != nil {
+			return nil, fmt.Errorf("rebase: %w", err)
+		}
+
+	case RestackMethodMerge:
+		if err := s.ensureCheckedOut(ctx, name); err != nil {
+			return nil, err
+		}
+		if err := s.wt.Merge(ctx, git.MergeRequest{
+			Commit:         baseHash.String(),
+			Message:        fmt.Sprintf("Merge branch '%v' into %v", b.Base, name),
+			NoEdit:         true,
+			Autostash:      true,
+			Rerere:         true,
+			StrategyOption: s.mergeAutoResolve.StrategyOption(),
+			Quiet:          true,
+		}); err != nil {
+			return nil, fmt.Errorf("merge: %w", err)
+		}
+
+	default:
+		must.Failf("unknown restack method: %v", s.restackMethod)
 	}
 
 	tx := s.store.BeginBranchTx()

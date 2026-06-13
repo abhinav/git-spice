@@ -473,6 +473,49 @@ func TestHandler_Restack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, count)
 	})
+
+	t.Run("MergeInterrupt", func(t *testing.T) {
+		log := silog.Nop()
+		ctrl := gomock.NewController(t)
+
+		mergeErr := &git.MergeInterruptError{
+			State: &git.MergeState{Branch: "feature"},
+			Err:   errors.New("conflict"),
+		}
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, mergeErr)
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+	})
 }
 
 func TestHandler_Restack_trunk(t *testing.T) {
