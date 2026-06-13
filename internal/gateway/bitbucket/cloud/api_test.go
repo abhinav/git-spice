@@ -1,4 +1,4 @@
-package bitbucket
+package cloud
 
 import (
 	"io"
@@ -372,4 +372,87 @@ func TestClient_WorkspaceMemberList(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, members.Values, 1)
 	assert.Equal(t, "spock", members.Values[0].User.Username)
+}
+
+func TestClient_RepositoryGet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/2.0/repositories/engineering/warp-core", r.URL.Path)
+		writeJSON(t, w, http.StatusOK, Repository{
+			MainBranch: Branch{Name: "main"},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	repo, _, err := client.RepositoryGet(t.Context(), "engineering", "warp-core")
+	require.NoError(t, err)
+	assert.Equal(t, "main", repo.MainBranch.Name)
+}
+
+func TestClient_RepositoryGet_notFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	_, _, err := client.RepositoryGet(t.Context(), "engineering", "warp-core")
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestClient_SourceFileGet(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t,
+			"/2.0/repositories/engineering/warp-core/src/main/.bitbucket/PULL_REQUEST_TEMPLATE.md",
+			r.URL.Path)
+
+		w.Header().Set("Content-Type", "text/plain")
+		_, err := io.WriteString(w, "## Summary\n")
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	body, _, err := client.SourceFileGet(
+		t.Context(), "engineering", "warp-core",
+		"main", ".bitbucket/PULL_REQUEST_TEMPLATE.md",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "## Summary\n", string(body))
+}
+
+func TestClient_SourceFileGet_escapesBranch(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t,
+			"/2.0/repositories/engineering/warp-core/src/release%2Fv1.0/PULL_REQUEST_TEMPLATE.md",
+			r.URL.EscapedPath())
+
+		_, err := io.WriteString(w, "body")
+		assert.NoError(t, err)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	body, _, err := client.SourceFileGet(
+		t.Context(), "engineering", "warp-core",
+		"release/v1.0", "PULL_REQUEST_TEMPLATE.md",
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "body", string(body))
+}
+
+func TestClient_SourceFileGet_notFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	_, _, err := client.SourceFileGet(
+		t.Context(), "engineering", "warp-core",
+		"main", "PULL_REQUEST_TEMPLATE.md",
+	)
+	assert.ErrorIs(t, err, ErrNotFound)
 }

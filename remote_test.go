@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/bitbucket"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/silog"
 	"go.uber.org/mock/gomock"
@@ -129,6 +130,78 @@ func TestResolveRemoteRepository_unsupportedRecommendsForgeKind(t *testing.T) {
 	require.Error(t, err)
 
 	assert.Contains(t, logBuffer.String(), "git config spice.forge.kind <forge>")
+}
+
+// TestRemoteResolver_Resolve_bitbucketKind exercises the forced-kind path
+// with the real bitbucket forge,
+// which configures its instance URL from the remote
+// via [forge.RemoteURLConfigurer].
+// Each subtest builds its own Forge and Registry
+// because resolution may mutate the forge's options.
+func TestRemoteResolver_Resolve_bitbucketKind(t *testing.T) {
+	t.Run("DataCenterRemoteDerivesURL", func(t *testing.T) {
+		bb := &bitbucket.Forge{}
+		var forges forge.Registry
+		forges.Register(bb)
+
+		gotForge, gotRepoID, err := (&remoteResolver{
+			Forges:     &forges,
+			Repository: remoteURLMap{"origin": "https://git.corp.com/scm/PROJ/repo.git"},
+			ForgeKind:  "bitbucket",
+		}).Resolve(t.Context(), "origin")
+		require.NoError(t, err)
+
+		assert.Same(t, bb, gotForge)
+		assert.Equal(t, "https://git.corp.com", bb.Options.URL)
+		assert.Equal(t, "PROJ/repo", gotRepoID.String())
+
+		// Data Center-shaped change URLs prove that the derived
+		// instance URL reached the repository ID.
+		assert.Equal(t,
+			"https://git.corp.com/projects/PROJ/repos/repo/pull-requests/1/overview",
+			gotRepoID.ChangeURL(&bitbucket.PR{Number: 1}))
+	})
+
+	t.Run("CloudRemoteKeepsDefault", func(t *testing.T) {
+		bb := &bitbucket.Forge{}
+		var forges forge.Registry
+		forges.Register(bb)
+
+		gotForge, gotRepoID, err := (&remoteResolver{
+			Forges:     &forges,
+			Repository: remoteURLMap{"origin": "git@bitbucket.org:ws/repo.git"},
+			ForgeKind:  "bitbucket",
+		}).Resolve(t.Context(), "origin")
+		require.NoError(t, err)
+
+		assert.Same(t, bb, gotForge)
+		assert.Empty(t, bb.Options.URL)
+		assert.IsType(t, (*bitbucket.RepositoryID)(nil), gotRepoID)
+		assert.Equal(t, "ws/repo", gotRepoID.String())
+	})
+
+	t.Run("ExplicitURLWins", func(t *testing.T) {
+		bb := &bitbucket.Forge{
+			Options: bitbucket.Options{
+				URL: "https://bitbucket.internal.example.com",
+			},
+		}
+		var forges forge.Registry
+		forges.Register(bb)
+
+		_, gotRepoID, err := (&remoteResolver{
+			Forges:     &forges,
+			Repository: remoteURLMap{"origin": "https://git.corp.com/scm/PROJ/repo.git"},
+			ForgeKind:  "bitbucket",
+		}).Resolve(t.Context(), "origin")
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://bitbucket.internal.example.com", bb.Options.URL)
+		assert.Equal(t, "PROJ/repo", gotRepoID.String())
+		assert.Equal(t,
+			"https://bitbucket.internal.example.com/projects/PROJ/repos/repo/pull-requests/1/overview",
+			gotRepoID.ChangeURL(&bitbucket.PR{Number: 1}))
+	})
 }
 
 type remoteURLMap map[string]string

@@ -123,7 +123,8 @@ and leave them as-is.
 ## Will git-spice add support for other Git hosting services?
 
 As of writing this, git-spice supports
-GitHub, GitLab, and Bitbucket Cloud.
+GitHub, GitLab, Bitbucket Cloud,
+and self-hosted Bitbucket Data Center / Server.
 It is specifically designed to support other forges;
 most of the code is forge-agnostic,
 with forge-specific code is isolated to their own directories inside

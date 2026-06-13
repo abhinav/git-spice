@@ -1,0 +1,6 @@
+kind: Changed
+body: >-
+  bitbucket: A custom 'spice.forge.bitbucket.url' is now interpreted as a
+  Bitbucket Data Center instance unless 'spice.forge.bitbucket.kind=cloud'
+  is set.
+time: 2026-06-11T11:42:07.5312846+02:00
