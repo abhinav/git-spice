@@ -1,0 +1,39 @@
+# Resolve and unresolve a review thread.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add util.go
+gs bc -m 'Add util' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# post an inline comment to create a thread
+gs branch comment add util.go:3 -m 'Rename this function.'
+stderr 'Posted comment'
+
+# get the thread ID from the list output
+gs branch comment list
+stderr 'thread-'
+
+-- repo/util.go --
+package main
+
+func doStuff() {
+	// stuff
+}
