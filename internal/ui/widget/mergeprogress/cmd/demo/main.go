@@ -156,7 +156,7 @@ type demoModel struct {
 type tickMsg struct{}
 
 func (m *demoModel) Init() tea.Cmd {
-	return m.nextTick()
+	return tea.Batch(m.Widget.Init(), m.nextTick())
 }
 
 func (m *demoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -177,13 +177,13 @@ func (m *demoModel) advance() tea.Cmd {
 			m.states[idx] = mergeprogress.StateMerged
 			itemID := itemID(idx)
 			m.logf("%s: pulled 1 new commit(s)", itemID)
-			_, _ = m.Widget.Update(mergeprogress.Event{
+			_, cmd := m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateMerged,
 				Message: itemID + ": merged",
 			})
 			m.logf("%s: deleted (was %s)", itemID, fakeHash(idx))
-			return m.nextTick()
+			return tea.Batch(cmd, m.nextTick())
 		}
 	}
 
@@ -193,14 +193,14 @@ func (m *demoModel) advance() tea.Cmd {
 			itemID := itemID(idx)
 			m.logf("%s: retargeting #%d onto main...",
 				itemID, changeNumber(idx))
-			_, _ = m.Widget.Update(mergeprogress.Event{
+			_, cmd := m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateActive,
 				Message: itemID + ": waiting for CI checks",
 			})
 			m.logf("%s: updated #%d: https://example.test/pull/%d",
 				itemID, changeNumber(idx), changeNumber(idx))
-			return m.nextTick()
+			return tea.Batch(cmd, m.nextTick())
 		}
 	}
 
