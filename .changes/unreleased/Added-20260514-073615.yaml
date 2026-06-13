@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: ''gs cc'', ''gs bc -m'' auto-commit staged changes in tracked submodules (state 1) and update gitlinks in a single parent commit; ''gs ca'' does the same non-interactively, with --module-message=<path>=<msg> overriding the per-sub message.'
+time: 2026-05-14T07:36:15.953873-04:00
