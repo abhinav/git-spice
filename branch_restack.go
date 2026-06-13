@@ -31,6 +31,13 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 	return nil
 }
 
-func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
-	return handler.RestackBranch(ctx, cmd.Branch)
+func (cmd *branchRestackCmd) Run(
+	ctx context.Context,
+	handler RestackHandler,
+	integrationHandler IntegrationHandler,
+) error {
+	if err := handler.RestackBranch(ctx, cmd.Branch); err != nil {
+		return err
+	}
+	return integrationHandler.MaybeRebuild(ctx)
 }
