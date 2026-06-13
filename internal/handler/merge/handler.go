@@ -442,6 +442,16 @@ func (e *mergePlanExecutor) execute(
 
 		// CI is checked after retargeting and restacking
 		// so each merge waits on the exact change being merged.
+		if err := e.awaitChangeHead(ctx, item, change); err != nil {
+			e.Progress.Event(mergeProgressEvent{
+				Kind: mergeProgressChecksFailed,
+				Item: item,
+			})
+			return fmt.Errorf(
+				"wait for pushed head on %q: %w",
+				item.branch, err,
+			)
+		}
 		if err := e.awaitChecks(ctx, item); err != nil {
 			e.Progress.Event(mergeProgressEvent{
 				Kind: mergeProgressChecksFailed,
@@ -581,6 +591,84 @@ func (e *mergePlanExecutor) prepareForMerge(
 	}
 	item.headHash = head
 	return nil
+}
+
+// awaitChangeHead waits until the forge reports the same change head
+// that the merge loop is about to merge.
+func (e *mergePlanExecutor) awaitChangeHead(
+	ctx context.Context,
+	item *mergeItem,
+	change *forge.FindChangeItem,
+) error {
+	const (
+		_baseDelay = 10 * time.Second
+		_maxDelay  = 30 * time.Second
+	)
+
+	return e.awaitChangeHeadWithDelay(
+		ctx, item, change, e.BuildTimeout, _baseDelay, _maxDelay,
+	)
+}
+
+func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
+	ctx context.Context,
+	item *mergeItem,
+	change *forge.FindChangeItem,
+	timeout, baseDelay, maxDelay time.Duration,
+) error {
+	if item.headHash == "" {
+		return nil
+	}
+	hashMatches := func(got git.Hash) bool {
+		return got != "" &&
+			(item.headHash == got ||
+				strings.HasPrefix(item.headHash.String(), got.String()) ||
+				strings.HasPrefix(got.String(), item.headHash.String()))
+	}
+
+	if hashMatches(change.HeadHash) {
+		return nil
+	}
+
+	delay := baseDelay
+	for attempt := 0; ; attempt++ {
+		statuses, err := e.RemoteRepository.ChangeStatuses(
+			ctx, []forge.ChangeID{item.changeID},
+		)
+		if err != nil {
+			return fmt.Errorf("query change head: %w", err)
+		}
+		if len(statuses) == 0 {
+			return errors.New("forge returned no change status")
+		}
+		if hashMatches(statuses[0].HeadHash) {
+			return nil
+		}
+
+		if timeout == 0 {
+			return fmt.Errorf(
+				"change head for %q is still %s, want %s",
+				item.branch, statuses[0].HeadHash, item.headHash,
+			)
+		}
+		if attempt == 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+
+		e.Progress.Event(mergeProgressEvent{
+			Kind: mergeProgressWaitingForChecks,
+			Item: item,
+		})
+		if err := sleep(ctx, delay); err != nil {
+			return fmt.Errorf(
+				"timed out waiting for forge head on %q",
+				item.branch,
+			)
+		}
+		delay = min(delay*2, maxDelay)
+	}
 }
 
 // awaitChecks polls until CI checks pass for the given change.

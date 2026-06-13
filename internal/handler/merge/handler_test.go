@@ -238,13 +238,13 @@ func TestExecutePlan_retargets(t *testing.T) {
 	// Pre-check: pr-1 already targets main.
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
+		Return(fakeFindResultWithHead("main", "head1"), nil)
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr2).
-		Return(fakeFindResult("main"), nil)
+		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr3).
-		Return(fakeFindResult("main"), nil)
+		Return(fakeFindResultWithHead("main", "head3"), nil)
 
 	// Each merge: checks -> merge -> awaitMerged -> sync
 	// -> prepare next (except last).
@@ -315,6 +315,90 @@ func TestExecutePlan_retargets(t *testing.T) {
 	assert.NotContains(t, output, "Restacking feat3 after merge")
 }
 
+func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(&spice.BranchNeedsRestackError{Base: "main"})
+
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectMergeItem(mockForge, pr1)
+
+	mockRestack := NewMockRestackHandler(ctrl)
+	mockRestack.EXPECT().
+		RestackBranch(gomock.Any(), "feat2").
+		Return(nil)
+
+	mockSubmit := NewMockSubmitHandler(ctrl)
+	mockSubmit.EXPECT().
+		Submit(gomock.Any(), gomock.Any()).
+		DoAndReturn(assertSubmitUpdate(t, "feat2"))
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("new-head2"), nil)
+
+	// The submit call can return before the forge's change view catches up
+	// to the pushed branch head.
+	// A stale ChecksPassed value at this point belongs to the old head,
+	// so the merge loop must wait until the forge reports new-head2
+	// before asking whether checks passed.
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr2).
+		Return(fakeFindResultWithHead("main", "old-head2"), nil)
+	status := mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: git.Hash("new-head2"),
+		}}, nil)
+	mockForge.EXPECT().
+		ChangeChecksState(gomock.Any(), pr2).
+		Return(forge.ChecksPassed, nil).
+		After(status.Call)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr2, forge.MergeChangeOptions{
+			Method:   forge.MergeMethodDefault,
+			HeadHash: git.Hash("new-head2"),
+		}).
+		Return(nil)
+	expectMerged(mockForge, pr2)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil).
+		Times(2)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+		restack:   mockRestack,
+		submit:    mockSubmit,
+		sync:      mockSync,
+	})
+
+	err := h.executePlan(t.Context(), []*mergeItem{
+		{branch: "feat1", changeID: pr1, headHash: git.Hash("head1")},
+		{branch: "feat2", changeID: pr2, headHash: git.Hash("old-head2")},
+	}, &Request{Branch: "feat2"})
+	require.NoError(t, err)
+}
+
 func TestExecutePlan_noWait(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var logBuffer bytes.Buffer
@@ -328,7 +412,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 	// Pre-check: pr-1 already targets main.
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
+		Return(fakeFindResultWithHead("main", "head1"), nil)
 
 	expectChecksAndMerge(mockForge, pr1)
 	// No ChangesStates polling (awaitMerged skipped).
@@ -432,7 +516,7 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
+		Return(fakeFindResultWithHead("main", "head1"), nil)
 	mockForge.EXPECT().
 		ChangeChecksState(gomock.Any(), pr1).
 		Return(forge.ChecksPassed, nil)
@@ -904,12 +988,19 @@ func testGitRepo(
 func fakeFindResult(
 	base string,
 ) *forge.FindChangeItem {
+	return fakeFindResultWithHead(base, "abc123")
+}
+
+func fakeFindResultWithHead(
+	base string,
+	head git.Hash,
+) *forge.FindChangeItem {
 	return &forge.FindChangeItem{
 		ID:       fakeChangeID("find-id"),
 		URL:      "http://example.com/1",
 		State:    forge.ChangeOpen,
 		Subject:  "test change",
-		HeadHash: "abc123",
+		HeadHash: head,
 		BaseName: base,
 		Draft:    false,
 	}
