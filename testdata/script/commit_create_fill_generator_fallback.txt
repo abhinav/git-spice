@@ -1,0 +1,28 @@
+# 'gs commit --fill' falls back to default behavior
+# when the configured generator fails.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# configure a generator that fails
+git config spice.message.generator 'exit 1'
+
+# --fill with -m still works; generator is skipped
+# because -m already provides a message
+git add foo.txt
+gs cc --fill -m 'manual message'
+
+git log -1 --format=%s
+stdout 'manual message'
+
+-- repo/foo.txt --
+Contents of foo.

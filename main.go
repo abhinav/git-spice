@@ -167,7 +167,7 @@ func main() {
 		kong.Name(cmdName),
 		kong.Description("git-spice is a command line tool for stacking Git branches."),
 		kong.Resolvers(spiceConfig),
-		kong.Bind(logger, &forges, &sigStack, &cmd),
+		kong.Bind(logger, &forges, &sigStack, &cmd, spiceConfig),
 		kong.BindTo(&cmd.Forge, (*forgeOptions)(nil)),
 		kong.BindTo(ctx, (*context.Context)(nil)),
 		kong.BindTo(spiceConfig, (*experiment.Enabler)(nil)),
@@ -461,6 +461,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 			svc *spice.Service,
 			secretStash secret.Stash,
 			remoteResolver *remoteResolver,
+			cfg *spice.Config,
 		) (SubmitHandler, error) {
 			return &submit.Handler{
 				Log:        log,
@@ -470,6 +471,9 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 				Store:      store,
 				Service:    svc,
 				Browser:    _browserLauncher,
+				Config:     cfg,
+				RepoRoot:   wt.RootDir(),
+				Args:       os.Args,
 				FindRemote: func(ctx context.Context) (state.Remote, error) {
 					return ensureRemote(ctx, wt.Repository(), store, log, view)
 				},
@@ -526,6 +530,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			cfg *spice.Config,
 			repo *git.Repository,
 			wt *git.Worktree,
 			store *state.Store,
@@ -534,11 +539,14 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		) (SquashHandler, error) {
 			return &squash.Handler{
 				Log:        log,
+				Config:     cfg,
 				Repository: repo,
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
 				Restack:    restackHandler,
+				RepoRoot:   wt.RootDir(),
+				Args:       os.Args,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

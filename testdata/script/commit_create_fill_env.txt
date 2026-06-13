@@ -1,0 +1,34 @@
+# 'gs cc --fill' sets the shared GS_OPERATION env contract and the
+# message-specific GS_MESSAGE_UPDATE for the generator.
+
+as 'Test <test@example.com>'
+at '2024-03-30T14:59:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+gs branch track --base main
+
+# configure a generator that echoes the env vars as the JSON title
+chmod 755 $WORK/gen.sh
+git config spice.message.generator $WORK/gen.sh
+
+# create a commit using --fill
+git add foo.txt
+gs cc --fill
+
+# verify the env vars were set correctly
+git log -1 --format=%s
+stdout 'op=commit-create update=false'
+
+-- repo/foo.txt --
+Contents of foo.
+-- gen.sh --
+#!/bin/sh
+op="${GS_OPERATION:-}"
+update="${GS_MESSAGE_UPDATE:-}"
+printf '{"title":"op=%s update=%s"}' "$op" "$update"

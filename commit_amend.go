@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -20,6 +23,7 @@ type commitAmendCmd struct {
 
 	All         bool   `short:"a" help:"Stage all changes before committing."`
 	AllowEmpty  bool   `help:"Create a commit even if it contains no changes."`
+	Fill bool `short:"c" negatable:"" config:"message.autoFill" help:"Fill the commit message using the configured message updater. Defaults to spice.message.autoFill."`
 	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
 	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
@@ -56,6 +60,7 @@ func (*commitAmendCmd) Help() string {
 func (cmd *commitAmendCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
+	cfg *spice.Config,
 	view ui.View,
 	repo *git.Repository,
 	wt *git.Worktree,
@@ -128,7 +133,7 @@ func (cmd *commitAmendCmd) Run(
 					MessageFile:        cmd.MessageFile,
 					Signoff:            cmd.Signoff,
 					Commit:             true,
-				}).Run(ctx, log, repo, wt, store, svc, restackHandler)
+				}).Run(ctx, log, cfg, repo, wt, store, svc, restackHandler)
 			}
 		}
 	}
@@ -215,6 +220,42 @@ func (cmd *commitAmendCmd) Run(
 			if !continueAmend {
 				return errors.New("operation aborted")
 			}
+		}
+	}
+
+	// If --fill is set and no message was provided,
+	// try to update the existing message
+	// using the configured script.
+	if cmd.Fill && cmd.Message == "" {
+		script := cfg.MessageGenerator()
+		if script == "" {
+			return msggen.ErrNoGenerator
+		}
+
+		var extras []string
+		existingMsg, err := repo.CommitMessageFull(
+			ctx, "HEAD",
+		)
+		if err == nil {
+			extras = append(extras,
+				"GS_MESSAGE="+existingMsg,
+			)
+		}
+		env := commitEnv(ctx, wt, scriptrun.OpCommitAmend, true, extras...)
+
+		result, err := (&msggen.Runner{
+			Log:  log,
+			Args: os.Args,
+		}).Run(
+			ctx, script, wt.RootDir(), env,
+		)
+		if err != nil {
+			log.Warn("Message generator failed, "+
+				"falling back to editor",
+				"error", err)
+		} else {
+			cmd.Message = result.Message()
+			cmd.NoEdit = true
 		}
 	}
 
