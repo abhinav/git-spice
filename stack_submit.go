@@ -128,4 +128,3 @@ func (cmd *stackSubmitCmd) runFromIntegration(
 	}
 	return err
 }
-

@@ -1,9 +1,11 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
@@ -76,16 +78,51 @@ type ScriptResolveError struct {
 }
 
 func (e *ScriptResolveError) Error() string {
+	var msg string
 	switch e.Stage {
 	case "exit":
-		return fmt.Sprintf(
-			"resolver exited with code %d", e.ExitCode)
+		msg = fmt.Sprintf("resolver exited with code %d", e.ExitCode)
 	case "parse":
-		return fmt.Sprintf(
-			"resolver output is not valid JSON: %v", e.Err)
+		msg = fmt.Sprintf("resolver output is not valid JSON: %v", e.Err)
 	default:
-		return fmt.Sprintf("resolver failed: %v", e.Err)
+		msg = fmt.Sprintf("resolver failed: %v", e.Err)
 	}
+	return msg + e.diagnosticPreview()
+}
+
+// diagnosticPreview returns a truncated preview of the resolver's
+// stdout and stderr for inclusion in the error message. Each stream
+// is capped at scriptOutputPreviewBytes to keep the log readable;
+// truncated streams are marked with a leading note. Empty streams
+// are explicitly labeled so the user knows whether a stream was
+// missing or unbounded.
+func (e *ScriptResolveError) diagnosticPreview() string {
+	if len(e.Stdout) == 0 && len(e.Stderr) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("\n--- resolver stdout ")
+	writeOutputPreview(&b, e.Stdout)
+	b.WriteString("\n--- resolver stderr ")
+	writeOutputPreview(&b, e.Stderr)
+	return b.String()
+}
+
+const scriptOutputPreviewBytes = 2048
+
+func writeOutputPreview(b *strings.Builder, out []byte) {
+	if len(out) == 0 {
+		b.WriteString("(empty) ---")
+		return
+	}
+	if len(out) <= scriptOutputPreviewBytes {
+		b.WriteString("---\n")
+		b.Write(bytes.TrimRight(out, "\n"))
+		return
+	}
+	fmt.Fprintf(b, "(last %d of %d bytes) ---\n",
+		scriptOutputPreviewBytes, len(out))
+	b.Write(bytes.TrimRight(out[len(out)-scriptOutputPreviewBytes:], "\n"))
 }
 
 func (e *ScriptResolveError) Unwrap() error { return e.Err }
@@ -112,7 +149,7 @@ func (r *ScriptResolver) Resolve(
 		Dir:    r.RepoRoot,
 		Env: scriptrun.EnvFor(
 			scriptrun.OpIntegrationRebuild,
-			req.TipName,        // GS_BRANCH = the tip being merged in
+			req.TipName,         // GS_BRANCH = the tip being merged in
 			req.IntegrationName, // GS_BASE   = the integration branch
 		),
 	})
