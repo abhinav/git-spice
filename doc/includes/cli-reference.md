@@ -1532,6 +1532,24 @@ gs integration (int) tip list (l,ls)
 
 List the configured integration tips
 
+### git-spice integration tip clean {#gs-integration-tip-clean}
+
+```
+gs integration (int) tip clean (prune)
+```
+
+Remove tips whose upstack already contains another tip
+
+Removes tips whose upstack chain already contains another
+configured tip. The higher tip's merge into the integration
+branch captures the lower tip's content, so keeping both
+costs an extra merge without changing the result.
+
+For each subsumed tip, the message reports which higher tip
+subsumes it. A second run is a no-op once nothing remains
+to prune. Existing tips with no upstack-tip relationship
+are left alone.
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}
