@@ -1,0 +1,25 @@
+Usage: gs branch (b) comment (cmt) submit-staged (ss) [flags]
+
+Submit all staged comments as a review
+
+Submits all staged comments for the current branch as a single review on the
+change request.
+
+Use --approve or --request-changes to set the review event type. Defaults to a
+comment-only review.
+
+Use --body to add an overall review body.
+
+Flags:
+      --body=BODY          Overall review body.
+      --approve            Mark the review as approved.
+      --request-changes    Mark the review as requesting changes.
+  -b, --branch=BRANCH      Branch to submit staged comments for. Defaults to
+                           current branch.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
