@@ -12,10 +12,8 @@ import (
 )
 
 func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
-	progress := newWidgetMergeProgress(
-		earlyExitModelView{},
-		ui.DefaultThemeLight(),
-	)
+	view := new(earlyExitModelView)
+	progress := newWidgetMergeProgress(view, ui.DefaultThemeLight())
 	progress.Start(t.Context(), []*mergeItem{{
 		branch: "feat1",
 	}})
@@ -25,6 +23,13 @@ func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("progress model did not exit")
 	}
+	require.NotNil(t, view.opts)
+	require.Equal(t,
+		mergeProgressScrollRegionMinHeight,
+		view.opts.ScrollRegionMinHeight)
+	require.Equal(t,
+		mergeProgressScrollRegionMaxHeight,
+		view.opts.ScrollRegionMaxHeight)
 
 	done := make(chan error, 1)
 	go func() {
@@ -45,16 +50,19 @@ func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
 	}
 }
 
-type earlyExitModelView struct{}
-
-func (earlyExitModelView) Write(p []byte) (int, error) {
+func (*earlyExitModelView) Write(p []byte) (int, error) {
 	return io.Discard.Write(p)
 }
 
-func (earlyExitModelView) Theme() ui.Theme {
+func (*earlyExitModelView) Theme() ui.Theme {
 	return ui.DefaultThemeLight()
 }
 
-func (earlyExitModelView) RunModel(tea.Model, *ui.RunOptions) error {
+func (v *earlyExitModelView) RunModel(_ tea.Model, opts *ui.RunOptions) error {
+	v.opts = opts
 	return nil
+}
+
+type earlyExitModelView struct {
+	opts *ui.RunOptions
 }
