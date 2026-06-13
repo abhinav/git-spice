@@ -1378,12 +1378,19 @@ configured resolver script is invoked to attempt automatic
 resolution before surfacing conflicts. See the recipe for
 details on the JSON protocol the script must implement.
 
+Any conflicts that survive the merge drivers and the resolver
+are auto-resolved by taking the incoming tip's version. Pass
+--no-accept-incoming (or set spice.integration.acceptIncoming
+=false) to disable that final fallback and surface conflicts
+for manual resolution instead.
+
 **Flags**
 
 * `--push`: Also push the integration branch after rebuilding
 * `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.integration.autoResolve" }](/cli/config.md#spiceintegrationautoresolve)): Auto-resolve merge conflicts using the configured resolver script
+* `--[no-]accept-incoming` ([:material-wrench:{ .middle title="spice.integration.acceptIncoming" }](/cli/config.md#spiceintegrationacceptincoming)): Final-stage fallback: take the incoming tip's version for any remaining conflicts so the rebuild completes without manual intervention
 
-**Configuration**: [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
+**Configuration**: [spice.integration.acceptIncoming](/cli/config.md#spiceintegrationacceptincoming), [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
 
 ### git-spice integration submit {#gs-integration-submit}
 

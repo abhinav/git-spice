@@ -259,6 +259,44 @@ func (c *MockGitWorktreeCheckoutNewBranchCall) DoAndReturn(f func(context.Contex
 	return c
 }
 
+// CheckoutTheirs mocks base method.
+func (m *MockGitWorktree) CheckoutTheirs(ctx context.Context, paths []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckoutTheirs", ctx, paths)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckoutTheirs indicates an expected call of CheckoutTheirs.
+func (mr *MockGitWorktreeMockRecorder) CheckoutTheirs(ctx, paths any) *MockGitWorktreeCheckoutTheirsCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckoutTheirs", reflect.TypeOf((*MockGitWorktree)(nil).CheckoutTheirs), ctx, paths)
+	return &MockGitWorktreeCheckoutTheirsCall{Call: call}
+}
+
+// MockGitWorktreeCheckoutTheirsCall wrap *gomock.Call
+type MockGitWorktreeCheckoutTheirsCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGitWorktreeCheckoutTheirsCall) Return(arg0 error) *MockGitWorktreeCheckoutTheirsCall {
+	c.Call = c.Call.Return(arg0)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGitWorktreeCheckoutTheirsCall) Do(f func(context.Context, []string) error) *MockGitWorktreeCheckoutTheirsCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGitWorktreeCheckoutTheirsCall) DoAndReturn(f func(context.Context, []string) error) *MockGitWorktreeCheckoutTheirsCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // CurrentBranch mocks base method.
 func (m *MockGitWorktree) CurrentBranch(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()

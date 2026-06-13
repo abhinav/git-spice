@@ -297,6 +297,27 @@ func (c *Config) IntegrationAutoResolve() bool {
 	return v
 }
 
+// IntegrationAcceptIncoming reports whether the rebuild's final
+// fallback should accept the incoming tip's version for any conflict
+// that survives the merge drivers and the configured resolver.
+//
+// Read from spice.integration.acceptIncoming. Defaults to true so
+// rebuild can complete without user intervention out of the box.
+// Unparseable values are treated as the default.
+func (c *Config) IntegrationAcceptIncoming() bool {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".integration.acceptIncoming",
+	).Canonical()]
+	if len(values) == 0 {
+		return true
+	}
+	v, err := strconv.ParseBool(values[len(values)-1])
+	if err != nil {
+		return true
+	}
+	return v
+}
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }
