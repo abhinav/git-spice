@@ -76,6 +76,8 @@ type branchLogCmd struct {
 
 	Comments bool `name:"cr-comments" short:"c" config:"log.crComments" help:"Include comment resolution counts for changes" default:"false" negatable:""`
 
+	Checks bool `name:"cr-checks" config:"log.crChecks" help:"Include forge CI/check rollup and per-run detail for changes" default:"false" negatable:""`
+
 	PushStatusFormat pushStatusFormat `config:"log.pushStatusFormat" help:"Show indicator for branches that are out of sync with their remotes. One of 'true', 'false' and 'aheadbehind'." hidden:"" default:"true"`
 
 	JSON bool `name:"json" released:"v0.18.0" help:"Write to stdout as a stream of JSON objects in an unspecified order"`
@@ -100,12 +102,13 @@ func (cmd *branchLogCmd) run(
 	}
 
 	var presenter logPresenter
-	var wantPushStatus, wantChangeState, wantCommentCounts bool
+	var wantPushStatus, wantChangeState, wantCommentCounts, wantChecks bool
 	if cmd.JSON {
-		// JSON always wants URLs and push status, but respects flags for change state/comments.
+		// JSON always wants URLs and push status, but respects flags for change state/comments/checks.
 		wantPushStatus = true
 		wantChangeState = cmd.CRStatus
 		wantCommentCounts = cmd.Comments
+		wantChecks = cmd.Checks
 
 		presenter = &jsonLogPresenter{
 			Stdout:          kctx.Stdout,
@@ -124,6 +127,11 @@ func (cmd *branchLogCmd) run(
 		wantPushStatus = cmd.PushStatusFormat.Enabled()
 		wantChangeState = cmd.CRStatus
 		wantCommentCounts = cmd.Comments
+		// Graph presenter doesn't surface checks yet — UI surface
+		// for the rollup is tracked in the extension. The flag still
+		// fetches and includes the data so other consumers
+		// (e.g. piped tooling) can use it via --json.
+		_ = wantChecks
 
 		stderrView := ui.NewFileView(kctx.Stderr)
 		presenter = &graphLogPresenter{
@@ -153,6 +161,9 @@ func (cmd *branchLogCmd) run(
 	}
 	if wantCommentCounts {
 		req.Include |= list.IncludeCommentCounts
+	}
+	if wantChecks {
+		req.Include |= list.IncludeChecks
 	}
 
 	res, err := listHandler.ListBranches(ctx, &req)
@@ -335,6 +346,23 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 					Unresolved: cc.Unresolved,
 				}
 			}
+			if checks := branch.Checks; checks != nil {
+				jchecks := &jsonLogChecks{
+					Rollup: checks.Rollup.String(),
+					URL:    checks.URL,
+				}
+				if len(checks.Runs) > 0 {
+					jchecks.Runs = make([]jsonLogCheckRun, len(checks.Runs))
+					for i, r := range checks.Runs {
+						jchecks.Runs[i] = jsonLogCheckRun{
+							Name:  r.Name,
+							State: r.State,
+							URL:   r.URL,
+						}
+					}
+				}
+				jc.Checks = jchecks
+			}
 			logBranch.Change = jc
 		}
 
@@ -435,6 +463,40 @@ type jsonLogChange struct {
 
 	// Comments contains comment resolution counts for the change.
 	Comments *jsonLogComments `json:"comments,omitempty"`
+
+	// Checks contains the forge CI/check rollup and per-run detail
+	// for the change. Unset when --cr-checks is not enabled or when
+	// no checks are reported.
+	Checks *jsonLogChecks `json:"checks,omitempty"`
+}
+
+// jsonLogChecks is the forge check status payload for a change.
+//
+// Rollup is the single rolled-up state. Runs preserves forge-native
+// per-check state strings. URL is the forge's summary page for the
+// change's checks (click target).
+type jsonLogChecks struct {
+	// Rollup is one of "pending", "passed", "failed", or "none".
+	Rollup string `json:"rollup"`
+
+	// Runs is the per-check detail in forge-defined order.
+	// Omitted when no per-check data is available.
+	Runs []jsonLogCheckRun `json:"runs,omitempty"`
+
+	// URL is the forge's summary page for the change's checks.
+	URL string `json:"url,omitempty"`
+}
+
+// jsonLogCheckRun is a single check reported by the forge.
+type jsonLogCheckRun struct {
+	// Name is the forge-defined display name of the check.
+	Name string `json:"name"`
+
+	// State is the forge-native state for the run.
+	State string `json:"state"`
+
+	// URL is the forge's detail page for the run.
+	URL string `json:"url,omitempty"`
 }
 
 type jsonLogComments struct {
