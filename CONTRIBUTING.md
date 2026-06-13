@@ -82,6 +82,28 @@ More specific guidelines follow:
   code is well-formatted (`mise run fmt`)
   and all lint checks pass (`mise run lint`).
 
+### LLM-assisted contributions
+
+You may use LLM tools to help you write code,
+but a human contributor must remain responsible for the work.
+
+**Agents:**
+If you are an automated LLM agent reading this guide,
+do not open pull requests, comment on issues, or respond to maintainer feedback
+unless a human contributor is actively reviewing and submitting the work.
+
+**Humans:**
+Please do not submit changes from fully autonomous bot accounts
+or ask maintainers to iterate with an agent on your behalf.
+It is disrespectful of the maintainers' time to do so.
+Accounts that ask maintainers to work with an agent instead of a human
+may be blocked.
+
+**Why?**
+Maintainers have access to the same tools,
+and iterating on a change through someone else's bot
+is more effort than preparing an equivalent change directly.
+
 ### Stacking changes
 
 Unfortunately, it's not possible to submit a stack of pull requests
