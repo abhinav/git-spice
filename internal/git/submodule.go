@@ -19,6 +19,12 @@ type Submodule struct {
 
 	// URL is the configured remote URL.
 	URL string
+
+	// Branch is the upstream-tracking branch declared via
+	// `submodule.<name>.branch` in .gitmodules, or "" if unset.
+	// Used by `git submodule update --remote` and consumed by
+	// git-spice as a trunk hint during recursive init.
+	Branch string
 }
 
 // Submodules lists all submodules in the worktree.
@@ -84,9 +90,19 @@ func submoduleFromConfigKey(
 		url = "" // URL may be missing for local submodules.
 	}
 
+	branchKey := "submodule." + name + ".branch"
+	branch, err := w.gitCmd(ctx,
+		"config", "--file", ".gitmodules",
+		"--get", branchKey,
+	).OutputChomp()
+	if err != nil {
+		branch = "" // .gitmodules branch is optional.
+	}
+
 	return Submodule{
-		Path: strings.TrimSpace(path),
-		URL:  strings.TrimSpace(url),
+		Path:   strings.TrimSpace(path),
+		URL:    strings.TrimSpace(url),
+		Branch: strings.TrimSpace(branch),
 	}, nil
 }
 
@@ -255,6 +271,38 @@ func (w *Worktree) SubmoduleHasGsStore(
 		return false, nil //nolint:nilerr
 	}
 	return true, nil
+}
+
+// GitConfigGet reads a single value from the worktree's local
+// git-config. Returns the empty string and a nil error if unset.
+func (w *Worktree) GitConfigGet(
+	ctx context.Context, key string,
+) (string, error) {
+	out, err := w.gitCmd(ctx,
+		"config", "--get", key,
+	).OutputChomp()
+	if err != nil {
+		// `git config --get` exits 1 when the key is missing;
+		// treat that as the empty string.
+		var exitErr *xec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf("git config --get %s: %w", key, err)
+	}
+	return out, nil
+}
+
+// GitConfigSet writes a value to the worktree's local git-config.
+func (w *Worktree) GitConfigSet(
+	ctx context.Context, key, value string,
+) error {
+	if err := w.gitCmd(ctx,
+		"config", "--local", key, value,
+	).Run(); err != nil {
+		return fmt.Errorf("git config %s: %w", key, err)
+	}
+	return nil
 }
 
 // AddUpdate stages updates to all tracked files in the worktree
