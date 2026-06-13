@@ -1,0 +1,68 @@
+# 'gs branch checkout' (and friends) switches each tracked submodule
+# to the branch recorded for the parent branch.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo with two branches.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+gs trunk
+git add fix.txt
+gs branch create sub-fix -m 'Add fix'
+
+# Set up the parent repo.
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Create branch 'feat-x' while sub is on sub-feat.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+git add file1.txt
+gs branch create feat-x -m 'Add file1'
+
+# Create branch 'feat-y' (from trunk) while sub is on sub-fix.
+gs trunk
+cd libs/core
+git checkout sub-fix
+cd $WORK/repo
+git add file2.txt
+gs branch create feat-y -m 'Add file2'
+
+# Verify associations are recorded.
+gs branch submodule list
+stderr 'libs/core'
+stderr 'sub-fix'
+
+# Switch to feat-x and verify the submodule follows.
+gs branch checkout feat-x
+cd libs/core
+git rev-parse --abbrev-ref HEAD
+stdout 'sub-feat'
+cd $WORK/repo
+
+# Switch to feat-y and verify the submodule follows.
+gs branch checkout feat-y
+cd libs/core
+git rev-parse --abbrev-ref HEAD
+stdout 'sub-fix'
+
+-- sub-repo/feat.txt --
+sub feature
+-- sub-repo/fix.txt --
+sub fix
+-- repo/file1.txt --
+parent file 1
+-- repo/file2.txt --
+parent file 2

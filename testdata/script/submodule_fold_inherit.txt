@@ -1,0 +1,57 @@
+# 'gs branch fold' merges submodule associations from the folded
+# branch into its base. Disjoint associations carry over without
+# prompts. Identical values are preserved.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+# Set up a submodule repo.
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git add feat.txt
+gs branch create sub-feat -m 'Add feat'
+
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Add the submodule.
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+# Switch sub to sub-feat and create child branch.
+cd libs/core
+git checkout sub-feat
+cd $WORK/repo
+
+git add file1.txt
+gs branch create feat-a -m 'Add file1'
+
+git add file2.txt
+gs branch create feat-b -m 'Add file2'
+
+# Verify feat-a and feat-b both record libs/core:sub-feat.
+gs branch submodule list -b feat-a
+stderr 'libs/core'
+stderr 'sub-feat'
+gs branch submodule list -b feat-b
+stderr 'libs/core'
+stderr 'sub-feat'
+
+# Fold feat-b into feat-a. They record the same value: no prompt.
+gs branch fold
+
+# feat-a should still record libs/core:sub-feat.
+gs branch submodule list -b feat-a
+stderr 'libs/core'
+stderr 'sub-feat'
+
+-- sub-repo/feat.txt --
+sub feature
+-- repo/file1.txt --
+parent file 1
+-- repo/file2.txt --
+parent file 2

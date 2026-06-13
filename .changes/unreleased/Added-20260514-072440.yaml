@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: gs branch fold merges submodule associations across the folded and base branches; conflicts prompt interactively or accept ''--module-branch=<path>=<branch>''.'
+time: 2026-05-14T07:24:40.075455-04:00

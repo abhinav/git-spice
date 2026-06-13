@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"go.abhg.dev/gs/internal/git"
@@ -35,6 +36,62 @@ func (t *Tracker) RecordBranchState(
 		)
 	}
 	return RecordAssociations(ctx, t.Store, branch, assocs)
+}
+
+// RecordWithInheritance records submodule associations for branch
+// using parentBranch's recorded associations as a baseline, then
+// overlaying the current state of each submodule.
+//
+// The resulting map gives current state precedence: if a submodule
+// is on a different branch than what parentBranch records, the new
+// branch records the current state. If a submodule has no association
+// in the current worktree (e.g., detached HEAD), the parent's value
+// is preserved.
+//
+// This makes `gs bc` create a child branch that is consistent with
+// its parent's submodule pinning by default without an extra step.
+func (t *Tracker) RecordWithInheritance(
+	ctx context.Context, branch, parentBranch string,
+) error {
+	inherited := make(map[string]string)
+	if parentBranch != "" {
+		resp, err := t.Store.LookupBranch(ctx, parentBranch)
+		switch {
+		case err == nil:
+			maps.Copy(inherited, resp.Submodules)
+		case errors.Is(err, state.ErrNotExist):
+			// Parent not tracked (e.g., trunk): no baseline to inherit.
+		default:
+			return fmt.Errorf(
+				"lookup parent branch %s: %w", parentBranch, err,
+			)
+		}
+	}
+
+	current, err := t.ResolveAssociations(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"resolve submodule associations: %w", err,
+		)
+	}
+	for _, a := range current {
+		inherited[a.Path] = a.Branch
+	}
+
+	if len(inherited) == 0 {
+		return nil
+	}
+
+	tx := t.Store.BeginBranchTx()
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:       branch,
+		Submodules: inherited,
+	}); err != nil {
+		return err
+	}
+	return tx.Commit(ctx,
+		"record submodule associations (with inheritance)",
+	)
 }
 
 // GitWorktree is the subset of [git.Worktree]
