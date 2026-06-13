@@ -11,6 +11,8 @@ https://abhinav.github.io/git-spice/cli/json/ for details.
 Flags:
   -a, --all                 Show all tracked branches, not just the current
                             stack. (🔧 spice.log.all)
+  -w, --worktree            Filter to branches in the current worktree. Implies
+                            --all.
   -S, --[no-]cr-status      Request and include information about the Change
                             Request (🔧 spice.log.crStatus)
   -c, --[no-]cr-comments    Include comment resolution counts for changes (🔧

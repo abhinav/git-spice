@@ -306,7 +306,8 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
-	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
+	Worktree worktreeCmd `cmd:"" aliases:"wt" group:"Worktree"`
+	Rebase   rebaseCmd   `cmd:"" aliases:"rb" group:"Rebase"`
 
 	// Navigation
 	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`

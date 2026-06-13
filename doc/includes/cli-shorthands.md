@@ -39,3 +39,5 @@
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |
+| gs wtc | [gs worktree create](/cli/reference.md#gs-worktree-create) |
+| gs wtls | [gs worktree list](/cli/reference.md#gs-worktree-list) |

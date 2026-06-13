@@ -1,0 +1,65 @@
+# 'repo restack -w' only restacks branches
+# in stacks that have a branch checked out
+# in the current worktree.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create two stacks:
+# Stack 1: main -> feat1 -> feat2
+# Stack 2: main -> feat3 -> feat4
+
+# Stack 1
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+
+# Stack 2
+gs bco main
+git add feat3.txt
+gs bc feat3 -m 'Add feat3'
+git add feat4.txt
+gs bc feat4 -m 'Add feat4'
+
+# Create a worktree for feat1 (part of stack 1).
+git worktree add ../wt1 feat1
+
+# Update main to require restacking of all branches.
+gs bco main
+git add main-update.txt
+git commit -m 'Update main'
+
+# From wt1, restack only the current worktree's branches.
+cd ../wt1
+gs repo restack -w
+stderr 'feat1: restacked'
+! stderr 'feat3'
+! stderr 'feat4'
+
+# feat2 is part of the same stack but not checked out here.
+# It should still be restacked since it's in the same stack.
+stderr 'feat2: restacked'
+
+# Verify that feat3 and feat4 are NOT restacked.
+cd ../repo
+gs bco feat3
+gs branch restack
+stderr 'feat3: restacked'
+
+-- repo/feat1.txt --
+feat1
+-- repo/feat2.txt --
+feat2
+-- repo/feat3.txt --
+feat3
+-- repo/feat4.txt --
+feat4
+-- repo/main-update.txt --
+main update
