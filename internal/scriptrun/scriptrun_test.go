@@ -129,9 +129,9 @@ func TestRunner_Run_emptyScript(t *testing.T) {
 func TestRunner_Run_nilRequest(t *testing.T) {
 	r := &Runner{Log: silog.Nop()}
 
-	_, err := r.Run(t.Context(), nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "nil request")
+	assert.Panics(t, func() {
+		_, _ = r.Run(t.Context(), nil)
+	})
 }
 
 func TestRunner_Run_contextCancellation(t *testing.T) {

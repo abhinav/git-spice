@@ -34,6 +34,7 @@ import (
 	"os"
 	"strings"
 
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
 )
@@ -59,7 +60,7 @@ type RunRequest struct {
 	// If it starts with "#!", it is executed directly via the
 	// interpreter named in the shebang; otherwise it is passed to
 	// "sh -c".
-	Script string
+	Script string // required
 
 	// Dir is the working directory for the script.
 	// Empty means the current working directory.
@@ -93,9 +94,7 @@ type RunResult struct {
 // or waited on (e.g., temp-file creation failed, or the executable
 // could not be found).
 func (r *Runner) Run(ctx context.Context, req *RunRequest) (*RunResult, error) {
-	if req == nil {
-		return nil, errors.New("scriptrun: nil request")
-	}
+	must.NotBeNilf(req, "scriptrun: nil request")
 	if req.Script == "" {
 		return nil, errors.New("scriptrun: empty script")
 	}
