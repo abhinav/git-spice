@@ -207,8 +207,10 @@ func NewHTTPRecorder(
 }
 
 type (
-	// MergeChangeFunc merges a change.
-	// This functionality is not available on the forge interface.
+	// MergeChangeFunc merges a change with provider-specific test setup.
+	//
+	// Leave IntegrationConfig.MergeChange unset to use
+	// forge.Repository.MergeChange directly.
 	MergeChangeFunc func(
 		t *testing.T,
 		repo forge.Repository,
@@ -254,8 +256,10 @@ type IntegrationConfig struct {
 	// It receives an HTTP client to wrap as needed for the forge implementation.
 	OpenRepository func(*testing.T, *http.Client) forge.Repository // required
 
-	// MergeChange merges a change.
-	MergeChange MergeChangeFunc // required
+	// MergeChange merges a change with provider-specific test setup.
+	//
+	// If nil, the integration suite uses forge.Repository.MergeChange.
+	MergeChange MergeChangeFunc // optional
 
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc // required
@@ -321,6 +325,19 @@ type IntegrationConfig struct {
 
 // RunIntegration runs integration tests with the given configuration.
 func RunIntegration(t *testing.T, config IntegrationConfig) {
+	mergeChange := config.MergeChange
+	if mergeChange == nil {
+		mergeChange = func(
+			t *testing.T,
+			repo forge.Repository,
+			changeID forge.ChangeID,
+		) {
+			require.NoError(t, repo.MergeChange(
+				t.Context(), changeID, forge.MergeChangeOptions{},
+			))
+		}
+	}
+
 	suite := &integrationSuite{
 		Forge: config.Forge,
 		Fixtures: fixturetest.Config{
@@ -329,7 +346,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		RemoteURL:             config.RemoteURL,
 		PushRemoteURL:         config.PushRemoteURL,
 		openRepository:        config.OpenRepository,
-		MergeChange:           config.MergeChange,
+		MergeChange:           mergeChange,
 		CloseChange:           config.CloseChange,
 		SetChangeChecksState:  config.SetChangeChecksState,
 		Reviewers:             config.Reviewers,

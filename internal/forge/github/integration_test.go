@@ -119,9 +119,6 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return newRepo
 		},
-		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, github.MergeChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
-		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, github.CloseChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
 		},
