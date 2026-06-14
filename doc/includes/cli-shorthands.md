@@ -34,6 +34,7 @@
 | gs rs | [gs repo sync](/cli/reference.md#gs-repo-sync) |
 | gs sd | [gs stack delete](/cli/reference.md#gs-stack-delete) |
 | gs se | [gs stack edit](/cli/reference.md#gs-stack-edit) |
+| gs sm | [gs stack merge](/cli/reference.md#gs-stack-merge) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
 | gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |

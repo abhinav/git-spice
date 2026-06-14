@@ -1,0 +1,38 @@
+Usage: gs stack (s) merge (m) [flags]
+
+Merge a stack
+
+Merges the CRs for the current branch's stack into trunk. Use --branch to merge
+a different branch's stack.
+
+The stack includes the selected branch, its downstack branches down to trunk,
+and every upstack branch.
+
+Already-merged branches are skipped automatically. Branches must have an open
+Change Request to be merged.
+
+Before merging, the stack is checked for branches whose base PR was already
+merged on the forge. Use --no-branch-check to skip this validation.
+
+Before each merge, waits for CI checks to pass. Use --build-timeout to configure
+the maximum wait before failing if checks are not ready.
+
+By default, a branch failure skips that branch's upstack descendants, but
+independent sibling branches continue. Use --fail-fast to stop the queue after
+the first branch failure.
+
+Flags:
+  --method=METHOD        Preferred merge method. One of 'merge', 'squash',
+                         and 'rebase'. (🔧 spice.merge.method)
+  --build-timeout=30m    Max time to wait for CI checks before each merge.
+                         0 means check once. (🔧 spice.merge.buildTimeout)
+  --no-branch-check      Skip stale base validation before merging.
+  --fail-fast            Stop the merge queue after the first branch failure.
+  --branch=NAME          Branch whose stack to merge
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

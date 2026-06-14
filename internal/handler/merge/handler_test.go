@@ -548,6 +548,174 @@ func TestMergeBranch_rejectsBranchNotBasedOnTrunk(t *testing.T) {
 	assert.Contains(t, err.Error(), "gs downstack merge --branch feat2")
 }
 
+func TestMergeStack_includesUpstackDescendants(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranch("feat1", "main", pr1),
+		testBranch("feat2", "feat1", pr2),
+		testBranch("feat3", "feat1", pr3),
+	})
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2, pr3}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectMergeItem(mockForge, pr1)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat3").
+		Return(nil)
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat1", "feat1").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat1").
+		Return(git.Hash("head1"), nil)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat2", "feat2").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil).
+		Times(2)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat3", "feat3").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat3").
+		Return(git.Hash("head3"), nil).
+		Times(2)
+
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr2).
+		Return(fakeFindResultWithHead("main", "head2"), nil)
+	expectMergeItem(mockForge, pr2)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr3).
+		Return(fakeFindResultWithHead("main", "head3"), nil)
+	expectMergeItem(mockForge, pr3)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+	})
+
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branch: "feat1",
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+		},
+	})
+	require.NoError(t, err)
+}
+
+func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranch("feat1", "main", pr1),
+		testBranch("feat2", "feat1", pr2),
+		testBranch("feat3", "feat1", pr3),
+	})
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2, pr3}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectMergeItem(mockForge, pr1)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat1", "feat1").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat1").
+		Return(git.Hash("head1"), nil)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat2", "feat2").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil).
+		Times(2)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat3", "feat3").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat3").
+		Return(git.Hash("head3"), nil)
+
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr2).
+		Return(fakeFindResultWithHead("main", "head2"), nil)
+	mockForge.EXPECT().
+		ChangeChecksState(gomock.Any(), pr2).
+		Return(forge.ChecksFailed, nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+	})
+
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branch: "feat1",
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+			FailFast:      true,
+		},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CI checks failed")
+}
+
 func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
