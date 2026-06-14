@@ -34,13 +34,13 @@ Use --no-wait for single branch merging when you don't want to wait for the
 merge to propagate. --no-wait is rejected for multi-branch merges.
 
 Flags:
-  --branch=NAME          Branch to start merging from
-  --no-wait              Skip polling for a single branch merge to propagate.
-  --no-branch-check      Skip stale base validation before merging.
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
   --build-timeout=30m    Max time to wait for CI checks before each merge.
                          0 means check once. (🔧 spice.merge.buildTimeout)
+  --no-wait              Skip polling for a single branch merge to propagate.
+  --no-branch-check      Skip stale base validation before merging.
+  --branch=NAME          Branch to start merging from
 
 Global Flags:
   -h, --help           Show help for the command

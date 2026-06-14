@@ -21,6 +21,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 	"go.abhg.dev/gs/internal/ui"
 )
 
@@ -301,9 +302,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 		{branch: "feat3", changeID: pr3},
 	}
 
-	err := h.executePlan(t.Context(), plan, &Request{
-		Branch: "feat3",
-	})
+	err := h.executePlan(t.Context(), plan, mergeExecutionOptions{})
 	require.NoError(t, err)
 
 	output := logBuffer.String()
@@ -395,7 +394,7 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1, headHash: git.Hash("head1")},
 		{branch: "feat2", changeID: pr2, headHash: git.Hash("old-head2")},
-	}, &Request{Branch: "feat2"})
+	}, mergeExecutionOptions{})
 	require.NoError(t, err)
 }
 
@@ -427,8 +426,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 		{branch: "feat1", changeID: pr1},
 	}
 
-	err := h.executePlan(t.Context(), plan, &Request{
-		Branch: "feat1",
+	err := h.executePlan(t.Context(), plan, mergeExecutionOptions{
 		NoWait: true,
 	})
 	require.NoError(t, err)
@@ -468,8 +466,86 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 
 	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, &Request{Branch: "feat1"})
+	}, mergeExecutionOptions{})
 	require.NoError(t, err)
+}
+
+func TestMergeBranch_delegatesToDownstackMerge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	pr1 := fakeChangeID("pr-1")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	mockForge.EXPECT().
+		FindChangeByID(gomock.Any(), pr1).
+		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectMergeItem(mockForge, pr1)
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		CommitAheadBehind(
+			gomock.Any(), "origin/feat1", "feat1",
+		).
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat1").
+		Return(git.Hash("head1"), nil)
+
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranch("feat1", "main", pr1),
+	})
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+		sync:      mockSync,
+	})
+
+	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
+		Branch: "feat1",
+	})
+	require.NoError(t, err)
+}
+
+func TestMergeBranch_rejectsBranchNotBasedOnTrunk(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main")
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		store: mockStore,
+		service: testBranchGraphService(ctrl,
+			testBranchGraph(t, []spice.LoadBranchItem{
+				testBranch("feat1", "main", fakeChangeID("pr-1")),
+				testBranch("feat2", "feat1", fakeChangeID("pr-2")),
+			}),
+		),
+	})
+
+	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
+		Branch: "feat2",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(),
+		"branch \"feat2\" is based on \"feat1\", not trunk")
+	assert.Contains(t, err.Error(), "gs downstack merge --branch feat2")
 }
 
 func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
@@ -500,7 +576,7 @@ func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 
 	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, &Request{Branch: "feat1"})
+	}, mergeExecutionOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sync trunk")
 }
@@ -538,8 +614,7 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 			changeID: pr1,
 			headHash: git.Hash("head1"),
 		},
-	}, &Request{
-		Branch: "feat1",
+	}, mergeExecutionOptions{
 		Method: forge.MergeMethodSquash,
 		NoWait: true,
 	})
@@ -583,7 +658,7 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 
 	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, &Request{Branch: "feat1"})
+	}, mergeExecutionOptions{})
 	require.NoError(t, err)
 
 	output := logBuffer.String()
@@ -622,7 +697,7 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 
 	err := h.executePlan(t.Context(), []*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, &Request{Branch: "feat1"})
+	}, mergeExecutionOptions{})
 	require.NoError(t, err)
 
 	assert.NotContains(t,
@@ -857,6 +932,24 @@ type testHandlerOpts struct {
 	logBuffer *bytes.Buffer
 }
 
+type testChangeMetadata fakeChangeID
+
+var _ forge.ChangeMetadata = testChangeMetadata("")
+
+func (c testChangeMetadata) ForgeID() string {
+	return "fake"
+}
+
+func (c testChangeMetadata) ChangeID() forge.ChangeID {
+	return fakeChangeID(c)
+}
+
+func (c testChangeMetadata) NavigationCommentID() forge.ChangeCommentID {
+	return nil
+}
+
+func (c testChangeMetadata) SetNavigationCommentID(forge.ChangeCommentID) {}
+
 // newTestHandler builds a Handler with sensible defaults
 // for any fields not provided in opts.
 func newTestHandler(
@@ -981,6 +1074,42 @@ func testGitRepo(
 		return mock
 	}
 	return NewMockGitRepository(ctrl)
+}
+
+func testBranchGraph(
+	t *testing.T,
+	branches []spice.LoadBranchItem,
+) *spice.BranchGraph {
+	t.Helper()
+
+	return spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+		Trunk:    "main",
+		Branches: branches,
+	})
+}
+
+func testBranch(
+	name string,
+	base string,
+	changeID fakeChangeID,
+) spice.LoadBranchItem {
+	return spice.LoadBranchItem{
+		Name:           name,
+		Base:           base,
+		Change:         testChangeMetadata(changeID),
+		UpstreamBranch: name,
+	}
+}
+
+func testBranchGraphService(
+	ctrl *gomock.Controller,
+	graph *spice.BranchGraph,
+) *MockService {
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+	return mockService
 }
 
 // fakeFindResult returns a minimal FindChangeItem
