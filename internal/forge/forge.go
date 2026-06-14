@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/giturl"
@@ -142,7 +143,7 @@ type WithCommentFormat interface {
 	CommentFormat() CommentFormat
 }
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed -write_package_comment=false . Forge,RepositoryID,Repository,WithInlineComments
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions
@@ -307,6 +308,9 @@ type Repository interface {
 	PostChangeComment(context.Context, ChangeID, string) (ChangeCommentID, error)
 	UpdateChangeComment(context.Context, ChangeCommentID, string) error
 	DeleteChangeComment(context.Context, ChangeCommentID) error
+
+	// EditComment updates the body of an existing inline comment.
+	EditComment(context.Context, ChangeCommentID, string) error
 
 	// List comments on a CR, optionally filtered per the given options.
 	ListChangeComments(context.Context, ChangeID, *ListChangeCommentsOptions) iter.Seq2[*ListChangeCommentItem, error]
@@ -759,4 +763,158 @@ func (s ChecksState) GoString() string {
 	default:
 		return fmt.Sprintf("ChecksState(%d)", int(s))
 	}
+}
+
+// Inline comment types and optional interfaces
+
+// InlineCommentThreadID identifies an inline comment thread.
+type InlineCommentThreadID string
+
+// InlineCommentSide identifies which side of a diff an inline comment targets.
+type InlineCommentSide int
+
+const (
+	// InlineCommentSideRight targets the new side of a diff.
+	InlineCommentSideRight InlineCommentSide = iota
+
+	// InlineCommentSideLeft targets the old side of a diff.
+	InlineCommentSideLeft
+)
+
+// String returns the forge-neutral spelling for the side.
+func (s InlineCommentSide) String() string {
+	switch s {
+	case InlineCommentSideLeft:
+		return "left"
+	default:
+		return "right"
+	}
+}
+
+// InlineCommentRange identifies an inclusive line range in a diff.
+type InlineCommentRange struct {
+	// StartLine is the first line in the range, inclusive.
+	StartLine int
+
+	// EndLine is the final line in the range, inclusive.
+	EndLine int
+}
+
+// InlineCommentLine returns a range covering exactly one line.
+func InlineCommentLine(line int) InlineCommentRange {
+	return InlineCommentRange{
+		StartLine: line,
+		EndLine:   line,
+	}
+}
+
+// InlineCommentRequest describes a new inline comment
+// to post on a change diff.
+type InlineCommentRequest struct {
+	// InReplyTo identifies the inline comment thread to reply to.
+	//
+	// Leave InReplyTo empty to start a new inline comment thread.
+	InReplyTo InlineCommentThreadID
+
+	// Path is the file path relative to the repository root.
+	Path string
+
+	// Lines identifies the line range in the diff.
+	Lines InlineCommentRange
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Side indicates which side of the diff the comment applies to.
+	Side InlineCommentSide
+}
+
+// InlineComment is a comment on a specific line of a diff.
+type InlineComment struct {
+	// ID is the inline comment thread identifier.
+	ID InlineCommentThreadID
+
+	// CommentID is the forge-specific comment identifier.
+	CommentID ChangeCommentID
+
+	// Path is the file path relative to the repository root.
+	Path string
+
+	// Lines identifies the line range in the diff.
+	Lines InlineCommentRange
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Author is the username of the comment author.
+	Author string
+
+	// Resolved indicates the comment thread is resolved.
+	Resolved bool
+
+	// Outdated indicates the comment is on an outdated diff.
+	Outdated bool
+
+	// CreatedAt is the time the comment was created.
+	CreatedAt time.Time
+}
+
+// ReviewEvent specifies the type of review being submitted.
+type ReviewEvent int
+
+const (
+	// ReviewComment submits a review with comments only.
+	ReviewComment ReviewEvent = iota
+
+	// ReviewApprove submits an approving review.
+	ReviewApprove
+
+	// ReviewRequestChanges submits a review
+	// requesting changes.
+	ReviewRequestChanges
+)
+
+// ReviewRequest is a batch of inline comments
+// submitted together as a single review.
+type ReviewRequest struct {
+	// Body is the overall review body (optional).
+	Body string
+
+	// Comments are the inline comments in the review.
+	Comments []InlineCommentRequest
+
+	// Event is the review event type.
+	Event ReviewEvent
+}
+
+// WithInlineComments is an optional interface
+// for forges that support inline/diff comments
+// and code reviews.
+type WithInlineComments interface {
+	Repository
+
+	// ListInlineComments lists inline/review comments
+	// on a change.
+	ListInlineComments(
+		ctx context.Context, id ChangeID,
+	) ([]*InlineComment, error)
+
+	// SubmitReview posts a batch of inline comments
+	// as a single review.
+	SubmitReview(
+		ctx context.Context, id ChangeID, req ReviewRequest,
+	) error
+
+	// PostInlineComment posts a single inline comment
+	// outside of a batch review.
+	PostInlineComment(
+		ctx context.Context, id ChangeID,
+		req InlineCommentRequest,
+	) (*InlineComment, error)
+
+	// ResolveThread marks a comment thread as resolved.
+	ResolveThread(ctx context.Context, id InlineCommentThreadID) error
+
+	// UnresolveThread marks a comment thread as unresolved.
+	UnresolveThread(ctx context.Context, id InlineCommentThreadID) error
 }

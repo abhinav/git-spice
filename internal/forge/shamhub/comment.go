@@ -8,6 +8,7 @@ import (
 	"iter"
 	"slices"
 	"strconv"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 )
@@ -135,11 +136,32 @@ type shamComment struct {
 	Change int
 	Body   string
 
-	// Resolvable indicates this is a code review comment that can be resolved.
+	// Resolvable indicates this is a code review comment
+	// that can be resolved.
 	Resolvable bool
 
 	// Resolved indicates this comment has been resolved.
 	Resolved bool
+
+	// Inline comment fields (optional).
+
+	// Path is the file path for inline comments.
+	Path string
+
+	// Line is the line number for inline comments.
+	Line int
+
+	// Side identifies which side of the diff the inline comment targets.
+	Side int
+
+	// ThreadID groups inline comments into threads.
+	ThreadID string
+
+	// Author is the comment author username.
+	Author string
+
+	// CreatedAt is the comment creation timestamp.
+	CreatedAt time.Time
 }
 
 var (
