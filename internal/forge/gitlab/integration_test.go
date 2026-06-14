@@ -114,9 +114,6 @@ func TestIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return newRepo
 		},
-		MergeChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.MergeChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
-		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
 		},

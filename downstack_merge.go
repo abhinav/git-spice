@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
-	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -14,11 +12,9 @@ import (
 )
 
 type downstackMergeCmd struct {
-	Branch        string            `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
-	NoWait        bool              `help:"Skip polling for a single branch merge to propagate."`
-	NoBranchCheck bool              `help:"Skip stale base validation before merging."`
-	Method        forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
-	BuildTimeout  time.Duration     `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
+	merge.DownstackMergeOptions
+
+	Branch string `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
 }
 
 func (*downstackMergeCmd) Help() string {
@@ -66,7 +62,9 @@ func (*downstackMergeCmd) Help() string {
 
 // MergeHandler merges change requests via a forge.
 type MergeHandler interface {
-	MergeDownstack(ctx context.Context, req *merge.Request) error
+	MergeDownstack(ctx context.Context, req *merge.DownstackMergeRequest) error
+	MergeBranch(ctx context.Context, req *merge.BranchMergeRequest) error
+	MergeStack(ctx context.Context, req *merge.StackMergeRequest) error
 }
 
 func (cmd *downstackMergeCmd) AfterApply(
@@ -93,11 +91,8 @@ func (cmd *downstackMergeCmd) Run(
 		return errors.New("cannot merge trunk")
 	}
 
-	return mergeHandler.MergeDownstack(ctx, &merge.Request{
-		Branch:        cmd.Branch,
-		NoWait:        cmd.NoWait,
-		NoBranchCheck: cmd.NoBranchCheck,
-		Method:        cmd.Method,
-		BuildTimeout:  cmd.BuildTimeout,
+	return mergeHandler.MergeDownstack(ctx, &merge.DownstackMergeRequest{
+		Branch:  cmd.Branch,
+		Options: &cmd.DownstackMergeOptions,
 	})
 }

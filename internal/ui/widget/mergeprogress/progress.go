@@ -136,12 +136,13 @@ type Widget struct {
 	KeyMap KeyMap
 	Style  Style
 
-	items   []Item
-	index   map[string]int // item ID => items index
-	message string
-	err     error
-	width   int
-	theme   ui.Theme
+	items     []Item
+	index     map[string]int // item ID => items index
+	message   string
+	err       error
+	width     int
+	theme     ui.Theme
+	animation animationState
 }
 
 var _ tea.Model = (*Widget)(nil)
@@ -151,6 +152,9 @@ func New(items ...Item) *Widget {
 	w := &Widget{
 		KeyMap: DefaultKeyMap,
 		Style:  DefaultStyle,
+		animation: animationState{
+			enabled: true,
+		},
 	}
 	w.setItems(items...)
 	return w
@@ -181,6 +185,17 @@ func (w *Widget) WithTheme(theme ui.Theme) *Widget {
 	return w
 }
 
+// WithAnimation enables or disables frame-driven active-state animation.
+//
+// Animation is enabled by default.
+//
+// This is intended for code-level rendering contexts such as stable snapshots,
+// not for user-facing configuration.
+func (w *Widget) WithAnimation(enabled bool) *Widget {
+	w.animation.enabled = enabled
+	return w
+}
+
 // Err reports cancellation or another rendering error.
 func (w *Widget) Err() error {
 	return w.err
@@ -188,7 +203,8 @@ func (w *Widget) Err() error {
 
 // Init initializes the Bubble Tea model.
 func (w *Widget) Init() tea.Cmd {
-	return nil
+	w.animation.resetSchedule()
+	return w.scheduleAnimationTick()
 }
 
 // Update updates the Bubble Tea model.
@@ -198,6 +214,10 @@ func (w *Widget) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		w.width = msg.Width
 	case Event:
 		w.apply(msg)
+		return w, w.scheduleAnimationTick()
+	case animationTickMsg:
+		w.animation.advance(msg)
+		return w, w.scheduleAnimationTick()
 	case tea.KeyMsg:
 		if key.Matches(msg, w.KeyMap.Cancel) {
 			w.err = ErrCanceled
@@ -274,11 +294,31 @@ func (w *Widget) renderBar(out ui.Writer, theme ui.Theme) {
 
 	segmentWidths := distribute(width, len(w.items))
 	for idx, item := range w.items {
-		out.WriteString(strings.Repeat(
-			w.styleFor(item.State).String(theme),
-			segmentWidths[idx],
-		))
+		w.renderSegment(out, theme, item.State, segmentWidths[idx])
 	}
+}
+
+func (w *Widget) renderSegment(
+	out ui.Writer,
+	theme ui.Theme,
+	state State,
+	width int,
+) {
+	if state == StateActive {
+		position, glyph, ok := w.animation.marker(width)
+		if ok {
+			active := w.Style.Active.String(theme)
+			out.WriteString(strings.Repeat(active, position))
+			out.WriteString(w.Style.Active.SetString(glyph).String(theme))
+			out.WriteString(strings.Repeat(active, width-position-1))
+			return
+		}
+	}
+
+	out.WriteString(strings.Repeat(
+		w.styleFor(state).String(theme),
+		width,
+	))
 }
 
 func (w *Widget) styleFor(state State) ui.Style {
@@ -294,6 +334,19 @@ func (w *Widget) styleFor(state State) ui.Style {
 	default:
 		return w.Style.Pending
 	}
+}
+
+func (w *Widget) scheduleAnimationTick() tea.Cmd {
+	return w.animation.scheduleTick(w.hasActiveItem())
+}
+
+func (w *Widget) hasActiveItem() bool {
+	for _, item := range w.items {
+		if item.State == StateActive {
+			return true
+		}
+	}
+	return false
 }
 
 // distribute divides a bar width into contiguous item segment widths.
