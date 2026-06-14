@@ -28,13 +28,16 @@ func TestModel_RendersWithExplicitSize(t *testing.T) {
 	require.Nil(t, cmd)
 	_, cmd = model.Update(testStep{})
 	require.NotNil(t, cmd)
-	assert.NoError(t, model.Close())
 
 	got := visibleControl(buf.String())
-	assert.Contains(t, got, "<esc>[1;8r")                      // set scroll margins
-	assert.Contains(t, got, "<esc>[10;1H<esc>[2Kview: 0 40x2") // draw bottom row
-	assert.Contains(t, got, "<esc>[10;1H<esc>[2Kview: 1 40x2") // redraw bottom row
-	assert.Contains(t, got, "<esc>[r")                         // reset scroll margins
+	assert.Contains(t, got, "<esc>[1;8r")              // set scroll margins
+	assert.Contains(t, got, "<esc>[10;1Hview: 0 40x2") // draw bottom row
+	assert.Contains(t, got, "<esc>[10;7H1 ")           // diff changed cell
+	assert.NotContains(t, got, "<esc>[10;1H<esc>[2Kview: 1 40x2")
+
+	assert.NoError(t, model.Close())
+	got = visibleControl(buf.String())
+	assert.Contains(t, got, "<esc>[r") // reset scroll margins
 }
 
 func TestModel_GrowsToMax(t *testing.T) {
@@ -52,10 +55,10 @@ func TestModel_GrowsToMax(t *testing.T) {
 	require.NotNil(t, cmd)
 
 	got := visibleControl(buf.String())
-	assert.Contains(t, got, "<esc>[1;8r")                // reserve two bottom rows
-	assert.Contains(t, got, "<esc>[1;6r")                // grow to four bottom rows
-	assert.Contains(t, got, "<esc>[7;1H<esc>[2Kline 1")  // draw top reserved row
-	assert.Contains(t, got, "<esc>[10;1H<esc>[2Kline 4") // draw bottom reserved row
+	assert.Contains(t, got, "<esc>[1;8r")                 // reserve two bottom rows
+	assert.Contains(t, got, "<esc>[1;6r")                 // grow to four bottom rows
+	assert.Contains(t, got, "<esc>[7;1Hline 1")           // draw top reserved row
+	assert.Contains(t, got, "line 3\r\nline 4<esc>[6;1H") // draw bottom reserved row
 }
 
 func TestModel_RendersAfterFirstWindowSize(t *testing.T) {
@@ -71,7 +74,27 @@ func TestModel_RendersAfterFirstWindowSize(t *testing.T) {
 
 	got := visibleControl(buf.String())
 	assert.Contains(t, got, "<esc>[1;8r")
-	assert.Contains(t, got, "<esc>[10;1H<esc>[2Kwidget")
+	assert.Contains(t, got, "<esc>[10;1Hwidget")
+}
+
+func TestModel_PreservesStyledContent(t *testing.T) {
+	t.Setenv("TTY_FORCE", "1")
+	t.Setenv("NO_COLOR", "false")
+
+	var buf bytes.Buffer
+	model := New(&styledTestModel{}, &buf, &Options{
+		Width:     40,
+		Height:    10,
+		MinHeight: 2,
+		MaxHeight: 3,
+		TERM:      "xterm-256color",
+	})
+
+	_, cmd := model.Update(tea.WindowSizeMsg{Width: 40, Height: 10})
+	require.Nil(t, cmd)
+
+	got := visibleControl(buf.String())
+	assert.Contains(t, got, "<esc>[31mred")
 }
 
 func TestRenderer_LogsScrollAboveRegion(t *testing.T) {
@@ -167,6 +190,20 @@ func (m *staticTestModel) Update(tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *staticTestModel) View() tea.View {
 	return tea.NewView("widget")
+}
+
+type styledTestModel struct{}
+
+func (m *styledTestModel) Init() tea.Cmd {
+	return nil
+}
+
+func (m *styledTestModel) Update(tea.Msg) (tea.Model, tea.Cmd) {
+	return m, nil
+}
+
+func (m *styledTestModel) View() tea.View {
+	return tea.NewView("\x1b[31mred\x1b[0m")
 }
 
 type tallTestModel struct {
