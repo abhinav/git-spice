@@ -214,6 +214,7 @@ func RunModel(model tea.Model, opts *RunOptions) (err error) {
 				Height:    opts.Height,
 				MinHeight: opts.ScrollRegionMinHeight,
 				MaxHeight: opts.ScrollRegionMaxHeight,
+				TERM:      opts.TERM,
 				Signals:   opts.Signals,
 			})
 		defer func() {

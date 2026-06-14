@@ -2,10 +2,12 @@ package scrollregion
 
 import (
 	"io"
+	"os"
 	"strings"
 	"sync"
 
 	tea "charm.land/bubbletea/v2"
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 	"go.abhg.dev/gs/internal/must"
@@ -18,11 +20,25 @@ type renderer struct {
 	// out is the same stream used by ordinary log output.
 	//
 	// If it exposes Fd, the renderer can discover terminal size from it.
-	out io.Writer // immutable
+	out  io.Writer // immutable
+	term string    // immutable
 
 	mu     sync.Mutex // guards mutable fields below
 	width  int
 	height int
+
+	// diffRenderer owns ultraviolet's view of the terminal.
+	//
+	// Ordinary log output bypasses it,
+	// so callers must resynchronize its cursor before each frame.
+	diffRenderer *uv.TerminalRenderer
+
+	// frame is a full-terminal buffer,
+	// but only the reserved rows are touched.
+	//
+	// Keeping full-terminal coordinates lets ultraviolet move the real cursor
+	// to absolute terminal rows without learning about DECSTBM.
+	frame uv.ScreenBuffer
 
 	minHeight int // immutable
 	maxHeight int // immutable
@@ -45,6 +61,7 @@ func newRenderer(
 	height int,
 	minHeight int,
 	maxHeight int,
+	term string,
 ) *renderer {
 	must.NotBeNilf(out, "scroll region output is required")
 	if minHeight <= 0 {
@@ -62,6 +79,7 @@ func newRenderer(
 
 	return &renderer{
 		out:           out,
+		term:          term,
 		width:         width,
 		height:        height,
 		minHeight:     minHeight,
@@ -98,7 +116,10 @@ func (r *renderer) Resize(width, height int) {
 	if !r.reserved {
 		return
 	}
+	// Resizing changes absolute row coordinates.
+	// Rebuild ultraviolet's coordinate space after the terminal margins move.
 	r.reserveLocked(0)
+	r.resetDiffLocked()
 }
 
 // Render draws view into the reserved rows.
@@ -113,36 +134,27 @@ func (r *renderer) Render(view tea.View) {
 		return
 	}
 
-	lines := viewLines(view.Content)
+	content := strings.TrimRight(view.Content, "\n")
+	lines := 0
+	if content != "" {
+		lines = strings.Count(content, "\n") + 1
+	}
 	oldHeight := r.currentHeight
-	r.currentHeight = r.heightForLines(len(lines))
+	r.currentHeight = r.heightForLines(lines)
 	if !r.reserved {
 		r.reserveInitial()
 	} else if oldHeight != r.currentHeight {
+		// Changing the reserved height moves the widget to different absolute
+		// rows, so ultraviolet's old screen coordinates are no longer valid.
 		r.reserveLocked(oldHeight)
+		r.resetDiffLocked()
 	}
-	if len(lines) > r.currentHeight {
-		lines = lines[:r.currentHeight]
+	if lines > r.currentHeight {
+		content = truncateViewLines(content, r.currentHeight)
+		lines = r.currentHeight
 	}
 
-	var b strings.Builder
-	renderStart := r.regionStart()
-	if len(lines) < r.currentHeight {
-		renderStart += r.currentHeight - len(lines)
-	}
-	for row := range r.currentHeight {
-		b.WriteString(ansi.CursorPosition(1, r.regionStart()+row))
-		b.WriteString(ansi.EraseLine(2))
-		lineIdx := row - (renderStart - r.regionStart())
-		if lineIdx >= 0 && lineIdx < len(lines) {
-			b.WriteString(lines[lineIdx])
-		}
-	}
-	// Park the cursor on the last scrollable row.
-	// Ordinary log writes should resume above the reserved rows,
-	// not inside the redrawn model region.
-	b.WriteString(ansi.CursorPosition(1, r.scrollBottom()))
-	_, _ = io.WriteString(r.out, b.String())
+	r.renderFrameLocked(content, lines)
 }
 
 // Close clears the reserved rows and restores normal scrolling.
@@ -235,6 +247,9 @@ func (r *renderer) reserveInitial() {
 	b.WriteString(ansi.CursorPosition(1, r.scrollBottom()))
 	_, _ = io.WriteString(r.out, b.String())
 	r.reserved = true
+	// The first frame must start from the terminal size and row coordinates
+	// established by the initial margin sequence.
+	r.resetDiffLocked()
 }
 
 func (r *renderer) reserveLocked(oldHeight int) {
@@ -256,6 +271,61 @@ func (r *renderer) reserveLocked(oldHeight int) {
 	_, _ = io.WriteString(r.out, b.String())
 }
 
+// resetDiffLocked rebuilds ultraviolet's terminal model.
+//
+// Ultraviolet tracks prior screen contents and cursor position internally.
+// When the terminal size or reserved region changes,
+// keeping that old model would make future diffs target stale rows.
+func (r *renderer) resetDiffLocked() {
+	if r.width <= 0 || r.height <= 0 {
+		r.diffRenderer = nil
+		r.frame = uv.ScreenBuffer{}
+		return
+	}
+
+	r.diffRenderer = uv.NewTerminalRenderer(r.out, r.rendererEnv())
+	r.frame = uv.NewScreenBuffer(r.width, r.height)
+}
+
+// renderFrameLocked draws content into the reserved rows
+// and lets ultraviolet emit a diff from the previous frame.
+func (r *renderer) renderFrameLocked(content string, lines int) {
+	if r.diffRenderer == nil || r.frame.Bounds().Empty() {
+		r.resetDiffLocked()
+	}
+	if r.diffRenderer == nil {
+		return
+	}
+
+	if missing := r.currentHeight - lines; missing > 0 {
+		content = strings.Repeat("\n", missing) + content
+	}
+
+	// This area maps the widget's local row zero to its absolute terminal row.
+	// The buffer still spans the whole terminal so cursor movement is absolute.
+	area := uv.Rect(0, r.regionStart()-1, r.width, r.currentHeight)
+	uv.NewStyledString(content).Draw(r.frame, area)
+
+	// Ordinary log writes happen outside ultraviolet,
+	// so the diff renderer's cursor position is stale by the next frame.
+	r.diffRenderer.SetPosition(-1, -1)
+	r.diffRenderer.Render(r.frame.RenderBuffer)
+	r.diffRenderer.MoveTo(0, r.scrollBottom()-1)
+	_ = r.diffRenderer.Flush()
+}
+
+// rendererEnv builds the environment used for terminal capability detection.
+//
+// TERM is supplied by callers that need Bubble Tea and ultraviolet
+// to use the same terminal profile in tests or controlled renderers.
+func (r *renderer) rendererEnv() []string {
+	env := os.Environ()
+	if r.term != "" {
+		env = append(env, "TERM="+r.term)
+	}
+	return env
+}
+
 func (r *renderer) marginSequence() string {
 	// DECSTBM keeps ordinary log output scrolling above the reserved rows.
 	return ansi.SetTopBottomMargins(1, r.scrollBottom())
@@ -275,10 +345,23 @@ func (r *renderer) heightForLines(lines int) int {
 	return min(height, r.height-1)
 }
 
-func viewLines(content string) []string {
-	content = strings.TrimRight(content, "\n")
-	if content == "" {
-		return nil
+// truncateViewLines drops rows beyond the reserved height.
+//
+// The wrapped model still renders as if it owns the full reserved viewport,
+// but the terminal region may be capped by MaxHeight.
+func truncateViewLines(content string, lines int) string {
+	if lines <= 0 {
+		return ""
 	}
-	return strings.Split(content, "\n")
+	newlines := 0
+	for idx, ch := range content {
+		if ch != '\n' {
+			continue
+		}
+		newlines++
+		if newlines == lines {
+			return content[:idx]
+		}
+	}
+	return content
 }

@@ -47,6 +47,11 @@ type Options struct {
 	// This caps future model detail sections so log output keeps enough room.
 	MaxHeight int
 
+	// TERM overrides the terminal type used for capability detection.
+	//
+	// If empty, the renderer uses the process environment unchanged.
+	TERM string
+
 	// Signals receives terminal resize signals.
 	//
 	// If nil, a private stack is used for the lifetime of this model.
@@ -83,6 +88,7 @@ func New(model tea.Model, output io.Writer, opts *Options) *Model {
 		opts.Height,
 		opts.MinHeight,
 		opts.MaxHeight,
+		opts.TERM,
 	)
 	signals := opts.Signals
 	if signals == nil {
