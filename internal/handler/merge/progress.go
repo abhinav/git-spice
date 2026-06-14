@@ -49,6 +49,9 @@ const (
 	mergeProgressWaitingForMerge                                // waiting for merged state
 	mergeProgressMergeIncomplete                                // merged state did not appear
 	mergeProgressMerged                                         // merged state observed
+	mergeProgressSyncFailed                                     // trunk sync failed
+	mergeProgressFailed                                         // branch failed by scheduler policy
+	mergeProgressSkipped                                        // branch skipped by scheduler policy
 )
 
 // logMergeProgress reports merge progress through sparse log messages.
@@ -83,6 +86,8 @@ func (p *logMergeProgress) Event(event mergeProgressEvent) {
 			event.Item.branch, event.Item.changeID, event.URL)
 	case mergeProgressWaitingForMerge:
 		p.log.Debugf("%s: waiting for merge", event.Item.branch)
+	case mergeProgressSkipped:
+		p.log.Infof("%s: skipped", event.Item.branch)
 	}
 }
 
@@ -301,6 +306,23 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 			ItemID:  item.branch,
 			State:   mergeprogress.StateMerged,
 			Message: item.branch + ": merged",
+		}
+	case mergeProgressSyncFailed:
+		return mergeprogress.Event{
+			ItemID:  item.branch,
+			State:   mergeprogress.StateFailed,
+			Message: item.branch + ": sync failed",
+		}
+	case mergeProgressFailed:
+		return mergeprogress.Event{
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
+		}
+	case mergeProgressSkipped:
+		return mergeprogress.Event{
+			ItemID:  item.branch,
+			State:   mergeprogress.StateSkipped,
+			Message: item.branch + ": skipped",
 		}
 	default:
 		panic(fmt.Sprintf("unknown merge progress event kind: %d",

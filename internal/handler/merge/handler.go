@@ -180,12 +180,17 @@ func (h *Handler) MergeBranch(
 
 // mergeItem is one queue item in a downstack merge plan.
 //
-// buildPlan fills branch, changeID, and upstreamBranch from the branch graph.
-// validateSynced later fills headHash after it verifies the local branch
-// matches its upstream ref.
+// buildPlan fills branch, base, changeID, and upstreamBranch
+// from the branch graph.
+// validateSynced later fills headHash after it verifies
+// the local branch matches its upstream ref.
 type mergeItem struct {
 	// branch is the local branch to merge.
 	branch string
+
+	// base is the configured base branch observed
+	// when the plan was built.
+	base string
 
 	// changeID identifies the forge Change Request to merge.
 	changeID forge.ChangeID
@@ -236,6 +241,7 @@ func (h *Handler) buildPlan(
 
 		item := &mergeItem{
 			branch:         name,
+			base:           branch.Base,
 			changeID:       branch.Change.ChangeID(),
 			upstreamBranch: branch.UpstreamBranch,
 		}
@@ -448,150 +454,12 @@ func (h *Handler) executePlan(
 		BuildTimeout: opts.BuildTimeout,
 		Method:       opts.Method,
 		NoWait:       opts.NoWait,
-	}).execute(ctx, plan)
+	}).Execute(ctx, plan)
 	if err != nil {
 		return err
 	}
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
-	return nil
-}
-
-// mergePlanExecutor runs the merge loop after preflight checks complete.
-//
-// It intentionally has no logger.
-// Merge-loop status must be reported through progress events
-// so terminal and non-terminal output stay in one policy boundary.
-type mergePlanExecutor struct {
-	RemoteRepository forge.Repository // required
-	Repository       GitRepository    // required
-
-	Service Service        // required
-	Restack RestackHandler // required
-	Submit  SubmitHandler  // required
-	Sync    SyncHandler    // required
-
-	Progress mergeProgress // required
-
-	Trunk        string            // required
-	BuildTimeout time.Duration     // required
-	Method       forge.MergeMethod // required
-	NoWait       bool
-}
-
-func (e *mergePlanExecutor) execute(
-	ctx context.Context, plan []*mergeItem,
-) error {
-	for i, item := range plan {
-		// After each lower branch merges,
-		// prepare the next branch on top of updated trunk state.
-		if i > 0 {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressPreparing,
-				Item: item,
-			})
-			if err := e.prepareForMerge(ctx, item); err != nil {
-				e.Progress.Event(mergeProgressEvent{
-					Kind: mergeProgressPrepareFailed,
-					Item: item,
-				})
-				return fmt.Errorf("prepare %q: %w", item.branch, err)
-			}
-		}
-
-		// The forge will only merge a change that targets trunk.
-		// Re-check immediately before each merge because prior queue items
-		// and repo sync may have changed the server-side base.
-		change, err := e.ensureTargetsTrunk(ctx, item)
-		if err != nil {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressRetargetFailed,
-				Item: item,
-			})
-			return fmt.Errorf(
-				"ensure %q targets trunk: %w",
-				item.branch, err,
-			)
-		}
-
-		// CI is checked after retargeting and restacking
-		// so each merge waits on the exact change being merged.
-		if err := e.awaitChangeHead(ctx, item, change); err != nil {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressChecksFailed,
-				Item: item,
-			})
-			return fmt.Errorf(
-				"wait for pushed head on %q: %w",
-				item.branch, err,
-			)
-		}
-		if err := e.awaitChecks(ctx, item); err != nil {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressChecksFailed,
-				Item: item,
-			})
-			return fmt.Errorf(
-				"wait for checks on %q: %w",
-				item.branch, err,
-			)
-		}
-
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressMerging,
-			Item: item,
-			URL:  change.URL,
-		})
-		if err := e.RemoteRepository.MergeChange(
-			ctx, item.changeID,
-			forge.MergeChangeOptions{
-				Method:   e.Method,
-				HeadHash: item.headHash,
-			},
-		); err != nil {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressMergeFailed,
-				Item: item,
-			})
-			return fmt.Errorf("merge %q: %w", item.branch, err)
-		}
-
-		if e.NoWait {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressMergeRequested,
-				Item: item,
-			})
-			continue
-		}
-
-		// Wait until the forge reports the merge.
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressWaitingForMerge,
-			Item: item,
-		})
-		if err := e.awaitMerged(ctx, item); err != nil {
-			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressMergeIncomplete,
-				Item: item,
-			})
-			return fmt.Errorf("await merge of %q: %w",
-				item.branch, err)
-		}
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressMerged,
-			Item: item,
-		})
-
-		// SyncTrunk updates trunk,
-		// deletes merged branches,
-		// and retargets their upstacks.
-		if err := e.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
-			ClosedChanges: sync.ClosedChangesIgnore,
-		}); err != nil {
-			return fmt.Errorf("sync trunk: %w", err)
-		}
-	}
-
 	return nil
 }
 
