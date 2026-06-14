@@ -296,11 +296,11 @@ func TestExecutePlan_retargets(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	plan := []*mergeItem{
+	plan := testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
 		{branch: "feat2", changeID: pr2},
 		{branch: "feat3", changeID: pr3},
-	}
+	})
 
 	err := h.executePlan(t.Context(), plan, mergeExecutionOptions{})
 	require.NoError(t, err)
@@ -391,10 +391,10 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 		sync:      mockSync,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1, headHash: git.Hash("head1")},
 		{branch: "feat2", changeID: pr2, headHash: git.Hash("old-head2")},
-	}, mergeExecutionOptions{})
+	}), mergeExecutionOptions{})
 	require.NoError(t, err)
 }
 
@@ -422,9 +422,9 @@ func TestExecutePlan_noWait(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	plan := []*mergeItem{
+	plan := testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}
+	})
 
 	err := h.executePlan(t.Context(), plan, mergeExecutionOptions{
 		NoWait: true,
@@ -464,9 +464,9 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 		sync:      mockSync,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, mergeExecutionOptions{})
+	}), mergeExecutionOptions{})
 	require.NoError(t, err)
 }
 
@@ -574,9 +574,9 @@ func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 		sync:      mockSync,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, mergeExecutionOptions{})
+	}), mergeExecutionOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sync trunk")
 }
@@ -608,13 +608,13 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 		store:     mockStore,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{
 			branch:   "feat1",
 			changeID: pr1,
 			headHash: git.Hash("head1"),
 		},
-	}, mergeExecutionOptions{
+	}), mergeExecutionOptions{
 		Method: forge.MergeMethodSquash,
 		NoWait: true,
 	})
@@ -656,9 +656,9 @@ func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, mergeExecutionOptions{})
+	}), mergeExecutionOptions{})
 	require.NoError(t, err)
 
 	output := logBuffer.String()
@@ -695,9 +695,9 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 		logBuffer: &logBuffer,
 	})
 
-	err := h.executePlan(t.Context(), []*mergeItem{
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
 		{branch: "feat1", changeID: pr1},
-	}, mergeExecutionOptions{})
+	}), mergeExecutionOptions{})
 	require.NoError(t, err)
 
 	assert.NotContains(t,
@@ -1004,6 +1004,16 @@ func newTestMergePlanExecutor(
 		BuildTimeout: 30 * time.Minute,
 		Method:       forge.MergeMethodDefault,
 	}
+}
+
+func testMergePlan(items []*mergeItem) []*mergeItem {
+	for idx, item := range items {
+		item.base = "main"
+		if idx > 0 {
+			item.base = items[idx-1].branch
+		}
+	}
+	return items
 }
 
 func testForgeRepo(
