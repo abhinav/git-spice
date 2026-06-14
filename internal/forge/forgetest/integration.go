@@ -225,15 +225,14 @@ type (
 		changeID forge.ChangeID,
 	)
 
-	// SetChangeChecksStateFunc sets the aggregate checks state
-	// that a forge reports for a change.
-	SetChangeChecksStateFunc func(
+	// SetChangeCheckFunc sets a synthetic check for a change.
+	SetChangeCheckFunc func(
 		t *testing.T,
 		httpClient *http.Client,
 		repo forge.Repository,
 		changeID forge.ChangeID,
 		headHash git.Hash,
-		state forge.ChecksState,
+		check forge.ChangeCheck,
 	)
 )
 
@@ -264,8 +263,8 @@ type IntegrationConfig struct {
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc // required
 
-	// SetChangeChecksState sets checks state for a change.
-	SetChangeChecksState SetChangeChecksStateFunc // optional
+	// SetChangeCheck sets a synthetic check for a change.
+	SetChangeCheck SetChangeCheckFunc // optional
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string // required
@@ -348,7 +347,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		openRepository:        config.OpenRepository,
 		MergeChange:           mergeChange,
 		CloseChange:           config.CloseChange,
-		SetChangeChecksState:  config.SetChangeChecksState,
+		SetChangeCheck:        config.SetChangeCheck,
 		Reviewers:             config.Reviewers,
 		Assignees:             config.Assignees,
 		SetCommentsPageSize:   config.SetCommentsPageSize,
@@ -388,11 +387,13 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		})
 	}
 
-	if config.SetChangeChecksState != nil {
+	if config.SetChangeCheck != nil {
+		// Keep the pre-rename subtest name so existing VCR fixture paths
+		// remain valid until the fixtures are re-recorded.
 		t.Run("ChangeChecksState", func(t *testing.T) {
 			t.Parallel()
 
-			suite.TestChangeChecksState(t)
+			suite.TestChangeChecks(t)
 		})
 	}
 
@@ -487,8 +488,8 @@ type integrationSuite struct {
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc
 
-	// SetChangeChecksState sets checks state for a change.
-	SetChangeChecksState SetChangeChecksStateFunc
+	// SetChangeCheck sets a synthetic check for a change.
+	SetChangeCheck SetChangeCheckFunc
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string
@@ -830,16 +831,34 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 	assert.NotEmpty(t, statuses[2].HeadHash)
 }
 
-// TestChangeChecksState verifies that forges report aggregate checks state
+// TestChangeChecks verifies that forges report checks
 // for newly submitted changes.
-func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
+func (s *integrationSuite) TestChangeChecks(t *testing.T) {
 	tests := []struct {
 		name string
-		want forge.ChecksState
+		want forge.ChangeCheck
 	}{
-		{name: "Pending", want: forge.ChecksPending},
-		{name: "Passed", want: forge.ChecksPassed},
-		{name: "Failed", want: forge.ChecksFailed},
+		{
+			name: "Pending",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration pending",
+				State: forge.ChangeCheckPending,
+			},
+		},
+		{
+			name: "Passed",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration passed",
+				State: forge.ChangeCheckPassed,
+			},
+		},
+		{
+			name: "Failed",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration failed",
+				State: forge.ChangeCheckFailed,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -880,7 +899,7 @@ func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
 			})
 			require.NoError(t, err, "error creating change")
 
-			s.SetChangeChecksState(
+			s.SetChangeCheck(
 				t,
 				httpClient,
 				repo,
@@ -889,9 +908,9 @@ func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
 				tt.want,
 			)
 
-			got, err := repo.ChangeChecksState(t.Context(), change.ID)
+			got, err := repo.ChangeChecks(t.Context(), change.ID)
 			require.NoError(t, err, "error fetching checks")
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, []forge.ChangeCheck{tt.want}, got)
 		})
 	}
 }

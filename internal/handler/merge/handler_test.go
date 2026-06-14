@@ -101,10 +101,10 @@ func TestAwaitChecks_passed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksState(
+		ChangeChecks(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(forge.ChecksPassed, nil)
+		Return(checks(forge.ChangeCheckPassed), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -127,10 +127,10 @@ func TestAwaitChecks_failed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksState(
+		ChangeChecks(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(forge.ChecksFailed, nil)
+		Return(checks(forge.ChangeCheckFailed), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -154,10 +154,10 @@ func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecksState(
+		ChangeChecks(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(forge.ChecksPending, nil)
+		Return(checks(forge.ChangeCheckPending), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -183,15 +183,15 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	first := mockRepo.EXPECT().
-		ChangeChecksState(
+		ChangeChecks(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(forge.ChecksPending, nil)
+		Return(checks(forge.ChangeCheckPending), nil)
 	mockRepo.EXPECT().
-		ChangeChecksState(
+		ChangeChecks(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(forge.ChecksPassed, nil).
+		Return(checks(forge.ChangeCheckPassed), nil).
 		After(first.Call)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -214,6 +214,25 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 		2*time.Millisecond, // max delay
 	)
 	require.NoError(t, err)
+}
+
+func TestCheckState_allObservedChecksGateReadiness(t *testing.T) {
+	assert.Equal(t, mergeChecksPassed, checkState([]forge.ChangeCheck{
+		{Name: "build", State: forge.ChangeCheckPassed},
+		{Name: "lint", State: forge.ChangeCheckPassed},
+	}))
+	assert.Equal(t, mergeChecksFailed, checkState([]forge.ChangeCheck{
+		{Name: "build", State: forge.ChangeCheckPassed},
+		{Name: "lint", State: forge.ChangeCheckFailed},
+	}))
+	assert.Equal(t, mergeChecksPending, checkState([]forge.ChangeCheck{
+		{Name: "build", State: forge.ChangeCheckPassed},
+		{Name: "lint", State: forge.ChangeCheckPending},
+	}))
+	assert.Equal(t, mergeChecksFailed, checkState([]forge.ChangeCheck{
+		{Name: "build", State: forge.ChangeCheckPending},
+		{Name: "lint", State: forge.ChangeCheckFailed},
+	}))
 }
 
 func TestExecutePlan_retargets(t *testing.T) {
@@ -364,8 +383,8 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 			HeadHash: git.Hash("new-head2"),
 		}}, nil)
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), pr2).
-		Return(forge.ChecksPassed, nil).
+		ChangeChecks(gomock.Any(), pr2).
+		Return(checks(forge.ChangeCheckPassed), nil).
 		After(status.Call)
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), pr2, forge.MergeChangeOptions{
@@ -695,8 +714,8 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), pr2).
-		Return(forge.ChecksFailed, nil)
+		ChangeChecks(gomock.Any(), pr2).
+		Return(checks(forge.ChangeCheckFailed), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
@@ -762,8 +781,8 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResultWithHead("main", "head1"), nil)
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), pr1).
-		Return(forge.ChecksPassed, nil)
+		ChangeChecks(gomock.Any(), pr1).
+		Return(checks(forge.ChangeCheckPassed), nil)
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), pr1, forge.MergeChangeOptions{
 			Method:   forge.MergeMethodSquash,
@@ -1354,8 +1373,8 @@ func expectPreparedNext(
 	t.Helper()
 
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), id).
-		Return(forge.ChecksPassed, nil)
+		ChangeChecks(gomock.Any(), id).
+		Return(checks(forge.ChangeCheckPassed), nil)
 }
 
 func assertSubmitUpdate(
@@ -1381,10 +1400,17 @@ func expectChecksAndMerge(
 	id fakeChangeID,
 ) {
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), id).
-		Return(forge.ChecksPassed, nil)
+		ChangeChecks(gomock.Any(), id).
+		Return(checks(forge.ChangeCheckPassed), nil)
 
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), id, gomock.Any()).
 		Return(nil)
+}
+
+func checks(state forge.ChangeCheckState) []forge.ChangeCheck {
+	return []forge.ChangeCheck{{
+		Name:  "test",
+		State: state,
+	}}
 }

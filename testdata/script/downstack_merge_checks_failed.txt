@@ -25,7 +25,7 @@ gs bc feature1 -m 'Add feature 1'
 # submit the branch and mark its checks failed
 gs downstack submit --fill
 stderr 'Created #1'
-shamhub set-status alice/example 1 failed
+shamhub set-status --name 'unit tests' alice/example 1 failed
 
 # downstack merge should stop before sending the merge request.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
