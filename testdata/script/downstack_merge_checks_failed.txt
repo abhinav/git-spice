@@ -45,7 +45,7 @@ This is feature 1
 >   feature1 (#1)
 true
 -- golden/merge-stderr.txt --
-FTL gs: wait for checks on "feature1": CI checks failed for "feature1"
+FTL gs: merge queue item "feature1": wait for checks: CI checks failed
 -- golden/change-1.json --
 {
   "number": 1,

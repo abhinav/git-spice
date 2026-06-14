@@ -86,7 +86,7 @@ func (e *mergePlanExecutor) Merge(ctx context.Context, item *mergeItem) error {
 				Kind: mergeProgressPrepareFailed,
 				Item: item,
 			})
-			return fmt.Errorf("prepare %q: %w", item.branch, err)
+			return fmt.Errorf("prepare: %w", err)
 		}
 	}
 	return e.mergeOne(ctx, item)
@@ -105,10 +105,7 @@ func (e *mergePlanExecutor) mergeOne(
 			Kind: mergeProgressRetargetFailed,
 			Item: item,
 		})
-		return fmt.Errorf(
-			"ensure %q targets trunk: %w",
-			item.branch, err,
-		)
+		return fmt.Errorf("ensure targets trunk: %w", err)
 	}
 
 	// CI is checked after retargeting and restacking
@@ -118,20 +115,14 @@ func (e *mergePlanExecutor) mergeOne(
 			Kind: mergeProgressChecksFailed,
 			Item: item,
 		})
-		return fmt.Errorf(
-			"wait for pushed head on %q: %w",
-			item.branch, err,
-		)
+		return fmt.Errorf("wait for pushed head: %w", err)
 	}
 	if err := e.awaitChecks(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressChecksFailed,
 			Item: item,
 		})
-		return fmt.Errorf(
-			"wait for checks on %q: %w",
-			item.branch, err,
-		)
+		return fmt.Errorf("wait for checks: %w", err)
 	}
 
 	e.Progress.Event(mergeProgressEvent{
@@ -150,7 +141,7 @@ func (e *mergePlanExecutor) mergeOne(
 			Kind: mergeProgressMergeFailed,
 			Item: item,
 		})
-		return fmt.Errorf("merge %q: %w", item.branch, err)
+		return fmt.Errorf("merge: %w", err)
 	}
 
 	if e.NoWait {
@@ -171,7 +162,7 @@ func (e *mergePlanExecutor) mergeOne(
 			Kind: mergeProgressMergeIncomplete,
 			Item: item,
 		})
-		return fmt.Errorf("await merge of %q: %w", item.branch, err)
+		return fmt.Errorf("await merge: %w", err)
 	}
 	e.Progress.Event(mergeProgressEvent{
 		Kind: mergeProgressMerged,

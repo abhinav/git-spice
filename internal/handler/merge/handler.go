@@ -589,8 +589,8 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 
 		if timeout == 0 {
 			return fmt.Errorf(
-				"change head for %q is still %s, want %s",
-				item.branch, statuses[0].HeadHash, item.headHash,
+				"change head is still %s, want %s",
+				statuses[0].HeadHash, item.headHash,
 			)
 		}
 		if attempt == 0 {
@@ -604,10 +604,7 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 			Item: item,
 		})
 		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for forge head on %q",
-				item.branch,
-			)
+			return errors.New("timed out waiting for forge head")
 		}
 		delay = min(delay*2, maxDelay)
 	}
@@ -650,16 +647,11 @@ func (e *mergePlanExecutor) awaitChecksWithDelay(
 			return nil
 		}
 		if state == forge.ChecksFailed {
-			return fmt.Errorf(
-				"CI checks failed for %q", item.branch,
-			)
+			return errors.New("CI checks failed")
 		}
 
 		if timeout == 0 {
-			return fmt.Errorf(
-				"CI checks pending for %q (build-timeout=0)",
-				item.branch,
-			)
+			return errors.New("CI checks pending (build-timeout=0)")
 		}
 		if attempt == 0 {
 			var cancel context.CancelFunc
@@ -672,10 +664,7 @@ func (e *mergePlanExecutor) awaitChecksWithDelay(
 			Item: item,
 		})
 		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for CI on %q",
-				item.branch,
-			)
+			return errors.New("timed out waiting for CI")
 		}
 		delay = min(delay*2, maxDelay)
 	}
@@ -691,9 +680,7 @@ func (e *mergePlanExecutor) ensureTargetsTrunk(
 		ctx, item.changeID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"check base of %q: %w", item.branch, err,
-		)
+		return nil, fmt.Errorf("check base: %w", err)
 	}
 
 	if change.BaseName == e.Trunk {
@@ -742,10 +729,7 @@ func (e *mergePlanExecutor) awaitMerged(
 			Item: item,
 		})
 		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for %q to merge",
-				item.branch,
-			)
+			return errors.New("timed out waiting for merge")
 		}
 
 		delay = min(delay*2, _maxDelay)
@@ -766,8 +750,7 @@ func (e *mergePlanExecutor) retargetChange(
 		forge.EditChangeOptions{Base: e.Trunk},
 	)
 	if err != nil {
-		return fmt.Errorf("retarget %q to %q: %w",
-			item.branch, e.Trunk, err)
+		return fmt.Errorf("retarget to %q: %w", e.Trunk, err)
 	}
 	return nil
 }
