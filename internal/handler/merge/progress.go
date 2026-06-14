@@ -192,7 +192,7 @@ type mergeProgressModel struct {
 }
 
 func (m *mergeProgressModel) Init() tea.Cmd {
-	return waitMergeProgressEvent(m.events)
+	return tea.Batch(m.Widget.Init(), waitMergeProgressEvent(m.events))
 }
 
 func (m *mergeProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
