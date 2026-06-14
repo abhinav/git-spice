@@ -615,11 +615,11 @@ when you don't want to wait for the merge to propagate.
 
 **Flags**
 
-* `--branch=NAME`: Branch to start merging from
-* `--no-wait`: Skip polling for a single branch merge to propagate.
-* `--no-branch-check`: Skip stale base validation before merging.
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--no-wait`: Skip polling for a single branch merge to propagate.
+* `--no-branch-check`: Skip stale base validation before merging.
+* `--branch=NAME`: Branch to start merging from
 
 **Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
@@ -1074,6 +1074,33 @@ Use --branch to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to diff
+
+### git-spice branch merge {#gs-branch-merge}
+
+```
+gs branch (b) merge (m) [flags]
+```
+
+<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
+
+Merge a branch into trunk
+
+Merges the CR for the current branch into trunk.
+Use --branch to merge a different branch.
+
+The branch must be based directly on trunk.
+To merge a stacked branch, use 'gs downstack merge'.
+
+Before merging, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait.
+
+**Flags**
+
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--branch=NAME`: Branch to merge
+
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice branch submit {#gs-branch-submit}
 

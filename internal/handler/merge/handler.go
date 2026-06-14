@@ -1,7 +1,8 @@
-// Package merge implements the downstack merge command.
+// Package merge implements forge-backed merge commands.
 package merge
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -58,25 +59,47 @@ type GitRepository interface {
 	) (ahead, behind int, err error)
 }
 
-// Request is a request to merge a branch and its downstack.
-type Request struct {
-	Branch string // required
-
-	// NoWait skips polling for the merge to propagate.
-	// Server-dependent cleanup is left to a later sync.
-	NoWait bool
-
-	// NoBranchCheck skips stale base validation.
-	NoBranchCheck bool
-
+// Options controls behavior shared by forge-backed merge commands.
+type Options struct {
 	// Method selects the forge merge strategy.
-	// Empty means use the forge default.
-	Method forge.MergeMethod
+	// Empty means use the configured or forge default.
+	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
 
 	// BuildTimeout is the maximum time to wait
-	// for CI checks to pass before each merge.
-	// Zero means check once and fail if not ready.
-	BuildTimeout time.Duration
+	// for CI checks before each merge attempt.
+	// Zero means check once and fail if CI is not ready.
+	BuildTimeout time.Duration `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
+}
+
+// DownstackMergeOptions controls downstack merge behavior.
+type DownstackMergeOptions struct {
+	Options
+
+	// NoWait skips polling for a single merge to propagate.
+	// Server-dependent cleanup is left to a later sync.
+	NoWait bool `help:"Skip polling for a single branch merge to propagate."`
+
+	// NoBranchCheck skips stale base validation before merging.
+	NoBranchCheck bool `help:"Skip stale base validation before merging."`
+}
+
+// DownstackMergeRequest asks Handler to merge a branch
+// and its downstack ancestors bottom-up.
+type DownstackMergeRequest struct {
+	Branch string // required
+
+	Options *DownstackMergeOptions // optional
+
+	// BranchGraph reuses branch graph data already loaded by the caller.
+	BranchGraph *spice.BranchGraph // optional
+}
+
+// BranchMergeRequest asks Handler to merge one branch
+// that is configured directly on trunk.
+type BranchMergeRequest struct {
+	Branch string // required
+
+	Options *Options // optional
 }
 
 // Handler merges change requests via the forge API.
@@ -98,8 +121,9 @@ type Handler struct {
 // MergeDownstack merges the given branch
 // and all its downstack ancestors bottom-up.
 func (h *Handler) MergeDownstack(
-	ctx context.Context, req *Request,
+	ctx context.Context, req *DownstackMergeRequest,
 ) error {
+	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
 	plan, err := h.buildPlan(ctx, req)
 	if err != nil {
 		return err
@@ -114,7 +138,44 @@ func (h *Handler) MergeDownstack(
 		return err
 	}
 
-	return h.executePlan(ctx, plan, req)
+	return h.executePlan(ctx, plan, mergeExecutionOptions{
+		Method:       opts.Method,
+		BuildTimeout: opts.BuildTimeout,
+		NoWait:       opts.NoWait,
+	})
+}
+
+// MergeBranch merges one branch that is configured directly on trunk.
+func (h *Handler) MergeBranch(
+	ctx context.Context, req *BranchMergeRequest,
+) error {
+	opts := cmp.Or(req.Options, &Options{})
+	graph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	branch, ok := graph.Lookup(req.Branch)
+	if !ok {
+		return fmt.Errorf("branch %q is not tracked", req.Branch)
+	}
+	trunk := h.Store.Trunk()
+	if branch.Base != trunk {
+		return fmt.Errorf(
+			"branch %q is based on %q, not trunk; "+
+				"use 'gs downstack merge --branch %s' "+
+				"to merge stack branches bottom-up",
+			req.Branch, branch.Base, req.Branch,
+		)
+	}
+
+	return h.MergeDownstack(ctx, &DownstackMergeRequest{
+		Branch: req.Branch,
+		Options: &DownstackMergeOptions{
+			Options: *opts,
+		},
+		BranchGraph: graph,
+	})
 }
 
 // mergeItem is one queue item in a downstack merge plan.
@@ -142,11 +203,16 @@ type mergeItem struct {
 // contains only open Change Requests,
 // and has local push-safety metadata ready for execution.
 func (h *Handler) buildPlan(
-	ctx context.Context, req *Request,
+	ctx context.Context, req *DownstackMergeRequest,
 ) ([]*mergeItem, error) {
-	graph, err := h.Service.BranchGraph(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build branch graph: %w", err)
+	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
+	graph := req.BranchGraph
+	if graph == nil {
+		var err error
+		graph, err = h.Service.BranchGraph(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("build branch graph: %w", err)
+		}
 	}
 
 	// Build the queue bottom-up because each merge changes
@@ -200,7 +266,7 @@ func (h *Handler) buildPlan(
 		}
 	}
 
-	if req.NoWait && len(plan) > 1 {
+	if opts.NoWait && len(plan) > 1 {
 		return nil, fmt.Errorf(
 			"--no-wait can merge only one branch; "+
 				"got %d branches",
@@ -212,7 +278,7 @@ func (h *Handler) buildPlan(
 		return nil, fmt.Errorf("validate branch sync: %w", err)
 	}
 
-	if !req.NoBranchCheck {
+	if !opts.NoBranchCheck {
 		if err := h.validateFreshBases(ctx, graph, req.Branch); err != nil {
 			return nil, fmt.Errorf("validate stale bases: %w", err)
 		}
@@ -342,8 +408,16 @@ func (h *Handler) confirm(plan []*mergeItem) error {
 	return nil
 }
 
+type mergeExecutionOptions struct {
+	Method       forge.MergeMethod
+	BuildTimeout time.Duration
+	NoWait       bool
+}
+
 func (h *Handler) executePlan(
-	ctx context.Context, plan []*mergeItem, req *Request,
+	ctx context.Context,
+	plan []*mergeItem,
+	opts mergeExecutionOptions,
 ) (err error) {
 	var progress mergeProgress
 	if runner, ok := h.View.(ui.ModelView); ok {
@@ -371,9 +445,9 @@ func (h *Handler) executePlan(
 		Progress: progress,
 
 		Trunk:        h.Store.Trunk(),
-		BuildTimeout: req.BuildTimeout,
-		Method:       req.Method,
-		NoWait:       req.NoWait,
+		BuildTimeout: opts.BuildTimeout,
+		Method:       opts.Method,
+		NoWait:       opts.NoWait,
 	}).execute(ctx, plan)
 	if err != nil {
 		return err

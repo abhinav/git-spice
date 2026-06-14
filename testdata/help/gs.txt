@@ -58,6 +58,7 @@ Branch
   branch (b) restack (r)       Restack a branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
+  branch (b) merge (m)         Merge a branch into trunk
   branch (b) submit (s)        Submit a branch
 
 Commit

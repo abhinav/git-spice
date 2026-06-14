@@ -1,0 +1,73 @@
+# 'branch merge --branch' refuses to merge when CI checks failed.
+
+as 'Test <test@example.com>'
+at '2026-06-13T18:29:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch and mark its checks failed
+gs branch submit --fill
+stderr 'Created #1'
+shamhub set-status alice/example 1 failed
+
+# branch merge should stop before sending the merge request.
+gs trunk
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs branch merge --branch feature1
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+cmp stderr $WORK/golden/merge-stderr.txt
+
+# The change remains open because it was never merged.
+shamhub dump change 1
+cmpenvJSON stdout $WORK/golden/change-1.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/merge-stderr.txt --
+FTL gs: wait for checks on "feature1": CI checks failed for "feature1"
+-- golden/change-1.json --
+{
+  "number": 1,
+  "html_url": "$SHAMHUB_URL/alice/example/change/1",
+  "state": "open",
+  "title": "Add feature 1",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "fd0c8194fd8dbdd59644d28e87c4be2550429197"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature1",
+    "sha": "62c3c4e12506afae52cd50383886ea7a815700c3"
+  }
+}
