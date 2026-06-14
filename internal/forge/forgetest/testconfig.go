@@ -19,6 +19,7 @@ type TestConfig struct {
 	GitHub    ForgeConfig `yaml:"github"`
 	GitLab    ForgeConfig `yaml:"gitlab"`
 	Bitbucket ForgeConfig `yaml:"bitbucket"`
+	Forgejo   ForgeConfig `yaml:"forgejo"`
 }
 
 // ForgeConfig holds per-forge test configuration.
@@ -80,6 +81,7 @@ func canonicalConfig() *TestConfig {
 		GitHub:    CanonicalGitHubConfig(),
 		GitLab:    CanonicalGitLabConfig(),
 		Bitbucket: CanonicalBitbucketConfig(),
+		Forgejo:   CanonicalForgejoConfig(),
 	}
 }
 
@@ -122,6 +124,18 @@ func CanonicalBitbucketConfig() ForgeConfig {
 		ForkRepo:  "test-fork-repo",
 		Reviewer:  "Test Reviewer",
 		Assignee:  "",
+	}
+}
+
+// CanonicalForgejoConfig returns canonical placeholders for Forgejo fixtures.
+func CanonicalForgejoConfig() ForgeConfig {
+	return ForgeConfig{
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalRepo,
+		ForkOwner: "test-fork-owner",
+		ForkRepo:  "test-fork-repo",
+		Reviewer:  "test-reviewer",
+		Assignee:  "test-assignee",
 	}
 }
 

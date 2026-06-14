@@ -14,7 +14,8 @@
 git-spice is a tool for stacking Git branches.
 It lets you manage and navigate stacks of branches,
 conveniently modify and rebase them,
-and create GitHub Pull Requests or GitLab Merge Requests from them.
+and create GitHub, Bitbucket, or Forgejo Pull Requests
+or GitLab Merge Requests from them.
 
 See <https://abhinav.github.io/git-spice/> for more details.
 
@@ -52,7 +53,7 @@ $ gs sr        # stack restack
 
 - Create, edit, and navigate stacks of branches with ease.
 - Submit the entire stack or parts of it with a single command.
-  Supports GitHub, GitLab, and BitBucket.
+  Supports GitHub, GitLab, Bitbucket, and Forgejo hosts such as Codeberg.
 - Keep using your existing workflow and adopt git-spice incrementally.
 - Completely offline operation with no external dependencies
   until you push or pull from a remote repository.
