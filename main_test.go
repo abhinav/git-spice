@@ -13,6 +13,7 @@ import (
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/secret/secrettest"
+	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/termtest"
 	"go.abhg.dev/gs/internal/ui"
@@ -50,7 +51,12 @@ func TestMain(m *testing.M) {
 			// If ROBOT_INPUT is set, install a uitest.RobotView
 			// instead of the normal view. This will always be interactive.
 			if fixtureFile := os.Getenv("ROBOT_INPUT"); fixtureFile != "" {
-				_buildView = func(_ io.Reader, stderr io.Writer, _ bool) (ui.View, error) {
+				_buildView = func(
+					_ io.Reader,
+					stderr io.Writer,
+					_ bool,
+					_ *sigstack.Stack,
+				) (ui.View, error) {
 					return uitest.NewRobotView(
 						fixtureFile,
 						&uitest.RobotViewOptions{

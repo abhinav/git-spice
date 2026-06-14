@@ -336,7 +336,12 @@ type forgeOptions struct {
 	Kind string `name:"forge-kind" hidden:"" config:"forge.kind" env:"GIT_SPICE_FORGE_KIND" configHelp:"-" help:"Forge kind to use when remote URLs do not identify a supported Git host."`
 }
 
-func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *silog.Logger) error {
+func (cmd *mainCmd) AfterApply(
+	ctx context.Context,
+	kctx *kong.Context,
+	logger *silog.Logger,
+	signals *sigstack.Stack,
+) error {
 	if cmd.Globals.Verbose {
 		logger.SetLevel(silog.LevelDebug)
 	}
@@ -352,7 +357,7 @@ func (cmd *mainCmd) AfterApply(ctx context.Context, kctx *kong.Context, logger *
 		}
 	}
 
-	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt)
+	view, err := _buildView(os.Stdin, kctx.Stderr, cmd.Globals.Prompt, signals)
 	if err != nil {
 		return fmt.Errorf("build view: %w", err)
 	}
@@ -706,9 +711,14 @@ type AutostashHandler interface {
 
 var _ AutostashHandler = (*autostash.Handler)(nil)
 
-var _buildView = func(stdin io.Reader, stderr io.Writer, interactive bool) (ui.View, error) {
+var _buildView = func(
+	stdin io.Reader,
+	stderr io.Writer,
+	interactive bool,
+	signals *sigstack.Stack,
+) (ui.View, error) {
 	if interactive {
-		return ui.NewTerminalView(stdin, stderr), nil
+		return ui.NewTerminalView(stdin, stderr).WithSignals(signals), nil
 	}
 	return ui.NewFileView(stderr), nil
 }

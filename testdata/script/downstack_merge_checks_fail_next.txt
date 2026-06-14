@@ -63,7 +63,7 @@ INF feature1: deleted (was dc8aa3d)
 INF feature2: retargeting #2 onto main...
 INF feature2: restacked on main
 INF Updated #2: $SHAMHUB_URL/alice/example/change/2
-FTL gs: wait for checks on "feature2": CI checks failed for "feature2"
+FTL gs: merge queue item "feature2": wait for checks: CI checks failed
 -- golden/change-1.json --
 {
   "number": 1,

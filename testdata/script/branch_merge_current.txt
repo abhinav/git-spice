@@ -1,0 +1,48 @@
+# 'branch merge' merges the current branch into trunk.
+
+as 'Test <test@example.com>'
+at '2026-06-13T18:29:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch
+gs branch submit --fill
+stderr 'Created #1'
+
+# merge the current branch
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature1: #1 was merged'
+stderr 'All 1 change.s. merged.'
+
+# verify the change is now merged
+shamhub dump changes
+stdout '"merged": true'
+! stdout '"state": "open"'
+
+-- repo/feature1.txt --
+This is feature 1
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true

@@ -754,13 +754,16 @@ func (h *Handler) findForgeFinishedBranches(
 		}
 	}
 	sort.Strings(mergedBranchNames)
-	topoBranches := graph.Toposort(mergedBranchNames,
+	topoBranches, err := graph.Toposort(mergedBranchNames,
 		func(name string) (string, bool) {
 			base := finishedBranches[name].Base
 			// Ordering matters only if the base was also merged.
 			baseBranch, ok := finishedBranches[base]
 			return base, ok && baseBranch.Merged
 		})
+	if err != nil {
+		must.Failf("sort merged branches: %v", err)
+	}
 
 	// For each merged branch, bubble up merged downstacks
 	// to their direct upstacks.
