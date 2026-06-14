@@ -47,10 +47,10 @@ Each supported service supports different authentication methods.
 
 - [OAuth](#oauth): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [GitHub App](#github-app): <!-- gs:badge:github -->
-- [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket -->
-- [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
+- [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
+- [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
 - [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
-- [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket -->
+- [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
 
 Read on for more details on each method,
 or skip on to [Pick an authentication method](#picking-an-authentication-method).
@@ -509,6 +509,38 @@ export GITLAB_OAUTH_CLIENT_ID=your-client-id
 ```
 
 Authenticate with $$gs auth login$$ as usual after that.
+
+### Gitea
+
+<!-- gs:version unreleased -->
+
+To use git-spice with a Gitea instance,
+set $$spice.forge.gitea.url$$ to the address of your Gitea instance.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.gitea.url{reset} {mag}https://gitea.example.com{reset}
+```
+
+Alternatively, set the configuration with the `GITEA_URL` environment variable.
+
+```freeze language="bash"
+export GITEA_URL=https://gitea.example.com
+```
+
+Then authenticate with $$gs auth login$$.
+Gitea supports Personal Access Tokens and Git Credential Manager:
+
+- **Personal Access Token**: Create one at
+  `{your Gitea instance}/user/settings/applications`.
+  Required scope: `repository`.
+- **Git Credential Manager**: If you already use GCM
+  for your Gitea instance, git-spice can reuse those credentials.
+
+Alternatively, set `GITEA_TOKEN` to skip the login flow:
+
+```freeze language="bash"
+export GITEA_TOKEN=your-gitea-token
+```
 
 ## Safety
 

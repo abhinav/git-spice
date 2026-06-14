@@ -215,7 +215,7 @@ the repository path.
 ```
 
 Accepted values are registered forge IDs,
-including `github`, `gitlab`, and `bitbucket`.
+including `github`, `gitlab`, `bitbucket`, and `gitea`.
 Test repositories may also use `shamhub`.
 
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
@@ -293,6 +293,32 @@ Whether to remove the source branch when a Merge Request is merged.
 
 - `true` (default)
 - `false`
+
+### spice.forge.gitea.apiURL
+
+<!-- gs:version unreleased -->
+
+URL at which the Gitea API is available.
+Defaults to `$GITEA_API_URL` if set,
+or the Gitea URL otherwise.
+
+See also [Gitea](../setup/auth.md#gitea).
+
+### spice.forge.gitea.url
+
+<!-- gs:version unreleased -->
+
+URL of the Gitea instance.
+Defaults to `$GITEA_URL` if set.
+
+Gitea is always self-hosted, so this value is required
+for git-spice to detect and connect to your instance.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.gitea.url{reset} {mag}https://gitea.example.com{reset}
+```
+
+See also [Gitea](../setup/auth.md#gitea).
 
 ### spice.git.indexLockTimeout
 

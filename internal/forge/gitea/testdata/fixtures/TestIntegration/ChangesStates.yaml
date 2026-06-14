@@ -1,0 +1,285 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 17.967208ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/user
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 534
+        body: |
+            {"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"}
+        headers:
+            Content-Length:
+                - "534"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 6.834333ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 78
+        host: 127.0.0.1:3000
+        body: '{"title":"Open tJyNZqRW","body":"Open change","head":"tJyNZqRW","base":"main"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":9,"url":"http://localhost:3000/test-owner/test-repo/pulls/9","number":9,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Open tJyNZqRW","body":"Open change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/9","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/9.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/9.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"tJyNZqRW","ref":"tJyNZqRW","sha":"7ed94ee5cfa9b28d59c3ac49f2ff38444bbf17c0","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:39Z","updated_at":"2026-06-13T19:31:39Z","closed_at":null,"pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 297.047ms
+    - id: 3
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 82
+        host: 127.0.0.1:3000
+        body: '{"title":"Merged jH1sfXvt","body":"Merged change","head":"jH1sfXvt","base":"main"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":11,"url":"http://localhost:3000/test-owner/test-repo/pulls/11","number":11,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Merged jH1sfXvt","body":"Merged change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/11","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/11.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/11.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"jH1sfXvt","ref":"jH1sfXvt","sha":"d9e6287ca35eb835dd9c50235c80645e2cf54197","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:39Z","updated_at":"2026-06-13T19:31:39Z","closed_at":null,"pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 422.629542ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 82
+        host: 127.0.0.1:3000
+        body: '{"title":"Closed zVZ1aJ42","body":"Closed change","head":"zVZ1aJ42","base":"main"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":13,"url":"http://localhost:3000/test-owner/test-repo/pulls/13","number":13,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Closed zVZ1aJ42","body":"Closed change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/13.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/13.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":9,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"zVZ1aJ42","ref":"zVZ1aJ42","sha":"4c2b9c37c22a706214752683fb74ab9e2e30fd69","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":9,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:39Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:40Z","updated_at":"2026-06-13T19:31:40Z","closed_at":null,"pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 370.765458ms
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 14
+        host: 127.0.0.1:3000
+        body: '{"Do":"merge"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls/11/merge
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        body: ""
+        headers:
+            Content-Length:
+                - "0"
+        status: 200 OK
+        code: 200
+        duration: 216.360125ms
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 18
+        host: 127.0.0.1:3000
+        body: '{"state":"closed"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls/13
+        method: PATCH
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":13,"url":"http://localhost:3000/test-owner/test-repo/pulls/13","number":13,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Closed zVZ1aJ42","body":"Closed change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"closed","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/13.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/13.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"900f11a466df9ad93239f990388226f2a8d3200b","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":4,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"zVZ1aJ42","ref":"zVZ1aJ42","sha":"4c2b9c37c22a706214752683fb74ab9e2e30fd69","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":4,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:40Z","updated_at":"2026-06-13T19:31:40Z","closed_at":"2026-06-13T19:31:40Z","pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 201 Created
+        code: 201
+        duration: 80.185125ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls/9
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":9,"url":"http://localhost:3000/test-owner/test-repo/pulls/9","number":9,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Open tJyNZqRW","body":"Open change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/9","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/9.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/9.patch","mergeable":false,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"900f11a466df9ad93239f990388226f2a8d3200b","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":4,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"tJyNZqRW","ref":"tJyNZqRW","sha":"7ed94ee5cfa9b28d59c3ac49f2ff38444bbf17c0","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":4,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:39Z","updated_at":"2026-06-13T19:31:39Z","closed_at":null,"pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 26.996041ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls/11
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":11,"url":"http://localhost:3000/test-owner/test-repo/pulls/11","number":11,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Merged jH1sfXvt","body":"Merged change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"closed","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/11","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/11.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/11.patch","mergeable":true,"merged":true,"merged_at":"2026-06-13T19:31:40Z","merge_commit_sha":"900f11a466df9ad93239f990388226f2a8d3200b","merged_by":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"900f11a466df9ad93239f990388226f2a8d3200b","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":3,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"jH1sfXvt","ref":"jH1sfXvt","sha":"d9e6287ca35eb835dd9c50235c80645e2cf54197","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":3,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:39Z","updated_at":"2026-06-13T19:31:40Z","closed_at":"2026-06-13T19:31:40Z","pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 21.107875ms
+    - id: 9
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls/13
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":13,"url":"http://localhost:3000/test-owner/test-repo/pulls/13","number":13,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Closed zVZ1aJ42","body":"Closed change","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"closed","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/13.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/13.patch","mergeable":false,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"900f11a466df9ad93239f990388226f2a8d3200b","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":3,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"zVZ1aJ42","ref":"zVZ1aJ42","sha":"4c2b9c37c22a706214752683fb74ab9e2e30fd69","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"admin@test.example","avatar_url":"http://localhost:3000/avatars/4546db4a134be43f9c8bfe851fb05630","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-13T19:31:35Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":32,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":0,"watchers_count":1,"open_issues_count":0,"open_pr_counter":3,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-13T19:31:36Z","updated_at":"2026-06-13T19:31:40Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"12893b958da7f9b9f7322efafb1aeadf0a8d1fca","due_date":null,"created_at":"2026-06-13T19:31:40Z","updated_at":"2026-06-13T19:31:40Z","closed_at":"2026-06-13T19:31:40Z","pin_order":0}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 14.054958ms
