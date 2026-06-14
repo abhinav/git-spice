@@ -64,6 +64,7 @@ func (*downstackMergeCmd) Help() string {
 type MergeHandler interface {
 	MergeDownstack(ctx context.Context, req *merge.DownstackMergeRequest) error
 	MergeBranch(ctx context.Context, req *merge.BranchMergeRequest) error
+	MergeStack(ctx context.Context, req *merge.StackMergeRequest) error
 }
 
 func (cmd *downstackMergeCmd) AfterApply(

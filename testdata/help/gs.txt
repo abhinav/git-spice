@@ -31,6 +31,7 @@ Log
 
 Stack
   stack (s) submit (s)          Submit a stack
+  stack (s) merge (m)           Merge a stack
   stack (s) restack (r)         Restack a stack
   stack (s) edit (e)            Edit the order of branches in a stack
   stack (s) delete (d)          Delete all branches in a stack

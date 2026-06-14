@@ -102,6 +102,26 @@ type BranchMergeRequest struct {
 	Options *Options // optional
 }
 
+// StackMergeOptions controls stack merge behavior.
+type StackMergeOptions struct {
+	Options
+
+	// NoBranchCheck skips stale base validation before merging.
+	NoBranchCheck bool `help:"Skip stale base validation before merging."`
+
+	// FailFast stops the merge queue after the first branch failure.
+	FailFast bool `help:"Stop the merge queue after the first branch failure."`
+}
+
+// StackMergeRequest asks Handler to merge a branch,
+// its downstack branches down to trunk,
+// and its upstack branches.
+type StackMergeRequest struct {
+	Branch string // required
+
+	Options *StackMergeOptions // optional
+}
+
 // Handler merges change requests via the forge API.
 type Handler struct {
 	Log              *silog.Logger    // required
@@ -134,7 +154,10 @@ func (h *Handler) MergeDownstack(
 		return nil
 	}
 
-	if err := h.confirm(plan); err != nil {
+	if err := h.confirm(
+		plan,
+		fmt.Sprintf("Merge %d change(s) bottom-up?", len(plan)),
+	); err != nil {
 		return err
 	}
 
@@ -178,10 +201,51 @@ func (h *Handler) MergeBranch(
 	})
 }
 
+// MergeStack merges the given branch,
+// its downstack branches down to trunk,
+// and its upstack branches.
+func (h *Handler) MergeStack(
+	ctx context.Context, req *StackMergeRequest,
+) error {
+	opts := cmp.Or(req.Options, &StackMergeOptions{})
+	graph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
+		Graph:         graph,
+		Branches:      slices.Collect(graph.Stack(req.Branch)),
+		NoBranchCheck: opts.NoBranchCheck,
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(plan) == 0 {
+		h.Log.Info("No open changes to merge.")
+		return nil
+	}
+
+	if err := h.confirm(
+		plan,
+		fmt.Sprintf("Merge %d change(s)?", len(plan)),
+	); err != nil {
+		return err
+	}
+
+	return h.executePlan(ctx, plan, mergeExecutionOptions{
+		Method:       opts.Method,
+		BuildTimeout: opts.BuildTimeout,
+		FailFast:     opts.FailFast,
+	})
+}
+
 // mergeItem is one queue item in a downstack merge plan.
 //
-// buildPlan fills branch, base, changeID, and upstreamBranch
-// from the branch graph.
+// buildPlanFromBranches fills branch, base, changeID, and upstreamBranch
+// from the branch graph for either a linear downstack
+// or a graph-shaped stack merge.
 // validateSynced later fills headHash after it verifies
 // the local branch matches its upstream ref.
 type mergeItem struct {
@@ -225,10 +289,34 @@ func (h *Handler) buildPlan(
 	downstack := slices.Collect(graph.Downstack(req.Branch))
 	slices.Reverse(downstack)
 
-	items := make([]*mergeItem, 0, len(downstack))
-	ids := make([]forge.ChangeID, 0, len(downstack))
-	for _, name := range downstack {
-		branch, ok := graph.Lookup(name)
+	return h.buildPlanFromBranches(ctx, mergePlanRequest{
+		Graph:         graph,
+		Branches:      downstack,
+		NoBranchCheck: opts.NoBranchCheck,
+		NoWait:        opts.NoWait,
+	})
+}
+
+// mergePlanRequest selects the local branches that become merge queue items.
+//
+// Branches provides the prompt order.
+// The merge queue still enforces base dependencies before execution.
+type mergePlanRequest struct {
+	Graph *spice.BranchGraph // required
+
+	Branches []string // required
+
+	NoBranchCheck bool
+	NoWait        bool
+}
+
+func (h *Handler) buildPlanFromBranches(
+	ctx context.Context, req mergePlanRequest,
+) ([]*mergeItem, error) {
+	items := make([]*mergeItem, 0, len(req.Branches))
+	ids := make([]forge.ChangeID, 0, len(req.Branches))
+	for _, name := range req.Branches {
+		branch, ok := req.Graph.Lookup(name)
 		if !ok {
 			return nil, fmt.Errorf("branch %q is not tracked", name)
 		}
@@ -248,6 +336,9 @@ func (h *Handler) buildPlan(
 		items = append(items, item)
 		ids = append(ids, item.changeID)
 	}
+	if len(items) == 0 {
+		return nil, nil
+	}
 
 	statuses, err := h.RemoteRepository.ChangeStatuses(ctx, ids)
 	if err != nil {
@@ -255,7 +346,7 @@ func (h *Handler) buildPlan(
 	}
 
 	// Drop already-merged changes from the queue,
-	// but stop if any downstack Change Request was closed without merging.
+	// but stop if any Change Request was closed without merging.
 	plan := items[:0]
 	for i, item := range items {
 		switch statuses[i].State {
@@ -272,7 +363,7 @@ func (h *Handler) buildPlan(
 		}
 	}
 
-	if opts.NoWait && len(plan) > 1 {
+	if req.NoWait && len(plan) > 1 {
 		return nil, fmt.Errorf(
 			"--no-wait can merge only one branch; "+
 				"got %d branches",
@@ -284,8 +375,10 @@ func (h *Handler) buildPlan(
 		return nil, fmt.Errorf("validate branch sync: %w", err)
 	}
 
-	if !opts.NoBranchCheck {
-		if err := h.validateFreshBases(ctx, graph, req.Branch); err != nil {
+	if !req.NoBranchCheck {
+		if err := h.validateFreshBases(
+			ctx, req.Graph, req.Branches,
+		); err != nil {
 			return nil, fmt.Errorf("validate stale bases: %w", err)
 		}
 	}
@@ -383,7 +476,7 @@ func (h *Handler) validateSynced(
 	return errors.New(msg.String())
 }
 
-func (h *Handler) confirm(plan []*mergeItem) error {
+func (h *Handler) confirm(plan []*mergeItem, title string) error {
 	if !ui.Interactive(h.View) {
 		return nil
 	}
@@ -396,12 +489,7 @@ func (h *Handler) confirm(plan []*mergeItem) error {
 
 	proceed := true
 	prompt := ui.NewConfirm().
-		WithTitle(
-			fmt.Sprintf(
-				"Merge %d change(s) bottom-up?",
-				len(plan),
-			),
-		).
+		WithTitle(title).
 		WithDescription(desc.String()).
 		WithValue(&proceed)
 	if err := ui.Run(h.View, prompt); err != nil {
@@ -418,6 +506,7 @@ type mergeExecutionOptions struct {
 	Method       forge.MergeMethod
 	BuildTimeout time.Duration
 	NoWait       bool
+	FailFast     bool
 }
 
 func (h *Handler) executePlan(
@@ -454,6 +543,7 @@ func (h *Handler) executePlan(
 		BuildTimeout: opts.BuildTimeout,
 		Method:       opts.Method,
 		NoWait:       opts.NoWait,
+		FailFast:     opts.FailFast,
 	}).Execute(ctx, plan)
 	if err != nil {
 		return err
@@ -466,12 +556,12 @@ func (h *Handler) executePlan(
 func (h *Handler) validateFreshBases(
 	ctx context.Context,
 	graph *spice.BranchGraph,
-	branch string,
+	branches []string,
 ) error {
 	staleBases, err := spice.FindStaleBases(ctx, graph,
 		func(context.Context) (forge.Repository, error) {
 			return h.RemoteRepository, nil
-		}, []string{branch})
+		}, branches)
 	if err != nil {
 		return fmt.Errorf("find stale bases: %w", err)
 	}
