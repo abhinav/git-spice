@@ -9,11 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-var (
-	_ forge.WithInlineComments   = (*forgeRepository)(nil)
-	_ forge.WithThreadResolution = (*forgeRepository)(nil)
-	_ forge.WithCommentEdit      = (*forgeRepository)(nil)
-)
+var _ forge.WithInlineComments = (*forgeRepository)(nil)
 
 // Inline comment handlers
 
@@ -113,10 +109,10 @@ func (r *forgeRepository) ListInlineComments(
 	var comments []*forge.InlineComment
 	for _, item := range res.Items {
 		comments = append(comments, &forge.InlineComment{
-			ID:        ChangeCommentID(item.ID),
-			ThreadID:  item.ThreadID,
+			ID:        forge.InlineCommentThreadID(item.ThreadID),
+			CommentID: ChangeCommentID(item.ID),
 			Path:      item.Path,
-			Line:      item.Line,
+			Lines:     forge.InlineCommentLine(item.Line),
 			Body:      item.Body,
 			Author:    item.Author,
 			Resolved:  item.Resolved,
@@ -137,7 +133,7 @@ type postInlineCommentRequest struct {
 	Path     string `json:"path"`
 	Line     int    `json:"line"`
 	Body     string `json:"body"`
-	Side     string `json:"side"`
+	Side     int    `json:"side"`
 	ThreadID string `json:"threadID,omitempty"`
 }
 
@@ -193,10 +189,10 @@ func (r *forgeRepository) PostInlineComment(
 	body := postInlineCommentRequest{
 		Change:   int(id.(ChangeID)),
 		Path:     req.Path,
-		Line:     req.Line,
+		Line:     req.Lines.StartLine,
 		Body:     req.Body,
-		Side:     req.Side,
-		ThreadID: req.ThreadID,
+		Side:     int(req.Side),
+		ThreadID: string(req.InReplyTo),
 	}
 
 	var res postInlineCommentResponse
@@ -207,10 +203,10 @@ func (r *forgeRepository) PostInlineComment(
 	}
 
 	return &forge.InlineComment{
-		ID:        ChangeCommentID(res.ID),
-		ThreadID:  res.ThreadID,
+		ID:        forge.InlineCommentThreadID(res.ThreadID),
+		CommentID: ChangeCommentID(res.ID),
 		Path:      req.Path,
-		Line:      req.Line,
+		Lines:     req.Lines,
 		Body:      req.Body,
 		CreatedAt: res.CreatedAt,
 	}, nil
@@ -232,7 +228,7 @@ type submitReviewCommentRequest struct {
 	Path     string `json:"path"`
 	Line     int    `json:"line"`
 	Body     string `json:"body"`
-	Side     string `json:"side,omitempty"`
+	Side     int    `json:"side,omitempty"`
 	ThreadID string `json:"threadID,omitempty"`
 }
 
@@ -287,10 +283,10 @@ func (r *forgeRepository) SubmitReview(
 	for _, c := range req.Comments {
 		comments = append(comments, submitReviewCommentRequest{
 			Path:     c.Path,
-			Line:     c.Line,
+			Line:     c.Lines.StartLine,
 			Body:     c.Body,
-			Side:     c.Side,
-			ThreadID: c.ThreadID,
+			Side:     int(c.Side),
+			ThreadID: string(c.InReplyTo),
 		})
 	}
 
@@ -369,10 +365,10 @@ func (sh *ShamHub) handleUnresolveThread(
 
 func (r *forgeRepository) ResolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
 	u := r.apiURL.JoinPath(
-		r.owner, r.repo, "threads", threadID, "resolve",
+		r.owner, r.repo, "threads", string(id), "resolve",
 	)
 
 	var res resolveThreadResponse
@@ -387,10 +383,10 @@ func (r *forgeRepository) ResolveThread(
 
 func (r *forgeRepository) UnresolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
 	u := r.apiURL.JoinPath(
-		r.owner, r.repo, "threads", threadID, "unresolve",
+		r.owner, r.repo, "threads", string(id), "unresolve",
 	)
 
 	var res resolveThreadResponse

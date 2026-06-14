@@ -10,11 +10,7 @@ import (
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
-var (
-	_ forge.WithInlineComments   = (*Repository)(nil)
-	_ forge.WithThreadResolution = (*Repository)(nil)
-	_ forge.WithCommentEdit      = (*Repository)(nil)
-)
+var _ forge.WithInlineComments = (*Repository)(nil)
 
 // ListInlineComments lists inline/review comments on a MR
 // by fetching discussions that have position information.
@@ -67,15 +63,15 @@ func (r *Repository) ListInlineComments(
 
 				comments = append(comments,
 					&forge.InlineComment{
-						ID: &MRComment{
+						ID: formatInlineCommentThreadID(
+							disc.ID, mr.Number,
+						),
+						CommentID: &MRComment{
 							Number:   note.ID,
 							MRNumber: mr.Number,
 						},
-						ThreadID: formatThreadID(
-							disc.ID, mr.Number,
-						),
 						Path:      path,
-						Line:      line,
+						Lines:     forge.InlineCommentLine(line),
 						Body:      note.Body,
 						Author:    note.Author.Username,
 						Resolved:  root.Resolved,
@@ -112,9 +108,9 @@ func (r *Repository) SubmitReview(
 	}
 
 	for _, c := range req.Comments {
-		if c.ThreadID != "" {
+		if c.InReplyTo != "" {
 			// Reply to existing thread.
-			discID, _, perr := parseThreadID(c.ThreadID)
+			discID, _, perr := parseInlineCommentThreadID(c.InReplyTo)
 			if perr != nil {
 				return perr
 			}
@@ -127,19 +123,19 @@ func (r *Repository) SubmitReview(
 			); err != nil {
 				return fmt.Errorf(
 					"reply to thread %s: %w",
-					c.ThreadID, err,
+					c.InReplyTo, err,
 				)
 			}
 			continue
 		}
 
-		opts := newDiscussionOptions(c.Body, c.Path, c.Line, diffRefs)
+		opts := newDiscussionOptions(c.Body, c.Path, c.Lines, diffRefs)
 		if _, _, err := r.client.MergeRequestDiscussionCreate(
 			ctx, r.repoID, mr.Number, opts,
 		); err != nil {
 			return fmt.Errorf(
 				"create discussion on %s:%d: %w",
-				c.Path, c.Line, err,
+				c.Path, c.Lines.StartLine, err,
 			)
 		}
 	}
@@ -161,8 +157,8 @@ func (r *Repository) PostInlineComment(
 	mr := mustMR(id)
 
 	// Reply to existing thread.
-	if req.ThreadID != "" {
-		discID, _, err := parseThreadID(req.ThreadID)
+	if req.InReplyTo != "" {
+		discID, _, err := parseInlineCommentThreadID(req.InReplyTo)
 		if err != nil {
 			return nil, err
 		}
@@ -184,13 +180,13 @@ func (r *Repository) PostInlineComment(
 			createdAt = *note.CreatedAt
 		}
 		return &forge.InlineComment{
-			ID: &MRComment{
+			ID: req.InReplyTo,
+			CommentID: &MRComment{
 				Number:   note.ID,
 				MRNumber: mr.Number,
 			},
-			ThreadID:  req.ThreadID,
 			Path:      req.Path,
-			Line:      req.Line,
+			Lines:     req.Lines,
 			Body:      req.Body,
 			CreatedAt: createdAt,
 		}, nil
@@ -204,7 +200,7 @@ func (r *Repository) PostInlineComment(
 
 	disc, _, err := r.client.MergeRequestDiscussionCreate(
 		ctx, r.repoID, mr.Number,
-		newDiscussionOptions(req.Body, req.Path, req.Line, diffRefs),
+		newDiscussionOptions(req.Body, req.Path, req.Lines, diffRefs),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create discussion: %w", err)
@@ -218,27 +214,27 @@ func (r *Repository) PostInlineComment(
 	r.log.Debug("Posted inline comment",
 		"mr", mr.Number,
 		"path", req.Path,
-		"line", req.Line,
+		"line", req.Lines.StartLine,
 	)
 
 	return &forge.InlineComment{
-		ID: &MRComment{
+		ID: formatInlineCommentThreadID(disc.ID, mr.Number),
+		CommentID: &MRComment{
 			Number:   noteID,
 			MRNumber: mr.Number,
 		},
-		ThreadID: formatThreadID(disc.ID, mr.Number),
-		Path:     req.Path,
-		Line:     req.Line,
-		Body:     req.Body,
+		Path:  req.Path,
+		Lines: req.Lines,
+		Body:  req.Body,
 	}, nil
 }
 
 func newDiscussionOptions(
-	body, path string, line int,
+	body, path string, lines forge.InlineCommentRange,
 	refs *gitlab.MergeRequestDiffRefs,
 ) *gitlab.CreateMergeRequestDiscussionOptions {
 	textType := "text"
-	lineN := int64(line)
+	lineN := int64(lines.StartLine)
 	return &gitlab.CreateMergeRequestDiscussionOptions{
 		Body: &body,
 		Position: &gitlab.PositionOptions{
@@ -271,10 +267,10 @@ func (r *Repository) diffRefs(
 // ResolveThread marks a discussion thread as resolved.
 func (r *Repository) ResolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
 	// Thread ID format: "discussion_id:mr_number"
-	discID, mrNumber, err := parseThreadID(threadID)
+	discID, mrNumber, err := parseInlineCommentThreadID(id)
 	if err != nil {
 		return err
 	}
@@ -289,16 +285,16 @@ func (r *Repository) ResolveThread(
 		return fmt.Errorf("resolve thread: %w", err)
 	}
 
-	r.log.Debug("Resolved thread", "threadID", threadID)
+	r.log.Debug("Resolved thread", "id", id)
 	return nil
 }
 
 // UnresolveThread marks a discussion thread as unresolved.
 func (r *Repository) UnresolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
-	discID, mrNumber, err := parseThreadID(threadID)
+	discID, mrNumber, err := parseInlineCommentThreadID(id)
 	if err != nil {
 		return err
 	}
@@ -313,7 +309,7 @@ func (r *Repository) UnresolveThread(
 		return fmt.Errorf("unresolve thread: %w", err)
 	}
 
-	r.log.Debug("Unresolved thread", "threadID", threadID)
+	r.log.Debug("Unresolved thread", "id", id)
 	return nil
 }
 
@@ -390,13 +386,14 @@ func (r *Repository) findDiscussionForNote(
 // This encodes both the discussion ID and MR number
 // so resolve/unresolve can work without extra context.
 
-func formatThreadID(discID string, mrNumber int64) string {
-	return discID + ":" + strconv.FormatInt(mrNumber, 10)
+func formatInlineCommentThreadID(discID string, mrNumber int64) forge.InlineCommentThreadID {
+	return forge.InlineCommentThreadID(discID + ":" + strconv.FormatInt(mrNumber, 10))
 }
 
-func parseThreadID(threadID string) (
+func parseInlineCommentThreadID(id forge.InlineCommentThreadID) (
 	discID string, mrNumber int64, err error,
 ) {
+	threadID := string(id)
 	for i := len(threadID) - 1; i >= 0; i-- {
 		if threadID[i] == ':' {
 			discID = threadID[:i]

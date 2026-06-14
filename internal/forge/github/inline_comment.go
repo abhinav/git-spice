@@ -9,11 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-var (
-	_ forge.WithInlineComments   = (*Repository)(nil)
-	_ forge.WithThreadResolution = (*Repository)(nil)
-	_ forge.WithCommentEdit      = (*Repository)(nil)
-)
+var _ forge.WithInlineComments = (*Repository)(nil)
 
 // ListInlineComments lists inline/review comments on a PR
 // by querying the reviewThreads connection.
@@ -83,13 +79,13 @@ func (r *Repository) ListInlineComments(
 
 			for _, c := range thread.Comments.Nodes {
 				comments = append(comments, &forge.InlineComment{
-					ID: &PRComment{
+					ID: forge.InlineCommentThreadID(threadID),
+					CommentID: &PRComment{
 						GQLID: c.ID,
 						URL:   c.URL,
 					},
-					ThreadID:  threadID,
 					Path:      thread.Path,
-					Line:      line,
+					Lines:     forge.InlineCommentLine(line),
 					Body:      c.Body,
 					Author:    c.Author.Login,
 					Resolved:  thread.IsResolved,
@@ -137,7 +133,7 @@ func (r *Repository) SubmitReview(
 	var threads []*githubv4.DraftPullRequestReviewThread
 	for _, c := range req.Comments {
 		side := githubv4.DiffSideRight
-		if c.Side == "LEFT" {
+		if c.Side == forge.InlineCommentSideLeft {
 			side = githubv4.DiffSideLeft
 		}
 		threads = append(threads,
@@ -146,7 +142,7 @@ func (r *Repository) SubmitReview(
 					githubv4.String(c.Path),
 				),
 				Line: new(
-					githubv4.Int(c.Line),
+					githubv4.Int(c.Lines.StartLine),
 				),
 				Side: &side,
 				Body: githubv4.String(c.Body),
@@ -195,12 +191,12 @@ func (r *Repository) PostInlineComment(
 	}
 
 	// If replying to an existing thread, use addPullRequestReviewComment.
-	if req.ThreadID != "" {
+	if req.InReplyTo != "" {
 		return r.replyToThread(ctx, req)
 	}
 
 	side := githubv4.DiffSideRight
-	if req.Side == "LEFT" {
+	if req.Side == forge.InlineCommentSideLeft {
 		side = githubv4.DiffSideLeft
 	}
 
@@ -225,7 +221,7 @@ func (r *Repository) PostInlineComment(
 			githubv4.String(req.Path),
 		),
 		Line: new(
-			githubv4.Int(req.Line),
+			githubv4.Int(req.Lines.StartLine),
 		),
 		Side: &side,
 		Body: githubv4.String(req.Body),
@@ -249,14 +245,14 @@ func (r *Repository) PostInlineComment(
 	r.log.Debug("Posted inline comment",
 		"pr", pr.Number,
 		"path", req.Path,
-		"line", req.Line,
+		"line", req.Lines.StartLine,
 	)
 
 	return &forge.InlineComment{
-		ID:        commentID,
-		ThreadID:  threadID,
+		ID:        forge.InlineCommentThreadID(threadID),
+		CommentID: commentID,
 		Path:      req.Path,
-		Line:      req.Line,
+		Lines:     req.Lines,
 		Body:      req.Body,
 		CreatedAt: createdAt,
 	}, nil
@@ -278,7 +274,7 @@ func (r *Repository) replyToThread(
 	}
 
 	input := githubv4.AddPullRequestReviewThreadReplyInput{
-		PullRequestReviewThreadID: githubv4.ID(req.ThreadID),
+		PullRequestReviewThreadID: githubv4.ID(req.InReplyTo),
 		Body:                      githubv4.String(req.Body),
 	}
 
@@ -288,10 +284,10 @@ func (r *Repository) replyToThread(
 
 	n := m.AddPullRequestReviewThreadReply.Comment
 	return &forge.InlineComment{
-		ID:        &PRComment{GQLID: n.ID, URL: n.URL},
-		ThreadID:  req.ThreadID,
+		ID:        req.InReplyTo,
+		CommentID: &PRComment{GQLID: n.ID, URL: n.URL},
 		Path:      req.Path,
-		Line:      req.Line,
+		Lines:     req.Lines,
 		Body:      req.Body,
 		CreatedAt: n.CreatedAt.Time,
 	}, nil
@@ -300,7 +296,7 @@ func (r *Repository) replyToThread(
 // ResolveThread marks a review thread as resolved.
 func (r *Repository) ResolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
 	var m struct {
 		ResolveReviewThread struct {
@@ -311,21 +307,21 @@ func (r *Repository) ResolveThread(
 	}
 
 	input := githubv4.ResolveReviewThreadInput{
-		ThreadID: githubv4.ID(threadID),
+		ThreadID: githubv4.ID(id),
 	}
 
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("resolve thread: %w", err)
 	}
 
-	r.log.Debug("Resolved thread", "threadID", threadID)
+	r.log.Debug("Resolved thread", "id", id)
 	return nil
 }
 
 // UnresolveThread marks a review thread as unresolved.
 func (r *Repository) UnresolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
 	var m struct {
 		UnresolveReviewThread struct {
@@ -336,14 +332,14 @@ func (r *Repository) UnresolveThread(
 	}
 
 	input := githubv4.UnresolveReviewThreadInput{
-		ThreadID: githubv4.ID(threadID),
+		ThreadID: githubv4.ID(id),
 	}
 
 	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
 		return fmt.Errorf("unresolve thread: %w", err)
 	}
 
-	r.log.Debug("Unresolved thread", "threadID", threadID)
+	r.log.Debug("Unresolved thread", "id", id)
 	return nil
 }
 

@@ -151,8 +151,8 @@ type shamComment struct {
 	// Line is the line number for inline comments.
 	Line int
 
-	// Side is "LEFT" or "RIGHT" for inline comments.
-	Side string
+	// Side identifies which side of the diff the inline comment targets.
+	Side int
 
 	// ThreadID groups inline comments into threads.
 	ThreadID string

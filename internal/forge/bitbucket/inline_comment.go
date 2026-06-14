@@ -9,11 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
-var (
-	_ forge.WithInlineComments   = (*Repository)(nil)
-	_ forge.WithThreadResolution = (*Repository)(nil)
-	_ forge.WithCommentEdit      = (*Repository)(nil)
-)
+var _ forge.WithInlineComments = (*Repository)(nil)
 
 // ListInlineComments lists inline/review comments on a PR
 // by filtering comments that have inline position data.
@@ -47,17 +43,17 @@ func (r *Repository) ListInlineComments(
 
 			// Thread ID encodes comment ID and PR ID
 			// for resolve/unresolve operations.
-			threadID := formatThreadID(c.ID, prID)
+			id := formatInlineCommentThreadID(c.ID, prID)
 
 			comments = append(comments,
 				&forge.InlineComment{
-					ID: &PRComment{
+					ID: id,
+					CommentID: &PRComment{
 						ID:   c.ID,
 						PRID: prID,
 					},
-					ThreadID: threadID,
 					Path:     c.Inline.Path,
-					Line:     line,
+					Lines:    forge.InlineCommentLine(line),
 					Body:     c.Content.Raw,
 					Author:   c.User.DisplayName,
 					Resolved: c.Resolution != nil,
@@ -104,10 +100,10 @@ func (r *Repository) submitOneComment(
 	prID int64,
 	c forge.InlineCommentRequest,
 ) error {
-	if c.ThreadID != "" {
-		parentID, _, err := parseThreadID(c.ThreadID)
+	if c.InReplyTo != "" {
+		parentID, _, err := parseInlineCommentThreadID(c.InReplyTo)
 		if err != nil {
-			return fmt.Errorf("parse thread ID: %w", err)
+			return fmt.Errorf("parse inline comment ID: %w", err)
 		}
 		_, err = r.replyToComment(
 			ctx, prID, parentID, c.Body,
@@ -115,13 +111,13 @@ func (r *Repository) submitOneComment(
 		return err
 	}
 	_, err := r.postInlineCommentAPI(
-		ctx, prID, c.Path, c.Line, c.Body,
+		ctx, prID, c.Path, c.Lines, c.Body,
 	)
 	return err
 }
 
 // PostInlineComment posts a single inline comment on a PR.
-// If req.ThreadID is set, posts a reply to that thread
+// If req.InReplyTo is set, posts a reply to that thread
 // instead of creating a new inline comment.
 func (r *Repository) PostInlineComment(
 	ctx context.Context,
@@ -130,7 +126,7 @@ func (r *Repository) PostInlineComment(
 ) (*forge.InlineComment, error) {
 	prID := mustPR(id).Number
 
-	if req.ThreadID != "" {
+	if req.InReplyTo != "" {
 		return r.postReply(ctx, prID, req)
 	}
 	return r.postNewInlineComment(ctx, prID, req)
@@ -142,22 +138,22 @@ func (r *Repository) postNewInlineComment(
 	req forge.InlineCommentRequest,
 ) (*forge.InlineComment, error) {
 	comment, err := r.postInlineCommentAPI(
-		ctx, prID, req.Path, req.Line, req.Body,
+		ctx, prID, req.Path, req.Lines, req.Body,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &forge.InlineComment{
-		ID: &PRComment{
+		ID: formatInlineCommentThreadID(comment.ID, prID),
+		CommentID: &PRComment{
 			ID:   comment.ID,
 			PRID: prID,
 		},
-		ThreadID: formatThreadID(comment.ID, prID),
-		Path:     req.Path,
-		Line:     req.Line,
-		Body:     req.Body,
-		Author:   comment.User.DisplayName,
+		Path:   req.Path,
+		Lines:  req.Lines,
+		Body:   req.Body,
+		Author: comment.User.DisplayName,
 	}, nil
 }
 
@@ -166,9 +162,9 @@ func (r *Repository) postReply(
 	prID int64,
 	req forge.InlineCommentRequest,
 ) (*forge.InlineComment, error) {
-	parentID, _, err := parseThreadID(req.ThreadID)
+	parentID, _, err := parseInlineCommentThreadID(req.InReplyTo)
 	if err != nil {
-		return nil, fmt.Errorf("parse thread ID: %w", err)
+		return nil, fmt.Errorf("parse inline comment ID: %w", err)
 	}
 
 	comment, err := r.replyToComment(
@@ -179,13 +175,13 @@ func (r *Repository) postReply(
 	}
 
 	return &forge.InlineComment{
-		ID: &PRComment{
+		ID: req.InReplyTo,
+		CommentID: &PRComment{
 			ID:   comment.ID,
 			PRID: prID,
 		},
-		ThreadID: req.ThreadID,
-		Body:     req.Body,
-		Author:   comment.User.DisplayName,
+		Body:   req.Body,
+		Author: comment.User.DisplayName,
 	}, nil
 }
 
@@ -214,10 +210,10 @@ func (r *Repository) postInlineCommentAPI(
 	ctx context.Context,
 	prID int64,
 	filePath string,
-	line int,
+	lines forge.InlineCommentRange,
 	body string,
 ) (*bitbucket.Comment, error) {
-	to := line
+	to := lines.StartLine
 	comment, _, err := r.client.CommentCreate(
 		ctx, r.workspace, r.repo, prID,
 		&bitbucket.CommentCreateRequest{
@@ -231,7 +227,7 @@ func (r *Repository) postInlineCommentAPI(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"create inline comment on %s:%d: %w",
-			filePath, line, err,
+			filePath, lines.StartLine, err,
 		)
 	}
 	return comment, nil
@@ -240,9 +236,9 @@ func (r *Repository) postInlineCommentAPI(
 // ResolveThread marks an inline comment as resolved.
 func (r *Repository) ResolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
-	commentID, prID, err := parseThreadID(threadID)
+	commentID, prID, err := parseInlineCommentThreadID(id)
 	if err != nil {
 		return err
 	}
@@ -256,16 +252,16 @@ func (r *Repository) ResolveThread(
 		return fmt.Errorf("resolve thread: %w", err)
 	}
 
-	r.log.Debug("Resolved thread", "threadID", threadID)
+	r.log.Debug("Resolved thread", "id", id)
 	return nil
 }
 
 // UnresolveThread marks an inline comment as unresolved.
 func (r *Repository) UnresolveThread(
 	ctx context.Context,
-	threadID string,
+	id forge.InlineCommentThreadID,
 ) error {
-	commentID, prID, err := parseThreadID(threadID)
+	commentID, prID, err := parseInlineCommentThreadID(id)
 	if err != nil {
 		return err
 	}
@@ -279,7 +275,7 @@ func (r *Repository) UnresolveThread(
 		return fmt.Errorf("unresolve thread: %w", err)
 	}
 
-	r.log.Debug("Unresolved thread", "threadID", threadID)
+	r.log.Debug("Unresolved thread", "id", id)
 	return nil
 }
 
@@ -296,14 +292,15 @@ func (r *Repository) EditComment(
 // Thread ID encoding for Bitbucket:
 // "commentID:prID"
 
-func formatThreadID(commentID, prID int64) string {
-	return strconv.FormatInt(commentID, 10) +
-		":" + strconv.FormatInt(prID, 10)
+func formatInlineCommentThreadID(commentID, prID int64) forge.InlineCommentThreadID {
+	return forge.InlineCommentThreadID(strconv.FormatInt(commentID, 10) +
+		":" + strconv.FormatInt(prID, 10))
 }
 
-func parseThreadID(threadID string) (
+func parseInlineCommentThreadID(id forge.InlineCommentThreadID) (
 	commentID, prID int64, err error,
 ) {
+	threadID := string(id)
 	for i := len(threadID) - 1; i >= 0; i-- {
 		if threadID[i] == ':' {
 			commentID, err = strconv.ParseInt(

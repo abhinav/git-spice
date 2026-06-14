@@ -715,16 +715,16 @@ func TestPostInlineComment(t *testing.T) {
 		t.Context(),
 		&PR{Number: 1},
 		forge.InlineCommentRequest{
-			Path: "file.go",
-			Line: 42,
-			Body: "new comment",
+			Path:  "file.go",
+			Lines: forge.InlineCommentLine(42),
+			Body:  "new comment",
 		},
 	)
 	require.NoError(t, err)
 
 	assert.Equal(t, "new comment", posted.Body)
 	assert.Equal(t, "file.go", posted.Path)
-	assert.Equal(t, 42, posted.Line)
+	assert.Equal(t, forge.InlineCommentLine(42), posted.Lines)
 }
 
 func TestPostInlineComment_reply(t *testing.T) {
@@ -771,14 +771,14 @@ func TestPostInlineComment_reply(t *testing.T) {
 		t.Context(),
 		&PR{Number: 1},
 		forge.InlineCommentRequest{
-			Body:     "reply body",
-			ThreadID: "99:1", // commentID:prID
+			Body:      "reply body",
+			InReplyTo: "99:1", // commentID:prID
 		},
 	)
 	require.NoError(t, err)
 
 	assert.Equal(t, "reply body", posted.Body)
-	assert.Equal(t, "99:1", posted.ThreadID)
+	assert.Equal(t, forge.InlineCommentThreadID("99:1"), posted.ID)
 }
 
 func TestSubmitReview_withReply(t *testing.T) {
@@ -811,13 +811,13 @@ func TestSubmitReview_withReply(t *testing.T) {
 		forge.ReviewRequest{
 			Comments: []forge.InlineCommentRequest{
 				{
-					Path: "a.go",
-					Line: 10,
-					Body: "new comment",
+					Path:  "a.go",
+					Lines: forge.InlineCommentLine(10),
+					Body:  "new comment",
 				},
 				{
-					Body:     "thread reply",
-					ThreadID: "55:1",
+					Body:      "thread reply",
+					InReplyTo: "55:1",
 				},
 			},
 		},
