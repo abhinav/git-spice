@@ -74,7 +74,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(git.Hash("def123"), nil).
 			AnyTimes()
 
-		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t))
+		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t), nil)
 
 		// We should still be able to resolve metadata
 		// for known forges.
@@ -139,7 +139,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 
-		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t))
+		svc := NewService(mockRepo, mockWT, mockStore, &forgeReg, silogtest.New(t), nil)
 		resp, err := svc.LookupBranch(ctx, "feature")
 		require.NoError(t, err)
 
@@ -192,7 +192,7 @@ func TestService_LookupBranch_upstreamBranch(t *testing.T) {
 		Return(git.Hash("def123"), nil).
 		AnyTimes()
 
-	svc := NewService(mockRepo, mockWT, store, nil /* forges */, silogtest.New(t))
+	svc := NewService(mockRepo, mockWT, store, nil /* forges */, silogtest.New(t), nil)
 
 	t.Run("NoUpstream", func(t *testing.T) {
 		setUpstreamBranch("")
@@ -323,6 +323,7 @@ func TestService_LoadBranches_lookupError_issue926(t *testing.T) {
 		mockStore,
 		nil,
 		silogtest.New(t),
+		nil,
 	)
 	ctx := t.Context()
 	assert.NotPanics(t, func() {

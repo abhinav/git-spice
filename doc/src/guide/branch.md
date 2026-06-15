@@ -301,6 +301,16 @@ text "gs upstack restack" mono with w at last.e
     $$gs downstack restack$$ to restack the current branch and branches below it,
     and $$gs stack restack$$ to restack all branches in the current stack.
 
+<!-- gs:version unreleased -->
+
+By default, restacking rebases a branch onto its base,
+which rewrites the branch and usually requires a force-push afterwards.
+Set $$spice.restack.method$$ to `merge`
+to instead update a branch by merging its base into it.
+This avoids force-pushes
+and ensures conflicts you resolve once do not recur on later restacks,
+at the cost of a merge commit on the branch.
+
 ### Automatic restacking
 
 git-spice provides several convenience commands
@@ -361,6 +371,15 @@ You may then:
   to let git-spice continue the rest of the operation; or
 - Run $$gs rebase abort$$ (`gs rba` for short) to abort the operation
   and go back to the state before the rebase started.
+
+<!-- gs:version unreleased -->
+
+The same applies to conflicts raised by a merge-based restack
+(see $$spice.restack.method$$):
+resolve the conflict and run $$gs continue$$ to finish the operation,
+or run $$gs abort$$ to cancel it.
+$$gs continue$$ and $$gs abort$$ work for both rebase and merge conflicts,
+so you can use them regardless of the restack method.
 
 ### Squashing commits in a branch
 

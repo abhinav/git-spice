@@ -285,6 +285,9 @@ type mainCmd struct {
 		Dir           kong.ChangeDirFlag `short:"C" placeholder:"DIR" help:"Change to DIR before doing anything" predictor:"dirs"`
 		Prompt        bool               `name:"prompt" negatable:"" default:"${defaultPrompt}" help:"Whether to prompt for missing information"`
 		SecretBackend secretBackend      `name:"secret-backend" hidden:"" config:"secret.backend" env:"GIT_SPICE_SECRET_BACKEND" default:"auto" help:"Backend to use for secret storage."`
+
+		RestackMethod           spice.RestackMethod    `name:"restack-method" hidden:"" config:"restack.method" default:"rebase" help:"How to update stacked branches when restacking: 'rebase' (default) or 'merge'."`
+		RestackMergeAutoResolve spice.MergeAutoResolve `name:"restack-merge-auto-resolve" hidden:"" config:"restack.mergeAutoResolve" default:"none" help:"When restacking with merge, auto-resolve conflicts by preferring one side: 'none' (default), 'ours', or 'theirs'."`
 	} `embed:"" group:"globals"`
 
 	Git struct {
@@ -306,7 +309,9 @@ type mainCmd struct {
 	Branch branchCmd `cmd:"" aliases:"b" group:"Branch"`
 	Commit commitCmd `cmd:"" aliases:"c" group:"Commit"`
 
-	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
+	Rebase   rebaseCmd   `cmd:"" aliases:"rb" group:"Rebase"`
+	Continue continueCmd `cmd:"" group:"Rebase" help:"Continue an interrupted operation (rebase or merge)"`
+	Abort    abortCmd    `cmd:"" group:"Rebase" help:"Abort an interrupted operation (rebase or merge)"`
 
 	// Navigation
 	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`
@@ -413,7 +418,10 @@ func (cmd *mainCmd) AfterApply(
 			store *state.Store,
 			forges *forge.Registry,
 		) (*spice.Service, error) {
-			return spice.NewService(repo, wt, store, forges, logger), nil
+			return spice.NewService(repo, wt, store, forges, logger, &spice.ServiceOptions{
+				RestackMethod:    cmd.Globals.RestackMethod,
+				MergeAutoResolve: cmd.Globals.RestackMergeAutoResolve,
+			}), nil
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
@@ -491,12 +499,15 @@ func (cmd *mainCmd) AfterApply(
 			worktree *git.Worktree,
 			store *state.Store,
 			svc *spice.Service,
+			autostashHandler AutostashHandler,
 		) (RestackHandler, error) {
 			return &restack.Handler{
-				Log:      log,
-				Worktree: worktree,
-				Store:    store,
-				Service:  svc,
+				Log:           log,
+				Worktree:      worktree,
+				Store:         store,
+				Service:       svc,
+				RestackMethod: cmd.Globals.RestackMethod,
+				Autostash:     autostashHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -504,12 +515,15 @@ func (cmd *mainCmd) AfterApply(
 			wt *git.Worktree,
 			svc *spice.Service,
 			restackHandler RestackHandler,
+			autostashHandler AutostashHandler,
 		) (OntoHandler, error) {
 			return &onto.Handler{
-				Log:      log,
-				Worktree: wt,
-				Service:  svc,
-				Restack:  restackHandler,
+				Log:           log,
+				Worktree:      wt,
+				Service:       svc,
+				Restack:       restackHandler,
+				RestackMethod: cmd.Globals.RestackMethod,
+				Autostash:     autostashHandler,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

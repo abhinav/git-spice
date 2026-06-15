@@ -1,0 +1,69 @@
+# Back-compat: 'gs rebase continue' can finish a merge-based restack that
+# was interrupted by a conflict, just like 'gs continue'.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# go back to main and modify init in a conflicting way.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack the feature branch: the merge conflicts.
+! gs branch restack
+stderr 'There was a conflict while merging'
+
+# a merge is in progress.
+exists .git/MERGE_HEAD
+
+# resolve the conflict and finish with the older 'gs rebase continue',
+# which is merge-aware and shares its implementation with 'gs continue'.
+cp $WORK/extra/init.resolved.txt init.txt
+git add init.txt
+env EDITOR=true
+gs rebase continue
+
+# the merge is finished and recorded as a merge commit.
+! exists .git/MERGE_HEAD
+cmp init.txt $WORK/extra/init.resolved.txt
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- extra/init.resolved.txt --
+updated init
+
+-- golden/graph.txt --
+*   2ac3f2c (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 57ab3b0 (main) Change init
+* | 10ab8d9 feature
+|/  
+* d692027 Initial commit

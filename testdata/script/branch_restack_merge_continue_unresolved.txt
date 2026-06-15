@@ -1,0 +1,80 @@
+# 'gs continue' on the merge restack path, while conflicts are still
+# unresolved, fails and keeps the merge in progress until the conflict
+# is actually resolved and staged.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# create a feature branch that modifies init.
+cp $WORK/extra/init.feature.txt init.txt
+git add init.txt
+gs bc -m feature
+
+# go back to main and modify init in a conflicting way.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+gs up
+stderr 'feature: needs to be restacked'
+
+# restack the feature branch: the merge conflicts.
+! gs branch restack
+stderr 'There was a conflict while merging'
+stderr '  gs continue'
+stderr '  gs abort'
+
+# a merge is in progress.
+exists .git/MERGE_HEAD
+
+# run 'gs continue' WITHOUT resolving the conflict: it must fail,
+# report that conflicts remain, and keep the merge in progress.
+env EDITOR=true
+! gs continue
+stderr 'There are more conflicts to resolve'
+exists .git/MERGE_HEAD
+
+# now actually resolve the conflict, stage it, and continue.
+cp $WORK/extra/init.resolved.txt init.txt
+git add init.txt
+gs continue
+
+# the merge is finished.
+! exists .git/MERGE_HEAD
+! stderr 'There are more conflicts to resolve'
+
+# verify resolved content and a merge commit on the branch.
+cmp init.txt $WORK/extra/init.resolved.txt
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/init.txt --
+initial init
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/init.feature.txt --
+feature's init
+
+-- extra/init.resolved.txt --
+updated init
+
+-- golden/graph.txt --
+*   2ac3f2c (HEAD -> feature) Merge branch 'main' into feature
+|\  
+| * 57ab3b0 (main) Change init
+* | 10ab8d9 feature
+|/  
+* d692027 Initial commit

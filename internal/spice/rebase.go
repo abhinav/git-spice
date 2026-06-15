@@ -34,21 +34,23 @@ type RebaseRescueRequest struct {
 	Message string // optional
 }
 
-// rescuedRebaseError helps differentiate between rescued rebases
-// and non-rescued rebases so that we don't print the message twice
-type rescuedRebaseError struct {
-	err *git.RebaseInterruptError
+// rescuedInterruptError helps differentiate between rescued interrupts
+// and non-rescued interrupts so that we don't print the message twice.
+//
+// It wraps either a rebase or a merge interrupt.
+type rescuedInterruptError struct {
+	err error
 }
 
-func (r *rescuedRebaseError) Error() string {
+func (r *rescuedInterruptError) Error() string {
 	return r.err.Error()
 }
 
-// IsRebaseRescue reports whether the error has already been handled by
-// RebaseRescue.
-func IsRebaseRescue(err error) bool {
-	var rescuedErr *rescuedRebaseError
-	return errors.As(err, &rescuedErr)
+// Unwrap exposes the wrapped interrupt error
+// so that errors.As can still see the [git.InterruptError]
+// after the interrupt has been rescued.
+func (r *rescuedInterruptError) Unwrap() error {
+	return r.err
 }
 
 // RebaseRescue helps operations continue from rebase conflicts.
@@ -98,8 +100,9 @@ func IsRebaseRescue(err error) bool {
 // As at that point, re-running the child operation is sufficient.
 func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) error {
 	var (
-		rescuedErr *rescuedRebaseError
+		rescuedErr *rescuedInterruptError
 		rebaseErr  *git.RebaseInterruptError
+		mergeErr   *git.MergeInterruptError
 	)
 	switch {
 	case errors.As(req.Err, &rescuedErr):
@@ -134,7 +137,27 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 			must.Failf("unexpected rebase interrupt kind: %v", rebaseErr.Kind)
 		}
 
-		rescuedErr = &rescuedRebaseError{err: rebaseErr}
+		rescuedErr = &rescuedInterruptError{err: rebaseErr}
+
+	case errors.As(req.Err, &mergeErr):
+		// First in a possible sequence of rescues up the call stack.
+		// Print the error message, and clear the continuation stack.
+		if _, err := s.store.TakeContinuations(ctx, "rebase rescue"); err != nil {
+			return fmt.Errorf("clear rebase continuations: %w", err)
+		}
+
+		// Recommend the top-level continue/abort commands here;
+		// the rebase messages above keep the older 'rebase continue'
+		// wording for backwards compatibility.
+		var msg strings.Builder
+		fmt.Fprintf(&msg, "There was a conflict while merging.\n"+
+			"Resolve the conflict and run:\n"+
+			"  %[1]s continue\n"+
+			"Or abort the operation with:\n"+
+			"  %[1]s abort\n", cli.Name())
+		s.log.Error(msg.String())
+
+		rescuedErr = &rescuedInterruptError{err: mergeErr}
 
 	default:
 		return req.Err
@@ -148,7 +171,10 @@ func (s *Service) RebaseRescue(ctx context.Context, req RebaseRescueRequest) err
 
 	branch := req.Branch
 	if branch == "" {
-		branch = rebaseErr.State.Branch
+		// Fall back to the branch reported by the interrupt.
+		if interrupt, ok := errors.AsType[git.InterruptError](req.Err); ok {
+			branch = interrupt.InterruptedBranch()
+		}
 	}
 
 	msg := req.Message

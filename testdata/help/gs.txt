@@ -70,8 +70,12 @@ Commit
   commit (c) pick (p)      Cherry-pick a commit
 
 Rebase
-  rebase (rb) continue (c)    Continue an interrupted operation
-  rebase (rb) abort (a)       Abort an operation
+  rebase (rb) continue (c)    Continue an interrupted operation (rebase or
+                              merge)
+  rebase (rb) abort (a)       Abort an interrupted operation (rebase or merge)
+  continue                    Continue an interrupted operation (rebase or
+                              merge)
+  abort                       Abort an interrupted operation (rebase or merge)
 
 Navigation
   up (u)        Move up one branch
@@ -84,6 +88,12 @@ Configuration (🔧):
   spice.git.indexLockTimeout    Total time to spend retrying git commands that
                                 fail due to index.lock contention. Set to 0 to
                                 disable retries.
+  spice.restack.mergeAutoResolve
+                                When restacking with merge, auto-resolve
+                                conflicts by preferring one side: 'none'
+                                (default), 'ours', or 'theirs'.
+  spice.restack.method          How to update stacked branches when restacking:
+                                'rebase' (default) or 'merge'.
   spice.secret.backend          Backend to use for secret storage
                                 ($GIT_SPICE_SECRET_BACKEND).
 

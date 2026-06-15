@@ -470,6 +470,55 @@ If set to false, you can opt in to opening the editor with the `--edit` flag.
 - `true` (default)
 - `false`
 
+### spice.restack.method
+
+<!-- gs:version unreleased -->
+
+Controls how git-spice updates a branch
+when it restacks the branch onto its base.
+
+**Accepted values:**
+
+- `rebase` (default): replay the branch's own commits onto the new base.
+  This rewrites the branch and usually requires a force-push afterwards.
+- `merge`: merge the new base into the branch, recording a merge commit.
+  The branch's existing commits are preserved,
+  so no force-push is needed,
+  and conflicts you resolve once do not recur on later restacks.
+
+The `merge` method is useful when the remote forbids force-pushes.
+
+Overlapping edits still need to be resolved once:
+the merge stops on the conflict,
+and you finish it with $$gs continue$$
+(or cancel it with $$gs abort$$).
+The recorded merge commit then carries that resolution forward.
+
+### spice.restack.mergeAutoResolve
+
+<!-- gs:version unreleased -->
+
+When restacking with the `merge` method
+(see $$spice.restack.method$$),
+controls whether conflicting hunks are auto-resolved
+by preferring one side of the merge.
+
+**Accepted values:**
+
+- `none` (default): conflicting hunks stop the merge for manual resolution
+- `ours`: keep the branch's version of conflicting hunks (`git merge -X ours`)
+- `theirs`: keep the new base's version of conflicting hunks
+  (`git merge -X theirs`)
+
+This option has no effect when $$spice.restack.method$$ is `rebase`.
+
+!!! warning
+
+    `ours` and `theirs` resolve conflicts without prompting,
+    so they can silently discard the losing side's conflicting changes.
+    Use them only when you are sure
+    which side should win every conflicting hunk.
+
 ### spice.submit.draft
 
 <!-- gs:version v0.16.0 -->

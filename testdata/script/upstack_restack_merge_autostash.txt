@@ -1,0 +1,91 @@
+# With spice.restack.method=merge, a multi-branch restack
+# (here 'gs upstack restack') with a dirty worktree completes
+# without a checkout error, and the uncommitted change survives.
+
+as 'Test <test@example.com>'
+at '2024-05-27T18:24:42Z'
+
+mkdir repo
+cd repo
+git init
+git add init.txt dirty.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# use the merge method for restacks.
+git config spice.restack.method merge
+
+# stack: main -> a -> b.
+# 'a' and 'b' each add an independent file.
+cp $WORK/extra/a.txt a.txt
+git add a.txt
+gs bc -m a
+
+cp $WORK/extra/b.txt b.txt
+git add b.txt
+gs bc -m b
+
+# advance trunk with a change to a file that neither branch nor the
+# dirty change touches, so the merges and the autostash pop are clean.
+gs trunk
+cp $WORK/extra/init.new.txt init.txt
+git add init.txt
+git commit -m 'Change init'
+
+# make an uncommitted change to a tracked file before restacking.
+gs branch checkout a
+cp $WORK/extra/dirty.new.txt dirty.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-status.txt
+
+# restack the upstack of 'a': both 'a' and 'b' get merge commits.
+# without the autostash wrap, the dirty tree would break the checkout
+# of 'b' after 'a' is merged.
+gs upstack restack
+stderr 'a: restacked on main'
+stderr 'b: restacked on a'
+
+# no merge was left pending and no conflict prompt was shown.
+! exists .git/MERGE_HEAD
+! stderr 'There was a conflict while merging'
+
+# the uncommitted change survives in the worktree.
+cmp dirty.txt $WORK/extra/dirty.new.txt
+git status --porcelain
+cmp stdout $WORK/golden/dirty-status.txt
+
+# both branches carry merge commits of their new bases.
+git graph --branches
+cmp stdout $WORK/golden/graph.txt
+
+-- repo/init.txt --
+initial init
+
+-- repo/dirty.txt --
+clean dirty
+
+-- extra/a.txt --
+a contents
+
+-- extra/b.txt --
+b contents
+
+-- extra/init.new.txt --
+changed init
+
+-- extra/dirty.new.txt --
+dirty changes
+
+-- golden/dirty-status.txt --
+ M dirty.txt
+-- golden/graph.txt --
+*   8952528 (b) Merge branch 'a' into b
+|\  
+| *   3856e6c (HEAD -> a) Merge branch 'main' into a
+| |\  
+| | * 0515afa (main) Change init
+* | | 0201d12 b
+|/ /  
+* / a14c6cc a
+|/  
+* 49cb34e Initial commit
