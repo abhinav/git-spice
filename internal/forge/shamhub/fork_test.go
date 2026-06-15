@@ -2,7 +2,6 @@ package shamhub
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -25,7 +24,7 @@ func TestForkWorkflow(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_NAME", "Test")
 	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Setup ShamHub server
 	sh, err := New(Config{
