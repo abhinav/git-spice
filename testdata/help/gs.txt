@@ -31,6 +31,7 @@ Log
 
 Stack
   stack (s) submit (s)          Submit a stack
+  stack (s) merge (m)           Merge a stack
   stack (s) sync (sy)           Pull remote-side commits for every branch in the
                                 stack
   stack (s) restack (r)         Restack a stack
@@ -64,6 +65,7 @@ Branch
   branch (b) restack (r)       Restack a branch
   branch (b) onto (on)         Move a branch onto another branch
   branch (b) diff (di)         Show diff between a branch and its base
+  branch (b) merge (m)         Merge a branch into trunk
   branch (b) submit (s)        Submit a branch
   branch (b) sync (sy)         Pull remote-side commits into a tracked branch
 
