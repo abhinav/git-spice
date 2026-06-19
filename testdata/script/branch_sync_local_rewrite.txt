@@ -1,0 +1,46 @@
+# When a branch has been rewritten locally (e.g. restacked onto a newer
+# trunk) but the remote has gained nothing since the last push, the
+# branch has not really "diverged": there is nothing to pull and it
+# simply owes a push. 'gs branch sync' reports this benignly and never
+# warns about divergence.
+
+as 'Test <test@example.com>'
+at '2026-06-18T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create feat1 and submit; this records the last-pushed hash.
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+gs branch submit --fill
+stderr 'Created #'
+
+# rewrite the branch locally below the last-pushed hash (an amend stands
+# in for a restack onto a moved trunk: the pushed commit leaves local
+# history). The remote still sits at the last-pushed hash.
+cp $WORK/extra/feat1-v2.txt feat1.txt
+git add feat1.txt
+gs commit amend --no-edit
+
+# 'gs branch sync' sees raw divergence but recognizes the remote gained
+# nothing: it reports the branch as ahead and does NOT warn about
+# divergence.
+gs branch sync
+stderr 'feat1: ahead of remote; nothing to pull'
+! stderr 'diverged'
+
+-- repo/feat1.txt --
+feat 1
+-- extra/feat1-v2.txt --
+feat 1 rewritten

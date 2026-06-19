@@ -280,10 +280,15 @@ typically commits added by CI bots such as autofix-ci, license-headers,
 or codeowners.
 
 Branches that fast-forward bring their children along by triggering an
-upstack restack;
-diverged branches (both local and remote have new commits since the
-last push) are reported and skipped by default.
-To replay diverged branches' local commits on top of the remote, set:
+upstack restack.
+When the remote has genuinely gained commits but the local branch has
+also moved -- including branches restacked onto a newer trunk since
+their last push -- the branch is reported as diverged and skipped by
+default.
+A branch that has only moved locally, with no new remote commits,
+is recognized as simply owing a push and is not reported as diverged.
+To replay the remote-side commits on top of a diverged branch
+(even one that has been restacked), set:
 
 ```freeze language="terminal"
 {green}${reset} git config {red}spice.repoSync.pullBranches{reset} {mag}rebase{reset}

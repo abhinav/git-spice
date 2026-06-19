@@ -72,8 +72,9 @@ const (
 	// remote-side commits brought in from the upstream.
 	ActionRebased
 
-	// ActionBehind means the remote is behind the local branch; the
-	// branch will need to be pushed.
+	// ActionBehind means the remote has no commits to integrate: it sits
+	// at (or behind) our last push. The local branch is ahead of, or has
+	// only moved away from, a stale remote and simply needs to be pushed.
 	ActionBehind
 
 	// ActionDiverged means both local and remote have new commits since
@@ -192,31 +193,55 @@ func (h *Handler) Sync(ctx context.Context, req SyncRequest) (*SyncResult, error
 		return res, nil
 	}
 
-	// Truly diverged.
+	// Local and remote have diverged in raw Git terms: neither tip is an
+	// ancestor of the other. Use the last-pushed hash as a baseline to
+	// tell apart two very different situations that look identical here:
+	//
+	//   - The remote is stale and only our local branch moved (e.g. it
+	//     was restacked onto a newer trunk). There is nothing to pull;
+	//     the branch owes a push.
+	//   - The remote genuinely gained commits since our last push (e.g. a
+	//     CI bot). Those are the commits we want to integrate.
+	//
+	// The remote-side commits are the range pHash..remote. If that range
+	// is empty, the remote has gained nothing and the divergence is purely
+	// local.
+	pHash := lookup.UpstreamLastPushedHash
+	remoteAhead := pHash != "" && pHash != remoteHash &&
+		h.Repository.IsAncestor(ctx, pHash, remoteHash)
+
+	if !remoteAhead {
+		switch {
+		case pHash != "" && pHash == remoteHash:
+			// Remote sits exactly at our last push: it gained nothing.
+			// The local branch moved on its own and just owes a push.
+			res.Action = ActionBehind
+		case pHash == "":
+			// No baseline recorded, so we can't identify what to pull.
+			res.Action = ActionSkipped
+			res.SkipReason = "no last-pushed hash recorded; push the branch once to establish a baseline"
+		default:
+			// Remote was rewritten away from our baseline.
+			res.Action = ActionDiverged
+		}
+		return res, nil
+	}
+
+	// pHash..remote is a non-empty, well-formed range: the remote has real
+	// commits to integrate. Bringing them in means replaying them onto the
+	// local tip, which is a rebase, not a fast-forward.
 	if req.Mode != ModeRebase {
 		res.Action = ActionDiverged
 		return res, nil
 	}
 
-	// Rebase path. Validate that LastPushedHash is in both L and R's
-	// history; otherwise we can't safely identify which commits to pull.
-	if lookup.UpstreamLastPushedHash == "" {
-		res.Action = ActionSkipped
-		res.SkipReason = "no LastPushedHash recorded; push the branch once to establish a baseline"
-		return res, nil
-	}
-	pHash := lookup.UpstreamLastPushedHash
-	if !h.Repository.IsAncestor(ctx, pHash, remoteHash) {
-		res.Action = ActionSkipped
-		res.SkipReason = "remote history has been rewritten since last push; manual recovery required"
-		return res, nil
-	}
-	if !h.Repository.IsAncestor(ctx, pHash, localHash) {
-		res.Action = ActionSkipped
-		res.SkipReason = "local history has been rewritten below the last-pushed hash; manual recovery required"
-		return res, nil
-	}
-
+	// Replay pHash..remote onto the local tip via 'git rebase --onto'.
+	//
+	// We deliberately do NOT require pHash to be an ancestor of local: a
+	// restacked branch drops pHash from its history, yet rebase --onto
+	// only needs pHash..remote to be a valid range, which remoteAhead
+	// already guarantees. This is what lets remote-side commits survive
+	// even after the branch has been restacked locally.
 	if err := h.rebase(ctx, branch, lookup.UpstreamBranch, localHash, remoteHash, pHash); err != nil {
 		return nil, err
 	}
