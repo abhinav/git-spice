@@ -8,4 +8,5 @@ type anchorCmd struct {
 	Create anchorCreateCmd `cmd:"" aliases:"c" help:"Create a new worktree anchored at a branch"`
 	List   anchorListCmd   `cmd:"" aliases:"ls" help:"List anchors and their worktrees"`
 	Track  anchorTrackCmd  `cmd:"" aliases:"tr" help:"Track an existing worktree as an anchor"`
+	Rm     anchorRmCmd     `cmd:"" aliases:"rm" help:"Remove an anchor worktree and dissolve its anchor"`
 }

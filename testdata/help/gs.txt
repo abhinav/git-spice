@@ -73,6 +73,7 @@ Anchor
   anchor create (c)    Create a new worktree anchored at a branch
   anchor list (ls)     List anchors and their worktrees
   anchor track (tr)    Track an existing worktree as an anchor
+  anchor rm (rm)       Remove an anchor worktree and dissolve its anchor
 
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation

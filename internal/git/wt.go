@@ -112,6 +112,31 @@ func (r *Repository) WorktreeAdd(
 	return r.gitCmd(ctx, "worktree", args...).Run()
 }
 
+// WorktreeRemoveRequest specifies parameters for removing a worktree.
+type WorktreeRemoveRequest struct {
+	// Path is the filesystem path of the worktree to remove.
+	Path string // required
+
+	// Force removes the worktree even if it is dirty
+	// or contains submodules.
+	Force bool
+}
+
+// WorktreeRemove removes the worktree at the given path.
+//
+// It removes only the worktree's working directory and administrative
+// files; branches and other refs are left untouched.
+func (r *Repository) WorktreeRemove(
+	ctx context.Context, req WorktreeRemoveRequest,
+) error {
+	args := []string{"remove"}
+	if req.Force {
+		args = append(args, "--force")
+	}
+	args = append(args, req.Path)
+	return r.gitCmd(ctx, "worktree", args...).Run()
+}
+
 // WorktreeListItem represents a worktree associated with a repository.
 type WorktreeListItem struct {
 	// Path is the path to the worktree.
