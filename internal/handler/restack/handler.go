@@ -106,6 +106,14 @@ type Request struct {
 	// checked out in the given worktree.
 	WorktreeFilter string
 
+	// WholeRepo extends an upstack-from-trunk restack
+	// to also cover stacks rooted at anchors
+	// (per-worktree trunks),
+	// which are otherwise disconnected from the canonical trunk.
+	//
+	// It has no effect unless req.Branch is the canonical trunk.
+	WholeRepo bool
+
 	// SkipCheckout skips checking out req.Branch
 	// after restacking completes.
 	// Use this when the caller handles checkout itself.
@@ -186,6 +194,21 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 			}
 
 			branchesToRestack = append(branchesToRestack, branch)
+		}
+	}
+
+	// A whole-repo restack also covers stacks rooted at anchors
+	// (per-worktree trunks). Anchors are graph roots disconnected
+	// from the canonical trunk, so an upstack-from-trunk traversal
+	// never reaches them; walk each anchor's upstack explicitly.
+	if req.WholeRepo {
+		for anchor := range branchGraph.Anchors() {
+			for branch := range branchGraph.Upstack(anchor) {
+				if branch == anchor {
+					continue // anchor is a root; never restacked
+				}
+				branchesToRestack = append(branchesToRestack, branch)
+			}
 		}
 	}
 

@@ -53,7 +53,12 @@ func (cmd *repoRestackCmd) Run(
 		SkipCheckout:    true, // caller handles checkout
 	}
 	if cmd.Worktree {
+		// Scope to stacks touching this worktree.
 		req.WorktreeFilter = wt.RootDir()
+	} else {
+		// Whole repo: also reach stacks rooted at anchors,
+		// which are disconnected from the canonical trunk.
+		req.WholeRepo = true
 	}
 
 	count, err := handler.Restack(ctx, &req)
