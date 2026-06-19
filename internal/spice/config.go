@@ -264,6 +264,43 @@ func (c *Config) ScriptResolveMaxIterations() int {
 	return n
 }
 
+// lastValue returns the last value for the given config key,
+// or an empty string if the key is not set.
+func (c *Config) lastValue(key string) string {
+	values := c.items[git.ConfigKey(
+		_spiceSection+"."+key,
+	).Canonical()]
+	if len(values) == 0 {
+		return ""
+	}
+	return values[len(values)-1]
+}
+
+// MessageGenerator returns the configured script
+// for generating or updating messages,
+// or an empty string if not set.
+//
+// The value is read from spice.message.generator.
+func (c *Config) MessageGenerator() string {
+	return c.lastValue("message.generator")
+}
+
+// MessageAutoFill reports whether the message generator should be
+// invoked by default. Read from spice.message.autoFill (bool, default
+// false). When true, `gs commit create` and friends behave as though
+// `--fill` was passed; `--no-fill` opts out.
+func (c *Config) MessageAutoFill() bool {
+	v := c.lastValue("message.autoFill")
+	if v == "" {
+		return false
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return b
+}
+
 // Validate checks if the configuration is valid for the given application.
 // This is a no-op, as we allow unknown configuration keys.
 func (*Config) Validate(*kong.Application) error { return nil }

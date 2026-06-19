@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.uber.org/mock/gomock"
@@ -302,6 +303,54 @@ func TestHandler_SquashBranch(t *testing.T) {
 			MessageFile: "message.txt",
 		})
 		assert.NoError(t, err)
+	})
+
+	// When --fill is set without a message generator,
+	// an error should be returned telling the user
+	// to configure a generator.
+	t.Run("FillWithoutGenerator", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		branchName := "feature"
+		baseHash := git.Hash("abc123")
+		headHash := git.Hash("def456")
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			VerifyRestacked(t.Context(), branchName).
+			Return(nil)
+		mockService.EXPECT().
+			LookupBranch(t.Context(), branchName).
+			Return(&spice.LookupBranchResponse{
+				Head:     headHash,
+				BaseHash: baseHash,
+				Base:     "main",
+			}, nil)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			CommitMessageRange(
+				t.Context(),
+				headHash.String(),
+				baseHash.String(),
+			).
+			Return([]git.CommitMessage{
+				{Subject: "Add feature", Body: "Implementation"},
+			}, nil)
+
+		handler := &Handler{
+			Log:        silog.Nop(),
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Store:      mockStore,
+			Service:    mockService,
+			Restack:    NewMockRestackHandler(ctrl),
+		}
+
+		err := handler.SquashBranch(
+			t.Context(), branchName, &Options{Fill: true},
+		)
+		assert.ErrorIs(t, err, msggen.ErrNoGenerator)
 	})
 
 	t.Run("NoMessage", func(t *testing.T) {
