@@ -63,6 +63,17 @@ type Item struct {
 	// If non-nil and Total > 0, rendered as " [☑️Resolved/Total💬]".
 	CommentCounts *forge.CommentCounts
 
+	// Anchor reports whether this item is an anchor:
+	// a per-worktree trunk that roots another worktree's stack.
+	// If true, rendered with a " [root anchor]" or " [internal anchor]"
+	// tag depending on AnchorBase.
+	Anchor bool
+
+	// AnchorBase is the branch an internal anchor is pinned at.
+	// Empty for a root anchor (which tracks the remote trunk).
+	// Only meaningful when Anchor is true.
+	AnchorBase string
+
 	// Worktree is the absolute path where this branch is checked out.
 	// If non-empty and differs from GraphOptions.CurrentWorktree,
 	// rendered as "[wt: path]".
@@ -335,6 +346,14 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 
 	if cc := item.CommentCounts; cc != nil && cc.Total > 0 {
 		r.commentCounts(sb, cc)
+	}
+
+	if item.Anchor {
+		tag := " [root anchor]"
+		if item.AnchorBase != "" {
+			tag = " [internal anchor]"
+		}
+		sb.WriteString(r.Style.Worktree.Render(tag))
 	}
 
 	if wt := item.Worktree; wt != "" && wt != r.CurrentWorktree {

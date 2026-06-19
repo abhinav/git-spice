@@ -39,6 +39,9 @@ type Store interface {
 	// TrunkFor returns the trunk branch for the given worktree root:
 	// the worktree's registered trunk if any, else the canonical trunk.
 	TrunkFor(worktreePath string) string
+
+	// Anchors returns all registered anchors (per-worktree trunks).
+	Anchors() []state.Anchor
 }
 
 var _ Store = (*state.Store)(nil)
@@ -160,6 +163,17 @@ type BranchItem struct {
 	// NeedsRestack indicates whether this branch needs to be restacked
 	// on top of its base branch.
 	NeedsRestack bool
+
+	// Anchor reports whether this item is an anchor branch:
+	// a per-worktree trunk that roots another worktree's stack.
+	// Anchor items are injected as display nodes; they are not
+	// tracked stack branches.
+	Anchor bool
+
+	// AnchorBase is the branch an internal anchor is pinned at.
+	// Empty for a root anchor (which tracks the remote trunk).
+	// Only meaningful when Anchor is true.
+	AnchorBase string
 }
 
 // PushStatus contains push-related information
@@ -375,6 +389,37 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	trunkItem := &BranchItem{Name: displayTrunk}
 	items = append(items, trunkItem)
 	itemByName[trunkItem.Name] = trunkItem
+
+	// Inject anchor nodes for any displayed branch rooted at an anchor.
+	// Anchors are per-worktree trunks: graph roots that are not tracked
+	// stack branches, so they are absent from the listing. Show each one
+	// as an intermediate node under its base (the canonical trunk for a
+	// root anchor, or the pinned branch for an internal anchor) so the
+	// owning worktree's stack renders beneath it.
+	anchorByBranch := make(map[string]state.Anchor)
+	for _, a := range h.Store.Anchors() {
+		anchorByBranch[a.Branch] = a
+	}
+	for _, item := range items {
+		anchor, ok := anchorByBranch[item.Base]
+		if !ok {
+			continue // base is a normal branch or the trunk
+		}
+		if _, shown := itemByName[anchor.Branch]; shown {
+			continue // already injected
+		}
+
+		base := cmp.Or(anchor.Base, displayTrunk)
+		anchorItem := &BranchItem{
+			Name:       anchor.Branch,
+			Base:       base,
+			Worktree:   anchor.Worktree,
+			Anchor:     true,
+			AnchorBase: anchor.Base,
+		}
+		items = append(items, anchorItem)
+		itemByName[anchor.Branch] = anchorItem
+	}
 
 	slices.SortFunc(items, func(a, b *BranchItem) int {
 		return strings.Compare(a.Name, b.Name)

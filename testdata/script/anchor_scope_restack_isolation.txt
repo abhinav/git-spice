@@ -1,0 +1,51 @@
+# Restack operations are scoped to the invoking worktree's anchor:
+# they never reach across an anchor boundary into another worktree's
+# stack. This holds structurally because an anchor is a graph root,
+# disconnected from the canonical trunk and from its own base.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Primary builds a stack: main -> featA1
+cp $WORK/featA1.txt featA1.txt
+git add featA1.txt
+gs bc featA1 -m 'Add featA1'
+
+# A dependent worktree anchored at featA1 (an internal anchor),
+# carrying its own stack: wtB -> featB1 -> featB2.
+gs anchor create $WORK/wtB --anchor featA1 -b featB1
+cd $WORK/wtB
+cp $WORK/featB1.txt featB1.txt
+git add featB1.txt
+gs cc -m 'Add featB1'
+cp $WORK/featB2.txt featB2.txt
+git add featB2.txt
+gs bc featB2 -m 'Add featB2'
+
+# From the primary, an upstack restack at featA1 stops at the child
+# anchor: it does not reach into wtB's stack.
+cd $WORK/repo
+gs upstack restack
+! stderr 'featB1'
+! stderr 'featB2'
+
+# From wtB, a stack restack stays above the anchor: it does not reach
+# down into the primary's featA1.
+cd $WORK/wtB
+gs stack restack
+! stderr 'featA1: restacked'
+
+-- repo/dummy.txt --
+dummy
+-- featA1.txt --
+featA1
+-- featB1.txt --
+featB1
+-- featB2.txt --
+featB2

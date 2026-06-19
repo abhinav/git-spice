@@ -1,0 +1,3 @@
+kind: Added
+body: 'anchor: Restack and log commands are anchor-aware: ''gs repo restack'' also restacks stacks rooted at worktree anchors, ''gs ll'' shows another worktree''s anchor-rooted stack tagged by anchor kind (with ''anchor'' and ''anchorKind'' JSON fields), and checking out a branch already in use by another worktree fails with a clear message.'
+time: 2026-06-19T11:40:07.895977-04:00

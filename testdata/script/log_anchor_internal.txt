@@ -1,0 +1,42 @@
+# An internal anchor (one pinned at a tracked branch) renders with an
+# '[internal anchor]' tag and reports "anchorKind":"internal" in JSON,
+# distinguishing it from a root anchor that tracks the remote trunk.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Primary builds a stack: main -> featA1
+cp $WORK/featA1.txt featA1.txt
+git add featA1.txt
+gs bc featA1 -m 'Add featA1'
+
+# A dependent worktree with an internal anchor pinned at featA1.
+gs anchor create $WORK/wtB --anchor featA1 -b featB1
+cd $WORK/wtB
+cp $WORK/featB1.txt featB1.txt
+git add featB1.txt
+gs cc -m 'Add featB1'
+
+# From the primary, the anchor node is tagged internal and nested
+# under its pinned base featA1.
+cd $WORK/repo
+gs bco featA1
+gs ls -a
+stderr 'wtB.*\[internal anchor\]'
+
+# JSON records the internal kind.
+gs ls -a --json
+stdout '"name":"wtB".*"anchorKind":"internal"'
+
+-- repo/dummy.txt --
+dummy
+-- featA1.txt --
+featA1
+-- featB1.txt --
+featB1

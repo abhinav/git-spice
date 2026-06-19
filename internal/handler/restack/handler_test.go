@@ -602,6 +602,64 @@ func TestHandler_Restack_trunk(t *testing.T) {
 	})
 }
 
+func TestHandler_Restack_wholeRepo(t *testing.T) {
+	// A whole-repo restack must reach stacks rooted at an anchor,
+	// not just those reachable from the canonical trunk.
+	//
+	//	main ---> other
+	//	wt-a ---> feat1 --> feat2   (anchor-rooted; disconnected from main)
+	t.Run("ReachesAnchorStacks", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Anchor("wt-a").
+				Branch("other", "main").
+				Branch("feat1", "wt-a").
+				Branch("feat2", "feat1").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "other").
+			Return(&spice.RestackResponse{Base: "main"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feat1").
+			Return(&spice.RestackResponse{Base: "wt-a"}, nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feat2").
+			Return(&spice.RestackResponse{Base: "feat1"}, nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "main",
+			Scope:           ScopeUpstackExclusive,
+			ContinueCommand: []string{"repo", "restack"},
+			SkipCheckout:    true,
+			WholeRepo:       true,
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, 3, count)
+		assert.Contains(t, logBuffer.String(), "other: restacked on main")
+		assert.Contains(t, logBuffer.String(), "feat1: restacked on wt-a")
+		assert.Contains(t, logBuffer.String(), "feat2: restacked on feat1")
+	})
+}
+
 func TestHandler_Restack_skipCheckedOut(t *testing.T) {
 	t.Run("Branch", func(t *testing.T) {
 		// Branch-scoped restack operation,
@@ -848,6 +906,7 @@ func TestHandler_Restack_errors(t *testing.T) {
 
 type branchGraphBuilder struct {
 	trunk     string
+	anchors   []string
 	items     []spice.BranchGraphItem
 	worktrees map[string]string
 }
@@ -867,6 +926,13 @@ func (b *branchGraphBuilder) Branch(name, base string) *branchGraphBuilder {
 	return b
 }
 
+// Anchor registers an anchor branch: a per-worktree graph root.
+// Branches based on it are rooted there, disconnected from trunk.
+func (b *branchGraphBuilder) Anchor(name string) *branchGraphBuilder {
+	b.anchors = append(b.anchors, name)
+	return b
+}
+
 func (b *branchGraphBuilder) Worktree(branch, wt string) *branchGraphBuilder {
 	b.worktrees[branch] = wt
 	return b
@@ -875,6 +941,7 @@ func (b *branchGraphBuilder) Worktree(branch, wt string) *branchGraphBuilder {
 func (b *branchGraphBuilder) Build(t testing.TB) *spice.BranchGraph {
 	graph, err := spice.NewBranchGraph(t.Context(), &branchLoaderStub{
 		trunk:     b.trunk,
+		anchors:   b.anchors,
 		items:     b.items,
 		worktrees: b.worktrees,
 	}, &spice.BranchGraphOptions{IncludeWorktrees: true})
@@ -884,6 +951,7 @@ func (b *branchGraphBuilder) Build(t testing.TB) *spice.BranchGraph {
 
 type branchLoaderStub struct {
 	trunk     string
+	anchors   []string
 	items     []spice.LoadBranchItem
 	worktrees map[string]string
 }
@@ -895,7 +963,7 @@ func (b *branchLoaderStub) Trunk() string {
 }
 
 func (b *branchLoaderStub) AnchorBranches() []string {
-	return nil
+	return b.anchors
 }
 
 func (b *branchLoaderStub) LoadBranches(context.Context) ([]spice.LoadBranchItem, error) {
