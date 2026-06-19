@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
+	"go.abhg.dev/gs/internal/msggen"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -65,11 +68,15 @@ type Handler struct {
 	Store      Store          // required
 	Service    Service        // required
 	Restack    RestackHandler // required
+	Config     *spice.Config  // optional
+	RepoRoot   string         // optional; repo root dir
+	Args       []string       // optional; invoking process args
 }
 
 // Options defines options for the SquashBranch method.
-// These are exposed as flags in the CLI
+// These are exposed as flags in the CLI.
 type Options struct {
+	Fill     bool `short:"c" help:"Fill the commit message using the configured message generator."`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 
 	// git.commentString is the prefix for comments in commit messages.
@@ -115,18 +122,52 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 		msg := commitMessageTemplate(
 			commitMessages,
 			opts.CommentPrefix,
-			!opts.NoEdit, // generate comments only if the message will be edited
+			!opts.NoEdit, // comments only if editing
 		)
-		if opts.NoEdit {
-			// If --no-edit is specified, use the combined commit messages
-			// as the commit message without opening an editor.
-			opts.Message = msg
-		} else {
-			// Otherwise, use the combined commit messages as a template
-			// for the commit message, which will be opened in an editor.
-			commitTemplate = msg
+
+		// If --fill and a message generator is configured,
+		// run it to produce the squash commit message.
+		if opts.Fill {
+			var script string
+			if h.Config != nil {
+				script = h.Config.MessageGenerator()
+			}
+			if script == "" {
+				return msggen.ErrNoGenerator
+			}
+
+			env := scriptrun.EnvFor(
+				scriptrun.OpBranchSquash, branchName, branch.Base,
+			)
+			env = append(env,
+				"GS_MESSAGE_KIND=commit",
+				"GS_MESSAGE_UPDATE="+strconv.FormatBool(true),
+				"GS_MESSAGE="+msg,
+			)
+			result, err := (&msggen.Runner{
+				Log:  h.Log,
+				Args: h.Args,
+			}).Run(
+				ctx, script, h.RepoRoot, env,
+			)
+			if err != nil {
+				h.Log.Warn(
+					"Message generator failed,"+
+						" falling back to editor",
+					"error", err,
+				)
+			} else {
+				opts.Message = result.Message()
+			}
 		}
 
+		if opts.Message == "" {
+			if opts.NoEdit {
+				opts.Message = msg
+			} else {
+				commitTemplate = msg
+			}
+		}
 	}
 
 	// Detach the HEAD so that we don't mess with the current branch

@@ -23,6 +23,8 @@ var _draftRegex = regexp.MustCompile(`(?i)^\s*(\[Draft]|Draft:|\(Draft\))\s*`)
 func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts forge.EditChangeOptions) error {
 	if cmputil.Zero(opts.Base) &&
 		cmputil.Zero(opts.Draft) &&
+		cmputil.Zero(opts.Subject) &&
+		cmputil.Zero(opts.Body) &&
 		len(opts.AddLabels) == 0 &&
 		len(opts.AddReviewers) == 0 &&
 		len(opts.AddAssignees) == 0 {
@@ -57,6 +59,18 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	if opts.Base != "" {
 		updateOptions.TargetBranch = &opts.Base
 		logUpdates = append(logUpdates, slog.String("base", opts.Base))
+	}
+
+	if opts.Subject != "" {
+		updateOptions.Title = &opts.Subject
+		logUpdates = append(logUpdates,
+			slog.String("subject", opts.Subject))
+	}
+
+	if opts.Body != nil {
+		updateOptions.Description = opts.Body
+		logUpdates = append(logUpdates,
+			slog.String("body", *opts.Body))
 	}
 
 	// TODO:

@@ -1,0 +1,3 @@
+kind: Added
+body: 'commit/submit/squash: Add AI message generation via spice.message.generator config option, activated with --fill. For branch submit, --fill and spice.message.autoFill only generate messages for new change requests; use --regenerate-message to rewrite an existing description. Scripts receive GS_OPERATION, GS_MESSAGE_KIND, and GS_MESSAGE_UPDATE environment variables, plus the full gs command as positional args.'
+time: 2026-03-21T07:29:17.2847-04:00

@@ -14,6 +14,7 @@ type findPRNode struct {
 	Number         githubv4.Int              `graphql:"number"`
 	URL            githubv4.URI              `graphql:"url"`
 	Title          githubv4.String           `graphql:"title"`
+	Body           githubv4.String           `graphql:"body"`
 	State          githubv4.PullRequestState `graphql:"state"`
 	HeadRefOid     githubv4.GitObjectID      `graphql:"headRefOid"`
 	BaseRefName    githubv4.String           `graphql:"baseRefName"`
@@ -80,6 +81,7 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 		URL:       n.URL.String(),
 		State:     forgeChangeState(n.State),
 		Subject:   string(n.Title),
+		Body:      string(n.Body),
 		BaseName:  string(n.BaseRefName),
 		HeadHash:  git.Hash(n.HeadRefOid),
 		Draft:     bool(n.IsDraft),

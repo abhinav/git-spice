@@ -516,6 +516,7 @@ type BasicMergeRequest struct {
 	SourceBranch            string       `json:"source_branch"`
 	TargetBranch            string       `json:"target_branch"`
 	Title                   string       `json:"title"`
+	Description             string       `json:"description"`
 	State                   string       `json:"state"`
 	Assignees               []*BasicUser `json:"assignees"`
 	Reviewers               []*BasicUser `json:"reviewers"`
@@ -695,6 +696,7 @@ type CreateMergeRequestOptions struct {
 // UpdateMergeRequestOptions configures merge-request updates.
 type UpdateMergeRequestOptions struct {
 	Title        *string       `json:"title,omitempty"`
+	Description  *string       `json:"description,omitempty"`
 	TargetBranch *string       `json:"target_branch,omitempty"`
 	AssigneeIDs  *[]int64      `json:"assignee_ids,omitempty"`
 	ReviewerIDs  *[]int64      `json:"reviewer_ids,omitempty"`

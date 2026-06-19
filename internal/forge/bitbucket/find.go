@@ -92,6 +92,7 @@ func (r *Repository) convertPRToFindItem(pr *bitbucket.PullRequest) *forge.FindC
 		URL:       pr.Links.HTML.Href,
 		State:     stateFromAPI(pr.State),
 		Subject:   pr.Title,
+		Body:      pr.Description,
 		BaseName:  pr.Destination.Branch.Name,
 		HeadHash:  extractHeadHash(pr),
 		Draft:     pr.Draft,

@@ -81,7 +81,7 @@ interactions:
       remote_addr: ""
       request_uri: ""
       body: |
-        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,body,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
       form: {}
       headers:
         Content-Type:
@@ -183,7 +183,7 @@ interactions:
       remote_addr: ""
       request_uri: ""
       body: |
-        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
+        {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,body,state,headRefOid,baseRefName,isDraft}}}","variables":{"number":4,"owner":"test-owner","repo":"test-repo"}}
       form: {}
       headers:
         Content-Type:

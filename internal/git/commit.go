@@ -245,6 +245,21 @@ func (r *Repository) CommitSubject(ctx context.Context, commitish string) (strin
 	return out, nil
 }
 
+// CommitMessageFull returns the full message of a commit
+// (subject and body combined).
+func (r *Repository) CommitMessageFull(
+	ctx context.Context,
+	commitish string,
+) (string, error) {
+	out, err := r.gitCmd(ctx,
+		"show", "--no-patch", "--format=%B", commitish,
+	).OutputChomp()
+	if err != nil {
+		return "", fmt.Errorf("git log: %w", err)
+	}
+	return out, nil
+}
+
 // CommitMessage is the subject and body of a commit.
 type CommitMessage struct {
 	// Subject for the commit.
