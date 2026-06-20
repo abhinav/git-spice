@@ -8,6 +8,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"slices"
 	"sort"
@@ -38,6 +39,9 @@ type GitRepository interface {
 	Var(ctx context.Context, name string) (string, error)
 	CommitMessageRange(ctx context.Context, start string, stop string) ([]git.CommitMessage, error)
 	RemoteFetchRefspecs(ctx context.Context, remote string) ([]git.Refspec, error)
+	IsAncestor(ctx context.Context, a, b git.Hash) bool
+	Fetch(ctx context.Context, opts git.FetchOptions) error
+	ListCommitsDetails(ctx context.Context, commits git.CommitRange) iter.Seq2[git.CommitDetail, error]
 }
 
 var _ GitRepository = (*git.Repository)(nil)
@@ -56,6 +60,7 @@ type Store interface {
 	BeginBranchTx() *state.BranchTx
 	Trunk() string
 
+	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
 	LoadPreparedBranch(ctx context.Context, name string) (*state.PreparedBranch, error)
 	SavePreparedBranch(ctx context.Context, b *state.PreparedBranch) error
 	ClearPreparedBranch(ctx context.Context, name string) error
@@ -650,6 +655,14 @@ func (h *Handler) submitBranch(
 		return status, fmt.Errorf("peel to commit: %w", err)
 	}
 
+	// lastPushed is the commit git-spice last recorded pushing to the
+	// upstream branch. It is the baseline for the --force-with-lease used
+	// below: we refuse to force-push if the remote has moved past it.
+	var lastPushed git.Hash
+	if resp, err := h.Store.LookupBranch(ctx, branchToSubmit); err == nil {
+		lastPushed = resp.UpstreamLastPushedHash
+	}
+
 	remote, err := h.remote(ctx)
 	if err != nil {
 		return status, fmt.Errorf("get remote: %w", err)
@@ -982,15 +995,25 @@ func (h *Handler) submitBranch(
 			NoVerify: opts.NoVerify,
 		}
 
-		// If we've already pushed this branch before,
-		// we'll need a force push.
-		// Use a --force-with-lease to avoid
-		// overwriting someone else's changes.
+		// If we've already pushed this branch before, we'll need a force
+		// push. Use a --force-with-lease against the commit we last pushed
+		// so we don't overwrite commits added by someone else.
 		if !opts.Force {
-			existingHash, err := h.Repository.PeelToCommit(ctx, remote.Push+"/"+upstreamBranch)
-			if err == nil {
-				pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+			// No CR is associated yet, so there is no forge head to
+			// consult; fall back to the remote-tracking ref, which is
+			// zero if the branch does not exist on the remote.
+			var remoteHead git.Hash
+			if h, err := h.Repository.PeelToCommit(ctx, remote.Push+"/"+upstreamBranch); err == nil {
+				remoteHead = h
 			}
+
+			lease, err := h.ensureSafePush(ctx, log,
+				branchToSubmit, remote.Push, upstreamBranch,
+				lastPushed, remoteHead, commitHash)
+			if err != nil {
+				return status, err
+			}
+			pushOpts.ForceWithLease = lease
 		}
 
 		err = h.Worktree.Push(ctx, pushOpts)
@@ -1179,16 +1202,20 @@ func (h *Handler) submitBranch(
 				NoVerify: opts.NoVerify,
 			}
 			if !opts.Force {
-				// Force push, but only if the ref is exactly
-				// where we think it is.
-				existingHash, err := h.Repository.PeelToCommit(ctx, remote.Push+"/"+upstreamBranch)
-				if err == nil {
-					pushOpts.ForceWithLease = upstreamBranch + ":" + existingHash.String()
+				// Force push, but only if the remote is still where we
+				// last left it. The forge already told us its current head
+				// (pull.HeadHash), so this needs no extra fetch.
+				lease, err := h.ensureSafePush(ctx, log,
+					branchToSubmit, remote.Push, upstreamBranch,
+					lastPushed, pull.HeadHash, commitHash)
+				if err != nil {
+					return status, err
 				}
+				pushOpts.ForceWithLease = lease
 			}
 
 			if err := h.Worktree.Push(ctx, pushOpts); err != nil {
-				log.Error("Push failed. Branch may have been updated by someone else. Try with --force.")
+				log.Error("Push failed. The remote may have changed since we checked. Run 'gs branch sync', then submit again.")
 				return status, fmt.Errorf("push branch: %w", err)
 			}
 

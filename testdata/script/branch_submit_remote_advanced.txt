@@ -1,0 +1,86 @@
+# 'gs branch submit' refuses to overwrite commits that someone else pushed
+# to the branch since our last push, and points to 'gs branch sync' to bring
+# them in. After syncing, submitting succeeds and the other commit survives.
+
+as 'Test <test@example.com>'
+at '2026-06-19T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create feat1 and submit it
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+gs branch submit --fill
+stderr 'Created #'
+
+# A maintainer pushes a commit on top of feat1 on the remote.
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+git checkout feat1
+cp $WORK/extra/helper.txt helper.txt
+git add helper.txt
+git commit -m 'Add helper from maintainer'
+git push origin feat1
+
+# Meanwhile we make a local change and try to submit.
+cd ../repo
+cp $WORK/extra/feat1-edit.txt feat1.txt
+git add feat1.txt
+git commit -m 'Edit feat1 locally'
+
+# Submit refuses: it will not discard the maintainer's commit, and it
+# surfaces the offending commit and the recommended recovery.
+! gs branch submit
+stderr 'has commits that are not in your branch'
+stderr 'Add helper from maintainer'
+stderr 'gs branch sync'
+stderr 'use --force'
+
+# The remote still has the maintainer's commit; nothing was overwritten.
+cd ../fork
+git fetch
+git log --pretty=%s origin/feat1
+cmp stdout $WORK/golden/remote-before-sync.txt
+
+# Bring the maintainer's commit into our branch and submit again.
+cd ../repo
+gs branch sync --rebase
+stderr 'feat1: rebased'
+
+gs branch submit
+stderr 'Updated #'
+
+# Both the maintainer's helper and our edit are now on the remote.
+cd ../fork
+git fetch
+git log --pretty=%s origin/feat1
+cmp stdout $WORK/golden/remote-after-sync.txt
+
+-- repo/feat1.txt --
+feat 1
+-- extra/feat1-edit.txt --
+feat 1
+edited locally
+-- extra/helper.txt --
+helper from maintainer
+-- golden/remote-before-sync.txt --
+Add helper from maintainer
+Add feat1
+Initial commit
+-- golden/remote-after-sync.txt --
+Add helper from maintainer
+Edit feat1 locally
+Add feat1
+Initial commit

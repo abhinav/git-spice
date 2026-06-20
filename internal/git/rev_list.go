@@ -37,6 +37,9 @@ type CommitDetail struct {
 	// Subject is the first line of the commit message.
 	Subject string
 
+	// AuthorEmail is the email address of the commit author.
+	AuthorEmail string
+
 	// AuthorDate is the time the commit was authored.
 	AuthorDate time.Time
 }
@@ -48,7 +51,9 @@ func (cd *CommitDetail) String() string {
 // ListCommitsDetails returns details about commits matched by the given range.
 func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange) iter.Seq2[CommitDetail, error] {
 	return func(yield func(CommitDetail, error) bool) {
-		for line, err := range r.listCommitsFormat(ctx, commits, "%H %h %at %s") {
+		// %ae (author email) carries no spaces, so it stays a single
+		// space-delimited field ahead of the free-form subject.
+		for line, err := range r.listCommitsFormat(ctx, commits, "%H %h %at %ae %s") {
 			if err != nil {
 				yield(CommitDetail{}, err)
 				return
@@ -66,7 +71,7 @@ func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange
 				continue
 			}
 
-			epochstr, subject, ok := strings.Cut(line, " ")
+			epochstr, line, ok := strings.Cut(line, " ")
 			if !ok {
 				r.log.Warn("Bad rev-list output", "line", line, "error", "missing an time")
 				continue
@@ -77,11 +82,18 @@ func (r *Repository) ListCommitsDetails(ctx context.Context, commits CommitRange
 				continue
 			}
 
+			authorEmail, subject, ok := strings.Cut(line, " ")
+			if !ok {
+				r.log.Warn("Bad rev-list output", "line", line, "error", "missing an author email")
+				continue
+			}
+
 			if !yield(CommitDetail{
-				Hash:       Hash(hash),
-				ShortHash:  Hash(shortHash),
-				Subject:    subject,
-				AuthorDate: time.Unix(epoch, 0),
+				Hash:        Hash(hash),
+				ShortHash:   Hash(shortHash),
+				Subject:     subject,
+				AuthorEmail: authorEmail,
+				AuthorDate:  time.Unix(epoch, 0),
 			}, nil) {
 				return
 			}

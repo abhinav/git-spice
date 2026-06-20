@@ -47,7 +47,8 @@ feature 1
     "hash": "2ff547329e55465505b962b0615d398764bea3de"
   },
   "upstream": {
-    "branch": "feature1"
+    "branch": "feature1",
+    "lastPushedHash": "93a14f446ab82c8c39f0c233a8a0a0f047ec4761"
   },
   "change": {
     "shamhub": {
