@@ -28,11 +28,11 @@ type mergePlanExecutor struct {
 
 	Progress mergeProgress // required
 
-	Trunk        string            // required
-	BuildTimeout time.Duration     // required
-	Method       forge.MergeMethod // required
-	NoWait       bool
-	FailFast     bool
+	Trunk                 string            // required
+	MergeReadinessTimeout time.Duration     // required
+	Method                forge.MergeMethod // required
+	NoWait                bool
+	FailFast              bool
 }
 
 // Execute runs the merge queue over the supplied plan items.
@@ -108,21 +108,21 @@ func (e *mergePlanExecutor) mergeOne(
 		return fmt.Errorf("ensure targets trunk: %w", err)
 	}
 
-	// CI is checked after retargeting and restacking
+	// Merge readiness is checked after retargeting and restacking
 	// so each merge waits on the exact change being merged.
 	if err := e.awaitChangeHead(ctx, item, change); err != nil {
 		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressChecksFailed,
+			Kind: mergeProgressForgeHeadFailed,
 			Item: item,
 		})
 		return fmt.Errorf("wait for pushed head: %w", err)
 	}
-	if err := e.awaitChecks(ctx, item); err != nil {
+	if err := e.awaitMergeability(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressChecksFailed,
+			Kind: mergeProgressMergeabilityFailed,
 			Item: item,
 		})
-		return fmt.Errorf("wait for checks: %w", err)
+		return fmt.Errorf("wait for merge readiness: %w", err)
 	}
 
 	e.Progress.Event(mergeProgressEvent{

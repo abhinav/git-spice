@@ -34,7 +34,7 @@ func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		progress.Event(mergeProgressEvent{
-			Kind: mergeProgressChecksFailed,
+			Kind: mergeProgressMergeabilityFailed,
 			Item: &mergeItem{
 				branch: "feat1",
 			},

@@ -8,14 +8,15 @@ different branch.
 The branch must be based directly on trunk. To merge a stacked branch, use 'gs
 downstack merge'.
 
-Before merging, waits for CI checks to pass. Use --build-timeout to configure
+Before merging, waits for merge readiness: the forge must observe the pushed
+head and report that the CR is ready to merge. Use --ready-timeout to configure
 the maximum wait.
 
 Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
-  --build-timeout=30m    Max time to wait for CI checks before each merge.
-                         0 means check once. (🔧 spice.merge.buildTimeout)
+  --ready-timeout=30m    Max time to wait for merge readiness before each merge.
+                         0 means check once. (🔧 spice.merge.readyTimeout)
   --branch=NAME          Branch to merge
 
 Global Flags:

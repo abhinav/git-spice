@@ -36,22 +36,24 @@ type mergeProgressEvent struct {
 type mergeProgressEventKind uint8
 
 const (
-	mergeProgressPreparing        mergeProgressEventKind = iota // branch preparation started
-	mergeProgressPrepareFailed                                  // local preparation failed
-	mergeProgressRetargeting                                    // retargeting to trunk started
-	mergeProgressRetargetFailed                                 // retargeting to trunk failed
-	mergeProgressWaitingForChecks                               // CI checks still pending
-	mergeProgressChecksPassed                                   // CI checks passed
-	mergeProgressChecksFailed                                   // CI checks failed or timed out
-	mergeProgressMerging                                        // forge merge request started
-	mergeProgressMergeFailed                                    // forge merge request failed
-	mergeProgressMergeRequested                                 // merge requested without waiting
-	mergeProgressWaitingForMerge                                // waiting for merged state
-	mergeProgressMergeIncomplete                                // merged state did not appear
-	mergeProgressMerged                                         // merged state observed
-	mergeProgressSyncFailed                                     // trunk sync failed
-	mergeProgressFailed                                         // branch failed by scheduler policy
-	mergeProgressSkipped                                        // branch skipped by scheduler policy
+	mergeProgressPreparing              mergeProgressEventKind = iota // branch preparation started
+	mergeProgressPrepareFailed                                        // local preparation failed
+	mergeProgressRetargeting                                          // retargeting to trunk started
+	mergeProgressRetargetFailed                                       // retargeting to trunk failed
+	mergeProgressWaitingForForgeHead                                  // forge HEAD still stale
+	mergeProgressForgeHeadFailed                                      // forge HEAD did not update
+	mergeProgressWaitingForMergeability                               // merge readiness still pending
+	mergeProgressMergeabilityReady                                    // ready to merge
+	mergeProgressMergeabilityFailed                                   // merge readiness blocked or timed out
+	mergeProgressMerging                                              // forge merge request started
+	mergeProgressMergeFailed                                          // forge merge request failed
+	mergeProgressMergeRequested                                       // merge requested without waiting
+	mergeProgressWaitingForMerge                                      // waiting for merged state
+	mergeProgressMergeIncomplete                                      // merged state did not appear
+	mergeProgressMerged                                               // merged state observed
+	mergeProgressSyncFailed                                           // trunk sync failed
+	mergeProgressFailed                                               // branch failed by scheduler policy
+	mergeProgressSkipped                                              // branch skipped by scheduler policy
 )
 
 // logMergeProgress reports merge progress through sparse log messages.
@@ -79,8 +81,10 @@ func (p *logMergeProgress) Event(event mergeProgressEvent) {
 	case mergeProgressRetargeting:
 		p.log.Infof("%s: retargeting %v onto %s",
 			event.Item.branch, event.Item.changeID, event.Base)
-	case mergeProgressWaitingForChecks:
-		p.log.Infof("%s: waiting for CI checks", event.Item.branch)
+	case mergeProgressWaitingForForgeHead:
+		p.log.Infof("%s: waiting for HEAD to update", event.Item.branch)
+	case mergeProgressWaitingForMergeability:
+		p.log.Infof("%s: waiting for merge readiness", event.Item.branch)
 	case mergeProgressMerging:
 		p.log.Infof("%s: merging %v: %s",
 			event.Item.branch, event.Item.changeID, event.URL)
@@ -252,23 +256,35 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 			State:   mergeprogress.StateFailed,
 			Message: item.branch + ": retarget failed",
 		}
-	case mergeProgressWaitingForChecks:
+	case mergeProgressWaitingForForgeHead:
 		return mergeprogress.Event{
 			ItemID:  item.branch,
 			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for CI checks",
+			Message: item.branch + ": waiting for HEAD to update",
 		}
-	case mergeProgressChecksPassed:
-		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": CI checks passed",
-		}
-	case mergeProgressChecksFailed:
+	case mergeProgressForgeHeadFailed:
 		return mergeprogress.Event{
 			ItemID:  item.branch,
 			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": CI checks failed",
+			Message: item.branch + ": HEAD did not update",
+		}
+	case mergeProgressWaitingForMergeability:
+		return mergeprogress.Event{
+			ItemID:  item.branch,
+			State:   mergeprogress.StateActive,
+			Message: item.branch + ": waiting for merge readiness",
+		}
+	case mergeProgressMergeabilityReady:
+		return mergeprogress.Event{
+			ItemID:  item.branch,
+			State:   mergeprogress.StateActive,
+			Message: item.branch + ": ready to merge",
+		}
+	case mergeProgressMergeabilityFailed:
+		return mergeprogress.Event{
+			ItemID:  item.branch,
+			State:   mergeprogress.StateFailed,
+			Message: item.branch + ": merge readiness failed",
 		}
 	case mergeProgressMerging:
 		return mergeprogress.Event{
