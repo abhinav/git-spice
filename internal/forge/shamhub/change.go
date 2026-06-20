@@ -110,6 +110,9 @@ type shamChange struct {
 
 	// Checks lists the CI/checks reported for the change.
 	Checks []forge.ChangeCheck
+
+	// Mergeability overrides ShamHub's inferred mergeability result.
+	Mergeability *forge.ChangeMergeability
 }
 
 // Change is a change proposal against a repository.
