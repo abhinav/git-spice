@@ -1,0 +1,40 @@
+# 'gs repo park' enters exclusive mode: it records every linked worktree
+# in a durable manifest and removes the worktree directories, leaving the
+# whole graph in the primary checkout. 'gs repo restore' leaves exclusive
+# mode, re-creating the worktrees at their branches' current tips.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with a feature branch checked out: dev -> feat1.
+gs anchor create $WORK/wtB --name dev -b feat1
+exists $WORK/wtB
+
+# Park from the primary: the worktree directory is removed, but its
+# branches survive in the primary.
+cd $WORK/repo
+gs repo park
+stderr 'Parked'
+! exists $WORK/wtB
+
+# The whole graph is reachable from the primary while parked.
+gs ls -a
+stderr 'feat1'
+stderr 'dev'
+
+# Restore: the worktree comes back with its branch checked out.
+gs repo restore
+stderr 'Restored'
+exists $WORK/wtB
+cd $WORK/wtB
+git branch --show-current
+stdout 'feat1'
+
+-- repo/dummy.txt --
+dummy

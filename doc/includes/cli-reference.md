@@ -185,6 +185,76 @@ respective bases in dependency order, ensuring a linear history.
 
 * `-w`, `--worktree`: Only restack branches in the current worktree.
 
+### git-spice repo park {#gs-repo-park}
+
+```
+gs repo (r) park [flags]
+```
+
+Enter exclusive mode: park worktrees and take the whole repo
+
+Enters exclusive mode: the whole repository is handed to a single
+process so it can reorganize the stack without contending with
+worktrees owned by other processes.
+
+Every linked worktree is recorded in a durable manifest and its
+directory is removed; the branches themselves are left untouched,
+so the entire graph remains reachable from the primary checkout.
+Run 'gs repo restore' to leave exclusive mode and re-create the
+worktrees.
+
+Worktrees with uncommitted changes are refused unless --force is
+given, which discards those changes. The manifest is written
+before any worktree is removed, so an interrupted park can be
+resumed by re-running the command.
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
+
+### git-spice repo restore {#gs-repo-restore}
+
+```
+gs repo (r) restore
+```
+
+Leave exclusive mode: restore parked worktrees
+
+Leaves exclusive mode: the worktrees recorded by 'gs repo park'
+are re-created at their branches' current tips, and the
+exclusive-mode marker is cleared.
+
+It is idempotent and resumable: worktrees that already exist are
+left alone, so an interrupted restore can be finished by
+re-running the command.
+
+### git-spice repo exclusive {#gs-repo-exclusive}
+
+```
+gs repo (r) exclusive [<command> ...] [flags]
+```
+
+Run a command with the whole repo to itself
+
+Runs a command with the whole repository to itself: it parks every
+worktree (see 'gs repo park'), runs the command, then restores the
+worktrees (see 'gs repo restore').
+
+The worktrees are always restored, even if the command fails, so
+this is the safe way to take exclusive mode for a single command.
+
+Separate the command from this one's flags with '--', for example:
+
+	gs repo exclusive -- git rebase -i main
+
+**Arguments**
+
+* `command`: Command to run with the repository to itself
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
+
 ## Log
 
 ### git-spice log short {#gs-log-short}
@@ -1391,8 +1461,7 @@ branch: a dependent worktree, for building on top of another
 worktree's work.
 
 Use -b/--branch to also create a tracked branch stacked on the
-anchor. With --no-anchor there is no anchor to stack on, so the
-branch is created untracked at the trunk commit.
+anchor.
 
 Use --no-anchor to instead start the worktree in detached HEAD
 state at the current trunk commit.
@@ -1416,13 +1485,9 @@ gs anchor list (ls)
 
 List anchors and their worktrees
 
-Lists the anchors registered in the repository.
-
-For each anchor, shows its branch, the worktree that owns it, and
-whether it is a root anchor (tracking the canonical trunk) or an
-internal anchor (pinned at another local branch). The anchor that
-is the trunk in effect for the current worktree is marked with a
-'*'.
+Lists all worktrees associated with the repository.
+For each worktree, shows the checked-out branch
+and any tracked branches in its stack.
 
 ### git-spice anchor track {#gs-anchor-track}
 

@@ -37,6 +37,11 @@ type Store struct {
 	// path and base). Loaded once at store open so [Store.IsTrunk]
 	// stays cheap in hot paths.
 	anchors map[string]Anchor
+
+	// exclusive holds the parked-worktree manifest when the repository is
+	// in exclusive mode, and is nil otherwise. Loaded once at store open
+	// so [Store.InExclusiveMode] stays cheap.
+	exclusive *[]ParkedWorktree
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -208,6 +213,9 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 	}
 	if err := store.loadAnchors(ctx); err != nil {
 		return nil, fmt.Errorf("load anchors: %w", err)
+	}
+	if err := store.loadExclusive(ctx); err != nil {
+		return nil, fmt.Errorf("load exclusive: %w", err)
 	}
 
 	return store, nil
