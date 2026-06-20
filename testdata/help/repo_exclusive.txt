@@ -1,0 +1,28 @@
+Usage: gs repo (r) exclusive [<command> ...] [flags]
+
+Run a command with the whole repo to itself
+
+Runs a command with the whole repository to itself: it parks every worktree (see
+'gs repo park'), runs the command, then restores the worktrees (see 'gs repo
+restore').
+
+The worktrees are always restored, even if the command fails, so this is the
+safe way to take exclusive mode for a single command.
+
+Separate the command from this one's flags with '--', for example:
+
+    gs repo exclusive -- git rebase -i main
+
+Arguments:
+  [<command> ...]    Command to run with the repository to itself
+
+Flags:
+  --force    Park worktrees even if they have uncommitted changes (changes are
+             discarded)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

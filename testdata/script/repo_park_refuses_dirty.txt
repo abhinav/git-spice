@@ -1,0 +1,41 @@
+# 'gs repo park' refuses to remove a worktree that has uncommitted
+# changes, naming the dirty worktree, and leaves everything untouched.
+# '--force' removes it anyway.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with uncommitted work in it.
+gs anchor create $WORK/wtB --name dev -b feat1
+cd $WORK/wtB
+cp $WORK/dirty.txt dirty.txt
+git add dirty.txt
+
+# Park from the primary is refused: the worktree is dirty and nothing
+# is removed.
+cd $WORK/repo
+! gs repo park
+stderr 'wtB'
+stderr 'uncommitted'
+exists $WORK/wtB
+
+# The repository is not in exclusive mode, so anchors can still be made.
+gs anchor create $WORK/wtC --name dev2
+exists $WORK/wtC
+
+# With --force, the dirty worktree is removed and exclusive mode begins.
+gs repo park --force
+stderr 'Parked'
+! exists $WORK/wtB
+! exists $WORK/wtC
+
+-- repo/dummy.txt --
+dummy
+-- dirty.txt --
+uncommitted

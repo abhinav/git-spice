@@ -1,0 +1,3 @@
+kind: Added
+body: 'repo: Add exclusive mode: `gs repo park` records and removes linked worktrees so one process owns the whole repository, `gs repo restore` brings them back, and `gs repo exclusive -- <cmd>` wraps a command in park/restore. While parked, `gs anchor create` is refused.'
+time: 2026-06-20T06:34:03.614351-04:00
