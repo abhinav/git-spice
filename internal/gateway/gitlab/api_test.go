@@ -126,10 +126,11 @@ func TestClient_MergeRequestGet(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55", r.URL.Path)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
 			BasicMergeRequest: BasicMergeRequest{
-				IID:          55,
-				Title:        "Stabilize nacelles",
-				TargetBranch: "main",
-				Labels:       []string{"engineering"},
+				IID:                 55,
+				Title:               "Stabilize nacelles",
+				TargetBranch:        "main",
+				Labels:              []string{"engineering"},
+				DetailedMergeStatus: DetailedMergeStatusMergeable,
 				Reviewers: []*BasicUser{
 					{ID: 12, Username: "spock"},
 				},
@@ -142,6 +143,7 @@ func TestClient_MergeRequestGet(t *testing.T) {
 	mr, _, err := client.MergeRequestGet(t.Context(), int64(42), 55, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Stabilize nacelles", mr.Title)
+	assert.Equal(t, DetailedMergeStatusMergeable, mr.DetailedMergeStatus)
 	require.Len(t, mr.Reviewers, 1)
 	assert.Equal(t, "spock", mr.Reviewers[0].Username)
 }

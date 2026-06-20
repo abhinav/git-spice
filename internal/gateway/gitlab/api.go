@@ -524,6 +524,8 @@ type BasicMergeRequest struct {
 	SHA                     string       `json:"sha"`
 	WebURL                  string       `json:"web_url"`
 	ForceRemoveSourceBranch bool         `json:"force_remove_source_branch"`
+	DetailedMergeStatus     string       `json:"detailed_merge_status"`
+	HasConflicts            bool         `json:"has_conflicts"`
 }
 
 // MergeRequest matches the merge request response shape
@@ -574,6 +576,36 @@ const (
 	PipelineStatusSkipped            = "skipped"
 	PipelineStatusManual             = "manual"
 	PipelineStatusScheduled          = "scheduled"
+)
+
+// GitLab detailed merge status values.
+//
+// https://docs.gitlab.com/api/merge_requests/#merge-status
+const (
+	DetailedMergeStatusApprovalsSyncing            = "approvals_syncing"
+	DetailedMergeStatusChecking                    = "checking"
+	DetailedMergeStatusCIMustPass                  = "ci_must_pass"
+	DetailedMergeStatusCIStillRunning              = "ci_still_running"
+	DetailedMergeStatusCommitsStatus               = "commits_status"
+	DetailedMergeStatusConflict                    = "conflict"
+	DetailedMergeStatusDiscussionsNotResolved      = "discussions_not_resolved"
+	DetailedMergeStatusDraftStatus                 = "draft_status"
+	DetailedMergeStatusJiraAssociationMissing      = "jira_association_missing"
+	DetailedMergeStatusMergeable                   = "mergeable"
+	DetailedMergeStatusMergeRequestBlocked         = "merge_request_blocked"
+	DetailedMergeStatusMergeTime                   = "merge_time"
+	DetailedMergeStatusNeedRebase                  = "need_rebase"
+	DetailedMergeStatusNotApproved                 = "not_approved"
+	DetailedMergeStatusNotOpen                     = "not_open"
+	DetailedMergeStatusPreparing                   = "preparing"
+	DetailedMergeStatusRequestedChanges            = "requested_changes"
+	DetailedMergeStatusSecurityPolicyPipelineCheck = "security_policy_pipeline_check"
+	DetailedMergeStatusSecurityPolicyViolations    = "security_policy_violations"
+	DetailedMergeStatusStatusChecksMustPass        = "status_checks_must_pass"
+	DetailedMergeStatusUnchecked                   = "unchecked"
+	DetailedMergeStatusLockedPaths                 = "locked_paths"
+	DetailedMergeStatusLockedLFSFiles              = "locked_lfs_files"
+	DetailedMergeStatusTitleRegex                  = "title_regex"
 )
 
 // NoteAuthor matches the nested author object in note responses.

@@ -115,7 +115,11 @@ func TestIntegration(t *testing.T) {
 			return newRepo
 		},
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
-			require.NoError(t, gitlabforge.CloseChange(t.Context(), repo.(*gitlabforge.Repository), change.(*gitlabforge.MR)))
+			require.NoError(t, gitlabforge.CloseChange(
+				context.WithoutCancel(t.Context()),
+				repo.(*gitlabforge.Repository),
+				change.(*gitlabforge.MR),
+			))
 		},
 		SetChangeCheck: func(
 			t *testing.T,
@@ -158,11 +162,8 @@ func TestIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 			}
 		},
-		// TODO: Remove SkipMergeability after the GitLab provider branch
-		// records scenario fixtures.
 		SetCommentsPageSize:   gitlabforge.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
-		SkipMergeability:      true,
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},
