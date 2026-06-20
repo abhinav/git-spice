@@ -7,12 +7,18 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/branchsync"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type branchSyncCmd struct {
 	Branch string `placeholder:"NAME" help:"Branch to sync" predictor:"trackedBranches"`
 	Rebase bool   `help:"On divergence (both local and remote have new commits since the last push), replay remote-side commits onto local. Conflicts surface as a normal interrupted rebase; resume with 'gs rebase --continue'."`
+
+	// RecordPushed is set only by the rebase continuation that finishes a
+	// conflicted '--rebase' sync: it records the integrated remote head as
+	// the last-pushed baseline without re-running the rebase.
+	RecordPushed string `hidden:"" help:"Record the given hash as the last-pushed baseline and exit."`
 }
 
 func (*branchSyncCmd) Help() string {
@@ -45,14 +51,31 @@ func (cmd *branchSyncCmd) AfterApply(ctx context.Context, wt *git.Worktree) erro
 func (cmd *branchSyncCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
+	svc *spice.Service,
 	handler *branchsync.Handler,
 ) error {
 	req := branchsync.SyncRequest{Branch: cmd.Branch}
 	if cmd.Rebase {
 		req.Mode = branchsync.ModeRebase
 	}
+	if cmd.RecordPushed != "" {
+		req.RecordPushed = git.Hash(cmd.RecordPushed)
+	}
+
 	res, err := handler.Sync(ctx, req)
 	if err != nil {
+		// A '--rebase' sync can be interrupted by a conflict. Once the user
+		// resolves it and runs 'gs rebase continue', re-running the rebase
+		// would conflict again, so the continuation only records the
+		// integrated remote head (res.ToHash) as the last-pushed baseline.
+		if res != nil && !res.ToHash.IsZero() {
+			return svc.RebaseRescue(ctx, spice.RebaseRescueRequest{
+				Err:     err,
+				Command: []string{"branch", "sync", "--record-pushed", res.ToHash.String()},
+				Branch:  cmd.Branch,
+				Message: "interrupted: sync branch " + cmd.Branch,
+			})
+		}
 		return err
 	}
 

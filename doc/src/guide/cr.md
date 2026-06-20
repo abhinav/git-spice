@@ -191,6 +191,18 @@ if the operation could result in data loss.
 To override these safety checks
 and push to a branch anyway, use the `--force` flag.
 
+<!-- gs:version unreleased -->
+
+In particular, if someone else has pushed commits to a branch
+since git-spice last pushed it
+(for example, a maintainer adding changes to your CR),
+submitting will stop and list those commits
+instead of overwriting them.
+Use $$gs branch sync$$ to bring the commits into your branch,
+then submit again.
+This protection is based on the commit git-spice last pushed,
+so it holds even after the branch has been restacked.
+
 ### Update existing CRs only
 
 <!-- gs:version v0.10.0 -->

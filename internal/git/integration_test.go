@@ -70,16 +70,18 @@ func TestIntegrationCommitListing(t *testing.T) {
 
 		assert.Equal(t, []git.CommitDetail{
 			{
-				Hash:       "9045e63b1d4d4e6e2db3fa03d4eb98a6ed653f3a",
-				ShortHash:  "9045e63",
-				Subject:    "Add feature2",
-				AuthorDate: time.Date(2024, 8, 27, 22, 10, 11, 0, time.UTC),
+				Hash:        "9045e63b1d4d4e6e2db3fa03d4eb98a6ed653f3a",
+				ShortHash:   "9045e63",
+				Subject:     "Add feature2",
+				AuthorEmail: "test@example.com",
+				AuthorDate:  time.Date(2024, 8, 27, 22, 10, 11, 0, time.UTC),
 			},
 			{
-				Hash:       "acca66548dc31594dc3bc669c804e98eda1edc3d",
-				ShortHash:  "acca665",
-				Subject:    "Add feature1",
-				AuthorDate: time.Date(2024, 8, 27, 21, 52, 12, 0, time.UTC),
+				Hash:        "acca66548dc31594dc3bc669c804e98eda1edc3d",
+				ShortHash:   "acca665",
+				Subject:     "Add feature1",
+				AuthorEmail: "test@example.com",
+				AuthorDate:  time.Date(2024, 8, 27, 21, 52, 12, 0, time.UTC),
 			},
 		}, commits)
 	})

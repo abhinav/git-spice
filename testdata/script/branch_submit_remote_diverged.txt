@@ -1,0 +1,67 @@
+# 'gs branch submit' refuses to push when the remote branch was rewritten
+# away from our last push (its history no longer contains that commit), since
+# it cannot tell what a force-push would discard. --force still overrides.
+
+as 'Test <test@example.com>'
+at '2026-06-19T10:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create feat1 and submit it
+git add feat1.txt
+gs bc -m 'Add feat1' feat1
+gs branch submit --fill
+stderr 'Created #'
+
+# Someone rewrites feat1 on the remote (force-push of a different history).
+cd ..
+git clone $SHAMHUB_URL/alice/example.git fork
+cd fork
+git checkout feat1
+cp $WORK/extra/feat1-rewrite.txt feat1.txt
+git add feat1.txt
+git commit --amend -m 'Rewritten feat1'
+git push --force origin feat1
+
+# Locally we make a change and try to submit.
+cd ../repo
+cp $WORK/extra/feat1-edit.txt feat1.txt
+git add feat1.txt
+git commit -m 'Edit feat1 locally'
+
+# Submit refuses: the last pushed commit is gone from the remote history.
+! gs branch submit
+stderr 'was rewritten and no longer contains your last push'
+stderr 'use --force'
+
+# --force overrides and overwrites the remote.
+gs branch submit --force
+stderr 'Updated #'
+
+cd ../fork
+git fetch
+git log --pretty=%s origin/feat1
+cmp stdout $WORK/golden/remote-after-force.txt
+
+-- repo/feat1.txt --
+feat 1
+-- extra/feat1-edit.txt --
+feat 1
+edited locally
+-- extra/feat1-rewrite.txt --
+totally different content
+-- golden/remote-after-force.txt --
+Edit feat1 locally
+Add feat1
+Initial commit

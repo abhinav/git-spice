@@ -37,9 +37,11 @@ cp $WORK/extra/feature1-new.txt feature1.txt
 git add feature1.txt
 git commit -m 'Update feature1'
 
+# Submit refuses to overwrite the commit pushed from elsewhere.
 ! gs branch submit
-stderr 'Branch may have been updated by someone else'
-stderr 'failed to push some refs'
+stderr 'has commits that are not in your branch'
+stderr 'Introduce a conflict'
+stderr 'use --force'
 
 gs branch submit --force
 
