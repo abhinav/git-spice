@@ -76,6 +76,7 @@ nav:
     - guide/concepts.md
     - guide/branch.md
     - guide/cr.md
+    - guide/worktrees.md
     - guide/limits.md
     - guide/troubleshooting.md
     - guide/internals.md
