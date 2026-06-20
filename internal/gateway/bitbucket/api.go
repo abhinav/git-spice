@@ -394,6 +394,7 @@ func (c *Client) PullRequestMerge(
 
 // CommitStatus is a build status on a commit.
 type CommitStatus struct {
+	Key   string `json:"key"`
 	State string `json:"state"`
 }
 
@@ -421,20 +422,35 @@ type CommitStatusList struct {
 	Next   string         `json:"next,omitempty"`
 }
 
+// CommitStatusListOptions controls commit status pagination.
+type CommitStatusListOptions struct {
+	PageURL string
+}
+
 // CommitStatusList lists build statuses for a commit.
 func (c *Client) CommitStatusList(
 	ctx context.Context,
 	workspace string,
 	repo string,
 	commitHash string,
+	opt *CommitStatusListOptions,
 ) (*CommitStatusList, *Response, error) {
+	if opt == nil {
+		opt = &CommitStatusListOptions{}
+	}
+
 	var response CommitStatusList
-	resp, err := c.get(
-		ctx,
-		fmt.Sprintf(
+	resourcePath := opt.PageURL
+	if resourcePath == "" {
+		resourcePath = fmt.Sprintf(
 			"/repositories/%s/%s/commit/%s/statuses",
 			workspace, repo, commitHash,
-		),
+		)
+	}
+
+	resp, err := c.get(
+		ctx,
+		resourcePath,
 		nil, &response,
 	)
 	if err != nil {

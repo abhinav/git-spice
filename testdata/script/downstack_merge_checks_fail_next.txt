@@ -28,8 +28,8 @@ gs bc feature2 -m 'Add feature 2'
 gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
-shamhub set-status alice/example 1 passed
-shamhub set-status alice/example 2 failed
+shamhub set-status --name 'unit tests' alice/example 1 passed
+shamhub set-status --name 'unit tests' alice/example 2 failed
 
 # The queue should merge feature1, update feature2, then stop before
 # merging feature2 because the updated PR's checks are failed.

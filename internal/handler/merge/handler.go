@@ -723,20 +723,21 @@ func (e *mergePlanExecutor) awaitChecksWithDelay(
 ) error {
 	delay := baseDelay
 	for attempt := 0; ; attempt++ {
-		state, err := e.RemoteRepository.ChangeChecksState(
+		checks, err := e.RemoteRepository.ChangeChecks(
 			ctx, item.changeID,
 		)
 		if err != nil {
 			return fmt.Errorf("query checks: %w", err)
 		}
-		if state == forge.ChecksPassed {
+		state := checkState(checks)
+		if state == mergeChecksPassed {
 			e.Progress.Event(mergeProgressEvent{
 				Kind: mergeProgressChecksPassed,
 				Item: item,
 			})
 			return nil
 		}
-		if state == forge.ChecksFailed {
+		if state == mergeChecksFailed {
 			return errors.New("CI checks failed")
 		}
 
@@ -758,6 +759,27 @@ func (e *mergePlanExecutor) awaitChecksWithDelay(
 		}
 		delay = min(delay*2, maxDelay)
 	}
+}
+
+type mergeChecksState int
+
+const (
+	mergeChecksPassed mergeChecksState = iota + 1
+	mergeChecksPending
+	mergeChecksFailed
+)
+
+func checkState(checks []forge.ChangeCheck) mergeChecksState {
+	state := mergeChecksPassed
+	for _, check := range checks {
+		if check.State == forge.ChangeCheckFailed {
+			return mergeChecksFailed
+		}
+		if check.State == forge.ChangeCheckPending {
+			state = mergeChecksPending
+		}
+	}
+	return state
 }
 
 // ensureTargetsTrunk verifies a change targets trunk

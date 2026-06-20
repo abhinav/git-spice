@@ -294,13 +294,12 @@ type Repository interface {
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 
-	// ChangeChecksState reports the aggregate CI/checks
-	// state for the given change.
+	// ChangeChecks reports CI/checks for the given change.
 	//
 	// If the forge has no CI/checks integration
 	// or the change has no required checks,
-	// implementations should return ChecksPassed.
-	ChangeChecksState(ctx context.Context, id ChangeID) (ChecksState, error)
+	// implementations should return an empty slice.
+	ChangeChecks(ctx context.Context, id ChangeID) ([]ChangeCheck, error)
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -716,47 +715,55 @@ func (s *ChangeState) UnmarshalText(b []byte) error {
 	return nil
 }
 
-// ChecksState represents the aggregate CI/checks
-// status for a change.
-//
-// TODO: Teach this type the names of individual statuses
-// so merge failures can report exactly what's blocking the user.
-type ChecksState int
+// ChangeCheck is a forge-independent status check
+// reported for a change.
+type ChangeCheck struct {
+	// Name identifies the status check.
+	Name string
+
+	// State reports whether the status check is still running,
+	// passed, or failed.
+	State ChangeCheckState
+}
+
+// ChangeCheckState represents the state of one CI/checks signal
+// reported for a change.
+type ChangeCheckState int
 
 const (
-	// ChecksPending indicates checks are still running.
-	ChecksPending ChecksState = iota + 1
+	// ChangeCheckPending indicates a check is still running.
+	ChangeCheckPending ChangeCheckState = iota + 1
 
-	// ChecksPassed indicates all checks have passed.
-	ChecksPassed
+	// ChangeCheckPassed indicates a check has passed.
+	ChangeCheckPassed
 
-	// ChecksFailed indicates one or more checks failed.
-	ChecksFailed
+	// ChangeCheckFailed indicates a check has failed.
+	ChangeCheckFailed
 )
 
-func (s ChecksState) String() string {
+func (s ChangeCheckState) String() string {
 	switch s {
-	case ChecksPending:
+	case ChangeCheckPending:
 		return "pending"
-	case ChecksPassed:
+	case ChangeCheckPassed:
 		return "passed"
-	case ChecksFailed:
+	case ChangeCheckFailed:
 		return "failed"
 	default:
-		return fmt.Sprintf("ChecksState(%d)", int(s))
+		return fmt.Sprintf("ChangeCheckState(%d)", int(s))
 	}
 }
 
 // GoString returns a Go-syntax representation.
-func (s ChecksState) GoString() string {
+func (s ChangeCheckState) GoString() string {
 	switch s {
-	case ChecksPending:
-		return "ChecksPending"
-	case ChecksPassed:
-		return "ChecksPassed"
-	case ChecksFailed:
-		return "ChecksFailed"
+	case ChangeCheckPending:
+		return "ChangeCheckPending"
+	case ChangeCheckPassed:
+		return "ChangeCheckPassed"
+	case ChangeCheckFailed:
+		return "ChangeCheckFailed"
 	default:
-		return fmt.Sprintf("ChecksState(%d)", int(s))
+		return fmt.Sprintf("ChangeCheckState(%d)", int(s))
 	}
 }

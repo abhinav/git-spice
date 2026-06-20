@@ -34,9 +34,9 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 18
+        content_length: 56
         host: 127.0.0.1:56373
-        body: '{"state":"failed"}'
+        body: '{"name":"git-spice integration failed","state":"failed"}'
         url: http://127.0.0.1:56373/abhinav/test-repo/change/19/checks
         method: POST
       response:
@@ -67,10 +67,15 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 24
+        content_length: 90
         body: |
             {
-              "state": "failed"
+              "checks": [
+                {
+                  "name": "git-spice integration failed",
+                  "state": "failed"
+                }
+              ]
             }
         headers:
             Content-Length:

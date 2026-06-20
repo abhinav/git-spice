@@ -8,52 +8,68 @@ import (
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
 )
 
-// ChangeChecksState reports the aggregate build status
-// for the given pull request.
-func (r *Repository) ChangeChecksState(
+// ChangeChecks reports build statuses for the given pull request.
+func (r *Repository) ChangeChecks(
 	ctx context.Context, fid forge.ChangeID,
-) (forge.ChecksState, error) {
+) ([]forge.ChangeCheck, error) {
 	id := mustPR(fid)
 	pr, err := r.getPullRequest(ctx, id.Number)
 	if err != nil {
-		return 0, fmt.Errorf("get pull request: %w", err)
+		return nil, fmt.Errorf("get pull request: %w", err)
 	}
 
 	if pr.Source.Commit == nil {
-		return forge.ChecksPassed, nil
+		return nil, nil
 	}
-	return r.commitChecksState(ctx, pr.Source.Commit.Hash)
+	return r.commitChecks(ctx, pr.Source.Commit.Hash)
 }
 
-func (r *Repository) commitChecksState(
+func (r *Repository) commitChecks(
 	ctx context.Context, commitHash string,
-) (forge.ChecksState, error) {
-	statuses, _, err := r.client.CommitStatusList(
-		ctx, r.workspace, r.repo, commitHash,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("get commit statuses: %w", err)
+) ([]forge.ChangeCheck, error) {
+	var statuses []bitbucket.CommitStatus
+	opt := &bitbucket.CommitStatusListOptions{}
+	for {
+		page, resp, err := r.client.CommitStatusList(
+			ctx, r.workspace, r.repo, commitHash, opt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("get commit statuses: %w", err)
+		}
+
+		statuses = append(statuses, page.Values...)
+		if resp.NextURL == "" {
+			break
+		}
+		opt.PageURL = resp.NextURL
 	}
 
-	return aggregateStatuses(statuses.Values), nil
+	return statusChecks(statuses), nil
 }
 
-func aggregateStatuses(
+func statusChecks(
 	statuses []bitbucket.CommitStatus,
-) forge.ChecksState {
+) []forge.ChangeCheck {
 	if len(statuses) == 0 {
-		return forge.ChecksPassed // no checks configured
+		return nil
 	}
 
-	for _, s := range statuses {
+	checks := make([]forge.ChangeCheck, 0, len(statuses))
+	for i, s := range statuses {
+		check := forge.ChangeCheck{Name: s.Key}
+		if check.Name == "" {
+			check.Name = fmt.Sprintf("Bitbucket build status %d", i+1)
+		}
 		switch s.State {
 		case bitbucket.CommitStatusFailed,
 			bitbucket.CommitStatusStopped:
-			return forge.ChecksFailed
+			check.State = forge.ChangeCheckFailed
 		case bitbucket.CommitStatusInProgress:
-			return forge.ChecksPending
+			check.State = forge.ChangeCheckPending
+		default:
+			check.State = forge.ChangeCheckPassed
 		}
+		checks = append(checks, check)
 	}
-
-	return forge.ChecksPassed
+	return checks
 }

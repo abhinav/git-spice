@@ -119,8 +119,8 @@ func TestMergeScheduler_siblingContinuesAfterSubtreeFails(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), pr2).
-		Return(forge.ChecksFailed, nil)
+		ChangeChecks(gomock.Any(), pr2).
+		Return(checks(forge.ChangeCheckFailed), nil)
 
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr3).
@@ -231,8 +231,8 @@ func TestMergeScheduler_failFastStopsOnFailure(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), pr2).
-		Return(forge.ChecksFailed, nil)
+		ChangeChecks(gomock.Any(), pr2).
+		Return(checks(forge.ChangeCheckFailed), nil)
 
 	progress := &recordingMergeProgress{}
 	executor := newTestMergePlanExecutor(
@@ -313,8 +313,8 @@ func expectMergeWithRecord(
 	operations *[]string,
 ) {
 	mockForge.EXPECT().
-		ChangeChecksState(gomock.Any(), id).
-		Return(forge.ChecksPassed, nil)
+		ChangeChecks(gomock.Any(), id).
+		Return(checks(forge.ChangeCheckPassed), nil)
 
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), id, gomock.Any()).

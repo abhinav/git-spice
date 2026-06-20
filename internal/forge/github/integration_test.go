@@ -122,13 +122,13 @@ func TestIntegration(t *testing.T) {
 		CloseChange: func(t *testing.T, repo forge.Repository, change forge.ChangeID) {
 			require.NoError(t, github.CloseChange(t.Context(), repo.(*github.Repository), change.(*github.PR)))
 		},
-		SetChangeChecksState: func(
+		SetChangeCheck: func(
 			t *testing.T,
 			httpClient *http.Client,
 			_ forge.Repository,
 			_ forge.ChangeID,
 			headHash git.Hash,
-			state forge.ChecksState,
+			check forge.ChangeCheck,
 		) {
 			require.NoError(t, setGitHubChangeChecksState(
 				t.Context(),
@@ -136,7 +136,7 @@ func TestIntegration(t *testing.T) {
 				cfg.Owner,
 				cfg.Repo,
 				headHash,
-				state,
+				check,
 			))
 		},
 		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
@@ -238,15 +238,15 @@ func setGitHubChangeChecksState(
 	owner string,
 	repo string,
 	headHash git.Hash,
-	state forge.ChecksState,
+	check forge.ChangeCheck,
 ) error {
 	// GitHub's GraphQL schema exposes the status rollup we read,
 	// but commit status creation remains a REST API operation.
 	// Check runs are a separate GitHub App-authenticated mechanism,
 	// so these tests create classic commit statuses instead.
 	body, err := json.Marshal(gitHubStatusRequest{
-		State:       gitHubStatusState(state),
-		Context:     "git-spice integration",
+		State:       gitHubStatusState(check.State),
+		Context:     check.Name,
 		Description: "Synthetic status for git-spice integration tests",
 	})
 	if err != nil {
@@ -289,13 +289,13 @@ type gitHubStatusRequest struct {
 	Description string `json:"description"`
 }
 
-func gitHubStatusState(state forge.ChecksState) string {
+func gitHubStatusState(state forge.ChangeCheckState) string {
 	switch state {
-	case forge.ChecksPending:
+	case forge.ChangeCheckPending:
 		return "pending"
-	case forge.ChecksPassed:
+	case forge.ChangeCheckPassed:
 		return "success"
-	case forge.ChecksFailed:
+	case forge.ChangeCheckFailed:
 		return "failure"
 	default:
 		return "error"

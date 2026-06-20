@@ -219,11 +219,61 @@ func TestClient_CommitStatusList(t *testing.T) {
 
 	client := newTestClient(t, srv)
 	statuses, _, err := client.CommitStatusList(
-		t.Context(), "engineering", "warp-core", "abc123",
+		t.Context(), "engineering", "warp-core", "abc123", nil,
 	)
 	require.NoError(t, err)
 	require.Len(t, statuses.Values, 2)
 	assert.Equal(t, CommitStatusInProgress, statuses.Values[0].State)
+}
+
+func TestClient_CommitStatusList_pages(t *testing.T) {
+	var srv *httptest.Server
+	var requests []string
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.URL.String())
+		switch r.URL.RawQuery {
+		case "":
+			writeJSON(t, w, http.StatusOK, CommitStatusList{
+				Values: []CommitStatus{
+					{Key: "build", State: CommitStatusInProgress},
+				},
+				Next: srv.URL + "/2.0/repositories/engineering/warp-core/commit/abc123/statuses?page=2",
+			})
+		case "page=2":
+			writeJSON(t, w, http.StatusOK, CommitStatusList{
+				Values: []CommitStatus{
+					{Key: "test", State: CommitStatusSuccessful},
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s", r.URL.String())
+		}
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	statuses, resp, err := client.CommitStatusList(
+		t.Context(), "engineering", "warp-core", "abc123", nil,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "build", statuses.Values[0].Key)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.NextURL)
+
+	statuses, _, err = client.CommitStatusList(
+		t.Context(),
+		"engineering",
+		"warp-core",
+		"abc123",
+		&CommitStatusListOptions{PageURL: resp.NextURL},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "test", statuses.Values[0].Key)
+
+	assert.Equal(t, []string{
+		"/2.0/repositories/engineering/warp-core/commit/abc123/statuses",
+		"/2.0/repositories/engineering/warp-core/commit/abc123/statuses?page=2",
+	}, requests)
 }
 
 func TestClient_CommitStatusCreate(t *testing.T) {

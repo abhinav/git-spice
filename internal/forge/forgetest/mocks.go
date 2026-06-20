@@ -709,41 +709,41 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
-// ChangeChecksState mocks base method.
-func (m *MockRepository) ChangeChecksState(ctx context.Context, id forge.ChangeID) (forge.ChecksState, error) {
+// ChangeChecks mocks base method.
+func (m *MockRepository) ChangeChecks(ctx context.Context, id forge.ChangeID) ([]forge.ChangeCheck, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeChecksState", ctx, id)
-	ret0, _ := ret[0].(forge.ChecksState)
+	ret := m.ctrl.Call(m, "ChangeChecks", ctx, id)
+	ret0, _ := ret[0].([]forge.ChangeCheck)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ChangeChecksState indicates an expected call of ChangeChecksState.
-func (mr *MockRepositoryMockRecorder) ChangeChecksState(ctx, id any) *MockRepositoryChangeChecksStateCall {
+// ChangeChecks indicates an expected call of ChangeChecks.
+func (mr *MockRepositoryMockRecorder) ChangeChecks(ctx, id any) *MockRepositoryChangeChecksCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChecksState", reflect.TypeOf((*MockRepository)(nil).ChangeChecksState), ctx, id)
-	return &MockRepositoryChangeChecksStateCall{Call: call}
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeChecks", reflect.TypeOf((*MockRepository)(nil).ChangeChecks), ctx, id)
+	return &MockRepositoryChangeChecksCall{Call: call}
 }
 
-// MockRepositoryChangeChecksStateCall wrap *gomock.Call
-type MockRepositoryChangeChecksStateCall struct {
+// MockRepositoryChangeChecksCall wrap *gomock.Call
+type MockRepositoryChangeChecksCall struct {
 	*gomock.Call
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockRepositoryChangeChecksStateCall) Return(arg0 forge.ChecksState, arg1 error) *MockRepositoryChangeChecksStateCall {
+func (c *MockRepositoryChangeChecksCall) Return(arg0 []forge.ChangeCheck, arg1 error) *MockRepositoryChangeChecksCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRepositoryChangeChecksStateCall) Do(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockRepositoryChangeChecksStateCall {
+func (c *MockRepositoryChangeChecksCall) Do(f func(context.Context, forge.ChangeID) ([]forge.ChangeCheck, error)) *MockRepositoryChangeChecksCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepositoryChangeChecksStateCall) DoAndReturn(f func(context.Context, forge.ChangeID) (forge.ChecksState, error)) *MockRepositoryChangeChecksStateCall {
+func (c *MockRepositoryChangeChecksCall) DoAndReturn(f func(context.Context, forge.ChangeID) ([]forge.ChangeCheck, error)) *MockRepositoryChangeChecksCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
