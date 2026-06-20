@@ -110,6 +110,33 @@ and track the branch with git-spice if it is not already tracked.
 
 ## Workflows
 
+### Create a worktree from the branch prompt
+
+<!-- gs:version unreleased -->
+
+git-spice supports custom shorthands,
+including shell command aliases
+that run commands outside git-spice.
+See [Shell command aliases](../cli/shorthand.md#shell-command-aliases)
+for the syntax and argument handling rules.
+
+This adds `gs wtadd <path>`,
+which asks you to choose a branch from the git-spice branch prompt,
+then creates a Git worktree at the requested path for that branch.
+
+```bash
+git config --global spice.shorthand.wtadd \
+    '!branch=$(git-spice bco -n) &&
+      git worktree add "${1:?worktree path required}" "$branch"'
+```
+
+**How it works:**
+
+- `git-spice bco -n` opens the $$gs branch checkout$$ branch prompt
+  and prints the selected branch name instead of checking it out.
+- `${1:?worktree path required}` makes the shell command fail
+  if no path argument was supplied.
+
 ### Create branches without committing
 
 <!-- gs:version v0.5.0 -->
