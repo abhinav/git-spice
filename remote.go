@@ -77,6 +77,14 @@ func (r *remoteResolver) Resolve(
 			return nil, nil, err
 		}
 
+		// The forge is forced by configuration, so the remote URL
+		// no longer needs to identify it.
+		// Let the forge configure itself from the URL instead,
+		// e.g. to derive a self-hosted instance URL.
+		if c, ok := f.(forge.RemoteURLConfigurer); ok {
+			c.ConfigureFromRemoteURL(parsedRemoteURL)
+		}
+
 		repoID, err := f.ParseRepositoryPath(parsedRemoteURL.Path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("parse remote path as %s: %w", f.ID(), err)

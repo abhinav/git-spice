@@ -3,10 +3,12 @@ icon: octicons/stop-16
 title: Limitations
 description: >-
   Usage constraints and limitations when using git-spice
-  to interact with GitHub, GitLab, or Bitbucket Cloud.
+  to interact with GitHub, GitLab, Bitbucket Cloud,
+  or Bitbucket Data Center / Server.
 ---
 
-Usage of git-spice with GitHub, GitLab, and Bitbucket Cloud
+Usage of git-spice with GitHub, GitLab, Bitbucket Cloud,
+and Bitbucket Data Center / Server
 runs into limitations of what is possible on those platforms,
 and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
@@ -131,8 +133,39 @@ compared to GitHub and GitLab:
   The `--label` flag is ignored.
 - **No PR assignees**: Bitbucket does not support pull request assignees.
   The `--assign` flag is ignored.
-- **No template enumeration**: Bitbucket does not provide an API
-  to list pull request templates.
+- **Fixed pull request template paths**:
+  Bitbucket does not provide an API to list pull request templates,
+  so git-spice reads them from a fixed set of well-known paths
+  on the default branch:
+  `PULL_REQUEST_TEMPLATE.md` or `pull_request_template.md`,
+  at the repository root or inside a `.bitbucket` directory.
+
+These are platform limitations, not git-spice limitations.
+
+## Bitbucket Data Center / Server limitations
+
+<!-- gs:version unreleased -->
+
+Self-hosted Bitbucket Data Center / Server support has some limitations
+compared to GitHub and GitLab:
+
+- **No PR labels**: Bitbucket Data Center does not support pull request labels.
+  The `--label` flag is ignored.
+- **No PR assignees**: Bitbucket Data Center does not support pull request assignees.
+  The `--assign` flag is ignored.
+- **Draft PRs require Bitbucket Data Center 8.18+**:
+  On older servers the draft flag is ignored
+  and a regular pull request is created.
+- **Draft status cannot be toggled after creation**:
+  A pull request may be created as a draft,
+  but Bitbucket Data Center does not allow changing its draft status afterward.
+  The `--draft` and `--ready` flags are ignored when updating an existing PR.
+- **No fork / cross-repository PRs**:
+  Pull requests are supported only between branches in the same repository.
+- **Nested task counts require Bitbucket Data Center 7.2+**:
+  Comment resolution counts (shown by `gs log --cr-comments`)
+  include tasks; on older servers,
+  tasks left as replies within a comment thread are not counted.
 
 These are platform limitations, not git-spice limitations.
 

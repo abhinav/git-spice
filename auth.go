@@ -69,11 +69,17 @@ func resolveForge(
 			log.Errorf("Forge ID must be one of: %s", strings.Join(available, ", "))
 			return nil, fmt.Errorf("unknown forge: %s", forgeID)
 		}
+		configureForgeFromRemote(ctx, log, f)
 		return f, nil
 	}
 
 	if configuredKind != "" {
-		return lookupForgeKind(forges, configuredKind)
+		f, err := lookupForgeKind(forges, configuredKind)
+		if err != nil {
+			return nil, err
+		}
+		configureForgeFromRemote(ctx, log, f)
+		return f, nil
 	}
 
 	f, _, err := guessCurrentForge(ctx, forges, log)
@@ -112,16 +118,68 @@ func resolveForge(
 
 // guessCurrentForge attempts to guess the current forge based on the
 // current directory.
-func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.Logger) (forge.Forge, forge.RepositoryID, error) {
+func guessCurrentForge(
+	ctx context.Context,
+	forges *forge.Registry,
+	log *silog.Logger,
+) (forge.Forge, forge.RepositoryID, error) {
+	parsedRemoteURL, err := currentRemoteURL(ctx, log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	forge, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
+	if !ok {
+		return nil, nil, fmt.Errorf("no forge found for %s", parsedRemoteURL.Raw)
+	}
+
+	return forge, repoID, nil
+}
+
+// configureForgeFromRemote lets an explicitly selected forge
+// configure itself from the current repository's remote URL,
+// if it supports doing so.
+//
+// It is best-effort:
+// if the remote cannot be determined
+// (not in a repository, no remote, or multiple remotes),
+// the forge keeps its explicit or default configuration.
+func configureForgeFromRemote(ctx context.Context, log *silog.Logger, f forge.Forge) {
+	c, ok := f.(forge.RemoteURLConfigurer)
+	if !ok {
+		return
+	}
+
+	parsedRemoteURL, err := currentRemoteURL(ctx, log)
+	if err != nil {
+		log.Debug("Could not determine the remote URL; skipping forge self-configuration", "error", err)
+		return
+	}
+
+	c.ConfigureFromRemoteURL(parsedRemoteURL)
+}
+
+// currentRemoteURL determines and parses the configured remote URL
+// of the repository in the current directory.
+//
+// It prefers the remote that git-spice was initialized with,
+// and falls back to the repository's only remote;
+// with multiple remotes and no initialization,
+// the remote cannot be guessed.
+//
+// Git transport rewriting is deliberately not applied:
+// this URL is used for forge identity and credential lookup,
+// not for network transport.
+func currentRemoteURL(ctx context.Context, log *silog.Logger) (*giturl.URL, error) {
 	repo, err := git.Open(ctx, ".", git.OpenOptions{
 		Log: log,
 	})
 	if err != nil {
-		return nil, nil, errors.New("not in a Git repository")
+		return nil, errors.New("not in a Git repository")
 	}
 
 	// If the repository is already initialized with git-spice,
-	// and a remote is configured, use the forge for that remote.
+	// and a remote is configured, use that remote.
 	var remote string
 	if store, err := state.OpenStore(ctx, newRepoStorage(repo, log), log); err == nil {
 		if r, err := store.Remote(); err == nil {
@@ -133,11 +191,11 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 	if remote == "" {
 		remotes, err := repo.ListRemotes(ctx)
 		if err != nil {
-			return nil, nil, fmt.Errorf("list remotes: %w", err)
+			return nil, fmt.Errorf("list remotes: %w", err)
 		}
 		switch len(remotes) {
 		case 0:
-			return nil, nil, errors.New("no remote set for repository")
+			return nil, errors.New("no remote set for repository")
 
 		case 1:
 			remote = remotes[0]
@@ -145,25 +203,20 @@ func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.L
 		default:
 			// Repository not initialized with git-spice
 			// and has multiple remotes.
-			// We can't guess the forge in this case.
-			return nil, nil, fmt.Errorf("multiple remotes found: initialize with %s first", cli.Name())
+			// We can't guess the remote in this case.
+			return nil, fmt.Errorf("multiple remotes found: initialize with %s first", cli.Name())
 		}
 	}
 
-	remoteURL, err := repo.RemoteURL(ctx, remote)
+	remoteURL, err := repo.RemoteConfigURL(ctx, remote)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get remote URL: %w", err)
+		return nil, fmt.Errorf("get remote URL: %w", err)
 	}
 
-	parsedRemoteURL, err := giturl.Parse(remoteURL)
+	u, err := giturl.Parse(remoteURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse remote URL: %w", err)
+		return nil, fmt.Errorf("parse remote URL: %w", err)
 	}
 
-	forge, repoID, ok := forge.FromRemoteURL(forges, parsedRemoteURL)
-	if !ok {
-		return nil, nil, fmt.Errorf("no forge found for %s", remoteURL)
-	}
-
-	return forge, repoID, nil
+	return u, nil
 }

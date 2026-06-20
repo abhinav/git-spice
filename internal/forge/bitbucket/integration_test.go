@@ -126,7 +126,7 @@ func TestIntegration(t *testing.T) {
 		// Bitbucket limitations:
 		SkipLabels:            true, // no PR labels
 		SkipAssignees:         true, // no PR assignees
-		SkipTemplates:         true, // limited template support
+		SkipTemplates:         true, // suite needs a template directory; Bitbucket has fixed .md paths only
 		ShortHeadHash:         true, // API returns 12-char hashes
 		SkipMerge:             true, // requires branch permissions
 		SkipCommentPagination: true, // 403 with small pages

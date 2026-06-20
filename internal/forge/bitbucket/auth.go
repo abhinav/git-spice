@@ -68,6 +68,10 @@ func (f *Forge) AuthenticationFlow(
 		return nil, errors.New("already authenticated")
 	}
 
+	if f.kind() == KindDataCenter {
+		return f.serverAuthenticationFlow(ctx, view)
+	}
+
 	method, err := f.selectAuthMethod(view)
 	if err != nil {
 		return nil, fmt.Errorf("select auth method: %w", err)
@@ -150,7 +154,7 @@ func (f *Forge) apiTokenAuth(_ context.Context, view ui.View) (*AuthenticationTo
 	f.logger().Info("  pullrequest:write - create and edit pull requests")
 	f.logger().Info("  account - read workspace members for reviewer lookup")
 
-	token, err := promptRequired(view, "Enter API token", "API token is required")
+	token, err := promptRequired(view, "Enter API token", "", "API token is required")
 	if err != nil {
 		return nil, fmt.Errorf("prompt for API token: %w", err)
 	}
@@ -161,10 +165,11 @@ func (f *Forge) apiTokenAuth(_ context.Context, view ui.View) (*AuthenticationTo
 	}, nil
 }
 
-func promptRequired(view ui.View, title, errMsg string) (string, error) {
+func promptRequired(view ui.View, title, description, errMsg string) (string, error) {
 	var value string
 	err := ui.Run(view, ui.NewInput().
 		WithTitle(title).
+		WithDescription(description).
 		WithValidate(requiredValidator(errMsg)).
 		WithValue(&value),
 	)

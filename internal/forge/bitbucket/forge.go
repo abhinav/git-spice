@@ -5,9 +5,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/gateway/bitbucket"
+	gw "go.abhg.dev/gs/internal/gateway/bitbucket"
+	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
+	"go.abhg.dev/gs/internal/gateway/bitbucket/server"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -20,8 +23,9 @@ type Forge struct {
 }
 
 var (
-	_ forge.Forge             = (*Forge)(nil)
-	_ forge.WithCommentFormat = (*Forge)(nil)
+	_ forge.Forge               = (*Forge)(nil)
+	_ forge.WithCommentFormat   = (*Forge)(nil)
+	_ forge.RemoteURLConfigurer = (*Forge)(nil)
 )
 
 func (f *Forge) logger() *silog.Logger {
@@ -29,6 +33,22 @@ func (f *Forge) logger() *silog.Logger {
 		return silog.Nop()
 	}
 	return f.Log.WithPrefix("bitbucket")
+}
+
+// kind returns the selected Bitbucket product.
+func (f *Forge) kind() Kind {
+	if f.Options.Kind != KindAuto {
+		return f.Options.Kind
+	}
+
+	if f.Options.URL == "" {
+		return KindCloud
+	}
+
+	if u, err := url.Parse(f.Options.URL); err == nil && isCloudHost(u.Hostname()) {
+		return KindCloud
+	}
+	return KindDataCenter
 }
 
 // URL returns the base URL configured for the Bitbucket Forge
@@ -42,14 +62,18 @@ func (f *Forge) BaseURL() string {
 	return f.URL()
 }
 
-// APIURL returns the base API URL configured for the Bitbucket Forge
-// or the default URL if none is set.
+// APIURL returns the configured API URL or the product default.
 func (f *Forge) APIURL() string {
+	if f.kind() == KindDataCenter {
+		return cmp.Or(f.Options.APIURL, f.URL()+"/rest/api/1.0")
+	}
 	return cmp.Or(f.Options.APIURL, DefaultAPIURL)
 }
 
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "bitbucket" }
+
+const _navigationCommentMarker = "[gs]: # (navigation comment)"
 
 // CommentFormat returns Bitbucket-specific comment formatting.
 // Bitbucket doesn't support HTML in comments, so we use plain Markdown.
@@ -59,7 +83,7 @@ func (*Forge) CommentFormat() forge.CommentFormat {
 		Footer: "*Change managed by [git-spice](https://abhinav.github.io/git-spice/).*",
 		// Use Markdown link definition syntax instead of HTML comment.
 		// This renders as invisible on Bitbucket.
-		Marker: "[gs]: # (navigation comment)",
+		Marker: _navigationCommentMarker,
 	}
 }
 
@@ -79,11 +103,22 @@ func (*Forge) ChangeTemplatePaths() []string {
 	}
 }
 
-// ParseRepositoryPath parses a Bitbucket repository path and returns
-// a [RepositoryID] for the repository it identifies.
-//
-// It returns [ErrUnsupportedURL] if the path is not a valid Bitbucket path.
+// ParseRepositoryPath parses a Bitbucket repository path.
 func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
+	if f.kind() == KindDataCenter {
+		projectKey, slug, personal, err := parseServerRepoPath(path)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+		}
+
+		return &serverRepositoryID{
+			url:        f.URL(),
+			projectKey: projectKey,
+			slug:       slug,
+			personal:   personal,
+		}, nil
+	}
+
 	workspace, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
@@ -102,22 +137,41 @@ func (f *Forge) OpenRepository(
 	token forge.AuthenticationToken,
 	id forge.RepositoryID,
 ) (forge.Repository, error) {
-	rid := mustRepositoryID(id)
 	tok := token.(*AuthenticationToken)
+	log := f.logger()
 
-	tokenSource, err := newGatewayTokenSource(tok)
+	var (
+		gateway gw.Gateway
+		err     error
+	)
+	if f.kind() == KindDataCenter {
+		rid := mustServerRepositoryID(id)
+		var stok *server.Token
+		if tok != nil {
+			stok = &server.Token{AccessToken: tok.AccessToken}
+		}
+		gateway, err = server.New(
+			f.APIURL(), f.Options.URL,
+			rid.projectKey, rid.slug, rid.personal,
+			log, stok,
+		)
+	} else {
+		rid := mustRepositoryID(id)
+		var ctok *cloud.Token
+		if tok != nil {
+			ctok = &cloud.Token{AccessToken: tok.AccessToken}
+		}
+		gateway, err = cloud.New(
+			f.APIURL(), f.URL(),
+			rid.workspace, rid.name,
+			log, ctok, http.DefaultClient,
+		)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("build Bitbucket token source: %w", err)
+		return nil, err
 	}
 
-	client, err := bitbucket.NewClient(tokenSource, &bitbucket.ClientOptions{
-		BaseURL: f.APIURL(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create Bitbucket client: %w", err)
-	}
-
-	return newRepository(f, rid.url, rid.workspace, rid.name, f.logger(), client, tok, http.DefaultClient), nil
+	return newRepository(f, log, gateway), nil
 }
 
 func extractRepoInfo(path string) (workspace, repo string, err error) {
