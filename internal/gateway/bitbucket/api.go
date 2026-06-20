@@ -31,6 +31,14 @@ type PullRequest struct {
 	Reviewers   []User           `json:"reviewers"`
 	Links       PullRequestLinks `json:"links"`
 	MergeCommit *Commit          `json:"merge_commit,omitempty"`
+
+	// Mergeable reports Bitbucket Cloud's current merge decision.
+	//
+	// It is nil when the response omits the field.
+	Mergeable *bool `json:"mergeable,omitempty"`
+
+	// Queued reports whether Bitbucket Cloud is still evaluating mergeability.
+	Queued bool `json:"queued,omitempty"`
 }
 
 // PullRequestCreateRequest is the request body for creating a pull request.

@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -90,6 +91,19 @@ func TestClient_PullRequestGet(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(55), pr.ID)
 	assert.Equal(t, "main", pr.Destination.Branch.Name)
+}
+
+func TestPullRequestMergeabilityFields(t *testing.T) {
+	var pr PullRequest
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"id": 55,
+		"mergeable": true,
+		"queued": true
+	}`), &pr))
+
+	require.NotNil(t, pr.Mergeable)
+	assert.True(t, *pr.Mergeable)
+	assert.True(t, pr.Queued)
 }
 
 func TestClient_PullRequestMerge(t *testing.T) {
