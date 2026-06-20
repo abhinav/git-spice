@@ -83,7 +83,7 @@ func changeMergeabilityFromGitHub(
 		}
 	case githubv4.MergeStateStatusBlocked:
 		return forge.ChangeMergeability{
-			State:  forge.ChangeMergeabilityBlocked,
+			State:  forge.ChangeMergeabilityWaiting,
 			Reason: forge.ChangeMergeabilityReasonUnknown,
 		}
 	}

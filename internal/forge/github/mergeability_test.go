@@ -160,11 +160,11 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 			},
 		},
 		{
-			name:           "Blocked",
+			name:           "BlockedWaits",
 			giveMergeable:  githubv4.MergeableStateMergeable,
 			giveMergeState: githubv4.MergeStateStatusBlocked,
 			want: forge.ChangeMergeability{
-				State:  forge.ChangeMergeabilityBlocked,
+				State:  forge.ChangeMergeabilityWaiting,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
 			},
 		},
