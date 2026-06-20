@@ -65,10 +65,10 @@ type Options struct {
 	// Empty means use the configured or forge default.
 	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
 
-	// BuildTimeout is the maximum time to wait
-	// for CI checks before each merge attempt.
-	// Zero means check once and fail if CI is not ready.
-	BuildTimeout time.Duration `config:"merge.buildTimeout" default:"30m" help:"Max time to wait for CI checks before each merge. 0 means check once."`
+	// MergeReadinessTimeout is the maximum time for each forge-readiness wait,
+	// including pushed-head visibility and merge readiness.
+	// Zero means check once and fail if merge readiness is not reached.
+	MergeReadinessTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
 }
 
 // DownstackMergeOptions controls downstack merge behavior.
@@ -162,9 +162,9 @@ func (h *Handler) MergeDownstack(
 	}
 
 	return h.executePlan(ctx, plan, mergeExecutionOptions{
-		Method:       opts.Method,
-		BuildTimeout: opts.BuildTimeout,
-		NoWait:       opts.NoWait,
+		Method:                opts.Method,
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		NoWait:                opts.NoWait,
 	})
 }
 
@@ -235,9 +235,9 @@ func (h *Handler) MergeStack(
 	}
 
 	return h.executePlan(ctx, plan, mergeExecutionOptions{
-		Method:       opts.Method,
-		BuildTimeout: opts.BuildTimeout,
-		FailFast:     opts.FailFast,
+		Method:                opts.Method,
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		FailFast:              opts.FailFast,
 	})
 }
 
@@ -503,10 +503,10 @@ func (h *Handler) confirm(plan []*mergeItem, title string) error {
 }
 
 type mergeExecutionOptions struct {
-	Method       forge.MergeMethod
-	BuildTimeout time.Duration
-	NoWait       bool
-	FailFast     bool
+	Method                forge.MergeMethod
+	MergeReadinessTimeout time.Duration
+	NoWait                bool
+	FailFast              bool
 }
 
 func (h *Handler) executePlan(
@@ -539,11 +539,11 @@ func (h *Handler) executePlan(
 
 		Progress: progress,
 
-		Trunk:        h.Store.Trunk(),
-		BuildTimeout: opts.BuildTimeout,
-		Method:       opts.Method,
-		NoWait:       opts.NoWait,
-		FailFast:     opts.FailFast,
+		Trunk:                 h.Store.Trunk(),
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		Method:                opts.Method,
+		NoWait:                opts.NoWait,
+		FailFast:              opts.FailFast,
 	}).Execute(ctx, plan)
 	if err != nil {
 		return err
@@ -638,7 +638,7 @@ func (e *mergePlanExecutor) awaitChangeHead(
 	)
 
 	return e.awaitChangeHeadWithDelay(
-		ctx, item, change, e.BuildTimeout, _baseDelay, _maxDelay,
+		ctx, item, change, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
 	)
 }
 
@@ -690,19 +690,20 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 		}
 
 		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressWaitingForChecks,
+			Kind: mergeProgressWaitingForForgeHead,
 			Item: item,
 		})
 		if err := sleep(ctx, delay); err != nil {
-			return errors.New("timed out waiting for forge head")
+			return fmt.Errorf("HEAD did not update after %v", timeout)
 		}
 		delay = min(delay*2, maxDelay)
 	}
 }
 
-// awaitChecks polls until CI checks pass for the given change.
+// awaitMergeability polls until the forge reports that the change is
+// ready to merge.
 // Uses truncated exponential backoff.
-func (e *mergePlanExecutor) awaitChecks(
+func (e *mergePlanExecutor) awaitMergeability(
 	ctx context.Context,
 	item *mergeItem,
 ) error {
@@ -711,38 +712,43 @@ func (e *mergePlanExecutor) awaitChecks(
 		_maxDelay  = 30 * time.Second
 	)
 
-	return e.awaitChecksWithDelay(
-		ctx, item, e.BuildTimeout, _baseDelay, _maxDelay,
+	return e.awaitMergeabilityWithDelay(
+		ctx, item, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
 	)
 }
 
-func (e *mergePlanExecutor) awaitChecksWithDelay(
+func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 	ctx context.Context,
 	item *mergeItem,
 	timeout, baseDelay, maxDelay time.Duration,
 ) error {
 	delay := baseDelay
 	for attempt := 0; ; attempt++ {
-		checks, err := e.RemoteRepository.ChangeChecks(
+		mergeability, err := e.RemoteRepository.ChangeMergeability(
 			ctx, item.changeID,
 		)
 		if err != nil {
-			return fmt.Errorf("query checks: %w", err)
+			return fmt.Errorf("check merge readiness: %w", err)
 		}
-		state := checkState(checks)
-		if state == mergeChecksPassed {
+		switch mergeability.State {
+		case forge.ChangeMergeabilityReady:
 			e.Progress.Event(mergeProgressEvent{
-				Kind: mergeProgressChecksPassed,
+				Kind: mergeProgressMergeabilityReady,
 				Item: item,
 			})
 			return nil
-		}
-		if state == mergeChecksFailed {
-			return errors.New("CI checks failed")
-		}
-
-		if timeout == 0 {
-			return errors.New("CI checks pending (build-timeout=0)")
+		case forge.ChangeMergeabilityWaiting:
+			if timeout == 0 {
+				return fmt.Errorf("not ready after %v", timeout)
+			}
+		case forge.ChangeMergeabilityBlocked:
+			return fmt.Errorf("blocked: %s", mergeability.Reason)
+		case forge.ChangeMergeabilityUnknown:
+			return errors.New("unknown state")
+		case forge.ChangeMergeabilityUnsupported:
+			return errors.New("unknown state")
+		default:
+			return fmt.Errorf("unknown state: %v", mergeability.State)
 		}
 		if attempt == 0 {
 			var cancel context.CancelFunc
@@ -751,35 +757,14 @@ func (e *mergePlanExecutor) awaitChecksWithDelay(
 		}
 
 		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressWaitingForChecks,
+			Kind: mergeProgressWaitingForMergeability,
 			Item: item,
 		})
 		if err := sleep(ctx, delay); err != nil {
-			return errors.New("timed out waiting for CI")
+			return fmt.Errorf("not ready after %v", timeout)
 		}
 		delay = min(delay*2, maxDelay)
 	}
-}
-
-type mergeChecksState int
-
-const (
-	mergeChecksPassed mergeChecksState = iota + 1
-	mergeChecksPending
-	mergeChecksFailed
-)
-
-func checkState(checks []forge.ChangeCheck) mergeChecksState {
-	state := mergeChecksPassed
-	for _, check := range checks {
-		if check.State == forge.ChangeCheckFailed {
-			return mergeChecksFailed
-		}
-		if check.State == forge.ChangeCheckPending {
-			state = mergeChecksPending
-		}
-	}
-	return state
 }
 
 // ensureTargetsTrunk verifies a change targets trunk

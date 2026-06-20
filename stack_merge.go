@@ -33,9 +33,11 @@ func (*stackMergeCmd) Help() string {
 		whose base PR was already merged on the forge.
 		Use --no-branch-check to skip this validation.
 
-		Before each merge, waits for CI checks to pass.
-		Use --build-timeout to configure the maximum wait
-		before failing if checks are not ready.
+		Before each merge, waits for merge readiness:
+		the forge must observe the pushed head
+		and report that the CR is ready to merge.
+		Use --ready-timeout to configure the maximum wait
+		before failing if merge readiness is not reached.
 
 		By default, a branch failure skips that branch's upstack descendants,
 		but independent sibling branches continue.

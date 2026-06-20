@@ -1,4 +1,4 @@
-# 'downstack merge' waits for checks on the next branch after restacking.
+# 'downstack merge' checks merge readiness on the next branch after restacking.
 
 as 'Test <test@example.com>'
 at '2026-05-31T08:07:00Z'
@@ -24,15 +24,15 @@ gs bc feature1 -m 'Add feature 1'
 git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
 
-# submit the stack, pass feature1, and fail feature2.
+# submit the stack, make feature1 ready, and block feature2.
 gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
-shamhub set-status --name 'unit tests' alice/example 1 passed
-shamhub set-status --name 'unit tests' alice/example 2 failed
+shamhub set-mergeability alice/example 1 ready
+shamhub set-mergeability -reason checks alice/example 2 blocked
 
 # The queue should merge feature1, update feature2, then stop before
-# merging feature2 because the updated PR's checks are failed.
+# merging feature2 because the updated PR's merge readiness is blocked.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
 ! gs downstack merge
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
@@ -63,7 +63,7 @@ INF feature1: deleted (was dc8aa3d)
 INF feature2: retargeting #2 onto main...
 INF feature2: restacked on main
 INF Updated #2: $SHAMHUB_URL/alice/example/change/2
-FTL gs: merge queue item "feature2": wait for checks: CI checks failed
+FTL gs: merge queue item "feature2": wait for merge readiness: blocked: checks
 -- golden/change-1.json --
 {
   "number": 1,

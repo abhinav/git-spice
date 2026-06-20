@@ -1,4 +1,4 @@
-# 'downstack merge' refuses pending CI checks when build-timeout is zero.
+# 'downstack merge' refuses a not-ready change when ready-timeout is zero.
 
 as 'Test <test@example.com>'
 at '2026-05-31T08:06:00Z'
@@ -22,14 +22,14 @@ gs auth login
 git add feature1.txt
 gs bc feature1 -m 'Add feature 1'
 
-# submit the branch and mark its checks pending
+# submit the branch and mark its merge readiness waiting
 gs downstack submit --fill
 stderr 'Created #1'
-shamhub set-status --name 'unit tests' alice/example 1 pending
+shamhub set-mergeability -reason checks alice/example 1 waiting
 
-# With build-timeout=0, pending checks fail immediately.
+# With ready-timeout=0, waiting merge readiness fails immediately.
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-! gs downstack merge --build-timeout=0
+! gs downstack merge --ready-timeout=0
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 cmp stderr $WORK/golden/merge-stderr.txt
 
@@ -45,7 +45,7 @@ This is feature 1
 >   feature1 (#1)
 true
 -- golden/merge-stderr.txt --
-FTL gs: merge queue item "feature1": wait for checks: CI checks pending (build-timeout=0)
+FTL gs: merge queue item "feature1": wait for merge readiness: not ready after 0s
 -- golden/change-1.json --
 {
   "number": 1,

@@ -96,15 +96,15 @@ func TestAwaitMerged_afterPolling(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestAwaitChecks_passed(t *testing.T) {
+func TestAwaitMergeability_ready(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecks(
+		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(checks(forge.ChangeCheckPassed), nil)
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -118,19 +118,25 @@ func TestAwaitChecks_passed(t *testing.T) {
 	progress := newLogMergeProgress(silog.Nop())
 	executor := newTestMergePlanExecutor(h, progress)
 
-	err := executor.awaitChecks(t.Context(), item)
+	err := executor.awaitMergeability(t.Context(), item)
 	require.NoError(t, err)
 }
 
-func TestAwaitChecks_failed(t *testing.T) {
+func TestAwaitMergeability_blocked(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecks(
+		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(checks(forge.ChangeCheckFailed), nil)
+		Return(
+			mergeabilityWithReason(
+				forge.ChangeMergeabilityBlocked,
+				forge.ChangeMergeabilityReasonChecks,
+			),
+			nil,
+		)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -144,20 +150,20 @@ func TestAwaitChecks_failed(t *testing.T) {
 	progress := newLogMergeProgress(silog.Nop())
 	executor := newTestMergePlanExecutor(h, progress)
 
-	err := executor.awaitChecks(t.Context(), item)
+	err := executor.awaitMergeability(t.Context(), item)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CI checks failed")
+	assert.Contains(t, err.Error(), "blocked: checks")
 }
 
-func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
+func TestAwaitMergeability_waitingZeroTimeout(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	mockRepo.EXPECT().
-		ChangeChecks(
+		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(checks(forge.ChangeCheckPending), nil)
+		Return(mergeability(forge.ChangeMergeabilityWaiting), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockRepo,
@@ -172,26 +178,26 @@ func TestAwaitChecks_pendingZeroTimeout(t *testing.T) {
 	progress := newLogMergeProgress(silog.Nop())
 	executor := newTestMergePlanExecutor(h, progress)
 
-	executor.BuildTimeout = 0
-	err := executor.awaitChecks(t.Context(), item)
+	executor.MergeReadinessTimeout = 0
+	err := executor.awaitMergeability(t.Context(), item)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CI checks pending")
+	assert.Contains(t, err.Error(), "not ready after 0s")
 }
 
-func TestAwaitChecks_pendingThenPassed(t *testing.T) {
+func TestAwaitMergeability_waitingThenReady(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockRepo := forgetest.NewMockRepository(ctrl)
 	first := mockRepo.EXPECT().
-		ChangeChecks(
+		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(checks(forge.ChangeCheckPending), nil)
+		Return(mergeability(forge.ChangeMergeabilityWaiting), nil)
 	mockRepo.EXPECT().
-		ChangeChecks(
+		ChangeMergeability(
 			gomock.Any(), fakeChangeID("pr-1"),
 		).
-		Return(checks(forge.ChangeCheckPassed), nil).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
 		After(first.Call)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -206,7 +212,7 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 	progress := newLogMergeProgress(silog.Nop())
 	executor := newTestMergePlanExecutor(h, progress)
 
-	err := executor.awaitChecksWithDelay(
+	err := executor.awaitMergeabilityWithDelay(
 		t.Context(),
 		item,
 		5*time.Second,      // timeout
@@ -216,23 +222,58 @@ func TestAwaitChecks_pendingThenPassed(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckState_allObservedChecksGateReadiness(t *testing.T) {
-	assert.Equal(t, mergeChecksPassed, checkState([]forge.ChangeCheck{
-		{Name: "build", State: forge.ChangeCheckPassed},
-		{Name: "lint", State: forge.ChangeCheckPassed},
-	}))
-	assert.Equal(t, mergeChecksFailed, checkState([]forge.ChangeCheck{
-		{Name: "build", State: forge.ChangeCheckPassed},
-		{Name: "lint", State: forge.ChangeCheckFailed},
-	}))
-	assert.Equal(t, mergeChecksPending, checkState([]forge.ChangeCheck{
-		{Name: "build", State: forge.ChangeCheckPassed},
-		{Name: "lint", State: forge.ChangeCheckPending},
-	}))
-	assert.Equal(t, mergeChecksFailed, checkState([]forge.ChangeCheck{
-		{Name: "build", State: forge.ChangeCheckPending},
-		{Name: "lint", State: forge.ChangeCheckFailed},
-	}))
+func TestAwaitMergeability_unknown(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockRepo := forgetest.NewMockRepository(ctrl)
+	mockRepo.EXPECT().
+		ChangeMergeability(
+			gomock.Any(), fakeChangeID("pr-1"),
+		).
+		Return(mergeability(forge.ChangeMergeabilityUnknown), nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockRepo,
+		logBuffer: nil,
+	})
+
+	item := &mergeItem{
+		branch:   "feat1",
+		changeID: fakeChangeID("pr-1"),
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitMergeability(t.Context(), item)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown state")
+}
+
+func TestAwaitMergeability_unsupported(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockRepo := forgetest.NewMockRepository(ctrl)
+	mockRepo.EXPECT().
+		ChangeMergeability(
+			gomock.Any(), fakeChangeID("pr-1"),
+		).
+		Return(mergeability(forge.ChangeMergeabilityUnsupported), nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockRepo,
+		logBuffer: nil,
+	})
+
+	item := &mergeItem{
+		branch:   "feat1",
+		changeID: fakeChangeID("pr-1"),
+	}
+	progress := newLogMergeProgress(silog.Nop())
+	executor := newTestMergePlanExecutor(h, progress)
+
+	err := executor.awaitMergeability(t.Context(), item)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown state")
 }
 
 func TestExecutePlan_retargets(t *testing.T) {
@@ -266,7 +307,7 @@ func TestExecutePlan_retargets(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr3).
 		Return(fakeFindResultWithHead("main", "head3"), nil)
 
-	// Each merge: checks -> merge -> awaitMerged -> sync
+	// Each merge: merge readiness -> merge -> awaitMerged -> sync
 	// -> prepare next (except last).
 	expectMergeItem(mockForge, pr1)
 	expectPreparedNext(t, mockForge, pr2)
@@ -370,9 +411,9 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 
 	// The submit call can return before the forge's change view catches up
 	// to the pushed branch head.
-	// A stale ChecksPassed value at this point belongs to the old head,
+	// A stale merge readiness value at this point belongs to the old head,
 	// so the merge loop must wait until the forge reports new-head2
-	// before asking whether checks passed.
+	// before asking whether the change is ready to merge.
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "old-head2"), nil)
@@ -383,8 +424,8 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 			HeadHash: git.Hash("new-head2"),
 		}}, nil)
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), pr2).
-		Return(checks(forge.ChangeCheckPassed), nil).
+		ChangeMergeability(gomock.Any(), pr2).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
 		After(status.Call)
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), pr2, forge.MergeChangeOptions{
@@ -432,7 +473,7 @@ func TestExecutePlan_noWait(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResultWithHead("main", "head1"), nil)
 
-	expectChecksAndMerge(mockForge, pr1)
+	expectMergeabilityAndMerge(mockForge, pr1)
 	// No ChangesStates polling (awaitMerged skipped).
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -714,8 +755,8 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), pr2).
-		Return(checks(forge.ChangeCheckFailed), nil)
+		ChangeMergeability(gomock.Any(), pr2).
+		Return(mergeability(forge.ChangeMergeabilityBlocked), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
@@ -732,7 +773,7 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		},
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CI checks failed")
+	assert.Contains(t, err.Error(), "blocked")
 }
 
 func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
@@ -781,8 +822,8 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr1).
 		Return(fakeFindResultWithHead("main", "head1"), nil)
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), pr1).
-		Return(checks(forge.ChangeCheckPassed), nil)
+		ChangeMergeability(gomock.Any(), pr1).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), pr1, forge.MergeChangeOptions{
 			Method:   forge.MergeMethodSquash,
@@ -910,11 +951,11 @@ func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
 		Base: "main",
 	})
 	progress.Event(mergeProgressEvent{
-		Kind: mergeProgressWaitingForChecks,
+		Kind: mergeProgressWaitingForMergeability,
 		Item: item,
 	})
 	progress.Event(mergeProgressEvent{
-		Kind: mergeProgressWaitingForChecks,
+		Kind: mergeProgressWaitingForMergeability,
 		Item: item,
 	})
 	progress.Event(mergeProgressEvent{
@@ -932,7 +973,7 @@ func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(output,
 		"feat1: retargeting pr-1 onto main"))
 	assert.Equal(t, 1, strings.Count(output,
-		"feat1: waiting for CI checks"))
+		"feat1: waiting for merge readiness"))
 	assert.Equal(t, 1, strings.Count(output,
 		"feat1: merging pr-1: http://example.com/1"))
 }
@@ -1187,9 +1228,9 @@ func newTestMergePlanExecutor(
 
 		Progress: progress,
 
-		Trunk:        "main",
-		BuildTimeout: 30 * time.Minute,
-		Method:       forge.MergeMethodDefault,
+		Trunk:                 "main",
+		MergeReadinessTimeout: 30 * time.Minute,
+		Method:                forge.MergeMethodDefault,
 	}
 }
 
@@ -1333,12 +1374,12 @@ func fakeFindResultWithHead(
 }
 
 // expectMergeItem sets up mock expectations for a full
-// merge iteration: checks passed -> merge -> awaitMerged.
+// merge iteration: ready to merge -> merge -> awaitMerged.
 func expectMergeItem(
 	mockForge *forgetest.MockRepository,
 	id fakeChangeID,
 ) {
-	expectChecksAndMerge(mockForge, id)
+	expectMergeabilityAndMerge(mockForge, id)
 	expectMerged(mockForge, id)
 }
 
@@ -1373,8 +1414,8 @@ func expectPreparedNext(
 	t.Helper()
 
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), id).
-		Return(checks(forge.ChangeCheckPassed), nil)
+		ChangeMergeability(gomock.Any(), id).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
 }
 
 func assertSubmitUpdate(
@@ -1393,24 +1434,36 @@ func assertSubmitUpdate(
 	}
 }
 
-// expectChecksAndMerge sets up mock expectations for
-// checks passed + merge (without awaitMerged polling).
-func expectChecksAndMerge(
+// expectMergeabilityAndMerge sets up mock expectations for
+// ready to merge + merge (without awaitMerged polling).
+func expectMergeabilityAndMerge(
 	mockForge *forgetest.MockRepository,
 	id fakeChangeID,
 ) {
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), id).
-		Return(checks(forge.ChangeCheckPassed), nil)
+		ChangeMergeability(gomock.Any(), id).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
 
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), id, gomock.Any()).
 		Return(nil)
 }
 
-func checks(state forge.ChangeCheckState) []forge.ChangeCheck {
-	return []forge.ChangeCheck{{
-		Name:  "test",
-		State: state,
-	}}
+func mergeability(
+	state forge.ChangeMergeabilityState,
+) forge.ChangeMergeability {
+	return mergeabilityWithReason(
+		state,
+		forge.ChangeMergeabilityReasonUnknown,
+	)
+}
+
+func mergeabilityWithReason(
+	state forge.ChangeMergeabilityState,
+	reason forge.ChangeMergeabilityReason,
+) forge.ChangeMergeability {
+	return forge.ChangeMergeability{
+		State:  state,
+		Reason: reason,
+	}
 }

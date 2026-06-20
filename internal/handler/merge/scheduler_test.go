@@ -119,8 +119,8 @@ func TestMergeScheduler_siblingContinuesAfterSubtreeFails(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), pr2).
-		Return(checks(forge.ChangeCheckFailed), nil)
+		ChangeMergeability(gomock.Any(), pr2).
+		Return(mergeability(forge.ChangeMergeabilityBlocked), nil)
 
 	mockForge.EXPECT().
 		FindChangeByID(gomock.Any(), pr3).
@@ -142,7 +142,7 @@ func TestMergeScheduler_siblingContinuesAfterSubtreeFails(t *testing.T) {
 		testPlanEntry("feat3", "feat1", pr3),
 	))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CI checks failed")
+	assert.Contains(t, err.Error(), "blocked")
 	assert.True(t, progress.seen(mergeProgressFailed, "feat2"))
 	assert.True(t, progress.seen(mergeProgressSkipped, "feat4"))
 	assert.True(t, progress.seen(mergeProgressMerging, "feat3"))
@@ -231,8 +231,8 @@ func TestMergeScheduler_failFastStopsOnFailure(t *testing.T) {
 		FindChangeByID(gomock.Any(), pr2).
 		Return(fakeFindResultWithHead("main", "head2"), nil)
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), pr2).
-		Return(checks(forge.ChangeCheckFailed), nil)
+		ChangeMergeability(gomock.Any(), pr2).
+		Return(mergeability(forge.ChangeMergeabilityBlocked), nil)
 
 	progress := &recordingMergeProgress{}
 	executor := newTestMergePlanExecutor(
@@ -251,7 +251,7 @@ func TestMergeScheduler_failFastStopsOnFailure(t *testing.T) {
 		testPlanEntry("feat3", "feat1", pr3),
 	))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CI checks failed")
+	assert.Contains(t, err.Error(), "blocked")
 	assert.False(t, progress.seen(mergeProgressMerging, "feat3"))
 }
 
@@ -313,8 +313,8 @@ func expectMergeWithRecord(
 	operations *[]string,
 ) {
 	mockForge.EXPECT().
-		ChangeChecks(gomock.Any(), id).
-		Return(checks(forge.ChangeCheckPassed), nil)
+		ChangeMergeability(gomock.Any(), id).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
 
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), id, gomock.Any()).

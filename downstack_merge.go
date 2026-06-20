@@ -27,7 +27,7 @@ func (*downstackMergeCmd) Help() string {
 		it merges one Change Request,
 		waits for that merge to finish,
 		restacks and updates the next Change Request,
-		waits for its CI checks to pass,
+		waits for merge readiness on the updated Change Request,
 		and then repeats the process.
 
 		For a stack like this:
@@ -45,13 +45,15 @@ func (*downstackMergeCmd) Help() string {
 		whose base PR was already merged on the forge.
 		Use --no-branch-check to skip this validation.
 
-		Before each merge, waits for CI checks to pass.
-		Use --build-timeout to configure the maximum wait
+		Before each merge, waits for merge readiness:
+		the forge must observe the pushed head
+		and report that the CR is ready to merge.
+		Use --ready-timeout to configure the maximum wait
 		(default: 30m, 0 means fail immediately if not ready).
 
 		Between merges, the command waits for each merge
 		to complete, restacks and updates the next PR,
-		waits for CI checks on the updated PR,
+		waits for merge readiness on the updated PR,
 		and syncs merged branch cleanup.
 
 		Use --no-wait for single branch merging

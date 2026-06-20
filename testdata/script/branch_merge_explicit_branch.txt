@@ -1,4 +1,4 @@
-# 'branch merge --branch' refuses to merge when CI checks failed.
+# 'branch merge --branch' refuses to merge when merge readiness is blocked.
 
 as 'Test <test@example.com>'
 at '2026-06-13T18:29:00Z'
@@ -22,10 +22,10 @@ gs auth login
 git add feature1.txt
 gs bc feature1 -m 'Add feature 1'
 
-# submit the branch and mark its checks failed
+# submit the branch and mark merge readiness blocked
 gs branch submit --fill
 stderr 'Created #1'
-shamhub set-status --name 'unit tests' alice/example 1 failed
+shamhub set-mergeability -reason checks alice/example 1 blocked
 
 # branch merge should stop before sending the merge request.
 gs trunk
@@ -46,7 +46,7 @@ This is feature 1
 >   feature1 (#1)
 true
 -- golden/merge-stderr.txt --
-FTL gs: merge queue item "feature1": wait for checks: CI checks failed
+FTL gs: merge queue item "feature1": wait for merge readiness: blocked: checks
 -- golden/change-1.json --
 {
   "number": 1,
