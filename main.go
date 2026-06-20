@@ -240,6 +240,7 @@ func main() {
 		}
 
 		if err := xec.Command(ctx, logger, "sh", shArgs...).
+			WithStdin(os.Stdin).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			AppendEnv(fmt.Sprintf("%v=%d", recursionDepthEnvVar, depth+1)).
