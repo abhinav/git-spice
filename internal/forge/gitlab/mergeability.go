@@ -1,0 +1,18 @@
+package gitlab
+
+import (
+	"context"
+
+	"go.abhg.dev/gs/internal/forge"
+)
+
+// ChangeMergeability reports whether the merge request can be merged.
+//
+// This compatibility implementation returns unknown until the GitLab-specific
+// mergeability translation is implemented.
+func (r *Repository) ChangeMergeability(
+	context.Context,
+	forge.ChangeID,
+) (forge.ChangeMergeability, error) {
+	return forge.ChangeMergeability{}, nil
+}

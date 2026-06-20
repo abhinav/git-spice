@@ -748,6 +748,45 @@ func (c *MockRepositoryChangeChecksCall) DoAndReturn(f func(context.Context, for
 	return c
 }
 
+// ChangeMergeability mocks base method.
+func (m *MockRepository) ChangeMergeability(ctx context.Context, id forge.ChangeID) (forge.ChangeMergeability, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeMergeability", ctx, id)
+	ret0, _ := ret[0].(forge.ChangeMergeability)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeMergeability indicates an expected call of ChangeMergeability.
+func (mr *MockRepositoryMockRecorder) ChangeMergeability(ctx, id any) *MockRepositoryChangeMergeabilityCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeMergeability", reflect.TypeOf((*MockRepository)(nil).ChangeMergeability), ctx, id)
+	return &MockRepositoryChangeMergeabilityCall{Call: call}
+}
+
+// MockRepositoryChangeMergeabilityCall wrap *gomock.Call
+type MockRepositoryChangeMergeabilityCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryChangeMergeabilityCall) Return(arg0 forge.ChangeMergeability, arg1 error) *MockRepositoryChangeMergeabilityCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryChangeMergeabilityCall) Do(f func(context.Context, forge.ChangeID) (forge.ChangeMergeability, error)) *MockRepositoryChangeMergeabilityCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryChangeMergeabilityCall) DoAndReturn(f func(context.Context, forge.ChangeID) (forge.ChangeMergeability, error)) *MockRepositoryChangeMergeabilityCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ChangeStatuses mocks base method.
 func (m *MockRepository) ChangeStatuses(ctx context.Context, ids []forge.ChangeID) ([]forge.ChangeStatus, error) {
 	m.ctrl.T.Helper()
