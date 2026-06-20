@@ -193,9 +193,7 @@ func TestIntegration(t *testing.T) {
 				))
 		},
 		SetCommentsPageSize: SetListChangeCommentsPageSize,
-		// TODO: Remove SkipMergeability on the ShamHub provider branch.
-		SkipMergeability: true,
-		Reviewers:        []string{"reviewer1", "reviewer2"},
-		Assignees:        []string{"assignee1", "assignee2"},
+		Reviewers:           []string{"reviewer1", "reviewer2"},
+		Assignees:           []string{"assignee1", "assignee2"},
 	})
 }
