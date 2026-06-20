@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -266,6 +267,13 @@ type IntegrationConfig struct {
 	// SetChangeCheck sets a synthetic check for a change.
 	SetChangeCheck SetChangeCheckFunc // optional
 
+	// SkipMergeability skips shared mergeability integration tests.
+	//
+	// The tests are enabled by default.
+	// Set to true while a provider branch is still adding mergeability support
+	// or cannot record the required fixtures.
+	SkipMergeability bool // optional
+
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string // required
 
@@ -394,6 +402,14 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			t.Parallel()
 
 			suite.TestChangeChecks(t)
+		})
+	}
+
+	if !config.SkipMergeability {
+		t.Run("ChangeMergeability", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestChangeMergeability(t, !config.SkipDraft)
 		})
 	}
 
@@ -913,6 +929,206 @@ func (s *integrationSuite) TestChangeChecks(t *testing.T) {
 			assert.Equal(t, []forge.ChangeCheck{tt.want}, got)
 		})
 	}
+}
+
+// TestChangeMergeability verifies that forges report mergeability
+// independently from the CI/check status surface.
+func (s *integrationSuite) TestChangeMergeability(
+	t *testing.T,
+	includeDraft bool,
+) {
+	t.Run("Ready", func(t *testing.T) {
+		t.Parallel()
+
+		s.testChangeMergeabilityReady(t)
+	})
+
+	t.Run("Conflicts", func(t *testing.T) {
+		t.Parallel()
+
+		s.testChangeMergeabilityConflicts(t)
+	})
+
+	if includeDraft {
+		t.Run("Draft", func(t *testing.T) {
+			t.Parallel()
+
+			s.testChangeMergeabilityDraft(t)
+		})
+	}
+}
+
+func (s *integrationSuite) testChangeMergeabilityReady(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "ready-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "ready-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile(headName+".txt", randomString(32))
+		testRepo.AddAllAndCommit("commit for mergeability ready")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *integrationSuite) testChangeMergeabilityConflicts(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "conflict-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "conflict-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile("mergeability-conflict.txt", "head "+randomString(32))
+		testRepo.AddAllAndCommit("commit conflicting head")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+
+		testRepo.CheckoutBranch("main")
+		testRepo.WriteFile("mergeability-conflict.txt", "base "+randomString(32))
+		testRepo.AddAllAndCommit("commit conflicting base")
+		testRepo.Push("HEAD:" + baseName)
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State:  forge.ChangeMergeabilityBlocked,
+			Reason: forge.ChangeMergeabilityReasonConflicts,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *integrationSuite) testChangeMergeabilityDraft(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "draft-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "draft-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile(headName+".txt", randomString(32))
+		testRepo.AddAllAndCommit("commit for mergeability draft")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+			Draft:   true,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State:  forge.ChangeMergeabilityBlocked,
+			Reason: forge.ChangeMergeabilityReasonDraft,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
 }
 
 // FindChangesByBranch returns no error, and an empty slice
@@ -1739,6 +1955,16 @@ func newTestRepository(t *testing.T, remoteURL string) *testRepository {
 		WithStdout(output).
 		WithStderr(output)
 	require.NoError(t, cmd.Run(), "failed to clone repository")
+
+	require.NoError(t, xec.Command(
+		t.Context(),
+		silogtest.New(t),
+		"git", "config", "commit.gpgsign", "false",
+	).
+		WithDir(repoDir).
+		WithStdout(output).
+		WithStderr(output).
+		Run(), "disable commit signing")
 
 	ctx := t.Context()
 	work, err := git.OpenWorktree(ctx, repoDir, git.OpenOptions{

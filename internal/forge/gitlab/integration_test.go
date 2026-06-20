@@ -158,8 +158,11 @@ func TestIntegration(t *testing.T) {
 				time.Sleep(2 * time.Second)
 			}
 		},
+		// TODO: Remove SkipMergeability after the GitLab provider branch
+		// records scenario fixtures.
 		SetCommentsPageSize:   gitlabforge.SetListChangeCommentsPageSize,
 		BaseBranchMayBeAbsent: true,
+		SkipMergeability:      true,
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},

@@ -120,6 +120,10 @@ func TestIntegration(t *testing.T) {
 		// 			check.State,
 		// 		))
 		// },
+		// TODO: Remove SkipMergeability after Bitbucket fixtures can be
+		// recorded for real ready, draft, and conflicting pull requests.
+		// The current Bitbucket integration setup cannot record new fixtures
+		// because no working test account is available.
 		SetCommentsPageSize: bitbucket.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{},
@@ -128,6 +132,7 @@ func TestIntegration(t *testing.T) {
 		SkipAssignees:         true, // no PR assignees
 		SkipTemplates:         true, // limited template support
 		ShortHeadHash:         true, // API returns 12-char hashes
+		SkipMergeability:      true, // no working account for recording
 		SkipMerge:             true, // requires branch permissions
 		SkipCommentPagination: true, // 403 with small pages
 	})

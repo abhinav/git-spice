@@ -139,6 +139,9 @@ func TestIntegration(t *testing.T) {
 				check,
 			))
 		},
+		// TODO: Remove SkipMergeability after the GitHub provider branch
+		// records scenario fixtures.
+		SkipMergeability:    true,
 		SetCommentsPageSize: github.SetListChangeCommentsPageSize,
 		Reviewers:           []string{cfg.Reviewer},
 		Assignees:           []string{cfg.Assignee},
