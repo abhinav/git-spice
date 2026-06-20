@@ -361,3 +361,127 @@ func TestMergeMethod(t *testing.T) {
 		assert.Equal(t, forge.MergeMethodDefault, got)
 	})
 }
+
+func TestChangeMergeabilityState(t *testing.T) {
+	tests := []struct {
+		name   string
+		give   forge.ChangeMergeabilityState
+		want   string
+		wantGo string
+	}{
+		{
+			name:   "Unknown",
+			give:   forge.ChangeMergeabilityUnknown,
+			want:   "unknown",
+			wantGo: "ChangeMergeabilityUnknown",
+		},
+		{
+			name:   "Unsupported",
+			give:   forge.ChangeMergeabilityUnsupported,
+			want:   "unsupported",
+			wantGo: "ChangeMergeabilityUnsupported",
+		},
+		{
+			name:   "Ready",
+			give:   forge.ChangeMergeabilityReady,
+			want:   "ready",
+			wantGo: "ChangeMergeabilityReady",
+		},
+		{
+			name:   "Waiting",
+			give:   forge.ChangeMergeabilityWaiting,
+			want:   "waiting",
+			wantGo: "ChangeMergeabilityWaiting",
+		},
+		{
+			name:   "Blocked",
+			give:   forge.ChangeMergeabilityBlocked,
+			want:   "blocked",
+			wantGo: "ChangeMergeabilityBlocked",
+		},
+		{
+			name:   "Unrecognized",
+			give:   forge.ChangeMergeabilityState(42),
+			want:   "ChangeMergeabilityState(42)",
+			wantGo: "ChangeMergeabilityState(42)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.give.String())
+			assert.Equal(t, tt.wantGo, tt.give.GoString())
+		})
+	}
+}
+
+func TestChangeMergeabilityReason(t *testing.T) {
+	tests := []struct {
+		name   string
+		give   forge.ChangeMergeabilityReason
+		want   string
+		wantGo string
+	}{
+		{
+			name:   "Unknown",
+			give:   forge.ChangeMergeabilityReasonUnknown,
+			want:   "unknown",
+			wantGo: "ChangeMergeabilityReasonUnknown",
+		},
+		{
+			name:   "Checks",
+			give:   forge.ChangeMergeabilityReasonChecks,
+			want:   "checks",
+			wantGo: "ChangeMergeabilityReasonChecks",
+		},
+		{
+			name:   "Review",
+			give:   forge.ChangeMergeabilityReasonReview,
+			want:   "review",
+			wantGo: "ChangeMergeabilityReasonReview",
+		},
+		{
+			name:   "Draft",
+			give:   forge.ChangeMergeabilityReasonDraft,
+			want:   "draft",
+			wantGo: "ChangeMergeabilityReasonDraft",
+		},
+		{
+			name:   "Conflicts",
+			give:   forge.ChangeMergeabilityReasonConflicts,
+			want:   "conflicts",
+			wantGo: "ChangeMergeabilityReasonConflicts",
+		},
+		{
+			name:   "Behind",
+			give:   forge.ChangeMergeabilityReasonBehind,
+			want:   "behind",
+			wantGo: "ChangeMergeabilityReasonBehind",
+		},
+		{
+			name:   "Discussions",
+			give:   forge.ChangeMergeabilityReasonDiscussions,
+			want:   "discussions",
+			wantGo: "ChangeMergeabilityReasonDiscussions",
+		},
+		{
+			name:   "Policy",
+			give:   forge.ChangeMergeabilityReasonPolicy,
+			want:   "policy",
+			wantGo: "ChangeMergeabilityReasonPolicy",
+		},
+		{
+			name:   "Unrecognized",
+			give:   forge.ChangeMergeabilityReason(42),
+			want:   "ChangeMergeabilityReason(42)",
+			wantGo: "ChangeMergeabilityReason(42)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.give.String())
+			assert.Equal(t, tt.wantGo, tt.give.GoString())
+		})
+	}
+}
