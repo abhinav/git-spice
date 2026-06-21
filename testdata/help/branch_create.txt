@@ -56,23 +56,22 @@ Arguments:
   [<name>]    Name of the new branch
 
 Flags:
-      --insert                     Restack the upstack of the target branch onto
-                                   the new branch
-      --below                      Place the branch below the target branch and
-                                   restack its upstack
-  -t, --target=BRANCH              Branch to create the new branch above/below
-  -a, --all                        Automatically stage modified and deleted
-                                   files
-  -m, --message=MSG                Commit message
-  -F, --message-file=FILE          Read the commit message from the given file.
-      --no-verify                  Bypass pre-commit and commit-msg hooks.
-      --signoff                    Add Signed-off-by trailer to the commit
-                                   message (🔧 spice.commit.signoff)
-      --module-message=PATH=MSG    Per-submodule commit message override
-                                   (repeatable)
-      --[no-]commit                Commit staged changes to the new
-                                   branch, or create an empty commit (🔧
-                                   spice.branchCreate.commit)
+      --insert               Restack the upstack of the target branch onto the
+                             new branch
+      --below                Place the branch below the target branch and
+                             restack its upstack
+  -t, --target=BRANCH        Branch to create the new branch above/below
+  -a, --all                  Automatically stage modified and deleted files
+  -c, --[no-]fill            Fill the commit message using the
+                             configured message generator. Defaults to
+                             spice.message.autoFill. (🔧 spice.message.autoFill)
+  -m, --message=MSG          Commit message
+  -F, --message-file=FILE    Read the commit message from the given file.
+      --no-verify            Bypass pre-commit and commit-msg hooks.
+      --signoff              Add Signed-off-by trailer to the commit message (🔧
+                             spice.commit.signoff)
+      --[no-]commit          Commit staged changes to the new branch, or create
+                             an empty commit (🔧 spice.branchCreate.commit)
 
 Global Flags:
   -h, --help           Show help for the command

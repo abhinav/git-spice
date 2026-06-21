@@ -1,0 +1,68 @@
+# autoFill / --fill only generates the message when creating a change
+# request. Regenerating the title and body of an existing change
+# request requires the explicit --regenerate-message flag.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create and submit a branch with --fill using the first generator
+chmod 755 $WORK/gen1.sh
+git config spice.message.generator $WORK/gen1.sh
+
+git add feature.txt
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+shamhub dump changes
+stdout 'First Title'
+
+# swap in a generator that would produce different output
+chmod 755 $WORK/gen2.sh
+git config spice.message.generator $WORK/gen2.sh
+
+# re-submit with --fill after a change: the branch is pushed, but the
+# title and body are left untouched (the generator does not run).
+cp $WORK/extra/feature-update.txt feature.txt
+git add feature.txt
+git commit -m 'update feature'
+gs branch submit --fill
+stderr 'Updated #'
+
+shamhub dump changes
+stdout 'First Title'
+! stdout 'Second Title'
+
+# re-submit with --regenerate-message: the generator runs and
+# overwrites the existing title and body.
+gs branch submit --regenerate-message
+stderr 'Updated #'
+
+shamhub dump changes
+stdout 'Second Title'
+! stdout 'First Title'
+
+-- repo/feature.txt --
+Contents of feature
+-- extra/feature-update.txt --
+New contents of feature
+-- gen1.sh --
+#!/bin/sh
+printf '{"title":"First Title","body":"first body"}'
+-- gen2.sh --
+#!/bin/sh
+printf '{"title":"Second Title","body":"second body"}'

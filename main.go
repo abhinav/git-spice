@@ -471,6 +471,7 @@ func (cmd *mainCmd) AfterApply(
 			svc *spice.Service,
 			secretStash secret.Stash,
 			remoteResolver *remoteResolver,
+			cfg *spice.Config,
 		) (SubmitHandler, error) {
 			return &submit.Handler{
 				Log:        log,
@@ -480,6 +481,9 @@ func (cmd *mainCmd) AfterApply(
 				Store:      store,
 				Service:    svc,
 				Browser:    _browserLauncher,
+				Config:     cfg,
+				RepoRoot:   wt.RootDir(),
+				Args:       os.Args,
 				FindRemote: func(ctx context.Context) (state.Remote, error) {
 					return ensureRemote(ctx, wt.Repository(), store, log, view)
 				},
@@ -570,6 +574,7 @@ func (cmd *mainCmd) AfterApply(
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
+			cfg *spice.Config,
 			repo *git.Repository,
 			wt *git.Worktree,
 			store *state.Store,
@@ -578,11 +583,14 @@ func (cmd *mainCmd) AfterApply(
 		) (SquashHandler, error) {
 			return &squash.Handler{
 				Log:        log,
+				Config:     cfg,
 				Repository: repo,
 				Worktree:   wt,
 				Store:      store,
 				Service:    svc,
 				Restack:    restackHandler,
+				RepoRoot:   wt.RootDir(),
+				Args:       os.Args,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(

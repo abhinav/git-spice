@@ -21,7 +21,9 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/iterutil"
+	"go.abhg.dev/gs/internal/msggen"
 	"go.abhg.dev/gs/internal/must"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -85,6 +87,9 @@ type Handler struct {
 	Store      Store            // required
 	Service    Service          // required
 	Browser    browser.Launcher // required
+	Config     *spice.Config    // optional
+	RepoRoot   string           // optional; repo root dir
+	Args       []string         // optional; invoking process args
 
 	// TODO: these should not be a func reference
 	// this whole memoize thing is a bit of a hack
@@ -200,11 +205,13 @@ func (v *memoizedValue[T]) Get(get func() (T, error)) (T, error) {
 // so care must be taken when adding things here.
 type Options struct {
 	DryRun bool `short:"n" help:"Don't actually submit the stack"`
-	Fill   bool `short:"c" help:"Fill in the change title and body from the commit messages"`
+	Fill   bool `short:"c" negatable:"" config:"message.autoFill" help:"Fill in the title and body of new change requests via the configured message generator. Defaults to spice.message.autoFill. Use --regenerate-message to also update existing change requests."`
 	// TODO: Default to Fill if --no-prompt?
-	Draft   *bool   `negatable:"" help:"Whether to mark change requests as drafts"`
-	Publish bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
-	Web     OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
+
+	RegenerateMessage bool    `name:"regenerate-message" help:"Regenerate the title and body of existing change requests via the configured message generator. Unlike --fill, this is never implied by configuration: overwriting an existing description is always explicit."`
+	Draft             *bool   `negatable:"" help:"Whether to mark change requests as drafts"`
+	Publish           bool    `name:"publish" negatable:"" default:"true" config:"submit.publish" help:"Whether to create CRs for pushed branches. Defaults to true."`
+	Web               OpenWeb `short:"w" config:"submit.web" help:"Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'."`
 
 	NavComment          NavCommentWhen      `name:"nav-comment" config:"submit.navigationComment" enum:"true,false,multiple" default:"true" help:"Whether to add a navigation comment to the change request. Must be one of: true, false, multiple."`
 	NavCommentSync      NavCommentSync      `name:"nav-comment-sync" config:"submit.navigationCommentSync" enum:"branch,downstack" default:"branch" hidden:"" help:"Which navigation comment to sync. Must be one of: branch, downstack."`
@@ -1149,6 +1156,48 @@ func (h *Handler) submitBranch(
 			}
 		}
 
+		// If --regenerate-message and a message generator is
+		// configured, run it to regenerate the title and body.
+		//
+		// Unlike the create path, this is gated on the explicit
+		// --regenerate-message flag rather than --fill/autoFill:
+		// overwriting an existing CR's description should be a
+		// deliberate action, not a side effect of every submit.
+		var (
+			updatedSubject string
+			updatedBody    *string
+		)
+		if opts.RegenerateMessage && h.Config != nil {
+			if script := h.Config.MessageGenerator(); script != "" {
+				env := scriptrun.EnvFor(
+					scriptrun.OpBranchSubmit, branchToSubmit, branch.Base,
+				)
+				env = append(env,
+					"GS_MESSAGE_KIND=branch",
+					"GS_MESSAGE_UPDATE=true",
+					"GS_TITLE="+pull.Subject,
+					"GS_BODY="+pull.Body,
+				)
+				result, err := (&msggen.Runner{
+					Log:  log,
+					Args: h.Args,
+				}).Run(
+					ctx, script, h.RepoRoot, env,
+				)
+				if err != nil {
+					log.Warn(
+						"Message generator failed",
+						"error", err,
+					)
+				} else {
+					updatedSubject = result.Title
+					updatedBody = &result.Body
+					updates = append(updates,
+						"update title/body")
+				}
+			}
+		}
+
 		if len(updates) == 0 {
 			log.Infof("CR %v is up-to-date: %s", pull.ID, pull.URL)
 			return status, nil
@@ -1190,6 +1239,8 @@ func (h *Handler) submitBranch(
 			editOpts := forge.EditChangeOptions{
 				Base:         upstreamBase,
 				Draft:        opts.Draft,
+				Subject:      updatedSubject,
+				Body:         updatedBody,
 				AddLabels:    labels,
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
@@ -1335,6 +1386,37 @@ func (h *Handler) prepareBranch(
 			if msg.Body != "" {
 				defaultBody.WriteString("\n\n")
 				defaultBody.WriteString(msg.Body)
+			}
+		}
+	}
+
+	// If --fill and a message generator is configured,
+	// run it to produce the title and body.
+	if opts.Fill && opts.Title == "" && opts.Body == "" &&
+		h.Config != nil {
+		if script := h.Config.MessageGenerator(); script != "" {
+			env := scriptrun.EnvFor(
+				scriptrun.OpBranchSubmit, branchToSubmit, baseBranch,
+			)
+			env = append(env,
+				"GS_MESSAGE_KIND=branch",
+				"GS_MESSAGE_UPDATE=false",
+			)
+			result, err := (&msggen.Runner{
+				Log:  h.Log,
+				Args: h.Args,
+			}).Run(
+				ctx, script, h.RepoRoot, env,
+			)
+			if err != nil {
+				h.Log.Warn(
+					"Message generator failed,"+
+						" falling back to default",
+					"error", err,
+				)
+			} else {
+				opts.Title = result.Title
+				opts.Body = result.Body
 			}
 		}
 	}
