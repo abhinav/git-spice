@@ -375,6 +375,45 @@ func (c *MockStoreLoadPreparedBranchCall) DoAndReturn(f func(context.Context, st
 	return c
 }
 
+// LookupBranch mocks base method.
+func (m *MockStore) LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LookupBranch", ctx, name)
+	ret0, _ := ret[0].(*state.LookupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LookupBranch indicates an expected call of LookupBranch.
+func (mr *MockStoreMockRecorder) LookupBranch(ctx, name any) *MockStoreLookupBranchCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupBranch", reflect.TypeOf((*MockStore)(nil).LookupBranch), ctx, name)
+	return &MockStoreLookupBranchCall{Call: call}
+}
+
+// MockStoreLookupBranchCall wrap *gomock.Call
+type MockStoreLookupBranchCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockStoreLookupBranchCall) Return(arg0 *state.LookupResponse, arg1 error) *MockStoreLookupBranchCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockStoreLookupBranchCall) Do(f func(context.Context, string) (*state.LookupResponse, error)) *MockStoreLookupBranchCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockStoreLookupBranchCall) DoAndReturn(f func(context.Context, string) (*state.LookupResponse, error)) *MockStoreLookupBranchCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // SavePreparedBranch mocks base method.
 func (m *MockStore) SavePreparedBranch(ctx context.Context, b *state.PreparedBranch) error {
 	m.ctrl.T.Helper()

@@ -1,0 +1,19 @@
+Usage: gs upstack (us) sync (sy) [flags]
+
+Pull remote-side commits for a branch and those above it
+
+Pull remote-side commits for the current branch and all branches upstack from
+it. Branches that fast-forward (or rebase, with --rebase) trigger an upstack
+restack of their children so the stack stays coherent. Use --branch to start at
+a different branch.
+
+Flags:
+  --branch=NAME    Branch to start at
+  --rebase         On divergence, replay remote-side commits onto local.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

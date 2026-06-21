@@ -17,6 +17,8 @@ Flags:
                             Request (🔧 spice.log.crStatus)
   -c, --[no-]cr-comments    Include comment resolution counts for changes (🔧
                             spice.log.crComments)
+      --[no-]cr-checks      Include forge CI/check rollup and per-run detail for
+                            changes (🔧 spice.log.crChecks)
       --json                Write to stdout as a stream of JSON objects in an
                             unspecified order
 

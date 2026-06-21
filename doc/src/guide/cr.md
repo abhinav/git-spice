@@ -191,6 +191,18 @@ if the operation could result in data loss.
 To override these safety checks
 and push to a branch anyway, use the `--force` flag.
 
+<!-- gs:version unreleased -->
+
+In particular, if someone else has pushed commits to a branch
+since git-spice last pushed it
+(for example, a maintainer adding changes to your CR),
+submitting will stop and list those commits
+instead of overwriting them.
+Use $$gs branch sync$$ to bring the commits into your branch,
+then submit again.
+This protection is based on the commit git-spice last pushed,
+so it holds even after the branch has been restacked.
+
 ### Update existing CRs only
 
 <!-- gs:version v0.10.0 -->
@@ -267,6 +279,46 @@ in one step, use the `--restack` flag:
 
 ```freeze language="terminal"
 {green}${reset} gs repo sync --restack
+```
+
+### Pulling remote-side commits on stack branches
+
+<!-- gs:version unreleased -->
+
+After the trunk pull and merged-branch handling,
+$$gs repo sync$$ also pulls remote-side commits added to each tracked
+stack branch since its last push --
+typically commits added by CI bots such as autofix-ci, license-headers,
+or codeowners.
+
+Branches that fast-forward bring their children along by triggering an
+upstack restack.
+When the remote has genuinely gained commits but the local branch has
+also moved -- including branches restacked onto a newer trunk since
+their last push -- the branch is reported as diverged and skipped by
+default.
+A branch that has only moved locally, with no new remote commits,
+is recognized as simply owing a push and is not reported as diverged.
+To replay the remote-side commits on top of a diverged branch
+(even one that has been restacked), set:
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.repoSync.pullBranches{reset} {mag}rebase{reset}
+```
+
+To skip the per-branch pull entirely,
+set the value to `off`.
+See the [configuration reference](../cli/config.md#spicereposyncpullbranches).
+
+For finer-grained control,
+the same machinery is also available per branch and per scope:
+
+```freeze language="terminal"
+{green}${reset} gs branch sync           {gray}# current branch only{reset}
+{green}${reset} gs upstack sync          {gray}# current branch and above{reset}
+{green}${reset} gs downstack sync        {gray}# current branch and below{reset}
+{green}${reset} gs stack sync            {gray}# the whole stack{reset}
+{green}${reset} gs branch sync --rebase  {gray}# integrate a diverged branch{reset}
 ```
 
 ### Handling closed Change Requests

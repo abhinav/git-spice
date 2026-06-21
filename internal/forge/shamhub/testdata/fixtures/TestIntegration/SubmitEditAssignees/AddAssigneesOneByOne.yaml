@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:49154
-        body: '{"subject":"Testing jQZfTJNw","body":"Test PR without assignees","base":"main","head":"jQZfTJNw"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:60501
+        body: '{"subject":"Testing sPW6Bywz","body":"Test PR without assignees","base":"main","head":"sPW6Bywz"}'
+        url: http://127.0.0.1:60501/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 80
         body: |
             {
-              "number": 7,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/7"
+              "number": 3,
+              "url": "http://127.0.0.1:60502/abhinav/test-repo/change/3"
             }
         headers:
             Content-Length:
@@ -28,16 +28,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 45.607667ms
+        duration: 67.177083ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:60501
         body: '{"assignees":["assignee1"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        url: http://127.0.0.1:60501/abhinav/test-repo/change/3
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -53,16 +53,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 957.209µs
+        duration: 1.824833ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:60501
         body: '{"assignees":["assignee2"]}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        url: http://127.0.0.1:60501/abhinav/test-repo/change/3
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -78,15 +78,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 254.833µs
+        duration: 661.75µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/7
+        host: 127.0.0.1:60501
+        url: http://127.0.0.1:60501/abhinav/test-repo/change/3
         method: GET
       response:
         proto: HTTP/1.1
@@ -95,10 +95,10 @@ interactions:
         content_length: 571
         body: |
             {
-              "number": 7,
-              "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/7",
+              "number": 3,
+              "html_url": "http://127.0.0.1:60502/abhinav/test-repo/change/3",
               "state": "open",
-              "title": "Testing jQZfTJNw",
+              "title": "Testing sPW6Bywz",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -106,15 +106,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
+                "sha": "577928e79548ad72169eb65956e6727c47568417"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "jQZfTJNw",
-                "sha": "518a98cdc5d9b0550bf90ade166de7da1f3f215e"
+                "ref": "sPW6Bywz",
+                "sha": "f28fad18d47e6bbe3508877a948b30c4d88cd774"
               },
               "assignees": [
                 "assignee1",
@@ -128,4 +128,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 46.775334ms
+        duration: 78.389333ms

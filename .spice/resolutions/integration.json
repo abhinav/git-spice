@@ -1,0 +1,15 @@
+{
+  "current_merge": {
+    "ours": "ed-irl/integration",
+    "theirs": "ed-irl/anchor-guide"
+  },
+  "resolutions": [
+    {
+      "merging_branches": {
+        "ours": "ed-irl/integration",
+        "theirs": "ed-irl/anchor-guide"
+      },
+      "resolution_instructions": []
+    }
+  ]
+}

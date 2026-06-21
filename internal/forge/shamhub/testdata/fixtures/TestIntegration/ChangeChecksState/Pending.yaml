@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 88
-        host: 127.0.0.1:49154
-        body: '{"subject":"Checks Rja9g0wC","body":"Checks state test","base":"main","head":"Rja9g0wC"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/changes
+        host: 127.0.0.1:60501
+        body: '{"subject":"Checks ziOl2hTZ","body":"Checks state test","base":"main","head":"ziOl2hTZ"}'
+        url: http://127.0.0.1:60501/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 80
         body: |
             {
-              "number": 4,
-              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/4"
+              "number": 8,
+              "url": "http://127.0.0.1:60502/abhinav/test-repo/change/8"
             }
         headers:
             Content-Length:
@@ -28,16 +28,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 67.391041ms
+        duration: 112.660166ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 19
-        host: 127.0.0.1:49154
+        host: 127.0.0.1:60501
         body: '{"state":"pending"}'
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/4/checks
+        url: http://127.0.0.1:60501/abhinav/test-repo/change/8/checks
         method: POST
       response:
         proto: HTTP/1.1
@@ -53,15 +53,15 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 2.5565ms
+        duration: 1.173834ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:49154
-        url: http://127.0.0.1:49154/abhinav/test-repo/change/4/checks
+        host: 127.0.0.1:60501
+        url: http://127.0.0.1:60501/abhinav/test-repo/change/8/checks
         method: GET
       response:
         proto: HTTP/1.1
@@ -79,4 +79,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 1.609416ms
+        duration: 371.584µs

@@ -12,9 +12,23 @@ Run with --restack to also restack them and their upstacks. Run with
 --restack=aboves to only restack direct upstacks of deleted branches, leaving
 higher branches in place.
 
+After the trunk sync, every other tracked branch is also checked against its
+remote: if the remote has new commits (typically from a CI bot) and local has
+not moved past the last-pushed hash, the local branch is fast-forwarded so the
+next 'gs submit' will not be rejected with "stale info". Pass --no-pull-branches
+to skip this step.
+
 Flags:
-  --restack    How to restack branches above deleted branches. One of 'none',
-               'aboves', and 'upstack'. (🔧 spice.repoSync.restack)
+  --restack                        How to restack branches above deleted
+                                   branches. One of 'none', 'aboves', and
+                                   'upstack'. (🔧 spice.repoSync.restack)
+  --pull-branches="fastForward"    How to integrate remote-side commits on
+                                   tracked stack branches. 'off' skips the
+                                   per-branch pull; 'fastForward' (default)
+                                   advances safe branches and skips diverged
+                                   ones; 'rebase' replays diverged branches'
+                                   local commits on top of the remote.
+                                   (🔧 spice.repoSync.pullBranches)
 
 Global Flags:
   -h, --help           Show help for the command

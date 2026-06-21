@@ -1,6 +1,8 @@
 | **Shorthand** | **Long form** |
 |  --- | --- |
 | gs bc | [gs branch create](/cli/reference.md#gs-branch-create) |
+| gs bcmtls | [gs branch comment list](/cli/reference.md#gs-branch-comment-list) |
+| gs bcmtss | [gs branch comment submit-staged](/cli/reference.md#gs-branch-comment-submit-staged) |
 | gs bco | [gs branch checkout](/cli/reference.md#gs-branch-checkout) |
 | gs bd | [gs branch delete](/cli/reference.md#gs-branch-delete) |
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
@@ -11,8 +13,10 @@
 | gs br | [gs branch restack](/cli/reference.md#gs-branch-restack) |
 | gs brn | [gs branch rename](/cli/reference.md#gs-branch-rename) |
 | gs bs | [gs branch submit](/cli/reference.md#gs-branch-submit) |
+| gs bsmls | [gs branch submodule list](/cli/reference.md#gs-branch-submodule-list) |
 | gs bsp | [gs branch split](/cli/reference.md#gs-branch-split) |
 | gs bsq | [gs branch squash](/cli/reference.md#gs-branch-squash) |
+| gs bsy | [gs branch sync](/cli/reference.md#gs-branch-sync) |
 | gs btr | [gs branch track](/cli/reference.md#gs-branch-track) |
 | gs buntr | [gs branch untrack](/cli/reference.md#gs-branch-untrack) |
 | gs ca | [gs commit amend](/cli/reference.md#gs-commit-amend) |
@@ -24,6 +28,7 @@
 | gs dsm | [gs downstack merge](/cli/reference.md#gs-downstack-merge) |
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
+| gs dssy | [gs downstack sync](/cli/reference.md#gs-downstack-sync) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
 | gs intc | [gs integration create](/cli/reference.md#gs-integration-create) |
 | gs intco | [gs integration checkout](/cli/reference.md#gs-integration-checkout) |
@@ -42,7 +47,9 @@
 | gs sm | [gs stack merge](/cli/reference.md#gs-stack-merge) |
 | gs sr | [gs stack restack](/cli/reference.md#gs-stack-restack) |
 | gs ss | [gs stack submit](/cli/reference.md#gs-stack-submit) |
+| gs ssy | [gs stack sync](/cli/reference.md#gs-stack-sync) |
 | gs usd | [gs upstack delete](/cli/reference.md#gs-upstack-delete) |
 | gs uso | [gs upstack onto](/cli/reference.md#gs-upstack-onto) |
 | gs usr | [gs upstack restack](/cli/reference.md#gs-upstack-restack) |
 | gs uss | [gs upstack submit](/cli/reference.md#gs-upstack-submit) |
+| gs ussy | [gs upstack sync](/cli/reference.md#gs-upstack-sync) |

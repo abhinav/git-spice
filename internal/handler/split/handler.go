@@ -37,6 +37,7 @@ type Store interface {
 	Trunk() string
 	Remote() (state.Remote, error)
 	BeginBranchTx() *state.BranchTx
+	LookupBranch(ctx context.Context, name string) (*state.LookupResponse, error)
 }
 
 var _ Store = (*state.Store)(nil)
@@ -354,6 +355,15 @@ func (h *Handler) prepareChangeMetadataTransfer(
 
 	toUpstreamBranch := cmp.Or(upstreamBranch, fromBranch)
 
+	// Carry the last-pushed baseline along with the upstream branch, so a
+	// later 'submit' of toBranch can still tell whether the remote has been
+	// touched by someone else. Without it, toBranch would have no baseline
+	// and submit would refuse to push.
+	var lastPushed *git.Hash
+	if resp, err := h.Store.LookupBranch(ctx, fromBranch); err == nil && !resp.UpstreamLastPushedHash.IsZero() {
+		lastPushed = &resp.UpstreamLastPushedHash
+	}
+
 	var empty string
 	if err := tx.Upsert(ctx, state.UpsertRequest{
 		Name:           fromBranch,
@@ -364,10 +374,11 @@ func (h *Handler) prepareChangeMetadataTransfer(
 	}
 
 	if err := tx.Upsert(ctx, state.UpsertRequest{
-		Name:           toBranch,
-		ChangeMetadata: metaJSON,
-		ChangeForge:    forgeID,
-		UpstreamBranch: &toUpstreamBranch,
+		Name:                   toBranch,
+		ChangeMetadata:         metaJSON,
+		ChangeForge:            forgeID,
+		UpstreamBranch:         &toUpstreamBranch,
+		UpstreamLastPushedHash: lastPushed,
 	}); err != nil {
 		return nil, fmt.Errorf("set change metadata on %v: %w", toBranch, err)
 	}
