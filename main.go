@@ -111,7 +111,11 @@ func (b secretBackend) String() string {
 }
 
 func main() {
-	logger := silog.New(colorprofile.NewWriter(os.Stderr, os.Environ()), &silog.Options{
+	stderr := ui.NewOutputWriter(os.Stderr)
+	logger := silog.New(&colorprofile.Writer{
+		Forward: stderr,
+		Profile: colorprofile.Detect(stderr.Unwrap(), os.Environ()),
+	}, &silog.Options{
 		Level: silog.LevelInfo,
 	})
 
@@ -177,6 +181,7 @@ func main() {
 		},
 		kong.UsageOnError(),
 		kong.Help(helpPrinter),
+		kong.Writers(os.Stdout, stderr),
 	)
 	if err != nil {
 		panic(err)
