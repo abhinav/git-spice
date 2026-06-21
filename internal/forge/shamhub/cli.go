@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/io/ioutil"
 	"gopkg.in/yaml.v3"
@@ -300,6 +301,56 @@ runCommand:
 		}
 
 		ts.Check(sh.SetChangeChecksState(owner, repo, pr, state))
+
+	case "set-checks":
+		if len(args) != 3 {
+			ts.Fatalf("usage: shamhub set-checks <owner/repo> <pr> <json>")
+		}
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		ownerRepo, prStr, body := args[0], args[1], args[2]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		repo = strings.TrimSuffix(repo, ".git")
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+
+		// Wire payload: {rollup,runs[],url} with rollup encoded as
+		// the same names as parseChecksState (pending/passed/failed/none).
+		var payload struct {
+			Rollup string `json:"rollup"`
+			Runs   []struct {
+				Name  string `json:"name"`
+				State string `json:"state"`
+				URL   string `json:"url,omitempty"`
+			} `json:"runs,omitempty"`
+			URL string `json:"url,omitempty"`
+		}
+		if err := json.Unmarshal([]byte(body), &payload); err != nil {
+			ts.Fatalf("invalid checks JSON: %s", err)
+		}
+
+		rollup, err := parseChecksState(payload.Rollup)
+		if err != nil {
+			ts.Fatalf("%s", err)
+		}
+
+		runs := make([]forge.CheckRun, len(payload.Runs))
+		for i, r := range payload.Runs {
+			runs[i] = forge.CheckRun{Name: r.Name, State: r.State, URL: r.URL}
+		}
+
+		ts.Check(sh.SetChangeChecks(owner, repo, pr, &forge.ChangeChecks{
+			Rollup: rollup,
+			Runs:   runs,
+			URL:    payload.URL,
+		}))
 
 	case "merge":
 		if sh == nil {

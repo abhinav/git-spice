@@ -415,6 +415,9 @@ func (c *Client) PullRequestMerge(
 // CommitStatus is a build status on a commit.
 type CommitStatus struct {
 	State string `json:"state"`
+	Key   string `json:"key,omitempty"`
+	Name  string `json:"name,omitempty"`
+	URL   string `json:"url,omitempty"`
 }
 
 // CommitStatusCreateRequest is the request body for creating a build status.

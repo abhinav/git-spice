@@ -302,6 +302,16 @@ type Repository interface {
 	// or the change has no required checks,
 	// implementations should return ChecksPassed.
 	ChangeChecksState(ctx context.Context, id ChangeID) (ChecksState, error)
+
+	// ChecksByChange reports per-change rolled-up and per-run check
+	// state for each of the given changes, in the same order as ids.
+	//
+	// A change with no checks configured or reported should yield a
+	// [*ChangeChecks] whose Rollup is [ChecksNone] and whose Runs
+	// is empty. Implementations may return nil for that slot if no
+	// data is available at all.
+	ChecksByChange(ctx context.Context, ids []ChangeID) ([]*ChangeChecks, error)
+
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -728,11 +738,11 @@ func (s *ChangeState) UnmarshalText(b []byte) error {
 	return nil
 }
 
-// ChecksState represents the aggregate CI/checks
-// status for a change.
+// ChecksState represents the rolled-up CI/checks status for a change.
 //
-// TODO: Teach this type the names of individual statuses
-// so merge failures can report exactly what's blocking the user.
+// The enum collapses each forge's native taxonomy down to the four
+// states that drive UI distinction (success, failure, pending, none).
+// Forge-native fidelity is preserved per-run in [CheckRun.State].
 type ChecksState int
 
 const (
@@ -744,6 +754,11 @@ const (
 
 	// ChecksFailed indicates one or more checks failed.
 	ChecksFailed
+
+	// ChecksNone indicates that no checks are configured or reported
+	// for the change. Distinct from ChecksPassed: the absence of
+	// checks is a different UI state than a green outcome.
+	ChecksNone
 )
 
 func (s ChecksState) String() string {
@@ -754,6 +769,8 @@ func (s ChecksState) String() string {
 		return "passed"
 	case ChecksFailed:
 		return "failed"
+	case ChecksNone:
+		return "none"
 	default:
 		return fmt.Sprintf("ChecksState(%d)", int(s))
 	}
@@ -768,6 +785,8 @@ func (s ChecksState) GoString() string {
 		return "ChecksPassed"
 	case ChecksFailed:
 		return "ChecksFailed"
+	case ChecksNone:
+		return "ChecksNone"
 	default:
 		return fmt.Sprintf("ChecksState(%d)", int(s))
 	}
@@ -983,4 +1002,66 @@ type WithCommentEdit interface {
 	EditComment(
 		ctx context.Context, id ChangeCommentID, body string,
 	) error
+}
+
+// MarshalText encodes the state as one of "pending", "passed",
+// "failed", or "none". This implements [encoding.TextMarshaler].
+func (s ChecksState) MarshalText() ([]byte, error) {
+	switch s {
+	case ChecksPending, ChecksPassed, ChecksFailed, ChecksNone:
+		return []byte(s.String()), nil
+	default:
+		return nil, fmt.Errorf("unknown checks state: %d", int(s))
+	}
+}
+
+// UnmarshalText decodes a state from one of "pending", "passed",
+// "failed", or "none". This implements [encoding.TextUnmarshaler].
+func (s *ChecksState) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "pending":
+		*s = ChecksPending
+	case "passed":
+		*s = ChecksPassed
+	case "failed":
+		*s = ChecksFailed
+	case "none":
+		*s = ChecksNone
+	default:
+		return fmt.Errorf("unknown checks state: %q", b)
+	}
+	return nil
+}
+
+// ChangeChecks describes the rolled-up and per-run check status for
+// a change.
+type ChangeChecks struct {
+	// Rollup is the single rolled-up state across all reported
+	// checks. Drives UI indicators that need a single visual.
+	Rollup ChecksState
+
+	// Runs lists the individual checks/runs the forge reported, in
+	// forge-defined order. Empty when Rollup is [ChecksNone].
+	Runs []CheckRun
+
+	// URL is the forge's summary page for the change's checks.
+	// May be empty if the forge has no per-change checks page or if
+	// no checks are reported.
+	URL string
+}
+
+// CheckRun is a single check reported by the forge.
+//
+// State is left as a forge-native string (e.g. GitHub's "success",
+// "neutral", "timed_out") so consumers can distinguish nuances the
+// rollup collapses.
+type CheckRun struct {
+	// Name is the forge-defined display name of the check.
+	Name string
+
+	// State is the forge-native state string for this run.
+	State string
+
+	// URL is the forge's detail page for this run, if any.
+	URL string
 }
