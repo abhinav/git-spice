@@ -1,0 +1,39 @@
+# 'ci merge-guard' allows unmanaged PRs by default,
+# blocks them with --all.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch on trunk and submit
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+gs bs --fill
+stderr 'Created #1'
+
+# delete the navigation comment to simulate an unmanaged PR
+shamhub delete-comment 1
+
+# by default, unmanaged PRs are allowed through
+gs ci merge-guard 1
+stderr 'not managed by git-spice, allowing'
+
+# with --all, unmanaged PRs are blocked
+! gs ci merge-guard --all 1
+stderr 'unmanaged PR blocked by --all'
+
+-- repo/feature1.txt --
+This is feature 1

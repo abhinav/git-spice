@@ -1409,6 +1409,43 @@ going back to the state before the rebase.
 The command can be used in place of 'git rebase --abort'
 even if a git-spice operation is not currently in progress.
 
+## CI
+
+### git-spice ci merge-guard {#gs-ci-merge-guard}
+
+```
+gs ci merge-guard <number> [flags]
+```
+
+Block merging a PR whose base is not trunk
+
+Checks whether a change request is safe to merge
+by verifying its base branch is trunk.
+
+Use this in forge CI/CD pipelines to prevent
+out-of-order merges in a stacked PR workflow.
+
+By default, only git-spice managed PRs are checked.
+Unmanaged PRs are allowed through.
+Use --all to block any PR whose base is not trunk.
+
+The trunk branch is detected from the git-spice
+navigation comment on the PR.
+Use --trunk to override this detection.
+
+Exit codes:
+  0  PR is safe to merge (base is trunk, or unmanaged)
+  1  PR should not be merged yet
+
+**Arguments**
+
+* `number`: Change request number to check
+
+**Flags**
+
+* `--trunk=STRING`: Override trunk branch name
+* `--all`: Block all non-trunk-based PRs, not just git-spice managed ones
+
 ## Navigation
 
 ### git-spice up {#gs-up}

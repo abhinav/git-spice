@@ -59,6 +59,7 @@ feature 2
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
 -- golden/comments-after.txt --
 - change: 2
   body: |
@@ -68,3 +69,4 @@ feature 2
 
     <sub>Change managed by [git-spice](https://abhinav.github.io/git-spice/).</sub>
     <!-- gs:navigation comment -->
+    <!-- gs:trunk main -->
