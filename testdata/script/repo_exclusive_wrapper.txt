@@ -1,0 +1,36 @@
+# 'gs repo exclusive -- <cmd>' is a scoped writer lock: it parks every
+# worktree, runs the command with the whole repo to itself, then restores
+# the worktrees, even if the command fails.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree.
+gs anchor create $WORK/wtB --name dev -b feat1
+exists $WORK/wtB
+
+# Run a command under exclusive mode. While it runs, the worktree is
+# parked, so 'git worktree list' does not see it.
+cd $WORK/repo
+gs repo exclusive -- git worktree list
+! stdout 'wtB'
+
+# Afterwards the worktree is restored and exclusive mode is cleared.
+exists $WORK/wtB
+gs anchor create $WORK/wtC --name dev2
+exists $WORK/wtC
+
+# Even when the wrapped command fails, the worktrees are restored and the
+# wrapper reports the failure.
+cd $WORK/repo
+! gs repo exclusive -- git no-such-subcommand
+exists $WORK/wtB
+
+-- repo/dummy.txt --
+dummy

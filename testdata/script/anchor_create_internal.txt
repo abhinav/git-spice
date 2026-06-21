@@ -1,0 +1,45 @@
+# 'gs anchor create --anchor BASE' creates a dependent worktree:
+# an internal anchor pinned at an existing tracked branch, so the new
+# worktree's stack builds on top of another worktree's work.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Primary builds a stack: main -> featA1
+git add featA1.txt
+gs bc featA1 -m 'Add featA1'
+
+# A root anchor cannot name the canonical trunk via --anchor.
+! gs anchor create $WORK/bad --anchor main
+stderr 'canonical trunk'
+
+# --anchor must name a tracked branch.
+! gs anchor create $WORK/bad --anchor nope
+stderr 'not a tracked branch'
+
+# Create a dependent worktree anchored at featA1.
+gs anchor create $WORK/wtB --anchor featA1 -b featB1
+stderr 'Created anchor wtB anchored at featA1'
+stderr 'Created and checked out branch featB1'
+
+# featA1 remains a normal tracked branch in the primary (not severed).
+cd $WORK/repo
+gs ls
+stderr 'featA1'
+
+# In wtB, featB1 is checked out and stacks on the anchor pointer wtB.
+cd $WORK/wtB
+git branch --show-current
+stdout 'featB1'
+gs ls
+stderr 'featB1'
+stderr 'wtB'
+
+-- repo/featA1.txt --
+featA1

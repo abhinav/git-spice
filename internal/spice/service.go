@@ -56,6 +56,9 @@ type GitWorktree interface {
 	// CurrentBranch returns the name of the current branch.
 	CurrentBranch(ctx context.Context) (string, error)
 	Rebase(context.Context, git.RebaseRequest) error
+
+	// RootDir returns the absolute root of this worktree.
+	RootDir() string
 }
 
 var (
@@ -66,8 +69,16 @@ var (
 // Store provides storage for git-spice.
 // It is a subset of the functionality provided by the state.Store type.
 type Store interface {
-	// Trunk returns the name of the trunk branch.
+	// Trunk returns the name of the canonical trunk branch.
 	Trunk() string
+
+	// Anchors returns the registered anchors (per-worktree trunks).
+	Anchors() []state.Anchor
+
+	// TrunkFor returns the trunk branch for the given worktree root:
+	// the worktree's registered trunk if any, else the canonical trunk.
+	TrunkFor(worktreePath string) string
+
 	Remote() (state.Remote, error)
 
 	// LookupBranch returns the branch state for the given branch,
@@ -137,9 +148,27 @@ func newService(
 	}
 }
 
-// Trunk reports the name of the trunk branch.
+// Trunk reports the name of the canonical trunk branch.
 func (s *Service) Trunk() string {
 	return s.store.Trunk()
+}
+
+// AnchorBranches reports the branches registered as anchors
+// (per-worktree trunks). Each is a graph root for its worktree.
+func (s *Service) AnchorBranches() []string {
+	anchors := s.store.Anchors()
+	names := make([]string, len(anchors))
+	for i, a := range anchors {
+		names[i] = a.Branch
+	}
+	return names
+}
+
+// TrunkFor reports the trunk branch that applies to the worktree this
+// service operates in: the worktree's registered trunk if it has one,
+// otherwise the canonical trunk.
+func (s *Service) TrunkFor() string {
+	return s.store.TrunkFor(s.wt.RootDir())
 }
 
 // BranchGraph builds a full view of the graph of branches in the repository.

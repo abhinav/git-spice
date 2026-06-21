@@ -1,0 +1,29 @@
+# While the repository is in exclusive mode (after 'gs repo park'),
+# 'gs anchor create' is refused: the whole repo belongs to the parking
+# process until 'gs repo restore'.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Enter exclusive mode (no worktrees to remove is fine).
+gs repo park
+stderr 'Parked'
+
+# Creating an anchor is blocked while parked.
+! gs anchor create $WORK/wtB --name dev
+stderr 'exclusive mode'
+! exists $WORK/wtB
+
+# After restore, anchors can be created again.
+gs repo restore
+gs anchor create $WORK/wtB --name dev
+exists $WORK/wtB
+
+-- repo/dummy.txt --
+dummy

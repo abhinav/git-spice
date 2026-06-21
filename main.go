@@ -312,6 +312,7 @@ type mainCmd struct {
 
 	Integration integrationCmd `cmd:"" aliases:"int" group:"Integration"`
 
+	Anchor anchorCmd `cmd:"" group:"Anchor"`
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
 	CI ciCmd `cmd:"" group:"CI" help:"CI/CD integration commands"`

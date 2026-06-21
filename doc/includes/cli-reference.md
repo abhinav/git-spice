@@ -171,7 +171,7 @@ of deleted branches, leaving higher branches in place.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -180,6 +180,80 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+**Flags**
+
+* `-w`, `--worktree`: Only restack branches in the current worktree.
+
+### git-spice repo park {#gs-repo-park}
+
+```
+gs repo (r) park [flags]
+```
+
+Enter exclusive mode: park worktrees and take the whole repo
+
+Enters exclusive mode: the whole repository is handed to a single
+process so it can reorganize the stack without contending with
+worktrees owned by other processes.
+
+Every linked worktree is recorded in a durable manifest and its
+directory is removed; the branches themselves are left untouched,
+so the entire graph remains reachable from the primary checkout.
+Run 'gs repo restore' to leave exclusive mode and re-create the
+worktrees.
+
+Worktrees with uncommitted changes are refused unless --force is
+given, which discards those changes. The manifest is written
+before any worktree is removed, so an interrupted park can be
+resumed by re-running the command.
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
+
+### git-spice repo restore {#gs-repo-restore}
+
+```
+gs repo (r) restore
+```
+
+Leave exclusive mode: restore parked worktrees
+
+Leaves exclusive mode: the worktrees recorded by 'gs repo park'
+are re-created at their branches' current tips, and the
+exclusive-mode marker is cleared.
+
+It is idempotent and resumable: worktrees that already exist are
+left alone, so an interrupted restore can be finished by
+re-running the command.
+
+### git-spice repo exclusive {#gs-repo-exclusive}
+
+```
+gs repo (r) exclusive [<command> ...] [flags]
+```
+
+Run a command with the whole repo to itself
+
+Runs a command with the whole repository to itself: it parks every
+worktree (see 'gs repo park'), runs the command, then restores the
+worktrees (see 'gs repo restore').
+
+The worktrees are always restored, even if the command fails, so
+this is the safe way to take exclusive mode for a single command.
+
+Separate the command from this one's flags with '--', for example:
+
+	gs repo exclusive -- git rebase -i main
+
+**Arguments**
+
+* `command`: Command to run with the repository to itself
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
 
 ## Log
 
@@ -201,12 +275,12 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
-* `--[no-]cr-checks` ([:material-wrench:{ .middle title="spice.log.crChecks" }](/cli/config.md#spicelogcrchecks)): Include forge CI/check rollup and per-run detail for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
-**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crChecks](/cli/config.md#spicelogcrchecks), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
+**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
 ### git-spice log long {#gs-log-long}
 
@@ -226,12 +300,12 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
-* `--[no-]cr-checks` ([:material-wrench:{ .middle title="spice.log.crChecks" }](/cli/config.md#spicelogcrchecks)): Include forge CI/check rollup and per-run detail for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
 
-**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crChecks](/cli/config.md#spicelogcrchecks), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
+**Configuration**: [spice.log.all](/cli/config.md#spicelogall), [spice.log.crComments](/cli/config.md#spicelogcrcomments), [spice.log.crFormat](/cli/config.md#spicelogcrformat), [spice.log.crStatus](/cli/config.md#spicelogcrstatus), [spice.log.pushStatusFormat](/cli/config.md#spicelogpushstatusformat), [spice.logLong.crFormat](/cli/config.md#spiceloglongcrformat), [spice.logShort.crFormat](/cli/config.md#spicelogshortcrformat)
 
 ## Stack
 
@@ -1362,6 +1436,114 @@ This command requires at least Git 2.45.
 **Flags**
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
+
+## Anchor
+
+### git-spice anchor create {#gs-anchor-create}
+
+```
+gs anchor create (c) <path> [flags]
+```
+
+Create a new worktree anchored at a branch
+
+Creates a new Git worktree at the given path, anchored at a branch.
+
+By default the worktree gets a root anchor: a per-worktree pointer
+branch (named after the worktree directory, or set with --name)
+that tracks the same remote trunk as the main checkout.
+Stacks created in the worktree are based on this anchor, so
+'gs repo sync' and restacks in different worktrees never contend
+on a single shared trunk checkout.
+
+Use --anchor to instead pin the worktree at an existing tracked
+branch: a dependent worktree, for building on top of another
+worktree's work.
+
+Use -b/--branch to also create a tracked branch stacked on the
+anchor.
+
+Use --no-anchor to instead start the worktree in detached HEAD
+state at the current trunk commit.
+
+**Arguments**
+
+* `path`: Path for the new worktree
+
+**Flags**
+
+* `--name=BRANCH`: Name of the anchor branch to create (defaults to the worktree directory name)
+* `--anchor=BRANCH`: Anchor on an existing tracked branch (a dependent worktree) instead of the remote trunk
+* `--no-anchor`: Do not create an anchor; start in detached HEAD at trunk
+* `-b`, `--branch=BRANCH`: Create and check out a new tracked branch stacked on the anchor
+
+### git-spice anchor list {#gs-anchor-list}
+
+```
+gs anchor list (ls)
+```
+
+List anchors and their worktrees
+
+Lists all worktrees associated with the repository.
+For each worktree, shows the checked-out branch
+and any tracked branches in its stack.
+
+### git-spice anchor track {#gs-anchor-track}
+
+```
+gs anchor track (tr) [flags]
+```
+
+Track an existing worktree as an anchor
+
+Registers an existing worktree's anchor branch with git-spice.
+
+Use this to adopt a worktree created outside of
+'gs anchor create' (for example, with 'git worktree add'):
+it records the worktree's anchor branch so that
+'gs repo sync', restacks, and stack listings treat that branch
+as an anchor, rooting the worktree's stacks at it instead of the
+shared canonical trunk.
+
+By default, the branch checked out in the current worktree is
+registered. Use --name to register a different existing branch.
+
+If the branch has no upstream, it is set to track the same
+remote ref as the canonical trunk, so that 'gs repo sync' in
+the worktree updates it from the remote.
+
+**Flags**
+
+* `--name=BRANCH`: Branch to register as this worktree's anchor (defaults to the branch checked out in the current worktree)
+
+### git-spice anchor rm {#gs-anchor-rm}
+
+```
+gs anchor rm (rm) <path> [flags]
+```
+
+Remove an anchor worktree and dissolve its anchor
+
+Removes an anchor worktree and dissolves its anchor.
+
+The anchor's direct child branches are retargeted onto the
+anchor's base (the canonical trunk for a root anchor, or the
+pinned branch for an internal anchor); they are left needing a
+restack. The anchor branch is then deleted and the worktree
+directory removed.
+
+Use this when a worktree's work is done. Run it from a different
+worktree (for example, the primary checkout): a worktree cannot
+remove itself.
+
+**Arguments**
+
+* `path`: Path of the anchor worktree to remove
+
+**Flags**
+
+* `--force`: Remove the worktree even if it has uncommitted changes
 
 ## Rebase
 

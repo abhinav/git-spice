@@ -1,0 +1,24 @@
+# Checking out a branch that is checked out in another worktree
+# fails with a legible message naming the worktree, instead of
+# git's raw 'already used by worktree' fatal.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with a branch checked out in it.
+gs anchor create $WORK/wt1 --name dev -b feat1
+stderr 'Created and checked out branch feat1'
+
+# From the primary worktree, the branch is in use by wt1.
+cd $WORK/repo
+! gs branch checkout feat1
+stderr 'feat1 is in use by worktree .*wt1'
+
+-- repo/dummy.txt --
+dummy

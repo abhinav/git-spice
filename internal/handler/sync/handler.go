@@ -58,6 +58,11 @@ var _ GitWorktree = (*git.Worktree)(nil)
 // Store provides read/write access to the state h.Store.
 type Store interface {
 	Trunk() string
+
+	// TrunkFor returns the trunk branch for the given worktree root:
+	// the worktree's registered trunk if any, else the canonical trunk.
+	TrunkFor(worktreePath string) string
+
 	BeginBranchTx() *state.BranchTx
 }
 
@@ -230,8 +235,16 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 	})
 
 	var trunkCheckedOutElsewhere bool
+
+	// trunk is the canonical, remote-side trunk (e.g. "main"): the remote
+	// branch we pull from. localTrunk is the branch we pull INTO for the
+	// worktree this sync runs in. In the primary worktree (and in repos
+	// without per-worktree trunks) the two are identical, so the split
+	// below is a no-op. In a linked worktree with its own trunk, we pull
+	// the canonical remote branch into that worktree's local trunk.
 	trunk := h.Store.Trunk()
-	trunkStartHash, err := h.Repository.PeelToCommit(ctx, trunk)
+	localTrunk := h.Store.TrunkFor(h.Worktree.RootDir())
+	trunkStartHash, err := h.Repository.PeelToCommit(ctx, localTrunk)
 	if err != nil {
 		return fmt.Errorf("peel to trunk: %w", err)
 	}
@@ -263,8 +276,8 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 	// 2. Sync status:
 	//    a. trunk is at or behind the remote; or
 	//    b. trunk has unpushed local commits
-	if currentBranch == trunk {
-		// (1a): Trunk is the current branch.
+	if currentBranch == localTrunk {
+		// (1a): The local trunk is the current branch.
 		// Sync status doesn't matter,
 		// git pull --rebase will handle everything.
 		log.Debug("trunk is checked out: pulling changes")
@@ -278,7 +291,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 				return fmt.Errorf("list branches: %w", err)
 			}
 
-			if branch.Name == trunk && branch.Worktree != "" {
+			if branch.Name == localTrunk && branch.Worktree != "" {
 				trunkWorktreePath = branch.Worktree
 				break
 			}
@@ -302,7 +315,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 			// (1b): Trunk is not the current branch,
 			// and it is not checked out in another worktree.
 
-			trunkHash, err := h.Repository.PeelToCommit(ctx, trunk)
+			trunkHash, err := h.Repository.PeelToCommit(ctx, localTrunk)
 			if err != nil {
 				return fmt.Errorf("peel to trunk: %w", err)
 			}
@@ -313,13 +326,15 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 			}
 
 			if h.Repository.IsAncestor(ctx, trunkHash, remoteHash) {
-				// (2a): Trunk is at or behind the remote.
-				// Fetch and upate the local trunk ref.
+				// (2a): Local trunk is at or behind the remote.
+				// Fast-forward the local trunk ref from the remote
+				// canonical trunk (remote name may differ from the
+				// local worktree trunk name).
 				log.Debug("trunk is at or behind remote: fetching changes")
 				opts := git.FetchOptions{
 					Remote: h.Remote,
 					Refspecs: []git.Refspec{
-						git.Refspec(trunk + ":" + trunk),
+						git.Refspec(trunk + ":" + localTrunk),
 					},
 				}
 				if err := h.Repository.Fetch(ctx, opts); err != nil {
@@ -335,7 +350,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 					return err
 				}
 
-				if err := h.Worktree.CheckoutBranch(ctx, trunk); err != nil {
+				if err := h.Worktree.CheckoutBranch(ctx, localTrunk); err != nil {
 					return fmt.Errorf("checkout trunk: %w", err)
 				}
 
@@ -361,13 +376,13 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 
 	}
 
-	trunkEndHash, err := h.Repository.PeelToCommit(ctx, trunk)
+	trunkEndHash, err := h.Repository.PeelToCommit(ctx, localTrunk)
 	if err != nil {
 		return fmt.Errorf("peel to trunk: %w", err)
 	}
 
 	if trunkStartHash == trunkEndHash {
-		log.Infof("%v: already up-to-date", trunk)
+		log.Infof("%v: already up-to-date", localTrunk)
 	} else if h.Repository.IsAncestor(ctx, trunkStartHash, trunkEndHash) {
 		// CountCommits only if IsAncestor is true
 		// because there may have been a force push.
@@ -376,7 +391,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		if err != nil {
 			log.Warn("Failed to count commits", "error", err)
 		} else {
-			log.Infof("%v: pulled %v new commit(s)", trunk, count)
+			log.Infof("%v: pulled %v new commit(s)", localTrunk, count)
 		}
 	}
 

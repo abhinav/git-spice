@@ -32,6 +32,16 @@ type Store struct {
 
 	trunk  string
 	remote Remote
+
+	// anchors maps a registered anchor branch to its record (worktree
+	// path and base). Loaded once at store open so [Store.IsTrunk]
+	// stays cheap in hot paths.
+	anchors map[string]Anchor
+
+	// exclusive holds the parked-worktree manifest when the repository is
+	// in exclusive mode, and is nil otherwise. Loaded once at store open
+	// so [Store.InExclusiveMode] stays cheap.
+	exclusive *[]ParkedWorktree
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -73,10 +83,11 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 
 	db := req.DB
 	store := &Store{
-		db:     db,
-		trunk:  req.Trunk,
-		remote: req.Remote,
-		log:    logger,
+		db:      db,
+		trunk:   req.Trunk,
+		remote:  req.Remote,
+		log:     logger,
+		anchors: make(map[string]Anchor),
 	}
 	var oldRepoInfo repoInfo
 	if err := db.Get(ctx, _repoJSON, &oldRepoInfo); err == nil {
@@ -195,12 +206,20 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 		return nil, fmt.Errorf("corrupt state: %w", err)
 	}
 
-	return &Store{
+	store := &Store{
 		db:     db,
 		trunk:  info.Trunk,
 		remote: info.stateRemote(),
 		log:    logger,
-	}, nil
+	}
+	if err := store.loadAnchors(ctx); err != nil {
+		return nil, fmt.Errorf("load anchors: %w", err)
+	}
+	if err := store.loadExclusive(ctx); err != nil {
+		return nil, fmt.Errorf("load exclusive: %w", err)
+	}
+
+	return store, nil
 }
 
 func storageVersion(info repoInfo) Version {

@@ -36,6 +36,13 @@ type Store interface {
 	Remote() (state.Remote, error)
 	Trunk() string
 	Integration(ctx context.Context) (*state.IntegrationInfo, error)
+
+	// TrunkFor returns the trunk branch for the given worktree root:
+	// the worktree's registered trunk if any, else the canonical trunk.
+	TrunkFor(worktreePath string) string
+
+	// Anchors returns all registered anchors (per-worktree trunks).
+	Anchors() []state.Anchor
 }
 
 var _ Store = (*state.Store)(nil)
@@ -73,7 +80,8 @@ type Handler struct {
 
 // Options holds command line options for the log command.
 type Options struct {
-	All bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	All      bool `short:"a" long:"all" config:"log.all" help:"Show all tracked branches, not just the current stack."`
+	Worktree bool `short:"w" long:"worktree" help:"Filter to branches in the current worktree. Implies --all."`
 }
 
 // Include specifies what additional information to include in the response.
@@ -117,6 +125,11 @@ type BranchesRequest struct {
 	//
 	// If Options.All is set, this is ignored and all tracked branches
 	Branch string // required
+
+	// CurrentWorktree is the absolute path
+	// to the current worktree root.
+	// Required when Options.Worktree is set.
+	CurrentWorktree string
 
 	Options *Options
 	Include Include
@@ -173,6 +186,17 @@ type BranchItem struct {
 	// Integration is non-nil for the synthetic integration branch row.
 	// Regular branch rows always have nil Integration.
 	Integration *IntegrationDisplay
+
+	// Anchor reports whether this item is an anchor branch:
+	// a per-worktree trunk that roots another worktree's stack.
+	// Anchor items are injected as display nodes; they are not
+	// tracked stack branches.
+	Anchor bool
+
+	// AnchorBase is the branch an internal anchor is pinned at.
+	// Empty for a root anchor (which tracks the remote trunk).
+	// Only meaningful when Anchor is true.
+	AnchorBase string
 }
 
 // IntegrationDisplay carries presentation-relevant information about
@@ -251,6 +275,12 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		return remoteRepoID.ChangeURL(changeID)
 	}
 
+	// displayTrunk is the trunk shown as the root of the listing. In a
+	// linked worktree with its own trunk, that is the worktree's local
+	// trunk so the stacks based on it render under it; elsewhere it is
+	// the canonical trunk.
+	displayTrunk := h.Store.TrunkFor(req.CurrentWorktree)
+
 	var itemsMu sync.Mutex
 	items := make([]*BranchItem, 0, branchGraph.Count()+1)   // +1 for trunk
 	itemByName := make(map[string]*BranchItem, len(items)+1) // name -> item
@@ -264,7 +294,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	for range runtime.GOMAXPROCS(0) {
 		wg.Go(func() {
 			for entry := range entryc {
-				if entry.Name == branchGraph.Trunk() {
+				if entry.Name == displayTrunk {
 					// Trunk is added at the end manually.
 					continue
 				}
@@ -353,9 +383,25 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	}
 
 	var branchesToLog iter.Seq[string]
-	if req.Options.All {
+	switch {
+	case req.Options.Worktree:
+		// Filter to branches in the current worktree.
+		// Include the full stack if any branch in it
+		// is checked out in the current worktree.
+		branchesToLog = func(yield func(string) bool) {
+			for stack := range branchGraph.StacksInWorktree(
+				req.CurrentWorktree,
+			) {
+				for _, branch := range stack {
+					if !yield(branch) {
+						return
+					}
+				}
+			}
+		}
+	case req.Options.All:
 		branchesToLog = branchGraph.Names()
-	} else {
+	default:
 		// If req.Branch is not tracked,
 		// we still want to list all branches.
 		if _, ok := branchGraph.Lookup(req.Branch); !ok {
@@ -371,7 +417,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	wg.Wait()
 
 	// Add trunk.
-	trunkItem := &BranchItem{Name: h.Store.Trunk()}
+	trunkItem := &BranchItem{Name: displayTrunk}
 	items = append(items, trunkItem)
 	itemByName[trunkItem.Name] = trunkItem
 
@@ -408,6 +454,37 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 		itemByName[intItem.Name] = intItem
 	}
 
+	// Inject anchor nodes for any displayed branch rooted at an anchor.
+	// Anchors are per-worktree trunks: graph roots that are not tracked
+	// stack branches, so they are absent from the listing. Show each one
+	// as an intermediate node under its base (the canonical trunk for a
+	// root anchor, or the pinned branch for an internal anchor) so the
+	// owning worktree's stack renders beneath it.
+	anchorByBranch := make(map[string]state.Anchor)
+	for _, a := range h.Store.Anchors() {
+		anchorByBranch[a.Branch] = a
+	}
+	for _, item := range items {
+		anchor, ok := anchorByBranch[item.Base]
+		if !ok {
+			continue // base is a normal branch or the trunk
+		}
+		if _, shown := itemByName[anchor.Branch]; shown {
+			continue // already injected
+		}
+
+		base := cmp.Or(anchor.Base, displayTrunk)
+		anchorItem := &BranchItem{
+			Name:       anchor.Branch,
+			Base:       base,
+			Worktree:   anchor.Worktree,
+			Anchor:     true,
+			AnchorBase: anchor.Base,
+		}
+		items = append(items, anchorItem)
+		itemByName[anchor.Branch] = anchorItem
+	}
+
 	slices.SortFunc(items, func(a, b *BranchItem) int {
 		return strings.Compare(a.Name, b.Name)
 	})
@@ -420,7 +497,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 	)
 	for idx, item := range items {
 		switch {
-		case item.Name == branchGraph.Trunk():
+		case item.Name == displayTrunk:
 			trunkIdx = idx
 			continue
 		case item.Integration != nil:

@@ -146,9 +146,10 @@ func (cmd *branchLogCmd) run(
 	}
 
 	req := list.BranchesRequest{
-		Branch:  currentBranch,
-		Options: &cmd.Options,
-		Include: list.IncludeChangeURL,
+		Branch:          currentBranch,
+		CurrentWorktree: wt.RootDir(),
+		Options:         &cmd.Options,
+		Include:         list.IncludeChangeURL,
 	}
 	if wantChangeState {
 		req.Include |= list.IncludeChangeState
@@ -200,6 +201,8 @@ func (p *graphLogPresenter) Present(res *list.BranchesResponse, currentBranch st
 		item := &branchtree.Item{
 			Branch:         b.Name,
 			Worktree:       b.Worktree,
+			Anchor:         b.Anchor,
+			AnchorBase:     b.AnchorBase,
 			NeedsRestack:   b.NeedsRestack,
 			Aboves:         b.Aboves,
 			Highlighted:    b.Name == currentBranch,
@@ -401,6 +404,18 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 		}
 
 		logBranch.Submodules = branch.Submodules
+		if branch.Anchor {
+			logBranch.Anchor = true
+			logBranch.AnchorKind = "root"
+			if branch.AnchorBase != "" {
+				logBranch.AnchorKind = "internal"
+			}
+			// An anchor's owning worktree is meaningful even though
+			// the anchor branch is not itself checked out there.
+			if wt := branch.Worktree; wt != "" {
+				logBranch.Worktree = wt
+			}
+		}
 
 		if err := enc.Encode(logBranch); err != nil {
 			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
@@ -455,11 +470,23 @@ type jsonLogBranch struct {
 	// This is unset if the branch is not checked out
 	// in any worktree,
 	// or if it's the current branch (current is true).
+	//
+	// For an anchor, this is the worktree that owns the anchor,
+	// even though the anchor branch itself may not be checked out there.
 	Worktree string `json:"worktree,omitempty"`
 
 	// Submodules maps submodule paths to associated
 	// branch names. Omitted when empty.
 	Submodules map[string]string `json:"submodules,omitempty"`
+
+	// Anchor is true if this branch is an anchor:
+	// a per-worktree trunk that roots another worktree's stack.
+	Anchor bool `json:"anchor,omitempty"`
+
+	// AnchorKind distinguishes the two anchor flavors when Anchor is true:
+	// "root" for a per-worktree trunk that tracks the remote canonical
+	// trunk, or "internal" for an anchor pinned at a tracked branch.
+	AnchorKind string `json:"anchorKind,omitempty"`
 }
 
 type jsonLogIntegration struct {

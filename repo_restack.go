@@ -14,6 +14,7 @@ import (
 
 type repoRestackCmd struct {
 	AutoResolve bool `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
+	Worktree    bool `short:"w" long:"worktree" help:"Only restack branches in the current worktree."`
 }
 
 func (*repoRestackCmd) Help() string {
@@ -47,12 +48,23 @@ func (cmd *repoRestackCmd) Run(
 	}
 	defer cleanup(&retErr, nil)
 
-	count, err := handler.Restack(ctx, &restack.Request{
+	req := restack.Request{
 		Branch:          store.Trunk(),
 		Scope:           restack.ScopeUpstackExclusive,
 		ContinueCommand: []string{"repo", "restack"},
+		SkipCheckout:    true, // caller handles checkout
 		AutoResolve:     &cmd.AutoResolve,
-	})
+	}
+	if cmd.Worktree {
+		// Scope to stacks touching this worktree.
+		req.WorktreeFilter = wt.RootDir()
+	} else {
+		// Whole repo: also reach stacks rooted at anchors,
+		// which are disconnected from the canonical trunk.
+		req.WholeRepo = true
+	}
+
+	count, err := handler.Restack(ctx, &req)
 	if err != nil {
 		return err
 	}

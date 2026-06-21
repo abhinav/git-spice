@@ -1,0 +1,53 @@
+# 'gs ll -a' from the primary worktree shows another worktree's
+# anchor-rooted stack, nested under the anchor's base. The anchor
+# pointer branch renders as an intermediate node tagged as an anchor.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A trunk-based branch in the primary worktree.
+cp $WORK/t1.txt t1.txt
+git add t1.txt
+gs bc t1 -m 'Add t1'
+
+# An anchor worktree with its own stack: dev -> a1 -> a2.
+gs anchor create $WORK/wt1 --name dev
+cd $WORK/wt1
+cp $WORK/a1.txt a1.txt
+git add a1.txt
+gs bc a1 -m 'Add a1'
+cp $WORK/a2.txt a2.txt
+git add a2.txt
+gs bc a2 -m 'Add a2'
+
+# From the primary worktree, -a lists every branch, including the
+# anchor's stack, rooted at the anchor node under main.
+cd $WORK/repo
+gs bco t1
+gs ls -a
+stderr 'a2'
+stderr 'a1'
+stderr 'dev.*\[root anchor\]'
+stderr 'main'
+
+# JSON output marks the anchor node, its kind, and owning worktree.
+gs ls -a --json
+stdout '"name":"dev"'
+stdout '"anchor":true'
+stdout '"anchorKind":"root"'
+stdout '"name":"a1".*"down":\{"name":"dev"'
+
+-- repo/dummy.txt --
+dummy
+-- t1.txt --
+t1
+-- a1.txt --
+a1
+-- a2.txt --
+a2

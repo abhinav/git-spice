@@ -84,6 +84,59 @@ func (r *Repository) OpenWorktree(ctx context.Context, dir string) (*Worktree, e
 	}), nil
 }
 
+// WorktreeAddRequest specifies parameters for creating a new worktree.
+type WorktreeAddRequest struct {
+	// Path is the filesystem path for the new worktree.
+	Path string // required
+
+	// Detach creates the worktree in detached HEAD state.
+	Detach bool
+
+	// Head is the commit to check out in the new worktree.
+	// If empty, defaults to HEAD.
+	Head string
+}
+
+// WorktreeAdd creates a new worktree at the given path.
+func (r *Repository) WorktreeAdd(
+	ctx context.Context, req WorktreeAddRequest,
+) error {
+	args := []string{"add"}
+	if req.Detach {
+		args = append(args, "--detach")
+	}
+	args = append(args, req.Path)
+	if req.Head != "" {
+		args = append(args, req.Head)
+	}
+	return r.gitCmd(ctx, "worktree", args...).Run()
+}
+
+// WorktreeRemoveRequest specifies parameters for removing a worktree.
+type WorktreeRemoveRequest struct {
+	// Path is the filesystem path of the worktree to remove.
+	Path string // required
+
+	// Force removes the worktree even if it is dirty
+	// or contains submodules.
+	Force bool
+}
+
+// WorktreeRemove removes the worktree at the given path.
+//
+// It removes only the worktree's working directory and administrative
+// files; branches and other refs are left untouched.
+func (r *Repository) WorktreeRemove(
+	ctx context.Context, req WorktreeRemoveRequest,
+) error {
+	args := []string{"remove"}
+	if req.Force {
+		args = append(args, "--force")
+	}
+	args = append(args, req.Path)
+	return r.gitCmd(ctx, "worktree", args...).Run()
+}
+
 // WorktreeListItem represents a worktree associated with a repository.
 type WorktreeListItem struct {
 	// Path is the path to the worktree.

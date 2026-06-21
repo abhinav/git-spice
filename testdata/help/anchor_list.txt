@@ -1,0 +1,13 @@
+Usage: gs anchor list (ls)
+
+List anchors and their worktrees
+
+Lists all worktrees associated with the repository. For each worktree, shows the
+checked-out branch and any tracked branches in its stack.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

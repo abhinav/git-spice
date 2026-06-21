@@ -12,6 +12,17 @@ import (
 // unexpectedly in detached HEAD state.
 var ErrDetachedHead = errors.New("in detached HEAD state")
 
+// BranchInUseError indicates that a branch could not be checked out
+// because it is already checked out in another worktree.
+type BranchInUseError struct {
+	Branch   string // branch that is in use
+	Worktree string // path to the worktree that holds it
+}
+
+func (e *BranchInUseError) Error() string {
+	return fmt.Sprintf("branch %v is in use by worktree %v", e.Branch, e.Worktree)
+}
+
 // CurrentBranch reports the current branch name.
 // It returns [ErrDetachedHead] if the repository is in detached HEAD state.
 func (w *Worktree) CurrentBranch(ctx context.Context) (string, error) {
@@ -72,6 +83,18 @@ func (w *Worktree) DetachHead(ctx context.Context, commitish string) error {
 // If the branch does not exist, it returns an error.
 func (w *Worktree) CheckoutBranch(ctx context.Context, branch string) error {
 	w.log.Debug("Checking out branch", "name", branch)
+
+	// Git refuses to check out a branch already checked out in another
+	// worktree. Detect that up front and return a legible error naming
+	// the worktree, rather than git's raw 'already used by worktree' fatal.
+	for wt, err := range w.repo.Worktrees(ctx) {
+		if err != nil {
+			return fmt.Errorf("list worktrees: %w", err)
+		}
+		if wt.Branch == branch && wt.Path != w.rootDir {
+			return &BranchInUseError{Branch: branch, Worktree: wt.Path}
+		}
+	}
 
 	if err := w.runGitWithIndexLockRetry(ctx, func() *gitCmd {
 		return w.gitCmd(ctx, "checkout", branch)

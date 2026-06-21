@@ -271,6 +271,20 @@ func (mr *MockGitWorktreeMockRecorder) Rebase(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rebase", reflect.TypeOf((*MockGitWorktree)(nil).Rebase), arg0, arg1)
 }
 
+// RootDir mocks base method.
+func (m *MockGitWorktree) RootDir() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RootDir")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// RootDir indicates an expected call of RootDir.
+func (mr *MockGitWorktreeMockRecorder) RootDir() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RootDir", reflect.TypeOf((*MockGitWorktree)(nil).RootDir))
+}
+
 // MockStore is a mock of Store interface.
 type MockStore struct {
 	ctrl     *gomock.Controller
@@ -293,6 +307,20 @@ func NewMockStore(ctrl *gomock.Controller) *MockStore {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 	return m.recorder
+}
+
+// Anchors mocks base method.
+func (m *MockStore) Anchors() []state.Anchor {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Anchors")
+	ret0, _ := ret[0].([]state.Anchor)
+	return ret0
+}
+
+// Anchors indicates an expected call of Anchors.
+func (mr *MockStoreMockRecorder) Anchors() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Anchors", reflect.TypeOf((*MockStore)(nil).Anchors))
 }
 
 // AppendContinuations mocks base method.
@@ -340,21 +368,6 @@ func (m *MockStore) CacheTemplates(arg0 context.Context, arg1 string, arg2 []*st
 func (mr *MockStoreMockRecorder) CacheTemplates(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CacheTemplates", reflect.TypeOf((*MockStore)(nil).CacheTemplates), arg0, arg1, arg2)
-}
-
-// Integration mocks base method.
-func (m *MockStore) Integration(ctx context.Context) (*state.IntegrationInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Integration", ctx)
-	ret0, _ := ret[0].(*state.IntegrationInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Integration indicates an expected call of Integration.
-func (mr *MockStoreMockRecorder) Integration(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Integration", reflect.TypeOf((*MockStore)(nil).Integration), ctx)
 }
 
 // ListBranches mocks base method.
@@ -417,20 +430,6 @@ func (mr *MockStoreMockRecorder) Remote() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remote", reflect.TypeOf((*MockStore)(nil).Remote))
 }
 
-// SetIntegration mocks base method.
-func (m *MockStore) SetIntegration(ctx context.Context, info *state.IntegrationInfo) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetIntegration", ctx, info)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetIntegration indicates an expected call of SetIntegration.
-func (mr *MockStoreMockRecorder) SetIntegration(ctx, info any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIntegration", reflect.TypeOf((*MockStore)(nil).SetIntegration), ctx, info)
-}
-
 // TakeContinuations mocks base method.
 func (m *MockStore) TakeContinuations(arg0 context.Context, arg1 string) ([]state.Continuation, error) {
 	m.ctrl.T.Helper()
@@ -458,4 +457,18 @@ func (m *MockStore) Trunk() string {
 func (mr *MockStoreMockRecorder) Trunk() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trunk", reflect.TypeOf((*MockStore)(nil).Trunk))
+}
+
+// TrunkFor mocks base method.
+func (m *MockStore) TrunkFor(worktreePath string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TrunkFor", worktreePath)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// TrunkFor indicates an expected call of TrunkFor.
+func (mr *MockStoreMockRecorder) TrunkFor(worktreePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrunkFor", reflect.TypeOf((*MockStore)(nil).TrunkFor), worktreePath)
 }

@@ -194,6 +194,25 @@ type Request struct {
 	// value enables the configured resolver; a false value disables
 	// it even when configured.
 	AutoResolve *bool
+
+	// WorktreeFilter, if non-empty,
+	// limits restacking to branches belonging to stacks
+	// that have at least one branch
+	// checked out in the given worktree.
+	WorktreeFilter string
+
+	// WholeRepo extends an upstack-from-trunk restack
+	// to also cover stacks rooted at anchors
+	// (per-worktree trunks),
+	// which are otherwise disconnected from the canonical trunk.
+	//
+	// It has no effect unless req.Branch is the canonical trunk.
+	WholeRepo bool
+
+	// SkipCheckout skips checking out req.Branch
+	// after restacking completes.
+	// Use this when the caller handles checkout itself.
+	SkipCheckout bool
 }
 
 // shouldAutoResolve resolves Request.AutoResolve against
@@ -259,6 +278,43 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 
 			branchesToRestack = append(branchesToRestack, branch)
 		}
+	}
+
+	// A whole-repo restack also covers stacks rooted at anchors
+	// (per-worktree trunks). Anchors are graph roots disconnected
+	// from the canonical trunk, so an upstack-from-trunk traversal
+	// never reaches them; walk each anchor's upstack explicitly.
+	if req.WholeRepo {
+		for anchor := range branchGraph.Anchors() {
+			for branch := range branchGraph.Upstack(anchor) {
+				if branch == anchor {
+					continue // anchor is a root; never restacked
+				}
+				branchesToRestack = append(branchesToRestack, branch)
+			}
+		}
+	}
+
+	// If a worktree filter is active,
+	// keep only branches belonging to stacks
+	// with at least one branch in the target worktree.
+	if req.WorktreeFilter != "" {
+		allowed := make(map[string]struct{})
+		for stack := range branchGraph.StacksInWorktree(
+			req.WorktreeFilter,
+		) {
+			for _, b := range stack {
+				allowed[b] = struct{}{}
+			}
+		}
+
+		filtered := branchesToRestack[:0]
+		for _, branch := range branchesToRestack {
+			if _, ok := allowed[branch]; ok {
+				filtered = append(filtered, branch)
+			}
+		}
+		branchesToRestack = filtered
 	}
 
 	// If any of the branches to be restacked
@@ -352,7 +408,7 @@ loop:
 
 	if requestBranchWT != "" && requestBranchWT != currentWT {
 		h.Log.Warnf("%v: checked out in another worktree (%v), not checking out here", req.Branch, requestBranchWT)
-	} else if restackCount > 0 {
+	} else if restackCount > 0 && !req.SkipCheckout {
 		if err := h.Worktree.CheckoutBranch(ctx, req.Branch); err != nil {
 			return 0, fmt.Errorf("checkout branch %v: %w", req.Branch, err)
 		}

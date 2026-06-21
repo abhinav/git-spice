@@ -1,0 +1,55 @@
+# 'gs repo restack' (whole repo) reaches stacks rooted at an anchor,
+# not just those reachable from the canonical trunk.
+# 'gs repo restack -w' stays scoped to the current worktree.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with its own two-branch stack:
+# dev (anchor) -> feat1 -> feat2.
+gs anchor create $WORK/wt1 --name dev
+cd $WORK/wt1
+cp $WORK/feat1.txt feat1.txt
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+cp $WORK/feat2.txt feat2.txt
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+
+# Rewrite feat1 so feat2 needs restacking,
+# without restacking the upstack.
+gs bco feat1
+git commit --amend -m 'Add feat1 reworded'
+
+# Park the worktree on its anchor so the stack branches
+# are not checked out anywhere.
+git checkout dev
+
+# From the primary worktree, a whole-repo restack reaches
+# the anchor-rooted stack and restacks feat2 onto feat1.
+cd $WORK/repo
+gs repo restack
+stderr 'feat2: restacked on feat1'
+
+# A worktree-scoped restack from the primary worktree
+# does not touch the anchor's stack: the primary worktree
+# holds no branch in it. Make feat2 stale again, then confirm
+# 'repo restack -w' leaves it alone.
+gs bco feat1
+git commit --amend -m 'Add feat1 reworded again'
+gs bco main
+gs repo restack -w
+! stderr 'feat2'
+
+-- repo/dummy.txt --
+dummy
+-- feat1.txt --
+feat1 content
+-- feat2.txt --
+feat2 content

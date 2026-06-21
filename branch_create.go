@@ -129,8 +129,6 @@ func (cmd *branchCreateCmd) Run(
 		return errors.New("a branch name is required with --no-commit")
 	}
 
-	trunk := store.Trunk()
-
 	if cmd.Target == "" {
 		cmd.Target, err = wt.CurrentBranch(ctx)
 		if err != nil {
@@ -157,8 +155,8 @@ func (cmd *branchCreateCmd) Run(
 		restackedMergedDownstack *[]json.RawMessage
 	)
 	if cmd.Below {
-		if cmd.Target == trunk {
-			return fmt.Errorf("--below cannot be used from %v", trunk)
+		if store.IsTrunk(cmd.Target) {
+			return fmt.Errorf("--below cannot be used from %v", cmd.Target)
 		}
 
 		b, err := svc.LookupBranch(ctx, cmd.Target)
@@ -197,7 +195,7 @@ func (cmd *branchCreateCmd) Run(
 	// that the base branch is actually tracked.
 	// This will also verify that.
 	if baseHash == "" || baseHash.IsZero() {
-		if store.Trunk() == baseName {
+		if store.IsTrunk(baseName) {
 			baseHash, err = repo.PeelToCommit(ctx, baseName)
 			if err != nil {
 				return fmt.Errorf("resolve %v: %w", baseName, err)
