@@ -79,6 +79,7 @@ nav:
     - guide/scripts.md
     - guide/ai-messages.md
     - guide/restack-auto-resolve.md
+    - guide/integration.md
     - guide/limits.md
     - guide/troubleshooting.md
     - guide/internals.md

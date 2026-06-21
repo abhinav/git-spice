@@ -286,6 +286,14 @@ func (c *Config) lastValue(key string) string {
 	return values[len(values)-1]
 }
 
+// IntegrationResolver returns the configured script for auto-resolving
+// integration branch merge conflicts, or empty if none is set.
+//
+// Read from spice.integration.resolver.
+func (c *Config) IntegrationResolver() string {
+	return c.lastValue("integration.resolver")
+}
+
 // MessageGenerator returns the configured script
 // for generating or updating messages,
 // or an empty string if not set.
@@ -309,6 +317,46 @@ func (c *Config) MessageAutoFill() bool {
 		return false
 	}
 	return b
+}
+
+// IntegrationAutoResolve reports whether the configured resolver
+// should run automatically during integration rebuilds.
+//
+// Read from spice.integration.autoResolve. Defaults to false.
+// Unparseable values are treated as false.
+func (c *Config) IntegrationAutoResolve() bool {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".integration.autoResolve",
+	).Canonical()]
+	if len(values) == 0 {
+		return false
+	}
+	v, err := strconv.ParseBool(values[len(values)-1])
+	if err != nil {
+		return false
+	}
+	return v
+}
+
+// IntegrationAcceptIncoming reports whether the rebuild's final
+// fallback should accept the incoming tip's version for any conflict
+// that survives the merge drivers and the configured resolver.
+//
+// Read from spice.integration.acceptIncoming. Defaults to true so
+// rebuild can complete without user intervention out of the box.
+// Unparseable values are treated as the default.
+func (c *Config) IntegrationAcceptIncoming() bool {
+	values := c.items[git.ConfigKey(
+		_spiceSection+".integration.acceptIncoming",
+	).Canonical()]
+	if len(values) == 0 {
+		return true
+	}
+	v, err := strconv.ParseBool(values[len(values)-1])
+	if err != nil {
+		return true
+	}
+	return v
 }
 
 // Validate checks if the configuration is valid for the given application.

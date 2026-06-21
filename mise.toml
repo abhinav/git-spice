@@ -27,11 +27,31 @@ golangci-lint = "latest"
 changie = "latest"
 requiredfield = "0.9.0"
 
+[tasks.setup]
+description = "One-time repo configuration (merge driver)"
+run = [
+  # Copy the path mappings AND the driver script into .git/info so
+  # they apply regardless of branch state. The integration rebuild
+  # resets the worktree to trunk before merging tips; both the
+  # tracked .gitattributes lines and the tracked driver script
+  # otherwise disappear from view during that merge.
+  ".githooks/install-attributes",
+  "git config merge.regenerate.name 'regenerate derived files on conflict'",
+  "git config merge.regenerate.driver \"$(git rev-parse --git-path info)/merge-regenerate %O %A %B %P\"",
+  "git config merge.regenerate.recursive binary",
+]
+
 [tasks.generate]
 depends = ["tools"]
 description = "Update generated code"
+# Run mock generation before any other directive that needs to compile
+# tests (e.g. help_test.go's `go test -run TestHelp -update`). All
+# //go:generate mockgen directives live under internal/, so generating
+# that subtree first lets the root-package directives see fresh mocks
+# when their build runs.
 run = [
-  "go generate -x ./...",
+  "go generate -x ./internal/...",
+  "go generate -x .",
   "(cd doc && mise run generate)",
 ]
 

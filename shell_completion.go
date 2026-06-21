@@ -88,6 +88,32 @@ func predictTrackedBranches(_ komplete.Args) (predictions []string) {
 	return branches
 }
 
+func predictIntegrationTips(_ komplete.Args) (predictions []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	repo, err := git.Open(ctx, ".", git.OpenOptions{})
+	if err != nil {
+		return nil
+	}
+
+	db := newRepoStorage(repo, nil /* log */)
+	store, err := state.OpenStore(ctx, db, nil /* log */)
+	if err != nil {
+		return nil
+	}
+
+	info, err := store.Integration(ctx)
+	if err != nil {
+		return nil
+	}
+	for _, tip := range info.Tips {
+		predictions = append(predictions, tip.Name)
+	}
+	sort.Strings(predictions)
+	return predictions
+}
+
 func predictRemotes(_ komplete.Args) (predictions []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

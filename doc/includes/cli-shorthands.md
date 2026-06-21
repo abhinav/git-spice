@@ -1,8 +1,6 @@
 | **Shorthand** | **Long form** |
 |  --- | --- |
 | gs bc | [gs branch create](/cli/reference.md#gs-branch-create) |
-| gs bcmtls | [gs branch comment list](/cli/reference.md#gs-branch-comment-list) |
-| gs bcmtss | [gs branch comment submit-staged](/cli/reference.md#gs-branch-comment-submit-staged) |
 | gs bco | [gs branch checkout](/cli/reference.md#gs-branch-checkout) |
 | gs bd | [gs branch delete](/cli/reference.md#gs-branch-delete) |
 | gs bdi | [gs branch diff](/cli/reference.md#gs-branch-diff) |
@@ -27,6 +25,11 @@
 | gs dsr | [gs downstack restack](/cli/reference.md#gs-downstack-restack) |
 | gs dss | [gs downstack submit](/cli/reference.md#gs-downstack-submit) |
 | gs dstr | [gs downstack track](/cli/reference.md#gs-downstack-track) |
+| gs intc | [gs integration create](/cli/reference.md#gs-integration-create) |
+| gs intco | [gs integration checkout](/cli/reference.md#gs-integration-checkout) |
+| gs intd | [gs integration delete](/cli/reference.md#gs-integration-delete) |
+| gs intrb | [gs integration rebuild](/cli/reference.md#gs-integration-rebuild) |
+| gs ints | [gs integration submit](/cli/reference.md#gs-integration-submit) |
 | gs ll | [gs log long](/cli/reference.md#gs-log-long) |
 | gs ls | [gs log short](/cli/reference.md#gs-log-short) |
 | gs rba | [gs rebase abort](/cli/reference.md#gs-rebase-abort) |

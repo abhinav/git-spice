@@ -59,6 +59,7 @@ func TestCheckVersion(t *testing.T) {
 	}{
 		{name: "VersionOne", version: VersionOne},
 		{name: "VersionTwo", version: VersionTwo},
+		{name: "VersionThree", version: VersionThree},
 		{
 			name:    "UnsupportedVersion",
 			version: Version(500),

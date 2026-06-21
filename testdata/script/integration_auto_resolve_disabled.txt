@@ -1,0 +1,47 @@
+# With --no-auto-resolve, the resolver is NOT invoked even if
+# configured and autoResolve is true.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+chmod 700 $WORK/resolver.sh
+git config spice.integration.resolver $WORK/resolver.sh
+git config spice.integration.autoResolve true
+
+# --no-auto-resolve must short-circuit before the resolver runs;
+# the resolver never gets to write its sentinel file.
+# --no-accept-incoming disables the final fallback so the conflict
+# surfaces for manual resolution (otherwise accept-incoming would
+# silently complete the merge).
+! gs integration rebuild --no-auto-resolve --no-accept-incoming
+stderr 'Merge conflict in tip feat-b'
+! exists $WORK/resolver-ran
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- resolver.sh --
+#!/bin/sh
+touch "$WORK/resolver-ran"
+echo '{}'

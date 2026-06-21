@@ -1,0 +1,3 @@
+kind: Added
+body: '''integration tip clean'' (alias ''prune''): Remove tips whose upstack chain already contains another configured tip.'
+time: 2026-06-01T12:54:54.098874-04:00

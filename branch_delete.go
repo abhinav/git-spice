@@ -6,6 +6,7 @@ import (
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -84,11 +85,22 @@ type DeleteHandler interface {
 
 func (cmd *branchDeleteCmd) Run(
 	ctx context.Context,
+	log *silog.Logger,
 	handler DeleteHandler,
+	integrationHandler IntegrationHandler,
 ) error {
-	return handler.DeleteBranches(ctx, &delete.Request{
+	if err := handler.DeleteBranches(ctx, &delete.Request{
 		Branches: cmd.Branches,
 		Force:    cmd.Force,
 		Restack:  cmd.Restack,
-	})
+	}); err != nil {
+		return err
+	}
+
+	for _, b := range cmd.Branches {
+		if err := integrationHandler.OnBranchRemoved(ctx, b); err != nil {
+			log.Warnf("prune integration resolution file: %v", err)
+		}
+	}
+	return nil
 }

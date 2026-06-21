@@ -1,0 +1,55 @@
+# Auto-resolve completes a single-tip conflict in one iteration when
+# the resolver script writes the resolved file and emits an empty JSON
+# response.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp feat-b-version.txt shared.txt
+git add shared.txt
+gs bc feat-b -m 'feat-b changes shared.txt'
+
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+# Configure the resolver: it's a shebang script in the WORK dir that
+# copies the canonical resolved content and emits '{}' on stdout.
+chmod 700 $WORK/resolver.sh
+git config spice.integration.resolver $WORK/resolver.sh
+git config spice.integration.autoResolve true
+
+gs integration rebuild
+stderr 'rebuilt with 2 tip\(s\)'
+
+# preview branch should have the resolved content.
+git show preview:shared.txt
+cmp stdout $WORK/golden/resolved.txt
+
+# Resolution file should have been written with current_merge cleared
+# after the last invocation… actually current_merge persists per spec.
+# Just verify the file exists.
+exists $WORK/repo/.spice/resolutions/integration.json
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/feat-b-version.txt --
+feat-b content
+-- golden/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+cp "$WORK/golden/resolved.txt" shared.txt
+echo '{}'

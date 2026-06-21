@@ -171,7 +171,7 @@ of deleted branches, leaving higher branches in place.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r) [flags]
+gs repo (r) restack (r)
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -180,12 +180,6 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
-
-**Flags**
-
-* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
-
-**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Log
 
@@ -250,6 +244,13 @@ Submit a stack
 Change Requests are created or updated
 for all branches in the current stack.
 
+When invoked from the configured integration branch, the
+"current stack" is the union of each configured tip's
+downstack (the tip and the branches below it), and the
+integration branch itself is pushed afterward. Branches
+above a tip are deliberately left alone: they are work in
+progress that has not been promoted to a tip yet.
+
 Use --dry-run to print what would be submitted without submitting it.
 
 For new Change Requests, a prompt will allow filling metadata.
@@ -292,48 +293,6 @@ only if there are multiple CRs in the stack.
 
 **Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
-### git-spice stack merge {#gs-stack-merge}
-
-```
-gs stack (s) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a stack
-
-Merges the CRs for the current branch's stack into trunk.
-Use --branch to merge a different branch's stack.
-
-The stack includes the selected branch,
-its downstack branches down to trunk,
-and every upstack branch.
-
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
-
-Before merging, the stack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
-
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
-before failing if checks are not ready.
-
-By default, a branch failure skips that branch's upstack descendants,
-but independent sibling branches continue.
-Use --fail-fast to stop the queue after the first branch failure.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--no-branch-check`: Skip stale base validation before merging.
-* `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
-
 ### git-spice stack restack {#gs-stack-restack}
 
 ```
@@ -349,10 +308,7 @@ Use --branch to rebase the stack of a different branch.
 
 **Flags**
 
-* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the stack of
-
-**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice stack edit {#gs-stack-edit}
 
@@ -480,10 +436,7 @@ but still rebase all branches above it.
 **Flags**
 
 * `--skip-start`: Do not restack the starting branch
-* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the upstack of
-
-**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice upstack onto {#gs-upstack-onto}
 
@@ -669,11 +622,11 @@ when you don't want to wait for the merge to propagate.
 
 **Flags**
 
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--branch=NAME`: Branch to start merging from
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 
 **Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
@@ -717,10 +670,7 @@ Use --branch to start at a different branch.
 
 **Flags**
 
-* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the downstack of
-
-**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Branch
 
@@ -1063,18 +1013,9 @@ The current branch will be rebased onto its base,
 ensuring a linear history.
 Use --branch to target a different branch.
 
-With --auto-resolve (or spice.restack.autoResolve=true),
-conflicts encountered during the rebase are passed to the
-configured resolver script before the operation is
-interrupted. See the restack auto-resolve guide for the
-JSON protocol the script must implement.
-
 **Flags**
 
-* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack
-
-**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice branch onto {#gs-branch-onto}
 
@@ -1140,33 +1081,6 @@ Use --branch to target a different branch.
 **Flags**
 
 * `--branch=NAME`: Branch to diff
-
-### git-spice branch merge {#gs-branch-merge}
-
-```
-gs branch (b) merge (m) [flags]
-```
-
-<span class="mdx-badge mdx-badge--experiment"><span class="mdx-badge__icon">:material-test-tube:{ title="Experimental" }</span><span class="mdx-badge__text">[merge](/cli/experiments.md#merge)</span></span>
-
-Merge a branch into trunk
-
-Merges the CR for the current branch into trunk.
-Use --branch to merge a different branch.
-
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
-
-Before merging, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait.
-
-**Flags**
-
-* `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
-
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice branch submit {#gs-branch-submit}
 
@@ -1384,6 +1298,309 @@ This command requires at least Git 2.45.
 **Flags**
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
+
+## Integration
+
+### git-spice integration show {#gs-integration-show}
+
+```
+gs integration (int) show
+```
+
+Show the configured integration branch
+
+Displays the configured integration branch and the tip branches
+that compose it. For each tip, shows whether its hash has drifted
+from the hash recorded at the last successful rebuild.
+
+### git-spice integration create {#gs-integration-create}
+
+```
+gs integration (int) create (c) <name> [flags]
+```
+
+Configure the integration branch
+
+Configures the singleton integration branch for this repo.
+The branch is materialized by sequentially merging each
+tip onto trunk; it is never given a PR and is invisible to
+'gs branch' commands.
+
+Use 'gs integration tip add <branch>' to add tips later,
+or pass --tip multiple times here.
+
+**Arguments**
+
+* `name`: Local name of the integration branch
+
+**Flags**
+
+* `--upstream=BRANCH`: Upstream branch name (defaults to local name)
+* `--tip=BRANCH,...`: Tip branches to include (repeat to add more)
+
+### git-spice integration delete {#gs-integration-delete}
+
+```
+gs integration (int) delete (d,rm)
+```
+
+Remove the integration branch configuration
+
+Removes the integration branch configuration. The underlying
+Git branch (if any) is not deleted; only the git-spice config
+that drives auto-rebuild and submit is removed.
+
+### git-spice integration checkout {#gs-integration-checkout}
+
+```
+gs integration (int) checkout (co)
+```
+
+Switch to the integration branch
+
+Switches the worktree to the configured integration branch.
+Fails if no integration is configured, or if the integration
+branch has not yet been materialized (run 'gs integration
+rebuild' first).
+
+### git-spice integration rebuild {#gs-integration-rebuild}
+
+```
+gs integration (int) rebuild (rb) [flags]
+```
+
+Rebuild the integration branch
+
+Regenerates the integration branch by resetting it to trunk
+and sequentially merging each configured tip with --no-ff.
+Rerere is enabled for the duration of these merges so any
+recorded conflict resolutions are replayed automatically.
+
+On conflict, the merge is left in the worktree. Resolve the
+conflicting files, commit with 'git merge --continue', then
+re-run 'gs integration rebuild' (or 'gs intrb') to resume.
+
+With --auto-resolve (or spice.integration.autoResolve=true), a
+configured resolver script is invoked to attempt automatic
+resolution before surfacing conflicts. See the recipe for
+details on the JSON protocol the script must implement.
+
+If the resolver produces corrupt or unusable output (script
+exit failure, malformed JSON, missing markers) the rebuild
+halts rather than falling through to accept-incoming. The
+usual cause is a prompt, model, or script issue that needs
+to be fixed, not glossed over by silently picking 'theirs'.
+
+Conflicts that survive the merge drivers and a successful
+resolver run are auto-resolved by taking the incoming tip's
+version. Pass --no-accept-incoming (or set
+spice.integration.acceptIncoming=false) to disable that
+final fallback and surface conflicts for manual resolution
+instead.
+
+If a bad resolution was silently cached (in rerere, in the
+resolution file, or in pending rebuild state) and is being
+replayed on every rebuild, use --reset-rerere-cache to wipe
+stale postimages (while still recording fresh ones),
+--reset-resolution-file to wipe the Q&A history,
+--reset-pending to drop any stale resume point, or
+--from-scratch for all three.
+
+--no-rerere is a stronger diagnostic mode: it disables
+rerere recording too, so the rebuild produces nothing
+cached for next time. Use it only when you suspect rerere
+itself is misbehaving — otherwise --reset-rerere-cache is
+what you want.
+
+**Flags**
+
+* `--push`: Also push the integration branch after rebuilding
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.integration.autoResolve" }](/cli/config.md#spiceintegrationautoresolve)): Auto-resolve merge conflicts using the configured resolver script
+* `--[no-]accept-incoming` ([:material-wrench:{ .middle title="spice.integration.acceptIncoming" }](/cli/config.md#spiceintegrationacceptincoming)): Final-stage fallback: take the incoming tip's version for any remaining conflicts so the rebuild completes without manual intervention
+* `--no-rerere`: Disable rerere entirely (no replay AND no recording) for this rebuild. Diagnostic mode — prefer --reset-rerere-cache when you want fresh resolutions cached for next time.
+* `--reset-rerere-cache`: Wipe the rerere cache (.git/rr-cache) before starting so stale cached resolutions are not replayed. Rerere stays enabled so the rebuild's fresh resolutions are recorded.
+* `--reset-resolution-file`: Delete the resolution file (.integration_resolution.json) before starting so stale Q&A history is not carried into this rebuild.
+* `--reset-pending`: Clear any pending rebuild state before starting. Use when a prior halted rebuild left stale state that should not be resumed.
+* `--from-scratch`: Shorthand: implies --reset-rerere-cache, --reset-resolution-file, and --reset-pending. Use after a bad rebuild left stale state in any cache; rerere stays enabled so good resolutions get recorded.
+
+**Configuration**: [spice.integration.acceptIncoming](/cli/config.md#spiceintegrationacceptincoming), [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
+
+### git-spice integration submit {#gs-integration-submit}
+
+```
+gs integration (int) submit (s) [flags]
+```
+
+Push the integration branch to the remote
+
+Pushes the integration branch to the configured remote with
+--force-with-lease against the hash recorded at the previous
+successful push.
+
+No change request (PR) is opened for the integration branch
+itself: it is a throwaway artifact. However, the downstack
+branches of each configured tip are also submitted, so any
+branches that need to be pushed or have their CRs created or
+updated are handled in one shot.
+
+Once a manual submit succeeds, 'gs stack submit' and
+'gs upstack submit' will keep the integration branch in sync
+with local rebuilds.
+
+Use --dry-run to print what would be submitted without submitting it.
+
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
+
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
+
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
+* `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
+* `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `--no-web`: Alias for --web=false.
+
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
+
+### git-spice integration mark-pushed {#gs-integration-mark-pushed}
+
+```
+gs integration (int) mark-pushed [<hash>]
+```
+
+Record a hash as the integration branch's last-pushed value
+
+Records the given commit hash as the integration branch's
+last-pushed value in gs's local state. Does not push.
+
+Used to reconcile state after a manual git push of the
+integration branch, or after a "push rejected" error caused by
+a multi-checkout collision or a state reset.
+
+With no argument, the hash is discovered from the configured
+push remote. With an explicit hash, that hash is recorded
+verbatim.
+
+After 'gs integration mark-pushed', the next
+'gs integration submit' uses --force-with-lease against the
+recorded hash. If multiple checkouts are publishing this
+branch, this command will not save you from a collision; it
+just confirms which remote state you accept as your baseline
+before overwriting.
+
+**Arguments**
+
+* `hash`: Commit hash to record as last-pushed. If empty, fetches the configured push remote and uses its current tip.
+
+### git-spice integration tip add {#gs-integration-tip-add}
+
+```
+gs integration (int) tip add (a) <branches> ...
+```
+
+Add a branch to the integration tip list
+
+Adds one or more tracked branches to the integration tip list.
+Each branch must already be tracked by git-spice; this command
+does not track new branches.
+
+Branches are added in order. If one fails to add, the previous
+ones remain in the tip list.
+
+**Arguments**
+
+* `branches`: Branches to add as tips
+
+### git-spice integration tip remove {#gs-integration-tip-remove}
+
+```
+gs integration (int) tip remove (r,rm) <branches> ...
+```
+
+Remove a branch from the integration tip list
+
+**Arguments**
+
+* `branches`: Branches to remove from the tip list
+
+### git-spice integration tip list {#gs-integration-tip-list}
+
+```
+gs integration (int) tip list (l,ls)
+```
+
+List the configured integration tips
+
+### git-spice integration tip clean {#gs-integration-tip-clean}
+
+```
+gs integration (int) tip clean (prune)
+```
+
+Remove tips whose upstack already contains another tip
+
+Removes tips whose upstack chain already contains another
+configured tip. The higher tip's merge into the integration
+branch captures the lower tip's content, so keeping both
+costs an extra merge without changing the result.
+
+For each subsumed tip, the message reports which higher tip
+subsumes it. A second run is a no-op once nothing remains
+to prune. Existing tips with no upstack-tip relationship
+are left alone.
+
+### git-spice integration tip advance {#gs-integration-tip-advance}
+
+```
+gs integration (int) tip advance [<branches> ...]
+```
+
+Move tips to the topmost branches of their upstacks
+
+For each configured tip (or only the named tips, if any are
+given as arguments), replaces the tip with the topmost
+branch(es) in its upstack — the leaves of the tree above it.
+
+If a tip already has no branches above it, it is left alone.
+If a tip's upstack forks, the tip expands to every leaf of
+the fork. Branches that would become duplicates of other
+configured tips are deduplicated.
+
+Useful as a one-shot maintenance step after extending a stack
+above a configured tip: instead of 'tip remove old' + 'tip
+add new', a single 'tip advance' walks each tip to its
+current top.
+
+**Arguments**
+
+* `branches`: Tips to advance; defaults to all configured tips
 
 ## Rebase
 

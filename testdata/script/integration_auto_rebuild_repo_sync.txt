@@ -1,0 +1,65 @@
+# Verifies that 'repo sync --restack' triggers an integration rebuild
+# when the sync restacks tracked integration tips, matching the behavior
+# of the dedicated restack commands. Previously repo sync was the only
+# restack-capable command that did not hook the integration branch.
+
+as 'Test <test@example.com>'
+at '2024-05-18T13:59:12Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# stack: feature1 -> feature2 -> feature3
+git add feature1.txt
+gs bc -m 'Add feature1' feature1
+
+git add feature2.txt
+gs bc -m 'Add feature2' feature2
+
+git add feature3.txt
+gs bc -m 'Add feature3' feature3
+
+# Integration tracks feature2 and feature3 as tips.
+git checkout main
+gs integration create preview --tip feature2 --tip feature3
+
+# Initial rebuild establishes baseline tip hashes.
+gs integration rebuild
+stderr 'Integration branch "preview" rebuilt with 2 tip\(s\).'
+
+# Submit feature1 and merge it server-side so the next sync advances
+# trunk and restacks feature2/feature3 (the integration tips) onto it.
+gs bco feature1
+gs branch submit --fill
+stderr 'Created #'
+shamhub merge alice/example 1
+
+# 'repo sync --restack' deletes the merged feature1 and restacks
+# feature2/feature3 onto the new trunk, drifting the integration tips.
+# The post-sync hook must rebuild the integration branch.
+git checkout main
+gs repo sync --restack
+stderr 'feature1: #1 was merged'
+stderr 'Rebuilding integration branch "preview"'
+
+# A second sync finds no drift and does not rebuild again.
+gs repo sync --restack
+! stderr 'Rebuilding integration branch'
+
+-- repo/feature1.txt --
+feature 1
+-- repo/feature2.txt --
+feature 2
+-- repo/feature3.txt --
+feature 3

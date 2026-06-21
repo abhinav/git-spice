@@ -113,7 +113,24 @@ type Item struct {
 	// It is invalid for both Disabled and Highlighted to be true.
 	Disabled bool
 
+	// IntegrationTip indicates this branch is a configured tip of the
+	// integration branch. Rendered as a trailing "[integration-tip]"
+	// annotation.
+	IntegrationTip bool
+
+	// Integration is non-nil for the synthetic integration branch row.
+	// The row gets a distinct node marker and a trailing
+	// "[integration: N tips]" annotation.
+	Integration *Integration
+
 	// TODO: enum for highlighted/disabled state?
+}
+
+// Integration holds presentation-relevant data for the integration
+// branch row.
+type Integration struct {
+	// TipCount is the number of configured tips.
+	TipCount int
 }
 
 // PushStatus contains push-related information
@@ -178,6 +195,18 @@ type Style struct {
 	// Must include the marker character via SetString.
 	NodeMarkerDisabled ui.Style
 
+	// NodeMarkerIntegration styles the node marker for the integration
+	// branch row. Must include the marker character via SetString.
+	NodeMarkerIntegration ui.Style
+
+	// Integration styles the trailing "[integration: N tips]"
+	// annotation on the integration branch row.
+	Integration ui.Style
+
+	// IntegrationTip styles the trailing "[integration-tip]"
+	// annotation on configured tip branches.
+	IntegrationTip ui.Style
+
 	// TextHighlight styles characters matching fuzzy search.
 	TextHighlight ui.Style
 
@@ -221,6 +250,9 @@ var DefaultStyle = Style{
 	NodeMarker:            fliptree.DefaultNodeMarker,
 	NodeMarkerHighlighted: fliptree.DefaultNodeMarker.SetString("■"),
 	NodeMarkerDisabled:    fliptree.DefaultNodeMarker.Faint(true),
+	NodeMarkerIntegration: fliptree.DefaultNodeMarker.SetString("◆").Foreground(ui.Magenta),
+	Integration:           ui.NewStyle().Foreground(ui.Magenta),
+	IntegrationTip:        ui.NewStyle().Foreground(ui.Magenta).Faint(true),
 	TextHighlight:         ui.NewStyle().Foreground(ui.Cyan),
 	Marker:                ui.NewStyle().Foreground(ui.Yellow).Bold(true).SetString("◀"),
 }
@@ -296,6 +328,8 @@ func Write(w io.Writer, g Graph, opts *GraphOptions) error {
 	treeStyle := fliptree.DefaultStyle[*Item]()
 	treeStyle.NodeMarker = func(item *Item) ui.Style {
 		switch {
+		case item.Integration != nil:
+			return opts.Style.NodeMarkerIntegration
 		case item.Disabled:
 			return opts.Style.NodeMarkerDisabled
 		case item.Highlighted:
@@ -334,6 +368,14 @@ func (r *branchTreeRenderer) RenderItem(item *Item) string {
 }
 
 func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
+	// The integration row renders as its own root in the fliptree,
+	// which means the tree skips the node marker for it. Re-render
+	// the marker inline so the row still has a visual anchor.
+	if item.Integration != nil {
+		sb.WriteString(r.Style.NodeMarkerIntegration.String())
+		sb.WriteString(" ")
+	}
+
 	r.branchName(sb, item)
 
 	if item.ChangeID != "" {
@@ -355,6 +397,20 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 	if item.NeedsRestack {
 		sb.WriteString(" ")
 		sb.WriteString(r.Style.NeedsRestack.String())
+	}
+
+	if item.Integration != nil {
+		noun := "tips"
+		if item.Integration.TipCount == 1 {
+			noun = "tip"
+		}
+		sb.WriteString(r.Style.Integration.Render(
+			fmt.Sprintf(" [integration: %d %s]", item.Integration.TipCount, noun),
+		))
+	}
+
+	if item.IntegrationTip {
+		sb.WriteString(r.Style.IntegrationTip.Render(" [integration-tip]"))
 	}
 
 	r.pushStatus(sb, item.PushStatus)
@@ -562,6 +618,9 @@ type branchTreeStyle struct {
 	NodeMarker            lipgloss.Style
 	NodeMarkerHighlighted lipgloss.Style
 	NodeMarkerDisabled    lipgloss.Style
+	NodeMarkerIntegration lipgloss.Style
+	Integration           lipgloss.Style
+	IntegrationTip        lipgloss.Style
 	TextHighlight         lipgloss.Style
 	Marker                lipgloss.Style
 }
@@ -581,6 +640,9 @@ func (s Style) resolve(theme ui.Theme) branchTreeStyle {
 		NodeMarker:            s.NodeMarker.Resolve(theme),
 		NodeMarkerHighlighted: s.NodeMarkerHighlighted.Resolve(theme),
 		NodeMarkerDisabled:    s.NodeMarkerDisabled.Resolve(theme),
+		NodeMarkerIntegration: s.NodeMarkerIntegration.Resolve(theme),
+		Integration:           s.Integration.Resolve(theme),
+		IntegrationTip:        s.IntegrationTip.Resolve(theme),
 		TextHighlight:         s.TextHighlight.Resolve(theme),
 		Marker:                s.Marker.Resolve(theme),
 	}

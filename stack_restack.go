@@ -90,6 +90,7 @@ func (cmd *stackRestackCmd) Run(
 	store *state.Store,
 	cfg *spice.Config,
 	handler RestackHandler,
+	integrationHandler IntegrationHandler,
 ) error {
 	if err := verifyRestackFromTrunk(log, view, store, cmd.Branch, "stack"); err != nil {
 		return err
@@ -101,42 +102,44 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	if !cmd.RecurseSubmodules {
-		return nil
-	}
+	if cmd.RecurseSubmodules {
+		var exclude []string
+		if cfg != nil {
+			exclude = cfg.SubmoduleExclusions()
+		}
 
-	var exclude []string
-	if cfg != nil {
-		exclude = cfg.SubmoduleExclusions()
-	}
-
-	return submodule.ForEachInitializedSubmodule(
-		ctx, wt, exclude, nil, log,
-		func(c *submodule.Context) error {
-			subCurrent, err := c.Worktree.CurrentBranch(ctx)
-			if err != nil {
-				log.Warn("Skipping submodule: cannot determine current branch",
-					"path", c.Path, "error", err)
+		if err := submodule.ForEachInitializedSubmodule(
+			ctx, wt, exclude, nil, log,
+			func(c *submodule.Context) error {
+				subCurrent, err := c.Worktree.CurrentBranch(ctx)
+				if err != nil {
+					log.Warn("Skipping submodule: cannot determine current branch",
+						"path", c.Path, "error", err)
+					return nil
+				}
+				log.Infof("Recursing restack into %s on %s",
+					c.Path, subCurrent)
+				subHandler := &restack.Handler{
+					Log:      c.Log,
+					Worktree: c.Worktree,
+					Store:    c.Store,
+					Service:  c.Service,
+				}
+				if _, err := subHandler.Restack(ctx, &restack.Request{
+					Branch:          subCurrent,
+					ContinueCommand: []string{"stack", "restack"},
+					Scope:           restack.ScopeStack,
+				}); err != nil {
+					return fmt.Errorf(
+						"submodule %s restack: %w", c.Path, err,
+					)
+				}
 				return nil
-			}
-			log.Infof("Recursing restack into %s on %s",
-				c.Path, subCurrent)
-			subHandler := &restack.Handler{
-				Log:      c.Log,
-				Worktree: c.Worktree,
-				Store:    c.Store,
-				Service:  c.Service,
-			}
-			if _, err := subHandler.Restack(ctx, &restack.Request{
-				Branch:          subCurrent,
-				ContinueCommand: []string{"stack", "restack"},
-				Scope:           restack.ScopeStack,
-			}); err != nil {
-				return fmt.Errorf(
-					"submodule %s restack: %w", c.Path, err,
-				)
-			}
-			return nil
-		},
-	)
+			},
+		); err != nil {
+			return err
+		}
+	}
+
+	return integrationHandler.MaybeRebuild(ctx)
 }

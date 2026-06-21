@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration: Add ''regenerate'' merge driver that re-runs generators for derived files (mocks, CLI ref, shamhub fixtures, help text) when they conflict during merge, instead of picking one side'
+time: 2026-06-02T16:08:42.565148-04:00
