@@ -1,0 +1,3 @@
+kind: Added
+body: '''restack'': New ''spice.restack.resolver'' / ''spice.restack.autoResolve'' opt-in feature that runs a user-configured script to resolve rebase conflicts during ''gs branch restack'' (and friends).'
+time: 2026-06-02T07:20:30.13834-04:00

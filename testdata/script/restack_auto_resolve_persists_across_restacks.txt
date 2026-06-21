@@ -1,0 +1,72 @@
+# Resolution Q&A persists in .spice/resolutions/restack.json across
+# successive restacks of the same branch. A resolver that escalates
+# only on its first run is allowed; subsequent runs read the saved
+# answer and proceed without re-prompting.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
+
+gs bco feat-a
+gs branch restack
+stderr 'restacked on main'
+exists $WORK/repo/.spice/resolutions/restack.json
+
+# Second restack of the same conflicting pair: drive main forward one
+# more time so the rebase conflicts again. The resolver script now
+# checks the resolution file for an existing answer and short-circuits.
+git checkout main
+cp main-update2.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt again'
+
+gs bco feat-a
+gs branch restack
+stderr 'restacked on main'
+
+# A single answer was recorded; the second restack did not re-prompt.
+grep -count=1 '"answer": "left"' $WORK/repo/.spice/resolutions/restack.json
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- repo/main-update2.txt --
+main updated content v2
+-- repo/resolved.txt --
+resolved content
+-- robot.golden --
+===
+> Auto-resolve question 1: Which side wins?
+"left"
+-- resolver.sh --
+#!/bin/sh
+RES=".spice/resolutions/restack.json"
+if [ -f "$RES" ] && grep -q '"answer": "left"' "$RES"; then
+  cp resolved.txt shared.txt
+  echo '{"assumptions": ["used saved answer"]}'
+else
+  echo '{"questions": ["Which side wins?"]}'
+fi

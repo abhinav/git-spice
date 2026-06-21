@@ -1,0 +1,50 @@
+# Auto-resolve script returns assumptions; they are logged at info
+# level and the rebase completes.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+cp feat-a-version.txt shared.txt
+git add shared.txt
+gs bc feat-a -m 'feat-a changes shared.txt'
+
+git checkout main
+cp main-update-version.txt shared.txt
+git add shared.txt
+git commit -m 'main updates shared.txt'
+
+chmod 700 $WORK/resolver.sh
+git config spice.restack.resolver $WORK/resolver.sh
+git config spice.restack.autoResolve true
+
+gs bco feat-a
+gs branch restack
+stderr 'Auto-resolve: kept main updates because they touched the same line'
+stderr 'Auto-resolve: applied feat-a delta on top of the resolved content'
+stderr 'restacked on main'
+
+-- repo/shared.txt --
+base content
+-- repo/feat-a-version.txt --
+feat-a content
+-- repo/main-update-version.txt --
+main updated content
+-- repo/resolved.txt --
+resolved content
+-- resolver.sh --
+#!/bin/sh
+cp resolved.txt shared.txt
+cat <<'EOF'
+{
+  "assumptions": [
+    "kept main updates because they touched the same line",
+    "applied feat-a delta on top of the resolved content"
+  ]
+}
+EOF

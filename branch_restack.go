@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/text"
 )
 
 type branchRestackCmd struct {
-	Branch string `placeholder:"NAME" help:"Branch to restack" predictor:"trackedBranches"`
+	AutoResolve bool   `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
+	Branch      string `placeholder:"NAME" help:"Branch to restack" predictor:"trackedBranches"`
 }
 
 func (*branchRestackCmd) Help() string {
@@ -17,6 +19,12 @@ func (*branchRestackCmd) Help() string {
 		The current branch will be rebased onto its base,
 		ensuring a linear history.
 		Use --branch to target a different branch.
+
+		With --auto-resolve (or spice.restack.autoResolve=true),
+		conflicts encountered during the rebase are passed to the
+		configured resolver script before the operation is
+		interrupted. See the restack auto-resolve guide for the
+		JSON protocol the script must implement.
 	`)
 }
 
@@ -32,5 +40,7 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
-	return handler.RestackBranch(ctx, cmd.Branch)
+	return handler.RestackBranch(ctx, cmd.Branch, &restack.Options{
+		AutoResolve: &cmd.AutoResolve,
+	})
 }

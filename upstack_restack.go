@@ -13,9 +13,9 @@ import (
 )
 
 type upstackRestackCmd struct {
-	restack.UpstackOptions
-
-	Branch string `help:"Branch to restack the upstack of" placeholder:"NAME" predictor:"trackedBranches"`
+	SkipStart   bool   `help:"Do not restack the starting branch"`
+	AutoResolve bool   `name:"auto-resolve" negatable:"" config:"restack.autoResolve" help:"Auto-resolve rebase conflicts using the configured resolver script"`
+	Branch      string `help:"Branch to restack the upstack of" placeholder:"NAME" predictor:"trackedBranches"`
 }
 
 func (*upstackRestackCmd) Help() string {
@@ -34,10 +34,10 @@ func (*upstackRestackCmd) Help() string {
 // RestackHandler implements high level restack operations.
 type RestackHandler interface {
 	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
-	RestackDownstack(ctx context.Context, branch string) error
+	RestackDownstack(ctx context.Context, branch string, opts *restack.Options) error
 	Restack(context.Context, *restack.Request) (int, error)
-	RestackStack(ctx context.Context, branch string) error
-	RestackBranch(ctx context.Context, branch string) error
+	RestackStack(ctx context.Context, branch string, opts *restack.Options) error
+	RestackBranch(ctx context.Context, branch string, opts *restack.Options) error
 }
 
 func (cmd *upstackRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
@@ -62,5 +62,8 @@ func (cmd *upstackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackUpstack(ctx, cmd.Branch, &cmd.UpstackOptions)
+	return handler.RestackUpstack(ctx, cmd.Branch, &restack.UpstackOptions{
+		SkipStart: cmd.SkipStart,
+		Options:   restack.Options{AutoResolve: &cmd.AutoResolve},
+	})
 }

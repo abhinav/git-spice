@@ -64,3 +64,17 @@ func (w *Worktree) ListUntrackedFiles(ctx context.Context) iter.Seq2[string, err
 		}
 	}
 }
+
+// StageFiles stages the given paths via `git add`. No-op when the
+// path list is empty. Used by auto-resolve loops after a resolver
+// script has rewritten conflicted files in place.
+func (w *Worktree) StageFiles(ctx context.Context, paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	addArgs := append([]string{"--"}, paths...)
+	if err := w.gitCmd(ctx, "add", addArgs...).Run(); err != nil {
+		return fmt.Errorf("git add: %w", err)
+	}
+	return nil
+}

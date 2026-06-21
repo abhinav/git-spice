@@ -8,9 +8,9 @@ ensuring a linear history.
 Use --branch to rebase the stack of a different branch.
 
 Flags:
-  --branch=NAME                Branch to restack the stack of
-  --[no-]recurse-submodules    Also restack tracked submodules (🔧
-                               spice.submodule.recurse)
+  --[no-]auto-resolve    Auto-resolve rebase conflicts using the configured
+                         resolver script (🔧 spice.restack.autoResolve)
+  --branch=NAME          Branch to restack the stack of
 
 Global Flags:
   -h, --help           Show help for the command

@@ -1,9 +1,13 @@
-Usage: gs repo (r) restack (r)
+Usage: gs repo (r) restack (r) [flags]
 
 Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their respective
 bases in dependency order, ensuring a linear history.
+
+Flags:
+  --[no-]auto-resolve    Auto-resolve rebase conflicts using the configured
+                         resolver script (🔧 spice.restack.autoResolve)
 
 Global Flags:
   -h, --help           Show help for the command
