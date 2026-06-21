@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/giturl"
@@ -142,7 +143,7 @@ type WithCommentFormat interface {
 	CommentFormat() CommentFormat
 }
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed -write_package_comment=false . Forge,RepositoryID,Repository,WithInlineComments,WithThreadResolution,WithCommentEdit
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions
@@ -770,4 +771,216 @@ func (s ChecksState) GoString() string {
 	default:
 		return fmt.Sprintf("ChecksState(%d)", int(s))
 	}
+}
+
+// Inline comment types and optional interfaces
+
+// CommentScope describes how a comment is anchored to a change.
+type CommentScope int
+
+const (
+	// CommentScopeUnknown is the zero value; treated by JSON
+	// output as [CommentScopeLine] for legacy callers that did
+	// not set Scope.
+	CommentScopeUnknown CommentScope = iota
+
+	// CommentScopeLine indicates the comment is anchored
+	// to a specific line (or range) in a file diff.
+	CommentScopeLine
+
+	// CommentScopeFile indicates the comment is anchored
+	// to a file but not to a specific line.
+	CommentScopeFile
+
+	// CommentScopePR indicates the comment is at the
+	// change-request level: not anchored to a file or line.
+	CommentScopePR
+)
+
+// String returns the canonical lowercase representation
+// used in JSON output ("pr"|"file"|"line").
+func (s CommentScope) String() string {
+	switch s {
+	case CommentScopePR:
+		return "pr"
+	case CommentScopeFile:
+		return "file"
+	case CommentScopeLine, CommentScopeUnknown:
+		return "line"
+	default:
+		return "line"
+	}
+}
+
+// CommentRange describes the inclusive line range a
+// multi-line comment spans.
+type CommentRange struct {
+	// Start is the first line of the range.
+	Start int
+
+	// End is the last line of the range (inclusive).
+	End int
+}
+
+// InlineCommentRequest describes a new comment to post on a
+// change. The "inline" name is historical: comments may be
+// pr-, file-, or line-scoped depending on [Scope].
+type InlineCommentRequest struct {
+	// Scope distinguishes pr-level, file-level, and line-level
+	// comments. Zero value is treated as [CommentScopeLine].
+	Scope CommentScope
+
+	// Path is the file path relative to the repository root.
+	// Empty for [CommentScopePR].
+	Path string
+
+	// Line is the line number in the new version of the file.
+	// Zero for [CommentScopePR] and [CommentScopeFile].
+	Line int
+
+	// Range is non-nil for multi-line comments. When nil, the
+	// comment is anchored to a single [Line].
+	Range *CommentRange
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Side indicates which side of the diff the comment
+	// applies to. Use "LEFT" for the old version
+	// or "RIGHT" (default) for the new version.
+	Side string
+
+	// ThreadID is set when replying to an existing thread.
+	// The format is forge-specific.
+	ThreadID string
+}
+
+// InlineComment is a comment managed by the change's inline-
+// comments API. Despite the historical name, comments may be
+// pr-, file-, or line-scoped depending on [Scope].
+type InlineComment struct {
+	// ID is the forge-specific comment identifier.
+	ID ChangeCommentID
+
+	// ThreadID is the forge-specific thread identifier.
+	ThreadID string
+
+	// Scope reports how the comment is anchored to the change.
+	// Zero value is treated as [CommentScopeLine].
+	Scope CommentScope
+
+	// Path is the file path relative to the repository root.
+	// Empty for [CommentScopePR].
+	Path string
+
+	// Line is the line number in the diff.
+	// Zero for [CommentScopePR] and [CommentScopeFile].
+	Line int
+
+	// Range is non-nil for multi-line comments. When nil, the
+	// comment is anchored to a single line ([Line]).
+	Range *CommentRange
+
+	// Side indicates which side of the diff the comment applies
+	// to: "LEFT" for the old version, "RIGHT" for the new
+	// version. Empty for non-line scopes.
+	Side string
+
+	// CommitSHA is the commit the comment was authored against.
+	// Empty when the forge does not track per-commit comments.
+	CommitSHA string
+
+	// Body is the markdown body of the comment.
+	Body string
+
+	// Author is the username of the comment author.
+	Author string
+
+	// Resolved indicates the comment thread is resolved.
+	Resolved bool
+
+	// Outdated indicates the comment is on an outdated diff:
+	// the anchored line is no longer present in the change's
+	// current head diff. Surfaced to the extension as "stale".
+	Outdated bool
+
+	// CreatedAt is the time the comment was created.
+	CreatedAt time.Time
+}
+
+// ReviewEvent specifies the type of review being submitted.
+type ReviewEvent int
+
+const (
+	// ReviewComment submits a review with comments only.
+	ReviewComment ReviewEvent = iota
+
+	// ReviewApprove submits an approving review.
+	ReviewApprove
+
+	// ReviewRequestChanges submits a review
+	// requesting changes.
+	ReviewRequestChanges
+)
+
+// ReviewRequest is a batch of inline comments
+// submitted together as a single review.
+type ReviewRequest struct {
+	// Body is the overall review body (optional).
+	Body string
+
+	// Comments are the inline comments in the review.
+	Comments []InlineCommentRequest
+
+	// Event is the review event type.
+	Event ReviewEvent
+}
+
+// WithInlineComments is an optional interface
+// for forges that support inline/diff comments
+// and code reviews.
+type WithInlineComments interface {
+	Repository
+
+	// ListInlineComments lists inline/review comments
+	// on a change.
+	ListInlineComments(
+		ctx context.Context, id ChangeID,
+	) ([]*InlineComment, error)
+
+	// SubmitReview posts a batch of inline comments
+	// as a single review.
+	SubmitReview(
+		ctx context.Context, id ChangeID, req ReviewRequest,
+	) error
+
+	// PostInlineComment posts a single inline comment
+	// outside of a batch review.
+	PostInlineComment(
+		ctx context.Context, id ChangeID,
+		req InlineCommentRequest,
+	) (*InlineComment, error)
+}
+
+// WithThreadResolution is an optional interface
+// for forges that support resolving comment threads.
+type WithThreadResolution interface {
+	Repository
+
+	// ResolveThread marks a comment thread as resolved.
+	ResolveThread(ctx context.Context, threadID string) error
+
+	// UnresolveThread marks a comment thread as unresolved.
+	UnresolveThread(ctx context.Context, threadID string) error
+}
+
+// WithCommentEdit is an optional interface
+// for forges that support editing existing comments.
+type WithCommentEdit interface {
+	Repository
+
+	// EditComment updates the body of an existing comment.
+	EditComment(
+		ctx context.Context, id ChangeCommentID, body string,
+	) error
 }

@@ -1,0 +1,63 @@
+# List comments on a change request with --json output.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch with a file and submit it
+git add main.go
+gs bc -m 'Add main' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+# add an inline comment so there is something to list
+gs branch comment add main.go:3 -m 'Consider using a constant here because it would make the code much more maintainable and readable.'
+stderr 'Posted comment'
+
+# --json should output NDJSON to stdout with forge comment
+gs branch comment list --json
+stdout '"kind":"forge"'
+stdout '"body":"Consider using a constant here because it would make the code much more maintainable and readable."'
+stdout '"path":"main.go"'
+stdout '"line":3'
+stdout '"status":"open"'
+
+# text mode shows the full body without truncation
+gs branch comment list
+stderr 'Consider using a constant here because it would make the code much more maintainable and readable.'
+
+# stage a comment
+gs branch comment stage main.go:5 -m 'Add error handling here.'
+stderr 'Staged comment'
+
+# --staged --json should include only staged comments
+gs branch comment list --staged --json
+cmpenvJSON stdout $WORK/golden/staged_only.json
+
+# --json without --staged includes both staged and forge
+gs branch comment list --json
+stdout '"kind":"staged"'
+stdout '"kind":"forge"'
+
+-- repo/main.go --
+package main
+
+func main() {
+	println("hello")
+}
+
+-- golden/staged_only.json --
+{"kind":"staged","id":"sc-1","scope":"line","path":"main.go","line":5,"body":"Add error handling here."}
