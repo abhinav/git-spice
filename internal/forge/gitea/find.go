@@ -38,7 +38,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		}
 
 		for _, pr := range prs {
-			if !matchesBranch(pr, branch, opts.PushRepository) {
+			if !matchesBranch(pr, branch, opts.PushRepository, r.owner, r.repo) {
 				continue
 			}
 			// Apply precise state filter (Gitea uses "closed" for both merged
@@ -84,25 +84,38 @@ func (r *Repository) listAllPRsByState(ctx context.Context, state string, maxIte
 
 // matchesBranch reports whether a PR's head branch matches the given branch
 // name, taking fork repositories into account.
-func matchesBranch(pr *giteagw.PullRequest, branch string, pushRepo forge.RepositoryID) bool {
+func matchesBranch(
+	pr *giteagw.PullRequest,
+	branch string,
+	pushRepo forge.RepositoryID,
+	owner string,
+	repo string,
+) bool {
 	if pr.Head == nil {
 		return false
 	}
 
 	if pushRepo != nil {
-		// Fork PR: match "forkowner:branch" in Head.Label,
-		// or just match the branch ref for same-name cases.
 		pushRID := mustRepositoryID(pushRepo)
-		expectedLabel := pushRID.owner + ":" + branch
-		if pr.Head.Label == expectedLabel {
+		if pr.Head.Ref != branch {
+			return false
+		}
+		if pr.Head.Repo != nil {
+			return pr.Head.Repo.FullName == pushRID.owner+"/"+pushRID.name
+		}
+		if pr.Head.Label == pushRID.owner+":"+branch {
 			return true
 		}
-		// Fall back to matching ref if label doesn't work.
 		return pr.Head.Ref == branch && isFromFork(pr)
 	}
 
-	// Same-repository PR: match branch ref exactly, exclude forks.
-	return pr.Head.Ref == branch && !isFromFork(pr)
+	if pr.Head.Ref != branch {
+		return false
+	}
+	if pr.Head.Repo != nil {
+		return pr.Head.Repo.FullName == owner+"/"+repo
+	}
+	return !isFromFork(pr)
 }
 
 // isFromFork reports whether a PR's head branch comes from a fork.

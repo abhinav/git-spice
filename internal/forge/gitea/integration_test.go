@@ -1,6 +1,7 @@
 package gitea_test
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,17 +23,9 @@ import (
 // In replay mode (default), tests run against committed VCR fixtures.
 // If no fixtures exist, the tests are skipped.
 //
-// To record fixtures against a live Gitea instance (e.g., Docker):
+// To record fixtures against a live Docker Gitea instance:
 //
-//	GITEA_URL=http://localhost:3000 \
-//	GITEA_TOKEN=<token> \
-//	GITEA_TEST_OWNER=testadmin \
-//	GITEA_TEST_REPO=test-repo \
-//	GITEA_TEST_FORK_OWNER=test-reviewer \
-//	GITEA_TEST_FORK_REPO=test-fork-repo \
-//	GITEA_TEST_REVIEWER=test-reviewer \
-//	GITEA_TEST_ASSIGNEE=test-reviewer \
-//	go test -update -run TestIntegration ./internal/forge/gitea/...
+//	bash tools/record-gitea-fixtures.sh
 //
 // The CI test-gitea-live job in .github/workflows/ci.yml runs this
 // in update mode against a Docker Gitea container on every PR.
@@ -206,18 +199,22 @@ func TestIntegration(t *testing.T) {
 
 		CloseChange: func(t *testing.T, repo forge.Repository, changeID forge.ChangeID) {
 			require.NoError(t,
-				giteaforge.CloseChange(t.Context(), repo.(*giteaforge.Repository), changeID),
+				giteaforge.CloseChange(
+					context.WithoutCancel(t.Context()),
+					repo.(*giteaforge.Repository),
+					changeID,
+				),
 				"close change",
 			)
 		},
 
-		SetChangeChecksState: func(
+		SetChangeCheck: func(
 			t *testing.T,
 			httpClient *http.Client,
 			_ forge.Repository,
 			_ forge.ChangeID,
 			headHash git.Hash,
-			state forge.ChecksState,
+			check forge.ChangeCheck,
 		) {
 			gc := newTestGiteaClient(t, cfg, httpClient)
 			require.NoError(t,
@@ -225,7 +222,7 @@ func TestIntegration(t *testing.T) {
 					t.Context(), gc,
 					cfg.Owner, cfg.Repo,
 					headHash.String(),
-					state,
+					check,
 				),
 				"set checks state",
 			)

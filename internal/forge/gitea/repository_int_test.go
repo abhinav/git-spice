@@ -29,12 +29,12 @@ func CommitStatusCreate(
 	ctx context.Context,
 	client *giteagw.Client,
 	owner, repo, sha string,
-	state forge.ChecksState,
+	check forge.ChangeCheck,
 ) error {
-	statusState := giteaStatusState(state)
+	statusState := giteaStatusState(check.State)
 	_, _, err := client.CommitStatusCreate(ctx, owner, repo, sha, &giteagw.CreateCommitStatusOption{
 		State:   statusState,
-		Context: "git-spice integration",
+		Context: check.Name,
 	})
 	if err != nil {
 		return fmt.Errorf("create commit status: %w", err)
@@ -42,13 +42,13 @@ func CommitStatusCreate(
 	return nil
 }
 
-func giteaStatusState(state forge.ChecksState) string {
+func giteaStatusState(state forge.ChangeCheckState) string {
 	switch state {
-	case forge.ChecksPending:
+	case forge.ChangeCheckPending:
 		return giteagw.CommitStatusPending
-	case forge.ChecksPassed:
+	case forge.ChangeCheckPassed:
 		return giteagw.CommitStatusSuccess
-	case forge.ChecksFailed:
+	case forge.ChangeCheckFailed:
 		return giteagw.CommitStatusFailure
 	default:
 		return giteagw.CommitStatusFailure

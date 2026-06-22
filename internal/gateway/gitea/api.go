@@ -261,6 +261,28 @@ func (c *Client) CommitStatusCombined(
 	return &response, resp, nil
 }
 
+// CommitStatusList lists commit statuses for a SHA.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/repository/repoListStatuses
+func (c *Client) CommitStatusList(
+	ctx context.Context,
+	owner, repo, sha string,
+	opt *ListCommitStatusOptions,
+) ([]*CommitStatus, *Response, error) {
+	var response []*CommitStatus
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf("repos/%s/%s/commits/%s/statuses", owner, repo, sha),
+		opt.encodeQuery(),
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
+}
+
 // RepoGet fetches a repository by owner and name.
 //
 // Gitea API:
@@ -403,9 +425,10 @@ type User struct {
 // PRBranch holds branch information embedded in a pull request.
 type PRBranch struct {
 	// Label is "owner:branch" for fork PRs, "branch" for same-repo PRs.
-	Label string `json:"label"`
-	Ref   string `json:"ref"`
-	Sha   string `json:"sha"`
+	Label string      `json:"label"`
+	Ref   string      `json:"ref"`
+	Sha   string      `json:"sha"`
+	Repo  *Repository `json:"repo"`
 }
 
 // PullRequest matches the subset of pull request fields the forge uses.
@@ -419,6 +442,7 @@ type PullRequest struct {
 	State              string    `json:"state"` // "open", "closed"
 	Merged             bool      `json:"merged"`
 	Draft              bool      `json:"draft"`
+	Mergeable          *bool     `json:"mergeable"`
 	Head               *PRBranch `json:"head"`
 	Base               *PRBranch `json:"base"`
 	Labels             []*Label  `json:"labels"`
@@ -573,6 +597,28 @@ type ListIssueCommentsOptions struct {
 }
 
 func (o *ListIssueCommentsOptions) encodeQuery() url.Values {
+	values := make(url.Values)
+	if o == nil {
+		return values
+	}
+	if o.Limit != 0 {
+		values.Set("limit", strconv.FormatInt(o.Limit, 10))
+	}
+	if o.Page != 0 {
+		values.Set("page", strconv.FormatInt(o.Page, 10))
+	}
+	return values
+}
+
+// ListCommitStatusOptions configures commit status listing.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/repository/repoListStatuses
+type ListCommitStatusOptions struct {
+	ListOptions
+}
+
+func (o *ListCommitStatusOptions) encodeQuery() url.Values {
 	values := make(url.Values)
 	if o == nil {
 		return values

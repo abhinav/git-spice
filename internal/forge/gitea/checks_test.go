@@ -10,18 +10,78 @@ import (
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 )
 
-func TestRepository_ChangeChecksState(t *testing.T) {
+func TestRepository_ChangeChecks(t *testing.T) {
 	tests := []struct {
-		name        string
-		statusState string
-		want        forge.ChecksState
+		name     string
+		statuses []*giteagw.CommitStatus
+		want     []forge.ChangeCheck
 	}{
-		{"NoStatuses", "", forge.ChecksPassed},
-		{"Success", giteagw.CommitStatusSuccess, forge.ChecksPassed},
-		{"Warning", giteagw.CommitStatusWarning, forge.ChecksPassed},
-		{"Pending", giteagw.CommitStatusPending, forge.ChecksPending},
-		{"Failure", giteagw.CommitStatusFailure, forge.ChecksFailed},
-		{"Error", giteagw.CommitStatusError, forge.ChecksFailed},
+		{"NoStatuses", nil, nil},
+		{
+			name: "Success",
+			statuses: []*giteagw.CommitStatus{{
+				State:   giteagw.CommitStatusSuccess,
+				Context: "ci/test",
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "ci/test",
+				State: forge.ChangeCheckPassed,
+			}},
+		},
+		{
+			name: "Warning",
+			statuses: []*giteagw.CommitStatus{{
+				State:   giteagw.CommitStatusWarning,
+				Context: "ci/test",
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "ci/test",
+				State: forge.ChangeCheckPassed,
+			}},
+		},
+		{
+			name: "Pending",
+			statuses: []*giteagw.CommitStatus{{
+				State:   giteagw.CommitStatusPending,
+				Context: "ci/test",
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "ci/test",
+				State: forge.ChangeCheckPending,
+			}},
+		},
+		{
+			name: "Failure",
+			statuses: []*giteagw.CommitStatus{{
+				State:   giteagw.CommitStatusFailure,
+				Context: "ci/test",
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "ci/test",
+				State: forge.ChangeCheckFailed,
+			}},
+		},
+		{
+			name: "Error",
+			statuses: []*giteagw.CommitStatus{{
+				State:   giteagw.CommitStatusError,
+				Context: "ci/test",
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "ci/test",
+				State: forge.ChangeCheckFailed,
+			}},
+		},
+		{
+			name: "MissingContext",
+			statuses: []*giteagw.CommitStatus{{
+				State: giteagw.CommitStatusSuccess,
+			}},
+			want: []forge.ChangeCheck{{
+				Name:  "Gitea commit status 1",
+				State: forge.ChangeCheckPassed,
+			}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -33,10 +93,8 @@ func TestRepository_ChangeChecksState(t *testing.T) {
 						Number: 42,
 						Head:   &giteagw.PRBranch{Sha: "abc123"},
 					})
-				case "/api/v1/repos/captain/warp-core/commits/abc123/status":
-					writeJSON(t, w, http.StatusOK, giteagw.CombinedStatus{
-						State: tt.statusState,
-					})
+				case "/api/v1/repos/captain/warp-core/commits/abc123/statuses":
+					writeJSON(t, w, http.StatusOK, tt.statuses)
 				default:
 					http.NotFound(w, r)
 				}
@@ -44,9 +102,9 @@ func TestRepository_ChangeChecksState(t *testing.T) {
 			defer srv.Close()
 
 			repo := newTestRepo(t, srv)
-			state, err := repo.ChangeChecksState(t.Context(), &PR{Number: 42})
+			checks, err := repo.ChangeChecks(t.Context(), &PR{Number: 42})
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, state)
+			assert.Equal(t, tt.want, checks)
 		})
 	}
 }
@@ -54,15 +112,15 @@ func TestRepository_ChangeChecksState(t *testing.T) {
 func TestCommitStatusState(t *testing.T) {
 	tests := []struct {
 		input string
-		want  forge.ChecksState
+		want  forge.ChangeCheckState
 	}{
-		{"", forge.ChecksPassed},
-		{giteagw.CommitStatusSuccess, forge.ChecksPassed},
-		{giteagw.CommitStatusWarning, forge.ChecksPassed},
-		{giteagw.CommitStatusPending, forge.ChecksPending},
-		{giteagw.CommitStatusFailure, forge.ChecksFailed},
-		{giteagw.CommitStatusError, forge.ChecksFailed},
-		{"unknown", forge.ChecksPending},
+		{"", forge.ChangeCheckPassed},
+		{giteagw.CommitStatusSuccess, forge.ChangeCheckPassed},
+		{giteagw.CommitStatusWarning, forge.ChangeCheckPassed},
+		{giteagw.CommitStatusPending, forge.ChangeCheckPending},
+		{giteagw.CommitStatusFailure, forge.ChangeCheckFailed},
+		{giteagw.CommitStatusError, forge.ChangeCheckFailed},
+		{"unknown", forge.ChangeCheckPending},
 	}
 	for _, tt := range tests {
 		assert.Equal(t, tt.want, commitStatusState(tt.input), "state=%q", tt.input)

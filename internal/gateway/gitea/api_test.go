@@ -291,6 +291,34 @@ func TestClient_CommitStatusCombined(t *testing.T) {
 	assert.Equal(t, CommitStatusSuccess, status.State)
 }
 
+func TestClient_CommitStatusList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v1/repos/captain/warp-core/commits/abc123/statuses", r.URL.Path)
+		assert.Equal(t, "2", r.URL.Query().Get("page"))
+		assert.Equal(t, "20", r.URL.Query().Get("limit"))
+		writeJSON(t, w, http.StatusOK, []*CommitStatus{
+			{ID: 1, State: CommitStatusSuccess, Context: "ci/test"},
+			{ID: 2, State: CommitStatusPending, Context: "ci/lint"},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	statuses, _, err := client.CommitStatusList(
+		t.Context(),
+		"captain",
+		"warp-core",
+		"abc123",
+		&ListCommitStatusOptions{
+			ListOptions: ListOptions{Page: 2, Limit: 20},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, statuses, 2)
+	assert.Equal(t, "ci/lint", statuses[1].Context)
+}
+
 func TestClient_LabelList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
