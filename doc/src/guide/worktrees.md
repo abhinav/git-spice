@@ -92,12 +92,16 @@ so syncing the dependency forward flows into the dependent work.
 
 | Command | Purpose |
 |---------|---------|
-| $$gs anchor list$$ | List worktrees, their anchors, and the branches stacked in each. |
+| $$gs anchor list$$ | List the registered anchors, the worktree that owns each, and whether it is a root or internal anchor. |
 | $$gs anchor track$$ | Register an existing worktree's anchor branch with git-spice. |
 | $$gs anchor rm$$ | Remove a worktree and dissolve its anchor. |
 
 $$gs anchor rm$$ refuses to remove a worktree with uncommitted changes
 unless `--force` is given.
+Run it from a different worktree (for example, the primary checkout):
+a worktree cannot remove itself.
+A worktree may own only one anchor,
+so $$gs anchor track$$ refuses to register a second anchor for it.
 
 ## Exclusive mode
 
@@ -128,12 +132,25 @@ at their branches' current tips.
 ```
 
 The manifest is written **before** any worktree is removed,
-and records each worktree's path, branch, and anchor.
+and records each worktree's path, branch, `HEAD` commit, and anchor.
 If a park or restore is interrupted partway through,
 re-running the same command finishes the job:
 park resumes from where it stopped,
 and restore skips worktrees that already exist.
 Nothing is lost to a `Ctrl-C` mid-reorganization.
+
+A reorganization may delete or rename a parked branch —
+an interactive rebase that drops it, for example.
+git-spice cannot know where that work landed in the rewritten graph,
+so $$gs repo restore$$ does not guess:
+it restores every other worktree,
+stays in exclusive mode,
+and reports the missing branch.
+Recover by re-creating the branch and re-running $$gs repo restore$$,
+or discard that worktree with `gs repo restore --forget <path>`.
+Each parked commit is preserved under `refs/gs-park/`
+so it is not lost to garbage collection before you recover it.
+A worktree parked in detached `HEAD` is restored at its recorded commit.
 
 While the repository is parked, $$gs anchor create$$ is refused —
 new worktrees would race with the reorganization in progress.
