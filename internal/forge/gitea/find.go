@@ -66,9 +66,11 @@ func (r *Repository) listAllPRsByState(ctx context.Context, state string) ([]*gi
 
 	for {
 		prs, resp, err := r.client.PullList(ctx, r.owner, r.repo, &giteagw.ListPullRequestsOptions{
-			State:       state,
-			Limit:       pageSize,
-			ListOptions: giteagw.ListOptions{Page: page},
+			ListOptions: giteagw.ListOptions{
+				Limit: pageSize,
+				Page:  page,
+			},
+			State: state,
 		})
 		if err != nil {
 			return nil, err

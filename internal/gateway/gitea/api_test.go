@@ -171,9 +171,9 @@ func TestClient_PullList(t *testing.T) {
 
 	client := newTestClient(t, srv)
 	prs, resp, err := client.PullList(t.Context(), "captain", "warp-core", &ListPullRequestsOptions{
-		State: "open",
-		Head:  "scotty/fix",
-		Limit: 10,
+		ListOptions: ListOptions{Limit: 10},
+		State:       "open",
+		Head:        "scotty/fix",
 	})
 	require.NoError(t, err)
 	require.Len(t, prs, 2)
@@ -387,7 +387,9 @@ func TestClient_PullList_paginated(t *testing.T) {
 	client := newTestClient(t, srv)
 
 	var all []*PullRequest
-	opts := &ListPullRequestsOptions{Limit: 2}
+	opts := &ListPullRequestsOptions{
+		ListOptions: ListOptions{Limit: 2},
+	}
 	for {
 		page, resp, err := client.PullList(t.Context(), "captain", "warp-core", opts)
 		require.NoError(t, err)

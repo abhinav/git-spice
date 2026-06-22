@@ -563,9 +563,6 @@ type ListPullRequestsOptions struct {
 
 	// Head filters by head branch name.
 	Head string
-
-	// Limit is the maximum number of results to return.
-	Limit int64
 }
 
 func (o *ListPullRequestsOptions) encodeQuery() url.Values {
