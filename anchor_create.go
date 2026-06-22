@@ -40,7 +40,8 @@ func (*anchorCreateCmd) Help() string {
 		worktree's work.
 
 		Use -b/--branch to also create a tracked branch stacked on the
-		anchor.
+		anchor. With --no-anchor there is no anchor to stack on, so the
+		branch is created untracked at the trunk commit.
 
 		Use --no-anchor to instead start the worktree in detached HEAD
 		state at the current trunk commit.
@@ -53,9 +54,13 @@ func (cmd *anchorCreateCmd) Run(
 	repo *git.Repository,
 	store *state.Store,
 	svc *spice.Service,
-) error {
+) (retErr error) {
 	if cmd.NoAnchor && cmd.Anchor != "" {
 		return errors.New("--no-anchor and --anchor are mutually exclusive")
+	}
+	if cmd.NoAnchor && cmd.Name != "" {
+		return errors.New("--name has no effect with --no-anchor: " +
+			"there is no anchor branch to name")
 	}
 
 	canonicalTrunk := store.Trunk()
@@ -98,6 +103,31 @@ func (cmd *anchorCreateCmd) Run(
 	}
 	log.Infof("Created worktree at %s", cmd.Path)
 
+	// Roll back everything created below if a later step fails, so the
+	// user can retry without manually removing a half-built worktree or
+	// deleting orphaned branches.
+	//
+	// Cleanups run in registration order: the worktree is removed first
+	// because it holds the checkout of any branch we created, and a
+	// checked-out branch cannot be deleted until its worktree is gone.
+	var cleanups []func()
+	defer func() {
+		if retErr == nil {
+			return
+		}
+		for _, cleanup := range cleanups {
+			cleanup()
+		}
+	}()
+	cleanups = append(cleanups, func() {
+		if err := repo.WorktreeRemove(ctx, git.WorktreeRemoveRequest{
+			Path:  cmd.Path,
+			Force: true,
+		}); err != nil {
+			log.Warnf("Could not clean up worktree %s: %v", cmd.Path, err)
+		}
+	})
+
 	newWT, err := repo.OpenWorktree(ctx, cmd.Path)
 	if err != nil {
 		return fmt.Errorf("open worktree: %w", err)
@@ -112,6 +142,7 @@ func (cmd *anchorCreateCmd) Run(
 			}); err != nil {
 				return fmt.Errorf("create branch: %w", err)
 			}
+			cleanups = append(cleanups, deleteBranchCleanup(ctx, repo, log, cmd.Branch))
 			if err := newWT.CheckoutBranch(ctx, cmd.Branch); err != nil {
 				return fmt.Errorf("checkout branch: %w", err)
 			}
@@ -133,6 +164,7 @@ func (cmd *anchorCreateCmd) Run(
 	}); err != nil {
 		return fmt.Errorf("create anchor %q: %w", anchorBranch, err)
 	}
+	cleanups = append(cleanups, deleteBranchCleanup(ctx, repo, log, anchorBranch))
 	if err := newWT.CheckoutBranch(ctx, anchorBranch); err != nil {
 		return fmt.Errorf("checkout anchor: %w", err)
 	}
@@ -158,6 +190,11 @@ func (cmd *anchorCreateCmd) Run(
 	}); err != nil {
 		return fmt.Errorf("register anchor: %w", err)
 	}
+	cleanups = append(cleanups, func() {
+		if err := store.UnregisterAnchor(ctx, anchorBranch); err != nil {
+			log.Warnf("Could not unregister anchor %s: %v", anchorBranch, err)
+		}
+	})
 	if internal {
 		log.Infof("Created anchor %s anchored at %s", anchorBranch, base)
 	} else {
@@ -171,6 +208,7 @@ func (cmd *anchorCreateCmd) Run(
 		}); err != nil {
 			return fmt.Errorf("create branch: %w", err)
 		}
+		cleanups = append(cleanups, deleteBranchCleanup(ctx, repo, log, cmd.Branch))
 		if err := newWT.CheckoutBranch(ctx, cmd.Branch); err != nil {
 			return fmt.Errorf("checkout branch: %w", err)
 		}
@@ -192,4 +230,21 @@ func (cmd *anchorCreateCmd) Run(
 	}
 
 	return nil
+}
+
+// deleteBranchCleanup returns a rollback that force-deletes a branch
+// created by 'gs anchor create', logging a warning if removal fails.
+func deleteBranchCleanup(
+	ctx context.Context,
+	repo *git.Repository,
+	log *silog.Logger,
+	branch string,
+) func() {
+	return func() {
+		if err := repo.DeleteBranch(ctx, branch, git.BranchDeleteOptions{
+			Force: true,
+		}); err != nil {
+			log.Warnf("Could not clean up branch %s: %v", branch, err)
+		}
+	}
 }

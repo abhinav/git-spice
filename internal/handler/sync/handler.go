@@ -438,8 +438,8 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 	// If sync deletes the branch we started on,
 	// a later rescued operation cannot resume there.
 	// Rescue onto the branch sync intends to leave checked out instead:
-	// trunk in the usual case,
-	// or no branch if trunk is checked out elsewhere.
+	// this worktree's local trunk in the usual case,
+	// or no branch if that trunk is checked out elsewhere.
 	// Otherwise, keep rescuing onto the original current branch.
 	branchAfterDelete := currentBranch
 	deletingCurrentBranch := slices.ContainsFunc(branchesToDelete, func(b branchDeletion) bool {
@@ -449,7 +449,7 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		if trunkCheckedOutElsewhere {
 			branchAfterDelete = ""
 		} else {
-			branchAfterDelete = trunk
+			branchAfterDelete = localTrunk
 		}
 	}
 	autostashRescueBranch = branchAfterDelete

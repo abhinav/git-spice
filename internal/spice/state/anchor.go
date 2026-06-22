@@ -84,10 +84,15 @@ func (s *Store) IsTrunk(branch string) bool {
 // TrunkFor returns the trunk branch that applies to the given worktree:
 // the worktree's registered anchor if it has one, otherwise the canonical
 // trunk. An empty worktreePath always resolves to the canonical trunk.
+//
+// RegisterAnchor enforces at most one anchor per worktree, but legacy
+// state could hold more than one. Resolution iterates anchors in sorted
+// branch order so the result is stable regardless of Go's randomized map
+// iteration.
 func (s *Store) TrunkFor(worktreePath string) string {
 	if worktreePath != "" {
-		for branch, a := range s.anchors {
-			if a.Worktree == worktreePath {
+		for _, branch := range slices.Sorted(maps.Keys(s.anchors)) {
+			if s.anchors[branch].Worktree == worktreePath {
 				return branch
 			}
 		}
@@ -109,14 +114,29 @@ func (s *Store) Anchors() []Anchor {
 }
 
 // RegisterAnchor records a branch as the anchor for a worktree.
-// It is idempotent: re-registering an existing branch updates its
-// worktree path and base.
+//
+// It is idempotent for a given branch: re-registering an existing anchor
+// updates its worktree path and base (so a relocated worktree can be
+// re-pointed). It refuses to register a second, different anchor for a
+// worktree that already has one, since each worktree resolves to exactly
+// one trunk ([Store.TrunkFor]).
 func (s *Store) RegisterAnchor(ctx context.Context, a Anchor) error {
 	if a.Branch == "" {
 		return errors.New("anchor branch name is required")
 	}
 	if a.Branch == s.trunk {
 		return fmt.Errorf("branch %q is already the canonical trunk", a.Branch)
+	}
+
+	// Reject a second anchor for a worktree that already has a different
+	// one. An empty worktree path is unaddressable, so it never conflicts.
+	if a.Worktree != "" {
+		for branch, existing := range s.anchors {
+			if branch != a.Branch && existing.Worktree == a.Worktree {
+				return fmt.Errorf(
+					"worktree %q already has anchor %q", a.Worktree, branch)
+			}
+		}
 	}
 
 	next := make(map[string]Anchor, len(s.anchors)+1)

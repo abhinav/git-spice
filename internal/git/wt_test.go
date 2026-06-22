@@ -92,6 +92,33 @@ func TestIntegrationWorktrees(t *testing.T) {
 	}, worktrees)
 }
 
+func TestRepository_WorktreeAdd_requiresHeadOrDetach(t *testing.T) {
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git add file.txt
+		git commit -m 'Initial commit'
+
+		-- file.txt --
+		contents
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	repo, err := git.Open(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	// A request with neither Head nor Detach is rejected: plain
+	// 'git worktree add <path>' would silently create a branch named
+	// after the path, which no caller wants.
+	err = repo.WorktreeAdd(t.Context(), git.WorktreeAddRequest{
+		Path: filepath.Join(fixture.Dir(), "..", "stray"),
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "Head or Detach")
+}
+
 func TestWorktree_IndexFile(t *testing.T) {
 	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
 		git init

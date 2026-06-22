@@ -2,8 +2,12 @@ Usage: gs anchor list (ls)
 
 List anchors and their worktrees
 
-Lists all worktrees associated with the repository. For each worktree, shows the
-checked-out branch and any tracked branches in its stack.
+Lists the anchors registered in the repository.
+
+For each anchor, shows its branch, the worktree that owns it, and whether it is
+a root anchor (tracking the canonical trunk) or an internal anchor (pinned at
+another local branch). The anchor that is the trunk in effect for the current
+worktree is marked with a '*'.
 
 Global Flags:
   -h, --help           Show help for the command

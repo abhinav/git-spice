@@ -36,6 +36,12 @@ gs bco dev
 gs anchor track
 stderr 'Tracking dev as the anchor for worktree'
 
+# A worktree may have only one anchor: tracking a second, different
+# branch as this worktree's anchor is refused.
+git branch dev2
+! gs anchor track --name dev2
+stderr 'already has anchor'
+
 # A tracked stack branch cannot be registered as an anchor.
 ! gs anchor track --name feat1
 stderr 'must be a graph root'

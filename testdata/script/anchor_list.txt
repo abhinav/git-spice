@@ -1,5 +1,5 @@
-# 'gs anchor list' shows all worktrees
-# with their checked-out branches and stack info.
+# 'gs anchor list' shows the registered anchors: their branches,
+# worktrees, and whether each is a root or internal anchor.
 
 as 'Test <test@example.com>'
 at '2026-03-29T14:00:00Z'
@@ -10,30 +10,32 @@ git init
 git commit --allow-empty -m 'Initial commit'
 gs repo init
 
-# Create a stack: main -> feat1 -> feat2
+# With no anchors, the list says so.
+gs anchor list
+stderr 'No anchors'
+
+# A root anchor (tracks the canonical trunk)...
+gs anchor create $WORK/wt1 --name dev
+
+# ...and an internal anchor stacked on a tracked branch.
 git add feat1.txt
 gs bc feat1 -m 'Add feat1'
-git add feat2.txt
-gs bc feat2 -m 'Add feat2'
+gs anchor create $WORK/wt2 --name sub --anchor feat1
 
-# Create a worktree for feat1
-git worktree add ../wt1 feat1
-
-# List worktrees from the main repo
+# From the primary worktree, both anchors are listed with their kind;
+# neither is the trunk in effect here, so neither is marked current.
 gs anchor list
-stderr 'repo'
-stderr 'feat2'
-stderr 'wt1'
-stderr 'feat1'
+stderr 'dev'
+stderr 'root'
+stderr 'sub'
+stderr 'on feat1'
 
-# List worktrees from wt1
-cd ../wt1
+# Inside an anchor worktree, that worktree's anchor is marked current.
+cd $WORK/wt1
 gs anchor ls
-stderr 'repo'
-stderr 'wt1'
-stderr 'feat1'
+stderr '\* dev'
 
+-- repo/dummy.txt --
+dummy
 -- repo/feat1.txt --
 feat1
--- repo/feat2.txt --
-feat2

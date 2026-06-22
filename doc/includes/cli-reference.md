@@ -171,7 +171,7 @@ of deleted branches, leaving higher branches in place.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -180,6 +180,10 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+**Flags**
+
+* `-w`, `--worktree`: Only restack branches in the current worktree.
 
 ## Log
 
@@ -201,6 +205,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
@@ -225,6 +230,7 @@ See https://abhinav.github.io/git-spice/cli/json/ for details.
 **Flags**
 
 * `-a`, `--all` ([:material-wrench:{ .middle title="spice.log.all" }](/cli/config.md#spicelogall)): Show all tracked branches, not just the current stack.
+* `-w`, `--worktree`: Filter to branches in the current worktree. Implies --all.
 * `-S`, `--[no-]cr-status` ([:material-wrench:{ .middle title="spice.log.crStatus" }](/cli/config.md#spicelogcrstatus)): Request and include information about the Change Request
 * `-c`, `--[no-]cr-comments` ([:material-wrench:{ .middle title="spice.log.crComments" }](/cli/config.md#spicelogcrcomments)): Include comment resolution counts for changes
 * `--json`: Write to stdout as a stream of JSON objects in an unspecified order <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.18.0](/changelog.md#v0.18.0)</span>
@@ -310,11 +316,9 @@ Before merging, the stack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
-before failing if merge readiness is not reached.
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
+before failing if checks are not ready.
 
 By default, a branch failure skips that branch's upstack descendants,
 but independent sibling branches continue.
@@ -323,12 +327,12 @@ Use --fail-fast to stop the queue after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--fail-fast`: Stop the merge queue after the first branch failure.
 * `--branch=NAME`: Branch whose stack to merge
 
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -626,7 +630,7 @@ This command acts as a local merge queue:
 it merges one Change Request,
 waits for that merge to finish,
 restacks and updates the next Change Request,
-waits for merge readiness on the updated Change Request,
+waits for its CI checks to pass,
 and then repeats the process.
 
 For a stack like this:
@@ -644,15 +648,13 @@ Before merging, the downstack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
+Before each merge, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait
 (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge
 to complete, restacks and updates the next PR,
-waits for merge readiness on the updated PR,
+waits for CI checks on the updated PR,
 and syncs merged branch cleanup.
 
 Use --no-wait for single branch merging
@@ -662,12 +664,12 @@ when you don't want to wait for the merge to propagate.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--branch=NAME`: Branch to start merging from
 
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1137,18 +1139,16 @@ Use --branch to merge a different branch.
 The branch must be based directly on trunk.
 To merge a stacked branch, use 'gs downstack merge'.
 
-Before merging, waits for merge readiness:
-the forge must observe the pushed head
-and report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait.
+Before merging, waits for CI checks to pass.
+Use --build-timeout to configure the maximum wait.
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
 * `--branch=NAME`: Branch to merge
 
-**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
 
 ### git-spice branch submit {#gs-branch-submit}
 
@@ -1366,6 +1366,91 @@ This command requires at least Git 2.45.
 **Flags**
 
 * `--from=NAME`: Branch whose upstack commits will be considered.
+
+## Anchor
+
+### git-spice anchor create {#gs-anchor-create}
+
+```
+gs anchor create (c) <path> [flags]
+```
+
+Create a new worktree anchored at a branch
+
+Creates a new Git worktree at the given path, anchored at a branch.
+
+By default the worktree gets a root anchor: a per-worktree pointer
+branch (named after the worktree directory, or set with --name)
+that tracks the same remote trunk as the main checkout.
+Stacks created in the worktree are based on this anchor, so
+'gs repo sync' and restacks in different worktrees never contend
+on a single shared trunk checkout.
+
+Use --anchor to instead pin the worktree at an existing tracked
+branch: a dependent worktree, for building on top of another
+worktree's work.
+
+Use -b/--branch to also create a tracked branch stacked on the
+anchor. With --no-anchor there is no anchor to stack on, so the
+branch is created untracked at the trunk commit.
+
+Use --no-anchor to instead start the worktree in detached HEAD
+state at the current trunk commit.
+
+**Arguments**
+
+* `path`: Path for the new worktree
+
+**Flags**
+
+* `--name=BRANCH`: Name of the anchor branch to create (defaults to the worktree directory name)
+* `--anchor=BRANCH`: Anchor on an existing tracked branch (a dependent worktree) instead of the remote trunk
+* `--no-anchor`: Do not create an anchor; start in detached HEAD at trunk
+* `-b`, `--branch=BRANCH`: Create and check out a new tracked branch stacked on the anchor
+
+### git-spice anchor list {#gs-anchor-list}
+
+```
+gs anchor list (ls)
+```
+
+List anchors and their worktrees
+
+Lists the anchors registered in the repository.
+
+For each anchor, shows its branch, the worktree that owns it, and
+whether it is a root anchor (tracking the canonical trunk) or an
+internal anchor (pinned at another local branch). The anchor that
+is the trunk in effect for the current worktree is marked with a
+'*'.
+
+### git-spice anchor track {#gs-anchor-track}
+
+```
+gs anchor track (tr) [flags]
+```
+
+Track an existing worktree as an anchor
+
+Registers an existing worktree's anchor branch with git-spice.
+
+Use this to adopt a worktree created outside of
+'gs anchor create' (for example, with 'git worktree add'):
+it records the worktree's anchor branch so that
+'gs repo sync', restacks, and stack listings treat that branch
+as an anchor, rooting the worktree's stacks at it instead of the
+shared canonical trunk.
+
+By default, the branch checked out in the current worktree is
+registered. Use --name to register a different existing branch.
+
+If the branch has no upstream, it is set to track the same
+remote ref as the canonical trunk, so that 'gs repo sync' in
+the worktree updates it from the remote.
+
+**Flags**
+
+* `--name=BRANCH`: Branch to register as this worktree's anchor (defaults to the branch checked out in the current worktree)
 
 ## Rebase
 

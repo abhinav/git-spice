@@ -21,8 +21,12 @@ cd $WORK/wt1
 git branch --show-current
 stdout 'wt1'
 
-# --no-anchor preserves the legacy detached-HEAD behavior.
+# --name has no effect without an anchor, so it is rejected.
 cd $WORK/repo
+! gs anchor create --no-anchor --name nope $WORK/wt-bad
+stderr '--name has no effect with --no-anchor'
+
+# --no-anchor preserves the legacy detached-HEAD behavior.
 gs anchor create --no-anchor $WORK/wt-detached
 cd $WORK/wt-detached
 git rev-parse --abbrev-ref HEAD

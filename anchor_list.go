@@ -1,13 +1,9 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"strings"
-
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
-	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -15,79 +11,47 @@ type anchorListCmd struct{}
 
 func (*anchorListCmd) Help() string {
 	return text.Dedent(`
-		Lists all worktrees associated with the repository.
-		For each worktree, shows the checked-out branch
-		and any tracked branches in its stack.
+		Lists the anchors registered in the repository.
+
+		For each anchor, shows its branch, the worktree that owns it, and
+		whether it is a root anchor (tracking the canonical trunk) or an
+		internal anchor (pinned at another local branch). The anchor that
+		is the trunk in effect for the current worktree is marked with a
+		'*'.
 	`)
 }
 
 func (*anchorListCmd) Run(
-	ctx context.Context,
 	log *silog.Logger,
-	repo *git.Repository,
-	svc *spice.Service,
+	store *state.Store,
 	wt *git.Worktree,
 ) error {
-	branchGraph, err := svc.BranchGraph(ctx,
-		&spice.BranchGraphOptions{
-			IncludeWorktrees: true,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("load branch graph: %w", err)
+	anchors := store.Anchors()
+	if len(anchors) == 0 {
+		log.Infof("No anchors in this repository")
+		return nil
 	}
 
-	trunk := branchGraph.Trunk()
-	currentWT := wt.RootDir()
+	// The anchor in effect for the current worktree, if any, is marked.
+	currentAnchor := store.TrunkFor(wt.RootDir())
 
-	for item, err := range repo.Worktrees(ctx) {
-		if err != nil {
-			return fmt.Errorf("list worktrees: %w", err)
-		}
-
-		if item.Bare {
-			continue
-		}
-
-		branchName := item.Branch
-		if branchName == "" {
-			branchName = "(detached)"
-		}
-
-		// Build stack description for the checked-out branch.
-		var stackDesc string
-		if branchName != "" && branchName != trunk {
-			if _, ok := branchGraph.Lookup(branchName); ok {
-				var parts []string
-				for b := range branchGraph.Stack(branchName) {
-					parts = append(parts, b)
-				}
-				if len(parts) > 1 {
-					stackDesc = strings.Join(parts, " → ")
-				}
-			}
-		}
-
-		// Build the display line.
+	for _, a := range anchors {
 		marker := " "
-		if item.Path == currentWT {
+		if a.Branch == currentAnchor {
 			marker = "*"
 		}
 
-		line := fmt.Sprintf(
-			"%s %s\t%s",
-			marker, item.Path, branchName,
-		)
-
-		if branchName == trunk {
-			line += " (trunk)"
+		kind := "root"
+		if a.Base != "" {
+			kind = "on " + a.Base
 		}
 
-		if stackDesc != "" {
-			line += "\t[" + stackDesc + "]"
+		worktree := a.Worktree
+		if worktree == "" {
+			worktree = "(unknown)"
 		}
 
-		log.Infof("%s", line)
+		log.Infof("%s %s\t%s\t(%s)", marker, a.Branch, worktree, kind)
 	}
 
 	return nil

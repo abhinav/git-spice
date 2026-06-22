@@ -13,7 +13,9 @@ single shared trunk checkout.
 Use --anchor to instead pin the worktree at an existing tracked branch:
 a dependent worktree, for building on top of another worktree's work.
 
-Use -b/--branch to also create a tracked branch stacked on the anchor.
+Use -b/--branch to also create a tracked branch stacked on the anchor. With
+--no-anchor there is no anchor to stack on, so the branch is created untracked
+at the trunk commit.
 
 Use --no-anchor to instead start the worktree in detached HEAD state at the
 current trunk commit.
