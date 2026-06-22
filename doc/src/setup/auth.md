@@ -47,7 +47,7 @@ Each supported service supports different authentication methods.
 
 - [OAuth](#oauth): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [GitHub App](#github-app): <!-- gs:badge:github -->
-- [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
+- [Git Credential Manager](#git-credential-manager): <!-- gs:badge:github --> <!-- gs:badge:bitbucket -->
 - [Personal Access Token](#personal-access-token): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
 - [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [Environment variable](#environment-variable): <!-- gs:badge:github --> <!-- gs:badge:gitlab --> <!-- gs:badge:bitbucket --> <!-- gs:badge:gitea -->
@@ -528,13 +528,11 @@ export GITEA_URL=https://gitea.example.com
 ```
 
 Then authenticate with $$gs auth login$$.
-Gitea supports Personal Access Tokens and Git Credential Manager:
+Gitea supports Personal Access Tokens:
 
 - **Personal Access Token**: Create one at
   `{your Gitea instance}/user/settings/applications`.
-  Required scopes: `write:repository` and `write:issue`.
-- **Git Credential Manager**: If you already use GCM
-  for your Gitea instance, git-spice can reuse those credentials.
+  Required scopes: `write:repository`, `write:issue`, and `read:user`.
 
 Alternatively, set `GITEA_TOKEN` to skip the login flow:
 
