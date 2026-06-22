@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	charm.land/bubbles/v2 v2.1.0
-	charm.land/bubbletea/v2 v2.0.6
-	charm.land/lipgloss/v2 v2.0.3
+	charm.land/bubbletea/v2 v2.0.7
+	charm.land/lipgloss/v2 v2.0.4
 	github.com/alecthomas/kong v1.15.0
 	github.com/buildkite/shellwords v1.0.1
 	github.com/charmbracelet/colorprofile v0.4.3
@@ -16,8 +16,8 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/hexops/autogold/v2 v2.3.1
 	github.com/mattn/go-isatty v0.0.22
-	github.com/rogpeppe/go-internal v1.14.1
-	github.com/sahilm/fuzzy v0.1.2
+	github.com/rogpeppe/go-internal v1.15.0
+	github.com/sahilm/fuzzy v0.1.3
 	github.com/shurcooL/githubv4 v0.0.0-20260209031235-2402fdf4a9ed
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.19.0
@@ -29,9 +29,9 @@ require (
 	go.abhg.dev/log/silog v0.3.0
 	go.abhg.dev/testing/stub v0.2.0
 	go.uber.org/mock v0.6.0
-	golang.org/x/mod v0.36.0
+	golang.org/x/mod v0.37.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.3.0
@@ -40,7 +40,7 @@ require (
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260416155717-489999b90468 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260525132238-948f4557a654 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -70,8 +70,8 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
-	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	mvdan.cc/gofumpt v0.9.2 // indirect
 )
 
