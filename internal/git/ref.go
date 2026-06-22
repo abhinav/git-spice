@@ -97,3 +97,9 @@ func (r *Repository) SetRef(ctx context.Context, req SetRefRequest) error {
 	}
 	return r.gitCmd(ctx, "update-ref", args...).Run()
 }
+
+// DeleteRef deletes a ref.
+func (r *Repository) DeleteRef(ctx context.Context, ref string) error {
+	r.log.Debug("Deleting Git ref", "name", ref)
+	return r.gitCmd(ctx, "update-ref", "-d", ref).Run()
+}

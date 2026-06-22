@@ -1,4 +1,4 @@
-Usage: gs repo (r) restore
+Usage: gs repo (r) restore [flags]
 
 Leave exclusive mode: restore parked worktrees
 
@@ -7,6 +7,18 @@ at their branches' current tips, and the exclusive-mode marker is cleared.
 
 It is idempotent and resumable: worktrees that already exist are left alone,
 so an interrupted restore can be finished by re-running the command.
+
+If a parked branch no longer exists, the branch was deleted outside git-spice
+while the repository was parked. That leaves git-spice's state inconsistent,
+so restore cannot put the worktree back on its own. It restores every other
+worktree but stays in exclusive mode and reports what is wrong. Recover by
+either re-creating the missing branch and re-running restore, or discarding
+that worktree with --forget. The commit each worktree was parked at is preserved
+under refs/gs-park/ so it is not lost to garbage collection in the meantime.
+
+Flags:
+  --forget=PATH,...    Discard a parked worktree whose branch is gone instead of
+                       restoring it (repeatable)
 
 Global Flags:
   -h, --help           Show help for the command

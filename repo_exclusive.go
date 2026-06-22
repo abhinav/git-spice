@@ -25,8 +25,10 @@ func (*repoExclusiveCmd) Help() string {
 		worktree (see 'gs repo park'), runs the command, then restores the
 		worktrees (see 'gs repo restore').
 
-		The worktrees are always restored, even if the command fails, so
-		this is the safe way to take exclusive mode for a single command.
+		The worktrees are restored even if the command fails. If the
+		command deletes a parked branch, restore cannot put that worktree
+		back; it restores the rest, stays in exclusive mode, and explains
+		how to recover with 'gs repo restore'.
 
 		Separate the command from this one's flags with '--', for example:
 

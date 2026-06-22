@@ -203,8 +203,9 @@ so the entire graph remains reachable from the primary checkout.
 Run 'gs repo restore' to leave exclusive mode and re-create the
 worktrees.
 
-Worktrees with uncommitted changes are refused unless --force is
-given, which discards those changes. The manifest is written
+A worktree with staged, unstaged, or untracked changes is refused
+unless --force is given, which discards those changes. Stashes are
+repository-global and are never discarded. The manifest is written
 before any worktree is removed, so an interrupted park can be
 resumed by re-running the command.
 
@@ -215,7 +216,7 @@ resumed by re-running the command.
 ### git-spice repo restore {#gs-repo-restore}
 
 ```
-gs repo (r) restore
+gs repo (r) restore [flags]
 ```
 
 Leave exclusive mode: restore parked worktrees
@@ -227,6 +228,20 @@ exclusive-mode marker is cleared.
 It is idempotent and resumable: worktrees that already exist are
 left alone, so an interrupted restore can be finished by
 re-running the command.
+
+If a parked branch no longer exists, the branch was deleted
+outside git-spice while the repository was parked. That leaves
+git-spice's state inconsistent, so restore cannot put the
+worktree back on its own. It restores every other worktree but
+stays in exclusive mode and reports what is wrong. Recover by
+either re-creating the missing branch and re-running restore, or
+discarding that worktree with --forget. The commit each worktree
+was parked at is preserved under refs/gs-park/ so it is not lost
+to garbage collection in the meantime.
+
+**Flags**
+
+* `--forget=PATH,...`: Discard a parked worktree whose branch is gone instead of restoring it (repeatable)
 
 ### git-spice repo exclusive {#gs-repo-exclusive}
 
@@ -240,8 +255,10 @@ Runs a command with the whole repository to itself: it parks every
 worktree (see 'gs repo park'), runs the command, then restores the
 worktrees (see 'gs repo restore').
 
-The worktrees are always restored, even if the command fails, so
-this is the safe way to take exclusive mode for a single command.
+The worktrees are restored even if the command fails. If the
+command deletes a parked branch, restore cannot put that worktree
+back; it restores the rest, stays in exclusive mode, and explains
+how to recover with 'gs repo restore'.
 
 Separate the command from this one's flags with '--', for example:
 
@@ -1461,7 +1478,8 @@ branch: a dependent worktree, for building on top of another
 worktree's work.
 
 Use -b/--branch to also create a tracked branch stacked on the
-anchor.
+anchor. With --no-anchor there is no anchor to stack on, so the
+branch is created untracked at the trunk commit.
 
 Use --no-anchor to instead start the worktree in detached HEAD
 state at the current trunk commit.
@@ -1485,9 +1503,13 @@ gs anchor list (ls)
 
 List anchors and their worktrees
 
-Lists all worktrees associated with the repository.
-For each worktree, shows the checked-out branch
-and any tracked branches in its stack.
+Lists the anchors registered in the repository.
+
+For each anchor, shows its branch, the worktree that owns it, and
+whether it is a root anchor (tracking the canonical trunk) or an
+internal anchor (pinned at another local branch). The anchor that
+is the trunk in effect for the current worktree is marked with a
+'*'.
 
 ### git-spice anchor track {#gs-anchor-track}
 

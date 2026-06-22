@@ -28,8 +28,9 @@ func (*repoParkCmd) Help() string {
 		Run 'gs repo restore' to leave exclusive mode and re-create the
 		worktrees.
 
-		Worktrees with uncommitted changes are refused unless --force is
-		given, which discards those changes. The manifest is written
+		A worktree with staged, unstaged, or untracked changes is refused
+		unless --force is given, which discards those changes. Stashes are
+		repository-global and are never discarded. The manifest is written
 		before any worktree is removed, so an interrupted park can be
 		resumed by re-running the command.
 	`)
@@ -88,6 +89,7 @@ func (cmd *repoParkCmd) Run(
 		byPath[item.Path] = state.ParkedWorktree{
 			Path:   item.Path,
 			Branch: item.Branch,
+			Head:   item.Head.String(),
 			Anchor: anchorForWorktree(store, item.Path),
 		}
 	}
@@ -101,6 +103,23 @@ func (cmd *repoParkCmd) Run(
 	})
 	if err := store.Park(ctx, manifest); err != nil {
 		return fmt.Errorf("enter exclusive mode: %w", err)
+	}
+
+	// Pin each parked commit under refs/gs-park/ so it stays reachable
+	// for recovery even if the exclusive command deletes the branch that
+	// held it and Git later prunes the now-unreachable object. The ref
+	// is removed by 'gs repo restore' once the worktree is recovered.
+	for _, p := range manifest {
+		if p.Head == "" {
+			continue
+		}
+		if err := repo.SetRef(ctx, git.SetRefRequest{
+			Ref:    parkRef(p.Head),
+			Hash:   git.Hash(p.Head),
+			Reason: "git-spice: pin parked commit",
+		}); err != nil {
+			log.Warnf("Could not pin parked commit %s: %v", p.Head, err)
+		}
 	}
 
 	// Remove the worktree directories; refs are left untouched.
@@ -149,6 +168,13 @@ func worktreeDirty(ctx context.Context, repo *git.Repository, path string) (bool
 	}
 
 	return false, nil
+}
+
+// parkRef is the ref under which a parked commit is pinned so it stays
+// reachable while the repository is in exclusive mode. It is keyed by the
+// commit hash, so it is unique and needs no separate bookkeeping.
+func parkRef(head string) string {
+	return "refs/gs-park/" + head
 }
 
 // anchorForWorktree returns the anchor branch registered for the worktree

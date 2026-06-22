@@ -25,6 +25,11 @@ type ParkedWorktree struct {
 	// Empty if the worktree was in detached-HEAD state.
 	Branch string
 
+	// Head is the commit hash the worktree's HEAD pointed at.
+	// Restore uses it to re-create a detached worktree at the right
+	// commit, and as a fallback when Branch no longer exists.
+	Head string
+
 	// Anchor is the anchor branch the worktree owned, if any.
 	// Recorded for legibility; restore re-checks-out Branch, and the
 	// anchor registration itself survives parking untouched.
@@ -39,6 +44,7 @@ type exclusiveInfo struct {
 type parkedWorktreeInfo struct {
 	Path   string `json:"path"`
 	Branch string `json:"branch,omitempty"`
+	Head   string `json:"head,omitempty"`
 	Anchor string `json:"anchor,omitempty"`
 }
 

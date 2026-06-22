@@ -23,8 +23,8 @@ func TestStore_Exclusive(t *testing.T) {
 	assert.Empty(t, store.ParkedWorktrees())
 
 	worktrees := []state.ParkedWorktree{
-		{Path: "/wt/a", Branch: "feat-a", Anchor: "anchor-a"},
-		{Path: "/wt/b", Branch: "feat-b"},
+		{Path: "/wt/a", Branch: "feat-a", Head: "hasha", Anchor: "anchor-a"},
+		{Path: "/wt/b", Head: "hashb"}, // detached
 	}
 	require.NoError(t, store.Park(ctx, worktrees))
 

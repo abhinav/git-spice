@@ -11,8 +11,9 @@ removed; the branches themselves are left untouched, so the entire graph remains
 reachable from the primary checkout. Run 'gs repo restore' to leave exclusive
 mode and re-create the worktrees.
 
-Worktrees with uncommitted changes are refused unless --force is given, which
-discards those changes. The manifest is written before any worktree is removed,
+A worktree with staged, unstaged, or untracked changes is refused unless --force
+is given, which discards those changes. Stashes are repository-global and
+are never discarded. The manifest is written before any worktree is removed,
 so an interrupted park can be resumed by re-running the command.
 
 Flags:
