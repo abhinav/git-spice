@@ -195,11 +195,29 @@ func ConfigSanitizers(cfg ForgeConfig, canonical ForgeConfig) []Sanitizer {
 	addSanitizer(cfg.Reviewer, canonical.Reviewer)
 	addSanitizer(cfg.Assignee, canonical.Assignee)
 
+	sortSanitizers(sanitizers)
+
+	return sanitizers
+}
+
+// GiteaConfigSanitizers returns sanitizers for Gitea test configuration.
+func GiteaConfigSanitizers(cfg GiteaConfig, canonical GiteaConfig) []Sanitizer {
+	sanitizers := ConfigSanitizers(cfg.ForgeConfig, canonical.ForgeConfig)
+	if cfg.URL != "" && cfg.URL != canonical.URL {
+		sanitizers = append(sanitizers, Sanitizer{
+			Replace: cfg.URL,
+			With:    canonical.URL,
+		})
+		sortSanitizers(sanitizers)
+	}
+
+	return sanitizers
+}
+
+func sortSanitizers(sanitizers []Sanitizer) {
 	sort.SliceStable(sanitizers, func(i, j int) bool {
 		return len(sanitizers[i].Replace) > len(sanitizers[j].Replace)
 	})
-
-	return sanitizers
 }
 
 // Sanitizer is re-exported from httptest for convenience.

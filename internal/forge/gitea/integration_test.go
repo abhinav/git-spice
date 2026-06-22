@@ -14,7 +14,6 @@ import (
 	giteaforge "go.abhg.dev/gs/internal/forge/gitea"
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -39,7 +38,7 @@ import (
 // in update mode against a Docker Gitea container on every PR.
 
 // testConfig returns the Gitea test configuration and sanitizers for VCR fixtures.
-func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []httptest.Sanitizer) {
+func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []forgetest.Sanitizer) {
 	t.Helper()
 	if !forgetest.Update() {
 		return forgetest.CanonicalGiteaConfig(), nil
@@ -60,26 +59,7 @@ func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []httptest.
 		},
 	}
 
-	sanitizers = []httptest.Sanitizer{}
-	for _, pair := range [][2]string{
-		{cfg.URL, canonical.URL},
-		{cfg.Owner, canonical.Owner},
-		{cfg.Repo, canonical.Repo},
-		{cfg.ForkOwner, canonical.ForkOwner},
-		{cfg.ForkRepo, canonical.ForkRepo},
-		{cfg.Reviewer, canonical.Reviewer},
-		{cfg.Assignee, canonical.Assignee},
-	} {
-		actual, canon := pair[0], pair[1]
-		if actual != "" && actual != canon {
-			sanitizers = append(sanitizers, httptest.Sanitizer{
-				Replace: actual,
-				With:    canon,
-			})
-		}
-	}
-
-	return cfg, sanitizers
+	return cfg, forgetest.GiteaConfigSanitizers(cfg, canonical)
 }
 
 func envOr(envVar string, fallback string) string {
@@ -105,9 +85,9 @@ func skipIfNoFixtures(t *testing.T) {
 	if forgetest.Update() {
 		return
 	}
-	fixturesDir := filepath.Join("testdata", t.Name())
-	if _, err := os.Stat(fixturesDir); os.IsNotExist(err) {
-		t.Skipf("no VCR fixtures at %s -- run with -update against a Gitea instance to record", fixturesDir)
+	fixturePath := filepath.Join("testdata", "fixtures", t.Name()+".yaml")
+	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
+		t.Skipf("no VCR fixture at %s -- run with -update against a Gitea instance to record", fixturePath)
 	}
 }
 
