@@ -32,7 +32,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 	var items []*forge.FindChangeItem
 	for _, state := range states {
-		prs, err := r.listAllPRsByState(ctx, state, opts.Limit)
+		prs, err := r.listAllPRsByState(ctx, state)
 		if err != nil {
 			return nil, fmt.Errorf("find changes by branch (%s): %w", state, err)
 		}
@@ -59,7 +59,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 }
 
 // listAllPRsByState fetches all PRs with the given state, paginating as needed.
-func (r *Repository) listAllPRsByState(ctx context.Context, state string, maxItems int) ([]*giteagw.PullRequest, error) {
+func (r *Repository) listAllPRsByState(ctx context.Context, state string) ([]*giteagw.PullRequest, error) {
 	var all []*giteagw.PullRequest
 	page := int64(1)
 	pageSize := int64(50)
@@ -74,7 +74,7 @@ func (r *Repository) listAllPRsByState(ctx context.Context, state string, maxIte
 			return nil, err
 		}
 		all = append(all, prs...)
-		if resp.NextPage == 0 || len(all) >= maxItems*2 {
+		if resp.NextPage == 0 {
 			break
 		}
 		page = int64(resp.NextPage)
