@@ -409,7 +409,17 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 			continue // already injected
 		}
 
+		// An internal anchor is normally rooted at its pinned base, but
+		// that base may be absent from a filtered view (e.g. it lives
+		// downstack in another worktree). Falling through to the linking
+		// step below would drop the anchor's edge and silently hide its
+		// whole subtree, so root it at the display trunk instead. The
+		// pinned base is always a tracked branch, so if it is displayed
+		// it is already in itemByName at this point.
 		base := cmp.Or(anchor.Base, displayTrunk)
+		if _, shown := itemByName[base]; !shown {
+			base = displayTrunk
+		}
 		anchorItem := &BranchItem{
 			Name:       anchor.Branch,
 			Base:       base,

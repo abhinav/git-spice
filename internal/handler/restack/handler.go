@@ -31,6 +31,10 @@ var _ GitWorktree = (*git.Worktree)(nil)
 // Store is a subset of the state.Store interface.
 type Store interface {
 	Trunk() string
+
+	// TrunkFor returns the trunk in effect for a worktree: its anchor
+	// if it has one, else the canonical trunk.
+	TrunkFor(worktree string) string
 }
 
 // Service is a subset of the spice.Service interface.
@@ -106,12 +110,14 @@ type Request struct {
 	// checked out in the given worktree.
 	WorktreeFilter string
 
-	// WholeRepo extends an upstack-from-trunk restack
-	// to also cover stacks rooted at anchors
-	// (per-worktree trunks),
-	// which are otherwise disconnected from the canonical trunk.
+	// WholeRepo also adds every stack rooted at an anchor
+	// (a per-worktree trunk) to the restack set,
+	// regardless of req.Branch.
+	// Anchors are graph roots disconnected from the canonical trunk,
+	// so an upstack-from-trunk traversal never reaches them.
 	//
-	// It has no effect unless req.Branch is the canonical trunk.
+	// Combine with WorktreeFilter to restack the anchor-rooted stack
+	// of a specific worktree.
 	WholeRepo bool
 
 	// SkipCheckout skips checking out req.Branch
@@ -222,6 +228,18 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 		) {
 			for _, b := range stack {
 				allowed[b] = struct{}{}
+			}
+		}
+
+		// A worktree owns the stack rooted at its anchor even when no
+		// tracked branch from that stack is currently checked out here
+		// (e.g. the anchor itself is checked out). StacksInWorktree only
+		// sees checked-out tracked branches, so add the anchor's upstack
+		// explicitly; otherwise '-w' from an anchor worktree restacks
+		// nothing.
+		if anchor := h.Store.TrunkFor(req.WorktreeFilter); anchor != h.Store.Trunk() {
+			for branch := range branchGraph.Upstack(anchor) {
+				allowed[branch] = struct{}{}
 			}
 		}
 

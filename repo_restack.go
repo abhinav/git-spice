@@ -52,13 +52,16 @@ func (cmd *repoRestackCmd) Run(
 		ContinueCommand: []string{"repo", "restack"},
 		SkipCheckout:    true, // caller handles checkout
 	}
+	// WholeRepo seeds the restack set with stacks rooted at anchors
+	// (per-worktree trunks), which are disconnected from the canonical
+	// trunk and so are never reached by the upstack-from-trunk walk.
+	// It is always needed: a '-w' restack run from inside an anchor
+	// worktree must include that worktree's own anchor-rooted stack
+	// before WorktreeFilter narrows the set to this worktree.
+	req.WholeRepo = true
 	if cmd.Worktree {
 		// Scope to stacks touching this worktree.
 		req.WorktreeFilter = wt.RootDir()
-	} else {
-		// Whole repo: also reach stacks rooted at anchors,
-		// which are disconnected from the canonical trunk.
-		req.WholeRepo = true
 	}
 
 	count, err := handler.Restack(ctx, &req)
