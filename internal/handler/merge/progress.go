@@ -110,14 +110,6 @@ type widgetMergeProgress struct {
 	cancel  context.CancelFunc
 }
 
-const (
-	// The merge progress widget needs enough room for the bar,
-	// the summary row,
-	// and one or two status lines without consuming the terminal.
-	mergeProgressScrollRegionMinHeight = 4
-	mergeProgressScrollRegionMaxHeight = 8
-)
-
 func newWidgetMergeProgress(
 	runner ui.ModelView,
 	theme ui.Theme,
@@ -155,10 +147,7 @@ func (p *widgetMergeProgress) Start(
 		events: p.events,
 	}
 	go func() {
-		p.err = p.runner.RunModel(model, &ui.RunOptions{
-			ScrollRegionMinHeight: mergeProgressScrollRegionMinHeight,
-			ScrollRegionMaxHeight: mergeProgressScrollRegionMaxHeight,
-		})
+		p.err = p.runner.RunModel(model, nil)
 		if errors.Is(model.Err(), mergeprogress.ErrCanceled) {
 			p.cancel()
 		}

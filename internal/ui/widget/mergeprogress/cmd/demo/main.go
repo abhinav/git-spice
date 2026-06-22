@@ -4,7 +4,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -31,14 +30,10 @@ func main() {
 	flag.DurationVar(&req.tick, "tick", 750*time.Millisecond, "animation tick")
 	flag.IntVar(&req.width, "width", 0, "initial widget width")
 	flag.IntVar(&req.height, "height", 0, "initial terminal height")
-	flag.IntVar(&req.regionMinHeight, "region-min-height", 4,
-		"minimum bottom rows reserved for the widget")
-	flag.IntVar(&req.regionMaxHeight, "region-max-height", 8,
-		"maximum bottom rows reserved for the widget")
 	flag.BoolVar(&req.dark, "dark", true, "use the dark theme")
 	flag.Parse()
 
-	if err := req.run(); err != nil {
+	if err := req.run(ui.NewOutputWriter(os.Stdout)); err != nil {
 		fmt.Fprintf(os.Stderr, "mergeprogress demo: %v\n", err)
 		os.Exit(1)
 	}
@@ -58,13 +53,10 @@ type request struct {
 	tick    time.Duration
 	width   int
 	height  int
-
-	regionMinHeight int
-	regionMaxHeight int
-	dark            bool
+	dark    bool
 }
 
-func (r *request) run() error {
+func (r *request) run(output *ui.OutputWriter) error {
 	widget := mergeprogress.New(r.progressItems()...).
 		WithTheme(r.theme())
 	if r.message != "" {
@@ -80,8 +72,8 @@ func (r *request) run() error {
 			states: r.states(),
 			tick:   r.tick,
 			log: silog.New(&colorprofile.Writer{
-				Forward: crlfWriter{os.Stdout},
-				Profile: colorprofile.Detect(os.Stdout, os.Environ()),
+				Forward: output,
+				Profile: colorprofile.Detect(output.Unwrap(), os.Environ()),
 			}, &silog.Options{
 				Level: silog.LevelDebug,
 			}),
@@ -90,12 +82,10 @@ func (r *request) run() error {
 	}
 
 	if err := ui.RunModel(model, &ui.RunOptions{
-		Input:                 os.Stdin,
-		Output:                os.Stdout,
-		Width:                 r.width,
-		Height:                r.height,
-		ScrollRegionMinHeight: r.regionMinHeight,
-		ScrollRegionMaxHeight: r.regionMaxHeight,
+		Input:  os.Stdin,
+		Output: output,
+		Width:  r.width,
+		Height: r.height,
 	}); err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}
@@ -176,14 +166,17 @@ func (m *demoModel) advance() tea.Cmd {
 		if state == mergeprogress.StateActive {
 			m.states[idx] = mergeprogress.StateMerged
 			itemID := itemID(idx)
-			m.logf("%s: pulled 1 new commit(s)", itemID)
 			_, cmd := m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateMerged,
 				Message: itemID + ": merged",
 			})
-			m.logf("%s: deleted (was %s)", itemID, fakeHash(idx))
-			return tea.Batch(cmd, m.nextTick())
+			return tea.Batch(
+				cmd,
+				m.logf("%s: pulled 1 new commit(s)", itemID),
+				m.logf("%s: deleted (was %s)", itemID, fakeHash(idx)),
+				m.nextTick(),
+			)
 		}
 	}
 
@@ -191,16 +184,19 @@ func (m *demoModel) advance() tea.Cmd {
 		if state == mergeprogress.StatePending {
 			m.states[idx] = mergeprogress.StateActive
 			itemID := itemID(idx)
-			m.logf("%s: retargeting #%d onto main...",
-				itemID, changeNumber(idx))
 			_, cmd := m.Widget.Update(mergeprogress.Event{
 				ItemID:  itemID,
 				State:   mergeprogress.StateActive,
 				Message: itemID + ": waiting for CI checks",
 			})
-			m.logf("%s: updated #%d: https://example.test/pull/%d",
-				itemID, changeNumber(idx), changeNumber(idx))
-			return tea.Batch(cmd, m.nextTick())
+			return tea.Batch(
+				cmd,
+				m.logf("%s: retargeting #%d onto main...",
+					itemID, changeNumber(idx)),
+				m.logf("%s: updated #%d: https://example.test/pull/%d",
+					itemID, changeNumber(idx), changeNumber(idx)),
+				m.nextTick(),
+			)
 		}
 	}
 
@@ -213,9 +209,12 @@ func (m *demoModel) nextTick() tea.Cmd {
 	})
 }
 
-func (m *demoModel) logf(format string, args ...any) {
-	if m.logs {
-		m.log.Infof(format, args...)
+func (m *demoModel) logf(format string, args ...any) tea.Cmd {
+	return func() tea.Msg {
+		if m.logs {
+			m.log.Infof(format, args...)
+		}
+		return nil
 	}
 }
 
@@ -229,23 +228,4 @@ func changeNumber(idx int) int {
 
 func fakeHash(idx int) string {
 	return fmt.Sprintf("%06x", 0xabc000+idx)
-}
-
-type crlfWriter struct {
-	w io.Writer
-}
-
-func (w crlfWriter) Write(p []byte) (int, error) {
-	for _, b := range p {
-		if b == '\n' {
-			if _, err := w.w.Write([]byte{'\r', '\n'}); err != nil {
-				return 0, err
-			}
-			continue
-		}
-		if _, err := w.w.Write([]byte{b}); err != nil {
-			return 0, err
-		}
-	}
-	return len(p), nil
 }

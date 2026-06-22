@@ -23,13 +23,6 @@ func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("progress model did not exit")
 	}
-	require.NotNil(t, view.opts)
-	require.Equal(t,
-		mergeProgressScrollRegionMinHeight,
-		view.opts.ScrollRegionMinHeight)
-	require.Equal(t,
-		mergeProgressScrollRegionMaxHeight,
-		view.opts.ScrollRegionMaxHeight)
 
 	done := make(chan error, 1)
 	go func() {
