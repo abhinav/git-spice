@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rogpeppe/go-internal/testscript"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/io/ioutil"
 	"gopkg.in/yaml.v3"
@@ -274,11 +275,31 @@ runCommand:
 		}
 
 	case "set-status":
-		if len(args) != 3 {
-			ts.Fatalf("usage: shamhub set-status <owner/repo> <pr> <status>")
-		}
 		if sh == nil {
 			ts.Fatalf("ShamHub not initialized")
+		}
+
+		logw, closeLogw := ioutil.PrintfWriter(ts.Logf, "shamhub set-status: ")
+		ts.Defer(closeLogw)
+
+		flag := flag.NewFlagSet("shamhub set-status", flag.ContinueOnError)
+		flag.SetOutput(logw)
+		flag.Usage = func() {
+			fmt.Fprintln(logw,
+				"usage: shamhub set-status --name <name> "+
+					"<owner/repo> <pr> <status>")
+		}
+
+		name := flag.String("name", "", "status check name")
+		ts.Check(flag.Parse(args))
+		args = flag.Args()
+		if len(args) != 3 {
+			flag.Usage()
+			ts.Fatalf("expected 3 arguments, got %d", len(args))
+		}
+		if *name == "" {
+			flag.Usage()
+			ts.Fatalf("check name is required")
 		}
 
 		ownerRepo, prStr, status := args[0], args[1], args[2]
@@ -296,7 +317,56 @@ runCommand:
 			ts.Fatalf("%s", err)
 		}
 
-		ts.Check(sh.SetChangeChecksState(owner, repo, pr, state))
+		ts.Check(sh.SetChangeCheck(owner, repo, pr, forge.ChangeCheck{
+			Name:  *name,
+			State: state,
+		}))
+
+	case "set-mergeability":
+		if sh == nil {
+			ts.Fatalf("ShamHub not initialized")
+		}
+
+		logw, closeLogw := ioutil.PrintfWriter(ts.Logf, "shamhub set-mergeability: ")
+		ts.Defer(closeLogw)
+
+		flag := flag.NewFlagSet("shamhub set-mergeability", flag.ContinueOnError)
+		flag.SetOutput(logw)
+		flag.Usage = func() {
+			fmt.Fprintln(logw,
+				"usage: shamhub set-mergeability "+
+					"[-reason <reason>] <owner/repo> <pr> <state>")
+		}
+
+		reason := flag.String("reason", "", "mergeability reason")
+		ts.Check(flag.Parse(args))
+		args = flag.Args()
+		if len(args) != 3 {
+			flag.Usage()
+			ts.Fatalf("expected 3 arguments, got %d", len(args))
+		}
+
+		ownerRepo, prStr, status := args[0], args[1], args[2]
+		owner, repo, ok := strings.Cut(ownerRepo, "/")
+		if !ok {
+			ts.Fatalf("invalid owner/repo: %s", ownerRepo)
+		}
+		repo = strings.TrimSuffix(repo, ".git")
+		pr, err := strconv.Atoi(prStr)
+		if err != nil {
+			ts.Fatalf("invalid PR number: %s", err)
+		}
+		mergeability, err := parseMergeability(status, *reason)
+		if err != nil {
+			ts.Fatalf("%s", err)
+		}
+
+		ts.Check(sh.SetChangeMergeability(SetChangeMergeabilityRequest{
+			Owner:        owner,
+			Repo:         repo,
+			Number:       pr,
+			Mergeability: mergeability,
+		}))
 
 	case "merge":
 		if sh == nil {

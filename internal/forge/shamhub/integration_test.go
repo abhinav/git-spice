@@ -177,19 +177,19 @@ func TestIntegration(t *testing.T) {
 				}))
 			}
 		},
-		SetChangeChecksState: func(
+		SetChangeCheck: func(
 			t *testing.T,
 			_ *http.Client,
 			repo forge.Repository,
 			changeID forge.ChangeID,
 			_ git.Hash,
-			state forge.ChecksState,
+			check forge.ChangeCheck,
 		) {
 			require.NoError(t,
-				repo.(*forgeRepository).setChangeChecksState(
+				repo.(*forgeRepository).setChangeCheck(
 					t.Context(),
 					changeID,
-					state,
+					check,
 				))
 		},
 		SetCommentsPageSize: SetListChangeCommentsPageSize,

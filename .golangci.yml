@@ -72,6 +72,9 @@ linters:
         - (*go.abhg.dev/gs/internal/log.Logger).Log
         - (*go.abhg.dev/gs/internal/log.Logger).With
 
+    usetesting:
+      context-background: true
+
   exclusions:
     generated: lax
     rules:

@@ -5,17 +5,11 @@ import (
 	"fmt"
 
 	"github.com/shurcooL/githubv4"
-	"go.abhg.dev/gs/internal/forge"
 )
 
 // NewRepository re-exports the private NewRepository function
 // for testing.
 var NewRepository = newRepository
-
-// MergeChange merges a pull request using the production method.
-func MergeChange(ctx context.Context, repo *Repository, id *PR) error {
-	return repo.MergeChange(ctx, id, forge.MergeChangeOptions{})
-}
 
 func CloseChange(ctx context.Context, repo *Repository, id *PR) error {
 	var m struct {

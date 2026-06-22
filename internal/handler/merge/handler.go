@@ -1,7 +1,8 @@
-// Package merge implements the downstack merge command.
+// Package merge implements forge-backed merge commands.
 package merge
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -58,25 +59,67 @@ type GitRepository interface {
 	) (ahead, behind int, err error)
 }
 
-// Request is a request to merge a branch and its downstack.
-type Request struct {
+// Options controls behavior shared by forge-backed merge commands.
+type Options struct {
+	// Method selects the forge merge strategy.
+	// Empty means use the configured or forge default.
+	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
+
+	// MergeReadinessTimeout is the maximum time for each forge-readiness wait,
+	// including pushed-head visibility and merge readiness.
+	// Zero means check once and fail if merge readiness is not reached.
+	MergeReadinessTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
+}
+
+// DownstackMergeOptions controls downstack merge behavior.
+type DownstackMergeOptions struct {
+	Options
+
+	// NoWait skips polling for a single merge to propagate.
+	// Server-dependent cleanup is left to a later sync.
+	NoWait bool `help:"Skip polling for a single branch merge to propagate."`
+
+	// NoBranchCheck skips stale base validation before merging.
+	NoBranchCheck bool `help:"Skip stale base validation before merging."`
+}
+
+// DownstackMergeRequest asks Handler to merge a branch
+// and its downstack ancestors bottom-up.
+type DownstackMergeRequest struct {
 	Branch string // required
 
-	// NoWait skips polling for the merge to propagate.
-	// Server-dependent cleanup is left to a later sync.
-	NoWait bool
+	Options *DownstackMergeOptions // optional
 
-	// NoBranchCheck skips stale base validation.
-	NoBranchCheck bool
+	// BranchGraph reuses branch graph data already loaded by the caller.
+	BranchGraph *spice.BranchGraph // optional
+}
 
-	// Method selects the forge merge strategy.
-	// Empty means use the forge default.
-	Method forge.MergeMethod
+// BranchMergeRequest asks Handler to merge one branch
+// that is configured directly on trunk.
+type BranchMergeRequest struct {
+	Branch string // required
 
-	// BuildTimeout is the maximum time to wait
-	// for CI checks to pass before each merge.
-	// Zero means check once and fail if not ready.
-	BuildTimeout time.Duration
+	Options *Options // optional
+}
+
+// StackMergeOptions controls stack merge behavior.
+type StackMergeOptions struct {
+	Options
+
+	// NoBranchCheck skips stale base validation before merging.
+	NoBranchCheck bool `help:"Skip stale base validation before merging."`
+
+	// FailFast stops the merge queue after the first branch failure.
+	FailFast bool `help:"Stop the merge queue after the first branch failure."`
+}
+
+// StackMergeRequest asks Handler to merge a branch,
+// its downstack branches down to trunk,
+// and its upstack branches.
+type StackMergeRequest struct {
+	Branch string // required
+
+	Options *StackMergeOptions // optional
 }
 
 // Handler merges change requests via the forge API.
@@ -98,8 +141,9 @@ type Handler struct {
 // MergeDownstack merges the given branch
 // and all its downstack ancestors bottom-up.
 func (h *Handler) MergeDownstack(
-	ctx context.Context, req *Request,
+	ctx context.Context, req *DownstackMergeRequest,
 ) error {
+	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
 	plan, err := h.buildPlan(ctx, req)
 	if err != nil {
 		return err
@@ -110,21 +154,107 @@ func (h *Handler) MergeDownstack(
 		return nil
 	}
 
-	if err := h.confirm(plan); err != nil {
+	if err := h.confirm(
+		plan,
+		fmt.Sprintf("Merge %d change(s) bottom-up?", len(plan)),
+	); err != nil {
 		return err
 	}
 
-	return h.executePlan(ctx, plan, req)
+	return h.executePlan(ctx, plan, mergeExecutionOptions{
+		Method:                opts.Method,
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		NoWait:                opts.NoWait,
+	})
+}
+
+// MergeBranch merges one branch that is configured directly on trunk.
+func (h *Handler) MergeBranch(
+	ctx context.Context, req *BranchMergeRequest,
+) error {
+	opts := cmp.Or(req.Options, &Options{})
+	graph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	branch, ok := graph.Lookup(req.Branch)
+	if !ok {
+		return fmt.Errorf("branch %q is not tracked", req.Branch)
+	}
+	trunk := h.Store.Trunk()
+	if branch.Base != trunk {
+		return fmt.Errorf(
+			"branch %q is based on %q, not trunk; "+
+				"use 'gs downstack merge --branch %s' "+
+				"to merge stack branches bottom-up",
+			req.Branch, branch.Base, req.Branch,
+		)
+	}
+
+	return h.MergeDownstack(ctx, &DownstackMergeRequest{
+		Branch: req.Branch,
+		Options: &DownstackMergeOptions{
+			Options: *opts,
+		},
+		BranchGraph: graph,
+	})
+}
+
+// MergeStack merges the given branch,
+// its downstack branches down to trunk,
+// and its upstack branches.
+func (h *Handler) MergeStack(
+	ctx context.Context, req *StackMergeRequest,
+) error {
+	opts := cmp.Or(req.Options, &StackMergeOptions{})
+	graph, err := h.Service.BranchGraph(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("build branch graph: %w", err)
+	}
+
+	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
+		Graph:         graph,
+		Branches:      slices.Collect(graph.Stack(req.Branch)),
+		NoBranchCheck: opts.NoBranchCheck,
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(plan) == 0 {
+		h.Log.Info("No open changes to merge.")
+		return nil
+	}
+
+	if err := h.confirm(
+		plan,
+		fmt.Sprintf("Merge %d change(s)?", len(plan)),
+	); err != nil {
+		return err
+	}
+
+	return h.executePlan(ctx, plan, mergeExecutionOptions{
+		Method:                opts.Method,
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		FailFast:              opts.FailFast,
+	})
 }
 
 // mergeItem is one queue item in a downstack merge plan.
 //
-// buildPlan fills branch, changeID, and upstreamBranch from the branch graph.
-// validateSynced later fills headHash after it verifies the local branch
-// matches its upstream ref.
+// buildPlanFromBranches fills branch, base, changeID, and upstreamBranch
+// from the branch graph for either a linear downstack
+// or a graph-shaped stack merge.
+// validateSynced later fills headHash after it verifies
+// the local branch matches its upstream ref.
 type mergeItem struct {
 	// branch is the local branch to merge.
 	branch string
+
+	// base is the configured base branch observed
+	// when the plan was built.
+	base string
 
 	// changeID identifies the forge Change Request to merge.
 	changeID forge.ChangeID
@@ -142,11 +272,16 @@ type mergeItem struct {
 // contains only open Change Requests,
 // and has local push-safety metadata ready for execution.
 func (h *Handler) buildPlan(
-	ctx context.Context, req *Request,
+	ctx context.Context, req *DownstackMergeRequest,
 ) ([]*mergeItem, error) {
-	graph, err := h.Service.BranchGraph(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build branch graph: %w", err)
+	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
+	graph := req.BranchGraph
+	if graph == nil {
+		var err error
+		graph, err = h.Service.BranchGraph(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("build branch graph: %w", err)
+		}
 	}
 
 	// Build the queue bottom-up because each merge changes
@@ -154,10 +289,34 @@ func (h *Handler) buildPlan(
 	downstack := slices.Collect(graph.Downstack(req.Branch))
 	slices.Reverse(downstack)
 
-	items := make([]*mergeItem, 0, len(downstack))
-	ids := make([]forge.ChangeID, 0, len(downstack))
-	for _, name := range downstack {
-		branch, ok := graph.Lookup(name)
+	return h.buildPlanFromBranches(ctx, mergePlanRequest{
+		Graph:         graph,
+		Branches:      downstack,
+		NoBranchCheck: opts.NoBranchCheck,
+		NoWait:        opts.NoWait,
+	})
+}
+
+// mergePlanRequest selects the local branches that become merge queue items.
+//
+// Branches provides the prompt order.
+// The merge queue still enforces base dependencies before execution.
+type mergePlanRequest struct {
+	Graph *spice.BranchGraph // required
+
+	Branches []string // required
+
+	NoBranchCheck bool
+	NoWait        bool
+}
+
+func (h *Handler) buildPlanFromBranches(
+	ctx context.Context, req mergePlanRequest,
+) ([]*mergeItem, error) {
+	items := make([]*mergeItem, 0, len(req.Branches))
+	ids := make([]forge.ChangeID, 0, len(req.Branches))
+	for _, name := range req.Branches {
+		branch, ok := req.Graph.Lookup(name)
 		if !ok {
 			return nil, fmt.Errorf("branch %q is not tracked", name)
 		}
@@ -170,11 +329,15 @@ func (h *Handler) buildPlan(
 
 		item := &mergeItem{
 			branch:         name,
+			base:           branch.Base,
 			changeID:       branch.Change.ChangeID(),
 			upstreamBranch: branch.UpstreamBranch,
 		}
 		items = append(items, item)
 		ids = append(ids, item.changeID)
+	}
+	if len(items) == 0 {
+		return nil, nil
 	}
 
 	statuses, err := h.RemoteRepository.ChangeStatuses(ctx, ids)
@@ -183,7 +346,7 @@ func (h *Handler) buildPlan(
 	}
 
 	// Drop already-merged changes from the queue,
-	// but stop if any downstack Change Request was closed without merging.
+	// but stop if any Change Request was closed without merging.
 	plan := items[:0]
 	for i, item := range items {
 		switch statuses[i].State {
@@ -213,7 +376,9 @@ func (h *Handler) buildPlan(
 	}
 
 	if !req.NoBranchCheck {
-		if err := h.validateFreshBases(ctx, graph, req.Branch); err != nil {
+		if err := h.validateFreshBases(
+			ctx, req.Graph, req.Branches,
+		); err != nil {
 			return nil, fmt.Errorf("validate stale bases: %w", err)
 		}
 	}
@@ -311,7 +476,7 @@ func (h *Handler) validateSynced(
 	return errors.New(msg.String())
 }
 
-func (h *Handler) confirm(plan []*mergeItem) error {
+func (h *Handler) confirm(plan []*mergeItem, title string) error {
 	if !ui.Interactive(h.View) {
 		return nil
 	}
@@ -324,12 +489,7 @@ func (h *Handler) confirm(plan []*mergeItem) error {
 
 	proceed := true
 	prompt := ui.NewConfirm().
-		WithTitle(
-			fmt.Sprintf(
-				"Merge %d change(s) bottom-up?",
-				len(plan),
-			),
-		).
+		WithTitle(title).
 		WithDescription(desc.String()).
 		WithValue(&proceed)
 	if err := ui.Run(h.View, prompt); err != nil {
@@ -342,82 +502,51 @@ func (h *Handler) confirm(plan []*mergeItem) error {
 	return nil
 }
 
+type mergeExecutionOptions struct {
+	Method                forge.MergeMethod
+	MergeReadinessTimeout time.Duration
+	NoWait                bool
+	FailFast              bool
+}
+
 func (h *Handler) executePlan(
-	ctx context.Context, plan []*mergeItem, req *Request,
-) error {
-	trunk := h.Store.Trunk()
-
-	for i, item := range plan {
-		lastItem := i == len(plan)-1
-
-		// After each lower branch merges,
-		// prepare the next branch on top of updated trunk state.
-		if i > 0 {
-			if err := h.prepareForMerge(ctx, item); err != nil {
-				return fmt.Errorf("prepare %q: %w", item.branch, err)
-			}
-		}
-
-		// The forge will only merge a change that targets trunk.
-		// Re-check immediately before each merge because prior queue items
-		// and repo sync may have changed the server-side base.
-		change, err := h.ensureTargetsTrunk(
-			ctx, item, trunk,
+	ctx context.Context,
+	plan []*mergeItem,
+	opts mergeExecutionOptions,
+) (err error) {
+	var progress mergeProgress
+	if runner, ok := h.View.(ui.ModelView); ok {
+		widgetProgress := newWidgetMergeProgress(
+			runner, h.View.Theme(),
 		)
-		if err != nil {
-			return fmt.Errorf(
-				"ensure %q targets trunk: %w",
-				item.branch, err,
-			)
-		}
+		progress = widgetProgress
+		ctx = widgetProgress.Start(ctx, plan)
+		defer func() {
+			err = errors.Join(err, widgetProgress.Finish())
+		}()
+	} else {
+		progress = newLogMergeProgress(h.Log)
+	}
 
-		// CI is checked after retargeting and restacking
-		// so each merge waits on the exact change being merged.
-		if err := h.awaitChecks(
-			ctx, item, req.BuildTimeout,
-		); err != nil {
-			return fmt.Errorf(
-				"wait for checks on %q: %w",
-				item.branch, err,
-			)
-		}
+	err = (&mergePlanExecutor{
+		RemoteRepository: h.RemoteRepository,
+		Repository:       h.Repository,
 
-		h.Log.Infof(
-			"%s: merging %v: %s",
-			item.branch, item.changeID, change.URL,
-		)
-		if err := h.RemoteRepository.MergeChange(
-			ctx, item.changeID,
-			forge.MergeChangeOptions{
-				Method:   req.Method,
-				HeadHash: item.headHash,
-			},
-		); err != nil {
-			return fmt.Errorf("merge %q: %w", item.branch, err)
-		}
+		Service: h.Service,
+		Restack: h.Restack,
+		Submit:  h.Submit,
+		Sync:    h.Sync,
 
-		if req.NoWait {
-			continue
-		}
+		Progress: progress,
 
-		// Wait until the forge reports the merge.
-		if err := h.awaitMerged(ctx, item); err != nil {
-			return fmt.Errorf("await merge of %q: %w",
-				item.branch, err)
-		}
-
-		// SyncTrunk updates trunk,
-		// deletes merged branches,
-		// and retargets their upstacks.
-		if err := h.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
-			ClosedChanges: sync.ClosedChangesIgnore,
-		}); err != nil {
-			if !lastItem {
-				return fmt.Errorf("sync trunk: %w", err)
-			}
-			h.Log.Warn("Unable to sync trunk after merge",
-				"error", err)
-		}
+		Trunk:                 h.Store.Trunk(),
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		Method:                opts.Method,
+		NoWait:                opts.NoWait,
+		FailFast:              opts.FailFast,
+	}).Execute(ctx, plan)
+	if err != nil {
+		return err
 	}
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
@@ -427,12 +556,12 @@ func (h *Handler) executePlan(
 func (h *Handler) validateFreshBases(
 	ctx context.Context,
 	graph *spice.BranchGraph,
-	branch string,
+	branches []string,
 ) error {
 	staleBases, err := spice.FindStaleBases(ctx, graph,
 		func(context.Context) (forge.Repository, error) {
 			return h.RemoteRepository, nil
-		}, []string{branch})
+		}, branches)
 	if err != nil {
 		return fmt.Errorf("find stale bases: %w", err)
 	}
@@ -460,21 +589,21 @@ func (h *Handler) validateFreshBases(
 // This is intentionally outside delete cleanup:
 // the merge queue owns the user-visible restack and submit
 // needed before the branch can be merged.
-func (h *Handler) prepareForMerge(
+func (e *mergePlanExecutor) prepareForMerge(
 	ctx context.Context,
 	item *mergeItem,
 ) error {
-	if err := h.Service.VerifyRestacked(ctx, item.branch); err != nil {
+	if err := e.Service.VerifyRestacked(ctx, item.branch); err != nil {
 		var restackErr *spice.BranchNeedsRestackError
 		if !errors.As(err, &restackErr) {
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 
-		if err := h.Restack.RestackBranch(ctx, item.branch); err != nil {
+		if err := e.Restack.RestackBranch(ctx, item.branch); err != nil {
 			return fmt.Errorf("restack branch: %w", err)
 		}
 
-		if err := h.Submit.Submit(ctx, &submit.Request{
+		if err := e.Submit.Submit(ctx, &submit.Request{
 			Branch: item.branch,
 			Options: &submit.Options{
 				// Publish keeps this on the normal Change Request update path.
@@ -488,7 +617,7 @@ func (h *Handler) prepareForMerge(
 		}
 	}
 
-	head, err := h.Repository.PeelToCommit(ctx, item.branch)
+	head, err := e.Repository.PeelToCommit(ctx, item.branch)
 	if err != nil {
 		return fmt.Errorf("resolve updated head: %w", err)
 	}
@@ -496,49 +625,62 @@ func (h *Handler) prepareForMerge(
 	return nil
 }
 
-// awaitChecks polls until CI checks pass for the given change.
-// Uses truncated exponential backoff.
-func (h *Handler) awaitChecks(
+// awaitChangeHead waits until the forge reports the same change head
+// that the merge loop is about to merge.
+func (e *mergePlanExecutor) awaitChangeHead(
 	ctx context.Context,
 	item *mergeItem,
-	timeout time.Duration,
+	change *forge.FindChangeItem,
 ) error {
 	const (
 		_baseDelay = 10 * time.Second
 		_maxDelay  = 30 * time.Second
 	)
 
-	return h.awaitChecksWithDelay(
-		ctx, item, timeout, _baseDelay, _maxDelay,
+	return e.awaitChangeHeadWithDelay(
+		ctx, item, change, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
 	)
 }
 
-func (h *Handler) awaitChecksWithDelay(
+func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 	ctx context.Context,
 	item *mergeItem,
+	change *forge.FindChangeItem,
 	timeout, baseDelay, maxDelay time.Duration,
 ) error {
+	if item.headHash == "" {
+		return nil
+	}
+	hashMatches := func(got git.Hash) bool {
+		return got != "" &&
+			(item.headHash == got ||
+				strings.HasPrefix(item.headHash.String(), got.String()) ||
+				strings.HasPrefix(got.String(), item.headHash.String()))
+	}
+
+	if hashMatches(change.HeadHash) {
+		return nil
+	}
+
 	delay := baseDelay
 	for attempt := 0; ; attempt++ {
-		state, err := h.RemoteRepository.ChangeChecksState(
-			ctx, item.changeID,
+		statuses, err := e.RemoteRepository.ChangeStatuses(
+			ctx, []forge.ChangeID{item.changeID},
 		)
 		if err != nil {
-			return fmt.Errorf("query checks: %w", err)
+			return fmt.Errorf("query change head: %w", err)
 		}
-		if state == forge.ChecksPassed {
+		if len(statuses) == 0 {
+			return errors.New("forge returned no change status")
+		}
+		if hashMatches(statuses[0].HeadHash) {
 			return nil
-		}
-		if state == forge.ChecksFailed {
-			return fmt.Errorf(
-				"CI checks failed for %q", item.branch,
-			)
 		}
 
 		if timeout == 0 {
 			return fmt.Errorf(
-				"CI checks pending for %q (build-timeout=0)",
-				item.branch,
+				"change head is still %s, want %s",
+				statuses[0].HeadHash, item.headHash,
 			)
 		}
 		if attempt == 0 {
@@ -547,12 +689,79 @@ func (h *Handler) awaitChecksWithDelay(
 			defer cancel()
 		}
 
-		h.Log.Infof("%s: waiting for CI checks", item.branch)
+		e.Progress.Event(mergeProgressEvent{
+			Kind: mergeProgressWaitingForForgeHead,
+			Item: item,
+		})
 		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for CI on %q",
-				item.branch,
-			)
+			return fmt.Errorf("HEAD did not update after %v", timeout)
+		}
+		delay = min(delay*2, maxDelay)
+	}
+}
+
+// awaitMergeability polls until the forge reports that the change is
+// ready to merge.
+// Uses truncated exponential backoff.
+func (e *mergePlanExecutor) awaitMergeability(
+	ctx context.Context,
+	item *mergeItem,
+) error {
+	const (
+		_baseDelay = 10 * time.Second
+		_maxDelay  = 30 * time.Second
+	)
+
+	return e.awaitMergeabilityWithDelay(
+		ctx, item, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
+	)
+}
+
+func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
+	ctx context.Context,
+	item *mergeItem,
+	timeout, baseDelay, maxDelay time.Duration,
+) error {
+	delay := baseDelay
+	for attempt := 0; ; attempt++ {
+		mergeability, err := e.RemoteRepository.ChangeMergeability(
+			ctx, item.changeID,
+		)
+		if err != nil {
+			return fmt.Errorf("check merge readiness: %w", err)
+		}
+		switch mergeability.State {
+		case forge.ChangeMergeabilityReady:
+			e.Progress.Event(mergeProgressEvent{
+				Kind: mergeProgressMergeabilityReady,
+				Item: item,
+			})
+			return nil
+		case forge.ChangeMergeabilityWaiting:
+			if timeout == 0 {
+				return fmt.Errorf("not ready after %v", timeout)
+			}
+		case forge.ChangeMergeabilityBlocked:
+			return fmt.Errorf("blocked: %s", mergeability.Reason)
+		case forge.ChangeMergeabilityUnknown:
+			return errors.New("unknown state")
+		case forge.ChangeMergeabilityUnsupported:
+			return errors.New("unknown state")
+		default:
+			return fmt.Errorf("unknown state: %v", mergeability.State)
+		}
+		if attempt == 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+
+		e.Progress.Event(mergeProgressEvent{
+			Kind: mergeProgressWaitingForMergeability,
+			Item: item,
+		})
+		if err := sleep(ctx, delay); err != nil {
+			return fmt.Errorf("not ready after %v", timeout)
 		}
 		delay = min(delay*2, maxDelay)
 	}
@@ -560,25 +769,22 @@ func (h *Handler) awaitChecksWithDelay(
 
 // ensureTargetsTrunk verifies a change targets trunk
 // on the forge, retargeting if needed.
-func (h *Handler) ensureTargetsTrunk(
+func (e *mergePlanExecutor) ensureTargetsTrunk(
 	ctx context.Context,
 	item *mergeItem,
-	trunk string,
 ) (*forge.FindChangeItem, error) {
-	change, err := h.RemoteRepository.FindChangeByID(
+	change, err := e.RemoteRepository.FindChangeByID(
 		ctx, item.changeID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"check base of %q: %w", item.branch, err,
-		)
+		return nil, fmt.Errorf("check base: %w", err)
 	}
 
-	if change.BaseName == trunk {
+	if change.BaseName == e.Trunk {
 		return change, nil
 	}
 
-	if err := h.retargetChange(ctx, item, trunk); err != nil {
+	if err := e.retargetChange(ctx, item); err != nil {
 		return nil, err
 	}
 	return change, nil
@@ -586,7 +792,7 @@ func (h *Handler) ensureTargetsTrunk(
 
 // awaitMerged polls until the given change shows as merged.
 // Uses exponential backoff starting at 500ms, capped at 8s.
-func (h *Handler) awaitMerged(
+func (e *mergePlanExecutor) awaitMerged(
 	ctx context.Context, item *mergeItem,
 ) error {
 	const (
@@ -604,7 +810,7 @@ func (h *Handler) awaitMerged(
 	// need a more expressive wait state.
 	delay := _initialDelay
 	for {
-		statuses, err := h.RemoteRepository.ChangeStatuses(
+		statuses, err := e.RemoteRepository.ChangeStatuses(
 			ctx, []forge.ChangeID{item.changeID},
 		)
 		if err != nil {
@@ -615,13 +821,12 @@ func (h *Handler) awaitMerged(
 			return nil
 		}
 
-		h.Log.Debugf("%s: waiting for merge to settle",
-			item.branch)
+		e.Progress.Event(mergeProgressEvent{
+			Kind: mergeProgressWaitingForMerge,
+			Item: item,
+		})
 		if err := sleep(ctx, delay); err != nil {
-			return fmt.Errorf(
-				"timed out waiting for %q to merge",
-				item.branch,
-			)
+			return errors.New("timed out waiting for merge")
 		}
 
 		delay = min(delay*2, _maxDelay)
@@ -629,18 +834,20 @@ func (h *Handler) awaitMerged(
 }
 
 // retargetChange updates a change's base to trunk.
-func (h *Handler) retargetChange(
-	ctx context.Context, item *mergeItem, trunk string,
+func (e *mergePlanExecutor) retargetChange(
+	ctx context.Context, item *mergeItem,
 ) error {
-	h.Log.Infof("%s: retargeting %v onto %s",
-		item.branch, item.changeID, trunk)
-	err := h.RemoteRepository.EditChange(
+	e.Progress.Event(mergeProgressEvent{
+		Kind: mergeProgressRetargeting,
+		Item: item,
+		Base: e.Trunk,
+	})
+	err := e.RemoteRepository.EditChange(
 		ctx, item.changeID,
-		forge.EditChangeOptions{Base: trunk},
+		forge.EditChangeOptions{Base: e.Trunk},
 	)
 	if err != nil {
-		return fmt.Errorf("retarget %q to %q: %w",
-			item.branch, trunk, err)
+		return fmt.Errorf("retarget to %q: %w", e.Trunk, err)
 	}
 	return nil
 }

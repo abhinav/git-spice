@@ -452,16 +452,17 @@ whether the branch is in sync with its pushed counterpart.
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
-### spice.merge.buildTimeout
+### spice.merge.readyTimeout
 
 <!-- gs:version unreleased -->
 
-Maximum time $$gs downstack merge$$ waits for CI checks to pass
-before merging each branch in the stack.
+Maximum time merge commands wait for merge readiness before each merge.
+Merge readiness requires the forge to report the pushed head
+and report that the CR is ready to merge.
 
 The value must be a duration string such as
 `30m`, `1h`, `90s`, etc.
-Set to `0` to fail immediately if checks aren't already passing.
+Set to `0` to fail immediately if merge readiness is not already reached.
 
 Defaults to `30m`.
 

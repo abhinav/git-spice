@@ -74,7 +74,7 @@ func TestMultiSelect(t *testing.T) {
 			assert.Equal(t, want, got)
 		},
 		&uitest.RunScriptsOptions{
-			Update: *ui.UpdateFixtures,
+			Update: ui.UpdateFixtures(),
 		},
 		"testdata/script/multi_select",
 	)

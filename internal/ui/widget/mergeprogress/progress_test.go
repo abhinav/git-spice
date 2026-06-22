@@ -15,7 +15,9 @@ import (
 )
 
 func TestWidget_RenderProgression(t *testing.T) {
-	widget := New(makeItems(10)...).WithTheme(ui.DefaultThemeDark())
+	widget := New(makeItems(10)...).
+		WithTheme(ui.DefaultThemeDark()).
+		WithAnimation(false)
 	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 40})
 
 	autogold.Expect(`Merging: 0 of 10 changes
@@ -95,14 +97,18 @@ func TestWidget_Render_scalingKeepsShape(t *testing.T) {
 	}
 	items[7].State = StateActive
 
-	wideWidget := New(items...).WithTheme(ui.DefaultThemeDark())
+	wideWidget := New(items...).
+		WithTheme(ui.DefaultThemeDark()).
+		WithAnimation(false)
 	mustUpdate(t, wideWidget, tea.WindowSizeMsg{Width: 72})
 	mustUpdate(t, wideWidget, Event{
 		Message: "Waiting for CI checks on feature-08 (#108).",
 	})
 	wide := renderPlain(wideWidget)
 
-	narrowWidget := New(items...).WithTheme(ui.DefaultThemeDark())
+	narrowWidget := New(items...).
+		WithTheme(ui.DefaultThemeDark()).
+		WithAnimation(false)
 	mustUpdate(t, narrowWidget, tea.WindowSizeMsg{Width: 24})
 	mustUpdate(t, narrowWidget, Event{
 		Message: "Waiting for CI checks on feature-08 (#108).",
@@ -129,7 +135,9 @@ func TestWidget_Render_failedAndSkipped(t *testing.T) {
 	items[2].State = StateActive
 	items[3].State = StateFailed
 
-	widget := New(items...).WithTheme(ui.DefaultThemeDark())
+	widget := New(items...).
+		WithTheme(ui.DefaultThemeDark()).
+		WithAnimation(false)
 	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 20})
 	mustUpdate(t, widget, Event{
 		Message: "CI checks failed for feature-04 (#104).",

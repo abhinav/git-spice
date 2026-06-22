@@ -1,0 +1,23 @@
+# 'branch track' rejects HEAD as an explicit branch operand.
+
+as 'Test <test@example.com>'
+at '2026-06-20T21:28:29Z'
+
+mkdir repo
+cd repo
+
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git checkout -b feature
+git commit --allow-empty -m 'feature 1'
+
+! gs branch track HEAD
+stderr 'branch "HEAD" does not exist'
+
+gs ls
+cmp stderr $WORK/golden/ls.txt
+
+-- golden/ls.txt --
+main

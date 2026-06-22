@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'branch track: Reject revision names such as HEAD when tracking a branch.'
+time: 2026-06-20T07:17:43.281689-07:00

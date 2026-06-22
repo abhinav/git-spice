@@ -1,0 +1,146 @@
+# 'stack merge' merges the selected branch and its divergent upstacks.
+
+as 'Test <test@example.com>'
+at '2026-06-14T09:35:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a divergent stack:
+# main -> feat1 -> feat2
+#              \-> feat3
+git add feat1.txt
+gs bc feat1 -m 'Add feat1'
+git add feat2.txt
+gs bc feat2 -m 'Add feat2'
+gs bco feat1
+git add feat3.txt
+gs bc feat3 -m 'Add feat3'
+
+# Submit from the branch whose stack includes both divergent upstacks.
+gs bco feat1
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# Merge the stack from the shared branch.
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs stack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feat1: merging #1:'
+stderr 'feat1: #1 was merged'
+stderr 'feat2: restacked on main'
+stderr 'Updated #2'
+stderr 'feat2: merging #2:'
+stderr 'feat2: #2 was merged'
+stderr 'feat3: restacked on main'
+stderr 'Updated #3'
+stderr 'feat3: merging #3:'
+stderr 'feat3: #3 was merged'
+stderr 'All 3 change.s. merged.'
+
+# verify all three changes are now merged
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes-merged.json
+
+-- repo/feat1.txt --
+feature 1
+-- repo/feat2.txt --
+feature 2
+-- repo/feat3.txt --
+feature 3
+-- robot-merge.golden --
+===
+> Merge 3 change(s)?: [Y/n]
+>   feat1 (#1)
+>   feat2 (#2)
+>   feat3 (#3)
+true
+-- golden/changes-merged.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feat1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feat1",
+      "sha": "59bc50146899001ac5f7980229b6e2ac1b058448"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feat2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feat2",
+      "sha": "399f5d2acad8d9b9d72a7db340d9833468b33b1c"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feat3",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feat3",
+      "sha": "a4b82177ae474989019f13f8651c97b97372ca15"
+    }
+  }
+]

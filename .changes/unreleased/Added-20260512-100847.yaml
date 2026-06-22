@@ -1,3 +1,4 @@
 kind: Added
-body: Add 'gs downstack merge' (dsm) to merge a stacked PR series bottom-up with CI gating
+body: >-
+  Add 'gs downstack merge' command to merge CRs from trunk up to a specified branch.
 time: 2026-05-12T10:08:47.691277-04:00

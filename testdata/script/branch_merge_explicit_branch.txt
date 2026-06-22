@@ -1,7 +1,7 @@
-# 'downstack merge' refuses pending CI checks when build-timeout is zero.
+# 'branch merge --branch' refuses to merge when merge readiness is blocked.
 
 as 'Test <test@example.com>'
-at '2026-05-31T08:06:00Z'
+at '2026-06-13T18:29:00Z'
 
 # setup
 cd repo
@@ -18,18 +18,19 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-# create a stack: main -> feature1
+# create a branch directly on trunk
 git add feature1.txt
 gs bc feature1 -m 'Add feature 1'
 
-# submit the branch and mark its checks pending
-gs downstack submit --fill
+# submit the branch and mark merge readiness blocked
+gs branch submit --fill
 stderr 'Created #1'
-shamhub set-status alice/example 1 pending
+shamhub set-mergeability -reason checks alice/example 1 blocked
 
-# With build-timeout=0, pending checks fail immediately.
+# branch merge should stop before sending the merge request.
+gs trunk
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-! gs downstack merge --build-timeout=0
+! gs branch merge --branch feature1
 cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
 cmp stderr $WORK/golden/merge-stderr.txt
 
@@ -45,7 +46,7 @@ This is feature 1
 >   feature1 (#1)
 true
 -- golden/merge-stderr.txt --
-FTL gs: wait for checks on "feature1": CI checks pending for "feature1" (build-timeout=0)
+FTL gs: merge queue item "feature1": wait for merge readiness: blocked: checks
 -- golden/change-1.json --
 {
   "number": 1,
@@ -59,7 +60,7 @@ FTL gs: wait for checks on "feature1": CI checks pending for "feature1" (build-t
       "name": "example"
     },
     "ref": "main",
-    "sha": "ce4327bec5cf5eecf21c061a0ae1e7337b4c0b94"
+    "sha": "fd0c8194fd8dbdd59644d28e87c4be2550429197"
   },
   "head": {
     "repository": {
@@ -67,6 +68,6 @@ FTL gs: wait for checks on "feature1": CI checks pending for "feature1" (build-t
       "name": "example"
     },
     "ref": "feature1",
-    "sha": "e17eba8fee97848e6f17002f39de101206f793b1"
+    "sha": "62c3c4e12506afae52cd50383886ea7a815700c3"
   }
 }

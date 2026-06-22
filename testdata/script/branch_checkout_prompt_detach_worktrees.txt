@@ -42,11 +42,26 @@ cmp $WORK/robot.actual $ROBOT_INPUT
 git rev-parse HEAD
 cmp stdout $WORK/golden/feat1-hash.txt
 
+# Attempt to print the selected branch name
+# from the other worktree.
+[unix] env ROBOT_INPUT=$WORK/robot-name-unix.golden
+[windows] env ROBOT_INPUT=$WORK/robot-name-windows.golden
+env ROBOT_OUTPUT=$WORK/robot-name.actual
+gs branch checkout -n
+cmp stdout $WORK/golden/feat1-name.txt
+cmp $WORK/robot-name.actual $ROBOT_INPUT
+
+# Verify dry-run did not change HEAD.
+git rev-parse HEAD
+cmp stdout $WORK/golden/feat1-hash.txt
+
 -- repo/feat1.txt --
 feature content
 
 -- golden/feat1-hash.txt --
 121498bab12f8ac31e38043ac0b475ccfdcf7769
+-- golden/feat1-name.txt --
+feat1
 -- robot-unix.golden --
 ===
 > Select a branch to checkout: 
@@ -58,4 +73,16 @@ feature content
 > Select a branch to checkout: 
 > ┏━□ feat1 [wt: ~\repo]
 > main ◀
+"feat1"
+-- robot-name-unix.golden --
+===
+> Select a branch to checkout: 
+> ┏━■ feat1 [wt: ~/repo] ◀
+> main
+"feat1"
+-- robot-name-windows.golden --
+===
+> Select a branch to checkout: 
+> ┏━■ feat1 [wt: ~\repo] ◀
+> main
 "feat1"
