@@ -21,13 +21,13 @@ interactions:
             - chunked
         content_length: -1
         body: |
-            {"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":23,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":0,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T14:54:57Z","updated_at":"2026-06-22T14:54:57Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}
+            {"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":7,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T15:01:22Z","updated_at":"2026-06-22T15:01:27Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}
         headers:
             Content-Type:
                 - application/json;charset=utf-8
         status: 200 OK
         code: 200
-        duration: 95.46975ms
+        duration: 317.311458ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -46,7 +46,7 @@ interactions:
         proto_minor: 1
         content_length: 537
         body: |
-            {"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"}
+            {"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"}
         headers:
             Content-Length:
                 - "537"
@@ -54,7 +54,7 @@ interactions:
                 - application/json;charset=utf-8
         status: 200 OK
         code: 200
-        duration: 19.273833ms
+        duration: 18.1625ms
     - id: 2
       request:
         proto: HTTP/1.1
@@ -62,7 +62,7 @@ interactions:
         proto_minor: 1
         content_length: 90
         host: 127.0.0.1:3000
-        body: '{"title":"Testing cqKouQza","body":"Test PR for comments","head":"cqKouQza","base":"main"}'
+        body: '{"title":"Testing 9CZsSx15","body":"Test PR for comments","head":"9CZsSx15","base":"main"}'
         headers:
             Content-Type:
                 - application/json
@@ -78,13 +78,13 @@ interactions:
             - chunked
         content_length: -1
         body: |
-            {"id":2,"url":"http://localhost:3000/test-owner/test-repo/pulls/2","number":2,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Testing cqKouQza","body":"Test PR for comments","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/2.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/2.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"b5cddb6f81f0feace19944c6f65a0b8850ab92d1","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":23,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":0,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T14:54:57Z","updated_at":"2026-06-22T14:54:57Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"cqKouQza","ref":"cqKouQza","sha":"c262bff28434b1756e3df3c8a39bb8823f30e0c1","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":23,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":0,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T14:54:57Z","updated_at":"2026-06-22T14:54:57Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"b5cddb6f81f0feace19944c6f65a0b8850ab92d1","due_date":null,"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:00Z","closed_at":null,"pin_order":0}
+            {"id":13,"url":"http://localhost:3000/test-owner/test-repo/pulls/13","number":13,"user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"title":"Testing 9CZsSx15","body":"Test PR for comments","labels":[],"milestone":null,"assignee":null,"assignees":null,"requested_reviewers":null,"state":"open","draft":false,"is_locked":false,"comments":0,"review_comments":0,"additions":1,"deletions":0,"changed_files":1,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13","diff_url":"http://localhost:3000/test-owner/test-repo/pulls/13.diff","patch_url":"http://localhost:3000/test-owner/test-repo/pulls/13.patch","mergeable":true,"merged":false,"merged_at":null,"merge_commit_sha":null,"merged_by":null,"allow_maintainer_edit":false,"base":{"label":"main","ref":"main","sha":"a701ae14a3c268aa845f8a385d5f1c85bc799540","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T15:01:22Z","updated_at":"2026-06-22T15:01:28Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"head":{"label":"9CZsSx15","ref":"9CZsSx15","sha":"546584065e4a660515fe0054a661f6a02dcbb458","repo_id":1,"repo":{"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":33,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":8,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T15:01:22Z","updated_at":"2026-06-22T15:01:28Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}},"merge_base":"a701ae14a3c268aa845f8a385d5f1c85bc799540","due_date":null,"created_at":"2026-06-22T15:01:28Z","updated_at":"2026-06-22T15:01:28Z","closed_at":null,"pin_order":0}
         headers:
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 555.905708ms
+        duration: 483.2565ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -92,29 +92,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"NDZav3bTbAa1q4VWi56lli4BEvg972Kq"}'
+        body: '{"body":"ms5FPtx37ClHuJQOyELdMM8pQMOryWc4"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 901
+        content_length: 905
         body: |
-            {"id":4,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-4","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"NDZav3bTbAa1q4VWi56lli4BEvg972Kq","assets":[],"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:00Z"}
+            {"id":22,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-22","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"ms5FPtx37ClHuJQOyELdMM8pQMOryWc4","assets":[],"created_at":"2026-06-22T15:01:28Z","updated_at":"2026-06-22T15:01:28Z"}
         headers:
             Content-Length:
-                - "901"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 467.521042ms
+        duration: 394.2955ms
     - id: 4
       request:
         proto: HTTP/1.1
@@ -122,29 +122,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"dbdYqUxChUttBawRxSAGte0AK1cJa1XH"}'
+        body: '{"body":"6dPWUwdQfOpNSD1HGpLsWCvWqPXeuOwW"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 901
+        content_length: 905
         body: |
-            {"id":7,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-7","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"dbdYqUxChUttBawRxSAGte0AK1cJa1XH","assets":[],"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:00Z"}
+            {"id":27,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-27","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"6dPWUwdQfOpNSD1HGpLsWCvWqPXeuOwW","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"}
         headers:
             Content-Length:
-                - "901"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 119.097042ms
+        duration: 352.471208ms
     - id: 5
       request:
         proto: HTTP/1.1
@@ -152,29 +152,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"Ktuc47k6Ajdub9pyYSnrNU8sc8GcHvRB"}'
+        body: '{"body":"WbqCPP9aNC9LkbaRmn4qrtaQWfYAoLhc"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 901
+        content_length: 905
         body: |
-            {"id":8,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-8","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"Ktuc47k6Ajdub9pyYSnrNU8sc8GcHvRB","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":28,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-28","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"WbqCPP9aNC9LkbaRmn4qrtaQWfYAoLhc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"}
         headers:
             Content-Length:
-                - "901"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 223.840917ms
+        duration: 68.187417ms
     - id: 6
       request:
         proto: HTTP/1.1
@@ -182,29 +182,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"2SX80WtYyqBQv12TMH4d8A061ur3O4wF"}'
+        body: '{"body":"IJhHVv6avmW6KGRXesZGrJUMty3mecvc"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":11,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-11","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2SX80WtYyqBQv12TMH4d8A061ur3O4wF","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":30,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-30","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"IJhHVv6avmW6KGRXesZGrJUMty3mecvc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 239.275292ms
+        duration: 433.150708ms
     - id: 7
       request:
         proto: HTTP/1.1
@@ -212,29 +212,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"B6466O8gjpx8pFguRV1piw49r0gk6Fiw"}'
+        body: '{"body":"EwWlTo79ldDheyHqdbASHPhcxWrG7CcL"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":13,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-13","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"B6466O8gjpx8pFguRV1piw49r0gk6Fiw","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":34,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-34","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"EwWlTo79ldDheyHqdbASHPhcxWrG7CcL","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 107.246584ms
+        duration: 330.595542ms
     - id: 8
       request:
         proto: HTTP/1.1
@@ -242,29 +242,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"02CpDikaIkrgbKV50ppIAtwYkRH5GyZ8"}'
+        body: '{"body":"yXJNDp2GWWACnKf9it8PDjFXugHAVg6g"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":14,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-14","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"02CpDikaIkrgbKV50ppIAtwYkRH5GyZ8","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":36,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-36","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"yXJNDp2GWWACnKf9it8PDjFXugHAVg6g","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 114.356042ms
+        duration: 244.718792ms
     - id: 9
       request:
         proto: HTTP/1.1
@@ -272,29 +272,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"A3qItuEXH0Wh50ybTLBZbqyELznCH2Gj"}'
+        body: '{"body":"umtgNwcviOrV7dLqhVSXctpWU4SyU0PL"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":16,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-16","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"A3qItuEXH0Wh50ybTLBZbqyELznCH2Gj","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":39,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-39","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"umtgNwcviOrV7dLqhVSXctpWU4SyU0PL","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 199.086208ms
+        duration: 224.072417ms
     - id: 10
       request:
         proto: HTTP/1.1
@@ -302,29 +302,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"MdyfutKddlzHR1Vq8bEBboYjX0dHj9sn"}'
+        body: '{"body":"bFBS3BHe4utKkW1y1xlzIEY1dEsIxdOI"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":19,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-19","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"MdyfutKddlzHR1Vq8bEBboYjX0dHj9sn","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"}
+            {"id":41,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-41","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"bFBS3BHe4utKkW1y1xlzIEY1dEsIxdOI","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 79.832542ms
+        duration: 295.78175ms
     - id: 11
       request:
         proto: HTTP/1.1
@@ -332,29 +332,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"SNr2ucdbeCXYCIXGjbWqOSEzMsSDkKNu"}'
+        body: '{"body":"ypwE7x7xfZ5EVgcUKdqB6swoPg8KP8Ji"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":20,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-20","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"SNr2ucdbeCXYCIXGjbWqOSEzMsSDkKNu","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"}
+            {"id":43,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-43","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"ypwE7x7xfZ5EVgcUKdqB6swoPg8KP8Ji","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 123.396458ms
+        duration: 146.592583ms
     - id: 12
       request:
         proto: HTTP/1.1
@@ -362,29 +362,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"TFplmdh1twSvSJ5C4yzJmHAmHBqp67cV"}'
+        body: '{"body":"2TN1aU50hOkZQJBubLBSd78X0aUDa28R"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 903
+        content_length: 905
         body: |
-            {"id":23,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-23","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"TFplmdh1twSvSJ5C4yzJmHAmHBqp67cV","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"}
+            {"id":47,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-47","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2TN1aU50hOkZQJBubLBSd78X0aUDa28R","assets":[],"created_at":"2026-06-22T15:01:31Z","updated_at":"2026-06-22T15:01:31Z"}
         headers:
             Content-Length:
-                - "903"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 201 Created
         code: 201
-        duration: 196.115959ms
+        duration: 291.196375ms
     - id: 13
       request:
         proto: HTTP/1.1
@@ -392,29 +392,29 @@ interactions:
         proto_minor: 1
         content_length: 43
         host: 127.0.0.1:3000
-        body: '{"body":"vwgrrI69Wb0TsxWOTuNOe9D1xrRGkHb2"}'
+        body: '{"body":"eRMktDBcbgjtKKHVbaoEgFcfoqDv2gmg"}'
         headers:
             Content-Type:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/4
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/22
         method: PATCH
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 901
+        content_length: 905
         body: |
-            {"id":4,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-4","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"vwgrrI69Wb0TsxWOTuNOe9D1xrRGkHb2","assets":[],"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:02Z"}
+            {"id":22,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-22","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"eRMktDBcbgjtKKHVbaoEgFcfoqDv2gmg","assets":[],"created_at":"2026-06-22T15:01:28Z","updated_at":"2026-06-22T15:01:31Z"}
         headers:
             Content-Length:
-                - "901"
+                - "905"
             Content-Type:
                 - application/json;charset=utf-8
         status: 200 OK
         code: 200
-        duration: 176.688875ms
+        duration: 107.25275ms
     - id: 14
       request:
         proto: HTTP/1.1
@@ -425,7 +425,7 @@ interactions:
         headers:
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/7
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/27
         method: DELETE
       response:
         proto: HTTP/1.1
@@ -436,7 +436,7 @@ interactions:
         headers: {}
         status: 204 No Content
         code: 204
-        duration: 236.769375ms
+        duration: 40.216ms
     - id: 15
       request:
         proto: HTTP/1.1
@@ -450,23 +450,23 @@ interactions:
                 - application/json
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/7
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/comments/27
         method: PATCH
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 143
+        content_length: 144
         body: |
-            {"errors":["comment does not exist [id: 7, issue_id: 0]"],"message":"The target couldn't be found.","url":"http://localhost:3000/api/swagger"}
+            {"errors":["comment does not exist [id: 27, issue_id: 0]"],"message":"The target couldn't be found.","url":"http://localhost:3000/api/swagger"}
         headers:
             Content-Length:
-                - "143"
+                - "144"
             Content-Type:
                 - application/json;charset=utf-8
         status: 404 Not Found
         code: 404
-        duration: 55.023416ms
+        duration: 25.526292ms
     - id: 16
       request:
         proto: HTTP/1.1
@@ -480,7 +480,7 @@ interactions:
         headers:
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments?limit=3
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments?limit=3
         method: GET
       response:
         proto: HTTP/1.1
@@ -490,13 +490,13 @@ interactions:
             - chunked
         content_length: -1
         body: |
-            [{"id":4,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-4","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"vwgrrI69Wb0TsxWOTuNOe9D1xrRGkHb2","assets":[],"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:02Z"},{"id":8,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-8","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"Ktuc47k6Ajdub9pyYSnrNU8sc8GcHvRB","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":11,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-11","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2SX80WtYyqBQv12TMH4d8A061ur3O4wF","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":13,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-13","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"B6466O8gjpx8pFguRV1piw49r0gk6Fiw","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":14,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-14","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"02CpDikaIkrgbKV50ppIAtwYkRH5GyZ8","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":16,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-16","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"A3qItuEXH0Wh50ybTLBZbqyELznCH2Gj","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":19,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-19","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"MdyfutKddlzHR1Vq8bEBboYjX0dHj9sn","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":20,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-20","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"SNr2ucdbeCXYCIXGjbWqOSEzMsSDkKNu","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"},{"id":23,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-23","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"TFplmdh1twSvSJ5C4yzJmHAmHBqp67cV","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"}]
+            [{"id":22,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-22","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"eRMktDBcbgjtKKHVbaoEgFcfoqDv2gmg","assets":[],"created_at":"2026-06-22T15:01:28Z","updated_at":"2026-06-22T15:01:31Z"},{"id":28,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-28","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"WbqCPP9aNC9LkbaRmn4qrtaQWfYAoLhc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":30,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-30","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"IJhHVv6avmW6KGRXesZGrJUMty3mecvc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":34,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-34","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"EwWlTo79ldDheyHqdbASHPhcxWrG7CcL","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":36,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-36","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"yXJNDp2GWWACnKf9it8PDjFXugHAVg6g","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":39,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-39","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"umtgNwcviOrV7dLqhVSXctpWU4SyU0PL","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":41,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-41","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"bFBS3BHe4utKkW1y1xlzIEY1dEsIxdOI","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":43,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-43","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"ypwE7x7xfZ5EVgcUKdqB6swoPg8KP8Ji","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":47,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-47","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2TN1aU50hOkZQJBubLBSd78X0aUDa28R","assets":[],"created_at":"2026-06-22T15:01:31Z","updated_at":"2026-06-22T15:01:31Z"}]
         headers:
             Content-Type:
                 - application/json;charset=utf-8
         status: 200 OK
         code: 200
-        duration: 51.321417ms
+        duration: 50.474167ms
     - id: 17
       request:
         proto: HTTP/1.1
@@ -510,7 +510,7 @@ interactions:
         headers:
             User-Agent:
                 - git-spice
-        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/2/comments?limit=3
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/issues/13/comments?limit=3
         method: GET
       response:
         proto: HTTP/1.1
@@ -520,10 +520,10 @@ interactions:
             - chunked
         content_length: -1
         body: |
-            [{"id":4,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-4","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"vwgrrI69Wb0TsxWOTuNOe9D1xrRGkHb2","assets":[],"created_at":"2026-06-22T14:55:00Z","updated_at":"2026-06-22T14:55:02Z"},{"id":8,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-8","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"Ktuc47k6Ajdub9pyYSnrNU8sc8GcHvRB","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":11,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-11","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2SX80WtYyqBQv12TMH4d8A061ur3O4wF","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":13,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-13","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"B6466O8gjpx8pFguRV1piw49r0gk6Fiw","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":14,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-14","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"02CpDikaIkrgbKV50ppIAtwYkRH5GyZ8","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":16,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-16","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"A3qItuEXH0Wh50ybTLBZbqyELznCH2Gj","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":19,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-19","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"MdyfutKddlzHR1Vq8bEBboYjX0dHj9sn","assets":[],"created_at":"2026-06-22T14:55:01Z","updated_at":"2026-06-22T14:55:01Z"},{"id":20,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-20","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"SNr2ucdbeCXYCIXGjbWqOSEzMsSDkKNu","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"},{"id":23,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/2#issuecomment-23","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/2","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T14:54:56Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"TFplmdh1twSvSJ5C4yzJmHAmHBqp67cV","assets":[],"created_at":"2026-06-22T14:55:02Z","updated_at":"2026-06-22T14:55:02Z"}]
+            [{"id":22,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-22","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"eRMktDBcbgjtKKHVbaoEgFcfoqDv2gmg","assets":[],"created_at":"2026-06-22T15:01:28Z","updated_at":"2026-06-22T15:01:31Z"},{"id":28,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-28","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"WbqCPP9aNC9LkbaRmn4qrtaQWfYAoLhc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":30,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-30","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"IJhHVv6avmW6KGRXesZGrJUMty3mecvc","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":34,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-34","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"EwWlTo79ldDheyHqdbASHPhcxWrG7CcL","assets":[],"created_at":"2026-06-22T15:01:29Z","updated_at":"2026-06-22T15:01:29Z"},{"id":36,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-36","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"yXJNDp2GWWACnKf9it8PDjFXugHAVg6g","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":39,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-39","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"umtgNwcviOrV7dLqhVSXctpWU4SyU0PL","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":41,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-41","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"bFBS3BHe4utKkW1y1xlzIEY1dEsIxdOI","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":43,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-43","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"ypwE7x7xfZ5EVgcUKdqB6swoPg8KP8Ji","assets":[],"created_at":"2026-06-22T15:01:30Z","updated_at":"2026-06-22T15:01:30Z"},{"id":47,"html_url":"http://localhost:3000/test-owner/test-repo/pulls/13#issuecomment-47","pull_request_url":"http://localhost:3000/test-owner/test-repo/pulls/13","issue_url":"","user":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"test-owner@noreply.localhost","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"original_author":"","original_author_id":0,"body":"2TN1aU50hOkZQJBubLBSd78X0aUDa28R","assets":[],"created_at":"2026-06-22T15:01:31Z","updated_at":"2026-06-22T15:01:31Z"}]
         headers:
             Content-Type:
                 - application/json;charset=utf-8
         status: 200 OK
         code: 200
-        duration: 59.413375ms
+        duration: 12.75ms

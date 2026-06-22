@@ -1,10 +1,14 @@
-// Command gitea-bootstrap prepares a local Docker Gitea instance
+// Command gitea-bootstrap prepares the canonical Docker Gitea topology
 // for fixture recording.
 //
 // It expects tools/record-gitea-fixtures.sh to have started Gitea
 // with INSTALL_LOCK=true and sqlite3,
 // and to have created the owner account as an administrator
 // with the credentials below.
+// It is not used for GITEA_RECORD_MODE=existing;
+// existing-instance recording reads topology from
+// internal/forge/forgetest/testconfig.yaml and assumes the configured users,
+// repository, fork repository, and collaborator permissions already exist.
 //
 // The command creates the rest of the actor graph needed by forgetest:
 // a reviewer account,
@@ -12,8 +16,9 @@
 // a fork repository,
 // and collaborator permissions for reviewer and assignee flows.
 //
-// The repository and user names must stay aligned with
-// forgetest.CanonicalGiteaConfig.
+// The repository and user names must stay aligned with the `gitea` section
+// in internal/forge/forgetest/testconfig.yaml
+// and with forgetest.CanonicalGiteaConfig.
 // Integration tests use those canonical names in replay mode,
 // while this command prints only dynamic token values
 // that cannot be checked in.
@@ -25,6 +30,10 @@
 //
 // On success it writes shell assignments for use by
 // tools/record-gitea-fixtures.sh.
+//
+//	GITEA_URL=<container-api-url>
+//	GITEA_TOKEN=<owner-access-token>
+//	GITEA_FORK_TOKEN=<fork-owner-access-token>
 package main
 
 import (

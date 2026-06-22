@@ -27,6 +27,14 @@ import (
 //
 //	bash tools/record-gitea-fixtures.sh
 //
+// To record fixtures against an existing Gitea instance,
+// configure the `gitea` section in
+// internal/forge/forgetest/testconfig.yaml,
+// set GITEA_TOKEN and GITEA_FORK_TOKEN,
+// and run:
+//
+//	GITEA_RECORD_MODE=existing bash tools/record-gitea-fixtures.sh
+//
 // The CI test-gitea-live job in .github/workflows/ci.yml runs this
 // in update mode against a Docker Gitea container on every PR.
 
@@ -38,16 +46,17 @@ func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []httptest.
 	}
 
 	canonical := forgetest.CanonicalGiteaConfig()
+	config := forgetest.Config(t).Gitea
 
 	cfg = forgetest.GiteaConfig{
-		URL: cmp(os.Getenv("GITEA_URL"), canonical.URL),
+		URL: envOr("GITEA_URL", config.URL),
 		ForgeConfig: forgetest.ForgeConfig{
-			Owner:     cmp(os.Getenv("GITEA_TEST_OWNER"), canonical.Owner),
-			Repo:      cmp(os.Getenv("GITEA_TEST_REPO"), canonical.Repo),
-			ForkOwner: cmp(os.Getenv("GITEA_TEST_FORK_OWNER"), canonical.ForkOwner),
-			ForkRepo:  cmp(os.Getenv("GITEA_TEST_FORK_REPO"), canonical.ForkRepo),
-			Reviewer:  cmp(os.Getenv("GITEA_TEST_REVIEWER"), canonical.Reviewer),
-			Assignee:  cmp(os.Getenv("GITEA_TEST_ASSIGNEE"), canonical.Assignee),
+			Owner:     envOr("GITEA_TEST_OWNER", config.Owner),
+			Repo:      envOr("GITEA_TEST_REPO", config.Repo),
+			ForkOwner: envOr("GITEA_TEST_FORK_OWNER", config.ForkOwner),
+			ForkRepo:  envOr("GITEA_TEST_FORK_REPO", config.ForkRepo),
+			Reviewer:  envOr("GITEA_TEST_REVIEWER", config.Reviewer),
+			Assignee:  envOr("GITEA_TEST_ASSIGNEE", config.Assignee),
 		},
 	}
 
@@ -73,11 +82,11 @@ func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []httptest.
 	return cfg, sanitizers
 }
 
-func cmp(a, b string) string {
-	if a != "" {
-		return a
+func envOr(envVar string, fallback string) string {
+	if value := os.Getenv(envVar); value != "" {
+		return value
 	}
-	return b
+	return fallback
 }
 
 func newTestGiteaClient(t *testing.T, cfg forgetest.GiteaConfig, httpClient *http.Client) *giteagw.Client {
@@ -149,23 +158,17 @@ func TestIntegration(t *testing.T) {
 
 	remoteURL := cfg.URL + "/" + cfg.Owner + "/" + cfg.Repo
 
-	// Fork PR tests require:
-	// - A real fork of the base repo owned by ForkOwner
-	// - Push credentials for the fork (GITEA_FORK_TOKEN)
-	// Set GITEA_FORK_TOKEN to enable fork PR recording.
-	// Without it, fork tests are skipped in both update and replay modes.
 	forkToken := os.Getenv("GITEA_FORK_TOKEN")
 	var pushRemoteURL string
 
 	if forgetest.Update() {
 		token := forgetest.Token(t, cfg.URL, "GITEA_TOKEN")
 		remoteURL = gitAuthURL(cfg.URL, cfg.Owner, cfg.Repo, token)
-		if forkToken != "" {
-			pushRemoteURL = gitAuthURL(cfg.URL, cfg.ForkOwner, cfg.ForkRepo, forkToken)
+		if forkToken == "" {
+			t.Fatal("GITEA_FORK_TOKEN is required to record fork pull request fixtures")
 		}
-	} else if forkToken != "" {
-		// Only run fork tests in replay mode if we also have the token
-		// (i.e., fixtures were previously recorded with it).
+		pushRemoteURL = gitAuthURL(cfg.URL, cfg.ForkOwner, cfg.ForkRepo, forkToken)
+	} else {
 		pushRemoteURL = cfg.URL + "/" + cfg.ForkOwner + "/" + cfg.ForkRepo
 	}
 

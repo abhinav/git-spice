@@ -532,7 +532,7 @@ Gitea supports Personal Access Tokens and Git Credential Manager:
 
 - **Personal Access Token**: Create one at
   `{your Gitea instance}/user/settings/applications`.
-  Required scope: `repository`.
+  Required scopes: `write:repository` and `write:issue`.
 - **Git Credential Manager**: If you already use GCM
   for your Gitea instance, git-spice can reuse those credentials.
 
