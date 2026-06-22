@@ -22,8 +22,24 @@ cp $WORK/b2.txt b2.txt
 git add b2.txt
 gs bc b2 -m 'Add b2'
 
-# From the primary worktree, remove the anchor worktree.
+# A worktree cannot remove itself: refused before any state changes.
+cd $WORK/wtB
+! gs anchor rm $WORK/wtB
+stderr 'cannot remove itself'
+
+# A dirty worktree is refused without --force, and because removal is
+# attempted before retargeting, nothing is mutated: the anchor is still
+# registered and the worktree still exists.
+cp $WORK/b1.txt $WORK/wtB/dirty.txt
 cd $WORK/repo
+! gs anchor rm $WORK/wtB
+stderr 'remove worktree'
+gs anchor ls
+stderr 'dev'
+exists $WORK/wtB
+
+# Clean up the dirt, then remove the anchor worktree for real.
+rm $WORK/wtB/dirty.txt
 gs anchor rm $WORK/wtB
 stderr 'b1: retargeted onto main'
 stderr 'Removed worktree'
