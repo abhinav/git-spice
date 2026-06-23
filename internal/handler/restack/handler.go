@@ -310,18 +310,26 @@ loop:
 			var rebaseErr *git.RebaseInterruptError
 			switch {
 			case errors.As(err, &rebaseErr):
-				if h.shouldAutoResolve(req) && h.Resolver != nil &&
+				if h.shouldAutoResolve(req) &&
 					rebaseErr.Kind == git.RebaseInterruptConflict {
-					resolved, baseName := h.tryAutoResolveRebase(ctx, operationFromContinueCommand(req.ContinueCommand), branch, branchGraph)
-					if resolved {
-						h.Log.Infof("%v: restacked on %v", branch, baseName)
-						restackCount++
-						continue loop
+					if h.Resolver == nil {
+						// Auto-resolve was requested but no resolver
+						// is configured; warn rather than silently
+						// falling through to manual resolution.
+						h.Log.Warnf("%v: auto-resolve requested but no resolver script configured; "+
+							"set spice.restack.resolver to enable automatic conflict resolution", branch)
+					} else {
+						resolved, baseName := h.tryAutoResolveRebase(ctx, operationFromContinueCommand(req.ContinueCommand), branch, branchGraph)
+						if resolved {
+							h.Log.Infof("%v: restacked on %v", branch, baseName)
+							restackCount++
+							continue loop
+						}
+						// Fall through to RebaseRescue on auto-resolve
+						// failure: the rebase is still mid-flight in
+						// the worktree, the user resolves manually
+						// and runs 'gs rebase continue'.
 					}
-					// Fall through to RebaseRescue on auto-resolve
-					// failure: the rebase is still mid-flight in
-					// the worktree, the user resolves manually
-					// and runs 'gs rebase continue'.
 				}
 
 				// If the rebase is interrupted by a conflict,

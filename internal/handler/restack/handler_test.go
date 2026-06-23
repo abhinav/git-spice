@@ -473,6 +473,53 @@ func TestHandler_Restack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 0, count)
 	})
+
+	t.Run("AutoResolveNoResolver", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		rebaseErr := &git.RebaseInterruptError{
+			Kind: git.RebaseInterruptConflict,
+		}
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, rebaseErr)
+		mockService.EXPECT().
+			RebaseRescue(gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		autoResolve := true
+		count, err := handler.Restack(t.Context(), &Request{
+			Branch:          "feature",
+			ContinueCommand: []string{"false"},
+			Scope:           ScopeBranch,
+			AutoResolve:     &autoResolve,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 0, count)
+		assert.Contains(t, logBuffer.String(), "no resolver script configured")
+		assert.Contains(t, logBuffer.String(), "spice.restack.resolver")
+	})
 }
 
 func TestHandler_Restack_trunk(t *testing.T) {

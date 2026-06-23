@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'restack: Warn when --auto-resolve is requested but no resolver script is configured, instead of silently falling back to manual conflict resolution.'
+time: 2026-06-23T10:00:52.299802-04:00
