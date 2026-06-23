@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -158,12 +159,17 @@ func TestClient_PullList(t *testing.T) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, "/api/v1/repos/captain/warp-core/pulls", r.URL.Path)
 		assert.Equal(t, "open", r.URL.Query().Get("state"))
+		assert.Equal(t, "recentupdate", r.URL.Query().Get("sort"))
 		assert.Equal(t, "scotty/fix", r.URL.Query().Get("head"))
 		assert.Equal(t, "10", r.URL.Query().Get("limit"))
 		w.Header().Set("X-Page", "1")
 		w.Header().Set("X-Total-Pages", "1")
 		writeJSON(t, w, http.StatusOK, []*PullRequest{
-			{Number: 42, Title: "Stabilize nacelles"},
+			{
+				Number:    42,
+				Title:     "Stabilize nacelles",
+				UpdatedAt: time.Date(2026, 6, 23, 9, 0, 0, 0, time.UTC),
+			},
 			{Number: 43, Title: "Refit shields"},
 		})
 	}))
@@ -173,11 +179,15 @@ func TestClient_PullList(t *testing.T) {
 	prs, resp, err := client.PullList(t.Context(), "captain", "warp-core", &ListPullRequestsOptions{
 		ListOptions: ListOptions{Limit: 10},
 		State:       "open",
+		Sort:        "recentupdate",
 		Head:        "scotty/fix",
 	})
 	require.NoError(t, err)
 	require.Len(t, prs, 2)
 	assert.Equal(t, int64(43), prs[1].Number)
+	assert.Equal(t,
+		time.Date(2026, 6, 23, 9, 0, 0, 0, time.UTC),
+		prs[0].UpdatedAt)
 	assert.Equal(t, 1, resp.CurrentPage)
 }
 

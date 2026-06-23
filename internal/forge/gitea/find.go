@@ -18,21 +18,29 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		opts.Limit = 10
 	}
 
-	// Determine which states to fetch.
-	var states []string
+	// Gitea's pull-list API can sort by recent update,
+	// but it still reports merged pull requests under the closed state.
+	// Keep merged-vs-closed filtering on the client side.
+	state := "all"
 	switch opts.State {
 	case forge.ChangeOpen:
-		states = []string{"open"}
+		state = "open"
 	case forge.ChangeClosed, forge.ChangeMerged:
-		states = []string{"closed"}
-	default:
-		// All states: fetch open and closed separately.
-		states = []string{"open", "closed"}
+		state = "closed"
 	}
 
 	var items []*forge.FindChangeItem
-	for _, state := range states {
-		prs, err := r.listAllPRsByState(ctx, state)
+	page := int64(1)
+
+	for {
+		prs, resp, err := r.client.PullList(ctx, r.owner, r.repo, &giteagw.ListPullRequestsOptions{
+			ListOptions: giteagw.ListOptions{
+				Limit: 50,
+				Page:  page,
+			},
+			State: state,
+			Sort:  "recentupdate",
+		})
 		if err != nil {
 			return nil, fmt.Errorf("find changes by branch (%s): %w", state, err)
 		}
@@ -54,34 +62,13 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 				return items, nil
 			}
 		}
-	}
-	return items, nil
-}
 
-// listAllPRsByState fetches all PRs with the given state, paginating as needed.
-func (r *Repository) listAllPRsByState(ctx context.Context, state string) ([]*giteagw.PullRequest, error) {
-	var all []*giteagw.PullRequest
-	page := int64(1)
-	pageSize := int64(50)
-
-	for {
-		prs, resp, err := r.client.PullList(ctx, r.owner, r.repo, &giteagw.ListPullRequestsOptions{
-			ListOptions: giteagw.ListOptions{
-				Limit: pageSize,
-				Page:  page,
-			},
-			State: state,
-		})
-		if err != nil {
-			return nil, err
-		}
-		all = append(all, prs...)
 		if resp.NextPage == 0 {
 			break
 		}
 		page = int64(resp.NextPage)
 	}
-	return all, nil
+	return items, nil
 }
 
 // matchesBranch reports whether a PR's head branch matches the given branch

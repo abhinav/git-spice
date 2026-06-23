@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 // UserCurrent fetches the authenticated Gitea user.
@@ -449,6 +450,7 @@ type PullRequest struct {
 	Assignees          []*User   `json:"assignees"`
 	RequestedReviewers []*User   `json:"requested_reviewers"`
 	HTMLURL            string    `json:"html_url"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // Label matches the subset of label fields the forge uses.
@@ -558,8 +560,12 @@ type MergePullRequestOption struct {
 type ListPullRequestsOptions struct {
 	ListOptions
 
-	// State filters by PR state: "open", "closed", or "".
+	// State filters by PR state: "open", "closed", "all", or "".
 	State string
+
+	// Sort orders PRs.
+	// Gitea supports values such as "recentupdate".
+	Sort string
 
 	// Head filters by head branch name.
 	Head string
@@ -572,6 +578,9 @@ func (o *ListPullRequestsOptions) encodeQuery() url.Values {
 	}
 	if o.State != "" {
 		values.Set("state", o.State)
+	}
+	if o.Sort != "" {
+		values.Set("sort", o.Sort)
 	}
 	if o.Head != "" {
 		values.Set("head", o.Head)

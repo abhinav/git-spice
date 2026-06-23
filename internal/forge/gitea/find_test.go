@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,6 +46,7 @@ func TestRepository_FindChangesByBranch_searchesPastLimitBeforeFiltering(
 	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/api/v1/repos/captain/warp-core/pulls", r.URL.Path)
 		require.Equal(t, "open", r.URL.Query().Get("state"))
+		require.Equal(t, "recentupdate", r.URL.Query().Get("sort"))
 		page, err := strconv.Atoi(r.URL.Query().Get("page"))
 		require.NoError(t, err)
 		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -68,6 +70,65 @@ func TestRepository_FindChangesByBranch_searchesPastLimitBeforeFiltering(
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, &PR{Number: 56}, got[0].ID)
+}
+
+func TestRepository_FindChangesByBranch_sortsAllStatesBeforeLimit(
+	t *testing.T,
+) {
+	const targetBranch = "feature"
+
+	openUpdatedAt := time.Date(2026, 6, 23, 10, 0, 0, 0, time.UTC)
+	closedUpdatedAt := time.Date(2026, 6, 23, 11, 0, 0, 0, time.UTC)
+
+	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/api/v1/repos/captain/warp-core/pulls", r.URL.Path)
+		require.Equal(t, "1", r.URL.Query().Get("page"))
+		require.Equal(t, "50", r.URL.Query().Get("limit"))
+		require.Equal(t, "recentupdate", r.URL.Query().Get("sort"))
+
+		switch r.URL.Query().Get("state") {
+		case "all":
+			writeJSON(t, w, http.StatusOK, []*giteagw.PullRequest{
+				{
+					Number:    2,
+					Title:     "Newer closed target",
+					State:     "closed",
+					UpdatedAt: closedUpdatedAt,
+					Head: &giteagw.PRBranch{
+						Ref: targetBranch,
+						Repo: &giteagw.Repository{
+							FullName: "captain/warp-core",
+						},
+					},
+				},
+				{
+					Number:    1,
+					Title:     "Older open target",
+					State:     "open",
+					UpdatedAt: openUpdatedAt,
+					Head: &giteagw.PRBranch{
+						Ref: targetBranch,
+						Repo: &giteagw.Repository{
+							FullName: "captain/warp-core",
+						},
+					},
+				},
+			})
+		default:
+			t.Fatalf("unexpected state: %q", r.URL.Query().Get("state"))
+		}
+	})
+	defer srv.Close()
+
+	repo := newTestRepo(t, srv)
+	got, err := repo.FindChangesByBranch(
+		t.Context(),
+		targetBranch,
+		forge.FindChangesOptions{Limit: 1},
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, &PR{Number: 2}, got[0].ID)
 }
 
 func TestMatchesBranch_forkRepository(t *testing.T) {
