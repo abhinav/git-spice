@@ -1,12 +1,19 @@
 package gitea
 
 import (
+	"bytes"
+	"io"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
+	"github.com/hexops/autogold/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/secret"
+	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/uitest"
 )
 
 func TestForge_LoadAuthenticationToken_envVar(t *testing.T) {
@@ -21,6 +28,59 @@ func TestForge_LoadAuthenticationToken_envVar(t *testing.T) {
 	gTok := tok.(*AuthenticationToken)
 	assert.Equal(t, AuthTypeEnvironmentVariable, gTok.AuthType)
 	assert.Equal(t, "env-token", gTok.AccessToken)
+}
+
+func TestAuth_alreadyHasGiteaToken(t *testing.T) {
+	var logBuffer bytes.Buffer
+	f := &Forge{
+		Options: Options{
+			Token: "env-token",
+		},
+		Log: silog.New(&logBuffer, nil),
+	}
+
+	view := ui.NewFileView(io.Discard)
+
+	t.Run("AuthenticationFlow", func(t *testing.T) {
+		_, err := f.AuthenticationFlow(t.Context(), view)
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "already authenticated")
+		assert.Contains(t, logBuffer.String(), "Already authenticated")
+		assert.Contains(t, logBuffer.String(), "GITEA_TOKEN")
+	})
+
+	t.Run("LoadAndSave", func(t *testing.T) {
+		var stash secret.MemoryStash
+		tok, err := f.LoadAuthenticationToken(&stash)
+		require.NoError(t, err)
+
+		err = f.SaveAuthenticationToken(&stash, tok)
+		require.NoError(t, err)
+
+		got, err := f.LoadAuthenticationToken(&stash)
+		require.NoError(t, err)
+
+		assert.Equal(t, tok, got)
+
+		require.NoError(t, f.ClearAuthenticationToken(&stash))
+	})
+}
+
+func TestAuthenticationFlow_APIToken(t *testing.T) {
+	drv := uitest.Drive(t, func(view ui.InteractiveView) {
+		got, err := new(Forge).AuthenticationFlow(t.Context(), view)
+		require.NoError(t, err)
+
+		assert.Equal(t, &AuthenticationToken{
+			AuthType:    AuthTypeAPIToken,
+			AccessToken: "my-token",
+		}, got)
+	}, nil)
+
+	drv.PressN(tea.KeyEnter, 0)
+	autogold.Expect("Enter API token:\n").Equal(t, drv.Snapshot())
+	drv.Type("my-token")
+	drv.Press(tea.KeyEnter)
 }
 
 func TestForge_SaveLoadClearToken_PAT(t *testing.T) {
