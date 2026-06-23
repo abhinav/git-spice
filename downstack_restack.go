@@ -44,5 +44,5 @@ func (cmd *downstackRestackCmd) Run(
 		return errors.New("nothing to restack below trunk")
 	}
 
-	return handler.RestackDownstack(ctx, cmd.Branch)
+	return handler.RestackDownstack(ctx, cmd.Branch, nil)
 }

@@ -317,10 +317,10 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(ctrl)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat2").
+		RestackBranch(gomock.Any(), "feat2", gomock.Nil()).
 		Return(nil)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat3").
+		RestackBranch(gomock.Any(), "feat3", gomock.Nil()).
 		Return(nil)
 
 	mockSubmit := NewMockSubmitHandler(ctrl)
@@ -396,7 +396,7 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(ctrl)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat2").
+		RestackBranch(gomock.Any(), "feat2", gomock.Nil()).
 		Return(nil)
 
 	mockSubmit := NewMockSubmitHandler(ctrl)

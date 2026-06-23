@@ -93,6 +93,33 @@ type Request struct {
 	//
 	// Defaults to ScopeBranch.
 	Scope Scope
+
+	// AutoResolve, if non-nil, overrides
+	// [Handler.DefaultAutoResolve] for this invocation. A true
+	// value enables the configured resolver; a false value disables
+	// it even when configured.
+	AutoResolve *bool
+}
+
+// Options are optional parameters shared by the high-level restack
+// entry points ([Handler.RestackBranch], [Handler.RestackStack],
+// [Handler.RestackDownstack]).
+type Options struct {
+	// AutoResolve, if non-nil, overrides
+	// [Handler.DefaultAutoResolve] for this invocation. A true
+	// value enables the configured resolver; a false value disables
+	// it even when configured.
+	AutoResolve *bool
+}
+
+// autoResolvePtr returns the AutoResolve pointer if opts is
+// non-nil, or nil. Callers pass the result through to
+// [Request.AutoResolve].
+func (o *Options) autoResolvePtr() *bool {
+	if o == nil {
+		return nil
+	}
+	return o.AutoResolve
 }
 
 // Restack restacks one or more branches according to the request.
