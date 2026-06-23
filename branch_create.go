@@ -28,9 +28,9 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
-	All         bool   `short:"a" help:"Automatically stage modified and deleted files"`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Commit message"`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	All         bool     `short:"a" help:"Automatically stage modified and deleted files"`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
@@ -107,7 +107,7 @@ func (cmd *branchCreateCmd) Run(
 	restackHandler RestackHandler,
 ) (err error) {
 	// If a message is specified, automatically enable commits
-	if cmd.Message != "" || cmd.MessageFile != "" {
+	if len(cmd.Message) > 0 || cmd.MessageFile != "" {
 		cmd.Commit = true
 	}
 
@@ -353,7 +353,7 @@ func (cmd *branchCreateCmd) commit(
 
 	if err := wt.Commit(ctx, git.CommitRequest{
 		AllowEmpty:  len(diff) == 0,
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		NoVerify:    cmd.NoVerify,
 		All:         cmd.All,

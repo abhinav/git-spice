@@ -1,0 +1,6 @@
+kind: Added
+body: >-
+  commit create, commit amend, branch create: The -m/--message flag may now
+  be passed multiple times to add multiple paragraphs to the commit message,
+  matching 'git commit'.
+time: 2026-06-23T05:04:12.000000-07:00
