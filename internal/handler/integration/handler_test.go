@@ -1,8 +1,11 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"iter"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1318,4 +1321,230 @@ func singleRemoteRef(ref git.RemoteRef) iter.Seq2[git.RemoteRef, error] {
 	return func(yield func(git.RemoteRef, error) bool) {
 		yield(ref, nil)
 	}
+}
+
+// regenLogPathFrom finds GS_INTEGRATION_REGEN_LOG=<path> in opts.Env.
+// Used by mock Merge callbacks to simulate the merge driver writing
+// to the log file.
+func regenLogPathFrom(opts git.MergeOptions) string {
+	const prefix = regenLogEnvVar + "="
+	for _, e := range opts.Env {
+		if after, ok := strings.CutPrefix(e, prefix); ok {
+			return after
+		}
+	}
+	return ""
+}
+
+// writeRegenLog simulates merge-driver invocations by appending the
+// given paths to the log file gs prepared for this merge.
+func writeRegenLog(t *testing.T, opts git.MergeOptions, paths ...string) {
+	t.Helper()
+	logPath := regenLogPathFrom(opts)
+	require.NotEmpty(t, logPath, "merge options missing %s", regenLogEnvVar)
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, f.Close()) }()
+	for _, p := range paths {
+		_, err := f.WriteString(p + "\n")
+		require.NoError(t, err)
+	}
+}
+
+// newHandlerWithRegenerator returns a handler with a Regenerator mock
+// plus the standard handler mocks. The handler's RepoRoot is a fresh
+// temp dir.
+func newHandlerWithRegenerator(t *testing.T) (*Handler, *handlerMocks, *MockRegenerator) {
+	t.Helper()
+	mockCtrl := gomock.NewController(t)
+	mocks := &handlerMocks{
+		Repository: NewMockGitRepository(mockCtrl),
+		Worktree:   NewMockGitWorktree(mockCtrl),
+		Store:      NewMockStore(mockCtrl),
+		Service:    NewMockService(mockCtrl),
+	}
+	regenerator := NewMockRegenerator(mockCtrl)
+	h := &Handler{
+		Log:         silogtest.New(t),
+		Repository:  mocks.Repository,
+		Worktree:    mocks.Worktree,
+		Store:       mocks.Store,
+		Service:     mocks.Service,
+		Regenerator: regenerator,
+		RepoRoot:    t.TempDir(),
+	}
+	expectBorrowableWorktree(mocks)
+	return h, mocks, regenerator
+}
+
+// setupSuccessfulRebuild primes the mocks for a fresh rebuild with one
+// tip that merges cleanly. Returns the gomock matcher for Merge so
+// callers can inject additional behavior (like writing to the regen
+// log) via Do.
+func setupSuccessfulRebuild(t *testing.T, mocks *handlerMocks) {
+	t.Helper()
+	info := &state.IntegrationInfo{
+		Name: "preview",
+		Tips: []state.IntegrationTip{{Name: "feat-a"}},
+	}
+	mocks.Store.EXPECT().Integration(gomock.Any()).Return(info, nil)
+	mocks.Store.EXPECT().
+		PendingIntegrationRebuild(gomock.Any()).
+		Return(nil, state.ErrNotExist)
+	mocks.Worktree.EXPECT().CurrentBranch(gomock.Any()).Return("main", nil)
+	mocks.Worktree.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mocks.Store.EXPECT().Trunk().Return("main").AnyTimes()
+	mocks.Repository.EXPECT().
+		PeelToCommit(gomock.Any(), "main").
+		Return(git.Hash("trunk-hash"), nil)
+	mocks.Service.EXPECT().
+		LookupBranch(gomock.Any(), "feat-a").
+		Return(&spice.LookupBranchResponse{}, nil)
+	mocks.Repository.EXPECT().
+		PeelToCommit(gomock.Any(), "feat-a").
+		Return(git.Hash("hash-a"), nil)
+	mocks.Worktree.EXPECT().
+		CheckoutNewBranch(gomock.Any(), gomock.Any()).
+		Return(nil)
+	// Final state save + cleanup mocks expected by the happy path.
+	mocks.Store.EXPECT().
+		SetIntegration(gomock.Any(), gomock.Any()).
+		Return(nil)
+	mocks.Store.EXPECT().
+		ClearPendingIntegrationRebuild(gomock.Any()).
+		Return(nil)
+	mocks.Worktree.EXPECT().
+		CheckoutBranch(gomock.Any(), "main").
+		Return(nil)
+}
+
+func TestHandler_Rebuild_regenerateInvokedWithLoggedPaths(t *testing.T) {
+	h, mocks, regenerator := newHandlerWithRegenerator(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	// Simulate the take-incoming merge driver writing two paths to
+	// the regen log during the merge.
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, opts git.MergeOptions) error {
+			writeRegenLog(t, opts,
+				"doc/includes/cli-shorthands.md",
+				"testdata/help/foo.txt")
+			return nil
+		}).
+		Return(nil)
+
+	regenerator.EXPECT().
+		Regenerate(gomock.Any(), []string{
+			"doc/includes/cli-shorthands.md",
+			"testdata/help/foo.txt",
+		}).
+		Return(nil)
+	mocks.Worktree.EXPECT().AmendCommitAll(gomock.Any()).Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err)
+}
+
+func TestHandler_Rebuild_regenerateDedupesPaths(t *testing.T) {
+	h, mocks, regenerator := newHandlerWithRegenerator(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, opts git.MergeOptions) error {
+			writeRegenLog(t, opts, "a", "b", "a", "b", "c")
+			return nil
+		}).
+		Return(nil)
+
+	regenerator.EXPECT().
+		Regenerate(gomock.Any(), []string{"a", "b", "c"}).
+		Return(nil)
+	mocks.Worktree.EXPECT().AmendCommitAll(gomock.Any()).Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err)
+}
+
+func TestHandler_Rebuild_regenerateSkippedWhenLogEmpty(t *testing.T) {
+	h, mocks, _ := newHandlerWithRegenerator(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	// No log writes → no Regenerator.Regenerate call expected.
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err)
+}
+
+func TestHandler_Rebuild_regenerateErrorIsWarning(t *testing.T) {
+	h, mocks, regenerator := newHandlerWithRegenerator(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, opts git.MergeOptions) error {
+			writeRegenLog(t, opts, "foo.go")
+			return nil
+		}).
+		Return(nil)
+
+	regenerator.EXPECT().
+		Regenerate(gomock.Any(), gomock.Any()).
+		Return(errors.New("script blew up"))
+	// AmendCommitAll is called even when the regenerator failed: a
+	// partial run may have written real updates that must not be
+	// left dirty in the worktree.
+	mocks.Worktree.EXPECT().AmendCommitAll(gomock.Any()).Return(nil)
+
+	res, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err, "regen failure must not fail the rebuild")
+	require.NotNil(t, res)
+}
+
+func TestHandler_Rebuild_regenerateAmendIsAlwaysCalledOnSuccess(t *testing.T) {
+	// On successful Regenerator.Regenerate, AmendCommitAll is always
+	// called. AmendCommitAll itself uses --allow-empty, so the case
+	// where the regenerator produced no changes is handled by git
+	// without gs needing a worktree-state check (which would miss
+	// untracked files anyway, see internal/git/files_wt.go IsClean).
+	h, mocks, regenerator := newHandlerWithRegenerator(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, opts git.MergeOptions) error {
+			writeRegenLog(t, opts, "foo.go")
+			return nil
+		}).
+		Return(nil)
+
+	regenerator.EXPECT().
+		Regenerate(gomock.Any(), []string{"foo.go"}).
+		Return(nil)
+	mocks.Worktree.EXPECT().AmendCommitAll(gomock.Any()).Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err)
+}
+
+func TestHandler_Rebuild_regenerateNilSkipped(t *testing.T) {
+	// Default newHandler has nil Regenerator; even when paths get
+	// logged, no panic and no amend.
+	h, mocks := newHandler(t)
+	setupSuccessfulRebuild(t, mocks)
+
+	mocks.Worktree.EXPECT().
+		Merge(gomock.Any(), gomock.Any()).
+		Do(func(_ context.Context, opts git.MergeOptions) error {
+			writeRegenLog(t, opts, "foo.go")
+			return nil
+		}).
+		Return(nil)
+
+	_, err := h.Rebuild(t.Context(), nil)
+	require.NoError(t, err)
 }
