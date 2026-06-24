@@ -1,0 +1,66 @@
+# 'gs anchor rm' removes a worktree and dissolves its anchor:
+# direct child branches are retargeted onto the anchor's base
+# (left needing a restack), the anchor branch is deleted, and the
+# worktree directory is removed.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with a child stack: dev -> b1 -> b2.
+gs anchor create $WORK/wtB --name dev
+cd $WORK/wtB
+cp $WORK/b1.txt b1.txt
+git add b1.txt
+gs bc b1 -m 'Add b1'
+cp $WORK/b2.txt b2.txt
+git add b2.txt
+gs bc b2 -m 'Add b2'
+
+# A worktree cannot remove itself: refused before any state changes.
+cd $WORK/wtB
+! gs anchor rm $WORK/wtB
+stderr 'cannot remove itself'
+
+# A dirty worktree is refused without --force, and because removal is
+# attempted before retargeting, nothing is mutated: the anchor is still
+# registered and the worktree still exists.
+cp $WORK/b1.txt $WORK/wtB/dirty.txt
+cd $WORK/repo
+! gs anchor rm $WORK/wtB
+stderr 'remove worktree'
+gs anchor ls
+stderr 'dev'
+exists $WORK/wtB
+
+# Clean up the dirt, then remove the anchor worktree for real.
+rm $WORK/wtB/dirty.txt
+gs anchor rm $WORK/wtB
+stderr 'b1: retargeted onto main'
+stderr 'Removed worktree'
+
+# The worktree directory is gone.
+! exists $WORK/wtB
+
+# The anchor branch is dissolved; its direct child now roots at main,
+# and the rest of the stack is preserved above it.
+gs ls -a
+stderr 'b1'
+stderr 'b2'
+! stderr 'dev'
+
+# Removing a path that is not an anchor worktree is an error.
+! gs anchor rm $WORK/repo
+stderr 'not an anchor worktree'
+
+-- repo/dummy.txt --
+dummy
+-- b1.txt --
+b1
+-- b2.txt --
+b2

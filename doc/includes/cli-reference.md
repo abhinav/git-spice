@@ -1458,6 +1458,34 @@ the worktree updates it from the remote.
 
 * `--name=BRANCH`: Branch to register as this worktree's anchor (defaults to the branch checked out in the current worktree)
 
+### git-spice anchor rm {#gs-anchor-rm}
+
+```
+gs anchor rm (rm) <path> [flags]
+```
+
+Remove an anchor worktree and dissolve its anchor
+
+Removes an anchor worktree and dissolves its anchor.
+
+The anchor's direct child branches are retargeted onto the
+anchor's base (the canonical trunk for a root anchor, or the
+pinned branch for an internal anchor); they are left needing a
+restack. The anchor branch is then deleted and the worktree
+directory removed.
+
+Use this when a worktree's work is done. Run it from a different
+worktree (for example, the primary checkout): a worktree cannot
+remove itself.
+
+**Arguments**
+
+* `path`: Path of the anchor worktree to remove
+
+**Flags**
+
+* `--force`: Remove the worktree even if it has uncommitted changes
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}
