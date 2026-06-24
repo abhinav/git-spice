@@ -1259,14 +1259,18 @@ Staged comments are submitted together with
 ### git-spice branch comment add {#gs-branch-comment-add}
 
 ```
-gs branch (b) comment (cmt) add [<file-and-line>] [flags]
+gs branch (b) comment (cmt) add [<anchor>] [flags]
 ```
 
 Post an inline comment immediately
 
-Posts an inline comment immediately
-on the change request for the current branch.
-Provide the file and line number as file.go:42.
+Posts a comment immediately on the change request for the
+current branch. The anchor argument controls the scope:
+
+  file.go:42       line-scope: anchored to that line
+  file.go:42-50    line-scope multi-line range
+  file.go          file-scope: anchored to the file
+  (empty) + --pr   pr-scope: not anchored to any file
 
 If no message is given with -m, an editor is opened.
 
@@ -1275,11 +1279,12 @@ instead of starting a new one.
 
 **Arguments**
 
-* `file-and-line`: File and line in the form file.go:42.
+* `anchor`: What to anchor the comment to: file.go:42 for a line, file.go for a file, or empty for the PR.
 
 **Flags**
 
 * `-m`, `--message=MSG`: Comment body. Opens editor if not provided.
+* `--pr`: Post a PR-level comment with no file or line anchor.
 * `--respond=THREAD_ID`: Thread ID to reply to instead of starting a new thread.
 * `-b`, `--branch=BRANCH`: Branch to add comment for. Defaults to current branch.
 

@@ -166,6 +166,18 @@ type shamComment struct {
 	// ThreadID groups inline comments into threads.
 	ThreadID string
 
+	// Scope is "line", "file", or "pr" for inline-managed
+	// comments. Empty for change-level comments created via
+	// the non-inline endpoint; the inline-list filter uses
+	// non-emptiness as the "include me" signal.
+	Scope string
+
+	// RangeStart and RangeEnd describe a multi-line range
+	// for line-scope comments. Both zero indicates a single-
+	// line comment anchored to Line.
+	RangeStart int
+	RangeEnd   int
+
 	// CommitSHA is the head SHA of the change at the time the
 	// comment was posted. Used to compute whether the comment is
 	// stale relative to the change's current head.

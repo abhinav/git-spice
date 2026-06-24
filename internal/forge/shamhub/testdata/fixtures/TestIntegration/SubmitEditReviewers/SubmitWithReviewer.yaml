@@ -7,54 +7,54 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:65023
-        body: '{"subject":"Testing 3wsEeIkE","body":"Test PR with reviewer","base":"main","head":"3wsEeIkE","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:65023/abhinav/test-repo/changes
+        host: 127.0.0.1:49154
+        body: '{"subject":"Testing t9pXp56V","body":"Test PR with reviewer","base":"main","head":"t9pXp56V","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:49154/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
+        content_length: 82
         body: |
             {
-              "number": 3,
-              "url": "http://127.0.0.1:65024/abhinav/test-repo/change/3"
+              "number": 12,
+              "url": "http://127.0.0.1:49156/abhinav/test-repo/change/12"
             }
         headers:
             Content-Length:
-                - "80"
+                - "82"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 43.853542ms
+        duration: 46.645833ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:65023
+        host: 127.0.0.1:49154
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:65023/abhinav/test-repo/changes/by-branch/3wsEeIkE?limit=10&state=all
+        url: http://127.0.0.1:49154/abhinav/test-repo/changes/by-branch/t9pXp56V?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 635
+        content_length: 637
         body: |
             [
               {
-                "number": 3,
-                "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/3",
+                "number": 12,
+                "html_url": "http://127.0.0.1:49156/abhinav/test-repo/change/12",
                 "state": "open",
-                "title": "Testing 3wsEeIkE",
+                "title": "Testing t9pXp56V",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "3f0e08369ff67b1c0df49de949a61a36b0f0d258"
+                  "sha": "e53659aba7155eacc28ec958ae49e1bb76383f12"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "3wsEeIkE",
-                  "sha": "5fab980ca1556d04c0dcbb005c5372ba48534139"
+                  "ref": "t9pXp56V",
+                  "sha": "4fb0917da94bd269275264ac2f6009760583a87c"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -80,9 +80,9 @@ interactions:
             ]
         headers:
             Content-Length:
-                - "635"
+                - "637"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 38.093459ms
+        duration: 38.2285ms
