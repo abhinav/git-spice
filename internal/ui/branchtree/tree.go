@@ -4,7 +4,9 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -77,6 +79,11 @@ type Item struct {
 	//
 	// Style depends on Highlighted: normal if true, faint otherwise.
 	Commits []commit.Summary
+
+	// Submodules maps submodule paths
+	// to associated branch names.
+	// Rendered as "[path:branch, ...]" when non-empty.
+	Submodules map[string]string
 
 	// NeedsRestack indicates whether the branch needs restacking.
 	// If true, renders the needs-restack indicator.
@@ -341,6 +348,10 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 		r.worktree(sb, item.Worktree, item.WorktreeHighlights)
 	}
 
+	if len(item.Submodules) > 0 {
+		r.submodules(sb, item.Submodules)
+	}
+
 	if item.NeedsRestack {
 		sb.WriteString(" ")
 		sb.WriteString(r.Style.NeedsRestack.String())
@@ -474,6 +485,24 @@ func (r *branchTreeRenderer) worktree(
 	}
 
 	renderTextWithHighlights(sb, wt, highlights, r.Style.Worktree, r.Style.TextHighlight)
+}
+
+func (r *branchTreeRenderer) submodules(
+	sb *strings.Builder,
+	subs map[string]string,
+) {
+	sb.WriteString(r.Style.Worktree.Render(" ["))
+	defer sb.WriteString(r.Style.Worktree.Render("]"))
+
+	paths := slices.Sorted(maps.Keys(subs))
+	for i, path := range paths {
+		if i > 0 {
+			sb.WriteString(r.Style.Worktree.Render(", "))
+		}
+		sb.WriteString(r.Style.Worktree.Render(
+			path + ":" + subs[path],
+		))
+	}
 }
 
 func (r *branchTreeRenderer) pushStatus(

@@ -48,6 +48,7 @@ func (cmd *commitCreateCmd) Run(
 	ctx context.Context,
 	log *silog.Logger,
 	wt *git.Worktree,
+	submoduleTracker SubmoduleTracker,
 	restackHandler RestackHandler,
 ) error {
 	if err := wt.Commit(ctx, git.CommitRequest{
@@ -77,6 +78,13 @@ func (cmd *commitCreateCmd) Run(
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if err := submoduleTracker.RecordBranchState(
+		ctx, currentBranch,
+	); err != nil {
+		log.Warn("Could not record submodule associations",
+			"error", err)
 	}
 
 	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
