@@ -85,6 +85,7 @@ type PullRequestListOptions struct {
 type Comment struct {
 	ID         int64       `json:"id"`
 	Content    Content     `json:"content"`
+	User       User        `json:"user"`
 	Inline     *Inline     `json:"inline,omitempty"`
 	Resolution *Resolution `json:"resolution,omitempty"`
 }
@@ -92,6 +93,25 @@ type Comment struct {
 // CommentCreateRequest is the request body for creating or updating a comment.
 type CommentCreateRequest struct {
 	Content Content `json:"content"`
+
+	// Inline, when set, posts a code-review (inline) comment
+	// on the given file path and line.
+	Inline *Inline `json:"inline,omitempty"`
+
+	// Parent, when set, posts a reply on the given parent comment.
+	// Mutually exclusive with Inline.
+	Parent *CommentRef `json:"parent,omitempty"`
+}
+
+// CommentRef identifies a comment by ID.
+type CommentRef struct {
+	ID int64 `json:"id"`
+}
+
+// CommentResolveRequest is the request body for resolving
+// or unresolving an inline comment.
+type CommentResolveRequest struct {
+	Resolution *Resolution `json:"resolution"`
 }
 
 // CommentList is the paginated response for listing comments.
@@ -481,6 +501,32 @@ func (c *Client) CommitStatusCreate(
 		fmt.Sprintf(
 			"/repositories/%s/%s/commit/%s/statuses/build",
 			workspace, repo, commitHash,
+		),
+		nil, req, &response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
+// CommentResolve resolves or unresolves a pull-request inline comment.
+//
+// Pass req.Resolution = nil to unresolve, non-nil to resolve.
+func (c *Client) CommentResolve(
+	ctx context.Context,
+	workspace string,
+	repo string,
+	prID int64,
+	commentID int64,
+	req *CommentResolveRequest,
+) (*Comment, *Response, error) {
+	var response Comment
+	resp, err := c.put(
+		ctx,
+		fmt.Sprintf(
+			"/repositories/%s/%s/pullrequests/%d/comments/%d",
+			workspace, repo, prID, commentID,
 		),
 		nil, req, &response,
 	)

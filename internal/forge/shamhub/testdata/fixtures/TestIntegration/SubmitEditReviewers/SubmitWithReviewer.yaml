@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 131
-        host: 127.0.0.1:56373
-        body: '{"subject":"Testing 4oj7KI1p","body":"Test PR with reviewer","base":"main","head":"4oj7KI1p","reviewers":["reviewer1","reviewer2"]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53569
+        body: '{"subject":"Testing df7WoDco","body":"Test PR with reviewer","base":"main","head":"df7WoDco","reviewers":["reviewer1","reviewer2"]}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -18,8 +18,8 @@ interactions:
         content_length: 82
         body: |
             {
-              "number": 13,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/13"
+              "number": 12,
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/12"
             }
         headers:
             Content-Length:
@@ -28,20 +28,20 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 23.097875ms
+        duration: 30.764459ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53569
         form:
             limit:
                 - "10"
             state:
                 - all
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/4oj7KI1p?limit=10&state=all
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes/by-branch/df7WoDco?limit=10&state=all
         method: GET
       response:
         proto: HTTP/1.1
@@ -51,10 +51,10 @@ interactions:
         body: |
             [
               {
-                "number": 13,
-                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/13",
+                "number": 12,
+                "html_url": "http://127.0.0.1:53570/abhinav/test-repo/change/12",
                 "state": "open",
-                "title": "Testing 4oj7KI1p",
+                "title": "Testing df7WoDco",
                 "body": "Test PR with reviewer",
                 "base": {
                   "repository": {
@@ -62,15 +62,15 @@ interactions:
                     "name": "test-repo"
                   },
                   "ref": "main",
-                  "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                  "sha": "c17a304a06b281e76d193f8a86a8ab71585b64e3"
                 },
                 "head": {
                   "repository": {
                     "owner": "abhinav",
                     "name": "test-repo"
                   },
-                  "ref": "4oj7KI1p",
-                  "sha": "d42a7e9d935c9911190197ad4e04542af2500250"
+                  "ref": "df7WoDco",
+                  "sha": "6cca56449280db9fd8954bd6d01d3b30ca7a474c"
                 },
                 "requested_reviewers": [
                   "reviewer1",
@@ -85,4 +85,4 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 23.390833ms
+        duration: 28.513791ms

@@ -7,9 +7,9 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 88
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53569
         body: '{"subject":"Checks f0XMOiaa","body":"Checks state test","base":"main","head":"f0XMOiaa"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        url: http://127.0.0.1:53569/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
@@ -19,7 +19,7 @@ interactions:
         body: |
             {
               "number": 9,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/9"
+              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/9"
             }
         headers:
             Content-Length:
@@ -34,10 +34,10 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 56
-        host: 127.0.0.1:56373
-        body: '{"name":"git-spice integration passed","state":"passed"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/9/checks
+        content_length: 18
+        host: 127.0.0.1:53569
+        body: '{"state":"passed"}'
+        url: http://127.0.0.1:53569/abhinav/test-repo/change/9/checks
         method: POST
       response:
         proto: HTTP/1.1
@@ -60,22 +60,17 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/9/checks
+        host: 127.0.0.1:53569
+        url: http://127.0.0.1:53569/abhinav/test-repo/change/9/checks
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 90
+        content_length: 24
         body: |
             {
-              "checks": [
-                {
-                  "name": "git-spice integration passed",
-                  "state": "passed"
-                }
-              ]
+              "state": "passed"
             }
         headers:
             Content-Length:
