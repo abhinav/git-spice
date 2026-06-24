@@ -1,0 +1,3 @@
+kind: Added
+body: 'submodule: Add primitives for transactional checkout and recursive operations on tracked submodules.'
+time: 2026-06-02T16:11:11.782224-04:00
