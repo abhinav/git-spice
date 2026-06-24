@@ -171,7 +171,7 @@ of deleted branches, leaving higher branches in place.
 ### git-spice repo restack {#gs-repo-restack}
 
 ```
-gs repo (r) restack (r)
+gs repo (r) restack (r) [flags]
 ```
 
 <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span></span>
@@ -180,6 +180,12 @@ Restack all tracked branches
 
 All tracked branches in the repository are rebased on top of their
 respective bases in dependency order, ensuring a linear history.
+
+**Flags**
+
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Log
 
@@ -345,7 +351,10 @@ Use --branch to rebase the stack of a different branch.
 
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the stack of
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice stack edit {#gs-stack-edit}
 
@@ -473,7 +482,10 @@ but still rebase all branches above it.
 **Flags**
 
 * `--skip-start`: Do not restack the starting branch
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the upstack of
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice upstack onto {#gs-upstack-onto}
 
@@ -709,7 +721,10 @@ Use --branch to start at a different branch.
 
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack the downstack of
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ## Branch
 
@@ -1052,9 +1067,18 @@ The current branch will be rebased onto its base,
 ensuring a linear history.
 Use --branch to target a different branch.
 
+With --auto-resolve (or spice.restack.autoResolve=true),
+conflicts encountered during the rebase are passed to the
+configured resolver script before the operation is
+interrupted. See the restack auto-resolve guide for the
+JSON protocol the script must implement.
+
 **Flags**
 
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.restack.autoResolve" }](/cli/config.md#spicerestackautoresolve)): Auto-resolve rebase conflicts using the configured resolver script
 * `--branch=NAME`: Branch to restack
+
+**Configuration**: [spice.restack.autoResolve](/cli/config.md#spicerestackautoresolve)
 
 ### git-spice branch onto {#gs-branch-onto}
 

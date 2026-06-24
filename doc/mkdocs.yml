@@ -77,6 +77,7 @@ nav:
     - guide/branch.md
     - guide/cr.md
     - guide/scripts.md
+    - guide/restack-auto-resolve.md
     - guide/limits.md
     - guide/troubleshooting.md
     - guide/internals.md
