@@ -1,0 +1,65 @@
+# 'branch restack' when trunk is checked out in another worktree.
+# A branch based on trunk should restack successfully
+# even if trunk is checked out in a different worktree.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature2'
+
+# create a worktree for feature1
+# (feature2 stays in the main repo)
+git worktree add ../wt-feature1 feature1
+
+# go back to main and make a change that requires restacking
+gs trunk
+cp $WORK/extra/main-update.txt main-update.txt
+git add main-update.txt
+git commit -m 'Update main'
+
+# go to the feature1 worktree and restack
+cd ../wt-feature1
+gs branch restack
+stderr 'feature1: restacked'
+
+# verify the branch graph from wt-feature1
+git graph --branches
+cmp stdout $WORK/golden/graph-after-restack.txt
+
+# now go back to main repo and restack feature2
+cd ../repo
+gs bco feature2
+gs branch restack
+stderr 'feature2: restacked'
+
+git graph --branches
+cmp stdout $WORK/golden/graph-final.txt
+
+-- repo/feature1.txt --
+feature1
+-- repo/feature2.txt --
+feature2
+-- extra/main-update.txt --
+main update
+-- golden/graph-after-restack.txt --
+* f5facc1 (HEAD -> feature1) Add feature1
+* 4bced44 (main) Update main
+| * 9726f03 (feature2) Add feature2
+| * d1dd13f Add feature1
+|/  
+* e2cefa6 Initial commit
+-- golden/graph-final.txt --
+* 40815b9 (HEAD -> feature2) Add feature2
+* f5facc1 (feature1) Add feature1
+* 4bced44 (main) Update main
+* e2cefa6 Initial commit

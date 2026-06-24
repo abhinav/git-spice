@@ -1,0 +1,3 @@
+kind: Added
+body: 'anchor: Add ''gs anchor create'', ''gs anchor list'', and ''gs anchor track'' commands. ''gs anchor create'' sets up a per-worktree trunk branch (an anchor) that tracks the remote trunk, so ''repo sync'' and restacks in different worktrees operate on their own trunk without contending on a shared checkout. ''gs anchor track'' adopts the anchor of a worktree created outside git-spice. ''gs anchor list'' shows the registered anchors. Also adds ''-w/--worktree'' to ''log short'' and ''repo restack'' to scope operations to the current worktree''s stacks.'
+time: 2026-06-02T16:04:50.426069-04:00

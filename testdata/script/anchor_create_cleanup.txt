@@ -1,0 +1,42 @@
+# 'gs anchor create' cleans up the worktree and any branches it
+# created when a later step fails, so the user is not left with
+# debris that blocks a retry.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A branch name that the anchor will collide with.
+git branch taken
+
+# Creating an anchor whose name already exists fails...
+! gs anchor create $WORK/wt1 --name taken
+stderr 'create anchor'
+
+# ...and leaves no worktree behind, so a retry is possible.
+! exists $WORK/wt1
+
+# The pre-existing branch must be untouched by cleanup.
+git rev-parse --verify refs/heads/taken
+
+# A second failure mode: the -b feature branch collides after the
+# anchor branch has already been created and registered.
+git branch feat-taken
+! gs anchor create $WORK/wt2 --name dev2 -b feat-taken
+stderr 'create branch'
+
+# The worktree is gone and the anchor branch it created is rolled
+# back, so nothing is left dangling.
+! exists $WORK/wt2
+! git rev-parse --verify refs/heads/dev2
+
+# The pre-existing feature branch must survive.
+git rev-parse --verify refs/heads/feat-taken
+
+-- repo/dummy.txt --
+dummy

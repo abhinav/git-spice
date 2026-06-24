@@ -32,6 +32,11 @@ type Store struct {
 
 	trunk  string
 	remote Remote
+
+	// anchors maps a registered anchor branch to its record (worktree
+	// path and base). Loaded once at store open so [Store.IsTrunk]
+	// stays cheap in hot paths.
+	anchors map[string]Anchor
 }
 
 // InitStoreRequest is a request to initialize the store
@@ -73,10 +78,11 @@ func InitStore(ctx context.Context, req InitStoreRequest) (*Store, error) {
 
 	db := req.DB
 	store := &Store{
-		db:     db,
-		trunk:  req.Trunk,
-		remote: req.Remote,
-		log:    logger,
+		db:      db,
+		trunk:   req.Trunk,
+		remote:  req.Remote,
+		log:     logger,
+		anchors: make(map[string]Anchor),
 	}
 	var oldRepoInfo repoInfo
 	if err := db.Get(ctx, _repoJSON, &oldRepoInfo); err == nil {
@@ -194,12 +200,17 @@ func OpenStore(ctx context.Context, db DB, logger *silog.Logger) (*Store, error)
 		return nil, fmt.Errorf("corrupt state: %w", err)
 	}
 
-	return &Store{
+	store := &Store{
 		db:     db,
 		trunk:  info.Trunk,
 		remote: info.stateRemote(),
 		log:    logger,
-	}, nil
+	}
+	if err := store.loadAnchors(ctx); err != nil {
+		return nil, fmt.Errorf("load anchors: %w", err)
+	}
+
+	return store, nil
 }
 
 func storageVersionForRemote(remote Remote) Version {

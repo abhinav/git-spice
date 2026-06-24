@@ -1,0 +1,57 @@
+# 'gs anchor track' adopts an existing worktree's anchor branch into
+# git-spice's anchor registry.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A worktree created outside git-spice (plain 'git worktree add'),
+# with its own local branch 'dev' acting as an anchor.
+git worktree add $WORK/wt1 -b dev
+cd $WORK/wt1
+cp $WORK/feat1.txt feat1.txt
+
+# Before tracking, git-spice does not know 'dev' is an anchor, so a branch
+# based on it cannot be tracked.
+git add feat1.txt
+! gs bc feat1 -m 'Add feat1'
+
+# Adopt the worktree's anchor.
+gs anchor track
+stderr 'Tracking dev as the anchor for worktree'
+
+# Now a branch created in the worktree roots at the worktree anchor.
+gs bc feat1 -m 'Add feat1'
+gs ls
+stderr 'feat1'
+stderr 'dev'
+
+# Re-tracking is idempotent.
+gs bco dev
+gs anchor track
+stderr 'Tracking dev as the anchor for worktree'
+
+# A worktree may have only one anchor: tracking a second, different
+# branch as this worktree's anchor is refused.
+git branch dev2
+! gs anchor track --name dev2
+stderr 'already has anchor'
+
+# A tracked stack branch cannot be registered as an anchor.
+! gs anchor track --name feat1
+stderr 'must be a graph root'
+
+# From the primary worktree on the canonical trunk, tracking is refused.
+cd $WORK/repo
+! gs anchor track
+stderr 'canonical trunk'
+
+-- repo/dummy.txt --
+dummy
+-- feat1.txt --
+feat1 content

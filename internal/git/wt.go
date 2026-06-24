@@ -84,6 +84,70 @@ func (r *Repository) OpenWorktree(ctx context.Context, dir string) (*Worktree, e
 	}), nil
 }
 
+// WorktreeAddRequest specifies parameters for creating a new worktree.
+type WorktreeAddRequest struct {
+	// Path is the filesystem path for the new worktree.
+	Path string // required
+
+	// Detach creates the worktree in detached HEAD state.
+	//
+	// At least one of Detach or Head must be set: a bare
+	// 'git worktree add <path>' would silently create a branch named
+	// after the path's basename, which no caller wants.
+	Detach bool
+
+	// Head is the branch or commit to check out in the new worktree.
+	//
+	// With Detach, the worktree is detached at Head. Without Detach,
+	// Head must name an existing branch, which is checked out.
+	Head string
+}
+
+// WorktreeAdd creates a new worktree at the given path.
+func (r *Repository) WorktreeAdd(
+	ctx context.Context, req WorktreeAddRequest,
+) error {
+	if !req.Detach && req.Head == "" {
+		return fmt.Errorf(
+			"worktree add %v: one of Head or Detach is required", req.Path)
+	}
+
+	args := []string{"add"}
+	if req.Detach {
+		args = append(args, "--detach")
+	}
+	args = append(args, req.Path)
+	if req.Head != "" {
+		args = append(args, req.Head)
+	}
+	return r.gitCmd(ctx, "worktree", args...).Run()
+}
+
+// WorktreeRemoveRequest specifies parameters for removing a worktree.
+type WorktreeRemoveRequest struct {
+	// Path is the filesystem path of the worktree to remove.
+	Path string // required
+
+	// Force removes the worktree even if it is dirty
+	// or contains submodules.
+	Force bool
+}
+
+// WorktreeRemove removes the worktree at the given path.
+//
+// It removes only the worktree's working directory and administrative
+// files; branches and other refs are left untouched.
+func (r *Repository) WorktreeRemove(
+	ctx context.Context, req WorktreeRemoveRequest,
+) error {
+	args := []string{"remove"}
+	if req.Force {
+		args = append(args, "--force")
+	}
+	args = append(args, req.Path)
+	return r.gitCmd(ctx, "worktree", args...).Run()
+}
+
 // WorktreeListItem represents a worktree associated with a repository.
 type WorktreeListItem struct {
 	// Path is the path to the worktree.
