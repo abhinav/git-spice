@@ -1625,6 +1625,32 @@ subsumes it. A second run is a no-op once nothing remains
 to prune. Existing tips with no upstack-tip relationship
 are left alone.
 
+### git-spice integration tip advance {#gs-integration-tip-advance}
+
+```
+gs integration (int) tip advance [<branches> ...]
+```
+
+Move tips to the topmost branches of their upstacks
+
+For each configured tip (or only the named tips, if any are
+given as arguments), replaces the tip with the topmost
+branch(es) in its upstack — the leaves of the tree above it.
+
+If a tip already has no branches above it, it is left alone.
+If a tip's upstack forks, the tip expands to every leaf of
+the fork. Branches that would become duplicates of other
+configured tips are deduplicated.
+
+Useful as a one-shot maintenance step after extending a stack
+above a configured tip: instead of 'tip remove old' + 'tip
+add new', a single 'tip advance' walks each tip to its
+current top.
+
+**Arguments**
+
+* `branches`: Tips to advance; defaults to all configured tips
+
 ## Rebase
 
 ### git-spice rebase continue {#gs-rebase-continue}

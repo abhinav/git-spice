@@ -1,0 +1,90 @@
+# Verifies 'gs integration tip advance' moves each configured tip
+# to the topmost branch(es) in its upstack — i.e., the leaf branches
+# that have no branches above them. This is the natural maintenance
+# operation after adding new work above a tip: instead of asking the
+# user to manually 'tip remove' + 'tip add', the same effect is
+# achieved in one step.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Linear stack:  main -> low -> middle -> high
+git add low.txt
+gs branch create low -m 'Add low'
+git add middle.txt
+gs branch create middle -m 'Add middle'
+git add high.txt
+gs branch create high -m 'Add high'
+
+# Forked stack:  main -> base -> fork-a
+#                              -> fork-b
+gs trunk
+git add base.txt
+gs branch create base -m 'Add base'
+git add fork-a.txt
+gs branch create fork-a -m 'Add fork-a'
+
+gs branch checkout base
+git add fork-b.txt
+gs branch create fork-b -m 'Add fork-b'
+
+# Configure only the lower branches as tips: 'low' (linear) and
+# 'base' (forked). After advance:
+# - 'low' moves up to 'high' (single leaf)
+# - 'base' expands to 'fork-a' and 'fork-b' (two leaves)
+gs trunk
+gs integration create preview --tip low --tip base
+
+gs integration tip advance
+stderr 'Advanced "low" to "high"'
+stderr 'Advanced "base" to "fork-a", "fork-b"'
+
+# The new tip list is the union of all leaves, in encounter order
+# (the configured order of source tips, then per-tip leaves).
+gs integration tip list
+cmp stdout $WORK/golden/tips-after.txt
+
+# A second run is a no-op: each tip is already a leaf.
+gs integration tip advance
+stderr 'No tips to advance'
+
+# Advance can be scoped to a single tip with the optional argument.
+# Add a new branch above fork-a, then advance only fork-a.
+gs branch checkout fork-a
+git add above-a.txt
+gs branch create above-a -m 'Add above-a'
+
+gs integration tip advance fork-a
+stderr 'Advanced "fork-a" to "above-a"'
+! stderr 'Advanced "fork-b"'
+
+gs integration tip list
+cmp stdout $WORK/golden/tips-after-scoped.txt
+
+-- repo/low.txt --
+low
+-- repo/middle.txt --
+middle
+-- repo/high.txt --
+high
+-- repo/base.txt --
+base
+-- repo/fork-a.txt --
+fork a
+-- repo/fork-b.txt --
+fork b
+-- repo/above-a.txt --
+above a
+-- golden/tips-after.txt --
+high
+fork-a
+fork-b
+-- golden/tips-after-scoped.txt --
+high
+fork-b
+above-a
