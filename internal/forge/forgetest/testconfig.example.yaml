@@ -52,3 +52,31 @@ bitbucket:
   reviewer: "another-bitbucket-user"
   # Bitbucket does not support assignees, leave empty
   assignee: ""
+
+gitea:
+  # Base URL of your Gitea instance.
+  #
+  # To record against an existing instance, set this section to the real
+  # instance topology, set GITEA_TOKEN and GITEA_FORK_TOKEN in the environment,
+  # then run:
+  #   GITEA_RECORD_MODE=existing bash tools/record-gitea-fixtures.sh
+  url: "http://localhost:3000"
+  # Repository owner (your Gitea username or organization).
+  owner: "your-gitea-username"
+  # Test repository name.
+  #
+  # The repository must exist and the GITEA_TOKEN user must be able to push,
+  # create pull requests, update pull requests, and create issue comments.
+  repo: "your-test-repo"
+  # Fork repository owner for cross-repository pull request tests.
+  #
+  # The fork must exist and the GITEA_FORK_TOKEN user must be able to push
+  # branches to it. For the CI Docker bootstrap, forkOwner == reviewer ==
+  # assignee to simplify test user setup with a single secondary user account.
+  forkOwner: "another-gitea-user"
+  # Fork repository name for cross-repository pull request tests.
+  forkRepo: "your-test-repo-fork"
+  # A Gitea user who can be added as a reviewer.
+  reviewer: "another-gitea-user"
+  # A Gitea user who can be assigned to PRs.
+  assignee: "another-gitea-user"

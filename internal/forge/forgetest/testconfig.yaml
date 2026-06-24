@@ -48,3 +48,19 @@ bitbucket:
   reviewer: "Ed IRL Kohlwey"
   # Bitbucket does not support assignees, leave empty
   assignee: ""
+
+gitea:
+  # Base URL of the Gitea instance used for recording fixtures.
+  url: "http://127.0.0.1:3000"
+  # Repository owner.
+  owner: "test-owner"
+  # Test repository name.
+  repo: "test-repo"
+  # Fork repository owner for cross-repository pull request tests.
+  forkOwner: "test-reviewer"
+  # Fork repository name for cross-repository pull request tests.
+  forkRepo: "test-fork-repo"
+  # User who can be added as a reviewer.
+  reviewer: "test-reviewer"
+  # User who can be assigned to pull requests.
+  assignee: "test-reviewer"

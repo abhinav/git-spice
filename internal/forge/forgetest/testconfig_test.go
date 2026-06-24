@@ -27,6 +27,25 @@ func TestConfigSanitizers_GitHubRoleCollisions(t *testing.T) {
 		got)
 }
 
+func TestGiteaConfigSanitizers_URLCollision(t *testing.T) {
+	cfg := GiteaConfig{
+		URL: "https://forge.example.com/alice/widgets",
+		ForgeConfig: ForgeConfig{
+			Owner: "alice",
+			Repo:  "widgets",
+		},
+	}
+
+	got := applyTestSanitizers(
+		`url=https://forge.example.com/alice/widgets owner=alice repo=widgets`,
+		GiteaConfigSanitizers(cfg, CanonicalGiteaConfig()),
+	)
+
+	assert.Equal(t,
+		`url=http://localhost:3000 owner=test-owner repo=test-repo`,
+		got)
+}
+
 func applyTestSanitizers(s string, sanitizers []Sanitizer) string {
 	for _, sanitizer := range sanitizers {
 		s = strings.ReplaceAll(s, sanitizer.Replace, sanitizer.With)

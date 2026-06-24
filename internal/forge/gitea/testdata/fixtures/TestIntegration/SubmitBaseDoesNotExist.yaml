@@ -1,0 +1,87 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        transfer_encoding:
+            - chunked
+        content_length: -1
+        body: |
+            {"id":1,"owner":{"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":false,"last_login":"0001-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":false,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"},"name":"test-repo","full_name":"test-owner/test-repo","description":"git-spice integration test repository","empty":false,"private":false,"fork":false,"template":false,"parent":null,"mirror":false,"size":23,"language":"","languages_url":"http://localhost:3000/api/v1/repos/test-owner/test-repo/languages","html_url":"http://localhost:3000/test-owner/test-repo","url":"http://localhost:3000/api/v1/repos/test-owner/test-repo","link":"","ssh_url":"git@localhost:test-owner/test-repo.git","clone_url":"http://localhost:3000/test-owner/test-repo.git","original_url":"","website":"","stars_count":0,"forks_count":1,"watchers_count":1,"open_issues_count":0,"open_pr_counter":0,"release_counter":0,"default_branch":"main","archived":false,"created_at":"2026-06-22T15:01:22Z","updated_at":"2026-06-22T15:01:22Z","archived_at":"1970-01-01T00:00:00Z","permissions":{"admin":true,"push":true,"pull":true},"has_issues":true,"internal_tracker":{"enable_time_tracker":true,"allow_only_contributors_to_track_time":true,"enable_issue_dependencies":true},"has_wiki":true,"has_pull_requests":true,"has_projects":true,"projects_mode":"all","has_releases":true,"has_packages":true,"has_actions":true,"ignore_whitespace_conflicts":false,"allow_merge_commits":true,"allow_rebase":true,"allow_rebase_explicit":true,"allow_squash_merge":true,"allow_fast_forward_only_merge":true,"allow_rebase_update":true,"default_delete_branch_after_merge":false,"default_merge_style":"merge","default_allow_maintainer_edit":false,"avatar_url":"","internal":false,"mirror_interval":"","object_format_name":"sha1","mirror_updated":"0001-01-01T00:00:00Z","repo_transfer":null}
+        headers:
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 16.581834ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:3000
+        headers:
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/user
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 537
+        body: |
+            {"id":1,"login":"test-owner","login_name":"","source_id":0,"full_name":"","email":"owner@test.example","avatar_url":"http://localhost:3000/avatars/36860231b886b0334428e81f0084a86a","html_url":"http://localhost:3000/test-owner","language":"","is_admin":true,"last_login":"1970-01-01T00:00:00Z","created":"2026-06-22T15:01:20Z","restricted":false,"active":true,"prohibit_login":false,"location":"","website":"","description":"","visibility":"public","followers_count":0,"following_count":0,"starred_repos_count":0,"username":"test-owner"}
+        headers:
+            Content-Length:
+                - "537"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 23.693458ms
+    - id: 2
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 104
+        host: 127.0.0.1:3000
+        body: '{"title":"Testing UKOUcM87","body":"Test PR with non-existent base","head":"UKOUcM87","base":"uAKc66EK"}'
+        headers:
+            Content-Type:
+                - application/json
+            User-Agent:
+                - git-spice
+        url: http://localhost:3000/api/v1/repos/test-owner/test-repo/pulls
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 83
+        body: |
+            {"errors":null,"message":"BaseNotExist","url":"http://localhost:3000/api/swagger"}
+        headers:
+            Content-Length:
+                - "83"
+            Content-Type:
+                - application/json;charset=utf-8
+        status: 404 Not Found
+        code: 404
+        duration: 26.75675ms
