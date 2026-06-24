@@ -64,3 +64,16 @@ func (w *Worktree) ListUntrackedFiles(ctx context.Context) iter.Seq2[string, err
 		}
 	}
 }
+
+// IsClean reports whether the worktree has no uncommitted changes among
+// tracked files. Staged changes, unstaged changes, and unmerged paths
+// all make the worktree unclean. Untracked files are ignored.
+func (w *Worktree) IsClean(ctx context.Context) (bool, error) {
+	out, err := w.gitCmd(ctx, "status",
+		"--porcelain", "--untracked-files=no").
+		OutputChomp()
+	if err != nil {
+		return false, fmt.Errorf("git status: %w", err)
+	}
+	return out == "", nil
+}
