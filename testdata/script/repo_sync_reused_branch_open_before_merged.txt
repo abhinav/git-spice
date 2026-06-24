@@ -1,0 +1,112 @@
+# 'repo sync' deletes a manually tracked branch
+# when a newer open CR reuses the same source branch name.
+
+as 'Test <test@example.com>'
+at '2026-06-23T12:00:00Z'
+
+# Setup.
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up a fake GitHub remote.
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create and merge the older CR for feature.
+# The original repo keeps its local feature branch at this merged head.
+git add feature-v1.txt
+gs bc -m 'Add feature v1' feature
+gs branch submit --fill
+stderr 'Created #1'
+shamhub merge alice/example 1
+git push origin --delete feature
+
+# A second checkout creates a newer open CR with the same source branch name.
+cd ..
+shamhub clone alice/example.git other
+cd other
+gs repo init --trunk=main --remote=origin
+cp $WORK/extra/feature-v2.txt feature-v2.txt
+git add feature-v2.txt
+gs bc -m 'Add feature v2' feature
+gs branch submit --fill
+stderr 'Created #2'
+
+# Forget the original repo's CR metadata so repo sync must inspect CRs
+# by source branch name. The forge returns #2 before #1.
+cd ../repo
+gs repo init --reset --trunk=main --remote=origin
+gs branch track --base=main feature
+gs repo sync
+stderr 'feature: #1 was merged'
+stderr 'feature: deleted \(was 8c7a786\)'
+
+git branch --list feature
+cmp stdout $WORK/golden/no-branches.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature-v1.txt --
+Contents of feature v1
+
+-- extra/feature-v2.txt --
+Contents of feature v2
+
+-- golden/no-branches.txt --
+-- golden/changes.json --
+[
+  {
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "b0393bc4dcfcec7ef4218974b998afe35eebcfeb"
+    },
+    "body": "",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "02c39434c145c87fd068369784677e58e827c75b"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "merged": true,
+    "number": 1,
+    "state": "closed",
+    "title": "Add feature v1"
+  },
+  {
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "b0393bc4dcfcec7ef4218974b998afe35eebcfeb"
+    },
+    "body": "",
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "02c39434c145c87fd068369784677e58e827c75b"
+    },
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "number": 2,
+    "state": "open",
+    "title": "Add feature v2"
+  }
+]

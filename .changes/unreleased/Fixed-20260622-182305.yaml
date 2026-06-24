@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'repo sync: Detect manually submitted merged changes when a source branch name is reused by a newer open change.'
+time: 2026-06-22T18:23:05.333324-07:00
