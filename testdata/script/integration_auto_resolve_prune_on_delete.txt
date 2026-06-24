@@ -1,0 +1,53 @@
+# gs branch delete prunes resolution-file entries that reference the
+# deleted branch.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+gs bc -m 'feat-a' feat-a
+git checkout main
+gs bc -m 'feat-b' feat-b
+git checkout main
+gs integration create preview --tip feat-a --tip feat-b
+
+mkdir .spice/resolutions
+cp $WORK/golden/resolution-before.json .spice/resolutions/integration.json
+
+gs branch delete --force feat-a
+
+cmpenvJSON .spice/resolutions/integration.json $WORK/golden/resolution-after.json
+
+-- repo/.placeholder --
+-- golden/resolution-before.json --
+{
+  "resolutions": [
+    {
+      "merging_branches": {"ours": "preview", "theirs": "feat-a"},
+      "resolution_instructions": [
+        {"question": "q-a", "answer": "a-a"}
+      ]
+    },
+    {
+      "merging_branches": {"ours": "preview", "theirs": "feat-b"},
+      "resolution_instructions": [
+        {"question": "q-b", "answer": "a-b"}
+      ]
+    }
+  ]
+}
+-- golden/resolution-after.json --
+{
+  "resolutions": [
+    {
+      "merging_branches": {"ours": "preview", "theirs": "feat-b"},
+      "resolution_instructions": [
+        {"question": "q-b", "answer": "a-b"}
+      ]
+    }
+  ]
+}

@@ -1448,9 +1448,17 @@ On conflict, the merge is left in the worktree. Resolve the
 conflicting files, commit with 'git merge --continue', then
 re-run 'gs integration rebuild' (or 'gs intrb') to resume.
 
+With --auto-resolve (or spice.integration.autoResolve=true), a
+configured resolver script is invoked to attempt automatic
+resolution before surfacing conflicts. See the recipe for
+details on the JSON protocol the script must implement.
+
 **Flags**
 
 * `--push`: Also push the integration branch after rebuilding
+* `--[no-]auto-resolve` ([:material-wrench:{ .middle title="spice.integration.autoResolve" }](/cli/config.md#spiceintegrationautoresolve)): Auto-resolve merge conflicts using the configured resolver script
+
+**Configuration**: [spice.integration.autoResolve](/cli/config.md#spiceintegrationautoresolve)
 
 ### git-spice integration submit {#gs-integration-submit}
 

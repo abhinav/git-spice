@@ -127,6 +127,155 @@ subsequent `gs stack submit`, `gs upstack submit`, and
 `gs downstack submit` invocations will keep the published branch in
 sync by pushing the latest rebuild.
 
+## Auto-resolving conflicts
+
+<!-- gs:version unreleased -->
+
+Even with rerere and the `regenerate` merge driver handling the
+mechanical conflicts, rebuilds can still surface hand-resolution
+conflicts when two tips touch the same file. For local-only integration
+branches, you can configure a script that resolves these conflicts
+automatically.
+
+The protocol the script speaks (JSON output schema, environment
+contract, persistent resolution file, iteration cap, fall-through
+rules) is the same across all of git-spice's script-driven features.
+See **[Script integrations](scripts.md)** for the complete contract.
+This section only documents what is integration-specific.
+
+### Configuration
+
+Two git-config keys control the feature:
+
+- $$spice.integration.resolver$$ — the resolver script body. The value
+  is the script itself (not a path); git-spice runs it via `sh -c`,
+  or executes it directly if it starts with `#!`. Typically set at
+  `--global` scope since the resolver is a personal preference.
+- $$spice.integration.autoResolve$$ — when `true`, the resolver runs
+  automatically on every $$gs integration rebuild$$.
+
+The shared $$spice.scriptResolve.maxIterations$$ key bounds the Q&A
+loop. See [Script integrations](scripts.md#iteration-cap).
+
+Per-invocation overrides are available on $$gs integration rebuild$$:
+
+- `--auto-resolve` enables auto-resolve for this invocation.
+- `--no-auto-resolve` disables it, even when the config has it on.
+
+### Integration-specific environment
+
+In addition to the shared
+[`GS_OPERATION` / `GS_BRANCH` / `GS_BASE`](scripts.md#environment-contract)
+values, the resolver runs from the repository root with an in-progress
+`git merge`. `GS_OPERATION` is always `integration-rebuild`. `GS_BRANCH`
+is the tip being merged in; `GS_BASE` is the integration branch (also
+recorded in the resolution file's `current_merge.theirs` and
+`current_merge.ours` fields, respectively).
+
+### Resolution file
+
+Integration's persistent Q&A lives at
+`<repo-root>/.spice/resolutions/integration.json`. The schema is
+described in
+[Script integrations: persistent resolution files](scripts.md#persistent-resolution-files).
+Each entry is keyed by the `(ours, theirs)` branch pair, so an answer
+recorded on one rebuild is reused on subsequent rebuilds.
+
+Entries are pruned automatically when their branches are untracked
+($$gs branch untrack$$), deleted ($$gs branch delete$$), or removed
+by $$gs repo sync$$ after the underlying CR merges.
+
+### Example: Claude Code resolver
+
+The resolver is configured as a user-level preference — the config
+value is the script body itself, run by git-spice via `sh -c`,
+the same shape as $$spice.messageGenerator$$. Use `--global` so the
+script applies to every repo you run integration rebuilds in.
+
+Paste the block below into a terminal to install a resolver that
+delegates to [Claude Code](https://docs.claude.com/en/docs/claude-code)
+and turn auto-resolve on by default:
+
+```bash
+git config --global spice.integration.resolver "$(cat <<'GITCONFIG'
+#!/bin/sh
+exec claude --print --max-turns 30 <<'PROMPT'
+You are resolving merge conflicts on a throwaway integration branch.
+
+CONTEXT
+- 'git ls-files --unmerged' lists the conflicted paths.
+- 'git log -p ours' and 'git log -p theirs' show the commits on each
+  side; 'git diff ours theirs -- <path>' compares them on one file.
+- GS_OPERATION, GS_BRANCH, and GS_BASE are set in the environment;
+  see https://abhinav.github.io/git-spice/guide/scripts/ for the
+  full env contract.
+- .spice/resolutions/integration.json names the merge in progress
+  (current_merge: ours = GS_BASE, theirs = GS_BRANCH) and carries
+  any prior Q&A you have recorded under resolutions. Honor that
+  prior guidance when it applies.
+
+WHAT TO DO
+- Edit each conflicted file in place. Remove the <<<<<<<, =======,
+  and >>>>>>> markers and produce a syntactically valid merged file.
+- Do NOT run 'git add' or 'git commit'. After you exit, git-spice
+  stages every originally-conflicted path and commits the merge.
+
+OUTPUT — emit exactly one JSON document on stdout, then exit:
+
+  {"assumptions": [...], "questions": [...], "unresolved_files": [...]}
+
+- All three keys are optional. Empty (or assumptions-only) means
+  "everything resolved cleanly"; git-spice will stage and commit.
+- "assumptions" — short notes on judgement calls you made. They are
+  surfaced in the rebuild log so a human can spot-check them.
+See https://abhinav.github.io/git-spice/guide/scripts/ for what each
+field means and when to use it.
+PROMPT
+GITCONFIG
+)"
+
+git config --global spice.integration.autoResolve true
+```
+
+For Claude Code to run unattended, pre-approve the tools it needs in
+`~/.claude/settings.json`. The schema is a `permissions` object with
+an `allow` array of tool patterns
+([reference](https://docs.claude.com/en/docs/claude-code/settings#permissions)):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git diff:*)",
+      "Bash(git ls-files:*)"
+    ]
+  }
+}
+```
+
+Bare names like `Read` and `Edit` allow the tool on any path; scope
+them with `Read(/repo/path/**)` if you'd rather only let the resolver
+read inside the integration repo.
+
+If you already run Claude Code with a permissive default — e.g.,
+`permissions.defaultMode` set to `auto` (skip routine prompts) or
+`bypassPermissions` (skip all prompts) — you can omit the `allow`
+list entirely. The integration branch is throwaway, so this is a
+reasonable trade-off for unattended rebuilds. See the upstream
+[settings reference](https://docs.claude.com/en/docs/claude-code/settings#permissions)
+for what each mode covers.
+
+If a resolution turns out to be wrong, the integration branch is
+throwaway: investigate the diff, update your prompt or hand-edit
+`resolution_instructions` in `.spice/resolutions/integration.json`,
+then run $$gs integration rebuild$$ again. If `rerere` has recorded
+an incorrect resolution from an earlier run, `git rerere clear` wipes
+the cache.
+
 ## Removing the configuration
 
 Use $$gs integration delete$$ to remove the configuration. The
