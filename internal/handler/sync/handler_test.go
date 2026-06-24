@@ -768,7 +768,7 @@ func TestHandler_SyncTrunk_deletesCurrentBranchInAnchorWorktree(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(ctrl)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "child").
+		RestackBranch(gomock.Any(), "child", gomock.Nil()).
 		Return(nil)
 
 	mockAutostash := NewMockAutostashHandler(ctrl)
