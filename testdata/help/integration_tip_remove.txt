@@ -1,0 +1,13 @@
+Usage: gs integration (int) tip remove (r,rm) <branches> ...
+
+Remove a branch from the integration tip list
+
+Arguments:
+  <branches> ...    Branches to remove from the tip list
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

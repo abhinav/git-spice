@@ -1,0 +1,37 @@
+# Verifies 'gs integration delete' removes the configuration without
+# affecting the underlying Git branch.
+
+as 'Test <test@example.com>'
+at '2025-01-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+
+git checkout main
+gs integration create preview --tip feat-a
+gs integration rebuild
+
+# preview branch exists.
+git show-ref --verify refs/heads/preview
+
+gs integration delete
+stderr 'Integration branch configuration removed.'
+
+# 'gs integration show' now reports no configuration.
+gs integration show
+stderr 'No integration branch configured.'
+
+# The git branch itself is untouched.
+git show-ref --verify refs/heads/preview
+
+# Deleting when already not configured is rejected.
+! gs integration delete
+stderr 'no integration branch configured'
+
+-- repo/feat-a.txt --
+feature a
