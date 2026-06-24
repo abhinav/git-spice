@@ -17,7 +17,7 @@ import (
 	"go.abhg.dev/gs/internal/spice/state"
 )
 
-//go:generate mockgen -destination mocks_test.go -package checkout -typed . GitRepository,GitWorktree,TrackHandler,Service,Store
+//go:generate mockgen -destination mocks_test.go -package checkout -typed . GitRepository,GitWorktree,TrackHandler,Service,Store,SubmoduleApplier
 
 // Options defines options for checking out a branch.
 // These turn into command line flags, so be mindful of what you add here.
@@ -40,6 +40,14 @@ type Store interface {
 type GitWorktree interface {
 	DetachHead(ctx context.Context, commitish string) error
 	CheckoutBranch(ctx context.Context, branch string) error
+	SnapshotHead(ctx context.Context) (*git.HeadSnapshot, error)
+	RestoreHead(ctx context.Context, snap *git.HeadSnapshot) error
+}
+
+// SubmoduleApplier switches tracked submodules to the branches
+// recorded for a parent branch.
+type SubmoduleApplier interface {
+	ApplyAssociations(ctx context.Context, parentBranch string) error
 }
 
 // GitRepository provides access to the Git repository methods
@@ -63,13 +71,14 @@ type Service interface {
 
 // Handler provides a central place for handling checkout operations.
 type Handler struct {
-	Stdout     io.Writer     // required
-	Log        *silog.Logger // required
-	Store      Store         // required
-	Repository GitRepository // required
-	Worktree   GitWorktree   // required
-	Track      TrackHandler  // required
-	Service    Service       // required
+	Stdout     io.Writer        // required
+	Log        *silog.Logger    // required
+	Store      Store            // required
+	Repository GitRepository    // required
+	Worktree   GitWorktree      // required
+	Track      TrackHandler     // required
+	Service    Service          // required
+	Submodule  SubmoduleApplier // optional; nil disables submodule auto-checkout
 }
 
 // Request is a request to checkout a branch.
@@ -174,8 +183,35 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 		return nil
 	}
 
+	// Snapshot parent HEAD before any state-changing op so we can
+	// roll back if the submodule apply fails downstream.
+	var parentSnap *git.HeadSnapshot
+	if h.Submodule != nil {
+		var err error
+		parentSnap, err = h.Worktree.SnapshotHead(ctx)
+		if err != nil {
+			// Snapshot failure is non-fatal — proceed without rollback.
+			log.Warn("Could not snapshot HEAD before checkout; "+
+				"submodule rollback disabled",
+				"error", err)
+		}
+	}
+
 	if err := h.Worktree.CheckoutBranch(ctx, branch); err != nil {
 		return fmt.Errorf("checkout branch: %w", err)
+	}
+
+	if h.Submodule != nil {
+		if err := h.Submodule.ApplyAssociations(ctx, branch); err != nil {
+			if parentSnap != nil {
+				if rerr := h.Worktree.RestoreHead(ctx, parentSnap); rerr != nil {
+					log.Warn("Parent rollback failed after submodule conflict",
+						"target", parentSnap.Hash,
+						"error", rerr)
+				}
+			}
+			return fmt.Errorf("apply submodules: %w", err)
+		}
 	}
 
 	if opts.Verbose {
