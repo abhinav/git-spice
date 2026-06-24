@@ -185,6 +185,13 @@ Entries are pruned automatically when their branches are untracked
 ($$gs branch untrack$$), deleted ($$gs branch delete$$), or removed
 by $$gs repo sync$$ after the underlying CR merges.
 
+| Response                                            | Behavior                                                                              |
+|-----------------------------------------------------|---------------------------------------------------------------------------------------|
+| Empty (or `assumptions` only)                       | Assumptions logged at info level. Files staged, merge committed.                      |
+| `questions` populated                               | Each question is asked interactively. Answers append to the resolution file. Resolver is re-invoked. |
+| `unresolved_files` populated, no `questions`        | Resolver structurally surrendered. The conflict surfaces for manual resolution; `--accept-incoming` is bypassed (the AI itself flagged the file as needing human judgement). |
+| Non-zero exit code or invalid JSON                  | **Rebuild halts** with a resolver-failure error; pending state is saved so you can resume after fixing the underlying problem. `--accept-incoming` is also bypassed, since picking "theirs" wholesale would routinely drop integration-side API surface (methods, fields, getters that the tip branch never had). |
+
 ### Example: Claude Code resolver
 
 The resolver is configured as a user-level preference — the config
@@ -199,7 +206,11 @@ and turn auto-resolve on by default:
 ```bash
 git config --global spice.integration.resolver "$(cat <<'GITCONFIG'
 #!/bin/sh
-exec claude --print --max-turns 30 <<'PROMPT'
+RAW=$(mktemp -t spice-resolver-raw.XXXXXX)
+echo "spice resolver: raw Claude output -> $RAW" >&2
+claude --print --max-turns 30 --output-format text 2>/dev/null <<'PROMPT' \
+  | tee "$RAW" \
+  | sed -n '/<resolution>/,/<\/resolution>/{/<resolution>/d;/<\/resolution>/d;p;}'
 You are resolving merge conflicts on a throwaway integration branch.
 
 CONTEXT
@@ -220,9 +231,27 @@ WHAT TO DO
 - Do NOT run 'git add' or 'git commit'. After you exit, git-spice
   stages every originally-conflicted path and commits the merge.
 
-OUTPUT — emit exactly one JSON document on stdout, then exit:
+DEFAULT TO ADDITIVE MERGES.
+When each side adds an independent top-level declaration at the
+conflict boundary — a method on a struct, an exported package
+function, a struct field, an interface method, a config getter, a
+type definition, an import, a struct literal field — that is almost
+never a real conflict. Keep BOTH additions, in either order.
+Dropping one side's method or getter to "resolve" the conflict
+silently breaks the build of any caller that depends on it. Only
+collapse two declarations into one when they have the same name
+AND the same signature AND one body is strictly a superset of the
+other; otherwise keep both. When in doubt, keep both and add an
+assumption — it is much easier for the user to delete a stray
+method than to rediscover one that was silently dropped.
 
+OUTPUT — emit exactly one JSON document between <resolution> and
+</resolution> tags. Only content between these tags is parsed; any
+preface or trailing prose is dropped. Exit after emitting.
+
+  <resolution>
   {"assumptions": [...], "questions": [...], "unresolved_files": [...]}
+  </resolution>
 
 - All three keys are optional. Empty (or assumptions-only) means
   "everything resolved cleanly"; git-spice will stage and commit.
@@ -236,6 +265,16 @@ GITCONFIG
 
 git config --global spice.integration.autoResolve true
 ```
+
+The `<resolution>...</resolution>` marker pattern (paired with the
+`sed -n` extraction in the script) mirrors the
+[$$spice.messageGenerator$$](../cli/config.md#spicemessagegenerator)
+recipe. It is more robust than a strict-JSON contract: Claude
+routinely emits a leading prose summary even when told not to, and
+the marker lets us discard it without changing the resolver's JSON
+parser. If the model omits the markers entirely, sed produces no
+output — git-spice then logs an "Auto-resolve failed" warning and
+falls through to whichever fallback you have configured.
 
 For Claude Code to run unattended, pre-approve the tools it needs in
 `~/.claude/settings.json`. The schema is a `permissions` object with

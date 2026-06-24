@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration rebuild: Add --no-rerere, --reset-resolution-file, and --from-scratch flags to clear cached resolution state, and log resolver/regenerator/rerere invocations so silent replays of stale resolutions are visible.'
+time: 2026-06-02T09:23:01.662647-04:00
