@@ -1,5 +1,6 @@
 # Resolver reports unresolved_files with no questions: auto-resolve
-# fails, falling through to the existing conflict-surfacing path.
+# fails, and with --no-accept-incoming the conflict surfaces for
+# manual resolution rather than being silently taken-incoming.
 
 as 'Test <test@example.com>'
 at '2025-01-01T00:00:00Z'
@@ -26,7 +27,7 @@ chmod 700 $WORK/resolver.sh
 git config spice.integration.resolver $WORK/resolver.sh
 git config spice.integration.autoResolve true
 
-! gs integration rebuild
+! gs integration rebuild --no-accept-incoming
 stderr 'unresolved files with no questions: shared.txt'
 stderr 'Merge conflict in tip feat-b'
 

@@ -28,7 +28,10 @@ git config spice.integration.autoResolve true
 
 # --no-auto-resolve must short-circuit before the resolver runs;
 # the resolver never gets to write its sentinel file.
-! gs integration rebuild --no-auto-resolve
+# --no-accept-incoming disables the final fallback so the conflict
+# surfaces for manual resolution (otherwise accept-incoming would
+# silently complete the merge).
+! gs integration rebuild --no-auto-resolve --no-accept-incoming
 stderr 'Merge conflict in tip feat-b'
 ! exists $WORK/resolver-ran
 

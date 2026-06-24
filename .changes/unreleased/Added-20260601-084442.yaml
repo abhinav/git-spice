@@ -1,0 +1,3 @@
+kind: Added
+body: 'integration: accept-incoming fallback completes integration rebuild without manual intervention when conflicts survive the merge drivers and resolver. Disable with --no-accept-incoming or spice.integration.acceptIncoming=false.'
+time: 2026-06-01T08:44:42.990672-04:00
