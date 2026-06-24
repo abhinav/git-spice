@@ -1,0 +1,29 @@
+# 'gs repo init --no-recurse-submodules' skips submodule initialization
+# and does not set spice.submodule.recurse.
+
+as 'Test <test@example.com>'
+at '2026-03-11T15:00:00Z'
+
+cd sub-repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+cd $WORK/repo
+git init
+git commit --allow-empty -m 'Initial commit'
+git -c protocol.file.allow=always submodule add $WORK/sub-repo libs/core
+git commit -m 'Add submodule'
+
+gs repo init --trunk=main --no-recurse-submodules
+
+# Parent initialized.
+git rev-parse --verify refs/spice/data
+
+# Sub NOT initialized.
+! git -C libs/core rev-parse --verify refs/spice/data
+
+# Config not set.
+! git config --local spice.submodule.recurse
+
+-- repo/.keep --
+-- sub-repo/.keep --
