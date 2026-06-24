@@ -113,6 +113,12 @@ type shamChange struct {
 
 	// Mergeability overrides ShamHub's inferred mergeability result.
 	Mergeability *forge.ChangeMergeability
+
+	// ChecksReport is the rolled-up per-change checks payload (rollup
+	// + per-run detail + URL) reported by ChecksByChange. Seeded by
+	// [ShamHub.SetChangeChecks]; nil when no payload has been seeded,
+	// in which case ChecksByChange reports [forge.ChecksRollupNone].
+	ChecksReport *forge.ChecksReport
 }
 
 // Change is a change proposal against a repository.
