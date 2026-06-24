@@ -57,10 +57,14 @@ func (cmd *upstackRestackCmd) Run(
 	view ui.View,
 	store *state.Store,
 	handler RestackHandler,
+	integrationHandler IntegrationHandler,
 ) error {
 	if err := verifyRestackFromTrunk(log, view, store, cmd.Branch, "upstack"); err != nil {
 		return err
 	}
 
-	return handler.RestackUpstack(ctx, cmd.Branch, &cmd.UpstackOptions)
+	if err := handler.RestackUpstack(ctx, cmd.Branch, &cmd.UpstackOptions); err != nil {
+		return err
+	}
+	return integrationHandler.MaybeRebuild(ctx)
 }
