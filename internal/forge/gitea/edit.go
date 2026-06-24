@@ -70,9 +70,9 @@ func (r *Repository) EditChange(ctx context.Context, id forge.ChangeID, opts for
 	}
 
 	if len(opts.AddLabels) > 0 {
-		newLabelIDs, err := r.resolveLabels(ctx, opts.AddLabels)
+		newLabelIDs, err := r.ensureLabels(ctx, opts.AddLabels)
 		if err != nil {
-			return fmt.Errorf("resolve labels: %w", err)
+			return fmt.Errorf("ensure labels: %w", err)
 		}
 
 		existing, err := r.currentLabelIDs(ctx, prID.Number)

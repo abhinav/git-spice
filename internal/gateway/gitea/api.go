@@ -131,6 +131,54 @@ func (c *Client) PullMerge(
 	)
 }
 
+// PullReviewList lists reviews for a pull request.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoListPullReviews
+func (c *Client) PullReviewList(
+	ctx context.Context,
+	owner, repo string,
+	index int64,
+	opt *ListPullReviewsOptions,
+) ([]*PullReview, *Response, error) {
+	var response []*PullReview
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf("repos/%s/%s/pulls/%d/reviews", owner, repo, index),
+		opt.encodeQuery(),
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
+}
+
+// PullReviewCommentList lists comments for a pull request review.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoGetPullReviewComments
+func (c *Client) PullReviewCommentList(
+	ctx context.Context,
+	owner, repo string,
+	index, reviewID int64,
+) ([]*PullReviewComment, *Response, error) {
+	var response []*PullReviewComment
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"repos/%s/%s/pulls/%d/reviews/%d/comments",
+			owner, repo, index, reviewID,
+		),
+		nil,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
+}
+
 // ReviewRequestCreate adds reviewer requests to a pull request.
 //
 // Gitea API:
@@ -393,6 +441,29 @@ func (c *Client) LabelList(
 	return response, resp, nil
 }
 
+// LabelCreate creates a repository label.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/issueCreateLabel
+func (c *Client) LabelCreate(
+	ctx context.Context,
+	owner, repo string,
+	opt *CreateLabelOption,
+) (*Label, *Response, error) {
+	var response Label
+	resp, err := c.post(
+		ctx,
+		fmt.Sprintf("repos/%s/%s/labels", owner, repo),
+		nil,
+		opt,
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return &response, resp, nil
+}
+
 // FileContent fetches the contents of a file in a repository.
 //
 // Gitea API:
@@ -451,6 +522,23 @@ type PullRequest struct {
 	RequestedReviewers []*User   `json:"requested_reviewers"`
 	HTMLURL            string    `json:"html_url"`
 	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+// PullReview matches the subset of pull review fields the forge uses.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoGetPullReview
+type PullReview struct {
+	ID int64 `json:"id"`
+}
+
+// PullReviewComment matches the subset of pull review comment fields
+// the forge uses.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoGetPullReviewComments
+type PullReviewComment struct {
+	ID int64 `json:"id"`
 }
 
 // Label matches the subset of label fields the forge uses.
@@ -594,6 +682,28 @@ func (o *ListPullRequestsOptions) encodeQuery() url.Values {
 	return values
 }
 
+// ListPullReviewsOptions configures pull review listing.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/repoListPullReviews
+type ListPullReviewsOptions struct {
+	ListOptions
+}
+
+func (o *ListPullReviewsOptions) encodeQuery() url.Values {
+	values := make(url.Values)
+	if o == nil {
+		return values
+	}
+	if o.Limit != 0 {
+		values.Set("limit", strconv.FormatInt(o.Limit, 10))
+	}
+	if o.Page != 0 {
+		values.Set("page", strconv.FormatInt(o.Page, 10))
+	}
+	return values
+}
+
 // ListIssueCommentsOptions configures issue comment listing.
 //
 // Gitea API:
@@ -658,6 +768,15 @@ func (o *ListLabelsOptions) encodeQuery() url.Values {
 		values.Set("page", strconv.FormatInt(o.Page, 10))
 	}
 	return values
+}
+
+// CreateLabelOption configures repository label creation.
+//
+// Gitea API:
+// https://gitea.com/api/swagger#/issue/issueCreateLabel
+type CreateLabelOption struct {
+	Name  string `json:"name"`  // required
+	Color string `json:"color"` // required
 }
 
 type createCommentOption struct {

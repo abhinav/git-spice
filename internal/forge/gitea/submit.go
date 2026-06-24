@@ -46,9 +46,9 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 	}
 
 	if len(req.Labels) > 0 {
-		labelIDs, err := r.resolveLabels(ctx, req.Labels)
+		labelIDs, err := r.ensureLabels(ctx, req.Labels)
 		if err != nil {
-			return forge.SubmitChangeResult{}, fmt.Errorf("resolve labels: %w", err)
+			return forge.SubmitChangeResult{}, fmt.Errorf("ensure labels: %w", err)
 		}
 		input.Labels = labelIDs
 	}
