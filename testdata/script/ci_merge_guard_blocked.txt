@@ -1,0 +1,43 @@
+# 'ci merge-guard' blocks a PR whose base is not trunk.
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the full stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# PR #2 is based on feature1, not trunk — should be blocked
+! gs ci merge-guard 2
+stderr 'base is "feature1"'
+stderr 'expected trunk "main"'
+
+# PR #1 is based on main — should be safe
+gs ci merge-guard 1
+stderr 'safe to merge'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2

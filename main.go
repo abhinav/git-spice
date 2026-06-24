@@ -314,6 +314,8 @@ type mainCmd struct {
 
 	Rebase rebaseCmd `cmd:"" aliases:"rb" group:"Rebase"`
 
+	CI ciCmd `cmd:"" group:"CI" help:"CI/CD integration commands"`
+
 	// Navigation
 	Up     upCmd     `cmd:"" aliases:"u" group:"Navigation" help:"Move up one branch"`
 	Down   downCmd   `cmd:"" aliases:"d" group:"Navigation" help:"Move down one branch"`
