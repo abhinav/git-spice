@@ -125,6 +125,58 @@ func TestRepository_SubmitChange_withLabels(t *testing.T) {
 	assert.Equal(t, int64(44), result.ID.(*PR).Number)
 }
 
+func TestRepository_SubmitChange_createsMissingLabels(t *testing.T) {
+	var labelCreated bool
+	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/repos/captain/warp-core/labels":
+			switch r.Method {
+			case http.MethodGet:
+				writeJSON(t, w, http.StatusOK, []*giteagw.Label{
+					{ID: 10, Name: "engineering"},
+				})
+			case http.MethodPost:
+				assertJSONBody(t, r, `{
+					"name":"priority-1",
+					"color":"#ededed"
+				}`)
+				labelCreated = true
+				writeJSON(t, w, http.StatusCreated, giteagw.Label{
+					ID:   11,
+					Name: "priority-1",
+				})
+			default:
+				http.NotFound(w, r)
+			}
+		case "/api/v1/repos/captain/warp-core/pulls":
+			assertJSONBody(t, r, `{
+				"title":"Fix nacelles",
+				"head":"fix",
+				"base":"main",
+				"labels":[10,11]
+			}`)
+			writeJSON(t, w, http.StatusCreated, giteagw.PullRequest{
+				Number:  44,
+				HTMLURL: "https://gitea.example.com/captain/warp-core/pulls/44",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	defer srv.Close()
+
+	repo := newTestRepo(t, srv)
+	result, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Fix nacelles",
+		Head:    "fix",
+		Base:    "main",
+		Labels:  []string{"engineering", "priority-1"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(44), result.ID.(*PR).Number)
+	assert.True(t, labelCreated, "missing label should be created")
+}
+
 // newTestServer wraps an HTTP handler. The repo-get and user endpoints that
 // newRepository always calls are served automatically; the inner handler
 // receives all other requests.

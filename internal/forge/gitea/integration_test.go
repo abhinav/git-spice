@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +19,6 @@ import (
 // This file tests end-to-end interactions with the Gitea API.
 //
 // In replay mode (default), tests run against committed VCR fixtures.
-// If no fixtures exist, the tests are skipped.
 //
 // To record fixtures against a live Docker Gitea instance:
 //
@@ -77,22 +75,7 @@ func newTestGiteaClient(t *testing.T, cfg forgetest.GiteaConfig, httpClient *htt
 	return gc
 }
 
-// skipIfNoFixtures skips the test when not in update mode and no VCR fixtures
-// exist for this test. This prevents failures when running the test suite
-// locally without a Gitea instance.
-func skipIfNoFixtures(t *testing.T) {
-	t.Helper()
-	if forgetest.Update() {
-		return
-	}
-	fixturePath := filepath.Join("testdata", "fixtures", t.Name()+".yaml")
-	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
-		t.Skipf("no VCR fixture at %s -- run with -update against a Gitea instance to record", fixturePath)
-	}
-}
-
 func TestIntegration_Repository(t *testing.T) {
-	skipIfNoFixtures(t)
 	cfg, sanitizers := testConfig(t)
 	rec := forgetest.NewHTTPRecorder(t, t.Name(), sanitizers)
 	gc := newTestGiteaClient(t, cfg, rec.GetDefaultClient())
@@ -109,7 +92,6 @@ func TestIntegration_Repository(t *testing.T) {
 }
 
 func TestIntegration_Repository_notFoundError(t *testing.T) {
-	skipIfNoFixtures(t)
 	cfg, sanitizers := testConfig(t)
 	rec := forgetest.NewHTTPRecorder(t, t.Name(), sanitizers)
 	gc := newTestGiteaClient(t, cfg, rec.GetDefaultClient())
@@ -126,7 +108,6 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 }
 
 func TestIntegration(t *testing.T) {
-	skipIfNoFixtures(t)
 	cfg, sanitizers := testConfig(t)
 
 	t.Cleanup(func() {
@@ -218,20 +199,8 @@ func TestIntegration(t *testing.T) {
 		Reviewers: []string{cfg.Reviewer},
 		Assignees: []string{cfg.Assignee},
 
-		// Gitea issue comments have no thread-resolution concept.
-		SkipCommentCounts: true,
-
 		// Gitea returns short (7-char) commit hashes in some API responses.
 		ShortHeadHash: true,
-
-		// Our ListChangeTemplates reads individual files, not directories.
-		// The integration test requires a directory-style template path.
-		SkipTemplates: true,
-
-		// Gitea requires labels to be pre-created on the repository.
-		// Our resolveLabels skips unknown label names rather than creating
-		// them. Labels can be tested with pre-created fixtures.
-		SkipLabels: true,
 	})
 }
 

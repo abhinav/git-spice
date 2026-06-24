@@ -208,6 +208,64 @@ func TestClient_PullMerge(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestClient_PullReviewList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v1/repos/captain/warp-core/pulls/42/reviews", r.URL.Path)
+		assert.Equal(t, "20", r.URL.Query().Get("limit"))
+		assert.Equal(t, "2", r.URL.Query().Get("page"))
+		w.Header().Set("X-Page", "2")
+		w.Header().Set("X-Next-Page", "3")
+		writeJSON(t, w, http.StatusOK, []*PullReview{
+			{ID: 100},
+			{ID: 101},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	reviews, resp, err := client.PullReviewList(
+		t.Context(),
+		"captain",
+		"warp-core",
+		42,
+		&ListPullReviewsOptions{
+			ListOptions: ListOptions{Page: 2, Limit: 20},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, reviews, 2)
+	assert.Equal(t, int64(101), reviews[1].ID)
+	assert.Equal(t, 2, resp.CurrentPage)
+	assert.Equal(t, 3, resp.NextPage)
+}
+
+func TestClient_PullReviewCommentList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t,
+			"/api/v1/repos/captain/warp-core/pulls/42/reviews/100/comments",
+			r.URL.Path)
+		writeJSON(t, w, http.StatusOK, []*PullReviewComment{
+			{ID: 1000},
+			{ID: 1001},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	comments, _, err := client.PullReviewCommentList(
+		t.Context(),
+		"captain",
+		"warp-core",
+		42,
+		100,
+	)
+	require.NoError(t, err)
+	require.Len(t, comments, 2)
+	assert.Equal(t, int64(1001), comments[1].ID)
+}
+
 func TestClient_CommentCreate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
@@ -348,6 +406,34 @@ func TestClient_LabelList(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, labels, 2)
 	assert.Equal(t, "priority-1", labels[1].Name)
+}
+
+func TestClient_LabelCreate(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v1/repos/captain/warp-core/labels", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"name":"engineering",
+			"color":"#ededed"
+		}`)
+		writeJSON(t, w, http.StatusCreated, Label{
+			ID:   3,
+			Name: "engineering",
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	label, resp, err := client.LabelCreate(t.Context(), "captain", "warp-core",
+		&CreateLabelOption{
+			Name:  "engineering",
+			Color: "#ededed",
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, int64(3), label.ID)
+	assert.Equal(t, "engineering", label.Name)
 }
 
 func TestClient_FileContent(t *testing.T) {

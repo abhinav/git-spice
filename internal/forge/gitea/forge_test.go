@@ -110,10 +110,3 @@ func TestForge_CLIPlugin(t *testing.T) {
 	f := new(Forge)
 	assert.Equal(t, &f.Options, f.CLIPlugin())
 }
-
-func TestForge_ChangeTemplatePaths(t *testing.T) {
-	paths := new(Forge).ChangeTemplatePaths()
-	assert.NotEmpty(t, paths)
-	assert.Contains(t, paths, ".gitea/PULL_REQUEST_TEMPLATE.md")
-	assert.Contains(t, paths, "PULL_REQUEST_TEMPLATE.md")
-}

@@ -1218,27 +1218,13 @@ func (s *integrationSuite) TestSubmitChangeFromPushRepository(t *testing.T) {
 }
 
 func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
-	// Get the template paths from the forge.
-	// We'll use the first non-.md path as the directory for templates.
 	templatePaths := s.Forge.ChangeTemplatePaths()
 	require.NotEmpty(t, templatePaths, "forge must have template paths")
 
-	var templateDir string
-	for _, path := range templatePaths {
-		if !strings.HasSuffix(path, ".md") {
-			templateDir = path
-			break
-		}
-	}
-	t.Logf("Will write templates to directory: %s", templateDir)
-	require.NotEmpty(t, templateDir, "could not find template directory")
-
-	// Repository has no templates.
 	t.Run("NoTemplates", func(t *testing.T) {
 		if Update() {
 			testRepo := newTestRepository(t, s.RemoteURL)
 
-			// Nuke all CR templates in the repo.
 			t.Logf("Removing all templates from main")
 			var deleted bool
 			for _, path := range templatePaths {
@@ -1268,33 +1254,44 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 		assert.Empty(t, templates, "should have no templates")
 	})
 
-	// Repository has templates.
-	t.Run("TemplatesPresent", func(t *testing.T) {
-		// Generate template names.
-		emptyTemplateFixture := fixturetest.New(s.Fixtures, "empty-template", func() string {
-			return randomString(8) + ".md"
-		})
-		nonEmptyTemplateFixture := fixturetest.New(s.Fixtures, "non-empty-template", func() string {
-			return randomString(8) + ".md"
-		})
+	var templateDir string
+	for _, path := range templatePaths {
+		if !strings.HasSuffix(path, ".md") {
+			templateDir = path
+			break
+		}
+	}
 
-		emptyTemplateName := emptyTemplateFixture.Get(t)
-		nonEmptyTemplateName := nonEmptyTemplateFixture.Get(t)
-		t.Logf("Creating templates: %s (empty), %s (non-empty)",
-			emptyTemplateName, nonEmptyTemplateName)
+	t.Run("TemplatesPresent", func(t *testing.T) {
+		var emptyTemplateName, nonEmptyTemplateName string
+		if templateDir != "" {
+			emptyTemplateName = fixturetest.New(s.Fixtures, "empty-template", func() string {
+				return randomString(8) + ".md"
+			}).Get(t)
+			nonEmptyTemplateName = fixturetest.New(s.Fixtures, "non-empty-template", func() string {
+				return randomString(8) + ".md"
+			}).Get(t)
+			t.Logf("Creating templates: %s (empty), %s (non-empty)",
+				emptyTemplateName, nonEmptyTemplateName)
+		}
 
 		if Update() {
 			testRepo := newTestRepository(t, s.RemoteURL)
 
-			testRepo.WriteFile(filepath.Join(templateDir, emptyTemplateName))
-			t.Logf("Created empty template at: %s",
-				filepath.Join(templateDir, emptyTemplateName))
+			if templateDir != "" {
+				testRepo.WriteFile(filepath.Join(templateDir, emptyTemplateName))
+				t.Logf("Created empty template at: %s",
+					filepath.Join(templateDir, emptyTemplateName))
 
-			testRepo.WriteFile(
-				filepath.Join(templateDir, nonEmptyTemplateName),
-				"This is a test template")
-			t.Logf("Created non-empty template at: %s",
-				filepath.Join(templateDir, nonEmptyTemplateName))
+				testRepo.WriteFile(
+					filepath.Join(templateDir, nonEmptyTemplateName),
+					"This is a test template")
+				t.Logf("Created non-empty template at: %s",
+					filepath.Join(templateDir, nonEmptyTemplateName))
+			} else {
+				testRepo.WriteFile(templatePaths[0], "This is a test template")
+				t.Logf("Created template at: %s", templatePaths[0])
+			}
 
 			testRepo.AddAllAndCommit("Add templates")
 			testRepo.Push("main")
@@ -1306,12 +1303,19 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 		require.NoError(t, err)
 
 		// Find our test templates in the results.
-		var foundEmpty, foundNonEmpty bool
+		var foundEmpty, foundNonEmpty, foundSingleFile bool
 		for _, template := range templates {
 			// Template names may not have extensions depending on the forge.
 			templateName := strings.TrimSuffix(template.Filename, ".md") + ".md"
 
 			switch templateName {
+			case filepath.Base(templatePaths[0]):
+				foundSingleFile = true
+				assert.Equal(t,
+					strings.TrimSpace("This is a test template"),
+					strings.TrimSpace(template.Body),
+					"template should have correct body")
+
 			case emptyTemplateName:
 				foundEmpty = true
 				// https://github.com/abhinav/git-spice/issues/931
@@ -1329,8 +1333,12 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 			}
 		}
 
-		assert.True(t, foundEmpty, "empty template not found in results")
-		assert.True(t, foundNonEmpty, "non-empty template not found in results")
+		if templateDir == "" {
+			assert.True(t, foundSingleFile, "template not found in results")
+		} else {
+			assert.True(t, foundEmpty, "empty template not found in results")
+			assert.True(t, foundNonEmpty, "non-empty template not found in results")
+		}
 	})
 }
 

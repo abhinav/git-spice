@@ -7,14 +7,41 @@ import (
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
 )
 
-// resolveLabels converts label names to Gitea label IDs.
-// Unknown names are logged as warnings and skipped.
-func (r *Repository) resolveLabels(ctx context.Context, names []string) ([]int64, error) {
+const _defaultLabelColor = "#ededed"
+
+// ensureLabels returns Gitea label IDs for names,
+// creating missing repository labels before applying them.
+func (r *Repository) ensureLabels(ctx context.Context, names []string) ([]int64, error) {
 	if len(names) == 0 {
 		return nil, nil
 	}
 
-	// Build name→ID map by paginating through all labels.
+	nameToID, err := r.labelIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ids := make([]int64, 0, len(names))
+	for _, name := range names {
+		id, ok := nameToID[name]
+		if !ok {
+			r.log.Infof("Label does not exist, creating: %v", name)
+			label, _, err := r.client.LabelCreate(ctx, r.owner, r.repo, &giteagw.CreateLabelOption{
+				Name:  name,
+				Color: _defaultLabelColor,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("create label %q: %w", name, err)
+			}
+			id = label.ID
+			nameToID[name] = id
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func (r *Repository) labelIDs(ctx context.Context) (map[string]int64, error) {
 	nameToID := make(map[string]int64)
 	page := int64(1)
 	for {
@@ -32,17 +59,7 @@ func (r *Repository) resolveLabels(ctx context.Context, names []string) ([]int64
 		}
 		page = int64(resp.NextPage)
 	}
-
-	ids := make([]int64, 0, len(names))
-	for _, name := range names {
-		id, ok := nameToID[name]
-		if !ok {
-			r.log.Warn("Label not found; skipping", "label", name)
-			continue
-		}
-		ids = append(ids, id)
-	}
-	return ids, nil
+	return nameToID, nil
 }
 
 // currentLabelIDs fetches the current label IDs for a PR.
