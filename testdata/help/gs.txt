@@ -86,6 +86,9 @@ Integration
                                    Remove a branch from the integration tip list
   integration (int) tip list (l,ls)
                                    List the configured integration tips
+  integration (int) tip clean (prune)
+                                   Remove tips whose upstack already contains
+                                   another tip
 
 Rebase
   rebase (rb) continue (c)    Continue an interrupted operation

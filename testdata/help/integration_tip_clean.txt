@@ -1,0 +1,18 @@
+Usage: gs integration (int) tip clean (prune)
+
+Remove tips whose upstack already contains another tip
+
+Removes tips whose upstack chain already contains another configured tip. The
+higher tip's merge into the integration branch captures the lower tip's content,
+so keeping both costs an extra merge without changing the result.
+
+For each subsumed tip, the message reports which higher tip subsumes it.
+A second run is a no-op once nothing remains to prune. Existing tips with no
+upstack-tip relationship are left alone.
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information
