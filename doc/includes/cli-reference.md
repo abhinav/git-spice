@@ -312,9 +312,11 @@ Before merging, the stack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
-before failing if checks are not ready.
+Before each merge, waits for merge readiness:
+the forge must observe the pushed head
+and report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait
+before failing if merge readiness is not reached.
 
 By default, a branch failure skips that branch's upstack descendants,
 but independent sibling branches continue.
@@ -323,12 +325,12 @@ Use --fail-fast to stop the queue after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--fail-fast`: Stop the merge queue after the first branch failure.
 * `--branch=NAME`: Branch whose stack to merge
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -626,7 +628,7 @@ This command acts as a local merge queue:
 it merges one Change Request,
 waits for that merge to finish,
 restacks and updates the next Change Request,
-waits for its CI checks to pass,
+waits for merge readiness on the updated Change Request,
 and then repeats the process.
 
 For a stack like this:
@@ -644,13 +646,15 @@ Before merging, the downstack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
+Before each merge, waits for merge readiness:
+the forge must observe the pushed head
+and report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait
 (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge
 to complete, restacks and updates the next PR,
-waits for CI checks on the updated PR,
+waits for merge readiness on the updated PR,
 and syncs merged branch cleanup.
 
 Use --no-wait for single branch merging
@@ -660,12 +664,12 @@ when you don't want to wait for the merge to propagate.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--branch=NAME`: Branch to start merging from
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1135,16 +1139,18 @@ Use --branch to merge a different branch.
 The branch must be based directly on trunk.
 To merge a stacked branch, use 'gs downstack merge'.
 
-Before merging, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait.
+Before merging, waits for merge readiness:
+the forge must observe the pushed head
+and report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait.
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--branch=NAME`: Branch to merge
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice branch submit {#gs-branch-submit}
 
