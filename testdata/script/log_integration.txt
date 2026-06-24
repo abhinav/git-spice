@@ -1,0 +1,67 @@
+# Verifies that 'gs ls' and 'gs ll' display the configured integration
+# branch as a top row, with each tip marked '[integration-tip]'.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Build two stacks rooted at trunk:
+#   main -> feat-a -> feat-a-up
+#   main -> feat-b
+git add feat-a.txt
+gs bc feat-a -m 'Add feat-a'
+git add feat-a-up.txt
+gs bc feat-a-up -m 'Add feat-a-up'
+
+gs trunk
+git add feat-b.txt
+gs bc feat-b -m 'Add feat-b'
+
+gs trunk
+gs integration create preview --tip feat-a --tip feat-b
+gs integration rebuild
+
+# 'gs ls -a' shows the integration branch as a top row and marks the
+# tips with [integration-tip].
+gs ls -a
+cmp stderr $WORK/golden/ls-all.txt
+
+# 'gs ll -a' shows the same with commits below each branch.
+gs ll -a
+cmp stderr $WORK/golden/ll-all.txt
+
+# 'gs ls --json' emits an "integration" record alongside branches.
+gs ls --json -a
+cmp stdout $WORK/golden/ls-all.json
+
+-- repo/feat-a.txt --
+feature a
+-- repo/feat-a-up.txt --
+feature a up
+-- repo/feat-b.txt --
+feature b
+-- golden/ls-all.txt --
+◆ preview [integration: 2 tips]
+  ┏━□ feat-a-up
+┏━┻□ feat-a [integration-tip]
+┣━□ feat-b [integration-tip]
+main ◀
+-- golden/ll-all.txt --
+◆ preview [integration: 2 tips]
+  ┏━□ feat-a-up
+  ┃   0be0594 Add feat-a-up (now)
+┏━┻□ feat-a [integration-tip]
+┃    cc7e211 Add feat-a (now)
+┣━□ feat-b [integration-tip]
+┃   3183ddc Add feat-b (now)
+main ◀
+-- golden/ls-all.json --
+{"name":"feat-a","integrationTip":true,"down":{"name":"main"},"ups":[{"name":"feat-a-up"}]}
+{"name":"feat-a-up","down":{"name":"feat-a"}}
+{"name":"feat-b","integrationTip":true,"down":{"name":"main"}}
+{"name":"main","current":true,"ups":[{"name":"feat-a"},{"name":"feat-b"}]}
+{"name":"preview","integration":{"tips":["feat-a","feat-b"]}}
