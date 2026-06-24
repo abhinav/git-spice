@@ -381,6 +381,40 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 	}
 	s.log.Debug("Renamed tracked name of branch", "old", oldName, "new", newName)
 
+	if err := s.renameIntegrationTip(ctx, oldName, newName); err != nil {
+		// Branch rename already succeeded; surface as warning only.
+		s.log.Warnf("integration tip rename: %v", err)
+	}
+
+	return nil
+}
+
+// renameIntegrationTip rewrites any integration tip that references
+// oldName to use newName instead.
+func (s *Service) renameIntegrationTip(ctx context.Context, oldName, newName string) error {
+	info, err := s.store.Integration(ctx)
+	if errors.Is(err, state.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get integration: %w", err)
+	}
+
+	var updated bool
+	for i, tip := range info.Tips {
+		if tip.Name == oldName {
+			info.Tips[i].Name = newName
+			updated = true
+		}
+	}
+	if !updated {
+		return nil
+	}
+
+	if err := s.store.SetIntegration(ctx, info); err != nil {
+		return fmt.Errorf("save integration: %w", err)
+	}
+	s.log.Debug("Renamed integration tip", "old", oldName, "new", newName)
 	return nil
 }
 

@@ -342,6 +342,21 @@ func (mr *MockStoreMockRecorder) CacheTemplates(arg0, arg1, arg2 any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CacheTemplates", reflect.TypeOf((*MockStore)(nil).CacheTemplates), arg0, arg1, arg2)
 }
 
+// Integration mocks base method.
+func (m *MockStore) Integration(ctx context.Context) (*state.IntegrationInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Integration", ctx)
+	ret0, _ := ret[0].(*state.IntegrationInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Integration indicates an expected call of Integration.
+func (mr *MockStoreMockRecorder) Integration(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Integration", reflect.TypeOf((*MockStore)(nil).Integration), ctx)
+}
+
 // ListBranches mocks base method.
 func (m *MockStore) ListBranches(ctx context.Context) iter.Seq2[string, error] {
 	m.ctrl.T.Helper()
@@ -400,6 +415,20 @@ func (m *MockStore) Remote() (state.Remote, error) {
 func (mr *MockStoreMockRecorder) Remote() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remote", reflect.TypeOf((*MockStore)(nil).Remote))
+}
+
+// SetIntegration mocks base method.
+func (m *MockStore) SetIntegration(ctx context.Context, info *state.IntegrationInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetIntegration", ctx, info)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetIntegration indicates an expected call of SetIntegration.
+func (mr *MockStoreMockRecorder) SetIntegration(ctx, info any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIntegration", reflect.TypeOf((*MockStore)(nil).SetIntegration), ctx, info)
 }
 
 // TakeContinuations mocks base method.
