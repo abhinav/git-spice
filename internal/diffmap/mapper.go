@@ -208,6 +208,43 @@ func (m *Mapper) Files() []string {
 	return files
 }
 
+// LineModified reports whether the given file:line was changed
+// by this diff. side selects which side of the diff to inspect:
+// "LEFT" (or "left") tests the NEW range of each hunk (the diff's
+// "+" side), "RIGHT" (or "right", and the default) tests the OLD
+// range (the diff's "-" side).
+//
+// The "RIGHT"-tests-OLD convention exists because callers ask
+// stale-style questions: "this comment was anchored to line N on
+// the RIGHT side of the original PR diff (i.e., the post-commit
+// version of the file). I am now looking at the diff between the
+// post-commit and the current head — has line N been touched in
+// the post-commit's frame of reference?" That frame is the OLD
+// side of the post-commit..head diff.
+func (m *Mapper) LineModified(file string, line int, side string) bool {
+	fd, ok := m.files[file]
+	if !ok {
+		return false
+	}
+	useNewRange := strings.EqualFold(side, "LEFT")
+	for _, h := range fd.hunks {
+		if useNewRange {
+			if h.newCount > 0 &&
+				line >= h.newStart &&
+				line < h.newStart+h.newCount {
+				return true
+			}
+		} else {
+			if h.oldCount > 0 &&
+				line >= h.oldStart &&
+				line < h.oldStart+h.oldCount {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // parseHunkHeader parses "@@ -old,count +new,count @@".
 func parseHunkHeader(line string) (hunk, error) {
 	// Strip "@@ " prefix and " @@..." suffix.

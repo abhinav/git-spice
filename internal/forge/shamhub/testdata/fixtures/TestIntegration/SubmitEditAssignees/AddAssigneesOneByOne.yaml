@@ -7,37 +7,37 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:53569
-        body: '{"subject":"Testing lEG1MUxo","body":"Test PR without assignees","base":"main","head":"lEG1MUxo"}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/changes
+        host: 127.0.0.1:65023
+        body: '{"subject":"Testing mrsfBxAT","body":"Test PR without assignees","base":"main","head":"mrsfBxAT"}'
+        url: http://127.0.0.1:65023/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 80
+        content_length: 82
         body: |
             {
-              "number": 4,
-              "url": "http://127.0.0.1:53570/abhinav/test-repo/change/4"
+              "number": 18,
+              "url": "http://127.0.0.1:65024/abhinav/test-repo/change/18"
             }
         headers:
             Content-Length:
-                - "80"
+                - "82"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 42.64775ms
+        duration: 103.338917ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:53569
+        host: 127.0.0.1:65023
         body: '{"assignees":["assignee1"]}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/4
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -53,16 +53,16 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 631.583µs
+        duration: 2.698958ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:53569
+        host: 127.0.0.1:65023
         body: '{"assignees":["assignee2"]}'
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/4
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
         method: PATCH
       response:
         proto: HTTP/1.1
@@ -78,27 +78,27 @@ interactions:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 129.958µs
+        duration: 757.208µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:53569
-        url: http://127.0.0.1:53569/abhinav/test-repo/change/4
+        host: 127.0.0.1:65023
+        url: http://127.0.0.1:65023/abhinav/test-repo/change/18
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 571
+        content_length: 573
         body: |
             {
-              "number": 4,
-              "html_url": "http://127.0.0.1:53570/abhinav/test-repo/change/4",
+              "number": 18,
+              "html_url": "http://127.0.0.1:65024/abhinav/test-repo/change/18",
               "state": "open",
-              "title": "Testing lEG1MUxo",
+              "title": "Testing mrsfBxAT",
               "body": "Test PR without assignees",
               "base": {
                 "repository": {
@@ -106,15 +106,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "c17a304a06b281e76d193f8a86a8ab71585b64e3"
+                "sha": "822b12d04865ab61606efc7c3b21439c79070762"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "lEG1MUxo",
-                "sha": "c95d303c96fd553536f0b20c74bbf7cb19087f37"
+                "ref": "mrsfBxAT",
+                "sha": "037decf9634d9ef000d3338a1118a12c30f508f9"
               },
               "assignees": [
                 "assignee1",
@@ -123,9 +123,9 @@ interactions:
             }
         headers:
             Content-Length:
-                - "571"
+                - "573"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 37.717625ms
+        duration: 28.944958ms

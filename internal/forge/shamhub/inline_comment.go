@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
+	"go.abhg.dev/gs/internal/diffmap"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/xec"
 )
 
 var (
@@ -69,16 +72,39 @@ type inlineCommentItem struct {
 }
 
 func (sh *ShamHub) handleListInlineComments(
-	_ context.Context,
+	ctx context.Context,
 	req *listInlineCommentsRequest,
 ) (*listInlineCommentsResponse, error) {
 	sh.mu.RLock()
 	defer sh.mu.RUnlock()
 
+	// Locate the change once so the per-comment stale check has a
+	// reference to compare each comment's anchor SHA against.
+	var change *shamChange
+	for i, c := range sh.changes {
+		if c.Base.Owner == req.Owner &&
+			c.Base.Repo == req.Repo &&
+			c.Number == req.Change {
+			change = &sh.changes[i]
+			break
+		}
+	}
+
 	var items []inlineCommentItem
 	for _, c := range sh.comments {
 		if c.Change != req.Change || c.Path == "" {
 			continue
+		}
+		outdated := c.Outdated
+		if !outdated && change != nil {
+			stale, err := sh.commentIsStale(ctx, &c, change)
+			if err != nil {
+				sh.log.Warn("compute stale",
+					"comment", c.ID,
+					"error", err)
+			} else {
+				outdated = stale
+			}
 		}
 		items = append(items, inlineCommentItem{
 			ID:        c.ID,
@@ -88,12 +114,73 @@ func (sh *ShamHub) handleListInlineComments(
 			Body:      c.Body,
 			Author:    c.Author,
 			Resolved:  c.Resolved,
-			Outdated:  false,
+			Outdated:  outdated,
 			CreatedAt: c.CreatedAt,
 		})
 	}
 
 	return &listInlineCommentsResponse{Items: items}, nil
+}
+
+// commentIsStale reports whether the comment's anchored line has
+// been touched between the comment's recorded CommitSHA and the
+// change's current head. Comments without a recorded CommitSHA
+// (e.g. test-seeded entries) are never considered stale by this
+// path; tests can still force stale via the Outdated override.
+func (sh *ShamHub) commentIsStale(
+	ctx context.Context, c *shamComment, change *shamChange,
+) (bool, error) {
+	if c.CommitSHA == "" {
+		return false, nil
+	}
+	headSHA, err := sh.resolveBranchSHA(
+		ctx, change.Head.Owner, change.Head.Repo, change.Head.Name,
+	)
+	if err != nil {
+		return false, err
+	}
+	if headSHA == c.CommitSHA {
+		return false, nil
+	}
+
+	out, err := xec.Command(ctx, sh.log, sh.gitExe,
+		"diff", "--unified=0",
+		c.CommitSHA+".."+headSHA, "--", c.Path).
+		WithDir(sh.repoDir(change.Head.Owner, change.Head.Repo)).
+		Output()
+	if err != nil {
+		// If the file is gone or the diff fails, treat as stale:
+		// the comment's anchor can no longer be located cleanly.
+		return true, nil
+	}
+	if len(out) == 0 {
+		return false, nil
+	}
+
+	mapper, err := diffmap.New(out)
+	if err != nil {
+		return false, fmt.Errorf("parse diff: %w", err)
+	}
+	side := c.Side
+	if side == "" {
+		side = "RIGHT"
+	}
+	return mapper.LineModified(c.Path, c.Line, side), nil
+}
+
+// resolveBranchSHA returns the current SHA of the named branch in
+// the given owner/repo's worktree.
+func (sh *ShamHub) resolveBranchSHA(
+	ctx context.Context, owner, repo, branch string,
+) (string, error) {
+	out, err := xec.Command(ctx, sh.log, sh.gitExe, "rev-parse", branch).
+		WithDir(sh.repoDir(owner, repo)).
+		Output()
+	if err != nil {
+		return "", fmt.Errorf(
+			"resolve %s/%s:%s: %w", owner, repo, branch, err)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func (r *forgeRepository) ListInlineComments(
@@ -148,9 +235,37 @@ type postInlineCommentResponse struct {
 }
 
 func (sh *ShamHub) handlePostInlineComment(
-	_ context.Context,
+	ctx context.Context,
 	req *postInlineCommentRequest,
 ) (*postInlineCommentResponse, error) {
+	// Look up the change's head branch BEFORE taking the write lock
+	// so the rev-parse subprocess doesn't fight other writers.
+	sh.mu.RLock()
+	var headOwner, headRepo, headBranch string
+	for _, c := range sh.changes {
+		if c.Base.Owner == req.Owner &&
+			c.Base.Repo == req.Repo &&
+			c.Number == req.Change {
+			headOwner = c.Head.Owner
+			headRepo = c.Head.Repo
+			headBranch = c.Head.Name
+			break
+		}
+	}
+	sh.mu.RUnlock()
+
+	var commitSHA string
+	if headBranch != "" {
+		sha, err := sh.resolveBranchSHA(ctx, headOwner, headRepo, headBranch)
+		if err != nil {
+			sh.log.Warn("capture comment commitSHA",
+				"change", req.Change,
+				"error", err)
+		} else {
+			commitSHA = sha
+		}
+	}
+
 	sh.mu.Lock()
 	defer sh.mu.Unlock()
 
@@ -168,6 +283,7 @@ func (sh *ShamHub) handlePostInlineComment(
 		Path:       req.Path,
 		Line:       req.Line,
 		Side:       req.Side,
+		CommitSHA:  commitSHA,
 		ThreadID:   threadID,
 		Resolvable: true,
 		Author:     "test-user",

@@ -1,0 +1,3 @@
+kind: Added
+body: '''branch comment'': Inline comments now report ''outdated'' automatically when the anchored line is modified between the comment''s commit and the change''s current head (shamhub forge); previously a static field.'
+time: 2026-06-01T14:27:16.137838-04:00

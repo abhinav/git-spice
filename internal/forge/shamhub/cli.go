@@ -115,11 +115,13 @@ runCommand:
 			flag := flag.NewFlagSet("shamhub comment edit", flag.ContinueOnError)
 			flag.SetOutput(logw)
 			flag.Usage = func() {
-				fmt.Fprintln(logw, "usage: shamhub comment edit [-resolved=true|false] <id>")
+				fmt.Fprintln(logw, "usage: shamhub comment edit [-resolved=true|false] [-outdated=true|false] <id>")
 			}
 
 			var resolved optionalBoolFlag
+			var outdated optionalBoolFlag
 			flag.Var(&resolved, "resolved", "set whether the comment is resolved")
+			flag.Var(&outdated, "outdated", "force the comment to be reported as outdated/stale")
 			ts.Check(flag.Parse(args[1:]))
 			args = flag.Args()
 			if len(args) != 1 {
@@ -135,6 +137,7 @@ runCommand:
 			ts.Check(sh.EditComment(EditCommentRequest{
 				ID:       id,
 				Resolved: resolved.Ptr(),
+				Outdated: outdated.Ptr(),
 			}))
 
 		case "delete":
