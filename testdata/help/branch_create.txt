@@ -62,6 +62,9 @@ Flags:
                              restack its upstack
   -t, --target=BRANCH        Branch to create the new branch above/below
   -a, --all                  Automatically stage modified and deleted files
+  -c, --[no-]fill            Fill the commit message using the
+                             configured message generator. Defaults to
+                             spice.message.autoFill. (🔧 spice.message.autoFill)
   -m, --message=MSG          Commit message
   -F, --message-file=FILE    Read the commit message from the given file.
       --no-verify            Bypass pre-commit and commit-msg hooks.

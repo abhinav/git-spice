@@ -1,0 +1,56 @@
+# 'gs branch submit' sets the shared GS_OPERATION env contract for the
+# message generator on both the create path (--fill) and the update
+# path (--regenerate-message).
+
+as 'Test <test@example.com>'
+at '2024-04-05T16:40:32Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# configure a generator that echoes the shared env vars
+chmod 755 $WORK/gen.sh
+git config spice.message.generator $WORK/gen.sh
+
+# create and submit a branch with --fill (create path)
+git add feature.txt
+gs bc -m 'Add feature' feature1
+gs branch submit --fill
+stderr 'Created #'
+
+shamhub dump changes
+stdout 'op=branch-submit update=false branch=feature1 base=main'
+
+# re-submit with --regenerate-message (update path)
+cp $WORK/extra/feature-update.txt feature.txt
+git add feature.txt
+git commit -m 'update feature'
+
+gs branch submit --regenerate-message
+stderr 'Updated #'
+
+shamhub dump changes
+stdout 'op=branch-submit update=true branch=feature1 base=main'
+
+-- repo/feature.txt --
+Contents of feature
+-- extra/feature-update.txt --
+New contents of feature
+-- gen.sh --
+#!/bin/sh
+op="${GS_OPERATION:-}"
+up="${GS_MESSAGE_UPDATE:-}"
+br="${GS_BRANCH:-}"
+ba="${GS_BASE:-}"
+printf '{"title":"op=%s update=%s branch=%s base=%s","body":"body"}' "$op" "$up" "$br" "$ba"
