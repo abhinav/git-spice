@@ -14,6 +14,7 @@ import (
 type BranchGraph struct {
 	trunk    string
 	trunks   map[string]struct{} // all trunk-equivalents (canonical + worktree trunks)
+	anchors  []string            // anchor branches (per-worktree trunks), in load order
 	branches []BranchGraphItem   // all tracked branches
 	byName   map[string]int      // name -> index in branches
 	byBase   map[string][]int    // name -> [indices in branches]
@@ -82,14 +83,16 @@ func NewBranchGraph(ctx context.Context, loader BranchLoader, opts *BranchGraphO
 	}
 
 	trunk := loader.Trunk()
+	anchors := loader.AnchorBranches()
 	trunks := map[string]struct{}{trunk: {}}
-	for _, t := range loader.AnchorBranches() {
+	for _, t := range anchors {
 		trunks[t] = struct{}{}
 	}
 
 	return &BranchGraph{
 		trunk:     trunk,
 		trunks:    trunks,
+		anchors:   anchors,
 		branches:  branches,
 		byName:    byName,
 		byBase:    byBase,
@@ -108,6 +111,15 @@ func (g *BranchGraph) Trunk() string {
 func (g *BranchGraph) isTrunk(name string) bool {
 	_, ok := g.trunks[name]
 	return ok
+}
+
+// Anchors returns an iterator over the anchor branches in the graph:
+// per-worktree trunks that root their own stacks,
+// disconnected from the canonical trunk.
+//
+// The canonical trunk is not included.
+func (g *BranchGraph) Anchors() iter.Seq[string] {
+	return slices.Values(g.anchors)
 }
 
 // All returns an iterator over all branches in the graph

@@ -31,6 +31,10 @@ var _ GitWorktree = (*git.Worktree)(nil)
 // Store is a subset of the state.Store interface.
 type Store interface {
 	Trunk() string
+
+	// TrunkFor returns the trunk in effect for a worktree: its anchor
+	// if it has one, else the canonical trunk.
+	TrunkFor(worktree string) string
 }
 
 // Service is a subset of the spice.Service interface.
@@ -105,6 +109,16 @@ type Request struct {
 	// that have at least one branch
 	// checked out in the given worktree.
 	WorktreeFilter string
+
+	// WholeRepo also adds every stack rooted at an anchor
+	// (a per-worktree trunk) to the restack set,
+	// regardless of req.Branch.
+	// Anchors are graph roots disconnected from the canonical trunk,
+	// so an upstack-from-trunk traversal never reaches them.
+	//
+	// Combine with WorktreeFilter to restack the anchor-rooted stack
+	// of a specific worktree.
+	WholeRepo bool
 
 	// SkipCheckout skips checking out req.Branch
 	// after restacking completes.
@@ -189,6 +203,21 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 		}
 	}
 
+	// A whole-repo restack also covers stacks rooted at anchors
+	// (per-worktree trunks). Anchors are graph roots disconnected
+	// from the canonical trunk, so an upstack-from-trunk traversal
+	// never reaches them; walk each anchor's upstack explicitly.
+	if req.WholeRepo {
+		for anchor := range branchGraph.Anchors() {
+			for branch := range branchGraph.Upstack(anchor) {
+				if branch == anchor {
+					continue // anchor is a root; never restacked
+				}
+				branchesToRestack = append(branchesToRestack, branch)
+			}
+		}
+	}
+
 	// If a worktree filter is active,
 	// keep only branches belonging to stacks
 	// with at least one branch in the target worktree.
@@ -199,6 +228,18 @@ func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 		) {
 			for _, b := range stack {
 				allowed[b] = struct{}{}
+			}
+		}
+
+		// A worktree owns the stack rooted at its anchor even when no
+		// tracked branch from that stack is currently checked out here
+		// (e.g. the anchor itself is checked out). StacksInWorktree only
+		// sees checked-out tracked branches, so add the anchor's upstack
+		// explicitly; otherwise '-w' from an anchor worktree restacks
+		// nothing.
+		if anchor := h.Store.TrunkFor(req.WorktreeFilter); anchor != h.Store.Trunk() {
+			for branch := range branchGraph.Upstack(anchor) {
+				allowed[branch] = struct{}{}
 			}
 		}
 

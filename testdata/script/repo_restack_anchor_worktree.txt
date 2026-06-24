@@ -1,0 +1,53 @@
+# 'repo restack -w' run from inside an anchor worktree restacks that
+# worktree's own stack, which is rooted at the anchor and thus
+# disconnected from the canonical trunk.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A second stack rooted at the canonical trunk, in the primary
+# worktree: main -> other.
+git add other.txt
+gs bc other -m 'Add other'
+gs bco main
+
+# An anchor worktree with its own stack: dev -> a1 -> a2.
+gs anchor create $WORK/wt1 --name dev
+cd $WORK/wt1
+cp $WORK/a1.txt a1.txt
+git add a1.txt
+gs bc a1 -m 'Add a1'
+cp $WORK/a2.txt a2.txt
+git add a2.txt
+gs bc a2 -m 'Add a2'
+
+# Add a commit on the anchor so a1/a2 need restacking onto it.
+gs bco dev
+cp $WORK/dev-update.txt dev-update.txt
+git add dev-update.txt
+git commit -m 'Update dev'
+
+# From inside the anchor worktree, '-w' restacks the anchor's stack...
+gs repo restack -w
+stderr 'a1: restacked'
+stderr 'a2: restacked'
+
+# ...and does not touch the canonical-trunk stack in another worktree.
+! stderr 'other'
+
+-- repo/dummy.txt --
+dummy
+-- repo/other.txt --
+other
+-- a1.txt --
+a1
+-- a2.txt --
+a2
+-- dev-update.txt --
+dev update

@@ -71,3 +71,38 @@ func TestWorktree_CheckoutFiles(t *testing.T) {
 		assert.Equal(t, "Feature content", strings.TrimSpace(string(content)))
 	})
 }
+
+func TestWorktree_CheckoutBranch_inUseByOtherWorktree(t *testing.T) {
+	t.Parallel()
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		git init
+		git add init.txt
+		git commit -m 'Initial commit'
+		git checkout -b feature
+		git checkout main
+
+		-- init.txt --
+		Initial content
+	`)))
+	require.NoError(t, err)
+
+	wt, err := git.OpenWorktree(t.Context(), fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	// Check out 'feature' in a second worktree so it is in use there.
+	otherDir := filepath.Join(t.TempDir(), "other")
+	require.NoError(t, wt.Repository().WorktreeAdd(t.Context(), git.WorktreeAddRequest{
+		Path: otherDir,
+		Head: "feature",
+	}))
+
+	// Checking out 'feature' from the main worktree is refused legibly.
+	err = wt.CheckoutBranch(t.Context(), "feature")
+	var inUse *git.BranchInUseError
+	require.ErrorAs(t, err, &inUse)
+	assert.Equal(t, "feature", inUse.Branch)
+	assert.Equal(t, "other", filepath.Base(inUse.Worktree))
+}
