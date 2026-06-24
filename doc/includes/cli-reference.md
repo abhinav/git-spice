@@ -1470,7 +1470,7 @@ for manual resolution instead.
 ### git-spice integration submit {#gs-integration-submit}
 
 ```
-gs integration (int) submit (s)
+gs integration (int) submit (s) [flags]
 ```
 
 Push the integration branch to the remote
@@ -1479,10 +1479,57 @@ Pushes the integration branch to the configured remote with
 --force-with-lease against the hash recorded at the previous
 successful push.
 
-No change request (PR) is opened: this command only pushes the
-branch. Once a manual submit succeeds, 'gs stack submit' and
-'gs upstack submit' will keep the published branch in sync with
-local rebuilds.
+No change request (PR) is opened for the integration branch
+itself: it is a throwaway artifact. However, the downstack
+branches of each configured tip are also submitted, so any
+branches that need to be pushed or have their CRs created or
+updated are handled in one shot.
+
+Once a manual submit succeeds, 'gs stack submit' and
+'gs upstack submit' will keep the integration branch in sync
+with local rebuilds.
+
+Use --dry-run to print what would be submitted without submitting it.
+
+For new Change Requests, a prompt will allow filling metadata.
+Use --fill to populate title and body from the commit messages.
+The --[no-]draft flag marks the CR as draft or not.
+Use the 'spice.submit.draft' configuration option
+to mark new CRs as drafts (or not) by default,
+skipping the prompt.
+
+For updating Change Requests,
+use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
+
+Use --no-publish to push branches without creating CRs.
+This has no effect if a branch already has an open CR.
+
+Use --update-only to only update branches with existing CRs,
+and skip those that would create new CRs.
+
+Use --nav-comment=false to disable navigation comments in CRs,
+or --nav-comment=multiple to post those comments
+only if there are multiple CRs in the stack.
+
+
+**Flags**
+
+* `-n`, `--dry-run`: Don't actually submit the stack
+* `-c`, `--fill`: Fill in the change title and body from the commit messages
+* `--[no-]draft`: Whether to mark change requests as drafts
+* `--[no-]publish` ([:material-wrench:{ .middle title="spice.submit.publish" }](/cli/config.md#spicesubmitpublish)): Whether to create CRs for pushed branches. Defaults to true.
+* `-w`, `--web` ([:material-wrench:{ .middle title="spice.submit.web" }](/cli/config.md#spicesubmitweb)): Open submitted changes in a web browser. Accepts an optional argument: 'true', 'false', 'created'.
+* `--nav-comment=true` ([:material-wrench:{ .middle title="spice.submit.navigationComment" }](/cli/config.md#spicesubmitnavigationcomment)): Whether to add a navigation comment to the change request. Must be one of: true, false, multiple.
+* `--force`: Force push, bypassing safety checks
+* `--no-verify`: Bypass pre-push hooks when pushing to the remote. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.15.0](/changelog.md#v0.15.0)</span>
+* `-u`, `--[no-]update-only`: Only update existing change requests, do not create new ones
+* `-l`, `--label=LABEL,...`: Add labels to the change request. Pass multiple times or separate with commas.
+* `-r`, `--reviewer=REVIEWER,...`: Add reviewers to the change request. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `-a`, `--assign=ASSIGNEE,...`: Assign the change request to these users. Pass multiple times or separate with commas. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.21.0](/changelog.md#v0.21.0)</span>
+* `--no-web`: Alias for --web=false.
+
+**Configuration**: [spice.submit.assignees](/cli/config.md#spicesubmitassignees), [spice.submit.draft](/cli/config.md#spicesubmitdraft), [spice.submit.labels](/cli/config.md#spicesubmitlabels), [spice.submit.labels.addWhen](/cli/config.md#spicesubmitlabelsaddwhen), [spice.submit.listTemplatesTimeout](/cli/config.md#spicesubmitlisttemplatestimeout), [spice.submit.navigationComment](/cli/config.md#spicesubmitnavigationcomment), [spice.submit.navigationComment.downstack](/cli/config.md#spicesubmitnavigationcommentdownstack), [spice.submit.navigationCommentStyle.marker](/cli/config.md#spicesubmitnavigationcommentstylemarker), [spice.submit.navigationCommentSync](/cli/config.md#spicesubmitnavigationcommentsync), [spice.submit.publish](/cli/config.md#spicesubmitpublish), [spice.submit.reviewers](/cli/config.md#spicesubmitreviewers), [spice.submit.reviewers.addWhen](/cli/config.md#spicesubmitreviewersaddwhen), [spice.submit.skipRestackCheck](/cli/config.md#spicesubmitskiprestackcheck), [spice.submit.template](/cli/config.md#spicesubmittemplate), [spice.submit.updateOnly](/cli/config.md#spicesubmitupdateonly), [spice.submit.web](/cli/config.md#spicesubmitweb)
 
 ### git-spice integration mark-pushed {#gs-integration-mark-pushed}
 

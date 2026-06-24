@@ -1,13 +1,63 @@
-Usage: gs integration (int) submit (s)
+Usage: gs integration (int) submit (s) [flags]
 
 Push the integration branch to the remote
 
 Pushes the integration branch to the configured remote with --force-with-lease
 against the hash recorded at the previous successful push.
 
-No change request (PR) is opened: this command only pushes the branch. Once a
-manual submit succeeds, 'gs stack submit' and 'gs upstack submit' will keep the
-published branch in sync with local rebuilds.
+No change request (PR) is opened for the integration branch itself: it is a
+throwaway artifact. However, the downstack branches of each configured tip are
+also submitted, so any branches that need to be pushed or have their CRs created
+or updated are handled in one shot.
+
+Once a manual submit succeeds, 'gs stack submit' and 'gs upstack submit' will
+keep the integration branch in sync with local rebuilds.
+
+Use --dry-run to print what would be submitted without submitting it.
+
+For new Change Requests, a prompt will allow filling metadata. Use --fill to
+populate title and body from the commit messages. The --[no-]draft flag marks
+the CR as draft or not. Use the 'spice.submit.draft' configuration option to
+mark new CRs as drafts (or not) by default, skipping the prompt.
+
+For updating Change Requests, use --[no-]draft to change its draft status.
+Without the flag, the draft status is not changed.
+
+Use --no-publish to push branches without creating CRs. This has no effect if a
+branch already has an open CR.
+
+Use --update-only to only update branches with existing CRs, and skip those that
+would create new CRs.
+
+Use --nav-comment=false to disable navigation comments in CRs, or
+--nav-comment=multiple to post those comments only if there are multiple CRs in
+the stack.
+
+Flags:
+  -n, --dry-run                  Don't actually submit the stack
+  -c, --fill                     Fill in the change title and body from the
+                                 commit messages
+      --[no-]draft               Whether to mark change requests as drafts
+      --[no-]publish             Whether to create CRs for pushed branches.
+                                 Defaults to true. (🔧 spice.submit.publish)
+  -w, --web                      Open submitted changes in a web browser.
+                                 Accepts an optional argument: 'true', 'false',
+                                 'created'. (🔧 spice.submit.web)
+      --nav-comment=true         Whether to add a navigation comment to the
+                                 change request. Must be one of: true, false,
+                                 multiple. (🔧 spice.submit.navigationComment)
+      --force                    Force push, bypassing safety checks
+      --no-verify                Bypass pre-push hooks when pushing to the
+                                 remote.
+  -u, --[no-]update-only         Only update existing change requests, do not
+                                 create new ones
+  -l, --label=LABEL,...          Add labels to the change request. Pass multiple
+                                 times or separate with commas.
+  -r, --reviewer=REVIEWER,...    Add reviewers to the change request. Pass
+                                 multiple times or separate with commas.
+  -a, --assign=ASSIGNEE,...      Assign the change request to these users.
+                                 Pass multiple times or separate with commas.
+      --no-web                   Alias for --web=false.
 
 Global Flags:
   -h, --help           Show help for the command
@@ -15,3 +65,30 @@ Global Flags:
   -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
   -C, --dir=DIR        Change to DIR before doing anything
       --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.submit.assignees           Default assignees to add to change requests.
+  spice.submit.draft               Default value for --draft when creating
+                                   change requests.
+  spice.submit.labels              Default labels to add to change requests.
+  spice.submit.labels.addWhen      When to add configured labels.
+  spice.submit.listTemplatesTimeout
+                                   Timeout for listing CR templates
+  spice.submit.navigationComment.downstack
+                                   Which downstack CRs to include in navigation
+                                   comments. Must be one of: all, open.
+  spice.submit.navigationCommentStyle.marker
+                                   Marker to use for the current change in
+                                   navigation comments. Defaults to '◀'.
+  spice.submit.navigationCommentSync
+                                   Which navigation comment to sync. Must be one
+                                   of: branch, downstack.
+  spice.submit.reviewers           Default reviewers to add to change requests.
+  spice.submit.reviewers.addWhen
+                                   When to add configured reviewers.
+  spice.submit.skipRestackCheck    When to skip the restack check. Must be one
+                                   of: never, trunk, always.
+  spice.submit.template            Default template to use when multiple
+                                   templates are available
+  spice.submit.updateOnly          Default value for --update-only in batch
+                                   submit operations.

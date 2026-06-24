@@ -1,0 +1,174 @@
+# Verifies 'gs integration submit' also submits the downstack branches
+# of each configured tip, pushing them and creating CRs (PRs).
+#
+# The integration branch itself never gets a CR, but the tip branches
+# and their dependencies do.
+
+as 'Test <test@example.com>'
+at '2025-06-01T00:00:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+gs repo init
+
+# Build two stacks rooted at trunk:
+#   main -> base-a -> tip-a
+#   main -> base-b -> tip-b
+git add base-a.txt
+gs branch create base-a -m 'Add base-a'
+git add tip-a.txt
+gs branch create tip-a -m 'Add tip-a'
+
+gs trunk
+git add base-b.txt
+gs branch create base-b -m 'Add base-b'
+git add tip-b.txt
+gs branch create tip-b -m 'Add tip-b'
+
+# Configure the integration branch over the two tips.
+gs trunk
+gs integration create preview --tip tip-a --tip tip-b
+gs integration rebuild
+
+# Submit the integration branch. This should also submit the tip
+# stacks (base-a, tip-a, base-b, tip-b), creating CRs for each.
+gs integration submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+stderr 'Created #4'
+stderr 'Integration branch pushed.'
+
+# Verify all four tip-stack branches got CRs, and the integration
+# branch was pushed as a regular branch (no CR).
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/pulls.json
+
+# Verify the integration branch appeared on the remote, even though
+# it has no CR.
+cd ../
+git clone $SHAMHUB_URL/alice/example.git clone
+cd clone
+git branch -r
+cmp stdout $WORK/golden/remote-branches.txt
+
+-- repo/base-a.txt --
+base a
+-- repo/tip-a.txt --
+tip a
+-- repo/base-b.txt --
+base b
+-- repo/tip-b.txt --
+tip b
+-- golden/pulls.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add base-a",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "20c47e7889ce2a42f0262a0a3e826fff131a23cf"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "base-a",
+      "sha": "ae20834108c790c4fad17fa11718c2b20509c7c8"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add tip-a",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "base-a",
+      "sha": "ae20834108c790c4fad17fa11718c2b20509c7c8"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "tip-a",
+      "sha": "e7e426d9c7ba9bb22462cf38908e0851b5096714"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "open",
+    "title": "Add base-b",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "20c47e7889ce2a42f0262a0a3e826fff131a23cf"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "base-b",
+      "sha": "1b30f4eedaa906d0ced733c2da76bb758f603283"
+    }
+  },
+  {
+    "number": 4,
+    "html_url": "$SHAMHUB_URL/alice/example/change/4",
+    "state": "open",
+    "title": "Add tip-b",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "base-b",
+      "sha": "1b30f4eedaa906d0ced733c2da76bb758f603283"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "tip-b",
+      "sha": "24e9aa620deb7d78eef540870752326140ea7c57"
+    }
+  }
+]
+-- golden/remote-branches.txt --
+  origin/HEAD -> origin/main
+  origin/base-a
+  origin/base-b
+  origin/main
+  origin/preview
+  origin/tip-a
+  origin/tip-b
