@@ -68,6 +68,7 @@ type inlineCommentItem struct {
 	RangeLo   int       `json:"rangeStart,omitempty"`
 	RangeHi   int       `json:"rangeEnd,omitempty"`
 	Side      string    `json:"side,omitempty"`
+	CommitSHA string    `json:"commitSHA,omitempty"`
 	Body      string    `json:"body"`
 	Author    string    `json:"author"`
 	Resolved  bool      `json:"resolved"`
@@ -119,6 +120,7 @@ func (sh *ShamHub) handleListInlineComments(
 			RangeLo:   c.RangeStart,
 			RangeHi:   c.RangeEnd,
 			Side:      c.Side,
+			CommitSHA: c.CommitSHA,
 			Body:      c.Body,
 			Author:    c.Author,
 			Resolved:  c.Resolved,
@@ -215,6 +217,7 @@ func (r *forgeRepository) ListInlineComments(
 			Path:      item.Path,
 			Line:      item.Line,
 			Side:      item.Side,
+			CommitSHA: item.CommitSHA,
 			Body:      item.Body,
 			Author:    item.Author,
 			Resolved:  item.Resolved,
@@ -260,6 +263,7 @@ type postInlineCommentRequest struct {
 	RangeEnd   int    `json:"rangeEnd,omitempty"`
 	Body       string `json:"body"`
 	Side       string `json:"side,omitempty"`
+	CommitSHA  string `json:"commitSHA,omitempty"`
 	ThreadID   string `json:"threadID,omitempty"`
 }
 
