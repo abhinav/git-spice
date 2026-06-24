@@ -308,6 +308,16 @@ type Repository interface {
 	// or the change has no required checks,
 	// implementations should return an empty slice.
 	ChangeChecks(ctx context.Context, id ChangeID) ([]ChangeCheck, error)
+
+	// ChecksByChange reports per-change rolled-up and per-run check
+	// state for each of the given changes, in the same order as ids.
+	//
+	// A change with no checks configured or reported should yield a
+	// [*ChecksReport] whose Rollup is [ChecksRollupNone] and whose
+	// Runs is empty. Implementations may return nil for that slot if
+	// no data is available at all.
+	ChecksByChange(ctx context.Context, ids []ChangeID) ([]*ChecksReport, error)
+
 	CommentCountsByChange(ctx context.Context, ids []ChangeID) ([]*CommentCounts, error)
 
 	// Post, update, and delete comments on changes.
@@ -937,4 +947,127 @@ func (s ChangeCheckState) GoString() string {
 	default:
 		return fmt.Sprintf("ChangeCheckState(%d)", int(s))
 	}
+}
+
+// ChecksReport describes the rolled-up and per-run check status for
+// a change.
+//
+// It is a display-oriented view layered on top of the per-check
+// [ChangeCheck] primitive: [Repository.ChecksByChange] reports one
+// per change for surfaces that want a single rollup plus per-run
+// detail (e.g. gs log --cr-checks).
+type ChecksReport struct {
+	// Rollup is the single rolled-up state across all reported
+	// checks. Drives UI indicators that need a single visual.
+	Rollup ChecksRollupState
+
+	// Runs lists the individual checks/runs the forge reported, in
+	// forge-defined order. Empty when Rollup is [ChecksRollupNone].
+	Runs []CheckRun
+
+	// URL is the forge's summary page for the change's checks.
+	// May be empty if the forge has no per-change checks page or if
+	// no checks are reported.
+	URL string
+}
+
+// CheckRun is a single check reported by the forge.
+//
+// State is left as a forge-native string (e.g. GitHub's "success",
+// "neutral", "timed_out") so consumers can distinguish nuances the
+// rollup collapses.
+type CheckRun struct {
+	// Name is the forge-defined display name of the check.
+	Name string
+
+	// State is the forge-native state string for this run.
+	State string
+
+	// URL is the forge's detail page for this run, if any.
+	URL string
+}
+
+// ChecksRollupState represents the rolled-up CI/checks status for a
+// change.
+//
+// The enum collapses each forge's native taxonomy down to the four
+// states that drive UI distinction (pending, passed, failed, none).
+// Forge-native fidelity is preserved per-run in [CheckRun.State].
+type ChecksRollupState int
+
+const (
+	// ChecksRollupPending indicates checks are still running.
+	ChecksRollupPending ChecksRollupState = iota + 1
+
+	// ChecksRollupPassed indicates all checks have passed.
+	ChecksRollupPassed
+
+	// ChecksRollupFailed indicates one or more checks failed.
+	ChecksRollupFailed
+
+	// ChecksRollupNone indicates that no checks are configured or
+	// reported for the change. Distinct from ChecksRollupPassed:
+	// the absence of checks is a different UI state than a green
+	// outcome.
+	ChecksRollupNone
+)
+
+func (s ChecksRollupState) String() string {
+	switch s {
+	case ChecksRollupPending:
+		return "pending"
+	case ChecksRollupPassed:
+		return "passed"
+	case ChecksRollupFailed:
+		return "failed"
+	case ChecksRollupNone:
+		return "none"
+	default:
+		return fmt.Sprintf("ChecksRollupState(%d)", int(s))
+	}
+}
+
+// GoString returns a Go-syntax representation.
+func (s ChecksRollupState) GoString() string {
+	switch s {
+	case ChecksRollupPending:
+		return "ChecksRollupPending"
+	case ChecksRollupPassed:
+		return "ChecksRollupPassed"
+	case ChecksRollupFailed:
+		return "ChecksRollupFailed"
+	case ChecksRollupNone:
+		return "ChecksRollupNone"
+	default:
+		return fmt.Sprintf("ChecksRollupState(%d)", int(s))
+	}
+}
+
+// MarshalText encodes the state as one of "pending", "passed",
+// "failed", or "none". This implements [encoding.TextMarshaler].
+func (s ChecksRollupState) MarshalText() ([]byte, error) {
+	switch s {
+	case ChecksRollupPending, ChecksRollupPassed, ChecksRollupFailed, ChecksRollupNone:
+		return []byte(s.String()), nil
+	default:
+		return nil, fmt.Errorf("unknown checks rollup state: %d", int(s))
+	}
+}
+
+// UnmarshalText decodes a state from one of "pending", "passed",
+// "failed", or "none". This implements [encoding.TextUnmarshaler].
+func (s *ChecksRollupState) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "pending":
+		*s = ChecksRollupPending
+	case "passed":
+		*s = ChecksRollupPassed
+	case "failed":
+		*s = ChecksRollupFailed
+	case "none":
+		*s = ChecksRollupNone
+	default:
+		return fmt.Errorf("unknown checks rollup state: %q", b)
+	}
+	return nil
 }

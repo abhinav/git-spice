@@ -310,6 +310,55 @@ func TestChangeState(t *testing.T) {
 	})
 }
 
+func TestChecksRollupState(t *testing.T) {
+	tests := []struct {
+		state forge.ChecksRollupState
+		str   string
+	}{
+		{forge.ChecksRollupPending, "pending"},
+		{forge.ChecksRollupPassed, "passed"},
+		{forge.ChecksRollupFailed, "failed"},
+		{forge.ChecksRollupNone, "none"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.str, func(t *testing.T) {
+			t.Run("String", func(t *testing.T) {
+				assert.Equal(t, tt.str, tt.state.String())
+			})
+
+			t.Run("MarshalRoundTrip", func(t *testing.T) {
+				bs, err := tt.state.MarshalText()
+				require.NoError(t, err)
+				assert.Equal(t, tt.str, string(bs))
+
+				var s forge.ChecksRollupState
+				require.NoError(t, s.UnmarshalText(bs))
+				assert.Equal(t, tt.state, s)
+			})
+		})
+	}
+
+	t.Run("unknown", func(t *testing.T) {
+		s := forge.ChecksRollupState(42)
+
+		t.Run("String", func(t *testing.T) {
+			assert.Equal(t, "ChecksRollupState(42)", s.String())
+		})
+
+		t.Run("Marshal", func(t *testing.T) {
+			_, err := s.MarshalText()
+			assert.Error(t, err)
+		})
+
+		t.Run("Unmarshal", func(t *testing.T) {
+			var got forge.ChecksRollupState
+			err := got.UnmarshalText([]byte("unknown"))
+			assert.Error(t, err)
+		})
+	})
+}
+
 func TestMergeMethod(t *testing.T) {
 	tests := []struct {
 		method forge.MergeMethod
