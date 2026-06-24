@@ -1,0 +1,42 @@
+# 'gs repo restore --forget' discards a parked worktree whose branch was
+# deleted on purpose, so the repository can leave exclusive mode without
+# resurrecting a branch the user meant to remove.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Two worktrees: one keeps its branch, one will lose it.
+gs anchor create $WORK/wtKeep --name keep -b featKeep
+gs anchor create $WORK/wtDrop --name drop -b featDrop
+
+# Park, then delete one worktree's branch intentionally.
+cd $WORK/repo
+gs repo park
+git branch -D featDrop
+
+# A plain restore is blocked on the deleted branch.
+! gs repo restore
+stderr 'parked branch "featDrop" no longer exists'
+
+# Discard the intentionally-deleted worktree: the kept one is restored
+# and exclusive mode clears.
+gs repo restore --forget $WORK/wtDrop
+stderr 'Forgot parked worktree'
+stderr 'exclusive mode cleared'
+exists $WORK/wtKeep
+! exists $WORK/wtDrop
+
+# A non-matching --forget path is rejected.
+gs repo park
+! gs repo restore --forget $WORK/nope
+stderr 'does not match any parked worktree'
+gs repo restore
+
+-- repo/dummy.txt --
+dummy

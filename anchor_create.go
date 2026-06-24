@@ -63,6 +63,13 @@ func (cmd *anchorCreateCmd) Run(
 			"there is no anchor branch to name")
 	}
 
+	// While the repository is in exclusive mode, it belongs to the
+	// parking process; new worktrees would race with its reorganization.
+	if store.InExclusiveMode() {
+		return errors.New("repository is in exclusive mode; " +
+			"run 'gs repo restore' first")
+	}
+
 	canonicalTrunk := store.Trunk()
 
 	// Resolve the base the worktree is anchored at: the canonical trunk

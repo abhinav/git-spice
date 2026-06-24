@@ -1,0 +1,39 @@
+# 'gs repo park' records a detached worktree's HEAD commit, so
+# 'gs repo restore' re-creates it at that same commit rather than at the
+# primary checkout's (possibly newer) HEAD.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# A detached worktree at the current trunk commit.
+gs anchor create --no-anchor $WORK/wtD
+cd $WORK/wtD
+git rev-parse --abbrev-ref HEAD
+stdout 'HEAD'
+
+# Advance the primary's trunk so its HEAD differs from the detached
+# worktree's commit.
+cd $WORK/repo
+git commit --allow-empty -m 'Second commit'
+
+# Park and restore.
+gs repo park
+! exists $WORK/wtD
+gs repo restore
+exists $WORK/wtD
+
+# The detached worktree is back at its own commit ('Initial commit'),
+# not the primary's advanced HEAD ('Second commit').
+cd $WORK/wtD
+git log -1 --format=%s
+stdout 'Initial commit'
+! stdout 'Second commit'
+
+-- repo/dummy.txt --
+dummy

@@ -24,6 +24,10 @@ Repository
   repo (r) init (i)       Initialize a repository
   repo (r) sync (s)       Pull latest changes from the remote
   repo (r) restack (r)    Restack all tracked branches
+  repo (r) park           Enter exclusive mode: park worktrees and take the
+                          whole repo
+  repo (r) restore        Leave exclusive mode: restore parked worktrees
+  repo (r) exclusive      Run a command with the whole repo to itself
 
 Log
   log (l) short (s)    List branches

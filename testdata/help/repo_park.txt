@@ -1,0 +1,28 @@
+Usage: gs repo (r) park [flags]
+
+Enter exclusive mode: park worktrees and take the whole repo
+
+Enters exclusive mode: the whole repository is handed to a single process so
+it can reorganize the stack without contending with worktrees owned by other
+processes.
+
+Every linked worktree is recorded in a durable manifest and its directory is
+removed; the branches themselves are left untouched, so the entire graph remains
+reachable from the primary checkout. Run 'gs repo restore' to leave exclusive
+mode and re-create the worktrees.
+
+A worktree with staged, unstaged, or untracked changes is refused unless --force
+is given, which discards those changes. Stashes are repository-global and
+are never discarded. The manifest is written before any worktree is removed,
+so an interrupted park can be resumed by re-running the command.
+
+Flags:
+  --force    Park worktrees even if they have uncommitted changes (changes are
+             discarded)
+
+Global Flags:
+  -h, --help           Show help for the command
+      --version        Print version information and quit
+  -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
+  -C, --dir=DIR        Change to DIR before doing anything
+      --[no-]prompt    Whether to prompt for missing information

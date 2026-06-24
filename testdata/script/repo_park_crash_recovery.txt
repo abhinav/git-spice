@@ -1,0 +1,42 @@
+# Park and restore are durable and resumable: the exclusive-mode manifest
+# lives in the repository's spice state, so a crash mid-operation loses
+# nothing. Re-running park or restore picks up where it left off and is
+# idempotent.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Two anchor worktrees.
+gs anchor create $WORK/wtB --name dev -b feat1
+gs anchor create $WORK/wtC --name dev2 -b feat2
+
+# Park them.
+cd $WORK/repo
+gs repo park
+stderr 'Parked'
+! exists $WORK/wtB
+! exists $WORK/wtC
+
+# Re-running park while already in exclusive mode is a harmless no-op
+# (this is what a resume after a crash looks like).
+gs repo park
+! exists $WORK/wtB
+! exists $WORK/wtC
+
+# Restore brings both worktrees back.
+gs repo restore
+stderr 'Restored'
+exists $WORK/wtB
+exists $WORK/wtC
+
+# Re-running restore is idempotent: nothing left to restore, no error.
+gs repo restore
+
+-- repo/dummy.txt --
+dummy

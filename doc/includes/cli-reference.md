@@ -185,6 +185,93 @@ respective bases in dependency order, ensuring a linear history.
 
 * `-w`, `--worktree`: Only restack branches in the current worktree.
 
+### git-spice repo park {#gs-repo-park}
+
+```
+gs repo (r) park [flags]
+```
+
+Enter exclusive mode: park worktrees and take the whole repo
+
+Enters exclusive mode: the whole repository is handed to a single
+process so it can reorganize the stack without contending with
+worktrees owned by other processes.
+
+Every linked worktree is recorded in a durable manifest and its
+directory is removed; the branches themselves are left untouched,
+so the entire graph remains reachable from the primary checkout.
+Run 'gs repo restore' to leave exclusive mode and re-create the
+worktrees.
+
+A worktree with staged, unstaged, or untracked changes is refused
+unless --force is given, which discards those changes. Stashes are
+repository-global and are never discarded. The manifest is written
+before any worktree is removed, so an interrupted park can be
+resumed by re-running the command.
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
+
+### git-spice repo restore {#gs-repo-restore}
+
+```
+gs repo (r) restore [flags]
+```
+
+Leave exclusive mode: restore parked worktrees
+
+Leaves exclusive mode: the worktrees recorded by 'gs repo park'
+are re-created at their branches' current tips, and the
+exclusive-mode marker is cleared.
+
+It is idempotent and resumable: worktrees that already exist are
+left alone, so an interrupted restore can be finished by
+re-running the command.
+
+If a parked branch no longer exists, the branch was deleted
+outside git-spice while the repository was parked. That leaves
+git-spice's state inconsistent, so restore cannot put the
+worktree back on its own. It restores every other worktree but
+stays in exclusive mode and reports what is wrong. Recover by
+either re-creating the missing branch and re-running restore, or
+discarding that worktree with --forget. The commit each worktree
+was parked at is preserved under refs/gs-park/ so it is not lost
+to garbage collection in the meantime.
+
+**Flags**
+
+* `--forget=PATH,...`: Discard a parked worktree whose branch is gone instead of restoring it (repeatable)
+
+### git-spice repo exclusive {#gs-repo-exclusive}
+
+```
+gs repo (r) exclusive [<command> ...] [flags]
+```
+
+Run a command with the whole repo to itself
+
+Runs a command with the whole repository to itself: it parks every
+worktree (see 'gs repo park'), runs the command, then restores the
+worktrees (see 'gs repo restore').
+
+The worktrees are restored even if the command fails. If the
+command deletes a parked branch, restore cannot put that worktree
+back; it restores the rest, stays in exclusive mode, and explains
+how to recover with 'gs repo restore'.
+
+Separate the command from this one's flags with '--', for example:
+
+	gs repo exclusive -- git rebase -i main
+
+**Arguments**
+
+* `command`: Command to run with the repository to itself
+
+**Flags**
+
+* `--force`: Park worktrees even if they have uncommitted changes (changes are discarded)
+
 ## Log
 
 ### git-spice log short {#gs-log-short}

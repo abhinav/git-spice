@@ -1,0 +1,53 @@
+# When a branch is deleted out-of-band while the repository is parked,
+# 'gs repo restore' cannot put that worktree back (the branch is gone and
+# git-spice's state is now inconsistent). It restores everything else but
+# stays wedged in exclusive mode and explains how to recover, rather than
+# fabricating a branch or silently dropping the worktree.
+
+as 'Test <test@example.com>'
+at '2026-03-29T14:00:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# An anchor worktree with a feature branch checked out.
+gs anchor create $WORK/wtB --name dev -b feat1
+
+# Park from the primary.
+cd $WORK/repo
+gs repo park
+! exists $WORK/wtB
+
+# The parked commit is pinned so it cannot be lost to GC.
+exec git for-each-ref refs/gs-park/
+stdout 'refs/gs-park/'
+
+# Simulate the exclusive command deleting the parked branch.
+git branch -D feat1
+
+# Restore refuses to complete: it reports the missing branch and how to
+# recover, and stays in exclusive mode.
+! gs repo restore
+stderr 'parked branch "feat1" no longer exists'
+stderr 'To recover'
+! exists $WORK/wtB
+
+# Still parked: new worktrees remain blocked.
+! gs anchor create $WORK/wtX --name x
+stderr 'exclusive mode'
+
+# Recover by re-creating the branch, then re-running restore.
+git branch feat1 main
+gs repo restore
+stderr 'exclusive mode cleared'
+exists $WORK/wtB
+
+# The pin is released once recovery completes.
+exec git for-each-ref refs/gs-park/
+! stdout 'refs/gs-park/'
+
+-- repo/dummy.txt --
+dummy
