@@ -42,7 +42,7 @@ var _ Store = (*state.Store)(nil)
 // Service provides access to git-spice's higher-level operations.
 type Service interface {
 	BranchGraph(context.Context, *spice.BranchGraphOptions) (*spice.BranchGraph, error)
-	CheckRestacked(context.Context, string) (git.Hash, error)
+	CheckLoadedBranchRestacked(context.Context, spice.LoadBranchItem) (git.Hash, error)
 }
 
 var _ Service = (*spice.Service)(nil)
@@ -259,7 +259,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				// BranchGraph was loaded before restack reconciliation.
 				// When CheckRestacked heals a boundary, its error returns the
 				// reconciled value so this invocation does not render stale commits.
-				baseHash, err := h.Service.CheckRestacked(ctx, branch.Name)
+				baseHash, err := h.Service.CheckLoadedBranchRestacked(ctx, branch)
 				if err != nil {
 					if needsRestack, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 						item.NeedsRestack = true

@@ -125,6 +125,27 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 		return git.ZeroHash, err
 	}
 
+	return s.checkRestacked(ctx, name, b)
+}
+
+// CheckLoadedBranchRestacked is like [Service.CheckRestacked],
+// but uses the supplied branch state instead of loading it again.
+func (s *Service) CheckLoadedBranchRestacked(
+	ctx context.Context,
+	b LoadBranchItem,
+) (git.Hash, error) {
+	return s.checkRestacked(ctx, b.Name, &LookupBranchResponse{
+		Head:     b.Head,
+		Base:     b.Base,
+		BaseHash: b.BaseHash,
+	})
+}
+
+func (s *Service) checkRestacked(
+	ctx context.Context,
+	name string,
+	b *LookupBranchResponse,
+) (git.Hash, error) {
 	commitRange, err := s.branchBaseInfo(ctx, name, b)
 	if err != nil {
 		return git.ZeroHash, err
