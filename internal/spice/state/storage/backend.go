@@ -15,6 +15,12 @@ type Backend interface {
 	// If the key does not exist, Get returns [ErrNotExist].
 	Get(ctx context.Context, key string, dst any) error
 
+	// GetMany retrieves values from the store
+	// and decodes each value into its request destination.
+	//
+	// If any key does not exist, GetMany returns ErrNotExist.
+	GetMany(ctx context.Context, reqs []GetRequest) error
+
 	// Snapshot returns a read-only view of the current store revision.
 	Snapshot(ctx context.Context) (Snapshot, error)
 
@@ -79,6 +85,15 @@ type SetRequest struct {
 type MoveRequest struct {
 	From string // required
 	To   string // required
+}
+
+// GetRequest is a single operation to retrieve a key.
+type GetRequest struct {
+	// Key to retrieve.
+	Key string
+
+	// Value receives the JSON-decoded value.
+	Value any
 }
 
 // ErrNotExist indicates that an expected key does not exist.

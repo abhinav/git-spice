@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"os"
 	"sync"
@@ -122,6 +123,63 @@ func TestGitBackendMove_replaysConcurrentUpdate(t *testing.T) {
 	assert.ErrorIs(t, db.Get(ctx, "old", &got), ErrNotExist)
 	require.NoError(t, db.Get(ctx, "new", &got))
 	assert.Equal(t, "after", got)
+}
+
+func TestGitBackend_GetManyUsesReadObjects(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	wrappedRepo := &readObjectsTrackingRepository{Repository: repo}
+	backend := NewGitBackend(GitConfig{
+		Repo:        wrappedRepo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	})
+
+	db := NewDB(backend)
+	require.NoError(t, db.Set(ctx, "foo", "bar", "set foo"))
+	require.NoError(t, db.Set(ctx, "baz", "qux", "set baz"))
+
+	wrappedRepo.rejectReadObject = true
+
+	var got1, got2 string
+	require.NoError(t, db.GetMany(ctx, []GetRequest{
+		{Key: "foo", Value: &got1},
+		{Key: "baz", Value: &got2},
+	}))
+	assert.Equal(t, "bar", got1)
+	assert.Equal(t, "qux", got2)
+	assert.Equal(t, 1, wrappedRepo.readObjectsCalls)
+	assert.Equal(t, 2, wrappedRepo.readObjectsHashes)
+}
+
+func TestGitBackend_GetManyDecodeError(t *testing.T) {
+	ctx := t.Context()
+	repo, _, err := git.Init(ctx, t.TempDir(), git.InitOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	backend := NewGitBackend(GitConfig{
+		Repo:        repo,
+		Ref:         "refs/data",
+		AuthorName:  "Test Author",
+		AuthorEmail: "test@example.com",
+		Log:         silogtest.New(t),
+	})
+
+	db := NewDB(backend)
+	require.NoError(t, db.Set(ctx, "foo", "not a number", "set foo"))
+
+	var got int
+	err = db.GetMany(ctx, []GetRequest{{Key: "foo", Value: &got}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode JSON")
 }
 
 func TestGitBackend_ConcurrentOperations(t *testing.T) {
@@ -346,4 +404,33 @@ func (r *updateTreeHookRepository) UpdateTree(
 		return "", err
 	}
 	return r.GitRepository.UpdateTree(ctx, req)
+}
+
+type readObjectsTrackingRepository struct {
+	*git.Repository
+
+	rejectReadObject  bool
+	readObjectsCalls  int
+	readObjectsHashes int
+}
+
+func (r *readObjectsTrackingRepository) ReadObject(
+	ctx context.Context,
+	typ git.Type,
+	hash git.Hash,
+	dst io.Writer,
+) error {
+	if r.rejectReadObject {
+		return errors.New("ReadObject should not be used")
+	}
+	return r.Repository.ReadObject(ctx, typ, hash, dst)
+}
+
+func (r *readObjectsTrackingRepository) ReadObjects(
+	ctx context.Context,
+	hashes []git.Hash,
+) (*git.ObjectBatchReader, error) {
+	r.readObjectsCalls++
+	r.readObjectsHashes += len(hashes)
+	return r.Repository.ReadObjects(ctx, hashes)
 }
