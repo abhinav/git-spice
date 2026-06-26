@@ -858,7 +858,7 @@ target (A) to the specified branch:
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
-* `-m`, `--message=MSG`: Commit message
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
@@ -1237,7 +1237,7 @@ when you want to apply changes to an older commit.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'git-spice commit fixup'.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
@@ -1276,7 +1276,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.

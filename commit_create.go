@@ -13,13 +13,13 @@ import (
 )
 
 type commitCreateCmd struct {
-	All         bool   `short:"a" help:"Stage all changes before committing."`
-	AllowEmpty  bool   `help:"Create a new commit even if it contains no changes."`
-	Fixup       string `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
-	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
-	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
-	NoVerify    bool   `help:"Bypass pre-commit and commit-msg hooks."`
-	Signoff     bool   `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+	All         bool     `short:"a" help:"Stage all changes before committing."`
+	AllowEmpty  bool     `help:"Create a new commit even if it contains no changes."`
+	Fixup       string   `help:"Create a fixup commit. See also 'git-spice commit fixup'." placeholder:"COMMIT"`
+	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
+	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
+	NoVerify    bool     `help:"Bypass pre-commit and commit-msg hooks."`
+	Signoff     bool     `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -51,7 +51,7 @@ func (cmd *commitCreateCmd) Run(
 	restackHandler RestackHandler,
 ) error {
 	if err := wt.Commit(ctx, git.CommitRequest{
-		Message:     cmd.Message,
+		Messages:    cmd.Message,
 		MessageFile: cmd.MessageFile,
 		All:         cmd.All,
 		AllowEmpty:  cmd.AllowEmpty,

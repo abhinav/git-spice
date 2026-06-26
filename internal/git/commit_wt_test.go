@@ -133,3 +133,61 @@ func TestWorktree_Commit_messageFile(t *testing.T) {
 	require.Equal(t, "Add test file", commit.Subject)
 	require.Equal(t, "From file.\n", commit.Body)
 }
+
+func TestWorktree_Commit_multipleMessages(t *testing.T) {
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("USER", "testuser")
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("GIT_COMMITTER_NAME", "Test Committer")
+	t.Setenv("GIT_COMMITTER_EMAIL", "committer@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "Test Author")
+	t.Setenv("GIT_AUTHOR_EMAIL", "author@example.com")
+
+	fixture, err := gittest.LoadFixtureScript([]byte(text.Dedent(`
+		at '2025-08-30T21:28:29Z'
+		as 'Test Owner <test@example.com>'
+
+		git init
+		git commit --allow-empty -m 'Initial commit'
+
+		git add file.txt
+
+		-- file.txt --
+		test content
+	`)))
+	require.NoError(t, err)
+	t.Cleanup(fixture.Cleanup)
+
+	ctx := t.Context()
+	worktree, err := git.OpenWorktree(ctx, fixture.Dir(), git.OpenOptions{
+		Log: silogtest.New(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, worktree.Commit(ctx, git.CommitRequest{
+		Messages: []string{
+			"Subject line",
+			"Body paragraph one.",
+			"Body paragraph two.",
+		},
+	}))
+
+	commit, err := worktree.Repository().ReadCommit(ctx, "HEAD")
+	require.NoError(t, err)
+	require.Equal(t, "Subject line", commit.Subject)
+	require.Contains(t, commit.Body,
+		"Body paragraph one.\n\nBody paragraph two.")
+
+	t.Run("SingleMessage", func(t *testing.T) {
+		require.NoError(t, worktree.Commit(ctx, git.CommitRequest{
+			AllowEmpty: true,
+			Messages:   []string{"Only subject"},
+		}))
+
+		commit, err := worktree.Repository().ReadCommit(ctx, "HEAD")
+		require.NoError(t, err)
+		require.Equal(t, "Only subject", commit.Subject)
+		require.Empty(t, commit.Body)
+	})
+}
