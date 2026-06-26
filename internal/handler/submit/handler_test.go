@@ -185,6 +185,52 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 	assert.Contains(t, logBuffer.String(), "base=feat1")
 }
 
+func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	mockStore := NewMockStore(mockCtrl)
+	mockStore.EXPECT().
+		Trunk().
+		Return("main")
+
+	handler := &Handler{
+		Log:        silog.Nop(),
+		View:       ui.NewFileView(&bytes.Buffer{}),
+		Repository: nil,
+		Worktree:   nil,
+		Store:      mockStore,
+		Service:    nil,
+		Browser:    &browser.Noop{},
+		FindRemote: func(context.Context) (state.Remote, error) {
+			return state.Remote{}, nil
+		},
+		OpenRepository: func(
+			context.Context,
+			forge.Forge,
+			forge.RepositoryID,
+		) (forge.Repository, error) {
+			return nil, nil
+		},
+		ResolveRepository: func(
+			context.Context,
+			string,
+		) (forge.Forge, forge.RepositoryID, error) {
+			return nil, nil, nil
+		},
+	}
+
+	_, err := handler.resolveUpstreamBranch(
+		t.Context(),
+		"origin",
+		"feature",
+		"main",
+	)
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, `refusing to push branch "feature" to trunk "main"`)
+	assert.ErrorContains(t, err, "branch untrack feature")
+}
+
 func TestHandler_checkStaleSubmissionBases_forceSkipsValidation(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 

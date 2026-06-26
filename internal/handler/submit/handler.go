@@ -1226,6 +1226,13 @@ func (h *Handler) resolveUpstreamBranch(
 	// Stored upstream branch state wins because it reflects the branch name
 	// previously used for submission, even if the local branch was renamed.
 	if storedUpstream != "" {
+		if storedUpstream == h.Store.Trunk() {
+			return "", fmt.Errorf(
+				"refusing to push branch %q to trunk %q; "+
+					"run '%s branch untrack %s' and track the branch again",
+				branch, storedUpstream, cli.Name(), branch)
+		}
+
 		return storedUpstream, nil
 	}
 
@@ -1241,6 +1248,13 @@ func (h *Handler) resolveUpstreamBranch(
 	}
 
 	if b, ok := strings.CutPrefix(upstream, remote+"/"); ok {
+		if b == h.Store.Trunk() {
+			return "", fmt.Errorf(
+				"refusing to push branch %q to trunk %q; "+
+					"run 'git branch --unset-upstream %s'",
+				branch, b, branch)
+		}
+
 		h.Log.Infof("%v: Using upstream name '%v'", branch, b)
 		h.Log.Infof("%v: If this is incorrect, cancel this operation and run 'git branch --unset-upstream %v'.", branch, branch)
 		return b, nil
