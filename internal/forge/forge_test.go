@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/forge/forgejo"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.uber.org/mock/gomock"
@@ -54,6 +55,19 @@ func TestRegister(t *testing.T) {
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})
+}
+
+func TestFromRemoteURL_codebergForgejo(t *testing.T) {
+	var registry forge.Registry
+	defer registry.Register(new(forgejo.Forge))()
+
+	remoteURL, err := giturl.Parse("git@codeberg.org:example/repo.git")
+	require.NoError(t, err)
+
+	f, rid, ok := forge.FromRemoteURL(&registry, remoteURL)
+	require.True(t, ok, "forge not found")
+	assert.Equal(t, "forgejo", f.ID())
+	assert.Equal(t, "example/repo", rid.String())
 }
 
 func TestFromRemoteURL(t *testing.T) {

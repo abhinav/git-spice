@@ -80,3 +80,31 @@ gitea:
   reviewer: "another-gitea-user"
   # A Gitea user who can be assigned to PRs.
   assignee: "another-gitea-user"
+
+forgejo:
+  # Base URL of your Forgejo instance.
+  #
+  # To record against an existing instance, set this section to the real
+  # instance topology, set FORGEJO_TOKEN and FORGEJO_FORK_TOKEN
+  # in the environment, then run:
+  #   FORGEJO_RECORD_MODE=existing bash tools/record-forgejo-fixtures.sh
+  url: "https://codeberg.org"
+  # Repository owner (your Forgejo username or organization).
+  owner: "your-forgejo-username"
+  # Test repository name.
+  #
+  # The repository must exist and the FORGEJO_TOKEN user must be able
+  # to push, create pull requests, update pull requests,
+  # and create issue comments.
+  repo: "your-test-repo"
+  # Fork repository owner for cross-repository pull request tests.
+  #
+  # The fork must exist and the FORGEJO_FORK_TOKEN user must be able
+  # to push branches to it.
+  forkOwner: "your-forgejo-username"
+  # Fork repository name for cross-repository pull request tests.
+  forkRepo: "your-test-repo-fork"
+  # A Forgejo user who can be added as a reviewer.
+  reviewer: "another-forgejo-user"
+  # A Forgejo user who can be assigned to PRs.
+  assignee: "another-forgejo-user"

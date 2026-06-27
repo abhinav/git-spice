@@ -176,7 +176,7 @@ and then work on them, you can use the following to adjust the workflow:
 <!-- gs:version v0.6.0 -->
 
 If you're using a Git hosting service that is not supported by git-spice
-(e.g. Bitbucket, SourceHut, etc.),
+(e.g. Azure DevOps, SourceHut, etc.),
 you can use git-spice to manage your branches locally without any issues.
 However, when it comes to pushing branches to the remote,
 there are some options that can help your workflow.
