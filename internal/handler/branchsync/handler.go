@@ -125,6 +125,16 @@ const (
 type SyncRequest struct {
 	Branch string
 	Mode   Mode
+
+	// RecordPushed, when set, makes Sync skip all fetching and rebasing and
+	// only record the given hash as the branch's last-pushed baseline.
+	//
+	// It is used to finish a '--rebase' sync that was interrupted by a
+	// conflict: once the user resolves it and runs 'gs rebase continue', the
+	// remote commits are integrated, but the baseline still needs to be
+	// recorded. Re-running the full sync would try to rebase again, so the
+	// continuation records the baseline directly instead.
+	RecordPushed git.Hash
 }
 
 // Sync syncs a single tracked branch according to the request. Returns
@@ -136,6 +146,26 @@ func (h *Handler) Sync(ctx context.Context, req SyncRequest) (*SyncResult, error
 
 	if branch == h.Store.Trunk() {
 		return &SyncResult{Branch: branch, Action: ActionSkipped, SkipReason: "trunk is synced by 'gs repo sync'"}, nil
+	}
+
+	// Finish an interrupted '--rebase' sync: just record the baseline.
+	if !req.RecordPushed.IsZero() {
+		lookup, err := h.Store.LookupBranch(ctx, branch)
+		if err != nil {
+			return nil, fmt.Errorf("lookup branch: %w", err)
+		}
+		if lookup.UpstreamBranch == "" {
+			return nil, ErrNoUpstream
+		}
+		if err := h.recordPushedHash(ctx, branch, lookup.UpstreamBranch, req.RecordPushed); err != nil {
+			return nil, err
+		}
+		return &SyncResult{
+			Branch:   branch,
+			Action:   ActionRebased,
+			FromHash: req.RecordPushed,
+			ToHash:   req.RecordPushed,
+		}, nil
 	}
 
 	lookup, err := h.Store.LookupBranch(ctx, branch)
@@ -243,7 +273,11 @@ func (h *Handler) Sync(ctx context.Context, req SyncRequest) (*SyncResult, error
 	// already guarantees. This is what lets remote-side commits survive
 	// even after the branch has been restacked locally.
 	if err := h.rebase(ctx, branch, lookup.UpstreamBranch, localHash, remoteHash, pHash); err != nil {
-		return nil, err
+		// The rebase was interrupted (typically a conflict). Surface the
+		// integration target so the caller can record it as the baseline
+		// once the user resolves the conflict and resumes.
+		res.ToHash = remoteHash
+		return res, err
 	}
 	if err := h.recordPushedHash(ctx, branch, lookup.UpstreamBranch, remoteHash); err != nil {
 		log.Warn("Could not record pushed hash", "error", err)

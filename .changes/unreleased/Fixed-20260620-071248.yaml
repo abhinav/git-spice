@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'submit: Refuse to overwrite commits added to a branch by someone else since git-spice last pushed it; the offending commits are listed. Run ''gs branch sync'' to integrate them, or use --force to overwrite.'
+time: 2026-06-20T07:12:48.071369-04:00
