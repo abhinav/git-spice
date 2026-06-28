@@ -55,7 +55,7 @@ This is feature 2
 >   feature2 (#2)
 true
 -- golden/merge-stderr.txt --
-INF feature1: merging #1: $SHAMHUB_URL/alice/example/changes/1
+INF feature1: merging #1: $SHAMHUB_URL/alice/example/change/1
 INF main: pulled 2 new commit(s)
 INF feature1: #1 was merged
 INF feature2: retargeted upstack onto main

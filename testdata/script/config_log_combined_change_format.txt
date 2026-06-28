@@ -62,12 +62,12 @@ cmpenv stderr $WORK/golden/ll-fallback-id.txt
 
 -- golden/ls-general-url.txt --
   ┏━■ feat2 ◀
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 main
 -- golden/ll-general-url.txt --
   ┏━■ feat2 ◀
   ┃   562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ls-specific-id.txt --
@@ -77,7 +77,7 @@ main
 -- golden/ll-specific-url.txt --
   ┏━■ feat2 ◀
   ┃   562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ls-fallback-id.txt --

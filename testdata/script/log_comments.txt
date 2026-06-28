@@ -94,22 +94,22 @@ main
 ┃    92fc5a4 feat1 (now)
 main
 -- golden/ls-without-comments.json --
-{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
-{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/change/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/change/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/change/3"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ll-without-comments.json --
-{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1"},"push":{"ahead":0,"behind":0}}
-{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2"},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3"},"push":{"ahead":0,"behind":0}}
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/change/1"},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/change/2"},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/change/3"},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ls-with-comments.json --
-{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
-{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/change/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/change/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/change/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
 -- golden/ll-with-comments.json --
-{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/changes/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
-{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/changes/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
-{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/changes/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat1","down":{"name":"main"},"ups":[{"name":"feat2"}],"commits":[{"sha":"92fc5a4cc99e01014388a99f08e6e93dd5ce9e64","subject":"feat1"}],"change":{"id":"#1","url":"$SHAMHUB_URL/alice/example/change/1","comments":{"total":2,"resolved":1,"unresolved":1}},"push":{"ahead":0,"behind":0}}
+{"name":"feat2","down":{"name":"feat1"},"ups":[{"name":"feat3"}],"commits":[{"sha":"87abb98561265516e610dc3cc2d4765114bb0c14","subject":"feat2"}],"change":{"id":"#2","url":"$SHAMHUB_URL/alice/example/change/2","comments":{"total":1,"resolved":1,"unresolved":0}},"push":{"ahead":0,"behind":0}}
+{"name":"feat3","current":true,"down":{"name":"feat2"},"commits":[{"sha":"7112afba5ab632bb4ebd8215b716c36c6c3dd824","subject":"feat3"}],"change":{"id":"#3","url":"$SHAMHUB_URL/alice/example/change/3","comments":{"total":0,"resolved":0,"unresolved":0}},"push":{"ahead":0,"behind":0}}
 {"name":"main","ups":[{"name":"feat1"}]}
