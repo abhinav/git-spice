@@ -25,9 +25,9 @@ func (*branchMergeCmd) Help() string {
 		The branch must be based directly on trunk.
 		To merge a stacked branch, use 'gs downstack merge'.
 
-		Before merging, waits for merge readiness:
-		the forge must observe the pushed head
-		and report that the CR is ready to merge.
+		Before checking merge readiness,
+		the command waits briefly for the forge to observe the pushed head.
+		Then it waits for the forge to report that the CR is ready to merge.
 		Use --ready-timeout to configure the maximum wait.
 	`)
 }

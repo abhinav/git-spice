@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/silog"
@@ -51,7 +52,6 @@ const (
 	mergeProgressWaitingForMerge                                      // waiting for merged state
 	mergeProgressMergeIncomplete                                      // merged state did not appear
 	mergeProgressMerged                                               // merged state observed
-	mergeProgressSyncFailed                                           // trunk sync failed
 	mergeProgressFailed                                               // branch failed by scheduler policy
 	mergeProgressSkipped                                              // branch skipped by scheduler policy
 )
@@ -60,6 +60,7 @@ const (
 type logMergeProgress struct {
 	log *silog.Logger
 
+	mu   sync.Mutex
 	last map[string]mergeProgressEvent
 }
 
@@ -72,6 +73,10 @@ func newLogMergeProgress(log *silog.Logger) *logMergeProgress {
 
 func (p *logMergeProgress) Event(event mergeProgressEvent) {
 	item := event.Item
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if p.last[item.branch] == event {
 		return
 	}
@@ -90,8 +95,21 @@ func (p *logMergeProgress) Event(event mergeProgressEvent) {
 			event.Item.branch, event.Item.changeID, event.URL)
 	case mergeProgressWaitingForMerge:
 		p.log.Debugf("%s: waiting for merge", event.Item.branch)
+	case mergeProgressFailed:
+		// The returned item error becomes the fatal command error.
+		// Logging this scheduler state would duplicate the failure
+		// without adding the operation that failed.
 	case mergeProgressSkipped:
-		p.log.Infof("%s: skipped", event.Item.branch)
+		p.log.Warnf("%s: skipped", event.Item.branch)
+	}
+}
+
+// mergeProgressGroup reports each event to multiple progress renderers.
+type mergeProgressGroup []mergeProgress
+
+func (g mergeProgressGroup) Event(event mergeProgressEvent) {
+	for _, progress := range g {
+		progress.Event(event)
 	}
 }
 
@@ -311,12 +329,6 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 			ItemID:  item.branch,
 			State:   mergeprogress.StateMerged,
 			Message: item.branch + ": merged",
-		}
-	case mergeProgressSyncFailed:
-		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": sync failed",
 		}
 	case mergeProgressFailed:
 		return mergeprogress.Event{

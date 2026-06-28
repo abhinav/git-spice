@@ -647,30 +647,36 @@ func (cmd *mainCmd) AfterApply(
 			svc *spice.Service,
 			repo *git.Repository,
 			remote state.Remote,
-			remoteRepo forge.Repository,
+			remoteRepo *remoteRepository,
 			restackHandler RestackHandler,
 			submitHandler SubmitHandler,
 			syncHandler SyncHandler,
 		) (MergeHandler, error) {
 			return &merge.Handler{
-				Log:              log,
-				View:             view,
-				Store:            store,
-				Service:          svc,
-				RemoteRepository: remoteRepo,
-				Restack:          restackHandler,
-				Submit:           submitHandler,
-				Sync:             syncHandler,
-				Repository:       repo,
-				Remote:           remote.Upstream,
+				Log:                log,
+				View:               view,
+				Store:              store,
+				Service:            svc,
+				RemoteRepository:   remoteRepo.Repository,
+				RemoteRepositoryID: remoteRepo.ID,
+				Restack:            restackHandler,
+				Submit:             submitHandler,
+				Sync:               syncHandler,
+				Repository:         repo,
+				Remote:             remote.Upstream,
 			}, nil
+		}),
+		kctx.BindSingletonProvider(func(
+			remoteRepo *remoteRepository,
+		) forge.Repository {
+			return remoteRepo.Repository
 		}),
 		kctx.BindSingletonProvider(func(
 			log *silog.Logger,
 			secretStash secret.Stash,
 			remoteResolver *remoteResolver,
 			remote state.Remote,
-		) (forge.Repository, error) {
+		) (*remoteRepository, error) {
 			f, repoID, err := resolveRemoteRepository(
 				ctx, log, remoteResolver, remote.Upstream,
 			)
@@ -686,7 +692,10 @@ func (cmd *mainCmd) AfterApply(
 			if err != nil {
 				return nil, fmt.Errorf("open remote repository: %w", err)
 			}
-			return remoteRepo, nil
+			return &remoteRepository{
+				Repository: remoteRepo,
+				ID:         repoID,
+			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
 			ctx context.Context,
@@ -706,6 +715,16 @@ type AutostashHandler interface {
 }
 
 var _ AutostashHandler = (*autostash.Handler)(nil)
+
+// remoteRepository keeps the opened forge repository together with the
+// repository ID that produced it.
+// The command wiring needs the opened repository for forge operations,
+// while merge planning uses the repository ID to format change URLs
+// without making another forge API request.
+type remoteRepository struct {
+	Repository forge.Repository
+	ID         forge.RepositoryID
+}
 
 var _buildView = func(
 	stdin io.Reader,

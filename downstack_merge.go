@@ -45,9 +45,9 @@ func (*downstackMergeCmd) Help() string {
 		whose base PR was already merged on the forge.
 		Use --no-branch-check to skip this validation.
 
-		Before each merge, waits for merge readiness:
-		the forge must observe the pushed head
-		and report that the CR is ready to merge.
+		Before checking merge readiness,
+		the command waits briefly for the forge to observe the pushed head.
+		Then it waits for the forge to report that the CR is ready to merge.
 		Use --ready-timeout to configure the maximum wait
 		(default: 30m, 0 means fail immediately if not ready).
 

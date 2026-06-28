@@ -84,7 +84,7 @@ true
         "name": "example"
       },
       "ref": "main",
-      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+      "sha": "219fa2bf6969189366d3d9b0820ee87dd369f8c2"
     },
     "head": {
       "repository": {
@@ -108,7 +108,7 @@ true
         "name": "example"
       },
       "ref": "main",
-      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+      "sha": "219fa2bf6969189366d3d9b0820ee87dd369f8c2"
     },
     "head": {
       "repository": {
@@ -132,7 +132,7 @@ true
         "name": "example"
       },
       "ref": "main",
-      "sha": "1a87435f94bc3fc823273410a223e31b9665dbdc"
+      "sha": "219fa2bf6969189366d3d9b0820ee87dd369f8c2"
     },
     "head": {
       "repository": {
@@ -140,7 +140,7 @@ true
         "name": "example"
       },
       "ref": "feat3",
-      "sha": "a4b82177ae474989019f13f8651c97b97372ca15"
+      "sha": "ed261ee88dd0ee05643f8f6d67800b1c3372d3c0"
     }
   }
 ]

@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/mergequeue"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/spicetest"
@@ -62,38 +64,40 @@ func TestAwaitMerged_immediate(t *testing.T) {
 }
 
 func TestAwaitMerged_afterPolling(t *testing.T) {
-	ctrl := gomock.NewController(t)
+	synctest.Test(t, func(t *testing.T) {
+		ctrl := gomock.NewController(t)
 
-	ids := []forge.ChangeID{fakeChangeID("pr-1")}
-	mockRepo := forgetest.NewMockRepository(ctrl)
+		ids := []forge.ChangeID{fakeChangeID("pr-1")}
+		mockRepo := forgetest.NewMockRepository(ctrl)
 
-	// First call: still open.
-	mockRepo.EXPECT().
-		ChangeStatuses(gomock.Any(), ids).
-		Return(
-			[]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil,
-		)
-	// Second call: merged.
-	mockRepo.EXPECT().
-		ChangeStatuses(gomock.Any(), ids).
-		Return(
-			[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
-		)
+		// First call: still open.
+		mockRepo.EXPECT().
+			ChangeStatuses(gomock.Any(), ids).
+			Return(
+				[]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil,
+			)
+		// Second call: merged.
+		mockRepo.EXPECT().
+			ChangeStatuses(gomock.Any(), ids).
+			Return(
+				[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
+			)
 
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockRepo,
-		logBuffer: nil,
+		h := newTestHandler(t, ctrl, testHandlerOpts{
+			forgeRepo: mockRepo,
+			logBuffer: nil,
+		})
+
+		item := &mergeItem{
+			branch:   "feat1",
+			changeID: fakeChangeID("pr-1"),
+		}
+		progress := newLogMergeProgress(silog.Nop())
+		executor := newTestMergePlanExecutor(h, progress)
+
+		err := executor.awaitMerged(t.Context(), item)
+		require.NoError(t, err)
 	})
-
-	item := &mergeItem{
-		branch:   "feat1",
-		changeID: fakeChangeID("pr-1"),
-	}
-	progress := newLogMergeProgress(silog.Nop())
-	executor := newTestMergePlanExecutor(h, progress)
-
-	err := executor.awaitMerged(t.Context(), item)
-	require.NoError(t, err)
 }
 
 func TestAwaitMergeability_ready(t *testing.T) {
@@ -185,41 +189,37 @@ func TestAwaitMergeability_waitingZeroTimeout(t *testing.T) {
 }
 
 func TestAwaitMergeability_waitingThenReady(t *testing.T) {
-	ctrl := gomock.NewController(t)
+	synctest.Test(t, func(t *testing.T) {
+		ctrl := gomock.NewController(t)
 
-	mockRepo := forgetest.NewMockRepository(ctrl)
-	first := mockRepo.EXPECT().
-		ChangeMergeability(
-			gomock.Any(), fakeChangeID("pr-1"),
-		).
-		Return(mergeability(forge.ChangeMergeabilityWaiting), nil)
-	mockRepo.EXPECT().
-		ChangeMergeability(
-			gomock.Any(), fakeChangeID("pr-1"),
-		).
-		Return(mergeability(forge.ChangeMergeabilityReady), nil).
-		After(first.Call)
+		mockRepo := forgetest.NewMockRepository(ctrl)
+		first := mockRepo.EXPECT().
+			ChangeMergeability(
+				gomock.Any(), fakeChangeID("pr-1"),
+			).
+			Return(mergeability(forge.ChangeMergeabilityWaiting), nil)
+		mockRepo.EXPECT().
+			ChangeMergeability(
+				gomock.Any(), fakeChangeID("pr-1"),
+			).
+			Return(mergeability(forge.ChangeMergeabilityReady), nil).
+			After(first.Call)
 
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockRepo,
-		logBuffer: nil,
+		h := newTestHandler(t, ctrl, testHandlerOpts{
+			forgeRepo: mockRepo,
+			logBuffer: nil,
+		})
+
+		item := &mergeItem{
+			branch:   "feat1",
+			changeID: fakeChangeID("pr-1"),
+		}
+		progress := newLogMergeProgress(silog.Nop())
+		executor := newTestMergePlanExecutor(h, progress)
+
+		err := executor.awaitMergeability(t.Context(), item)
+		require.NoError(t, err)
 	})
-
-	item := &mergeItem{
-		branch:   "feat1",
-		changeID: fakeChangeID("pr-1"),
-	}
-	progress := newLogMergeProgress(silog.Nop())
-	executor := newTestMergePlanExecutor(h, progress)
-
-	err := executor.awaitMergeabilityWithDelay(
-		t.Context(),
-		item,
-		5*time.Second,      // timeout
-		1*time.Millisecond, // base delay (fast for test)
-		2*time.Millisecond, // max delay
-	)
-	require.NoError(t, err)
 }
 
 func TestAwaitMergeability_unknown(t *testing.T) {
@@ -296,23 +296,13 @@ func TestExecutePlan_retargets(t *testing.T) {
 	pr2 := fakeChangeID("pr-2")
 	pr3 := fakeChangeID("pr-3")
 
-	// Pre-check: pr-1 already targets main.
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr2).
-		Return(fakeFindResultWithHead("main", "head2"), nil)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr3).
-		Return(fakeFindResultWithHead("main", "head3"), nil)
-
 	// Each merge: merge readiness -> merge -> awaitMerged -> sync
 	// -> prepare next (except last).
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
-	expectPreparedNext(t, mockForge, pr2)
+	expectPreparedNext(t, mockForge, pr2, "head2")
 	expectMergePreparedItem(mockForge, pr2)
-	expectPreparedNext(t, mockForge, pr3)
+	expectPreparedNext(t, mockForge, pr3, "head3")
 	expectMergePreparedItem(mockForge, pr3)
 
 	mockRestack := NewMockRestackHandler(ctrl)
@@ -388,10 +378,7 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 
 	pr1 := fakeChangeID("pr-1")
 	pr2 := fakeChangeID("pr-2")
-
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
 
 	mockRestack := NewMockRestackHandler(ctrl)
@@ -414,9 +401,6 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 	// A stale merge readiness value at this point belongs to the old head,
 	// so the merge loop must wait until the forge reports new-head2
 	// before asking whether the change is ready to merge.
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr2).
-		Return(fakeFindResultWithHead("main", "old-head2"), nil)
 	status := mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
 		Return([]forge.ChangeStatus{{
@@ -469,16 +453,14 @@ func TestExecutePlan_noWait(t *testing.T) {
 	pr1 := fakeChangeID("pr-1")
 
 	// Pre-check: pr-1 already targets main.
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
-
 	expectMergeabilityAndMerge(mockForge, pr1)
 	// No ChangesStates polling (awaitMerged skipped).
 
+	mockSync := NewMockSyncHandler(ctrl)
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
+		sync:      mockSync,
 		logBuffer: &logBuffer,
 	})
 
@@ -507,10 +489,7 @@ func TestExecutePlan_singleBranch(t *testing.T) {
 	pr1 := fakeChangeID("pr-1")
 
 	// Pre-check: pr-1 already targets main.
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
-
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
 
 	mockSync := NewMockSyncHandler(ctrl)
@@ -541,9 +520,7 @@ func TestMergeBranch_delegatesToDownstackMerge(t *testing.T) {
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
 
 	mockGit := NewMockGitRepository(ctrl)
@@ -631,9 +608,7 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 			{State: forge.ChangeOpen},
 			{State: forge.ChangeOpen},
 		}, nil)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
 
 	mockService := NewMockService(ctrl)
@@ -668,14 +643,9 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 		PeelToCommit(gomock.Any(), "feat3").
 		Return(git.Hash("head3"), nil).
 		Times(2)
-
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr2).
-		Return(fakeFindResultWithHead("main", "head2"), nil)
+	expectPushedHead(mockForge, pr2, "head2")
+	expectPushedHead(mockForge, pr3, "head3")
 	expectMergeItem(mockForge, pr2)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr3).
-		Return(fakeFindResultWithHead("main", "head3"), nil)
 	expectMergeItem(mockForge, pr3)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
@@ -717,9 +687,7 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 			{State: forge.ChangeOpen},
 			{State: forge.ChangeOpen},
 		}, nil)
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
+	expectPushedHead(mockForge, pr1, "head1")
 	expectMergeItem(mockForge, pr1)
 
 	mockService := NewMockService(ctrl)
@@ -728,6 +696,9 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		Return(graph, nil)
 	mockService.EXPECT().
 		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat3").
 		Return(nil)
 
 	mockGit := NewMockGitRepository(ctrl)
@@ -749,14 +720,33 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 		Return(0, 0, nil)
 	mockGit.EXPECT().
 		PeelToCommit(gomock.Any(), "feat3").
-		Return(git.Hash("head3"), nil)
-
+		Return(git.Hash("head3"), nil).
+		AnyTimes()
+	expectPushedHead(mockForge, pr2, "head2")
 	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr2).
-		Return(fakeFindResultWithHead("main", "head2"), nil)
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: git.Hash("head3"),
+		}}, nil).
+		AnyTimes()
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr2).
 		Return(mergeability(forge.ChangeMergeabilityBlocked), nil)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr3).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
+		AnyTimes()
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr3, gomock.Any()).
+		Return(nil).
+		AnyTimes()
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr3}).
+		Return(
+			[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
+		).
+		AnyTimes()
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
@@ -784,11 +774,6 @@ func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 	mockStore.EXPECT().Trunk().Return("main")
 
 	pr1 := fakeChangeID("pr-1")
-
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
-
 	expectMergeItem(mockForge, pr1)
 
 	mockSync := NewMockSyncHandler(ctrl)
@@ -807,6 +792,11 @@ func TestExecutePlan_syncTrunkFailureStopsLoop(t *testing.T) {
 	}), mergeExecutionOptions{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sync trunk")
+
+	var barrierErr *mergequeue.BarrierError
+	assert.ErrorAs(t, err, &barrierErr)
+	var itemErr *mergequeue.ItemError
+	assert.False(t, errors.As(err, &itemErr))
 }
 
 func TestExecutePlan_mergeMethod(t *testing.T) {
@@ -817,13 +807,11 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 	mockStore.EXPECT().Trunk().Return("main")
 
 	pr1 := fakeChangeID("pr-1")
-
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResultWithHead("main", "head1"), nil)
+	status := expectPushedHead(mockForge, pr1, "head1")
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), pr1).
-		Return(mergeability(forge.ChangeMergeabilityReady), nil)
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
+		After(status.Call)
 	mockForge.EXPECT().
 		MergeChange(gomock.Any(), pr1, forge.MergeChangeOptions{
 			Method:   forge.MergeMethodSquash,
@@ -849,51 +837,6 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestExecutePlan_retargetsStaleFirstItem(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	var logBuffer bytes.Buffer
-
-	mockForge := forgetest.NewMockRepository(ctrl)
-	mockStore := NewMockStore(ctrl)
-	mockStore.EXPECT().Trunk().Return("main")
-
-	pr1 := fakeChangeID("pr-1")
-
-	// Pre-check: pr-1 has stale base "feature0".
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("feature0"), nil)
-
-	// Retarget pr-1 to main before merging.
-	mockForge.EXPECT().
-		EditChange(gomock.Any(), pr1,
-			forge.EditChangeOptions{Base: "main"}).
-		Return(nil)
-
-	expectMergeItem(mockForge, pr1)
-
-	mockSync := NewMockSyncHandler(ctrl)
-	mockSync.EXPECT().
-		SyncTrunk(gomock.Any(), syncTrunkOptions()).
-		Return(nil)
-
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockForge,
-		store:     mockStore,
-		sync:      mockSync,
-		logBuffer: &logBuffer,
-	})
-
-	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
-		{branch: "feat1", changeID: pr1},
-	}), mergeExecutionOptions{})
-	require.NoError(t, err)
-
-	output := logBuffer.String()
-	assert.Contains(t, output, "feat1: retargeting pr-1 onto main")
-	assert.Contains(t, output, "feat1: merging pr-1: http://example.com/1")
-}
-
 func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var logBuffer bytes.Buffer
@@ -905,10 +848,6 @@ func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	pr1 := fakeChangeID("pr-1")
 
 	// Pre-check: pr-1 already targets main.
-	mockForge.EXPECT().
-		FindChangeByID(gomock.Any(), pr1).
-		Return(fakeFindResult("main"), nil)
-
 	expectMergeItem(mockForge, pr1)
 
 	mockSync := NewMockSyncHandler(ctrl)
@@ -968,6 +907,14 @@ func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
 		Item: item,
 		URL:  "http://example.com/1",
 	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressFailed,
+		Item: item,
+	})
+	progress.Event(mergeProgressEvent{
+		Kind: mergeProgressSkipped,
+		Item: item,
+	})
 
 	output := logBuffer.String()
 	assert.Equal(t, 1, strings.Count(output,
@@ -976,6 +923,10 @@ func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
 		"feat1: waiting for merge readiness"))
 	assert.Equal(t, 1, strings.Count(output,
 		"feat1: merging pr-1: http://example.com/1"))
+	assert.NotContains(t, output,
+		"feat1: failed")
+	assert.Equal(t, 1, strings.Count(output,
+		"feat1: skipped"))
 }
 
 func TestLogMergeProgress_waitingForMergeIsDebug(t *testing.T) {
@@ -1178,6 +1129,18 @@ func (c testChangeMetadata) NavigationCommentID() forge.ChangeCommentID {
 
 func (c testChangeMetadata) SetNavigationCommentID(forge.ChangeCommentID) {}
 
+type testRepositoryID struct{}
+
+var _ forge.RepositoryID = testRepositoryID{}
+
+func (testRepositoryID) String() string {
+	return "example/repo"
+}
+
+func (testRepositoryID) ChangeURL(forge.ChangeID) string {
+	return "http://example.com/1"
+}
+
 // newTestHandler builds a Handler with sensible defaults
 // for any fields not provided in opts.
 func newTestHandler(
@@ -1193,16 +1156,17 @@ func newTestHandler(
 	}
 
 	return &Handler{
-		Log:              testLog(opts.logBuffer),
-		View:             ui.NewFileView(io.Discard),
-		Remote:           "origin",
-		RemoteRepository: testForgeRepo(ctrl, opts.forgeRepo),
-		Store:            testStore(ctrl, opts.store),
-		Service:          service,
-		Restack:          testRestack(ctrl, opts.restack),
-		Submit:           testSubmit(ctrl, opts.submit),
-		Sync:             testSync(opts.sync),
-		Repository:       testGitRepo(ctrl, opts.gitRepo),
+		Log:                testLog(opts.logBuffer),
+		View:               ui.NewFileView(io.Discard),
+		Remote:             "origin",
+		RemoteRepository:   testForgeRepo(ctrl, opts.forgeRepo),
+		RemoteRepositoryID: testRepositoryID{},
+		Store:              testStore(ctrl, opts.store),
+		Service:            service,
+		Restack:            testRestack(ctrl, opts.restack),
+		Submit:             testSubmit(ctrl, opts.submit),
+		Sync:               testSync(opts.sync),
+		Repository:         testGitRepo(ctrl, opts.gitRepo),
 	}
 }
 
@@ -1239,6 +1203,9 @@ func testMergePlan(items []*mergeItem) []*mergeItem {
 		item.base = "main"
 		if idx > 0 {
 			item.base = items[idx-1].branch
+		}
+		if item.mergeURL == "" {
+			item.mergeURL = testRepositoryID{}.ChangeURL(item.changeID)
 		}
 	}
 	return items
@@ -1350,29 +1317,6 @@ func testBranchGraphService(
 	return mockService
 }
 
-// fakeFindResult returns a minimal FindChangeItem
-// with the given base branch name.
-func fakeFindResult(
-	base string,
-) *forge.FindChangeItem {
-	return fakeFindResultWithHead(base, "abc123")
-}
-
-func fakeFindResultWithHead(
-	base string,
-	head git.Hash,
-) *forge.FindChangeItem {
-	return &forge.FindChangeItem{
-		ID:       fakeChangeID("find-id"),
-		URL:      "http://example.com/1",
-		State:    forge.ChangeOpen,
-		Subject:  "test change",
-		HeadHash: head,
-		BaseName: base,
-		Draft:    false,
-	}
-}
-
 // expectMergeItem sets up mock expectations for a full
 // merge iteration: ready to merge -> merge -> awaitMerged.
 func expectMergeItem(
@@ -1410,12 +1354,28 @@ func expectPreparedNext(
 	t *testing.T,
 	mockForge *forgetest.MockRepository,
 	id fakeChangeID,
+	head git.Hash,
 ) {
 	t.Helper()
 
+	status := expectPushedHead(mockForge, id, head)
 	mockForge.EXPECT().
 		ChangeMergeability(gomock.Any(), id).
-		Return(mergeability(forge.ChangeMergeabilityReady), nil)
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
+		After(status.Call)
+}
+
+func expectPushedHead(
+	mockForge *forgetest.MockRepository,
+	id fakeChangeID,
+	head git.Hash,
+) *forgetest.MockRepositoryChangeStatusesCall {
+	return mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{id}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: head,
+		}}, nil)
 }
 
 func assertSubmitUpdate(

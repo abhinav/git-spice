@@ -2,35 +2,41 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/mergequeue"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
+	"go.abhg.dev/gs/internal/ui/branchtree"
 	"go.abhg.dev/gs/internal/ui/widget/mergeprogress"
 )
 
 func main() {
 	var req request
 	flag.IntVar(&req.items, "items", 12, "number of items")
-	flag.IntVar(&req.merged, "merged", 0, "initial merged item count")
-	flag.IntVar(&req.active, "active", 1, "initial active item count")
-	flag.IntVar(&req.failed, "failed", 0, "initial failed item count")
-	flag.IntVar(&req.skipped, "skipped", 0, "initial skipped item count")
-	flag.StringVar(&req.message, "message",
-		"feat1: waiting for CI checks",
-		"detail message")
-	flag.BoolVar(&req.animate, "animate", false, "animate progress")
-	flag.BoolVar(&req.logs, "logs", false,
-		"emit synthetic logs while the widget is active")
-	flag.DurationVar(&req.tick, "tick", 750*time.Millisecond, "animation tick")
+	flag.BoolVar(&req.noAnimate, "no-animate", false, "disable animation")
+	flag.BoolVar(&req.noLogs, "no-logs", false,
+		"disable synthetic logs while the widget is active")
+	flag.BoolVar(&req.printTopology, "topology", false,
+		"print the generated branch topology before running")
 	flag.IntVar(&req.width, "width", 0, "initial widget width")
 	flag.IntVar(&req.height, "height", 0, "initial terminal height")
 	flag.BoolVar(&req.dark, "dark", true, "use the dark theme")
+	flag.Int64Var(&req.seed, "seed", 1, "random seed")
+	flag.Float64Var(&req.failRate, "fail-rate", 0.20,
+		"probability that an item fails during prepare or run")
+	flag.DurationVar(&req.minDelay, "min-delay", 500*time.Millisecond,
+		"minimum synthetic item delay")
+	flag.DurationVar(&req.maxDelay, "max-delay", 2*time.Second,
+		"maximum synthetic item delay")
 	flag.Parse()
 
 	if err := req.run(ui.NewOutputWriter(os.Stdout)); err != nil {
@@ -41,45 +47,49 @@ func main() {
 
 // request is the flag-decoded demo configuration.
 type request struct {
-	items   int
-	merged  int
-	active  int
-	failed  int
-	skipped int
+	items int
 
-	message string
-	animate bool
-	logs    bool
-	tick    time.Duration
-	width   int
-	height  int
-	dark    bool
+	noAnimate     bool
+	noLogs        bool
+	printTopology bool
+	width         int
+	height        int
+	dark          bool
+
+	seed     int64
+	failRate float64
+	minDelay time.Duration
+	maxDelay time.Duration
 }
 
 func (r *request) run(output *ui.OutputWriter) error {
-	widget := mergeprogress.New(r.progressItems()...).
-		WithTheme(r.theme())
-	if r.message != "" {
-		_, _ = widget.Update(mergeprogress.Event{
-			Message: r.message,
+	if err := r.validate(); err != nil {
+		return err
+	}
+
+	log := silog.Nop()
+	if !r.noLogs {
+		log = silog.New(&colorprofile.Writer{
+			Forward: output,
+			Profile: colorprofile.Detect(output.Unwrap(), os.Environ()),
+		}, &silog.Options{
+			Level: silog.LevelDebug,
 		})
 	}
 
-	var model tea.Model = widget
-	if r.animate {
-		model = &demoModel{
-			Widget: widget,
-			states: r.states(),
-			tick:   r.tick,
-			log: silog.New(&colorprofile.Writer{
-				Forward: output,
-				Profile: colorprofile.Detect(output.Unwrap(), os.Environ()),
-			}, &silog.Options{
-				Level: silog.LevelDebug,
-			}),
-			logs: r.logs,
+	scenario := r.scenario(log)
+	if r.printTopology {
+		fmt.Fprintln(output, "Generated topology:")
+		if err := branchtree.Write(output, scenario.branchTree(),
+			&branchtree.GraphOptions{Theme: r.theme()}); err != nil {
+			return fmt.Errorf("render topology: %w", err)
 		}
+		fmt.Fprintln(output)
 	}
+
+	model := newDemoModel(mergeprogress.New(scenario.progressItems()...).
+		WithTheme(r.theme()).
+		WithAnimation(!r.noAnimate), scenario.items, log)
 
 	if err := ui.RunModel(model, &ui.RunOptions{
 		Input:  os.Stdin,
@@ -92,6 +102,25 @@ func (r *request) run(output *ui.OutputWriter) error {
 	return nil
 }
 
+func (r *request) validate() error {
+	if r.items < 0 {
+		return errors.New("items must be non-negative")
+	}
+	if r.failRate < 0 || r.failRate > 1 {
+		return errors.New("fail-rate must be between 0 and 1")
+	}
+	if r.minDelay < 0 {
+		return errors.New("min-delay must be non-negative")
+	}
+	if r.maxDelay < 0 {
+		return errors.New("max-delay must be non-negative")
+	}
+	if r.minDelay > r.maxDelay {
+		return errors.New("min-delay must be <= max-delay")
+	}
+	return nil
+}
+
 func (r *request) theme() ui.Theme {
 	if r.dark {
 		return ui.DefaultThemeDark()
@@ -99,122 +128,335 @@ func (r *request) theme() ui.Theme {
 	return ui.DefaultThemeLight()
 }
 
-func (r *request) progressItems() []mergeprogress.Item {
-	states := r.states()
-	items := make([]mergeprogress.Item, len(states))
-	for idx, state := range states {
+func (r *request) scenario(log *silog.Logger) *scenario {
+	rng := rand.New(rand.NewSource(r.seed))
+	items := make([]*syntheticItem, r.items)
+	for idx := range items {
+		var parent string
+		if idx > 0 && rng.Intn(4) != 0 {
+			parent = itemID(rng.Intn(idx))
+		}
+
+		fail := rng.Float64() < r.failRate
+		failStage := failStageNone
+		if fail {
+			failStage = failStagePrepare
+			if rng.Intn(2) == 0 {
+				failStage = failStageRun
+			}
+		}
+
+		items[idx] = &syntheticItem{
+			id:           itemID(idx),
+			parent:       parent,
+			changeNumber: changeNumber(idx),
+			prepareDelay: randomDelay(rng, r.minDelay, r.maxDelay),
+			runDelay:     randomDelay(rng, r.minDelay, r.maxDelay),
+			failStage:    failStage,
+			log:          log,
+		}
+	}
+	return &scenario{items: items}
+}
+
+func randomDelay(
+	rng *rand.Rand,
+	minDelay time.Duration,
+	maxDelay time.Duration,
+) time.Duration {
+	if minDelay == maxDelay {
+		return minDelay
+	}
+	return minDelay + time.Duration(rng.Int63n(int64(maxDelay-minDelay)+1))
+}
+
+type scenario struct {
+	items []*syntheticItem
+}
+
+func (s *scenario) progressItems() []mergeprogress.Item {
+	items := make([]mergeprogress.Item, len(s.items))
+	for idx, item := range s.items {
 		items[idx] = mergeprogress.Item{
-			ID:    itemID(idx),
-			State: state,
+			ID:    item.id,
+			State: mergeprogress.StatePending,
 		}
 	}
 	return items
 }
 
-func (r *request) states() []mergeprogress.State {
-	states := make([]mergeprogress.State, r.items)
-	idx := 0
-	for range r.merged {
-		states[idx] = mergeprogress.StateMerged
-		idx++
+func (s *scenario) branchTree() branchtree.Graph {
+	items := make([]*branchtree.Item, len(s.items)+1)
+	items[0] = &branchtree.Item{Branch: "trunk"}
+
+	indexByID := make(map[string]int, len(s.items))
+	for idx, item := range s.items {
+		treeIdx := idx + 1
+		items[treeIdx] = &branchtree.Item{Branch: item.id}
+		indexByID[item.id] = treeIdx
 	}
-	for range r.active {
-		states[idx] = mergeprogress.StateActive
-		idx++
+
+	for idx, item := range s.items {
+		treeIdx := idx + 1
+		if item.parent == "" {
+			items[0].Aboves = append(items[0].Aboves, treeIdx)
+			continue
+		}
+		items[indexByID[item.parent]].Aboves = append(
+			items[indexByID[item.parent]].Aboves,
+			treeIdx,
+		)
 	}
-	for range r.failed {
-		states[idx] = mergeprogress.StateFailed
-		idx++
+
+	return branchtree.Graph{
+		Items: items,
+		Roots: []int{0},
 	}
-	for range r.skipped {
-		states[idx] = mergeprogress.StateSkipped
-		idx++
-	}
-	return states
 }
 
-// demoModel adds synthetic timed progress to the real widget.
+// demoModel runs synthetic mergequeue work beside the real widget.
 type demoModel struct {
 	*mergeprogress.Widget
 
-	states []mergeprogress.State
-	tick   time.Duration
+	ctx    context.Context
+	cancel context.CancelFunc
+	items  []mergequeue.Item
+	events chan tea.Msg
 	log    *silog.Logger
-	logs   bool
 }
 
-type tickMsg struct{}
+func newDemoModel(
+	widget *mergeprogress.Widget,
+	items []*syntheticItem,
+	log *silog.Logger,
+) *demoModel {
+	queueItems := make([]mergequeue.Item, len(items))
+	for idx, item := range items {
+		queueItems[idx] = item
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	model := &demoModel{
+		Widget: widget,
+		ctx:    ctx,
+		cancel: cancel,
+		items:  queueItems,
+		events: make(chan tea.Msg),
+		log:    log,
+	}
+	for _, item := range items {
+		item.events = model.events
+	}
+	return model
+}
 
 func (m *demoModel) Init() tea.Cmd {
-	return tea.Batch(m.Widget.Init(), m.nextTick())
+	return tea.Batch(
+		m.Widget.Init(),
+		m.runScheduler(),
+		m.waitEvent(),
+	)
 }
 
 func (m *demoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if _, ok := msg.(tickMsg); ok {
-		return m, m.advance()
+	switch msg := msg.(type) {
+	case schedulerDoneMsg:
+		m.cancel()
+		if msg.err != nil {
+			model, cmd := m.Widget.Update(mergeprogress.Event{
+				Message: "merge demo failed: " + msg.err.Error(),
+			})
+			if widget, ok := model.(*mergeprogress.Widget); ok {
+				m.Widget = widget
+			}
+			return m, tea.Batch(cmd, tea.Quit)
+		}
+		return m, tea.Quit
+	case mergeprogress.Event:
+		model, cmd := m.Widget.Update(msg)
+		if widget, ok := model.(*mergeprogress.Widget); ok {
+			m.Widget = widget
+		}
+		return m, tea.Batch(cmd, m.waitEvent())
 	}
 
 	model, cmd := m.Widget.Update(msg)
 	if widget, ok := model.(*mergeprogress.Widget); ok {
 		m.Widget = widget
 	}
+	if errors.Is(m.Err(), mergeprogress.ErrCanceled) {
+		m.cancel()
+	}
 	return m, cmd
 }
 
-func (m *demoModel) advance() tea.Cmd {
-	for idx, state := range m.states {
-		if state == mergeprogress.StateActive {
-			m.states[idx] = mergeprogress.StateMerged
-			itemID := itemID(idx)
-			_, cmd := m.Widget.Update(mergeprogress.Event{
-				ItemID:  itemID,
-				State:   mergeprogress.StateMerged,
-				Message: itemID + ": merged",
-			})
-			return tea.Batch(
-				cmd,
-				m.logf("%s: pulled 1 new commit(s)", itemID),
-				m.logf("%s: deleted (was %s)", itemID, fakeHash(idx)),
-				m.nextTick(),
-			)
+func (m *demoModel) runScheduler() tea.Cmd {
+	return func() tea.Msg {
+		scheduler, err := mergequeue.New(m.items, &mergequeue.Options{
+			Observer: demoObserver{
+				ctx:    m.ctx,
+				events: m.events,
+				log:    m.log,
+			},
+		})
+		if err == nil {
+			err = scheduler.Run(m.ctx)
 		}
+		return schedulerDoneMsg{err: err}
 	}
-
-	for idx, state := range m.states {
-		if state == mergeprogress.StatePending {
-			m.states[idx] = mergeprogress.StateActive
-			itemID := itemID(idx)
-			_, cmd := m.Widget.Update(mergeprogress.Event{
-				ItemID:  itemID,
-				State:   mergeprogress.StateActive,
-				Message: itemID + ": waiting for CI checks",
-			})
-			return tea.Batch(
-				cmd,
-				m.logf("%s: retargeting #%d onto main...",
-					itemID, changeNumber(idx)),
-				m.logf("%s: updated #%d: https://example.test/pull/%d",
-					itemID, changeNumber(idx), changeNumber(idx)),
-				m.nextTick(),
-			)
-		}
-	}
-
-	return tea.Quit
 }
 
-func (m *demoModel) nextTick() tea.Cmd {
-	return tea.Tick(m.tick, func(time.Time) tea.Msg {
-		return tickMsg{}
+func (m *demoModel) waitEvent() tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case event := <-m.events:
+			return event
+		case <-m.ctx.Done():
+			return schedulerDoneMsg{err: m.ctx.Err()}
+		}
+	}
+}
+
+type schedulerDoneMsg struct {
+	err error
+}
+
+type demoObserver struct {
+	ctx    context.Context
+	events chan<- tea.Msg
+	log    *silog.Logger
+}
+
+func (o demoObserver) Prepared(mergequeue.Item) {}
+
+func (o demoObserver) Done(mergequeue.Item) {}
+
+func (o demoObserver) Failed(item mergequeue.Item, _ error) {
+	o.log.Errorf("%s: failed", item.ID())
+	o.send(mergeprogress.Event{
+		ItemID:  item.ID(),
+		State:   mergeprogress.StateFailed,
+		Message: item.ID() + ": failed",
 	})
 }
 
-func (m *demoModel) logf(format string, args ...any) tea.Cmd {
-	return func() tea.Msg {
-		if m.logs {
-			m.log.Infof(format, args...)
-		}
+func (o demoObserver) Skipped(item mergequeue.Item, _ mergequeue.SkipReason) {
+	o.log.Warnf("%s: skipped", item.ID())
+	o.send(mergeprogress.Event{
+		ItemID:  item.ID(),
+		State:   mergeprogress.StateSkipped,
+		Message: item.ID() + ": skipped",
+	})
+}
+
+func (o demoObserver) send(msg tea.Msg) {
+	select {
+	case o.events <- msg:
+	case <-o.ctx.Done():
+	}
+}
+
+type failStage uint8
+
+const (
+	failStageNone failStage = iota
+	failStagePrepare
+	failStageRun
+)
+
+var _ mergequeue.Item = (*syntheticItem)(nil)
+
+type syntheticItem struct {
+	id     string
+	parent string
+
+	changeNumber int
+	prepareDelay time.Duration
+	runDelay     time.Duration
+	failStage    failStage
+
+	events chan<- tea.Msg
+	log    *silog.Logger
+}
+
+func (i *syntheticItem) ID() string {
+	return i.id
+}
+
+func (i *syntheticItem) Parent() string {
+	return i.parent
+}
+
+func (i *syntheticItem) Prepare(ctx context.Context) error {
+	i.emit(ctx, mergeprogress.Event{
+		ItemID:  i.id,
+		State:   mergeprogress.StateActive,
+		Message: i.id + ": preparing",
+	})
+	if err := sleep(ctx, i.prepareDelay); err != nil {
+		return err
+	}
+	if i.parent != "" {
+		i.log.Infof("%s: retargeting #%d onto main...",
+			i.id, i.changeNumber)
+		i.log.Infof("%s: updated #%d: https://example.test/pull/%d",
+			i.id, i.changeNumber, i.changeNumber)
+	}
+	if i.failStage == failStagePrepare {
+		i.emit(ctx, mergeprogress.Event{
+			ItemID:  i.id,
+			State:   mergeprogress.StateFailed,
+			Message: i.id + ": prepare failed",
+		})
+		return errors.New("prepare failed")
+	}
+	return nil
+}
+
+func (i *syntheticItem) Run(ctx context.Context) error {
+	i.emit(ctx, mergeprogress.Event{
+		ItemID:  i.id,
+		State:   mergeprogress.StateActive,
+		Message: i.id + ": waiting for merge readiness",
+	})
+	if err := sleep(ctx, i.runDelay); err != nil {
+		return err
+	}
+	if i.failStage == failStageRun {
+		i.emit(ctx, mergeprogress.Event{
+			ItemID:  i.id,
+			State:   mergeprogress.StateFailed,
+			Message: i.id + ": merge readiness failed",
+		})
+		return errors.New("merge readiness failed")
+	}
+
+	i.log.Infof("%s: pulled 1 new commit(s)", i.id)
+	i.log.Infof("%s: deleted (was %s)", i.id, fakeHash(i.changeNumber))
+	i.emit(ctx, mergeprogress.Event{
+		ItemID:  i.id,
+		State:   mergeprogress.StateMerged,
+		Message: i.id + ": merged",
+	})
+	return nil
+}
+
+func (i *syntheticItem) emit(ctx context.Context, event mergeprogress.Event) {
+	select {
+	case i.events <- event:
+	case <-ctx.Done():
+	}
+}
+
+func sleep(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
 		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -226,6 +468,6 @@ func changeNumber(idx int) int {
 	return 1200 + idx + 1
 }
 
-func fakeHash(idx int) string {
-	return fmt.Sprintf("%06x", 0xabc000+idx)
+func fakeHash(n int) string {
+	return fmt.Sprintf("%06x", 0xabc000+n)
 }
