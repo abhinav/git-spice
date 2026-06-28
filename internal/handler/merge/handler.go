@@ -211,9 +211,10 @@ func (h *Handler) MergeStack(
 	}
 
 	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
-		Graph:         graph,
-		Branches:      slices.Collect(graph.Stack(req.Branch)),
-		NoBranchCheck: opts.NoBranchCheck,
+		Graph:             graph,
+		Branches:          slices.Collect(graph.Stack(req.Branch)),
+		NoBranchCheck:     opts.NoBranchCheck,
+		IgnoreUnsubmitted: true,
 	})
 	if err != nil {
 		return err
@@ -319,7 +320,8 @@ type mergePlanRequest struct {
 
 	Branches []string // required
 
-	NoBranchCheck bool
+	NoBranchCheck     bool
+	IgnoreUnsubmitted bool
 }
 
 func (h *Handler) buildPlanFromBranches(
@@ -333,6 +335,10 @@ func (h *Handler) buildPlanFromBranches(
 			return mergePlan{}, fmt.Errorf("branch %q is not tracked", name)
 		}
 		if branch.Change == nil {
+			if req.IgnoreUnsubmitted {
+				h.Log.Infof("%s: no published change request, skipping", name)
+				continue
+			}
 			return mergePlan{}, fmt.Errorf(
 				"branch %q has no published change request",
 				name,
@@ -383,8 +389,15 @@ func (h *Handler) buildPlanFromBranches(
 	}
 
 	if !req.NoBranchCheck {
+		branches := req.Branches
+		if req.IgnoreUnsubmitted {
+			branches = make([]string, 0, len(plan))
+			for _, item := range plan {
+				branches = append(branches, item.branch)
+			}
+		}
 		if err := h.validateFreshBases(
-			ctx, req.Graph, req.Branches,
+			ctx, req.Graph, branches,
 		); err != nil {
 			return mergePlan{}, fmt.Errorf("validate stale bases: %w", err)
 		}
