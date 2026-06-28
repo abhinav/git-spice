@@ -45,6 +45,7 @@ This is feature 1
 >   feature1 (#1)
 true
 -- golden/merge-stderr.txt --
+ERR feature1: failed
 FTL gs: merge queue item "feature1": wait for merge readiness: blocked: checks
 -- golden/change-1.json --
 {
