@@ -923,8 +923,8 @@ func TestLogMergeProgress_deduplicatesRepeatedState(t *testing.T) {
 		"feat1: waiting for merge readiness"))
 	assert.Equal(t, 1, strings.Count(output,
 		"feat1: merging pr-1: http://example.com/1"))
-	assert.Equal(t, 1, strings.Count(output,
-		"feat1: failed"))
+	assert.NotContains(t, output,
+		"feat1: failed")
 	assert.Equal(t, 1, strings.Count(output,
 		"feat1: skipped"))
 }

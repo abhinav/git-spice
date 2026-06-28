@@ -96,7 +96,9 @@ func (p *logMergeProgress) Event(event mergeProgressEvent) {
 	case mergeProgressWaitingForMerge:
 		p.log.Debugf("%s: waiting for merge", event.Item.branch)
 	case mergeProgressFailed:
-		p.log.Errorf("%s: failed", event.Item.branch)
+		// The returned item error becomes the fatal command error.
+		// Logging this scheduler state would duplicate the failure
+		// without adding the operation that failed.
 	case mergeProgressSkipped:
 		p.log.Warnf("%s: skipped", event.Item.branch)
 	}
