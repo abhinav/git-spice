@@ -174,8 +174,41 @@ func (h *Handler) MergeBranch(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
-	if err := validateBranchMergeSelection(graph, req.Branches); err != nil {
-		return err
+	selected := make(map[string]struct{}, len(req.Branches))
+	for _, name := range req.Branches {
+		selected[name] = struct{}{}
+	}
+
+	// Branch merge treats --branch as an exact branch selection.
+	// Every selected branch must have its non-trunk bases selected too,
+	// so the selected set itself forms the path to trunk.
+	for _, name := range req.Branches {
+		seen := map[string]struct{}{name: {}}
+		for current := name; current != graph.Trunk(); {
+			branch, ok := graph.Lookup(current)
+			if !ok {
+				return fmt.Errorf("branch %q is not tracked", current)
+			}
+
+			current = branch.Base
+			if _, ok := seen[current]; ok {
+				return fmt.Errorf(
+					"branch %q has a cycle through %q",
+					name, current,
+				)
+			}
+			seen[current] = struct{}{}
+
+			if current == graph.Trunk() {
+				break
+			}
+			if _, ok := selected[current]; !ok {
+				return fmt.Errorf(
+					"branch %q requires selected base %q",
+					name, current,
+				)
+			}
+		}
 	}
 
 	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
@@ -266,49 +299,6 @@ func (h *Handler) MergeStack(
 		FailFast:              opts.FailFast,
 		SyncBeforeStart:       plan.syncBeforeStart,
 	})
-}
-
-func validateBranchMergeSelection(
-	graph *spice.BranchGraph,
-	branches []string,
-) error {
-	selected := make(map[string]struct{}, len(branches))
-	for _, name := range branches {
-		selected[name] = struct{}{}
-	}
-
-	// Branch merge treats --branch as an exact branch selection.
-	// Every selected branch must have its non-trunk bases selected too,
-	// so the selected set itself forms the path to trunk.
-	for _, name := range branches {
-		seen := map[string]struct{}{name: {}}
-		for current := name; current != graph.Trunk(); {
-			branch, ok := graph.Lookup(current)
-			if !ok {
-				return fmt.Errorf("branch %q is not tracked", current)
-			}
-
-			current = branch.Base
-			if _, ok := seen[current]; ok {
-				return fmt.Errorf(
-					"branch %q has a cycle through %q",
-					name, current,
-				)
-			}
-			seen[current] = struct{}{}
-
-			if current == graph.Trunk() {
-				break
-			}
-			if _, ok := selected[current]; !ok {
-				return fmt.Errorf(
-					"branch %q requires selected base %q",
-					name, current,
-				)
-			}
-		}
-	}
-	return nil
 }
 
 // mergeItem is one queue item in a downstack merge plan.
