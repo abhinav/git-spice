@@ -210,9 +210,23 @@ func (h *Handler) MergeStack(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
+	var branches []string
+	for name := range graph.Stack(req.Branch) {
+		branch, ok := graph.Lookup(name)
+		if !ok {
+			branches = append(branches, name)
+			continue
+		}
+		if branch.Change == nil {
+			h.Log.Infof("%s: no published change request, skipping", name)
+			continue
+		}
+		branches = append(branches, name)
+	}
+
 	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
 		Graph:         graph,
-		Branches:      slices.Collect(graph.Stack(req.Branch)),
+		Branches:      branches,
 		NoBranchCheck: opts.NoBranchCheck,
 	})
 	if err != nil {
