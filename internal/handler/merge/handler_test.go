@@ -554,7 +554,53 @@ func TestMergeBranch_acceptsMultipleBranches(t *testing.T) {
 	assert.Equal(t, []string{"feat1", "feat2"}, mergePlanBranches(plan))
 }
 
-func TestMergeBranch_acceptsStackedRequestedBranches(t *testing.T) {
+func TestMergeBranch_rejectsSelectedBranchWithoutBase(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(testBranchGraph(t, []spice.LoadBranchItem{
+			testBranchWithoutUpstream("feat1", "main", fakeChangeID("pr-1")),
+			testBranchWithoutUpstream("feat2", "feat1", fakeChangeID("pr-2")),
+			testBranchWithoutUpstream("feat3", "feat2", fakeChangeID("pr-3")),
+		}), nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		service: mockService,
+	})
+	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
+		Branches: []string{"feat2"},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(),
+		`branch "feat2" requires selected base "feat1"`)
+}
+
+func TestMergeBranch_rejectsSelectedBranchesWithoutPathToTrunk(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(testBranchGraph(t, []spice.LoadBranchItem{
+			testBranchWithoutUpstream("feat1", "main", fakeChangeID("pr-1")),
+			testBranchWithoutUpstream("feat2", "feat1", fakeChangeID("pr-2")),
+			testBranchWithoutUpstream("feat3", "feat2", fakeChangeID("pr-3")),
+		}), nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		service: mockService,
+	})
+	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
+		Branches: []string{"feat3", "feat2"},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(),
+		`requires selected base "feat1"`)
+}
+
+func TestMergeBranch_acceptsSelectedPathToTrunk(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockStore := NewMockStore(ctrl)

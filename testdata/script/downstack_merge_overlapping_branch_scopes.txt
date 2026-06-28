@@ -36,9 +36,7 @@ stderr 'Created #3'
 # Request two overlapping downstack scopes.
 # feature2 selects feature1 and feature2.
 # feature3 selects feature1, feature2, and feature3.
-env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs downstack merge --branch feature2 --branch feature3
-cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+gs downstack merge --branch feature2 --branch feature3 --no-prompt
 stderr 'feature1: merging #1:'
 stderr 'feature1: #1 was merged'
 stderr 'feature1: deleted'
@@ -56,8 +54,7 @@ stderr 'All 3 change.s. merged.'
 
 # verify all selected changes were merged
 shamhub dump changes
-stdout '"merged": true'
-! stdout '"state": "open"'
+cmpenvJSON stdout $WORK/golden/changes-merged.json
 
 -- repo/feature1.txt --
 This is feature 1
@@ -65,10 +62,78 @@ This is feature 1
 This is feature 2
 -- repo/feature3.txt --
 This is feature 3
--- robot-merge.golden --
-===
-> Merge 3 change(s) bottom-up?: [Y/n]
->   feature1 (#1)
->   feature2 (#2)
->   feature3 (#3)
-true
+-- golden/changes-merged.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "c4911913f1f3f4ea13768711df593c1b88d8b572"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "54a1cc7d8ed1dac40dab756d73c2691e3b1c1473"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 3",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "7011262d613a32ade757acab9cae0a9773782915"
+    }
+  }
+]
