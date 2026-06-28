@@ -518,34 +518,156 @@ func TestMergeBranch_delegatesToDownstackMerge(t *testing.T) {
 	})
 
 	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
-		Branch: "feat1",
+		Branches: []string{"feat1"},
 	})
 	require.NoError(t, err)
 }
 
-func TestMergeBranch_rejectsBranchNotBasedOnTrunk(t *testing.T) {
+func TestMergeBranch_acceptsMultipleBranches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranchWithoutUpstream("feat1", "main", pr1),
+		testBranchWithoutUpstream("feat2", "main", pr2),
+	})
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+	})
+
+	plan, err := h.buildPlanFromBranches(t.Context(), mergePlanRequest{
+		Graph:    graph,
+		Branches: []string{"feat1", "feat2", "feat1"},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"feat1", "feat2"}, mergePlanBranches(plan))
+}
+
+func TestMergeBranch_acceptsStackedRequestedBranches(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockStore := NewMockStore(ctrl)
-	mockStore.EXPECT().Trunk().Return("main")
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	planStatus := mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+	staleBaseStatus := mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil).
+		After(planStatus.Call)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr1).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil).
+		After(staleBaseStatus)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr1, forge.MergeChangeOptions{}).
+		Return(nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return(
+			[]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil,
+		)
+	expectPushedHead(mockForge, pr2, "head2")
+	expectMergeItem(mockForge, pr2)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(testBranchGraph(t, []spice.LoadBranchItem{
+			testBranchWithoutUpstream("feat1", "main", pr1),
+			testBranchWithoutUpstream("feat2", "feat1", pr2),
+		}), nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
-		store: mockStore,
-		service: testBranchGraphService(ctrl,
-			testBranchGraph(t, []spice.LoadBranchItem{
-				testBranch("feat1", "main", fakeChangeID("pr-1")),
-				testBranch("feat2", "feat1", fakeChangeID("pr-2")),
-			}),
-		),
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
 	})
 
 	err := h.MergeBranch(t.Context(), &BranchMergeRequest{
-		Branch: "feat2",
+		Branches: []string{"feat1", "feat2"},
+	})
+	require.NoError(t, err)
+}
+
+func TestBuildPlan_expandsAndNormalizesDownstackBranches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2, pr3}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranchWithoutUpstream("feat1", "main", pr1),
+		testBranchWithoutUpstream("feat2", "feat1", pr2),
+		testBranchWithoutUpstream("feat3", "feat1", pr3),
+	})
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+	})
+	plan, err := h.buildPlan(t.Context(), &DownstackMergeRequest{
+		Branches:    []string{"feat2", "feat3", "feat2"},
+		BranchGraph: graph,
+		Options: &DownstackMergeOptions{
+			NoBranchCheck: true,
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{"feat1", "feat2", "feat3"},
+		mergePlanBranches(plan),
+	)
+}
+
+func TestBuildPlan_rejectsUnknownDownstackBranch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{})
+	_, err := h.buildPlan(t.Context(), &DownstackMergeRequest{
+		Branches: []string{"missing"},
+		BranchGraph: testBranchGraph(t, []spice.LoadBranchItem{
+			testBranchWithoutUpstream("feat1", "main", fakeChangeID("pr-1")),
+		}),
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(),
-		"branch \"feat2\" is based on \"feat1\", not trunk")
-	assert.Contains(t, err.Error(), "gs downstack merge --branch feat2")
+	assert.Contains(t, err.Error(), `branch "missing" is not tracked`)
 }
 
 func TestMergeStack_includesUpstackDescendants(t *testing.T) {
@@ -619,7 +741,70 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 	})
 
 	err := h.MergeStack(t.Context(), &StackMergeRequest{
-		Branch: "feat1",
+		Branches: []string{"feat1"},
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+		},
+	})
+	require.NoError(t, err)
+}
+
+func TestMergeStack_normalizesContainedScopes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		testBranchWithoutUpstream("feat1", "main", pr1),
+		testBranchWithoutUpstream("feat2", "feat1", pr2),
+		testBranchWithoutUpstream("feat3", "feat1", pr3),
+	})
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2, pr3}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+			{State: forge.ChangeOpen},
+		}, nil)
+
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat3").
+		Return(nil)
+
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat3").
+		Return(git.Hash("head3"), nil)
+
+	expectMergeItem(mockForge, pr1)
+	expectPushedHead(mockForge, pr2, "head2")
+	expectMergeItem(mockForge, pr2)
+	expectPushedHead(mockForge, pr3, "head3")
+	expectMergeItem(mockForge, pr3)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+	})
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branches: []string{"feat1", "feat2"},
 		Options: &StackMergeOptions{
 			NoBranchCheck: true,
 		},
@@ -890,7 +1075,7 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 	})
 
 	err := h.MergeStack(t.Context(), &StackMergeRequest{
-		Branch: "feat1",
+		Branches: []string{"feat1"},
 		Options: &StackMergeOptions{
 			NoBranchCheck: true,
 			FailFast:      true,
@@ -1446,15 +1631,24 @@ func testBranch(
 	}
 }
 
-func testBranchGraphService(
-	ctrl *gomock.Controller,
-	graph *spice.BranchGraph,
-) *MockService {
-	mockService := NewMockService(ctrl)
-	mockService.EXPECT().
-		BranchGraph(gomock.Any(), gomock.Nil()).
-		Return(graph, nil)
-	return mockService
+func testBranchWithoutUpstream(
+	name string,
+	base string,
+	changeID fakeChangeID,
+) spice.LoadBranchItem {
+	return spice.LoadBranchItem{
+		Name:   name,
+		Base:   base,
+		Change: testChangeMetadata(changeID),
+	}
+}
+
+func mergePlanBranches(plan mergePlan) []string {
+	branches := make([]string, 0, len(plan.items))
+	for _, item := range plan.items {
+		branches = append(branches, item.branch)
+	}
+	return branches
 }
 
 // expectMergeItem sets up mock expectations for a full

@@ -298,10 +298,12 @@ Merge a stack
 
 Merges the CRs for the current branch's stack into trunk.
 Use --branch to merge a different branch's stack.
+Use --branch multiple times to merge multiple stacks.
 
 The stack includes the selected branch,
 its downstack branches down to trunk,
 and every upstack branch.
+Overlapping stacks are merged once.
 
 Already-merged branches are skipped automatically.
 Branches must have an open Change Request to be merged.
@@ -326,7 +328,7 @@ Use --fail-fast to stop the queue after the first branch failure.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
+* `--branch=NAME,...`: Branches whose stacks to merge. May be repeated.
 
 **Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
@@ -621,6 +623,11 @@ Merge a branch and those below it
 Merges the current branch and all branches below it
 into trunk via the forge API, bottom-up.
 Use --branch to start at a different branch.
+Use --branch multiple times to merge multiple downstacks.
+
+Each selected branch expands to that branch
+and its downstack branches down to trunk.
+Overlapping downstacks are merged once.
 
 This command acts as a local merge queue:
 it merges one Change Request,
@@ -660,7 +667,7 @@ and syncs merged branch cleanup.
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--branch=NAME,...`: Branches to start merging from. May be repeated.
 
 **Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
@@ -1128,9 +1135,13 @@ Merge a branch into trunk
 
 Merges the CR for the current branch into trunk.
 Use --branch to merge a different branch.
+Use --branch multiple times to merge multiple branches.
 
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
+Only the selected branches are merged.
+To merge a branch and its downstack,
+use 'git-spice downstack merge'.
+To merge a whole stack,
+use 'git-spice stack merge'.
 
 Before checking merge readiness,
 the command waits briefly for the forge to observe the pushed head.
@@ -1141,7 +1152,7 @@ Use --ready-timeout to configure the maximum wait.
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
+* `--branch=NAME,...`: Branches to merge. May be repeated.
 
 **Configuration**: [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 

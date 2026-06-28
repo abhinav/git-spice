@@ -3,7 +3,11 @@ Usage: gs downstack (ds) merge (m) [flags]
 Merge a branch and those below it
 
 Merges the current branch and all branches below it into trunk via the forge
-API, bottom-up. Use --branch to start at a different branch.
+API, bottom-up. Use --branch to start at a different branch. Use --branch
+multiple times to merge multiple downstacks.
+
+Each selected branch expands to that branch and its downstack branches down to
+trunk. Overlapping downstacks are merged once.
 
 This command acts as a local merge queue: it merges one Change Request, waits
 for that merge to finish, restacks and updates the next Change Request, waits
@@ -38,7 +42,7 @@ Flags:
   --ready-timeout=30m    Max time to wait for merge readiness before each merge.
                          0 means check once. (🔧 spice.merge.readyTimeout)
   --no-branch-check      Skip stale base validation before merging.
-  --branch=NAME          Branch to start merging from
+  --branch=NAME,...      Branches to start merging from. May be repeated.
 
 Global Flags:
   -h, --help           Show help for the command
