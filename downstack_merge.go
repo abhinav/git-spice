@@ -55,10 +55,6 @@ func (*downstackMergeCmd) Help() string {
 		to complete, restacks and updates the next PR,
 		waits for merge readiness on the updated PR,
 		and syncs merged branch cleanup.
-
-		Use --no-wait for single branch merging
-		when you don't want to wait for the merge to propagate.
-		--no-wait is rejected for multi-branch merges.
 	`)
 }
 

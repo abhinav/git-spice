@@ -655,15 +655,10 @@ to complete, restacks and updates the next PR,
 waits for merge readiness on the updated PR,
 and syncs merged branch cleanup.
 
-Use --no-wait for single branch merging
-when you don't want to wait for the merge to propagate.
---no-wait is rejected for multi-branch merges.
-
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--no-wait`: Skip polling for a single branch merge to propagate.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--branch=NAME`: Branch to start merging from
 

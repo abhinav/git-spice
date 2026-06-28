@@ -48,7 +48,6 @@ const (
 	mergeProgressMergeabilityFailed                                   // merge readiness blocked or timed out
 	mergeProgressMerging                                              // forge merge request started
 	mergeProgressMergeFailed                                          // forge merge request failed
-	mergeProgressMergeRequested                                       // merge requested without waiting
 	mergeProgressWaitingForMerge                                      // waiting for merged state
 	mergeProgressMergeIncomplete                                      // merged state did not appear
 	mergeProgressMerged                                               // merged state observed
@@ -305,12 +304,6 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 			ItemID:  item.branch,
 			State:   mergeprogress.StateFailed,
 			Message: item.branch + ": merge failed",
-		}
-	case mergeProgressMergeRequested:
-		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateMerged,
-			Message: item.branch + ": merge requested",
 		}
 	case mergeProgressWaitingForMerge:
 		return mergeprogress.Event{

@@ -29,7 +29,6 @@ type mergePlanExecutor struct {
 	Trunk                 string            // required
 	MergeReadinessTimeout time.Duration     // required
 	Method                forge.MergeMethod // required
-	NoWait                bool
 	FailFast              bool
 }
 
@@ -63,19 +62,16 @@ func (e *mergePlanExecutor) Execute(
 		})
 	}
 
-	var barrier func(context.Context) error
-	if !e.NoWait {
-		barrier = func(ctx context.Context) error {
-			// SyncTrunk updates trunk,
-			// deletes merged branches,
-			// and retargets their upstacks.
-			if err := e.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
-				ClosedChanges: sync.ClosedChangesIgnore,
-			}); err != nil {
-				return fmt.Errorf("sync trunk: %w", err)
-			}
-			return nil
+	barrier := func(ctx context.Context) error {
+		// SyncTrunk updates trunk,
+		// deletes merged branches,
+		// and retargets their upstacks.
+		if err := e.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
+			ClosedChanges: sync.ClosedChangesIgnore,
+		}); err != nil {
+			return fmt.Errorf("sync trunk: %w", err)
 		}
+		return nil
 	}
 
 	scheduler, err := mergequeue.New(items, &mergequeue.Options{
@@ -184,14 +180,6 @@ func (e *mergePlanExecutor) mergeItem(
 			Item: item,
 		})
 		return fmt.Errorf("merge: %w", err)
-	}
-
-	if e.NoWait {
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressMergeRequested,
-			Item: item,
-		})
-		return nil
 	}
 
 	// Wait until the forge reports the merge.

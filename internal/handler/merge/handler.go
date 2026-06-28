@@ -75,10 +75,6 @@ type Options struct {
 type DownstackMergeOptions struct {
 	Options
 
-	// NoWait skips polling for a single merge to propagate.
-	// Server-dependent cleanup is left to a later sync.
-	NoWait bool `help:"Skip polling for a single branch merge to propagate."`
-
 	// NoBranchCheck skips stale base validation before merging.
 	NoBranchCheck bool `help:"Skip stale base validation before merging."`
 }
@@ -165,7 +161,6 @@ func (h *Handler) MergeDownstack(
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
-		NoWait:                opts.NoWait,
 		SyncBeforeStart:       plan.syncBeforeStart,
 	})
 }
@@ -312,7 +307,6 @@ func (h *Handler) buildPlan(
 		Graph:         graph,
 		Branches:      downstack,
 		NoBranchCheck: opts.NoBranchCheck,
-		NoWait:        opts.NoWait,
 	})
 }
 
@@ -326,7 +320,6 @@ type mergePlanRequest struct {
 	Branches []string // required
 
 	NoBranchCheck bool
-	NoWait        bool
 }
 
 func (h *Handler) buildPlanFromBranches(
@@ -383,14 +376,6 @@ func (h *Handler) buildPlanFromBranches(
 		case forge.ChangeOpen:
 			plan = append(plan, item)
 		}
-	}
-
-	if req.NoWait && len(plan) > 1 {
-		return mergePlan{}, fmt.Errorf(
-			"--no-wait can merge only one branch; "+
-				"got %d branches",
-			len(plan),
-		)
 	}
 
 	if err := h.validateSynced(ctx, plan); err != nil {
@@ -530,7 +515,6 @@ func (h *Handler) confirm(plan []*mergeItem, title string) error {
 type mergeExecutionOptions struct {
 	Method                forge.MergeMethod
 	MergeReadinessTimeout time.Duration
-	NoWait                bool
 	FailFast              bool
 	SyncBeforeStart       bool
 }
@@ -579,7 +563,6 @@ func (h *Handler) executePlan(
 		Trunk:                 h.Store.Trunk(),
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
 		Method:                opts.Method,
-		NoWait:                opts.NoWait,
 		FailFast:              opts.FailFast,
 	}).Execute(ctx, plan)
 	if err != nil {
