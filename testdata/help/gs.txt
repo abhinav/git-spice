@@ -32,15 +32,21 @@ Log
 Stack
   stack (s) submit (s)          Submit a stack
   stack (s) merge (m)           Merge a stack
+  stack (s) sync (sy)           Pull remote-side commits for every branch in the
+                                stack
   stack (s) restack (r)         Restack a stack
   stack (s) edit (e)            Edit the order of branches in a stack
   stack (s) delete (d)          Delete all branches in a stack
   upstack (us) submit (s)       Submit a branch and those above it
+  upstack (us) sync (sy)        Pull remote-side commits for a branch and those
+                                above it
   upstack (us) restack (r)      Restack a branch and its upstack
   upstack (us) onto (o)         Move a branch onto another branch
   upstack (us) delete (d)       Delete all branches above the current branch
   downstack (ds) track (tr)     Track all untracked branches below a branch
   downstack (ds) submit (s)     Submit a branch and those below it
+  downstack (ds) sync (sy)      Pull remote-side commits for a branch and those
+                                below it
   downstack (ds) merge (m)      Merge a branch and those below it
   downstack (ds) edit (e)       Edit the order of branches below a branch
   downstack (ds) restack (r)    Restack a branch and its downstack
@@ -61,6 +67,7 @@ Branch
   branch (b) diff (di)         Show diff between a branch and its base
   branch (b) merge (m)         Merge a branch into trunk
   branch (b) submit (s)        Submit a branch
+  branch (b) sync (sy)         Pull remote-side commits into a tracked branch
 
 Commit
   commit (c) create (c)    Create a new commit
