@@ -3,10 +3,11 @@ Usage: gs stack (s) merge (m) [flags]
 Merge a stack
 
 Merges the CRs for the current branch's stack into trunk. Use --branch to merge
-a different branch's stack.
+a different branch's stack. Use --branch multiple times to merge multiple
+stacks.
 
 The stack includes the selected branch, its downstack branches down to trunk,
-and every upstack branch.
+and every upstack branch. Overlapping stacks are merged once.
 
 Already-merged branches are skipped automatically. Branches must have an open
 Change Request to be merged.
@@ -30,7 +31,7 @@ Flags:
                          0 means check once. (🔧 spice.merge.readyTimeout)
   --no-branch-check      Skip stale base validation before merging.
   --fail-fast            Stop the merge queue after the first branch failure.
-  --branch=NAME          Branch whose stack to merge
+  --branch=NAME,...      Branches whose stacks to merge. May be repeated.
 
 Global Flags:
   -h, --help           Show help for the command

@@ -79,10 +79,10 @@ type DownstackMergeOptions struct {
 	NoBranchCheck bool `help:"Skip stale base validation before merging."`
 }
 
-// DownstackMergeRequest asks Handler to merge a branch
+// DownstackMergeRequest asks Handler to merge each requested branch
 // and its downstack ancestors bottom-up.
 type DownstackMergeRequest struct {
-	Branch string // required
+	Branches []string // required
 
 	Options *DownstackMergeOptions // optional
 
@@ -90,10 +90,9 @@ type DownstackMergeRequest struct {
 	BranchGraph *spice.BranchGraph // optional
 }
 
-// BranchMergeRequest asks Handler to merge one branch
-// that is configured directly on trunk.
+// BranchMergeRequest asks Handler to merge the selected branches.
 type BranchMergeRequest struct {
-	Branch string // required
+	Branches []string // required
 
 	Options *Options // optional
 }
@@ -109,11 +108,11 @@ type StackMergeOptions struct {
 	FailFast bool `help:"Stop the merge queue after the first branch failure."`
 }
 
-// StackMergeRequest asks Handler to merge a branch,
+// StackMergeRequest asks Handler to merge each requested branch,
 // its downstack branches down to trunk,
 // and its upstack branches.
 type StackMergeRequest struct {
-	Branch string // required
+	Branches []string // required
 
 	Options *StackMergeOptions // optional
 }
@@ -165,7 +164,7 @@ func (h *Handler) MergeDownstack(
 	})
 }
 
-// MergeBranch merges one branch that is configured directly on trunk.
+// MergeBranch merges the selected branches without expanding their scopes.
 func (h *Handler) MergeBranch(
 	ctx context.Context, req *BranchMergeRequest,
 ) error {
@@ -175,26 +174,55 @@ func (h *Handler) MergeBranch(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
-	branch, ok := graph.Lookup(req.Branch)
-	if !ok {
-		return fmt.Errorf("branch %q is not tracked", req.Branch)
-	}
-	trunk := h.Store.Trunk()
-	if branch.Base != trunk {
-		return fmt.Errorf(
-			"branch %q is based on %q, not trunk; "+
-				"use 'gs downstack merge --branch %s' "+
-				"to merge stack branches bottom-up",
-			req.Branch, branch.Base, req.Branch,
-		)
+	selected := make(map[string]struct{}, len(req.Branches))
+	for _, name := range req.Branches {
+		selected[name] = struct{}{}
 	}
 
-	return h.MergeDownstack(ctx, &DownstackMergeRequest{
-		Branch: req.Branch,
-		Options: &DownstackMergeOptions{
-			Options: *opts,
-		},
-		BranchGraph: graph,
+	// Branch merge treats --branch as an exact branch selection.
+	// Every selected branch must have its non-trunk bases selected too,
+	// so the selected set itself forms the path to trunk.
+	for _, name := range req.Branches {
+		for current := name; current != graph.Trunk(); {
+			branch, ok := graph.Lookup(current)
+			if !ok {
+				return fmt.Errorf("branch %q is not tracked", current)
+			}
+
+			if _, ok := selected[current]; !ok {
+				return fmt.Errorf(
+					"branch %q requires selected base %q",
+					name, current,
+				)
+			}
+			current = branch.Base
+		}
+	}
+
+	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
+		Graph:    graph,
+		Branches: req.Branches,
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(plan.items) == 0 {
+		h.Log.Info("No open changes to merge.")
+		return nil
+	}
+
+	if err := h.confirm(
+		plan.items,
+		fmt.Sprintf("Merge %d change(s) bottom-up?", len(plan.items)),
+	); err != nil {
+		return err
+	}
+
+	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
+		Method:                opts.Method,
+		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		SyncBeforeStart:       plan.syncBeforeStart,
 	})
 }
 
@@ -211,17 +239,25 @@ func (h *Handler) MergeStack(
 	}
 
 	var branches []string
-	for name := range graph.Stack(req.Branch) {
-		branch, ok := graph.Lookup(name)
-		if !ok {
-			branches = append(branches, name)
-			continue
+	for _, name := range req.Branches {
+		if _, ok := graph.Lookup(name); !ok {
+			return fmt.Errorf("branch %q is not tracked", name)
 		}
-		if branch.Change == nil {
-			h.Log.Infof("%s: no published change request, skipping", name)
-			continue
+		for branchName := range graph.Stack(name) {
+			branch, ok := graph.Lookup(branchName)
+			if !ok {
+				branches = append(branches, branchName)
+				continue
+			}
+			if branch.Change == nil {
+				h.Log.Infof(
+					"%s: no published change request, skipping",
+					branchName,
+				)
+				continue
+			}
+			branches = append(branches, branchName)
 		}
-		branches = append(branches, name)
 	}
 
 	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
@@ -312,14 +348,22 @@ func (h *Handler) buildPlan(
 		}
 	}
 
-	// Build the queue bottom-up because each merge changes
-	// the base of the branch above it.
-	downstack := slices.Collect(graph.Downstack(req.Branch))
-	slices.Reverse(downstack)
+	var branches []string
+	for _, name := range req.Branches {
+		if _, ok := graph.Lookup(name); !ok {
+			return mergePlan{}, fmt.Errorf("branch %q is not tracked", name)
+		}
+
+		// Build each downstack bottom-up because each merge changes
+		// the base of the branch above it.
+		downstack := slices.Collect(graph.Downstack(name))
+		slices.Reverse(downstack)
+		branches = append(branches, downstack...)
+	}
 
 	return h.buildPlanFromBranches(ctx, mergePlanRequest{
 		Graph:         graph,
-		Branches:      downstack,
+		Branches:      branches,
 		NoBranchCheck: opts.NoBranchCheck,
 	})
 }
@@ -327,6 +371,9 @@ func (h *Handler) buildPlan(
 // mergePlanRequest selects the local branches that become merge queue items.
 //
 // Branches provides the prompt order.
+// Scope expansion may append the same branch more than once;
+// buildPlanFromBranches normalizes duplicates before querying
+// forge state or constructing merge queue items.
 // The merge queue still enforces base dependencies before execution.
 type mergePlanRequest struct {
 	Graph *spice.BranchGraph // required
@@ -339,9 +386,10 @@ type mergePlanRequest struct {
 func (h *Handler) buildPlanFromBranches(
 	ctx context.Context, req mergePlanRequest,
 ) (mergePlan, error) {
-	items := make([]*mergeItem, 0, len(req.Branches))
-	ids := make([]forge.ChangeID, 0, len(req.Branches))
-	for _, name := range req.Branches {
+	branches := uniqueBranches(req.Branches)
+	items := make([]*mergeItem, 0, len(branches))
+	ids := make([]forge.ChangeID, 0, len(branches))
+	for _, name := range branches {
 		branch, ok := req.Graph.Lookup(name)
 		if !ok {
 			return mergePlan{}, fmt.Errorf("branch %q is not tracked", name)
@@ -398,7 +446,7 @@ func (h *Handler) buildPlanFromBranches(
 
 	if !req.NoBranchCheck {
 		if err := h.validateFreshBases(
-			ctx, req.Graph, req.Branches,
+			ctx, req.Graph, branches,
 		); err != nil {
 			return mergePlan{}, fmt.Errorf("validate stale bases: %w", err)
 		}
@@ -408,6 +456,23 @@ func (h *Handler) buildPlanFromBranches(
 		items:           plan,
 		syncBeforeStart: sawMerged && len(plan) > 0,
 	}, nil
+}
+
+func uniqueBranches(branches []string) []string {
+	if len(branches) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(branches))
+	out := make([]string, 0, len(branches))
+	for _, branch := range branches {
+		if _, ok := seen[branch]; ok {
+			continue
+		}
+		seen[branch] = struct{}{}
+		out = append(out, branch)
+	}
+	return out
 }
 
 // validateSynced checks that all branches in the merge plan

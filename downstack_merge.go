@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
@@ -14,7 +15,7 @@ import (
 type downstackMergeCmd struct {
 	merge.DownstackMergeOptions
 
-	Branch string `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
+	Branches []string `name:"branch" placeholder:"NAME" help:"Branches to start merging from. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*downstackMergeCmd) Help() string {
@@ -22,6 +23,11 @@ func (*downstackMergeCmd) Help() string {
 		Merges the current branch and all branches below it
 		into trunk via the forge API, bottom-up.
 		Use --branch to start at a different branch.
+		Use --branch multiple times to merge multiple downstacks.
+
+		Each selected branch expands to that branch
+		and its downstack branches down to trunk.
+		Overlapping downstacks are merged once.
 
 		This command acts as a local merge queue:
 		it merges one Change Request,
@@ -69,14 +75,14 @@ func (cmd *downstackMergeCmd) AfterApply(
 	ctx context.Context,
 	wt *git.Worktree,
 ) error {
-	if cmd.Branch != "" {
+	if len(cmd.Branches) > 0 {
 		return nil
 	}
 	branch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
-	cmd.Branch = branch
+	cmd.Branches = []string{branch}
 	return nil
 }
 
@@ -85,12 +91,12 @@ func (cmd *downstackMergeCmd) Run(
 	store *state.Store,
 	mergeHandler MergeHandler,
 ) error {
-	if cmd.Branch == store.Trunk() {
+	if slices.Contains(cmd.Branches, store.Trunk()) {
 		return errors.New("cannot merge trunk")
 	}
 
 	return mergeHandler.MergeDownstack(ctx, &merge.DownstackMergeRequest{
-		Branch:  cmd.Branch,
-		Options: &cmd.DownstackMergeOptions,
+		Branches: cmd.Branches,
+		Options:  &cmd.DownstackMergeOptions,
 	})
 }

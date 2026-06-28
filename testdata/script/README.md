@@ -137,6 +137,8 @@ cmpenvJSON <want> <got>
 Compares the contents of the two files as JSON,
 replacing environment variables in the forms `${VAR}` and `$VAR`
 with their values at the time of the comparison.
+Use this for ShamHub JSON dumps and other JSON outputs.
+Do not verify JSON with `stdout` or `stderr` substring assertions.
 
 ### git
 
@@ -273,6 +275,8 @@ shamhub dump comments [num] ...
 
 Dumps information about all changes, a single change,
 all comments, or comments for specific changes, respectively.
+Verify JSON dumps with `cmpenvJSON` and a golden file,
+not substring matching.
 
 #### shamhub register
 

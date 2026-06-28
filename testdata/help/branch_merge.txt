@@ -3,10 +3,11 @@ Usage: gs branch (b) merge (m) [flags]
 Merge a branch into trunk
 
 Merges the CR for the current branch into trunk. Use --branch to merge a
-different branch.
+different branch. Use --branch multiple times to merge multiple branches.
 
-The branch must be based directly on trunk. To merge a stacked branch, use 'gs
-downstack merge'.
+Only the selected branches are merged. To merge a branch and its downstack,
+use 'git-spice downstack merge'. To merge a whole stack, use 'git-spice stack
+merge'.
 
 Before checking merge readiness, the command waits briefly for the forge to
 observe the pushed head. Then it waits for the forge to report that the CR is
@@ -17,7 +18,7 @@ Flags:
                          and 'rebase'. (🔧 spice.merge.method)
   --ready-timeout=30m    Max time to wait for merge readiness before each merge.
                          0 means check once. (🔧 spice.merge.readyTimeout)
-  --branch=NAME          Branch to merge
+  --branch=NAME,...      Branches to merge. May be repeated.
 
 Global Flags:
   -h, --help           Show help for the command

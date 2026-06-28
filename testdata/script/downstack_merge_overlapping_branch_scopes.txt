@@ -1,7 +1,7 @@
-# 'branch merge' can merge selected branches from the same stack.
+# 'downstack merge --branch' normalizes overlapping branch scopes.
 
 as 'Test <test@example.com>'
-at '2026-06-13T18:29:00Z'
+at '2026-06-28T10:15:00Z'
 
 # setup
 cd repo
@@ -18,21 +18,25 @@ git push origin main
 env SHAMHUB_USERNAME=alice
 gs auth login
 
-# create a stack: main -> feature1 -> feature2
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
 git add feature1.txt
 gs bc feature1 -m 'Add feature 1'
 git add feature2.txt
 gs bc feature2 -m 'Add feature 2'
+git add feature3.txt
+gs bc feature3 -m 'Add feature 3'
 
-# submit the stack
+# submit the full stack
 gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
+stderr 'Created #3'
 
-# merge selected branches from the stack
-env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs branch merge --branch feature1 --branch feature2
-cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+# Request two overlapping downstack scopes.
+# feature2 selects feature1 and feature2.
+# feature3 selects feature1, feature2, and feature3.
+gs downstack merge --branch feature2 --branch feature3 --no-prompt
 stderr 'feature1: merging #1:'
 stderr 'feature1: #1 was merged'
 stderr 'feature1: deleted'
@@ -41,26 +45,23 @@ stderr 'Updated #2'
 stderr 'feature2: merging #2:'
 stderr 'feature2: #2 was merged'
 stderr 'feature2: deleted'
-stderr 'All 2 change.s. merged.'
+stderr 'feature3: restacked on main'
+stderr 'Updated #3'
+stderr 'feature3: merging #3:'
+stderr 'feature3: #3 was merged'
+stderr 'feature3: deleted'
+stderr 'All 3 change.s. merged.'
 
-# verify both changes are merged
+# verify all selected changes were merged
 shamhub dump changes
 cmpenvJSON stdout $WORK/golden/changes-merged.json
-
-# verify that the later PR was retargeted to main
-shamhub dump change 2
-cmpenvJSON stdout $WORK/golden/change-2.json
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
--- robot-merge.golden --
-===
-> Merge 2 change(s) bottom-up?: [Y/n]
->   feature1 (#1)
->   feature2 (#2)
-true
+-- repo/feature3.txt --
+This is feature 3
 -- golden/changes-merged.json --
 [
   {
@@ -76,7 +77,7 @@ true
         "name": "example"
       },
       "ref": "main",
-      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
     },
     "head": {
       "repository": {
@@ -84,7 +85,7 @@ true
         "name": "example"
       },
       "ref": "feature1",
-      "sha": "62c3c4e12506afae52cd50383886ea7a815700c3"
+      "sha": "c4911913f1f3f4ea13768711df593c1b88d8b572"
     }
   },
   {
@@ -100,7 +101,7 @@ true
         "name": "example"
       },
       "ref": "main",
-      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
     },
     "head": {
       "repository": {
@@ -108,32 +109,31 @@ true
         "name": "example"
       },
       "ref": "feature2",
-      "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
+      "sha": "54a1cc7d8ed1dac40dab756d73c2691e3b1c1473"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 3",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "8c3f7f55475156b47580d1c1e64d37ddb437c312"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "7011262d613a32ade757acab9cae0a9773782915"
     }
   }
 ]
--- golden/change-2.json --
-{
-  "number": 2,
-  "html_url": "$SHAMHUB_URL/alice/example/change/2",
-  "state": "closed",
-  "merged": true,
-  "title": "Add feature 2",
-  "body": "",
-  "base": {
-    "repository": {
-      "owner": "alice",
-      "name": "example"
-    },
-    "ref": "main",
-    "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
-  },
-  "head": {
-    "repository": {
-      "owner": "alice",
-      "name": "example"
-    },
-    "ref": "feature2",
-    "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
-  }
-}

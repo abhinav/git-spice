@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
@@ -14,17 +15,19 @@ import (
 type stackMergeCmd struct {
 	merge.StackMergeOptions
 
-	Branch string `placeholder:"NAME" help:"Branch whose stack to merge" predictor:"trackedBranches"`
+	Branches []string `name:"branch" placeholder:"NAME" help:"Branches whose stacks to merge. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*stackMergeCmd) Help() string {
 	return text.Dedent(`
 		Merges the CRs for the current branch's stack into trunk.
 		Use --branch to merge a different branch's stack.
+		Use --branch multiple times to merge multiple stacks.
 
 		The stack includes the selected branch,
 		its downstack branches down to trunk,
 		and every upstack branch.
+		Overlapping stacks are merged once.
 
 		Already-merged branches are skipped automatically.
 		Branches must have an open Change Request to be merged.
@@ -49,14 +52,14 @@ func (cmd *stackMergeCmd) AfterApply(
 	ctx context.Context,
 	wt *git.Worktree,
 ) error {
-	if cmd.Branch != "" {
+	if len(cmd.Branches) > 0 {
 		return nil
 	}
 	branch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
-	cmd.Branch = branch
+	cmd.Branches = []string{branch}
 	return nil
 }
 
@@ -65,12 +68,12 @@ func (cmd *stackMergeCmd) Run(
 	store *state.Store,
 	mergeHandler MergeHandler,
 ) error {
-	if cmd.Branch == store.Trunk() {
+	if slices.Contains(cmd.Branches, store.Trunk()) {
 		return errors.New("cannot merge trunk")
 	}
 
 	return mergeHandler.MergeStack(ctx, &merge.StackMergeRequest{
-		Branch:  cmd.Branch,
-		Options: &cmd.StackMergeOptions,
+		Branches: cmd.Branches,
+		Options:  &cmd.StackMergeOptions,
 	})
 }
