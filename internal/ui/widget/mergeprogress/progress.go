@@ -82,6 +82,62 @@ var DefaultKeyMap = KeyMap{
 	),
 }
 
+// GlyphSet defines the characters used for queue states.
+type GlyphSet struct {
+	Merged  string // merged item
+	Active  string // active item base fill
+	Pending string // item not yet started
+	Failed  string // item that failed
+	Skipped string // item skipped by scheduler policy
+
+	Animation AnimationGlyphSet // active item marker glyphs
+}
+
+// AnimationGlyphSet defines active-segment animation characters.
+type AnimationGlyphSet struct {
+	LeftEdge  string // marker at the left edge
+	RightEdge string // marker at the right edge
+	Slow      string // marker while moving slowly
+	Medium    string // marker while moving at medium speed
+	Fast      string // marker while moving fastest
+}
+
+// SymbolsGlyphSet returns the default symbol glyph set.
+func SymbolsGlyphSet() GlyphSet {
+	return GlyphSet{
+		Merged:  "■",
+		Active:  "◆",
+		Pending: "□",
+		Failed:  "×",
+		Skipped: "○",
+		Animation: AnimationGlyphSet{
+			LeftEdge:  "◆",
+			RightEdge: "◆",
+			Slow:      "◆",
+			Medium:    "◇",
+			Fast:      "◇",
+		},
+	}
+}
+
+// ASCIIGlyphSet returns the glyph set for basic terminal compatibility.
+func ASCIIGlyphSet() GlyphSet {
+	return GlyphSet{
+		Merged:  "#",
+		Active:  "=",
+		Pending: "-",
+		Failed:  "x",
+		Skipped: "o",
+		Animation: AnimationGlyphSet{
+			LeftEdge:  "-",
+			RightEdge: "-",
+			Slow:      "-",
+			Medium:    "-",
+			Fast:      "-",
+		},
+	}
+}
+
 // Style defines the visual style of [Widget].
 type Style struct {
 	Merged  ui.Style // requires value
@@ -97,28 +153,10 @@ type Style struct {
 }
 
 // DefaultStyle is the default visual style of [Widget].
-var DefaultStyle = Style{
-	Merged: ui.NewStyle().
-		Foreground(ui.Green).
-		SetString("■"),
-	Active: ui.NewStyle().
-		Foreground(ui.Yellow).
-		SetString("="),
-	Pending: ui.NewStyle().
-		Foreground(ui.Gray).
-		SetString("-"),
-	Failed: ui.NewStyle().
-		Foreground(ui.Red).
-		SetString("!"),
-	Skipped: ui.NewStyle().
-		Foreground(ui.Plain).
-		SetString("·"),
-
-	Title:   ui.NewStyle().Bold(true),
-	Summary: ui.NewStyle().Foreground(ui.Plain),
-	Detail:  ui.NewStyle().Foreground(ui.Plain),
-	Hint:    ui.NewStyle().Foreground(ui.Gray),
-}
+//
+// TODO: Add merge configuration plumbing to select [ASCIIGlyphSet]
+// for terminals where the symbol glyphs do not render well.
+var DefaultStyle = styleForGlyphSet(SymbolsGlyphSet())
 
 // Widget is a Bubble Tea model for stack merge progress.
 //
@@ -143,6 +181,7 @@ type Widget struct {
 	width     int
 	theme     ui.Theme
 	animation animationState
+	glyphs    GlyphSet
 }
 
 var _ tea.Model = (*Widget)(nil)
@@ -152,6 +191,7 @@ func New(items ...Item) *Widget {
 	w := &Widget{
 		KeyMap: DefaultKeyMap,
 		Style:  DefaultStyle,
+		glyphs: SymbolsGlyphSet(),
 		animation: animationState{
 			enabled: true,
 		},
@@ -182,6 +222,13 @@ func (w *Widget) apply(event Event) {
 // WithTheme sets the theme used by Bubble Tea rendering.
 func (w *Widget) WithTheme(theme ui.Theme) *Widget {
 	w.theme = theme
+	return w
+}
+
+// WithGlyphSet changes the queue state characters used by the widget.
+func (w *Widget) WithGlyphSet(glyphs GlyphSet) *Widget {
+	w.glyphs = glyphs
+	w.Style = styleForGlyphSet(glyphs)
 	return w
 }
 
@@ -305,7 +352,7 @@ func (w *Widget) renderSegment(
 	width int,
 ) {
 	if state == StateActive {
-		position, glyph, ok := w.animation.marker(width)
+		position, glyph, ok := w.animation.marker(width, w.glyphs.Animation)
 		if ok {
 			active := w.Style.Active.String(theme)
 			out.WriteString(strings.Repeat(active, position))
@@ -369,4 +416,29 @@ func distribute(width, segments int) []int {
 		}
 	}
 	return widths
+}
+
+func styleForGlyphSet(glyphs GlyphSet) Style {
+	return Style{
+		Merged: ui.NewStyle().
+			Foreground(ui.Green).
+			SetString(glyphs.Merged),
+		Active: ui.NewStyle().
+			Foreground(ui.Yellow).
+			SetString(glyphs.Active),
+		Pending: ui.NewStyle().
+			Foreground(ui.Gray).
+			SetString(glyphs.Pending),
+		Failed: ui.NewStyle().
+			Foreground(ui.Red).
+			SetString(glyphs.Failed),
+		Skipped: ui.NewStyle().
+			Foreground(ui.Plain).
+			SetString(glyphs.Skipped),
+
+		Title:   ui.NewStyle().Bold(true),
+		Summary: ui.NewStyle().Foreground(ui.Plain),
+		Detail:  ui.NewStyle().Foreground(ui.Plain),
+		Hint:    ui.NewStyle().Foreground(ui.Gray),
+	}
 }

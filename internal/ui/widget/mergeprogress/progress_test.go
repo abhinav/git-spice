@@ -22,7 +22,7 @@ func TestWidget_RenderProgression(t *testing.T) {
 
 	autogold.Expect(`Merging: 0 of 10 changes
 
-----------------------------------------
+□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 0   waiting: 0   pending: 10
 
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
@@ -34,7 +34,7 @@ Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 	})
 	autogold.Expect(`Merging: 0 of 10 changes
 
-====------------------------------------
+◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 0   waiting: 1   pending: 9
 
 Waiting for CI checks on feature-01 (#101).
@@ -57,7 +57,7 @@ Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 	})
 	autogold.Expect(`Merging: 1 of 10 changes
 
-■■■■========----------------------------
+■■■■◆◆◆◆◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 1   waiting: 2   pending: 7
 
 Waiting for CI checks on feature-02 (#102) and feature-03 (#103).
@@ -70,7 +70,7 @@ Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 	})
 	autogold.Expect(`Merging: 2 of 10 changes
 
-■■■■■■■■====----------------------------
+■■■■■■■■◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 2   waiting: 1   pending: 7
 
 Merged feature-02 (#102); still waiting for feature-03 (#103).
@@ -83,7 +83,7 @@ Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 	})
 	autogold.Expect(`Merging: 2 of 10 changes
 
-■■■■■■■■!!!!----------------------------
+■■■■■■■■××××□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 2   waiting: 0   pending: 7   failed: 1
 
 CI checks failed for feature-03 (#103).
@@ -124,8 +124,8 @@ func TestWidget_Render_scalingKeepsShape(t *testing.T) {
 	assert.Equal(t, 72, lipgloss.Width(barLine(wide)))
 	assert.Equal(t, 24, lipgloss.Width(barLine(narrow)))
 	assert.Contains(t, barLine(wide), "■")
-	assert.Contains(t, barLine(wide), "=")
-	assert.Contains(t, barLine(wide), "-")
+	assert.Contains(t, barLine(wide), "◆")
+	assert.Contains(t, barLine(wide), "□")
 }
 
 func TestWidget_Render_failedAndSkipped(t *testing.T) {
@@ -147,7 +147,23 @@ func TestWidget_Render_failedAndSkipped(t *testing.T) {
 	assert.Contains(t, got, "merged: 1   waiting: 1   pending: 1")
 	assert.Contains(t, got, "failed: 1")
 	assert.Contains(t, got, "skipped: 1")
-	assert.Equal(t, "■■■■····====!!!!----", barLine(got))
+	assert.Equal(t, "■■■■○○○○◆◆◆◆××××□□□□", barLine(got))
+}
+
+func TestWidget_Render_ASCIIGlyphSet(t *testing.T) {
+	items := makeItems(5)
+	items[0].State = StateMerged
+	items[1].State = StateSkipped
+	items[2].State = StateActive
+	items[3].State = StateFailed
+
+	widget := New(items...).
+		WithTheme(ui.DefaultThemeDark()).
+		WithGlyphSet(ASCIIGlyphSet()).
+		WithAnimation(false)
+	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 20})
+
+	assert.Equal(t, "####oooo====xxxx----", barLine(renderPlain(widget)))
 }
 
 func renderPlain(widget *Widget) string {
