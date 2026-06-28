@@ -627,69 +627,31 @@ func TestMergeStack_includesUpstackDescendants(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestBuildPlanFromBranches_ignoresUnsubmittedStackBranches(t *testing.T) {
+func TestMergeStack_ignoresUnsubmittedAboveSubmitted(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	var logBuffer bytes.Buffer
 
-	pr1 := fakeChangeID("pr-1")
-	pr3 := fakeChangeID("pr-3")
-	graph := testBranchGraph(t, []spice.LoadBranchItem{
-		testBranch("feat1", "main", pr1),
-		testUnsubmittedBranch("feat2", "feat1"),
-		testBranch("feat3", "feat2", pr3),
-	})
-
-	mockForge := forgetest.NewMockRepository(ctrl)
-	mockForge.EXPECT().
-		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr3}).
-		Return([]forge.ChangeStatus{
-			{State: forge.ChangeOpen},
-			{State: forge.ChangeOpen},
-		}, nil)
-
-	mockGit := NewMockGitRepository(ctrl)
-	mockGit.EXPECT().
-		CommitAheadBehind(gomock.Any(), "origin/feat1", "feat1").
-		Return(0, 0, nil)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "feat1").
-		Return(git.Hash("head1"), nil)
-	mockGit.EXPECT().
-		CommitAheadBehind(gomock.Any(), "origin/feat3", "feat3").
-		Return(0, 0, nil)
-	mockGit.EXPECT().
-		PeelToCommit(gomock.Any(), "feat3").
-		Return(git.Hash("head3"), nil)
-
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockForge,
-		gitRepo:   mockGit,
-	})
-
-	plan, err := h.buildPlanFromBranches(t.Context(), mergePlanRequest{
-		Graph:             graph,
-		Branches:          []string{"feat1", "feat2", "feat3"},
-		NoBranchCheck:     true,
-		IgnoreUnsubmitted: true,
-	})
-	require.NoError(t, err)
-	require.Len(t, plan.items, 2)
-	assert.Equal(t, "feat1", plan.items[0].branch)
-	assert.Equal(t, "feat3", plan.items[1].branch)
-}
-
-func TestBuildPlanFromBranches_ignoresUnsubmittedAboveSubmitted(t *testing.T) {
-	ctrl := gomock.NewController(t)
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
 
 	pr1 := fakeChangeID("pr-1")
 	graph := testBranchGraph(t, []spice.LoadBranchItem{
 		testBranch("feat1", "main", pr1),
-		testUnsubmittedBranch("feat2", "feat1"),
+		{
+			Name:           "feat2",
+			Base:           "feat1",
+			UpstreamBranch: "feat2",
+		},
 	})
 
 	mockForge := forgetest.NewMockRepository(ctrl)
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
-		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeOpen},
+		}, nil)
+	expectPushedHead(mockForge, pr1, "head1")
+	expectMergeItem(mockForge, pr1)
 
 	mockGit := NewMockGitRepository(ctrl)
 	mockGit.EXPECT().
@@ -699,40 +661,141 @@ func TestBuildPlanFromBranches_ignoresUnsubmittedAboveSubmitted(t *testing.T) {
 		PeelToCommit(gomock.Any(), "feat1").
 		Return(git.Hash("head1"), nil)
 
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil)
+
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
 		gitRepo:   mockGit,
+		sync:      mockSync,
+		logBuffer: &logBuffer,
 	})
 
-	plan, err := h.buildPlanFromBranches(t.Context(), mergePlanRequest{
-		Graph:             graph,
-		Branches:          []string{"feat1", "feat2"},
-		NoBranchCheck:     true,
-		IgnoreUnsubmitted: true,
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branch: "feat1",
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+		},
 	})
 	require.NoError(t, err)
-	require.Len(t, plan.items, 1)
-	assert.Equal(t, "feat1", plan.items[0].branch)
+	assert.Contains(t, logBuffer.String(),
+		"feat2: no published change request, skipping")
 }
 
-func TestBuildPlanFromBranches_allSelectedBranchesUnsubmitted(t *testing.T) {
+func TestMergeStack_ignoresUnsubmittedBelowSubmitted(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	var logBuffer bytes.Buffer
 
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+	pr2 := fakeChangeID("pr-2")
 	graph := testBranchGraph(t, []spice.LoadBranchItem{
-		testUnsubmittedBranch("feat1", "main"),
-		testUnsubmittedBranch("feat2", "feat1"),
+		{
+			Name:           "feat1",
+			Base:           "main",
+			UpstreamBranch: "feat1",
+		},
+		testBranch("feat2", "feat1", pr2),
 	})
 
-	h := newTestHandler(t, ctrl, testHandlerOpts{})
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil)
+	expectPushedHead(mockForge, pr2, "head2")
+	expectMergeItem(mockForge, pr2)
 
-	plan, err := h.buildPlanFromBranches(t.Context(), mergePlanRequest{
-		Graph:             graph,
-		Branches:          []string{"feat1", "feat2"},
-		NoBranchCheck:     true,
-		IgnoreUnsubmitted: true,
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().
+		CommitAheadBehind(gomock.Any(), "origin/feat2", "feat2").
+		Return(0, 0, nil)
+	mockGit.EXPECT().
+		PeelToCommit(gomock.Any(), "feat2").
+		Return(git.Hash("head2"), nil).
+		Times(2)
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+	mockService.EXPECT().
+		VerifyRestacked(gomock.Any(), "feat2").
+		Return(nil)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		service:   mockService,
+		gitRepo:   mockGit,
+		sync:      mockSync,
+		logBuffer: &logBuffer,
+	})
+
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branch: "feat2",
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+		},
 	})
 	require.NoError(t, err)
-	assert.Empty(t, plan.items)
+	assert.Contains(t, logBuffer.String(),
+		"feat1: no published change request, skipping")
+}
+
+func TestMergeStack_allSelectedBranchesUnsubmitted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	var logBuffer bytes.Buffer
+
+	graph := testBranchGraph(t, []spice.LoadBranchItem{
+		{
+			Name:           "feat1",
+			Base:           "main",
+			UpstreamBranch: "feat1",
+		},
+		{
+			Name:           "feat2",
+			Base:           "feat1",
+			UpstreamBranch: "feat2",
+		},
+	})
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), gomock.Nil()).
+		Return(graph, nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		service:   mockService,
+		logBuffer: &logBuffer,
+	})
+
+	err := h.MergeStack(t.Context(), &StackMergeRequest{
+		Branch: "feat2",
+		Options: &StackMergeOptions{
+			NoBranchCheck: true,
+		},
+	})
+	require.NoError(t, err)
+	assert.Contains(t, logBuffer.String(),
+		"feat1: no published change request, skipping")
+	assert.Contains(t, logBuffer.String(),
+		"feat2: no published change request, skipping")
+	assert.Contains(t, logBuffer.String(), "No open changes to merge.")
 }
 
 func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
@@ -1379,17 +1442,6 @@ func testBranch(
 		Name:           name,
 		Base:           base,
 		Change:         testChangeMetadata(changeID),
-		UpstreamBranch: name,
-	}
-}
-
-func testUnsubmittedBranch(
-	name string,
-	base string,
-) spice.LoadBranchItem {
-	return spice.LoadBranchItem{
-		Name:           name,
-		Base:           base,
 		UpstreamBranch: name,
 	}
 }
