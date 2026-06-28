@@ -65,8 +65,8 @@ type Options struct {
 	// Empty means use the configured or forge default.
 	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
 
-	// MergeReadinessTimeout is the maximum time for each forge-readiness wait,
-	// including pushed-head visibility and merge readiness.
+	// MergeReadinessTimeout is the maximum time to wait for the forge
+	// to report that a change is ready to merge.
 	// Zero means check once and fail if merge readiness is not reached.
 	MergeReadinessTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
 }
@@ -124,14 +124,15 @@ type StackMergeRequest struct {
 
 // Handler merges change requests via the forge API.
 type Handler struct {
-	Log              *silog.Logger    // required
-	View             ui.View          // required
-	Store            Store            // required
-	Service          Service          // required
-	RemoteRepository forge.Repository // required
-	Restack          RestackHandler   // required
-	Submit           SubmitHandler    // required
-	Sync             SyncHandler      // required
+	Log                *silog.Logger      // required
+	View               ui.View            // required
+	Store              Store              // required
+	Service            Service            // required
+	RemoteRepository   forge.Repository   // required
+	RemoteRepositoryID forge.RepositoryID // required
+	Restack            RestackHandler     // required
+	Submit             SubmitHandler      // required
+	Sync               SyncHandler        // required
 
 	// Cleanup dependencies:
 	Repository GitRepository // required
@@ -264,6 +265,9 @@ type mergeItem struct {
 
 	// headHash is passed to MergeChange for server-side assertion.
 	headHash git.Hash
+
+	// mergeURL is the forge URL displayed when requesting the merge.
+	mergeURL string
 }
 
 // buildPlan snapshots repository state into the local merge queue.
@@ -332,6 +336,7 @@ func (h *Handler) buildPlanFromBranches(
 			base:           branch.Base,
 			changeID:       branch.Change.ChangeID(),
 			upstreamBranch: branch.UpstreamBranch,
+			mergeURL:       h.RemoteRepositoryID.ChangeURL(branch.Change.ChangeID()),
 		}
 		items = append(items, item)
 		ids = append(ids, item.changeID)
@@ -519,7 +524,10 @@ func (h *Handler) executePlan(
 		widgetProgress := newWidgetMergeProgress(
 			runner, h.View.Theme(),
 		)
-		progress = widgetProgress
+		progress = mergeProgressGroup{
+			widgetProgress,
+			newLogMergeProgress(h.Log),
+		}
 		ctx = widgetProgress.Start(ctx, plan)
 		defer func() {
 			err = errors.Join(err, widgetProgress.Finish())
@@ -630,22 +638,26 @@ func (e *mergePlanExecutor) prepareForMerge(
 func (e *mergePlanExecutor) awaitChangeHead(
 	ctx context.Context,
 	item *mergeItem,
-	change *forge.FindChangeItem,
 ) error {
 	const (
 		_baseDelay = 10 * time.Second
 		_maxDelay  = 30 * time.Second
+
+		// Head visibility is a forge catch-up wait,
+		// not a merge readiness policy wait.
+		// Keep this bounded separately from --ready-timeout
+		// so repository rules and CI get the configured readiness budget.
+		_timeout = time.Minute
 	)
 
 	return e.awaitChangeHeadWithDelay(
-		ctx, item, change, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
+		ctx, item, _timeout, _baseDelay, _maxDelay,
 	)
 }
 
 func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 	ctx context.Context,
 	item *mergeItem,
-	change *forge.FindChangeItem,
 	timeout, baseDelay, maxDelay time.Duration,
 ) error {
 	if item.headHash == "" {
@@ -656,10 +668,6 @@ func (e *mergePlanExecutor) awaitChangeHeadWithDelay(
 			(item.headHash == got ||
 				strings.HasPrefix(item.headHash.String(), got.String()) ||
 				strings.HasPrefix(got.String(), item.headHash.String()))
-	}
-
-	if hashMatches(change.HeadHash) {
-		return nil
 	}
 
 	delay := baseDelay
@@ -767,29 +775,6 @@ func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 	}
 }
 
-// ensureTargetsTrunk verifies a change targets trunk
-// on the forge, retargeting if needed.
-func (e *mergePlanExecutor) ensureTargetsTrunk(
-	ctx context.Context,
-	item *mergeItem,
-) (*forge.FindChangeItem, error) {
-	change, err := e.RemoteRepository.FindChangeByID(
-		ctx, item.changeID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("check base: %w", err)
-	}
-
-	if change.BaseName == e.Trunk {
-		return change, nil
-	}
-
-	if err := e.retargetChange(ctx, item); err != nil {
-		return nil, err
-	}
-	return change, nil
-}
-
 // awaitMerged polls until the given change shows as merged.
 // Uses exponential backoff starting at 500ms, capped at 8s.
 func (e *mergePlanExecutor) awaitMerged(
@@ -831,25 +816,6 @@ func (e *mergePlanExecutor) awaitMerged(
 
 		delay = min(delay*2, _maxDelay)
 	}
-}
-
-// retargetChange updates a change's base to trunk.
-func (e *mergePlanExecutor) retargetChange(
-	ctx context.Context, item *mergeItem,
-) error {
-	e.Progress.Event(mergeProgressEvent{
-		Kind: mergeProgressRetargeting,
-		Item: item,
-		Base: e.Trunk,
-	})
-	err := e.RemoteRepository.EditChange(
-		ctx, item.changeID,
-		forge.EditChangeOptions{Base: e.Trunk},
-	)
-	if err != nil {
-		return fmt.Errorf("retarget to %q: %w", e.Trunk, err)
-	}
-	return nil
 }
 
 func sleep(ctx context.Context, d time.Duration) error {

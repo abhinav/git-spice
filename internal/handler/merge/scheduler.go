@@ -10,8 +10,6 @@ import (
 	"go.abhg.dev/gs/internal/mergequeue"
 )
 
-var _ mergequeue.Executor[*mergeItem] = (*mergePlanExecutor)(nil)
-
 // mergePlanExecutor runs the merge loop after preflight checks complete.
 //
 // It intentionally has no logger.
@@ -47,17 +45,42 @@ func (e *mergePlanExecutor) Execute(
 	ctx context.Context,
 	plan []*mergeItem,
 ) error {
-	items := make([]mergequeue.Item[*mergeItem], 0, len(plan))
+	inQueue := make(map[string]struct{}, len(plan))
 	for _, item := range plan {
-		items = append(items, mergequeue.Item[*mergeItem]{
-			ID:     item.branch,
-			BaseID: item.base,
-			Value:  item,
+		inQueue[item.branch] = struct{}{}
+	}
+
+	items := make([]mergequeue.Item, 0, len(plan))
+	for _, item := range plan {
+		var parent string
+		if _, ok := inQueue[item.base]; item.base != e.Trunk && ok {
+			parent = item.base
+		}
+		items = append(items, &mergeQueueItem{
+			mergeItem: item,
+			executor:  e,
+			parent:    parent,
 		})
 	}
 
-	scheduler, err := mergequeue.New(items, &mergequeue.Options[*mergeItem]{
+	var barrier func(context.Context) error
+	if !e.NoWait {
+		barrier = func(ctx context.Context) error {
+			// SyncTrunk updates trunk,
+			// deletes merged branches,
+			// and retargets their upstacks.
+			if err := e.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
+				ClosedChanges: sync.ClosedChangesIgnore,
+			}); err != nil {
+				return fmt.Errorf("sync trunk: %w", err)
+			}
+			return nil
+		}
+	}
+
+	scheduler, err := mergequeue.New(items, &mergequeue.Options{
 		FailFast: e.FailFast,
+		Barrier:  barrier,
 		Observer: &mergeQueueObserver{
 			progress: e.Progress,
 		},
@@ -65,18 +88,46 @@ func (e *mergePlanExecutor) Execute(
 	if err != nil {
 		return fmt.Errorf("build merge queue: %w", err)
 	}
-	return scheduler.Run(ctx, e)
+	return scheduler.Run(ctx)
 }
 
-// Merge implements mergequeue.Executor.
-func (e *mergePlanExecutor) Merge(ctx context.Context, item *mergeItem) error {
+var _ mergequeue.Item = (*mergeQueueItem)(nil)
+
+type mergeQueueItem struct {
+	*mergeItem
+
+	executor *mergePlanExecutor
+
+	// parent is the queue-local branch dependency.
+	// Empty means the dependency is already satisfied outside this queue.
+	parent string
+}
+
+func (i *mergeQueueItem) ID() string {
+	return i.branch
+}
+
+func (i *mergeQueueItem) Parent() string {
+	return i.parent
+}
+
+func (i *mergeQueueItem) Prepare(ctx context.Context) error {
+	return i.executor.prepareItem(ctx, i.mergeItem)
+}
+
+func (i *mergeQueueItem) Run(ctx context.Context) error {
+	return i.executor.mergeItem(ctx, i.mergeItem)
+}
+
+func (e *mergePlanExecutor) prepareItem(
+	ctx context.Context,
+	item *mergeItem,
+) error {
 	if item.base != e.Trunk {
-		// Non-trunk items were based on another item in this queue
-		// when the plan was built.
-		// After that base merges,
-		// the item must be restacked,
-		// submitted,
-		// and resolved to its new head before the forge merge request.
+		// Non-trunk items must be restacked and submitted
+		// before the forge merge request.
+		// Queue parentage determines when this happens;
+		// the original local base only tells us whether preparation is needed.
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressPreparing,
 			Item: item,
@@ -89,34 +140,25 @@ func (e *mergePlanExecutor) Merge(ctx context.Context, item *mergeItem) error {
 			return fmt.Errorf("prepare: %w", err)
 		}
 	}
-	return e.mergeOne(ctx, item)
+	return nil
 }
 
-func (e *mergePlanExecutor) mergeOne(
+func (e *mergePlanExecutor) mergeItem(
 	ctx context.Context,
 	item *mergeItem,
 ) error {
-	// The forge will only merge a change that targets trunk.
-	// Re-check immediately before each merge because prior queue items
-	// and repo sync may have changed the server-side base.
-	change, err := e.ensureTargetsTrunk(ctx, item)
-	if err != nil {
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressRetargetFailed,
-			Item: item,
-		})
-		return fmt.Errorf("ensure targets trunk: %w", err)
-	}
-
-	// Merge readiness is checked after retargeting and restacking
-	// so each merge waits on the exact change being merged.
-	if err := e.awaitChangeHead(ctx, item, change); err != nil {
+	// The forge may lag a branch update sent before the merge loop
+	// or during item preparation.
+	// Merge readiness is meaningful only after the forge reports
+	// the head this run will pass to the merge request.
+	if err := e.awaitChangeHead(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressForgeHeadFailed,
 			Item: item,
 		})
 		return fmt.Errorf("wait for pushed head: %w", err)
 	}
+
 	if err := e.awaitMergeability(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressMergeabilityFailed,
@@ -128,7 +170,7 @@ func (e *mergePlanExecutor) mergeOne(
 	e.Progress.Event(mergeProgressEvent{
 		Kind: mergeProgressMerging,
 		Item: item,
-		URL:  change.URL,
+		URL:  item.mergeURL,
 	})
 	if err := e.RemoteRepository.MergeChange(
 		ctx, item.changeID,
@@ -168,19 +210,6 @@ func (e *mergePlanExecutor) mergeOne(
 		Kind: mergeProgressMerged,
 		Item: item,
 	})
-
-	// SyncTrunk updates trunk,
-	// deletes merged branches,
-	// and retargets their upstacks.
-	if err := e.Sync.SyncTrunk(ctx, &sync.TrunkOptions{
-		ClosedChanges: sync.ClosedChangesIgnore,
-	}); err != nil {
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressSyncFailed,
-			Item: item,
-		})
-		return fmt.Errorf("sync trunk: %w", err)
-	}
 	return nil
 }
 
@@ -190,7 +219,12 @@ type mergeQueueObserver struct {
 	progress mergeProgress
 }
 
-func (o *mergeQueueObserver) Failed(item *mergeItem, _ error) {
+func (o *mergeQueueObserver) Prepared(mergequeue.Item) {}
+
+func (o *mergeQueueObserver) Done(mergequeue.Item) {}
+
+func (o *mergeQueueObserver) Failed(queueItem mergequeue.Item, _ error) {
+	item := queueItem.(*mergeQueueItem).mergeItem
 	o.progress.Event(mergeProgressEvent{
 		Kind: mergeProgressFailed,
 		Item: item,
@@ -198,9 +232,10 @@ func (o *mergeQueueObserver) Failed(item *mergeItem, _ error) {
 }
 
 func (o *mergeQueueObserver) Skipped(
-	item *mergeItem,
+	queueItem mergequeue.Item,
 	_ mergequeue.SkipReason,
 ) {
+	item := queueItem.(*mergeQueueItem).mergeItem
 	o.progress.Event(mergeProgressEvent{
 		Kind: mergeProgressSkipped,
 		Item: item,
