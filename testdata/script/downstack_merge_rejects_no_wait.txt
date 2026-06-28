@@ -1,0 +1,7 @@
+# 'downstack merge' rejects the removed --no-wait flag.
+
+as 'Test <test@example.com>'
+at '2026-06-28T12:00:00Z'
+
+! gs downstack merge --no-wait --help
+stderr 'unknown flag --no-wait'

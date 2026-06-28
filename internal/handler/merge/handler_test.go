@@ -442,43 +442,6 @@ func TestExecutePlan_waitsForPreparedChangeHeadBeforeChecks(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestExecutePlan_noWait(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	var logBuffer bytes.Buffer
-
-	mockForge := forgetest.NewMockRepository(ctrl)
-	mockStore := NewMockStore(ctrl)
-	mockStore.EXPECT().Trunk().Return("main")
-
-	pr1 := fakeChangeID("pr-1")
-
-	// Pre-check: pr-1 already targets main.
-	expectMergeabilityAndMerge(mockForge, pr1)
-	// No ChangesStates polling (awaitMerged skipped).
-
-	mockSync := NewMockSyncHandler(ctrl)
-	h := newTestHandler(t, ctrl, testHandlerOpts{
-		forgeRepo: mockForge,
-		store:     mockStore,
-		sync:      mockSync,
-		logBuffer: &logBuffer,
-	})
-
-	plan := testMergePlan([]*mergeItem{
-		{branch: "feat1", changeID: pr1},
-	})
-
-	err := h.executePlan(t.Context(), plan, mergeExecutionOptions{
-		NoWait: true,
-	})
-	require.NoError(t, err)
-
-	output := logBuffer.String()
-	assert.Contains(t, output, "feat1: merging pr-1: http://example.com/1")
-	assert.Contains(t, output, "All 1 change(s) merged")
-	assert.NotContains(t, output, "Cleaning up")
-}
-
 func TestExecutePlan_singleBranch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -818,10 +781,17 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 			HeadHash: git.Hash("head1"),
 		}).
 		Return(nil)
+	expectMerged(mockForge, pr1)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil)
 
 	h := newTestHandler(t, ctrl, testHandlerOpts{
 		forgeRepo: mockForge,
 		store:     mockStore,
+		sync:      mockSync,
 	})
 
 	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
@@ -832,7 +802,6 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 		},
 	}), mergeExecutionOptions{
 		Method: forge.MergeMethodSquash,
-		NoWait: true,
 	})
 	require.NoError(t, err)
 }
@@ -1394,8 +1363,8 @@ func assertSubmitUpdate(
 	}
 }
 
-// expectMergeabilityAndMerge sets up mock expectations for
-// ready to merge + merge (without awaitMerged polling).
+// expectMergeabilityAndMerge sets up mock expectations
+// through the forge merge request.
 func expectMergeabilityAndMerge(
 	mockForge *forgetest.MockRepository,
 	id fakeChangeID,

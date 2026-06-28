@@ -32,15 +32,11 @@ Between merges, the command waits for each merge to complete, restacks and
 updates the next PR, waits for merge readiness on the updated PR, and syncs
 merged branch cleanup.
 
-Use --no-wait for single branch merging when you don't want to wait for the
-merge to propagate. --no-wait is rejected for multi-branch merges.
-
 Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
   --ready-timeout=30m    Max time to wait for merge readiness before each merge.
                          0 means check once. (🔧 spice.merge.readyTimeout)
-  --no-wait              Skip polling for a single branch merge to propagate.
   --no-branch-check      Skip stale base validation before merging.
   --branch=NAME          Branch to start merging from
 
