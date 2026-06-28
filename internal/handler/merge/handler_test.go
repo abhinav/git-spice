@@ -912,7 +912,7 @@ func TestMergeStack_ignoresUnsubmittedAboveSubmitted(t *testing.T) {
 	})
 
 	err := h.MergeStack(t.Context(), &StackMergeRequest{
-		Branch: "feat1",
+		Branches: []string{"feat1"},
 		Options: &StackMergeOptions{
 			NoBranchCheck: true,
 		},
@@ -978,7 +978,7 @@ func TestMergeStack_ignoresUnsubmittedBelowSubmitted(t *testing.T) {
 	})
 
 	err := h.MergeStack(t.Context(), &StackMergeRequest{
-		Branch: "feat2",
+		Branches: []string{"feat2"},
 		Options: &StackMergeOptions{
 			NoBranchCheck: true,
 		},
@@ -1016,7 +1016,7 @@ func TestMergeStack_allSelectedBranchesUnsubmitted(t *testing.T) {
 	})
 
 	err := h.MergeStack(t.Context(), &StackMergeRequest{
-		Branch: "feat2",
+		Branches: []string{"feat2"},
 		Options: &StackMergeOptions{
 			NoBranchCheck: true,
 		},
