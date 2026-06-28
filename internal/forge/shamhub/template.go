@@ -3,10 +3,12 @@ package shamhub
 import (
 	"context"
 	"fmt"
+	"path"
 	"slices"
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/scanutil"
 	"go.abhg.dev/gs/internal/xec"
 )
 
@@ -37,56 +39,101 @@ type changeTemplate struct {
 	Body     string `json:"body,omitempty"`
 }
 
-func (sh *ShamHub) handleChangeTemplate(_ context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
+func (sh *ShamHub) handleChangeTemplate(ctx context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
 	owner, repo := req.Owner, req.Repo
 
-	templatePaths := make(map[string]struct{})
+	templatePathSet := make(map[string]struct{}, len(_changeTemplatePaths)*3)
 	for _, p := range _changeTemplatePaths {
-		templatePaths[p] = struct{}{}
-		templatePaths[strings.ToLower(p)] = struct{}{}
-		templatePaths[strings.ToUpper(p)] = struct{}{}
+		templatePathSet[strings.ToLower(p)] = struct{}{}
 	}
 
 	var res changeTemplateResponse
-	for path := range templatePaths {
-		// Try to read as a file (blob objects only).
-		if out, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "blob", "HEAD:"+path).
-			WithDir(sh.repoDir(owner, repo)).
-			Output(); err == nil {
-			res = append(res, &changeTemplate{
-				Filename: path,
-				Body:     strings.TrimSpace(string(out)) + "\n",
-			})
-			continue
+	var matches []matchingTemplatePath
+	treeCmd := xec.Command(ctx, nil, sh.gitExe,
+		"ls-tree", "-r", "-z", "--name-only", "HEAD").
+		WithDir(sh.repoDir(owner, repo))
+	for treePath, err := range treeCmd.Scan(scanutil.SplitNull) {
+		if err != nil {
+			return nil, nil
 		}
 
-		// Try to read as a directory.
-		lsOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "ls-tree", "--name-only", "HEAD:"+path).
+		templatePath, ok := matchTemplatePath(string(treePath), templatePathSet)
+		if !ok {
+			continue
+		}
+		matches = append(matches, templatePath)
+	}
+
+	slices.SortFunc(matches, func(a, b matchingTemplatePath) int {
+		return strings.Compare(a.filePath, b.filePath)
+	})
+
+	for _, templatePath := range matches {
+		out, err := xec.Command(ctx, sh.log, sh.gitExe,
+			"cat-file", "blob", "HEAD:"+templatePath.filePath).
 			WithDir(sh.repoDir(owner, repo)).
 			Output()
 		if err != nil {
 			continue
 		}
 
-		// List all .md files in the directory.
-		for file := range strings.SplitSeq(strings.TrimSpace(string(lsOut)), "\n") {
-			if file == "" || !strings.HasSuffix(file, ".md") {
-				continue
-			}
-
-			filePath := path + "/" + file
-			if fileOut, err := xec.Command(context.Background(), sh.log, sh.gitExe, "cat-file", "-p", "HEAD:"+filePath).
-				WithDir(sh.repoDir(owner, repo)).
-				Output(); err == nil {
-				res = append(res, &changeTemplate{
-					Filename: file,
-					Body:     strings.TrimSpace(string(fileOut)) + "\n",
-				})
-			}
-		}
+		res = append(res, &changeTemplate{
+			Filename: templatePath.filename,
+			Body:     strings.TrimSpace(string(out)) + "\n",
+		})
 	}
 
 	return res, nil
+}
+
+// matchingTemplatePath identifies an existing repository file
+// that should be returned as a change template.
+type matchingTemplatePath struct {
+	// filePath is the full repository path to read.
+	filePath string
+
+	// filename is the template name returned by the ShamHub API.
+	// For templates inside a template directory,
+	// the API returns only the base name.
+	filename string
+}
+
+func matchTemplatePath(
+	treePath string,
+	templatePathSet map[string]struct{},
+) (matchingTemplatePath, bool) {
+	if treePath == "" {
+		return matchingTemplatePath{}, false
+	}
+
+	lowerTreePath := strings.ToLower(treePath)
+
+	// ShamHub template paths are case-insensitive,
+	// but Git still needs the original path casing when reading the blob.
+	if _, ok := templatePathSet[lowerTreePath]; ok {
+		return matchingTemplatePath{
+			filePath: treePath,
+			filename: treePath,
+		}, true
+	}
+
+	for templatePath := range templatePathSet {
+		prefix := templatePath + "/"
+		file, ok := strings.CutPrefix(lowerTreePath, prefix)
+
+		// Directory templates include only immediate Markdown children.
+		// Nested files and non-Markdown files are not change templates.
+		if !ok || strings.Contains(file, "/") || !strings.HasSuffix(file, ".md") {
+			continue
+		}
+
+		return matchingTemplatePath{
+			filePath: treePath,
+			filename: path.Base(treePath),
+		}, true
+	}
+
+	return matchingTemplatePath{}, false
 }
 
 func (r *forgeRepository) ListChangeTemplates(ctx context.Context) ([]*forge.ChangeTemplate, error) {
