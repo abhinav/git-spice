@@ -164,7 +164,7 @@ func (h *Handler) MergeDownstack(
 	})
 }
 
-// MergeBranch merges one branch that is configured directly on trunk.
+// MergeBranch merges the selected branches without expanding their scopes.
 func (h *Handler) MergeBranch(
 	ctx context.Context, req *BranchMergeRequest,
 ) error {
@@ -174,6 +174,9 @@ func (h *Handler) MergeBranch(
 		return fmt.Errorf("build branch graph: %w", err)
 	}
 
+	// Branch merge treats --branch as an exact branch selection:
+	// unselected bases validate the path to trunk
+	// but do not become merge queue items.
 	for _, name := range req.Branches {
 		seen := map[string]struct{}{name: {}}
 		for current := name; current != graph.Trunk(); {
@@ -365,6 +368,9 @@ func (h *Handler) buildPlan(
 // mergePlanRequest selects the local branches that become merge queue items.
 //
 // Branches provides the prompt order.
+// Scope expansion may append the same branch more than once;
+// buildPlanFromBranches normalizes duplicates before querying
+// forge state or constructing merge queue items.
 // The merge queue still enforces base dependencies before execution.
 type mergePlanRequest struct {
 	Graph *spice.BranchGraph // required

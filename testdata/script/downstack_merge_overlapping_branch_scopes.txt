@@ -1,0 +1,74 @@
+# 'downstack merge --branch' normalizes overlapping branch scopes.
+
+as 'Test <test@example.com>'
+at '2026-06-28T10:15:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack:
+# main -> feature1 -> feature2 -> feature3
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+git add feature3.txt
+gs bc feature3 -m 'Add feature 3'
+
+# submit the full stack
+gs downstack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+stderr 'Created #3'
+
+# Request two overlapping downstack scopes.
+# feature2 selects feature1 and feature2.
+# feature3 selects feature1, feature2, and feature3.
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs downstack merge --branch feature2 --branch feature3
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
+stderr 'feature2: restacked on main'
+stderr 'Updated #2'
+stderr 'feature2: merging #2:'
+stderr 'feature2: #2 was merged'
+stderr 'feature2: deleted'
+stderr 'feature3: restacked on main'
+stderr 'Updated #3'
+stderr 'feature3: merging #3:'
+stderr 'feature3: #3 was merged'
+stderr 'feature3: deleted'
+stderr 'All 3 change.s. merged.'
+
+# verify all selected changes were merged
+shamhub dump changes
+stdout '"merged": true'
+! stdout '"state": "open"'
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- repo/feature3.txt --
+This is feature 3
+-- robot-merge.golden --
+===
+> Merge 3 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+>   feature3 (#3)
+true
