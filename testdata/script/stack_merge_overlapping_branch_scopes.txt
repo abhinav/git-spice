@@ -56,8 +56,7 @@ stderr 'All 3 change.s. merged.'
 
 # verify all selected changes were merged
 shamhub dump changes
-stdout '"merged": true'
-! stdout '"state": "open"'
+cmpenvJSON stdout $WORK/golden/changes-merged.json
 
 -- repo/feature1.txt --
 This is feature 1
@@ -72,3 +71,78 @@ This is feature 3
 >   feature2 (#2)
 >   feature3 (#3)
 true
+-- golden/changes-merged.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "68e655956144a5f78c4dc1bcddcda4abb2992d73"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "d4721f77eb03f834aafad0df2fcfca7f9d22dc41"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "68e655956144a5f78c4dc1bcddcda4abb2992d73"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "3d57a0c953e925ab1c80201f366680ea9a2a28b1"
+    }
+  },
+  {
+    "number": 3,
+    "html_url": "$SHAMHUB_URL/alice/example/change/3",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 3",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "68e655956144a5f78c4dc1bcddcda4abb2992d73"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature3",
+      "sha": "19c2e2fa285b9c4b88aa34e544bdd8f05ac5af70"
+    }
+  }
+]

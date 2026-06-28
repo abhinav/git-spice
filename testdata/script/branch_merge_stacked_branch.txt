@@ -45,12 +45,11 @@ stderr 'All 2 change.s. merged.'
 
 # verify both changes are merged
 shamhub dump changes
-stdout '"merged": true'
-! stdout '"state": "open"'
+cmpenvJSON stdout $WORK/golden/changes-merged.json
 
 # verify that the later PR was retargeted to main
 shamhub dump change 2
-stdout '"ref": "main"'
+cmpenvJSON stdout $WORK/golden/change-2.json
 
 -- repo/feature1.txt --
 This is feature 1
@@ -62,3 +61,79 @@ This is feature 2
 >   feature1 (#1)
 >   feature2 (#2)
 true
+-- golden/changes-merged.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "62c3c4e12506afae52cd50383886ea7a815700c3"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
+    }
+  }
+]
+-- golden/change-2.json --
+{
+  "number": 2,
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "state": "closed",
+  "merged": true,
+  "title": "Add feature 2",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
+  }
+}
