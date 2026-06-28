@@ -18,6 +18,6 @@ func TestForge_ParseRepositoryPath_knownForge(t *testing.T) {
 
 	assert.Equal(t, "example/repo", rid.String())
 	assert.Equal(t,
-		"https://shamhub.example/example/repo/changes/123",
+		"https://shamhub.example/example/repo/change/123",
 		rid.ChangeURL(ChangeID(123)))
 }
