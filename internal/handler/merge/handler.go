@@ -183,31 +183,19 @@ func (h *Handler) MergeBranch(
 	// Every selected branch must have its non-trunk bases selected too,
 	// so the selected set itself forms the path to trunk.
 	for _, name := range req.Branches {
-		seen := map[string]struct{}{name: {}}
 		for current := name; current != graph.Trunk(); {
 			branch, ok := graph.Lookup(current)
 			if !ok {
 				return fmt.Errorf("branch %q is not tracked", current)
 			}
 
-			current = branch.Base
-			if _, ok := seen[current]; ok {
-				return fmt.Errorf(
-					"branch %q has a cycle through %q",
-					name, current,
-				)
-			}
-			seen[current] = struct{}{}
-
-			if current == graph.Trunk() {
-				break
-			}
 			if _, ok := selected[current]; !ok {
 				return fmt.Errorf(
 					"branch %q requires selected base %q",
 					name, current,
 				)
 			}
+			current = branch.Base
 		}
 	}
 
