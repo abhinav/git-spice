@@ -1252,6 +1252,121 @@ func TestExecutePlan_mergeMethod(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestExecutePlan_mergeCommandRequestsThenAwaitsMerge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	var logBuffer bytes.Buffer
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForgeForge := forgetest.NewMockForge(ctrl)
+	mockForgeForge.EXPECT().
+		ID().
+		Return("shamhub").
+		AnyTimes()
+	mockForge.EXPECT().
+		Forge().
+		Return(mockForgeForge).
+		AnyTimes()
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().
+		Trunk().
+		Return("main").
+		AnyTimes()
+
+	pr1 := fakeChangeID("pr-1")
+	expectPushedHead(mockForge, pr1, "head1")
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr1).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
+	mockForge.EXPECT().
+		MergeCommandEnvironment(gomock.Any(), pr1).
+		Return(map[string]string{
+			"GIT_SPICE_SHAMHUB_CHANGE_NUMBER": "1",
+			"GIT_SPICE_BRANCH":                "wrong",
+		}, nil)
+	expectMerged(mockForge, pr1)
+
+	mockSync := NewMockSyncHandler(ctrl)
+	mockSync.EXPECT().
+		SyncTrunk(gomock.Any(), syncTrunkOptions()).
+		Return(nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+		sync:      mockSync,
+		logBuffer: &logBuffer,
+	})
+
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
+		{
+			branch:   "feat1",
+			changeID: pr1,
+			headHash: git.Hash("head1"),
+		},
+	}), mergeExecutionOptions{
+		Command: strings.Join([]string{
+			"test \"$GIT_SPICE_FORGE_ID\" = shamhub",
+			"test \"$GIT_SPICE_BRANCH\" = feat1",
+			"test \"$GIT_SPICE_BASE_BRANCH\" = main",
+			"test \"$GIT_SPICE_TRUNK_BRANCH\" = main",
+			"test \"$GIT_SPICE_CHANGE_URL\" = http://example.com/1",
+			"test \"$GIT_SPICE_HEAD_SHA\" = head1",
+			"test \"$GIT_SPICE_SHAMHUB_CHANGE_NUMBER\" = 1",
+			"test -z \"$GIT_SPICE_CHANGE_ID\"",
+			"echo command stdout",
+			"echo command stderr >&2",
+		}, "\n"),
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, logBuffer.String(), "INF merge: command stdout")
+	assert.Contains(t, logBuffer.String(), "INF merge: command stderr")
+}
+
+func TestExecutePlan_mergeCommandFailureFailsItem(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForgeForge := forgetest.NewMockForge(ctrl)
+	mockForgeForge.EXPECT().
+		ID().
+		Return("shamhub").
+		AnyTimes()
+	mockForge.EXPECT().
+		Forge().
+		Return(mockForgeForge).
+		AnyTimes()
+	mockStore := NewMockStore(ctrl)
+	mockStore.EXPECT().
+		Trunk().
+		Return("main").
+		AnyTimes()
+
+	pr1 := fakeChangeID("pr-1")
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr1).
+		Return(mergeability(forge.ChangeMergeabilityReady), nil)
+	mockForge.EXPECT().
+		MergeCommandEnvironment(gomock.Any(), pr1).
+		Return(nil, nil)
+
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: mockForge,
+		store:     mockStore,
+	})
+
+	err := h.executePlan(t.Context(), testMergePlan([]*mergeItem{
+		{
+			branch:   "feat1",
+			changeID: pr1,
+		},
+	}), mergeExecutionOptions{
+		Command: "exit 42",
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "command exited with status 42")
+}
+
 func TestExecutePlan_firstItemAlreadyOnTrunk(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var logBuffer bytes.Buffer
@@ -1606,6 +1721,10 @@ func newTestMergePlanExecutor(
 		Sync:    h.Sync,
 
 		Progress: progress,
+		Requester: &directMergeRequester{
+			repo:   h.RemoteRepository,
+			method: forge.MergeMethodDefault,
+		},
 
 		Trunk:                 "main",
 		MergeReadinessTimeout: 30 * time.Minute,

@@ -15,6 +15,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/ui"
@@ -66,6 +67,10 @@ type Options struct {
 	// Method selects the forge merge strategy.
 	// Empty means use the configured or forge default.
 	Method forge.MergeMethod `placeholder:"METHOD" config:"merge.method" help:"Preferred merge method. One of 'merge', 'squash', and 'rebase'."`
+
+	// Command requests merges through a user-defined command.
+	// Empty means use the forge merge API.
+	Command string `hidden:"" config:"merge.command" help:"Command to request merge instead of using the forge merge API."`
 
 	// MergeReadinessTimeout is the maximum time to wait for the forge
 	// to report that a change is ready to merge.
@@ -165,6 +170,7 @@ func (h *Handler) MergeDownstack(
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
+		Command:               opts.Command,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
 		MergeTimeout:          opts.MergeTimeout,
 		SyncBeforeStart:       plan.syncBeforeStart,
@@ -228,6 +234,7 @@ func (h *Handler) MergeBranch(
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
+		Command:               opts.Command,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
 		MergeTimeout:          opts.MergeTimeout,
 		SyncBeforeStart:       plan.syncBeforeStart,
@@ -291,6 +298,7 @@ func (h *Handler) MergeStack(
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
+		Command:               opts.Command,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
 		MergeTimeout:          opts.MergeTimeout,
 		FailFast:              opts.FailFast,
@@ -602,6 +610,7 @@ func (h *Handler) confirm(plan []*mergeItem, title string) error {
 
 type mergeExecutionOptions struct {
 	Method                forge.MergeMethod
+	Command               string
 	MergeReadinessTimeout time.Duration
 	MergeTimeout          time.Duration
 	FailFast              bool
@@ -645,6 +654,20 @@ func (h *Handler) executePlan(
 		progress = newLogMergeProgress(h.Log)
 	}
 
+	requester := mergeRequester(&directMergeRequester{
+		repo:   h.RemoteRepository,
+		method: opts.Method,
+	})
+	if opts.Command != "" {
+		requester = &commandMergeRequester{
+			log:     h.Log,
+			repo:    h.RemoteRepository,
+			forgeID: h.RemoteRepository.Forge().ID(),
+			trunk:   h.Store.Trunk(),
+			command: opts.Command,
+		}
+	}
+
 	err = (&mergePlanExecutor{
 		RemoteRepository: h.RemoteRepository,
 		Repository:       h.Repository,
@@ -654,7 +677,8 @@ func (h *Handler) executePlan(
 		Submit:  h.Submit,
 		Sync:    h.Sync,
 
-		Progress: progress,
+		Progress:  progress,
+		Requester: requester,
 
 		Trunk:                 h.Store.Trunk(),
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
@@ -668,6 +692,105 @@ func (h *Handler) executePlan(
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
 	return nil
+}
+
+// mergeRequester requests the forge-side merge after readiness checks pass.
+//
+// A successful request does not mean the change has merged.
+// The merge executor must still wait for the forge to report the merged state.
+type mergeRequester interface {
+	RequestMerge(context.Context, *mergeItem) error
+}
+
+// directMergeRequester requests merges through the forge API.
+type directMergeRequester struct {
+	repo   forge.Repository // required
+	method forge.MergeMethod
+}
+
+func (r *directMergeRequester) RequestMerge(
+	ctx context.Context,
+	item *mergeItem,
+) error {
+	return r.repo.MergeChange(ctx, item.changeID, forge.MergeChangeOptions{
+		Method:   r.method,
+		HeadHash: item.headHash,
+	})
+}
+
+// commandMergeRequester requests merges through a user-configured command.
+//
+// The command is only the merge request step.
+// The caller remains responsible for waiting until the forge reports the
+// change as merged.
+type commandMergeRequester struct {
+	log     *silog.Logger    // required
+	repo    forge.Repository // required
+	forgeID string           // required
+	trunk   string           // required
+	command string           // required
+}
+
+func (r *commandMergeRequester) RequestMerge(
+	ctx context.Context,
+	item *mergeItem,
+) error {
+	env, err := r.mergeCommandEnvironment(ctx, item)
+	if err != nil {
+		return fmt.Errorf("build environment: %w", err)
+	}
+
+	output, flushOutput := silog.Writer(
+		r.log.WithPrefix("merge"),
+		silog.LevelInfo,
+	)
+	defer flushOutput()
+
+	result, err := new(scriptrun.Runner).Run(ctx, &scriptrun.RunRequest{
+		Script: r.command,
+		Env:    env,
+		Stdout: output,
+		Stderr: output,
+	})
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return fmt.Errorf("command exited with status %d", result.ExitCode)
+	}
+	return nil
+}
+
+func (r *commandMergeRequester) mergeCommandEnvironment(
+	ctx context.Context,
+	item *mergeItem,
+) ([]string, error) {
+	common := map[string]string{
+		"GIT_SPICE_FORGE_ID":     r.forgeID,
+		"GIT_SPICE_BRANCH":       item.branch,
+		"GIT_SPICE_BASE_BRANCH":  item.base,
+		"GIT_SPICE_TRUNK_BRANCH": r.trunk,
+		"GIT_SPICE_CHANGE_URL":   item.mergeURL,
+		"GIT_SPICE_HEAD_SHA":     item.headHash.String(),
+	}
+
+	forgeEnv, err := r.repo.MergeCommandEnvironment(ctx, item.changeID)
+	if err != nil {
+		return nil, fmt.Errorf("forge environment: %w", err)
+	}
+	for key, value := range forgeEnv {
+		if _, blocked := common[key]; blocked {
+			continue
+		}
+		common[key] = value
+	}
+
+	env := make([]string, 0, len(common))
+	for key, value := range common {
+		env = append(env, key+"="+value)
+	}
+	slices.Sort(env)
+	return env, nil
 }
 
 func (h *Handler) validateFreshBases(

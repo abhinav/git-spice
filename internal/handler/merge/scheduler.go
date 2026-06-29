@@ -24,7 +24,8 @@ type mergePlanExecutor struct {
 	Submit  SubmitHandler  // required
 	Sync    SyncHandler    // required
 
-	Progress mergeProgress // required
+	Progress  mergeProgress  // required
+	Requester mergeRequester // required
 
 	Trunk                 string            // required
 	MergeReadinessTimeout time.Duration     // required
@@ -169,13 +170,7 @@ func (e *mergePlanExecutor) mergeItem(
 		Item: item,
 		URL:  item.mergeURL,
 	})
-	if err := e.RemoteRepository.MergeChange(
-		ctx, item.changeID,
-		forge.MergeChangeOptions{
-			Method:   e.Method,
-			HeadHash: item.headHash,
-		},
-	); err != nil {
+	if err := e.Requester.RequestMerge(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressMergeFailed,
 			Item: item,

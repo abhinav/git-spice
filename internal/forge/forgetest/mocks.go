@@ -1172,6 +1172,45 @@ func (c *MockRepositoryMergeChangeCall) DoAndReturn(f func(context.Context, forg
 	return c
 }
 
+// MergeCommandEnvironment mocks base method.
+func (m *MockRepository) MergeCommandEnvironment(ctx context.Context, id forge.ChangeID) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MergeCommandEnvironment", ctx, id)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MergeCommandEnvironment indicates an expected call of MergeCommandEnvironment.
+func (mr *MockRepositoryMockRecorder) MergeCommandEnvironment(ctx, id any) *MockRepositoryMergeCommandEnvironmentCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeCommandEnvironment", reflect.TypeOf((*MockRepository)(nil).MergeCommandEnvironment), ctx, id)
+	return &MockRepositoryMergeCommandEnvironmentCall{Call: call}
+}
+
+// MockRepositoryMergeCommandEnvironmentCall wrap *gomock.Call
+type MockRepositoryMergeCommandEnvironmentCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryMergeCommandEnvironmentCall) Return(arg0 map[string]string, arg1 error) *MockRepositoryMergeCommandEnvironmentCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryMergeCommandEnvironmentCall) Do(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryMergeCommandEnvironmentCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryMergeCommandEnvironmentCall) DoAndReturn(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryMergeCommandEnvironmentCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // NewChangeMetadata mocks base method.
 func (m *MockRepository) NewChangeMetadata(ctx context.Context, id forge.ChangeID) (forge.ChangeMetadata, error) {
 	m.ctrl.T.Helper()

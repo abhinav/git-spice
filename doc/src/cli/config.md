@@ -216,7 +216,6 @@ the repository path.
 
 Accepted values are registered forge IDs,
 including `github`, `gitlab`, `bitbucket`, `gitea`, and `forgejo`.
-Test repositories may also use `shamhub`.
 
 Alternatively, set this option with the `GIT_SPICE_FORGE_KIND`
 environment variable.
@@ -505,6 +504,8 @@ Defaults to `2m`.
 Preferred merge method for $$gs downstack merge$$.
 If unset, git-spice lets the forge use its default merge method.
 
+This setting is ignored if `spice.merge.command` is set.
+
 Merge methods are forge-specific.
 If the selected forge does not recognize the configured method,
 git-spice warns and lets the forge use its default merge method.
@@ -514,6 +515,42 @@ git-spice warns and lets the forge use its default merge method.
 - `merge`: create a merge commit
 - `squash`: squash commits before merging
 - `rebase`: rebase commits before merging
+
+### spice.merge.command
+
+<!-- gs:version unreleased -->
+
+Command to run to request a forge merge
+when a CR is deemed mergeable by a merge command.
+If unset, git-spice requests the merge through the forge API.
+
+git-spice still waits for the forge to report merge readiness before running
+the command,
+and still waits for the forge to report that the CR merged after the command
+exits successfully.
+git-spice may run the command concurrently for different CRs.
+
+Exit status `0` means the command requested the merge.
+Any non-zero exit status means the merge request failed for that CR.
+
+The command receives these common environment variables:
+
+- `GIT_SPICE_FORGE_ID`
+- `GIT_SPICE_BRANCH`
+- `GIT_SPICE_BASE_BRANCH`
+- `GIT_SPICE_TRUNK_BRANCH`
+- `GIT_SPICE_CHANGE_URL`
+- `GIT_SPICE_HEAD_SHA`
+
+Forges may also provide provider-specific variables.
+
+**Provider-specific variables:**
+
+- `GIT_SPICE_GITHUB_PR_NUMBER`
+- `GIT_SPICE_GITLAB_MR_IID`
+- `GIT_SPICE_BITBUCKET_PR_ID`
+- `GIT_SPICE_FORGEJO_PR_NUMBER`
+- `GIT_SPICE_GITEA_PR_NUMBER`
 
 ### spice.rebaseContinue.edit
 
