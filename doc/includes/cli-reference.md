@@ -331,7 +331,7 @@ Use --fail-fast to stop the queue after the first branch failure.
 * `--fail-fast`: Stop the merge queue after the first branch failure.
 * `--branch=NAME,...`: Branches whose stacks to merge. May be repeated.
 
-**Configuration**: [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -671,7 +671,7 @@ and syncs merged branch cleanup.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--branch=NAME,...`: Branches to start merging from. May be repeated.
 
-**Configuration**: [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1157,7 +1157,7 @@ Use --ready-timeout to configure the maximum wait.
 * `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--branch=NAME,...`: Branches to merge. May be repeated.
 
-**Configuration**: [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice branch submit {#gs-branch-submit}
 

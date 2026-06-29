@@ -20,8 +20,12 @@
 //
 // # Output handling
 //
-// stdout and stderr are captured independently. Neither is parsed by
-// scriptrun itself — the caller decides what to do with them.
+// stdout and stderr are captured independently
+// unless callers provide explicit output writers.
+// Explicit writers receive output during execution
+// and opt that stream out of result capture.
+// Neither stream is parsed by scriptrun itself:
+// the caller decides what to do with the output.
 //
 // A non-zero exit code is not an error from Run's perspective: it is
 // reported in the returned RunResult. Errors are reserved for cases
@@ -77,6 +81,14 @@ type RunRequest struct {
 
 	// Stdin, if non-nil, is supplied to the script as its stdin.
 	Stdin io.Reader
+
+	// Stdout, if non-nil, receives stdout while the script is running.
+	// RunResult.Stdout is not populated in that case.
+	Stdout io.Writer
+
+	// Stderr, if non-nil, receives stderr while the script is running.
+	// RunResult.Stderr is not populated in that case.
+	Stderr io.Writer
 }
 
 // RunResult is the outcome of a single script invocation.
@@ -85,9 +97,11 @@ type RunResult struct {
 	ExitCode int
 
 	// Stdout is the captured standard output of the script.
+	// If RunRequest.Stdout was set, Stdout is not populated.
 	Stdout []byte
 
 	// Stderr is the captured standard error of the script.
+	// If RunRequest.Stderr was set, Stderr is not populated.
 	Stderr []byte
 }
 
@@ -125,7 +139,15 @@ func (r *Runner) Run(ctx context.Context, req *RunRequest) (*RunResult, error) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	cmd.WithStdout(&stdout).WithStderr(&stderr)
+	stdoutWriter := io.Writer(&stdout)
+	if req.Stdout != nil {
+		stdoutWriter = req.Stdout
+	}
+	stderrWriter := io.Writer(&stderr)
+	if req.Stderr != nil {
+		stderrWriter = req.Stderr
+	}
+	cmd.WithStdout(stdoutWriter).WithStderr(stderrWriter)
 
 	runErr := cmd.Run()
 	exitErr := new(xec.ExitError)

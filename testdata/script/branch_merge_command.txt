@@ -1,0 +1,97 @@
+# 'branch merge' can request merge through spice.merge.command.
+
+as 'Test <test@example.com>'
+at '2026-06-28T12:00:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch
+gs branch submit --fill
+stderr 'Created #1'
+
+# configure a merge hook that verifies the public environment
+chmod 755 $WORK/merge-command.sh
+git config spice.merge.command $WORK/merge-command.sh
+
+# merge the current branch through the configured command
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature1: #1 was merged'
+stderr 'All 1 change.s. merged.'
+
+# verify the command requested the merge and git-spice waited for it
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- merge-command.sh --
+#!/bin/sh
+
+test "$GIT_SPICE_FORGE_ID" = shamhub
+test "$GIT_SPICE_BRANCH" = feature1
+test "$GIT_SPICE_BASE_BRANCH" = main
+test "$GIT_SPICE_TRUNK_BRANCH" = main
+test -n "$GIT_SPICE_CHANGE_URL"
+test -n "$GIT_SPICE_HEAD_SHA"
+test "$GIT_SPICE_SHAMHUB_CHANGE_NUMBER" = 1
+test -n "$GIT_SPICE_SHAMHUB_API_URL"
+test -n "$GIT_SPICE_SHAMHUB_TOKEN"
+test -z "$GIT_SPICE_CHANGE_ID"
+
+curl -fsS -X POST \
+  -H 'Content-Type: application/json' \
+  -H "Authentication-Token: $GIT_SPICE_SHAMHUB_TOKEN" \
+  -d '{}' \
+  "$GIT_SPICE_SHAMHUB_API_URL/alice/example/change/$GIT_SPICE_SHAMHUB_CHANGE_NUMBER/merge"
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "552ba3fd1fe9eadbaae36004b4ed9af6648d4dbe"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "df84c0162baca54872ec984e03f90871232594cf"
+    }
+  }
+]
