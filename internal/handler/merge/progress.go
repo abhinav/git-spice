@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	tea "charm.land/bubbletea/v2"
+	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
 	"go.abhg.dev/gs/internal/ui/widget/mergeprogress"
@@ -150,16 +151,8 @@ func (p *widgetMergeProgress) Start(
 	p.events = make(chan tea.Msg, 1)
 	p.stopped = make(chan struct{})
 
-	progressItems := make([]mergeprogress.Item, len(items))
-	for idx, item := range items {
-		progressItems[idx] = mergeprogress.Item{
-			ID:    item.branch,
-			State: mergeprogress.StatePending,
-		}
-	}
-
 	model := &mergeProgressModel{
-		Widget: mergeprogress.New(progressItems...).
+		Widget: mergeprogress.New(mergeProgressItems(items)...).
 			WithTheme(p.theme),
 		events: p.events,
 	}
@@ -171,6 +164,33 @@ func (p *widgetMergeProgress) Start(
 		close(p.stopped)
 	}()
 	return ctx
+}
+
+func mergeProgressItems(items []*mergeItem) []mergeprogress.Item {
+	indexByBranch := make(map[string]int, len(items))
+	branches := make([]string, len(items))
+	for idx, item := range items {
+		branches[idx] = item.branch
+		indexByBranch[item.branch] = idx
+	}
+
+	branches = graph.BreadthFirstSort(branches,
+		func(idx int, _ string) int {
+			parentIdx, ok := indexByBranch[items[idx].base]
+			if !ok {
+				return -1
+			}
+			return parentIdx
+		})
+
+	progressItems := make([]mergeprogress.Item, len(branches))
+	for idx, branch := range branches {
+		progressItems[idx] = mergeprogress.Item{
+			ID:    branch,
+			State: mergeprogress.StatePending,
+		}
+	}
+	return progressItems
 }
 
 func (p *widgetMergeProgress) Event(event mergeProgressEvent) {

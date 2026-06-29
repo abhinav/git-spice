@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/colorprofile"
+	"go.abhg.dev/gs/internal/graph"
 	"go.abhg.dev/gs/internal/mergequeue"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/ui"
@@ -178,10 +179,25 @@ type scenario struct {
 }
 
 func (s *scenario) progressItems() []mergeprogress.Item {
-	items := make([]mergeprogress.Item, len(s.items))
+	indexByID := make(map[string]int, len(s.items))
+	ids := make([]string, len(s.items))
 	for idx, item := range s.items {
+		ids[idx] = item.id
+		indexByID[item.id] = idx
+	}
+
+	ids = graph.BreadthFirstSort(ids, func(idx int, _ string) int {
+		parentIdx, ok := indexByID[s.items[idx].parent]
+		if !ok {
+			return -1
+		}
+		return parentIdx
+	})
+
+	items := make([]mergeprogress.Item, len(ids))
+	for idx, id := range ids {
 		items[idx] = mergeprogress.Item{
-			ID:    item.id,
+			ID:    id,
 			State: mergeprogress.StatePending,
 		}
 	}

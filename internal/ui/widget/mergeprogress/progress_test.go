@@ -145,6 +145,23 @@ func TestWidget_Render_ASCIIGlyphSet(t *testing.T) {
 	assert.Equal(t, "####oooo====xxxx----", barLine(renderPlain(widget)))
 }
 
+func TestWidget_UpdatePreservesItemOrder(t *testing.T) {
+	widget := New(
+		Item{ID: "root"},
+		Item{ID: "sibling"},
+		Item{ID: "child"},
+	).WithTheme(ui.DefaultThemeDark()).
+		WithAnimation(false)
+	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 12})
+
+	mustUpdate(t, widget, Event{ItemID: "child", State: StateFailed})
+	mustUpdate(t, widget, Event{ItemID: "root", State: StateMerged})
+	mustUpdate(t, widget, Event{ItemID: "sibling", State: StateActive})
+	mustUpdate(t, widget, Event{ItemID: "child", State: StateSkipped})
+
+	assert.Equal(t, "■■■■◆◆◆◆○○○○", barLine(renderPlain(widget)))
+}
+
 func renderPlain(widget *Widget) string {
 	return ansi.Strip(widget.View().Content)
 }
