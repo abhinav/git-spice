@@ -59,14 +59,11 @@ type Item struct {
 type Event struct {
 	// ItemID identifies the item to update.
 	//
-	// Empty means the event updates only the operation message.
+	// Empty means the event does not update item state.
 	ItemID string
 
 	// State is the new state for the item.
 	State State
-
-	// Message is the current operation detail shown below the bar.
-	Message string
 }
 
 // KeyMap defines key bindings for [Widget].
@@ -148,7 +145,6 @@ type Style struct {
 
 	Title   ui.Style
 	Summary ui.Style
-	Detail  ui.Style
 	Hint    ui.Style
 }
 
@@ -165,8 +161,7 @@ var DefaultStyle = styleForGlyphSet(SymbolsGlyphSet())
 // The widget renders every item into one continuous horizontal bar.
 // Terminal width changes each item's segment width,
 // but not which fields are rendered:
-// branch names stay out of the bar,
-// and the current operation detail is shown below it.
+// branch names and operation details stay out of the widget.
 //
 // The widget does not import or depend on forge APIs.
 // Translate forge-specific states into [State] values at the command boundary.
@@ -176,7 +171,6 @@ type Widget struct {
 
 	items     []Item
 	index     map[string]int // item ID => items index
-	message   string
 	err       error
 	width     int
 	theme     ui.Theme
@@ -213,9 +207,6 @@ func (w *Widget) apply(event Event) {
 		if idx, ok := w.index[event.ItemID]; ok {
 			w.items[idx].State = event.State
 		}
-	}
-	if event.Message != "" {
-		w.message = event.Message
 	}
 }
 
@@ -319,10 +310,6 @@ func (w *Widget) render(out ui.Writer, theme ui.Theme) {
 	}
 	out.WriteString("\n\n")
 
-	if w.message != "" {
-		out.WriteString(w.Style.Detail.Render(theme, w.message))
-		out.WriteString("\n")
-	}
 	out.WriteString(w.Style.Hint.Render(theme,
 		"Press Ctrl-C to cancel merge operation."))
 }
@@ -438,7 +425,6 @@ func styleForGlyphSet(glyphs GlyphSet) Style {
 
 		Title:   ui.NewStyle().Bold(true),
 		Summary: ui.NewStyle().Foreground(ui.Plain),
-		Detail:  ui.NewStyle().Foreground(ui.Plain),
 		Hint:    ui.NewStyle().Foreground(ui.Gray),
 	}
 }

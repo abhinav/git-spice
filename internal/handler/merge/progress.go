@@ -239,89 +239,73 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 	switch event.Kind {
 	case mergeProgressPreparing:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: preparing %v", item.branch, item.changeID),
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressPrepareFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": prepare failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressRetargeting:
 		return mergeprogress.Event{
 			ItemID: item.branch,
 			State:  mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: retargeting %v onto %s",
-				item.branch, item.changeID, event.Base),
 		}
 	case mergeProgressRetargetFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": retarget failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForForgeHead:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for HEAD to update",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressForgeHeadFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": HEAD did not update",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForMergeability:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for merge readiness",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeabilityReady:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": ready to merge",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeabilityFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge readiness failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressMerging:
 		return mergeprogress.Event{
 			ItemID: item.branch,
 			State:  mergeprogress.StateActive,
-			Message: fmt.Sprintf("%s: merging %v: %s",
-				item.branch, item.changeID, event.URL),
 		}
 	case mergeProgressMergeFailed:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge failed",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressWaitingForMerge:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateActive,
-			Message: item.branch + ": waiting for merge",
+			ItemID: item.branch,
+			State:  mergeprogress.StateActive,
 		}
 	case mergeProgressMergeIncomplete:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateFailed,
-			Message: item.branch + ": merge did not complete",
+			ItemID: item.branch,
+			State:  mergeprogress.StateFailed,
 		}
 	case mergeProgressMerged:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateMerged,
-			Message: item.branch + ": merged",
+			ItemID: item.branch,
+			State:  mergeprogress.StateMerged,
 		}
 	case mergeProgressFailed:
 		return mergeprogress.Event{
@@ -330,9 +314,8 @@ func widgetProgressEvent(event mergeProgressEvent) mergeprogress.Event {
 		}
 	case mergeProgressSkipped:
 		return mergeprogress.Event{
-			ItemID:  item.branch,
-			State:   mergeprogress.StateSkipped,
-			Message: item.branch + ": skipped",
+			ItemID: item.branch,
+			State:  mergeprogress.StateSkipped,
 		}
 	default:
 		panic(fmt.Sprintf("unknown merge progress event kind: %d",
