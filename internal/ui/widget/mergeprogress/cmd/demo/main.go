@@ -99,6 +99,9 @@ func (r *request) run(output *ui.OutputWriter) error {
 	}); err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}
+	if model.err != nil {
+		log.Errorf("merge demo failed: %v", model.err)
+	}
 	return nil
 }
 
@@ -223,6 +226,7 @@ type demoModel struct {
 	items  []mergequeue.Item
 	events chan tea.Msg
 	log    *silog.Logger
+	err    error
 }
 
 func newDemoModel(
@@ -262,14 +266,8 @@ func (m *demoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case schedulerDoneMsg:
 		m.cancel()
-		if msg.err != nil {
-			model, cmd := m.Widget.Update(mergeprogress.Event{
-				Message: "merge demo failed: " + msg.err.Error(),
-			})
-			if widget, ok := model.(*mergeprogress.Widget); ok {
-				m.Widget = widget
-			}
-			return m, tea.Batch(cmd, tea.Quit)
+		if msg.err != nil && !errors.Is(msg.err, context.Canceled) {
+			m.err = msg.err
 		}
 		return m, tea.Quit
 	case mergeprogress.Event:
@@ -334,18 +332,16 @@ func (o demoObserver) Done(mergequeue.Item) {}
 func (o demoObserver) Failed(item mergequeue.Item, _ error) {
 	o.log.Errorf("%s: failed", item.ID())
 	o.send(mergeprogress.Event{
-		ItemID:  item.ID(),
-		State:   mergeprogress.StateFailed,
-		Message: item.ID() + ": failed",
+		ItemID: item.ID(),
+		State:  mergeprogress.StateFailed,
 	})
 }
 
 func (o demoObserver) Skipped(item mergequeue.Item, _ mergequeue.SkipReason) {
 	o.log.Warnf("%s: skipped", item.ID())
 	o.send(mergeprogress.Event{
-		ItemID:  item.ID(),
-		State:   mergeprogress.StateSkipped,
-		Message: item.ID() + ": skipped",
+		ItemID: item.ID(),
+		State:  mergeprogress.StateSkipped,
 	})
 }
 
@@ -389,9 +385,8 @@ func (i *syntheticItem) Parent() string {
 
 func (i *syntheticItem) Prepare(ctx context.Context) error {
 	i.emit(ctx, mergeprogress.Event{
-		ItemID:  i.id,
-		State:   mergeprogress.StateActive,
-		Message: i.id + ": preparing",
+		ItemID: i.id,
+		State:  mergeprogress.StateActive,
 	})
 	if err := sleep(ctx, i.prepareDelay); err != nil {
 		return err
@@ -404,9 +399,8 @@ func (i *syntheticItem) Prepare(ctx context.Context) error {
 	}
 	if i.failStage == failStagePrepare {
 		i.emit(ctx, mergeprogress.Event{
-			ItemID:  i.id,
-			State:   mergeprogress.StateFailed,
-			Message: i.id + ": prepare failed",
+			ItemID: i.id,
+			State:  mergeprogress.StateFailed,
 		})
 		return errors.New("prepare failed")
 	}
@@ -415,18 +409,16 @@ func (i *syntheticItem) Prepare(ctx context.Context) error {
 
 func (i *syntheticItem) Run(ctx context.Context) error {
 	i.emit(ctx, mergeprogress.Event{
-		ItemID:  i.id,
-		State:   mergeprogress.StateActive,
-		Message: i.id + ": waiting for merge readiness",
+		ItemID: i.id,
+		State:  mergeprogress.StateActive,
 	})
 	if err := sleep(ctx, i.runDelay); err != nil {
 		return err
 	}
 	if i.failStage == failStageRun {
 		i.emit(ctx, mergeprogress.Event{
-			ItemID:  i.id,
-			State:   mergeprogress.StateFailed,
-			Message: i.id + ": merge readiness failed",
+			ItemID: i.id,
+			State:  mergeprogress.StateFailed,
 		})
 		return errors.New("merge readiness failed")
 	}
@@ -434,9 +426,8 @@ func (i *syntheticItem) Run(ctx context.Context) error {
 	i.log.Infof("%s: pulled 1 new commit(s)", i.id)
 	i.log.Infof("%s: deleted (was %s)", i.id, fakeHash(i.changeNumber))
 	i.emit(ctx, mergeprogress.Event{
-		ItemID:  i.id,
-		State:   mergeprogress.StateMerged,
-		Message: i.id + ": merged",
+		ItemID: i.id,
+		State:  mergeprogress.StateMerged,
 	})
 	return nil
 }

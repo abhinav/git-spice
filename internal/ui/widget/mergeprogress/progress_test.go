@@ -28,65 +28,55 @@ merged: 0   waiting: 0   pending: 10
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 
 	mustUpdate(t, widget, Event{
-		ItemID:  "1",
-		State:   StateActive,
-		Message: "Waiting for CI checks on feature-01 (#101).",
+		ItemID: "1",
+		State:  StateActive,
 	})
 	autogold.Expect(`Merging: 0 of 10 changes
 
 ◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 0   waiting: 1   pending: 9
 
-Waiting for CI checks on feature-01 (#101).
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 
 	mustUpdate(t, widget, Event{
-		ItemID:  "1",
-		State:   StateMerged,
-		Message: "Merged feature-01 (#101).",
+		ItemID: "1",
+		State:  StateMerged,
 	})
 	mustUpdate(t, widget, Event{
-		ItemID:  "2",
-		State:   StateActive,
-		Message: "Waiting for CI checks on feature-02 (#102).",
+		ItemID: "2",
+		State:  StateActive,
 	})
 	mustUpdate(t, widget, Event{
-		ItemID:  "3",
-		State:   StateActive,
-		Message: "Waiting for CI checks on feature-02 (#102) and feature-03 (#103).",
+		ItemID: "3",
+		State:  StateActive,
 	})
 	autogold.Expect(`Merging: 1 of 10 changes
 
 ■■■■◆◆◆◆◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 1   waiting: 2   pending: 7
 
-Waiting for CI checks on feature-02 (#102) and feature-03 (#103).
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 
 	mustUpdate(t, widget, Event{
-		ItemID:  "2",
-		State:   StateMerged,
-		Message: "Merged feature-02 (#102); still waiting for feature-03 (#103).",
+		ItemID: "2",
+		State:  StateMerged,
 	})
 	autogold.Expect(`Merging: 2 of 10 changes
 
 ■■■■■■■■◆◆◆◆□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 2   waiting: 1   pending: 7
 
-Merged feature-02 (#102); still waiting for feature-03 (#103).
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 
 	mustUpdate(t, widget, Event{
-		ItemID:  "3",
-		State:   StateFailed,
-		Message: "CI checks failed for feature-03 (#103).",
+		ItemID: "3",
+		State:  StateFailed,
 	})
 	autogold.Expect(`Merging: 2 of 10 changes
 
 ■■■■■■■■××××□□□□□□□□□□□□□□□□□□□□□□□□□□□□
 merged: 2   waiting: 0   pending: 7   failed: 1
 
-CI checks failed for feature-03 (#103).
 Press Ctrl-C to cancel merge operation.`).Equal(t, renderPlain(widget))
 }
 
@@ -101,24 +91,16 @@ func TestWidget_Render_scalingKeepsShape(t *testing.T) {
 		WithTheme(ui.DefaultThemeDark()).
 		WithAnimation(false)
 	mustUpdate(t, wideWidget, tea.WindowSizeMsg{Width: 72})
-	mustUpdate(t, wideWidget, Event{
-		Message: "Waiting for CI checks on feature-08 (#108).",
-	})
 	wide := renderPlain(wideWidget)
 
 	narrowWidget := New(items...).
 		WithTheme(ui.DefaultThemeDark()).
 		WithAnimation(false)
 	mustUpdate(t, narrowWidget, tea.WindowSizeMsg{Width: 24})
-	mustUpdate(t, narrowWidget, Event{
-		Message: "Waiting for CI checks on feature-08 (#108).",
-	})
 	narrow := renderPlain(narrowWidget)
 
 	assert.Contains(t, wide, "Merging: 7 of 18 changes")
 	assert.Contains(t, wide, "merged: 7   waiting: 1   pending: 10")
-	assert.Contains(t, wide,
-		"Waiting for CI checks on feature-08 (#108).")
 	assert.NotContains(t, barLine(wide), "feature")
 	assert.NotContains(t, barLine(narrow), "feature")
 	assert.Equal(t, 72, lipgloss.Width(barLine(wide)))
@@ -139,9 +121,6 @@ func TestWidget_Render_failedAndSkipped(t *testing.T) {
 		WithTheme(ui.DefaultThemeDark()).
 		WithAnimation(false)
 	mustUpdate(t, widget, tea.WindowSizeMsg{Width: 20})
-	mustUpdate(t, widget, Event{
-		Message: "CI checks failed for feature-04 (#104).",
-	})
 	got := renderPlain(widget)
 
 	assert.Contains(t, got, "merged: 1   waiting: 1   pending: 1")
