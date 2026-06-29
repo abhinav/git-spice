@@ -41,6 +41,8 @@ Flags:
                          and 'rebase'. (🔧 spice.merge.method)
   --ready-timeout=30m    Max time to wait for merge readiness before each merge.
                          0 means check once. (🔧 spice.merge.readyTimeout)
+  --merge-timeout=2m     Max time to wait for merge completion after requesting
+                         merge. (🔧 spice.merge.mergeTimeout)
   --no-branch-check      Skip stale base validation before merging.
   --branch=NAME,...      Branches to start merging from. May be repeated.
 

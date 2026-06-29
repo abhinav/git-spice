@@ -28,6 +28,7 @@ type mergePlanExecutor struct {
 
 	Trunk                 string            // required
 	MergeReadinessTimeout time.Duration     // required
+	MergeTimeout          time.Duration     // required
 	Method                forge.MergeMethod // required
 	FailFast              bool
 }

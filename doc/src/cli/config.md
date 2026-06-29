@@ -486,6 +486,18 @@ Set to `0` to fail immediately if merge readiness is not already reached.
 
 Defaults to `30m`.
 
+### spice.merge.mergeTimeout
+
+<!-- gs:version unreleased -->
+
+Maximum time merge commands wait for the forge to report
+that the CR is merged after requesting merge.
+
+The value must be a duration string such as
+`2m`, `30s`, `5m`, etc.
+
+Defaults to `2m`.
+
 ### spice.merge.method
 
 <!-- gs:version unreleased -->

@@ -10,6 +10,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -33,6 +34,17 @@ import (
 type fakeChangeID string
 
 func (f fakeChangeID) String() string { return string(f) }
+
+func TestOptions_mergeTimeoutDefault(t *testing.T) {
+	var got Options
+	parser, err := kong.New(&got)
+	require.NoError(t, err)
+
+	_, err = parser.Parse(nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2*time.Minute, got.MergeTimeout)
+}
 
 func TestAwaitMerged_immediate(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -97,6 +109,38 @@ func TestAwaitMerged_afterPolling(t *testing.T) {
 
 		err := executor.awaitMerged(t.Context(), item)
 		require.NoError(t, err)
+	})
+}
+
+func TestAwaitMerged_respectsMergeTimeout(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		ids := []forge.ChangeID{fakeChangeID("pr-1")}
+		mockRepo := forgetest.NewMockRepository(ctrl)
+		mockRepo.EXPECT().
+			ChangeStatuses(gomock.Any(), ids).
+			Return(
+				[]forge.ChangeStatus{{State: forge.ChangeOpen}}, nil,
+			).
+			AnyTimes()
+
+		h := newTestHandler(t, ctrl, testHandlerOpts{
+			forgeRepo: mockRepo,
+			logBuffer: nil,
+		})
+
+		item := &mergeItem{
+			branch:   "feat1",
+			changeID: fakeChangeID("pr-1"),
+		}
+		progress := newLogMergeProgress(silog.Nop())
+		executor := newTestMergePlanExecutor(h, progress)
+		executor.MergeTimeout = time.Nanosecond
+
+		err := executor.awaitMerged(t.Context(), item)
+		require.Error(t, err)
+		assert.EqualError(t, err, "timed out waiting for merge")
 	})
 }
 
@@ -1565,6 +1609,7 @@ func newTestMergePlanExecutor(
 
 		Trunk:                 "main",
 		MergeReadinessTimeout: 30 * time.Minute,
+		MergeTimeout:          2 * time.Minute,
 		Method:                forge.MergeMethodDefault,
 	}
 }

@@ -20,6 +20,8 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
+const defaultMergeTimeout = 2 * time.Minute
+
 // Store provides read access to the state store.
 type Store interface {
 	Trunk() string
@@ -69,6 +71,10 @@ type Options struct {
 	// to report that a change is ready to merge.
 	// Zero means check once and fail if merge readiness is not reached.
 	MergeReadinessTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
+
+	// MergeTimeout is the maximum time to wait for the forge
+	// to report that a change is merged after requesting merge.
+	MergeTimeout time.Duration `name:"merge-timeout" config:"merge.mergeTimeout" default:"2m" help:"Max time to wait for merge completion after requesting merge."`
 }
 
 // DownstackMergeOptions controls downstack merge behavior.
@@ -160,6 +166,7 @@ func (h *Handler) MergeDownstack(
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		MergeTimeout:          opts.MergeTimeout,
 		SyncBeforeStart:       plan.syncBeforeStart,
 	})
 }
@@ -222,6 +229,7 @@ func (h *Handler) MergeBranch(
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		MergeTimeout:          opts.MergeTimeout,
 		SyncBeforeStart:       plan.syncBeforeStart,
 	})
 }
@@ -284,6 +292,7 @@ func (h *Handler) MergeStack(
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
 		Method:                opts.Method,
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		MergeTimeout:          opts.MergeTimeout,
 		FailFast:              opts.FailFast,
 		SyncBeforeStart:       plan.syncBeforeStart,
 	})
@@ -594,8 +603,16 @@ func (h *Handler) confirm(plan []*mergeItem, title string) error {
 type mergeExecutionOptions struct {
 	Method                forge.MergeMethod
 	MergeReadinessTimeout time.Duration
+	MergeTimeout          time.Duration
 	FailFast              bool
 	SyncBeforeStart       bool
+}
+
+func (opts mergeExecutionOptions) mergeTimeout() time.Duration {
+	if opts.MergeTimeout == 0 {
+		return defaultMergeTimeout
+	}
+	return opts.MergeTimeout
 }
 
 func (h *Handler) executePlan(
@@ -641,6 +658,7 @@ func (h *Handler) executePlan(
 
 		Trunk:                 h.Store.Trunk(),
 		MergeReadinessTimeout: opts.MergeReadinessTimeout,
+		MergeTimeout:          opts.mergeTimeout(),
 		Method:                opts.Method,
 		FailFast:              opts.FailFast,
 	}).Execute(ctx, plan)
@@ -874,10 +892,9 @@ func (e *mergePlanExecutor) awaitMerged(
 	const (
 		_initialDelay = 500 * time.Millisecond
 		_maxDelay     = 8 * time.Second
-		_timeout      = 2 * time.Minute
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, _timeout)
+	ctx, cancel := context.WithTimeout(ctx, e.MergeTimeout)
 	defer cancel()
 
 	// TODO: This only waits for the immediate change to reach
