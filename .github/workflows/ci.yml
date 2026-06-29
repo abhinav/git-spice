@@ -16,7 +16,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       name: Check out repository
     - uses: jdx/mise-action@v4
       with:
@@ -27,7 +27,7 @@ jobs:
     name: Generate test matrix
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       name: Check out repository
     - uses: jdx/mise-action@v4
       with:
@@ -61,7 +61,7 @@ jobs:
     name: Test / ${{ matrix.name }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: jdx/mise-action@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -103,7 +103,7 @@ jobs:
       shell: bash
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v6.0.0
+      uses: codecov/codecov-action@v7.0.0
       if: ${{ matrix.os != 'windows-latest' }}
       with:
         files: ./cover.out
