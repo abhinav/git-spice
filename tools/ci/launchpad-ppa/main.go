@@ -205,8 +205,13 @@ func run(log *silog.Logger, req publishRequest) error {
 
 		if plan.Dput {
 			log.Info("Uploading source package", "series", series, "changes", changes)
-			if err := xec.Command(ctx, log, "dput", "--unchecked", plan.DputTarget, changes).
-				Run(); err != nil {
+			output, flushOutput := silog.Writer(log.WithPrefix("dput"), silog.LevelInfo)
+			err := xec.Command(ctx, log, "dput", "--unchecked", plan.DputTarget, changes).
+				WithStdout(output).
+				WithStderr(output).
+				Run()
+			flushOutput()
+			if err != nil {
 				return fmt.Errorf("dput %s: %w", series, err)
 			}
 		} else {
