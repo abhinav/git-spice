@@ -112,7 +112,7 @@ and track the branch with git-spice if it is not already tracked.
 
 ### Create a worktree from the branch prompt
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 git-spice supports custom shorthands,
 including shell command aliases

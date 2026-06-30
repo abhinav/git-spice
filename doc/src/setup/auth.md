@@ -16,8 +16,8 @@ This page covers methods to authenticate git-spice
 with GitHub, GitLab, Bitbucket Cloud, Gitea, and Forgejo.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
 Bitbucket Cloud support requires at least version <!-- gs:version v0.25.0 -->.
-Gitea support requires at least version <!-- gs:version unreleased -->.
-Forgejo support requires at least version <!-- gs:version unreleased -->,
+Gitea support requires at least version <!-- gs:version v0.30.0 -->.
+Forgejo support requires at least version <!-- gs:version v0.30.0 -->,
 and defaults to Codeberg.
 
 ## Logging in
@@ -451,7 +451,7 @@ It is intended only for CI/CD environments where you have no other choice.
 
 ## Aliased SSH remotes
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 git-spice usually identifies the forge from the Git remote URL.
 For example, a remote hosted on `github.com` identifies GitHub.
@@ -572,7 +572,7 @@ Authenticate with $$gs auth login$$ as usual after that.
 
 ### Gitea
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 To use git-spice with a Gitea instance,
 set $$spice.forge.gitea.url$$ to the address of your Gitea instance.
@@ -602,7 +602,7 @@ export GITEA_TOKEN=your-gitea-token
 
 ### Forgejo
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Codeberg is the default Forgejo host.
 To use git-spice with a different Forgejo instance,

@@ -198,7 +198,7 @@ should print a message when switching branches.
 
 ### spice.forge.kind
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 The forge kind to use when a remote URL does not identify the forge by host.
 
@@ -295,7 +295,7 @@ Whether to remove the source branch when a Merge Request is merged.
 
 ### spice.forge.gitea.apiURL
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 URL at which the Gitea API is available.
 Defaults to `$GITEA_API_URL` if set,
@@ -305,7 +305,7 @@ See also [Gitea](../setup/auth.md#gitea).
 
 ### spice.forge.gitea.url
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 URL of the Gitea instance.
 Defaults to `$GITEA_URL` if set.
@@ -321,7 +321,7 @@ See also [Gitea](../setup/auth.md#gitea).
 
 ### spice.forge.forgejo.apiURL
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 URL at which the Forgejo API is available.
 Defaults to `$FORGEJO_API_URL` if set,
@@ -331,7 +331,7 @@ See also [Forgejo](../setup/auth.md#forgejo).
 
 ### spice.forge.forgejo.url
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 URL of the Forgejo instance used for Forgejo requests.
 Defaults to `$FORGEJO_URL` if set,
@@ -473,7 +473,7 @@ whether the branch is in sync with its pushed counterpart.
 
 ### spice.merge.readyTimeout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Maximum time merge commands wait for merge readiness before each merge.
 Merge readiness requires the forge to report the pushed head
@@ -487,7 +487,7 @@ Defaults to `30m`.
 
 ### spice.merge.mergeTimeout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Maximum time merge commands wait for the forge to report
 that the CR is merged after requesting merge.
@@ -499,7 +499,7 @@ Defaults to `2m`.
 
 ### spice.merge.method
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Preferred merge method for $$gs branch merge$$ and friends.
 If unset, git-spice lets the forge use its default merge method.
@@ -518,7 +518,7 @@ git-spice warns and lets the forge use its default merge method.
 
 ### spice.merge.command
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Command to run to request a forge merge
 when a CR is deemed mergeable by a merge command.
@@ -613,7 +613,7 @@ will be combined with the configured assignees.
 
 ### spice.submit.labels
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Add the configured labels to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
@@ -627,11 +627,11 @@ will be combined with the configured labels.
 
 <!-- gs:version v0.16.0 -->
 
-Deprecated in favor of $$spice.submit.labels$$ in <!-- gs:version unreleased -->.
+Deprecated in favor of $$spice.submit.labels$$ in <!-- gs:version v0.30.0 -->.
 
 ### spice.submit.labels.addWhen
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Controls when labels from $$spice.submit.labels$$
 are added to change requests.
@@ -649,7 +649,7 @@ except when added explicitly via the `-l`/`--label` flag.
 
 <!-- gs:version v0.29.0 -->
 
-Deprecated in favor of $$spice.submit.labels.addWhen$$ in <!-- gs:version unreleased -->.
+Deprecated in favor of $$spice.submit.labels.addWhen$$ in <!-- gs:version v0.30.0 -->.
 
 ### spice.submit.reviewers
 

@@ -7,7 +7,7 @@ description: >-
 
 # Merging stacked change requests
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 !!! important "Experimental feature"
 

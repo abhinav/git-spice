@@ -57,7 +57,7 @@ after cherry-picking a commit.
 
 ### merge
 
-**Added**: <!-- gs:version unreleased -->
+**Added**: <!-- gs:version v0.30.0 -->
 <!-- TODO: **Removed**: -->
 
 Enables experimental merge commands:

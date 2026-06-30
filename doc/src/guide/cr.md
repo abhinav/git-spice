@@ -15,8 +15,8 @@ description: >-
     - <!-- gs:github -->
     - <!-- gs:gitlab --> (<!-- gs:version v0.9.0 -->)
     - <!-- gs:bitbucket --> (<!-- gs:version v0.25.0 -->)
-    - <!-- gs:gitea --> (<!-- gs:version unreleased -->)
-    - <!-- gs:forgejo --> (<!-- gs:version unreleased -->)
+    - <!-- gs:gitea --> (<!-- gs:version v0.30.0 -->)
+    - <!-- gs:forgejo --> (<!-- gs:version v0.30.0 -->)
 
     If you're using a different service,
     you can still use git-spice,
