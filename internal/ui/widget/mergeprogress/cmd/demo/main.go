@@ -1,4 +1,17 @@
 // Command demo previews the merge progress widget.
+//
+// Run the command without arguments to start a randomized merge simulation:
+//
+//	go run ./internal/ui/widget/mergeprogress/cmd/demo
+//
+// Use -snapshot to render one deterministic frame and exit.
+// Snapshot mode is useful for documentation captures:
+//
+//	go run ./internal/ui/widget/mergeprogress/cmd/demo \
+//	  -snapshot merged,merged,active,failed,pending \
+//	  -width 50 \
+//	  -no-animate \
+//	  -no-logs
 package main
 
 import (
@@ -8,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -21,6 +35,8 @@ import (
 )
 
 func main() {
+	flag.Usage = printUsage
+
 	var req request
 	flag.IntVar(&req.items, "items", 12, "number of items")
 	flag.BoolVar(&req.noAnimate, "no-animate", false, "disable animation")
@@ -28,7 +44,9 @@ func main() {
 		"disable synthetic logs while the widget is active")
 	flag.BoolVar(&req.printTopology, "topology", false,
 		"print the generated branch topology before running")
-	flag.IntVar(&req.width, "width", 0, "initial widget width")
+	flag.StringVar(&req.snapshot, "snapshot", "",
+		"comma-separated states to render once and exit")
+	flag.IntVar(&req.width, "width", 0, "initial widget width in columns")
 	flag.IntVar(&req.height, "height", 0, "initial terminal height")
 	flag.BoolVar(&req.dark, "dark", true, "use the dark theme")
 	flag.Int64Var(&req.seed, "seed", 1, "random seed")
@@ -46,6 +64,21 @@ func main() {
 	}
 }
 
+func printUsage() {
+	fmt.Fprintf(flag.CommandLine.Output(), `Usage:
+  go run ./internal/ui/widget/mergeprogress/cmd/demo [flags]
+  go run ./internal/ui/widget/mergeprogress/cmd/demo -snapshot merged,merged,active,failed,pending -width 50 -no-animate -no-logs
+
+The default mode runs a randomized scheduler-backed merge simulation.
+Snapshot mode renders one frame from comma-separated item states and exits.
+Valid snapshot states are:
+  pending, active, waiting, merged, failed, skipped
+
+Flags:
+`)
+	flag.PrintDefaults()
+}
+
 // request is the flag-decoded demo configuration.
 type request struct {
 	items int
@@ -53,6 +86,7 @@ type request struct {
 	noAnimate     bool
 	noLogs        bool
 	printTopology bool
+	snapshot      string
 	width         int
 	height        int
 	dark          bool
@@ -66,6 +100,9 @@ type request struct {
 func (r *request) run(output *ui.OutputWriter) error {
 	if err := r.validate(); err != nil {
 		return err
+	}
+	if r.snapshot != "" {
+		return r.renderSnapshot(output)
 	}
 
 	log := silog.Nop()
@@ -106,6 +143,23 @@ func (r *request) run(output *ui.OutputWriter) error {
 	return nil
 }
 
+func (r *request) renderSnapshot(output *ui.OutputWriter) error {
+	items, err := parseSnapshot(r.snapshot)
+	if err != nil {
+		return err
+	}
+
+	widget := mergeprogress.New(items...).
+		WithTheme(r.theme()).
+		WithAnimation(!r.noAnimate)
+	if r.width > 0 {
+		widget.Update(tea.WindowSizeMsg{Width: r.width})
+	}
+
+	fmt.Fprintln(output, widget.View().Content)
+	return nil
+}
+
 func (r *request) validate() error {
 	if r.items < 0 {
 		return errors.New("items must be non-negative")
@@ -123,6 +177,39 @@ func (r *request) validate() error {
 		return errors.New("min-delay must be <= max-delay")
 	}
 	return nil
+}
+
+func parseSnapshot(snapshot string) ([]mergeprogress.Item, error) {
+	states := strings.Split(snapshot, ",")
+	items := make([]mergeprogress.Item, len(states))
+	for idx, state := range states {
+		parsed, err := parseState(strings.TrimSpace(state))
+		if err != nil {
+			return nil, fmt.Errorf("parse snapshot state %d: %w", idx+1, err)
+		}
+		items[idx] = mergeprogress.Item{
+			ID:    itemID(idx),
+			State: parsed,
+		}
+	}
+	return items, nil
+}
+
+func parseState(state string) (mergeprogress.State, error) {
+	switch state {
+	case "pending":
+		return mergeprogress.StatePending, nil
+	case "active", "waiting":
+		return mergeprogress.StateActive, nil
+	case "merged":
+		return mergeprogress.StateMerged, nil
+	case "failed":
+		return mergeprogress.StateFailed, nil
+	case "skipped":
+		return mergeprogress.StateSkipped, nil
+	default:
+		return 0, fmt.Errorf("unknown state %q", state)
+	}
 }
 
 func (r *request) theme() ui.Theme {

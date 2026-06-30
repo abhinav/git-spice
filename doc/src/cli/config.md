@@ -501,7 +501,7 @@ Defaults to `2m`.
 
 <!-- gs:version unreleased -->
 
-Preferred merge method for $$gs downstack merge$$.
+Preferred merge method for $$gs branch merge$$ and friends.
 If unset, git-spice lets the forge use its default merge method.
 
 This setting is ignored if `spice.merge.command` is set.

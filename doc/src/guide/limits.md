@@ -117,6 +117,10 @@ you can run:
 {green}${reset} gs stack submit
 ```
 
+The experimental merge commands automate this merge,
+sync, restack, and update loop.
+See [Merging stacks](merge.md).
+
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->
 
