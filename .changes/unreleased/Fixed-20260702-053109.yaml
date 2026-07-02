@@ -1,5 +1,0 @@
-kind: Fixed
-body: >-
-  branch submit: Fix deadlock and terminal display corruption
-  if CR template lookup failed during interactive prompt.
-time: 2026-07-02T05:31:09.777099-07:00

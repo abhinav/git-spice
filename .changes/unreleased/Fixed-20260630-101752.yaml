@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'release: Fix Ubuntu PPA publishing to avoid re-uploading the upstream orig tarball for later Ubuntu series.'
-time: 2026-06-30T10:17:52.504171-07:00
