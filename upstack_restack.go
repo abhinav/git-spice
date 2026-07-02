@@ -33,11 +33,11 @@ func (*upstackRestackCmd) Help() string {
 
 // RestackHandler implements high level restack operations.
 type RestackHandler interface {
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
-	RestackDownstack(ctx context.Context, branch string) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
+	RestackDownstack(ctx context.Context, req *restack.DownstackRequest) error
 	Restack(context.Context, *restack.Request) (int, error)
-	RestackStack(ctx context.Context, branch string) error
-	RestackBranch(ctx context.Context, branch string) error
+	RestackStack(ctx context.Context, req *restack.StackRequest) error
+	RestackBranch(ctx context.Context, req *restack.BranchRequest) error
 }
 
 func (cmd *upstackRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) error {
@@ -62,5 +62,8 @@ func (cmd *upstackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackUpstack(ctx, cmd.Branch, &cmd.UpstackOptions)
+	return handler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch:  cmd.Branch,
+		Options: &cmd.UpstackOptions,
+	})
 }

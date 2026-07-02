@@ -54,7 +54,7 @@ var _ Service = (*spice.Service)(nil)
 
 // RestackHandler provides methods to restack branches.
 type RestackHandler interface {
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 // Handler handles git-spice's squash commands.
@@ -186,7 +186,9 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	}
 	reattachedHead = true
 
-	return h.Restack.RestackUpstack(ctx, branchName, nil)
+	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: branchName,
+	})
 }
 
 func commitMessageTemplate(

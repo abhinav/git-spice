@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.uber.org/mock/gomock"
@@ -165,7 +166,9 @@ func TestHandler_SquashBranch(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(t.Context(), branchName, nil).
+			RestackUpstack(t.Context(), &restack.UpstackRequest{
+				Branch: branchName,
+			}).
 			Return(nil)
 
 		handler := &Handler{
@@ -225,7 +228,9 @@ func TestHandler_SquashBranch(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(t.Context(), branchName, nil).
+			RestackUpstack(t.Context(), &restack.UpstackRequest{
+				Branch: branchName,
+			}).
 			Return(nil)
 
 		handler := &Handler{
@@ -286,7 +291,9 @@ func TestHandler_SquashBranch(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(t.Context(), branchName, nil).
+			RestackUpstack(t.Context(), &restack.UpstackRequest{
+				Branch: branchName,
+			}).
 			Return(nil)
 
 		handler := &Handler{
@@ -357,7 +364,9 @@ func TestHandler_SquashBranch(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(t.Context(), branchName, nil).
+			RestackUpstack(t.Context(), &restack.UpstackRequest{
+				Branch: branchName,
+			}).
 			Return(nil)
 
 		handler := &Handler{

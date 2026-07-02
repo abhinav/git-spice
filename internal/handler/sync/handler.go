@@ -78,8 +78,8 @@ type DeleteHandler interface {
 // RestackHandler allows restacking branches after sync
 // has removed their downstack branches.
 type RestackHandler interface {
-	RestackBranch(ctx context.Context, branch string) error
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+	RestackBranch(ctx context.Context, req *restack.BranchRequest) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 // AutostashHandler is a subset of the autostash.Handler interface.
@@ -1023,11 +1023,15 @@ func (h *Handler) restackDeletedBranchUpstack(
 ) error {
 	switch {
 	case mode.Includes(spice.RestackUpstack):
-		if err := h.Restack.RestackUpstack(ctx, target, nil); err != nil {
+		if err := h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+			Branch: target,
+		}); err != nil {
 			return fmt.Errorf("restack upstack %q: %w", target, err)
 		}
 	case mode.Includes(spice.RestackAboves):
-		if err := h.Restack.RestackBranch(ctx, target); err != nil {
+		if err := h.Restack.RestackBranch(ctx, &restack.BranchRequest{
+			Branch: target,
+		}); err != nil {
 			return fmt.Errorf("restack branch %q: %w", target, err)
 		}
 	case mode.Includes(spice.RestackNone):

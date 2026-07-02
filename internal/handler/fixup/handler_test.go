@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/git/gittest"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
@@ -228,7 +229,12 @@ func TestFixupCommit_success(t *testing.T) {
 	// Will try to restack the upstack of feature1 (target branch)
 	mockRestack := NewMockRestackHandler(mockCtrl)
 	mockRestack.EXPECT().
-		RestackUpstack(gomock.Any(), "feature1", gomock.Any()).
+		RestackUpstack(gomock.Any(), &restack.UpstackRequest{
+			Branch: "feature1",
+			Options: &restack.UpstackOptions{
+				SkipStart: true,
+			},
+		}).
 		Return(nil)
 
 		// Sanity check: feature1:staged.txt does not exist yet.
@@ -333,7 +339,12 @@ func TestFixupCommit_edit(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(mockCtrl)
 	mockRestack.EXPECT().
-		RestackUpstack(gomock.Any(), "feature1", gomock.Any()).
+		RestackUpstack(gomock.Any(), &restack.UpstackRequest{
+			Branch: "feature1",
+			Options: &restack.UpstackOptions{
+				SkipStart: true,
+			},
+		}).
 		Return(nil)
 
 	var signals sigstack.Stack

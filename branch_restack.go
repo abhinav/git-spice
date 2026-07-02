@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -32,5 +33,7 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
-	return handler.RestackBranch(ctx, cmd.Branch)
+	return handler.RestackBranch(ctx, &restack.BranchRequest{
+		Branch: cmd.Branch,
+	})
 }

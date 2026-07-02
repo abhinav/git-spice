@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/text"
@@ -59,5 +60,7 @@ func (*branchEditCmd) Run(
 		})
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, nil)
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+	})
 }

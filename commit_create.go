@@ -79,7 +79,10 @@ func (cmd *commitCreateCmd) Run(
 		return fmt.Errorf("get current branch: %w", err)
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
-		SkipStart: true,
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }

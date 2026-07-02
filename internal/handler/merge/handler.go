@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 
@@ -39,7 +40,7 @@ type Service interface {
 
 // RestackHandler restacks branches after their bases are merged.
 type RestackHandler interface {
-	RestackBranch(context.Context, string) error
+	RestackBranch(ctx context.Context, req *restack.BranchRequest) error
 }
 
 // SubmitHandler updates change requests after branch restacks.
@@ -839,7 +840,9 @@ func (e *mergePlanExecutor) prepareForMerge(
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 
-		if err := e.Restack.RestackBranch(ctx, item.branch); err != nil {
+		if err := e.Restack.RestackBranch(ctx, &restack.BranchRequest{
+			Branch: item.branch,
+		}); err != nil {
 			return fmt.Errorf("restack branch: %w", err)
 		}
 

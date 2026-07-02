@@ -95,6 +95,11 @@ type Request struct {
 	Scope Scope
 }
 
+// Options are optional parameters shared by the high-level restack
+// entry points ([Handler.RestackBranch], [Handler.RestackStack],
+// [Handler.RestackDownstack]).
+type Options struct{}
+
 // Restack restacks one or more branches according to the request.
 func (h *Handler) Restack(ctx context.Context, req *Request) (int, error) {
 	must.NotBeBlankf(req.Branch, "branch must not be blank")
