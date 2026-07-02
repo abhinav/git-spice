@@ -260,6 +260,16 @@ runCommand:
 
 		key, value := args[0], args[1]
 		switch key {
+		case "changeTemplateErrorDelay":
+			delay, err := time.ParseDuration(value)
+			if err != nil {
+				ts.Fatalf("parse duration: %s", err)
+			}
+
+			sh.mu.Lock()
+			sh.changeTemplateErrorDelay = delay
+			sh.mu.Unlock()
+
 		case "mergeMethod":
 			mergeMethod, err := parseMergeMethod(value)
 			if err != nil {

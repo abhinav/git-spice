@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -43,6 +44,9 @@ type ShamHub struct {
 
 	tokens             map[string]string // token -> username
 	defaultMergeMethod MergeMethod       // used when API merge requests omit a method
+	// changeTemplateErrorDelay makes the change-template endpoint return a
+	// delayed error, allowing terminal tests to exercise background failures.
+	changeTemplateErrorDelay time.Duration
 }
 
 // Config configures a ShamHub server.
