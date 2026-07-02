@@ -24,14 +24,15 @@ type mergePlanExecutor struct {
 	Submit  SubmitHandler  // required
 	Sync    SyncHandler    // required
 
-	Progress  mergeProgress  // required
-	Requester mergeRequester // required
+	Progress         mergeProgress    // required
+	MergeRequester   mergeRequester   // required
+	ReadinessChecker readinessChecker // required
 
-	Trunk                 string            // required
-	MergeReadinessTimeout time.Duration     // required
-	MergeTimeout          time.Duration     // required
-	Method                forge.MergeMethod // required
-	FailFast              bool
+	Trunk        string            // required
+	ReadyTimeout time.Duration     // required
+	MergeTimeout time.Duration     // required
+	Method       forge.MergeMethod // required
+	FailFast     bool
 }
 
 // Execute runs the merge queue over the supplied plan items.
@@ -170,7 +171,7 @@ func (e *mergePlanExecutor) mergeItem(
 		Item: item,
 		URL:  item.mergeURL,
 	})
-	if err := e.Requester.RequestMerge(ctx, item); err != nil {
+	if err := e.MergeRequester.RequestMerge(ctx, item); err != nil {
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressMergeFailed,
 			Item: item,

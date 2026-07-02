@@ -40,6 +40,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -152,6 +153,13 @@ func (c *Cmd) WithLogPrefix(prefix string) *Cmd {
 // WithDir sets the working directory for the command.
 func (c *Cmd) WithDir(dir string) *Cmd {
 	c.cmd.Dir = dir
+	return c
+}
+
+// WithWaitDelay bounds the time Wait spends on command shutdown
+// after the command context is canceled or the process exits.
+func (c *Cmd) WithWaitDelay(d time.Duration) *Cmd {
+	c.cmd.WaitDelay = d
 	return c
 }
 

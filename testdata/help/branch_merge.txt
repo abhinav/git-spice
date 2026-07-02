@@ -4,14 +4,42 @@ Merge a branch into trunk
 
 Merges the CR for the current branch into trunk. Use --branch to merge a
 different branch. Use --branch multiple times to merge multiple branches.
+Only the selected branches are merged. All selected branches must be stacked on
+trunk or on a branch that is also selected.
 
-Only the selected branches are merged. To merge a branch and its downstack,
-use 'git-spice downstack merge'. To merge a whole stack, use 'git-spice stack
+For example, for the following stack:
+
+       ┌── B
+     ┌─┴ A
+    trunk
+
+This command can merge A alone, or A and B together.
+
+    gs branch merge --branch A
+    gs branch merge --branch A --branch B
+
+It cannot merge B alone, because A is not selected:
+
+    gs branch merge --branch B // error
+
+To merge multiple branches in a stack prefer 'gs downstack merge' or 'gs stack
 merge'.
 
-Before checking merge readiness, the command waits briefly for the forge to
-observe the pushed head. Then it waits for the forge to report that the CR is
-ready to merge. Use --ready-timeout to configure the maximum wait.
+Branches merge bottom-up starting with those stacked on trunk. After a branch
+merges, its upstack branches are restacked and resubmitted. When those are ready
+to merge, they are merged in turn, and the process repeats.
+
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration. Override this with the
+'spice.merge.readyCommand' configuration option.
+
+Branches are merged using the forge's merge API. Override this with the
+'spice.merge.command' configuration option.
+
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge, it is
+skipped and any branches stacked on it are also skipped. Use --fail-fast to stop
+scheduling remaining merge queue work after the first branch failure.
 
 Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
@@ -20,6 +48,8 @@ Flags:
                          0 means check once. (🔧 spice.merge.readyTimeout)
   --merge-timeout=2m     Max time to wait for merge completion after requesting
                          merge. (🔧 spice.merge.mergeTimeout)
+  --fail-fast            Stop scheduling remaining merge queue work after the
+                         first branch failure.
   --branch=NAME,...      Branches to merge. May be repeated.
 
 Global Flags:
@@ -30,5 +60,7 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
-  spice.merge.command    Command to request merge instead of using the forge
-                         merge API.
+  spice.merge.command         Command to request merge instead of using the
+                              forge merge API.
+  spice.merge.readyCommand    Command to check merge readiness instead of using
+                              the forge.

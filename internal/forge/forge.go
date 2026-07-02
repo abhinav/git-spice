@@ -290,13 +290,13 @@ type Repository interface {
 	// MergeChange merges an open change into its base branch.
 	MergeChange(ctx context.Context, id ChangeID, opts MergeChangeOptions) error
 
-	// MergeCommandEnvironment returns forge-specific environment variables
-	// for a command that requests merge of the given change.
+	// CommandEnvironment returns forge-specific environment variables
+	// for commands that operate on the given change.
 	//
 	// Keys must use the GIT_SPICE_ prefix.
 	// Callers own common git-spice variables
 	// and may ignore forge values that collide with those keys.
-	MergeCommandEnvironment(ctx context.Context, id ChangeID) (map[string]string, error)
+	CommandEnvironment(ctx context.Context, id ChangeID) (map[string]string, error)
 
 	// ChangeMergeability reports whether the forge currently considers
 	// the change mergeable.

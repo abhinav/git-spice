@@ -7,8 +7,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// MergeCommandEnvironment returns GitHub-specific variables for merge hooks.
-func (r *Repository) MergeCommandEnvironment(
+// CommandEnvironment returns GitHub-specific variables for command hooks.
+func (r *Repository) CommandEnvironment(
 	_ context.Context,
 	id forge.ChangeID,
 ) (map[string]string, error) {

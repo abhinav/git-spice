@@ -38,6 +38,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -651,6 +652,7 @@ func (cmd *mainCmd) AfterApply(
 			restackHandler RestackHandler,
 			submitHandler SubmitHandler,
 			syncHandler SyncHandler,
+			scriptRunner *scriptrun.Runner,
 		) (MergeHandler, error) {
 			return &merge.Handler{
 				Log:                log,
@@ -664,6 +666,7 @@ func (cmd *mainCmd) AfterApply(
 				Sync:               syncHandler,
 				Repository:         repo,
 				Remote:             remote.Upstream,
+				ScriptRunner:       scriptRunner,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -705,6 +708,11 @@ func (cmd *mainCmd) AfterApply(
 			view ui.View,
 		) (state.Remote, error) {
 			return ensureRemote(ctx, repo, store, log, view)
+		}),
+		kctx.BindSingletonProvider(func(log *silog.Logger) *scriptrun.Runner {
+			return &scriptrun.Runner{
+				Log: log,
+			}
 		}),
 	)
 }

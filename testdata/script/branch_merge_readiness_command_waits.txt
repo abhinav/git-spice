@@ -1,0 +1,96 @@
+# 'branch merge' polls spice.merge.readyCommand until it reports ready.
+
+as 'Test <test@example.com>'
+at '2026-06-30T12:00:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch
+gs branch submit --fill
+stderr 'Created #1'
+
+# configure a readiness command that waits once and then reports ready
+chmod 755 $WORK/ready-command.sh
+git config spice.merge.readyCommand $WORK/ready-command.sh
+git config spice.merge.readyTimeout 11s
+
+# merge the current branch after the readiness command allows the merge
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'INF merge: readiness waiting'
+stderr 'INF merge: readiness ready'
+stderr 'feature1: #1 was merged'
+stderr 'All 1 change.s. merged.'
+
+# verify the change is now merged
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- ready-command.sh --
+#!/bin/sh
+
+test "$GIT_SPICE_BRANCH" = feature1
+test "$GIT_SPICE_BASE_BRANCH" = main
+test "$GIT_SPICE_TRUNK_BRANCH" = main
+test "$GIT_SPICE_SHAMHUB_CHANGE_NUMBER" = 1
+
+if ! test -f "$WORK/readiness-seen"; then
+  echo readiness waiting
+  echo seen > "$WORK/readiness-seen"
+  exit 1
+fi
+
+echo readiness ready
+exit 0
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "39357f190900be0a2dac405bd77b939441d1c688"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "ad58974ffb72f15e51c8b097f1b08d6f9c77d0d8"
+    }
+  }
+]

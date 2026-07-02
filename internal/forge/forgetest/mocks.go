@@ -826,6 +826,45 @@ func (c *MockRepositoryChangeStatusesCall) DoAndReturn(f func(context.Context, [
 	return c
 }
 
+// CommandEnvironment mocks base method.
+func (m *MockRepository) CommandEnvironment(ctx context.Context, id forge.ChangeID) (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommandEnvironment", ctx, id)
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommandEnvironment indicates an expected call of CommandEnvironment.
+func (mr *MockRepositoryMockRecorder) CommandEnvironment(ctx, id any) *MockRepositoryCommandEnvironmentCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommandEnvironment", reflect.TypeOf((*MockRepository)(nil).CommandEnvironment), ctx, id)
+	return &MockRepositoryCommandEnvironmentCall{Call: call}
+}
+
+// MockRepositoryCommandEnvironmentCall wrap *gomock.Call
+type MockRepositoryCommandEnvironmentCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockRepositoryCommandEnvironmentCall) Return(arg0 map[string]string, arg1 error) *MockRepositoryCommandEnvironmentCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockRepositoryCommandEnvironmentCall) Do(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryCommandEnvironmentCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockRepositoryCommandEnvironmentCall) DoAndReturn(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryCommandEnvironmentCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // CommentCountsByChange mocks base method.
 func (m *MockRepository) CommentCountsByChange(ctx context.Context, ids []forge.ChangeID) ([]*forge.CommentCounts, error) {
 	m.ctrl.T.Helper()
@@ -1168,45 +1207,6 @@ func (c *MockRepositoryMergeChangeCall) Do(f func(context.Context, forge.ChangeI
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
 func (c *MockRepositoryMergeChangeCall) DoAndReturn(f func(context.Context, forge.ChangeID, forge.MergeChangeOptions) error) *MockRepositoryMergeChangeCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
-// MergeCommandEnvironment mocks base method.
-func (m *MockRepository) MergeCommandEnvironment(ctx context.Context, id forge.ChangeID) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MergeCommandEnvironment", ctx, id)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MergeCommandEnvironment indicates an expected call of MergeCommandEnvironment.
-func (mr *MockRepositoryMockRecorder) MergeCommandEnvironment(ctx, id any) *MockRepositoryMergeCommandEnvironmentCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeCommandEnvironment", reflect.TypeOf((*MockRepository)(nil).MergeCommandEnvironment), ctx, id)
-	return &MockRepositoryMergeCommandEnvironmentCall{Call: call}
-}
-
-// MockRepositoryMergeCommandEnvironmentCall wrap *gomock.Call
-type MockRepositoryMergeCommandEnvironmentCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockRepositoryMergeCommandEnvironmentCall) Return(arg0 map[string]string, arg1 error) *MockRepositoryMergeCommandEnvironmentCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockRepositoryMergeCommandEnvironmentCall) Do(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryMergeCommandEnvironmentCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRepositoryMergeCommandEnvironmentCall) DoAndReturn(f func(context.Context, forge.ChangeID) (map[string]string, error)) *MockRepositoryMergeCommandEnvironmentCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

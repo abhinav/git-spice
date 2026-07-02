@@ -1,0 +1,115 @@
+# 'branch merge' can use readiness and final merge commands together.
+
+as 'Test <test@example.com>'
+at '2026-06-30T12:02:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch
+gs branch submit --fill
+stderr 'Created #1'
+
+# configure separate readiness and merge commands
+chmod 755 $WORK/ready-command.sh
+chmod 755 $WORK/merge-command.sh
+git config spice.merge.readyCommand $WORK/ready-command.sh
+git config spice.merge.command $WORK/merge-command.sh
+
+# merge the current branch through both configured commands
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'INF merge: readiness command ready'
+stderr 'INF merge: merge command requested'
+stderr 'feature1: #1 was merged'
+stderr 'All 1 change.s. merged.'
+
+# verify the merge command requested the forge merge
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- ready-command.sh --
+#!/bin/sh
+
+test "$GIT_SPICE_FORGE_ID" = shamhub
+test "$GIT_SPICE_BRANCH" = feature1
+test "$GIT_SPICE_BASE_BRANCH" = main
+test "$GIT_SPICE_TRUNK_BRANCH" = main
+test -n "$GIT_SPICE_CHANGE_URL"
+test -n "$GIT_SPICE_HEAD_SHA"
+test "$GIT_SPICE_SHAMHUB_CHANGE_NUMBER" = 1
+test -n "$GIT_SPICE_SHAMHUB_API_URL"
+test -n "$GIT_SPICE_SHAMHUB_TOKEN"
+
+echo readiness command ready
+exit 0
+-- merge-command.sh --
+#!/bin/sh
+
+test "$GIT_SPICE_FORGE_ID" = shamhub
+test "$GIT_SPICE_BRANCH" = feature1
+test "$GIT_SPICE_BASE_BRANCH" = main
+test "$GIT_SPICE_TRUNK_BRANCH" = main
+test -n "$GIT_SPICE_CHANGE_URL"
+test -n "$GIT_SPICE_HEAD_SHA"
+test "$GIT_SPICE_SHAMHUB_CHANGE_NUMBER" = 1
+test -n "$GIT_SPICE_SHAMHUB_API_URL"
+test -n "$GIT_SPICE_SHAMHUB_TOKEN"
+
+echo merge command requested
+curl -fsS -X POST \
+  -H 'Content-Type: application/json' \
+  -H "Authentication-Token: $GIT_SPICE_SHAMHUB_TOKEN" \
+  -d '{}' \
+  "$GIT_SPICE_SHAMHUB_API_URL/alice/example/change/$GIT_SPICE_SHAMHUB_CHANGE_NUMBER/merge"
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "547f6f39cf85eede1ec262c0c361f9497dcc8e23"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "80705ee7f4750daacdcc0fe1807f4853ac40f81d"
+    }
+  }
+]

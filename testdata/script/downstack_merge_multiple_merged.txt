@@ -1,4 +1,4 @@
-# 'downstack merge' skips multiple already-merged branches in a stack.
+# 'downstack merge' reports multiple already-merged branches before stale-base failure.
 
 as 'Test <test@example.com>'
 at '2024-04-05T16:40:32Z'
@@ -36,17 +36,17 @@ stderr 'Created #3'
 shamhub merge alice/example 1
 shamhub merge alice/example 2
 
-# downstack merge should skip both and merge only feature3.
-# Use --no-branch-check because the external merges
-# would trigger stale base validation.
-# feature3's PR base is retargeted from feature2 to main.
-env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs downstack merge --no-branch-check
-cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+# downstack merge should skip both before stale-base validation blocks feature3.
+! gs downstack merge
 stderr 'feature1.*already merged, skipping'
 stderr 'feature2.*already merged, skipping'
-stderr 'feature3: retargeting #3 onto main'
-stderr 'feature3: merging #3:'
+stderr 'Branch has stale base'
+stderr 'branch=feature2'
+stderr 'base=feature1'
+stderr 'branch=feature3'
+stderr 'base=feature2'
+stderr '2 branches with stale bases were found'
+stderr 'gs repo sync'
 
 -- repo/feature1.txt --
 This is feature 1
@@ -54,8 +54,3 @@ This is feature 1
 This is feature 2
 -- repo/feature3.txt --
 This is feature 3
--- robot-merge.golden --
-===
-> Merge 1 change(s) bottom-up?: [Y/n]
->   feature3 (#3)
-true

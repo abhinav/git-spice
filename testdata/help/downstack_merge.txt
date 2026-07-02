@@ -2,39 +2,45 @@ Usage: gs downstack (ds) merge (m) [flags]
 
 Merge a branch and those below it
 
-Merges the current branch and all branches below it into trunk via the forge
-API, bottom-up. Use --branch to start at a different branch. Use --branch
-multiple times to merge multiple downstacks.
+Merges CRs for the current branch and all branches below it into trunk.
+Use --branch to merge the downstack of a different branch. Use --branch multiple
+times to merge downstacks of multiple branches. Selected branches and their
+downstack branches down to trunk are merged.
 
-Each selected branch expands to that branch and its downstack branches down to
-trunk. Overlapping downstacks are merged once.
+For example, for the following stack:
 
-This command acts as a local merge queue: it merges one Change Request, waits
-for that merge to finish, restacks and updates the next Change Request, waits
-for merge readiness on the updated Change Request, and then repeats the process.
+       ┌── D
+       │ ┌── C
+       ├─┴ B
+     ┌─┴ A
+    trunk
 
-For a stack like this:
+The following commands have the following effects:
 
-    main <- feature1 <- feature2 <- feature3
+    gs downstack merge --branch D # merge A, D
+    gs downstack merge --branch B # merge A, B
+    gs downstack merge --branch C # merge A, B, C
+    gs downstack merge \          # merge A, B, C, D
+                          --branch C --branch D
 
-Running from feature3 merges in this order:
+Use 'gs stack merge' to merge a branch and its upstack branches in one
+operation.
 
-    feature1, feature2, feature3
+Branches merge bottom-up starting with those stacked on trunk. After a branch
+merges, its upstack branches are restacked and resubmitted. When those are ready
+to merge, they are merged in turn, and the process repeats.
 
-Already-merged branches are skipped automatically. Branches must have an open
-Change Request to be merged.
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration. Override this with the
+'spice.merge.readyCommand' configuration option.
 
-Before merging, the downstack is checked for branches whose base PR was already
-merged on the forge. Use --no-branch-check to skip this validation.
+Branches are merged using the forge's merge API. Override this with the
+'spice.merge.command' configuration option.
 
-Before checking merge readiness, the command waits briefly for the forge to
-observe the pushed head. Then it waits for the forge to report that the CR is
-ready to merge. Use --ready-timeout to configure the maximum wait (default: 30m,
-0 means fail immediately if not ready).
-
-Between merges, the command waits for each merge to complete, restacks and
-updates the next PR, waits for merge readiness on the updated PR, and syncs
-merged branch cleanup.
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge, it is
+skipped and any branches stacked on it are also skipped. Use --fail-fast to stop
+scheduling remaining merge queue work after the first branch failure.
 
 Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
@@ -43,7 +49,8 @@ Flags:
                          0 means check once. (🔧 spice.merge.readyTimeout)
   --merge-timeout=2m     Max time to wait for merge completion after requesting
                          merge. (🔧 spice.merge.mergeTimeout)
-  --no-branch-check      Skip stale base validation before merging.
+  --fail-fast            Stop scheduling remaining merge queue work after the
+                         first branch failure.
   --branch=NAME,...      Branches to start merging from. May be repeated.
 
 Global Flags:
@@ -54,5 +61,7 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
-  spice.merge.command    Command to request merge instead of using the forge
-                         merge API.
+  spice.merge.command         Command to request merge instead of using the
+                              forge merge API.
+  spice.merge.readyCommand    Command to check merge readiness instead of using
+                              the forge.

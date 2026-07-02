@@ -16,6 +16,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
@@ -63,6 +64,12 @@ type GitRepository interface {
 	) (ahead, behind int, err error)
 }
 
+// ScriptRunner is the command execution boundary
+// used to run user-provided scripts.
+type ScriptRunner interface {
+	Run(context.Context, *scriptrun.RunRequest) (*scriptrun.RunResult, error)
+}
+
 // Options controls behavior shared by forge-backed merge commands.
 type Options struct {
 	// Method selects the forge merge strategy.
@@ -73,22 +80,22 @@ type Options struct {
 	// Empty means use the forge merge API.
 	Command string `hidden:"" config:"merge.command" help:"Command to request merge instead of using the forge merge API."`
 
-	// MergeReadinessTimeout is the maximum time to wait for the forge
-	// to report that a change is ready to merge.
+	// ReadyCommand checks merge readiness through a user-defined command.
+	// Empty means use forge readiness.
+	ReadyCommand string `hidden:"" config:"merge.readyCommand" help:"Command to check merge readiness instead of using the forge."`
+
+	// ReadyTimeout is the maximum time to wait
+	// for the configured readiness provider.
 	// Zero means check once and fail if merge readiness is not reached.
-	MergeReadinessTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
+	ReadyTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
 
 	// MergeTimeout is the maximum time to wait for the forge
 	// to report that a change is merged after requesting merge.
 	MergeTimeout time.Duration `name:"merge-timeout" config:"merge.mergeTimeout" default:"2m" help:"Max time to wait for merge completion after requesting merge."`
-}
 
-// DownstackMergeOptions controls downstack merge behavior.
-type DownstackMergeOptions struct {
-	Options
-
-	// NoBranchCheck skips stale base validation before merging.
-	NoBranchCheck bool `help:"Skip stale base validation before merging."`
+	// FailFast stops scheduling remaining merge queue work
+	// after the first branch failure.
+	FailFast bool `help:"Stop scheduling remaining merge queue work after the first branch failure."`
 }
 
 // DownstackMergeRequest asks Handler to merge each requested branch
@@ -96,7 +103,7 @@ type DownstackMergeOptions struct {
 type DownstackMergeRequest struct {
 	Branches []string // required
 
-	Options *DownstackMergeOptions // optional
+	Options *Options // optional
 
 	// BranchGraph reuses branch graph data already loaded by the caller.
 	BranchGraph *spice.BranchGraph // optional
@@ -109,24 +116,13 @@ type BranchMergeRequest struct {
 	Options *Options // optional
 }
 
-// StackMergeOptions controls stack merge behavior.
-type StackMergeOptions struct {
-	Options
-
-	// NoBranchCheck skips stale base validation before merging.
-	NoBranchCheck bool `help:"Skip stale base validation before merging."`
-
-	// FailFast stops the merge queue after the first branch failure.
-	FailFast bool `help:"Stop the merge queue after the first branch failure."`
-}
-
 // StackMergeRequest asks Handler to merge each requested branch,
 // its downstack branches down to trunk,
 // and its upstack branches.
 type StackMergeRequest struct {
 	Branches []string // required
 
-	Options *StackMergeOptions // optional
+	Options *Options // optional
 }
 
 // Handler merges change requests via the forge API.
@@ -141,6 +137,8 @@ type Handler struct {
 	Submit             SubmitHandler      // required
 	Sync               SyncHandler        // required
 
+	ScriptRunner ScriptRunner // required
+
 	// Cleanup dependencies:
 	Repository GitRepository // required
 	Remote     string        // required
@@ -151,7 +149,7 @@ type Handler struct {
 func (h *Handler) MergeDownstack(
 	ctx context.Context, req *DownstackMergeRequest,
 ) error {
-	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
+	opts := cmp.Or(req.Options, &Options{})
 	plan, err := h.buildPlan(ctx, req)
 	if err != nil {
 		return err
@@ -170,11 +168,13 @@ func (h *Handler) MergeDownstack(
 	}
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
-		Method:                opts.Method,
-		Command:               opts.Command,
-		MergeReadinessTimeout: opts.MergeReadinessTimeout,
-		MergeTimeout:          opts.MergeTimeout,
-		SyncBeforeStart:       plan.syncBeforeStart,
+		Method:          opts.Method,
+		Command:         opts.Command,
+		ReadyCommand:    opts.ReadyCommand,
+		ReadyTimeout:    opts.ReadyTimeout,
+		MergeTimeout:    opts.MergeTimeout,
+		FailFast:        opts.FailFast,
+		SyncBeforeStart: plan.syncBeforeStart,
 	})
 }
 
@@ -234,11 +234,13 @@ func (h *Handler) MergeBranch(
 	}
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
-		Method:                opts.Method,
-		Command:               opts.Command,
-		MergeReadinessTimeout: opts.MergeReadinessTimeout,
-		MergeTimeout:          opts.MergeTimeout,
-		SyncBeforeStart:       plan.syncBeforeStart,
+		Method:          opts.Method,
+		Command:         opts.Command,
+		ReadyCommand:    opts.ReadyCommand,
+		ReadyTimeout:    opts.ReadyTimeout,
+		MergeTimeout:    opts.MergeTimeout,
+		FailFast:        opts.FailFast,
+		SyncBeforeStart: plan.syncBeforeStart,
 	})
 }
 
@@ -248,7 +250,7 @@ func (h *Handler) MergeBranch(
 func (h *Handler) MergeStack(
 	ctx context.Context, req *StackMergeRequest,
 ) error {
-	opts := cmp.Or(req.Options, &StackMergeOptions{})
+	opts := cmp.Or(req.Options, &Options{})
 	graph, err := h.Service.BranchGraph(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("build branch graph: %w", err)
@@ -277,9 +279,8 @@ func (h *Handler) MergeStack(
 	}
 
 	plan, err := h.buildPlanFromBranches(ctx, mergePlanRequest{
-		Graph:         graph,
-		Branches:      branches,
-		NoBranchCheck: opts.NoBranchCheck,
+		Graph:    graph,
+		Branches: branches,
 	})
 	if err != nil {
 		return err
@@ -298,12 +299,13 @@ func (h *Handler) MergeStack(
 	}
 
 	return h.executePlan(ctx, plan.items, mergeExecutionOptions{
-		Method:                opts.Method,
-		Command:               opts.Command,
-		MergeReadinessTimeout: opts.MergeReadinessTimeout,
-		MergeTimeout:          opts.MergeTimeout,
-		FailFast:              opts.FailFast,
-		SyncBeforeStart:       plan.syncBeforeStart,
+		Method:          opts.Method,
+		Command:         opts.Command,
+		ReadyCommand:    opts.ReadyCommand,
+		ReadyTimeout:    opts.ReadyTimeout,
+		MergeTimeout:    opts.MergeTimeout,
+		FailFast:        opts.FailFast,
+		SyncBeforeStart: plan.syncBeforeStart,
 	})
 }
 
@@ -356,7 +358,6 @@ type mergePlan struct {
 func (h *Handler) buildPlan(
 	ctx context.Context, req *DownstackMergeRequest,
 ) (mergePlan, error) {
-	opts := cmp.Or(req.Options, &DownstackMergeOptions{})
 	graph := req.BranchGraph
 	if graph == nil {
 		var err error
@@ -380,9 +381,8 @@ func (h *Handler) buildPlan(
 	}
 
 	return h.buildPlanFromBranches(ctx, mergePlanRequest{
-		Graph:         graph,
-		Branches:      branches,
-		NoBranchCheck: opts.NoBranchCheck,
+		Graph:    graph,
+		Branches: branches,
 	})
 }
 
@@ -397,8 +397,6 @@ type mergePlanRequest struct {
 	Graph *spice.BranchGraph // required
 
 	Branches []string // required
-
-	NoBranchCheck bool
 }
 
 func (h *Handler) buildPlanFromBranches(
@@ -462,12 +460,10 @@ func (h *Handler) buildPlanFromBranches(
 		return mergePlan{}, fmt.Errorf("validate branch sync: %w", err)
 	}
 
-	if !req.NoBranchCheck {
-		if err := h.validateFreshBases(
-			ctx, req.Graph, branches,
-		); err != nil {
-			return mergePlan{}, fmt.Errorf("validate stale bases: %w", err)
-		}
+	if err := h.validateFreshBases(
+		ctx, req.Graph, branches,
+	); err != nil {
+		return mergePlan{}, fmt.Errorf("validate stale bases: %w", err)
 	}
 
 	return mergePlan{
@@ -610,12 +606,13 @@ func (h *Handler) confirm(plan []*mergeItem, title string) error {
 }
 
 type mergeExecutionOptions struct {
-	Method                forge.MergeMethod
-	Command               string
-	MergeReadinessTimeout time.Duration
-	MergeTimeout          time.Duration
-	FailFast              bool
-	SyncBeforeStart       bool
+	Method          forge.MergeMethod
+	Command         string
+	ReadyCommand    string
+	ReadyTimeout    time.Duration
+	MergeTimeout    time.Duration
+	FailFast        bool
+	SyncBeforeStart bool
 }
 
 func (opts mergeExecutionOptions) mergeTimeout() time.Duration {
@@ -655,17 +652,40 @@ func (h *Handler) executePlan(
 		progress = newLogMergeProgress(h.Log)
 	}
 
-	requester := mergeRequester(&directMergeRequester{
-		repo:   h.RemoteRepository,
-		method: opts.Method,
+	var _commandRunner *commandRunner
+	getCommandRunner := func() *commandRunner {
+		if _commandRunner != nil {
+			return _commandRunner
+		}
+
+		_commandRunner = &commandRunner{
+			Log:        h.Log,
+			Repository: h.RemoteRepository,
+			ForgeID:    h.RemoteRepository.Forge().ID(),
+			Trunk:      h.Store.Trunk(),
+			Runner:     h.ScriptRunner,
+		}
+		return _commandRunner
+	}
+
+	mergeRequester := mergeRequester(&forgeMergeRequester{
+		Repository: h.RemoteRepository,
+		Method:     opts.Method,
 	})
 	if opts.Command != "" {
-		requester = &commandMergeRequester{
-			log:     h.Log,
-			repo:    h.RemoteRepository,
-			forgeID: h.RemoteRepository.Forge().ID(),
-			trunk:   h.Store.Trunk(),
-			command: opts.Command,
+		mergeRequester = &commandMergeRequester{
+			Runner: getCommandRunner(),
+			Script: opts.Command,
+		}
+	}
+
+	readinessChecker := readinessChecker(&forgeReadinessChecker{
+		Repository: h.RemoteRepository,
+	})
+	if opts.ReadyCommand != "" {
+		readinessChecker = &commandReadinessChecker{
+			Runner: getCommandRunner(),
+			Script: opts.ReadyCommand,
 		}
 	}
 
@@ -678,14 +698,15 @@ func (h *Handler) executePlan(
 		Submit:  h.Submit,
 		Sync:    h.Sync,
 
-		Progress:  progress,
-		Requester: requester,
+		Progress:         progress,
+		MergeRequester:   mergeRequester,
+		ReadinessChecker: readinessChecker,
 
-		Trunk:                 h.Store.Trunk(),
-		MergeReadinessTimeout: opts.MergeReadinessTimeout,
-		MergeTimeout:          opts.mergeTimeout(),
-		Method:                opts.Method,
-		FailFast:              opts.FailFast,
+		Trunk:        h.Store.Trunk(),
+		ReadyTimeout: opts.ReadyTimeout,
+		MergeTimeout: opts.mergeTimeout(),
+		Method:       opts.Method,
+		FailFast:     opts.FailFast,
 	}).Execute(ctx, plan)
 	if err != nil {
 		return err
@@ -693,105 +714,6 @@ func (h *Handler) executePlan(
 
 	h.Log.Infof("All %d change(s) merged.", len(plan))
 	return nil
-}
-
-// mergeRequester requests the forge-side merge after readiness checks pass.
-//
-// A successful request does not mean the change has merged.
-// The merge executor must still wait for the forge to report the merged state.
-type mergeRequester interface {
-	RequestMerge(context.Context, *mergeItem) error
-}
-
-// directMergeRequester requests merges through the forge API.
-type directMergeRequester struct {
-	repo   forge.Repository // required
-	method forge.MergeMethod
-}
-
-func (r *directMergeRequester) RequestMerge(
-	ctx context.Context,
-	item *mergeItem,
-) error {
-	return r.repo.MergeChange(ctx, item.changeID, forge.MergeChangeOptions{
-		Method:   r.method,
-		HeadHash: item.headHash,
-	})
-}
-
-// commandMergeRequester requests merges through a user-configured command.
-//
-// The command is only the merge request step.
-// The caller remains responsible for waiting until the forge reports the
-// change as merged.
-type commandMergeRequester struct {
-	log     *silog.Logger    // required
-	repo    forge.Repository // required
-	forgeID string           // required
-	trunk   string           // required
-	command string           // required
-}
-
-func (r *commandMergeRequester) RequestMerge(
-	ctx context.Context,
-	item *mergeItem,
-) error {
-	env, err := r.mergeCommandEnvironment(ctx, item)
-	if err != nil {
-		return fmt.Errorf("build environment: %w", err)
-	}
-
-	output, flushOutput := silog.Writer(
-		r.log.WithPrefix("merge"),
-		silog.LevelInfo,
-	)
-	defer flushOutput()
-
-	result, err := new(scriptrun.Runner).Run(ctx, &scriptrun.RunRequest{
-		Script: r.command,
-		Env:    env,
-		Stdout: output,
-		Stderr: output,
-	})
-	if err != nil {
-		return err
-	}
-	if result.ExitCode != 0 {
-		return fmt.Errorf("command exited with status %d", result.ExitCode)
-	}
-	return nil
-}
-
-func (r *commandMergeRequester) mergeCommandEnvironment(
-	ctx context.Context,
-	item *mergeItem,
-) ([]string, error) {
-	common := map[string]string{
-		"GIT_SPICE_FORGE_ID":     r.forgeID,
-		"GIT_SPICE_BRANCH":       item.branch,
-		"GIT_SPICE_BASE_BRANCH":  item.base,
-		"GIT_SPICE_TRUNK_BRANCH": r.trunk,
-		"GIT_SPICE_CHANGE_URL":   item.mergeURL,
-		"GIT_SPICE_HEAD_SHA":     item.headHash.String(),
-	}
-
-	forgeEnv, err := r.repo.MergeCommandEnvironment(ctx, item.changeID)
-	if err != nil {
-		return nil, fmt.Errorf("forge environment: %w", err)
-	}
-	for key, value := range forgeEnv {
-		if _, blocked := common[key]; blocked {
-			continue
-		}
-		common[key] = value
-	}
-
-	env := make([]string, 0, len(common))
-	for key, value := range common {
-		env = append(env, key+"="+value)
-	}
-	slices.Sort(env)
-	return env, nil
 }
 
 func (h *Handler) validateFreshBases(
@@ -818,8 +740,7 @@ func (h *Handler) validateFreshBases(
 	}
 	return fmt.Errorf(
 		"%d branches with stale bases were found; "+
-			"run 'gs repo sync' first, "+
-			"or use --no-branch-check to merge anyway",
+			"run 'gs repo sync' first",
 		len(staleBases),
 	)
 }
@@ -956,7 +877,7 @@ func (e *mergePlanExecutor) awaitMergeability(
 	)
 
 	return e.awaitMergeabilityWithDelay(
-		ctx, item, e.MergeReadinessTimeout, _baseDelay, _maxDelay,
+		ctx, item, e.ReadyTimeout, _baseDelay, _maxDelay,
 	)
 }
 
@@ -965,12 +886,21 @@ func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 	item *mergeItem,
 	timeout, baseDelay, maxDelay time.Duration,
 ) error {
+	must.NotBeNilf(e.ReadinessChecker, "merge: ReadinessChecker is required")
+
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
 	delay := baseDelay
 	for attempt := 0; ; attempt++ {
-		mergeability, err := e.RemoteRepository.ChangeMergeability(
-			ctx, item.changeID,
-		)
+		mergeability, err := e.ReadinessChecker.CheckMergeItemReady(ctx, item)
 		if err != nil {
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("not ready after %v", timeout)
+			}
 			return fmt.Errorf("check merge readiness: %w", err)
 		}
 		switch mergeability.State {
@@ -993,12 +923,6 @@ func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 		default:
 			return fmt.Errorf("unknown state: %v", mergeability.State)
 		}
-		if attempt == 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, timeout)
-			defer cancel()
-		}
-
 		e.Progress.Event(mergeProgressEvent{
 			Kind: mergeProgressWaitingForMergeability,
 			Item: item,

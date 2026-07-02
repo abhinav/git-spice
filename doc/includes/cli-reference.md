@@ -296,42 +296,55 @@ gs stack (s) merge (m) [flags]
 
 Merge a stack
 
-Merges the CRs for the current branch's stack into trunk.
+Merges CRs for the current branch's full stack into trunk.
 Use --branch to merge a different branch's stack.
-Use --branch multiple times to merge multiple stacks.
-
-The stack includes the selected branch,
+Use --branch multiple times to merge independent stacks.
+A stack includes the selected branch,
 its downstack branches down to trunk,
 and every upstack branch.
-Overlapping stacks are merged once.
 
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
+For example, for the following stack:
 
-Before merging, the stack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
+                         ┌── E
+                       ┌─┴ D
+                       │ ┌── C
+                       ├─┴ B
+                     ┌─┴ A
+                    trunk
 
-Before checking merge readiness,
-the command waits briefly for the forge to observe the pushed head.
-Then it waits for the forge to report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
-before failing if merge readiness is not reached.
+The following commands have the following effects:
 
-By default, a branch failure skips that branch's upstack descendants,
-but independent sibling branches continue.
-Use --fail-fast to stop the queue after the first branch failure.
+    gs stack merge --branch A # merge A, B, C, D, E
+    gs stack merge --branch B # merge A, B, C
+    gs stack merge --branch D # merge A, D, E
+
+Branches merge bottom-up starting with those stacked on trunk.
+After a branch merges, its upstack branches are restacked and resubmitted.
+When those are ready to merge, they are merged in turn, and the process repeats.
+
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration.
+Override this with the 'spice.merge.readyCommand' configuration option.
+
+Branches are merged using the forge's merge API.
+Override this with the 'spice.merge.command' configuration option.
+
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge,
+it is skipped and any branches stacked on it are also skipped.
+Use --fail-fast to stop scheduling remaining merge queue work
+after the first branch failure.
+
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
-* `--no-branch-check`: Skip stale base validation before merging.
-* `--fail-fast`: Stop the merge queue after the first branch failure.
+* `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches whose stacks to merge. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -621,57 +634,57 @@ gs downstack (ds) merge (m) [flags]
 
 Merge a branch and those below it
 
-Merges the current branch and all branches below it
-into trunk via the forge API, bottom-up.
-Use --branch to start at a different branch.
-Use --branch multiple times to merge multiple downstacks.
+Merges CRs for the current branch and all branches below it into trunk.
+Use --branch to merge the downstack of a different branch.
+Use --branch multiple times to merge downstacks of multiple branches.
+Selected branches and their downstack branches down to trunk are merged.
 
-Each selected branch expands to that branch
-and its downstack branches down to trunk.
-Overlapping downstacks are merged once.
+For example, for the following stack:
 
-This command acts as a local merge queue:
-it merges one Change Request,
-waits for that merge to finish,
-restacks and updates the next Change Request,
-waits for merge readiness on the updated Change Request,
-and then repeats the process.
+                       ┌── D
+                       │ ┌── C
+                       ├─┴ B
+                     ┌─┴ A
+                    trunk
 
-For a stack like this:
+The following commands have the following effects:
 
-    main <- feature1 <- feature2 <- feature3
+    gs downstack merge --branch D # merge A, D
+    gs downstack merge --branch B # merge A, B
+    gs downstack merge --branch C # merge A, B, C
+    gs downstack merge \          # merge A, B, C, D
+                          --branch C --branch D
 
-Running from feature3 merges in this order:
+Use 'gs stack merge' to merge a branch
+and its upstack branches in one operation.
 
-    feature1, feature2, feature3
+Branches merge bottom-up starting with those stacked on trunk.
+After a branch merges, its upstack branches are restacked and resubmitted.
+When those are ready to merge, they are merged in turn, and the process repeats.
 
-Already-merged branches are skipped automatically.
-Branches must have an open Change Request to be merged.
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration.
+Override this with the 'spice.merge.readyCommand' configuration option.
 
-Before merging, the downstack is checked for branches
-whose base PR was already merged on the forge.
-Use --no-branch-check to skip this validation.
+Branches are merged using the forge's merge API.
+Override this with the 'spice.merge.command' configuration option.
 
-Before checking merge readiness,
-the command waits briefly for the forge to observe the pushed head.
-Then it waits for the forge to report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait
-(default: 30m, 0 means fail immediately if not ready).
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge,
+it is skipped and any branches stacked on it are also skipped.
+Use --fail-fast to stop scheduling remaining merge queue work
+after the first branch failure.
 
-Between merges, the command waits for each merge
-to complete, restacks and updates the next PR,
-waits for merge readiness on the updated PR,
-and syncs merged branch cleanup.
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
-* `--no-branch-check`: Skip stale base validation before merging.
+* `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches to start merging from. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1138,26 +1151,56 @@ Merge a branch into trunk
 Merges the CR for the current branch into trunk.
 Use --branch to merge a different branch.
 Use --branch multiple times to merge multiple branches.
-
 Only the selected branches are merged.
-To merge a branch and its downstack,
-use 'git-spice downstack merge'.
-To merge a whole stack,
-use 'git-spice stack merge'.
+All selected branches must be stacked on trunk
+or on a branch that is also selected.
 
-Before checking merge readiness,
-the command waits briefly for the forge to observe the pushed head.
-Then it waits for the forge to report that the CR is ready to merge.
-Use --ready-timeout to configure the maximum wait.
+For example, for the following stack:
+
+       ┌── B
+     ┌─┴ A
+    trunk
+
+This command can merge A alone,
+or A and B together.
+
+    gs branch merge --branch A
+    gs branch merge --branch A --branch B
+
+It cannot merge B alone, because A is not selected:
+
+    gs branch merge --branch B // error
+
+To merge multiple branches in a stack
+prefer 'gs downstack merge' or 'gs stack merge'.
+
+Branches merge bottom-up starting with those stacked on trunk.
+After a branch merges, its upstack branches are restacked and resubmitted.
+When those are ready to merge, they are merged in turn, and the process repeats.
+
+A branch is considered ready to merge when the forge reports it as mergeable,
+based on the forge and the repository configuration.
+Override this with the 'spice.merge.readyCommand' configuration option.
+
+Branches are merged using the forge's merge API.
+Override this with the 'spice.merge.command' configuration option.
+
+If a branch becomes blocked and will not become ready without intervention,
+or it takes too long to become ready, or otherwise fails to merge,
+it is skipped and any branches stacked on it are also skipped.
+Use --fail-fast to stop scheduling remaining merge queue work
+after the first branch failure.
+
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
 * `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
 * `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
+* `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches to merge. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice branch submit {#gs-branch-submit}
 

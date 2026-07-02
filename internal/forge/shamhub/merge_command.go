@@ -7,8 +7,8 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
-// MergeCommandEnvironment returns ShamHub-specific variables for merge hooks.
-func (r *forgeRepository) MergeCommandEnvironment(
+// CommandEnvironment returns ShamHub-specific variables for command hooks.
+func (r *forgeRepository) CommandEnvironment(
 	_ context.Context,
 	id forge.ChangeID,
 ) (map[string]string, error) {

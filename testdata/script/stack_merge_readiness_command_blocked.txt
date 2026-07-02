@@ -1,0 +1,121 @@
+# 'stack merge' skips upstack branches after readiness command blocks a base.
+
+as 'Test <test@example.com>'
+at '2026-06-30T12:01:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a stack: main -> feature1 -> feature2
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+git add feature2.txt
+gs bc feature2 -m 'Add feature 2'
+
+# submit the stack
+gs stack submit --fill
+stderr 'Created #1'
+stderr 'Created #2'
+
+# configure a readiness command that permanently blocks the base branch
+chmod 755 $WORK/ready-command.sh
+git config spice.merge.readyCommand $WORK/ready-command.sh
+
+# stack merge should skip the dependent upstack branch
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs stack merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'INF merge: readiness blocked'
+stderr 'wait for merge readiness: blocked: unknown'
+stderr 'feature2: skipped'
+
+# verify neither change was merged
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- repo/feature2.txt --
+This is feature 2
+-- ready-command.sh --
+#!/bin/sh
+
+test -n "$GIT_SPICE_CHANGE_URL"
+test -n "$GIT_SPICE_HEAD_SHA"
+test -n "$GIT_SPICE_SHAMHUB_API_URL"
+test -n "$GIT_SPICE_SHAMHUB_TOKEN"
+
+if test "$GIT_SPICE_BRANCH" = feature1; then
+  echo readiness blocked
+  exit 2
+fi
+
+echo readiness ready
+exit 0
+-- robot-merge.golden --
+===
+> Merge 2 change(s)?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+true
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "9bbaa8eb7a0b942b16fdebe0752dda54446e3f8c"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "5e87719b9168fa7d7908e971c65ef3d85b30d864"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "open",
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "5e87719b9168fa7d7908e971c65ef3d85b30d864"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "b1158be1739dba20f1516b1a10fbdb5fda6a1706"
+    }
+  }
+]

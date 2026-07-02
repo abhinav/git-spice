@@ -105,16 +105,102 @@ text "feat3" color red
 
 ## When is a CR ready to merge?
 
-Before git-spice requests a merge,
-it waits for the forge to report that the CR is ready to merge.
+Before git-spice requests a merge, it waits for the CR to be ready.
 
-The forge decides what "ready to merge" means for the repository.
-Depending on the forge and repository settings,
-this can include required CI checks, review approvals, or other requirements.
+By default, the definition of "ready to merge" for a CR
+depends on the forge and repository settings.
+This can include CI checks, required approvals, or other requirements.
 
-If a CR is not ready to merge within 30 minutes,
-git-spice treats the branch as failed, and skips its upstack branches.
-The wait time can be changed with the $$spice.merge.mergeTimeout$$ configuration option.
+git-spice will poll the forge until the CR is reported as mergeable,
+waiting up to 30 minutes for the CR to become ready.
+The wait time can be changed
+with the $$spice.merge.readyTimeout$$ configuration option.
+
+If a CR is not ready to merge after the configured timeout,
+that CR is assumed to be blocked and it, and its upstack branches,
+will not be merged.
+
+### Custom merge readiness
+
+If a repository's configured definition of "ready to merge" is not sufficient,
+git-spice offers a $$spice.merge.readyCommand$$ configuration option
+to customize it.
+
+If set, git-spice will run the configured command to poll for a CR's readiness.
+The configuration value can be set to a shell command or a script/executable.
+
+Its exit status determines whether the CR is ready to merge:
+
+- exit status `0` means the CR is ready
+- exit status `1` means git-spice should try again later
+- exit status `2` means the CR is blocked and waiting won't help;
+  the CR and its upstack branches will not be merged
+
+<details>
+  <summary>Example: Wait for GitHub mergeability and review</summary>
+
+For example, this command waits until GitHub reports a PR mergeable,
+with at least one approval and no blocking reviews.
+
+```bash title="Configuration"
+git config \
+  spice.merge.readyCommand \
+  "$HOME/bin/merge-ready.sh"
+```
+
+```bash title="$HOME/bin/merge-ready.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly PR="${GIT_SPICE_GITHUB_PR_NUMBER}"
+
+MERGEABLE="$(
+  gh pr view "$PR" \
+    --json mergeable \
+    --jq .mergeable
+)"
+
+case "$MERGEABLE" in
+  MERGEABLE)
+    ;;
+  UNKNOWN)
+    # GitHub may return UNKNOWN while it computes whether the PR can merge.
+    # Treat that as temporary and let git-spice poll again.
+    exit 1
+    ;;
+  CONFLICTING)
+    exit 2
+    ;;
+esac
+
+REVIEW="$(
+  gh pr view "$PR" \
+    --json reviewDecision \
+    --jq .reviewDecision
+)"
+
+case "$REVIEW" in
+  APPROVED)
+    exit 0
+    ;;
+  "" | REVIEW_REQUIRED)
+    # GitHub may return an empty reviewDecision
+    # when no review requirement applies or no review decision is available.
+    # For this policy, both empty and REVIEW_REQUIRED mean keep waiting.
+    exit 1
+    ;;
+  CHANGES_REQUESTED)
+    exit 2
+    ;;
+esac
+
+exit 1
+```
+
+</details>
+
+See [Command environment](#command-environment)
+for the variables passed to $$spice.merge.readyCommand$$.
 
 ## Merging multiple stacks
 
@@ -259,5 +345,27 @@ If the command exits with a non-zero exit code,
 the merge is considered to have failed
 and the upstack branches are not merged.
 
-See $$spice.merge.command$$ for the full set of environment variables
-available to the command.
+See [Command environment](#command-environment)
+for the variables passed to $$spice.merge.command$$.
+
+## Command environment
+
+$$spice.merge.readyCommand$$ and $$spice.merge.command$$
+receive the following environment variables when executed:
+
+- `GIT_SPICE_FORGE_ID`
+- `GIT_SPICE_BRANCH`
+- `GIT_SPICE_BASE_BRANCH`
+- `GIT_SPICE_TRUNK_BRANCH`
+- `GIT_SPICE_CHANGE_URL`
+- `GIT_SPICE_HEAD_SHA`
+
+Depending on the forge, the following additional variables may be set:
+
+| Environment variable | Forge |
+|---|---|
+| `GIT_SPICE_GITHUB_PR_NUMBER` | <!-- gs:badge:github --> |
+| `GIT_SPICE_GITLAB_MR_IID` | <!-- gs:badge:gitlab --> |
+| `GIT_SPICE_BITBUCKET_PR_ID` | <!-- gs:badge:bitbucket --> |
+| `GIT_SPICE_FORGEJO_PR_NUMBER` | <!-- gs:badge:forgejo --> |
+| `GIT_SPICE_GITEA_PR_NUMBER` | <!-- gs:badge:gitea --> |

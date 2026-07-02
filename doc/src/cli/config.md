@@ -475,15 +475,46 @@ whether the branch is in sync with its pushed counterpart.
 
 <!-- gs:version v0.30.0 -->
 
-Maximum time merge commands wait for merge readiness before each merge.
-Merge readiness requires the forge to report the pushed head
-and report that the CR is ready to merge.
+Maximum time that the merge commands wait
+for a CR to be ready to merge after enqueued.
+
+Whether a CR is ready is determined by the forge and repository configuration,
+or by $$spice.merge.readyCommand$$ if configured.
 
 The value must be a duration string such as
 `30m`, `1h`, `90s`, etc.
-Set to `0` to fail immediately if merge readiness is not already reached.
+
+Set to `0` to fail immediately for any CRs
+that aren't already ready to merge.
 
 Defaults to `30m`.
+
+### spice.merge.readyCommand
+
+<!-- gs:version unreleased -->
+
+Command to run to check whether a CR is ready to merge.
+
+If unset, this is determined by the forge and repository settings.
+If set, the command replaces the forge readiness check.
+
+The command does not request the merge.
+Use $$spice.merge.command$$ to customize the later merge-request step.
+Both settings may be configured together.
+
+The command must exit with one of the following statuses:
+
+- `0`: the CR is ready to merge
+- `1`: the CR is not ready yet, and git-spice should poll again later
+- `2`: the CR is permanently blocked by the command's policy;
+  use this for conditions that cannot be resolved by waiting,
+  such as a missing approval or failing CI checks
+- any other exit status: the operation failed
+
+See [Command environment](/guide/merge.md#command-environment)
+for the variables passed to the command.
+
+git-spice may run the command concurrently for different CRs.
 
 ### spice.merge.mergeTimeout
 
@@ -520,37 +551,21 @@ git-spice warns and lets the forge use its default merge method.
 
 <!-- gs:version v0.30.0 -->
 
-Command to run to request a forge merge
-when a CR is deemed mergeable by a merge command.
+Command to run to request a forge merge when a CR is deemed ready-to-merge.
 If unset, git-spice requests the merge through the forge API.
 
-git-spice still waits for the forge to report merge readiness before running
-the command,
-and still waits for the forge to report that the CR merged after the command
-exits successfully.
-git-spice may run the command concurrently for different CRs.
+git-spice waits for the CR to be reported as ready-to-merge
+before attempting a merge.
+Ready-to-merge is defined by the forge and repository settings,
+or by $$spice.merge.readyCommand$$ if configured.
 
 Exit status `0` means the command requested the merge.
 Any non-zero exit status means the merge request failed for that CR.
 
-The command receives these common environment variables:
+See [Command environment](/guide/merge.md#command-environment)
+for the variables passed to the command.
 
-- `GIT_SPICE_FORGE_ID`
-- `GIT_SPICE_BRANCH`
-- `GIT_SPICE_BASE_BRANCH`
-- `GIT_SPICE_TRUNK_BRANCH`
-- `GIT_SPICE_CHANGE_URL`
-- `GIT_SPICE_HEAD_SHA`
-
-Forges may also provide provider-specific variables.
-
-**Provider-specific variables:**
-
-- `GIT_SPICE_GITHUB_PR_NUMBER`
-- `GIT_SPICE_GITLAB_MR_IID`
-- `GIT_SPICE_BITBUCKET_PR_ID`
-- `GIT_SPICE_FORGEJO_PR_NUMBER`
-- `GIT_SPICE_GITEA_PR_NUMBER`
+git-spice may run the command concurrently for different CRs.
 
 ### spice.rebaseContinue.edit
 

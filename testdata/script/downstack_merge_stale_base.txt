@@ -39,23 +39,8 @@ stderr 'branch=feature2'
 stderr 'base=feature1'
 stderr '1 branches with stale bases were found'
 stderr 'gs repo sync'
-stderr 'no-branch-check'
-
-# --no-branch-check bypasses the stale base check.
-# feature2's PR base is retargeted from feature1 to main.
-env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
-gs downstack merge --no-branch-check
-cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
-stderr 'already merged, skipping'
-stderr 'feature2: retargeting #2 onto main'
-stderr 'feature2: merging #2:'
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
--- robot-merge.golden --
-===
-> Merge 1 change(s) bottom-up?: [Y/n]
->   feature2 (#2)
-true
