@@ -32,5 +32,5 @@ func (cmd *branchRestackCmd) AfterApply(ctx context.Context, wt *git.Worktree) e
 }
 
 func (cmd *branchRestackCmd) Run(ctx context.Context, handler RestackHandler) error {
-	return handler.RestackBranch(ctx, cmd.Branch)
+	return handler.RestackBranch(ctx, cmd.Branch, nil)
 }

@@ -88,5 +88,5 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch)
+	return handler.RestackStack(ctx, cmd.Branch, nil)
 }

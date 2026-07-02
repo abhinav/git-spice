@@ -782,17 +782,17 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 }
 
 // RestackBranch mocks base method.
-func (m *MockRestackHandler) RestackBranch(ctx context.Context, branch string) error {
+func (m *MockRestackHandler) RestackBranch(ctx context.Context, branch string, opts *restack.Options) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackBranch", ctx, branch)
+	ret := m.ctrl.Call(m, "RestackBranch", ctx, branch, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RestackBranch indicates an expected call of RestackBranch.
-func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, branch any) *MockRestackHandlerRestackBranchCall {
+func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, branch, opts any) *MockRestackHandlerRestackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, branch)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, branch, opts)
 	return &MockRestackHandlerRestackBranchCall{Call: call}
 }
 
@@ -808,13 +808,13 @@ func (c *MockRestackHandlerRestackBranchCall) Return(arg0 error) *MockRestackHan
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, string, *restack.Options) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, string) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, string, *restack.Options) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

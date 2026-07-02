@@ -54,7 +54,7 @@ func TestHandler_RestackDownstack(t *testing.T) {
 			Service:  mockService,
 		}
 
-		require.NoError(t, handler.RestackDownstack(t.Context(), "feature3"))
+		require.NoError(t, handler.RestackDownstack(t.Context(), "feature3", nil))
 		assert.Contains(t, logBuffer.String(), "feature1: restacked on main")
 		assert.Contains(t, logBuffer.String(), "feature2: restacked on feature1")
 		assert.Contains(t, logBuffer.String(), "feature3: restacked on feature2")
@@ -99,6 +99,6 @@ func TestHandler_RestackDownstack(t *testing.T) {
 			Service:  mockService,
 		}
 
-		require.NoError(t, handler.RestackDownstack(t.Context(), "feature2"))
+		require.NoError(t, handler.RestackDownstack(t.Context(), "feature2", nil))
 	})
 }
