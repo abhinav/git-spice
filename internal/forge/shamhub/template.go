@@ -3,9 +3,11 @@ package shamhub
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/scanutil"
@@ -40,6 +42,21 @@ type changeTemplate struct {
 
 func (sh *ShamHub) handleChangeTemplate(ctx context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {
 	owner, repo := req.Owner, req.Repo
+
+	sh.mu.RLock()
+	changeTemplateErrorDelay := sh.changeTemplateErrorDelay
+	sh.mu.RUnlock()
+	if changeTemplateErrorDelay > 0 {
+		select {
+		case <-time.After(changeTemplateErrorDelay):
+			return nil, &httpError{
+				code:    http.StatusInternalServerError,
+				message: "change template lookup failed",
+			}
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 
 	templatePathSet := make(map[string]struct{}, len(_changeTemplatePaths)*3)
 	for _, p := range _changeTemplatePaths {

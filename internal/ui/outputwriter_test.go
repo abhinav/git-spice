@@ -3,7 +3,9 @@ package ui
 import (
 	"bytes"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +15,9 @@ import (
 func TestOutputWriter_Write_inactiveWritesDirect(t *testing.T) {
 	var buf bytes.Buffer
 	w := NewOutputWriter(&buf)
+	defer func() {
+		require.NoError(t, w.Close())
+	}()
 
 	_, err := w.Write([]byte("direct output\n"))
 
@@ -24,19 +29,25 @@ func TestOutputWriter_Write_activeSendsCompletedLines(t *testing.T) {
 	var buf bytes.Buffer
 	var program captureProgram
 	w := NewOutputWriter(&buf)
+	defer func() {
+		require.NoError(t, w.Close())
+	}()
 	stopPrinting := w.printTo(&program)
 
 	_, err := w.Write([]byte("one"))
 	require.NoError(t, err)
-	assert.Empty(t, program.msgs)
+	assert.Empty(t, program.Messages())
 	assert.Empty(t, buf.String())
 
 	_, err = w.Write([]byte("\r\ntwo\npartial"))
 	require.NoError(t, err)
 
-	require.Len(t, program.msgs, 2)
-	assertPrintLineMessage(t, program.msgs[0], "one")
-	assertPrintLineMessage(t, program.msgs[1], "two")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Len(c, program.Messages(), 2)
+	}, time.Second, 10*time.Millisecond)
+	msgs := program.Messages()
+	assertPrintLineMessage(t, msgs[0], "one")
+	assertPrintLineMessage(t, msgs[1], "two")
 	assert.Empty(t, buf.String())
 
 	stopPrinting()
@@ -46,11 +57,22 @@ func TestOutputWriter_Write_activeSendsCompletedLines(t *testing.T) {
 }
 
 type captureProgram struct {
+	mu   sync.Mutex
 	msgs []tea.Msg
 }
 
 func (p *captureProgram) Send(msg tea.Msg) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.msgs = append(p.msgs, msg)
+}
+
+func (p *captureProgram) Messages() []tea.Msg {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return append([]tea.Msg(nil), p.msgs...)
 }
 
 func assertPrintLineMessage(t *testing.T, msg tea.Msg, want string) {
