@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/cli"
@@ -24,6 +25,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/sliceutil"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
 	"go.abhg.dev/gs/internal/ui"
@@ -39,6 +41,10 @@ type GitRepository interface {
 	IsAncestor(ctx context.Context, ancestor, descendant git.Hash) bool
 	Fetch(ctx context.Context, opts git.FetchOptions) error
 	CountCommits(ctx context.Context, commitRange git.CommitRange) (int, error)
+	ListCommitsDetails(
+		ctx context.Context,
+		commitRange git.CommitRange,
+	) iter.Seq2[git.CommitDetail, error]
 	DeleteBranch(ctx context.Context, name string, opts git.BranchDeleteOptions) error // TODO:specialize to delete remote branch?
 	RemoteURL(ctx context.Context, remote string) (string, error)
 }
@@ -904,7 +910,8 @@ func (h *Handler) shouldDeleteMergedChange(
 		var shouldDelete bool
 		prompt := ui.NewConfirm().
 			WithTitle(fmt.Sprintf("Delete %v?", branchName)).
-			WithDescription(mismatchMsg).
+			WithDescription(h.mergedChangeHeadMismatchDescription(
+				ctx, branchName, changeID, localHead, remoteHead)).
 			WithValue(&shouldDelete)
 		if err := ui.Run(h.View, prompt); err != nil {
 			h.Log.Warn("Skipping branch", "branch", branchName, "error", err)
@@ -917,6 +924,72 @@ func (h *Handler) shouldDeleteMergedChange(
 		must.Bef(false, "unknown merged change head status")
 		return false
 	}
+}
+
+func (h *Handler) mergedChangeHeadMismatchDescription(
+	ctx context.Context,
+	branchName string,
+	changeID forge.ChangeID,
+	localHead, remoteHead git.Hash,
+) string {
+	const localCommitsLimit = 5
+
+	var desc strings.Builder
+	fmt.Fprintf(&desc,
+		"%v was merged but local SHA (%v) does not match remote SHA (%v)",
+		changeID, localHead.Short(), remoteHead.Short())
+
+	err := func() error {
+		localCommits := git.CommitRangeFrom(localHead).ExcludeFrom(remoteHead)
+
+		count, err := h.Repository.CountCommits(ctx, localCommits)
+		if err != nil {
+			return fmt.Errorf("count unpushed commits: %w", err)
+		}
+
+		if count == 0 {
+			return nil // no unpushed commits
+		}
+
+		localCommitsLimited := localCommits.Limit(localCommitsLimit)
+		commits, err := sliceutil.CollectErr(h.Repository.ListCommitsDetails(ctx, localCommitsLimited))
+		if len(commits) == 0 {
+			// This is not really expected:
+			// if count returned non-zero,
+			// we should be able to list them.
+			// But if it happens, don't fail the whole prompt.
+			fmt.Fprintf(&desc, "\n%v has %d unpushed commit(s).", branchName, count)
+			if err != nil {
+				return fmt.Errorf("list unpushed commits: %w", err)
+			}
+			return nil
+		}
+
+		fmt.Fprintf(&desc, "\n%v has %d unpushed commit(s):", branchName, count)
+		for _, commit := range commits {
+			fmt.Fprintf(&desc, "\n  %v %v", commit.ShortHash, commit.Subject)
+		}
+		if remaining := count - len(commits); remaining > 0 {
+			fmt.Fprintf(&desc, "\n  ... and %d more", remaining)
+		}
+		return nil
+	}()
+	if err != nil {
+		h.Log.Warn("Unable to report unpushed commits", "error", err)
+	}
+
+	for commit, err := range h.Repository.ListCommitsDetails(ctx,
+		git.CommitRangeFrom(remoteHead).Limit(1)) {
+		if err != nil {
+			h.Log.Warn("Unable to list merged head", "error", err)
+			break
+		}
+		fmt.Fprintf(&desc, "\n%v was merged at:", changeID)
+		fmt.Fprintf(&desc, "\n  %v %v", commit.ShortHash, commit.Subject)
+		break
+	}
+
+	return desc.String()
 }
 
 type mergedChangeHeadStatus int

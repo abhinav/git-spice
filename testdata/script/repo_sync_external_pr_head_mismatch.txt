@@ -53,6 +53,10 @@ New contents of feature
 ===
 > Delete feature?: [y/N]
 > #1 was merged but local SHA (4513f9f) does not match remote SHA (a1b54a6)
+> feature has 1 unpushed commit(s):
+>   4513f9f Modify feature
+> #1 was merged at:
+>   a1b54a6 Add feature
 true
 -- golden/merged-log.txt --
 *   f512e87 (HEAD -> main, origin/main) Merge change #1
