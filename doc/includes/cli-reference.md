@@ -1542,3 +1542,4 @@ Print version information and quit
 **Flags**
 
 * `--short`: Print only the version number.
+
