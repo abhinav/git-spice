@@ -12,7 +12,7 @@ git-spice is a command line tool for stacking Git branches.
 * `-C`, `--dir=DIR`: Change to DIR before doing anything
 * `--[no-]prompt`: Whether to prompt for missing information
 
-**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.kind](/cli/config.md#spiceforgebitbucketkind), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.kind](/cli/config.md#spiceforgekind), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.secret.backend](/cli/config.md#spicesecretbackend)
+**Configuration**: [spice.forge.bitbucket.apiURL](/cli/config.md#spiceforgebitbucketapiurl), [spice.forge.bitbucket.kind](/cli/config.md#spiceforgebitbucketkind), [spice.forge.bitbucket.url](/cli/config.md#spiceforgebitbucketurl), [spice.forge.forgejo.apiURL](/cli/config.md#spiceforgeforgejoapiurl), [spice.forge.forgejo.url](/cli/config.md#spiceforgeforgejourl), [spice.forge.gitea.apiURL](/cli/config.md#spiceforgegiteaapiurl), [spice.forge.gitea.url](/cli/config.md#spiceforgegiteaurl), [spice.forge.github.apiUrl](/cli/config.md#spiceforgegithubapiurl), [spice.forge.github.url](/cli/config.md#spiceforgegithuburl), [spice.forge.gitlab.apiURL](/cli/config.md#spiceforgegitlabapiurl), [spice.forge.gitlab.oauth.clientID](/cli/config.md#spiceforgegitlaboauthclientid), [spice.forge.gitlab.removeSourceBranch](/cli/config.md#spiceforgegitlabremovesourcebranch), [spice.forge.gitlab.url](/cli/config.md#spiceforgegitlaburl), [spice.forge.kind](/cli/config.md#spiceforgekind), [spice.git.indexLockTimeout](/cli/config.md#spicegitindexlocktimeout), [spice.secret.backend](/cli/config.md#spicesecretbackend)
 
 ## Shell
 
@@ -298,10 +298,12 @@ Merge a stack
 
 Merges the CRs for the current branch's stack into trunk.
 Use --branch to merge a different branch's stack.
+Use --branch multiple times to merge multiple stacks.
 
 The stack includes the selected branch,
 its downstack branches down to trunk,
 and every upstack branch.
+Overlapping stacks are merged once.
 
 Already-merged branches are skipped automatically.
 Branches must have an open Change Request to be merged.
@@ -310,9 +312,11 @@ Before merging, the stack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
-before failing if checks are not ready.
+Before checking merge readiness,
+the command waits briefly for the forge to observe the pushed head.
+Then it waits for the forge to report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait
+before failing if merge readiness is not reached.
 
 By default, a branch failure skips that branch's upstack descendants,
 but independent sibling branches continue.
@@ -321,12 +325,13 @@ Use --fail-fast to stop the queue after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--no-branch-check`: Skip stale base validation before merging.
 * `--fail-fast`: Stop the merge queue after the first branch failure.
-* `--branch=NAME`: Branch whose stack to merge
+* `--branch=NAME,...`: Branches whose stacks to merge. May be repeated.
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -619,12 +624,17 @@ Merge a branch and those below it
 Merges the current branch and all branches below it
 into trunk via the forge API, bottom-up.
 Use --branch to start at a different branch.
+Use --branch multiple times to merge multiple downstacks.
+
+Each selected branch expands to that branch
+and its downstack branches down to trunk.
+Overlapping downstacks are merged once.
 
 This command acts as a local merge queue:
 it merges one Change Request,
 waits for that merge to finish,
 restacks and updates the next Change Request,
-waits for its CI checks to pass,
+waits for merge readiness on the updated Change Request,
 and then repeats the process.
 
 For a stack like this:
@@ -642,28 +652,26 @@ Before merging, the downstack is checked for branches
 whose base PR was already merged on the forge.
 Use --no-branch-check to skip this validation.
 
-Before each merge, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait
+Before checking merge readiness,
+the command waits briefly for the forge to observe the pushed head.
+Then it waits for the forge to report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait
 (default: 30m, 0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge
 to complete, restacks and updates the next PR,
-waits for CI checks on the updated PR,
+waits for merge readiness on the updated PR,
 and syncs merged branch cleanup.
-
-Use --no-wait for single branch merging
-when you don't want to wait for the merge to propagate.
---no-wait is rejected for multi-branch merges.
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--no-wait`: Skip polling for a single branch merge to propagate.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--no-branch-check`: Skip stale base validation before merging.
-* `--branch=NAME`: Branch to start merging from
+* `--branch=NAME,...`: Branches to start merging from. May be repeated.
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -854,7 +862,7 @@ target (A) to the specified branch:
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
 * `-a`, `--all`: Automatically stage modified and deleted files
-* `-m`, `--message=MSG`: Commit message
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
@@ -1129,20 +1137,27 @@ Merge a branch into trunk
 
 Merges the CR for the current branch into trunk.
 Use --branch to merge a different branch.
+Use --branch multiple times to merge multiple branches.
 
-The branch must be based directly on trunk.
-To merge a stacked branch, use 'gs downstack merge'.
+Only the selected branches are merged.
+To merge a branch and its downstack,
+use 'git-spice downstack merge'.
+To merge a whole stack,
+use 'git-spice stack merge'.
 
-Before merging, waits for CI checks to pass.
-Use --build-timeout to configure the maximum wait.
+Before checking merge readiness,
+the command waits briefly for the forge to observe the pushed head.
+Then it waits for the forge to report that the CR is ready to merge.
+Use --ready-timeout to configure the maximum wait.
 
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--build-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.buildTimeout" }](/cli/config.md#spicemergebuildtimeout)): Max time to wait for CI checks before each merge. 0 means check once.
-* `--branch=NAME`: Branch to merge
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
+* `--branch=NAME,...`: Branches to merge. May be repeated.
 
-**Configuration**: [spice.merge.buildTimeout](/cli/config.md#spicemergebuildtimeout), [spice.merge.method](/cli/config.md#spicemergemethod)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
 
 ### git-spice branch submit {#gs-branch-submit}
 
@@ -1231,7 +1246,7 @@ when you want to apply changes to an older commit.
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a new commit even if it contains no changes.
 * `--fixup=COMMIT`: Create a fixup commit. See also 'git-spice commit fixup'.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
@@ -1270,7 +1285,7 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 
 * `-a`, `--all`: Stage all changes before committing.
 * `--allow-empty`: Create a commit even if it contains no changes.
-* `-m`, `--message=MSG`: Use the given message as the commit message.
+* `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
@@ -1527,4 +1542,3 @@ Print version information and quit
 **Flags**
 
 * `--short`: Print only the version number.
-

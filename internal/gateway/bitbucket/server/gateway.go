@@ -171,31 +171,36 @@ func (g *Gateway) ChangeTemplate(
 	return string(body), nil
 }
 
-// ListCommitChecks reports the states of CI checks
+// ListCommitChecks reports the CI checks
 // recorded for the given commit.
 // Any non-SUCCESSFUL, non-INPROGRESS state
 // (including unrecognized ones) counts as failing.
 func (g *Gateway) ListCommitChecks(
 	ctx context.Context,
 	commit git.Hash,
-) ([]forge.ChecksState, error) {
+) ([]forge.ChangeCheck, error) {
 	statuses, err := g.client.BuildStatusList(ctx, string(commit))
 	if err != nil {
 		return nil, fmt.Errorf("list build statuses: %w", err)
 	}
 
-	states := make([]forge.ChecksState, 0, len(statuses))
-	for _, s := range statuses {
+	checks := make([]forge.ChangeCheck, 0, len(statuses))
+	for i, s := range statuses {
+		check := forge.ChangeCheck{Name: s.Key}
+		if check.Name == "" {
+			check.Name = fmt.Sprintf("Bitbucket build status %d", i+1)
+		}
 		switch s.State {
 		case BuildStatusSuccessful:
-			states = append(states, forge.ChecksPassed)
+			check.State = forge.ChangeCheckPassed
 		case BuildStatusInProgress:
-			states = append(states, forge.ChecksPending)
+			check.State = forge.ChangeCheckPending
 		default:
-			states = append(states, forge.ChecksFailed)
+			check.State = forge.ChangeCheckFailed
 		}
+		checks = append(checks, check)
 	}
-	return states, nil
+	return checks, nil
 }
 
 // numericRepoID resolves and memoizes the numeric repository ID, which the

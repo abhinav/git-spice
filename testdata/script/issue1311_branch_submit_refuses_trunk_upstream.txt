@@ -1,0 +1,45 @@
+# Regression test for https://github.com/abhinav/git-spice/issues/1311.
+# branch submit must not push a feature branch to the trunk ref when the
+# branch's Git upstream is configured directly to origin/main.
+
+as 'Test <test@example.com>'
+at '2026-06-25T00:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# Set up a fake GitHub remote.
+shamhub init
+shamhub register alice
+shamhub new origin alice/example.git
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# Create a git-spice-tracked feature branch, then configure its Git upstream
+# directly to the trunk remote ref using the same style as the reported issue.
+git add feature.txt
+gs branch create feature -m 'Add feature'
+git branch --set-upstream-to=origin/main feature
+
+! gs branch submit --draft --fill
+stderr 'refusing to push branch "feature" to trunk "main"'
+
+# The failed submit must not advance origin/main or create a CR.
+git rev-parse main
+cmp stdout $WORK/golden/main.txt
+git rev-parse origin/main
+cmp stdout $WORK/golden/main.txt
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature.txt --
+feature
+-- golden/main.txt --
+aff9520a4bb3d33784bd9c359489d7fce9f0f698
+-- golden/changes.json --
+[]

@@ -66,7 +66,7 @@ complete "script" run="ls testdata/script/*.txt | cut -d/ -f3 | sed 's/.txt$//'"
 run = """
 gotestsum --format={{usage.format}} -- {# -#}
   -tags=script {# enable script tests -#}
-  -run TestScript/{{usage.run}} {# run only script tests -#}
+  -run TestScript/{{usage.run|quote}} {# run only script tests -#}
   -count {{usage.count}} {# number of times to run tests -#}
   -race={{usage.race}} {# race detection -#}
   -shard-index={{usage.shard_index}} {# shard index -#}

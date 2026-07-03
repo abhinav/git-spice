@@ -294,13 +294,42 @@ func (g *Gateway) toPullRequest(pr *PullRequest) *bitbucket.PullRequest {
 	}
 
 	return &bitbucket.PullRequest{
-		Number:    pr.ID,
-		URL:       pr.Links.HTML.Href,
-		State:     stateFromAPI(pr.State),
-		Subject:   pr.Title,
-		BaseName:  pr.Destination.Branch.Name,
-		HeadHash:  headHash,
-		Draft:     pr.Draft || pr.State == "DRAFT",
+		Number:   pr.ID,
+		URL:      pr.Links.HTML.Href,
+		State:    stateFromAPI(pr.State),
+		Subject:  pr.Title,
+		BaseName: pr.Destination.Branch.Name,
+		HeadHash: headHash,
+		Draft:    pr.Draft || pr.State == "DRAFT",
+		Mergeability: mergeabilityFromAPI(
+			pr.Mergeable,
+			pr.Queued,
+		),
 		Reviewers: extractUsernames(pr.Reviewers),
 	}
+}
+
+func mergeabilityFromAPI(
+	mergeable *bool,
+	queued bool,
+) forge.ChangeMergeability {
+	// Bitbucket Cloud reports the mergeability decision,
+	// but not the reason behind a blocked or waiting decision.
+	result := forge.ChangeMergeability{
+		Reason: forge.ChangeMergeabilityReasonUnknown,
+	}
+	switch {
+	case mergeable == nil && queued:
+		result.State = forge.ChangeMergeabilityWaiting
+	case mergeable == nil:
+		result.State = forge.ChangeMergeabilityUnknown
+	case queued:
+		result.State = forge.ChangeMergeabilityWaiting
+	case *mergeable:
+		result.State = forge.ChangeMergeabilityReady
+	default:
+		result.State = forge.ChangeMergeabilityBlocked
+	}
+
+	return result
 }

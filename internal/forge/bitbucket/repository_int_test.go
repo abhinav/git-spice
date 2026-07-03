@@ -48,7 +48,7 @@ func SetChangeChecksState(
 	ctx context.Context,
 	repo *Repository,
 	headHash git.Hash,
-	state forge.ChecksState,
+	state forge.ChangeCheckState,
 ) error {
 	gw := cloudGW(repo)
 	_, _, err := gw.client.CommitStatusCreate(
@@ -68,13 +68,13 @@ func SetChangeChecksState(
 	return nil
 }
 
-func bitbucketStatusState(state forge.ChecksState) string {
+func bitbucketStatusState(state forge.ChangeCheckState) string {
 	switch state {
-	case forge.ChecksPending:
+	case forge.ChangeCheckPending:
 		return bitbucketapi.CommitStatusInProgress
-	case forge.ChecksPassed:
+	case forge.ChangeCheckPassed:
 		return bitbucketapi.CommitStatusSuccessful
-	case forge.ChecksFailed:
+	case forge.ChangeCheckFailed:
 		return bitbucketapi.CommitStatusFailed
 	default:
 		return bitbucketapi.CommitStatusFailed

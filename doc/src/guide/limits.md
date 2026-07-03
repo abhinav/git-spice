@@ -4,11 +4,11 @@ title: Limitations
 description: >-
   Usage constraints and limitations when using git-spice
   to interact with GitHub, GitLab, Bitbucket Cloud,
-  or Bitbucket Data Center / Server.
+  Bitbucket Data Center / Server, Gitea, or Forgejo.
 ---
 
 Usage of git-spice with GitHub, GitLab, Bitbucket Cloud,
-and Bitbucket Data Center / Server
+Bitbucket Data Center / Server, Gitea, and Forgejo
 runs into limitations of what is possible on those platforms,
 and how they handle Git commits.
 Some limitations imposed on git-spice are listed below.
@@ -118,6 +118,10 @@ you can run:
 {green}${reset} gs repo sync --restack
 {green}${reset} gs stack submit
 ```
+
+The experimental merge commands automate this merge,
+sync, restack, and update loop.
+See [Merging stacks](merge.md).
 
 <!-- TODO: can be alleviated somewhat if we implement
      https://github.com/abhinav/git-spice/issues/65 -->

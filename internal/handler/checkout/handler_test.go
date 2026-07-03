@@ -139,9 +139,6 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 
 	t.Run("DryRun", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
-		mockWorktree := NewMockGitWorktree(ctrl)
-		mockTrack := NewMockTrackHandler(ctrl)
-		mockService := NewMockService(ctrl)
 
 		var stdout bytes.Buffer
 		handler := &Handler{
@@ -149,15 +146,10 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 			Log:        silog.Nop(),
 			Store:      mockStore,
 			Repository: NewMockGitRepository(ctrl),
-			Worktree:   mockWorktree,
-			Track:      mockTrack,
-			Service:    mockService,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
 		}
-
-		mockService.
-			EXPECT().
-			VerifyRestacked(gomock.Any(), "feature").
-			Return(nil)
 
 		req := &Request{
 			Branch:  "feature",
@@ -167,6 +159,30 @@ func TestHandler_CheckoutBranch_NonTrunk(t *testing.T) {
 		err := handler.CheckoutBranch(t.Context(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "feature\n", stdout.String())
+	})
+
+	t.Run("DryRunNeedsRestack", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		var logBuffer bytes.Buffer
+		var stdout bytes.Buffer
+		handler := &Handler{
+			Stdout:     &stdout,
+			Log:        silog.New(&logBuffer, nil),
+			Store:      mockStore,
+			Repository: NewMockGitRepository(ctrl),
+			Worktree:   NewMockGitWorktree(ctrl),
+			Track:      NewMockTrackHandler(ctrl),
+			Service:    NewMockService(ctrl),
+		}
+
+		err := handler.CheckoutBranch(t.Context(), &Request{
+			Branch:  "feature",
+			Options: &Options{DryRun: true},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "feature\n", stdout.String())
+		assert.NotContains(t, logBuffer.String(), "needs to be restacked")
 	})
 
 	t.Run("Detach", func(t *testing.T) {

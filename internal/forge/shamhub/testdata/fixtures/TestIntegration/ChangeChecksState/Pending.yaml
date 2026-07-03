@@ -34,9 +34,9 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 19
+        content_length: 58
         host: 127.0.0.1:56373
-        body: '{"state":"pending"}'
+        body: '{"name":"git-spice integration pending","state":"pending"}'
         url: http://127.0.0.1:56373/abhinav/test-repo/change/3/checks
         method: POST
       response:
@@ -67,10 +67,15 @@ interactions:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 25
+        content_length: 92
         body: |
             {
-              "state": "pending"
+              "checks": [
+                {
+                  "name": "git-spice integration pending",
+                  "state": "pending"
+                }
+              ]
             }
         headers:
             Content-Length:

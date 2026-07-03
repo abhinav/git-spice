@@ -67,7 +67,7 @@ main
 -- golden/ll-loglong-url.txt --
   ┏━■ feat2 ◀
   ┃   562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-loglong-id.txt --
@@ -79,7 +79,7 @@ main
 -- golden/ll-fallback-url.txt --
   ┏━■ feat2 ◀
   ┃   562c8c6 feat2 (now)
-┏━┻□ feat1 ($SHAMHUB_URL/alice/example/changes/1)
+┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-override-id.txt --

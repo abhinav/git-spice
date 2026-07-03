@@ -31,6 +31,14 @@ type PullRequest struct {
 	Reviewers   []User           `json:"reviewers"`
 	Links       PullRequestLinks `json:"links"`
 	MergeCommit *Commit          `json:"merge_commit,omitempty"`
+
+	// Mergeable reports Bitbucket Cloud's current merge decision.
+	//
+	// It is nil when the response omits the field.
+	Mergeable *bool `json:"mergeable,omitempty"`
+
+	// Queued reports whether Bitbucket Cloud is still evaluating mergeability.
+	Queued bool `json:"queued,omitempty"`
 }
 
 // PullRequestCreateRequest is the request body for creating a pull request.
@@ -394,6 +402,7 @@ func (c *Client) PullRequestMerge(
 
 // CommitStatus is a build status on a commit.
 type CommitStatus struct {
+	Key   string `json:"key"`
 	State string `json:"state"`
 }
 
@@ -421,20 +430,35 @@ type CommitStatusList struct {
 	Next   string         `json:"next,omitempty"`
 }
 
+// CommitStatusListOptions controls commit status pagination.
+type CommitStatusListOptions struct {
+	PageURL string
+}
+
 // CommitStatusList lists build statuses for a commit.
 func (c *Client) CommitStatusList(
 	ctx context.Context,
 	workspace string,
 	repo string,
 	commitHash string,
+	opt *CommitStatusListOptions,
 ) (*CommitStatusList, *Response, error) {
+	if opt == nil {
+		opt = &CommitStatusListOptions{}
+	}
+
 	var response CommitStatusList
-	resp, err := c.get(
-		ctx,
-		fmt.Sprintf(
+	resourcePath := opt.PageURL
+	if resourcePath == "" {
+		resourcePath = fmt.Sprintf(
 			"/repositories/%s/%s/commit/%s/statuses",
 			workspace, repo, commitHash,
-		),
+		)
+	}
+
+	resp, err := c.get(
+		ctx,
+		resourcePath,
 		nil, &response,
 	)
 	if err != nil {

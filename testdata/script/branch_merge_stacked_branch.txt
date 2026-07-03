@@ -1,4 +1,4 @@
-# 'branch merge' rejects branches that are configured on another branch.
+# 'branch merge' can merge selected branches from the same stack.
 
 as 'Test <test@example.com>'
 at '2026-06-13T18:29:00Z'
@@ -29,17 +29,111 @@ gs downstack submit --fill
 stderr 'Created #1'
 stderr 'Created #2'
 
-# branch merge is only for branches configured directly on trunk.
-! gs branch merge --branch feature2
-stderr 'branch "feature2" is based on "feature1", not trunk'
-stderr 'gs downstack merge --branch feature2'
+# merge selected branches from the stack
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+gs branch merge --branch feature1 --branch feature2
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'feature1: #1 was merged'
+stderr 'feature1: deleted'
+stderr 'feature2: restacked on main'
+stderr 'Updated #2'
+stderr 'feature2: merging #2:'
+stderr 'feature2: #2 was merged'
+stderr 'feature2: deleted'
+stderr 'All 2 change.s. merged.'
 
-# verify both changes are still open
+# verify both changes are merged
 shamhub dump changes
-stdout '"state": "open"'
-! stdout '"merged": true'
+cmpenvJSON stdout $WORK/golden/changes-merged.json
+
+# verify that the later PR was retargeted to main
+shamhub dump change 2
+cmpenvJSON stdout $WORK/golden/change-2.json
 
 -- repo/feature1.txt --
 This is feature 1
 -- repo/feature2.txt --
 This is feature 2
+-- robot-merge.golden --
+===
+> Merge 2 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+>   feature2 (#2)
+true
+-- golden/changes-merged.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "62c3c4e12506afae52cd50383886ea7a815700c3"
+    }
+  },
+  {
+    "number": 2,
+    "html_url": "$SHAMHUB_URL/alice/example/change/2",
+    "state": "closed",
+    "merged": true,
+    "title": "Add feature 2",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature2",
+      "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
+    }
+  }
+]
+-- golden/change-2.json --
+{
+  "number": 2,
+  "html_url": "$SHAMHUB_URL/alice/example/change/2",
+  "state": "closed",
+  "merged": true,
+  "title": "Add feature 2",
+  "body": "",
+  "base": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "main",
+    "sha": "d4211170e9e333ce4648017d366472ba07cb63ff"
+  },
+  "head": {
+    "repository": {
+      "owner": "alice",
+      "name": "example"
+    },
+    "ref": "feature2",
+    "sha": "1d2c26f2593df77c5b00c49eab0e6ae15db266cb"
+  }
+}

@@ -1,4 +1,0 @@
-kind: Fixed
-body: >-
-  github: GitHub user ID lookups during the same operation are now reused.
-time: 2026-06-09T20:13:33.204033-07:00

@@ -8,35 +8,63 @@ import (
 	"go.abhg.dev/gs/internal/gateway/gitlab"
 )
 
-// ChangeChecksState reports the aggregate CI pipeline state
-// for the given merge request.
-func (r *Repository) ChangeChecksState(
+// ChangeChecks reports CI/checks for the given merge request.
+func (r *Repository) ChangeChecks(
 	ctx context.Context, fid forge.ChangeID,
-) (forge.ChecksState, error) {
+) ([]forge.ChangeCheck, error) {
 	id := mustMR(fid)
 	mr, _, err := r.client.MergeRequestGet(
 		ctx, r.repoID, id.Number, nil,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("get merge request: %w", err)
+		return nil, fmt.Errorf("get merge request: %w", err)
 	}
 
-	return pipelineState(mr.HeadPipeline), nil
+	if mr.SHA == "" {
+		return nil, nil
+	}
+
+	var checks []forge.ChangeCheck
+	opt := &gitlab.ListCommitStatusesOptions{
+		ListOptions: gitlab.ListOptions{PerPage: 100},
+	}
+	if mr.SourceBranch != "" {
+		opt.Ref = &mr.SourceBranch
+	}
+
+	for {
+		statuses, resp, err := r.client.CommitStatusList(
+			ctx,
+			r.repoID,
+			mr.SHA,
+			opt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("list commit statuses: %w", err)
+		}
+
+		for _, status := range statuses {
+			checks = append(checks, commitStatusCheck(status))
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = int64(resp.NextPage)
+	}
+
+	return checks, nil
 }
 
-func pipelineState(
-	pipeline *gitlab.Pipeline,
-) forge.ChecksState {
-	if pipeline == nil {
-		return forge.ChecksPassed // no CI configured
-	}
-
-	switch pipeline.Status {
+func commitStatusCheck(status *gitlab.CommitStatus) forge.ChangeCheck {
+	check := forge.ChangeCheck{Name: status.Name}
+	switch status.Status {
 	case gitlab.PipelineStatusSuccess, gitlab.PipelineStatusSkipped:
-		return forge.ChecksPassed
+		check.State = forge.ChangeCheckPassed
 	case gitlab.PipelineStatusFailed, gitlab.PipelineStatusCanceled:
-		return forge.ChecksFailed
+		check.State = forge.ChangeCheckFailed
 	default:
-		return forge.ChecksPending
+		check.State = forge.ChangeCheckPending
 	}
+	return check
 }

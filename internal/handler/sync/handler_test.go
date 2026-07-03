@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/autostash"
 	branchdel "go.abhg.dev/gs/internal/handler/delete"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/spicetest"
@@ -286,7 +287,9 @@ func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(gomock.Any(), "child", nil).
+			RestackUpstack(gomock.Any(), &restack.UpstackRequest{
+				Branch: "child",
+			}).
 			Return(nil)
 
 		handler := &Handler{
@@ -368,7 +371,9 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackBranch(gomock.Any(), "child").
+			RestackBranch(gomock.Any(), &restack.BranchRequest{
+				Branch: "child",
+			}).
 			Return(nil)
 
 		mockAutostash := NewMockAutostashHandler(ctrl)
@@ -457,7 +462,9 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(gomock.Any(), "child", nil).
+			RestackUpstack(gomock.Any(), &restack.UpstackRequest{
+				Branch: "child",
+			}).
 			Return(nil)
 
 		mockAutostash := NewMockAutostashHandler(ctrl)
@@ -551,7 +558,9 @@ func TestHandler_SyncTrunk_restackDeletedUpstacks(t *testing.T) {
 
 		mockRestack := NewMockRestackHandler(ctrl)
 		mockRestack.EXPECT().
-			RestackUpstack(gomock.Any(), "c", nil).
+			RestackUpstack(gomock.Any(), &restack.UpstackRequest{
+				Branch: "c",
+			}).
 			Return(nil)
 
 		mockAutostash := NewMockAutostashHandler(ctrl)

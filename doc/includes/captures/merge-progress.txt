@@ -1,0 +1,6 @@
+[1mMerging: 2 of 5 changes[m
+
+[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[92m■[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[93m◆[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[91m×[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m[90m□[m
+merged: 2   waiting: 1   pending: 1   failed: 1
+
+[90mPress Ctrl-C to cancel merge operation.[m

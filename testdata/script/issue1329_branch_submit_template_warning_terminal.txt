@@ -1,0 +1,70 @@
+# branch submit continues after delayed template lookup warnings.
+# https://github.com/abhinav/git-spice/issues/1329
+
+[!unix] skip # pending github.com/creack/pty/pull/155
+
+as 'Test <test@example.com>'
+at '2026-07-02T12:40:00Z'
+
+# setup
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+git add feature.txt
+gs bc feature -m 'Add feature'
+
+shamhub config changeTemplateErrorDelay 200ms
+env GIT_EDITOR=true EDITOR=true
+with-term $WORK/input/prompt.txt -- gs branch submit
+
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature.txt --
+Contents of feature
+
+-- input/prompt.txt --
+await Title:
+feed \r
+await Body:
+feed \r
+await Draft:
+feed \r
+await Created
+
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "2ac8d4fa35f97afa1b2adc32ad4cf8c567af9ce3"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature",
+      "sha": "4d3f7f8fce4adeb5a8291933606828ad3131c59a"
+    }
+  }
+]

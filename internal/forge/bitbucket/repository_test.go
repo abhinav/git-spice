@@ -369,62 +369,31 @@ func TestRepository_ChangeStatuses_error(t *testing.T) {
 	assert.ErrorContains(t, err, "get state for PR #2")
 }
 
-func TestRepository_ChangeChecksState(t *testing.T) {
-	tests := []struct {
-		name   string
-		checks []forge.ChecksState
-		want   forge.ChecksState
-	}{
-		{name: "NoChecks", checks: []forge.ChecksState{}, want: forge.ChecksPassed},
-		{
-			name:   "AllPassed",
-			checks: []forge.ChecksState{forge.ChecksPassed, forge.ChecksPassed},
-			want:   forge.ChecksPassed,
-		},
-		{
-			name:   "PendingBeatsPassed",
-			checks: []forge.ChecksState{forge.ChecksPassed, forge.ChecksPending},
-			want:   forge.ChecksPending,
-		},
-		{
-			name:   "FailedBeatsPassed",
-			checks: []forge.ChecksState{forge.ChecksPassed, forge.ChecksFailed},
-			want:   forge.ChecksFailed,
-		},
-		{
-			name: "FailedBeatsPending",
-			checks: []forge.ChecksState{
-				forge.ChecksPending,
-				forge.ChecksFailed,
-			},
-			want: forge.ChecksFailed,
-		},
+func TestRepository_ChangeChecks(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+
+	want := []forge.ChangeCheck{
+		{Name: "build", State: forge.ChangeCheckPassed},
+		{Name: "test", State: forge.ChangeCheckPending},
 	}
+	mockGateway := NewMockGateway(mockCtrl)
+	mockGateway.EXPECT().
+		GetChange(gomock.Any(), int64(7)).
+		Return(&gw.PullRequest{
+			Number:   7,
+			HeadHash: git.Hash("feedface"),
+		}, nil)
+	mockGateway.EXPECT().
+		ListCommitChecks(gomock.Any(), git.Hash("feedface")).
+		Return(want, nil)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mockCtrl := gomock.NewController(t)
-
-			mockGateway := NewMockGateway(mockCtrl)
-			mockGateway.EXPECT().
-				GetChange(gomock.Any(), int64(7)).
-				Return(&gw.PullRequest{
-					Number:   7,
-					HeadHash: git.Hash("feedface"),
-				}, nil)
-			mockGateway.EXPECT().
-				ListCommitChecks(gomock.Any(), git.Hash("feedface")).
-				Return(tt.checks, nil)
-
-			repo := newRepository(new(Forge), silog.Nop(), mockGateway)
-			got, err := repo.ChangeChecksState(t.Context(), &PR{Number: 7})
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+	repo := newRepository(new(Forge), silog.Nop(), mockGateway)
+	got, err := repo.ChangeChecks(t.Context(), &PR{Number: 7})
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
 }
 
-func TestRepository_ChangeChecksState_noHeadCommit(t *testing.T) {
+func TestRepository_ChangeChecks_noHeadCommit(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 
 	mockGateway := NewMockGateway(mockCtrl)
@@ -433,12 +402,12 @@ func TestRepository_ChangeChecksState_noHeadCommit(t *testing.T) {
 		Return(&gw.PullRequest{Number: 7}, nil)
 
 	repo := newRepository(new(Forge), silog.Nop(), mockGateway)
-	got, err := repo.ChangeChecksState(t.Context(), &PR{Number: 7})
+	got, err := repo.ChangeChecks(t.Context(), &PR{Number: 7})
 	require.NoError(t, err)
-	assert.Equal(t, forge.ChecksPassed, got)
+	assert.Nil(t, got)
 }
 
-func TestRepository_ChangeChecksState_errors(t *testing.T) {
+func TestRepository_ChangeChecks_errors(t *testing.T) {
 	t.Run("GetChange", func(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 
@@ -449,7 +418,7 @@ func TestRepository_ChangeChecksState_errors(t *testing.T) {
 			Return(nil, wantErr)
 
 		repo := newRepository(new(Forge), silog.Nop(), mockGateway)
-		_, err := repo.ChangeChecksState(t.Context(), &PR{Number: 7})
+		_, err := repo.ChangeChecks(t.Context(), &PR{Number: 7})
 		assert.ErrorIs(t, err, wantErr)
 	})
 
@@ -469,7 +438,7 @@ func TestRepository_ChangeChecksState_errors(t *testing.T) {
 			Return(nil, wantErr)
 
 		repo := newRepository(new(Forge), silog.Nop(), mockGateway)
-		_, err := repo.ChangeChecksState(t.Context(), &PR{Number: 7})
+		_, err := repo.ChangeChecks(t.Context(), &PR{Number: 7})
 		assert.ErrorIs(t, err, wantErr)
 	})
 }

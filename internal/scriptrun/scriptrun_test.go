@@ -1,13 +1,17 @@
 package scriptrun
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,6 +90,52 @@ func TestRunner_Run_nonZeroExit(t *testing.T) {
 	assert.Equal(t, 7, res.ExitCode)
 	assert.Equal(t, "out\n", string(res.Stdout))
 	assert.Equal(t, "err\n", string(res.Stderr))
+}
+
+func TestRunner_Run_streamsOutputBeforeExit(t *testing.T) {
+	r := &Runner{Log: silog.Nop()}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	stdout := newSignalWriter()
+	stderr := newSignalWriter()
+	done := make(chan error, 1)
+	go func() {
+		_, err := r.Run(ctx, &RunRequest{
+			Script: `echo stdout; echo stderr >&2; sleep 2`,
+			Stdout: stdout,
+			Stderr: stderr,
+		})
+		done <- err
+	}()
+
+	requireWrittenBeforeExit(t, stdout.Written(), done)
+	requireWrittenBeforeExit(t, stderr.Written(), done)
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("script did not exit after context cancellation")
+	}
+}
+
+func TestRunner_Run_streamsOutputWithoutCapture(t *testing.T) {
+	r := &Runner{Log: silog.Nop()}
+
+	var stdout, stderr bytes.Buffer
+	res, err := r.Run(t.Context(), &RunRequest{
+		Script: `echo stdout; echo stderr >&2`,
+		Stdout: &stdout,
+		Stderr: &stderr,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.ExitCode)
+	assert.Equal(t, "stdout\n", stdout.String())
+	assert.Equal(t, "stderr\n", stderr.String())
+	assert.Empty(t, res.Stdout)
+	assert.Empty(t, res.Stderr)
 }
 
 func TestRunner_Run_shebangScript(t *testing.T) {
@@ -185,3 +235,42 @@ func TestRunner_Run_nilLogger(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ok\n", string(res.Stdout))
 }
+
+type signalWriter struct {
+	once    sync.Once
+	written chan struct{}
+}
+
+func newSignalWriter() *signalWriter {
+	return &signalWriter{written: make(chan struct{})}
+}
+
+func (w *signalWriter) Write(p []byte) (int, error) {
+	w.once.Do(func() {
+		close(w.written)
+	})
+	return len(p), nil
+}
+
+func (w *signalWriter) Written() <-chan struct{} {
+	return w.written
+}
+
+func requireWrittenBeforeExit(
+	t *testing.T,
+	written <-chan struct{},
+	done <-chan error,
+) {
+	t.Helper()
+
+	select {
+	case <-written:
+	case err := <-done:
+		require.NoError(t, err)
+		t.Fatal("script exited before output was streamed")
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("output was not streamed before script exit")
+	}
+}
+
+var _ io.Writer = (*signalWriter)(nil)

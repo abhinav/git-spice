@@ -110,6 +110,33 @@ and track the branch with git-spice if it is not already tracked.
 
 ## Workflows
 
+### Create a worktree from the branch prompt
+
+<!-- gs:version v0.30.0 -->
+
+git-spice supports custom shorthands,
+including shell command aliases
+that run commands outside git-spice.
+See [Shell command aliases](../cli/shorthand.md#shell-command-aliases)
+for the syntax and argument handling rules.
+
+This adds `gs wtadd <path>`,
+which asks you to choose a branch from the git-spice branch prompt,
+then creates a Git worktree at the requested path for that branch.
+
+```bash
+git config --global spice.shorthand.wtadd \
+    '!branch=$(git-spice bco -n) &&
+      git worktree add "${1:?worktree path required}" "$branch"'
+```
+
+**How it works:**
+
+- `git-spice bco -n` opens the $$gs branch checkout$$ branch prompt
+  and prints the selected branch name instead of checking it out.
+- `${1:?worktree path required}` makes the shell command fail
+  if no path argument was supplied.
+
 ### Create branches without committing
 
 <!-- gs:version v0.5.0 -->
@@ -149,7 +176,7 @@ and then work on them, you can use the following to adjust the workflow:
 <!-- gs:version v0.6.0 -->
 
 If you're using a Git hosting service that is not supported by git-spice
-(e.g. Bitbucket, SourceHut, etc.),
+(e.g. Azure DevOps, SourceHut, etc.),
 you can use git-spice to manage your branches locally without any issues.
 However, when it comes to pushing branches to the remote,
 there are some options that can help your workflow.

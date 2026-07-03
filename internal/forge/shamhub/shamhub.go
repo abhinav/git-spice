@@ -5,6 +5,7 @@
 package shamhub
 
 import (
+	"context"
 	"fmt"
 	"net/http/cgi"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/xec"
@@ -42,6 +44,9 @@ type ShamHub struct {
 
 	tokens             map[string]string // token -> username
 	defaultMergeMethod MergeMethod       // used when API merge requests omit a method
+	// changeTemplateErrorDelay makes the change-template endpoint return a
+	// delayed error, allowing terminal tests to exercise background failures.
+	changeTemplateErrorDelay time.Duration
 }
 
 // Config configures a ShamHub server.
@@ -135,6 +140,16 @@ func (sh *ShamHub) RepoURL(owner, repo string) string {
 func (sh *ShamHub) repoDir(owner, repo string) string {
 	repo = strings.TrimSuffix(repo, ".git")
 	return filepath.Join(sh.gitRoot, owner, repo+".git")
+}
+
+// gitCmd builds a git command scoped to the bare repository for owner/repo.
+// Use this instead of WithDir(repoDir(...)): git 2.50 no longer discovers a
+// bare repo from the current working directory alone, so an explicit
+// --git-dir is required for `git config`, `git show-ref`, `git rev-parse`,
+// and similar commands.
+func (sh *ShamHub) gitCmd(ctx context.Context, owner, repo string, args ...string) *xec.Cmd {
+	return xec.Command(ctx, sh.log, sh.gitExe,
+		append([]string{"--git-dir", sh.repoDir(owner, repo)}, args...)...)
 }
 
 func (sh *ShamHub) changeURL(owner, repo string, change int) string {

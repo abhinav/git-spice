@@ -1,0 +1,58 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 140
+        host: 127.0.0.1:56373
+        body: '{"subject":"Mergeability ready-head-zvtLVlaE","body":"Mergeability scenario test","base":"ready-base-h824mRrI","head":"ready-head-zvtLVlaE"}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 1,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/1"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 12.899ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        url: http://127.0.0.1:56373/abhinav/test-repo/change/1/mergeability
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 46
+        body: |
+            {
+              "state": "ready",
+              "reason": "unknown"
+            }
+        headers:
+            Content-Length:
+                - "46"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 18.580916ms

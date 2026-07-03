@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ProjectGet fetches a single project by numeric ID or `group/project` path.
@@ -198,6 +199,33 @@ func (c *Client) CommitStatusSet(
 		return nil, resp, err
 	}
 	return &response, resp, nil
+}
+
+// CommitStatusList lists commit statuses.
+//
+// GitLab API:
+// https://docs.gitlab.com/api/commits/#list-commit-statuses
+func (c *Client) CommitStatusList(
+	ctx context.Context,
+	projectID int64,
+	sha string,
+	opt *ListCommitStatusesOptions,
+) ([]*CommitStatus, *Response, error) {
+	var response []*CommitStatus
+	resp, err := c.get(
+		ctx,
+		fmt.Sprintf(
+			"projects/%d/repository/commits/%s/statuses",
+			projectID,
+			sha,
+		),
+		opt.encodeQuery(),
+		&response,
+	)
+	if err != nil {
+		return nil, resp, err
+	}
+	return response, resp, nil
 }
 
 // MergeRequestNoteCreate creates a merge request note.
@@ -485,6 +513,7 @@ type User struct {
 type BasicMergeRequest struct {
 	IID                     int64        `json:"iid"`
 	SourceProjectID         int64        `json:"source_project_id"`
+	SourceBranch            string       `json:"source_branch"`
 	TargetBranch            string       `json:"target_branch"`
 	Title                   string       `json:"title"`
 	State                   string       `json:"state"`
@@ -495,6 +524,8 @@ type BasicMergeRequest struct {
 	SHA                     string       `json:"sha"`
 	WebURL                  string       `json:"web_url"`
 	ForceRemoveSourceBranch bool         `json:"force_remove_source_branch"`
+	DetailedMergeStatus     string       `json:"detailed_merge_status"`
+	HasConflicts            bool         `json:"has_conflicts"`
 }
 
 // MergeRequest matches the merge request response shape
@@ -512,7 +543,22 @@ type MergeRequest struct {
 // GitLab pipelines API:
 // https://docs.gitlab.com/api/pipelines/
 type Pipeline struct {
+	ID     int64  `json:"id"`
 	Status string `json:"status"`
+}
+
+// CommitStatus matches the subset of GitLab commit status fields
+// needed to report named change checks.
+//
+// GitLab commit statuses API:
+// https://docs.gitlab.com/api/commits/#list-commit-statuses
+type CommitStatus struct {
+	ID         int64      `json:"id"`
+	Name       string     `json:"name"`
+	Status     string     `json:"status"`
+	CreatedAt  time.Time  `json:"created_at"`
+	StartedAt  *time.Time `json:"started_at"`
+	FinishedAt *time.Time `json:"finished_at"`
 }
 
 // GitLab pipeline status values.
@@ -530,6 +576,36 @@ const (
 	PipelineStatusSkipped            = "skipped"
 	PipelineStatusManual             = "manual"
 	PipelineStatusScheduled          = "scheduled"
+)
+
+// GitLab detailed merge status values.
+//
+// https://docs.gitlab.com/api/merge_requests/#merge-status
+const (
+	DetailedMergeStatusApprovalsSyncing            = "approvals_syncing"
+	DetailedMergeStatusChecking                    = "checking"
+	DetailedMergeStatusCIMustPass                  = "ci_must_pass"
+	DetailedMergeStatusCIStillRunning              = "ci_still_running"
+	DetailedMergeStatusCommitsStatus               = "commits_status"
+	DetailedMergeStatusConflict                    = "conflict"
+	DetailedMergeStatusDiscussionsNotResolved      = "discussions_not_resolved"
+	DetailedMergeStatusDraftStatus                 = "draft_status"
+	DetailedMergeStatusJiraAssociationMissing      = "jira_association_missing"
+	DetailedMergeStatusMergeable                   = "mergeable"
+	DetailedMergeStatusMergeRequestBlocked         = "merge_request_blocked"
+	DetailedMergeStatusMergeTime                   = "merge_time"
+	DetailedMergeStatusNeedRebase                  = "need_rebase"
+	DetailedMergeStatusNotApproved                 = "not_approved"
+	DetailedMergeStatusNotOpen                     = "not_open"
+	DetailedMergeStatusPreparing                   = "preparing"
+	DetailedMergeStatusRequestedChanges            = "requested_changes"
+	DetailedMergeStatusSecurityPolicyPipelineCheck = "security_policy_pipeline_check"
+	DetailedMergeStatusSecurityPolicyViolations    = "security_policy_violations"
+	DetailedMergeStatusStatusChecksMustPass        = "status_checks_must_pass"
+	DetailedMergeStatusUnchecked                   = "unchecked"
+	DetailedMergeStatusLockedPaths                 = "locked_paths"
+	DetailedMergeStatusLockedLFSFiles              = "locked_lfs_files"
+	DetailedMergeStatusTitleRegex                  = "title_regex"
 )
 
 // NoteAuthor matches the nested author object in note responses.
@@ -685,6 +761,34 @@ type SetCommitStatusOptions struct {
 
 	// Description explains the status result.
 	Description *string `json:"description,omitempty"`
+
+	// Ref identifies the branch or tag for the commit status.
+	Ref *string `json:"ref,omitempty"`
+}
+
+// ListCommitStatusesOptions configures commit-status listing.
+type ListCommitStatusesOptions struct {
+	ListOptions
+
+	// Ref filters statuses by branch or tag.
+	Ref *string `json:"ref,omitempty"`
+}
+
+func (o *ListCommitStatusesOptions) encodeQuery() url.Values {
+	values := make(url.Values)
+	if o == nil {
+		return values
+	}
+	if o.Ref != nil {
+		values.Set("ref", *o.Ref)
+	}
+	if o.PerPage != 0 {
+		values.Set("per_page", strconv.FormatInt(o.PerPage, 10))
+	}
+	if o.Page != 0 {
+		values.Set("page", strconv.FormatInt(o.Page, 10))
+	}
+	return values
 }
 
 // CreateMergeRequestNoteOptions configures note creation.

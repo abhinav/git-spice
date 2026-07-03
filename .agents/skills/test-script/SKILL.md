@@ -19,7 +19,7 @@ Test scripts verify end-to-end behavior and are stored in `testdata/script/`.
 | Create branch | `gs branch create <name> -m <msg>` |
 | Make commit | `gs commit create -m <msg>` |
 | Compare stdout | `cmp stdout $WORK/golden/file.txt` |
-| Partial match | `stdout 'expected substring'` |
+| Partial match | `stdout 'expected substring'` for non-JSON text only |
 | Check file exists | `exists filename` |
 | Compare with env vars | `cmpenv stdout $WORK/golden/file.txt` |
 | Test interactive | `env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual` |
@@ -39,6 +39,10 @@ Avoid these errors when writing test scripts:
 - ❌ **Using `git checkout -b`**: Use `gs branch create` instead (unless testing non-git-spice scenarios).
 
 - ❌ **Empty golden files with `(empty)`**: Just leave content blank after `-- path --`.
+
+- ❌ **String matching JSON output**: Use `cmpenvJSON`
+  for ShamHub JSON dumps and other JSON outputs.
+  Do not use `stdout` or `stderr` substring assertions on JSON.
 
 ## Writing a test script
 
@@ -423,7 +427,8 @@ Common `shamhub` commands:
   Reject a ShamHub Change Request and close it.
 - `shamhub dump changes/comments`:
   Dump ShamHub state to stdout for verification.
-  (Use `cmp`, `cmpenv`, and `cmpenvJSON` to verify output.)
+  Use `cmpenvJSON` with a golden file.
+  Do not verify JSON with `stdout` substring assertions.
 
 ## Reference
 

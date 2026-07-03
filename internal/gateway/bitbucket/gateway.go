@@ -48,6 +48,10 @@ type PullRequest struct {
 	// Draft reports whether the pull request is marked as a draft.
 	Draft bool
 
+	// Mergeability reports the product's current mergeability decision.
+	// Products that do not report mergeability leave this unknown.
+	Mergeability forge.ChangeMergeability
+
 	// Reviewers are the usernames of users
 	// who have been requested to review the pull request.
 	Reviewers []string
@@ -196,9 +200,9 @@ type Gateway interface {
 	// MergeChange merges a pull request using the given method.
 	MergeChange(ctx context.Context, number int64, method forge.MergeMethod) error
 
-	// ListCommitChecks reports the states of CI checks
+	// ListCommitChecks reports the CI checks
 	// recorded for the given commit.
-	ListCommitChecks(ctx context.Context, commit git.Hash) ([]forge.ChecksState, error)
+	ListCommitChecks(ctx context.Context, commit git.Hash) ([]forge.ChangeCheck, error)
 
 	// CreateComment posts a new comment on a pull request.
 	CreateComment(ctx context.Context, prID int64, body string) (*ChangeComment, error)

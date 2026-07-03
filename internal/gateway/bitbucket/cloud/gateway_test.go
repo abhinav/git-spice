@@ -151,49 +151,62 @@ func TestGateway_ListCommitChecks(t *testing.T) {
 	tests := []struct {
 		name     string
 		statuses []CommitStatus
-		want     []forge.ChecksState
+		want     []forge.ChangeCheck
 	}{
 		{
 			name: "NoStatuses",
-			want: []forge.ChecksState{},
+			want: []forge.ChangeCheck{},
 		},
 		{
 			name:     "Successful",
-			statuses: []CommitStatus{{State: CommitStatusSuccessful}},
-			want:     []forge.ChecksState{forge.ChecksPassed},
+			statuses: []CommitStatus{{Key: "build", State: CommitStatusSuccessful}},
+			want: []forge.ChangeCheck{
+				{Name: "build", State: forge.ChangeCheckPassed},
+			},
 		},
 		{
 			name:     "InProgress",
-			statuses: []CommitStatus{{State: CommitStatusInProgress}},
-			want:     []forge.ChecksState{forge.ChecksPending},
+			statuses: []CommitStatus{{Key: "test", State: CommitStatusInProgress}},
+			want: []forge.ChangeCheck{
+				{Name: "test", State: forge.ChangeCheckPending},
+			},
 		},
 		{
 			name:     "Failed",
-			statuses: []CommitStatus{{State: CommitStatusFailed}},
-			want:     []forge.ChecksState{forge.ChecksFailed},
+			statuses: []CommitStatus{{Key: "lint", State: CommitStatusFailed}},
+			want: []forge.ChangeCheck{
+				{Name: "lint", State: forge.ChangeCheckFailed},
+			},
 		},
 		{
 			name:     "Stopped",
-			statuses: []CommitStatus{{State: CommitStatusStopped}},
-			want:     []forge.ChecksState{forge.ChecksFailed},
+			statuses: []CommitStatus{{Key: "deploy", State: CommitStatusStopped}},
+			want: []forge.ChangeCheck{
+				{Name: "deploy", State: forge.ChangeCheckFailed},
+			},
 		},
 		{
 			name: "Mixed",
 			statuses: []CommitStatus{
-				{State: CommitStatusSuccessful},
-				{State: CommitStatusInProgress},
-				{State: CommitStatusFailed},
+				{Key: "build", State: CommitStatusSuccessful},
+				{Key: "test", State: CommitStatusInProgress},
+				{Key: "lint", State: CommitStatusFailed},
 			},
-			want: []forge.ChecksState{
-				forge.ChecksPassed,
-				forge.ChecksPending,
-				forge.ChecksFailed,
+			want: []forge.ChangeCheck{
+				{Name: "build", State: forge.ChangeCheckPassed},
+				{Name: "test", State: forge.ChangeCheckPending},
+				{Name: "lint", State: forge.ChangeCheckFailed},
 			},
 		},
 		{
 			name:     "UnknownState",
 			statuses: []CommitStatus{{State: "WEIRD"}},
-			want:     []forge.ChecksState{forge.ChecksPassed},
+			want: []forge.ChangeCheck{
+				{
+					Name:  "Bitbucket build status 1",
+					State: forge.ChangeCheckPassed,
+				},
+			},
 		},
 	}
 

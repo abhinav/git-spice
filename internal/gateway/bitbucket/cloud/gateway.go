@@ -137,32 +137,45 @@ func (g *Gateway) defaultBranch(ctx context.Context) (string, error) {
 	return g.defaultBranchName, nil
 }
 
-// ListCommitChecks reports the states of CI checks
-// recorded for the given commit, one entry per check.
+// ListCommitChecks reports the CI checks
+// recorded for the given commit.
 func (g *Gateway) ListCommitChecks(
 	ctx context.Context,
 	commit git.Hash,
-) ([]forge.ChecksState, error) {
-	statuses, _, err := g.client.CommitStatusList(
-		ctx, g.workspace, g.repo, commit.String(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("get commit statuses: %w", err)
+) ([]forge.ChangeCheck, error) {
+	var statuses []CommitStatus
+	opt := &CommitStatusListOptions{}
+	for {
+		page, resp, err := g.client.CommitStatusList(
+			ctx, g.workspace, g.repo, commit.String(), opt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("get commit statuses: %w", err)
+		}
+
+		statuses = append(statuses, page.Values...)
+		if resp.NextURL == "" {
+			break
+		}
+		opt.PageURL = resp.NextURL
 	}
 
-	states := make([]forge.ChecksState, 0, len(statuses.Values))
-	for _, s := range statuses.Values {
-		var state forge.ChecksState
+	checks := make([]forge.ChangeCheck, 0, len(statuses))
+	for i, s := range statuses {
+		check := forge.ChangeCheck{Name: s.Key}
+		if check.Name == "" {
+			check.Name = fmt.Sprintf("Bitbucket build status %d", i+1)
+		}
 		switch s.State {
 		case CommitStatusFailed,
 			CommitStatusStopped:
-			state = forge.ChecksFailed
+			check.State = forge.ChangeCheckFailed
 		case CommitStatusInProgress:
-			state = forge.ChecksPending
+			check.State = forge.ChangeCheckPending
 		default:
-			state = forge.ChecksPassed
+			check.State = forge.ChangeCheckPassed
 		}
-		states = append(states, state)
+		checks = append(checks, check)
 	}
-	return states, nil
+	return checks, nil
 }

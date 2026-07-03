@@ -99,6 +99,11 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 	must.NotBeBlankf(branch, "branch name must not be blank")
 	must.NotBef(opts.DryRun && opts.Detach, "cannot use both dry-run and detach options")
 
+	if opts.DryRun {
+		_, _ = fmt.Fprintln(h.Stdout, branch)
+		return nil
+	}
+
 	log := h.Log
 	if branch != h.Store.Trunk() {
 		if err := h.Service.VerifyRestacked(ctx, branch); err != nil {
@@ -159,11 +164,6 @@ func (h *Handler) CheckoutBranch(ctx context.Context, req *Request) error {
 					"branch", branch, "error", err)
 			}
 		}
-	}
-
-	if opts.DryRun {
-		_, _ = fmt.Fprintln(h.Stdout, branch)
-		return nil
 	}
 
 	if opts.Detach {

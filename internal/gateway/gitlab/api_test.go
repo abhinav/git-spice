@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -125,10 +126,11 @@ func TestClient_MergeRequestGet(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55", r.URL.Path)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
 			BasicMergeRequest: BasicMergeRequest{
-				IID:          55,
-				Title:        "Stabilize nacelles",
-				TargetBranch: "main",
-				Labels:       []string{"engineering"},
+				IID:                 55,
+				Title:               "Stabilize nacelles",
+				TargetBranch:        "main",
+				Labels:              []string{"engineering"},
+				DetailedMergeStatus: DetailedMergeStatusMergeable,
 				Reviewers: []*BasicUser{
 					{ID: 12, Username: "spock"},
 				},
@@ -141,6 +143,7 @@ func TestClient_MergeRequestGet(t *testing.T) {
 	mr, _, err := client.MergeRequestGet(t.Context(), int64(42), 55, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Stabilize nacelles", mr.Title)
+	assert.Equal(t, DetailedMergeStatusMergeable, mr.DetailedMergeStatus)
 	require.Len(t, mr.Reviewers, 1)
 	assert.Equal(t, "spock", mr.Reviewers[0].Username)
 }
@@ -348,7 +351,8 @@ func TestClient_CommitStatusSet(t *testing.T) {
 		assertJSONBody(t, r, `{
 			"state":"success",
 			"name":"git-spice",
-			"description":"Warp core stable"
+			"description":"Warp core stable",
+			"ref":"feature/refit"
 		}`)
 		writeJSON(t, w, http.StatusCreated, Pipeline{
 			Status: PipelineStatusSuccess,
@@ -360,6 +364,7 @@ func TestClient_CommitStatusSet(t *testing.T) {
 	status := PipelineStatusSuccess
 	name := "git-spice"
 	description := "Warp core stable"
+	ref := "feature/refit"
 	pipeline, _, err := client.CommitStatusSet(
 		t.Context(),
 		int64(42),
@@ -368,10 +373,97 @@ func TestClient_CommitStatusSet(t *testing.T) {
 			State:       &status,
 			Name:        &name,
 			Description: &description,
+			Ref:         &ref,
 		},
 	)
 	require.NoError(t, err)
 	assert.Equal(t, PipelineStatusSuccess, pipeline.Status)
+}
+
+func TestClient_CommitStatusList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(
+			t,
+			"/api/v4/projects/42/repository/commits/abc123/statuses",
+			r.URL.Path,
+		)
+		assert.Equal(t, "feature/refit", r.URL.Query().Get("ref"))
+		assert.Equal(t, "100", r.URL.Query().Get("per_page"))
+		assert.Equal(t, "2", r.URL.Query().Get("page"))
+		w.Header().Set("X-Page", "2")
+		w.Header().Set("X-Next-Page", "3")
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`[
+			{
+				"id": 91,
+				"name": "unit",
+				"status": "success",
+				"created_at": "2016-01-19T08:40:25.934Z",
+				"started_at": "2016-01-19T08:41:25.934Z",
+				"finished_at": "2016-01-19T08:42:25.934Z"
+			},
+			{
+				"id": 92,
+				"name": "deploy",
+				"status": "pending",
+				"created_at": "2016-01-19T09:40:25.934Z",
+				"started_at": null,
+				"finished_at": null
+			}
+		]`))
+		require.NoError(t, err)
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	ref := "feature/refit"
+	statuses, resp, err := client.CommitStatusList(
+		t.Context(),
+		int64(42),
+		"abc123",
+		&ListCommitStatusesOptions{
+			Ref: &ref,
+			ListOptions: ListOptions{
+				PerPage: 100,
+				Page:    2,
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, statuses, 2)
+	assert.Equal(t, "unit", statuses[0].Name)
+	assert.Equal(t, PipelineStatusSuccess, statuses[0].Status)
+	assert.Equal(t, int64(91), statuses[0].ID)
+	assert.Equal(
+		t,
+		time.Date(2016, 1, 19, 8, 40, 25, 934000000, time.UTC),
+		statuses[0].CreatedAt,
+	)
+	require.NotNil(t, statuses[0].StartedAt)
+	assert.Equal(
+		t,
+		time.Date(2016, 1, 19, 8, 41, 25, 934000000, time.UTC),
+		*statuses[0].StartedAt,
+	)
+	require.NotNil(t, statuses[0].FinishedAt)
+	assert.Equal(
+		t,
+		time.Date(2016, 1, 19, 8, 42, 25, 934000000, time.UTC),
+		*statuses[0].FinishedAt,
+	)
+	assert.Equal(t, "deploy", statuses[1].Name)
+	assert.Equal(t, PipelineStatusPending, statuses[1].Status)
+	assert.Equal(t, int64(92), statuses[1].ID)
+	assert.Equal(
+		t,
+		time.Date(2016, 1, 19, 9, 40, 25, 934000000, time.UTC),
+		statuses[1].CreatedAt,
+	)
+	assert.Nil(t, statuses[1].StartedAt)
+	assert.Nil(t, statuses[1].FinishedAt)
+	assert.Equal(t, 2, resp.CurrentPage)
+	assert.Equal(t, 3, resp.NextPage)
 }
 
 func TestClient_MergeRequestNoteCreate(t *testing.T) {

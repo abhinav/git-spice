@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -225,15 +226,14 @@ type (
 		changeID forge.ChangeID,
 	)
 
-	// SetChangeChecksStateFunc sets the aggregate checks state
-	// that a forge reports for a change.
-	SetChangeChecksStateFunc func(
+	// SetChangeCheckFunc sets a synthetic check for a change.
+	SetChangeCheckFunc func(
 		t *testing.T,
 		httpClient *http.Client,
 		repo forge.Repository,
 		changeID forge.ChangeID,
 		headHash git.Hash,
-		state forge.ChecksState,
+		check forge.ChangeCheck,
 	)
 )
 
@@ -264,8 +264,14 @@ type IntegrationConfig struct {
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc // required
 
-	// SetChangeChecksState sets checks state for a change.
-	SetChangeChecksState SetChangeChecksStateFunc // optional
+	// SetChangeCheck sets a synthetic check for a change.
+	SetChangeCheck SetChangeCheckFunc // optional
+
+	// SkipMergeability skips shared mergeability integration tests.
+	//
+	// The tests are enabled by default.
+	// Set to true only for forges that do not support mergeability.
+	SkipMergeability bool // optional
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string // required
@@ -348,7 +354,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		openRepository:        config.OpenRepository,
 		MergeChange:           mergeChange,
 		CloseChange:           config.CloseChange,
-		SetChangeChecksState:  config.SetChangeChecksState,
+		SetChangeCheck:        config.SetChangeCheck,
 		Reviewers:             config.Reviewers,
 		Assignees:             config.Assignees,
 		SetCommentsPageSize:   config.SetCommentsPageSize,
@@ -388,11 +394,21 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		})
 	}
 
-	if config.SetChangeChecksState != nil {
+	if config.SetChangeCheck != nil {
+		// Keep the pre-rename subtest name so existing VCR fixture paths
+		// remain valid until the fixtures are re-recorded.
 		t.Run("ChangeChecksState", func(t *testing.T) {
 			t.Parallel()
 
-			suite.TestChangeChecksState(t)
+			suite.TestChangeChecks(t)
+		})
+	}
+
+	if !config.SkipMergeability {
+		t.Run("ChangeMergeability", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestChangeMergeability(t, !config.SkipDraft)
 		})
 	}
 
@@ -487,8 +503,8 @@ type integrationSuite struct {
 	// CloseChange closes a change without merging.
 	CloseChange CloseChangeFunc
 
-	// SetChangeChecksState sets checks state for a change.
-	SetChangeChecksState SetChangeChecksStateFunc
+	// SetChangeCheck sets a synthetic check for a change.
+	SetChangeCheck SetChangeCheckFunc
 
 	// Reviewers is a list of usernames that can be added as reviewers to changes.
 	Reviewers []string
@@ -830,16 +846,34 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 	assert.NotEmpty(t, statuses[2].HeadHash)
 }
 
-// TestChangeChecksState verifies that forges report aggregate checks state
+// TestChangeChecks verifies that forges report checks
 // for newly submitted changes.
-func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
+func (s *integrationSuite) TestChangeChecks(t *testing.T) {
 	tests := []struct {
 		name string
-		want forge.ChecksState
+		want forge.ChangeCheck
 	}{
-		{name: "Pending", want: forge.ChecksPending},
-		{name: "Passed", want: forge.ChecksPassed},
-		{name: "Failed", want: forge.ChecksFailed},
+		{
+			name: "Pending",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration pending",
+				State: forge.ChangeCheckPending,
+			},
+		},
+		{
+			name: "Passed",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration passed",
+				State: forge.ChangeCheckPassed,
+			},
+		},
+		{
+			name: "Failed",
+			want: forge.ChangeCheck{
+				Name:  "git-spice integration failed",
+				State: forge.ChangeCheckFailed,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -880,7 +914,7 @@ func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
 			})
 			require.NoError(t, err, "error creating change")
 
-			s.SetChangeChecksState(
+			s.SetChangeCheck(
 				t,
 				httpClient,
 				repo,
@@ -889,11 +923,211 @@ func (s *integrationSuite) TestChangeChecksState(t *testing.T) {
 				tt.want,
 			)
 
-			got, err := repo.ChangeChecksState(t.Context(), change.ID)
+			got, err := repo.ChangeChecks(t.Context(), change.ID)
 			require.NoError(t, err, "error fetching checks")
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, []forge.ChangeCheck{tt.want}, got)
 		})
 	}
+}
+
+// TestChangeMergeability verifies that forges report mergeability
+// independently from the CI/check status surface.
+func (s *integrationSuite) TestChangeMergeability(
+	t *testing.T,
+	includeDraft bool,
+) {
+	t.Run("Ready", func(t *testing.T) {
+		t.Parallel()
+
+		s.testChangeMergeabilityReady(t)
+	})
+
+	t.Run("Conflicts", func(t *testing.T) {
+		t.Parallel()
+
+		s.testChangeMergeabilityConflicts(t)
+	})
+
+	if includeDraft {
+		t.Run("Draft", func(t *testing.T) {
+			t.Parallel()
+
+			s.testChangeMergeabilityDraft(t)
+		})
+	}
+}
+
+func (s *integrationSuite) testChangeMergeabilityReady(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "ready-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "ready-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile(headName+".txt", randomString(32))
+		testRepo.AddAllAndCommit("commit for mergeability ready")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *integrationSuite) testChangeMergeabilityConflicts(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "conflict-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "conflict-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile("mergeability-conflict.txt", "head "+randomString(32))
+		testRepo.AddAllAndCommit("commit conflicting head")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+
+		testRepo.CheckoutBranch("main")
+		testRepo.WriteFile("mergeability-conflict.txt", "base "+randomString(32))
+		testRepo.AddAllAndCommit("commit conflicting base")
+		testRepo.Push("HEAD:" + baseName)
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State:  forge.ChangeMergeabilityBlocked,
+			Reason: forge.ChangeMergeabilityReasonConflicts,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
+}
+
+func (s *integrationSuite) testChangeMergeabilityDraft(t *testing.T) {
+	baseName := fixturetest.New(s.Fixtures, "base", func() string {
+		return "draft-base-" + randomString(8)
+	}).Get(t)
+	headName := fixturetest.New(s.Fixtures, "head", func() string {
+		return "draft-head-" + randomString(8)
+	}).Get(t)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CheckoutBranch("main")
+		testRepo.Push("main:" + baseName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(baseName)
+		})
+
+		testRepo.CreateBranch(headName)
+		testRepo.CheckoutBranch(headName)
+		testRepo.WriteFile(headName+".txt", randomString(32))
+		testRepo.AddAllAndCommit("commit for mergeability draft")
+		testRepo.Push(headName)
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(headName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+
+	change, err := repo.SubmitChange(
+		t.Context(),
+		forge.SubmitChangeRequest{
+			Subject: "Mergeability " + headName,
+			Body:    "Mergeability scenario test",
+			Base:    baseName,
+			Head:    headName,
+			Draft:   true,
+		},
+	)
+	require.NoError(t, err, "error creating change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+	}
+
+	var got forge.ChangeMergeability
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var err error
+		got, err = repo.ChangeMergeability(t.Context(), change.ID)
+		require.NoError(c, err, "error fetching mergeability")
+		assert.Equal(c, forge.ChangeMergeability{
+			State:  forge.ChangeMergeabilityBlocked,
+			Reason: forge.ChangeMergeabilityReasonDraft,
+		}, got)
+	}, 30*time.Second, 500*time.Millisecond)
 }
 
 // FindChangesByBranch returns no error, and an empty slice
@@ -983,27 +1217,13 @@ func (s *integrationSuite) TestSubmitChangeFromPushRepository(t *testing.T) {
 }
 
 func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
-	// Get the template paths from the forge.
-	// We'll use the first non-.md path as the directory for templates.
 	templatePaths := s.Forge.ChangeTemplatePaths()
 	require.NotEmpty(t, templatePaths, "forge must have template paths")
 
-	var templateDir string
-	for _, path := range templatePaths {
-		if !strings.HasSuffix(path, ".md") {
-			templateDir = path
-			break
-		}
-	}
-	t.Logf("Will write templates to directory: %s", templateDir)
-	require.NotEmpty(t, templateDir, "could not find template directory")
-
-	// Repository has no templates.
 	t.Run("NoTemplates", func(t *testing.T) {
 		if Update() {
 			testRepo := newTestRepository(t, s.RemoteURL)
 
-			// Nuke all CR templates in the repo.
 			t.Logf("Removing all templates from main")
 			var deleted bool
 			for _, path := range templatePaths {
@@ -1033,33 +1253,44 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 		assert.Empty(t, templates, "should have no templates")
 	})
 
-	// Repository has templates.
-	t.Run("TemplatesPresent", func(t *testing.T) {
-		// Generate template names.
-		emptyTemplateFixture := fixturetest.New(s.Fixtures, "empty-template", func() string {
-			return randomString(8) + ".md"
-		})
-		nonEmptyTemplateFixture := fixturetest.New(s.Fixtures, "non-empty-template", func() string {
-			return randomString(8) + ".md"
-		})
+	var templateDir string
+	for _, path := range templatePaths {
+		if !strings.HasSuffix(path, ".md") {
+			templateDir = path
+			break
+		}
+	}
 
-		emptyTemplateName := emptyTemplateFixture.Get(t)
-		nonEmptyTemplateName := nonEmptyTemplateFixture.Get(t)
-		t.Logf("Creating templates: %s (empty), %s (non-empty)",
-			emptyTemplateName, nonEmptyTemplateName)
+	t.Run("TemplatesPresent", func(t *testing.T) {
+		var emptyTemplateName, nonEmptyTemplateName string
+		if templateDir != "" {
+			emptyTemplateName = fixturetest.New(s.Fixtures, "empty-template", func() string {
+				return randomString(8) + ".md"
+			}).Get(t)
+			nonEmptyTemplateName = fixturetest.New(s.Fixtures, "non-empty-template", func() string {
+				return randomString(8) + ".md"
+			}).Get(t)
+			t.Logf("Creating templates: %s (empty), %s (non-empty)",
+				emptyTemplateName, nonEmptyTemplateName)
+		}
 
 		if Update() {
 			testRepo := newTestRepository(t, s.RemoteURL)
 
-			testRepo.WriteFile(filepath.Join(templateDir, emptyTemplateName))
-			t.Logf("Created empty template at: %s",
-				filepath.Join(templateDir, emptyTemplateName))
+			if templateDir != "" {
+				testRepo.WriteFile(filepath.Join(templateDir, emptyTemplateName))
+				t.Logf("Created empty template at: %s",
+					filepath.Join(templateDir, emptyTemplateName))
 
-			testRepo.WriteFile(
-				filepath.Join(templateDir, nonEmptyTemplateName),
-				"This is a test template")
-			t.Logf("Created non-empty template at: %s",
-				filepath.Join(templateDir, nonEmptyTemplateName))
+				testRepo.WriteFile(
+					filepath.Join(templateDir, nonEmptyTemplateName),
+					"This is a test template")
+				t.Logf("Created non-empty template at: %s",
+					filepath.Join(templateDir, nonEmptyTemplateName))
+			} else {
+				testRepo.WriteFile(templatePaths[0], "This is a test template")
+				t.Logf("Created template at: %s", templatePaths[0])
+			}
 
 			testRepo.AddAllAndCommit("Add templates")
 			testRepo.Push("main")
@@ -1071,12 +1302,19 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 		require.NoError(t, err)
 
 		// Find our test templates in the results.
-		var foundEmpty, foundNonEmpty bool
+		var foundEmpty, foundNonEmpty, foundSingleFile bool
 		for _, template := range templates {
 			// Template names may not have extensions depending on the forge.
 			templateName := strings.TrimSuffix(template.Filename, ".md") + ".md"
 
 			switch templateName {
+			case filepath.Base(templatePaths[0]):
+				foundSingleFile = true
+				assert.Equal(t,
+					strings.TrimSpace("This is a test template"),
+					strings.TrimSpace(template.Body),
+					"template should have correct body")
+
 			case emptyTemplateName:
 				foundEmpty = true
 				// https://github.com/abhinav/git-spice/issues/931
@@ -1094,8 +1332,12 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 			}
 		}
 
-		assert.True(t, foundEmpty, "empty template not found in results")
-		assert.True(t, foundNonEmpty, "non-empty template not found in results")
+		if templateDir == "" {
+			assert.True(t, foundSingleFile, "template not found in results")
+		} else {
+			assert.True(t, foundEmpty, "empty template not found in results")
+			assert.True(t, foundNonEmpty, "non-empty template not found in results")
+		}
 	})
 }
 
@@ -1720,6 +1962,16 @@ func newTestRepository(t *testing.T, remoteURL string) *testRepository {
 		WithStdout(output).
 		WithStderr(output)
 	require.NoError(t, cmd.Run(), "failed to clone repository")
+
+	require.NoError(t, xec.Command(
+		t.Context(),
+		silogtest.New(t),
+		"git", "config", "commit.gpgsign", "false",
+	).
+		WithDir(repoDir).
+		WithStdout(output).
+		WithStderr(output).
+		Run(), "disable commit signing")
 
 	ctx := t.Context()
 	work, err := git.OpenWorktree(ctx, repoDir, git.OpenOptions{

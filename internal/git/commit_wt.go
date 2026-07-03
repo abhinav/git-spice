@@ -15,6 +15,14 @@ type CommitRequest struct {
 	// $EDITOR is opened to edit the message.
 	Message string
 
+	// Messages are additional commit message paragraphs.
+	//
+	// Each element becomes a separate -m argument,
+	// producing separate paragraphs like git commit's repeated -m behavior.
+	// When both Message and Messages are set,
+	// Messages is appended after Message.
+	Messages []string
+
 	// MessageFile reads the commit message from the given file.
 	MessageFile string
 
@@ -66,6 +74,9 @@ func (w *Worktree) Commit(ctx context.Context, req CommitRequest) error {
 	}
 	if req.Message != "" {
 		args = append(args, "-m", req.Message)
+	}
+	for _, m := range req.Messages {
+		args = append(args, "-m", m)
 	}
 	if req.MessageFile != "" {
 		args = append(args, "-F", req.MessageFile)

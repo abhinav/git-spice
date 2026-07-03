@@ -1,0 +1,76 @@
+# 'branch merge' fails an item when spice.merge.command exits non-zero.
+
+as 'Test <test@example.com>'
+at '2026-06-29T12:00:00Z'
+
+# setup
+cd repo
+git init
+git config spice.experiment.merge true
+git commit --allow-empty -m 'Initial commit'
+
+# set up a fake GitHub remote
+shamhub init
+shamhub new origin alice/example.git
+shamhub register alice
+git push origin main
+
+env SHAMHUB_USERNAME=alice
+gs auth login
+
+# create a branch directly on trunk
+git add feature1.txt
+gs bc feature1 -m 'Add feature 1'
+
+# submit the branch
+gs branch submit --fill
+stderr 'Created #1'
+
+# configure a merge hook that refuses to request the forge merge
+git config spice.merge.command 'echo merge rejected >&2; exit 17'
+
+# merge reports the hook failure instead of waiting for the CR to merge
+env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual
+! gs branch merge
+cmp $WORK/robot-merge.actual $WORK/robot-merge.golden
+stderr 'feature1: merging #1:'
+stderr 'command exited with status 17'
+! stderr 'feature1: #1 was merged'
+
+# verify the command did not request a forge merge
+shamhub dump changes
+cmpenvJSON stdout $WORK/golden/changes.json
+
+-- repo/feature1.txt --
+This is feature 1
+-- robot-merge.golden --
+===
+> Merge 1 change(s) bottom-up?: [Y/n]
+>   feature1 (#1)
+true
+-- golden/changes.json --
+[
+  {
+    "number": 1,
+    "html_url": "$SHAMHUB_URL/alice/example/change/1",
+    "state": "open",
+    "title": "Add feature 1",
+    "body": "",
+    "base": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "main",
+      "sha": "4534ecd83e64a03eb6ab28c54c179f31255d98c5"
+    },
+    "head": {
+      "repository": {
+        "owner": "alice",
+        "name": "example"
+      },
+      "ref": "feature1",
+      "sha": "0a81a9aa40eeebda39d579657c084e3ab99c632e"
+    }
+  }
+]

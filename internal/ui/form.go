@@ -11,7 +11,6 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"go.abhg.dev/gs/internal/sigstack"
-	"go.abhg.dev/gs/internal/ui/scrollregion"
 )
 
 // FormKeyMap defines the key bindings for a form.
@@ -184,17 +183,6 @@ type RunOptions struct {
 
 	// Signals coordinates signal handling with the rest of the command.
 	Signals *sigstack.Stack
-
-	// ScrollRegionMinHeight and ScrollRegionMaxHeight reserve a bottom
-	// terminal region for the model.
-	//
-	// This is an experimental renderer mode. Ordinary terminal output scrolls
-	// above the reserved rows while the model is redrawn in the reserved rows.
-	// The reserved height follows the model's rendered line count.
-	// MinHeight prevents the region from bouncing when a model briefly renders
-	// fewer lines, and MaxHeight caps future detail sections.
-	ScrollRegionMinHeight int
-	ScrollRegionMaxHeight int
 }
 
 // FormRunOptions specifies options for [Form.Run].
@@ -205,30 +193,18 @@ func RunModel(model tea.Model, opts *RunOptions) (err error) {
 	opts = cmp.Or(opts, &RunOptions{})
 
 	var teaOpts []tea.ProgramOption
-	startScrollRegion := func(*tea.Program) {}
-	if opts.ScrollRegionMinHeight > 0 || opts.ScrollRegionMaxHeight > 0 {
-		scrollRegion := scrollregion.New(model,
-			cmp.Or(opts.Output, io.Writer(os.Stderr)),
-			&scrollregion.Options{
-				Width:     opts.Width,
-				Height:    opts.Height,
-				MinHeight: opts.ScrollRegionMinHeight,
-				MaxHeight: opts.ScrollRegionMaxHeight,
-				TERM:      opts.TERM,
-				Signals:   opts.Signals,
-			})
-		defer func() {
-			err = errors.Join(err, scrollRegion.Close())
-		}()
-		model = scrollRegion
-		teaOpts = append(teaOpts, tea.WithoutRenderer())
-		startScrollRegion = scrollRegion.Start
-	}
+	var printOutput *OutputWriter
 
 	if i := opts.Input; i != nil {
 		teaOpts = append(teaOpts, tea.WithInput(i))
 	}
 	if o := opts.Output; o != nil {
+		if ow, ok := o.(*OutputWriter); ok {
+			// Bubble Tea renders to the raw terminal stream.
+			// Ordinary writes use printTo below during the active program run.
+			printOutput = ow
+			o = ow.Unwrap()
+		}
 		teaOpts = append(teaOpts, tea.WithOutput(o))
 	}
 	if opts.Width > 0 && opts.Height > 0 {
@@ -242,7 +218,9 @@ func RunModel(model tea.Model, opts *RunOptions) (err error) {
 		teaOpts = append(teaOpts, tea.WithoutSignals())
 	}
 	program := tea.NewProgram(model, teaOpts...)
-	startScrollRegion(program)
+	if printOutput != nil {
+		defer printOutput.printTo(program)()
+	}
 	if msg := opts.SendMsg; msg != nil {
 		go program.Send(msg)
 	}

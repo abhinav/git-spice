@@ -397,6 +397,7 @@ func (c *Client) ApplicationProperties(ctx context.Context) (*ApplicationPropert
 
 // BuildStatus is a single CI build status reported for a commit.
 type BuildStatus struct {
+	Key   string `json:"key"`
 	State string `json:"state"` // one of the BuildStatus* constants
 }
 

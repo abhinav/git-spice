@@ -16,6 +16,7 @@ import (
 
 // GitRepository provides read access to the Git repository's state.
 type GitRepository interface {
+	BranchExists(ctx context.Context, branch string) bool
 	PeelToCommit(ctx context.Context, ref string) (git.Hash, error)
 	ListCommits(ctx context.Context, commits git.CommitRange) iter.Seq2[git.Hash, error]
 	LocalBranches(ctx context.Context, opts *git.LocalBranchesOptions) iter.Seq2[git.LocalBranch, error]

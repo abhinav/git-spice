@@ -198,7 +198,7 @@ should print a message when switching branches.
 
 ### spice.forge.kind
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 The forge kind to use when a remote URL does not identify the forge by host.
 
@@ -215,8 +215,7 @@ the repository path.
 ```
 
 Accepted values are registered forge IDs,
-including `github`, `gitlab`, and `bitbucket`.
-Test repositories may also use `shamhub`.
+including `github`, `gitlab`, `bitbucket`, `gitea`, and `forgejo`.
 
 With `bitbucket`, the instance URL is derived from the remote URL
 when $$spice.forge.bitbucket.url$$ is not set,
@@ -333,6 +332,52 @@ Whether to remove the source branch when a Merge Request is merged.
 
 - `true` (default)
 - `false`
+
+### spice.forge.gitea.apiURL
+
+<!-- gs:version v0.30.0 -->
+
+URL at which the Gitea API is available.
+Defaults to `$GITEA_API_URL` if set,
+or the Gitea URL otherwise.
+
+See also [Gitea](../setup/auth.md#gitea).
+
+### spice.forge.gitea.url
+
+<!-- gs:version v0.30.0 -->
+
+URL of the Gitea instance.
+Defaults to `$GITEA_URL` if set.
+
+Gitea is always self-hosted, so this value is required
+for git-spice to detect and connect to your instance.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.gitea.url{reset} {mag}https://gitea.example.com{reset}
+```
+
+See also [Gitea](../setup/auth.md#gitea).
+
+### spice.forge.forgejo.apiURL
+
+<!-- gs:version v0.30.0 -->
+
+URL at which the Forgejo API is available.
+Defaults to `$FORGEJO_API_URL` if set,
+or the Forgejo URL otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
+
+### spice.forge.forgejo.url
+
+<!-- gs:version v0.30.0 -->
+
+URL of the Forgejo instance used for Forgejo requests.
+Defaults to `$FORGEJO_URL` if set,
+or `https://codeberg.org` otherwise.
+
+See also [Forgejo](../setup/auth.md#forgejo).
 
 ### spice.git.indexLockTimeout
 
@@ -466,25 +511,40 @@ whether the branch is in sync with its pushed counterpart.
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
-### spice.merge.buildTimeout
+### spice.merge.readyTimeout
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
-Maximum time $$gs downstack merge$$ waits for CI checks to pass
-before merging each branch in the stack.
+Maximum time merge commands wait for merge readiness before each merge.
+Merge readiness requires the forge to report the pushed head
+and report that the CR is ready to merge.
 
 The value must be a duration string such as
 `30m`, `1h`, `90s`, etc.
-Set to `0` to fail immediately if checks aren't already passing.
+Set to `0` to fail immediately if merge readiness is not already reached.
 
 Defaults to `30m`.
 
+### spice.merge.mergeTimeout
+
+<!-- gs:version v0.30.0 -->
+
+Maximum time merge commands wait for the forge to report
+that the CR is merged after requesting merge.
+
+The value must be a duration string such as
+`2m`, `30s`, `5m`, etc.
+
+Defaults to `2m`.
+
 ### spice.merge.method
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
-Preferred merge method for $$gs downstack merge$$.
+Preferred merge method for $$gs branch merge$$ and friends.
 If unset, git-spice lets the forge use its default merge method.
+
+This setting is ignored if `spice.merge.command` is set.
 
 Merge methods are forge-specific.
 If the selected forge does not recognize the configured method,
@@ -495,6 +555,42 @@ git-spice warns and lets the forge use its default merge method.
 - `merge`: create a merge commit
 - `squash`: squash commits before merging
 - `rebase`: rebase commits before merging
+
+### spice.merge.command
+
+<!-- gs:version v0.30.0 -->
+
+Command to run to request a forge merge
+when a CR is deemed mergeable by a merge command.
+If unset, git-spice requests the merge through the forge API.
+
+git-spice still waits for the forge to report merge readiness before running
+the command,
+and still waits for the forge to report that the CR merged after the command
+exits successfully.
+git-spice may run the command concurrently for different CRs.
+
+Exit status `0` means the command requested the merge.
+Any non-zero exit status means the merge request failed for that CR.
+
+The command receives these common environment variables:
+
+- `GIT_SPICE_FORGE_ID`
+- `GIT_SPICE_BRANCH`
+- `GIT_SPICE_BASE_BRANCH`
+- `GIT_SPICE_TRUNK_BRANCH`
+- `GIT_SPICE_CHANGE_URL`
+- `GIT_SPICE_HEAD_SHA`
+
+Forges may also provide provider-specific variables.
+
+**Provider-specific variables:**
+
+- `GIT_SPICE_GITHUB_PR_NUMBER`
+- `GIT_SPICE_GITLAB_MR_IID`
+- `GIT_SPICE_BITBUCKET_PR_ID`
+- `GIT_SPICE_FORGEJO_PR_NUMBER`
+- `GIT_SPICE_GITEA_PR_NUMBER`
 
 ### spice.rebaseContinue.edit
 
@@ -557,7 +653,7 @@ will be combined with the configured assignees.
 
 ### spice.submit.labels
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Add the configured labels to all submitted and updated change requests
 when using $$gs branch submit$$ and friends.
@@ -571,11 +667,11 @@ will be combined with the configured labels.
 
 <!-- gs:version v0.16.0 -->
 
-Deprecated in favor of $$spice.submit.labels$$ in <!-- gs:version unreleased -->.
+Deprecated in favor of $$spice.submit.labels$$ in <!-- gs:version v0.30.0 -->.
 
 ### spice.submit.labels.addWhen
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 Controls when labels from $$spice.submit.labels$$
 are added to change requests.
@@ -593,7 +689,7 @@ except when added explicitly via the `-l`/`--label` flag.
 
 <!-- gs:version v0.29.0 -->
 
-Deprecated in favor of $$spice.submit.labels.addWhen$$ in <!-- gs:version unreleased -->.
+Deprecated in favor of $$spice.submit.labels.addWhen$$ in <!-- gs:version v0.30.0 -->.
 
 ### spice.submit.reviewers
 

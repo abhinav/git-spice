@@ -3,11 +3,15 @@ Usage: gs downstack (ds) merge (m) [flags]
 Merge a branch and those below it
 
 Merges the current branch and all branches below it into trunk via the forge
-API, bottom-up. Use --branch to start at a different branch.
+API, bottom-up. Use --branch to start at a different branch. Use --branch
+multiple times to merge multiple downstacks.
 
-This command acts as a local merge queue: it merges one Change Request,
-waits for that merge to finish, restacks and updates the next Change Request,
-waits for its CI checks to pass, and then repeats the process.
+Each selected branch expands to that branch and its downstack branches down to
+trunk. Overlapping downstacks are merged once.
+
+This command acts as a local merge queue: it merges one Change Request, waits
+for that merge to finish, restacks and updates the next Change Request, waits
+for merge readiness on the updated Change Request, and then repeats the process.
 
 For a stack like this:
 
@@ -23,24 +27,24 @@ Change Request to be merged.
 Before merging, the downstack is checked for branches whose base PR was already
 merged on the forge. Use --no-branch-check to skip this validation.
 
-Before each merge, waits for CI checks to pass. Use --build-timeout to configure
-the maximum wait (default: 30m, 0 means fail immediately if not ready).
+Before checking merge readiness, the command waits briefly for the forge to
+observe the pushed head. Then it waits for the forge to report that the CR is
+ready to merge. Use --ready-timeout to configure the maximum wait (default: 30m,
+0 means fail immediately if not ready).
 
 Between merges, the command waits for each merge to complete, restacks and
-updates the next PR, waits for CI checks on the updated PR, and syncs merged
-branch cleanup.
-
-Use --no-wait for single branch merging when you don't want to wait for the
-merge to propagate. --no-wait is rejected for multi-branch merges.
+updates the next PR, waits for merge readiness on the updated PR, and syncs
+merged branch cleanup.
 
 Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
-  --build-timeout=30m    Max time to wait for CI checks before each merge.
-                         0 means check once. (🔧 spice.merge.buildTimeout)
-  --no-wait              Skip polling for a single branch merge to propagate.
+  --ready-timeout=30m    Max time to wait for merge readiness before each merge.
+                         0 means check once. (🔧 spice.merge.readyTimeout)
+  --merge-timeout=2m     Max time to wait for merge completion after requesting
+                         merge. (🔧 spice.merge.mergeTimeout)
   --no-branch-check      Skip stale base validation before merging.
-  --branch=NAME          Branch to start merging from
+  --branch=NAME,...      Branches to start merging from. May be repeated.
 
 Global Flags:
   -h, --help           Show help for the command
@@ -48,3 +52,7 @@ Global Flags:
   -v, --verbose        Enable verbose output ($GIT_SPICE_VERBOSE)
   -C, --dir=DIR        Change to DIR before doing anything
       --[no-]prompt    Whether to prompt for missing information
+
+Configuration (🔧):
+  spice.merge.command    Command to request merge instead of using the forge
+                         merge API.

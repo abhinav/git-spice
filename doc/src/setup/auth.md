@@ -1,7 +1,8 @@
 ---
 icon: material/lock
 description: >-
-  Authenticate with GitHub/GitLab/Bitbucket to push and pull changes.
+  Authenticate with GitHub/GitLab/Bitbucket/Gitea/Forgejo
+  to push and pull changes.
 ---
 
 # Authentication
@@ -13,10 +14,13 @@ you will need to authenticate with the respective service.
 
 This page covers methods to authenticate git-spice
 with GitHub, GitLab, Bitbucket Cloud,
-and self-hosted Bitbucket Data Center / Server.
+Bitbucket Data Center / Server, Gitea, and Forgejo.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
 Bitbucket Cloud support requires at least version <!-- gs:version v0.25.0 -->.
 Bitbucket Data Center / Server support requires at least version <!-- gs:version unreleased -->.
+Gitea support requires at least version <!-- gs:version v0.30.0 -->.
+Forgejo support requires at least version <!-- gs:version v0.30.0 -->,
+and defaults to Codeberg.
 
 ## Logging in
 
@@ -41,7 +45,7 @@ Take the following steps to authenticate with a service:
 
     Skip prompt (2) by running $$gs auth login$$
     inside a Git repository cloned from
-    GitHub, GitLab, or Bitbucket Cloud.
+    GitHub, GitLab, Bitbucket, Gitea, or Forgejo.
     For self-hosted Bitbucket,
     configure the instance first as described in
     [Bitbucket Data Center / Server](#bitbucket-data-center-server).
@@ -56,10 +60,14 @@ Each supported service supports different authentication methods.
 - [Personal Access Token](#personal-access-token):
   <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
   <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
+  <!-- gs:badge:gitea -->
+  <!-- gs:badge:forgejo -->
 - [Service CLI](#service-cli): <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 - [Environment variable](#environment-variable):
   <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
   <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
+  <!-- gs:badge:gitea -->
+  <!-- gs:badge:forgejo -->
 
 Read on for more details on each method,
 or skip on to [Pick an authentication method](#picking-an-authentication-method).
@@ -191,6 +199,7 @@ After that, git-spice will use the stored OAuth token automatically.
 **Supported by**
 <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
+<!-- gs:badge:gitea --> <!-- gs:badge:forgejo -->
 
 To use a Personal Access Token with git-spice,
 you will generate a Personal Access Token on the website
@@ -309,6 +318,30 @@ Select an authentication method: {red}Personal Access Token{reset}
     {green}INF{reset} bitbucket: successfully logged in
     ```
 
+=== "<!-- gs:gitea -->"
+
+    To use an API token with Gitea:
+
+    1. Open your user settings on the Gitea instance.
+       For the default Gitea UI,
+       go to `{your Gitea instance}/user/settings/applications`.
+    2. Create a new token.
+    3. Grant the token repository access sufficient
+       to create and update Pull Requests.
+    4. Copy the generated token.
+
+=== "<!-- gs:forgejo -->"
+
+    To use an API token with Forgejo or Codeberg:
+
+    1. Open your user settings on the Forgejo instance.
+       On Codeberg,
+       go to <https://codeberg.org/user/settings/applications>.
+    2. Create a new token.
+    3. Grant the token repository access sufficient
+       to create and update Pull Requests.
+    4. Copy the generated token.
+
 After you have a token, enter it into the prompt.
 
 ### Service CLI
@@ -344,6 +377,7 @@ git-spice will request a token from the CLI as needed.
 **Supported by**
 <!-- gs:badge:github --> <!-- gs:badge:gitlab -->
 <!-- gs:badge:bitbucket --> <!-- gs:badge:bitbucket-server -->
+<!-- gs:badge:gitea --> <!-- gs:badge:forgejo -->
 
 You can provide the authentication token as an environment variable.
 This is not recommended as a primary authentication method,
@@ -372,6 +406,14 @@ but it can be useful in CI/CD environments.
     whichever the current repository resolves to;
     to hold tokens for several instances at once,
     log in with $$gs auth login$$ instead.
+
+=== "<!-- gs:gitea -->"
+
+    Set the `GITEA_TOKEN` environment variable to your API token.
+
+=== "<!-- gs:forgejo -->"
+
+    Set the `FORGEJO_TOKEN` environment variable to your API token.
 
 If you have the environment variable set,
 this takes precedence over all other authentication methods.
@@ -436,13 +478,25 @@ The $$gs auth login$$ operation will always fail if you use this method.
     interactive authentication method for Bitbucket Data Center / Server.
     It requires manual token management but works without additional tools.
 
+=== "<!-- gs:gitea -->"
+
+    [Personal Access Token](#personal-access-token) is the primary
+    authentication method for Gitea.
+    It requires manual token management but works without additional tools.
+
+=== "<!-- gs:forgejo -->"
+
+    [Personal Access Token](#personal-access-token) is the primary
+    authentication method for Forgejo and Codeberg.
+    It requires manual token management but works without additional tools.
+
 [Environment variable](#environment-variable) is the least convenient
 and the least secure method. End users should typically never pick this.
 It is intended only for CI/CD environments where you have no other choice.
 
 ## Aliased SSH remotes
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.30.0 -->
 
 git-spice usually identifies the forge from the Git remote URL.
 For example, a remote hosted on `github.com` identifies GitHub.
@@ -650,6 +704,65 @@ specifying the forge explicitly:
     repositories cloned from bitbucket.org no longer match it.
     Prefer setting the option per repository,
     as with a custom $$spice.forge.gitlab.url$$.
+
+### Gitea
+
+<!-- gs:version v0.30.0 -->
+
+To use git-spice with a Gitea instance,
+set $$spice.forge.gitea.url$$ to the address of your Gitea instance.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.gitea.url{reset} {mag}https://gitea.example.com{reset}
+```
+
+Alternatively, set the configuration with the `GITEA_URL` environment variable.
+
+```freeze language="bash"
+export GITEA_URL=https://gitea.example.com
+```
+
+Then authenticate with $$gs auth login$$.
+Gitea supports Personal Access Tokens:
+
+- **Personal Access Token**: Create one at
+  `{your Gitea instance}/user/settings/applications`.
+  Required scopes: `write:repository`, `write:issue`, and `read:user`.
+
+Alternatively, set `GITEA_TOKEN` to skip the login flow:
+
+```freeze language="bash"
+export GITEA_TOKEN=your-gitea-token
+```
+
+### Forgejo
+
+<!-- gs:version v0.30.0 -->
+
+Codeberg is the default Forgejo host.
+To use git-spice with a different Forgejo instance,
+set $$spice.forge.forgejo.url$$ to the address of that instance.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.forgejo.url{reset} {mag}https://forgejo.example.com{reset}
+```
+
+*Optionally*, also set the Forgejo API URL
+with the $$spice.forge.forgejo.apiURL$$ configuration option.
+By default,
+git-spice derives the API endpoint from the Forgejo URL.
+
+```freeze language="terminal"
+{green}${reset} git config {red}spice.forge.forgejo.apiURL{reset} {mag}https://forgejo.example.com/api/v1{reset}
+```
+
+Alternatively, set these configuration options
+with the `FORGEJO_URL` and `FORGEJO_API_URL` environment variables.
+
+```freeze language="bash"
+export FORGEJO_URL=https://forgejo.example.com
+export FORGEJO_API_URL=https://forgejo.example.com/api/v1
+```
 
 ## Safety
 

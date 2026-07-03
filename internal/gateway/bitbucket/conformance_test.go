@@ -196,7 +196,7 @@ func TestGatewayConformance_SetChangeDraft(t *testing.T) {
 }
 
 // TestGatewayConformance_ListCommitChecks verifies that equivalent
-// build statuses map to the same forge.ChecksState multiset
+// build statuses map to the same forge.ChangeCheck multiset
 // on both products.
 func TestGatewayConformance_ListCommitChecks(t *testing.T) {
 	// Both products spell these build states identically on the wire.
@@ -212,10 +212,10 @@ func TestGatewayConformance_ListCommitChecks(t *testing.T) {
 				t.Context(), git.Hash(conformanceCommitSHA),
 			)
 			require.NoError(t, err)
-			assert.ElementsMatch(t, []forge.ChecksState{
-				forge.ChecksPassed,
-				forge.ChecksPending,
-				forge.ChecksFailed,
+			assert.ElementsMatch(t, []forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckPassed},
+				{Name: "build-1", State: forge.ChangeCheckPending},
+				{Name: "build-2", State: forge.ChangeCheckFailed},
 			}, got)
 		})
 	}
@@ -566,7 +566,10 @@ func stubCommitStatuses(
 	case productCloud:
 		statuses := make([]cloud.CommitStatus, len(states))
 		for i, state := range states {
-			statuses[i] = cloud.CommitStatus{State: state}
+			statuses[i] = cloud.CommitStatus{
+				Key:   "build-" + strconv.Itoa(i),
+				State: state,
+			}
 		}
 		mux.HandleFunc("GET "+cloudStatusesPath(conformanceCommitSHA),
 			func(w http.ResponseWriter, _ *http.Request) {

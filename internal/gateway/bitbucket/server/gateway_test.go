@@ -162,26 +162,31 @@ func TestGateway_ListCommitChecks(t *testing.T) {
 	tests := []struct {
 		name   string
 		states []string
-		want   []forge.ChecksState
+		want   []forge.ChangeCheck
 	}{
-		{"Empty", nil, []forge.ChecksState{}},
+		{"Empty", nil, []forge.ChangeCheck{}},
 		{
 			"Successful",
 			[]string{"SUCCESSFUL"},
-			[]forge.ChecksState{forge.ChecksPassed},
+			[]forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckPassed},
+			},
 		},
 		{
 			"InProgress",
 			[]string{"SUCCESSFUL", "INPROGRESS"},
-			[]forge.ChecksState{forge.ChecksPassed, forge.ChecksPending},
+			[]forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckPassed},
+				{Name: "build-1", State: forge.ChangeCheckPending},
+			},
 		},
 		{
 			"Failed",
 			[]string{"SUCCESSFUL", "INPROGRESS", "FAILED"},
-			[]forge.ChecksState{
-				forge.ChecksPassed,
-				forge.ChecksPending,
-				forge.ChecksFailed,
+			[]forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckPassed},
+				{Name: "build-1", State: forge.ChangeCheckPending},
+				{Name: "build-2", State: forge.ChangeCheckFailed},
 			},
 		},
 		// An unknown/future state (e.g. CANCELLED or STOPPED) must not be
@@ -189,12 +194,17 @@ func TestGateway_ListCommitChecks(t *testing.T) {
 		{
 			"Unknown",
 			[]string{"CANCELLED"},
-			[]forge.ChecksState{forge.ChecksFailed},
+			[]forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckFailed},
+			},
 		},
 		{
 			"UnknownBesideSuccessful",
 			[]string{"SUCCESSFUL", "CANCELLED"},
-			[]forge.ChecksState{forge.ChecksPassed, forge.ChecksFailed},
+			[]forge.ChangeCheck{
+				{Name: "build-0", State: forge.ChangeCheckPassed},
+				{Name: "build-1", State: forge.ChangeCheckFailed},
+			},
 		},
 	}
 

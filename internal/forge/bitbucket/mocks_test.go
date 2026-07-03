@@ -353,10 +353,10 @@ func (c *MockGatewayListCommentsCall) DoAndReturn(f func(context.Context, int64,
 }
 
 // ListCommitChecks mocks base method.
-func (m *MockGateway) ListCommitChecks(ctx context.Context, commit git.Hash) ([]forge.ChecksState, error) {
+func (m *MockGateway) ListCommitChecks(ctx context.Context, commit git.Hash) ([]forge.ChangeCheck, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCommitChecks", ctx, commit)
-	ret0, _ := ret[0].([]forge.ChecksState)
+	ret0, _ := ret[0].([]forge.ChangeCheck)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -374,19 +374,19 @@ type MockGatewayListCommitChecksCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockGatewayListCommitChecksCall) Return(arg0 []forge.ChecksState, arg1 error) *MockGatewayListCommitChecksCall {
+func (c *MockGatewayListCommitChecksCall) Return(arg0 []forge.ChangeCheck, arg1 error) *MockGatewayListCommitChecksCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockGatewayListCommitChecksCall) Do(f func(context.Context, git.Hash) ([]forge.ChecksState, error)) *MockGatewayListCommitChecksCall {
+func (c *MockGatewayListCommitChecksCall) Do(f func(context.Context, git.Hash) ([]forge.ChangeCheck, error)) *MockGatewayListCommitChecksCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockGatewayListCommitChecksCall) DoAndReturn(f func(context.Context, git.Hash) ([]forge.ChecksState, error)) *MockGatewayListCommitChecksCall {
+func (c *MockGatewayListCommitChecksCall) DoAndReturn(f func(context.Context, git.Hash) ([]forge.ChangeCheck, error)) *MockGatewayListCommitChecksCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

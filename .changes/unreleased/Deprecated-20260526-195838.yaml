@@ -1,3 +1,0 @@
-kind: Deprecated
-body: 'submit: Deprecate the singular ''spice.submit.label'' and ''spice.submit.label.addWhen'' configuration names in favor of the plural forms.'
-time: 2026-05-26T19:58:38.618637-07:00

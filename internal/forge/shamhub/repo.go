@@ -98,8 +98,7 @@ func (sh *ShamHub) newRepository(owner, repo string, forkOf *repoID) (string, er
 	}
 
 	// Configure the repository to accept pushes.
-	if err := xec.Command(ctx, sh.log, sh.gitExe, "config", "http.receivepack", "true").
-		WithDir(repoDir).
+	if err := sh.gitCmd(ctx, owner, repo, "config", "http.receivepack", "true").
 		CaptureStdout().
 		Run(); err != nil {
 		return "", fmt.Errorf("configure repository: %w", err)

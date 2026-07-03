@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
@@ -14,7 +15,7 @@ import (
 type downstackMergeCmd struct {
 	merge.DownstackMergeOptions
 
-	Branch string `placeholder:"NAME" help:"Branch to start merging from" predictor:"trackedBranches"`
+	Branches []string `name:"branch" placeholder:"NAME" help:"Branches to start merging from. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*downstackMergeCmd) Help() string {
@@ -22,12 +23,17 @@ func (*downstackMergeCmd) Help() string {
 		Merges the current branch and all branches below it
 		into trunk via the forge API, bottom-up.
 		Use --branch to start at a different branch.
+		Use --branch multiple times to merge multiple downstacks.
+
+		Each selected branch expands to that branch
+		and its downstack branches down to trunk.
+		Overlapping downstacks are merged once.
 
 		This command acts as a local merge queue:
 		it merges one Change Request,
 		waits for that merge to finish,
 		restacks and updates the next Change Request,
-		waits for its CI checks to pass,
+		waits for merge readiness on the updated Change Request,
 		and then repeats the process.
 
 		For a stack like this:
@@ -45,18 +51,16 @@ func (*downstackMergeCmd) Help() string {
 		whose base PR was already merged on the forge.
 		Use --no-branch-check to skip this validation.
 
-		Before each merge, waits for CI checks to pass.
-		Use --build-timeout to configure the maximum wait
+		Before checking merge readiness,
+		the command waits briefly for the forge to observe the pushed head.
+		Then it waits for the forge to report that the CR is ready to merge.
+		Use --ready-timeout to configure the maximum wait
 		(default: 30m, 0 means fail immediately if not ready).
 
 		Between merges, the command waits for each merge
 		to complete, restacks and updates the next PR,
-		waits for CI checks on the updated PR,
+		waits for merge readiness on the updated PR,
 		and syncs merged branch cleanup.
-
-		Use --no-wait for single branch merging
-		when you don't want to wait for the merge to propagate.
-		--no-wait is rejected for multi-branch merges.
 	`)
 }
 
@@ -71,14 +75,14 @@ func (cmd *downstackMergeCmd) AfterApply(
 	ctx context.Context,
 	wt *git.Worktree,
 ) error {
-	if cmd.Branch != "" {
+	if len(cmd.Branches) > 0 {
 		return nil
 	}
 	branch, err := wt.CurrentBranch(ctx)
 	if err != nil {
 		return fmt.Errorf("get current branch: %w", err)
 	}
-	cmd.Branch = branch
+	cmd.Branches = []string{branch}
 	return nil
 }
 
@@ -87,12 +91,12 @@ func (cmd *downstackMergeCmd) Run(
 	store *state.Store,
 	mergeHandler MergeHandler,
 ) error {
-	if cmd.Branch == store.Trunk() {
+	if slices.Contains(cmd.Branches, store.Trunk()) {
 		return errors.New("cannot merge trunk")
 	}
 
 	return mergeHandler.MergeDownstack(ctx, &merge.DownstackMergeRequest{
-		Branch:  cmd.Branch,
-		Options: &cmd.DownstackMergeOptions,
+		Branches: cmd.Branches,
+		Options:  &cmd.DownstackMergeOptions,
 	})
 }

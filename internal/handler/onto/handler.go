@@ -15,7 +15,7 @@ import (
 
 // RestackHandler restacks branches after their downstack base changes.
 type RestackHandler interface {
-	RestackUpstack(ctx context.Context, branch string, opts *restack.UpstackOptions) error
+	RestackUpstack(ctx context.Context, req *restack.UpstackRequest) error
 }
 
 // Handler coordinates higher-level onto operations.
@@ -95,8 +95,11 @@ func (h *Handler) BranchOnto(ctx context.Context, req *BranchRequest) error {
 			continue
 		}
 
-		if err := h.Restack.RestackUpstack(ctx, above, &restack.UpstackOptions{
-			SkipStart: true,
+		if err := h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+			Branch: above,
+			Options: &restack.UpstackOptions{
+				SkipStart: true,
+			},
 		}); err != nil {
 			return h.Service.RebaseRescue(ctx, spice.RebaseRescueRequest{
 				Err:     err,
@@ -151,7 +154,10 @@ func (h *Handler) UpstackOnto(ctx context.Context, req *UpstackRequest) error {
 	}
 	h.Log.Infof("%v: moved upstack onto %v", req.Branch, req.Onto)
 
-	return h.Restack.RestackUpstack(ctx, req.Branch, &restack.UpstackOptions{
-		SkipStart: true,
+	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: req.Branch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }

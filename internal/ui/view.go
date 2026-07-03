@@ -65,14 +65,19 @@ var _ View = (*FileView)(nil)
 
 // NewFileView builds a non-interactive view for the given writer.
 func NewFileView(w io.Writer) *FileView {
+	detectOutput := w
+	if ow, ok := w.(*OutputWriter); ok {
+		detectOutput = ow.Unwrap()
+	}
+
 	cpw, ok := w.(*colorprofile.Writer)
 	if !ok {
-		cpw = colorprofile.NewWriter(w, os.Environ())
+		cpw = colorprofile.NewWriter(detectOutput, os.Environ())
 	}
 
 	return &FileView{
 		w:     cpw,
-		theme: detectTheme(nil, w),
+		theme: detectTheme(nil, detectOutput),
 	}
 }
 
@@ -99,11 +104,16 @@ var _ InteractiveView = (*TerminalView)(nil)
 
 // NewTerminalView builds an interactive view for the given streams.
 func NewTerminalView(r io.Reader, w io.Writer) *TerminalView {
+	detectOutput := w
+	if ow, ok := w.(*OutputWriter); ok {
+		detectOutput = ow.Unwrap()
+	}
+
 	return &TerminalView{
 		r: r,
 		w: w,
 		theme: sync.OnceValue(func() Theme {
-			return detectTheme(r, w)
+			return detectTheme(r, detectOutput)
 		}),
 	}
 }

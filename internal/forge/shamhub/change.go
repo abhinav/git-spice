@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/xec"
 )
 
 // ListChanges reports all changes known to the forge.
@@ -108,8 +107,11 @@ type shamChange struct {
 	// Assignees are users assigned to the change.
 	Assignees []string
 
-	// ChecksState is the aggregate CI/checks state for the change.
-	ChecksState forge.ChecksState
+	// Checks lists the CI/checks reported for the change.
+	Checks []forge.ChangeCheck
+
+	// Mergeability overrides ShamHub's inferred mergeability result.
+	Mergeability *forge.ChangeMergeability
 }
 
 // Change is a change proposal against a repository.
@@ -219,8 +221,7 @@ type ChangeBranch struct {
 }
 
 func (sh *ShamHub) toChangeBranch(b *shamBranch) (*ChangeBranch, error) {
-	out, err := xec.Command(context.Background(), sh.log, sh.gitExe, "rev-parse", b.Name).
-		WithDir(sh.repoDir(b.Owner, b.Repo)).
+	out, err := sh.gitCmd(context.Background(), b.Owner, b.Repo, "rev-parse", b.Name).
 		Output()
 	if err != nil {
 		return nil, fmt.Errorf("get SHA for %v/%v:%v: %w", b.Owner, b.Repo, b.Name, err)

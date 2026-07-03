@@ -16,9 +16,23 @@ import (
 // This configuration is loaded from testconfig.yaml in update mode,
 // and uses canonical placeholders in replay mode.
 type TestConfig struct {
-	GitHub    ForgeConfig `yaml:"github"`
-	GitLab    ForgeConfig `yaml:"gitlab"`
-	Bitbucket ForgeConfig `yaml:"bitbucket"`
+	GitHub    ForgeConfig   `yaml:"github"`
+	GitLab    ForgeConfig   `yaml:"gitlab"`
+	Bitbucket ForgeConfig   `yaml:"bitbucket"`
+	Gitea     GiteaConfig   `yaml:"gitea"`
+	Forgejo   ForgejoConfig `yaml:"forgejo"`
+}
+
+// GiteaConfig holds Gitea-specific test configuration.
+type GiteaConfig struct {
+	ForgeConfig `yaml:",inline"`
+	URL         string `yaml:"url"`
+}
+
+// ForgejoConfig holds Forgejo-specific test configuration.
+type ForgejoConfig struct {
+	ForgeConfig `yaml:",inline"`
+	URL         string `yaml:"url"`
 }
 
 // ForgeConfig holds per-forge test configuration.
@@ -80,6 +94,8 @@ func canonicalConfig() *TestConfig {
 		GitHub:    CanonicalGitHubConfig(),
 		GitLab:    CanonicalGitLabConfig(),
 		Bitbucket: CanonicalBitbucketConfig(),
+		Gitea:     CanonicalGiteaConfig(),
+		Forgejo:   CanonicalForgejoConfig(),
 	}
 }
 
@@ -122,6 +138,38 @@ func CanonicalBitbucketConfig() ForgeConfig {
 		ForkRepo:  "test-fork-repo",
 		Reviewer:  "Test Reviewer",
 		Assignee:  "",
+	}
+}
+
+// CanonicalGiteaConfig returns canonical placeholders for Gitea fixtures.
+// ForkOwner, Reviewer, and Assignee all use "test-reviewer" so that
+// a single Gitea user account can serve all three roles in tests.
+func CanonicalGiteaConfig() GiteaConfig {
+	return GiteaConfig{
+		URL: "http://localhost:3000",
+		ForgeConfig: ForgeConfig{
+			Owner:     CanonicalOwner,
+			Repo:      CanonicalRepo,
+			ForkOwner: "test-reviewer",
+			ForkRepo:  "test-fork-repo",
+			Reviewer:  "test-reviewer",
+			Assignee:  "test-reviewer",
+		},
+	}
+}
+
+// CanonicalForgejoConfig returns canonical placeholders for Forgejo fixtures.
+func CanonicalForgejoConfig() ForgejoConfig {
+	return ForgejoConfig{
+		URL: "https://codeberg.org",
+		ForgeConfig: ForgeConfig{
+			Owner:     CanonicalOwner,
+			Repo:      CanonicalRepo,
+			ForkOwner: "test-fork-owner",
+			ForkRepo:  CanonicalRepo,
+			Reviewer:  "test-reviewer",
+			Assignee:  "test-assignee",
+		},
 	}
 }
 
@@ -170,11 +218,47 @@ func ConfigSanitizers(cfg ForgeConfig, canonical ForgeConfig) []Sanitizer {
 	addSanitizer(cfg.Reviewer, canonical.Reviewer)
 	addSanitizer(cfg.Assignee, canonical.Assignee)
 
+	sortSanitizers(sanitizers)
+
+	return sanitizers
+}
+
+// GiteaConfigSanitizers returns sanitizers for Gitea test configuration.
+func GiteaConfigSanitizers(cfg GiteaConfig, canonical GiteaConfig) []Sanitizer {
+	sanitizers := ConfigSanitizers(cfg.ForgeConfig, canonical.ForgeConfig)
+	if cfg.URL != "" && cfg.URL != canonical.URL {
+		sanitizers = append(sanitizers, Sanitizer{
+			Replace: cfg.URL,
+			With:    canonical.URL,
+		})
+		sortSanitizers(sanitizers)
+	}
+
+	return sanitizers
+}
+
+// ForgejoConfigSanitizers returns sanitizers
+// for Forgejo test configuration.
+func ForgejoConfigSanitizers(
+	cfg ForgejoConfig,
+	canonical ForgejoConfig,
+) []Sanitizer {
+	sanitizers := ConfigSanitizers(cfg.ForgeConfig, canonical.ForgeConfig)
+	if cfg.URL != "" && cfg.URL != canonical.URL {
+		sanitizers = append(sanitizers, Sanitizer{
+			Replace: cfg.URL,
+			With:    canonical.URL,
+		})
+		sortSanitizers(sanitizers)
+	}
+
+	return sanitizers
+}
+
+func sortSanitizers(sanitizers []Sanitizer) {
 	sort.SliceStable(sanitizers, func(i, j int) bool {
 		return len(sanitizers[i].Replace) > len(sanitizers[j].Replace)
 	})
-
-	return sanitizers
 }
 
 // Sanitizer is re-exported from httptest for convenience.

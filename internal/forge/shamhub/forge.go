@@ -124,7 +124,7 @@ func (rid *RepositoryID) String() string {
 func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	cr := id.(ChangeID)
 
-	return fmt.Sprintf("%s/%s/%s/changes/%v", rid.url, rid.owner, rid.repo, int(cr))
+	return fmt.Sprintf("%s/%s/%s/change/%v", rid.url, rid.owner, rid.repo, int(cr))
 }
 
 func extractRepoInfo(path string) (owner, repo string, err error) {
