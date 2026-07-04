@@ -2082,9 +2082,14 @@ func TestMergeStack_passesFailFastToScheduler(t *testing.T) {
 	mockService.EXPECT().
 		VerifyRestacked(gomock.Any(), "feat2").
 		Return(nil)
+	// feat3 is an already-ready sibling when feat2 fails.
+	// Fail-fast may stop scheduling before feat3 enters preparation,
+	// or feat3 may already be in preparation by the time feat2 reports
+	// blocked.
 	mockService.EXPECT().
 		VerifyRestacked(gomock.Any(), "feat3").
-		Return(nil)
+		Return(nil).
+		AnyTimes()
 
 	mockGit := NewMockGitRepository(ctrl)
 	mockGit.EXPECT().
