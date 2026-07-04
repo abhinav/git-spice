@@ -187,20 +187,21 @@ The shamhub command is used to control the behavior of the forge.
 
 The following subcommands are available:
 
-#### shamhub init
+#### shamhub-setup
 
 ```
-shamhub init
+shamhub-setup
 ```
 
-This must be run before any other shamhub commands.
+This must be run before any shamhub commands.
 It spins up a ShamHub server and
 configures environment variables to be able to connect to it.
 
-It makes two environment variables available:
+It makes three environment variables available:
 
 - `SHAMHUB_URL`: The URL of the ShamHub server.
 - `SHAMHUB_API_URL`: The URL of the ShamHub API.
+- `SHAMHUB_ADMIN_TOKEN`: The token used by the shamhub CLI.
 
 #### shamhub new
 

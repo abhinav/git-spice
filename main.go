@@ -63,7 +63,7 @@ var (
 	_browserLauncher browser.Launcher = new(browser.Browser)
 
 	// Forges to registry into main at startup besides the defaults.
-	_extraForges []forge.Forge
+	_extraForges []func(*silog.Logger) forge.Forge
 
 	_highlightStyle = ui.NewStyle().
 			Foreground(ui.Cyan).
@@ -129,8 +129,8 @@ func main() {
 	forges.Register(&gitea.Forge{Log: logger})
 	forges.Register(&github.Forge{Log: logger})
 	forges.Register(&gitlab.Forge{Log: logger})
-	for _, f := range _extraForges {
-		forges.Register(f)
+	for _, buildForge := range _extraForges {
+		forges.Register(buildForge(logger))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
