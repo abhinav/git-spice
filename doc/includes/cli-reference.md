@@ -324,7 +324,7 @@ When those are ready to merge, they are merged in turn, and the process repeats.
 
 A branch is considered ready to merge when the forge reports it as mergeable,
 based on the forge and the repository configuration.
-Override this with the 'spice.merge.readyCommand' configuration option.
+Override this with the 'spice.merge.ready.command' configuration option.
 
 Branches are merged using the forge's merge API.
 Override this with the 'spice.merge.command' configuration option.
@@ -339,12 +339,12 @@ after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.ready.timeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.timeout" }](/cli/config.md#spicemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches whose stacks to merge. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.ready.command](/cli/config.md#spicemergereadycommand), [spice.merge.ready.timeout](/cli/config.md#spicemergereadytimeout), [spice.merge.timeout](/cli/config.md#spicemergetimeout)
 
 ### git-spice stack restack {#gs-stack-restack}
 
@@ -664,7 +664,7 @@ When those are ready to merge, they are merged in turn, and the process repeats.
 
 A branch is considered ready to merge when the forge reports it as mergeable,
 based on the forge and the repository configuration.
-Override this with the 'spice.merge.readyCommand' configuration option.
+Override this with the 'spice.merge.ready.command' configuration option.
 
 Branches are merged using the forge's merge API.
 Override this with the 'spice.merge.command' configuration option.
@@ -679,12 +679,12 @@ after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.ready.timeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.timeout" }](/cli/config.md#spicemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches to start merging from. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.ready.command](/cli/config.md#spicemergereadycommand), [spice.merge.ready.timeout](/cli/config.md#spicemergereadytimeout), [spice.merge.timeout](/cli/config.md#spicemergetimeout)
 
 ### git-spice downstack edit {#gs-downstack-edit}
 
@@ -1180,7 +1180,7 @@ When those are ready to merge, they are merged in turn, and the process repeats.
 
 A branch is considered ready to merge when the forge reports it as mergeable,
 based on the forge and the repository configuration.
-Override this with the 'spice.merge.readyCommand' configuration option.
+Override this with the 'spice.merge.ready.command' configuration option.
 
 Branches are merged using the forge's merge API.
 Override this with the 'spice.merge.command' configuration option.
@@ -1195,12 +1195,12 @@ after the first branch failure.
 **Flags**
 
 * `--method=METHOD` ([:material-wrench:{ .middle title="spice.merge.method" }](/cli/config.md#spicemergemethod)): Preferred merge method. One of 'merge', 'squash', and 'rebase'.
-* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.readyTimeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
-* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.mergeTimeout" }](/cli/config.md#spicemergemergetimeout)): Max time to wait for merge completion after requesting merge.
+* `--ready-timeout=30m` ([:material-wrench:{ .middle title="spice.merge.ready.timeout" }](/cli/config.md#spicemergereadytimeout)): Max time to wait for merge readiness before each merge. 0 means check once.
+* `--merge-timeout=2m` ([:material-wrench:{ .middle title="spice.merge.timeout" }](/cli/config.md#spicemergetimeout)): Max time to wait for merge completion after requesting merge.
 * `--fail-fast`: Stop scheduling remaining merge queue work after the first branch failure.
 * `--branch=NAME,...`: Branches to merge. May be repeated.
 
-**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.mergeTimeout](/cli/config.md#spicemergemergetimeout), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.readyCommand](/cli/config.md#spicemergereadycommand), [spice.merge.readyTimeout](/cli/config.md#spicemergereadytimeout)
+**Configuration**: [spice.merge.command](/cli/config.md#spicemergecommand), [spice.merge.method](/cli/config.md#spicemergemethod), [spice.merge.ready.command](/cli/config.md#spicemergereadycommand), [spice.merge.ready.timeout](/cli/config.md#spicemergereadytimeout), [spice.merge.timeout](/cli/config.md#spicemergetimeout)
 
 ### git-spice branch submit {#gs-branch-submit}
 

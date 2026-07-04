@@ -28,7 +28,7 @@ to merge, they are merged in turn, and the process repeats.
 
 A branch is considered ready to merge when the forge reports it as mergeable,
 based on the forge and the repository configuration. Override this with the
-'spice.merge.readyCommand' configuration option.
+'spice.merge.ready.command' configuration option.
 
 Branches are merged using the forge's merge API. Override this with the
 'spice.merge.command' configuration option.
@@ -42,9 +42,9 @@ Flags:
   --method=METHOD        Preferred merge method. One of 'merge', 'squash',
                          and 'rebase'. (🔧 spice.merge.method)
   --ready-timeout=30m    Max time to wait for merge readiness before each merge.
-                         0 means check once. (🔧 spice.merge.readyTimeout)
+                         0 means check once. (🔧 spice.merge.ready.timeout)
   --merge-timeout=2m     Max time to wait for merge completion after requesting
-                         merge. (🔧 spice.merge.mergeTimeout)
+                         merge. (🔧 spice.merge.timeout)
   --fail-fast            Stop scheduling remaining merge queue work after the
                          first branch failure.
   --branch=NAME,...      Branches whose stacks to merge. May be repeated.
@@ -57,7 +57,7 @@ Global Flags:
       --[no-]prompt    Whether to prompt for missing information
 
 Configuration (🔧):
-  spice.merge.command         Command to request merge instead of using the
-                              forge merge API.
-  spice.merge.readyCommand    Command to check merge readiness instead of using
-                              the forge.
+  spice.merge.command          Command to request merge instead of using the
+                               forge merge API.
+  spice.merge.ready.command    Command to check merge readiness instead of using
+                               the forge.

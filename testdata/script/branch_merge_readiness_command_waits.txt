@@ -1,4 +1,4 @@
-# 'branch merge' polls spice.merge.readyCommand until it reports ready.
+# 'branch merge' polls spice.merge.ready.command until it reports ready.
 
 as 'Test <test@example.com>'
 at '2026-06-30T12:00:00Z'
@@ -28,8 +28,8 @@ stderr 'Created #1'
 
 # configure a readiness command that waits once and then reports ready
 chmod 755 $WORK/ready-command.sh
-git config spice.merge.readyCommand $WORK/ready-command.sh
-git config spice.merge.readyTimeout 11s
+git config spice.merge.ready.command $WORK/ready-command.sh
+git config spice.merge.ready.timeout 11s
 
 # merge the current branch after the readiness command allows the merge
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual

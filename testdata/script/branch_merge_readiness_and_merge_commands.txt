@@ -29,7 +29,7 @@ stderr 'Created #1'
 # configure separate readiness and merge commands
 chmod 755 $WORK/ready-command.sh
 chmod 755 $WORK/merge-command.sh
-git config spice.merge.readyCommand $WORK/ready-command.sh
+git config spice.merge.ready.command $WORK/ready-command.sh
 git config spice.merge.command $WORK/merge-command.sh
 
 # merge the current branch through both configured commands

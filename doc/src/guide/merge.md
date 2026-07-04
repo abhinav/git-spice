@@ -114,7 +114,7 @@ This can include CI checks, required approvals, or other requirements.
 git-spice will poll the forge until the CR is reported as mergeable,
 waiting up to 30 minutes for the CR to become ready.
 The wait time can be changed
-with the $$spice.merge.readyTimeout$$ configuration option.
+with the $$spice.merge.ready.timeout$$ configuration option.
 
 If a CR is not ready to merge after the configured timeout,
 that CR is assumed to be blocked and it, and its upstack branches,
@@ -123,7 +123,7 @@ will not be merged.
 ### Custom merge readiness
 
 If a repository's configured definition of "ready to merge" is not sufficient,
-git-spice offers a $$spice.merge.readyCommand$$ configuration option
+git-spice offers a $$spice.merge.ready.command$$ configuration option
 to customize it.
 
 If set, git-spice will run the configured command to poll for a CR's readiness.
@@ -144,7 +144,7 @@ with at least one approval and no blocking reviews.
 
 ```bash title="Configuration"
 git config \
-  spice.merge.readyCommand \
+  spice.merge.ready.command \
   "$HOME/bin/merge-ready.sh"
 ```
 
@@ -200,7 +200,7 @@ exit 1
 </details>
 
 See [Command environment](#command-environment)
-for the variables passed to $$spice.merge.readyCommand$$.
+for the variables passed to $$spice.merge.ready.command$$.
 
 ## Merging multiple stacks
 
@@ -338,7 +338,7 @@ git-spice waits for the CR to be ready to merge
 before running the configured command,
 and waits for the CR to finish merging before moving upstack.
 If the merge workflow is slow,
-the $$spice.merge.mergeTimeout$$ configuration option
+the $$spice.merge.timeout$$ configuration option
 can be used to increase the wait time.
 
 If the command exits with a non-zero exit code,
@@ -350,7 +350,7 @@ for the variables passed to $$spice.merge.command$$.
 
 ## Command environment
 
-$$spice.merge.readyCommand$$ and $$spice.merge.command$$
+$$spice.merge.ready.command$$ and $$spice.merge.command$$
 receive the following environment variables when executed:
 
 - `GIT_SPICE_FORGE_ID`

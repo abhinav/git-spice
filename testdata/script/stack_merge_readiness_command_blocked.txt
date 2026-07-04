@@ -31,7 +31,7 @@ stderr 'Created #2'
 
 # configure a readiness command that permanently blocks the base branch
 chmod 755 $WORK/ready-command.sh
-git config spice.merge.readyCommand $WORK/ready-command.sh
+git config spice.merge.ready.command $WORK/ready-command.sh
 
 # stack merge should skip the dependent upstack branch
 env ROBOT_INPUT=$WORK/robot-merge.golden ROBOT_OUTPUT=$WORK/robot-merge.actual

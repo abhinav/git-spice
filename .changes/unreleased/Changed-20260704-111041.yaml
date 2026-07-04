@@ -1,0 +1,3 @@
+kind: Changed
+body: 'merge: Rename ''spice.merge.mergeTimeout'' to ''spice.merge.timeout''.'
+time: 2026-07-04T11:10:41.621809-07:00

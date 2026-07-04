@@ -82,16 +82,16 @@ type Options struct {
 
 	// ReadyCommand checks merge readiness through a user-defined command.
 	// Empty means use forge readiness.
-	ReadyCommand string `hidden:"" config:"merge.readyCommand" help:"Command to check merge readiness instead of using the forge."`
+	ReadyCommand string `hidden:"" config:"merge.ready.command" help:"Command to check merge readiness instead of using the forge."`
 
 	// ReadyTimeout is the maximum time to wait
 	// for the configured readiness provider.
 	// Zero means check once and fail if merge readiness is not reached.
-	ReadyTimeout time.Duration `name:"ready-timeout" config:"merge.readyTimeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
+	ReadyTimeout time.Duration `name:"ready-timeout" config:"merge.ready.timeout" default:"30m" help:"Max time to wait for merge readiness before each merge. 0 means check once."`
 
 	// MergeTimeout is the maximum time to wait for the forge
 	// to report that a change is merged after requesting merge.
-	MergeTimeout time.Duration `name:"merge-timeout" config:"merge.mergeTimeout" default:"2m" help:"Max time to wait for merge completion after requesting merge."`
+	MergeTimeout time.Duration `name:"merge-timeout" config:"merge.timeout" default:"2m" help:"Max time to wait for merge completion after requesting merge."`
 
 	// FailFast stops scheduling remaining merge queue work
 	// after the first branch failure.

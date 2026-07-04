@@ -471,7 +471,7 @@ whether the branch is in sync with its pushed counterpart.
   show the number of outgoing and incoming commits in the form `⇡1⇣2`,
   where `⇡` indicates outgoing commits and `⇣` indicates incoming commits
 
-### spice.merge.readyTimeout
+### spice.merge.ready.timeout
 
 <!-- gs:version v0.30.0 -->
 
@@ -479,7 +479,7 @@ Maximum time that the merge commands wait
 for a CR to be ready to merge after enqueued.
 
 Whether a CR is ready is determined by the forge and repository configuration,
-or by $$spice.merge.readyCommand$$ if configured.
+or by $$spice.merge.ready.command$$ if configured.
 
 The value must be a duration string such as
 `30m`, `1h`, `90s`, etc.
@@ -489,7 +489,7 @@ that aren't already ready to merge.
 
 Defaults to `30m`.
 
-### spice.merge.readyCommand
+### spice.merge.ready.command
 
 <!-- gs:version unreleased -->
 
@@ -516,7 +516,7 @@ for the variables passed to the command.
 
 git-spice may run the command concurrently for different CRs.
 
-### spice.merge.mergeTimeout
+### spice.merge.timeout
 
 <!-- gs:version v0.30.0 -->
 
@@ -557,7 +557,7 @@ If unset, git-spice requests the merge through the forge API.
 git-spice waits for the CR to be reported as ready-to-merge
 before attempting a merge.
 Ready-to-merge is defined by the forge and repository settings,
-or by $$spice.merge.readyCommand$$ if configured.
+or by $$spice.merge.ready.command$$ if configured.
 
 Exit status `0` means the command requested the merge.
 Any non-zero exit status means the merge request failed for that CR.

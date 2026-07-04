@@ -8,7 +8,7 @@ When those are ready to merge, they are merged in turn, and the process repeats.
 
 A branch is considered ready to merge when the forge reports it as mergeable,
 based on the forge and the repository configuration.
-Override this with the 'spice.merge.readyCommand' configuration option.
+Override this with the 'spice.merge.ready.command' configuration option.
 
 Branches are merged using the forge's merge API.
 Override this with the 'spice.merge.command' configuration option.
