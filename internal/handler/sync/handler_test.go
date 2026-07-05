@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"testing"
 
@@ -88,6 +89,168 @@ func TestMergedChangeHeadCheck(t *testing.T) {
 				mergedChangeHeadCheck(t.Context(), mockRepo, tt.local, tt.remote))
 		})
 	}
+}
+
+func TestHandler_mergedChangeHeadMismatchDescription(t *testing.T) {
+	t.Run("LimitsUnpushedCommits", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		localOnly := git.CommitRangeFrom("local").ExcludeFrom("remote")
+		mockRepo.EXPECT().
+			CountCommits(gomock.Any(), localOnly).
+			Return(7, nil)
+		mockRepo.EXPECT().
+			ListCommitsDetails(gomock.Any(), gomock.Any()).
+			Return(commitDetailsIter(
+				git.CommitDetail{
+					ShortHash: "aaaaaaa",
+					Subject:   "Update field one",
+				},
+				git.CommitDetail{
+					ShortHash: "bbbbbbb",
+					Subject:   "Update field two",
+				},
+				git.CommitDetail{
+					ShortHash: "ccccccc",
+					Subject:   "Update field three",
+				},
+				git.CommitDetail{
+					ShortHash: "ddddddd",
+					Subject:   "Update field four",
+				},
+				git.CommitDetail{
+					ShortHash: "eeeeeee",
+					Subject:   "Update field five",
+				},
+			))
+		mockRepo.EXPECT().
+			ListCommitsDetails(gomock.Any(),
+				git.CommitRangeFrom(git.Hash("remote")).Limit(1)).
+			Return(commitDetailsIter(git.CommitDetail{
+				ShortHash: "fffffff",
+				Subject:   "Add feature",
+			}))
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Store:      NewMockStore(ctrl),
+			Service:    NewMockService(ctrl),
+			Delete:     NewMockDeleteHandler(ctrl),
+			Restack:    NewMockRestackHandler(ctrl),
+			Autostash:  NewMockAutostashHandler(ctrl),
+			Remote:     "",
+		}
+
+		assert.Equal(t, ""+
+			"#1 was merged but local SHA (local) does not match remote SHA (remote)\n"+
+			"feature has 7 unpushed commit(s):\n"+
+			"  aaaaaaa Update field one\n"+
+			"  bbbbbbb Update field two\n"+
+			"  ccccccc Update field three\n"+
+			"  ddddddd Update field four\n"+
+			"  eeeeeee Update field five\n"+
+			"  ... and 2 more\n"+
+			"#1 was merged at:\n"+
+			"  fffffff Add feature",
+			handler.mergedChangeHeadMismatchDescription(
+				t.Context(),
+				"feature",
+				fakeChangeID("#1"),
+				"local",
+				"remote"))
+	})
+
+	t.Run("SkipsEmptyUnpushedCommits", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		mockRepo.EXPECT().
+			CountCommits(gomock.Any(),
+				git.CommitRangeFrom(git.Hash("local")).ExcludeFrom("remote")).
+			Return(0, nil)
+		mockRepo.EXPECT().
+			ListCommitsDetails(gomock.Any(),
+				git.CommitRangeFrom(git.Hash("remote")).Limit(1)).
+			Return(commitDetailsIter(git.CommitDetail{
+				ShortHash: "fffffff",
+				Subject:   "Add feature",
+			}))
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Store:      NewMockStore(ctrl),
+			Service:    NewMockService(ctrl),
+			Delete:     NewMockDeleteHandler(ctrl),
+			Restack:    NewMockRestackHandler(ctrl),
+			Autostash:  NewMockAutostashHandler(ctrl),
+			Remote:     "",
+		}
+
+		assert.Equal(t, ""+
+			"#1 was merged but local SHA (local) does not match remote SHA (remote)\n"+
+			"#1 was merged at:\n"+
+			"  fffffff Add feature",
+			handler.mergedChangeHeadMismatchDescription(
+				t.Context(),
+				"feature",
+				fakeChangeID("#1"),
+				"local",
+				"remote"))
+	})
+
+	t.Run("FallsBackWhenUnpushedDetailsUnavailable", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+
+		mockRepo := NewMockGitRepository(ctrl)
+		localOnly := git.CommitRangeFrom("local").ExcludeFrom("remote")
+		mockRepo.EXPECT().
+			CountCommits(gomock.Any(), localOnly).
+			Return(7, nil)
+		mockRepo.EXPECT().
+			ListCommitsDetails(gomock.Any(), gomock.Any()).
+			Return(func(yield func(git.CommitDetail, error) bool) {
+				yield(git.CommitDetail{}, errors.New("rev-list"))
+			})
+		mockRepo.EXPECT().
+			ListCommitsDetails(gomock.Any(),
+				git.CommitRangeFrom(git.Hash("remote")).Limit(1)).
+			Return(commitDetailsIter(git.CommitDetail{
+				ShortHash: "fffffff",
+				Subject:   "Add feature",
+			}))
+
+		handler := &Handler{
+			Log:        silogtest.New(t),
+			View:       ui.NewFileView(t.Output()),
+			Repository: mockRepo,
+			Worktree:   NewMockGitWorktree(ctrl),
+			Store:      NewMockStore(ctrl),
+			Service:    NewMockService(ctrl),
+			Delete:     NewMockDeleteHandler(ctrl),
+			Restack:    NewMockRestackHandler(ctrl),
+			Autostash:  NewMockAutostashHandler(ctrl),
+			Remote:     "",
+		}
+
+		assert.Equal(t, ""+
+			"#1 was merged but local SHA (local) does not match remote SHA (remote)\n"+
+			"feature has 7 unpushed commit(s).\n"+
+			"#1 was merged at:\n"+
+			"  fffffff Add feature",
+			handler.mergedChangeHeadMismatchDescription(
+				t.Context(),
+				"feature",
+				fakeChangeID("#1"),
+				"local",
+				"remote"))
+	})
 }
 
 func TestHandler_SyncTrunk_autostashLazy(t *testing.T) {
@@ -717,6 +880,16 @@ func branchIter(branches ...git.LocalBranch) iter.Seq2[git.LocalBranch, error] {
 	return func(yield func(git.LocalBranch, error) bool) {
 		for _, branch := range branches {
 			if !yield(branch, nil) {
+				return
+			}
+		}
+	}
+}
+
+func commitDetailsIter(commits ...git.CommitDetail) iter.Seq2[git.CommitDetail, error] {
+	return func(yield func(git.CommitDetail, error) bool) {
+		for _, commit := range commits {
+			if !yield(commit, nil) {
 				return
 			}
 		}

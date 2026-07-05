@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -13,55 +14,37 @@ import (
 )
 
 type downstackMergeCmd struct {
-	merge.DownstackMergeOptions
+	merge.Options
 
 	Branches []string `name:"branch" placeholder:"NAME" help:"Branches to start merging from. May be repeated." predictor:"trackedBranches"`
 }
 
 func (*downstackMergeCmd) Help() string {
-	return text.Dedent(`
-		Merges the current branch and all branches below it
-		into trunk via the forge API, bottom-up.
-		Use --branch to start at a different branch.
-		Use --branch multiple times to merge multiple downstacks.
+	return text.Dedent(fmt.Sprintf(`
+		Merges CRs for the current branch and all branches below it into trunk.
+		Use --branch to merge the downstack of a different branch.
+		Use --branch multiple times to merge downstacks of multiple branches.
+		Selected branches and their downstack branches down to trunk are merged.
 
-		Each selected branch expands to that branch
-		and its downstack branches down to trunk.
-		Overlapping downstacks are merged once.
+		For example, for the following stack:
 
-		This command acts as a local merge queue:
-		it merges one Change Request,
-		waits for that merge to finish,
-		restacks and updates the next Change Request,
-		waits for merge readiness on the updated Change Request,
-		and then repeats the process.
+                       ┌── D
+                       │ ┌── C
+                       ├─┴ B
+                     ┌─┴ A
+                    trunk
 
-		For a stack like this:
+		The following commands have the following effects:
 
-		    main <- feature1 <- feature2 <- feature3
+		    %[1]s downstack merge --branch D # merge A, D
+		    %[1]s downstack merge --branch B # merge A, B
+		    %[1]s downstack merge --branch C # merge A, B, C
+		    %[1]s downstack merge \          # merge A, B, C, D
+		                          --branch C --branch D
 
-		Running from feature3 merges in this order:
-
-		    feature1, feature2, feature3
-
-		Already-merged branches are skipped automatically.
-		Branches must have an open Change Request to be merged.
-
-		Before merging, the downstack is checked for branches
-		whose base PR was already merged on the forge.
-		Use --no-branch-check to skip this validation.
-
-		Before checking merge readiness,
-		the command waits briefly for the forge to observe the pushed head.
-		Then it waits for the forge to report that the CR is ready to merge.
-		Use --ready-timeout to configure the maximum wait
-		(default: 30m, 0 means fail immediately if not ready).
-
-		Between merges, the command waits for each merge
-		to complete, restacks and updates the next PR,
-		waits for merge readiness on the updated PR,
-		and syncs merged branch cleanup.
-	`)
+		Use '%[1]s stack merge' to merge a branch
+		and its upstack branches in one operation.
+	`, cli.Name())) + _mergeHelpCommon
 }
 
 // MergeHandler merges change requests via a forge.
@@ -97,6 +80,6 @@ func (cmd *downstackMergeCmd) Run(
 
 	return mergeHandler.MergeDownstack(ctx, &merge.DownstackMergeRequest{
 		Branches: cmd.Branches,
-		Options:  &cmd.DownstackMergeOptions,
+		Options:  &cmd.Options,
 	})
 }

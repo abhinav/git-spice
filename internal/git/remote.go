@@ -53,7 +53,7 @@ func (r *Repository) RemoteURL(ctx context.Context, remote string) (string, erro
 func (r *Repository) RemoteConfigURL(ctx context.Context, remote string) (string, error) {
 	url, err := r.gitCmd(ctx, "config", "--get", "remote."+remote+".url").OutputChomp()
 	if err != nil {
-		return "", fmt.Errorf("config get remote.%s.url: %w", remote, err)
+		return "", fmt.Errorf("config get remote.%q.url: %w", remote, err)
 	}
 	return url, nil
 }
@@ -82,7 +82,7 @@ func (r *Repository) RemoteFetchRefspecs(ctx context.Context, remote string) ([]
 		ctx, "config", "--get-all", "remote."+remote+".fetch").
 		OutputChomp()
 	if err != nil {
-		return nil, fmt.Errorf("config get-all remote.%s.fetch: %w", remote, err)
+		return nil, fmt.Errorf("config get-all remote.%q.fetch: %w", remote, err)
 	}
 
 	var refspecs []Refspec

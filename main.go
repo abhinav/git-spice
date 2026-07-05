@@ -38,6 +38,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 	"go.abhg.dev/gs/internal/handler/track"
+	"go.abhg.dev/gs/internal/scriptrun"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/sigstack"
 	"go.abhg.dev/gs/internal/silog"
@@ -62,7 +63,7 @@ var (
 	_browserLauncher browser.Launcher = new(browser.Browser)
 
 	// Forges to registry into main at startup besides the defaults.
-	_extraForges []forge.Forge
+	_extraForges []func(*silog.Logger) forge.Forge
 
 	_highlightStyle = ui.NewStyle().
 			Foreground(ui.Cyan).
@@ -128,8 +129,8 @@ func main() {
 	forges.Register(&gitea.Forge{Log: logger})
 	forges.Register(&github.Forge{Log: logger})
 	forges.Register(&gitlab.Forge{Log: logger})
-	for _, f := range _extraForges {
-		forges.Register(f)
+	for _, buildForge := range _extraForges {
+		forges.Register(buildForge(logger))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -651,6 +652,7 @@ func (cmd *mainCmd) AfterApply(
 			restackHandler RestackHandler,
 			submitHandler SubmitHandler,
 			syncHandler SyncHandler,
+			scriptRunner *scriptrun.Runner,
 		) (MergeHandler, error) {
 			return &merge.Handler{
 				Log:                log,
@@ -664,6 +666,7 @@ func (cmd *mainCmd) AfterApply(
 				Sync:               syncHandler,
 				Repository:         repo,
 				Remote:             remote.Upstream,
+				ScriptRunner:       scriptRunner,
 			}, nil
 		}),
 		kctx.BindSingletonProvider(func(
@@ -705,6 +708,11 @@ func (cmd *mainCmd) AfterApply(
 			view ui.View,
 		) (state.Remote, error) {
 			return ensureRemote(ctx, repo, store, log, view)
+		}),
+		kctx.BindSingletonProvider(func(log *silog.Logger) *scriptrun.Runner {
+			return &scriptrun.Runner{
+				Log: log,
+			}
 		}),
 	)
 }

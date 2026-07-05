@@ -31,8 +31,8 @@ var _handlers []shamhubEndpoint
 //   - `form:"name"` or `query:"name"` to extract values from the form data.
 //     These fields are optional unless the tag is `form:"name,required"`.
 //
-// Fields can only be tagged with one of `path` and `form`,
-// and they MUST be tagged with `json:"-"`.
+// Fields can only be tagged with one of `path`, `form`, and `query`.
+// Non-JSON fields MUST be tagged with `json:"-"`.
 // They must be one of the following types:
 //
 //   - string
@@ -240,8 +240,14 @@ func (sh *ShamHub) apiHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sh.log.Infof("ShamHub: %s %s", r.Method, r.URL.String())
 
-		// Everything except /auth/login requires a token.
-		if r.URL.Path != "/login" {
+		if strings.HasPrefix(r.URL.Path, "/_shamhub/admin/") {
+			if token := r.Header.Get("ShamHub-Admin-Token"); token != sh.adminToken {
+				http.Error(w, "invalid admin token", http.StatusUnauthorized)
+				return
+			}
+		} else if r.URL.Path != "/login" {
+			// Everything except login and admin endpoints requires
+			// a user authentication token.
 			token := r.Header.Get("Authentication-Token")
 			if token == "" {
 				http.Error(w, "missing token", http.StatusUnauthorized)

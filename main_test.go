@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/browser/browsertest"
 	"go.abhg.dev/gs/internal/cli"
+	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/shamhub"
 	"go.abhg.dev/gs/internal/mockedit"
 	"go.abhg.dev/gs/internal/secret"
@@ -67,10 +68,15 @@ func TestMain(m *testing.M) {
 				}
 			}
 
-			_extraForges = append(_extraForges, &shamhub.Forge{Log: logger})
+			_extraForges = append(_extraForges, func(log *silog.Logger) forge.Forge {
+				return &shamhub.Forge{Log: log}
+			})
 			main()
 		},
 		"mockedit": mockedit.Main,
+		"shamhub": func() {
+			os.Exit(shamhub.CLI())
+		},
 		// "true" is a no-op command that always succeeds.
 		"true": func() {},
 		// with-term file -- cmd [args ...]

@@ -93,8 +93,8 @@ func TestRepository_HookRun(t *testing.T) {
 			Run(gomock.Any()).
 			Return(errors.New("git command failed"))
 
-		err := repo.HookRun(ctx, "commit-msg", nil)
+		err := repo.HookRun(ctx, "commit msg", nil)
 		assert.Error(t, err)
-		assert.ErrorContains(t, err, "hook run commit-msg")
+		assert.ErrorContains(t, err, `hook run "commit msg"`)
 	})
 }

@@ -1,12 +1,12 @@
 package shamhub
 
 import (
+	"bytes"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/rogpeppe/go-internal/testscript"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
@@ -58,47 +58,46 @@ func TestForgeRepository_setChangeMergeability(t *testing.T) {
 	}, got)
 }
 
-func TestCmd_setMergeability(t *testing.T) {
-	sh := &ShamHub{}
+func TestCLI_setMergeability(t *testing.T) {
+	sh, err := New(Config{Log: silogtest.New(t)})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, sh.Close())
+	})
 	seedMergeabilityChange(sh)
 
-	var cmd Cmd
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(
-		filepath.Join(dir, "set_mergeability.txt"),
-		[]byte(
-			"shamhub set-mergeability -reason checks alice/example 1 waiting\n"+
-				"assert-mergeability waiting checks\n",
-		),
-		0o644,
-	))
-
-	testscript.Run(t, testscript.Params{
-		Dir: dir,
-		Setup: func(e *testscript.Env) error {
-			cmd.Setup(t, e)
-			e.Values[shamHubKey{}].(*shamHubValue).sh = sh
-			return nil
+	getenv := func(key string) string {
+		switch key {
+		case "SHAMHUB_API_URL":
+			return sh.APIURL()
+		case "SHAMHUB_URL":
+			return sh.GitURL()
+		case "SHAMHUB_ADMIN_TOKEN":
+			return sh.AdminToken()
+		default:
+			return ""
+		}
+	}
+	err = runCLI(
+		t.Context(),
+		[]string{
+			"set-mergeability",
+			"-reason", "checks",
+			"alice/example",
+			"1",
+			"waiting",
 		},
-		Cmds: map[string]func(*testscript.TestScript, bool, []string){
-			"shamhub": cmd.Run,
-			"assert-mergeability": func(ts *testscript.TestScript, neg bool, args []string) {
-				if neg || len(args) != 2 {
-					ts.Fatalf("usage: assert-mergeability <state> <reason>")
-				}
+		getenv,
+		new(bytes.Buffer),
+		new(bytes.Buffer),
+	)
+	require.NoError(t, err)
 
-				got, err := ts.Value(shamHubKey{}).(*shamHubValue).
-					sh.
-					ChangeMergeability("alice", "example", 1)
-				ts.Check(err)
-				want, err := parseMergeability(args[0], args[1])
-				ts.Check(err)
-				if got != want {
-					ts.Fatalf("mergeability = %#v, want %#v", got, want)
-				}
-			},
-		},
-	})
+	got, err := sh.ChangeMergeability("alice", "example", 1)
+	require.NoError(t, err)
+	want, err := parseMergeability("waiting", "checks")
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
 }
 
 func TestShamHub_ChangeMergeability_conflicts(t *testing.T) {

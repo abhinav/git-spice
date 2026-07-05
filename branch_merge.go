@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 
+	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/merge"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -19,22 +20,33 @@ type branchMergeCmd struct {
 }
 
 func (*branchMergeCmd) Help() string {
-	return text.Dedent(`
+	return text.Dedent(fmt.Sprintf(`
 		Merges the CR for the current branch into trunk.
 		Use --branch to merge a different branch.
 		Use --branch multiple times to merge multiple branches.
-
 		Only the selected branches are merged.
-		To merge a branch and its downstack,
-		use 'git-spice downstack merge'.
-		To merge a whole stack,
-		use 'git-spice stack merge'.
+		All selected branches must be stacked on trunk
+		or on a branch that is also selected.
 
-		Before checking merge readiness,
-		the command waits briefly for the forge to observe the pushed head.
-		Then it waits for the forge to report that the CR is ready to merge.
-		Use --ready-timeout to configure the maximum wait.
-	`)
+		For example, for the following stack:
+
+		       ┌── B
+		     ┌─┴ A
+		    trunk
+
+		This command can merge A alone,
+		or A and B together.
+
+		    %[1]s branch merge --branch A
+		    %[1]s branch merge --branch A --branch B
+
+		It cannot merge B alone, because A is not selected:
+
+		    %[1]s branch merge --branch B // error
+
+		To merge multiple branches in a stack
+		prefer '%[1]s downstack merge' or '%[1]s stack merge'.
+	`, cli.Name())) + _mergeHelpCommon
 }
 
 func (cmd *branchMergeCmd) AfterApply(

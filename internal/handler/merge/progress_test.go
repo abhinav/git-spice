@@ -3,7 +3,7 @@ package merge
 import (
 	"io"
 	"testing"
-	"time"
+	"testing/synctest"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/stretchr/testify/assert"
@@ -14,35 +14,39 @@ import (
 )
 
 func TestWidgetMergeProgress_FinishAfterRunnerExit(t *testing.T) {
-	view := new(earlyExitModelView)
-	progress := newWidgetMergeProgress(view, ui.DefaultThemeLight())
-	progress.Start(t.Context(), []*mergeItem{{
-		branch: "feat1",
-	}})
+	synctest.Test(t, func(t *testing.T) {
+		view := new(earlyExitModelView)
+		progress := newWidgetMergeProgress(view, ui.DefaultThemeLight())
+		progress.Start(t.Context(), []*mergeItem{{
+			branch: "feat1",
+		}})
 
-	select {
-	case <-progress.stopped:
-	case <-time.After(time.Second):
-		t.Fatal("progress model did not exit")
-	}
+		synctest.Wait()
+		select {
+		case <-progress.stopped:
+		default:
+			t.Fatal("progress model did not exit")
+		}
 
-	done := make(chan error, 1)
-	go func() {
-		progress.Event(mergeProgressEvent{
-			Kind: mergeProgressMergeabilityFailed,
-			Item: &mergeItem{
-				branch: "feat1",
-			},
-		})
-		done <- progress.Finish()
-	}()
+		done := make(chan error, 1)
+		go func() {
+			progress.Event(mergeProgressEvent{
+				Kind: mergeProgressMergeabilityFailed,
+				Item: &mergeItem{
+					branch: "feat1",
+				},
+			})
+			done <- progress.Finish()
+		}()
 
-	select {
-	case err := <-done:
-		require.NoError(t, err)
-	case <-time.After(time.Second):
-		t.Fatal("Finish blocked after progress model exited")
-	}
+		synctest.Wait()
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+		default:
+			t.Fatal("Finish blocked after progress model exited")
+		}
+	})
 }
 
 func TestMergeProgressItems_ordersByDependencyLayer(t *testing.T) {

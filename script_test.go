@@ -43,7 +43,7 @@ func TestScript(t *testing.T) {
 		defaultEnv["GIT_SPICE_VERBOSE"] = "true"
 	}
 
-	var shamhubCmd shamhub.Cmd
+	var shamhubSetupCmd shamhub.SetupCmd
 
 	scriptDir := filepath.Join("testdata", "script")
 	if *_shardCount > 1 {
@@ -91,7 +91,7 @@ func TestScript(t *testing.T) {
 			t.Logf("Secret server URL: %s", secretServer.URL())
 			e.Setenv("SECRET_SERVER_URL", secretServer.URL())
 
-			shamhubCmd.Setup(t, e)
+			shamhubSetupCmd.Setup(t, e)
 			return nil
 		},
 		Condition: func(cond string) (bool, error) {
@@ -113,8 +113,8 @@ func TestScript(t *testing.T) {
 				// can set GIT_SPICE_NOW to a different value.
 				ts.Setenv("GIT_SPICE_NOW", ts.Getenv("GIT_COMMITTER_DATE"))
 			},
-			"cmpenvJSON": cmdCmpenvJSON,
-			"shamhub":    shamhubCmd.Run,
+			"cmpenvJSON":    cmdCmpenvJSON,
+			"shamhub-setup": shamhubSetupCmd.Run,
 			"home": func(ts *testscript.TestScript, _ bool, args []string) {
 				if len(args) != 1 {
 					ts.Fatalf("usage: sethome <path>")

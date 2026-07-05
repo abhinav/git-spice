@@ -15,7 +15,7 @@ git clone repo fork
 cd fork
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new upstream alice/example.git
 shamhub register alice
 git push upstream main

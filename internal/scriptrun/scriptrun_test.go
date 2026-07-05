@@ -44,12 +44,12 @@ func TestRunner_Run_envVars(t *testing.T) {
 
 func TestRunner_Run_positionalArgs(t *testing.T) {
 	r := &Runner{
-		Log:  silog.Nop(),
-		Args: []string{"alpha", "beta"},
+		Log: silog.Nop(),
 	}
 
 	res, err := r.Run(t.Context(), &RunRequest{
 		Script: `echo "$1-$2"`,
+		Args:   []string{"alpha", "beta"},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "alpha-beta\n", string(res.Stdout))
@@ -157,12 +157,12 @@ func TestRunner_Run_shebangReceivesArgs(t *testing.T) {
 		t.Skip("shebang scripts are POSIX-only")
 	}
 	r := &Runner{
-		Log:  silog.Nop(),
-		Args: []string{"first", "second"},
+		Log: silog.Nop(),
 	}
 
 	res, err := r.Run(t.Context(), &RunRequest{
 		Script: "#!/bin/sh\necho \"$1=$2\"\n",
+		Args:   []string{"first", "second"},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "first=second\n", string(res.Stdout))
@@ -180,11 +180,11 @@ func TestRunner_Run_scriptFilePath(t *testing.T) {
 	))
 
 	r := &Runner{
-		Log:  silog.Nop(),
-		Args: []string{"one", "two"},
+		Log: silog.Nop(),
 	}
 	res, err := r.Run(t.Context(), &RunRequest{
 		Script: path,
+		Args:   []string{"one", "two"},
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "one:two\n", string(res.Stdout))
@@ -224,6 +224,18 @@ func TestRunner_Run_contextCancellation(t *testing.T) {
 		strings.Contains(err.Error(), "killed") ||
 		strings.Contains(err.Error(), "context canceled"),
 		"unexpected error: %v", err)
+}
+
+func TestRunner_Run_contextCancelsRunningScript(t *testing.T) {
+	r := &Runner{Log: silog.Nop()}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := r.Run(ctx, &RunRequest{
+		Script: `sleep 1`,
+	})
+	require.ErrorIs(t, err, context.DeadlineExceeded)
 }
 
 func TestRunner_Run_nilLogger(t *testing.T) {

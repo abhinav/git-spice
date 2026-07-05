@@ -3,7 +3,7 @@
 as 'Test <test@example.com>'
 at '2024-07-01T04:30:32Z'
 
-shamhub init
+shamhub-setup
 shamhub register alice
 env SHAMHUB_USERNAME=alice
 

@@ -10,7 +10,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # set up a fake GitHub remote
-shamhub init
+shamhub-setup
 shamhub new origin alice/example.git
 shamhub register alice
 git push origin main

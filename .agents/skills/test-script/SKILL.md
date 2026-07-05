@@ -63,7 +63,7 @@ git commit --allow-empty -m 'Initial commit'
 gs repo init
 
 # (Optional) ShamHub setup for forge interactions
-shamhub init
+shamhub-setup
 shamhub register alice
 shamhub new origin alice/example.git
 git push origin main
@@ -119,10 +119,11 @@ Notes:
 
     For tests involving forge interactions,
     we use a simulation server called ShamHub.
-    To set it up, use the `shamhub` commands:
+    To set it up, use `shamhub-setup`,
+    then use `shamhub` commands to create users and repositories:
 
     ```
-    shamhub init
+    shamhub-setup
     shamhub register alice
     shamhub new origin alice/example.git
     git push origin main
@@ -404,12 +405,12 @@ used for testing git-spice's forge interactions.
 
 Outside of using git-spice (`gs`) commands,
 ShamHub interactions are available through the `shamhub` command
-defined at internal/forge/shamhub/cli.go.
+defined at internal/forge/shamhub/cli_main.go.
 
 Common `shamhub` commands:
 
-- `shamhub init`:
-  Initialize ShamHub server, set environment variables.
+- `shamhub-setup`:
+  Initialize the ShamHub server and set environment variables.
 - `shamhub register <username>`:
   Register users on ShamHub.
 - `shamhub new <remote> <owner/repo>`:

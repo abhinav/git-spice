@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -102,7 +101,9 @@ type AuthenticationToken struct {
 // The flow will fail if these variables are not set.
 // The flow will also fail if the user is already authenticated.
 func (f *Forge) AuthenticationFlow(ctx context.Context, _ ui.View) (forge.AuthenticationToken, error) {
-	must.NotBeBlankf(f.APIURL, "API URL is required")
+	if f.APIURL == "" {
+		return nil, errors.New("SHAMHUB_API_URL is required")
+	}
 
 	username := os.Getenv("SHAMHUB_USERNAME")
 	if username == "" {
@@ -125,19 +126,29 @@ func (f *Forge) AuthenticationFlow(ctx context.Context, _ ui.View) (forge.Authen
 	return &AuthenticationToken{tok: res.Token}, nil
 }
 
-func (f *Forge) secretService() string {
-	must.NotBeBlankf(f.URL, "URL is required")
-	return "shamhub:" + f.URL
+func (f *Forge) secretService() (string, error) {
+	if f.URL == "" {
+		return "", errors.New("SHAMHUB_URL is required")
+	}
+	return "shamhub:" + f.URL, nil
 }
 
 // SaveAuthenticationToken saves the given authentication token to the stash.
 func (f *Forge) SaveAuthenticationToken(stash secret.Stash, t forge.AuthenticationToken) error {
-	return stash.SaveSecret(f.secretService(), "token", t.(*AuthenticationToken).tok)
+	service, err := f.secretService()
+	if err != nil {
+		return err
+	}
+	return stash.SaveSecret(service, "token", t.(*AuthenticationToken).tok)
 }
 
 // LoadAuthenticationToken loads the authentication token from the stash.
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
-	token, err := stash.LoadSecret(f.secretService(), "token")
+	service, err := f.secretService()
+	if err != nil {
+		return nil, err
+	}
+	token, err := stash.LoadSecret(service, "token")
 	if err != nil {
 		return nil, fmt.Errorf("load token: %w", err)
 	}
@@ -146,5 +157,9 @@ func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.Authenticatio
 
 // ClearAuthenticationToken removes the authentication token from the stash.
 func (f *Forge) ClearAuthenticationToken(stash secret.Stash) error {
-	return stash.DeleteSecret(f.secretService(), "token")
+	service, err := f.secretService()
+	if err != nil {
+		return err
+	}
+	return stash.DeleteSecret(service, "token")
 }

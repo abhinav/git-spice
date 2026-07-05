@@ -14,9 +14,9 @@ import (
 
 // ChangeComment is a comment made on ShamHub.
 type ChangeComment struct {
-	ID     int
-	Change int
-	Body   string
+	ID     int    `json:"id"`
+	Change int    `json:"change"`
+	Body   string `json:"body"`
 }
 
 // ListChangeComments returns all comments on all changes in ShamHub.
