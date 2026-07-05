@@ -146,12 +146,16 @@ func (f *Forge) OpenRepository(
 	)
 	if f.kind() == KindDataCenter {
 		rid := mustServerRepositoryID(id)
+		apiURL := f.Options.APIURL
+		if apiURL == "" {
+			apiURL = rid.url + "/rest/api/1.0"
+		}
 		var stok *server.Token
 		if tok != nil {
 			stok = &server.Token{AccessToken: tok.AccessToken}
 		}
 		gateway, err = server.New(
-			f.APIURL(), f.Options.URL,
+			apiURL, rid.url,
 			rid.projectKey, rid.slug, rid.personal,
 			log, stok,
 		)

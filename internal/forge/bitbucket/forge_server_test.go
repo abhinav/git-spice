@@ -183,3 +183,27 @@ func TestForge_OpenRepository_requiresURL(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }
+
+func TestForge_OpenRepository_serverUsesRepositoryIDURL(t *testing.T) {
+	f := &Forge{
+		Options: Options{
+			Kind: KindDataCenter,
+			URL:  "https://wrong.example.com",
+		},
+	}
+
+	repo, err := f.OpenRepository(
+		t.Context(),
+		&AuthenticationToken{AccessToken: "tok"},
+		&serverRepositoryID{
+			url:        "https://bitbucket.example.com",
+			projectKey: "KEY",
+			slug:       "repo",
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		"https://bitbucket.example.com/projects/KEY/repos/repo/pull-requests/42/overview",
+		repo.(forge.WithChangeURL).ChangeURL(&PR{Number: 42}))
+}
