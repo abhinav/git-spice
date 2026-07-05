@@ -393,7 +393,7 @@ func TestBranchTreeRenderer_worktree(t *testing.T) {
 			}
 
 			var sb strings.Builder
-			r.worktree(&sb, tt.wt, nil)
+			r.worktree(&sb, highlightedText{text: tt.wt})
 
 			assert.Equal(t, tt.want, sb.String())
 		})
@@ -448,19 +448,16 @@ func TestBranchTreeRenderer_worktreeHighlights(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wt, highlights := tt.wt.Split()
+			wt := tt.wt.Parse()
 
-			var capturedText string
-			var capturedHighlights []int
+			var capturedText highlightedText
 			defer stub.Value(&renderTextWithHighlights,
 				func(
 					_ *strings.Builder,
-					text string,
-					hl []int,
+					text highlightedText,
 					_, _ lipgloss.Style,
 				) {
 					capturedText = text
-					capturedHighlights = hl
 				},
 			)()
 
@@ -470,24 +467,23 @@ func TestBranchTreeRenderer_worktreeHighlights(t *testing.T) {
 			}
 
 			var sb strings.Builder
-			r.worktree(&sb, wt, highlights)
+			r.worktree(&sb, wt)
 
-			wantText, wantHighlights := tt.want.Split()
-			assert.Equal(t, wantText, capturedText, "text mismatch")
-			assert.Equal(t, wantHighlights, capturedHighlights, "highlights mismatch")
+			assert.Equal(t, tt.want.Parse(), capturedText)
 		})
 	}
 }
 
-// highlightedString represents text with highlighted characters.
+// highlightedString represents text with highlighted characters in tests.
 // Characters wrapped in {braces} are highlighted.
 // Example: "fo{o}bar" represents "foobar" with index 2 highlighted.
 type highlightedString string
 
-// Split parses the highlighted string into plain text and highlight indexes.
-func (s highlightedString) Split() (text string, highlights []int) {
+// Parse converts the marked-up string into the renderer's highlighted text.
+func (s highlightedString) Parse() highlightedText {
 	var sb strings.Builder
 	var runeCount int
+	var highlights []int
 	runes := []rune(s)
 	for i := 0; i < len(runes); i++ {
 		if runes[i] == '{' {
@@ -508,10 +504,10 @@ func (s highlightedString) Split() (text string, highlights []int) {
 		sb.WriteRune(runes[i])
 		runeCount++
 	}
-	return sb.String(), highlights
+	return highlightedText{text: sb.String(), highlights: highlights}
 }
 
-func TestHighlightedString_Split(t *testing.T) {
+func TestHighlightedString_Parse(t *testing.T) {
 	tests := []struct {
 		name           string
 		give           highlightedString
@@ -564,9 +560,9 @@ func TestHighlightedString_Split(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			text, highlights := tt.give.Split()
-			assert.Equal(t, tt.wantText, text)
-			assert.Equal(t, tt.wantHighlights, highlights)
+			got := tt.give.Parse()
+			assert.Equal(t, tt.wantText, got.text)
+			assert.Equal(t, tt.wantHighlights, got.highlights)
 		})
 	}
 }

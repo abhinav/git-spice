@@ -38,8 +38,6 @@ type Item struct {
 	// Characters at these indexes use Style.TextHighlight.
 	BranchHighlights []int
 
-	// TODO: Combine (string, []int) pairs into a HighlightedString type?
-
 	// ChangeID is the optional change ID or URL to display.
 	//
 	// If non-empty, rendered as "($id)" or "($id $state)"
@@ -107,6 +105,16 @@ type Item struct {
 	Disabled bool
 
 	// TODO: enum for highlighted/disabled state?
+}
+
+// highlightedText is renderer text paired with rune indexes that should use
+// the highlight style.
+type highlightedText struct {
+	// text is the unstyled text to render.
+	text string
+
+	// highlights contains rune indexes in text that should be highlighted.
+	highlights []int
 }
 
 // PushStatus contains push-related information
@@ -330,7 +338,10 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 	r.branchName(sb, item)
 
 	if item.ChangeID != "" {
-		r.changeID(sb, item.ChangeID, item.ChangeURL, item.ChangeIDHighlights, item.ChangeState)
+		r.changeID(sb, highlightedText{
+			text:       item.ChangeID,
+			highlights: item.ChangeIDHighlights,
+		}, item.ChangeURL, item.ChangeState)
 	}
 
 	if cc := item.CommentCounts; cc != nil && cc.Total > 0 {
@@ -338,7 +349,10 @@ func (r *branchTreeRenderer) item(sb *strings.Builder, item *Item) {
 	}
 
 	if wt := item.Worktree; wt != "" && wt != r.CurrentWorktree {
-		r.worktree(sb, item.Worktree, item.WorktreeHighlights)
+		r.worktree(sb, highlightedText{
+			text:       item.Worktree,
+			highlights: item.WorktreeHighlights,
+		})
 	}
 
 	if item.NeedsRestack {
@@ -368,21 +382,23 @@ func (r *branchTreeRenderer) branchName(sb *strings.Builder, item *Item) {
 		baseStyle = r.Style.BranchDisabled
 	}
 
-	renderTextWithHighlights(sb, item.Branch, item.BranchHighlights, baseStyle, r.Style.TextHighlight)
+	renderTextWithHighlights(sb, highlightedText{
+		text:       item.Branch,
+		highlights: item.BranchHighlights,
+	}, baseStyle, r.Style.TextHighlight)
 }
 
 func (r *branchTreeRenderer) changeID(
 	sb *strings.Builder,
-	changeID string,
+	changeID highlightedText,
 	changeURL string,
-	changeIDHighlights []int,
 	changeState *forge.ChangeState,
 ) {
 	sb.WriteString(" (")
 	defer sb.WriteString(")")
 
 	var inner strings.Builder
-	renderTextWithHighlights(&inner, changeID, changeIDHighlights, r.Style.ChangeID, r.Style.TextHighlight)
+	renderTextWithHighlights(&inner, changeID, r.Style.ChangeID, r.Style.TextHighlight)
 	text := inner.String()
 	if changeURL != "" {
 		text = lipgloss.NewStyle().Hyperlink(changeURL).Render(text)
@@ -417,14 +433,13 @@ func (r *branchTreeRenderer) commentCounts(
 
 func (r *branchTreeRenderer) worktree(
 	sb *strings.Builder,
-	wt string,
-	highlights []int,
+	wt highlightedText,
 ) {
 	sb.WriteString(r.Style.Worktree.Render(" [wt: "))
 	defer sb.WriteString(r.Style.Worktree.Render("]"))
 
 	if r.HomeDir != "" {
-		rel, err := filepath.Rel(r.HomeDir, wt)
+		rel, err := filepath.Rel(r.HomeDir, wt.text)
 		if err == nil && filepath.IsLocal(rel) {
 			newWT := filepath.Join("~", rel)
 			// Replacing "$HOME" prefix in wt with "~"
@@ -450,11 +465,11 @@ func (r *branchTreeRenderer) worktree(
 			//    = 14 - 5
 			//    = 9
 			//
-			homeIdx := len(wt) - len(rel)
-			offset := len(wt) - len(newWT)
+			homeIdx := len(wt.text) - len(rel)
+			offset := len(wt.text) - len(newWT)
 
 			var adjustedHighlights []int
-			for _, idx := range highlights {
+			for _, idx := range wt.highlights {
 				if idx < homeIdx {
 					// Highlight the "~" character.
 					// If adjustedHighlights is non-empty
@@ -468,12 +483,14 @@ func (r *branchTreeRenderer) worktree(
 				adjusted := idx - offset
 				adjustedHighlights = append(adjustedHighlights, adjusted)
 			}
-			highlights = adjustedHighlights
-			wt = newWT
+			wt = highlightedText{
+				text:       newWT,
+				highlights: adjustedHighlights,
+			}
 		}
 	}
 
-	renderTextWithHighlights(sb, wt, highlights, r.Style.Worktree, r.Style.TextHighlight)
+	renderTextWithHighlights(sb, wt, r.Style.Worktree, r.Style.TextHighlight)
 }
 
 func (r *branchTreeRenderer) pushStatus(
@@ -578,18 +595,17 @@ var renderTextWithHighlights = _renderTextWithHighlights
 
 func _renderTextWithHighlights(
 	sb *strings.Builder,
-	text string,
-	highlights []int,
+	text highlightedText,
 	baseStyle, highlightStyle lipgloss.Style,
 ) {
-	if len(highlights) == 0 {
-		sb.WriteString(baseStyle.Render(text))
+	if len(text.highlights) == 0 {
+		sb.WriteString(baseStyle.Render(text.text))
 		return
 	}
 
 	var lastRuneIdx int
-	runes := []rune(text)
-	for _, runeIdx := range highlights {
+	runes := []rune(text.text)
+	for _, runeIdx := range text.highlights {
 		sb.WriteString(baseStyle.Render(string(runes[lastRuneIdx:runeIdx])))
 		sb.WriteString(highlightStyle.Render(string(runes[runeIdx])))
 		lastRuneIdx = runeIdx + 1
