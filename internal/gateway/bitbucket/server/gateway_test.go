@@ -130,7 +130,7 @@ func TestGateway_ChangeTemplate_personalProject(t *testing.T) {
 
 	gw := newTestServerGateway(t, srv.URL, &serverRepositoryID{
 		url:        srv.URL,
-		projectKey: "~jcaptain",
+		projectKey: "jcaptain",
 		slug:       "dotfiles",
 		personal:   true,
 	}, silog.Nop())

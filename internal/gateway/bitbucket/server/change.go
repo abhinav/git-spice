@@ -89,7 +89,7 @@ func (g *Gateway) CreateChange(
 	}
 
 	pr, _, err := g.client.PullRequestCreate(
-		ctx, g.repoID.projectKey, g.repoID.slug, apiReq,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, apiReq,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create pull request: %w", err)
@@ -173,7 +173,7 @@ func (g *Gateway) defaultReviewers(ctx context.Context, head, base string) []str
 
 	// Use the same fully qualified refs as creation (see createRef).
 	reviewers, _, err := g.client.DefaultReviewers(
-		ctx, g.repoID.projectKey, g.repoID.slug,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug,
 		repoID, repoID,
 		"refs/heads/"+head, "refs/heads/"+base,
 	)
@@ -214,7 +214,7 @@ func (g *Gateway) createRef(branch string) CreateRef {
 		Repository: CreateRefRepository{
 			Slug: g.repoID.slug,
 			Project: CreateRefProject{
-				Key: g.repoID.projectKey,
+				Key: g.repoID.restProjectKey(),
 			},
 		},
 	}
@@ -226,7 +226,7 @@ func (g *Gateway) GetChange(
 	number int64,
 ) (*bitbucket.PullRequest, error) {
 	pr, _, err := g.client.PullRequestGet(
-		ctx, g.repoID.projectKey, g.repoID.slug, number,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get pull request: %w", err)
@@ -257,7 +257,7 @@ func (g *Gateway) FindChangesByBranch(
 
 	var changes []*bitbucket.PullRequest
 	for pr, err := range g.client.PullRequestList(
-		ctx, g.repoID.projectKey, g.repoID.slug, req,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, req,
 	) {
 		if err != nil {
 			return nil, fmt.Errorf("list pull requests: %w", err)
@@ -284,20 +284,20 @@ func (g *Gateway) UpdateChange(
 	update bitbucket.ChangeUpdate,
 ) error {
 	pr, _, err := g.client.PullRequestGet(
-		ctx, g.repoID.projectKey, g.repoID.slug, number,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 	)
 	if err != nil {
 		return fmt.Errorf("get pull request: %w", err)
 	}
 
 	_, _, err = g.client.PullRequestUpdate(
-		ctx, g.repoID.projectKey, g.repoID.slug, number,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 		g.buildUpdateRequest(pr, update),
 	)
 	if errors.Is(err, ErrConflict) {
 		g.log.Debug("Pull request version conflict; refetching and retrying", "pr", number)
 		pr, _, err = g.client.PullRequestGet(
-			ctx, g.repoID.projectKey, g.repoID.slug, number,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 		)
 		if err != nil {
 			return fmt.Errorf("refetch pull request: %w", err)
@@ -305,7 +305,7 @@ func (g *Gateway) UpdateChange(
 		// Rebuild from the refetched pull request
 		// so the conflicting edit's fields are not overwritten.
 		_, _, err = g.client.PullRequestUpdate(
-			ctx, g.repoID.projectKey, g.repoID.slug, number,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 			g.buildUpdateRequest(pr, update),
 		)
 	}
@@ -356,7 +356,9 @@ func (g *Gateway) MergeChange(
 ) error {
 	// Best-effort pre-merge probe: block early on a clear "cannot merge".
 	// Any probe error falls through to the merge attempt.
-	if status, _, err := g.client.PullRequestCanMerge(ctx, g.repoID.projectKey, g.repoID.slug, number); err != nil {
+	if status, _, err := g.client.PullRequestCanMerge(
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
+	); err != nil {
 		g.log.Debug("Pre-merge check failed; proceeding with merge attempt", "pr", number, "error", err)
 	} else if status != nil && !status.CanMerge {
 		return fmt.Errorf("%w: %s", bitbucket.ErrMergeBlocked, formatVetoes(status))
@@ -371,7 +373,7 @@ func (g *Gateway) MergeChange(
 		StrategyID: g.mergeStrategyID(method),
 	}
 	_, _, err = g.client.PullRequestMerge(
-		ctx, g.repoID.projectKey, g.repoID.slug, number, version, req,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number, version, req,
 	)
 
 	if errors.Is(err, ErrConflict) {
@@ -381,7 +383,7 @@ func (g *Gateway) MergeChange(
 			return err
 		}
 		_, _, err = g.client.PullRequestMerge(
-			ctx, g.repoID.projectKey, g.repoID.slug, number, version, req,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, number, version, req,
 		)
 	}
 
@@ -396,7 +398,7 @@ func (g *Gateway) MergeChange(
 // currentPRVersion fetches a pull request's current optimistic-locking version.
 func (g *Gateway) currentPRVersion(ctx context.Context, number int64) (int, error) {
 	pr, _, err := g.client.PullRequestGet(
-		ctx, g.repoID.projectKey, g.repoID.slug, number,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("get pull request: %w", err)

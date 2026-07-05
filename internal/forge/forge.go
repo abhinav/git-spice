@@ -8,6 +8,7 @@ import (
 	"errors"
 	"iter"
 
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )

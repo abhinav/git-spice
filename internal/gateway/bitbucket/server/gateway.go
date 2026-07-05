@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -67,6 +68,17 @@ func (rid *serverRepositoryID) webBase() string {
 		return fmt.Sprintf("%s/users/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
 	}
 	return fmt.Sprintf("%s/projects/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
+}
+
+// restProjectKey returns the project key used in project-centric REST paths.
+// Bitbucket Data Center expects personal repository REST paths
+// to use the user's slug prefixed by tilde as the project key:
+// https://confluence.atlassian.com/bitbucketserverkb/personal-projects-in-bitbucket-data-center-1072204133.html
+func (rid *serverRepositoryID) restProjectKey() string {
+	if rid.personal && !strings.HasPrefix(rid.projectKey, "~") {
+		return "~" + rid.projectKey
+	}
+	return rid.projectKey
 }
 
 // Gateway implements [bitbucket.Gateway] for Bitbucket Data Center
@@ -158,7 +170,7 @@ func (g *Gateway) ChangeTemplate(
 	path string,
 ) (string, error) {
 	body, _, err := g.client.RawFileGet(
-		ctx, g.repoID.projectKey, g.repoID.slug, path,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, path,
 	)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -212,7 +224,9 @@ func (g *Gateway) numericRepoID(ctx context.Context) (int64, error) {
 	if g.repoNumericID != 0 {
 		return g.repoNumericID, nil
 	}
-	repo, _, err := g.client.RepositoryGet(ctx, g.repoID.projectKey, g.repoID.slug)
+	repo, _, err := g.client.RepositoryGet(
+		ctx, g.repoID.restProjectKey(), g.repoID.slug,
+	)
 	if err != nil {
 		return 0, fmt.Errorf("get repository: %w", err)
 	}

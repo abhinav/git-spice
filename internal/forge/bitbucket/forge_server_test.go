@@ -1,6 +1,8 @@
 package bitbucket
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -205,5 +207,42 @@ func TestForge_OpenRepository_serverUsesRepositoryIDURL(t *testing.T) {
 
 	assert.Equal(t,
 		"https://bitbucket.example.com/projects/KEY/repos/repo/pull-requests/42/overview",
+		repo.(forge.WithChangeURL).ChangeURL(&PR{Number: 42}))
+}
+
+func TestForge_OpenRepository_personalRepositoryUsesTildeRESTProjectKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/rest/api/1.0/projects/~jcaptain/repos/warp-core/raw/PULL_REQUEST_TEMPLATE.md":
+			_, err := w.Write([]byte("personal template\n"))
+			assert.NoError(t, err)
+		case "/rest/api/1.0/projects/~jcaptain/repos/warp-core/raw/pull_request_template.md",
+			"/rest/api/1.0/projects/~jcaptain/repos/warp-core/raw/.bitbucket/PULL_REQUEST_TEMPLATE.md",
+			"/rest/api/1.0/projects/~jcaptain/repos/warp-core/raw/.bitbucket/pull_request_template.md":
+			http.NotFound(w, r)
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	f := &Forge{Options: Options{Kind: KindDataCenter, URL: srv.URL}}
+	id, err := f.ParseRepositoryPath("/scm/~jcaptain/warp-core.git")
+	require.NoError(t, err)
+
+	repo, err := f.OpenRepository(
+		t.Context(),
+		&AuthenticationToken{AccessToken: "tok"},
+		id,
+	)
+	require.NoError(t, err)
+
+	templates, err := repo.ListChangeTemplates(t.Context())
+	require.NoError(t, err)
+	require.Len(t, templates, 1)
+	assert.Equal(t, "personal template\n", templates[0].Body)
+	assert.Equal(t,
+		srv.URL+"/users/jcaptain/repos/warp-core/pull-requests/42/overview",
 		repo.(forge.WithChangeURL).ChangeURL(&PR{Number: 42}))
 }

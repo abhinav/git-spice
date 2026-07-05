@@ -18,7 +18,7 @@ func (g *Gateway) CreateComment(
 	body string,
 ) (*bitbucket.ChangeComment, error) {
 	comment, _, err := g.client.CommentCreate(
-		ctx, g.repoID.projectKey, g.repoID.slug, prID, body,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, prID, body,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create comment: %w", err)
@@ -44,7 +44,7 @@ func (g *Gateway) UpdateComment(
 	body string,
 ) error {
 	_, _, err := g.client.CommentUpdate(
-		ctx, g.repoID.projectKey, g.repoID.slug,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug,
 		c.PRID, c.ID, body, c.Version,
 	)
 
@@ -59,7 +59,7 @@ func (g *Gateway) UpdateComment(
 			return fmt.Errorf("comment %d not found: %w", c.ID, forge.ErrNotFound)
 		}
 		_, _, err = g.client.CommentUpdate(
-			ctx, g.repoID.projectKey, g.repoID.slug,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug,
 			c.PRID, c.ID, body, version,
 		)
 	}
@@ -83,7 +83,7 @@ func (g *Gateway) DeleteComment(
 	c *bitbucket.ChangeComment,
 ) error {
 	_, err := g.client.CommentDelete(
-		ctx, g.repoID.projectKey, g.repoID.slug,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug,
 		c.PRID, c.ID, c.Version,
 	)
 
@@ -99,7 +99,7 @@ func (g *Gateway) DeleteComment(
 			return nil
 		}
 		_, err = g.client.CommentDelete(
-			ctx, g.repoID.projectKey, g.repoID.slug,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug,
 			c.PRID, c.ID, version,
 		)
 	}
@@ -123,7 +123,7 @@ func (g *Gateway) liveCommentVersion(
 	prID, commentID int64,
 ) (version int, found bool, err error) {
 	for activity, aerr := range g.client.ActivityList(
-		ctx, g.repoID.projectKey, g.repoID.slug, prID,
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, prID,
 	) {
 		if aerr != nil {
 			return 0, false, fmt.Errorf("list activities: %w", aerr)
@@ -165,7 +165,7 @@ func (g *Gateway) ListComments(
 		}
 
 		for activity, err := range g.client.ActivityList(
-			ctx, g.repoID.projectKey, g.repoID.slug, prID,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, prID,
 		) {
 			if err != nil {
 				yield(nil, fmt.Errorf("list activities: %w", err))
@@ -213,7 +213,7 @@ func (g *Gateway) ResolvableComments(
 	return func(yield func(*bitbucket.ResolvableComment, error) bool) {
 		seen := make(map[int64]struct{})
 		for activity, err := range g.client.ActivityList(
-			ctx, g.repoID.projectKey, g.repoID.slug, prID,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, prID,
 		) {
 			if err != nil {
 				yield(nil, fmt.Errorf("list activities: %w", err))
@@ -243,7 +243,7 @@ func (g *Gateway) ResolvableComments(
 
 		// Add tasks nested as replies, which the feed omits.
 		for c, err := range g.client.BlockerCommentList(
-			ctx, g.repoID.projectKey, g.repoID.slug, prID,
+			ctx, g.repoID.restProjectKey(), g.repoID.slug, prID,
 		) {
 			if err != nil {
 				if errors.Is(err, ErrNotFound) {
