@@ -35,6 +35,13 @@ Do not collect all constants, interfaces, types, or helpers at the top
 of a file
 unless they are genuinely file-wide concepts.
 
+### Embedding
+
+For structs and interfaces,
+put embedded fields or embedded interfaces at the top of the type body.
+Separate embedded entries from explicitly declared fields or methods
+with a blank line.
+
 ## Naming
 
 Use one stable term for one domain concept.

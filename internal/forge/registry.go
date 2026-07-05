@@ -1,75 +1,72 @@
 package forge
 
 import (
+	"fmt"
 	"iter"
-	"net/url"
 	"strings"
 	"sync"
 
 	"go.abhg.dev/gs/internal/git/giturl"
 )
 
-// Registry is a collection of known code forges.
+// Registry is a collection of known code forge definitions.
 type Registry struct {
 	m sync.Map
 }
 
-// All returns an iterator over items in the Forge
+// All returns an iterator over definitions in the Registry
 // in an unspecified order.
-func (r *Registry) All() iter.Seq[Forge] {
-	return func(yield func(Forge) bool) {
+func (r *Registry) All() iter.Seq[Definition] {
+	return func(yield func(Definition) bool) {
 		r.m.Range(func(_, value any) bool {
-			return yield(value.(Forge))
+			return yield(value.(Definition))
 		})
 	}
 }
 
-// Register registers a Forge with the Registry.
-// The Forge may be unregistered by calling the returned function.
-func (r *Registry) Register(f Forge) (unregister func()) {
-	id := f.ID()
-	r.m.Store(id, f)
+// Register registers a forge definition with the Registry.
+// The definition may be unregistered by calling the returned function.
+func (r *Registry) Register(d Definition) (unregister func()) {
+	id := d.ID()
+	r.m.Store(id, d)
 	return func() {
 		r.m.Delete(id)
 	}
 }
 
-// Lookup searches for a registered Forge by ID.
+// Lookup searches for a registered forge definition by ID.
 // It returns false if a forge with that ID is not known.
-func (r *Registry) Lookup(id string) (Forge, bool) {
-	f, ok := r.m.Load(id)
+func (r *Registry) Lookup(id string) (Definition, bool) {
+	d, ok := r.m.Load(id)
 	if !ok {
 		return nil, false
 	}
-	return f.(Forge), true
+	return d.(Definition), true
 }
 
-// FromRemoteURL attempts to match the given remote URL with a registered forge.
+// New constructs a registered forge by ID.
+func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
+	if remoteURL == nil {
+		return nil, fmt.Errorf("%w: remote URL is required", ErrUnsupportedURL)
+	}
+
+	d, ok := r.Lookup(id)
+	if !ok {
+		return nil, fmt.Errorf("%w: %q", ErrUnknown, id)
+	}
+	return d.New(remoteURL)
+}
+
+// InferFromRemoteURL attempts to infer the forge for the given remote URL.
 // It returns the matched forge and information about the matched repository.
-func FromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
-	for f := range r.All() {
-		baseURL, err := url.Parse(f.BaseURL())
+func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
+	for d := range r.All() {
+		if !remoteURLMatches(d.BaseURL(), remoteURL) {
+			continue
+		}
+
+		f, err := d.New(remoteURL)
 		if err != nil {
-			continue
-		}
-
-		baseHost := baseURL.Hostname()
-		remoteHost := remoteURL.Hostname
-		// Some forges advertise a base URL such as "https://github.com",
-		// while Git remotes use a related SSH hostname like "ssh.github.com".
-		// Accept subdomains so these documented SSH hosts still infer
-		// the same forge.
-		hostMatches := remoteHost == baseHost ||
-			strings.HasSuffix(remoteHost, "."+baseHost)
-		if !hostMatches {
-			continue
-		}
-
-		// A base URL without an explicit port describes the forge host,
-		// not one transport endpoint.
-		// In that case, allow the remote to specify its SSH port.
-		basePort := baseURL.Port()
-		if basePort != "" && remoteURL.Port != basePort {
 			continue
 		}
 

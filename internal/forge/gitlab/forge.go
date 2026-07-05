@@ -9,6 +9,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -42,15 +43,56 @@ type Options struct {
 	RemoveSourceBranch bool `name:"gitlab-remove-source-branch" hidden:"" config:"forge.gitlab.removeSourceBranch" default:"true" help:"Remove source branch after merging a merge request"`
 }
 
-// Forge builds a GitLab Forge.
-type Forge struct {
+// Definition configures GitLab forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options Options
 
 	// Log specifies the logger to use.
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Definition)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
+
+// ID reports a unique key for this forge.
+func (*Definition) ID() string { return "gitlab" }
+
+// BaseURL reports the GitLab web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return cmp.Or(d.Options.URL, DefaultURL)
+}
+
+// CLIPlugin returns the CLI plugin for the GitLab Forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a GitLab Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		Options: d.Options,
+		baseURL: d.BaseURL(),
+		Log:     d.Log,
+	}, nil
+}
+
+// Forge provides a GitLab forge instance.
+type Forge struct {
+	changeMetadataCodec
+
+	Options Options
+	baseURL string
+
+	// Log specifies the logger to use.
+	Log *silog.Logger
+}
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -67,7 +109,7 @@ func (f *Forge) URL() string {
 
 // BaseURL reports the GitLab web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
-	return f.URL()
+	return f.baseURL
 }
 
 // APIURL returns the base API URL configured for the GitHub Forge
@@ -78,9 +120,6 @@ func (f *Forge) APIURL() string {
 
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "gitlab" }
-
-// CLIPlugin returns the CLI plugin for the GitLab Forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
 
 // ParseRepositoryPath parses a GitLab repository path and returns a [RepositoryID]
 // for the GitLab repository it identifies.

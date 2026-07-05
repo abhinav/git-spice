@@ -22,8 +22,8 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -47,8 +47,8 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -63,20 +63,10 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	assert.Same(t, github, got)
 }
 
-func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
+func TestResolveForge_requiresGitRemote(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	ctrl := gomock.NewController(t)
-
-	github := forgetest.NewMockForge(ctrl)
-	github.EXPECT().ID().Return("github").AnyTimes()
-	gitlab := forgetest.NewMockForge(ctrl)
-	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
-
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
-
 	_, err := resolveForge(
 		t.Context(),
 		&forges,
@@ -87,5 +77,5 @@ func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
 	)
 	require.Error(t, err)
 
-	assert.ErrorIs(t, err, errNoPrompt)
+	assert.ErrorContains(t, err, "not in a Git repository")
 }

@@ -8,11 +8,15 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
-// Forge builds a Bitbucket Forge.
-type Forge struct {
+// Definition configures Bitbucket forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options Options
 
 	// Log specifies the logger to use.
@@ -20,9 +24,45 @@ type Forge struct {
 }
 
 var (
+	_ forge.Definition        = (*Definition)(nil)
 	_ forge.Forge             = (*Forge)(nil)
 	_ forge.WithCommentFormat = (*Forge)(nil)
 )
+
+// ID reports a unique key for this forge.
+func (*Definition) ID() string { return "bitbucket" }
+
+// BaseURL reports the Bitbucket web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return cmp.Or(d.Options.URL, DefaultURL)
+}
+
+// CLIPlugin returns the CLI plugin for the Bitbucket Forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a Bitbucket Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		Options: d.Options,
+		baseURL: d.BaseURL(),
+		Log:     d.Log,
+	}, nil
+}
+
+// Forge provides a Bitbucket forge instance.
+type Forge struct {
+	changeMetadataCodec
+
+	Options Options
+	baseURL string
+
+	// Log specifies the logger to use.
+	Log *silog.Logger
+}
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -39,7 +79,7 @@ func (f *Forge) URL() string {
 
 // BaseURL reports the Bitbucket web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
-	return f.URL()
+	return f.baseURL
 }
 
 // APIURL returns the base API URL configured for the Bitbucket Forge
@@ -62,9 +102,6 @@ func (*Forge) CommentFormat() forge.CommentFormat {
 		Marker: "[gs]: # (navigation comment)",
 	}
 }
-
-// CLIPlugin returns the CLI plugin for the Bitbucket Forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
 
 // ChangeTemplatePaths reports the paths at which change templates
 // can be found in a Bitbucket repository.

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 )
 
 func TestForge_ID(t *testing.T) {
@@ -40,9 +41,14 @@ func TestForge_URLs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &Forge{Options: tt.opts}
+			remoteURL, err := giturl.Parse("https://gitea.example.com/owner/repo")
+			require.NoError(t, err)
+
+			f, err := (&Definition{Options: tt.opts}).New(remoteURL)
+			require.NoError(t, err)
+
 			assert.Equal(t, tt.wantURL, f.BaseURL())
-			assert.Equal(t, tt.wantAPIURL, f.apiURL())
+			assert.Equal(t, tt.wantAPIURL, f.(*Forge).apiURL())
 		})
 	}
 }
@@ -106,7 +112,7 @@ func TestRepositoryID_ChangeURL(t *testing.T) {
 	)
 }
 
-func TestForge_CLIPlugin(t *testing.T) {
-	f := new(Forge)
-	assert.Equal(t, &f.Options, f.CLIPlugin())
+func TestDefinition_CLIPlugin(t *testing.T) {
+	d := new(Definition)
+	assert.Equal(t, &d.Options, d.CLIPlugin())
 }

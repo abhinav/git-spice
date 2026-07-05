@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -72,9 +71,22 @@ func (r *remoteResolver) Resolve(
 	}
 
 	if r.ForgeKind != "" {
-		f, err := lookupForgeKind(r.Forges, r.ForgeKind)
+		f, err := r.Forges.New(r.ForgeKind, parsedRemoteURL)
 		if err != nil {
-			return nil, nil, err
+			if errors.Is(err, forge.ErrUnknown) {
+				var available []string
+				for d := range r.Forges.All() {
+					available = append(available, d.ID())
+				}
+				slices.Sort(available)
+
+				return nil, nil, fmt.Errorf(
+					"unknown forge kind %q: expected one of: %s",
+					r.ForgeKind,
+					strings.Join(available, ", "),
+				)
+			}
+			return nil, nil, fmt.Errorf("construct forge %q: %w", r.ForgeKind, err)
 		}
 
 		repoID, err := f.ParseRepositoryPath(parsedRemoteURL.Path)
@@ -84,7 +96,7 @@ func (r *remoteResolver) Resolve(
 		return f, repoID, nil
 	}
 
-	f, repoID, ok := forge.FromRemoteURL(r.Forges, parsedRemoteURL)
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL)
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -92,23 +104,6 @@ func (r *remoteResolver) Resolve(
 		}
 	}
 	return f, repoID, nil
-}
-
-func lookupForgeKind(forges *forge.Registry, kind string) (forge.Forge, error) {
-	f, ok := forges.Lookup(kind)
-	if ok {
-		return f, nil
-	}
-
-	ids := make(map[string]struct{})
-	for f := range forges.All() {
-		ids[f.ID()] = struct{}{}
-	}
-	return nil, fmt.Errorf(
-		"unknown forge kind %q: expected one of: %s",
-		kind,
-		strings.Join(slices.Sorted(maps.Keys(ids)), ", "),
-	)
 }
 
 // ResolveID identifies the repository for a configured Git remote.

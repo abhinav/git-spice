@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -25,16 +26,57 @@ type Options struct {
 	APIURL string `name:"shamhub-api-url" hidden:"" env:"SHAMHUB_API_URL" help:"Base URL for ShamHub API requests"`
 }
 
-// Forge provides an implementation of [forge.Forge] backed by a ShamHub
-// server.
-type Forge struct {
+// Definition configures ShamHub forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options
 
 	// Log is the logger to use for logging.
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Definition)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
+
+// ID reports a unique identifier for this forge.
+func (*Definition) ID() string { return "shamhub" }
+
+// BaseURL reports the ShamHub web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return d.URL
+}
+
+// CLIPlugin registers additional CLI flags for the ShamHub forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a ShamHub Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+	if err := forge.ValidateRemoteURL(d.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		Options: d.Options,
+		baseURL: d.BaseURL(),
+		Log:     d.Log,
+	}, nil
+}
+
+// Forge provides an implementation of [forge.Forge] backed by a ShamHub
+// server.
+type Forge struct {
+	changeMetadataCodec
+
+	Options
+	baseURL string
+
+	// Log is the logger to use for logging.
+	Log *silog.Logger
+}
 
 func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
 	return &jsonHTTPClient{
@@ -46,12 +88,9 @@ func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
 // ID reports a unique identifier for this forge.
 func (*Forge) ID() string { return "shamhub" }
 
-// CLIPlugin registers additional CLI flags for the ShamHub forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
-
 // BaseURL reports the ShamHub web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
-	return f.URL
+	return f.baseURL
 }
 
 // ParseRepositoryPath parses a ShamHub repository path and returns
