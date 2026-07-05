@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	gw "go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/silog"
 	"go.uber.org/mock/gomock"
 )
@@ -52,11 +51,8 @@ func TestChangeMergeability(t *testing.T) {
 
 			mockGateway := NewMockGateway(mockCtrl)
 			mockGateway.EXPECT().
-				GetChange(gomock.Any(), int64(1)).
-				Return(&gw.PullRequest{
-					Number:       1,
-					Mergeability: tt.mergeability,
-				}, nil)
+				ChangeMergeability(gomock.Any(), int64(1)).
+				Return(tt.mergeability, nil)
 
 			repo := newRepository(new(Forge), silog.Nop(), mockGateway)
 			got, err := repo.ChangeMergeability(t.Context(), &PR{Number: 1})

@@ -294,19 +294,27 @@ func (g *Gateway) toPullRequest(pr *PullRequest) *bitbucket.PullRequest {
 	}
 
 	return &bitbucket.PullRequest{
-		Number:   pr.ID,
-		URL:      pr.Links.HTML.Href,
-		State:    stateFromAPI(pr.State),
-		Subject:  pr.Title,
-		BaseName: pr.Destination.Branch.Name,
-		HeadHash: headHash,
-		Draft:    pr.Draft || pr.State == "DRAFT",
-		Mergeability: mergeabilityFromAPI(
-			pr.Mergeable,
-			pr.Queued,
-		),
+		Number:    pr.ID,
+		URL:       pr.Links.HTML.Href,
+		State:     stateFromAPI(pr.State),
+		Subject:   pr.Title,
+		BaseName:  pr.Destination.Branch.Name,
+		HeadHash:  headHash,
+		Draft:     pr.Draft || pr.State == "DRAFT",
 		Reviewers: extractUsernames(pr.Reviewers),
 	}
+}
+
+// ChangeMergeability reports whether a pull request can be merged.
+func (g *Gateway) ChangeMergeability(
+	ctx context.Context,
+	number int64,
+) (forge.ChangeMergeability, error) {
+	pr, err := g.getPullRequest(ctx, number)
+	if err != nil {
+		return forge.ChangeMergeability{}, err
+	}
+	return mergeabilityFromAPI(pr.Mergeable, pr.Queued), nil
 }
 
 func mergeabilityFromAPI(

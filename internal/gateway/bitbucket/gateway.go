@@ -48,10 +48,6 @@ type PullRequest struct {
 	// Draft reports whether the pull request is marked as a draft.
 	Draft bool
 
-	// Mergeability reports the product's current mergeability decision.
-	// Products that do not report mergeability leave this unknown.
-	Mergeability forge.ChangeMergeability
-
 	// Reviewers are the usernames of users
 	// who have been requested to review the pull request.
 	Reviewers []string
@@ -182,6 +178,12 @@ type Gateway interface {
 
 	// GetChange retrieves a pull request by number.
 	GetChange(ctx context.Context, number int64) (*PullRequest, error)
+
+	// ChangeMergeability reports whether a pull request can be merged.
+	ChangeMergeability(
+		ctx context.Context,
+		number int64,
+	) (forge.ChangeMergeability, error)
 
 	// FindChangesByBranch lists pull requests
 	// whose source branch has the given name.

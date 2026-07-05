@@ -43,6 +43,45 @@ func (m *MockGateway) EXPECT() *MockGatewayMockRecorder {
 	return m.recorder
 }
 
+// ChangeMergeability mocks base method.
+func (m *MockGateway) ChangeMergeability(ctx context.Context, number int64) (forge.ChangeMergeability, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeMergeability", ctx, number)
+	ret0, _ := ret[0].(forge.ChangeMergeability)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeMergeability indicates an expected call of ChangeMergeability.
+func (mr *MockGatewayMockRecorder) ChangeMergeability(ctx, number any) *MockGatewayChangeMergeabilityCall {
+	mr.mock.ctrl.T.Helper()
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeMergeability", reflect.TypeOf((*MockGateway)(nil).ChangeMergeability), ctx, number)
+	return &MockGatewayChangeMergeabilityCall{Call: call}
+}
+
+// MockGatewayChangeMergeabilityCall wrap *gomock.Call
+type MockGatewayChangeMergeabilityCall struct {
+	*gomock.Call
+}
+
+// Return rewrite *gomock.Call.Return
+func (c *MockGatewayChangeMergeabilityCall) Return(arg0 forge.ChangeMergeability, arg1 error) *MockGatewayChangeMergeabilityCall {
+	c.Call = c.Call.Return(arg0, arg1)
+	return c
+}
+
+// Do rewrite *gomock.Call.Do
+func (c *MockGatewayChangeMergeabilityCall) Do(f func(context.Context, int64) (forge.ChangeMergeability, error)) *MockGatewayChangeMergeabilityCall {
+	c.Call = c.Call.Do(f)
+	return c
+}
+
+// DoAndReturn rewrite *gomock.Call.DoAndReturn
+func (c *MockGatewayChangeMergeabilityCall) DoAndReturn(f func(context.Context, int64) (forge.ChangeMergeability, error)) *MockGatewayChangeMergeabilityCall {
+	c.Call = c.Call.DoAndReturn(f)
+	return c
+}
+
 // ChangeTemplate mocks base method.
 func (m *MockGateway) ChangeTemplate(ctx context.Context, path string) (string, error) {
 	m.ctrl.T.Helper()

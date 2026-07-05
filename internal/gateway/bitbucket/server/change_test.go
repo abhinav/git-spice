@@ -686,6 +686,108 @@ func TestGateway_GetChange_notFound(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
+func TestMergeabilityFromAPI(t *testing.T) {
+	tests := []struct {
+		name   string
+		status *MergeStatus
+		want   forge.ChangeMergeability
+	}{
+		{
+			name: "Nil",
+			want: forge.ChangeMergeability{
+				State:  forge.ChangeMergeabilityUnknown,
+				Reason: forge.ChangeMergeabilityReasonUnknown,
+			},
+		},
+		{
+			name: "CanMerge",
+			status: &MergeStatus{
+				CanMerge: true,
+				Outcome:  "CLEAN",
+			},
+			want: forge.ChangeMergeability{
+				State:  forge.ChangeMergeabilityReady,
+				Reason: forge.ChangeMergeabilityReasonUnknown,
+			},
+		},
+		{
+			name: "Conflicted",
+			status: &MergeStatus{
+				Conflicted: true,
+				Outcome:    "UNKNOWN",
+			},
+			want: forge.ChangeMergeability{
+				State:  forge.ChangeMergeabilityBlocked,
+				Reason: forge.ChangeMergeabilityReasonConflicts,
+			},
+		},
+		{
+			name: "ConflictedOutcome",
+			status: &MergeStatus{
+				Outcome: "CONFLICTED",
+			},
+			want: forge.ChangeMergeability{
+				State:  forge.ChangeMergeabilityBlocked,
+				Reason: forge.ChangeMergeabilityReasonConflicts,
+			},
+		},
+		{
+			name: "Vetoed",
+			status: &MergeStatus{
+				CanMerge: false,
+				Outcome:  "CLEAN",
+				Vetoes: []Veto{{
+					SummaryMessage: "Needs approval",
+				}},
+			},
+			want: forge.ChangeMergeability{
+				State:  forge.ChangeMergeabilityBlocked,
+				Reason: forge.ChangeMergeabilityReasonUnknown,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, mergeabilityFromAPI(tt.status))
+		})
+	}
+}
+
+func TestGateway_ChangeMergeability(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodGet, r.Method)
+		require.Equal(t, prItemPath(42)+"/merge", r.URL.Path)
+		gatewayWriteJSON(t, w, http.StatusOK, map[string]any{
+			"canMerge":   false,
+			"conflicted": true,
+			"outcome":    "CONFLICTED",
+		})
+	}))
+	defer srv.Close()
+
+	gw := newOpsTestServerGateway(t, srv)
+	got, err := gw.ChangeMergeability(t.Context(), 42)
+	require.NoError(t, err)
+	assert.Equal(t, forge.ChangeMergeability{
+		State:  forge.ChangeMergeabilityBlocked,
+		Reason: forge.ChangeMergeabilityReasonConflicts,
+	}, got)
+}
+
+func TestGateway_ChangeMergeability_error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	gw := newOpsTestServerGateway(t, srv)
+	_, err := gw.ChangeMergeability(t.Context(), 99)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "get mergeability")
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
 func TestGateway_FindChangesByBranch(t *testing.T) {
 	var gotQuery struct {
 		at, direction, state string

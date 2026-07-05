@@ -234,6 +234,38 @@ func (g *Gateway) GetChange(
 	return g.toPullRequest(pr), nil
 }
 
+// ChangeMergeability reports whether a pull request can be merged.
+func (g *Gateway) ChangeMergeability(
+	ctx context.Context,
+	number int64,
+) (forge.ChangeMergeability, error) {
+	status, _, err := g.client.PullRequestCanMerge(
+		ctx, g.repoID.restProjectKey(), g.repoID.slug, number,
+	)
+	if err != nil {
+		return forge.ChangeMergeability{}, fmt.Errorf("get mergeability: %w", err)
+	}
+	return mergeabilityFromAPI(status), nil
+}
+
+func mergeabilityFromAPI(status *MergeStatus) forge.ChangeMergeability {
+	result := forge.ChangeMergeability{
+		Reason: forge.ChangeMergeabilityReasonUnknown,
+	}
+	switch {
+	case status == nil:
+		result.State = forge.ChangeMergeabilityUnknown
+	case status.CanMerge:
+		result.State = forge.ChangeMergeabilityReady
+	case status.Conflicted || status.Outcome == "CONFLICTED":
+		result.State = forge.ChangeMergeabilityBlocked
+		result.Reason = forge.ChangeMergeabilityReasonConflicts
+	default:
+		result.State = forge.ChangeMergeabilityBlocked
+	}
+	return result
+}
+
 // FindChangesByBranch lists pull requests
 // whose source branch has the given name,
 // returning up to opts.Limit results (zero means no limit).

@@ -12,10 +12,5 @@ func (r *Repository) ChangeMergeability(
 	id forge.ChangeID,
 ) (forge.ChangeMergeability, error) {
 	pr := mustPR(id)
-	pullRequest, err := r.gw.GetChange(ctx, pr.Number)
-	if err != nil {
-		return forge.ChangeMergeability{}, err
-	}
-
-	return pullRequest.Mergeability, nil
+	return r.gw.ChangeMergeability(ctx, pr.Number)
 }
