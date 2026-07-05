@@ -22,8 +22,8 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -47,8 +47,8 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -74,8 +74,8 @@ func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	_, err := resolveForge(
 		t.Context(),

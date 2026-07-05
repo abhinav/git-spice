@@ -95,7 +95,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 		changeMetadata json.RawMessage
 	)
 	if md := oldBranch.Change; md != nil {
-		if f, ok := s.forges.Lookup(md.ForgeID()); ok {
+		if f, err := s.forges.New(md.ForgeID(), nil); err == nil {
 			changeForge = f.ID()
 			changeMetadata, err = f.MarshalChangeMetadata(md)
 			if err != nil {

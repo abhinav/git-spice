@@ -8,6 +8,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/bitbucket"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -20,6 +21,7 @@ type Forge struct {
 }
 
 var (
+	_ forge.Definition        = (*Forge)(nil)
 	_ forge.Forge             = (*Forge)(nil)
 	_ forge.WithCommentFormat = (*Forge)(nil)
 )
@@ -65,6 +67,12 @@ func (*Forge) CommentFormat() forge.CommentFormat {
 
 // CLIPlugin returns the CLI plugin for the Bitbucket Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// New constructs a Bitbucket Forge from the configured options.
+func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
+	resolved := *f
+	return &resolved, nil
+}
 
 // ChangeTemplatePaths reports the paths at which change templates
 // can be found in a Bitbucket repository.

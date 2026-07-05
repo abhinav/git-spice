@@ -8,6 +8,7 @@ import (
 	"errors"
 	"iter"
 
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/ui"
 )
@@ -18,18 +19,32 @@ import (
 // Forge should become a struct with multiple interfaces or funcctions
 // that it depends on in the underlying implementation.
 
-// Forge is a forge that hosts Git repositories.
-type Forge interface {
+// Definition describes a forge implementation before it is bound
+// to a particular repository remote.
+type Definition interface {
 	// ID reports a unique identifier for the forge, e.g. "github".
-	ID() string // TODO: Rename to "slug" or "name" as that's more correct
+	ID() string
 
-	// CLIPlugin returns a Kong plugin for this Forge.
+	// CLIPlugin returns a Kong plugin for this forge.
 	//
 	// This will be installed into the application to provide
 	// additional Forge-specific flags or environment variable overrides.
 	//
 	// Return nil if the forge does not require any extra CLI flags.
 	CLIPlugin() any
+
+	// New constructs a forge instance from the definition's configured options.
+	//
+	// The remote URL is optional context from command resolution.
+	// Implementations may use it to derive instance configuration
+	// that is not known when command-line options are registered.
+	New(*giturl.URL) (Forge, error)
+}
+
+// Forge is a forge that hosts Git repositories.
+type Forge interface {
+	// ID reports a unique identifier for the forge, e.g. "github".
+	ID() string // TODO: Rename to "slug" or "name" as that's more correct
 
 	// BaseURL reports the configured forge web URL.
 	//
@@ -142,6 +157,9 @@ type RepositoryID interface {
 // ErrUnsubmittedBase indicates that a change cannot be submitted
 // because the base branch has not been pushed yet.
 var ErrUnsubmittedBase = errors.New("base branch has not been submitted yet")
+
+// ErrUnknown indicates that a requested forge is not registered.
+var ErrUnknown = errors.New("unknown forge")
 
 // Repository is a Git repository hosted on a forge.
 type Repository interface {

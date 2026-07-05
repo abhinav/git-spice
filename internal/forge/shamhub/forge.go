@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -34,7 +35,10 @@ type Forge struct {
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Forge)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
 
 func (f *Forge) jsonHTTPClient() *jsonHTTPClient {
 	return &jsonHTTPClient{
@@ -48,6 +52,12 @@ func (*Forge) ID() string { return "shamhub" }
 
 // CLIPlugin registers additional CLI flags for the ShamHub forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// New constructs a ShamHub Forge from the configured options.
+func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
+	resolved := *f
+	return &resolved, nil
+}
 
 // BaseURL reports the ShamHub web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
