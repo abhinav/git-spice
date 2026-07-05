@@ -38,7 +38,7 @@ func (r *Repository) HookRun(
 		cmd = cmd.AppendEnv(opts.Env...)
 	}
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("hook run %s: %w", hook, err)
+		return fmt.Errorf("hook run %q: %w", hook, err)
 	}
 	return nil
 }
