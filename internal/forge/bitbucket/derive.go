@@ -7,10 +7,10 @@ import (
 	"go.abhg.dev/gs/internal/git/giturl"
 )
 
-// ConfigureFromRemoteURL derives the Data Center instance URL
+// configureFromRemoteURL derives the Data Center instance URL
 // from a non-Cloud remote.
 // It leaves explicit URLs and bitbucket.org remotes unchanged.
-func (f *Forge) ConfigureFromRemoteURL(u *giturl.URL) {
+func (f *Forge) configureFromRemoteURL(u *giturl.URL) {
 	if f.Options.URL != "" {
 		return
 	}

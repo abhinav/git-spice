@@ -24,8 +24,8 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -49,8 +49,8 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	got, err := resolveForge(
 		t.Context(),
@@ -76,8 +76,8 @@ func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
 	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
 
 	var forges forge.Registry
-	forges.Register(github)
-	forges.Register(gitlab)
+	registerTestForge(&forges, "github", github)
+	registerTestForge(&forges, "gitlab", gitlab)
 
 	_, err := resolveForge(
 		t.Context(),
@@ -92,10 +92,6 @@ func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
 	assert.ErrorIs(t, err, errNoPrompt)
 }
 
-// TestResolveForge_configuredKindOutsideRepository verifies that
-// forge self-configuration from the remote URL is best-effort:
-// outside a Git repository there is no remote to derive from,
-// so the forge resolves with its default configuration intact.
 func TestResolveForge_configuredKindOutsideRepository(t *testing.T) {
 	t.Chdir(t.TempDir())
 
@@ -113,8 +109,9 @@ func TestResolveForge_configuredKindOutsideRepository(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Same(t, bb, got)
+	assert.NotSame(t, bb, got)
 	assert.Empty(t, bb.Options.URL)
+	assert.Empty(t, got.(*bitbucket.Forge).Options.URL)
 }
 
 func TestResolveForge_configuredKindUsesRemoteConfigURL(t *testing.T) {
@@ -139,8 +136,9 @@ func TestResolveForge_configuredKindUsesRemoteConfigURL(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Same(t, bb, got)
-	assert.Equal(t, "https://bitbucket-alias", bb.Options.URL)
+	assert.NotSame(t, bb, got)
+	assert.Empty(t, bb.Options.URL)
+	assert.Equal(t, "https://bitbucket-alias", got.(*bitbucket.Forge).Options.URL)
 }
 
 func runGitAuthTest(t *testing.T, args ...string) {

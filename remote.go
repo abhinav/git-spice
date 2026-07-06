@@ -72,17 +72,12 @@ func (r *remoteResolver) Resolve(
 	}
 
 	if r.ForgeKind != "" {
-		f, err := lookupForgeKind(r.Forges, r.ForgeKind)
+		f, err := r.Forges.New(r.ForgeKind, parsedRemoteURL)
 		if err != nil {
-			return nil, nil, err
-		}
-
-		// The forge is forced by configuration, so the remote URL
-		// no longer needs to identify it.
-		// Let the forge configure itself from the URL instead,
-		// e.g. to derive a self-hosted instance URL.
-		if c, ok := f.(forge.RemoteURLConfigurer); ok {
-			c.ConfigureFromRemoteURL(parsedRemoteURL)
+			if errors.Is(err, forge.ErrUnknown) {
+				return nil, nil, unknownForgeKindError(r.Forges, r.ForgeKind)
+			}
+			return nil, nil, fmt.Errorf("construct forge %q: %w", r.ForgeKind, err)
 		}
 
 		repoID, err := f.ParseRepositoryPath(parsedRemoteURL.Path)
@@ -92,7 +87,7 @@ func (r *remoteResolver) Resolve(
 		return f, repoID, nil
 	}
 
-	f, repoID, ok := forge.FromRemoteURL(r.Forges, parsedRemoteURL)
+	f, repoID, ok := forge.InferFromRemoteURL(r.Forges, parsedRemoteURL)
 	if !ok {
 		return nil, nil, &unsupportedForgeError{
 			Remote:    remote,
@@ -102,17 +97,12 @@ func (r *remoteResolver) Resolve(
 	return f, repoID, nil
 }
 
-func lookupForgeKind(forges *forge.Registry, kind string) (forge.Forge, error) {
-	f, ok := forges.Lookup(kind)
-	if ok {
-		return f, nil
-	}
-
+func unknownForgeKindError(forges *forge.Registry, kind string) error {
 	ids := make(map[string]struct{})
-	for f := range forges.All() {
-		ids[f.ID()] = struct{}{}
+	for d := range forges.All() {
+		ids[d.ID()] = struct{}{}
 	}
-	return nil, fmt.Errorf(
+	return fmt.Errorf(
 		"unknown forge kind %q: expected one of: %s",
 		kind,
 		strings.Join(slices.Sorted(maps.Keys(ids)), ", "),

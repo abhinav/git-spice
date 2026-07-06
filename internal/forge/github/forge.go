@@ -10,6 +10,7 @@ import (
 
 	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 	"golang.org/x/oauth2"
 )
@@ -45,7 +46,10 @@ type Forge struct {
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Forge)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -89,6 +93,12 @@ func (*Forge) ID() string { return "github" }
 
 // CLIPlugin returns the CLI plugin for the GitHub Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// New constructs a GitHub Forge from the configured options.
+func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
+	resolved := *f
+	return &resolved, nil
+}
 
 // ParseRepositoryPath parses a GitHub repository path and returns a [RepositoryID]
 // if the path identifies a repository.

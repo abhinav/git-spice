@@ -32,7 +32,12 @@ func TestRegister(t *testing.T) {
 		}).AnyTimes()
 
 	var registry forge.Registry
-	defer registry.Register(mockForge)()
+	defer registry.Register(testDefinition{
+		id: "a",
+		new: func(*giturl.URL) (forge.Forge, error) {
+			return mockForge, nil
+		},
+	})()
 
 	t.Run("All", func(t *testing.T) {
 		var ok bool
@@ -57,20 +62,48 @@ func TestRegister(t *testing.T) {
 	})
 }
 
-func TestFromRemoteURL_codebergForgejo(t *testing.T) {
+func TestRegistry_New(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	remoteURL, err := giturl.Parse("https://example.com/foo")
+	require.NoError(t, err)
+
+	var gotRemoteURL *giturl.URL
+	var registry forge.Registry
+	defer registry.Register(testDefinition{
+		id: "a",
+		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+			gotRemoteURL = remoteURL
+
+			mockForge := forgetest.NewMockForge(ctrl)
+			mockForge.EXPECT().ID().Return("a").AnyTimes()
+			return mockForge, nil
+		},
+	})()
+
+	first, err := registry.New("a", remoteURL)
+	require.NoError(t, err)
+	second, err := registry.New("a", remoteURL)
+	require.NoError(t, err)
+
+	assert.Same(t, remoteURL, gotRemoteURL)
+	assert.NotSame(t, first, second)
+}
+
+func TestInferFromRemoteURL_codebergForgejo(t *testing.T) {
 	var registry forge.Registry
 	defer registry.Register(new(forgejo.Forge))()
 
 	remoteURL, err := giturl.Parse("git@codeberg.org:example/repo.git")
 	require.NoError(t, err)
 
-	f, rid, ok := forge.FromRemoteURL(&registry, remoteURL)
+	f, rid, ok := forge.InferFromRemoteURL(&registry, remoteURL)
 	require.True(t, ok, "forge not found")
 	assert.Equal(t, "forgejo", f.ID())
 	assert.Equal(t, "example/repo", rid.String())
 }
 
-func TestFromRemoteURL(t *testing.T) {
+func TestInferFromRemoteURL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	tests := []struct {
@@ -111,12 +144,17 @@ func TestFromRemoteURL(t *testing.T) {
 				Return(mockHandle, nil)
 
 			var registry forge.Registry
-			defer registry.Register(mockForge)()
+			defer registry.Register(testDefinition{
+				id: "a",
+				new: func(*giturl.URL) (forge.Forge, error) {
+					return mockForge, nil
+				},
+			})()
 
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
-			f, h, ok := forge.FromRemoteURL(&registry, remoteURL)
+			f, h, ok := forge.InferFromRemoteURL(&registry, remoteURL)
 			assert.True(t, ok, "forge not found")
 			assert.Equal(t, "a", f.ID(), "forge ID mismatch")
 			assert.Same(t, mockHandle, h, "repository ID mismatch")
@@ -124,7 +162,7 @@ func TestFromRemoteURL(t *testing.T) {
 	}
 }
 
-func TestFromRemoteURL_noMatch(t *testing.T) {
+func TestInferFromRemoteURL_noMatch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	tests := []struct {
@@ -161,18 +199,23 @@ func TestFromRemoteURL_noMatch(t *testing.T) {
 			mockForge.EXPECT().BaseURL().Return(tt.baseURL)
 
 			var registry forge.Registry
-			defer registry.Register(mockForge)()
+			defer registry.Register(testDefinition{
+				id: "a",
+				new: func(*giturl.URL) (forge.Forge, error) {
+					return mockForge, nil
+				},
+			})()
 
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
-			_, _, ok := forge.FromRemoteURL(&registry, remoteURL)
+			_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL)
 			assert.False(t, ok, "unexpected forge match")
 		})
 	}
 }
 
-func TestFromRemoteURL_unsupportedRepositoryPath(t *testing.T) {
+func TestInferFromRemoteURL_unsupportedRepositoryPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	mockForge := forgetest.NewMockForge(ctrl)
@@ -183,12 +226,17 @@ func TestFromRemoteURL_unsupportedRepositoryPath(t *testing.T) {
 		Return(nil, fmt.Errorf("%w: unexpected path", forge.ErrUnsupportedURL))
 
 	var registry forge.Registry
-	defer registry.Register(mockForge)()
+	defer registry.Register(testDefinition{
+		id: "a",
+		new: func(*giturl.URL) (forge.Forge, error) {
+			return mockForge, nil
+		},
+	})()
 
 	remoteURL, err := giturl.Parse("https://example.com/foo")
 	require.NoError(t, err)
 
-	_, _, ok := forge.FromRemoteURL(&registry, remoteURL)
+	_, _, ok := forge.InferFromRemoteURL(&registry, remoteURL)
 	assert.False(t, ok, "unexpected forge match")
 }
 
@@ -275,6 +323,20 @@ func TestSplitRepositoryPath_noMatch(t *testing.T) {
 			assert.False(t, ok)
 		})
 	}
+}
+
+type testDefinition struct {
+	id     string
+	plugin any
+	new    func(*giturl.URL) (forge.Forge, error)
+}
+
+func (d testDefinition) ID() string { return d.id }
+
+func (d testDefinition) CLIPlugin() any { return d.plugin }
+
+func (d testDefinition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+	return d.new(remoteURL)
 }
 
 func TestChangeState(t *testing.T) {

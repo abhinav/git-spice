@@ -333,7 +333,7 @@ func TestForge_ChangeTemplatePaths(t *testing.T) {
 	assert.Contains(t, paths, "PULL_REQUEST_TEMPLATE.md")
 }
 
-func TestFromRemoteURL(t *testing.T) {
+func TestInferFromRemoteURL(t *testing.T) {
 	t.Run("Cloud", func(t *testing.T) {
 		var forges forge.Registry
 		forges.Register(&Forge{})
@@ -357,7 +357,7 @@ func TestFromRemoteURL(t *testing.T) {
 				remoteURL, err := giturl.Parse(tt.remoteURL)
 				require.NoError(t, err)
 
-				f, rid, ok := forge.FromRemoteURL(&forges, remoteURL)
+				f, rid, ok := forge.InferFromRemoteURL(&forges, remoteURL)
 				require.True(t, ok, "forge not found")
 
 				assert.Equal(t, "bitbucket", f.ID())
@@ -392,7 +392,7 @@ func TestFromRemoteURL(t *testing.T) {
 				remoteURL, err := giturl.Parse(tt.remoteURL)
 				require.NoError(t, err)
 
-				f, rid, ok := forge.FromRemoteURL(&forges, remoteURL)
+				f, rid, ok := forge.InferFromRemoteURL(&forges, remoteURL)
 				require.True(t, ok, "forge not found")
 
 				assert.Equal(t, "bitbucket", f.ID())
@@ -405,7 +405,7 @@ func TestFromRemoteURL(t *testing.T) {
 			remoteURL, err := giturl.Parse("git@bitbucket.org:ws/repo.git")
 			require.NoError(t, err)
 
-			_, _, ok := forge.FromRemoteURL(&forges, remoteURL)
+			_, _, ok := forge.InferFromRemoteURL(&forges, remoteURL)
 			assert.False(t, ok, "unexpected forge match")
 		})
 	})

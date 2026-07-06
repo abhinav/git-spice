@@ -8,7 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/git/giturl"
 )
 
-func TestForge_ConfigureFromRemoteURL(t *testing.T) {
+func TestForge_New(t *testing.T) {
 	tests := []struct {
 		name      string
 		presetURL string
@@ -69,11 +69,11 @@ func TestForge_ConfigureFromRemoteURL(t *testing.T) {
 			require.NoError(t, err)
 
 			f := &Forge{Options: Options{URL: tt.presetURL}}
-			f.ConfigureFromRemoteURL(remoteURL)
-			assert.Equal(t, tt.wantURL, f.Options.URL)
+			got, err := f.New(remoteURL)
+			require.NoError(t, err)
 
-			f.ConfigureFromRemoteURL(remoteURL)
-			assert.Equal(t, tt.wantURL, f.Options.URL)
+			assert.Equal(t, tt.presetURL, f.Options.URL)
+			assert.Equal(t, tt.wantURL, got.(*Forge).Options.URL)
 		})
 	}
 }

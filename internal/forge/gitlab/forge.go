@@ -9,6 +9,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/gitlab"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -50,7 +51,10 @@ type Forge struct {
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Forge)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -81,6 +85,12 @@ func (*Forge) ID() string { return "gitlab" }
 
 // CLIPlugin returns the CLI plugin for the GitLab Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// New constructs a GitLab Forge from the configured options.
+func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
+	resolved := *f
+	return &resolved, nil
+}
 
 // ParseRepositoryPath parses a GitLab repository path and returns a [RepositoryID]
 // for the GitLab repository it identifies.

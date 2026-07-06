@@ -63,7 +63,7 @@ var (
 	_browserLauncher browser.Launcher = new(browser.Browser)
 
 	// Forges to registry into main at startup besides the defaults.
-	_extraForges []func(*silog.Logger) forge.Forge
+	_extraForges []func(*silog.Logger) forge.Definition
 
 	_highlightStyle = ui.NewStyle().
 			Foreground(ui.Cyan).
@@ -566,12 +566,15 @@ func (cmd *mainCmd) AfterApply(
 			forges *forge.Registry,
 		) (SplitHandler, error) {
 			return &split.Handler{
-				Log:            log,
-				View:           view,
-				Repository:     repo,
-				Store:          store,
-				Service:        svc,
-				FindForge:      forges.Lookup,
+				Log:        log,
+				View:       view,
+				Repository: repo,
+				Store:      store,
+				Service:    svc,
+				FindForge: func(id string) (forge.Forge, bool) {
+					f, err := forges.New(id, nil)
+					return f, err == nil
+				},
 				HighlightStyle: _highlightStyle,
 			}, nil
 		}),

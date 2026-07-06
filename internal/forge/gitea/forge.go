@@ -9,6 +9,7 @@ import (
 
 	"go.abhg.dev/gs/internal/forge"
 	giteagw "go.abhg.dev/gs/internal/gateway/gitea"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
 )
 
@@ -37,7 +38,10 @@ type Forge struct {
 	Log *silog.Logger
 }
 
-var _ forge.Forge = (*Forge)(nil)
+var (
+	_ forge.Definition = (*Forge)(nil)
+	_ forge.Forge      = (*Forge)(nil)
+)
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -67,6 +71,12 @@ func (*Forge) ID() string { return "gitea" }
 
 // CLIPlugin returns the CLI plugin for the Gitea Forge.
 func (f *Forge) CLIPlugin() any { return &f.Options }
+
+// New constructs a Gitea Forge from the configured options.
+func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
+	resolved := *f
+	return &resolved, nil
+}
 
 // ParseRepositoryPath parses a Gitea repository path and returns a [RepositoryID]
 // for the Gitea repository it identifies.
