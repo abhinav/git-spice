@@ -7,6 +7,11 @@ shamhub-setup
 shamhub register alice
 env SHAMHUB_USERNAME=alice
 
+mkdir repo
+cd repo
+git init
+git remote add origin $SHAMHUB_URL/repo-only
+
 env ROBOT_INPUT=$WORK/robot.golden ROBOT_OUTPUT=$WORK/robot.actual
 gs auth login
 cmp $WORK/robot.actual $WORK/robot.golden

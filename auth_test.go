@@ -2,14 +2,13 @@ package main
 
 import (
 	"io"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/forge/bitbucket"
 	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/ui"
 	"go.uber.org/mock/gomock"
@@ -40,6 +39,39 @@ func TestResolveForge_explicitForgeWins(t *testing.T) {
 	assert.Same(t, gitlab, got)
 }
 
+func TestResolveForge_explicitForgeWithoutRepositoryRemote(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	ctrl := gomock.NewController(t)
+
+	github := forgetest.NewMockForge(ctrl)
+	github.EXPECT().ID().Return("github").AnyTimes()
+
+	var gotRemoteURL *giturl.URL
+	var forges forge.Registry
+	forges.Register(testDefinition{
+		id: "github",
+		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+			gotRemoteURL = remoteURL
+			return github, nil
+		},
+	})
+
+	got, err := resolveForge(
+		t.Context(),
+		&forges,
+		silogtest.New(t),
+		ui.NewFileView(io.Discard),
+		"github",
+		"",
+	)
+	require.NoError(t, err)
+
+	assert.Same(t, github, got)
+	require.NotNil(t, gotRemoteURL)
+	assert.Equal(t, "https://example.com", gotRemoteURL.Raw)
+}
+
 func TestResolveForge_configuredKind(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -65,20 +97,10 @@ func TestResolveForge_configuredKind(t *testing.T) {
 	assert.Same(t, github, got)
 }
 
-func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
+func TestResolveForge_requiresGitRemote(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	ctrl := gomock.NewController(t)
-
-	github := forgetest.NewMockForge(ctrl)
-	github.EXPECT().ID().Return("github").AnyTimes()
-	gitlab := forgetest.NewMockForge(ctrl)
-	gitlab.EXPECT().ID().Return("gitlab").AnyTimes()
-
 	var forges forge.Registry
-	registerTestForge(&forges, "github", github)
-	registerTestForge(&forges, "gitlab", gitlab)
-
 	_, err := resolveForge(
 		t.Context(),
 		&forges,
@@ -89,62 +111,5 @@ func TestResolveForge_noForgeSignalPreservesNoninteractiveError(t *testing.T) {
 	)
 	require.Error(t, err)
 
-	assert.ErrorIs(t, err, errNoPrompt)
-}
-
-func TestResolveForge_configuredKindOutsideRepository(t *testing.T) {
-	t.Chdir(t.TempDir())
-
-	bb := &bitbucket.Forge{}
-	var forges forge.Registry
-	forges.Register(bb)
-
-	got, err := resolveForge(
-		t.Context(),
-		&forges,
-		silogtest.New(t),
-		ui.NewFileView(io.Discard),
-		"",
-		"bitbucket",
-	)
-	require.NoError(t, err)
-
-	assert.NotSame(t, bb, got)
-	assert.Empty(t, bb.Options.URL)
-	assert.Empty(t, got.(*bitbucket.Forge).Options.URL)
-}
-
-func TestResolveForge_configuredKindUsesRemoteConfigURL(t *testing.T) {
-	t.Chdir(t.TempDir())
-	runGitAuthTest(t, "init")
-	runGitAuthTest(t, "remote", "add", "origin",
-		"ssh://bitbucket-alias/scm/PROJ/repo.git")
-	runGitAuthTest(t, "config", "url.https://git.corp.com/.insteadOf",
-		"ssh://bitbucket-alias/")
-
-	bb := &bitbucket.Forge{}
-	var forges forge.Registry
-	forges.Register(bb)
-
-	got, err := resolveForge(
-		t.Context(),
-		&forges,
-		silogtest.New(t),
-		ui.NewFileView(io.Discard),
-		"",
-		"bitbucket",
-	)
-	require.NoError(t, err)
-
-	assert.NotSame(t, bb, got)
-	assert.Empty(t, bb.Options.URL)
-	assert.Equal(t, "https://bitbucket-alias", got.(*bitbucket.Forge).Options.URL)
-}
-
-func runGitAuthTest(t *testing.T, args ...string) {
-	t.Helper()
-
-	cmd := exec.CommandContext(t.Context(), "git", args...)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "%s", out)
+	assert.ErrorContains(t, err, "not in a Git repository")
 }

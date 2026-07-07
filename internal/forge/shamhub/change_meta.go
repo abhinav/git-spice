@@ -50,13 +50,15 @@ func (r *forgeRepository) NewChangeMetadata(_ context.Context, id forge.ChangeID
 	}, nil
 }
 
+type changeMetadataCodec struct{}
+
 // MarshalChangeMetadata marshals the given change metadata to JSON.
-func (f *Forge) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata unmarshals the given JSON data to change metadata.
-func (f *Forge) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
 	var md ChangeMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, fmt.Errorf("unmarshal change metadata: %w", err)

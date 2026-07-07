@@ -77,15 +77,17 @@ func (m *PRMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
 	m.NavigationComment = mustPRComment(id)
 }
 
+type changeMetadataCodec struct{}
+
 // MarshalChangeMetadata serializes a PRMetadata into JSON.
-func (*Forge) MarshalChangeMetadata(
+func (changeMetadataCodec) MarshalChangeMetadata(
 	md forge.ChangeMetadata,
 ) (json.RawMessage, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata deserializes a PRMetadata from JSON.
-func (*Forge) UnmarshalChangeMetadata(
+func (changeMetadataCodec) UnmarshalChangeMetadata(
 	data json.RawMessage,
 ) (forge.ChangeMetadata, error) {
 	var md PRMetadata

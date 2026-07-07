@@ -26,6 +26,7 @@ import (
 	"go.abhg.dev/gs/internal/forge/github"
 	"go.abhg.dev/gs/internal/forge/gitlab"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/checkout"
 	"go.abhg.dev/gs/internal/handler/cherrypick"
@@ -124,11 +125,11 @@ func main() {
 
 	// Register supported forges.
 	var forges forge.Registry
-	forges.Register(&bitbucket.Forge{Log: logger})
-	forges.Register(&forgejo.Forge{Log: logger})
-	forges.Register(&gitea.Forge{Log: logger})
-	forges.Register(&github.Forge{Log: logger})
-	forges.Register(&gitlab.Forge{Log: logger})
+	forges.Register(&bitbucket.Definition{Log: logger})
+	forges.Register(&forgejo.Definition{Log: logger})
+	forges.Register(&gitea.Definition{Log: logger})
+	forges.Register(&github.Definition{Log: logger})
+	forges.Register(&gitlab.Definition{Log: logger})
 	for _, buildForge := range _extraForges {
 		forges.Register(buildForge(logger))
 	}
@@ -571,8 +572,23 @@ func (cmd *mainCmd) AfterApply(
 				Repository: repo,
 				Store:      store,
 				Service:    svc,
-				FindForge: func(id string) (forge.Forge, bool) {
-					f, err := forges.New(id, nil)
+				FindForge: func(ctx context.Context, id string) (forge.Forge, bool) {
+					remote, err := store.Remote()
+					if err != nil {
+						return nil, false
+					}
+
+					remoteURL, err := repo.RemoteURL(ctx, remote.Upstream)
+					if err != nil {
+						return nil, false
+					}
+
+					parsedRemoteURL, err := giturl.Parse(remoteURL)
+					if err != nil {
+						return nil, false
+					}
+
+					f, err := forges.New(id, parsedRemoteURL)
 					return f, err == nil
 				},
 				HighlightStyle: _highlightStyle,

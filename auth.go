@@ -57,28 +57,48 @@ func resolveForge(
 	forgeID string,
 	configuredKind string,
 ) (forge.Forge, error) {
-	if forgeID != "" {
-		return newSelectedForge(ctx, forges, log, forgeID)
+	if wantForge := cmp.Or(forgeID, configuredKind); wantForge != "" {
+		d, ok := forges.Lookup(wantForge)
+		if !ok {
+			var available []string
+			for d := range forges.All() {
+				available = append(available, d.ID())
+			}
+			slices.Sort(available)
+
+			log.Errorf("Forge ID must be one of: %s", strings.Join(available, ", "))
+			return nil, fmt.Errorf("unknown forge: %q", wantForge)
+		}
+
+		remoteURL, _, err := currentRemoteURL(ctx, log)
+		if err != nil {
+			remoteURL, err = giturl.Parse(d.BaseURL())
+			if err != nil {
+				return nil, fmt.Errorf("parse forge base URL: %w", err)
+			}
+		}
+
+		f, err := d.New(remoteURL)
+		if err != nil {
+			return nil, fmt.Errorf("construct forge %q: %w", wantForge, err)
+		}
+		return f, nil
 	}
 
-	if configuredKind != "" {
-		return newSelectedForge(ctx, forges, log, configuredKind)
+	remoteURL, rawRemoteURL, err := currentRemoteURL(ctx, log)
+	if err != nil {
+		return nil, err
 	}
 
-	f, _, err := guessCurrentForge(ctx, forges, log)
-	if err == nil {
+	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL)
+	if ok {
 		return f, nil
 	}
 
 	var opts []ui.SelectOption[forge.Definition]
 	for d := range forges.All() {
-		f, err := d.New(nil)
-		if err != nil {
-			log.Debug("Could not construct forge for selection", "forge", d.ID(), "error", err)
-			continue
-		}
 		opts = append(opts, ui.SelectOption[forge.Definition]{
-			Label: forge.GetDisplayName(f),
+			Label: forge.GetDisplayName(d),
 			Value: d,
 		})
 	}
@@ -88,10 +108,11 @@ func resolveForge(
 
 	// If there's only one known Forge, there's no need to prompt.
 	if len(opts) == 1 {
-		return opts[0].Value.New(nil)
+		return opts[0].Value.New(remoteURL)
 	}
 
 	if !ui.Interactive(view) {
+		err := fmt.Errorf("no forge found for %s", rawRemoteURL)
 		log.Error("No Forge specified, and could not guess one from the repository", "error", err)
 		return nil, fmt.Errorf("%w: please use the --forge flag", errNoPrompt)
 	}
@@ -105,51 +126,7 @@ func resolveForge(
 	if err != nil {
 		return nil, err
 	}
-	return selected.New(nil)
-}
-
-func newSelectedForge(
-	ctx context.Context,
-	forges *forge.Registry,
-	log *silog.Logger,
-	id string,
-) (forge.Forge, error) {
-	remoteURL, _, err := currentRemoteURL(ctx, log)
-	if err != nil {
-		log.Debug("Could not determine the remote URL; constructing forge without it", "error", err)
-	}
-
-	f, err := forges.New(id, remoteURL)
-	if errors.Is(err, forge.ErrUnknown) {
-		var available []string
-		for d := range forges.All() {
-			available = append(available, d.ID())
-		}
-		slices.Sort(available)
-
-		log.Errorf("Forge ID must be one of: %s", strings.Join(available, ", "))
-		return nil, fmt.Errorf("unknown forge: %q", id)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("construct forge %q: %w", id, err)
-	}
-	return f, nil
-}
-
-// guessCurrentForge attempts to guess the current forge based on the
-// current directory.
-func guessCurrentForge(ctx context.Context, forges *forge.Registry, log *silog.Logger) (forge.Forge, forge.RepositoryID, error) {
-	parsedRemoteURL, remoteURL, err := currentRemoteURL(ctx, log)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	f, repoID, ok := forge.InferFromRemoteURL(forges, parsedRemoteURL)
-	if !ok {
-		return nil, nil, fmt.Errorf("no forge found for %s", remoteURL)
-	}
-
-	return f, repoID, nil
+	return selected.New(remoteURL)
 }
 
 func currentRemoteURL(ctx context.Context, log *silog.Logger) (*giturl.URL, string, error) {
@@ -190,7 +167,7 @@ func currentRemoteURL(ctx context.Context, log *silog.Logger) (*giturl.URL, stri
 		}
 	}
 
-	remoteURL, err := repo.RemoteConfigURL(ctx, remote)
+	remoteURL, err := repo.RemoteURL(ctx, remote)
 	if err != nil {
 		return nil, "", fmt.Errorf("get remote URL: %w", err)
 	}

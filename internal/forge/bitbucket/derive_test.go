@@ -8,7 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/git/giturl"
 )
 
-func TestForge_New(t *testing.T) {
+func TestDefinition_New(t *testing.T) {
 	tests := []struct {
 		name      string
 		presetURL string
@@ -51,10 +51,10 @@ func TestForge_New(t *testing.T) {
 			wantURL:   "",
 		},
 		{
-			name:      "ExplicitURLWins",
-			presetURL: "https://bitbucket.internal.example.com",
+			name:      "ExplicitURLWinsForMatchingRemote",
+			presetURL: "https://git.corp.com",
 			remoteURL: "https://git.corp.com/scm/PROJ/repo.git",
-			wantURL:   "https://bitbucket.internal.example.com",
+			wantURL:   "https://git.corp.com",
 		},
 		{
 			name:      "HostAlias",
@@ -68,11 +68,11 @@ func TestForge_New(t *testing.T) {
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
-			f := &Forge{Options: Options{URL: tt.presetURL}}
-			got, err := f.New(remoteURL)
+			d := &Definition{Options: Options{URL: tt.presetURL}}
+			got, err := d.New(remoteURL)
 			require.NoError(t, err)
 
-			assert.Equal(t, tt.presetURL, f.Options.URL)
+			assert.Equal(t, tt.presetURL, d.Options.URL)
 			assert.Equal(t, tt.wantURL, got.(*Forge).Options.URL)
 		})
 	}

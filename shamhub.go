@@ -18,7 +18,7 @@ func init() {
 	}
 
 	_extraForges = append(_extraForges, func(log *silog.Logger) forge.Definition {
-		return &shamhub.Forge{Log: log}
+		return &shamhub.Definition{Log: log}
 	})
 }
 

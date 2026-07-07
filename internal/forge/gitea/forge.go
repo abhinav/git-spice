@@ -30,8 +30,11 @@ type Options struct {
 	Token string `name:"gitea-token" hidden:"" env:"GITEA_TOKEN" help:"Gitea API token"`
 }
 
-// Forge builds a Gitea Forge.
-type Forge struct {
+// Definition configures Gitea forge instances.
+type Definition struct {
+	changeMetadataCodec
+
+	// Options stores CLI and environment configuration.
 	Options Options
 
 	// Log specifies the logger to use.
@@ -39,9 +42,44 @@ type Forge struct {
 }
 
 var (
-	_ forge.Definition = (*Forge)(nil)
+	_ forge.Definition = (*Definition)(nil)
 	_ forge.Forge      = (*Forge)(nil)
 )
+
+// ID reports a unique key for this forge.
+func (*Definition) ID() string { return "gitea" }
+
+// BaseURL reports the Gitea web URL used for host matching.
+func (d *Definition) BaseURL() string {
+	return d.Options.URL
+}
+
+// CLIPlugin returns the CLI plugin for the Gitea Forge.
+func (d *Definition) CLIPlugin() any { return &d.Options }
+
+// New constructs a Gitea Forge from the configured options.
+func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
+	if err := forge.ValidateRemoteURL(d.Options.URL, remoteURL); err != nil {
+		return nil, err
+	}
+
+	return &Forge{
+		Options: d.Options,
+		baseURL: d.BaseURL(),
+		Log:     d.Log,
+	}, nil
+}
+
+// Forge provides a Gitea forge instance.
+type Forge struct {
+	changeMetadataCodec
+
+	Options Options
+	baseURL string
+
+	// Log specifies the logger to use.
+	Log *silog.Logger
+}
 
 func (f *Forge) logger() *silog.Logger {
 	if f.Log == nil {
@@ -58,7 +96,7 @@ func (f *Forge) URL() string {
 // BaseURL reports the Gitea instance URL used for host matching and links.
 // Returns an empty string if not configured.
 func (f *Forge) BaseURL() string {
-	return f.URL()
+	return f.baseURL
 }
 
 // apiURL returns the API URL to use for Gitea requests.
@@ -68,15 +106,6 @@ func (f *Forge) apiURL() string {
 
 // ID reports a unique key for this forge.
 func (*Forge) ID() string { return "gitea" }
-
-// CLIPlugin returns the CLI plugin for the Gitea Forge.
-func (f *Forge) CLIPlugin() any { return &f.Options }
-
-// New constructs a Gitea Forge from the configured options.
-func (f *Forge) New(*giturl.URL) (forge.Forge, error) {
-	resolved := *f
-	return &resolved, nil
-}
 
 // ParseRepositoryPath parses a Gitea repository path and returns a [RepositoryID]
 // for the Gitea repository it identifies.

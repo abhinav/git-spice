@@ -3,7 +3,6 @@ package forge
 import (
 	"fmt"
 	"iter"
-	"net/url"
 	"strings"
 	"sync"
 
@@ -47,6 +46,10 @@ func (r *Registry) Lookup(id string) (Definition, bool) {
 
 // New constructs a registered forge by ID.
 func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
+	if remoteURL == nil {
+		return nil, fmt.Errorf("%w: remote URL is required", ErrUnsupportedURL)
+	}
+
 	d, ok := r.Lookup(id)
 	if !ok {
 		return nil, fmt.Errorf("%w: %q", ErrUnknown, id)
@@ -58,37 +61,11 @@ func (r *Registry) New(id string, remoteURL *giturl.URL) (Forge, error) {
 // It returns the matched forge and information about the matched repository.
 func InferFromRemoteURL(r *Registry, remoteURL *giturl.URL) (forge Forge, rid RepositoryID, ok bool) {
 	for d := range r.All() {
-		f, err := d.New(nil)
-		if err != nil {
+		if !remoteURLMatches(d.BaseURL(), remoteURL) {
 			continue
 		}
 
-		baseURL, err := url.Parse(f.BaseURL())
-		if err != nil {
-			continue
-		}
-
-		baseHost := baseURL.Hostname()
-		remoteHost := remoteURL.Hostname
-		// Some forges advertise a base URL such as "https://github.com",
-		// while Git remotes use a related SSH hostname like "ssh.github.com".
-		// Accept subdomains so these documented SSH hosts still infer
-		// the same forge.
-		hostMatches := remoteHost == baseHost ||
-			strings.HasSuffix(remoteHost, "."+baseHost)
-		if !hostMatches {
-			continue
-		}
-
-		// A base URL without an explicit port describes the forge host,
-		// not one transport endpoint.
-		// In that case, allow the remote to specify its SSH port.
-		basePort := baseURL.Port()
-		if basePort != "" && remoteURL.Port != basePort {
-			continue
-		}
-
-		f, err = d.New(remoteURL)
+		f, err := d.New(remoteURL)
 		if err != nil {
 			continue
 		}

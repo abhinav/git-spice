@@ -50,13 +50,13 @@ var _ Service = (*spice.Service)(nil)
 
 // Handler handles git-spice's branch split commands.
 type Handler struct {
-	Log            *silog.Logger                            // required
-	View           ui.View                                  // required
-	Repository     GitRepository                            // required
-	Store          Store                                    // required
-	Service        Service                                  // required
-	FindForge      func(forgeID string) (forge.Forge, bool) // required
-	HighlightStyle ui.Style                                 // required
+	Log            *silog.Logger                                     // required
+	View           ui.View                                           // required
+	Repository     GitRepository                                     // required
+	Store          Store                                             // required
+	Service        Service                                           // required
+	FindForge      func(context.Context, string) (forge.Forge, bool) // required
+	HighlightStyle ui.Style                                          // required
 }
 
 // Options defines options for the SplitBranch method.
@@ -337,7 +337,7 @@ func (h *Handler) prepareChangeMetadataTransfer(
 	tx *state.BranchTx,
 ) (transfer func(), _ error) {
 	forgeID := meta.ForgeID()
-	f, ok := h.FindForge(forgeID)
+	f, ok := h.FindForge(ctx, forgeID)
 	if !ok {
 		return nil, fmt.Errorf("unknown forge: %v", forgeID)
 	}

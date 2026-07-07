@@ -336,7 +336,7 @@ func TestForge_ChangeTemplatePaths(t *testing.T) {
 func TestInferFromRemoteURL(t *testing.T) {
 	t.Run("Cloud", func(t *testing.T) {
 		var forges forge.Registry
-		forges.Register(&Forge{})
+		forges.Register(&Definition{})
 
 		tests := []struct {
 			name      string
@@ -369,7 +369,7 @@ func TestInferFromRemoteURL(t *testing.T) {
 
 	t.Run("CustomURL", func(t *testing.T) {
 		var forges forge.Registry
-		forges.Register(&Forge{
+		forges.Register(&Definition{
 			Options: Options{URL: "https://git.corp.com"},
 		})
 
