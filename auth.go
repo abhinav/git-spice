@@ -57,14 +57,9 @@ func resolveForge(
 	forgeID string,
 	configuredKind string,
 ) (forge.Forge, error) {
-	remoteURL, rawRemoteURL, err := currentRemoteURL(ctx, log)
-	if err != nil {
-		return nil, err
-	}
-
 	if wantForge := cmp.Or(forgeID, configuredKind); wantForge != "" {
-		f, err := forges.New(wantForge, remoteURL)
-		if errors.Is(err, forge.ErrUnknown) {
+		d, ok := forges.Lookup(wantForge)
+		if !ok {
 			var available []string
 			for d := range forges.All() {
 				available = append(available, d.ID())
@@ -74,10 +69,25 @@ func resolveForge(
 			log.Errorf("Forge ID must be one of: %s", strings.Join(available, ", "))
 			return nil, fmt.Errorf("unknown forge: %q", wantForge)
 		}
+
+		remoteURL, _, err := currentRemoteURL(ctx, log)
+		if err != nil {
+			remoteURL, err = giturl.Parse(d.BaseURL())
+			if err != nil {
+				return nil, fmt.Errorf("parse forge base URL: %w", err)
+			}
+		}
+
+		f, err := d.New(remoteURL)
 		if err != nil {
 			return nil, fmt.Errorf("construct forge %q: %w", wantForge, err)
 		}
 		return f, nil
+	}
+
+	remoteURL, rawRemoteURL, err := currentRemoteURL(ctx, log)
+	if err != nil {
+		return nil, err
 	}
 
 	f, _, ok := forge.InferFromRemoteURL(forges, remoteURL)

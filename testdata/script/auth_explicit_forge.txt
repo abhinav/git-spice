@@ -15,7 +15,7 @@ git push origin main
 gs repo init
 
 ! gs auth status --forge=unrecognized
-stderr 'unknown forge: unrecognized'
+stderr 'unknown forge: "unrecognized"'
 stderr 'must be one of'
 
 ! gs auth status --forge=shamhub

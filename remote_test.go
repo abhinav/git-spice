@@ -86,6 +86,46 @@ func TestRemoteResolver_Resolve_configuredKind(t *testing.T) {
 	assert.Equal(t, repoID, gotRepoID)
 }
 
+func TestRemoteResolver_Resolve_configuredKindConstructsWithResolvedURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	repoID := forgetest.NewMockRepositoryID(ctrl)
+	testForge := forgetest.NewMockForge(ctrl)
+	testForge.EXPECT().ID().Return("github").AnyTimes()
+	testForge.EXPECT().
+		ParseRepositoryPath("/owner/repo.git").
+		Return(repoID, nil)
+
+	var gotRemoteURL *giturl.URL
+	var forges forge.Registry
+	forges.Register(testDefinition{
+		id: "github",
+		new: func(remoteURL *giturl.URL) (forge.Forge, error) {
+			gotRemoteURL = remoteURL
+			return testForge, nil
+		},
+	})
+
+	gotForge, gotRepoID, err := (&remoteResolver{
+		Forges: &forges,
+		Repository: remoteURLs{
+			config: map[string]string{
+				"origin": "ssh://githubalias/owner/repo.git",
+			},
+			resolved: map[string]string{
+				"origin": "https://example.com/owner/repo.git",
+			},
+		},
+		ForgeKind: "github",
+	}).Resolve(t.Context(), "origin")
+	require.NoError(t, err)
+
+	assert.Same(t, testForge, gotForge)
+	assert.Equal(t, repoID, gotRepoID)
+	require.NotNil(t, gotRemoteURL)
+	assert.Equal(t, "https://example.com/owner/repo.git", gotRemoteURL.Raw)
+}
+
 func TestRemoteResolver_Resolve_unknownConfiguredKind(t *testing.T) {
 	var forges forge.Registry
 	_, _, err := (&remoteResolver{
@@ -167,4 +207,21 @@ type remoteURLMap map[string]string
 
 func (m remoteURLMap) RemoteConfigURL(_ context.Context, remote string) (string, error) {
 	return m[remote], nil
+}
+
+func (m remoteURLMap) RemoteURL(ctx context.Context, remote string) (string, error) {
+	return m.RemoteConfigURL(ctx, remote)
+}
+
+type remoteURLs struct {
+	config   map[string]string
+	resolved map[string]string
+}
+
+func (m remoteURLs) RemoteConfigURL(_ context.Context, remote string) (string, error) {
+	return m.config[remote], nil
+}
+
+func (m remoteURLs) RemoteURL(_ context.Context, remote string) (string, error) {
+	return m.resolved[remote], nil
 }
