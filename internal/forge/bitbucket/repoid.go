@@ -71,13 +71,6 @@ func (rid *RepositoryID) webBase() string {
 	return fmt.Sprintf("%s/projects/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
 }
 
-func (rid *RepositoryID) restProjectKey() string {
-	if rid.personal && !strings.HasPrefix(rid.projectKey, "~") {
-		return "~" + rid.projectKey
-	}
-	return rid.projectKey
-}
-
 // parseServerRepoPath parses project/repo and /scm/project/repo paths.
 // Personal repositories use ~user/repo.
 func parseServerRepoPath(path string) (projectKey, slug string, personal bool, err error) {

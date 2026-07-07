@@ -58,8 +58,8 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 
 	kind := options.Kind
 	if kind == KindAuto {
-		switch {
-		case baseURL == "":
+		switch baseURL {
+		case "":
 			kind = KindCloud
 		default:
 			u, err := url.Parse(baseURL)
@@ -170,7 +170,7 @@ func (f *Forge) OpenRepository(
 ) (forge.Repository, error) {
 	tok := token.(*AuthenticationToken)
 	if f.product == nil {
-		return nil, errors.New("Bitbucket forge was not constructed by Definition.New")
+		return nil, errors.New("bitbucket forge was not constructed by Definition.New")
 	}
 	return f.product.openRepository(ctx, f, tok, mustRepositoryID(id))
 }
