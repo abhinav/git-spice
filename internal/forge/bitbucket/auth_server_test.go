@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/silog"
 )
@@ -116,7 +117,10 @@ func TestForge_validateToken(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		f := &Forge{Log: silog.Nop(), Options: Options{URL: srv.URL}}
+		f := newForgeForTest(t,
+			Options{Kind: KindDataCenter, URL: srv.URL},
+			srv.URL+"/scm/KEY/repo.git")
+		f.Log = silog.Nop()
 		require.NoError(t, f.validateToken(t.Context(),
 			&AuthenticationToken{AccessToken: "tok"}))
 	})
@@ -131,7 +135,10 @@ func TestForge_validateToken(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		f := &Forge{Log: silog.Nop(), Options: Options{URL: srv.URL}}
+		f := newForgeForTest(t,
+			Options{Kind: KindDataCenter, URL: srv.URL},
+			srv.URL+"/scm/KEY/repo.git")
+		f.Log = silog.Nop()
 		err := f.validateToken(t.Context(),
 			&AuthenticationToken{AccessToken: "bad"})
 		require.Error(t, err)
@@ -139,24 +146,25 @@ func TestForge_validateToken(t *testing.T) {
 }
 
 func TestForge_AuthenticationFlow_missingServerURL(t *testing.T) {
-	f := &Forge{
+	remoteURL, err := giturl.Parse("https://bitbucket.org/ws/repo.git")
+	require.NoError(t, err)
+
+	_, err = (&Definition{
 		Log:     silog.Nop(),
 		Options: Options{Kind: KindDataCenter},
-	}
-
-	_, err := f.AuthenticationFlow(t.Context(), nil)
+	}).New(remoteURL)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }
 
 func TestForge_AuthenticationFlow_serverAlreadyAuthenticated(t *testing.T) {
-	f := &Forge{
-		Log: silog.Nop(),
-		Options: Options{
+	f := newForgeForTest(t,
+		Options{
 			URL:   "https://bitbucket.example.com",
 			Token: "env-token",
 		},
-	}
+		"https://bitbucket.example.com/scm/KEY/repo.git")
+	f.Log = silog.Nop()
 
 	_, err := f.AuthenticationFlow(t.Context(), nil)
 	require.Error(t, err)

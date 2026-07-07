@@ -7,32 +7,23 @@ import (
 	"go.abhg.dev/gs/internal/git/giturl"
 )
 
-// configureFromRemoteURL derives the Data Center instance URL
-// from a non-Cloud remote.
-// It leaves explicit URLs and bitbucket.org remotes unchanged.
-func (f *Forge) configureFromRemoteURL(u *giturl.URL) {
-	if f.Options.URL != "" {
-		return
-	}
-
-	if u.Hostname == "" || isCloudHost(u.Hostname) {
-		return
-	}
-
-	f.Options.URL = deriveInstanceURL(u)
-}
-
 // deriveInstanceURL returns the web URL for a Data Center remote.
 // HTTP(S) remotes preserve the context path before /scm/;
 // SSH-style remotes fall back to https://host.
 func deriveInstanceURL(u *giturl.URL) string {
-	scheme, ok := webScheme(u.Raw)
-	if !ok {
-		return "https://" + u.Hostname
+	scheme := "https"
+	preservePort := false
+	for _, s := range []string{"https", "http"} {
+		if strings.HasPrefix(u.Raw, s+"://") ||
+			strings.HasPrefix(u.Raw, "git+"+s+"://") {
+			scheme = s
+			preservePort = true
+			break
+		}
 	}
 
 	derived := scheme + "://" + u.Hostname
-	if u.Port != "" {
+	if preservePort && u.Port != "" {
 		derived += ":" + u.Port
 	}
 
@@ -42,15 +33,4 @@ func deriveInstanceURL(u *giturl.URL) string {
 	}
 
 	return derived
-}
-
-// webScheme returns http or https for HTTP(S) Git remotes.
-func webScheme(raw string) (string, bool) {
-	for _, scheme := range []string{"https", "http"} {
-		if strings.HasPrefix(raw, scheme+"://") ||
-			strings.HasPrefix(raw, "git+"+scheme+"://") {
-			return scheme, true
-		}
-	}
-	return "", false
 }

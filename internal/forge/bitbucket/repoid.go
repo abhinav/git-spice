@@ -10,9 +10,20 @@ import (
 
 // RepositoryID is a unique identifier for a Bitbucket repository.
 type RepositoryID struct {
-	url       string // required
-	workspace string // required
-	name      string // required
+	url  string
+	kind Kind
+
+	// workspace and name identify Bitbucket Cloud repositories.
+	workspace string
+	name      string
+
+	// projectKey, slug, and personal identify Bitbucket Data Center repositories.
+	projectKey string
+	slug       string
+
+	// personal reports whether this is a personal ("~user") repository;
+	// when true, projectKey holds the username.
+	personal bool
 }
 
 var _ forge.RepositoryID = (*RepositoryID)(nil)
@@ -22,66 +33,49 @@ func mustRepositoryID(id forge.RepositoryID) *RepositoryID {
 	if ok {
 		return rid
 	}
-	panic(fmt.Sprintf("expected *RepositoryID, got %T", id))
+	panic(fmt.Sprintf("bitbucket: expected *RepositoryID, got %T", id))
 }
 
 // String returns a human-readable name for the repository ID.
 func (rid *RepositoryID) String() string {
-	return fmt.Sprintf("%s/%s", rid.workspace, rid.name)
-}
-
-// ChangeURL returns the URL for a Pull Request hosted on Bitbucket.
-func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
-	prNum := mustPR(id).Number
-	return fmt.Sprintf(
-		"%s/%s/%s/pull-requests/%v",
-		rid.url, rid.workspace, rid.name, prNum,
-	)
-}
-
-// serverRepositoryID is a Bitbucket Data Center repository ID.
-type serverRepositoryID struct {
-	url        string // required
-	projectKey string // required
-	slug       string // required
-
-	// personal reports whether this is a personal ("~user") repository;
-	// when true, projectKey holds the username.
-	personal bool
-}
-
-var _ forge.RepositoryID = (*serverRepositoryID)(nil)
-
-func mustServerRepositoryID(id forge.RepositoryID) *serverRepositoryID {
-	rid, ok := id.(*serverRepositoryID)
-	if ok {
-		return rid
+	if rid.kind == KindCloud {
+		return fmt.Sprintf("%s/%s", rid.workspace, rid.name)
 	}
-	panic(fmt.Sprintf("bitbucket: expected *serverRepositoryID, got %T", id))
-}
 
-// String returns a human-readable name for the repository ID.
-func (rid *serverRepositoryID) String() string {
 	if rid.personal {
 		return fmt.Sprintf("~%s/%s", rid.projectKey, rid.slug)
 	}
 	return fmt.Sprintf("%s/%s", rid.projectKey, rid.slug)
 }
 
-// ChangeURL returns the web URL for a Data Center pull request.
-func (rid *serverRepositoryID) ChangeURL(id forge.ChangeID) string {
+// ChangeURL returns the URL for a Pull Request hosted on Bitbucket.
+func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	prNum := mustPR(id).Number
+	if rid.kind == KindCloud {
+		return fmt.Sprintf(
+			"%s/%s/%s/pull-requests/%v",
+			rid.url, rid.workspace, rid.name, prNum,
+		)
+	}
+
 	return fmt.Sprintf(
 		"%s/pull-requests/%d/overview",
 		rid.webBase(), prNum,
 	)
 }
 
-func (rid *serverRepositoryID) webBase() string {
+func (rid *RepositoryID) webBase() string {
 	if rid.personal {
 		return fmt.Sprintf("%s/users/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
 	}
 	return fmt.Sprintf("%s/projects/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
+}
+
+func (rid *RepositoryID) restProjectKey() string {
+	if rid.personal && !strings.HasPrefix(rid.projectKey, "~") {
+		return "~" + rid.projectKey
+	}
+	return rid.projectKey
 }
 
 // parseServerRepoPath parses project/repo and /scm/project/repo paths.

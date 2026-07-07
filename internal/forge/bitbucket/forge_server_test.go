@@ -36,7 +36,7 @@ func TestForge_APIURL_server(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &Forge{Options: tt.options}
+			f := newForgeForTest(t, tt.options, "https://bitbucket.example.com/scm/KEY/repo.git")
 			assert.Equal(t, tt.want, f.APIURL())
 		})
 	}
@@ -109,14 +109,14 @@ func TestForge_ParseRepositoryPath_server(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &Forge{Options: Options{URL: baseURL}}
+			f := newForgeForTest(t, Options{URL: baseURL}, tt.remoteURL)
 			remoteURL, err := giturl.Parse(tt.remoteURL)
 			require.NoError(t, err)
 
 			id, err := f.ParseRepositoryPath(remoteURL.Path)
 			require.NoError(t, err)
 
-			rid, ok := id.(*serverRepositoryID)
+			rid, ok := id.(*RepositoryID)
 			require.True(t, ok)
 
 			assert.Equal(t, tt.wantProject, rid.projectKey, "projectKey")
@@ -152,8 +152,9 @@ func TestForge_ParseRepositoryPath_serverErrors(t *testing.T) {
 
 func TestServerRepositoryID_ChangeURL(t *testing.T) {
 	t.Run("Project", func(t *testing.T) {
-		rid := &serverRepositoryID{
+		rid := &RepositoryID{
 			url:        "https://bitbucket.example.com",
+			kind:       KindDataCenter,
 			projectKey: "KOLIBRI",
 			slug:       "kolibri-maklerpost",
 		}
@@ -163,8 +164,9 @@ func TestServerRepositoryID_ChangeURL(t *testing.T) {
 	})
 
 	t.Run("Personal", func(t *testing.T) {
-		rid := &serverRepositoryID{
+		rid := &RepositoryID{
 			url:        "https://bitbucket.example.com",
+			kind:       KindDataCenter,
 			projectKey: "user",
 			slug:       "repo",
 			personal:   true,
@@ -176,29 +178,28 @@ func TestServerRepositoryID_ChangeURL(t *testing.T) {
 }
 
 func TestForge_OpenRepository_requiresURL(t *testing.T) {
-	f := &Forge{Options: Options{Kind: KindDataCenter}}
-	_, err := f.OpenRepository(
-		t.Context(),
-		&AuthenticationToken{AccessToken: "tok"},
-		&serverRepositoryID{url: "", projectKey: "KEY", slug: "repo"},
-	)
+	remoteURL, err := giturl.Parse("https://bitbucket.org/ws/repo.git")
+	require.NoError(t, err)
+
+	_, err = (&Definition{Options: Options{Kind: KindDataCenter}}).New(remoteURL)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "no Bitbucket Data Center URL configured")
 }
 
 func TestForge_OpenRepository_serverUsesRepositoryIDURL(t *testing.T) {
-	f := &Forge{
-		Options: Options{
+	f := newForgeForTest(t,
+		Options{
 			Kind: KindDataCenter,
 			URL:  "https://wrong.example.com",
 		},
-	}
+		"https://wrong.example.com/scm/KEY/repo.git")
 
 	repo, err := f.OpenRepository(
 		t.Context(),
 		&AuthenticationToken{AccessToken: "tok"},
-		&serverRepositoryID{
+		&RepositoryID{
 			url:        "https://bitbucket.example.com",
+			kind:       KindDataCenter,
 			projectKey: "KEY",
 			slug:       "repo",
 		},
@@ -227,7 +228,9 @@ func TestForge_OpenRepository_personalRepositoryUsesTildeRESTProjectKey(t *testi
 	}))
 	defer srv.Close()
 
-	f := &Forge{Options: Options{Kind: KindDataCenter, URL: srv.URL}}
+	f := newForgeForTest(t,
+		Options{Kind: KindDataCenter, URL: srv.URL},
+		srv.URL+"/scm/jcaptain/warp-core.git")
 	id, err := f.ParseRepositoryPath("/scm/~jcaptain/warp-core.git")
 	require.NoError(t, err)
 

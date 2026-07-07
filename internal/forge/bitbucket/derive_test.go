@@ -1,6 +1,7 @@
 package bitbucket
 
 import (
+	"cmp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,7 +74,7 @@ func TestDefinition_New(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.presetURL, d.Options.URL)
-			assert.Equal(t, tt.wantURL, got.(*Forge).Options.URL)
+			assert.Equal(t, cmp.Or(tt.wantURL, DefaultURL), got.(*Forge).URL())
 		})
 	}
 }

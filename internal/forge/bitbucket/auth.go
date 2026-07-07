@@ -68,7 +68,7 @@ func (f *Forge) AuthenticationFlow(
 		return nil, errors.New("already authenticated")
 	}
 
-	if f.kind() == KindDataCenter {
+	if f.kind == KindDataCenter {
 		return f.serverAuthenticationFlow(ctx, view)
 	}
 
