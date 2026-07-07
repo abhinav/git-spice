@@ -252,6 +252,7 @@ func TestScheduler_Run_barrierRunsBeforeDependentPrepare(t *testing.T) {
 func TestScheduler_Run_barrierCoalescesReadyRunResults(t *testing.T) {
 	rec := &recordingQueue{}
 	started := make(chan string, 2)
+	prepareStarted := make(chan struct{})
 	releaseRuns := make(chan struct{})
 	releasePrepare := make(chan struct{})
 
@@ -267,6 +268,7 @@ func TestScheduler_Run_barrierCoalescesReadyRunResults(t *testing.T) {
 			return nil
 		}),
 		newTestItem("block-prepare", rec).withPrepare(func(context.Context) error {
+			close(prepareStarted)
 			<-releasePrepare
 			return nil
 		}).withRunError(errors.New("stop after barrier")),
@@ -291,6 +293,11 @@ func TestScheduler_Run_barrierCoalescesReadyRunResults(t *testing.T) {
 		receiveStarted(t, started),
 		receiveStarted(t, started),
 	})
+	select {
+	case <-prepareStarted:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for blocking Prepare to start")
+	}
 	close(releaseRuns)
 	require.Eventually(t, func() bool {
 		events := rec.events()
