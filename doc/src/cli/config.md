@@ -473,7 +473,9 @@ whether the branch is in sync with its pushed counterpart.
 
 ### spice.merge.ready.timeout
 
-<!-- gs:version v0.30.0 -->
+<!-- gs:version unreleased -->
+
+In <!-- gs:version v0.30.0 -->, this was named `spice.merge.readyTimeout`.
 
 Maximum time that the merge commands wait
 for a CR to be ready to merge after enqueued.
@@ -518,7 +520,9 @@ git-spice may run the command concurrently for different CRs.
 
 ### spice.merge.timeout
 
-<!-- gs:version v0.30.0 -->
+<!-- gs:version unreleased -->
+
+In <!-- gs:version v0.30.0 -->, this was named `spice.merge.mergeTimeout`.
 
 Maximum time merge commands wait for the forge to report
 that the CR is merged after requesting merge.
