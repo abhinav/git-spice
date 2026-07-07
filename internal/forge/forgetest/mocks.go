@@ -122,44 +122,6 @@ func (c *MockForgeBaseURLCall) DoAndReturn(f func() string) *MockForgeBaseURLCal
 	return c
 }
 
-// CLIPlugin mocks base method.
-func (m *MockForge) CLIPlugin() any {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CLIPlugin")
-	ret0, _ := ret[0].(any)
-	return ret0
-}
-
-// CLIPlugin indicates an expected call of CLIPlugin.
-func (mr *MockForgeMockRecorder) CLIPlugin() *MockForgeCLIPluginCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CLIPlugin", reflect.TypeOf((*MockForge)(nil).CLIPlugin))
-	return &MockForgeCLIPluginCall{Call: call}
-}
-
-// MockForgeCLIPluginCall wrap *gomock.Call
-type MockForgeCLIPluginCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockForgeCLIPluginCall) Return(arg0 any) *MockForgeCLIPluginCall {
-	c.Call = c.Call.Return(arg0)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockForgeCLIPluginCall) Do(f func() any) *MockForgeCLIPluginCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeCLIPluginCall) DoAndReturn(f func() any) *MockForgeCLIPluginCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // ChangeTemplatePaths mocks base method.
 func (m *MockForge) ChangeTemplatePaths() []string {
 	m.ctrl.T.Helper()
