@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
-	gw "go.abhg.dev/gs/internal/gateway/bitbucket"
+	"go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/server"
 	"go.abhg.dev/gs/internal/git/giturl"
@@ -193,7 +193,7 @@ func (f *Forge) OpenRepository(
 // selected during Definition.New.
 type bitbucketProduct interface {
 	parseRepositoryPath(path string) (*RepositoryID, error)
-	openGateway(context.Context, *AuthenticationToken, *RepositoryID) (gw.Gateway, error)
+	openGateway(context.Context, *AuthenticationToken, *RepositoryID) (bitbucket.Gateway, error)
 }
 
 type bitbucketCloudProduct struct {
@@ -220,7 +220,7 @@ func (p bitbucketCloudProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
-) (gw.Gateway, error) {
+) (bitbucket.Gateway, error) {
 	var ctok *cloud.Token
 	if tok != nil {
 		ctok = &cloud.Token{AccessToken: tok.AccessToken}
@@ -279,7 +279,7 @@ func (p bitbucketDataCenterProduct) openGateway(
 	_ context.Context,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
-) (gw.Gateway, error) {
+) (bitbucket.Gateway, error) {
 	var stok *server.Token
 	if tok != nil {
 		stok = &server.Token{AccessToken: tok.AccessToken}
