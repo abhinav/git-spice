@@ -74,6 +74,13 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 	}
 
 	apiURL := options.APIURL
+	log := d.Log
+	if log == nil {
+		log = silog.Nop()
+	} else {
+		log = log.WithPrefix("bitbucket")
+	}
+
 	var product bitbucketProduct
 	switch kind {
 	case KindDataCenter:
@@ -86,7 +93,7 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 		product = bitbucketDataCenterProduct{
 			baseURL: baseURL,
 			apiURL:  apiURL,
-			log:     bitbucketLogger(d.Log),
+			log:     log,
 		}
 	case KindCloud:
 		baseURL = cmp.Or(baseURL, DefaultURL)
@@ -94,7 +101,7 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 		product = bitbucketCloudProduct{
 			baseURL: baseURL,
 			apiURL:  apiURL,
-			log:     bitbucketLogger(d.Log),
+			log:     log,
 		}
 	default:
 		return nil, fmt.Errorf("invalid Bitbucket product: %s", kind)
@@ -125,14 +132,10 @@ type Forge struct {
 }
 
 func (f *Forge) logger() *silog.Logger {
-	return bitbucketLogger(f.Log)
-}
-
-func bitbucketLogger(log *silog.Logger) *silog.Logger {
-	if log == nil {
+	if f.Log == nil {
 		return silog.Nop()
 	}
-	return log.WithPrefix("bitbucket")
+	return f.Log.WithPrefix("bitbucket")
 }
 
 // URL returns the resolved Bitbucket web URL.
