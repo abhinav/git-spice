@@ -73,6 +73,13 @@ type PullRequestList struct {
 	Next   string        `json:"next,omitempty"`
 }
 
+func (l *PullRequestList) nextURL() string {
+	if l == nil {
+		return ""
+	}
+	return l.Next
+}
+
 // PullRequestListOptions controls pull request listing and pagination.
 type PullRequestListOptions struct {
 	Query   string
@@ -100,6 +107,13 @@ type CommentList struct {
 	Next   string    `json:"next,omitempty"`
 }
 
+func (l *CommentList) nextURL() string {
+	if l == nil {
+		return ""
+	}
+	return l.Next
+}
+
 // CommentListOptions controls comment listing and pagination.
 type CommentListOptions struct {
 	PageLen int
@@ -116,6 +130,13 @@ type WorkspaceMember struct {
 type WorkspaceMemberList struct {
 	Values []WorkspaceMember `json:"values"`
 	Next   string            `json:"next,omitempty"`
+}
+
+func (l *WorkspaceMemberList) nextURL() string {
+	if l == nil {
+		return ""
+	}
+	return l.Next
 }
 
 // WorkspaceMemberListOptions controls workspace member pagination.
@@ -428,6 +449,13 @@ const (
 type CommitStatusList struct {
 	Values []CommitStatus `json:"values"`
 	Next   string         `json:"next,omitempty"`
+}
+
+func (l *CommitStatusList) nextURL() string {
+	if l == nil {
+		return ""
+	}
+	return l.Next
 }
 
 // CommitStatusListOptions controls commit status pagination.

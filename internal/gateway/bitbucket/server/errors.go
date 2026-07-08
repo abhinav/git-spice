@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -93,7 +94,10 @@ func parseAPIErrorEnvelope(body []byte) []APIErrorDetail {
 	return envelope.Errors
 }
 
-func checkResponse(resp *http.Response, body []byte) error {
+// checkResponse converts unsuccessful HTTP responses into package errors.
+//
+// It reads the response body only when an error path needs response details.
+func checkResponse(resp *http.Response) error {
 	switch resp.StatusCode {
 	case http.StatusOK,
 		http.StatusCreated,
@@ -104,6 +108,11 @@ func checkResponse(resp *http.Response, body []byte) error {
 		return ErrNotFound
 	case http.StatusConflict:
 		return ErrConflict
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read error response: %w", err)
 	}
 
 	details := parseAPIErrorEnvelope(body)

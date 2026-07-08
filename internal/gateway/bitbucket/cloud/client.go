@@ -155,7 +155,7 @@ func (c *Client) get(
 	query url.Values,
 	dst any,
 ) (*Response, error) {
-	return c.do(ctx, http.MethodGet, resourcePath, query, nil, dst)
+	return c.doJSON(ctx, http.MethodGet, resourcePath, query, nil, dst)
 }
 
 func (c *Client) post(
@@ -165,7 +165,7 @@ func (c *Client) post(
 	body any,
 	dst any,
 ) (*Response, error) {
-	return c.do(ctx, http.MethodPost, resourcePath, query, body, dst)
+	return c.doJSON(ctx, http.MethodPost, resourcePath, query, body, dst)
 }
 
 func (c *Client) put(
@@ -175,7 +175,7 @@ func (c *Client) put(
 	body any,
 	dst any,
 ) (*Response, error) {
-	return c.do(ctx, http.MethodPut, resourcePath, query, body, dst)
+	return c.doJSON(ctx, http.MethodPut, resourcePath, query, body, dst)
 }
 
 func (c *Client) delete(
@@ -183,10 +183,14 @@ func (c *Client) delete(
 	resourcePath string,
 	query url.Values,
 ) (*Response, error) {
-	return c.do(ctx, http.MethodDelete, resourcePath, query, nil, nil)
+	return c.doJSON(ctx, http.MethodDelete, resourcePath, query, nil, nil)
 }
 
-func (c *Client) do(
+// doJSON sends a JSON API request and decodes a successful JSON response.
+//
+// It owns the response body lifecycle and copies Bitbucket Cloud pagination
+// state from decoded list responses into the returned Response.
+func (c *Client) doJSON(
 	ctx context.Context,
 	method string,
 	resourcePath string,
@@ -225,27 +229,29 @@ func (c *Client) do(
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	httpResp, bodyBytes, err := c.send(req)
+	httpResp, err := c.do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer drainAndClose(httpResp.Body)
 
-	resp := &Response{
-		Header:     httpResp.Header.Clone(),
-		StatusCode: httpResp.StatusCode,
-		NextURL:    extractNextURL(bodyBytes),
-	}
-	if err := checkResponse(httpResp, bodyBytes); err != nil {
+	resp := newResponse(httpResp)
+	if err := checkResponse(httpResp); err != nil {
 		return resp, err
 	}
 
-	if dst == nil || httpResp.StatusCode == http.StatusNoContent ||
-		len(bytes.TrimSpace(bodyBytes)) == 0 {
+	if dst == nil || httpResp.StatusCode == http.StatusNoContent {
 		return resp, nil
 	}
 
-	if err := json.Unmarshal(bodyBytes, dst); err != nil {
+	if err := json.NewDecoder(httpResp.Body).Decode(dst); err != nil {
+		if errors.Is(err, io.EOF) {
+			return resp, nil
+		}
 		return resp, fmt.Errorf("decode response: %w", err)
+	}
+	if next, ok := dst.(nextURLCarrier); ok {
+		resp.NextURL = next.nextURL()
 	}
 	return resp, nil
 }
@@ -266,30 +272,33 @@ func (c *Client) getRaw(
 		return nil, nil, fmt.Errorf("build request: %w", err)
 	}
 
-	httpResp, bodyBytes, err := c.send(req)
+	httpResp, err := c.do(req)
 	if err != nil {
 		return nil, nil, err
 	}
+	defer drainAndClose(httpResp.Body)
 
-	resp := &Response{
-		Header:     httpResp.Header.Clone(),
-		StatusCode: httpResp.StatusCode,
-	}
-	if err := checkResponse(httpResp, bodyBytes); err != nil {
+	resp := newResponse(httpResp)
+	if err := checkResponse(httpResp); err != nil {
 		return nil, resp, err
+	}
+
+	bodyBytes, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, resp, fmt.Errorf("read response: %w", err)
 	}
 	return bodyBytes, resp, nil
 }
 
-// send applies the User-Agent and authentication headers,
-// sends the request, and returns the response
-// with its body fully read and closed.
-func (c *Client) send(req *http.Request) (*http.Response, []byte, error) {
+// do applies client-wide headers and sends req.
+//
+// The caller owns the returned response body.
+func (c *Client) do(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", _userAgent)
 
 	header, err := c.authHeader(req.Context())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for key, values := range header {
 		for _, value := range values {
@@ -299,19 +308,26 @@ func (c *Client) send(req *http.Request) (*http.Response, []byte, error) {
 
 	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("send request: %w", err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, httpResp.Body)
-		_ = httpResp.Body.Close()
-	}()
-
-	bodyBytes, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read response: %w", err)
+		return nil, fmt.Errorf("send request: %w", err)
 	}
 
-	return httpResp, bodyBytes, nil
+	return httpResp, nil
+}
+
+func drainAndClose(body io.ReadCloser) {
+	_, _ = io.Copy(io.Discard, body)
+	_ = body.Close()
+}
+
+type nextURLCarrier interface {
+	nextURL() string
+}
+
+func newResponse(resp *http.Response) *Response {
+	return &Response{
+		Header:     resp.Header.Clone(),
+		StatusCode: resp.StatusCode,
+	}
 }
 
 func (c *Client) resolveRequestURL(resourcePath string) (string, error) {
@@ -350,16 +366,6 @@ func mergeQuery(reqURL string, query url.Values) (string, error) {
 	return u.String(), nil
 }
 
-func extractNextURL(body []byte) string {
-	var next struct {
-		Next string `json:"next"`
-	}
-	if err := json.Unmarshal(body, &next); err != nil {
-		return ""
-	}
-	return next.Next
-}
-
 type apiError struct {
 	StatusCode int
 	Method     string
@@ -380,7 +386,10 @@ func (e *apiError) Error() string {
 	)
 }
 
-func checkResponse(resp *http.Response, body []byte) error {
+// checkResponse converts unsuccessful HTTP responses into package errors.
+//
+// It reads the response body only when an error path needs response details.
+func checkResponse(resp *http.Response) error {
 	switch resp.StatusCode {
 	case http.StatusOK,
 		http.StatusCreated,
@@ -389,6 +398,11 @@ func checkResponse(resp *http.Response, body []byte) error {
 		return nil
 	case http.StatusNotFound:
 		return ErrNotFound
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read error response: %w", err)
 	}
 
 	if isDestinationBranchNotFound(resp, body) {
