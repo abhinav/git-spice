@@ -181,19 +181,19 @@ func TestGatewayConformance_FindChangesByBranch(t *testing.T) {
 							limit = min(limit, pagelen)
 						}
 
-						values := make([]cloud.PullRequest, limit)
+						values := make([]map[string]any, limit)
 						for i, pr := range prs[:limit] {
-							values[i] = cloudWirePR(pr)
+							values[i] = pr.cloudWirePR()
 						}
 						writeJSON(t, w, http.StatusOK,
-							cloud.PullRequestList{Values: values})
+							map[string]any{"values": values})
 					})
 			case productServer:
 				mux.HandleFunc("GET "+serverPullRequestsPath,
 					func(w http.ResponseWriter, _ *http.Request) {
 						values := make([]map[string]any, len(prs))
 						for i, pr := range prs {
-							values[i] = serverWirePR(pr)
+							values[i] = pr.serverWirePR()
 						}
 						writeJSON(t, w, http.StatusOK, map[string]any{
 							"isLastPage": true,
@@ -603,11 +603,6 @@ func TestGatewayConformance_ResolvableComments(t *testing.T) {
 
 // newConformanceGateway builds the gateway for product,
 // backed by a fake product server that serves mux.
-//
-// The Cloud gateway targets the workspace/repo test repository
-// (see newTestCloudGateway), and the Data Center gateway targets
-// testProjectKey/testSlug (see newOpsTestServerGateway);
-// product stubs must register handlers on the matching paths.
 func newConformanceGateway(
 	t *testing.T,
 	product string,
@@ -620,48 +615,29 @@ func newConformanceGateway(
 
 	switch product {
 	case productCloud:
-		return newTestCloudGateway(t, srv.URL)
+		gw, err := cloud.New(
+			srv.URL,
+			srv.URL,
+			"workspace", "repo",
+			silog.Nop(),
+			&cloud.Token{AccessToken: "test"},
+			http.DefaultClient,
+		)
+		require.NoError(t, err)
+		return gw
 	case productServer:
-		return newOpsTestServerGateway(t, srv)
+		gw, err := server.New(
+			srv.URL+"/rest/api/1.0", srv.URL,
+			testProjectKey, testSlug, false,
+			silog.Nop(),
+			&server.Token{AccessToken: "test-token"},
+		)
+		require.NoError(t, err)
+		return gw
 	default:
 		t.Fatalf("unknown product %q", product)
 		return nil
 	}
-}
-
-// newTestCloudGateway builds a Bitbucket Cloud gateway
-// for the workspace/repo test repository,
-// talking to the fake Bitbucket Cloud server at baseURL.
-func newTestCloudGateway(t *testing.T, baseURL string) *cloud.Gateway {
-	t.Helper()
-
-	gw, err := cloud.New(
-		baseURL,
-		baseURL,
-		"workspace", "repo",
-		silog.Nop(),
-		&cloud.Token{AccessToken: "test"},
-		http.DefaultClient,
-	)
-	require.NoError(t, err)
-	return gw
-}
-
-// newOpsTestServerGateway builds a Bitbucket Data Center gateway
-// for the shared testProjectKey/testSlug repository served by srv,
-// wired exactly as in production
-// (API rooted at srv.URL + "/rest/api/1.0").
-func newOpsTestServerGateway(t *testing.T, srv *httptest.Server) *server.Gateway {
-	t.Helper()
-
-	gw, err := server.New(
-		srv.URL+"/rest/api/1.0", srv.URL,
-		testProjectKey, testSlug, false,
-		silog.Nop(),
-		&server.Token{AccessToken: "test-token"},
-	)
-	require.NoError(t, err)
-	return gw
 }
 
 // conformancePR describes one logical pull request
@@ -693,13 +669,13 @@ func stubPullRequestGet(
 		path := cloudPullRequestsPath + "/" + strconv.FormatInt(pr.Number, 10)
 		mux.HandleFunc("GET "+path,
 			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, cloudWirePR(pr))
+				writeJSON(t, w, http.StatusOK, pr.cloudWirePR())
 			})
 	case productServer:
 		path := serverPullRequestsPath + "/" + strconv.FormatInt(pr.Number, 10)
 		mux.HandleFunc("GET "+path,
 			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, serverWirePR(pr))
+				writeJSON(t, w, http.StatusOK, pr.serverWirePR())
 			})
 	default:
 		t.Fatalf("unknown product %q", product)
@@ -707,36 +683,43 @@ func stubPullRequestGet(
 }
 
 // cloudWirePR renders pr in Bitbucket Cloud's REST 2.0 wire shape.
-func cloudWirePR(pr conformancePR) cloud.PullRequest {
-	wire := cloud.PullRequest{
-		ID:    pr.Number,
-		Title: pr.Title,
-		State: pr.WireState,
-		Draft: pr.Draft,
-		Source: cloud.BranchRef{
-			Branch: cloud.Branch{Name: pr.HeadName},
+func (pr conformancePR) cloudWirePR() map[string]any {
+	source := map[string]any{
+		"branch": map[string]any{"name": pr.HeadName},
+	}
+	if pr.SourceCommit != "" {
+		source["commit"] = map[string]any{"hash": pr.SourceCommit}
+	}
+
+	wire := map[string]any{
+		"id":     pr.Number,
+		"title":  pr.Title,
+		"state":  pr.WireState,
+		"draft":  pr.Draft,
+		"source": source,
+		"destination": map[string]any{
+			"branch": map[string]any{"name": pr.BaseName},
 		},
-		Destination: cloud.BranchRef{
-			Branch: cloud.Branch{Name: pr.BaseName},
-		},
-		Links: cloud.PullRequestLinks{
-			HTML: cloud.Link{
-				Href: "https://bitbucket.org/workspace/repo/pull-requests/" +
+		"links": map[string]any{
+			"html": map[string]any{
+				"href": "https://bitbucket.org/workspace/repo/pull-requests/" +
 					strconv.FormatInt(pr.Number, 10),
 			},
 		},
 	}
-	if pr.SourceCommit != "" {
-		wire.Source.Commit = &cloud.Commit{Hash: pr.SourceCommit}
-	}
+
+	reviewers := make([]map[string]any, 0, len(pr.Reviewers))
 	for _, name := range pr.Reviewers {
-		wire.Reviewers = append(wire.Reviewers, cloud.User{Nickname: name})
+		reviewers = append(reviewers, map[string]any{"nickname": name})
+	}
+	if len(reviewers) > 0 {
+		wire["reviewers"] = reviewers
 	}
 	return wire
 }
 
 // serverWirePR renders pr in Bitbucket Data Center's REST 1.0 wire shape.
-func serverWirePR(pr conformancePR) map[string]any {
+func (pr conformancePR) serverWirePR() map[string]any {
 	reviewers := make([]map[string]any, len(pr.Reviewers))
 	for i, name := range pr.Reviewers {
 		reviewers[i] = map[string]any{
