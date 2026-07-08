@@ -349,6 +349,12 @@ func (g *Gateway) UpdateChange(
 	return nil
 }
 
+// SetChangeDraft reports that Bitbucket Data Center cannot change
+// the draft status of an existing pull request.
+func (*Gateway) SetChangeDraft(context.Context, int64, bool) error {
+	return bitbucket.ErrUnsupported
+}
+
 // buildUpdateRequest assembles the thin-client update request from the
 // current pull request and the requested update. The update replaces the
 // mutable fields wholesale, so the current title, description, and reviewers

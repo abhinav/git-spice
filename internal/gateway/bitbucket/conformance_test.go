@@ -17,6 +17,31 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 )
 
+const (
+	productCloud  = "Cloud"
+	productServer = "DataCenter"
+)
+
+var conformanceProducts = [...]string{productCloud, productServer}
+
+const (
+	// Bitbucket Cloud (REST 2.0) wire states.
+	stateOpen       = "OPEN"
+	stateMerged     = "MERGED"
+	stateDeclined   = "DECLINED"
+	stateSuperseded = "SUPERSEDED"
+
+	// Bitbucket Data Center (REST 1.0) wire states.
+	statePROpen     = "OPEN"
+	statePRMerged   = "MERGED"
+	statePRDeclined = "DECLINED"
+)
+
+const (
+	testProjectKey = "ENG"
+	testSlug       = "warp-core"
+)
+
 // This file holds the gateway conformance suite.
 // Each scenario runs once per Bitbucket product
 // against a fake server speaking that product's wire protocol,
@@ -199,17 +224,19 @@ func TestGatewayConformance_SetChangeDraft(t *testing.T) {
 // build statuses map to the same forge.ChangeCheck multiset
 // on both products.
 func TestGatewayConformance_ListCommitChecks(t *testing.T) {
+	const commitSHA = "feedface"
+
 	// Both products spell these build states identically on the wire.
 	wireStates := []string{"SUCCESSFUL", "INPROGRESS", "FAILED"}
 
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			stubCommitStatuses(t, product, mux, wireStates)
+			stubCommitStatuses(t, product, mux, commitSHA, wireStates)
 
 			gw := newConformanceGateway(t, product, mux)
 			got, err := gw.ListCommitChecks(
-				t.Context(), git.Hash(conformanceCommitSHA),
+				t.Context(), git.Hash(commitSHA),
 			)
 			require.NoError(t, err)
 			assert.ElementsMatch(t, []forge.ChangeCheck{
@@ -225,16 +252,20 @@ func TestGatewayConformance_ListCommitChecks(t *testing.T) {
 // return identical template contents for an existing file,
 // and an error matching forge.ErrNotFound for a missing one.
 func TestGatewayConformance_ChangeTemplate(t *testing.T) {
+	const templatePath = "PULL_REQUEST_TEMPLATE.md"
+
 	t.Run("Found", func(t *testing.T) {
 		for _, product := range conformanceProducts {
 			t.Run(product, func(t *testing.T) {
 				mux := http.NewServeMux()
 				stubChangeTemplateRepo(t, product, mux)
-				stubChangeTemplateFile(t, product, mux, "## Summary\n")
+				stubChangeTemplateFile(
+					t, product, mux, templatePath, "## Summary\n",
+				)
 
 				gw := newConformanceGateway(t, product, mux)
 				body, err := gw.ChangeTemplate(
-					t.Context(), conformanceTemplatePath,
+					t.Context(), templatePath,
 				)
 				require.NoError(t, err)
 				assert.Equal(t, "## Summary\n", body)
@@ -253,7 +284,7 @@ func TestGatewayConformance_ChangeTemplate(t *testing.T) {
 
 				gw := newConformanceGateway(t, product, mux)
 				_, err := gw.ChangeTemplate(
-					t.Context(), conformanceTemplatePath,
+					t.Context(), templatePath,
 				)
 				require.Error(t, err)
 				assert.ErrorIs(t, err, forge.ErrNotFound)
@@ -268,18 +299,26 @@ func TestGatewayConformance_ChangeTemplate(t *testing.T) {
 // and that the created comment carries the same identifiers
 // and body.
 func TestGatewayConformance_commentRoundTrip(t *testing.T) {
+	const (
+		prID                 int64 = 7
+		commentID            int64 = 101
+		serverCommentVersion       = 3
+	)
+
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			recorder := stubCommentLifecycle(t, product, mux)
+			recorder := stubCommentLifecycle(
+				t, product, mux, prID, commentID, serverCommentVersion,
+			)
 
 			gw := newConformanceGateway(t, product, mux)
 			ctx := t.Context()
 
-			comment, err := gw.CreateComment(ctx, conformancePRID, "v1")
+			comment, err := gw.CreateComment(ctx, prID, "v1")
 			require.NoError(t, err)
-			assert.Equal(t, conformanceCommentID, comment.ID)
-			assert.Equal(t, conformancePRID, comment.PRID)
+			assert.Equal(t, commentID, comment.ID)
+			assert.Equal(t, prID, comment.PRID)
 			assert.Equal(t, "v1", comment.Body)
 
 			// Version is product-specific by contract
@@ -321,6 +360,8 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 // These fixtures contain no drafts,
 // making false the conforming value on both products.
 func TestGatewayConformance_ResolvableComments(t *testing.T) {
+	const prID int64 = 7
+
 	want := []bitbucket.ResolvableComment{
 		{ID: 1, Body: "needs work", Resolved: true},
 		{ID: 2, Body: "looks off"},
@@ -329,13 +370,13 @@ func TestGatewayConformance_ResolvableComments(t *testing.T) {
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			stubResolvableComments(t, product, mux)
+			stubResolvableComments(t, product, mux, prID)
 
 			gw := newConformanceGateway(t, product, mux)
 
 			var got []bitbucket.ResolvableComment
 			for comment, err := range gw.ResolvableComments(
-				t.Context(), conformancePRID,
+				t.Context(), prID,
 			) {
 				require.NoError(t, err)
 				got = append(got, *comment)
@@ -344,47 +385,6 @@ func TestGatewayConformance_ResolvableComments(t *testing.T) {
 		})
 	}
 }
-
-// Conformance harness.
-
-// Conformance subtest names, one per Bitbucket product.
-const (
-	productCloud  = "Cloud"
-	productServer = "DataCenter"
-)
-
-// conformanceProducts lists the products under conformance test.
-var conformanceProducts = []string{productCloud, productServer}
-
-// Shared fixture identifiers used by the conformance scenarios.
-const (
-	conformancePRID         int64 = 7
-	conformanceCommentID    int64 = 101
-	conformanceCommitSHA          = "feedface"
-	conformanceTemplatePath       = "PULL_REQUEST_TEMPLATE.md"
-
-	// serverCommentVersion is the comment version served by the
-	// Data Center comment stub. It is non-zero to prove that the
-	// gateway carries the product's optimistic-locking version
-	// through to the neutral ChangeComment.
-	serverCommentVersion = 3
-)
-
-// Product wire spellings of the pull-request states,
-// mirroring the unexported state constants of the cloud adapter
-// (stateOpen and friends) and the server adapter (statePR*).
-const (
-	// Bitbucket Cloud (REST 2.0) wire states.
-	stateOpen       = "OPEN"
-	stateMerged     = "MERGED"
-	stateDeclined   = "DECLINED"
-	stateSuperseded = "SUPERSEDED"
-
-	// Bitbucket Data Center (REST 1.0) wire states.
-	statePROpen     = "OPEN"
-	statePRMerged   = "MERGED"
-	statePRDeclined = "DECLINED"
-)
 
 // newConformanceGateway builds the gateway for product,
 // backed by a fake product server that serves mux.
@@ -553,11 +553,12 @@ func stubPullRequestList(
 }
 
 // stubCommitStatuses serves one build status per wire state
-// from the product's commit-status endpoint for conformanceCommitSHA.
+// from the product's commit-status endpoint for sha.
 func stubCommitStatuses(
 	t *testing.T,
 	product string,
 	mux *http.ServeMux,
+	sha string,
 	states []string,
 ) {
 	t.Helper()
@@ -571,7 +572,7 @@ func stubCommitStatuses(
 				State: state,
 			}
 		}
-		mux.HandleFunc("GET "+cloudStatusesPath(conformanceCommitSHA),
+		mux.HandleFunc("GET "+cloudStatusesPath(sha),
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK,
 					cloud.CommitStatusList{Values: statuses})
@@ -584,7 +585,7 @@ func stubCommitStatuses(
 				"state": state,
 			}
 		}
-		mux.HandleFunc("GET "+buildStatusPath(conformanceCommitSHA),
+		mux.HandleFunc("GET "+buildStatusPath(sha),
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, map[string]any{
 					"isLastPage": true,
@@ -618,12 +619,13 @@ func stubChangeTemplateRepo(t *testing.T, product string, mux *http.ServeMux) {
 	}
 }
 
-// stubChangeTemplateFile serves content for conformanceTemplatePath
+// stubChangeTemplateFile serves content for path
 // from the product's raw-file endpoint on the default branch.
 func stubChangeTemplateFile(
 	t *testing.T,
 	product string,
 	mux *http.ServeMux,
+	path string,
 	content string,
 ) {
 	t.Helper()
@@ -634,16 +636,16 @@ func stubChangeTemplateFile(
 	}
 	switch product {
 	case productCloud:
-		mux.HandleFunc("GET "+cloudSrcPath(conformanceTemplatePath), serve)
+		mux.HandleFunc("GET "+cloudSrcPath(path), serve)
 	case productServer:
-		mux.HandleFunc("GET "+serverRawPath(conformanceTemplatePath), serve)
+		mux.HandleFunc("GET "+serverRawPath(path), serve)
 	default:
 		t.Fatalf("unknown product %q", product)
 	}
 }
 
 // stubCommentLifecycle registers create, update, and delete handlers
-// for a single comment (conformanceCommentID on PR conformancePRID)
+// for a single comment
 // in the product's wire protocol,
 // and returns a recorder of what the fake server saw.
 //
@@ -656,6 +658,9 @@ func stubCommentLifecycle(
 	t *testing.T,
 	product string,
 	mux *http.ServeMux,
+	prID int64,
+	commentID int64,
+	serverCommentVersion int,
 ) *commentRecorder {
 	t.Helper()
 
@@ -667,45 +672,45 @@ func stubCommentLifecycle(
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 			recorder.bodies = append(recorder.bodies, req.Content.Raw)
 			writeJSON(t, w, http.StatusOK, cloud.Comment{
-				ID:      conformanceCommentID,
+				ID:      commentID,
 				Content: req.Content,
 			})
 		}
-		mux.HandleFunc("POST "+cloudCommentsPath(conformancePRID), echo)
+		mux.HandleFunc("POST "+cloudCommentsPath(prID), echo)
 		mux.HandleFunc(
-			"PUT "+cloudCommentItemPath(conformancePRID, conformanceCommentID),
+			"PUT "+cloudCommentItemPath(prID, commentID),
 			echo,
 		)
 		mux.HandleFunc(
-			"DELETE "+cloudCommentItemPath(conformancePRID, conformanceCommentID),
+			"DELETE "+cloudCommentItemPath(prID, commentID),
 			func(w http.ResponseWriter, _ *http.Request) {
 				recorder.deleted = true
 				w.WriteHeader(http.StatusNoContent)
 			})
 	case productServer:
-		mux.HandleFunc("POST "+commentsPath(conformancePRID),
+		mux.HandleFunc("POST "+commentsPath(prID),
 			func(w http.ResponseWriter, r *http.Request) {
 				text := decodeServerCommentText(t, r)
 				recorder.bodies = append(recorder.bodies, text)
 				writeJSON(t, w, http.StatusCreated, map[string]any{
-					"id":      conformanceCommentID,
+					"id":      commentID,
 					"version": serverCommentVersion,
 					"text":    text,
 				})
 			})
 		mux.HandleFunc(
-			"PUT "+commentItemPath(conformancePRID, conformanceCommentID),
+			"PUT "+commentItemPath(prID, commentID),
 			func(w http.ResponseWriter, r *http.Request) {
 				recorder.bodies = append(
 					recorder.bodies, decodeServerCommentText(t, r),
 				)
 				writeJSON(t, w, http.StatusOK, map[string]any{
-					"id":      conformanceCommentID,
+					"id":      commentID,
 					"version": serverCommentVersion + 1,
 				})
 			})
 		mux.HandleFunc(
-			"DELETE "+commentItemPath(conformancePRID, conformanceCommentID),
+			"DELETE "+commentItemPath(prID, commentID),
 			func(w http.ResponseWriter, _ *http.Request) {
 				recorder.deleted = true
 				w.WriteHeader(http.StatusNoContent)
@@ -718,13 +723,18 @@ func stubCommentLifecycle(
 
 // stubResolvableComments serves one resolved and one unresolved
 // inline review comment from the product's comment source
-// for PR conformancePRID.
-func stubResolvableComments(t *testing.T, product string, mux *http.ServeMux) {
+// for prID.
+func stubResolvableComments(
+	t *testing.T,
+	product string,
+	mux *http.ServeMux,
+	prID int64,
+) {
 	t.Helper()
 
 	switch product {
 	case productCloud:
-		mux.HandleFunc("GET "+cloudCommentsPath(conformancePRID),
+		mux.HandleFunc("GET "+cloudCommentsPath(prID),
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, cloud.CommentList{
 					Values: []cloud.Comment{
@@ -745,7 +755,7 @@ func stubResolvableComments(t *testing.T, product string, mux *http.ServeMux) {
 				})
 			})
 	case productServer:
-		mux.HandleFunc("GET "+activitiesPath(conformancePRID),
+		mux.HandleFunc("GET "+activitiesPath(prID),
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, map[string]any{
 					"isLastPage": true,
@@ -770,7 +780,7 @@ func stubResolvableComments(t *testing.T, product string, mux *http.ServeMux) {
 				})
 			})
 		// No tasks nested as replies; the flat task list is empty.
-		mux.HandleFunc("GET "+blockerCommentsPath(conformancePRID),
+		mux.HandleFunc("GET "+blockerCommentsPath(prID),
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, map[string]any{
 					"isLastPage": true,
@@ -915,13 +925,6 @@ func cloudStatusesPath(sha string) string {
 func cloudSrcPath(path string) string {
 	return cloudRepoPath() + "/src/main/" + path
 }
-
-// Bitbucket Data Center REST paths and coordinates,
-// the shared test repository baked into newOpsTestServerGateway.
-const (
-	testProjectKey = "ENG"
-	testSlug       = "warp-core"
-)
 
 // prListPath and prItemPath build the REST paths the server gateway
 // hits for the test repository.

@@ -229,16 +229,3 @@ type Gateway interface {
 	// if the file does not exist.
 	ChangeTemplate(ctx context.Context, path string) (string, error)
 }
-
-// UnsupportedGateway provides default implementations
-// of optional gateway capabilities, rejecting each with ErrUnsupported.
-//
-// Product gateways embed it so that they implement
-// only the optional capabilities that their product supports.
-type UnsupportedGateway struct{}
-
-// SetChangeDraft reports that the product cannot change
-// the draft status of an existing pull request.
-func (UnsupportedGateway) SetChangeDraft(context.Context, int64, bool) error {
-	return ErrUnsupported
-}

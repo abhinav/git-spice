@@ -16,7 +16,6 @@ import (
 // Gateway implements [bitbucket.Gateway] for Bitbucket Cloud
 // on top of its REST API 2.0.
 //
-// Unlike the server gateway, it does not embed [bitbucket.UnsupportedGateway]:
 // Bitbucket Cloud supports every optional gateway capability.
 type Gateway struct {
 	client *Client

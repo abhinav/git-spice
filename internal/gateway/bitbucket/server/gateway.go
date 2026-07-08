@@ -84,8 +84,6 @@ func (rid *serverRepositoryID) restProjectKey() string {
 // Gateway implements [bitbucket.Gateway] for Bitbucket Data Center
 // (REST 1.0) on top of the thin [Client].
 type Gateway struct {
-	bitbucket.UnsupportedGateway
-
 	client *Client
 	repoID *serverRepositoryID
 	log    *silog.Logger
