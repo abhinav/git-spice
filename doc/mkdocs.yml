@@ -19,6 +19,12 @@ extra:
   social:
     - icon: fontawesome/brands/github-alt
       link: https://github.com/abhinav
+    - icon: simple/githubsponsors
+      link: https://github.com/sponsors/abhinav
+      name: Sponsor on GitHub
+    - icon: simple/zulip
+      link: https://git-spice.zulipchat.com/
+      name: Zulip
     - icon: fontawesome/brands/mastodon
       link: https://hachyderm.io/@abhinav
     - icon: fontawesome/brands/bluesky
@@ -87,14 +93,15 @@ nav:
     - cli/experiments.md
     - cli/shorthand.md
     - cli/json.md
-  - Community: &community
+  - Community:
     - community/index.md
-    - community/faq.md
-    - community/recipes.md
-    - community/integrations.md
-    - community/llms.md
+  - Resources: &resources
+    - resources/index.md
+    - resources/faq.md
+    - resources/recipes.md
+    - resources/integrations.md
+    - resources/llms.md
   - Changelog: changelog.md
-  - 🤍 Sponsor: https://github.com/sponsors/abhinav
 
 plugins:
   - markdown-exec
@@ -105,9 +112,13 @@ plugins:
   - redirects:
       redirect_maps:
         'guide/pr.md': 'guide/cr.md'
-        'faq.md': 'community/faq.md'
-        'recipes.md': 'community/recipes.md'
-        'how-to.md': 'community/recipes.md'
+        'faq.md': 'resources/faq.md'
+        'recipes.md': 'resources/recipes.md'
+        'how-to.md': 'resources/recipes.md'
+        'community/faq.md': 'resources/faq.md'
+        'community/recipes.md': 'resources/recipes.md'
+        'community/integrations.md': 'resources/integrations.md'
+        'community/llms.md': 'resources/llms.md'
   - search
   - social:
       enabled: !ENV [CI, false]
@@ -120,7 +131,7 @@ plugins:
         User Guide: *user-guide
         Setting up: *setup
         CLI: *cli
-        Community: *community
+        Resources: *resources
 
 hooks:
   - hooks/replace.py

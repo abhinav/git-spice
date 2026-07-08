@@ -24,8 +24,8 @@ description: >-
 
     See:
 
-    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../community/recipes.md#working-with-unsupported-remotes)
-    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../community/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
+    - [:material-tooltip-check: Recipes > Working with unsupported remotes](../resources/recipes.md#working-with-unsupported-remotes)
+    - [:material-frequently-asked-questions: FAQ > Will git-spice add support for other Git hosting services](../resources/faq.md#will-git-spice-add-support-for-other-git-hosting-services)
 
 ## Submitting change requests
 
@@ -436,4 +436,4 @@ and use $$gs downstack track$$ to track them all at once.
 {green}${reset} gs downstack track
 ```
 
-See also [:material-tooltip-check: Recipes > Track an existing stack](../community/recipes.md#track-an-existing-stack).
+See also [:material-tooltip-check: Recipes > Track an existing stack](../resources/recipes.md#track-an-existing-stack).
