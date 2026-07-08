@@ -62,7 +62,7 @@ func (f *Forge) AuthenticationFlow(
 ) (forge.AuthenticationToken, error) {
 	log := f.logger()
 
-	if f.Options.Token != "" {
+	if f.token != "" {
 		log.Error("Already authenticated with BITBUCKET_TOKEN.")
 		log.Error("Unset BITBUCKET_TOKEN to login with a different method.")
 		return nil, errors.New("already authenticated")
@@ -193,7 +193,7 @@ func (f *Forge) SaveAuthenticationToken(
 	bbt := t.(*AuthenticationToken)
 
 	// If the user has set BITBUCKET_TOKEN, we should not save it to the stash.
-	if f.Options.Token != "" && f.Options.Token == bbt.AccessToken {
+	if f.token != "" && f.token == bbt.AccessToken {
 		return nil
 	}
 
@@ -214,10 +214,10 @@ func (f *Forge) SaveAuthenticationToken(
 // git-credential-manager on demand.
 func (f *Forge) LoadAuthenticationToken(stash secret.Stash) (forge.AuthenticationToken, error) {
 	// Environment variable takes highest precedence.
-	if f.Options.Token != "" {
+	if f.token != "" {
 		return &AuthenticationToken{
 			AuthType:    AuthTypeEnvironmentVariable,
-			AccessToken: f.Options.Token,
+			AccessToken: f.token,
 		}, nil
 	}
 

@@ -24,10 +24,6 @@ func (f *Forge) serverAuthenticationFlow(
 	ctx context.Context,
 	view ui.View,
 ) (forge.AuthenticationToken, error) {
-	if f.Options.URL == "" {
-		return nil, errNoServerURL
-	}
-
 	token, err := promptRequired(view,
 		"Enter HTTP access token",
 		f.tokenHelp(),

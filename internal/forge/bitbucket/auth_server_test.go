@@ -15,8 +15,8 @@ import (
 
 func TestAuthenticationToken_saveLoadClear(t *testing.T) {
 	f := &Forge{
+		baseURL: "https://bitbucket.example.com",
 		Log:     silog.Nop(),
-		Options: Options{URL: "https://bitbucket.example.com"},
 	}
 	var stash secret.MemoryStash
 
@@ -41,8 +41,8 @@ func TestAuthenticationToken_saveLoadClear(t *testing.T) {
 func TestAuthenticationToken_keyedByURL(t *testing.T) {
 	var stash secret.MemoryStash
 
-	fa := &Forge{Log: silog.Nop(), Options: Options{URL: "https://a.example.com"}}
-	fb := &Forge{Log: silog.Nop(), Options: Options{URL: "https://b.example.com"}}
+	fa := &Forge{baseURL: "https://a.example.com", Log: silog.Nop()}
+	fb := &Forge{baseURL: "https://b.example.com", Log: silog.Nop()}
 
 	require.NoError(t, fa.SaveAuthenticationToken(&stash,
 		&AuthenticationToken{AccessToken: "tok-a"}))
@@ -57,11 +57,9 @@ func TestAuthenticationToken_keyedByURL(t *testing.T) {
 
 func TestLoadAuthenticationToken_envPrecedence(t *testing.T) {
 	f := &Forge{
-		Log: silog.Nop(),
-		Options: Options{
-			URL:   "https://bitbucket.example.com",
-			Token: "env-token",
-		},
+		baseURL: "https://bitbucket.example.com",
+		token:   "env-token",
+		Log:     silog.Nop(),
 	}
 	var stash secret.MemoryStash
 
@@ -76,11 +74,9 @@ func TestLoadAuthenticationToken_envPrecedence(t *testing.T) {
 
 func TestSaveAuthenticationToken_skipsEnvToken(t *testing.T) {
 	f := &Forge{
-		Log: silog.Nop(),
-		Options: Options{
-			URL:   "https://bitbucket.example.com",
-			Token: "env-token",
-		},
+		baseURL: "https://bitbucket.example.com",
+		token:   "env-token",
+		Log:     silog.Nop(),
 	}
 	var stash secret.MemoryStash
 
@@ -93,13 +89,13 @@ func TestSaveAuthenticationToken_skipsEnvToken(t *testing.T) {
 
 func TestForge_tokenHelp(t *testing.T) {
 	t.Run("Root", func(t *testing.T) {
-		f := &Forge{Options: Options{URL: "https://bitbucket.example.com"}}
+		f := &Forge{baseURL: "https://bitbucket.example.com"}
 		assert.Contains(t, f.tokenHelp(),
 			"https://bitbucket.example.com/plugins/servlet/access-tokens/manage")
 	})
 
 	t.Run("ContextPath", func(t *testing.T) {
-		f := &Forge{Options: Options{URL: "https://git.corp.com:8443/bitbucket"}}
+		f := &Forge{baseURL: "https://git.corp.com:8443/bitbucket"}
 		assert.Contains(t, f.tokenHelp(),
 			"https://git.corp.com:8443/bitbucket/plugins/servlet/access-tokens/manage")
 	})

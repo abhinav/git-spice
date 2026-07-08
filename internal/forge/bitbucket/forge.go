@@ -3,12 +3,14 @@ package bitbucket
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
+	gw "go.abhg.dev/gs/internal/gateway/bitbucket"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/cloud"
 	"go.abhg.dev/gs/internal/gateway/bitbucket/server"
 	"go.abhg.dev/gs/internal/git/giturl"
@@ -81,20 +83,28 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 		if apiURL == "" {
 			apiURL = baseURL + "/rest/api/1.0"
 		}
-		product = dataCenterProduct{}
+		product = bitbucketDataCenterProduct{
+			baseURL: baseURL,
+			apiURL:  apiURL,
+			log:     bitbucketLogger(d.Log),
+		}
 	case KindCloud:
 		baseURL = cmp.Or(baseURL, DefaultURL)
 		apiURL = cmp.Or(apiURL, DefaultAPIURL)
-		product = cloudProduct{}
+		product = bitbucketCloudProduct{
+			baseURL: baseURL,
+			apiURL:  apiURL,
+			log:     bitbucketLogger(d.Log),
+		}
 	default:
 		return nil, fmt.Errorf("invalid Bitbucket product: %s", kind)
 	}
 
 	return &Forge{
-		Options: d.Options,
 		baseURL: baseURL,
 		apiURL:  apiURL,
 		kind:    kind,
+		token:   options.Token,
 		product: product,
 		Log:     d.Log,
 	}, nil
@@ -104,10 +114,10 @@ func (d *Definition) New(remoteURL *giturl.URL) (forge.Forge, error) {
 type Forge struct {
 	changeMetadataCodec
 
-	Options Options
 	baseURL string
 	apiURL  string
 	kind    Kind
+	token   string
 	product bitbucketProduct
 
 	// Log specifies the logger to use.
@@ -115,26 +125,29 @@ type Forge struct {
 }
 
 func (f *Forge) logger() *silog.Logger {
-	if f.Log == nil {
-		return silog.Nop()
-	}
-	return f.Log.WithPrefix("bitbucket")
+	return bitbucketLogger(f.Log)
 }
 
-// URL returns the base URL configured for the Bitbucket Forge
-// or the default URL if none is set.
+func bitbucketLogger(log *silog.Logger) *silog.Logger {
+	if log == nil {
+		return silog.Nop()
+	}
+	return log.WithPrefix("bitbucket")
+}
+
+// URL returns the resolved Bitbucket web URL.
 func (f *Forge) URL() string {
-	return cmp.Or(f.baseURL, f.Options.URL, DefaultURL)
+	return f.baseURL
 }
 
 // BaseURL reports the Bitbucket web URL used for host matching and links.
 func (f *Forge) BaseURL() string {
-	return f.URL()
+	return f.baseURL
 }
 
-// APIURL returns the configured API URL or the product default.
+// APIURL returns the resolved Bitbucket API URL.
 func (f *Forge) APIURL() string {
-	return cmp.Or(f.apiURL, f.Options.APIURL, DefaultAPIURL)
+	return f.apiURL
 }
 
 // ID reports a unique key for this forge.
@@ -156,10 +169,7 @@ func (*Forge) CommentFormat() forge.CommentFormat {
 
 // ParseRepositoryPath parses a Bitbucket repository path.
 func (f *Forge) ParseRepositoryPath(path string) (forge.RepositoryID, error) {
-	if f.product == nil {
-		return nil, fmt.Errorf("%w: Bitbucket forge was not constructed by Definition.New", forge.ErrUnsupportedURL)
-	}
-	return f.product.parseRepositoryPath(f.URL(), path)
+	return f.product.parseRepositoryPath(path)
 }
 
 // OpenRepository opens the Bitbucket repository that the given ID points to.
@@ -169,68 +179,92 @@ func (f *Forge) OpenRepository(
 	id forge.RepositoryID,
 ) (forge.Repository, error) {
 	tok := token.(*AuthenticationToken)
-	if f.product == nil {
-		return nil, errors.New("bitbucket forge was not constructed by Definition.New")
+	gateway, err := f.product.openGateway(ctx, tok, mustRepositoryID(id))
+	if err != nil {
+		return nil, err
 	}
-	return f.product.openRepository(ctx, f, tok, mustRepositoryID(id))
+	return newRepository(f, f.logger(), gateway), nil
 }
 
+// bitbucketProduct fixes the product-specific repository behavior
+// selected during Definition.New.
 type bitbucketProduct interface {
-	parseRepositoryPath(baseURL, path string) (*RepositoryID, error)
-	openRepository(context.Context, *Forge, *AuthenticationToken, *RepositoryID) (forge.Repository, error)
+	parseRepositoryPath(path string) (*RepositoryID, error)
+	openGateway(context.Context, *AuthenticationToken, *RepositoryID) (gw.Gateway, error)
 }
 
-// cloudProduct fixes Cloud-specific repository behavior for a constructed Forge.
-type cloudProduct struct{}
+type bitbucketCloudProduct struct {
+	baseURL string
+	apiURL  string
+	log     *silog.Logger
+}
 
-func (cloudProduct) parseRepositoryPath(baseURL, path string) (*RepositoryID, error) {
+func (p bitbucketCloudProduct) parseRepositoryPath(path string) (*RepositoryID, error) {
 	workspace, repo, err := extractRepoInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
 	}
 
 	return &RepositoryID{
-		url:       baseURL,
+		url:       p.baseURL,
 		kind:      KindCloud,
 		workspace: workspace,
 		name:      repo,
 	}, nil
 }
 
-func (cloudProduct) openRepository(
+func (p bitbucketCloudProduct) openGateway(
 	_ context.Context,
-	f *Forge,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
-) (forge.Repository, error) {
+) (gw.Gateway, error) {
 	var ctok *cloud.Token
 	if tok != nil {
 		ctok = &cloud.Token{AccessToken: tok.AccessToken}
 	}
 
-	gateway, err := cloud.New(
-		f.APIURL(), f.URL(),
+	return cloud.New(
+		p.apiURL, p.baseURL,
 		rid.workspace, rid.name,
-		f.logger(), ctok, http.DefaultClient,
+		p.log, ctok, http.DefaultClient,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return newRepository(f, f.logger(), gateway), nil
 }
 
-// dataCenterProduct fixes Data Center repository behavior for a constructed Forge.
-type dataCenterProduct struct{}
+type bitbucketDataCenterProduct struct {
+	baseURL string
+	apiURL  string
+	log     *silog.Logger
+}
 
-func (dataCenterProduct) parseRepositoryPath(baseURL, path string) (*RepositoryID, error) {
-	projectKey, slug, personal, err := parseServerRepoPath(path)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, err)
+func (p bitbucketDataCenterProduct) parseRepositoryPath(path string) (*RepositoryID, error) {
+	errInvalid := fmt.Errorf(
+		"path %q does not contain a Bitbucket Data Center repository", path,
+	)
+
+	s := strings.Trim(path, "/")
+	s = strings.TrimSuffix(s, ".git")
+
+	segments := strings.Split(s, "/")
+	if i := slices.Index(segments, "scm"); i >= 0 {
+		segments = segments[i+1:]
+	}
+
+	if len(segments) != 2 || segments[0] == "" || segments[1] == "" {
+		return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, errInvalid)
+	}
+
+	projectKey, slug := segments[0], segments[1]
+	personal := false
+	if user, ok := strings.CutPrefix(projectKey, "~"); ok {
+		if user == "" {
+			return nil, fmt.Errorf("%w: %w", forge.ErrUnsupportedURL, errInvalid)
+		}
+		projectKey = user
+		personal = true
 	}
 
 	return &RepositoryID{
-		url:        baseURL,
+		url:        p.baseURL,
 		kind:       KindDataCenter,
 		projectKey: projectKey,
 		slug:       slug,
@@ -238,27 +272,21 @@ func (dataCenterProduct) parseRepositoryPath(baseURL, path string) (*RepositoryI
 	}, nil
 }
 
-func (dataCenterProduct) openRepository(
+func (p bitbucketDataCenterProduct) openGateway(
 	_ context.Context,
-	f *Forge,
 	tok *AuthenticationToken,
 	rid *RepositoryID,
-) (forge.Repository, error) {
+) (gw.Gateway, error) {
 	var stok *server.Token
 	if tok != nil {
 		stok = &server.Token{AccessToken: tok.AccessToken}
 	}
 
-	gateway, err := server.New(
-		f.APIURL(), rid.url,
+	return server.New(
+		p.apiURL, rid.url,
 		rid.projectKey, rid.slug, rid.personal,
-		f.logger(), stok,
+		p.log, stok,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return newRepository(f, f.logger(), gateway), nil
 }
 
 func extractRepoInfo(path string) (workspace, repo string, err error) {

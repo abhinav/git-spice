@@ -2,8 +2,6 @@ package bitbucket
 
 import (
 	"fmt"
-	"slices"
-	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 )
@@ -69,34 +67,4 @@ func (rid *RepositoryID) webBase() string {
 		return fmt.Sprintf("%s/users/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
 	}
 	return fmt.Sprintf("%s/projects/%s/repos/%s", rid.url, rid.projectKey, rid.slug)
-}
-
-// parseServerRepoPath parses project/repo and /scm/project/repo paths.
-// Personal repositories use ~user/repo.
-func parseServerRepoPath(path string) (projectKey, slug string, personal bool, err error) {
-	errInvalid := fmt.Errorf(
-		"path %q does not contain a Bitbucket Data Center repository", path,
-	)
-
-	s := strings.Trim(path, "/")
-	s = strings.TrimSuffix(s, ".git")
-
-	segments := strings.Split(s, "/")
-	if i := slices.Index(segments, "scm"); i >= 0 {
-		segments = segments[i+1:]
-	}
-
-	if len(segments) != 2 || segments[0] == "" || segments[1] == "" {
-		return "", "", false, errInvalid
-	}
-	owner, slug := segments[0], segments[1]
-
-	if rest, ok := strings.CutPrefix(owner, "~"); ok {
-		if rest == "" {
-			return "", "", false, errInvalid
-		}
-		return rest, slug, true, nil
-	}
-
-	return owner, slug, false, nil
 }

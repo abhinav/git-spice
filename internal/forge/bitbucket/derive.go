@@ -13,13 +13,15 @@ import (
 func deriveInstanceURL(u *giturl.URL) string {
 	scheme := "https"
 	preservePort := false
-	for _, s := range []string{"https", "http"} {
-		if strings.HasPrefix(u.Raw, s+"://") ||
-			strings.HasPrefix(u.Raw, "git+"+s+"://") {
-			scheme = s
-			preservePort = true
-			break
-		}
+	switch u.Scheme {
+	case "https", "http":
+		scheme = u.Scheme
+		preservePort = true
+	case "git+https":
+		preservePort = true
+	case "git+http":
+		scheme = "http"
+		preservePort = true
 	}
 
 	derived := scheme + "://" + u.Hostname
@@ -29,6 +31,8 @@ func deriveInstanceURL(u *giturl.URL) string {
 
 	segments := strings.Split(strings.Trim(u.Path, "/"), "/")
 	if i := slices.Index(segments, "scm"); i > 0 {
+		// Data Center HTTP clone URLs may include a web context path
+		// before /scm/; keep that prefix in the derived instance URL.
 		derived += "/" + strings.Join(segments[:i], "/")
 	}
 

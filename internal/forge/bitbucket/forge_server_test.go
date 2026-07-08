@@ -140,7 +140,9 @@ func TestForge_ParseRepositoryPath_serverErrors(t *testing.T) {
 		{name: "SCMTrailingSlugSegments", path: "/ctx/scm/KEY/repo/extra.git"},
 	}
 
-	f := &Forge{Options: Options{URL: "https://bitbucket.example.com"}}
+	f := newForgeForTest(t,
+		Options{URL: "https://bitbucket.example.com"},
+		"https://bitbucket.example.com/scm/KEY/repo.git")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := f.ParseRepositoryPath(tt.path)
