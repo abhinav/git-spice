@@ -40,6 +40,11 @@ const (
 const (
 	testProjectKey = "ENG"
 	testSlug       = "warp-core"
+
+	cloudRepositoryPath    = "/repositories/workspace/repo"
+	cloudPullRequestsPath  = cloudRepositoryPath + "/pullrequests"
+	serverPullRequestsPath = "/rest/api/1.0/projects/" + testProjectKey +
+		"/repos/" + testSlug + "/pull-requests"
 )
 
 // This file holds the gateway conformance suite.
@@ -85,6 +90,8 @@ func TestGatewayConformance_GetChange(t *testing.T) {
 			// URL is product-specific by contract (see PullRequest.URL);
 			// only its presence is product-neutral.
 			assert.NotEmpty(t, change.URL)
+			neutral := *change
+			neutral.URL = ""
 
 			// All other fields must normalize identically.
 			assert.Equal(t, bitbucket.PullRequest{
@@ -95,7 +102,7 @@ func TestGatewayConformance_GetChange(t *testing.T) {
 				HeadHash:  "abc123def456",
 				Draft:     true,
 				Reviewers: []string{"spock", "uhura"},
-			}, withoutProductFields(change))
+			}, neutral)
 		})
 	}
 }
@@ -164,12 +171,46 @@ func TestGatewayConformance_FindChangesByBranch(t *testing.T) {
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			stubPullRequestList(t, product, mux, prs)
+			switch product {
+			case productCloud:
+				mux.HandleFunc("GET "+cloudPullRequestsPath,
+					func(w http.ResponseWriter, r *http.Request) {
+						limit := len(prs)
+						pagelen, err := strconv.Atoi(r.URL.Query().Get("pagelen"))
+						if err == nil {
+							limit = min(limit, pagelen)
+						}
+
+						values := make([]cloud.PullRequest, limit)
+						for i, pr := range prs[:limit] {
+							values[i] = cloudWirePR(pr)
+						}
+						writeJSON(t, w, http.StatusOK,
+							cloud.PullRequestList{Values: values})
+					})
+			case productServer:
+				mux.HandleFunc("GET "+serverPullRequestsPath,
+					func(w http.ResponseWriter, _ *http.Request) {
+						values := make([]map[string]any, len(prs))
+						for i, pr := range prs {
+							values[i] = serverWirePR(pr)
+						}
+						writeJSON(t, w, http.StatusOK, map[string]any{
+							"isLastPage": true,
+							"values":     values,
+						})
+					})
+			}
 
 			gw := newConformanceGateway(t, product, mux)
 			changes, err := gw.FindChangesByBranch(t.Context(), "feature",
 				bitbucket.FindChangesOptions{State: forge.ChangeOpen, Limit: 2})
 			require.NoError(t, err)
+
+			type changeSummary struct {
+				Number int64
+				State  forge.ChangeState
+			}
 
 			summaries := make([]changeSummary, len(changes))
 			for i, change := range changes {
@@ -195,7 +236,7 @@ func TestGatewayConformance_SetChangeDraft(t *testing.T) {
 	t.Run(productCloud, func(t *testing.T) {
 		var gotDraft *bool
 		mux := http.NewServeMux()
-		mux.HandleFunc("PUT "+cloudPRPath(1),
+		mux.HandleFunc("PUT "+cloudPullRequestsPath+"/1",
 			func(w http.ResponseWriter, r *http.Request) {
 				var body struct {
 					Draft *bool `json:"draft"`
@@ -213,7 +254,12 @@ func TestGatewayConformance_SetChangeDraft(t *testing.T) {
 	})
 
 	t.Run(productServer, func(t *testing.T) {
-		gw := newConformanceGateway(t, productServer, noRequestMux(t))
+		mux := http.NewServeMux()
+		mux.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		})
+
+		gw := newConformanceGateway(t, productServer, mux)
 		err := gw.SetChangeDraft(t.Context(), 1, true)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, bitbucket.ErrUnsupported)
@@ -232,7 +278,39 @@ func TestGatewayConformance_ListCommitChecks(t *testing.T) {
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			stubCommitStatuses(t, product, mux, commitSHA, wireStates)
+			switch product {
+			case productCloud:
+				statuses := make([]cloud.CommitStatus, len(wireStates))
+				for i, state := range wireStates {
+					statuses[i] = cloud.CommitStatus{
+						Key:   "build-" + strconv.Itoa(i),
+						State: state,
+					}
+				}
+
+				path := cloudRepositoryPath + "/commit/" + commitSHA + "/statuses"
+				mux.HandleFunc("GET "+path,
+					func(w http.ResponseWriter, _ *http.Request) {
+						writeJSON(t, w, http.StatusOK,
+							cloud.CommitStatusList{Values: statuses})
+					})
+			case productServer:
+				values := make([]map[string]any, len(wireStates))
+				for i, state := range wireStates {
+					values[i] = map[string]any{
+						"key":   "build-" + strconv.Itoa(i),
+						"state": state,
+					}
+				}
+
+				mux.HandleFunc("GET "+"/rest/build-status/1.0/commits/"+commitSHA,
+					func(w http.ResponseWriter, _ *http.Request) {
+						writeJSON(t, w, http.StatusOK, map[string]any{
+							"isLastPage": true,
+							"values":     values,
+						})
+					})
+			}
 
 			gw := newConformanceGateway(t, product, mux)
 			got, err := gw.ListCommitChecks(
@@ -258,10 +336,27 @@ func TestGatewayConformance_ChangeTemplate(t *testing.T) {
 		for _, product := range conformanceProducts {
 			t.Run(product, func(t *testing.T) {
 				mux := http.NewServeMux()
-				stubChangeTemplateRepo(t, product, mux)
-				stubChangeTemplateFile(
-					t, product, mux, templatePath, "## Summary\n",
-				)
+				switch product {
+				case productCloud:
+					mux.HandleFunc("GET "+cloudRepositoryPath,
+						func(w http.ResponseWriter, _ *http.Request) {
+							writeJSON(t, w, http.StatusOK, cloud.Repository{
+								MainBranch: cloud.Branch{Name: "main"},
+							})
+						})
+					mux.HandleFunc("GET "+cloudRepositoryPath+"/src/main/"+templatePath,
+						func(w http.ResponseWriter, _ *http.Request) {
+							_, err := w.Write([]byte("## Summary\n"))
+							assert.NoError(t, err)
+						})
+				case productServer:
+					mux.HandleFunc("GET "+"/rest/api/1.0/projects/"+
+						testProjectKey+"/repos/"+testSlug+"/raw/"+templatePath,
+						func(w http.ResponseWriter, _ *http.Request) {
+							_, err := w.Write([]byte("## Summary\n"))
+							assert.NoError(t, err)
+						})
+				}
 
 				gw := newConformanceGateway(t, product, mux)
 				body, err := gw.ChangeTemplate(
@@ -280,7 +375,14 @@ func TestGatewayConformance_ChangeTemplate(t *testing.T) {
 				// absent on both products: the fake servers answer
 				// 404 for the unregistered file paths.
 				mux := http.NewServeMux()
-				stubChangeTemplateRepo(t, product, mux)
+				if product == productCloud {
+					mux.HandleFunc("GET "+cloudRepositoryPath,
+						func(w http.ResponseWriter, _ *http.Request) {
+							writeJSON(t, w, http.StatusOK, cloud.Repository{
+								MainBranch: cloud.Branch{Name: "main"},
+							})
+						})
+				}
 
 				gw := newConformanceGateway(t, product, mux)
 				_, err := gw.ChangeTemplate(
@@ -308,9 +410,64 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			recorder := stubCommentLifecycle(
-				t, product, mux, prID, commentID, serverCommentVersion,
-			)
+			var bodies []string
+			var deleted bool
+			switch product {
+			case productCloud:
+				commentsPath := cloudPullRequestsPath + "/" +
+					strconv.FormatInt(prID, 10) + "/comments"
+				commentPath := commentsPath + "/" + strconv.FormatInt(commentID, 10)
+				echo := func(w http.ResponseWriter, r *http.Request) {
+					var req cloud.CommentCreateRequest
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+					bodies = append(bodies, req.Content.Raw)
+					writeJSON(t, w, http.StatusOK, cloud.Comment{
+						ID:      commentID,
+						Content: req.Content,
+					})
+				}
+				mux.HandleFunc("POST "+commentsPath, echo)
+				mux.HandleFunc("PUT "+commentPath, echo)
+				mux.HandleFunc("DELETE "+commentPath,
+					func(w http.ResponseWriter, _ *http.Request) {
+						deleted = true
+						w.WriteHeader(http.StatusNoContent)
+					})
+			case productServer:
+				prPath := serverPullRequestsPath + "/" + strconv.FormatInt(prID, 10)
+				commentsPath := prPath + "/comments"
+				commentPath := commentsPath + "/" + strconv.FormatInt(commentID, 10)
+				mux.HandleFunc("POST "+commentsPath,
+					func(w http.ResponseWriter, r *http.Request) {
+						var body struct {
+							Text string `json:"text"`
+						}
+						require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+						bodies = append(bodies, body.Text)
+						writeJSON(t, w, http.StatusCreated, map[string]any{
+							"id":      commentID,
+							"version": serverCommentVersion,
+							"text":    body.Text,
+						})
+					})
+				mux.HandleFunc("PUT "+commentPath,
+					func(w http.ResponseWriter, r *http.Request) {
+						var body struct {
+							Text string `json:"text"`
+						}
+						require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+						bodies = append(bodies, body.Text)
+						writeJSON(t, w, http.StatusOK, map[string]any{
+							"id":      commentID,
+							"version": serverCommentVersion + 1,
+						})
+					})
+				mux.HandleFunc("DELETE "+commentPath,
+					func(w http.ResponseWriter, _ *http.Request) {
+						deleted = true
+						w.WriteHeader(http.StatusNoContent)
+					})
+			}
 
 			gw := newConformanceGateway(t, product, mux)
 			ctx := t.Context()
@@ -338,8 +495,8 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 
 			// Both products must have transmitted the same comment
 			// texts in the same order, and then the delete.
-			assert.Equal(t, []string{"v1", "v2"}, recorder.bodies)
-			assert.True(t, recorder.deleted)
+			assert.Equal(t, []string{"v1", "v2"}, bodies)
+			assert.True(t, deleted)
 		})
 	}
 }
@@ -370,7 +527,65 @@ func TestGatewayConformance_ResolvableComments(t *testing.T) {
 	for _, product := range conformanceProducts {
 		t.Run(product, func(t *testing.T) {
 			mux := http.NewServeMux()
-			stubResolvableComments(t, product, mux, prID)
+			switch product {
+			case productCloud:
+				path := cloudPullRequestsPath + "/" +
+					strconv.FormatInt(prID, 10) + "/comments"
+				mux.HandleFunc("GET "+path,
+					func(w http.ResponseWriter, _ *http.Request) {
+						writeJSON(t, w, http.StatusOK, cloud.CommentList{
+							Values: []cloud.Comment{
+								{
+									ID:      1,
+									Content: cloud.Content{Raw: "needs work"},
+									Inline:  &cloud.Inline{Path: "main.go"},
+									Resolution: &cloud.Resolution{
+										Type: "comment_resolution",
+									},
+								},
+								{
+									ID:      2,
+									Content: cloud.Content{Raw: "looks off"},
+									Inline:  &cloud.Inline{Path: "main.go"},
+								},
+							},
+						})
+					})
+			case productServer:
+				prPath := serverPullRequestsPath + "/" + strconv.FormatInt(prID, 10)
+				mux.HandleFunc("GET "+prPath+"/activities",
+					func(w http.ResponseWriter, _ *http.Request) {
+						writeJSON(t, w, http.StatusOK, map[string]any{
+							"isLastPage": true,
+							"values": []map[string]any{
+								{"action": "COMMENTED", "comment": map[string]any{
+									"id": 1, "text": "needs work",
+									"severity": "NORMAL", "state": "OPEN",
+									"threadResolved": true,
+									"anchor": map[string]any{
+										"path": "main.go", "line": 10,
+									},
+								}},
+								{"action": "COMMENTED", "comment": map[string]any{
+									"id": 2, "text": "looks off",
+									"severity": "NORMAL", "state": "OPEN",
+									"threadResolved": false,
+									"anchor": map[string]any{
+										"path": "main.go", "line": 20,
+									},
+								}},
+							},
+						})
+					})
+				// No tasks nested as replies; the flat task list is empty.
+				mux.HandleFunc("GET "+prPath+"/blocker-comments",
+					func(w http.ResponseWriter, _ *http.Request) {
+						writeJSON(t, w, http.StatusOK, map[string]any{
+							"isLastPage": true,
+							"values":     []map[string]any{},
+						})
+					})
+			}
 
 			gw := newConformanceGateway(t, product, mux)
 
@@ -463,20 +678,6 @@ type conformancePR struct {
 	Reviewers    []string
 }
 
-// changeSummary is the product-neutral identity of a found pull
-// request: the fields the FindChangesByBranch scenario compares.
-type changeSummary struct {
-	Number int64
-	State  forge.ChangeState
-}
-
-// commentRecorder captures the comment mutations
-// that a fake product server received.
-type commentRecorder struct {
-	bodies  []string // texts received by create and update, in order
-	deleted bool
-}
-
 // stubPullRequestGet serves pr
 // from the product's single-pull-request GET endpoint.
 func stubPullRequestGet(
@@ -489,303 +690,16 @@ func stubPullRequestGet(
 
 	switch product {
 	case productCloud:
-		mux.HandleFunc("GET "+cloudPRPath(pr.Number),
+		path := cloudPullRequestsPath + "/" + strconv.FormatInt(pr.Number, 10)
+		mux.HandleFunc("GET "+path,
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, cloudWirePR(pr))
 			})
 	case productServer:
-		mux.HandleFunc("GET "+prItemPath(pr.Number),
+		path := serverPullRequestsPath + "/" + strconv.FormatInt(pr.Number, 10)
+		mux.HandleFunc("GET "+path,
 			func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(t, w, http.StatusOK, serverWirePR(pr))
-			})
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-}
-
-// stubPullRequestList serves prs
-// from the product's pull-request list endpoint.
-//
-// The Cloud stub honors the pagelen query parameter,
-// because Bitbucket Cloud applies the result limit server-side;
-// the Data Center stub returns everything
-// and relies on the gateway's client-side truncation.
-func stubPullRequestList(
-	t *testing.T,
-	product string,
-	mux *http.ServeMux,
-	prs []conformancePR,
-) {
-	t.Helper()
-
-	switch product {
-	case productCloud:
-		mux.HandleFunc("GET "+cloudPRsPath(),
-			func(w http.ResponseWriter, r *http.Request) {
-				limit := len(prs)
-				pagelen, err := strconv.Atoi(r.URL.Query().Get("pagelen"))
-				if err == nil {
-					limit = min(limit, pagelen)
-				}
-
-				values := make([]cloud.PullRequest, limit)
-				for i, pr := range prs[:limit] {
-					values[i] = cloudWirePR(pr)
-				}
-				writeJSON(t, w, http.StatusOK,
-					cloud.PullRequestList{Values: values})
-			})
-	case productServer:
-		mux.HandleFunc("GET "+prListPath(),
-			func(w http.ResponseWriter, _ *http.Request) {
-				values := make([]map[string]any, len(prs))
-				for i, pr := range prs {
-					values[i] = serverWirePR(pr)
-				}
-				writeJSON(t, w, http.StatusOK, map[string]any{
-					"isLastPage": true,
-					"values":     values,
-				})
-			})
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-}
-
-// stubCommitStatuses serves one build status per wire state
-// from the product's commit-status endpoint for sha.
-func stubCommitStatuses(
-	t *testing.T,
-	product string,
-	mux *http.ServeMux,
-	sha string,
-	states []string,
-) {
-	t.Helper()
-
-	switch product {
-	case productCloud:
-		statuses := make([]cloud.CommitStatus, len(states))
-		for i, state := range states {
-			statuses[i] = cloud.CommitStatus{
-				Key:   "build-" + strconv.Itoa(i),
-				State: state,
-			}
-		}
-		mux.HandleFunc("GET "+cloudStatusesPath(sha),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK,
-					cloud.CommitStatusList{Values: statuses})
-			})
-	case productServer:
-		values := make([]map[string]any, len(states))
-		for i, state := range states {
-			values[i] = map[string]any{
-				"key":   "build-" + strconv.Itoa(i),
-				"state": state,
-			}
-		}
-		mux.HandleFunc("GET "+buildStatusPath(sha),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, map[string]any{
-					"isLastPage": true,
-					"values":     values,
-				})
-			})
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-}
-
-// stubChangeTemplateRepo registers the repository-level fixtures
-// a template lookup needs before fetching the file:
-// Bitbucket Cloud first resolves the default branch,
-// while Data Center addresses the default branch implicitly.
-func stubChangeTemplateRepo(t *testing.T, product string, mux *http.ServeMux) {
-	t.Helper()
-
-	switch product {
-	case productCloud:
-		mux.HandleFunc("GET "+cloudRepoPath(),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, cloud.Repository{
-					MainBranch: cloud.Branch{Name: "main"},
-				})
-			})
-	case productServer:
-		// Nothing to register.
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-}
-
-// stubChangeTemplateFile serves content for path
-// from the product's raw-file endpoint on the default branch.
-func stubChangeTemplateFile(
-	t *testing.T,
-	product string,
-	mux *http.ServeMux,
-	path string,
-	content string,
-) {
-	t.Helper()
-
-	serve := func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte(content))
-		assert.NoError(t, err)
-	}
-	switch product {
-	case productCloud:
-		mux.HandleFunc("GET "+cloudSrcPath(path), serve)
-	case productServer:
-		mux.HandleFunc("GET "+serverRawPath(path), serve)
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-}
-
-// stubCommentLifecycle registers create, update, and delete handlers
-// for a single comment
-// in the product's wire protocol,
-// and returns a recorder of what the fake server saw.
-//
-// Both stubs echo the created comment's text back,
-// as the real products do.
-// The Data Center stub serves a non-zero comment version
-// (serverCommentVersion) to prove that the gateway
-// carries the product version through.
-func stubCommentLifecycle(
-	t *testing.T,
-	product string,
-	mux *http.ServeMux,
-	prID int64,
-	commentID int64,
-	serverCommentVersion int,
-) *commentRecorder {
-	t.Helper()
-
-	recorder := &commentRecorder{}
-	switch product {
-	case productCloud:
-		echo := func(w http.ResponseWriter, r *http.Request) {
-			var req cloud.CommentCreateRequest
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
-			recorder.bodies = append(recorder.bodies, req.Content.Raw)
-			writeJSON(t, w, http.StatusOK, cloud.Comment{
-				ID:      commentID,
-				Content: req.Content,
-			})
-		}
-		mux.HandleFunc("POST "+cloudCommentsPath(prID), echo)
-		mux.HandleFunc(
-			"PUT "+cloudCommentItemPath(prID, commentID),
-			echo,
-		)
-		mux.HandleFunc(
-			"DELETE "+cloudCommentItemPath(prID, commentID),
-			func(w http.ResponseWriter, _ *http.Request) {
-				recorder.deleted = true
-				w.WriteHeader(http.StatusNoContent)
-			})
-	case productServer:
-		mux.HandleFunc("POST "+commentsPath(prID),
-			func(w http.ResponseWriter, r *http.Request) {
-				text := decodeServerCommentText(t, r)
-				recorder.bodies = append(recorder.bodies, text)
-				writeJSON(t, w, http.StatusCreated, map[string]any{
-					"id":      commentID,
-					"version": serverCommentVersion,
-					"text":    text,
-				})
-			})
-		mux.HandleFunc(
-			"PUT "+commentItemPath(prID, commentID),
-			func(w http.ResponseWriter, r *http.Request) {
-				recorder.bodies = append(
-					recorder.bodies, decodeServerCommentText(t, r),
-				)
-				writeJSON(t, w, http.StatusOK, map[string]any{
-					"id":      commentID,
-					"version": serverCommentVersion + 1,
-				})
-			})
-		mux.HandleFunc(
-			"DELETE "+commentItemPath(prID, commentID),
-			func(w http.ResponseWriter, _ *http.Request) {
-				recorder.deleted = true
-				w.WriteHeader(http.StatusNoContent)
-			})
-	default:
-		t.Fatalf("unknown product %q", product)
-	}
-	return recorder
-}
-
-// stubResolvableComments serves one resolved and one unresolved
-// inline review comment from the product's comment source
-// for prID.
-func stubResolvableComments(
-	t *testing.T,
-	product string,
-	mux *http.ServeMux,
-	prID int64,
-) {
-	t.Helper()
-
-	switch product {
-	case productCloud:
-		mux.HandleFunc("GET "+cloudCommentsPath(prID),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, cloud.CommentList{
-					Values: []cloud.Comment{
-						{
-							ID:      1,
-							Content: cloud.Content{Raw: "needs work"},
-							Inline:  &cloud.Inline{Path: "main.go"},
-							Resolution: &cloud.Resolution{
-								Type: "comment_resolution",
-							},
-						},
-						{
-							ID:      2,
-							Content: cloud.Content{Raw: "looks off"},
-							Inline:  &cloud.Inline{Path: "main.go"},
-						},
-					},
-				})
-			})
-	case productServer:
-		mux.HandleFunc("GET "+activitiesPath(prID),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, map[string]any{
-					"isLastPage": true,
-					"values": []map[string]any{
-						{"action": "COMMENTED", "comment": map[string]any{
-							"id": 1, "text": "needs work",
-							"severity": "NORMAL", "state": "OPEN",
-							"threadResolved": true,
-							"anchor": map[string]any{
-								"path": "main.go", "line": 10,
-							},
-						}},
-						{"action": "COMMENTED", "comment": map[string]any{
-							"id": 2, "text": "looks off",
-							"severity": "NORMAL", "state": "OPEN",
-							"threadResolved": false,
-							"anchor": map[string]any{
-								"path": "main.go", "line": 20,
-							},
-						}},
-					},
-				})
-			})
-		// No tasks nested as replies; the flat task list is empty.
-		mux.HandleFunc("GET "+blockerCommentsPath(prID),
-			func(w http.ResponseWriter, _ *http.Request) {
-				writeJSON(t, w, http.StatusOK, map[string]any{
-					"isLastPage": true,
-					"values":     []map[string]any{},
-				})
 			})
 	default:
 		t.Fatalf("unknown product %q", product)
@@ -852,39 +766,6 @@ func serverWirePR(pr conformancePR) map[string]any {
 	}
 }
 
-// decodeServerCommentText extracts the "text" field from a Data Center
-// comment create or update request body.
-func decodeServerCommentText(t *testing.T, r *http.Request) string {
-	t.Helper()
-
-	var body struct {
-		Text string `json:"text"`
-	}
-	require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-	return body.Text
-}
-
-// withoutProductFields strips the PullRequest fields
-// that are product-specific by contract (see PullRequest).
-// The remaining fields must agree across products.
-func withoutProductFields(pr *bitbucket.PullRequest) bitbucket.PullRequest {
-	neutral := *pr
-	neutral.URL = ""
-	return neutral
-}
-
-// noRequestMux returns a mux that fails the test on any request,
-// for capabilities that must be rejected without a wire call.
-func noRequestMux(t *testing.T) *http.ServeMux {
-	t.Helper()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
-		t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-	})
-	return mux
-}
-
 // writeJSON writes a JSON response with the given status code.
 func writeJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 	t.Helper()
@@ -892,78 +773,4 @@ func writeJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	require.NoError(t, json.NewEncoder(w).Encode(v))
-}
-
-// Bitbucket Cloud REST paths for the workspace/repo test repository,
-// the coordinates baked into newTestCloudGateway.
-// They parallel the Data Center helpers prItemPath, commentsPath, etc.
-
-func cloudRepoPath() string {
-	return "/repositories/workspace/repo"
-}
-
-func cloudPRsPath() string {
-	return cloudRepoPath() + "/pullrequests"
-}
-
-func cloudPRPath(id int64) string {
-	return cloudPRsPath() + "/" + strconv.FormatInt(id, 10)
-}
-
-func cloudCommentsPath(prID int64) string {
-	return cloudPRPath(prID) + "/comments"
-}
-
-func cloudCommentItemPath(prID, commentID int64) string {
-	return cloudCommentsPath(prID) + "/" + strconv.FormatInt(commentID, 10)
-}
-
-func cloudStatusesPath(sha string) string {
-	return cloudRepoPath() + "/commit/" + sha + "/statuses"
-}
-
-func cloudSrcPath(path string) string {
-	return cloudRepoPath() + "/src/main/" + path
-}
-
-// prListPath and prItemPath build the REST paths the server gateway
-// hits for the test repository.
-func prListPath() string {
-	return "/rest/api/1.0/projects/" + testProjectKey + "/repos/" + testSlug + "/pull-requests"
-}
-
-func prItemPath(id int64) string {
-	return prListPath() + "/" + strconv.FormatInt(id, 10)
-}
-
-// commentsPath is the REST path for creating/listing comments on a PR.
-func commentsPath(prID int64) string {
-	return prItemPath(prID) + "/comments"
-}
-
-// commentItemPath is the REST path for a single comment on a PR.
-func commentItemPath(prID, commentID int64) string {
-	return commentsPath(prID) + "/" + strconv.FormatInt(commentID, 10)
-}
-
-// activitiesPath is the REST path for a PR's activity feed.
-func activitiesPath(prID int64) string {
-	return prItemPath(prID) + "/activities"
-}
-
-// blockerCommentsPath is the REST path for a PR's flat task list.
-func blockerCommentsPath(prID int64) string {
-	return prItemPath(prID) + "/blocker-comments"
-}
-
-// buildStatusPath is the REST path for a commit's build statuses.
-func buildStatusPath(sha string) string {
-	return "/rest/build-status/1.0/commits/" + sha
-}
-
-// serverRawPath is the Data Center REST path for a raw file
-// on the default branch of the shared test repository.
-func serverRawPath(path string) string {
-	return "/rest/api/1.0/projects/" + testProjectKey +
-		"/repos/" + testSlug + "/raw/" + path
 }
