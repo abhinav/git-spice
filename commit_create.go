@@ -9,6 +9,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -20,6 +21,8 @@ type commitCreateCmd struct {
 	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 	NoVerify    bool     `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff     bool     `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitCreate.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitCreateCmd) Help() string {
@@ -27,6 +30,9 @@ func (*commitCreateCmd) Help() string {
 	return text.Dedent(fmt.Sprintf(`
 		Staged changes are committed to the current branch.
 		Branches upstack are restacked if necessary.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitCreate.restack' configuration option
+		to change the default.
 		Use this as a shortcut for 'git commit'
 		followed by '%[1]s upstack restack'.
 
@@ -77,6 +83,10 @@ func (cmd *commitCreateCmd) Run(
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if cmd.Restack.None() {
+		return nil
 	}
 
 	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{

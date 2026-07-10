@@ -18,7 +18,9 @@ The new branch will use the current branch as its base. Use --target to specify
 a different base branch.
 
 --insert will move the branches upstack from the target branch on top of the new
-branch. --below will create the new branch below the target branch.
+branch. --below will create the new branch below the target branch. The upstack
+branches will be restacked automatically. Use --no-restack to disable that,
+or the 'spice.branchCreate.restack' configuration option to change the default.
 
 For example, given the following stack, with A checked out:
 
@@ -61,6 +63,8 @@ Flags:
       --below                Place the branch below the target branch and
                              restack its upstack
   -t, --target=BRANCH        Branch to create the new branch above/below
+      --[no-]restack         Whether to restack upstack branches for --insert or
+                             --below. (🔧 spice.branchCreate.restack)
   -a, --all                  Automatically stage modified and deleted files
   -m, --message=MSG          Use the given message as the commit message.
                              May be repeated to add multiple paragraphs.

@@ -15,6 +15,7 @@ import (
 	"go.abhg.dev/gs/internal/handler/autostash"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 )
 
 // RestackHandler is a subset of the restack.Handler interface.
@@ -65,6 +66,8 @@ type Handler struct {
 type Options struct {
 	// SignCommits indicates whether Git is configured to sign commits.
 	SignCommits bool `default:"false" hidden:"" config:"@commit.gpgsign"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitPick.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 // Request holds parameters for fixing up a commit.
@@ -224,6 +227,10 @@ func (h *Handler) CherryPickCommit(ctx context.Context, req *Request) (retErr er
 	}
 
 	h.Log.Infof("%v: cherry-picked %v: %v", req.Branch, req.Commit.Short(), commit.Subject)
+
+	if req.Options.Restack.None() {
+		return nil
+	}
 
 	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{
 		Branch: req.Branch,

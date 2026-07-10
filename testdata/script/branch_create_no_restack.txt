@@ -1,0 +1,66 @@
+# branch create --no-restack leaves existing upstack branches untouched.
+
+as 'Test <test@example.com>'
+at '2026-07-12T12:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/files/feature1.txt feature1.txt
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+cp $WORK/files/feature2.txt feature2.txt
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+# Record the feature2 head that both operations must preserve.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+# Insert between feature1 and feature2 without restacking feature2.
+gs down
+cp $WORK/files/inserted.txt inserted.txt
+git add inserted.txt
+gs branch create --insert --no-restack inserted -m 'Add inserted'
+
+# An unchanged feature2 head proves that --insert did not restack it.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+# Exercise --below in a separate repository so the two topology changes do not
+# influence each other.
+mkdir $WORK/repo-below
+cd $WORK/repo-below
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+cp $WORK/files/feature1.txt feature1.txt
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+cp $WORK/files/feature2.txt feature2.txt
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+cp $WORK/files/inserted.txt inserted.txt
+git add inserted.txt
+gs branch create --below --no-restack inserted -m 'Add inserted'
+
+# feature2 is the target of --below and must not be restacked onto inserted.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+-- files/feature1.txt --
+Feature 1
+-- files/feature2.txt --
+Feature 2
+-- files/inserted.txt --
+Inserted
+-- golden/feature2-before.txt --
+816e420

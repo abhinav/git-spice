@@ -26,6 +26,8 @@ type commitAmendCmd struct {
 	NoEdit   bool `help:"Don't edit the commit message"`
 	NoVerify bool `help:"Bypass pre-commit and commit-msg hooks."`
 	Signoff  bool `config:"commit.signoff" help:"Add Signed-off-by trailer to the commit message"`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitAmend.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitAmendCmd) Help() string {
@@ -33,6 +35,9 @@ func (*commitAmendCmd) Help() string {
 	return text.Dedent(fmt.Sprintf(`
 		Staged changes are amended into the topmost commit.
 		Branches upstack are restacked if necessary.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitAmend.restack' configuration option
+		to change the default.
 		This is a shortcut for 'git commit --amend'
 		followed by '%[1]s upstack restack'.
 
@@ -238,6 +243,10 @@ func (cmd *commitAmendCmd) Run(
 
 	if detachedHead {
 		log.Debug("HEAD is detached, skipping restack")
+		return nil
+	}
+
+	if cmd.Restack.None() {
 		return nil
 	}
 

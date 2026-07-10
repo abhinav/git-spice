@@ -1,0 +1,37 @@
+# commit fixup --no-restack leaves upstack branches untouched.
+
+[!git:2.45.0] skip # feature requires git 2.45
+
+as 'Test <test@example.com>'
+at '2026-07-12T12:20:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+git config spice.experiment.commitFixup true
+
+git add feature1.txt
+gs branch create feature1 -m 'Add feature1'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+mv $WORK/extra/feature1-updated.txt feature1.txt
+git add feature1.txt
+gs commit fixup --no-restack feature1
+
+# Fixing up feature1 rewrites it; feature2 must retain its original head.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature2.txt --
+Feature 2
+-- extra/feature1-updated.txt --
+Feature 1 updated
+-- golden/feature2-before.txt --
+6856c6a

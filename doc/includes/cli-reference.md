@@ -831,6 +831,10 @@ Use --target to specify a different base branch.
 --insert will move the branches upstack from the target branch
 on top of the new branch.
 --below will create the new branch below the target branch.
+The upstack branches will be restacked automatically.
+Use --no-restack to disable that,
+or the 'spice.branchCreate.restack' configuration option
+to change the default.
 
 For example, given the following stack, with A checked out:
 
@@ -874,6 +878,7 @@ target (A) to the specified branch:
 * `--insert`: Restack the upstack of the target branch onto the new branch
 * `--below`: Place the branch below the target branch and restack its upstack
 * `-t`, `--target=BRANCH`: Branch to create the new branch above/below
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.branchCreate.restack" }](/cli/config.md#spicebranchcreaterestack)): Whether to restack upstack branches for --insert or --below.
 * `-a`, `--all`: Automatically stage modified and deleted files
 * `-m`, `--message=MSG`: Use the given message as the commit message. May be repeated to add multiple paragraphs.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
@@ -881,7 +886,7 @@ target (A) to the specified branch:
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
 * `--[no-]commit` ([:material-wrench:{ .middle title="spice.branchCreate.commit" }](/cli/config.md#spicebranchcreatecommit)): Commit staged changes to the new branch, or create an empty commit
 
-**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.commit](/cli/config.md#spicebranchcreatecommit), [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.branchCreate.restack](/cli/config.md#spicebranchcreaterestack), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
 
 ### git-spice branch delete {#gs-branch-delete}
 
@@ -997,7 +1002,10 @@ gs branch (b) squash (sq) [flags]
 Squash a branch into one commit
 
 Squash all commits in the current branch into a single commit
-and restack upstack branches.
+and restack upstack branches automatically.
+Use --no-restack to disable that,
+or the 'spice.branchSquash.restack' configuration option
+to change the default.
 
 An editor will open to edit the commit message of the squashed commit.
 Use the -m/--message or -F/--file flag
@@ -1006,15 +1014,18 @@ to specify a commit message without editing.
 **Flags**
 
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.branchSquash.restack" }](/cli/config.md#spicebranchsquashrestack)): Whether to restack upstack branches.
 * `--no-edit`: Do not open an editor to edit the squashed commit message. Only applicable if --message is not used. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--branch=NAME`: Branch to squash. Defaults to current branch. <span class="mdx-badge"><span class="mdx-badge__icon">:material-tag:{ title="Released in version" }</span><span class="mdx-badge__text">[v0.16.0](/changelog.md#v0.16.0)</span>
 
+**Configuration**: [spice.branchSquash.restack](/cli/config.md#spicebranchsquashrestack)
+
 ### git-spice branch edit {#gs-branch-edit}
 
 ```
-gs branch (b) edit (e)
+gs branch (b) edit (e) [flags]
 ```
 
 Edit the commits in a branch
@@ -1025,6 +1036,15 @@ from this branch.
 
 After the rebase,
 branches upstack from this branch will be restacked.
+Use --no-restack to disable that,
+or the 'spice.branchEdit.restack' configuration option
+to change the default.
+
+**Flags**
+
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.branchEdit.restack" }](/cli/config.md#spicebrancheditrestack)): Whether to restack upstack branches.
+
+**Configuration**: [spice.branchEdit.restack](/cli/config.md#spicebrancheditrestack)
 
 ### git-spice branch rename {#gs-branch-rename}
 
@@ -1269,6 +1289,9 @@ Create a new commit
 
 Staged changes are committed to the current branch.
 Branches upstack are restacked if necessary.
+Use --no-restack to disable automatic restacking,
+or the 'spice.commitCreate.restack' configuration option
+to change the default.
 Use this as a shortcut for 'git commit'
 followed by 'gs upstack restack'.
 
@@ -1293,8 +1316,9 @@ when you want to apply changes to an older commit.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitCreate.restack" }](/cli/config.md#spicecommitcreaterestack)): Whether to restack upstack branches.
 
-**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitCreate.restack](/cli/config.md#spicecommitcreaterestack)
 
 ### git-spice commit amend {#gs-commit-amend}
 
@@ -1306,6 +1330,9 @@ Amend the current commit
 
 Staged changes are amended into the topmost commit.
 Branches upstack are restacked if necessary.
+Use --no-restack to disable automatic restacking,
+or the 'spice.commitAmend.restack' configuration option
+to change the default.
 This is a shortcut for 'git commit --amend'
 followed by 'gs upstack restack'.
 
@@ -1333,8 +1360,9 @@ The --no-prompt flag can be used to skip this prompt in scripts.
 * `--no-edit`: Don't edit the commit message
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
 * `--signoff` ([:material-wrench:{ .middle title="spice.commit.signoff" }](/cli/config.md#spicecommitsignoff)): Add Signed-off-by trailer to the commit message
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitAmend.restack" }](/cli/config.md#spicecommitamendrestack)): Whether to restack upstack branches.
 
-**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff)
+**Configuration**: [spice.branchCreate.generatedBranchNameLimit](/cli/config.md#spicebranchcreategeneratedbranchnamelimit), [spice.branchCreate.prefix](/cli/config.md#spicebranchcreateprefix), [spice.commit.signoff](/cli/config.md#spicecommitsignoff), [spice.commitAmend.restack](/cli/config.md#spicecommitamendrestack)
 
 ### git-spice commit split {#gs-commit-split}
 
@@ -1347,12 +1375,18 @@ Split the current commit
 Interactively select hunks from the current commit
 to split into new commits below it.
 Branches upstack are restacked as needed.
+Use --no-restack to disable automatic restacking,
+or the 'spice.commitSplit.restack' configuration option
+to change the default.
 
 **Flags**
 
 * `-m`, `--message=MSG`: Use the given message as the commit message.
 * `-F`, `--message-file=FILE`: Read the commit message from the given file.
 * `--no-verify`: Bypass pre-commit and commit-msg hooks.
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitSplit.restack" }](/cli/config.md#spicecommitsplitrestack)): Whether to restack upstack branches.
+
+**Configuration**: [spice.commitSplit.restack](/cli/config.md#spicecommitsplitrestack)
 
 ### git-spice commit fixup {#gs-commit-fixup}
 
@@ -1366,6 +1400,9 @@ Fixup a commit below the current commit
 
 Apply staged uncommited changes to another commit
 down the stack, and restack the rest of the stack on top of it.
+Use --no-restack to disable automatic restacking,
+or the 'spice.commitFixup.restack' configuration option
+to change the default.
 
 If a commit is not specified, a prompt is shown to select one.
 If the commit is specified,
@@ -1385,6 +1422,9 @@ This command requires at least Git 2.45.
 
 * `-e`, `--edit`: Open an editor to modify the commit message.
 * `--no-verify`: Bypass commit-msg hooks.
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitFixup.restack" }](/cli/config.md#spicecommitfixuprestack)): Whether to restack upstack branches.
+
+**Configuration**: [spice.commitFixup.restack](/cli/config.md#spicecommitfixuprestack)
 
 ### git-spice commit pick {#gs-commit-pick}
 
@@ -1398,6 +1438,9 @@ Cherry-pick a commit
 
 Apply the changes introduced by a commit to the current branch
 and restack the upstack branches.
+Use --no-restack to disable automatic restacking,
+or the 'spice.commitPick.restack' configuration option
+to change the default.
 
 If a commit is not specified, a prompt will allow picking
 from commits of upstack branches of the current branch.
@@ -1417,7 +1460,10 @@ This command requires at least Git 2.45.
 
 **Flags**
 
+* `--[no-]restack` ([:material-wrench:{ .middle title="spice.commitPick.restack" }](/cli/config.md#spicecommitpickrestack)): Whether to restack upstack branches.
 * `--from=NAME`: Branch whose upstack commits will be considered.
+
+**Configuration**: [spice.commitPick.restack](/cli/config.md#spicecommitpickrestack)
 
 ## Rebase
 

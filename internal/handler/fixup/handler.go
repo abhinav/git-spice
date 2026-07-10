@@ -104,6 +104,8 @@ type Options struct {
 	// for the editor diff.
 	CommitVerbose bool `hidden:"" config:"@commit.verbose" default:"false"`
 
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitFixup.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
+
 	// TODO: -a/--all option to stage all changes?
 }
 
@@ -264,6 +266,10 @@ func (h *Handler) FixupCommit(ctx context.Context, req *Request) error {
 		}
 
 		return fmt.Errorf("rebase onto new commit: %w", err)
+	}
+
+	if req.Options.Restack.None() {
+		return nil
 	}
 
 	return h.Restack.RestackUpstack(ctx, &restack.UpstackRequest{

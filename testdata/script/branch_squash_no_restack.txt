@@ -1,0 +1,53 @@
+# branch squash can opt out of automatic upstack restacking.
+
+as 'Test <test@example.com>'
+at '2026-07-09T12:05:00Z'
+
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create a branch with two commits and an upstack branch.
+git add feature1.txt
+gs branch create feature1 -m 'First feature1 commit'
+git add feature1b.txt
+git commit -m 'Second feature1 commit'
+git add feature2.txt
+gs branch create feature2 -m 'Add feature2'
+
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+gs down
+gs branch squash --no-restack --message 'Squashed feature1'
+
+# Squashing rewrites feature1; feature2 stays at its original head only when
+# automatic restacking is disabled.
+git rev-parse --short feature2
+cmp stdout $WORK/golden/feature2-before.txt
+
+# Config can disable restacking by default, and --restack=upstack can override
+# the configured value for a single squash.
+git reset --hard HEAD@{1}
+git config spice.branchSquash.restack none
+git add feature1c.txt
+git commit -m 'Third feature1 commit'
+gs branch squash --restack=upstack --message 'Squashed feature1 again'
+git graph --branches
+cmp stdout $WORK/golden/flag-upstack-graph.txt
+
+-- repo/feature1.txt --
+Feature 1
+-- repo/feature1b.txt --
+Feature 1b
+-- repo/feature1c.txt --
+Feature 1c
+-- repo/feature2.txt --
+Feature 2
+-- golden/feature2-before.txt --
+efe0fd9
+-- golden/flag-upstack-graph.txt --
+* 94c3715 (feature2) Add feature2
+* 7dec11a (HEAD -> feature1) Squashed feature1 again
+* 85f590c (main) Initial commit

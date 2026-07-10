@@ -29,6 +29,8 @@ type branchCreateCmd struct {
 	Below  bool   `help:"Place the branch below the target branch and restack its upstack"`
 	Target string `short:"t" placeholder:"BRANCH" help:"Branch to create the new branch above/below"`
 
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"branchCreate.restack" enum:"none,upstack" help:"Whether to restack upstack branches for --insert or --below."`
+
 	All         bool     `short:"a" help:"Automatically stage modified and deleted files"`
 	Message     []string `short:"m" xor:"commit-message-source" sep:"none" placeholder:"MSG" help:"Use the given message as the commit message. May be repeated to add multiple paragraphs."`
 	MessageFile string   `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
@@ -62,6 +64,10 @@ func (*branchCreateCmd) Help() string {
 		--insert will move the branches upstack from the target branch
 		on top of the new branch.
 		--below will create the new branch below the target branch.
+		The upstack branches will be restacked automatically.
+		Use --no-restack to disable that,
+		or the 'spice.branchCreate.restack' configuration option
+		to change the default.
 
 		For example, given the following stack, with A checked out:
 
@@ -324,7 +330,7 @@ func (cmd *branchCreateCmd) Run(
 		return fmt.Errorf("update branch state: %w", err)
 	}
 
-	if cmd.Below || cmd.Insert {
+	if (cmd.Below || cmd.Insert) && !cmd.Restack.None() {
 		return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
 			Branch: branchName,
 		})

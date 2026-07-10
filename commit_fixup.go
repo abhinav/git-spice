@@ -32,6 +32,9 @@ func (cmd *commitFixupCmd) Help() string {
 	return text.Dedent(`
 		Apply staged uncommited changes to another commit
 		down the stack, and restack the rest of the stack on top of it.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitFixup.restack' configuration option
+		to change the default.
 
 		If a commit is not specified, a prompt is shown to select one.
 		If the commit is specified,

@@ -8,6 +8,7 @@ import (
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
+	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/text"
 )
 
@@ -15,6 +16,8 @@ type commitSplitCmd struct {
 	Message     string `short:"m" xor:"commit-message-source" placeholder:"MSG" help:"Use the given message as the commit message."`
 	MessageFile string `short:"F" xor:"commit-message-source" placeholder:"FILE" help:"Read the commit message from the given file."`
 	NoVerify    bool   `help:"Bypass pre-commit and commit-msg hooks."`
+
+	Restack spice.AutoRestackMode `negatable:"" default:"upstack" config:"commitSplit.restack" enum:"none,upstack" help:"Whether to restack upstack branches."`
 }
 
 func (*commitSplitCmd) Help() string {
@@ -22,6 +25,9 @@ func (*commitSplitCmd) Help() string {
 		Interactively select hunks from the current commit
 		to split into new commits below it.
 		Branches upstack are restacked as needed.
+		Use --no-restack to disable automatic restacking,
+		or the 'spice.commitSplit.restack' configuration option
+		to change the default.
 	`)
 }
 
@@ -108,6 +114,10 @@ func (cmd *commitSplitCmd) Run(
 			return nil
 		}
 		return fmt.Errorf("get current branch: %w", err)
+	}
+
+	if cmd.Restack.None() {
+		return nil
 	}
 
 	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{

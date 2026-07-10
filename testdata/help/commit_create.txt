@@ -3,8 +3,9 @@ Usage: gs commit (c) create (c) [flags]
 Create a new commit
 
 Staged changes are committed to the current branch. Branches upstack are
-restacked if necessary. Use this as a shortcut for 'git commit' followed by 'gs
-upstack restack'.
+restacked if necessary. Use --no-restack to disable automatic restacking,
+or the 'spice.commitCreate.restack' configuration option to change the default.
+Use this as a shortcut for 'git commit' followed by 'gs upstack restack'.
 
 An editor is opened to edit the commit message. Use the -m/--message or
 -F/--file option to specify the message without opening an editor. Git hooks are
@@ -27,6 +28,8 @@ Flags:
       --no-verify            Bypass pre-commit and commit-msg hooks.
       --signoff              Add Signed-off-by trailer to the commit message (🔧
                              spice.commit.signoff)
+      --[no-]restack         Whether to restack upstack branches. (🔧
+                             spice.commitCreate.restack)
 
 Global Flags:
   -h, --help           Show help for the command

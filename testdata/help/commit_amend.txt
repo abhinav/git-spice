@@ -3,8 +3,9 @@ Usage: gs commit (c) amend (a) [flags]
 Amend the current commit
 
 Staged changes are amended into the topmost commit. Branches upstack are
-restacked if necessary. This is a shortcut for 'git commit --amend' followed by
-'gs upstack restack'.
+restacked if necessary. Use --no-restack to disable automatic restacking,
+or the 'spice.commitAmend.restack' configuration option to change the default.
+This is a shortcut for 'git commit --amend' followed by 'gs upstack restack'.
 
 Use 'gs commit fixup' to amend commits that are further downstack.
 
@@ -28,6 +29,8 @@ Flags:
       --no-verify            Bypass pre-commit and commit-msg hooks.
       --signoff              Add Signed-off-by trailer to the commit message (🔧
                              spice.commit.signoff)
+      --[no-]restack         Whether to restack upstack branches. (🔧
+                             spice.commitAmend.restack)
 
 Global Flags:
   -h, --help           Show help for the command

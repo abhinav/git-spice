@@ -76,3 +76,5 @@ require (
 )
 
 tool go.uber.org/mock/mockgen
+
+replace github.com/alecthomas/kong => github.com/abhinav/kong v0.8.2-0.20260711201529-e00b26b8d66f
