@@ -113,6 +113,23 @@ $ gs repo sync
     If it has been merged, git-spice will automatically retarget branches
     that depend on it.
 
+-   [:octicons-git-merge-16:{ .lg .middle } __Merge stacked change requests__](guide/merge.md)
+
+    ---
+
+    Merge submitted CRs bottom-up from the command line.
+    git-spice waits for each CR to be ready,
+    merges it,
+    then restacks and updates branches above it before continuing.
+
+-   [:octicons-comment-discussion-16:{ .lg .middle } __Review stack navigation__](guide/cr.md#navigation-comments)
+
+    ---
+
+    Help reviewers follow stacked CRs with navigation comments.
+    git-spice shows where each CR sits in the stack
+    and keeps that context updated as the stack changes.
+
 -   [:material-stairs:{ .lg .middle } __Incremental improvements__](start/stack.md)
 
     ---
