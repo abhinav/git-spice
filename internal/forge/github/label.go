@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"sync"
 
 	"go.abhg.dev/gs/internal/gateway/github"
@@ -39,63 +38,52 @@ func (r *Repository) ensureLabels(ctx context.Context, labelNames []string) ([]g
 		return nil, nil
 	}
 
-	idxc := make(chan int)
-	var (
-		wg sync.WaitGroup
+	labelIDs, err := r.gateway.LabelIDs(ctx, r.owner, r.repo, labelNames)
+	if err != nil {
+		return nil, fmt.Errorf("query labels: %w", err)
+	}
 
-		mu   sync.Mutex // guards errs
-		errs []error
-	)
-	labelIDs := make([]github.ID, len(labelNames)) // pre-allocate to fill without locking
-	for range runtime.GOMAXPROCS(0) {
-		wg.Go(func() {
-			for idx := range idxc {
-				labelName := labelNames[idx]
+	resolved := make(map[string]github.ID, len(labelNames))
+	var missing []string
+	for i, labelName := range labelNames {
+		if labelID := labelIDs[i]; labelID != "" {
+			resolved[labelName] = labelID
+			r.log.Debug("Resolved label ID", "name", labelName, "id", labelID)
+			continue
+		}
+		if _, seen := resolved[labelName]; !seen {
+			resolved[labelName] = ""
+			missing = append(missing, labelName)
+		}
+	}
 
-				labelID, err := r.ensureLabel(ctx, labelName)
-				if err != nil {
-					mu.Lock()
-					errs = append(errs, fmt.Errorf("ensure label %q: %w", labelName, err))
-					mu.Unlock()
-					continue
-				}
-
-				r.log.Debug("Resolved label ID", "name", labelName, "id", labelID)
-				labelIDs[idx] = labelID
+	createdIDs := make([]github.ID, len(missing))
+	createErrs := make([]error, len(missing))
+	var createGroup sync.WaitGroup
+	for i, labelName := range missing {
+		createGroup.Go(func() {
+			r.log.Infof("Label does not exist, creating: %v", labelName)
+			labelID, err := r.CreateLabel(ctx, labelName)
+			if err != nil {
+				createErrs[i] = fmt.Errorf("ensure label %q: %w", labelName, err)
+				return
 			}
+			createdIDs[i] = labelID
+			r.log.Debug("Resolved label ID", "name", labelName, "id", labelID)
 		})
 	}
-
-	for idx := range labelNames {
-		idxc <- idx
-	}
-	close(idxc)
-	wg.Wait()
-
-	if err := errors.Join(errs...); err != nil {
+	createGroup.Wait()
+	if err := errors.Join(createErrs...); err != nil {
 		return nil, err
 	}
+	for i, labelName := range missing {
+		resolved[labelName] = createdIDs[i]
+	}
 
+	for i, labelName := range labelNames {
+		labelIDs[i] = resolved[labelName]
+	}
 	return labelIDs, nil
-}
-
-func (r *Repository) ensureLabel(ctx context.Context, labelName string) (github.ID, error) {
-	labelID, err := r.LabelID(ctx, labelName)
-	if err == nil {
-		return labelID, nil
-	}
-
-	if !errors.Is(err, ErrLabelNotFound) {
-		return "", fmt.Errorf("query label: %w", err)
-	}
-
-	r.log.Infof("Label does not exist, creating: %v", labelName)
-	labelID, err = r.CreateLabel(ctx, labelName)
-	if err != nil {
-		return "", fmt.Errorf("create label: %w", err)
-	}
-
-	return labelID, nil
 }
 
 // ErrLabelNotFound indicates that a label that we were expecting

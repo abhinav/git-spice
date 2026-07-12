@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'github: Label IDs are resolved with one API call instead of one call per label.'
+time: 2026-07-12T11:01:46.834958-07:00
