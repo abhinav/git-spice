@@ -20,13 +20,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
+        uncompressed: true
         body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 328.176417ms
+        duration: 255.815542ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -35,7 +36,7 @@ interactions:
         content_length: 277
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"ZyMDPhV1","title":"Testing ZyMDPhV1","body":"Test PR without assignees"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"qG1vAoep","title":"Testing qG1vAoep","body":"Test PR without assignees"}}}
         headers:
             Content-Type:
                 - application/json
@@ -47,13 +48,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7wz5zl","number":104,"url":"https://github.com/test-owner/test-repo/pull/104"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7w2FOj","number":112,"url":"https://github.com/test-owner/test-repo/pull/112"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.085099416s
+        duration: 989.509333ms
     - id: 2
       request:
         proto: HTTP/1.1
@@ -62,7 +63,7 @@ interactions:
         content_length: 427
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":104,"owner":"test-owner","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":112,"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -74,13 +75,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7wz5zl","number":104,"url":"https://github.com/test-owner/test-repo/pull/104","title":"Testing ZyMDPhV1","state":"OPEN","headRefOid":"dbf5c1205081137e33d99870a1260c91a1e9f1f2","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7w2FOj","number":112,"url":"https://github.com/test-owner/test-repo/pull/112","title":"Testing qG1vAoep","state":"OPEN","headRefOid":"7afe21605143c267d2f2934cd1cc5f785b821b3b","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 377.980417ms
+        duration: 268.788042ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -100,22 +101,23 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
+        uncompressed: true
         body: '{"data":{"user0":{"id":"MDQ6VXNlcjQxNzMw"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 342.161625ms
+        duration: 211.605584ms
     - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 215
+        content_length: 237
         host: api.github.com
         body: |
-            {"query":"mutation($input:AddAssigneesToAssignableInput!){addAssigneesToAssignable(input: $input){clientMutationId}}","variables":{"input":{"assignableId":"PR_kwDOMVd0xs7wz5zl","assigneeIds":["MDQ6VXNlcjQxNzMw"]}}}
+            {"query":"mutation($assignees:AddAssigneesToAssignableInput!){assignees:addAssigneesToAssignable(input: $assignees){clientMutationId}}","variables":{"assignees":{"assignableId":"PR_kwDOMVd0xs7w2FOj","assigneeIds":["MDQ6VXNlcjQxNzMw"]}}}
         headers:
             Content-Type:
                 - application/json
@@ -127,13 +129,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"addAssigneesToAssignable":{"clientMutationId":null}},"extensions":{"warnings":[{"type":"DEPRECATION","message":"The id MDQ6VXNlcjQxNzMw is deprecated. Update your cache to use the next_global_id from the data payload.","data":{"legacy_global_id":"MDQ6VXNlcjQxNzMw","next_global_id":"U_kgDNowI"},"link":"https://docs.github.com"}]}}'
+        body: '{"data":{"assignees":{"clientMutationId":null}},"extensions":{"warnings":[{"type":"DEPRECATION","message":"The id MDQ6VXNlcjQxNzMw is deprecated. Update your cache to use the next_global_id from the data payload.","data":{"legacy_global_id":"MDQ6VXNlcjQxNzMw","next_global_id":"U_kgDNowI"},"link":"https://docs.github.com"}]}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 614.212708ms
+        duration: 667.28675ms
     - id: 5
       request:
         proto: HTTP/1.1
@@ -142,7 +144,7 @@ interactions:
         content_length: 427
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":104,"owner":"test-owner","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":112,"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -153,11 +155,10 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7wz5zl","number":104,"url":"https://github.com/test-owner/test-repo/pull/104","title":"Testing ZyMDPhV1","state":"OPEN","headRefOid":"dbf5c1205081137e33d99870a1260c91a1e9f1f2","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[{"login":"test-owner"}]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7w2FOj","number":112,"url":"https://github.com/test-owner/test-repo/pull/112","title":"Testing qG1vAoep","state":"OPEN","headRefOid":"7afe21605143c267d2f2934cd1cc5f785b821b3b","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[{"login":"test-owner"}]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 291.110875ms
+        duration: 284.67475ms

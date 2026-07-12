@@ -10,6 +10,48 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 )
 
+func (s *integrationSuite) TestSubmitCombinedMetadata(t *testing.T) {
+	require.NotEmpty(t, s.Reviewers, "test requires at least one reviewer")
+	require.NotEmpty(t, s.Assignees, "test requires at least one assignee")
+
+	branchFixture := fixturetest.New(s.Fixtures, "branch-combined-metadata", func() string {
+		return randomString(8)
+	})
+	branchName := branchFixture.Get(t)
+	t.Logf("Creating branch: %s", branchName)
+
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+
+		testRepo.CreateBranch(branchName)
+		testRepo.CheckoutBranch(branchName)
+		testRepo.WriteFile(branchName+".txt", randomString(32))
+		testRepo.AddAllAndCommit("commit from test")
+		testRepo.Push(branchName)
+
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(branchName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+	_, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject:   "Testing " + branchName,
+		Body:      "Test PR with combined metadata",
+		Base:      "main",
+		Head:      branchName,
+		Reviewers: s.Reviewers[:1],
+		Assignees: s.Assignees[:1],
+	})
+	require.NoError(t, err, "error creating PR")
+
+	foundChanges, err := repo.FindChangesByBranch(t.Context(), branchName, forge.FindChangesOptions{})
+	require.NoError(t, err)
+	require.Len(t, foundChanges, 1, "expected exactly one change")
+	assert.Equal(t, s.Reviewers[:1], foundChanges[0].Reviewers)
+	assert.Equal(t, s.Assignees[:1], foundChanges[0].Assignees)
+}
+
 func (s *integrationSuite) TestSubmitEditReviewers(t *testing.T) {
 	require.NotEmpty(t, s.Reviewers, "test requires at least one reviewer")
 

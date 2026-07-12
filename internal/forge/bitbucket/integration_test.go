@@ -135,5 +135,7 @@ func TestIntegration(t *testing.T) {
 		SkipMergeability:      true, // no working account for recording
 		SkipMerge:             true, // requires branch permissions
 		SkipCommentPagination: true, // 403 with small pages
+		// TODO: Enable the combined metadata test when Bitbucket assignees are supported.
+		SkipCombinedMetadata: true,
 	})
 }

@@ -167,12 +167,6 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	t.Run("DoesNotExist", func(t *testing.T) {
-		_, err := repo.LabelID(t.Context(), label)
-		require.Error(t, err, "expected error for non-existent label")
-		assert.ErrorIs(t, err, github.ErrLabelNotFound)
-	})
-
 	id, err := repo.CreateLabel(t.Context(), label)
 	require.NoError(t, err, "could not create label")
 	t.Cleanup(func() {
@@ -180,12 +174,6 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 		ctx := context.WithoutCancel(t.Context())
 		assert.NoError(t,
 			repo.DeleteLabel(ctx, label), "could not delete label")
-	})
-
-	t.Run("LabelID", func(t *testing.T) {
-		gotID, err := repo.LabelID(t.Context(), label)
-		require.NoError(t, err, "could not get label ID")
-		assert.Equal(t, id, gotID, "label ID does not match")
 	})
 
 	t.Run("createIsIdempotent", func(t *testing.T) {

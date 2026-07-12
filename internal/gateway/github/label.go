@@ -7,33 +7,6 @@ import (
 	"strings"
 )
 
-// LabelID looks up a repository label's GraphQL node ID by name.
-func (c *Gateway) LabelID(ctx context.Context, owner, repo, label string) (ID, error) {
-	var result struct {
-		Repository struct {
-			Label struct {
-				ID ID `json:"id"`
-			} `json:"label"`
-		} `json:"repository"`
-	}
-	vars := struct {
-		Label string `json:"label"`
-		Name  string `json:"name"`
-		Owner string `json:"owner"`
-	}{label, repo, owner}
-	query := compactGraphQL(`
-		query($label:String!$name:String!$owner:String!){
-			repository(owner: $owner, name: $name){
-				label(name: $label){id}
-			}
-		}
-	`)
-	if err := c.execute(ctx, query, vars, &result); err != nil {
-		return "", fmt.Errorf("query label: %w", err)
-	}
-	return result.Repository.Label.ID, nil
-}
-
 // LabelIDs looks up repository labels by name.
 //
 // Results have the same length and order as labels. Repeated names share one
@@ -110,19 +83,6 @@ func (c *Gateway) LabelIDs(ctx context.Context, owner, repo string, labels []str
 		}
 	}
 	return ids, nil
-}
-
-// AddLabelsToLabelable adds labels to a labelable node.
-func (c *Gateway) AddLabelsToLabelable(ctx context.Context, labelableID ID, labelIDs []ID) error {
-	mutation := compactGraphQL(`
-		mutation($input:AddLabelsToLabelableInput!){
-			addLabelsToLabelable(input: $input){clientMutationId}
-		}
-	`)
-	return c.mutate(ctx, mutation, struct {
-		LabelableID ID   `json:"labelableId"`
-		LabelIDs    []ID `json:"labelIds"`
-	}{labelableID, labelIDs}, &struct{}{})
 }
 
 // CreateLabel creates a repository label and returns its node ID.

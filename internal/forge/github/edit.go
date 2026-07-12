@@ -58,20 +58,17 @@ func (r *Repository) EditChange(ctx context.Context, fid forge.ChangeID, opts fo
 		r.log.Debug(logMsg, "pr", pr.Number)
 	}
 
-	// TODO:
-	// perform in parallel, share resolved user IDs, etc.
-	// maybe even cache and persist resolved IDs in store.
-
-	if err := r.addLabelsToPullRequest(ctx, opts.AddLabels, graphQLID); err != nil {
-		return fmt.Errorf("add labels to PR: %w", err)
-	}
-
-	if err := r.addReviewersToPullRequest(ctx, opts.AddReviewers, graphQLID); err != nil {
-		return fmt.Errorf("add reviewers to PR: %w", err)
-	}
-
-	if err := r.addAssigneesToPullRequest(ctx, opts.AddAssignees, graphQLID); err != nil {
-		return fmt.Errorf("add assignees to PR: %w", err)
+	// Keep base and draft transitions separate from the additive metadata
+	// mutation. GitHub may continue nullable sibling mutations after one fails;
+	// combining them could add metadata after a requested workflow transition
+	// did not take effect.
+	if err := r.addPullRequestMetadata(ctx, pullRequestMetadataRequest{
+		PullRequestID: graphQLID,
+		Labels:        opts.AddLabels,
+		Reviewers:     opts.AddReviewers,
+		Assignees:     opts.AddAssignees,
+	}); err != nil {
+		return err
 	}
 
 	return nil

@@ -107,54 +107,67 @@ func (s gatewayTestTokenSource) Token(context.Context) (string, error) {
 	return string(s), nil
 }
 
-func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
+func TestRepository_addPullRequestMetadata(t *testing.T) {
 	var userQueries int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
 
 		var body struct {
-			Query     string `json:"query"`
-			Variables struct {
-				User0 string         `json:"user0"`
-				Input map[string]any `json:"input"`
-			} `json:"variables"`
+			Query     string         `json:"query"`
+			Variables map[string]any `json:"variables"`
 		}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 
 		switch {
+		case strings.Contains(body.Query, "label0:label(name: $label0)"):
+			assert.Equal(t, "enhancement", body.Variables["label0"])
+			assert.Equal(t, "test-repo", body.Variables["name"])
+			assert.Equal(t, "test-owner", body.Variables["owner"])
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"repository": map[string]any{
+						"label0": map[string]any{"id": "labelID"},
+					},
+				},
+			}))
+
 		case strings.Contains(body.Query, "user0:user(login: $user0)"):
 			userQueries++
-			assert.Equal(t, "alice", body.Variables.User0)
+			assert.Equal(t, "alice", body.Variables["user0"])
+			assert.Equal(t, "bob", body.Variables["user1"])
 
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{
 					"user0": map[string]any{
 						"id": "aliceID",
 					},
-				},
-			}))
-
-		case strings.Contains(body.Query, "requestReviews(input:"):
-			assert.Equal(t, "prID", body.Variables.Input["pullRequestId"])
-			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["userIds"])
-
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
-				"data": map[string]any{
-					"requestReviews": map[string]any{
-						"clientMutationId": "reviewMutation",
+					"user1": map[string]any{
+						"id": "bobID",
 					},
 				},
 			}))
 
-		case strings.Contains(body.Query, "addAssigneesToAssignable(input:"):
-			assert.Equal(t, "prID", body.Variables.Input["assignableId"])
-			assert.Equal(t, []any{"aliceID"}, body.Variables.Input["assigneeIds"])
+		case strings.Contains(body.Query, "reviews:requestReviews(input:"):
+			labels, ok := body.Variables["labels"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", labels["labelableId"])
+			assert.Equal(t, []any{"labelID"}, labels["labelIds"])
+
+			reviews, ok := body.Variables["reviews"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", reviews["pullRequestId"])
+			assert.Equal(t, []any{"aliceID"}, reviews["userIds"])
+
+			assignees, ok := body.Variables["assignees"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "prID", assignees["assignableId"])
+			assert.Equal(t, []any{"bobID"}, assignees["assigneeIds"])
 
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{
-					"addAssigneesToAssignable": map[string]any{
-						"clientMutationId": "assigneeMutation",
-					},
+					"labels":    map[string]any{},
+					"reviews":   map[string]any{},
+					"assignees": map[string]any{},
 				},
 			}))
 
@@ -179,24 +192,18 @@ func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = repo.addReviewersToPullRequest(
-		t.Context(),
-		[]string{"alice"},
-		"prID",
-	)
-	require.NoError(t, err)
-
-	err = repo.addAssigneesToPullRequest(
-		t.Context(),
-		[]string{"alice"},
-		"prID",
-	)
+	err = repo.addPullRequestMetadata(t.Context(), pullRequestMetadataRequest{
+		PullRequestID: "prID",
+		Labels:        []string{"enhancement"},
+		Reviewers:     []string{"alice"},
+		Assignees:     []string{"bob", "bob"},
+	})
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, userQueries)
 }
 
-func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
+func TestRepository_identityIDsCoalescesConcurrentMisses(t *testing.T) {
 	var userQueries atomic.Int32
 	firstQueryStarted := make(chan struct{})
 	releaseQuery := make(chan struct{})
@@ -247,9 +254,9 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	errs := make(chan error, 2)
 
 	wg.Go(func() {
-		id, err := repo.userID(t.Context(), "alice")
+		userIDs, _, err := repo.identityIDs(t.Context(), []string{"alice"}, nil)
 		if err == nil {
-			assert.Equal(t, github.ID("aliceID"), id)
+			assert.Equal(t, []github.ID{"aliceID"}, userIDs)
 		}
 		errs <- err
 	})
@@ -257,9 +264,9 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	<-firstQueryStarted
 
 	wg.Go(func() {
-		id, err := repo.userID(t.Context(), "alice")
+		userIDs, _, err := repo.identityIDs(t.Context(), []string{"alice"}, nil)
 		if err == nil {
-			assert.Equal(t, github.ID("aliceID"), id)
+			assert.Equal(t, []github.ID{"aliceID"}, userIDs)
 		}
 		errs <- err
 	})

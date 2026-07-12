@@ -20,14 +20,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
         body: '{"data":{"repository":{"id":"R_kgDOMVd0xg"}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 342.587833ms
+        duration: 207.184667ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -36,7 +35,7 @@ interactions:
         content_length: 271
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"gd6GAT09","title":"Testing gd6GAT09","body":"Test PR with labels"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"svjT2LUI","title":"Testing svjT2LUI","body":"Test PR with labels"}}}
         headers:
             Content-Type:
                 - application/json
@@ -47,13 +46,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7wyv0y","number":102,"url":"https://github.com/test-owner/test-repo/pull/102"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7w2FOb","number":111,"url":"https://github.com/test-owner/test-repo/pull/111"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 898.328625ms
+        duration: 1.166501458s
     - id: 2
       request:
         proto: HTTP/1.1
@@ -62,7 +61,7 @@ interactions:
         content_length: 206
         host: api.github.com
         body: |
-            {"query":"query($label0:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id}}}","variables":{"label0":"6Ol9SHb1","name":"test-repo","owner":"test-owner"}}
+            {"query":"query($label0:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id}}}","variables":{"label0":"Pq3ELLdG","name":"test-repo","owner":"test-owner"}}
         headers:
             Content-Type:
                 - application/json
@@ -73,14 +72,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
         body: '{"data":{"repository":{"label0":null}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 270.192ms
+        duration: 227.421792ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -89,7 +87,7 @@ interactions:
         content_length: 175
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"6Ol9SHb1"}}}
+            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"Pq3ELLdG"}}}
         headers:
             Content-Type:
                 - application/json
@@ -100,22 +98,22 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrZrCZQ"}}}}'
+        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrbT-Rw"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 357.201041ms
+        duration: 333.234709ms
     - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 212
+        content_length: 222
         host: api.github.com
         body: |
-            {"query":"mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input: $input){clientMutationId}}","variables":{"input":{"labelableId":"PR_kwDOMVd0xs7wyv0y","labelIds":["LA_kwDOMVd0xs8AAAACrZrCZQ"]}}}
+            {"query":"mutation($labels:AddLabelsToLabelableInput!){labels:addLabelsToLabelable(input: $labels){clientMutationId}}","variables":{"labels":{"labelableId":"PR_kwDOMVd0xs7w2FOb","labelIds":["LA_kwDOMVd0xs8AAAACrbT-Rw"]}}}
         headers:
             Content-Type:
                 - application/json
@@ -127,13 +125,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"addLabelsToLabelable":{"clientMutationId":null}}}'
+        body: '{"data":{"labels":{"clientMutationId":null}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 564.346958ms
+        duration: 705.79725ms
     - id: 5
       request:
         proto: HTTP/1.1
@@ -142,7 +140,7 @@ interactions:
         content_length: 427
         host: api.github.com
         body: |
-            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":102,"owner":"test-owner","repo":"test-repo"}}
+            {"query":"query($number:Int!$owner:String!$repo:String!){repository(owner: $owner, name: $repo){pullRequest(number: $number){id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}","variables":{"number":111,"owner":"test-owner","repo":"test-repo"}}
         headers:
             Content-Type:
                 - application/json
@@ -153,13 +151,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7wyv0y","number":102,"url":"https://github.com/test-owner/test-repo/pull/102","title":"Testing gd6GAT09","state":"OPEN","headRefOid":"6f5d483108cdd4d1a9af2ee0f0f8c6490765cfa9","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[{"name":"6Ol9SHb1"}]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
+        body: '{"data":{"repository":{"pullRequest":{"id":"PR_kwDOMVd0xs7w2FOb","number":111,"url":"https://github.com/test-owner/test-repo/pull/111","title":"Testing svjT2LUI","state":"OPEN","headRefOid":"047477589315592c5fdcfdaa43d9ee0afb7bf90f","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[{"name":"Pq3ELLdG"}]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 314.69025ms
+        duration: 294.120958ms
     - id: 6
       request:
         proto: HTTP/1.1
@@ -168,7 +166,7 @@ interactions:
         content_length: 206
         host: api.github.com
         body: |
-            {"query":"query($label0:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id}}}","variables":{"label0":"2k8YeRF5","name":"test-repo","owner":"test-owner"}}
+            {"query":"query($label0:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id}}}","variables":{"label0":"TClwUq2i","name":"test-repo","owner":"test-owner"}}
         headers:
             Content-Type:
                 - application/json
@@ -179,13 +177,14 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
+        uncompressed: true
         body: '{"data":{"repository":{"label0":null}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 224.459625ms
+        duration: 271.609041ms
     - id: 7
       request:
         proto: HTTP/1.1
@@ -194,33 +193,7 @@ interactions:
         content_length: 175
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"2k8YeRF5"}}}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        content_length: -1
-        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrZrC6Q"}}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 382.759083ms
-    - id: 8
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 212
-        host: api.github.com
-        body: |
-            {"query":"mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input: $input){clientMutationId}}","variables":{"input":{"labelableId":"PR_kwDOMVd0xs7wyv0y","labelIds":["LA_kwDOMVd0xs8AAAACrZrC6Q"]}}}
+            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"TClwUq2i"}}}
         headers:
             Content-Type:
                 - application/json
@@ -232,13 +205,39 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"addLabelsToLabelable":{"clientMutationId":null}}}'
+        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrbT_Rg"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 600.227625ms
+        duration: 339.669542ms
+    - id: 8
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 222
+        host: api.github.com
+        body: |
+            {"query":"mutation($labels:AddLabelsToLabelableInput!){labels:addLabelsToLabelable(input: $labels){clientMutationId}}","variables":{"labels":{"labelableId":"PR_kwDOMVd0xs7w2FOb","labelIds":["LA_kwDOMVd0xs8AAAACrbT_Rg"]}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"labels":{"clientMutationId":null}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 575.119042ms
     - id: 9
       request:
         proto: HTTP/1.1
@@ -247,85 +246,7 @@ interactions:
         content_length: 273
         host: api.github.com
         body: |
-            {"query":"query($label0:String!$label1:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id},label1:label(name: $label1){id}}}","variables":{"label0":"2k8YeRF5","label1":"X7Jx0I1X","name":"test-repo","owner":"test-owner"}}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        content_length: -1
-        body: '{"data":{"repository":{"label0":{"id":"LA_kwDOMVd0xs8AAAACrZrC6Q"},"label1":null}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 270.627625ms
-    - id: 10
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 175
-        host: api.github.com
-        body: |
-            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"X7Jx0I1X"}}}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        content_length: -1
-        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrZrDLA"}}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 319.547458ms
-    - id: 11
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 240
-        host: api.github.com
-        body: |
-            {"query":"mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input: $input){clientMutationId}}","variables":{"input":{"labelableId":"PR_kwDOMVd0xs7wyv0y","labelIds":["LA_kwDOMVd0xs8AAAACrZrC6Q","LA_kwDOMVd0xs8AAAACrZrDLA"]}}}
-        headers:
-            Content-Type:
-                - application/json
-        url: https://api.github.com/graphql
-        method: POST
-      response:
-        proto: HTTP/2.0
-        proto_major: 2
-        proto_minor: 0
-        content_length: -1
-        body: '{"data":{"addLabelsToLabelable":{"clientMutationId":null}}}'
-        headers:
-            Content-Type:
-                - application/json; charset=utf-8
-        status: 200 OK
-        code: 200
-        duration: 593.141666ms
-    - id: 12
-      request:
-        proto: HTTP/1.1
-        proto_major: 1
-        proto_minor: 1
-        content_length: 615
-        host: api.github.com
-        body: |
-            {"query":"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}}","variables":{"branch":"gd6GAT09","limit":10,"owner":"test-owner","repo":"test-repo","states":["OPEN","CLOSED","MERGED"]}}
+            {"query":"query($label0:String!$label1:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id},label1:label(name: $label1){id}}}","variables":{"label0":"TClwUq2i","label1":"saWTv9fn","name":"test-repo","owner":"test-owner"}}
         headers:
             Content-Type:
                 - application/json
@@ -337,10 +258,89 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"repository":{"pullRequests":{"nodes":[{"id":"PR_kwDOMVd0xs7wyv0y","number":102,"url":"https://github.com/test-owner/test-repo/pull/102","title":"Testing gd6GAT09","state":"OPEN","headRefOid":"6f5d483108cdd4d1a9af2ee0f0f8c6490765cfa9","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[{"name":"6Ol9SHb1"},{"name":"2k8YeRF5"},{"name":"X7Jx0I1X"}]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}]}}}}'
+        body: '{"data":{"repository":{"label0":{"id":"LA_kwDOMVd0xs8AAAACrbT_Rg"},"label1":null}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 279.146083ms
+        duration: 260.286208ms
+    - id: 10
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 175
+        host: api.github.com
+        body: |
+            {"query":"mutation($input:CreateLabelInput!){createLabel(input: $input){label{id}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","color":"EDEDED","name":"saWTv9fn"}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        uncompressed: true
+        body: '{"data":{"createLabel":{"label":{"id":"LA_kwDOMVd0xs8AAAACrbT_5g"}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 504.281333ms
+    - id: 11
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 250
+        host: api.github.com
+        body: |
+            {"query":"mutation($labels:AddLabelsToLabelableInput!){labels:addLabelsToLabelable(input: $labels){clientMutationId}}","variables":{"labels":{"labelableId":"PR_kwDOMVd0xs7w2FOb","labelIds":["LA_kwDOMVd0xs8AAAACrbT_Rg","LA_kwDOMVd0xs8AAAACrbT_5g"]}}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"labels":{"clientMutationId":null}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 567.326333ms
+    - id: 12
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 615
+        host: api.github.com
+        body: |
+            {"query":"query($branch:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,url,title,state,headRefOid,baseRefName,isDraft,headRepository{owner{login},name},labels(first: 100){nodes{name}},reviewRequests(first: 100){nodes{requestedReviewer{... on Actor{login}}}},assignees(first: 100){nodes{login}}}}}}","variables":{"branch":"svjT2LUI","limit":10,"owner":"test-owner","repo":"test-repo","states":["OPEN","CLOSED","MERGED"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"pullRequests":{"nodes":[{"id":"PR_kwDOMVd0xs7w2FOb","number":111,"url":"https://github.com/test-owner/test-repo/pull/111","title":"Testing svjT2LUI","state":"OPEN","headRefOid":"047477589315592c5fdcfdaa43d9ee0afb7bf90f","baseRefName":"main","isDraft":false,"headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"},"labels":{"nodes":[{"name":"Pq3ELLdG"},{"name":"TClwUq2i"},{"name":"saWTv9fn"}]},"reviewRequests":{"nodes":[]},"assignees":{"nodes":[]}}]}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 280.77375ms

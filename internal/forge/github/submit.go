@@ -70,20 +70,14 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 
 	r.log.Debug("Created pull request", "pr", pullRequest.Number, "url", pullRequest.URL)
 
-	// TODO: combine the following into one mutation.
-
 	pullRequestID := pullRequest.ID
-	err = r.addLabelsToPullRequest(ctx, req.Labels, pullRequestID)
-	if err != nil {
-		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
-	}
-
-	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, pullRequestID); err != nil {
-		return forge.SubmitChangeResult{}, fmt.Errorf("add reviewers to PR: %w", err)
-	}
-
-	if err := r.addAssigneesToPullRequest(ctx, req.Assignees, pullRequestID); err != nil {
-		return forge.SubmitChangeResult{}, fmt.Errorf("add assignees to PR: %w", err)
+	if err := r.addPullRequestMetadata(ctx, pullRequestMetadataRequest{
+		PullRequestID: pullRequestID,
+		Labels:        req.Labels,
+		Reviewers:     req.Reviewers,
+		Assignees:     req.Assignees,
+	}); err != nil {
+		return forge.SubmitChangeResult{}, err
 	}
 
 	return forge.SubmitChangeResult{

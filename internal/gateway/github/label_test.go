@@ -11,13 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGateway_LabelID(t *testing.T) {
-	gateway := newResponseGateway(t, `{"data":{"repository":{"label":{"id":"L_1"}}}}`)
-	id, err := gateway.LabelID(t.Context(), "acme", "repo", "bug")
-	require.NoError(t, err)
-	assert.Equal(t, ID("L_1"), id)
-}
-
 func TestGateway_LabelIDs(t *testing.T) {
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
@@ -68,11 +61,6 @@ func TestGateway_CreateLabel(t *testing.T) {
 	id, err := gateway.CreateLabel(t.Context(), "R_1", "ffffff", "bug")
 	require.NoError(t, err)
 	assert.Equal(t, ID("L_1"), id)
-}
-
-func TestGateway_AddLabelsToLabelable(t *testing.T) {
-	gateway := newResponseGateway(t, `{"data":{"addLabelsToLabelable":{}}}`)
-	require.NoError(t, gateway.AddLabelsToLabelable(t.Context(), "PR_1", []ID{"L_1"}))
 }
 
 func TestGateway_DeleteLabel(t *testing.T) {

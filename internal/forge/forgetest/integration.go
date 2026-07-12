@@ -86,6 +86,10 @@ type IntegrationConfig struct {
 	// Assignees is a list of usernames that can be assigned to changes.
 	Assignees []string // required
 
+	// SkipCombinedMetadata skips submitting one change with both a reviewer and
+	// an assignee.
+	SkipCombinedMetadata bool // optional
+
 	// SetCommentsPageSize sets the page size for listing comments.
 	// This is used to test pagination.
 	SetCommentsPageSize func(testing.TB, int) // required
@@ -270,6 +274,14 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 			t.Parallel()
 
 			suite.TestSubmitEditAssignees(t)
+		})
+	}
+
+	if !config.SkipCombinedMetadata {
+		t.Run("SubmitCombinedMetadata", func(t *testing.T) {
+			t.Parallel()
+
+			suite.TestSubmitCombinedMetadata(t)
 		})
 	}
 

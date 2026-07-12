@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/gateway/github"
-	"go.abhg.dev/gs/internal/silog/silogtest"
+	"go.abhg.dev/gs/internal/silog"
 )
 
 func TestRepository_identityIDsCachesSuccessesFromPartialLookup(t *testing.T) {
@@ -31,10 +32,11 @@ func TestRepository_identityIDsCachesSuccessesFromPartialLookup(t *testing.T) {
 	}))
 	defer server.Close()
 
+	var logs strings.Builder
 	repo, err := newRepository(
 		t.Context(), new(Forge),
 		"acme", "warp-drive",
-		silogtest.New(t),
+		silog.New(&logs, &silog.Options{Level: silog.LevelDebug}),
 		newTestGateway(t, server.URL),
 		"R_1",
 	)
@@ -44,8 +46,9 @@ func TestRepository_identityIDsCachesSuccessesFromPartialLookup(t *testing.T) {
 	require.EqualError(t, err, `user not found: "missing"`)
 	assert.Equal(t, []github.ID{"U_1", ""}, userIDs)
 
-	id, err := repo.userID(t.Context(), "alice")
+	cachedUserIDs, _, err := repo.identityIDs(t.Context(), []string{"alice"}, nil)
 	require.NoError(t, err)
-	assert.Equal(t, github.ID("U_1"), id)
+	assert.Equal(t, []github.ID{"U_1"}, cachedUserIDs)
 	assert.Equal(t, 1, requests)
+	assert.Equal(t, 1, strings.Count(logs.String(), "Resolved user ID"))
 }

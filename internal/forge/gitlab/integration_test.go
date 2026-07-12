@@ -167,6 +167,8 @@ func TestIntegration(t *testing.T) {
 		SkipMerge:             true, // Merge requires MR approval settings to be disabled
 		Reviewers:             []string{cfg.Reviewer},
 		Assignees:             []string{cfg.Assignee},
+		// TODO: Enable the combined metadata test after recording its fixtures.
+		SkipCombinedMetadata: true,
 	})
 }
 
