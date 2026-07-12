@@ -26,23 +26,11 @@ func (r *Repository) queryChecksRollup(
 	ctx context.Context, gqlID github.ID,
 ) ([]forge.ChangeCheck, error) {
 	var contexts []github.StatusCheck
-	var after *string
-	for {
-		page, err := r.gateway.StatusChecks(ctx, gqlID, after)
+	for check, err := range r.gateway.StatusChecks(ctx, gqlID, nil) {
 		if err != nil {
 			return nil, fmt.Errorf("query status checks: %w", err)
 		}
-
-		if !page.Present {
-			return nil, nil
-		}
-
-		contexts = append(contexts, page.Contexts...)
-
-		if !page.HasNextPage {
-			break
-		}
-		after = &page.EndCursor
+		contexts = append(contexts, check)
 	}
 
 	return checksFromGatewayContexts(contexts), nil

@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
+	"strconv"
 	"time"
 )
 
 // StatusCheck is one gateway-normalized member of GitHub's status-check union.
 // Its dynamic type is either [StatusContext] or [CheckRun].
 // Future union members that the gateway does not recognize are omitted from
-// [StatusChecksPage.Contexts] so known checks remain available.
+// the sequence returned by [Gateway.StatusChecks] so known checks remain
+// available.
 type StatusCheck interface {
 	isStatusCheck()
 }
@@ -65,33 +68,66 @@ type CheckRun struct {
 
 func (*CheckRun) isStatusCheck() {}
 
-// StatusChecksPage is one page of a pull request's status-check rollup.
-type StatusChecksPage struct {
-	// Contexts contains the known status and check-run members on this page.
-	// Future unknown union members are omitted for forward compatibility.
-	Contexts []StatusCheck
+// StatusChecks yields every known status-check rollup context for a pull request.
+// Future union members that the gateway does not recognize are omitted.
+// A pagination or decoding error is yielded once before the sequence stops.
+// A nil opts or zero [PaginationOptions.ItemsPerPage] requests 100 contexts per
+// page.
+func (c *Gateway) StatusChecks(ctx context.Context, id ID, opts *PaginationOptions) iter.Seq2[StatusCheck, error] {
+	return func(yield func(StatusCheck, error) bool) {
+		itemsPerPage, err := paginationItemsPerPage(opts, 100)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
 
-	// EndCursor is usable as after when HasNextPage is true.
-	EndCursor string
-
-	// HasNextPage reports whether another page follows EndCursor.
-	HasNextPage bool
-
-	// Present reports whether the pull request has a status-check rollup.
-	Present bool
+		var after *string
+		for {
+			page, err := c.statusChecksPage(ctx, id, itemsPerPage, after)
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			if !page.present {
+				return
+			}
+			for _, check := range page.contexts {
+				if !yield(check, nil) {
+					return
+				}
+			}
+			if !page.hasNextPage {
+				return
+			}
+			after = &page.endCursor
+		}
+	}
 }
 
-// StatusChecks loads up to 100 status-check rollup contexts.
-// A nil after selects the first page; a non-nil after continues after that
-// cursor. Present is false when the pull request has no status-check rollup.
-func (c *Gateway) StatusChecks(ctx context.Context, id ID, after *string) (*StatusChecksPage, error) {
+// statusChecksPage is one response page from GitHub's status-check connection.
+type statusChecksPage struct {
+	// The page contains these known status and check-run union members.
+	contexts []StatusCheck
+
+	// The cursor identifies the page boundary when another page follows.
+	endCursor string
+
+	// This value reports whether GitHub has another page after the cursor.
+	hasNextPage bool
+
+	// This value reports whether the pull request has a status-check rollup.
+	present bool
+}
+
+// statusChecksPage requests and normalizes one status-check connection page.
+func (c *Gateway) statusChecksPage(ctx context.Context, id ID, first int, after *string) (*statusChecksPage, error) {
 	query := compactGraphQL(`
 		query($after:String$id:ID!){
 			node(id: $id){
 				... on PullRequest{
 					commits(last: 1){
 						nodes{commit{statusCheckRollup{
-							contexts(first: 100, after: $after){
+							contexts(first: ` + strconv.Itoa(first) + `, after: $after){
 								nodes{
 									... on StatusContext{context,state,createdAt},
 									... on CheckRun{
@@ -119,17 +155,17 @@ func (c *Gateway) StatusChecks(ctx context.Context, id ID, after *string) (*Stat
 
 	contexts, ok := result.statusCheckContexts()
 	if !ok {
-		return &StatusChecksPage{}, nil
+		return &statusChecksPage{}, nil
 	}
 	normalized, err := normalizeStatusChecks(contexts.Nodes)
 	if err != nil {
 		return nil, err
 	}
-	return &StatusChecksPage{
-		Contexts:    normalized,
-		EndCursor:   contexts.PageInfo.EndCursor,
-		HasNextPage: contexts.PageInfo.HasNextPage,
-		Present:     true,
+	return &statusChecksPage{
+		contexts:    normalized,
+		endCursor:   contexts.PageInfo.EndCursor,
+		hasNextPage: contexts.PageInfo.HasNextPage,
+		present:     true,
 	}, nil
 }
 

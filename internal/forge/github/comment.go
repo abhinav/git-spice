@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"slices"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/github"
@@ -139,45 +140,29 @@ func (r *Repository) ListChangeComments(
 	}
 
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
-		var after *string
-
-		for pageNum := 1; true; pageNum++ {
-			page, err := r.gateway.PullRequestComments(ctx, gqlID, _listChangeCommentsPageSize, after)
+		for node, err := range r.gateway.PullRequestComments(ctx, gqlID, &github.PaginationOptions{
+			ItemsPerPage: _listChangeCommentsPageSize,
+		}) {
 			if err != nil {
-				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
+				yield(nil, err)
 				return
 			}
 
-			for _, node := range page.Nodes {
-				match := true
-				for _, filter := range filters {
-					if !filter(node) {
-						match = false
-						break
-					}
-				}
-				if !match {
-					continue
-				}
-
-				item := &forge.ListChangeCommentItem{
-					ID: &PRComment{
-						GQLID: node.ID,
-						URL:   node.URL,
-					},
-					Body: node.Body,
-				}
-
-				if !yield(item, nil) {
-					return
-				}
+			if slices.ContainsFunc(filters, func(keep func(*github.Comment) bool) bool {
+				return !keep(node)
+			}) {
+				continue
 			}
 
-			if !page.HasNextPage {
+			if !yield(&forge.ListChangeCommentItem{
+				ID: &PRComment{
+					GQLID: node.ID,
+					URL:   node.URL,
+				},
+				Body: node.Body,
+			}, nil) {
 				return
 			}
-
-			after = &page.EndCursor
 		}
 	}
 }

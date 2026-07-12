@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"iter"
 	"time"
 )
 
@@ -30,22 +31,59 @@ type Comment struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// CommentsPage is one page from a pull request's comments connection.
-type CommentsPage struct {
-	// Nodes contains the comments on this page.
-	Nodes []*Comment
+// GitHub charges GraphQL rate limits by queried nodes.
+// Comments usually appear near the start of the ascending connection, so a
+// small page avoids over-fetching while retaining useful request granularity.
+const pullRequestCommentsPageSize = 10
 
-	// EndCursor is usable as after when HasNextPage is true.
-	EndCursor string
+// PullRequestComments yields pull request comments in GitHub's ascending order.
+// The gateway traverses every page and yields a pagination error once before
+// stopping. A nil opts or zero [PaginationOptions.ItemsPerPage] requests 10
+// comments per page.
+func (c *Gateway) PullRequestComments(ctx context.Context, id ID, opts *PaginationOptions) iter.Seq2[*Comment, error] {
+	return func(yield func(*Comment, error) bool) {
+		itemsPerPage, err := paginationItemsPerPage(opts, pullRequestCommentsPageSize)
+		if err != nil {
+			yield(nil, err)
+			return
+		}
 
-	// HasNextPage reports whether another page follows EndCursor.
-	HasNextPage bool
+		var after *string
+		for pageNum := 1; ; pageNum++ {
+			page, err := c.pullRequestCommentsPage(ctx, id, itemsPerPage, after)
+			if err != nil {
+				yield(nil, fmt.Errorf("list comments (page %d): %w", pageNum, err))
+				return
+			}
+			for _, comment := range page.nodes {
+				if !yield(comment, nil) {
+					return
+				}
+			}
+			if !page.hasNextPage {
+				return
+			}
+			after = &page.endCursor
+		}
+	}
 }
 
-// PullRequestComments loads one page with first entries.
-// A nil after selects the first page; a non-nil after continues after that
-// cursor. First must be from 1 through 100.
-func (c *Gateway) PullRequestComments(ctx context.Context, id ID, first int, after *string) (*CommentsPage, error) {
+// commentsPage is one response page from GitHub's comments connection.
+type commentsPage struct {
+	// The page contains these comments in GitHub's response order.
+	nodes []*Comment
+
+	// The cursor identifies the page boundary when another page follows.
+	endCursor string
+
+	// This value reports whether GitHub has another page after the cursor.
+	hasNextPage bool
+}
+
+// pullRequestCommentsPage requests one comments page.
+// The first request declares a nullable cursor while continuation requests
+// declare a non-null cursor to preserve the existing GraphQL documents.
+func (c *Gateway) pullRequestCommentsPage(ctx context.Context, id ID, first int, after *string) (*commentsPage, error) {
 	var result struct {
 		Node struct {
 			Comments struct {
@@ -82,7 +120,11 @@ func (c *Gateway) PullRequestComments(ctx context.Context, id ID, first int, aft
 		return nil, fmt.Errorf("query pull request comments: %w", err)
 	}
 	comments := result.Node.Comments
-	return &CommentsPage{Nodes: comments.Nodes, EndCursor: comments.PageInfo.EndCursor, HasNextPage: comments.PageInfo.HasNextPage}, nil
+	return &commentsPage{
+		nodes:       comments.Nodes,
+		endCursor:   comments.PageInfo.EndCursor,
+		hasNextPage: comments.PageInfo.HasNextPage,
+	}, nil
 }
 
 // AddedComment identifies a comment returned after creation.
