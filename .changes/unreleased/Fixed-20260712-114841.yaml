@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'github: Reviewer and assignee IDs are resolved in batches instead of one API call per identity.'
+time: 2026-07-12T11:48:41.655769-07:00

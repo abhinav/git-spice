@@ -115,20 +115,20 @@ func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
 		var body struct {
 			Query     string `json:"query"`
 			Variables struct {
-				Login string         `json:"login"`
+				User0 string         `json:"user0"`
 				Input map[string]any `json:"input"`
 			} `json:"variables"`
 		}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 
 		switch {
-		case strings.Contains(body.Query, "user(login: $login)"):
+		case strings.Contains(body.Query, "user0:user(login: $user0)"):
 			userQueries++
-			assert.Equal(t, "alice", body.Variables.Login)
+			assert.Equal(t, "alice", body.Variables.User0)
 
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 				"data": map[string]any{
-					"user": map[string]any{
+					"user0": map[string]any{
 						"id": "aliceID",
 					},
 				},
@@ -209,12 +209,12 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		var body struct {
 			Query     string `json:"query"`
 			Variables struct {
-				Login string `json:"login"`
+				User0 string `json:"user0"`
 			} `json:"variables"`
 		}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-		require.Contains(t, body.Query, "user(login: $login)")
-		assert.Equal(t, "alice", body.Variables.Login)
+		require.Contains(t, body.Query, "user0:user(login: $user0)")
+		assert.Equal(t, "alice", body.Variables.User0)
 
 		if userQueries.Add(1) == 1 {
 			close(firstQueryStarted)
@@ -226,7 +226,7 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		<-releaseQuery
 		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
 			"data": map[string]any{
-				"user": map[string]any{
+				"user0": map[string]any{
 					"id": "aliceID",
 				},
 			},

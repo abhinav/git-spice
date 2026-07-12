@@ -8,7 +8,6 @@ import (
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog"
-	"golang.org/x/sync/singleflight"
 )
 
 // Repository is a GitHub repository.
@@ -19,14 +18,15 @@ type Repository struct {
 	gateway     *github.Gateway
 	forge       *Forge
 
-	userIDsMu sync.Mutex // guards userIDs
-	// userIDs caches successful login lookups for this repository.
+	identityIDsMu sync.RWMutex // guards userIDsCache and teamIDsCache
+	// userIDsCache caches successful login lookups for this repository.
 	//
 	// Pull request metadata operations can resolve the same login
 	// through reviewers, assignees, or follow-up edits in one command.
-	userIDs map[string]github.ID
-	// userIDGroup coalesces concurrent misses for the same login.
-	userIDGroup singleflight.Group
+	userIDsCache map[string]github.ID
+
+	// teamIDsCache caches successful organization and team slug lookups.
+	teamIDsCache map[github.TeamName]github.ID
 }
 
 var _ forge.Repository = (*Repository)(nil)
@@ -50,68 +50,16 @@ func newRepository(
 	}
 
 	return &Repository{
-		owner:   owner,
-		repo:    repo,
-		log:     log,
-		gateway: gateway,
-		repoID:  repoID,
-		forge:   forge,
-		userIDs: make(map[string]github.ID),
+		owner:        owner,
+		repo:         repo,
+		log:          log,
+		gateway:      gateway,
+		repoID:       repoID,
+		forge:        forge,
+		userIDsCache: make(map[string]github.ID),
+		teamIDsCache: make(map[github.TeamName]github.ID),
 	}, nil
 }
 
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
-
-// userID looks up a user's GraphQL ID by login.
-func (r *Repository) userID(ctx context.Context, login string) (github.ID, error) {
-	r.userIDsMu.Lock()
-	id, ok := r.userIDs[login]
-	r.userIDsMu.Unlock()
-	if ok {
-		// Another goroutine resolved this login
-		// while the singleflight call was waiting for the lock.
-		return id, nil
-	}
-
-	idAny, err, _ := r.userIDGroup.Do(login, func() (any, error) {
-		r.userIDsMu.Lock()
-		id, ok := r.userIDs[login]
-		r.userIDsMu.Unlock()
-		if ok {
-			// Another goroutine resolved this login
-			// while the singleflight call was waiting for the lock.
-			return id, nil
-		}
-
-		id, err := r.queryUserID(ctx, login)
-		if err != nil {
-			return "", err
-		}
-
-		r.userIDsMu.Lock()
-		if r.userIDs == nil {
-			r.userIDs = make(map[string]github.ID)
-		}
-		r.userIDs[login] = id
-		r.userIDsMu.Unlock()
-
-		return id, nil
-	})
-	if err != nil {
-		return "", err
-	}
-	return idAny.(github.ID), nil
-}
-
-func (r *Repository) queryUserID(ctx context.Context, login string) (github.ID, error) {
-	id, err := r.gateway.UserID(ctx, login)
-	if err != nil {
-		return "", err
-	}
-	if id == "" {
-		return "", fmt.Errorf("user not found: %q", login)
-	}
-
-	return id, nil
-}
