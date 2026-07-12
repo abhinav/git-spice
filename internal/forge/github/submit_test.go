@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,10 +10,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -66,12 +67,18 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 		}))
 	}))
 	defer srv.Close()
+	gatewayClient, err := github.NewGateway(
+		srv.URL,
+		srv.Client(),
+		gatewayTestTokenSource("token"),
+	)
+	require.NoError(t, err)
 
 	repo, err := newRepository(
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		gatewayClient,
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -88,10 +95,16 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.True(t, created)
-	assert.Equal(t, &PR{Number: 55, GQLID: githubv4.ID("prID")}, change.ID)
+	assert.Equal(t, &PR{Number: 55, GQLID: "prID"}, change.ID)
 	assert.Equal(t,
 		"https://github.com/test-owner/test-repo/pull/55",
 		change.URL)
+}
+
+type gatewayTestTokenSource string
+
+func (s gatewayTestTokenSource) Token(context.Context) (string, error) {
+	return string(s), nil
 }
 
 func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
@@ -150,12 +163,18 @@ func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
+	gatewayClient, err := github.NewGateway(
+		srv.URL,
+		srv.Client(),
+		gatewayTestTokenSource("token"),
+	)
+	require.NoError(t, err)
 
 	repo, err := newRepository(
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		gatewayClient,
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -163,14 +182,14 @@ func TestRepository_prMetadataCachesUserIDs(t *testing.T) {
 	err = repo.addReviewersToPullRequest(
 		t.Context(),
 		[]string{"alice"},
-		githubv4.ID("prID"),
+		"prID",
 	)
 	require.NoError(t, err)
 
 	err = repo.addAssigneesToPullRequest(
 		t.Context(),
 		[]string{"alice"},
-		githubv4.ID("prID"),
+		"prID",
 	)
 	require.NoError(t, err)
 
@@ -219,7 +238,7 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 		t.Context(), new(Forge),
 		"test-owner", "test-repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		newTestGateway(t, srv.URL),
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -230,7 +249,7 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	wg.Go(func() {
 		id, err := repo.userID(t.Context(), "alice")
 		if err == nil {
-			assert.Equal(t, githubv4.ID("aliceID"), id)
+			assert.Equal(t, github.ID("aliceID"), id)
 		}
 		errs <- err
 	})
@@ -240,7 +259,7 @@ func TestRepository_userIDCoalescesConcurrentMisses(t *testing.T) {
 	wg.Go(func() {
 		id, err := repo.userID(t.Context(), "alice")
 		if err == nil {
-			assert.Equal(t, githubv4.ID("aliceID"), id)
+			assert.Equal(t, github.ID("aliceID"), id)
 		}
 		errs <- err
 	})

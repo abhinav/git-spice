@@ -5,35 +5,23 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
-	"go.abhg.dev/gs/internal/graphqlutil"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // SubmitChange creates a new change in a repository.
 func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeRequest) (forge.SubmitChangeResult, error) {
-	var m struct {
-		CreatePullRequest struct {
-			PullRequest struct {
-				ID     githubv4.ID  `graphql:"id"`
-				Number githubv4.Int `graphql:"number"`
-				URL    githubv4.URI `graphql:"url"`
-			} `graphql:"pullRequest"`
-		} `graphql:"createPullRequest(input: $input)"`
-	}
-
-	input := githubv4.CreatePullRequestInput{
+	input := github.CreatePullRequestInput{
 		RepositoryID: r.repoID,
-		Title:        githubv4.String(req.Subject),
-		BaseRefName:  githubv4.String(req.Base),
-		HeadRefName:  githubv4.String(req.Head),
+		Title:        req.Subject,
+		BaseRefName:  req.Base,
+		HeadRefName:  req.Head,
 	}
 	if req.PushRepository != nil {
 		pushRepository := mustRepositoryID(req.PushRepository)
 		if pushRepository.owner != r.owner || pushRepository.name != r.repo {
-			pushRepoID, err := repositoryGQLID(
+			pushRepositoryID, err := r.gateway.RepositoryID(
 				ctx,
-				r.client,
 				pushRepository.owner,
 				pushRepository.name,
 			)
@@ -47,18 +35,20 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 			// the qualified head name is human-readable in diagnostics,
 			// and the repository ID avoids ambiguity when repository names
 			// or ownership relationships are unusual.
-			input.HeadRefName = githubv4.String(pushRepository.owner + ":" + req.Head)
-			input.HeadRepositoryID = &pushRepoID
+			input.HeadRefName = pushRepository.owner + ":" + req.Head
+			input.HeadRepositoryID = &pushRepositoryID
 		}
 	}
 	if req.Body != "" {
-		input.Body = (*githubv4.String)(&req.Body)
+		input.Body = &req.Body
 	}
 	if req.Draft {
-		input.Draft = githubv4.NewBoolean(true)
+		draft := true
+		input.Draft = &draft
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	pullRequest, err := r.gateway.CreatePullRequest(ctx, &input)
+	if err != nil {
 		// If the base branch has not been pushed yet,
 		// the error is:
 		//   {
@@ -69,7 +59,7 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		// String matching is not the best way to handle this,
 		// so if the error is unprocessable,
 		// we'll check if the repository has the base branch.
-		if errors.Is(err, graphqlutil.ErrUnprocessable) {
+		if errors.Is(err, github.ErrUnprocessable) {
 			if exists, existsErr := r.RefExists(ctx, "refs/heads/"+req.Base); existsErr == nil && !exists {
 				return forge.SubmitChangeResult{}, errors.Join(forge.ErrUnsubmittedBase, err)
 			}
@@ -78,30 +68,29 @@ func (r *Repository) SubmitChange(ctx context.Context, req forge.SubmitChangeReq
 		return forge.SubmitChangeResult{}, fmt.Errorf("create pull request: %w", err)
 	}
 
-	r.log.Debug("Created pull request",
-		"pr", m.CreatePullRequest.PullRequest.Number,
-		"url", m.CreatePullRequest.PullRequest.URL.String())
+	r.log.Debug("Created pull request", "pr", pullRequest.Number, "url", pullRequest.URL)
 
 	// TODO: combine the following into one mutation.
 
-	err := r.addLabelsToPullRequest(ctx, req.Labels, m.CreatePullRequest.PullRequest.ID)
+	pullRequestID := pullRequest.ID
+	err = r.addLabelsToPullRequest(ctx, req.Labels, pullRequestID)
 	if err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add labels to PR: %w", err)
 	}
 
-	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, m.CreatePullRequest.PullRequest.ID); err != nil {
+	if err := r.addReviewersToPullRequest(ctx, req.Reviewers, pullRequestID); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add reviewers to PR: %w", err)
 	}
 
-	if err := r.addAssigneesToPullRequest(ctx, req.Assignees, m.CreatePullRequest.PullRequest.ID); err != nil {
+	if err := r.addAssigneesToPullRequest(ctx, req.Assignees, pullRequestID); err != nil {
 		return forge.SubmitChangeResult{}, fmt.Errorf("add assignees to PR: %w", err)
 	}
 
 	return forge.SubmitChangeResult{
 		ID: &PR{
-			Number: int(m.CreatePullRequest.PullRequest.Number),
-			GQLID:  m.CreatePullRequest.PullRequest.ID,
+			Number: pullRequest.Number,
+			GQLID:  pullRequestID,
 		},
-		URL: m.CreatePullRequest.PullRequest.URL.String(),
+		URL: pullRequest.URL,
 	}, nil
 }

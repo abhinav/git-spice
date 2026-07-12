@@ -3,9 +3,10 @@ package github
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // ChangeChecks reports CI/checks for the given pull request.
@@ -22,99 +23,33 @@ func (r *Repository) ChangeChecks(
 }
 
 func (r *Repository) queryChecksRollup(
-	ctx context.Context, gqlID githubv4.ID,
+	ctx context.Context, gqlID github.ID,
 ) ([]forge.ChangeCheck, error) {
-	var contexts []statusCheckRollupContext
-	var after *githubv4.String
+	var contexts []github.StatusCheck
+	var after *string
 	for {
-		var q struct {
-			Node struct {
-				PullRequest struct {
-					Commits struct {
-						Nodes []struct {
-							Commit struct {
-								StatusCheckRollup *struct {
-									Contexts struct {
-										Nodes    []statusCheckRollupContext `graphql:"nodes"`
-										PageInfo struct {
-											EndCursor   githubv4.String `graphql:"endCursor"`
-											HasNextPage bool            `graphql:"hasNextPage"`
-										} `graphql:"pageInfo"`
-									} `graphql:"contexts(first: 100, after: $after)"`
-								} `graphql:"statusCheckRollup"`
-							} `graphql:"commit"`
-						} `graphql:"nodes"`
-					} `graphql:"commits(last: 1)"`
-				} `graphql:"... on PullRequest"`
-			} `graphql:"node(id: $id)"`
-		}
-
-		err := r.client.Query(ctx, &q, map[string]any{
-			"id":    gqlID,
-			"after": after,
-		})
+		page, err := r.gateway.StatusChecks(ctx, gqlID, after)
 		if err != nil {
 			return nil, fmt.Errorf("query status checks: %w", err)
 		}
 
-		commits := q.Node.PullRequest.Commits.Nodes
-		if len(commits) == 0 {
+		if !page.Present {
 			return nil, nil
 		}
 
-		rollup := commits[0].Commit.StatusCheckRollup
-		if rollup == nil {
-			return nil, nil
-		}
+		contexts = append(contexts, page.Contexts...)
 
-		contexts = append(contexts, rollup.Contexts.Nodes...)
-		if !rollup.Contexts.PageInfo.HasNextPage {
+		if !page.HasNextPage {
 			break
 		}
-		after = &rollup.Contexts.PageInfo.EndCursor
+		after = &page.EndCursor
 	}
 
-	return checksFromRollupContexts(contexts), nil
+	return checksFromGatewayContexts(contexts), nil
 }
 
-// statusCheckRollupContext is one GitHub status-check rollup context.
-//
-// GitHub represents classic commit statuses and check runs as different node
-// types under the same rollup connection.
-// The older Commit.status field covers only classic commit statuses,
-// so using it would drop GitHub Actions and Checks API results.
-type statusCheckRollupContext struct {
-	StatusContext statusContextRollupContext `graphql:"... on StatusContext"`
-
-	CheckRun checkRunRollupContext `graphql:"... on CheckRun"`
-}
-
-// statusContextRollupContext is a classic GitHub commit status.
-type statusContextRollupContext struct {
-	Context   string               `graphql:"context"`
-	State     githubv4.StatusState `graphql:"state"`
-	CreatedAt githubv4.DateTime    `graphql:"createdAt"`
-}
-
-// checkRunRollupContext is a GitHub check run in a status-check rollup.
-type checkRunRollupContext struct {
-	Name       string `graphql:"name"`
-	CheckSuite struct {
-		WorkflowRun struct {
-			Event    string `graphql:"event"`
-			Workflow struct {
-				Name string `graphql:"name"`
-			} `graphql:"workflow"`
-		} `graphql:"workflowRun"`
-	} `graphql:"checkSuite"`
-	Status      githubv4.CheckStatusState      `graphql:"status"`
-	Conclusion  *githubv4.CheckConclusionState `graphql:"conclusion"`
-	StartedAt   githubv4.DateTime              `graphql:"startedAt"`
-	CompletedAt *githubv4.DateTime             `graphql:"completedAt"`
-}
-
-func checksFromRollupContexts(
-	contexts []statusCheckRollupContext,
+func checksFromGatewayContexts(
+	contexts []github.StatusCheck,
 ) []forge.ChangeCheck {
 	// checkRollupItem is one de-duplicated status or check run.
 	//
@@ -123,7 +58,7 @@ func checksFromRollupContexts(
 	type checkRollupItem struct {
 		Key   checkRollupKey    // de-dupe lane
 		Check forge.ChangeCheck // forge-neutral check state
-		At    githubv4.DateTime // timestamp used to pick the newest item
+		At    time.Time         // timestamp used to pick the newest item
 	}
 
 	var order []checkRollupKey
@@ -137,7 +72,7 @@ func checksFromRollupContexts(
 			return
 		}
 
-		if item.At.After(existing.At.Time) {
+		if item.At.After(existing.At) {
 			checks[item.Key] = item
 		}
 	}
@@ -146,36 +81,36 @@ func checksFromRollupContexts(
 	// contexts for a single logical check lane.
 	// Keep only the newest item for each lane on the client side.
 	for _, context := range contexts {
-		switch {
-		case context.StatusContext.Context != "":
+		switch context := context.(type) {
+		case *github.StatusContext:
 			addItem(checkRollupItem{
 				Key: checkRollupKey{
 					Kind: "status",
-					Name: context.StatusContext.Context,
+					Name: context.Context,
 				},
 				Check: forge.ChangeCheck{
-					Name: context.StatusContext.Context,
+					Name: context.Context,
 					State: changeCheckStateFromStatusState(
-						context.StatusContext.State,
+						context.State,
 					),
 				},
-				At: context.StatusContext.CreatedAt,
+				At: context.CreatedAt,
 			})
-		case context.CheckRun.Name != "":
-			at := context.CheckRun.StartedAt
-			if context.CheckRun.CompletedAt != nil {
-				at = *context.CheckRun.CompletedAt
+		case *github.CheckRun:
+			at := context.StartedAt
+			if context.CompletedAt != nil {
+				at = *context.CompletedAt
 			}
 			addItem(checkRollupItem{
 				Key: checkRollupKey{
 					Kind:     "check_run",
-					Name:     context.CheckRun.Name,
-					Workflow: context.CheckRun.CheckSuite.WorkflowRun.Workflow.Name,
-					Event:    context.CheckRun.CheckSuite.WorkflowRun.Event,
+					Name:     context.Name,
+					Workflow: context.CheckSuite.WorkflowRun.Workflow.Name,
+					Event:    context.CheckSuite.WorkflowRun.Event,
 				},
 				Check: forge.ChangeCheck{
-					Name:  context.CheckRun.Name,
-					State: changeCheckStateFromCheckRun(context.CheckRun),
+					Name:  context.Name,
+					State: changeCheckStateFromCheckRun(context),
 				},
 				At: at,
 			})
@@ -207,14 +142,14 @@ type checkRollupKey struct {
 }
 
 func changeCheckStateFromStatusState(
-	state githubv4.StatusState,
+	state github.StatusState,
 ) forge.ChangeCheckState {
 	switch state {
-	case githubv4.StatusStateSuccess:
+	case github.StatusStateSuccess:
 		return forge.ChangeCheckPassed
-	case githubv4.StatusStatePending, githubv4.StatusStateExpected:
+	case github.StatusStatePending, github.StatusStateExpected:
 		return forge.ChangeCheckPending
-	case githubv4.StatusStateError, githubv4.StatusStateFailure:
+	case github.StatusStateError, github.StatusStateFailure:
 		return forge.ChangeCheckFailed
 	default:
 		return forge.ChangeCheckFailed
@@ -222,26 +157,25 @@ func changeCheckStateFromStatusState(
 }
 
 func changeCheckStateFromCheckRun(
-	checkRun checkRunRollupContext,
+	checkRun *github.CheckRun,
 ) forge.ChangeCheckState {
 	switch {
-	case checkRun.Status != githubv4.CheckStatusStateCompleted:
+	case checkRun.Status != github.CheckStatusStateCompleted:
 		return forge.ChangeCheckPending
 	case checkRun.Conclusion == nil:
 		return forge.ChangeCheckFailed
 	}
 
 	switch *checkRun.Conclusion {
-	case githubv4.CheckConclusionStateSuccess,
-		githubv4.CheckConclusionStateNeutral,
-		githubv4.CheckConclusionStateSkipped:
+	case github.CheckConclusionStateSuccess, github.CheckConclusionStateNeutral,
+		github.CheckConclusionStateSkipped:
 		return forge.ChangeCheckPassed
-	case githubv4.CheckConclusionStateActionRequired,
-		githubv4.CheckConclusionStateCancelled,
-		githubv4.CheckConclusionStateFailure,
-		githubv4.CheckConclusionStateStale,
-		githubv4.CheckConclusionStateStartupFailure,
-		githubv4.CheckConclusionStateTimedOut:
+	case github.CheckConclusionStateActionRequired,
+		github.CheckConclusionStateCancelled,
+		github.CheckConclusionStateFailure,
+		github.CheckConclusionStateStale,
+		github.CheckConclusionStateStartupFailure,
+		github.CheckConclusionStateTimedOut:
 		return forge.ChangeCheckFailed
 	default:
 		return forge.ChangeCheckFailed

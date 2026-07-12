@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/silog"
-	"golang.org/x/oauth2"
 )
 
 // Default URLs for GitHub and its API.
@@ -153,12 +152,13 @@ func (f *Forge) OpenRepository(ctx context.Context, tok forge.AuthenticationToke
 		return nil, err
 	}
 
-	ghc, err := newGitHubv4Client(ctx, f.APIURL(), tokenSource)
+	gatewayTokens := newGatewayTokenSource(tokenSource)
+	gatewayClient, err := github.NewGateway(f.APIURL(), nil, gatewayTokens)
 	if err != nil {
-		return nil, fmt.Errorf("create GitHub client: %w", err)
+		return nil, fmt.Errorf("create GitHub gateway: %w", err)
 	}
 
-	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), ghc, nil)
+	return newRepository(ctx, f, rid.owner, rid.name, f.logger(), gatewayClient, "")
 }
 
 // RepositoryID is a unique identifier for a GitHub repository.
@@ -187,16 +187,6 @@ func (rid *RepositoryID) ChangeURL(id forge.ChangeID) string {
 	owner, repo := rid.owner, rid.name
 	prNum := mustPR(id).Number
 	return fmt.Sprintf("%s/%s/%s/pull/%d", rid.url, owner, repo, prNum)
-}
-
-func newGitHubv4Client(ctx context.Context, apiURL string, tokenSource oauth2.TokenSource) (*githubv4.Client, error) {
-	graphQLAPIURL, err := url.JoinPath(apiURL, "/graphql")
-	if err != nil {
-		return nil, fmt.Errorf("build GraphQL API URL: %w", err)
-	}
-
-	httpClient := oauth2.NewClient(ctx, tokenSource)
-	return newGitHubEnterpriseClient(graphQLAPIURL, httpClient), nil
 }
 
 func extractRepoInfo(path string) (owner, repo string, err error) {

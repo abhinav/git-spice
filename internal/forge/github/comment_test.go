@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
@@ -130,7 +129,7 @@ func TestListChangeComments(t *testing.T) {
 				t.Context(), new(Forge),
 				"owner", "repo",
 				silogtest.New(t),
-				githubv4.NewEnterpriseClient(srv.URL, nil),
+				newTestGateway(t, srv.URL),
 				"repoID",
 			)
 			require.NoError(t, err)

@@ -4,10 +4,60 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
+
+type statusCheckRollupContext struct {
+	StatusContext statusContextRollupContext
+	CheckRun      checkRunRollupContext
+}
+
+type statusContextRollupContext struct {
+	Context   string
+	State     github.StatusState
+	CreatedAt time.Time
+}
+
+type checkRunRollupContext struct {
+	Name       string
+	CheckSuite struct {
+		WorkflowRun struct {
+			Event    string
+			Workflow struct{ Name string }
+		}
+	}
+	Status      github.CheckStatusState
+	Conclusion  *github.CheckConclusionState
+	StartedAt   time.Time
+	CompletedAt *time.Time
+}
+
+func checksFromRollupContexts(contexts []statusCheckRollupContext) []forge.ChangeCheck {
+	converted := make([]github.StatusCheck, 0, len(contexts))
+	for _, context := range contexts {
+		if context.StatusContext.Context != "" {
+			converted = append(converted, &github.StatusContext{
+				Context:   context.StatusContext.Context,
+				State:     context.StatusContext.State,
+				CreatedAt: context.StatusContext.CreatedAt,
+			})
+			continue
+		}
+		checkRun := github.CheckRun{
+			Name:        context.CheckRun.Name,
+			Status:      context.CheckRun.Status,
+			Conclusion:  context.CheckRun.Conclusion,
+			StartedAt:   context.CheckRun.StartedAt,
+			CompletedAt: context.CheckRun.CompletedAt,
+		}
+		checkRun.CheckSuite.WorkflowRun.Event = context.CheckRun.CheckSuite.WorkflowRun.Event
+		checkRun.CheckSuite.WorkflowRun.Workflow.Name = context.CheckRun.CheckSuite.WorkflowRun.Workflow.Name
+		converted = append(converted, &checkRun)
+	}
+	return checksFromGatewayContexts(converted)
+}
 
 func TestChecksFromRollupContexts_statusContexts(t *testing.T) {
 	var contexts []statusCheckRollupContext
@@ -15,19 +65,19 @@ func TestChecksFromRollupContexts_statusContexts(t *testing.T) {
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context: "git-spice integration",
-				State:   githubv4.StatusStateSuccess,
+				State:   github.StatusStateSuccess,
 			},
 		},
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context: "lint",
-				State:   githubv4.StatusStatePending,
+				State:   github.StatusStatePending,
 			},
 		},
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context: "test",
-				State:   githubv4.StatusStateFailure,
+				State:   github.StatusStateFailure,
 			},
 		},
 	)
@@ -40,28 +90,28 @@ func TestChecksFromRollupContexts_statusContexts(t *testing.T) {
 }
 
 func TestChecksFromRollupContexts_checkRuns(t *testing.T) {
-	successConclusion := githubv4.CheckConclusionStateSuccess
-	failureConclusion := githubv4.CheckConclusionStateFailure
+	successConclusion := github.CheckConclusionStateSuccess
+	failureConclusion := github.CheckConclusionStateFailure
 
 	var contexts []statusCheckRollupContext
 	contexts = append(contexts,
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:   "build",
-				Status: githubv4.CheckStatusStateInProgress,
+				Status: github.CheckStatusStateInProgress,
 			},
 		},
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:       "unit",
-				Status:     githubv4.CheckStatusStateCompleted,
+				Status:     github.CheckStatusStateCompleted,
 				Conclusion: &successConclusion,
 			},
 		},
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:       "integration",
-				Status:     githubv4.CheckStatusStateCompleted,
+				Status:     github.CheckStatusStateCompleted,
 				Conclusion: &failureConclusion,
 			},
 		},
@@ -75,15 +125,15 @@ func TestChecksFromRollupContexts_checkRuns(t *testing.T) {
 }
 
 func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
-	successConclusion := githubv4.CheckConclusionStateSuccess
-	failureConclusion := githubv4.CheckConclusionStateFailure
+	successConclusion := github.CheckConclusionStateSuccess
+	failureConclusion := github.CheckConclusionStateFailure
 
 	var contexts []statusCheckRollupContext
 	contexts = append(contexts,
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:        "unit",
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &failureConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:00:00Z"),
 			},
@@ -91,7 +141,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:        "unit",
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &successConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:05:00Z"),
 			},
@@ -99,7 +149,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:        "integration",
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &successConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:10:00Z"),
 			},
@@ -107,7 +157,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:        "integration",
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &failureConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:01:00Z"),
 			},
@@ -116,7 +166,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 			CheckRun: checkRunRollupContext{
 				Name:        "test",
 				CheckSuite:  checkSuite("push", "linux"),
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &successConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:00:00Z"),
 			},
@@ -125,7 +175,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 			CheckRun: checkRunRollupContext{
 				Name:        "test",
 				CheckSuite:  checkSuite("pull_request", "linux"),
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &failureConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:00:00Z"),
 			},
@@ -134,7 +184,7 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 			CheckRun: checkRunRollupContext{
 				Name:        "test",
 				CheckSuite:  checkSuite("push", "windows"),
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &successConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:00:00Z"),
 			},
@@ -142,28 +192,28 @@ func TestChecksFromRollupContexts_deduplicatesByGitHubCheckLane(t *testing.T) {
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context:   "deploy",
-				State:     githubv4.StatusStatePending,
+				State:     github.StatusStatePending,
 				CreatedAt: dateTime(t, "2026-06-19T10:00:00Z"),
 			},
 		},
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context:   "deploy",
-				State:     githubv4.StatusStateSuccess,
+				State:     github.StatusStateSuccess,
 				CreatedAt: dateTime(t, "2026-06-19T10:05:00Z"),
 			},
 		},
 		statusCheckRollupContext{
 			StatusContext: statusContextRollupContext{
 				Context:   "shared",
-				State:     githubv4.StatusStateSuccess,
+				State:     github.StatusStateSuccess,
 				CreatedAt: dateTime(t, "2026-06-19T10:00:00Z"),
 			},
 		},
 		statusCheckRollupContext{
 			CheckRun: checkRunRollupContext{
 				Name:        "shared",
-				Status:      githubv4.CheckStatusStateCompleted,
+				Status:      github.CheckStatusStateCompleted,
 				Conclusion:  &failureConclusion,
 				CompletedAt: dateTimePtr(t, "2026-06-19T10:05:00Z"),
 			},
@@ -187,34 +237,34 @@ func checkSuite(
 	workflow string,
 ) struct {
 	WorkflowRun struct {
-		Event    string `graphql:"event"`
+		Event    string
 		Workflow struct {
-			Name string `graphql:"name"`
-		} `graphql:"workflow"`
-	} `graphql:"workflowRun"`
+			Name string
+		}
+	}
 } {
 	var checkSuite struct {
 		WorkflowRun struct {
-			Event    string `graphql:"event"`
+			Event    string
 			Workflow struct {
-				Name string `graphql:"name"`
-			} `graphql:"workflow"`
-		} `graphql:"workflowRun"`
+				Name string
+			}
+		}
 	}
 	checkSuite.WorkflowRun.Event = event
 	checkSuite.WorkflowRun.Workflow.Name = workflow
 	return checkSuite
 }
 
-func dateTime(t *testing.T, value string) githubv4.DateTime {
+func dateTime(t *testing.T, value string) time.Time {
 	t.Helper()
 
 	parsed, err := time.Parse(time.RFC3339, value)
 	assert.NoError(t, err)
-	return githubv4.DateTime{Time: parsed}
+	return parsed
 }
 
-func dateTimePtr(t *testing.T, value string) *githubv4.DateTime {
+func dateTimePtr(t *testing.T, value string) *time.Time {
 	t.Helper()
 
 	dt := dateTime(t, value)

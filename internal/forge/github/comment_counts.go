@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // CommentCountsByChange retrieves comment resolution counts for multiple PRs.
@@ -22,22 +22,19 @@ func (r *Repository) CommentCountsByChange(
 		return nil, err
 	}
 
-	var q struct {
-		Nodes []reviewThreadNode `graphql:"nodes(ids: $ids)"`
-	}
-	if err := r.client.Query(ctx, &q, map[string]any{"ids": gqlIDs}); err != nil {
+	threadsByChange, err := r.gateway.PullRequestReviewThreads(ctx, gqlIDs)
+	if err != nil {
 		return nil, fmt.Errorf("query review threads: %w", err)
 	}
 
-	results := make([]*forge.CommentCounts, len(q.Nodes))
-	for i, node := range q.Nodes {
-		threads := node.PullRequest.ReviewThreads
+	results := make([]*forge.CommentCounts, len(threadsByChange))
+	for i, threads := range threadsByChange {
 		resolved := countResolved(threads.Nodes)
 
 		// If there are more threads than the first page,
 		// paginate to count all resolved threads.
-		if threads.PageInfo.HasNextPage {
-			remaining, err := r.countRemainingResolved(ctx, gqlIDs[i], threads.PageInfo.EndCursor)
+		if threads.HasNextPage {
+			remaining, err := r.countRemainingResolved(ctx, gqlIDs[i], threads.EndCursor)
 			if err != nil {
 				return nil, err
 			}
@@ -55,15 +52,15 @@ func (r *Repository) CommentCountsByChange(
 func (r *Repository) resolveGraphQLIDs(
 	ctx context.Context,
 	ids []forge.ChangeID,
-) ([]githubv4.ID, error) {
-	gqlIDs := make([]githubv4.ID, len(ids))
+) ([]github.ID, error) {
+	gqlIDs := make([]github.ID, len(ids))
 	for i, id := range ids {
 		pr := mustPR(id)
-		var err error
-		gqlIDs[i], err = r.graphQLID(ctx, pr)
+		gqlID, err := r.graphQLID(ctx, pr)
 		if err != nil {
 			return nil, fmt.Errorf("resolve ID %v: %w", id, err)
 		}
+		gqlIDs[i] = gqlID
 	}
 	return gqlIDs, nil
 }
@@ -72,68 +69,37 @@ func (r *Repository) resolveGraphQLIDs(
 // fetched per page when counting comment resolutions.
 const _reviewThreadsPageSize = 100
 
-type reviewThreadNode struct {
-	PullRequest struct {
-		ReviewThreads reviewThreadsConnection `graphql:"reviewThreads(first: 100)"`
-	} `graphql:"... on PullRequest"`
-}
-
-type reviewThreadsConnection struct {
-	TotalCount int
-	PageInfo   struct {
-		EndCursor   githubv4.String `graphql:"endCursor"`
-		HasNextPage bool            `graphql:"hasNextPage"`
-	} `graphql:"pageInfo"`
-	Nodes []struct {
-		IsResolved bool
-	}
-}
-
 // countRemainingResolved paginates through the remaining
 // review threads for a single PR and counts resolved ones.
 func (r *Repository) countRemainingResolved(
 	ctx context.Context,
-	gqlID githubv4.ID,
-	cursor githubv4.String,
+	gqlID github.ID,
+	cursor string,
 ) (int, error) {
-	var q struct {
-		Node struct {
-			PullRequest struct {
-				ReviewThreads reviewThreadsConnection `graphql:"reviewThreads(first: $first, after: $after)"`
-			} `graphql:"... on PullRequest"`
-		} `graphql:"node(id: $id)"`
-	}
-
-	variables := map[string]any{
-		"id":    gqlID,
-		"first": githubv4.Int(_reviewThreadsPageSize),
-		"after": cursor,
-	}
-
 	resolved := 0
 	for pageNum := 2; ; pageNum++ {
-		if err := r.client.Query(ctx, &q, variables); err != nil {
+		threads, err := r.gateway.PullRequestReviewThreadsPage(ctx, gqlID, _reviewThreadsPageSize, cursor)
+		if err != nil {
 			return 0, fmt.Errorf(
 				"review threads (page %d): %w", pageNum, err,
 			)
 		}
 
-		threads := q.Node.PullRequest.ReviewThreads
 		resolved += countResolved(threads.Nodes)
 
-		if !threads.PageInfo.HasNextPage {
+		if !threads.HasNextPage {
 			break
 		}
-		variables["after"] = threads.PageInfo.EndCursor
+		cursor = threads.EndCursor
 	}
 
 	return resolved, nil
 }
 
-func countResolved(nodes []struct{ IsResolved bool }) int {
+func countResolved(nodes []bool) int {
 	count := 0
 	for _, n := range nodes {
-		if n.IsResolved {
+		if n {
 			count++
 		}
 	}

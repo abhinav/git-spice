@@ -10,6 +10,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/secret"
 	"go.abhg.dev/gs/internal/text"
 	"go.abhg.dev/gs/internal/ui"
@@ -128,6 +129,39 @@ func (f *Forge) tokenSource(t *AuthenticationToken) (oauth2.TokenSource, error) 
 	default:
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: t.AccessToken}), nil
 	}
+}
+
+func newGatewayTokenSource(
+	source oauth2.TokenSource,
+) github.TokenSource {
+	if cliSource, ok := source.(*CLITokenSource); ok {
+		return gatewayCLITokenSource{source: cliSource}
+	}
+	return gatewayOAuthTokenSource{source: source}
+}
+
+type gatewayOAuthTokenSource struct {
+	source oauth2.TokenSource
+}
+
+func (s gatewayOAuthTokenSource) Token(context.Context) (string, error) {
+	token, err := s.source.Token()
+	if err != nil {
+		return "", err
+	}
+	return token.AccessToken, nil
+}
+
+type gatewayCLITokenSource struct {
+	source *CLITokenSource
+}
+
+func (s gatewayCLITokenSource) Token(ctx context.Context) (string, error) {
+	token, err := s.source.tokenContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	return token.AccessToken, nil
 }
 
 func (f *Forge) oauth2Endpoint() (oauth2.Endpoint, error) {

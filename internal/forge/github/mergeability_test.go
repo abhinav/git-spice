@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -47,7 +47,7 @@ func TestRepository_ChangeMergeability(t *testing.T) {
 		t.Context(), new(Forge),
 		"owner", "repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		newTestGateway(t, srv.URL),
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestRepository_ChangeMergeability_wrapsQueryError(t *testing.T) {
 		t.Context(), new(Forge),
 		"owner", "repo",
 		silogtest.New(t),
-		githubv4.NewEnterpriseClient(srv.URL, nil),
+		newTestGateway(t, srv.URL),
 		"repoID",
 	)
 	require.NoError(t, err)
@@ -90,15 +90,15 @@ func TestRepository_ChangeMergeability_wrapsQueryError(t *testing.T) {
 func TestChangeMergeabilityFromGitHub(t *testing.T) {
 	tests := []struct {
 		name           string
-		giveMergeable  githubv4.MergeableState
-		giveMergeState githubv4.MergeStateStatus
+		giveMergeable  github.MergeableState
+		giveMergeState github.MergeStateStatus
 		giveDraft      bool
 		want           forge.ChangeMergeability
 	}{
 		{
 			name:           "Clean",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusClean,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusClean,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityReady,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -106,8 +106,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "HasHooks",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusHasHooks,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusHasHooks,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityReady,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -115,8 +115,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "Unstable",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusUnstable,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusUnstable,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityReady,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -124,8 +124,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "Dirty",
-			giveMergeable:  githubv4.MergeableStateConflicting,
-			giveMergeState: githubv4.MergeStateStatusDirty,
+			giveMergeable:  github.MergeableStateConflicting,
+			giveMergeState: github.MergeStateStatusDirty,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityBlocked,
 				Reason: forge.ChangeMergeabilityReasonConflicts,
@@ -133,8 +133,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "Behind",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusBehind,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusBehind,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityBlocked,
 				Reason: forge.ChangeMergeabilityReasonBehind,
@@ -142,8 +142,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "DraftStatus",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusDraft,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusDraft,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityBlocked,
 				Reason: forge.ChangeMergeabilityReasonDraft,
@@ -151,8 +151,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "DraftFlag",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusClean,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusClean,
 			giveDraft:      true,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityBlocked,
@@ -161,8 +161,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "BlockedWaits",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusBlocked,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusBlocked,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityWaiting,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -170,8 +170,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "MergeableWithUnknownStatus",
-			giveMergeable:  githubv4.MergeableStateMergeable,
-			giveMergeState: githubv4.MergeStateStatusUnknown,
+			giveMergeable:  github.MergeableStateMergeable,
+			giveMergeState: github.MergeStateStatusUnknown,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityWaiting,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -179,8 +179,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "ConflictingFallback",
-			giveMergeable:  githubv4.MergeableStateConflicting,
-			giveMergeState: githubv4.MergeStateStatusUnknown,
+			giveMergeable:  github.MergeableStateConflicting,
+			giveMergeState: github.MergeStateStatusUnknown,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityBlocked,
 				Reason: forge.ChangeMergeabilityReasonConflicts,
@@ -188,8 +188,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "Waiting",
-			giveMergeable:  githubv4.MergeableStateUnknown,
-			giveMergeState: githubv4.MergeStateStatusUnknown,
+			giveMergeable:  github.MergeableStateUnknown,
+			giveMergeState: github.MergeStateStatusUnknown,
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityWaiting,
 				Reason: forge.ChangeMergeabilityReasonUnknown,
@@ -197,8 +197,8 @@ func TestChangeMergeabilityFromGitHub(t *testing.T) {
 		},
 		{
 			name:           "Unknown",
-			giveMergeable:  githubv4.MergeableState("RECALIBRATING"),
-			giveMergeState: githubv4.MergeStateStatus("RECALIBRATING"),
+			giveMergeable:  github.MergeableState(99),
+			giveMergeState: github.MergeStateStatus(99),
 			want: forge.ChangeMergeability{
 				State:  forge.ChangeMergeabilityUnknown,
 				Reason: forge.ChangeMergeabilityReasonUnknown,

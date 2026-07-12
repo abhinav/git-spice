@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // addReviewersToPullRequest adds reviewers to a pull request.
 func (r *Repository) addReviewersToPullRequest(
 	ctx context.Context,
 	reviewers []string,
-	prGraphQLID githubv4.ID,
+	prGraphQLID github.ID,
 ) error {
 	if len(reviewers) == 0 {
 		return nil
@@ -24,15 +24,9 @@ func (r *Repository) addReviewersToPullRequest(
 		return fmt.Errorf("resolve reviewer IDs: %w", err)
 	}
 
-	var m struct {
-		RequestReviews struct {
-			ClientMutationID githubv4.String `graphql:"clientMutationId"`
-		} `graphql:"requestReviews(input: $input)"`
-	}
-
-	input := githubv4.RequestReviewsInput{
+	input := github.RequestReviewsInput{
 		PullRequestID: prGraphQLID,
-		Union:         githubv4.NewBoolean(true),
+		Union:         new(true),
 	}
 	if len(userIDs) > 0 {
 		input.UserIDs = &userIDs
@@ -41,7 +35,7 @@ func (r *Repository) addReviewersToPullRequest(
 		input.TeamIDs = &teamIDs
 	}
 
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gateway.RequestReviews(ctx, &input); err != nil {
 		return fmt.Errorf("request reviews: %w", err)
 	}
 
@@ -53,7 +47,7 @@ func (r *Repository) addReviewersToPullRequest(
 func (r *Repository) reviewersIDs(
 	ctx context.Context,
 	reviewers []string,
-) (userIDs []githubv4.ID, teamIDs []githubv4.ID, err error) {
+) (userIDs []github.ID, teamIDs []github.ID, err error) {
 	var errs []error
 
 	// TODO: parallelize lookups or combine into one GQL query.
@@ -88,26 +82,12 @@ func (r *Repository) reviewersIDs(
 }
 
 // teamID looks up a team's GraphQL ID by organization and team slug.
-func (r *Repository) teamID(ctx context.Context, org, teamSlug string) (githubv4.ID, error) {
-	var query struct {
-		Organization struct {
-			Team struct {
-				ID githubv4.ID `graphql:"id"`
-			} `graphql:"team(slug: $slug)"`
-		} `graphql:"organization(login: $org)"`
+func (r *Repository) teamID(ctx context.Context, org, teamSlug string) (github.ID, error) {
+	id, err := r.gateway.TeamID(ctx, org, teamSlug)
+	if err != nil {
+		return "", err
 	}
-
-	variables := map[string]any{
-		"org":  githubv4.String(org),
-		"slug": githubv4.String(teamSlug),
-	}
-
-	if err := r.client.Query(ctx, &query, variables); err != nil {
-		return "", fmt.Errorf("query team: %w", err)
-	}
-
-	id := query.Organization.Team.ID
-	if id == "" || id == nil {
+	if id == "" {
 		return "", fmt.Errorf("team not found: %q/%q", org, teamSlug)
 	}
 

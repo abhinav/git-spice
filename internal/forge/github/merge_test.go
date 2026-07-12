@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 )
 
@@ -82,11 +82,13 @@ func TestRepository_MergeChange_method(t *testing.T) {
 			}))
 			defer srv.Close()
 
+			gateway, err := github.NewGateway(srv.URL, nil, gatewayTestTokenSource("token"))
+			require.NoError(t, err)
 			repo, err := newRepository(
 				t.Context(), new(Forge),
 				"owner", "repo",
 				silogtest.New(t),
-				githubv4.NewEnterpriseClient(srv.URL, nil),
+				gateway,
 				"repoID",
 			)
 			require.NoError(t, err)

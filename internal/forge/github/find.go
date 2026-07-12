@@ -4,55 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git"
 )
 
-type findPRNode struct {
-	ID             githubv4.ID               `graphql:"id"`
-	Number         githubv4.Int              `graphql:"number"`
-	URL            githubv4.URI              `graphql:"url"`
-	Title          githubv4.String           `graphql:"title"`
-	State          githubv4.PullRequestState `graphql:"state"`
-	HeadRefOid     githubv4.GitObjectID      `graphql:"headRefOid"`
-	BaseRefName    githubv4.String           `graphql:"baseRefName"`
-	IsDraft        githubv4.Boolean          `graphql:"isDraft"`
-	HeadRepository struct {
-		Owner struct {
-			Login githubv4.String `graphql:"login"`
-		} `graphql:"owner"`
-		Name githubv4.String `graphql:"name"`
-	} `graphql:"headRepository"`
-	Labels struct {
-		Nodes []struct {
-			Name githubv4.String `graphql:"name"`
-		} `graphql:"nodes"`
-	} `graphql:"labels(first: 100)"`
-	ReviewRequests struct {
-		Nodes []struct {
-			// https://docs.github.com/en/graphql/reference/objects#requestedreviewer
-			RequestedReviewer struct {
-				Actor struct {
-					Login githubv4.String `graphql:"login"`
-				} `graphql:"... on Actor"`
-			} `graphql:"requestedReviewer"`
-		} `graphql:"nodes"`
-	} `graphql:"reviewRequests(first: 100)"`
-	// TODO: handle pagination of this information
-	Assignees struct {
-		Nodes []struct {
-			Login githubv4.String `graphql:"login"`
-		} `graphql:"nodes"`
-	} `graphql:"assignees(first: 100)"`
-}
-
-func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
+func toFindChangeItem(n *github.PullRequest) *forge.FindChangeItem {
 	var labels []string
 	if len(n.Labels.Nodes) > 0 {
 		labels = make([]string, len(n.Labels.Nodes))
 		for i, node := range n.Labels.Nodes {
-			labels[i] = string(node.Name)
+			labels[i] = node.Name
 		}
 	}
 
@@ -60,7 +22,7 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 	if len(n.ReviewRequests.Nodes) > 0 {
 		reviewers = make([]string, len(n.ReviewRequests.Nodes))
 		for i, node := range n.ReviewRequests.Nodes {
-			reviewers[i] = string(node.RequestedReviewer.Actor.Login)
+			reviewers[i] = node.RequestedReviewer.Login
 		}
 	}
 
@@ -68,47 +30,47 @@ func (n *findPRNode) toFindChangeItem() *forge.FindChangeItem {
 	if len(n.Assignees.Nodes) > 0 {
 		assignees = make([]string, len(n.Assignees.Nodes))
 		for i, node := range n.Assignees.Nodes {
-			assignees[i] = string(node.Login)
+			assignees[i] = node.Login
 		}
 	}
 
 	return &forge.FindChangeItem{
 		ID: &PR{
-			Number: int(n.Number),
+			Number: n.Number,
 			GQLID:  n.ID,
 		},
-		URL:       n.URL.String(),
+		URL:       n.URL,
 		State:     forgeChangeState(n.State),
-		Subject:   string(n.Title),
-		BaseName:  string(n.BaseRefName),
-		HeadHash:  git.Hash(n.HeadRefOid),
-		Draft:     bool(n.IsDraft),
+		Subject:   n.Title,
+		BaseName:  n.BaseRefName,
+		HeadHash:  git.Hash(n.HeadRefOID),
+		Draft:     n.IsDraft,
 		Labels:    labels,
 		Reviewers: reviewers,
 		Assignees: assignees,
 	}
 }
 
-func pullRequestState(s forge.ChangeState) githubv4.PullRequestState {
+func pullRequestState(s forge.ChangeState) github.PullRequestState {
 	switch s {
 	case forge.ChangeOpen:
-		return githubv4.PullRequestStateOpen
+		return github.PullRequestStateOpen
 	case forge.ChangeClosed:
-		return githubv4.PullRequestStateClosed
+		return github.PullRequestStateClosed
 	case forge.ChangeMerged:
-		return githubv4.PullRequestStateMerged
+		return github.PullRequestStateMerged
 	default:
-		return ""
+		return 0
 	}
 }
 
-func forgeChangeState(s githubv4.PullRequestState) forge.ChangeState {
+func forgeChangeState(s github.PullRequestState) forge.ChangeState {
 	switch s {
-	case githubv4.PullRequestStateOpen:
+	case github.PullRequestStateOpen:
 		return forge.ChangeOpen
-	case githubv4.PullRequestStateClosed:
+	case github.PullRequestStateClosed:
 		return forge.ChangeClosed
-	case githubv4.PullRequestStateMerged:
+	case github.PullRequestStateMerged:
 		return forge.ChangeMerged
 	default:
 		return 0
@@ -127,45 +89,33 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 		pushRepository = r.repositoryID()
 	}
 
-	var q struct {
-		Repository struct {
-			PullRequests struct {
-				Nodes []findPRNode `graphql:"nodes"`
-			} `graphql:"pullRequests(first: $limit, headRefName: $branch, states: $states, orderBy: {field: UPDATED_AT, direction: DESC})"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-
-	vars := map[string]any{
-		"owner":  githubv4.String(r.owner),
-		"repo":   githubv4.String(r.repo),
-		"branch": githubv4.String(branch),
-		"limit":  githubv4.Int(opts.Limit),
-	}
+	var states []github.PullRequestState
 	if opts.State == 0 {
-		vars["states"] = []githubv4.PullRequestState{
-			githubv4.PullRequestStateOpen,
-			githubv4.PullRequestStateClosed,
-			githubv4.PullRequestStateMerged,
+		states = []github.PullRequestState{
+			github.PullRequestStateOpen,
+			github.PullRequestStateClosed,
+			github.PullRequestStateMerged,
 		}
 	} else {
-		vars["states"] = []githubv4.PullRequestState{pullRequestState(opts.State)}
+		states = []github.PullRequestState{pullRequestState(opts.State)}
 	}
 
-	if err := r.client.Query(ctx, &q, vars); err != nil {
+	nodes, err := r.gateway.FindPullRequests(ctx, r.owner, r.repo, branch, opts.Limit, states)
+	if err != nil {
 		return nil, fmt.Errorf("find changes by branch: %w", err)
 	}
 
-	changes := make([]*forge.FindChangeItem, 0, len(q.Repository.PullRequests.Nodes))
-	for _, node := range q.Repository.PullRequests.Nodes {
+	changes := make([]*forge.FindChangeItem, 0, len(nodes))
+	for _, node := range nodes {
 		nodeRepository := RepositoryID{
 			url:   r.forge.URL(),
-			owner: string(node.HeadRepository.Owner.Login),
-			name:  string(node.HeadRepository.Name),
+			owner: node.HeadRepository.Owner.Login,
+			name:  node.HeadRepository.Name,
 		}
 		if nodeRepository.String() != pushRepository.String() {
 			continue
 		}
-		changes = append(changes, node.toFindChangeItem())
+		changes = append(changes, toFindChangeItem(node))
 	}
 
 	return changes, nil
@@ -173,22 +123,13 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 // FindChangeByID searches for a change with the given ID.
 func (r *Repository) FindChangeByID(ctx context.Context, id forge.ChangeID) (*forge.FindChangeItem, error) {
-	var q struct {
-		Repository struct {
-			PullRequest findPRNode `graphql:"pullRequest(number: $number)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-
 	pr := mustPR(id)
-	if err := r.client.Query(ctx, &q, map[string]any{
-		"owner":  githubv4.String(r.owner),
-		"repo":   githubv4.String(r.repo),
-		"number": githubv4.Int(pr.Number),
-	}); err != nil {
+	node, err := r.gateway.PullRequest(ctx, r.owner, r.repo, pr.Number)
+	if err != nil {
 		return nil, fmt.Errorf("find change by ID: %w", err)
 	}
 
-	return q.Repository.PullRequest.toFindChangeItem(), nil
+	return toFindChangeItem(node), nil
 }
 
 func (r *Repository) repositoryID() *RepositoryID {

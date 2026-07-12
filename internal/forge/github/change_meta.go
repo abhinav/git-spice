@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
 	"go.abhg.dev/gs/internal/forge"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
 // PRMetadata is the metadata for a pull request.
@@ -99,8 +99,8 @@ type PR struct {
 	Number int `json:"number"`
 
 	// GQLID is the GraphQL ID of the change.
-	// This may be nil or empty.
-	GQLID githubv4.ID `json:"gqlID,omitempty"`
+	// This may be empty.
+	GQLID github.ID `json:"gqlID,omitempty"`
 }
 
 var _ forge.ChangeID = (*PR)(nil)
@@ -140,26 +140,16 @@ func (id *PR) UnmarshalJSON(data []byte) error {
 
 // graphQLID returns the GraphQL ID of the change.
 // It will retrieve the ID from the GitHub API if it is not already set.
-func (r *Repository) graphQLID(ctx context.Context, gid *PR) (githubv4.ID, error) {
-	if gid.GQLID != "" && gid.GQLID != nil {
+func (r *Repository) graphQLID(ctx context.Context, gid *PR) (github.ID, error) {
+	if gid.GQLID != "" {
 		return gid.GQLID, nil
 	}
 
-	var q struct {
-		Repository struct {
-			PullRequest struct {
-				ID githubv4.ID `graphql:"id"`
-			} `graphql:"pullRequest(number: $number)"`
-		} `graphql:"repository(owner: $owner, name: $repo)"`
-	}
-	if err := r.client.Query(ctx, &q, map[string]any{
-		"owner":  githubv4.String(r.owner),
-		"repo":   githubv4.String(r.repo),
-		"number": githubv4.Int(gid.Number),
-	}); err != nil {
-		return nil, fmt.Errorf("get pull request ID: %w", err)
+	id, err := r.gateway.PullRequestID(ctx, r.owner, r.repo, gid.Number)
+	if err != nil {
+		return "", fmt.Errorf("get pull request ID: %w", err)
 	}
 
-	gid.GQLID = q.Repository.PullRequest.ID
+	gid.GQLID = id
 	return gid.GQLID, nil
 }

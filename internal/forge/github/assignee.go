@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shurcooL/githubv4"
+	"go.abhg.dev/gs/internal/gateway/github"
 )
 
-func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []string, prGraphQLID githubv4.ID) error {
+func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []string, prGraphQLID github.ID) error {
 	if len(assignees) == 0 {
 		return nil
 	}
@@ -17,18 +17,11 @@ func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []
 		return fmt.Errorf("get assignee IDs: %w", err)
 	}
 
-	var m struct {
-		AddAssigneesToAssignable struct {
-			ClientMutationID githubv4.String `graphql:"clientMutationId"`
-		} `graphql:"addAssigneesToAssignable(input: $input)"`
-	}
-
-	input := githubv4.AddAssigneesToAssignableInput{
-		AssignableID: prGraphQLID,
-		AssigneeIDs:  assigneeIDs,
-	}
-
-	if err := r.client.Mutate(ctx, &m, input, nil); err != nil {
+	if err := r.gateway.AddAssigneesToAssignable(
+		ctx,
+		prGraphQLID,
+		assigneeIDs,
+	); err != nil {
 		return fmt.Errorf("add assignees to assignable: %w", err)
 	}
 
@@ -38,8 +31,8 @@ func (r *Repository) addAssigneesToPullRequest(ctx context.Context, assignees []
 // assigneeIDs resolves assignee logins to GitHub user IDs.
 // The returned slice may be shorter than the input
 // because duplicate logins are automatically deduplicated.
-func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]githubv4.ID, error) {
-	ids := make([]githubv4.ID, 0, len(assignees))
+func (r *Repository) assigneeIDs(ctx context.Context, assignees []string) ([]github.ID, error) {
+	ids := make([]github.ID, 0, len(assignees))
 	seen := make(map[string]struct{}, len(assignees))
 	for _, assignee := range assignees {
 		if _, ok := seen[assignee]; ok {

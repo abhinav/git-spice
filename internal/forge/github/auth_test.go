@@ -69,6 +69,27 @@ func TestAuthenticationToken_tokenSource(t *testing.T) {
 	})
 }
 
+func TestNewGatewayTokenSource(t *testing.T) {
+	t.Run("AccessToken", func(t *testing.T) {
+		source := newGatewayTokenSource(
+			oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "token"}),
+		)
+
+		got, err := source.Token(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "token", got)
+	})
+
+	t.Run("GitHubCLI", func(t *testing.T) {
+		cliSource := &CLITokenSource{}
+		source := newGatewayTokenSource(
+			cliSource,
+		)
+
+		assert.Equal(t, gatewayCLITokenSource{source: cliSource}, source)
+	})
+}
+
 func TestForgeOAuth2Endpoint(t *testing.T) {
 	f := Forge{
 		Options: Options{

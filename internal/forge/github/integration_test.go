@@ -10,15 +10,14 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.abhg.dev/gs/internal/fixturetest"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/forge/github"
+	githubgateway "go.abhg.dev/gs/internal/gateway/github"
 	"go.abhg.dev/gs/internal/git"
-	"go.abhg.dev/gs/internal/graphqlutil"
 	"go.abhg.dev/gs/internal/httptest"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"golang.org/x/oauth2"
@@ -57,11 +56,15 @@ func newRecorder(
 	return forgetest.NewHTTPRecorder(t, name, sanitizers)
 }
 
-func newGitHubClient(
-	httpClient *http.Client,
-) *githubv4.Client {
-	httpClient.Transport = graphqlutil.WrapTransport(httpClient.Transport)
-	return githubv4.NewClient(httpClient)
+func newGateway(t *testing.T, httpClient *http.Client) *githubgateway.Gateway {
+	t.Helper()
+	client, err := githubgateway.NewGateway(
+		github.DefaultAPIURL,
+		&http.Client{Transport: httpClient.Transport},
+		testTokenSource("token"),
+	)
+	require.NoError(t, err)
+	return client
 }
 
 func TestIntegration_Repository(t *testing.T) {
@@ -76,8 +79,8 @@ func TestIntegration_Repository(t *testing.T) {
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
 
-	ghc := newGitHubClient(httpClient)
-	_, err := github.NewRepository(t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil)
+	gatewayClient := newGateway(t, httpClient)
+	_, err := github.NewRepository(t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), gatewayClient, "")
 	require.NoError(t, err)
 }
 
@@ -111,10 +114,10 @@ func TestIntegration(t *testing.T) {
 				}),
 			}
 
-			ghc := newGitHubClient(httpClient)
+			gatewayClient := newGateway(t, httpClient)
 			newRepo, err := github.NewRepository(
 				t.Context(), &githubForge, cfg.Owner, cfg.Repo,
-				silogtest.New(t), ghc, nil,
+				silogtest.New(t), gatewayClient, "",
 			)
 			require.NoError(t, err)
 			return newRepo
@@ -158,9 +161,9 @@ func TestIntegration_Repository_LabelCreateDelete(t *testing.T) {
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
 
-	ghc := newGitHubClient(httpClient)
+	gatewayClient := newGateway(t, httpClient)
 	repo, err := github.NewRepository(
-		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), ghc, nil,
+		t.Context(), new(github.Forge), cfg.Owner, cfg.Repo, silogtest.New(t), gatewayClient, "",
 	)
 	require.NoError(t, err)
 
@@ -204,19 +207,22 @@ func TestIntegration_Repository_notFoundError(t *testing.T) {
 		Base:   client.Transport,
 		Source: oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 	}
-	client.Transport = graphqlutil.WrapTransport(client.Transport)
-	ghc := newGitHubClient(client)
-	_, err := github.NewRepository(ctx, new(github.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), ghc, nil)
+	gatewayClient := newGateway(t, client)
+	_, err := github.NewRepository(ctx, new(github.Forge), cfg.Owner, "does-not-exist-repo", silogtest.New(t), gatewayClient, "")
 	require.Error(t, err)
-	assert.ErrorIs(t, err, graphqlutil.ErrNotFound)
+	assert.ErrorIs(t, err, githubgateway.ErrNotFound)
 
-	var gqlError *graphqlutil.Error
+	var gqlError *githubgateway.Error
 	if assert.ErrorAs(t, err, &gqlError) {
 		assert.Equal(t, "NOT_FOUND", gqlError.Type)
 		assert.Equal(t, []any{"repository"}, gqlError.Path)
 		assert.Contains(t, gqlError.Message, cfg.Owner+"/does-not-exist-repo")
 	}
 }
+
+type testTokenSource string
+
+func (s testTokenSource) Token(context.Context) (string, error) { return string(s), nil }
 
 const _alnum = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
