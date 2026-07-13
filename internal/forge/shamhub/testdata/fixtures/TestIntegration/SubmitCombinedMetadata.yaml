@@ -1,0 +1,90 @@
+---
+version: 2
+interactions:
+    - id: 0
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 154
+        host: 127.0.0.1:56373
+        body: '{"subject":"Testing 6MA8aVak","body":"Test PR with combined metadata","base":"main","head":"6MA8aVak","reviewers":["reviewer1"],"assignees":["assignee1"]}'
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        method: POST
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 80
+        body: |
+            {
+              "number": 1,
+              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/1"
+            }
+        headers:
+            Content-Length:
+                - "80"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 22.929584ms
+    - id: 1
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/6MA8aVak?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 669
+        body: |
+            [
+              {
+                "number": 1,
+                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/1",
+                "state": "open",
+                "title": "Testing 6MA8aVak",
+                "body": "Test PR with combined metadata",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "af0180184d5a04d2cb3c6867d55dd2fdf904767c"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "6MA8aVak",
+                  "sha": "e64755858bff7f2a7a3511a676bd939dfc672252"
+                },
+                "requested_reviewers": [
+                  "reviewer1"
+                ],
+                "assignees": [
+                  "assignee1"
+                ]
+              }
+            ]
+        headers:
+            Content-Length:
+                - "669"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 17.569042ms

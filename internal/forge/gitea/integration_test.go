@@ -198,8 +198,6 @@ func TestIntegration(t *testing.T) {
 
 		Reviewers: []string{cfg.Reviewer},
 		Assignees: []string{cfg.Assignee},
-		// TODO: Enable the combined metadata test after recording its fixtures.
-		SkipCombinedMetadata: true,
 
 		// Gitea returns short (7-char) commit hashes in some API responses.
 		ShortHeadHash: true,
