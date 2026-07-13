@@ -54,6 +54,7 @@ func TestNewPackagePlan_customValues(t *testing.T) {
 		SourceDateEpoch: 1_779_770_939,
 		Series:          seriesFlag{"noble", "plucky"},
 		PPARevision:     2,
+		OmitOrig:        true,
 		Dput:            true,
 		DputTarget:      "ppa:test/git-spice",
 	})
@@ -65,6 +66,7 @@ func TestNewPackagePlan_customValues(t *testing.T) {
 	assert.Equal(t,
 		time.Unix(1_779_770_939, 0).UTC(),
 		plan.SourceModTime)
+	assert.True(t, plan.OmitOrig)
 	assert.Nil(t, plan.Sign)
 	assert.True(t, plan.Dput)
 	assert.Equal(t, "ppa:test/git-spice", plan.DputTarget)
@@ -92,6 +94,22 @@ func TestNewPackagePlan_invalidSourceDateEpoch(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "-source-date-epoch must be positive: -1")
+}
+
+func TestPackagePlan_sourceUploadMode(t *testing.T) {
+	t.Run("FirstSeriesIncludesOrig", func(t *testing.T) {
+		plan := packagePlan{}
+
+		assert.Equal(t, sourceUploadWithOrig, plan.sourceUploadMode(0))
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(1))
+	})
+
+	t.Run("OmitOrigExcludesOrigFromAllSeries", func(t *testing.T) {
+		plan := packagePlan{OmitOrig: true}
+
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(0))
+		assert.Equal(t, sourceUploadWithoutOrig, plan.sourceUploadMode(1))
+	})
 }
 
 func TestSignConfigFromEnv(t *testing.T) {

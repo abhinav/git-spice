@@ -54,6 +54,9 @@ type publishRequest struct {
 	// PPARevision is the Debian package revision suffix for Launchpad retries.
 	PPARevision int
 
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
+
 	// Sign controls whether source packages are signed before upload.
 	Sign bool
 
@@ -94,6 +97,8 @@ func main() {
 		"Unix timestamp to use for reproducible package outputs")
 	flag.Var(&req.Series, "series", "Ubuntu series to target")
 	flag.IntVar(&req.PPARevision, "ppa-revision", 1, "PPA revision number")
+	flag.BoolVar(&req.OmitOrig, "omit-orig", false,
+		"Omit the upstream orig tarball from every source upload")
 	flag.BoolVar(&req.Sign, "sign", false, "Sign packages with Launchpad GPG environment variables")
 	flag.BoolVar(&req.Dput, "dput", false, "Upload signed packages with dput")
 	flag.StringVar(&req.DputTarget, "dput-target", _defaultDputTarget, "dput upload target")
@@ -127,6 +132,7 @@ func run(log *silog.Logger, req publishRequest) error {
 		"sourceDateEpoch", sourceDateEpoch,
 		"series", strings.Join(plan.Series, ","),
 		"ppaRevision", plan.PPARevision,
+		"omitOrig", plan.OmitOrig,
 		"dput", plan.Dput,
 		"dputTarget", plan.DputTarget)
 
@@ -191,15 +197,10 @@ func run(log *silog.Logger, req publishRequest) error {
 
 	var dputCommands []string
 	for i, series := range plan.Series {
-		uploadMode := sourceUploadWithOrig
-		if i > 0 {
-			uploadMode = sourceUploadWithoutOrig
-		}
-
 		changes, err := buildSeries(
 			ctx, log,
 			root, sourceDir, workDir, origTar,
-			plan, series, uploadMode, mtime)
+			plan, series, plan.sourceUploadMode(i), mtime)
 		if err != nil {
 			return fmt.Errorf("build %s: %w", series, err)
 		}
@@ -306,6 +307,9 @@ type packagePlan struct {
 	// PPARevision is the Launchpad PPA source package revision.
 	PPARevision int
 
+	// OmitOrig excludes the upstream orig tarball from every source upload.
+	OmitOrig bool
+
 	// Ref is the Git object exported as upstream source.
 	Ref string
 
@@ -320,6 +324,13 @@ type packagePlan struct {
 
 	// DputTarget is the destination passed to dput.
 	DputTarget string
+}
+
+func (p packagePlan) sourceUploadMode(seriesIndex int) sourceUploadMode {
+	if p.OmitOrig || seriesIndex > 0 {
+		return sourceUploadWithoutOrig
+	}
+	return sourceUploadWithOrig
 }
 
 // sourceUploadMode controls whether the generated .changes upload manifest
@@ -409,6 +420,7 @@ func newPackagePlan(req publishRequest) (packagePlan, error) {
 		),
 		SourceModTime: sourceModTime,
 		PPARevision:   req.PPARevision,
+		OmitOrig:      req.OmitOrig,
 		Ref:           req.Ref,
 		Series:        series,
 		Sign:          sign,
