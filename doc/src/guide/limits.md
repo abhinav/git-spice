@@ -148,7 +148,7 @@ These are platform limitations, not git-spice limitations.
 
 ## Bitbucket Data Center / Server limitations
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.31.0 -->
 
 Self-hosted Bitbucket Data Center / Server support has some limitations
 compared to GitHub and GitLab:

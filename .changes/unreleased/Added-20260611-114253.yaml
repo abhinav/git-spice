@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  bitbucket: New pull request descriptions are now filled from pull request
-  template files on the default branch.
-time: 2026-06-11T11:42:53.8146512+02:00

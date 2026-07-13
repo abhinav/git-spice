@@ -1,3 +1,0 @@
-kind: Fixed
-body: 'forge: `spice.forge.kind` now works with remotes that use `url.*.insteadOf` rewriting.'
-time: 2026-07-06T19:39:08.631966-07:00

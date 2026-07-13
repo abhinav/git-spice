@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  merge: Add --fail-fast flag to all merge commands to stop scheduling
-  remaining merge queue work after the first branch failure.
-time: 2026-06-30T20:02:20.005463-07:00

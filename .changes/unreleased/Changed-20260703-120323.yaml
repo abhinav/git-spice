@@ -1,5 +1,0 @@
-kind: Changed
-body: >-
-  repo sync: When a merge branch is deleted but the local and remote heads differ,
-  include more information in the deletion prompt to help the user make an informed decision.
-time: 2026-07-03T12:03:23.218908-07:00

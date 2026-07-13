@@ -1,8 +1,0 @@
-kind: Added
-body: >-
-  Add `--[no-]restack` flag to opt out of automatic restacking for the
-  following commands: branch create, branch edit, branch squash, commit amend,
-  commit create, commit fixup, commit pick, commit split.
-  Each command also gets a configuration option to change the default behavior.
-  See [Configuration](https://abhinav.github.io/git-spice/cli/config/) for details.
-time: 2026-07-09T22:18:18.598143908Z

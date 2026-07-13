@@ -17,7 +17,7 @@ with GitHub, GitLab, Bitbucket Cloud,
 Bitbucket Data Center / Server, Gitea, and Forgejo.
 Note that GitLab support requires at least version <!-- gs:version v0.9.0 -->.
 Bitbucket Cloud support requires at least version <!-- gs:version v0.25.0 -->.
-Bitbucket Data Center / Server support requires at least version <!-- gs:version unreleased -->.
+Bitbucket Data Center / Server support requires at least version <!-- gs:version v0.31.0 -->.
 Gitea support requires at least version <!-- gs:version v0.30.0 -->.
 Forgejo support requires at least version <!-- gs:version v0.30.0 -->,
 and defaults to Codeberg.
@@ -620,7 +620,7 @@ Authenticate with $$gs auth login$$ as usual after that.
 
 ### Bitbucket Data Center / Server
 
-<!-- gs:version unreleased -->
+<!-- gs:version v0.31.0 -->
 
 The same `bitbucket` forge serves Bitbucket Cloud
 and self-hosted Bitbucket Data Center / Server instances.

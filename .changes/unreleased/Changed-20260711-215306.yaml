@@ -1,6 +1,0 @@
-kind: Changed
-body: >-
-  github: Replace client implementation.
-  While we expect no user-facing impact from this, it's a significant change.
-  If you encounter any regressions, please [report them](https://github.com/abhinav/git-spice/issues).
-time: 2026-07-11T21:53:06.660987-07:00

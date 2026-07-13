@@ -1,5 +1,0 @@
-kind: Added
-body: >-
-  bitbucket: Self-hosted Bitbucket Data Center / Server instances are now
-  supported via 'spice.forge.kind=bitbucket' or 'spice.forge.bitbucket.url'.
-time: 2026-06-07T09:30:03.9146879+02:00
