@@ -213,13 +213,12 @@ func run(log *silog.Logger, req publishRequest) error {
 
 		if plan.Dput {
 			log.Info("Uploading source package", "series", series, "changes", changes)
-			output, flushOutput := silog.Writer(log.WithPrefix("dput"), silog.LevelInfo)
-			err := xec.Command(ctx, log, "dput", "--unchecked", plan.DputTarget, changes).
-				WithStdout(output).
-				WithStderr(output).
-				Run()
-			flushOutput()
-			if err != nil {
+			if err := uploadSourcePackage(
+				ctx,
+				log,
+				plan.DputTarget,
+				changes,
+			); err != nil {
 				return fmt.Errorf("dput %s: %w", series, err)
 			}
 		} else {
@@ -235,6 +234,43 @@ func run(log *silog.Logger, req publishRequest) error {
 	}
 
 	return nil
+}
+
+// uploadSourcePackage runs dput up to three times with exponential backoff.
+func uploadSourcePackage(
+	ctx context.Context,
+	log *silog.Logger,
+	target string,
+	changes string,
+) error {
+	const maxAttempts = 3
+	for attempt := 1; ; attempt++ {
+		output, flushOutput := silog.Writer(log.WithPrefix("dput"), silog.LevelInfo)
+		err := xec.Command(ctx, log, "dput", "--unchecked", target, changes).
+			WithStdout(output).
+			WithStderr(output).
+			Run()
+		flushOutput()
+		if err == nil {
+			return nil
+		}
+		if attempt >= maxAttempts {
+			return err
+		}
+
+		delay := 15 * time.Second << (attempt - 1)
+		log.Warn("dput failed; retrying",
+			"attempt", attempt,
+			"maxAttempts", maxAttempts,
+			"delay", delay,
+			"error", err)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
 }
 
 func writeDebianPackaging(log *silog.Logger, sourceDir string) error {
