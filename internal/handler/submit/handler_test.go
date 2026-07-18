@@ -12,6 +12,7 @@ import (
 	"go.abhg.dev/gs/internal/browser"
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/forge/forgetest"
+	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/silog/silogtest"
 	"go.abhg.dev/gs/internal/spice"
@@ -183,6 +184,135 @@ func TestHandler_SubmitBatch_rejectsStaleBaseBeforeSubmitting(t *testing.T) {
 	assert.Contains(t, logBuffer.String(), "Branch has stale base")
 	assert.Contains(t, logBuffer.String(), "branch=feat2")
 	assert.Contains(t, logBuffer.String(), "base=feat1")
+}
+
+func TestHandler_submitBranch_editBase(t *testing.T) {
+	draft := true
+	tests := []struct {
+		name       string
+		change     *forge.FindChangeItem
+		opts       *Options
+		wantEdit   forge.EditChangeOptions
+		wantPushed bool
+	}{
+		{
+			name: "UnchangedBase",
+			change: &forge.FindChangeItem{
+				ID:       submitFakeChangeID("pr-1"),
+				URL:      "https://example.com/pr-1",
+				State:    forge.ChangeOpen,
+				Subject:  "Feature",
+				HeadHash: git.Hash("old-head"),
+				BaseName: "main",
+				Draft:    false,
+			},
+			opts: &Options{
+				Draft:     &draft,
+				Labels:    []string{"bug"},
+				Reviewers: []string{"reviewer"},
+				Assignees: []string{"assignee"},
+			},
+			wantEdit: forge.EditChangeOptions{
+				Draft:        &draft,
+				AddLabels:    []string{"bug"},
+				AddReviewers: []string{"reviewer"},
+				AddAssignees: []string{"assignee"},
+			},
+			wantPushed: true,
+		},
+		{
+			name: "ChangedBase",
+			change: &forge.FindChangeItem{
+				ID:       submitFakeChangeID("pr-1"),
+				URL:      "https://example.com/pr-1",
+				State:    forge.ChangeOpen,
+				Subject:  "Feature",
+				HeadHash: git.Hash("new-head"),
+				BaseName: "old-main",
+				Draft:    false,
+			},
+			opts: &Options{},
+			wantEdit: forge.EditChangeOptions{
+				Base: "main",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockStore := NewMockStore(mockCtrl)
+			mockStore.EXPECT().Trunk().Return("main").AnyTimes()
+
+			mockService := NewMockService(mockCtrl)
+			mockService.EXPECT().
+				VerifyRestacked(gomock.Any(), "feature").
+				Return(nil)
+
+			mockRemoteRepo := forgetest.NewMockRepository(mockCtrl)
+			mockRemoteRepo.EXPECT().
+				FindChangeByID(gomock.Any(), submitFakeChangeID("pr-1")).
+				Return(tt.change, nil)
+			mockRemoteRepo.EXPECT().
+				EditChange(gomock.Any(), submitFakeChangeID("pr-1"), tt.wantEdit).
+				Return(nil)
+
+			var pushed bool
+			handler := &Handler{
+				Log:  silogtest.New(t),
+				View: ui.NewFileView(&bytes.Buffer{}),
+				Repository: &submitTestGitRepository{
+					peelToCommit: func(_ context.Context, ref string) (git.Hash, error) {
+						switch ref {
+						case "feature":
+							return git.Hash("new-head"), nil
+						case "origin/feature":
+							return "", git.ErrNotExist
+						default:
+							t.Fatalf("unexpected ref: %q", ref)
+							return "", nil
+						}
+					},
+				},
+				Worktree: &submitTestGitWorktree{
+					push: func(context.Context, git.PushOptions) error {
+						pushed = true
+						return nil
+					},
+				},
+				Store:   mockStore,
+				Service: mockService,
+				Browser: &browser.Noop{},
+				FindRemote: func(context.Context) (state.Remote, error) {
+					return state.Remote{Upstream: "origin", Push: "origin"}, nil
+				},
+				ResolveRepository: func(context.Context, string) (forge.Forge, forge.RepositoryID, error) {
+					return forgetest.NewMockForge(mockCtrl), stubRepositoryID("alice/repo"), nil
+				},
+				OpenRepository: func(context.Context, forge.Forge, forge.RepositoryID) (forge.Repository, error) {
+					return mockRemoteRepo, nil
+				},
+			}
+			graph := spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+				Trunk: "main",
+				Branches: []spice.LoadBranchItem{
+					{
+						Name:           "feature",
+						Base:           "main",
+						Change:         submitFakeChange("pr-1"),
+						UpstreamBranch: "feature",
+					},
+				},
+			})
+
+			status, err := handler.submitBranch(
+				t.Context(), graph, "feature", &submitOptions{Options: tt.opts},
+			)
+			require.NoError(t, err)
+			assert.True(t, status.Submitted)
+			assert.Equal(t, tt.wantPushed, pushed)
+		})
+	}
 }
 
 func TestHandler_resolveUpstreamBranch_refusesStoredTrunk(t *testing.T) {
@@ -527,6 +657,36 @@ func TestEffectiveLabels(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// submitTestGitRepository stubs PeelToCommit and leaves other Git repository
+// operations unavailable to submit handler tests.
+type submitTestGitRepository struct {
+	GitRepository
+
+	peelToCommit func(context.Context, string) (git.Hash, error)
+}
+
+func (r *submitTestGitRepository) PeelToCommit(
+	ctx context.Context,
+	ref string,
+) (git.Hash, error) {
+	return r.peelToCommit(ctx, ref)
+}
+
+// submitTestGitWorktree stubs Push and leaves other Git worktree operations
+// unavailable to submit handler tests.
+type submitTestGitWorktree struct {
+	GitWorktree
+
+	push func(context.Context, git.PushOptions) error
+}
+
+func (w *submitTestGitWorktree) Push(
+	ctx context.Context,
+	opts git.PushOptions,
+) error {
+	return w.push(ctx, opts)
 }
 
 type stubRepositoryID string

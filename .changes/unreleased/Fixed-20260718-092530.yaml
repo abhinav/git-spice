@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'github: Duplicate CI runs are no longer triggered when an updated branch is pushed without changing its pull request base.'
+time: 2026-07-18T09:25:30.878921-07:00
