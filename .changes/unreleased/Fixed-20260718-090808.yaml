@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  branch restack, branch onto: Conflicting rebases caused by replayed base
+  commits are avoided after a branch is rebased outside git-spice.
+time: 2026-07-18T09:08:08.569856-07:00

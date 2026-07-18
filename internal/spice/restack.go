@@ -28,64 +28,18 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		return nil, err // includes ErrNotExist
 	}
 
-	err = s.VerifyRestacked(ctx, name)
-	if err == nil {
-		// Case:
-		// The branch is already on top of its base branch
+	replayRange, err := s.resolveBranchReplayRange(ctx, name, b)
+	if err != nil {
+		return nil, err
+	}
+	if replayRange.isRestacked() {
+		s.reconcileRecordedBaseHash(ctx, name, b, replayRange.BaseHead)
 		return nil, ErrAlreadyRestacked
-	}
-	var restackErr *BranchNeedsRestackError
-	if !errors.As(err, &restackErr) {
-		return nil, fmt.Errorf("verify restacked: %w", err)
-	}
-
-	// The branch needs to be restacked on top of its base branch.
-	// We will proceed with the restack.
-
-	baseHash := restackErr.BaseHash
-	upstream := b.BaseHash
-
-	// Case:
-	// Recorded base hash is super out of date,
-	// and is not an ancestor of the current branch.
-	// In that case, use fork point as a hail mary
-	// to guess the upstream start point.
-	//
-	// For context, fork point attempts to find the point
-	// where the current branch diverged from the branch it
-	// was originally forked from.
-	// For example, given:
-	//
-	//  ---X---A'---o foo
-	//      \
-	//       A
-	//        \
-	//         B---o---o bar
-	//
-	// If bar branched from foo, when foo was at A,
-	// and then we amended foo to get A',
-	// bar will still refer to A.
-	//
-	// In this case, merge-base --fork-point will give us A,
-	// and that should be the upstream (commit to start rebasing from)
-	// if the recorded base hash is out of date
-	// because the user changed something externally.
-	if !s.repo.IsAncestor(ctx, upstream, b.Head) {
-		forkPoint, err := s.repo.ForkPoint(ctx, b.Base, name)
-		if err == nil {
-			if upstream != forkPoint {
-				s.log.Debug("Recorded base hash is out of date. Restacking from fork point.",
-					"base", b.Base,
-					"branch", name,
-					"forkPoint", forkPoint)
-			}
-			upstream = forkPoint
-		}
 	}
 
 	if err := s.wt.Rebase(ctx, git.RebaseRequest{
-		Onto:      baseHash.String(),
-		Upstream:  upstream.String(),
+		Onto:      replayRange.BaseHead.String(),
+		Upstream:  replayRange.Upstream.String(),
 		Branch:    name,
 		Autostash: true,
 		Quiet:     true,
@@ -96,7 +50,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	tx := s.store.BeginBranchTx()
 	if err := tx.Upsert(ctx, state.UpsertRequest{
 		Name:     name,
-		BaseHash: baseHash,
+		BaseHash: replayRange.BaseHead,
 	}); err != nil {
 		return nil, fmt.Errorf("update base hash of %v: %w", name, err)
 	}
@@ -136,69 +90,57 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 // It updates the base branch hash if the hash is out of date,
 // but the branch is restacked properly.
 //
-// It returns the actual hash of the base branch in case of succses,
-// [ErrNeedsRestack] if the branch needs to be restacked,
+// It returns the actual hash of the base branch on success,
+// [BranchNeedsRestackError] if the branch needs to be restacked,
 // [state.ErrNotExist] if the branch is not tracked.
 // Any other error indicates a problem with checking the branch.
 func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git.Hash, err error) {
-	// A branch needs to be restacked if
-	// its merge base with its base branch
-	// is not its base branch's head.
-	//
-	// That is, the branch is not on top of its base branch's current head.
 	b, err := s.LookupBranch(ctx, name)
 	if err != nil {
 		return git.ZeroHash, err
 	}
 
-	baseHash, err = s.repo.PeelToCommit(ctx, b.Base)
+	replayRange, err := s.resolveBranchReplayRange(ctx, name, b)
 	if err != nil {
-		if errors.Is(err, git.ErrNotExist) {
-			return git.ZeroHash, fmt.Errorf("base branch %v does not exist", b.Base)
-		}
-		return git.ZeroHash, fmt.Errorf("find commit for %v: %w", b.Base, err)
+		return git.ZeroHash, err
 	}
 
-	if !s.repo.IsAncestor(ctx, baseHash, b.Head) {
+	if !replayRange.isRestacked() {
 		return git.ZeroHash, &BranchNeedsRestackError{
 			Base:     b.Base,
-			BaseHash: baseHash,
+			BaseHash: replayRange.BaseHead,
 		}
 	}
 
-	// A branch retargeted without rebasing preserves its old base hash
-	// as the upstream boundary for the next explicit restack.
-	// Do not treat that as stale metadata just because the new base
-	// is already an ancestor of the branch head.
-	if b.BaseHash != baseHash &&
-		!b.BaseHash.IsZero() &&
-		s.repo.IsAncestor(ctx, baseHash, b.BaseHash) &&
-		s.repo.IsAncestor(ctx, b.BaseHash, b.Head) {
-		return git.ZeroHash, &BranchNeedsRestackError{
-			Base:     b.Base,
-			BaseHash: baseHash,
-		}
+	s.reconcileRecordedBaseHash(ctx, name, b, replayRange.BaseHead)
+	return replayRange.BaseHead, nil
+}
+
+// reconcileRecordedBaseHash updates stale state after the Git graph proves
+// that a branch is already restacked. State failures are logged because they
+// do not change whether the branch needs a rebase.
+func (s *Service) reconcileRecordedBaseHash(
+	ctx context.Context,
+	name string,
+	b *LookupBranchResponse,
+	baseHash git.Hash,
+) {
+	if b.BaseHash == baseHash {
+		return
 	}
 
-	// Branch does not need to be restacked
-	// but the base hash stored in state may be out of date.
-	if b.BaseHash != baseHash {
-		s.log.Debug("Updating recorded base hash", "branch", name, "base", b.Base)
+	s.log.Debug("Updating recorded base hash", "branch", name, "base", b.Base)
 
-		tx := s.store.BeginBranchTx()
-		if err := tx.Upsert(ctx, state.UpsertRequest{
-			Name:     name,
-			BaseHash: baseHash,
-		}); err != nil {
-			s.log.Warn("Failed to update recorded base hash", "error", err)
-			return git.ZeroHash, nil
-		}
-
-		if err := tx.Commit(ctx, fmt.Sprintf("%v: branch was restacked externally", name)); err != nil {
-			// This isn't a critical error. Just log it.
-			s.log.Warn("Failed to update state", "error", err)
-		}
+	tx := s.store.BeginBranchTx()
+	if err := tx.Upsert(ctx, state.UpsertRequest{
+		Name:     name,
+		BaseHash: baseHash,
+	}); err != nil {
+		s.log.Warn("Failed to update recorded base hash", "error", err)
+		return
 	}
 
-	return baseHash, nil
+	if err := tx.Commit(ctx, fmt.Sprintf("%v: branch was restacked externally", name)); err != nil {
+		s.log.Warn("Failed to update state", "error", err)
+	}
 }

@@ -1,0 +1,61 @@
+# 'branch onto' excludes commits from an externally advanced base branch.
+
+as 'Test <test@example.com>'
+at '2026-07-18T16:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Create an independent destination whose conflicting edit does not contain
+# commits from the feature's base branch.
+cp $WORK/extra/shared-from-target.txt shared.txt
+git add shared.txt
+gs branch create target -m 'Change target file'
+
+# Create the feature from the initial trunk commit.
+git checkout main
+git add feature-one.txt
+gs branch create feature -m 'Add first feature file'
+git add feature-two.txt
+gs commit create -m 'Add second feature file'
+
+# Advance trunk, then rebase the feature with plain Git. This leaves the
+# recorded base at the initial commit while the current merge base moves ahead.
+git checkout main
+cp $WORK/extra/shared-from-first-trunk.txt shared.txt
+git add shared.txt
+git commit -m 'Change unrelated file'
+git rebase --onto main feature~2 feature
+
+# Advance trunk again so its head is no longer an ancestor of the feature.
+git checkout main
+cp $WORK/extra/shared-from-second-trunk.txt shared.txt
+git add shared.txt
+git commit -m 'Change unrelated file again'
+git checkout feature
+
+gs branch onto target
+
+# Moving the feature should replay only its own commits onto target.
+git log --format=%s target..feature
+cmp stdout $WORK/golden/feature-commits.txt
+cmp shared.txt $WORK/extra/shared-from-target.txt
+
+-- repo/shared.txt --
+initial
+-- repo/feature-one.txt --
+first feature
+-- repo/feature-two.txt --
+second feature
+-- extra/shared-from-target.txt --
+target version
+-- extra/shared-from-first-trunk.txt --
+first trunk version
+-- extra/shared-from-second-trunk.txt --
+second trunk version
+-- golden/feature-commits.txt --
+Add second feature file
+Add first feature file

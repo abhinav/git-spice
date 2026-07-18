@@ -1,0 +1,77 @@
+# 'stack edit' excludes commits from an externally advanced base branch.
+
+as 'Test <test@example.com>'
+at '2026-07-18T16:00:00Z'
+
+cd repo
+git init
+git add shared.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Create a two-branch stack whose base owns the shared file.
+cp $WORK/extra/shared-from-base-a.txt shared.txt
+git add shared.txt
+gs branch create base -m 'Set base version'
+git add feature-one.txt
+gs branch create feature -m 'Add first feature file'
+git add feature-two.txt
+gs commit create -m 'Add second feature file'
+
+# Advance the base, then rebase the feature with plain Git. This leaves the
+# feature's recorded boundary at base~1 while its current merge base is base.
+git checkout base
+cp $WORK/extra/shared-from-base-b.txt shared.txt
+git add shared.txt
+git commit -m 'Change unrelated file'
+git rebase --onto base feature~2 feature
+
+# Advance the base again with another unrelated-file edit.
+git checkout base
+cp $WORK/extra/shared-from-base-c.txt shared.txt
+git add shared.txt
+git commit -m 'Change unrelated file again'
+git checkout feature
+
+# Reverse the stack so feature moves directly onto main.
+env MOCKEDIT_GIVE=$WORK/edit/give.txt MOCKEDIT_RECORD=$WORK/edit/got.txt
+gs stack edit
+cmp $WORK/edit/got.txt $WORK/edit/want.txt
+
+# Stack edit should move only the feature commits onto main.
+git checkout feature
+git log --format=%s main..feature
+cmp stdout $WORK/golden/feature-commits.txt
+cmp shared.txt $WORK/extra/shared-from-main.txt
+
+-- repo/shared.txt --
+main version
+-- repo/feature-one.txt --
+first feature
+-- repo/feature-two.txt --
+second feature
+-- extra/shared-from-base-a.txt --
+base version a
+-- extra/shared-from-base-b.txt --
+base version b
+-- extra/shared-from-base-c.txt --
+base version c
+-- extra/shared-from-main.txt --
+main version
+-- edit/give.txt --
+base
+feature
+-- edit/want.txt --
+feature
+base
+
+# Edit the order of branches by modifying the list above.
+# The branch at the bottom of the list will be merged into trunk first.
+# Branches above that will be stacked on top of it in the order they appear.
+# Branches deleted from the list will not be modified.
+#
+# Save and quit the editor to apply the changes.
+# Delete all lines in the editor to abort the operation.
+-- golden/feature-commits.txt --
+Add second feature file
+Add first feature file

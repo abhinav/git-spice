@@ -20,7 +20,7 @@ const (
 	// BranchOntoRetargetOnly updates state
 	// without rebasing the branch's commits.
 	//
-	// The old upstream boundary is preserved
+	// The resolved upstream boundary is preserved
 	// so a future restack can replay the branch correctly.
 	BranchOntoRetargetOnly
 )
@@ -46,7 +46,7 @@ type BranchOntoRequest struct {
 // BranchOnto moves the commits of a branch onto a different base branch,
 // updating internal state to reflect the new branch stack.
 // It DOES NOT modify the upstack branches of the branch being moved.
-// As this involves a rebase operation,
+// When Mode is [BranchOntoRebase],
 // the caller should be prepared to rescue the operation if it fails.
 func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error {
 	must.NotBeEqualf(req.Branch, s.store.Trunk(), "cannot move trunk")
@@ -71,36 +71,16 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		ontoHash = onto.Head
 	}
 
-	// The recorded base hash may be stale if the old base branch
-	// was advanced outside git-spice,
-	// and the branch being moved was restacked outside git-spice.
-	//
-	// For example:
-	//
-	//     o---A (RecordedBase)
-	//          \
-	//           B---C (ActualBase)
-	//                \
-	//                 D (Current)
-	//
-	// git-spice may still think Current is based on RecordedBase,
-	// but using RecordedBase..Current would replay B and C.
-	// If ActualBase is reachable from Current,
-	// use ActualBase..Current so only Current's own commits are replayed.
-	fromHash := branch.BaseHash
-	if actualBaseHash, err := s.repo.PeelToCommit(ctx, branch.Base); err == nil {
-		if s.repo.IsAncestor(ctx, actualBaseHash, branch.Head) {
-			fromHash = actualBaseHash
-		}
+	replayRange, err := s.resolveBranchReplayRange(ctx, req.Branch, branch)
+	if err != nil {
+		return fmt.Errorf("resolve branch replay range: %w", err)
 	}
+	fromHash := replayRange.Upstream
 
-	// We're trying to move the selected commit range onto OntoHash.
-	//
-	// However, there's a possibility that BaseHash is reachable from OntoHash
-	// because the old base is also the base of onto,
-	// and we've already partially rebased and handled a conflict.
-	//
-	// For example, suppose we have:
+	// The destination can already contain the resolved replay boundary.
+	// This is expected when two branches share a downstack
+	// and when a branch-onto operation resumes after a conflict.
+	// For example, before the first attempt:
 	//
 	//           C--D (Current)  (git-spice: base=OriginalBase)
 	//          /
@@ -108,9 +88,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	//          \
 	//           A--B (NewBase)  (git-spice: base=OriginalBase)
 	//
-	// If we run 'git-spice branch onto NewBase' from Current,
-	// and there's a conflict, the user will resolve the rebase conflict,
-	// but the git-spice state will not yet be updated.
+	// After Git has replayed Current but before git-spice state is updated:
 	//
 	//     o---X (OriginalBase)
 	//          \
@@ -118,20 +96,15 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	//               \
 	//                C--D (Current)  (git-spice: base=OriginalBase)
 	//
-	// At that point, 'git-spice rebase continue' will re-run the original command
-	// 'git-spice branch onto NewBase' from Current,
-	// except the commits it wants (OriginalBase..Current)
-	// now includes commits OriginalBase..NewBase,
-	// which will fail for obvious reasons.
-	//
-	// To catch this, if OriginalBase is reachable from NewBase,
-	// we'll change the commit range to NewBase..Current.
-	// This will turn the rebase into a no-op, but it'll correctly update state.
+	// Using the destination as the exclusive boundary selects
+	// NewBase..Current. The first attempt excludes NewBase's commits,
+	// and a resumed attempt becomes a no-op before state is updated.
 	if s.repo.IsAncestor(ctx, fromHash, ontoHash) {
 		fromHash = ontoHash
 	}
 
-	s.log.Debug("Moving commits onto new base",
+	s.log.Debug(
+		"Moving commits onto new base",
 		"branch", req.Branch,
 		"oldBase", branch.Base,
 		"newBase", req.Onto,
