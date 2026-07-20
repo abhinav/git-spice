@@ -106,10 +106,16 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 	}
 
 	if !replayRange.isRestacked() {
-		// A recovered replay boundary can match the branch head when the branch
-		// has already been merged into its base. Keeping the previous boundary
-		// lets log commands continue to show the branch commits while marking the
-		// branch as needing restack.
+		// If the base branch has merged this branch without updating git-spice
+		// state, the current merge base is the branch head:
+		//
+		//	A---B---M base
+		//	 \     /
+		//	  P---Q branch
+		//
+		// Moving the recorded boundary to Q would make log commands report no
+		// commits for branch, even though branch still needs restack because M is
+		// the base head. Keep the earlier recorded boundary in that case.
 		if replayRange.Upstream != b.Head {
 			s.reconcileRecordedBaseHash(ctx, name, b, replayRange.Upstream)
 		}
