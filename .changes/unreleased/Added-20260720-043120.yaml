@@ -1,0 +1,3 @@
+kind: Added
+body: Release artifacts are now signed with cosign.
+time: 2026-07-20T04:31:20.229508-07:00
