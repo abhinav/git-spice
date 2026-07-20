@@ -65,6 +65,9 @@ jobs:
     name: Publish Release
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      contents: write
+      id-token: write # for Cosigning
 
     steps:
     - uses: actions/checkout@v6
@@ -119,6 +122,9 @@ jobs:
         git push origin "$TAG"
       env:
         TAG: v${{ env.VERSION }}
+
+    - uses: sigstore/cosign-installer@v4.1.2
+      if: inputs.skip_goreleaser == false
 
     - name: Release
       if: inputs.skip_goreleaser == false
