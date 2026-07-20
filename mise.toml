@@ -26,6 +26,7 @@ golangci-lint = "latest"
 # Changelog manager.
 changie = "latest"
 requiredfield = "0.9.0"
+cosign = "latest"
 
 [tasks.generate]
 depends = ["tools"]

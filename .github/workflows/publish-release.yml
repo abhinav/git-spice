@@ -123,9 +123,6 @@ jobs:
       env:
         TAG: v${{ env.VERSION }}
 
-    - uses: sigstore/cosign-installer@v4.1.2
-      if: inputs.skip_goreleaser == false
-
     - name: Release
       if: inputs.skip_goreleaser == false
       uses: goreleaser/goreleaser-action@v7
