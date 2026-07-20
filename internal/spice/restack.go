@@ -106,6 +106,7 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 	}
 
 	if !replayRange.isRestacked() {
+		s.reconcileRecordedBaseHash(ctx, name, b, replayRange.Upstream)
 		return git.ZeroHash, &BranchNeedsRestackError{
 			Base:     b.Base,
 			BaseHash: replayRange.BaseHead,

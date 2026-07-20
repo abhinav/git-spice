@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'log: Recovered replay boundaries are persisted so repeated inspections do not emit stale-boundary diagnostics.'
+time: 2026-07-20T17:07:05.781716353Z
