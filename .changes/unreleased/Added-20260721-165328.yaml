@@ -1,0 +1,3 @@
+kind: Added
+body: 'navigation: Add `spice.submit.navigationComment.trunkComparison` configuration option to include a link comparing the branch against trunk in navigation comments, on the topmost or all CRs of a stack.'
+time: 2026-07-21T16:53:28.53826231Z

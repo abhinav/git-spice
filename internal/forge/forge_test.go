@@ -19,6 +19,21 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+func TestComparisonRequest_URLEncoded(t *testing.T) {
+	req := forge.ComparisonRequest{
+		Base: "release/v1#candidate",
+		Head: "feature/review#1",
+	}
+
+	t.Run("Base", func(t *testing.T) {
+		assert.Equal(t, "release%2Fv1%23candidate", req.BaseURLEncoded())
+	})
+
+	t.Run("Head", func(t *testing.T) {
+		assert.Equal(t, "feature%2Freview%231", req.HeadURLEncoded())
+	})
+}
+
 func TestRegister(t *testing.T) {
 	ctrl := gomock.NewController(t)
 

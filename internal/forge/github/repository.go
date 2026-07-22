@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -63,3 +64,22 @@ func newRepository(
 
 // Forge returns the forge this repository belongs to.
 func (r *Repository) Forge() forge.Forge { return r.forge }
+
+var _ forge.WithComparisonURL = (*Repository)(nil)
+
+// ComparisonURL returns a URL for a comparison on GitHub.
+// See GitHub's [comparing commits documentation].
+//
+// [comparing commits documentation]: https://docs.github.com/en/pull-requests/committing-changes-to-your-project/viewing-and-comparing-commits/comparing-commits
+func (r *Repository) ComparisonURL(req forge.ComparisonRequest) string {
+	head := req.HeadURLEncoded()
+	if req.HeadRepository != nil {
+		headRepo := mustRepositoryID(req.HeadRepository)
+		if headRepo.owner != r.owner || headRepo.name != r.repo {
+			// GitHub qualifies a cross-fork head with its owner.
+			head = url.PathEscape(headRepo.owner) + ":" + head
+		}
+	}
+	return fmt.Sprintf("%s/%s/%s/compare/%s...%s",
+		r.forge.URL(), r.owner, r.repo, req.BaseURLEncoded(), head)
+}

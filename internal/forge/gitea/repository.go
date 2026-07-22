@@ -26,14 +26,32 @@ type Repository struct {
 }
 
 var (
-	_ forge.Repository    = (*Repository)(nil)
-	_ forge.WithChangeURL = (*Repository)(nil)
+	_ forge.Repository        = (*Repository)(nil)
+	_ forge.WithChangeURL     = (*Repository)(nil)
+	_ forge.WithComparisonURL = (*Repository)(nil)
 )
 
 // ChangeURL returns the web URL for viewing the given pull request.
 func (r *Repository) ChangeURL(id forge.ChangeID) string {
 	return fmt.Sprintf("%s/%s/%s/pulls/%d",
 		r.forge.Options.URL, r.owner, r.repo, mustPR(id).Number)
+}
+
+// ComparisonURL returns a URL for a comparison on Gitea.
+// See Gitea's [compare API documentation].
+//
+// [compare API documentation]: https://docs.gitea.com/api/1.24/#tag/repository/operation/repoCompareDiff
+func (r *Repository) ComparisonURL(req forge.ComparisonRequest) string {
+	head := req.HeadURLEncoded()
+	if req.HeadRepository != nil {
+		headRepo := mustRepositoryID(req.HeadRepository)
+		if headRepo.owner != r.owner || headRepo.name != r.repo {
+			// Gitea qualifies a cross-fork head with its owner and repository.
+			head = headRepo.String() + ":" + head
+		}
+	}
+	return fmt.Sprintf("%s/%s/%s/compare/%s...%s",
+		r.forge.Options.URL, r.owner, r.repo, req.BaseURLEncoded(), head)
 }
 
 func newRepository(

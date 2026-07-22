@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"iter"
+	"net/url"
 
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/secret"
@@ -261,4 +262,46 @@ type WithNavigationReference interface {
 	// NavigationReference returns the markdown snippet used to reference
 	// the given change ID in stack navigation content.
 	NavigationReference(id ChangeID) string
+}
+
+// WithComparisonURL is an optional interface that repositories can implement
+// to build a web URL comparing two refs.
+//
+// This powers the optional trunk-comparison link in stack navigation
+// comments, which lets reviewers view the whole stack's diff against trunk
+// at once.
+// Forges that cannot construct such URLs simply don't implement this
+// interface, in which case the link is omitted.
+type WithComparisonURL interface {
+	Repository
+
+	// ComparisonURL returns a web URL for the requested comparison.
+	// It returns an empty string if a URL cannot be constructed.
+	ComparisonURL(ComparisonRequest) string
+}
+
+// ComparisonRequest describes a comparison against a repository's branch.
+// Base and Head are plain-text branch names.
+// Forges must URL-encode them before interpolation into a URL.
+type ComparisonRequest struct {
+	// Base is the plain-text branch to compare against
+	// in the receiving repository.
+	Base string // required
+
+	// Head is the plain-text branch containing the changes.
+	Head string // required
+
+	// HeadRepository identifies the repository that owns Head.
+	// If nil, the receiving repository owns Head.
+	HeadRepository RepositoryID // optional
+}
+
+// BaseURLEncoded returns Base encoded for use as one URL path segment.
+func (r ComparisonRequest) BaseURLEncoded() string {
+	return url.PathEscape(r.Base)
+}
+
+// HeadURLEncoded returns Head encoded for use as one URL path segment.
+func (r ComparisonRequest) HeadURLEncoded() string {
+	return url.PathEscape(r.Head)
 }

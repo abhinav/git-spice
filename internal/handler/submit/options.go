@@ -26,6 +26,9 @@ type Options struct {
 	NavCommentDownstack NavCommentDownstack `name:"nav-comment-downstack" config:"submit.navigationComment.downstack" enum:"all,open" default:"all" hidden:"" help:"Which downstack CRs to include in navigation comments. Must be one of: all, open."`
 	NavCommentMarker    string              `name:"nav-comment-marker" config:"submit.navigationCommentStyle.marker" hidden:"" help:"Marker to use for the current change in navigation comments. Defaults to '◀'."`
 
+	NavCommentTrunkLink     NavCommentTrunkLink `name:"nav-comment-trunk-link" config:"submit.navigationComment.trunkComparison" enum:"false,top,all" default:"false" hidden:"" help:"Whether to include a link comparing the branch against trunk in navigation comments, and on which CRs. Must be one of: false, top, all."`
+	NavCommentTrunkLinkText string              `name:"nav-comment-trunk-link-text" config:"submit.navigationCommentStyle.trunkComparisonText" hidden:"" help:"Text for the trunk comparison link in navigation comments. Defaults to 'Compare against trunk'."`
+
 	SkipRestackCheck SkipRestackCheck `config:"submit.skipRestackCheck" hidden:"" help:"When to skip the restack check. Must be one of: never, trunk, always." default:"never"`
 
 	Force      bool  `help:"Force push, bypassing safety checks"`
@@ -182,6 +185,61 @@ func (d *NavCommentDownstack) UnmarshalText(bs []byte) error {
 		*d = NavCommentDownstackOpen
 	default:
 		return fmt.Errorf("invalid value %q: expected all or open", bs)
+	}
+	return nil
+}
+
+// NavCommentTrunkLink specifies whether navigation comments include a link
+// comparing the branch against trunk, and which CRs in a stack receive it.
+type NavCommentTrunkLink int
+
+const (
+	// NavCommentTrunkLinkOff disables the trunk comparison link.
+	//
+	// This is the default.
+	NavCommentTrunkLinkOff NavCommentTrunkLink = iota
+
+	// NavCommentTrunkLinkTop adds the trunk comparison link
+	// only to the topmost CRs of a stack
+	// (those with nothing else stacked on top of them).
+	// On the tip of a stack, this shows the whole stack's diff
+	// against trunk in a single comparison.
+	NavCommentTrunkLinkTop
+
+	// NavCommentTrunkLinkAll adds the trunk comparison link
+	// to every CR in a stack that is stacked on top of another CR.
+	NavCommentTrunkLinkAll
+)
+
+var _ encoding.TextUnmarshaler = (*NavCommentTrunkLink)(nil)
+
+// String returns the string representation of the NavCommentTrunkLink.
+func (t NavCommentTrunkLink) String() string {
+	switch t {
+	case NavCommentTrunkLinkOff:
+		return "false"
+	case NavCommentTrunkLinkTop:
+		return "top"
+	case NavCommentTrunkLinkAll:
+		return "all"
+	default:
+		return "unknown"
+	}
+}
+
+// UnmarshalText decodes a NavCommentTrunkLink from text.
+// It supports "false", "top", and "all" values.
+// "true" is accepted as an alias for "top".
+func (t *NavCommentTrunkLink) UnmarshalText(bs []byte) error {
+	switch string(bs) {
+	case "false", "0", "no":
+		*t = NavCommentTrunkLinkOff
+	case "true", "top":
+		*t = NavCommentTrunkLinkTop
+	case "all":
+		*t = NavCommentTrunkLinkAll
+	default:
+		return fmt.Errorf("invalid value %q: expected false, top, or all", bs)
 	}
 	return nil
 }
