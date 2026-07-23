@@ -409,6 +409,22 @@ func (h *Handler) SyncTrunk(ctx context.Context, opts *TrunkOptions) (retErr err
 		if err != nil {
 			return fmt.Errorf("find finished CRs: %w", err)
 		}
+		// Also detect branches merged by force-push to trunk directly.
+		// The forge API won't report these as merged since there's no
+		// change-request lifecycle, but the local commit history shows
+		// the branch head is reachable from the updated trunk.
+		localMerged, err := h.findLocalMergedBranches(ctx, candidates, trunkEndHash)
+		if err != nil {
+			return fmt.Errorf("find locally merged branches: %w", err)
+		}
+		for _, b := range localMerged {
+			if !slices.ContainsFunc(branchesToDelete, func(d branchDeletion) bool {
+				return d.BranchName == b.BranchName
+			}) {
+				h.Log.Infof("%v was merged", b.BranchName)
+				branchesToDelete = append(branchesToDelete, b)
+			}
+		}
 	}
 
 	if len(branchesToDelete) == 0 {
