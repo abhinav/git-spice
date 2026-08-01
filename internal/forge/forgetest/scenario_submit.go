@@ -75,6 +75,33 @@ func (s *integrationSuite) TestSubmitEditChange(t *testing.T) {
 		assert.Equal(t, forge.ChangeOpen, foundChange.State, "state should be open")
 		assert.Equal(t, change.URL, foundChange.URL, "URL should match")
 	})
+
+	t.Run("MatchChangesToBranches", func(t *testing.T) {
+		results := forge.MatchChangesToBranches(
+			t.Context(),
+			repo,
+			[]string{branchName, "does-not-exist"},
+			nil,
+		)
+		require.Len(t, results, 2)
+
+		matchedResult := results[0]
+		require.NotNil(t, matchedResult)
+		require.NoError(t, matchedResult.Err)
+		require.Len(t, matchedResult.Changes, 1)
+
+		matchedChange := matchedResult.Changes[0]
+		require.NotNil(t, matchedChange)
+		assert.Equal(t, changeID, matchedChange.ID, "ID should match")
+		s.assertHashMatch(t, commitHash, matchedChange.HeadHash.String(),
+			"head hash should match first commit")
+		assert.Equal(t, forge.ChangeOpen, matchedChange.State, "state should be open")
+
+		missingResult := results[1]
+		require.NotNil(t, missingResult)
+		require.NoError(t, missingResult.Err)
+		assert.Empty(t, missingResult.Changes)
+	})
 }
 
 // Changes can be submitted with a non-main base,

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -616,91 +615,92 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	if len(trackedBranches) > 0 {
-		trackedch := make(chan *trackedBranch)
-		for range min(runtime.GOMAXPROCS(0), len(trackedBranches)) {
-			wg.Go(func() {
-				for b := range trackedch {
-					changes, err := h.RemoteRepository.FindChangesByBranch(ctx, b.Name, forge.FindChangesOptions{
-						PushRepository: h.PushRepository,
-						Limit:          10,
-					})
-					if err != nil {
-						h.Log.Error("Failed to list changes", "branch", b.Name, "error", err)
-						continue
-					}
+		wg.Go(func() {
+			branchNames := make([]string, len(trackedBranches))
+			for i, b := range trackedBranches {
+				branchNames[i] = b.Name
+			}
+			results := forge.MatchChangesToBranches(
+				ctx,
+				h.RemoteRepository,
+				branchNames,
+				&forge.MatchChangesToBranchesOptions{
+					PushRepository: h.PushRepository,
+				},
+			)
 
-					// Closed-unmerged changes cannot prove that this branch is
-					// safe to delete,
-					// so avoid resolving local head state unless a live or
-					// merged change could affect the sync decision.
-					var hasOpenOrMergedChange bool
-					for _, c := range changes {
-						if c.State == forge.ChangeOpen || c.State == forge.ChangeMerged {
-							hasOpenOrMergedChange = true
-							break
-						}
-					}
-					if !hasOpenOrMergedChange {
-						continue
-					}
-
-					// A reused source branch name is ambiguous until we compare
-					// the forge's head hashes with the local branch head.
-					localSHA, err := h.Repository.PeelToCommit(ctx, b.Name)
-					if err != nil {
-						h.Log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
-						continue
-					}
-
-					// Track the best candidates in forge order,
-					// but let a proven-safe merged change outrank an open
-					// change for the same reused source branch name.
-					var (
-						openChange       *forge.FindChangeItem
-						mergedChange     *forge.FindChangeItem
-						safeMergedChange *forge.FindChangeItem
-					)
-				findSafeMergedChange:
-					for _, c := range changes {
-						switch c.State {
-						case forge.ChangeOpen:
-							openChange = cmp.Or(openChange, c)
-						case forge.ChangeMerged:
-							mergedChange = cmp.Or(mergedChange, c)
-							if mergedChangeHeadCheck(ctx, h.Repository,
-								localSHA, c.HeadHash) != mergedChangeHeadMismatch {
-								safeMergedChange = c
-								break findSafeMergedChange
-							}
-						}
-					}
-
-					// Prefer an open change unless a merged change proves
-					// the local head was included,
-					// preserving the conservative behavior for ambiguous
-					// branch-name matches.
-					change := openChange
-					if safeMergedChange != nil {
-						change = safeMergedChange
-					} else if openChange == nil {
-						change = mergedChange
-					}
-
-					if change != nil {
-						b.Merged = change.State == forge.ChangeMerged
-						b.Change = change.ID
-						b.RemoteHeadSHA = change.HeadHash
-						b.LocalHeadSHA = localSHA
-					}
-
+			for i, result := range results {
+				b := trackedBranches[i]
+				if result.Err != nil {
+					h.Log.Error("Failed to list changes", "branch", b.Name, "error", result.Err)
+					continue
 				}
-			})
-		}
 
-		for _, b := range trackedBranches {
-			trackedch <- b
-		}
-		close(trackedch)
+				// Closed-unmerged changes cannot prove that this branch is
+				// safe to delete,
+				// so avoid resolving local head state unless a live or
+				// merged change could affect the sync decision.
+				var hasOpenOrMergedChange bool
+				for _, c := range result.Changes {
+					if c.State == forge.ChangeOpen || c.State == forge.ChangeMerged {
+						hasOpenOrMergedChange = true
+						break
+					}
+				}
+				if !hasOpenOrMergedChange {
+					continue
+				}
+
+				// A reused source branch name is ambiguous until we compare
+				// the forge's head hashes with the local branch head.
+				localSHA, err := h.Repository.PeelToCommit(ctx, b.Name)
+				if err != nil {
+					h.Log.Error("Failed to resolve local head SHA", "branch", b.Name, "error", err)
+					continue
+				}
+
+				// Track the best candidates in forge order,
+				// but let a proven-safe merged change outrank an open
+				// change for the same reused source branch name.
+				var (
+					openChange       *forge.MatchedBranchChange
+					mergedChange     *forge.MatchedBranchChange
+					safeMergedChange *forge.MatchedBranchChange
+				)
+			findSafeMergedChange:
+				for _, c := range result.Changes {
+					switch c.State {
+					case forge.ChangeOpen:
+						openChange = cmp.Or(openChange, c)
+					case forge.ChangeMerged:
+						mergedChange = cmp.Or(mergedChange, c)
+						if mergedChangeHeadCheck(ctx, h.Repository,
+							localSHA, c.HeadHash) != mergedChangeHeadMismatch {
+							safeMergedChange = c
+							break findSafeMergedChange
+						}
+					}
+				}
+
+				// Prefer an open change unless a merged change proves
+				// the local head was included,
+				// preserving the conservative behavior for ambiguous
+				// branch-name matches.
+				change := openChange
+				if safeMergedChange != nil {
+					change = safeMergedChange
+				} else if openChange == nil {
+					change = mergedChange
+				}
+
+				if change != nil {
+					b.Merged = change.State == forge.ChangeMerged
+					b.Change = change.ID
+					b.RemoteHeadSHA = change.HeadHash
+					b.LocalHeadSHA = localSHA
+				}
+			}
+		})
 	}
 	wg.Wait()
 

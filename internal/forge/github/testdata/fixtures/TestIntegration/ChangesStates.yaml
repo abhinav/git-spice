@@ -27,7 +27,7 @@ interactions:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 286.532125ms
+        duration: 324.071833ms
     - id: 1
       request:
         proto: HTTP/1.1
@@ -36,7 +36,7 @@ interactions:
         content_length: 260
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"Lgwei5Q0","title":"Open Lgwei5Q0","body":"Open change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"g2y2RaN8","title":"Open g2y2RaN8","body":"Open change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -47,14 +47,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvb","number":68,"url":"https://github.com/test-owner/test-repo/pull/68"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs75fZvt","number":127,"url":"https://github.com/test-owner/test-repo/pull/127"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 915.464625ms
+        duration: 1.010953708s
     - id: 2
       request:
         proto: HTTP/1.1
@@ -63,7 +62,7 @@ interactions:
         content_length: 264
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"oR1r89qa","title":"Merged oR1r89qa","body":"Merged change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"oFu1oXpG","title":"Merged oFu1oXpG","body":"Merged change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -75,13 +74,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvy","number":69,"url":"https://github.com/test-owner/test-repo/pull/69"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs75fZwS","number":128,"url":"https://github.com/test-owner/test-repo/pull/128"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 996.899875ms
+        duration: 908.796916ms
     - id: 3
       request:
         proto: HTTP/1.1
@@ -90,7 +89,7 @@ interactions:
         content_length: 264
         host: api.github.com
         body: |
-            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"LHSD69GY","title":"Closed LHSD69GY","body":"Closed change"}}}
+            {"query":"mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}","variables":{"input":{"repositoryId":"R_kgDOMVd0xg","baseRefName":"main","headRefName":"Y8BUg4Me","title":"Closed Y8BUg4Me","body":"Closed change"}}}
         headers:
             Content-Type:
                 - application/json
@@ -102,13 +101,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHwb","number":70,"url":"https://github.com/test-owner/test-repo/pull/70"}}}}'
+        body: '{"data":{"createPullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs75fZw4","number":129,"url":"https://github.com/test-owner/test-repo/pull/129"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.544673917s
+        duration: 884.24ms
     - id: 4
       request:
         proto: HTTP/1.1
@@ -117,7 +116,7 @@ interactions:
         content_length: 164
         host: api.github.com
         body: |
-            {"query":"mutation($input:MergePullRequestInput!){mergePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs7VxHvy"}}}
+            {"query":"mutation($input:MergePullRequestInput!){mergePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs75fZwS"}}}
         headers:
             Content-Type:
                 - application/json
@@ -128,14 +127,13 @@ interactions:
         proto_major: 2
         proto_minor: 0
         content_length: -1
-        uncompressed: true
-        body: '{"data":{"mergePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHvy"}}}}'
+        body: '{"data":{"mergePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs75fZwS"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 1.840947959s
+        duration: 1.81503875s
     - id: 5
       request:
         proto: HTTP/1.1
@@ -144,7 +142,7 @@ interactions:
         content_length: 183
         host: api.github.com
         body: |
-            {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs7VxHwb","state":"CLOSED"}}}
+            {"query":"mutation($input:UpdatePullRequestInput!){updatePullRequest(input: $input){pullRequest{id}}}","variables":{"input":{"pullRequestId":"PR_kwDOMVd0xs75fZw4","state":"CLOSED"}}}
         headers:
             Content-Type:
                 - application/json
@@ -156,13 +154,13 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs7VxHwb"}}}}'
+        body: '{"data":{"updatePullRequest":{"pullRequest":{"id":"PR_kwDOMVd0xs75fZw4"}}}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 818.099583ms
+        duration: 690.235583ms
     - id: 6
       request:
         proto: HTTP/1.1
@@ -171,7 +169,7 @@ interactions:
         content_length: 175
         host: api.github.com
         body: |
-            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs7VxHvb","PR_kwDOMVd0xs7VxHvy","PR_kwDOMVd0xs7VxHwb"]}}
+            {"query":"query($ids:[ID!]!){nodes(ids: $ids){... on PullRequest{state,headRefOid}}}","variables":{"ids":["PR_kwDOMVd0xs75fZvt","PR_kwDOMVd0xs75fZwS","PR_kwDOMVd0xs75fZw4"]}}
         headers:
             Content-Type:
                 - application/json
@@ -183,10 +181,36 @@ interactions:
         proto_minor: 0
         content_length: -1
         uncompressed: true
-        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"3a0df6baa6afa3ba213d544ed1f10d3650e9497d"},{"state":"MERGED","headRefOid":"2fbdfe75f33a6b4b71e8995e13e366b7e96979d2"},{"state":"CLOSED","headRefOid":"01b3391a453432ea5483ae10f67b88d9c1d2e5ba"}]}}'
+        body: '{"data":{"nodes":[{"state":"OPEN","headRefOid":"7559ace92065d1496d181fd22ee202adbfd8fa3d"},{"state":"MERGED","headRefOid":"fe444ebe6bdabba032d5e322866146438ee650be"},{"state":"CLOSED","headRefOid":"2f2db47c0634a1e2d51e6b8a8d904f75a23cad89"}]}}'
         headers:
             Content-Type:
                 - application/json; charset=utf-8
         status: 200 OK
         code: 200
-        duration: 216.685916ms
+        duration: 265.19075ms
+    - id: 7
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 912
+        host: api.github.com
+        body: |
+            {"query":"query($branch0:String!$branch1:String!$branch2:String!$limit:Int!$owner:String!$repo:String!$states:[PullRequestState!]!){repository(owner: $owner, name: $repo){branch0:pullRequests(first: $limit, headRefName: $branch0, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,state,headRefOid,headRepository{owner{login},name}}},branch1:pullRequests(first: $limit, headRefName: $branch1, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,state,headRefOid,headRepository{owner{login},name}}},branch2:pullRequests(first: $limit, headRefName: $branch2, states: $states, orderBy: {field: UPDATED_AT, direction: DESC}){nodes{id,number,state,headRefOid,headRepository{owner{login},name}}}}}","variables":{"branch0":"g2y2RaN8","branch1":"oFu1oXpG","branch2":"Y8BUg4Me","limit":10,"owner":"test-owner","repo":"test-repo","states":["OPEN","CLOSED","MERGED"]}}
+        headers:
+            Content-Type:
+                - application/json
+        url: https://api.github.com/graphql
+        method: POST
+      response:
+        proto: HTTP/2.0
+        proto_major: 2
+        proto_minor: 0
+        content_length: -1
+        body: '{"data":{"repository":{"branch0":{"nodes":[{"id":"PR_kwDOMVd0xs75fZvt","number":127,"state":"OPEN","headRefOid":"7559ace92065d1496d181fd22ee202adbfd8fa3d","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"}}]},"branch1":{"nodes":[{"id":"PR_kwDOMVd0xs75fZwS","number":128,"state":"MERGED","headRefOid":"fe444ebe6bdabba032d5e322866146438ee650be","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"}}]},"branch2":{"nodes":[{"id":"PR_kwDOMVd0xs75fZw4","number":129,"state":"CLOSED","headRefOid":"2f2db47c0634a1e2d51e6b8a8d904f75a23cad89","headRepository":{"owner":{"login":"test-owner"},"name":"test-repo"}}]}}}}'
+        headers:
+            Content-Type:
+                - application/json; charset=utf-8
+        status: 200 OK
+        code: 200
+        duration: 555.602333ms

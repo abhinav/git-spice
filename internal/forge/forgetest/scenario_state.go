@@ -91,9 +91,64 @@ func (s *integrationSuite) TestChangeStates(t *testing.T) {
 	assert.Equal(t, forge.ChangeOpen, statuses[0].State)
 	assert.Equal(t, forge.ChangeMerged, statuses[1].State)
 	assert.Equal(t, forge.ChangeClosed, statuses[2].State)
-	assert.NotEmpty(t, statuses[0].HeadHash)
-	assert.NotEmpty(t, statuses[1].HeadHash)
-	assert.NotEmpty(t, statuses[2].HeadHash)
+	require.NotEmpty(t, statuses[0].HeadHash)
+	require.NotEmpty(t, statuses[1].HeadHash)
+	require.NotEmpty(t, statuses[2].HeadHash)
+
+	t.Run("MatchChangesToBranches", func(t *testing.T) {
+		results := forge.MatchChangesToBranches(
+			t.Context(),
+			repo,
+			[]string{openBranch, mergedBranch, closedBranch},
+			nil,
+		)
+		require.Len(t, results, 3)
+
+		wantMatches := []struct {
+			name     string
+			changeID forge.ChangeID
+			state    forge.ChangeState
+			headHash git.Hash
+		}{
+			{
+				name:     "Open",
+				changeID: openChange.ID,
+				state:    forge.ChangeOpen,
+				headHash: statuses[0].HeadHash,
+			},
+			{
+				name:     "Merged",
+				changeID: mergedChange.ID,
+				state:    forge.ChangeMerged,
+				headHash: statuses[1].HeadHash,
+			},
+			{
+				name:     "Closed",
+				changeID: closedChange.ID,
+				state:    forge.ChangeClosed,
+				headHash: statuses[2].HeadHash,
+			},
+		}
+		for i, want := range wantMatches {
+			t.Run(want.name, func(t *testing.T) {
+				result := results[i]
+				require.NotNil(t, result)
+				require.NoError(t, result.Err)
+				require.Len(t, result.Changes, 1)
+
+				change := result.Changes[0]
+				require.NotNil(t, change)
+				assert.Equal(t, want.changeID, change.ID)
+				assert.Equal(t, want.state, change.State)
+				s.assertHashMatch(
+					t,
+					want.headHash.String(),
+					change.HeadHash.String(),
+					"head hash should match change status",
+				)
+			})
+		}
+	})
 }
 
 // TestChangeChecks verifies that forges report checks

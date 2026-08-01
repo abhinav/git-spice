@@ -1,0 +1,5 @@
+kind: Changed
+body: >-
+  repo sync: Discover PRs submitted to GitHub outside git-spice in batches,
+  reducing number of API calls.
+time: 2026-08-01T11:00:05.174974-07:00

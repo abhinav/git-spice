@@ -143,7 +143,7 @@ type FindChangeItem struct {
 	BaseName string // required
 
 	// Draft is true if the change is not yet ready to be reviewed.
-	Draft bool // required
+	Draft bool
 
 	// Labels are the labels currently applied to the change.
 	Labels []string

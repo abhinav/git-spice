@@ -6,26 +6,19 @@ GOBIN = "{{ config_root }}/bin"
 PROJECT_ROOT = "{{ config_root }}"
 _.path = ["{{ config_root }}/bin"]
 
-[tool_alias]
-# Specify sources for all tools so we can refer to them directly.
-golangci-lint = "aqua:golangci/golangci-lint"
-changie = "github:miniscruff/changie"
-requiredfield = "github:abhinav/requiredfield"
-
 [tools]
 # Self-explanatory.
 go = "latest"
 
+"github:abhinav/requiredfield" = "latest"
+
 # Test runner with prettier output.
 # https://github.com/gotestyourself/gotestsum/pull/568
 "github:abhinav/gotestsum" = "v1.14.0-beta.1+github-actions-fails"
-
-# Collection of linters.
 golangci-lint = "latest"
 
 # Changelog manager.
 changie = "latest"
-requiredfield = "0.9.0"
 cosign = "latest"
 
 [tasks.generate]
