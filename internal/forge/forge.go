@@ -14,7 +14,7 @@ import (
 	"go.abhg.dev/gs/internal/ui"
 )
 
-//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,RepositoryID,Repository
+//go:generate mockgen -destination=forgetest/mocks.go -package forgetest -typed . Forge,ChangeID,RepositoryID,Repository
 
 // TODO:
 // Forge should become a struct with multiple interfaces or funcctions

@@ -84,9 +84,9 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 	if opts.Limit == 0 {
 		opts.Limit = 10
 	}
-	pushRepository := opts.PushRepository
-	if pushRepository == nil {
-		pushRepository = r.repositoryID()
+	pushRepository := r.repositoryID()
+	if opts.PushRepository != nil {
+		pushRepository = mustRepositoryID(opts.PushRepository)
 	}
 
 	var states []github.PullRequestState
@@ -107,12 +107,8 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 	changes := make([]*forge.FindChangeItem, 0, len(nodes))
 	for _, node := range nodes {
-		nodeRepository := RepositoryID{
-			url:   r.forge.URL(),
-			owner: node.HeadRepository.Owner.Login,
-			name:  node.HeadRepository.Name,
-		}
-		if nodeRepository.String() != pushRepository.String() {
+		if node.HeadRepository.Owner.Login != pushRepository.owner ||
+			node.HeadRepository.Name != pushRepository.name {
 			continue
 		}
 		changes = append(changes, toFindChangeItem(node))

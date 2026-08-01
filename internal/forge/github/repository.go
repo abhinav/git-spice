@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"iter"
 	"net/url"
 	"sync"
 
@@ -11,12 +12,46 @@ import (
 	"go.abhg.dev/gs/internal/silog"
 )
 
+//go:generate mockgen -destination=mocks_test.go -package=github -write_package_comment=false -typed -mock_names=githubGateway=MockGithubGateway . githubGateway
+
+// githubGateway is the GitHub API boundary consumed by Repository.
+type githubGateway interface {
+	AddComment(context.Context, github.ID, string) (*github.AddedComment, error)
+	AddPullRequestMetadata(context.Context, *github.PullRequestMetadataInput) error
+	ChangeStatuses(context.Context, []github.ID) ([]*github.ChangeStatus, error)
+	ChangeTemplates(context.Context, string, string) ([]*github.ChangeTemplate, error)
+	ClosePullRequest(context.Context, github.ID) error
+	ConvertPullRequestToDraft(context.Context, github.ID) error
+	CreateLabel(context.Context, github.ID, string, string) (github.ID, error)
+	CreatePullRequest(context.Context, *github.CreatePullRequestInput) (*github.CreatedPullRequest, error)
+	DeleteIssueComment(context.Context, github.ID) error
+	DeleteLabel(context.Context, github.ID) error
+	FindPullRequests(context.Context, string, string, string, int, []github.PullRequestState) ([]*github.PullRequest, error)
+	FindPullRequestsByBranches(context.Context, *github.FindPullRequestsByBranchesRequest) ([][]*github.PullRequestBranchMatch, error)
+	IdentityIDs(context.Context, []string, []github.TeamName) ([]github.ID, []github.ID, error)
+	LabelIDs(context.Context, string, string, []string) ([]github.ID, error)
+	MarkPullRequestReadyForReview(context.Context, github.ID) error
+	MergePullRequest(context.Context, *github.MergePullRequestInput) error
+	PullRequest(context.Context, string, string, int) (*github.PullRequest, error)
+	PullRequestComments(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[*github.Comment, error]
+	PullRequestID(context.Context, string, string, int) (github.ID, error)
+	PullRequestMergeability(context.Context, github.ID) (*github.Mergeability, error)
+	PullRequestReviewThreadCounts(context.Context, []github.ID, *github.PaginationOptions) ([]*github.ReviewThreadCounts, error)
+	RefExists(context.Context, string, string, string) (bool, error)
+	RepositoryID(context.Context, string, string) (github.ID, error)
+	StatusChecks(context.Context, github.ID, *github.PaginationOptions) iter.Seq2[github.StatusCheck, error]
+	UpdateIssueComment(context.Context, github.ID, string) error
+	UpdatePullRequest(context.Context, *github.UpdatePullRequestInput) error
+}
+
+var _ githubGateway = (*github.Gateway)(nil)
+
 // Repository is a GitHub repository.
 type Repository struct {
 	owner, repo string
 	repoID      github.ID
 	log         *silog.Logger
-	gateway     *github.Gateway
+	gateway     githubGateway
 	forge       *Forge
 
 	identityIDsMu sync.RWMutex // guards userIDsCache and teamIDsCache
@@ -37,7 +72,7 @@ func newRepository(
 	forge *Forge,
 	owner, repo string,
 	log *silog.Logger,
-	gateway *github.Gateway,
+	gateway githubGateway,
 	repoID github.ID,
 ) (*Repository, error) {
 	log = log.With("repo", fmt.Sprintf("%s/%s", owner, repo))
