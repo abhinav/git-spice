@@ -125,3 +125,163 @@ interactions:
         status: 200 OK
         code: 200
         duration: 10.51575ms
+    - id: 4
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/jMfwXkYK?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 551
+        body: |
+            [
+              {
+                "number": 15,
+                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/15",
+                "state": "open",
+                "title": "Open jMfwXkYK",
+                "body": "Open change",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "jMfwXkYK",
+                  "sha": "84a9e994290ae89ccc93f7d2a03d009b39d103ea"
+                }
+              }
+            ]
+        headers:
+            Content-Length:
+                - "551"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 0s
+    - id: 5
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/C5hzQ5Ik?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 577
+        body: |
+            [
+              {
+                "number": 16,
+                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/16",
+                "state": "closed",
+                "merged": true,
+                "title": "Merged C5hzQ5Ik",
+                "body": "Merged change",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "C5hzQ5Ik",
+                  "sha": "25b03948515094aec6d2cf82537f16d56a1486dc"
+                }
+              }
+            ]
+        headers:
+            Content-Length:
+                - "577"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 0s
+    - id: 6
+      request:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 0
+        host: 127.0.0.1:56373
+        form:
+            limit:
+                - "10"
+            state:
+                - all
+        url: http://127.0.0.1:56373/abhinav/test-repo/changes/by-branch/IEtiDhFs?limit=10&state=all
+        method: GET
+      response:
+        proto: HTTP/1.1
+        proto_major: 1
+        proto_minor: 1
+        content_length: 557
+        body: |
+            [
+              {
+                "number": 18,
+                "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/18",
+                "state": "closed",
+                "title": "Closed IEtiDhFs",
+                "body": "Closed change",
+                "base": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "main",
+                  "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                },
+                "head": {
+                  "repository": {
+                    "owner": "abhinav",
+                    "name": "test-repo"
+                  },
+                  "ref": "IEtiDhFs",
+                  "sha": "0c32e505344f156f8aa70189cfd851a1a40765cd"
+                }
+              }
+            ]
+        headers:
+            Content-Length:
+                - "557"
+            Content-Type:
+                - application/json
+        status: 200 OK
+        code: 200
+        duration: 0s
