@@ -71,11 +71,10 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 		ontoHash = onto.Head
 	}
 
-	replayRange, err := s.resolveBranchReplayRange(ctx, req.Branch, branch)
+	replayRange, err := s.branchBaseInfo(ctx, req.Branch, branch)
 	if err != nil {
 		return fmt.Errorf("resolve branch replay range: %w", err)
 	}
-	fromHash := replayRange.Upstream
 
 	// The destination can already contain the resolved replay boundary.
 	// This is expected when two branches share a downstack
@@ -99,9 +98,7 @@ func (s *Service) BranchOnto(ctx context.Context, req *BranchOntoRequest) error 
 	// Using the destination as the exclusive boundary selects
 	// NewBase..Current. The first attempt excludes NewBase's commits,
 	// and a resumed attempt becomes a no-op before state is updated.
-	if s.repo.IsAncestor(ctx, fromHash, ontoHash) {
-		fromHash = ontoHash
-	}
+	fromHash := replayRange.ReplayBoundary(ctx, ontoHash)
 
 	s.log.Debug(
 		"Moving commits onto new base",

@@ -256,22 +256,15 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				// which will panic down below when consuming
 				// the result.
 
-				// Check restack status /before/ looking up
-				// the branch in git because VerifyRestacked
-				// might update the branch's base hash
-				// if the branch was manually restacked.
-				//
-				// TODO: This is a hack.
-				// The isn't a good abstraction.
+				// BranchGraph was loaded before restack reconciliation.
+				// When CheckRestacked heals a boundary, its error returns the
+				// reconciled value so this invocation does not render stale commits.
 				baseHash, err := h.Service.CheckRestacked(ctx, branch.Name)
 				if err != nil {
 					var needsRestack *spice.BranchNeedsRestackError
 					if errors.As(err, &needsRestack) {
-						// if the branch needs to be restacked,
-						// use the base hash stored in state
-						// so that the log doesn't show duplicated commits.
 						item.NeedsRestack = true
-						baseHash = branch.BaseHash
+						baseHash = needsRestack.Upstream
 					} else {
 						baseHash = git.ZeroHash
 					}

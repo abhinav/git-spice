@@ -1,0 +1,31 @@
+# https://github.com/abhinav/git-spice/issues/1387
+# Repeated log inspections stop reporting a stale base after an older trunk
+# commit is tracked as a branch.
+
+as 'Test <test@example.com>'
+at '2026-08-01T00:01:00Z'
+
+mkdir repo
+cd repo
+git init
+git commit --allow-empty -m 'Initial commit'
+gs repo init
+
+# Create topic-two at C after trunk reaches D. Tracking records D as the base
+# even though topic-two points to C. Trunk advances again after tracking.
+gs commit create --allow-empty --no-restack --no-prompt -m 'Advance trunk to C'
+gs commit create --allow-empty --no-restack --no-prompt -m 'Advance trunk to D'
+git branch topic-two main~1
+gs branch track --base main topic-two --no-prompt
+gs commit create --allow-empty --no-restack --no-prompt -m 'Advance trunk to E'
+
+# Reconciliation may happen during tracking or the first inspection. Repeated
+# inspection must not recover the same stale boundary again.
+gs log long --all --no-prompt --verbose
+cmp stderr $WORK/golden/log.txt
+gs log long --all --no-prompt --verbose
+cmp stderr $WORK/golden/log.txt
+
+-- golden/log.txt --
+┏━□ topic-two (needs restack)
+main ◀
