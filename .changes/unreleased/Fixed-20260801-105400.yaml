@@ -1,0 +1,4 @@
+kind: Fixed
+body: >-
+  log: Automatically heal from branches changed manually to point to a commit in their base branch.
+time: 2026-08-01T10:54:00.492776-07:00

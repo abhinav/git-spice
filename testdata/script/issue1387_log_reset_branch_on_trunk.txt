@@ -1,0 +1,63 @@
+# https://github.com/abhinav/git-spice/issues/1387
+# Repeated log inspections stop reporting a stale base after a tracked branch
+# is reset onto trunk.
+
+as 'Test <test@example.com>'
+at '2026-08-01T00:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git add app.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Track topic-one at A, then replace its topic commit by resetting the branch
+# to the newer trunk commit B. Trunk advances again after the reset.
+cp $WORK/extra/topic-one.txt app.txt
+git add app.txt
+gs branch create topic-one --no-prompt -m 'Add topic-one change'
+gs branch checkout main --no-prompt
+cp $WORK/extra/trunk-b.txt app.txt
+git add app.txt
+gs commit create --no-restack --no-prompt -m 'Advance trunk to B'
+git branch -f topic-one main
+cp $WORK/extra/trunk-e.txt app.txt
+git add app.txt
+gs commit create --no-restack --no-prompt -m 'Advance trunk to E'
+
+# After one inspection, repeated inspection must not recover the same stale
+# boundary again.
+gs log long --all --no-prompt --verbose
+cmp stderr $WORK/golden/first-log.txt
+gs log long --all --no-prompt --verbose
+cmp stderr $WORK/golden/second-log.txt
+
+# B and E replace the same line, so replaying B onto E would conflict.
+# Restacking succeeds because the branch owns no commits after its reset to B.
+gs branch restack --branch topic-one --no-prompt
+cmp stderr $WORK/golden/restack.txt
+gs log long --all --no-prompt --verbose
+cmp stderr $WORK/golden/after-restack.txt
+
+-- repo/app.txt --
+initial
+-- extra/topic-one.txt --
+topic one
+-- extra/trunk-b.txt --
+trunk B
+-- extra/trunk-e.txt --
+trunk E
+-- golden/first-log.txt --
+DBG Recorded base hash is out of date. Using fork point as ownership boundary.  base=main branch=topic-one forkPoint=1dc006f
+DBG Updating recorded base hash  branch=topic-one base=main
+┏━□ topic-one (needs restack)
+main ◀
+-- golden/second-log.txt --
+┏━□ topic-one (needs restack)
+main ◀
+-- golden/restack.txt --
+INF topic-one: restacked on main
+-- golden/after-restack.txt --
+┏━■ topic-one ◀
+main

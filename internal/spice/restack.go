@@ -28,18 +28,39 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 		return nil, err // includes ErrNotExist
 	}
 
-	replayRange, err := s.resolveBranchReplayRange(ctx, name, b)
+	commitRange, err := s.branchBaseInfo(ctx, name, b)
 	if err != nil {
 		return nil, err
 	}
-	if replayRange.isRestacked() {
-		s.reconcileRecordedBaseHash(ctx, name, b, replayRange.BaseHead)
+	if commitRange.IsRestacked() {
+		s.reconcileRecordedBaseHash(ctx, name, b, commitRange.BaseHead)
 		return nil, ErrAlreadyRestacked
 	}
 
+	// The base can already contain some or all branch-owned commits after a
+	// Git operation outside git-spice:
+	//
+	//	A---B---M base (BaseHead=M)
+	//	 \     /
+	//	  P---Q branch (MergeBase=Q, Upstream=A)
+	//
+	// Using the base as the exclusive replay boundary selects BaseHead..Q,
+	// which excludes every commit reachable from the base. In this example,
+	// the range is empty, so Git moves the branch to M without replaying P or Q.
+	//
+	// When the base does not contain Upstream, retaining it preserves
+	// retarget-without-rebase behavior:
+	//
+	//	A base (BaseHead=A)
+	//	 \
+	//	  B---P branch (MergeBase=A, Upstream=B,
+	//	                UpstreamDescendsFromBase=true)
+	//
+	// Replaying B..P onto A drops the old downstack commit B.
+	replayBoundary := commitRange.ReplayBoundary(ctx, commitRange.BaseHead)
 	if err := s.wt.Rebase(ctx, git.RebaseRequest{
-		Onto:      replayRange.BaseHead.String(),
-		Upstream:  replayRange.Upstream.String(),
+		Onto:      commitRange.BaseHead.String(),
+		Upstream:  replayBoundary.String(),
 		Branch:    name,
 		Autostash: true,
 		Quiet:     true,
@@ -50,7 +71,7 @@ func (s *Service) Restack(ctx context.Context, name string) (*RestackResponse, e
 	tx := s.store.BeginBranchTx()
 	if err := tx.Upsert(ctx, state.UpsertRequest{
 		Name:     name,
-		BaseHash: replayRange.BaseHead,
+		BaseHash: commitRange.BaseHead,
 	}); err != nil {
 		return nil, fmt.Errorf("update base hash of %v: %w", name, err)
 	}
@@ -73,6 +94,10 @@ type BranchNeedsRestackError struct {
 	// BaseHash is the hash of the base branch.
 	// Note that this is the actual hash, not the hash stored in state.
 	BaseHash git.Hash
+
+	// Upstream is the exclusive boundary of the branch's commits
+	// after reconciling the recorded state with the Git graph.
+	Upstream git.Hash
 }
 
 func (e *BranchNeedsRestackError) Error() string {
@@ -87,8 +112,8 @@ func (s *Service) VerifyRestacked(ctx context.Context, name string) error {
 }
 
 // CheckRestacked verifies that the given branch is on top of its base branch.
-// It updates the base branch hash if the hash is out of date,
-// but the branch is restacked properly.
+// It reconciles the recorded base hash with the Git graph,
+// including when the branch still needs to be restacked.
 //
 // It returns the actual hash of the base branch on success,
 // [BranchNeedsRestackError] if the branch needs to be restacked,
@@ -100,38 +125,27 @@ func (s *Service) CheckRestacked(ctx context.Context, name string) (baseHash git
 		return git.ZeroHash, err
 	}
 
-	replayRange, err := s.resolveBranchReplayRange(ctx, name, b)
+	commitRange, err := s.branchBaseInfo(ctx, name, b)
 	if err != nil {
 		return git.ZeroHash, err
 	}
 
-	if !replayRange.isRestacked() {
-		// If the base branch has merged this branch without updating git-spice
-		// state, the current merge base is the branch head:
-		//
-		//	A---B---M base
-		//	 \     /
-		//	  P---Q branch
-		//
-		// Moving the recorded boundary to Q would make log commands report no
-		// commits for branch, even though branch still needs restack because M is
-		// the base head. Keep the earlier recorded boundary in that case.
-		if replayRange.Upstream != b.Head {
-			s.reconcileRecordedBaseHash(ctx, name, b, replayRange.Upstream)
-		}
+	if !commitRange.IsRestacked() {
+		s.reconcileRecordedBaseHash(ctx, name, b, commitRange.Upstream)
 		return git.ZeroHash, &BranchNeedsRestackError{
 			Base:     b.Base,
-			BaseHash: replayRange.BaseHead,
+			BaseHash: commitRange.BaseHead,
+			Upstream: commitRange.Upstream,
 		}
 	}
 
-	s.reconcileRecordedBaseHash(ctx, name, b, replayRange.BaseHead)
-	return replayRange.BaseHead, nil
+	s.reconcileRecordedBaseHash(ctx, name, b, commitRange.BaseHead)
+	return commitRange.BaseHead, nil
 }
 
-// reconcileRecordedBaseHash updates stale state after the Git graph proves
-// that a branch is already restacked. State failures are logged because they
-// do not change whether the branch needs a rebase.
+// reconcileRecordedBaseHash persists an ownership boundary recovered from Git.
+// State failures are logged because they do not change the graph-derived
+// restack status.
 func (s *Service) reconcileRecordedBaseHash(
 	ctx context.Context,
 	name string,

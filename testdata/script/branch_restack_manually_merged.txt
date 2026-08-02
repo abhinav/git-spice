@@ -1,0 +1,74 @@
+# Restacking a manually merged branch preserves its commit ownership.
+
+as 'Test <test@example.com>'
+at '2026-07-20T02:00:00Z'
+
+mkdir repo
+cd repo
+git init
+git add app.txt
+git commit -m 'Initial commit'
+gs repo init
+
+# Create feature1 -> feature2,
+# then merge feature2 into feature1.
+cp $WORK/extra/feature1.txt app.txt
+git add app.txt
+gs branch create feature1 --no-prompt -m 'test: Add feature1'
+cp $WORK/extra/feature2.txt app.txt
+git add app.txt
+gs branch create feature2 --no-prompt -m 'test: Add feature2'
+gs branch checkout feature1 --no-prompt
+cp $WORK/extra/feature1-advanced.txt feature1.txt
+git add feature1.txt
+gs commit create --no-restack --no-prompt -m 'test: Advance feature1'
+git merge feature2 -m 'test: Merge feature2 into feature1'
+
+# feature2's head is now reachable from feature1,
+# but feature2 still owns its commits because the merge reached them through a
+# side parent.
+
+# Move feature1 to require a restack.
+cp $WORK/extra/feature1-after-merge.txt app.txt
+git add app.txt
+gs commit create --no-restack --no-prompt -m 'test: Change merged feature on feature1'
+
+# Inspections must preserve feature2's commits
+# so that if it's moved onto another branch, it still owns its commits.
+gs log long --all --verbose --no-prompt
+cmp stderr $WORK/golden/before-restack.txt
+
+gs branch restack --branch feature2 --no-prompt
+cmp stderr $WORK/golden/restack.txt
+gs log long --all --verbose --no-prompt
+cmp stderr $WORK/golden/after-restack.txt
+
+-- golden/before-restack.txt --
+  ┏━□ feature2 (needs restack)
+  ┃   497aca1 test: Add feature2 (now)
+┏━┻■ feature1 ◀
+┃    c8bface test: Change merged feature on feature1 (now)
+┃    a97fc5e test: Merge feature2 into feature1 (now)
+┃    768a4ce test: Advance feature1 (now)
+┃    f95154c test: Add feature1 (now)
+main
+-- golden/restack.txt --
+INF feature2: restacked on feature1
+-- golden/after-restack.txt --
+  ┏━■ feature2 ◀
+┏━┻□ feature1
+┃    c8bface test: Change merged feature on feature1 (now)
+┃    a97fc5e test: Merge feature2 into feature1 (now)
+┃    768a4ce test: Advance feature1 (now)
+┃    f95154c test: Add feature1 (now)
+main
+-- repo/app.txt --
+initial
+-- extra/feature1.txt --
+feature1
+-- extra/feature2.txt --
+feature2
+-- extra/feature1-advanced.txt --
+feature1 advanced
+-- extra/feature1-after-merge.txt --
+feature1 after merge
