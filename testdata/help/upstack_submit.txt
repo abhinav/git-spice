@@ -53,6 +53,8 @@ Flags:
                                  Pass multiple times or separate with commas.
       --no-web                   Alias for --web=false.
       --branch=NAME              Branch to start at
+      --fill-from=FILE           JSON file mapping branch names to {title,
+                                 body} for CR creation. Use '-' for stdin.
 
 Global Flags:
   -h, --help           Show help for the command
