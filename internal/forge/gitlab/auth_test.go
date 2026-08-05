@@ -585,6 +585,16 @@ func TestCLITokenParsing(t *testing.T) {
 			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
 		},
 		{
+			name: "LongKeyring",
+			give: "  ✓ Token found in operating system keyring: glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
+			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
+		},
+		{
+			name: "LongPlainText",
+			give: "  ✓ Token found in configuration file (plaintext): glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx\n",
+			want: "glpat-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.01.0xxxxxxxx",
+		},
+		{
 			name: "NoToken",
 			give: "  ✓ Token: \n",
 		},
