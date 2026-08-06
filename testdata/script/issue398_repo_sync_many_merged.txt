@@ -111,14 +111,14 @@ feat3 part2
 -- repo/feat4.part2.txt --
 feat4 part2
 -- golden/ll.start.txt --
-  ┏━□ feat1-part2
-  ┃   3b90c1c feat1.part2 (now)
-  ┃ ┏━□ feat2-part2
-  ┃ ┃   a252f85 feat2.part2 (now)
-  ┃ ┃ ┏━□ feat3-part2
-  ┃ ┃ ┃   9a90907 feat3.part2 (now)
-  ┃ ┃ ┃ ┏━□ feat4-part2
-  ┃ ┃ ┃ ┃   d568d96 feat4.part2 (now)
+  ┏━━□ feat1-part2
+  ┃    3b90c1c feat1.part2 (now)
+  ┃ ┏━━□ feat2-part2
+  ┃ ┃    a252f85 feat2.part2 (now)
+  ┃ ┃ ┏━━□ feat3-part2
+  ┃ ┃ ┃    9a90907 feat3.part2 (now)
+  ┃ ┃ ┃ ┏━━□ feat4-part2
+  ┃ ┃ ┃ ┃    d568d96 feat4.part2 (now)
   ┃ ┃ ┣━┻□ feat4
   ┃ ┃ ┃    267a7ec feat4 (now)
   ┃ ┣━┻□ feat3
@@ -129,10 +129,10 @@ feat4 part2
 ┃    fc49b37 feat1 (now)
 main ◀
 -- golden/ls.submit.txt --
-  ┏━□ feat1-part2 (#5)
-  ┃ ┏━□ feat2-part2 (#6)
-  ┃ ┃ ┏━□ feat3-part2 (#7)
-  ┃ ┃ ┃ ┏━□ feat4-part2 (#8)
+  ┏━━□ feat1-part2 (#5)
+  ┃ ┏━━□ feat2-part2 (#6)
+  ┃ ┃ ┏━━□ feat3-part2 (#7)
+  ┃ ┃ ┃ ┏━━□ feat4-part2 (#8)
   ┃ ┃ ┣━┻□ feat4 (#4)
   ┃ ┣━┻□ feat3 (#3)
   ┣━┻□ feat2 (#2)
@@ -165,12 +165,12 @@ main ◀
 |/  
 * f6036b5 Initial commit
 -- golden/ll.final.txt --
-┏━□ feat1-part2 (#5) (needs restack)
-┃   3b90c1c feat1.part2 (now)
-┣━□ feat2-part2 (#6) (needs restack)
-┃   a252f85 feat2.part2 (now)
-┣━□ feat3-part2 (#7) (needs restack)
-┃   9a90907 feat3.part2 (now)
-┣━□ feat4-part2 (#8) (needs restack)
-┃   d568d96 feat4.part2 (now)
+┏━━□ feat1-part2 (#5) (needs restack)
+┃    3b90c1c feat1.part2 (now)
+┣━━□ feat2-part2 (#6) (needs restack)
+┃    a252f85 feat2.part2 (now)
+┣━━□ feat3-part2 (#7) (needs restack)
+┃    9a90907 feat3.part2 (now)
+┣━━□ feat4-part2 (#8) (needs restack)
+┃    d568d96 feat4.part2 (now)
 main ◀

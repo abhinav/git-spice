@@ -44,8 +44,8 @@ gs log long --all --verbose --no-prompt
 cmp stderr $WORK/golden/after-restack.txt
 
 -- golden/before-restack.txt --
-  ┏━□ feature2 (needs restack)
-  ┃   497aca1 test: Add feature2 (now)
+  ┏━━□ feature2 (needs restack)
+  ┃    497aca1 test: Add feature2 (now)
 ┏━┻■ feature1 ◀
 ┃    c8bface test: Change merged feature on feature1 (now)
 ┃    a97fc5e test: Merge feature2 into feature1 (now)
@@ -55,7 +55,7 @@ main
 -- golden/restack.txt --
 INF feature2: restacked on feature1
 -- golden/after-restack.txt --
-  ┏━■ feature2 ◀
+  ┏━━■ feature2 ◀
 ┏━┻□ feature1
 ┃    c8bface test: Change merged feature on feature1 (now)
 ┃    a97fc5e test: Merge feature2 into feature1 (now)

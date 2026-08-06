@@ -63,5 +63,5 @@ part 2 of feature 1
 |/  
 * 43089bc Initial commit
 -- golden/ls.txt --
-┏━■ feature1 (needs restack) ◀
+┏━━■ feature1 (needs restack) ◀
 main

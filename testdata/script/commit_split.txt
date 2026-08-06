@@ -149,8 +149,8 @@ Date:   Mon Jul 8 05:04:32 2024 +0000
 
     Initial commit
 -- golden/ll.txt --
-  ┏━□ feature3
-  ┃   be650d2 Add feature 3 (now)
+  ┏━━□ feature3
+  ┃    be650d2 Add feature 3 (now)
 ┏━┻■ features ◀
 ┃    d5849e7 Add features (now)
 ┃    5c5b54e Add feature 1 (now)

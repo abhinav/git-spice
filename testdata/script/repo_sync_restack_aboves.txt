@@ -48,8 +48,8 @@ b
 -- repo/c.txt --
 c
 -- golden/ll-after-sync.txt --
-  ┏━■ c (#3) (needs restack) ◀
-  ┃   b62d5a6 Add c (now)
+  ┏━━■ c (#3) (needs restack) ◀
+  ┃    b62d5a6 Add c (now)
 ┏━┻□ b (#2) (needs push)
 ┃    a0b8ffd Add b (now)
 main

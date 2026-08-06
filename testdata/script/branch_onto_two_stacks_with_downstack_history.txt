@@ -125,20 +125,20 @@ feature2
 # Save and quit the editor to apply the changes.
 # Delete all lines in the editor to abort the operation.
 -- golden/ls-before-stack1.txt --
-    ┏━■ feature3 ◀
+    ┏━━■ feature3 ◀
   ┏━┻□ feature2
 ┏━┻□ feature1
 main
 -- golden/ls-before-stack2.txt --
-    ┏━□ feature3 (#3)
+    ┏━━□ feature3 (#3)
   ┏━┻□ feature2 (#2)
 ┏━┻□ feature1 (#1)
-┃ ┏━■ stack2feature2 ◀
+┃ ┏━━■ stack2feature2 ◀
 ┣━┻□ stack2feature1
 main
 -- golden/ls-after.txt --
-  ┏━□ feature3 (#3)
-  ┣━□ stack2feature2 (#5)
+  ┏━━□ feature3 (#3)
+  ┣━━□ stack2feature2 (#5)
 ┏━┻■ feature2 (#2) ◀
 main
 -- golden/submit-first-stack-comments.txt --

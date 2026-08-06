@@ -30,8 +30,8 @@ feature
 exit 1
 
 -- golden/ll.txt --
-┏━■ feature ◀
-┃   5648694 Add feature (now)
+┏━━■ feature ◀
+┃    5648694 Add feature (now)
 main
 -- golden/diff.txt --
 diff --git a/feature.txt b/feature.txt

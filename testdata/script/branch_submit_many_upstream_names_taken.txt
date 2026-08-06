@@ -53,8 +53,8 @@ cmpenvJSON stdout $WORK/golden/changes.json
 -- repo/feat1.txt --
 feature 1
 -- golden/ll.txt --
-┏━■ feature (#1) ◀
-┃   4af1d44 add feature (now)
+┏━━■ feature (#1) ◀
+┃    4af1d44 add feature (now)
 main
 -- golden/changes.json --
 [

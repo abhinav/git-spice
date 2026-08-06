@@ -1,0 +1,3 @@
+kind: Fixed
+body: 'tree: Pad leaf node connectors to match width of junction glyphs, aligning sibling branch labels.'
+time: 2026-08-05T11:39:24+00:00

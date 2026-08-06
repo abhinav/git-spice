@@ -68,26 +68,26 @@ feat2
 feat3
 
 -- golden/ls-without-comments.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-without-comments.txt --
-    ┏━■ feat3 (#3) ◀
-    ┃   7112afb feat3 (now)
+    ┏━━■ feat3 (#3) ◀
+    ┃    7112afb feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    87abb98 feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    92fc5a4 feat1 (now)
 main
 -- golden/ls-with-comments.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2) [☑️1/1💬]
 ┏━┻□ feat1 (#1) [☑️1/2💬]
 main
 -- golden/ll-with-comments.txt --
-    ┏━■ feat3 (#3) ◀
-    ┃   7112afb feat3 (now)
+    ┏━━■ feat3 (#3) ◀
+    ┃    7112afb feat3 (now)
   ┏━┻□ feat2 (#2) [☑️1/1💬]
   ┃    87abb98 feat2 (now)
 ┏━┻□ feat1 (#1) [☑️1/2💬]

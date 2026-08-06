@@ -80,7 +80,7 @@ false
 false
 
 -- golden/ls.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
