@@ -77,8 +77,8 @@ feat-1
 feat-2
 
 -- golden/ll-after-sync-unix.txt --
-┏━□ feat-2 (#2) [wt: ~/feat-2] (needs restack)
-┃   7e23316 Add feat-2 (now)
+┏━━□ feat-2 (#2) [wt: ~/feat-2] (needs restack)
+┃    7e23316 Add feat-2 (now)
 main ◀
 -- golden/ll-after-sync-windows.txt --
 ┏━□ feat-2 (#2) [wt: ~\feat-2] (needs restack)
@@ -94,8 +94,8 @@ main ◀
 |/  
 * c5c110d Initial commit
 -- golden/ll-after-restack-unix.txt --
-┏━□ feat-2 (#2) [wt: ~/feat-2] (needs push)
-┃   19505d8 Add feat-2 (now)
+┏━━□ feat-2 (#2) [wt: ~/feat-2] (needs push)
+┃    19505d8 Add feat-2 (now)
 main ◀
 -- golden/ll-after-restack-windows.txt --
 ┏━□ feat-2 (#2) [wt: ~\feat-2] (needs push)

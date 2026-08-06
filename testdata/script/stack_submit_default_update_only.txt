@@ -50,6 +50,6 @@ feature2
 feature update
 
 -- golden/ls.txt --
-  ┏━□ feature2
+  ┏━━□ feature2
 ┏━┻■ feature (#1) ◀
 main

@@ -31,7 +31,7 @@ def
 ]
 -- prompt --
 Select a commit:
-┏━□ feat1
-┃     abc feat: add another feature (1 day ago)
-┃   ▶ def refac: unrelated change (17 hours ago)
+┏━━□ feat1
+┃      abc feat: add another feature (1 day ago)
+┃    ▶ def refac: unrelated change (17 hours ago)
 main

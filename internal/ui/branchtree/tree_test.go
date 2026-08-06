@@ -47,7 +47,7 @@ func TestWrite(t *testing.T) {
 				Roots: []int{0},
 			},
 			want: joinLines(
-				"  ┏━□ feat2",
+				"  ┏━━□ feat2",
 				"┏━┻□ feat1",
 				"main",
 			),
@@ -63,8 +63,8 @@ func TestWrite(t *testing.T) {
 				Roots: []int{0},
 			},
 			want: joinLines(
-				"┏━□ feat1",
-				"┣━□ feat2",
+				"┏━━□ feat1",
+				"┣━━□ feat2",
 				"main",
 			),
 		},
@@ -81,9 +81,9 @@ func TestWrite(t *testing.T) {
 				Roots: []int{0},
 			},
 			want: joinLines(
-				"  ┏━□ feat1.1",
+				"  ┏━━□ feat1.1",
 				"┏━┻□ feat1",
-				"┃ ┏━□ feat2.1",
+				"┃ ┏━━□ feat2.1",
 				"┣━┻□ feat2",
 				"main",
 			),
@@ -100,9 +100,9 @@ func TestWrite(t *testing.T) {
 				Roots: []int{0, 2},
 			},
 			want: joinLines(
-				"┏━□ feat1",
+				"┏━━□ feat1",
 				"main",
-				"┏━□ hotfix",
+				"┏━━□ hotfix",
 				"develop",
 			),
 		},

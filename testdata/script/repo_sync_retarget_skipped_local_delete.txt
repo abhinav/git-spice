@@ -56,7 +56,7 @@ This is feature 1
 -- repo/feature2.txt --
 This is feature 2
 -- golden/ls-before.txt --
-  ┏━■ feature2 (#2) ◀
+  ┏━━■ feature2 (#2) ◀
 ┏━┻□ feature1 (#1)
 main
 -- golden/change-2.json --

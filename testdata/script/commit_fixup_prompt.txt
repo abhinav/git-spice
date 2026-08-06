@@ -67,8 +67,8 @@ Fixed file1 content
 -- robot.golden --
 ===
 > Pick a commit: 
->     ┏━□ feature3 
->     ┃   ▶ f0e8dfd Add file3 (now)
+>     ┏━━□ feature3 
+>     ┃    ▶ f0e8dfd Add file3 (now)
 >   ┏━┻□ feature2 
 >   ┃      47d73f5 Update feature2 (now) 
 >   ┃      a467257 Add file2 (now)

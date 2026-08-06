@@ -61,12 +61,12 @@ feat 3
 -- repo/feat4.txt --
 feat 4
 -- golden/ls-before.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
 -- golden/ls-after.txt --
-    ┏━□ feat3 (#3)
+    ┏━━□ feat3 (#3)
   ┏━┻□ feat2 (#2)
 ┏━┻■ feat4 (#4) ◀
 main

@@ -42,5 +42,5 @@ trunk D
 -- extra/trunk-e.txt --
 trunk E
 -- golden/log.txt --
-┏━□ topic-two (needs restack)
+┏━━□ topic-two (needs restack)
 main ◀
