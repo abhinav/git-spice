@@ -1,0 +1,5 @@
+kind: Fixed
+body: >-
+  Sibling branches in rendered branch trees are no longer unaligned
+  when one of them has upstack branches and the other does not.
+time: 2026-08-05T11:39:24+00:00

@@ -60,12 +60,12 @@ c
 -- repo/d.txt --
 d
 -- golden/config-branch-ll.txt --
-┏━■ b (#2) (needs push) ◀
-┃   b57bc06 Add b (now)
+┏━━■ b (#2) (needs push) ◀
+┃    b57bc06 Add b (now)
 main
 -- golden/override-none-ll.txt --
-┏━□ b (#2) (needs restack) (needs push)
-┃   b57bc06 Add b (now)
-┣━■ d (#4) (needs restack) ◀
-┃   c40282a Add d (now)
+┏━━□ b (#2) (needs restack) (needs push)
+┃    b57bc06 Add b (now)
+┣━━■ d (#4) (needs restack) ◀
+┃    c40282a Add d (now)
 main

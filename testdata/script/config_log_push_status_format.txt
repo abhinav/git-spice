@@ -81,42 +81,42 @@ feat3 new
 -- extra/feat2-new.txt --
 feat2 new
 -- golden/ls-feat3-default.txt --
-    ┏━■ feat3 (#3) (needs push) ◀
+    ┏━━■ feat3 (#3) (needs push) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-feat3-default.txt --
-    ┏━■ feat3 (#3) (needs push) ◀
-    ┃   e00a44b update feat3 (now)
-    ┃   61be7b8 feat3 (now)
+    ┏━━■ feat3 (#3) (needs push) ◀
+    ┃    e00a44b update feat3 (now)
+    ┃    61be7b8 feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    92d90ce feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    8761af2 feat1 (now)
 main
 -- golden/ls-feat3-disabled.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-feat3-disabled.txt --
-    ┏━■ feat3 (#3) ◀
-    ┃   e00a44b update feat3 (now)
-    ┃   61be7b8 feat3 (now)
+    ┏━━■ feat3 (#3) ◀
+    ┃    e00a44b update feat3 (now)
+    ┃    61be7b8 feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    92d90ce feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    8761af2 feat1 (now)
 main
 -- golden/ls-feat2-enabled.txt --
-    ┏━□ feat3 (#3) (needs restack) (needs push)
+    ┏━━□ feat3 (#3) (needs restack) (needs push)
   ┏━┻■ feat2 (#2) (needs push) ◀
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-feat2-enabled.txt --
-    ┏━□ feat3 (#3) (needs restack) (needs push)
-    ┃   e00a44b update feat3 (now)
-    ┃   61be7b8 feat3 (now)
+    ┏━━□ feat3 (#3) (needs restack) (needs push)
+    ┃    e00a44b update feat3 (now)
+    ┃    61be7b8 feat3 (now)
   ┏━┻■ feat2 (#2) (needs push) ◀
   ┃    b5b29cc update feat2 (now)
   ┃    92d90ce feat2 (now)
@@ -124,14 +124,14 @@ main
 ┃    8761af2 feat1 (now)
 main
 -- golden/ls-feat2-aheadBehind.txt --
-    ┏━□ feat3 (#3) (needs restack) (⇡1)
+    ┏━━□ feat3 (#3) (needs restack) (⇡1)
   ┏━┻■ feat2 (#2) (⇡1) ◀
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-feat2-aheadBehind.txt --
-    ┏━□ feat3 (#3) (needs restack) (⇡1)
-    ┃   e00a44b update feat3 (now)
-    ┃   61be7b8 feat3 (now)
+    ┏━━□ feat3 (#3) (needs restack) (⇡1)
+    ┃    e00a44b update feat3 (now)
+    ┃    61be7b8 feat3 (now)
   ┏━┻■ feat2 (#2) (⇡1) ◀
   ┃    b5b29cc update feat2 (now)
   ┃    92d90ce feat2 (now)

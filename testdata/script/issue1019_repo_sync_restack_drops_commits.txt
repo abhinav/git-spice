@@ -105,12 +105,12 @@ Contents of file1
 Contents of file2
 
 -- golden/ll-before.txt --
-┏━■ feature ◀
-┃   4bb9afa Second feature commit (now)
-┃   260e03c First feature commit (now)
+┏━━■ feature ◀
+┃    4bb9afa Second feature commit (now)
+┃    260e03c First feature commit (now)
 main
 -- golden/ll-after.txt --
-┏━■ feature ◀
-┃   28d574d Second feature commit (now)
-┃   8d031d0 First feature commit (now)
+┏━━■ feature ◀
+┃    28d574d Second feature commit (now)
+┃    8d031d0 First feature commit (now)
 main

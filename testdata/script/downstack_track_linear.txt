@@ -47,22 +47,22 @@ Feature 2 content
 -- repo/feat3.txt --
 Feature 3 content
 -- golden/linear-ls-feat3.txt --
-    ┏━■ feat3 ◀
+    ┏━━■ feat3 ◀
   ┏━┻□ feat2
 ┏━┻□ feat1
 main
 -- golden/linear-ll-feat3.txt --
-    ┏━■ feat3 ◀
-    ┃   dd76d28 Add feat3 (now)
+    ┏━━■ feat3 ◀
+    ┃    dd76d28 Add feat3 (now)
   ┏━┻□ feat2
   ┃    302dc4b Add feat2 (now)
 ┏━┻□ feat1
 ┃    79bb101 Add feat1 (now)
 main
 -- golden/linear-ls-feat1.txt --
-┏━□ feat1
+┏━━□ feat1
 main
 -- golden/linear-ll-feat1.txt --
-┏━□ feat1
-┃   79bb101 Add feat1 (now)
+┏━━□ feat1
+┃    79bb101 Add feat1 (now)
 main

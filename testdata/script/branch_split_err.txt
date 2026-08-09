@@ -45,10 +45,10 @@ feature2
 -- repo/feature3.txt --
 feature3
 -- golden/before.txt --
-  ┏━■ features ◀
-  ┃   20c96d0 Add feature3 (now)
-  ┃   31bf33e Add feature2 (now)
-  ┃   97bc101 Add feature1 (now)
+  ┏━━■ features ◀
+  ┃    20c96d0 Add feature3 (now)
+  ┃    31bf33e Add feature2 (now)
+  ┃    97bc101 Add feature1 (now)
 ┏━┻□ feature0
 ┃    b28a94c Add feature0 (now)
 main

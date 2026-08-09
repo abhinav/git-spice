@@ -65,8 +65,8 @@ b
 -- repo/c.txt --
 c
 -- golden/ll-after-sync.txt --
-┏━■ c (#3) (needs restack) ◀
-┃   bd749dc Add c (now)
+┏━━■ c (#3) (needs restack) ◀
+┃    bd749dc Add c (now)
 main
 -- golden/graph-after-sync.txt --
 * bd749dc (HEAD -> c, origin/c) Add c
@@ -83,8 +83,8 @@ main
 |/  
 * b567761 Initial commit
 -- golden/ll-after-restack.txt --
-┏━■ c (#3) (needs push) ◀
-┃   9eaaa26 Add c (now)
+┏━━■ c (#3) (needs push) ◀
+┃    9eaaa26 Add c (now)
 main
 -- golden/graph-after-restack.txt --
 * 9eaaa26 (HEAD -> c) Add c

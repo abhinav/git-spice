@@ -55,9 +55,9 @@ feature 1 adjustment
 -- robot.golden --
 ===
 > Pick a commit: 
->     ┏━□ feat3 
->     ┃   ▶ f596d7f feature 1 adjustment (now) 
->     ┃     18a7878 feat3 (now)
+>     ┏━━□ feat3 
+>     ┃    ▶ f596d7f feature 1 adjustment (now) 
+>     ┃      18a7878 feat3 (now)
 >   ┏━┻□ feat2 
 >   ┃      54bd7cc feat2 (now)
 > ┏━┻□ feat1

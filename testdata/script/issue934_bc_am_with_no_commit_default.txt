@@ -33,7 +33,7 @@ git status --porcelain
 -- repo/feature.txt --
 This is a new feature file.
 -- golden/ls.txt --
-┏━■ add-feature ◀
+┏━━■ add-feature ◀
 main
 -- golden/commit-message.txt --
 Add feature

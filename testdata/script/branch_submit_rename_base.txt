@@ -122,8 +122,8 @@ feature 3
   }
 ]
 -- golden/ll-before.txt --
-    ┏━■ feat3 (#3) ◀
-    ┃   dc2b288 feat3 (now)
+    ┏━━■ feat3 (#3) ◀
+    ┃    dc2b288 feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    3a03742 feat2 (now)
 ┏━┻□ feature (#1)
@@ -202,8 +202,8 @@ main
   }
 ]
 -- golden/ll-after.txt --
-    ┏━□ feat3 (#3)
-    ┃   dc2b288 feat3 (now)
+    ┏━━□ feat3 (#3)
+    ┃    dc2b288 feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    3a03742 feat2 (now)
 ┏━┻■ feat1 (#1) ◀

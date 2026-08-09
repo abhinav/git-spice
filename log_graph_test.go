@@ -38,7 +38,7 @@ func TestGraphLogPresenter_Present(t *testing.T) {
 	err := presenter.Present(res, "feature")
 	require.NoError(t, err)
 
-	assert.Equal(t, "┏━■ feature ◀\nmain\n", buf.String())
+	assert.Equal(t, "┏━━■ feature ◀\nmain\n", buf.String())
 }
 
 func TestGraphLogPresenter_Present_preservesColor(t *testing.T) {
