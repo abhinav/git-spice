@@ -1,3 +1,5 @@
 kind: Fixed
-body: 'tree: Pad leaf node connectors to match width of junction glyphs, aligning sibling branch labels.'
+body: >-
+  Sibling branches in rendered branch trees are no longer unaligned
+  when one of them has upstack branches and the other does not.
 time: 2026-08-05T11:39:24+00:00
