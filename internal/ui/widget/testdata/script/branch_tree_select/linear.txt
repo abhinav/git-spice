@@ -25,7 +25,7 @@ We have many branches to choose from.
 bar
 -- prompt --
 Select a branch:
-      ┏━■ qux ◀
+      ┏━━■ qux ◀
     ┏━┻□ baz
   ┏━┻□ bar
 ┏━┻□ foo
@@ -34,7 +34,7 @@ main
 We have many branches to choose from.
 -- hover --
 Select a branch:
-      ┏━□ qux
+      ┏━━□ qux
     ┏━┻□ baz
   ┏━┻■ bar ◀
 ┏━┻□ foo

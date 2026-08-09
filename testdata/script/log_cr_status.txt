@@ -72,26 +72,26 @@ feat3
 feat4
 
 -- golden/ls-without-status.txt --
-    ┏━■ feat3 (#3) ◀
+    ┏━━■ feat3 (#3) ◀
   ┏━┻□ feat2 (#2)
 ┏━┻□ feat1 (#1)
 main
 -- golden/ll-without-status.txt --
-    ┏━■ feat3 (#3) ◀
-    ┃   67480b6 feat3 (now)
+    ┏━━■ feat3 (#3) ◀
+    ┃    67480b6 feat3 (now)
   ┏━┻□ feat2 (#2)
   ┃    769cbf5 feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    ed5e364 feat1 (now)
 main
 -- golden/ls-with-status.txt --
-    ┏━■ feat3 (#3 closed) ◀
+    ┏━━■ feat3 (#3 closed) ◀
   ┏━┻□ feat2 (#2 open)
 ┏━┻□ feat1 (#1 merged)
 main
 -- golden/ll-with-status.txt --
-    ┏━■ feat3 (#3 closed) ◀
-    ┃   67480b6 feat3 (now)
+    ┏━━■ feat3 (#3 closed) ◀
+    ┃    67480b6 feat3 (now)
   ┏━┻□ feat2 (#2 open)
   ┃    769cbf5 feat2 (now)
 ┏━┻□ feat1 (#1 merged)

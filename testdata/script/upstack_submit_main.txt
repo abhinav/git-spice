@@ -75,13 +75,13 @@ INF Created #2: $SHAMHUB_URL/alice/example/change/2
 INF Created #3: $SHAMHUB_URL/alice/example/change/3
 INF Created #4: $SHAMHUB_URL/alice/example/change/4
 -- golden/ls-before.txt --
-    ┏━■ feature4 ◀
+    ┏━━■ feature4 ◀
   ┏━┻□ feature3
 ┏━┻□ feature1
 main
 -- golden/ls-after.txt --
-  ┏━□ feature2 (#2)
-  ┃ ┏━□ feature4 (#4)
+  ┏━━□ feature2 (#2)
+  ┃ ┏━━□ feature4 (#4)
   ┣━┻□ feature3 (#3)
 ┏━┻□ feature1 (#1)
 main ◀

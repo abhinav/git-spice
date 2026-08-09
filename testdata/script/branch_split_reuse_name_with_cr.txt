@@ -45,14 +45,14 @@ feature2
 -- repo/feature3.txt --
 feature3
 -- golden/before_split.txt --
-┏━■ features (#1) ◀
-┃   242e421 Add feature3 (now)
-┃   3c19fb9 Add feature2 (now)
-┃   569c763 Add feature1 (now)
+┏━━■ features (#1) ◀
+┃    242e421 Add feature3 (now)
+┃    3c19fb9 Add feature2 (now)
+┃    569c763 Add feature1 (now)
 main
 -- golden/after_split.txt --
-    ┏━■ feature3 ◀
-    ┃   242e421 Add feature3 (now)
+    ┏━━■ feature3 ◀
+    ┃    242e421 Add feature3 (now)
   ┏━┻□ feature2
   ┃    3c19fb9 Add feature2 (now)
 ┏━┻□ features (#1) (needs push)

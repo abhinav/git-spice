@@ -59,22 +59,22 @@ gs ls
 cmpenv stderr $WORK/golden/ls-override-id.txt
 
 -- golden/ls-default.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1 (#1)
 main
 -- golden/ls-logshort-url.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 main
 -- golden/ls-logshort-id.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1 (#1)
 main
 -- golden/ls-fallback-url.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 main
 -- golden/ls-override-id.txt --
-  ┏━■ feat2 ◀
+  ┏━━■ feat2 ◀
 ┏━┻□ feat1 (#1)
 main

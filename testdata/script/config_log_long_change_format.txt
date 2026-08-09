@@ -59,32 +59,32 @@ gs ll
 cmpenv stderr $WORK/golden/ll-override-id.txt
 
 -- golden/ll-default.txt --
-  ┏━■ feat2 ◀
-  ┃   562c8c6 feat2 (now)
+  ┏━━■ feat2 ◀
+  ┃    562c8c6 feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-loglong-url.txt --
-  ┏━■ feat2 ◀
-  ┃   562c8c6 feat2 (now)
+  ┏━━■ feat2 ◀
+  ┃    562c8c6 feat2 (now)
 ┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-loglong-id.txt --
-  ┏━■ feat2 ◀
-  ┃   562c8c6 feat2 (now)
+  ┏━━■ feat2 ◀
+  ┃    562c8c6 feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-fallback-url.txt --
-  ┏━■ feat2 ◀
-  ┃   562c8c6 feat2 (now)
+  ┏━━■ feat2 ◀
+  ┃    562c8c6 feat2 (now)
 ┏━┻□ feat1 ($SHAMHUB_URL/alice/example/change/1)
 ┃    ecc906e feat1 (now)
 main
 -- golden/ll-override-id.txt --
-  ┏━■ feat2 ◀
-  ┃   562c8c6 feat2 (now)
+  ┏━━■ feat2 ◀
+  ┃    562c8c6 feat2 (now)
 ┏━┻□ feat1 (#1)
 ┃    ecc906e feat1 (now)
 main

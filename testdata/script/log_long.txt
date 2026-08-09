@@ -72,8 +72,8 @@ stuff
 more
 
 -- golden/linear.txt --
-        ┏━■ feature5 ◀
-        ┃   32bf40a Add feature5 (now)
+        ┏━━■ feature5 ◀
+        ┃    32bf40a Add feature5 (now)
       ┏━┻□ feature4
       ┃    16fd303 Add feature4 (16 minutes ago)
     ┏━┻□ feature3
@@ -84,8 +84,8 @@ more
 ┃    b649e21 Add feature1 (1 hour ago)
 main
 -- golden/linear_next_day.txt --
-        ┏━□ feature5
-        ┃   165476c Add feature5 (1 day ago)
+        ┏━━□ feature5
+        ┃    165476c Add feature5 (1 day ago)
       ┏━┻□ feature4
       ┃    97739c2 Add feature4 (1 day ago)
     ┏━┻■ feature3 ◀
@@ -97,8 +97,8 @@ main
 ┃    b649e21 Add feature1 (1 day ago)
 main
 -- golden/linear_next_month.txt --
-        ┏━□ feature5
-        ┃   02d2ceb Add feature5 (1 month ago)
+        ┏━━□ feature5
+        ┃    02d2ceb Add feature5 (1 month ago)
       ┏━┻□ feature4
       ┃    88bfff0 Add feature4 (1 month ago)
     ┏━┻□ feature3
@@ -139,8 +139,8 @@ main
 {"name":"feature5","down":{"name":"feature4"},"commits":[{"sha":"02d2cebb53f1cf3226c9a080e3866d442e20fb3c","subject":"Add feature5"}]}
 {"name":"main","ups":[{"name":"feature1"}]}
 -- golden/merge_commit.txt --
-        ┏━□ feature5
-        ┃   02d2ceb Add feature5 (1 month ago)
+        ┏━━□ feature5
+        ┃    02d2ceb Add feature5 (1 month ago)
       ┏━┻□ feature4
       ┃    88bfff0 Add feature4 (1 month ago)
     ┏━┻□ feature3

@@ -70,7 +70,7 @@ Café feature content
 -- repo/feat5.txt --
 Japanese feature content
 -- golden/ls-after-create.txt --
-        ┏━■ feature/日本語 ◀
+        ┏━━■ feature/日本語 ◀
       ┏━┻□ feature/café
     ┏━┻□ feature/👨‍💻-developer
   ┏━┻□ feature/✅-checkmark
@@ -196,7 +196,7 @@ main
 ]
 
 -- golden/ls-after-restack.txt --
-      ┏━■ feature/日本語 (#5) (needs push) ◀
+      ┏━━■ feature/日本語 (#5) (needs push) ◀
     ┏━┻□ feature/café (#4) (needs push)
   ┏━┻□ feature/👨‍💻-developer (#3) (needs push)
 ┏━┻□ feature/θ-theta (#1)

@@ -44,9 +44,9 @@ ghi
 
 -- prompt --
 Select a commit:
-    ┏━□ feat3
-    ┃   ▶ abc feat: add another feature (1 day ago)
-    ┃     def refac: unrelated change (17 hours ago)
+    ┏━━□ feat3
+    ┃    ▶ abc feat: add another feature (1 day ago)
+    ┃      def refac: unrelated change (17 hours ago)
   ┏━┻□ feat2
 ┏━┻□ feat1
 ┃      ghi feat: add feature (11 hours ago)

@@ -54,7 +54,7 @@ Contents of feature2
 Contents of feature3
 
 -- golden/restacked.txt --
-  ┏━□ feature3
+  ┏━━□ feature3
 ┏━┻□ feature2
 main ◀
 -- golden/graph.txt --

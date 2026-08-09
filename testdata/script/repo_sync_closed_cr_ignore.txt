@@ -61,15 +61,15 @@ Contents of feature2
 Contents of feature3
 
 -- golden/open.txt --
-  ┏━■ feature2 (#2) ◀
+  ┏━━■ feature2 (#2) ◀
 ┏━┻□ feature1 (#1)
 main
 -- golden/ls-first-submit.txt --
-  ┏━■ feature2 (#2) ◀
+  ┏━━■ feature2 (#2) ◀
 ┏━┻□ feature1 (#1)
 main
 -- golden/ls-second-submit.txt --
-    ┏━■ feature3 (#3) ◀
+    ┏━━■ feature3 (#3) ◀
   ┏━┻□ feature2 (#2)
 ┏━┻□ feature1 (#1)
 main
