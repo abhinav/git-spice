@@ -120,45 +120,6 @@ func (c *MockServiceListChangeTemplatesCall) DoAndReturn(f func(context.Context,
 	return c
 }
 
-// LoadBranches mocks base method.
-func (m *MockService) LoadBranches(arg0 context.Context) ([]spice.LoadBranchItem, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadBranches", arg0)
-	ret0, _ := ret[0].([]spice.LoadBranchItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LoadBranches indicates an expected call of LoadBranches.
-func (mr *MockServiceMockRecorder) LoadBranches(arg0 any) *MockServiceLoadBranchesCall {
-	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadBranches", reflect.TypeOf((*MockService)(nil).LoadBranches), arg0)
-	return &MockServiceLoadBranchesCall{Call: call}
-}
-
-// MockServiceLoadBranchesCall wrap *gomock.Call
-type MockServiceLoadBranchesCall struct {
-	*gomock.Call
-}
-
-// Return rewrite *gomock.Call.Return
-func (c *MockServiceLoadBranchesCall) Return(arg0 []spice.LoadBranchItem, arg1 error) *MockServiceLoadBranchesCall {
-	c.Call = c.Call.Return(arg0, arg1)
-	return c
-}
-
-// Do rewrite *gomock.Call.Do
-func (c *MockServiceLoadBranchesCall) Do(f func(context.Context) ([]spice.LoadBranchItem, error)) *MockServiceLoadBranchesCall {
-	c.Call = c.Call.Do(f)
-	return c
-}
-
-// DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockServiceLoadBranchesCall) DoAndReturn(f func(context.Context) ([]spice.LoadBranchItem, error)) *MockServiceLoadBranchesCall {
-	c.Call = c.Call.DoAndReturn(f)
-	return c
-}
-
 // UnusedBranchName mocks base method.
 func (m *MockService) UnusedBranchName(ctx context.Context, remote, branch string) (string, error) {
 	m.ctrl.T.Helper()
