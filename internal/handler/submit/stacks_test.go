@@ -29,15 +29,16 @@ func TestNativeStackChanges(t *testing.T) {
 		},
 	})
 
+	got := nativeStackChanges(graph, "test", []string{"top"})
 	assert.ElementsMatch(t, []forge.StackChange{
 		{Change: submitFakeChangeID("pr-1"), BaseBranch: "main"},
 		{Change: submitFakeChangeID("pr-2"), BaseChange: submitFakeChangeID("pr-1"), BaseBranch: "bottom"},
 		{Change: submitFakeChangeID("pr-3"), BaseChange: submitFakeChangeID("pr-2"), BaseBranch: "middle"},
 		{Change: submitFakeChangeID("pr-4"), BaseChange: submitFakeChangeID("pr-2"), BaseBranch: "middle"},
-	}, nativeStackChanges(graph, "test", []string{"top"}))
+	}, got)
 }
 
-func TestHandler_updateStacks_unsupported(t *testing.T) {
+func TestHandler_updateStackRepresentations_unsupported(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	remoteForge := forgetest.NewMockForge(ctrl)
 	remoteRepo := forgetest.NewMockRepository(ctrl)
@@ -63,14 +64,16 @@ func TestHandler_updateStacks_unsupported(t *testing.T) {
 		return remoteRepo, nil
 	}
 
-	require.NoError(t, handler.updateStacks(
+	require.NoError(t, handler.updateStackRepresentations(
 		t.Context(),
+		&Options{NavComment: NavCommentNever},
+		&submitStackUpdates{requestedBranches: []string{"feature"}},
 		[]string{"feature"},
-		new(submitStackUpdates),
+		[]string{"feature"},
 	))
 }
 
-func TestHandler_updateStacks_errors(t *testing.T) {
+func TestHandler_updateStackRepresentations_nativeStackErrors(t *testing.T) {
 	tests := []struct {
 		name    string
 		planErr error
@@ -88,7 +91,7 @@ func TestHandler_updateStacks_errors(t *testing.T) {
 			remoteForge.EXPECT().ID().Return("test").AnyTimes()
 
 			remoteRepo := forgetest.NewMockRepository(ctrl)
-			remoteRepo.EXPECT().Forge().Return(remoteForge)
+			remoteRepo.EXPECT().Forge().Return(remoteForge).AnyTimes()
 			stackRepo := &submitStackRepository{
 				Repository: remoteRepo,
 				planErr:    tt.planErr,
@@ -125,11 +128,14 @@ func TestHandler_updateStacks_errors(t *testing.T) {
 				return stackRepo, nil
 			}
 
-			require.NoError(t, handler.updateStacks(
+			require.NoError(t, handler.updateStackRepresentations(
 				t.Context(),
+				&Options{NavComment: NavCommentNever},
+				&submitStackUpdates{requestedBranches: []string{"feature"}},
 				[]string{"feature"},
-				new(submitStackUpdates),
+				[]string{"feature"},
 			))
+			require.Len(t, stackRepo.plans, 1)
 
 			if tt.wantLog {
 				assert.Contains(t, logs.String(), "Could not update stacks")
@@ -141,12 +147,12 @@ func TestHandler_updateStacks_errors(t *testing.T) {
 	}
 }
 
-func TestHandler_updateStacks_fallsBackAfterUnsupportedPlan(t *testing.T) {
+func TestHandler_updateStackRepresentations_fallsBackAfterUnsupportedPlan(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	remoteForge := forgetest.NewMockForge(ctrl)
 	remoteForge.EXPECT().ID().Return("test").AnyTimes()
 	remoteRepo := forgetest.NewMockRepository(ctrl)
-	remoteRepo.EXPECT().Forge().Return(remoteForge)
+	remoteRepo.EXPECT().Forge().Return(remoteForge).AnyTimes()
 	change := submitFakeChangeID("pr-1")
 	remoteRepo.EXPECT().EditChange(gomock.Any(), change, forge.EditChangeOptions{
 		Base: "main",
@@ -164,6 +170,51 @@ func TestHandler_updateStacks_fallsBackAfterUnsupportedPlan(t *testing.T) {
 	})
 	service := NewMockService(ctrl)
 	service.EXPECT().BranchGraph(gomock.Any(), nil).Return(graph, nil)
+	handler := newStackFinalizationTestHandler(remoteForge, stackRepo, service)
+
+	err := handler.updateStackRepresentations(
+		t.Context(),
+		&Options{NavComment: NavCommentNever},
+		&submitStackUpdates{
+			requestedBranches: []string{"feature"},
+			deferredBases: []deferredBaseUpdate{
+				{branch: "feature", repository: remoteRepo, change: change, base: "main"},
+			},
+		},
+		[]string{"feature"},
+		[]string{"feature"},
+	)
+	require.NoError(t, err)
+}
+
+type submitStackRepository struct {
+	forge.Repository
+
+	plans   [][]forge.StackChange
+	planErr error
+	runErr  error
+}
+
+func (r *submitStackRepository) PlanStackUpdate(
+	_ context.Context,
+	changes []forge.StackChange,
+) (forge.StackUpdatePlan, error) {
+	r.plans = append(r.plans, changes)
+	if r.planErr != nil {
+		return nil, r.planErr
+	}
+	return submitStackUpdatePlan{err: r.runErr}, nil
+}
+
+type submitStackUpdatePlan struct{ err error }
+
+func (p submitStackUpdatePlan) Execute(context.Context) error { return p.err }
+
+func newStackFinalizationTestHandler(
+	remoteForge forge.Forge,
+	remoteRepo forge.Repository,
+	service Service,
+) *Handler {
 	handler := new(Handler)
 	handler.Log = silog.Nop()
 	handler.Service = service
@@ -181,38 +232,10 @@ func TestHandler_updateStacks_fallsBackAfterUnsupportedPlan(t *testing.T) {
 		forge.Forge,
 		forge.RepositoryID,
 	) (forge.Repository, error) {
-		return stackRepo, nil
+		return remoteRepo, nil
 	}
-
-	require.NoError(t, handler.updateStacks(
-		t.Context(),
-		[]string{"feature"},
-		&submitStackUpdates{deferredBases: []deferredBaseUpdate{
-			{repository: remoteRepo, change: change, base: "main"},
-		}},
-	))
+	return handler
 }
-
-type submitStackRepository struct {
-	forge.Repository
-
-	planErr error
-	runErr  error
-}
-
-func (r *submitStackRepository) PlanStackUpdate(
-	_ context.Context,
-	_ []forge.StackChange,
-) (forge.StackUpdatePlan, error) {
-	if r.planErr != nil {
-		return nil, r.planErr
-	}
-	return submitStackUpdatePlan{err: r.runErr}, nil
-}
-
-type submitStackUpdatePlan struct{ err error }
-
-func (p submitStackUpdatePlan) Execute(context.Context) error { return p.err }
 
 func (*submitStackRepository) PlanMergeRanges(
 	context.Context,
