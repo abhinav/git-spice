@@ -418,6 +418,25 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		}
 	}
 
+	recordStoppedResult := func(res workResult) {
+		switch res.kind {
+		case prepareResult:
+			if res.err != nil {
+				failNode(res.node, res.err)
+			}
+
+		case runResult:
+			if res.err != nil {
+				failNode(res.node, res.err)
+			} else if s.barrier != nil {
+				barrierDirty = true
+			}
+
+		default:
+			must.Failf("unknown work result kind %d", res.kind)
+		}
+	}
+
 	// The shutdown phase waits for workers and drains their buffered results.
 	// Drained results preserve errors from work that already started,
 	// but they must not unlock more work or emit normal progress events.
@@ -439,22 +458,7 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 		// but it does not unlock aboves or emit Done/Prepared events
 		// because scheduling has ended.
 		for res := range resultc {
-			switch res.kind {
-			case prepareResult:
-				if res.err != nil {
-					failNode(res.node, res.err)
-				}
-
-			case runResult:
-				if res.err != nil {
-					failNode(res.node, res.err)
-				} else if s.barrier != nil {
-					barrierDirty = true
-				}
-
-			default:
-				must.Failf("unknown work result kind %d", res.kind)
-			}
+			recordStoppedResult(res)
 		}
 
 		runBarrier()
@@ -575,6 +579,16 @@ func (s *Scheduler) Run(ctx context.Context) (retErr error) {
 			preparing = true
 
 		case res := <-resultc:
+			// A cancellation-aware worker can report its result at the same
+			// time as the caller context becomes done.
+			// Give caller cancellation ownership of pending items regardless
+			// of which ready select case was chosen.
+			if err := barrierCtx.Err(); err != nil {
+				errs = append(errs, err)
+				stopScheduling(SkipBecauseCanceled)
+				recordStoppedResult(res)
+				return
+			}
 			handleResult(res)
 
 		case <-ctx.Done():
