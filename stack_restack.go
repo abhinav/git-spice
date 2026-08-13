@@ -93,7 +93,10 @@ func (cmd *stackRestackCmd) Run(
 		return err
 	}
 
-	return handler.RestackStack(ctx, cmd.Branch, &restack.StackOptions{
-		SkipConflicts: cmd.SkipConflicts,
+	return handler.RestackStack(ctx, &restack.StackRequest{
+		Branch: cmd.Branch,
+		Options: &restack.Options{
+			SkipConflicts: cmd.SkipConflicts,
+		},
 	})
 }

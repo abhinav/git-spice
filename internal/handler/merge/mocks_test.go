@@ -208,17 +208,17 @@ func (m *MockRestackHandler) EXPECT() *MockRestackHandlerMockRecorder {
 }
 
 // RestackBranch mocks base method.
-func (m *MockRestackHandler) RestackBranch(arg0 context.Context, arg1 string, arg2 *restack.BranchOptions) error {
+func (m *MockRestackHandler) RestackBranch(ctx context.Context, req *restack.BranchRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestackBranch", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RestackBranch", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RestackBranch indicates an expected call of RestackBranch.
-func (mr *MockRestackHandlerMockRecorder) RestackBranch(arg0, arg1, arg2 any) *MockRestackHandlerRestackBranchCall {
+func (mr *MockRestackHandlerMockRecorder) RestackBranch(ctx, req any) *MockRestackHandlerRestackBranchCall {
 	mr.mock.ctrl.T.Helper()
-	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), arg0, arg1, arg2)
+	call := mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestackBranch", reflect.TypeOf((*MockRestackHandler)(nil).RestackBranch), ctx, req)
 	return &MockRestackHandlerRestackBranchCall{Call: call}
 }
 
@@ -234,13 +234,13 @@ func (c *MockRestackHandlerRestackBranchCall) Return(arg0 error) *MockRestackHan
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, string, *restack.BranchOptions) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) Do(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, string, *restack.BranchOptions) error) *MockRestackHandlerRestackBranchCall {
+func (c *MockRestackHandlerRestackBranchCall) DoAndReturn(f func(context.Context, *restack.BranchRequest) error) *MockRestackHandlerRestackBranchCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

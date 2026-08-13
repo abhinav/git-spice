@@ -47,7 +47,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(t.Context(), "feature", nil))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		}))
 		assert.Contains(t, logBuffer.String(), "feature: restacked on main")
 	})
 
@@ -82,7 +84,53 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		require.NoError(t, handler.RestackBranch(t.Context(), "feature", nil))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		}))
+	})
+
+	t.Run("SkipConflicts", func(t *testing.T) {
+		var logBuffer bytes.Buffer
+		log := silog.New(&logBuffer, nil)
+		ctrl := gomock.NewController(t)
+
+		mockService := NewMockService(ctrl)
+		mockService.EXPECT().
+			BranchGraph(gomock.Any(), gomock.Any()).
+			Return(newBranchGraphBuilder("main").
+				Branch("feature", "main").
+				Build(t), nil)
+		mockService.EXPECT().
+			Restack(gomock.Any(), "feature").
+			Return(nil, &git.RebaseInterruptError{
+				Kind: git.RebaseInterruptConflict,
+			})
+
+		mockWorktree := NewMockGitWorktree(ctrl)
+		mockWorktree.EXPECT().
+			RootDir().
+			Return(t.TempDir())
+		mockWorktree.EXPECT().
+			RebaseAbort(gomock.Any()).
+			Return(nil)
+		mockWorktree.EXPECT().
+			CheckoutBranch(gomock.Any(), "feature").
+			Return(nil)
+
+		handler := &Handler{
+			Log:      log,
+			Worktree: mockWorktree,
+			Store:    statetest.NewMemoryStore(t, "main", "", log),
+			Service:  mockService,
+		}
+
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+			Options: &Options{
+				SkipConflicts: true,
+			},
+		}))
+		assert.Contains(t, logBuffer.String(), "feature: conflict, skipping")
 	})
 
 	t.Run("UntrackedBranch", func(t *testing.T) {
@@ -113,7 +161,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Service:  mockService,
 		}
 
-		err := handler.RestackBranch(t.Context(), "untracked", nil)
+		err := handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "untracked",
+		})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "untracked branch")
 		assert.Contains(t, logBuffer.String(), "untracked: branch not tracked: run '"+cli.Name()+" branch track")
@@ -146,7 +196,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		require.NoError(t, handler.RestackBranch(t.Context(), "already-restacked", nil))
+		require.NoError(t, handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "already-restacked",
+		}))
 		assert.Contains(t, logBuffer.String(), "already-restacked: branch does not need to be restacked.")
 	})
 
@@ -177,7 +229,9 @@ func TestHandler_RestackBranch(t *testing.T) {
 			Store:    statetest.NewMemoryStore(t, "main", "", log),
 			Service:  mockService,
 		}
-		err := handler.RestackBranch(t.Context(), "feature", nil)
+		err := handler.RestackBranch(t.Context(), &BranchRequest{
+			Branch: "feature",
+		})
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "restack branch")
 		assert.ErrorIs(t, err, unexpectedErr)

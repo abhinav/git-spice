@@ -36,7 +36,7 @@ type Service interface {
 
 // RestackHandler restacks branches after their bases are merged.
 type RestackHandler interface {
-	RestackBranch(context.Context, string, *restack.BranchOptions) error
+	RestackBranch(ctx context.Context, req *restack.BranchRequest) error
 }
 
 // SubmitHandler updates change requests after branch restacks.
@@ -471,7 +471,9 @@ func (h *Handler) prepareForMerge(
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 
-		if err := h.Restack.RestackBranch(ctx, item.branch, nil); err != nil {
+		if err := h.Restack.RestackBranch(ctx, &restack.BranchRequest{
+			Branch: item.branch,
+		}); err != nil {
 			return fmt.Errorf("restack branch: %w", err)
 		}
 

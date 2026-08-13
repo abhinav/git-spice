@@ -47,7 +47,10 @@ func (cmd *downstackRestackCmd) Run(
 		return errors.New("nothing to restack below trunk")
 	}
 
-	return handler.RestackDownstack(ctx, cmd.Branch, &restack.DownstackOptions{
-		SkipConflicts: cmd.SkipConflicts,
+	return handler.RestackDownstack(ctx, &restack.DownstackRequest{
+		Branch: cmd.Branch,
+		Options: &restack.Options{
+			SkipConflicts: cmd.SkipConflicts,
+		},
 	})
 }

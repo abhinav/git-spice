@@ -8,6 +8,7 @@ import (
 
 	"go.abhg.dev/gs/internal/cli"
 	"go.abhg.dev/gs/internal/git"
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/silog"
 	"go.abhg.dev/gs/internal/spice"
 	"go.abhg.dev/gs/internal/spice/state"
@@ -324,7 +325,9 @@ func (cmd *branchCreateCmd) Run(
 	}
 
 	if cmd.Below || cmd.Insert {
-		return restackHandler.RestackUpstack(ctx, branchName, nil)
+		return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+			Branch: branchName,
+		})
 	}
 
 	return nil

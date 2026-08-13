@@ -5,18 +5,20 @@ import (
 	"context"
 )
 
-// DownstackOptions holds options for restacking a downstack.
-type DownstackOptions struct {
-	// SkipConflicts indicates that conflicting branches should be skipped.
-	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
+// DownstackRequest is a request to restack a branch and its downstack.
+type DownstackRequest struct {
+	// Branch is the top of the downstack to restack.
+	Branch string // required
+
+	Options *Options // optional
 }
 
 // RestackDownstack restacks the downstack of the given branch.
 // This includes the branch itself.
-func (h *Handler) RestackDownstack(ctx context.Context, branch string, opts *DownstackOptions) error {
-	opts = cmp.Or(opts, &DownstackOptions{})
+func (h *Handler) RestackDownstack(ctx context.Context, req *DownstackRequest) error {
+	opts := cmp.Or(req.Options, &Options{})
 	_, err := h.Restack(ctx, &Request{
-		Branch:          branch,
+		Branch:          req.Branch,
 		Scope:           ScopeDownstack,
 		ContinueCommand: []string{"downstack", "restack"},
 		SkipConflicts:   opts.SkipConflicts,

@@ -58,13 +58,13 @@ func (cmd *repoRestackCmd) Run(
 		return err
 	}
 
+	if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
+		return fmt.Errorf("checkout %v: %w", currentBranch, err)
+	}
+
 	if count == 0 {
 		log.Infof("Nothing to restack: no tracked branches available")
 		return nil
-	}
-
-	if err := wt.CheckoutBranch(ctx, currentBranch); err != nil {
-		return fmt.Errorf("checkout %v: %w", currentBranch, err)
 	}
 
 	log.Infof("Restacked %d branches", count)

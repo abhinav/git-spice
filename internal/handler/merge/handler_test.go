@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"go.abhg.dev/gs/internal/handler/restack"
 	"go.abhg.dev/gs/internal/handler/submit"
 	"go.abhg.dev/gs/internal/handler/sync"
 
@@ -230,10 +231,14 @@ func TestExecutePlan_retargets(t *testing.T) {
 
 	mockRestack := NewMockRestackHandler(ctrl)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat2", nil).
+		RestackBranch(gomock.Any(), &restack.BranchRequest{
+			Branch: "feat2",
+		}).
 		Return(nil)
 	mockRestack.EXPECT().
-		RestackBranch(gomock.Any(), "feat3", nil).
+		RestackBranch(gomock.Any(), &restack.BranchRequest{
+			Branch: "feat3",
+		}).
 		Return(nil)
 
 	mockSubmit := NewMockSubmitHandler(ctrl)

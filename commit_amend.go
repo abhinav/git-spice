@@ -241,7 +241,10 @@ func (cmd *commitAmendCmd) Run(
 		return nil
 	}
 
-	return restackHandler.RestackUpstack(ctx, currentBranch, &restack.UpstackOptions{
-		SkipStart: true,
+	return restackHandler.RestackUpstack(ctx, &restack.UpstackRequest{
+		Branch: currentBranch,
+		Options: &restack.UpstackOptions{
+			SkipStart: true,
+		},
 	})
 }

@@ -5,19 +5,21 @@ import (
 	"context"
 )
 
-// StackOptions holds options for restacking a stack.
-type StackOptions struct {
-	// SkipConflicts indicates that conflicting branches should be skipped.
-	SkipConflicts bool `help:"Skip branches that cannot be rebased due to conflicts"`
+// StackRequest is a request to restack all branches in a stack.
+type StackRequest struct {
+	// Branch selects the stack to restack.
+	Branch string // required
+
+	Options *Options // optional
 }
 
 // RestackStack restacks the stack of the given branch.
 // This includes all upstack and downtrack branches,
 // as well as the branch itself.
-func (h *Handler) RestackStack(ctx context.Context, branch string, opts *StackOptions) error {
-	opts = cmp.Or(opts, &StackOptions{})
+func (h *Handler) RestackStack(ctx context.Context, req *StackRequest) error {
+	opts := cmp.Or(req.Options, &Options{})
 	_, err := h.Restack(ctx, &Request{
-		Branch:          branch,
+		Branch:          req.Branch,
 		Scope:           ScopeStack,
 		ContinueCommand: []string{"stack", "restack"},
 		SkipConflicts:   opts.SkipConflicts,

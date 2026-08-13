@@ -31,6 +31,10 @@ cp $WORK/extra/init.main.txt init.txt
 git add init.txt
 git commit -m 'Main changes init'
 
+# Start from a branch that will be skipped.
+# The command must restore it after processing the repository.
+git checkout feature2
+
 gs repo restack --skip-conflicts
 stderr 'feature: conflict, skipping'
 stderr 'feature2: base branch feature was not restacked, skipping'
@@ -44,7 +48,7 @@ git merge-base --is-ancestor main other
 git merge-base --is-ancestor feature feature2
 
 git branch --show-current
-stdout '^main$'
+stdout '^feature2$'
 
 git status --porcelain
 ! stdout '.'
