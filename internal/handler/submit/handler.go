@@ -236,6 +236,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		return err
 	}
 
+	stackUpdates := new(submitStackUpdates)
 	var branchesToComment []string
 	for _, branch := range req.Branches {
 		// Shallow copy the options because submitBranch may modify them.
@@ -244,7 +245,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 			ctx,
 			graph,
 			branch,
-			&submitOptions{Options: &opts},
+			&submitOptions{Options: &opts, stackUpdates: stackUpdates},
 		)
 		if err != nil {
 			return fmt.Errorf("submit branch %s: %w", branch, err)
@@ -258,7 +259,8 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		return nil // nothing to do
 	}
 
-	return updateNavigationComments(
+	stackErr := h.updateStacks(ctx, branchesToComment, stackUpdates)
+	navCommentErr := updateNavigationComments(
 		ctx,
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
@@ -271,6 +273,7 @@ func (h *Handler) SubmitBatch(ctx context.Context, req *BatchRequest) error {
 		h.upstreamRepository,
 		h.pushRepositoryID,
 	)
+	return errors.Join(stackErr, navCommentErr)
 }
 
 // Request is a request to submit a single branch to a remote repository.
@@ -306,14 +309,16 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		return err
 	}
 
+	stackUpdates := new(submitStackUpdates)
 	status, err := h.submitBranch(
 		ctx,
 		graph,
 		req.Branch,
 		&submitOptions{
-			Options: opts,
-			Title:   req.Title,
-			Body:    req.Body,
+			Options:      opts,
+			Title:        req.Title,
+			Body:         req.Body,
+			stackUpdates: stackUpdates,
 		},
 	)
 	if err != nil {
@@ -325,7 +330,8 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		return nil
 	}
 
-	return updateNavigationComments(
+	stackErr := h.updateStacks(ctx, []string{req.Branch}, stackUpdates)
+	navCommentErr := updateNavigationComments(
 		ctx,
 		h.Store, h.Service, h.Log,
 		opts.NavComment,
@@ -338,6 +344,7 @@ func (h *Handler) Submit(ctx context.Context, req *Request) error {
 		h.upstreamRepository,
 		h.pushRepositoryID,
 	)
+	return errors.Join(stackErr, navCommentErr)
 }
 
 type submitStatus struct {
@@ -352,7 +359,8 @@ type submitStatus struct {
 type submitOptions struct {
 	*Options
 
-	Title, Body string
+	Title, Body  string
+	stackUpdates *submitStackUpdates
 }
 
 func (h *Handler) submitBranch(
@@ -929,16 +937,29 @@ func (h *Handler) submitBranch(
 				AddReviewers: reviewers,
 				AddAssignees: opts.Assignees,
 			}
-			// Some forges, including GitHub, treat setting an unchanged base
-			// as a mutation and may trigger redundant CI runs.
-			if pull.BaseName != upstreamBase {
-				editOpts.Base = upstreamBase
-			}
-
 			// remoteRepo is guaranteed to be available at this point.
 			remoteRepo, err := h.upstreamRepository(ctx)
 			if err != nil {
 				return status, fmt.Errorf("edit CR %v: %w", pull.ID, err)
+			}
+
+			// A native stack provider may need to dissolve existing membership
+			// before changing the pull request base. Defer that mutation to its
+			// planned transition; unsupported planning applies the same ordinary
+			// EditChange after submission.
+			if pull.BaseName != upstreamBase {
+				if _, ok := remoteRepo.(forge.StackRepository); ok && opts.stackUpdates != nil {
+					opts.stackUpdates.deferredBases = append(
+						opts.stackUpdates.deferredBases,
+						deferredBaseUpdate{
+							repository: remoteRepo,
+							change:     pull.ID,
+							base:       upstreamBase,
+						},
+					)
+				} else {
+					editOpts.Base = upstreamBase
+				}
 			}
 
 			if err := remoteRepo.EditChange(ctx, pull.ID, editOpts); err != nil {
