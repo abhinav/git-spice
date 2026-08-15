@@ -635,6 +635,33 @@ func (h *Handler) executePlan(
 		}
 	}
 
+	// The forge plans only the selected changes it can merge atomically. The
+	// scheduler will preserve every omitted change as an ordinary merge item.
+	var nativePlans []forge.MergeRangePlan
+	if stackRepository, ok := h.RemoteRepository.(forge.StackRepository); opts.Command == "" && ok {
+		changeByBranch := make(map[string]forge.ChangeID, len(plan))
+		for _, item := range plan {
+			changeByBranch[item.branch] = item.changeID
+		}
+
+		changes := make([]forge.StackChange, len(plan))
+		for i, item := range plan {
+			changes[i] = forge.StackChange{
+				Change:     item.changeID,
+				BaseChange: changeByBranch[item.base],
+				BaseBranch: item.base,
+			}
+		}
+
+		var err error
+		nativePlans, err = stackRepository.PlanMergeRanges(ctx, changes)
+		if errors.Is(err, forge.ErrUnsupported) {
+			nativePlans = nil
+		} else if err != nil {
+			return fmt.Errorf("plan native merge ranges: %w", err)
+		}
+	}
+
 	var progress mergeProgress
 	if runner, ok := h.View.(ui.ModelView); ok {
 		widgetProgress := newWidgetMergeProgress(
@@ -673,6 +700,8 @@ func (h *Handler) executePlan(
 		Method:     opts.Method,
 	})
 	if opts.Command != "" {
+		// A custom command owns merge transport and may implement semantics
+		// that one provider-native range request cannot preserve.
 		mergeRequester = &commandMergeRequester{
 			Runner: getCommandRunner(),
 			Script: opts.Command,
@@ -701,6 +730,7 @@ func (h *Handler) executePlan(
 		Progress:         progress,
 		MergeRequester:   mergeRequester,
 		ReadinessChecker: readinessChecker,
+		MergeRangePlans:  nativePlans,
 
 		Trunk:        h.Store.Trunk(),
 		ReadyTimeout: opts.ReadyTimeout,
@@ -930,48 +960,6 @@ func (e *mergePlanExecutor) awaitMergeabilityWithDelay(
 			return fmt.Errorf("not ready after %v", timeout)
 		}
 		delay = min(delay*2, maxDelay)
-	}
-}
-
-// awaitMerged polls until the given change shows as merged.
-// Uses exponential backoff starting at 500ms, capped at 8s.
-func (e *mergePlanExecutor) awaitMerged(
-	ctx context.Context, item *mergeItem,
-) error {
-	const (
-		_initialDelay = 500 * time.Millisecond
-		_maxDelay     = 8 * time.Second
-	)
-
-	ctx, cancel := context.WithTimeout(ctx, e.MergeTimeout)
-	defer cancel()
-
-	// TODO: This only waits for the immediate change to reach
-	// the merged state.
-	// Server-side merge queues and richer merge workflows
-	// need a more expressive wait state.
-	delay := _initialDelay
-	for {
-		statuses, err := e.RemoteRepository.ChangeStatuses(
-			ctx, []forge.ChangeID{item.changeID},
-		)
-		if err != nil {
-			return fmt.Errorf("poll state: %w", err)
-		}
-
-		if statuses[0].State == forge.ChangeMerged {
-			return nil
-		}
-
-		e.Progress.Event(mergeProgressEvent{
-			Kind: mergeProgressWaitingForMerge,
-			Item: item,
-		})
-		if err := sleep(ctx, delay); err != nil {
-			return errors.New("timed out waiting for merge")
-		}
-
-		delay = min(delay*2, _maxDelay)
 	}
 }
 

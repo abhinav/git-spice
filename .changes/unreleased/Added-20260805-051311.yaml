@@ -1,0 +1,3 @@
+kind: Added
+body: 'merge: Eligible linear GitHub pull request stacks are merged atomically, with bottom-up fallback when native range merging is unavailable.'
+time: 2026-08-05T05:13:11.409252-07:00
