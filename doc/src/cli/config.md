@@ -328,6 +328,23 @@ or computed from the GitHub URL if not set.
 
 See also: [GitHub Enterprise](../setup/auth.md#github-enterprise).
 
+### spice.forge.github.stacks
+
+<!-- gs:version unreleased -->
+
+Whether to use GitHub native stack operations.
+
+**Accepted values:**
+
+- `true` (default)
+- `false`
+
+When set to `false`, submit commands skip GitHub native stack updates,
+and merge commands use ordinary pull request merges
+instead of atomic stack merges.
+This setting affects only future git-spice operations;
+it does not remove native stack associations that already exist on GitHub.
+
 ### spice.forge.github.url
 
 URL of the GitHub instance used for GitHub requests.

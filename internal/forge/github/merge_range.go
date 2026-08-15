@@ -19,6 +19,10 @@ func (r *Repository) PlanMergeRanges(
 	ctx context.Context,
 	changes []forge.StackChange,
 ) ([]forge.MergeRangePlan, error) {
+	if !r.stacksEnabled {
+		return nil, forge.ErrUnsupported
+	}
+
 	type requestedChange struct {
 		change forge.ChangeID
 		base   int
@@ -138,6 +142,10 @@ func (p *githubMergeRangePlan) Merge(
 	ctx context.Context,
 	request forge.MergeRangeRequest,
 ) (forge.MergeOperation, error) {
+	if !p.repository.stacksEnabled {
+		return nil, forge.ErrUnsupported
+	}
+
 	if len(request.Changes) != len(p.changes) {
 		return nil, fmt.Errorf(
 			"merge range request has %d changes, planned %d",
