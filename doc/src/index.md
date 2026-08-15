@@ -118,9 +118,9 @@ $ gs repo sync
     ---
 
     Merge submitted CRs bottom-up from the command line.
-    git-spice waits for each CR to be ready,
-    merges it,
-    then restacks and updates branches above it before continuing.
+    git-spice waits for CRs to be ready,
+    merges them,
+    then restacks and updates surviving branches as needed.
 
 -   [:octicons-comment-discussion-16:{ .lg .middle } __Review stacked change requests__](guide/review.md)
 

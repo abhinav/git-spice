@@ -242,6 +242,22 @@ that have already been submitted.
         With this flag, the command prints the hash of the target branch
         without checking it out.
 
+### Native stacks
+
+<!-- gs:version unreleased -->
+<!-- gs:badge:github -->
+
+On supported forges such as GitHub,
+submit commands automatically register your CRs as a native stack.
+This includes submitted branches and their already-submitted downstack.
+Resubmit after changing your local stack to update its native representation.
+
+Forges without native stacks use ordinary submission.
+
+See [GitHub native-stack limitations](limits.md#github-native-stack-limitations)
+for restrictions.
+Set $$spice.forge.github.stacks$$ to `false` to opt out on GitHub.
+
 ## Syncing with upstream
 
 To sync with the upstream repository,
