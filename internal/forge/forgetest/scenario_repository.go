@@ -155,7 +155,8 @@ func (s *integrationSuite) TestListChangeTemplates(t *testing.T) {
 
 				testRepo.WriteFile(
 					filepath.Join(templateDir, nonEmptyTemplateName),
-					"This is a test template")
+					"This is a test template",
+				)
 				t.Logf("Created non-empty template at: %s",
 					filepath.Join(templateDir, nonEmptyTemplateName))
 			} else {
