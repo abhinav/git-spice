@@ -74,6 +74,7 @@ func (e *githubStackExecutor) sequence(
 }
 
 func (e *githubStackExecutor) unstack(ctx context.Context, instruction githubStackUnstack) error {
+	e.repository.log.Debug("Unstacking native stack.", "stack", instruction.StackNumber)
 	result, err := e.repository.gateway.UnstackPullRequestStack(ctx, &github.UnstackPullRequestStackInput{
 		Owner:       e.repository.owner,
 		Repo:        e.repository.repo,
@@ -104,6 +105,10 @@ func (e *githubStackExecutor) unstack(ctx context.Context, instruction githubSta
 }
 
 func (e *githubStackExecutor) changeBase(ctx context.Context, instruction githubStackChangeBase) error {
+	e.repository.log.Debug("Changing pull request base.",
+		"pr", instruction.PullRequestNumber,
+		"base", instruction.BaseBranch,
+	)
 	if err := e.repository.gateway.UpdatePullRequest(ctx, &github.UpdatePullRequestInput{
 		PullRequestID: instruction.PullRequestID,
 		BaseRefName:   &instruction.BaseBranch,
@@ -118,6 +123,7 @@ func (e *githubStackExecutor) changeBase(ctx context.Context, instruction github
 }
 
 func (e *githubStackExecutor) create(ctx context.Context, instruction githubStackCreate) error {
+	e.repository.log.Debug("Creating native stack.", "prs", instruction.PullRequests)
 	if err := e.repository.gateway.CreatePullRequestStack(ctx, &github.CreatePullRequestStackInput{
 		Owner:        e.repository.owner,
 		Repo:         e.repository.repo,
@@ -129,6 +135,10 @@ func (e *githubStackExecutor) create(ctx context.Context, instruction githubStac
 }
 
 func (e *githubStackExecutor) append(ctx context.Context, instruction githubStackAppend) error {
+	e.repository.log.Debug("Appending pull requests to native stack.",
+		"stack", instruction.StackNumber,
+		"prs", instruction.PullRequests,
+	)
 	if err := e.repository.gateway.AddPullRequestsToStack(ctx, &github.AddPullRequestsToStackInput{
 		Owner:        e.repository.owner,
 		Repo:         e.repository.repo,
