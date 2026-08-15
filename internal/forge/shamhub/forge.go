@@ -8,12 +8,47 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"go.abhg.dev/gs/internal/forge"
 	"go.abhg.dev/gs/internal/git/giturl"
 	"go.abhg.dev/gs/internal/must"
 	"go.abhg.dev/gs/internal/silog"
 )
+
+// stacksMode controls whether ShamHub exposes native stack capabilities.
+// Its zero value disables them.
+type stacksMode uint8
+
+const (
+	stacksOff stacksMode = iota
+	stacksOn
+)
+
+// UnmarshalText accepts the case-insensitive configuration values `on`, `off`,
+// `1`, and `0`.
+func (m *stacksMode) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "off", "0":
+		*m = stacksOff
+	case "on", "1":
+		*m = stacksOn
+	default:
+		return fmt.Errorf("invalid value %q: expected on or off", text)
+	}
+	return nil
+}
+
+func (m stacksMode) String() string {
+	switch m {
+	case stacksOff:
+		return "off"
+	case stacksOn:
+		return "on"
+	default:
+		return fmt.Sprintf("stacksMode(%d)", m)
+	}
+}
 
 // Options defines CLI options for the ShamHub forge.
 type Options struct {
@@ -24,6 +59,12 @@ type Options struct {
 
 	// APIURL is the base URL for the ShamHub API.
 	APIURL string `name:"shamhub-api-url" hidden:"" env:"SHAMHUB_API_URL" help:"Base URL for ShamHub API requests"`
+
+	// Stacks controls whether ShamHub exposes native stack operations.
+	// The default is `off`.
+	// Opened repositories expose optional native stack capabilities only when
+	// the value is `on`.
+	Stacks stacksMode `name:"shamhub-stacks" hidden:"" config:"forge.shamhub.stacks" default:"off" help:"Whether to expose ShamHub native stack operations. One of 'on' and 'off'."`
 }
 
 // Definition configures ShamHub forge instances.
@@ -135,14 +176,18 @@ func newRepository(f *Forge, token *AuthenticationToken, rid *RepositoryID, http
 		return nil, fmt.Errorf("parse API URL: %w", err)
 	}
 
-	return &forgeRepository{
+	repo := &forgeRepository{
 		forge:  f,
 		owner:  rid.owner,
 		repo:   rid.repo,
 		apiURL: apiURL,
 		log:    f.Log,
 		client: client,
-	}, nil
+	}
+	if f.Stacks == stacksOn {
+		return &stackRepository{forgeRepository: repo}, nil
+	}
+	return repo, nil
 }
 
 // RepositoryID is a unique identifier for a ShamHub repository.

@@ -125,6 +125,14 @@ type forgeRepository struct {
 	client *jsonHTTPClient
 }
 
+// stackRepository is separate from forgeRepository so ShamHub exposes its
+// optional native-stack capabilities only when test configuration enables
+// them. Callers therefore exercise the same capability upcasts and fallbacks
+// used with production forges.
+type stackRepository struct {
+	*forgeRepository
+}
+
 var (
 	_ forge.Repository        = (*forgeRepository)(nil)
 	_ forge.WithComparisonURL = (*forgeRepository)(nil)
