@@ -71,6 +71,12 @@ type Repository struct {
 	gateway     githubGateway
 	forge       *Forge
 
+	// stacksEnabled snapshots the forge configuration when the repository is
+	// opened. When disabled, both native-stack operations report
+	// forge.ErrUnsupported without accessing the gateway, which lets
+	// forge-independent callers use their ordinary submit and merge paths.
+	stacksEnabled bool
+
 	identityIDsMu sync.RWMutex // guards userIDsCache and teamIDsCache
 	// userIDsCache caches successful login lookups for this repository.
 	//
@@ -103,14 +109,15 @@ func newRepository(
 	}
 
 	return &Repository{
-		owner:        owner,
-		repo:         repo,
-		log:          log,
-		gateway:      gateway,
-		repoID:       repoID,
-		forge:        forge,
-		userIDsCache: make(map[string]github.ID),
-		teamIDsCache: make(map[github.TeamName]github.ID),
+		owner:         owner,
+		repo:          repo,
+		log:           log,
+		gateway:       gateway,
+		repoID:        repoID,
+		forge:         forge,
+		stacksEnabled: forge.Options.Stacks,
+		userIDsCache:  make(map[string]github.ID),
+		teamIDsCache:  make(map[github.TeamName]github.ID),
 	}, nil
 }
 

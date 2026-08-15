@@ -20,6 +20,10 @@ func (r *Repository) PlanMergeRanges(
 	ctx context.Context,
 	changes []forge.MergePlanChange,
 ) ([]forge.MergeRangePlan, error) {
+	if !r.stacksEnabled {
+		return nil, forge.ErrUnsupported
+	}
+
 	type requestedPR struct {
 		PR   *PR
 		Base int
@@ -136,6 +140,10 @@ func (p *githubMergeRangePlan) Merge(
 	ctx context.Context,
 	request forge.MergeRangeRequest,
 ) (forge.MergeOperation, error) {
+	if !p.Repo.stacksEnabled {
+		return nil, forge.ErrUnsupported
+	}
+
 	prNums := make([]int, len(p.PRs))
 	for i, pr := range p.PRs {
 		prNums[i] = pr.Number
