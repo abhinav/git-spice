@@ -193,5 +193,3 @@ func (r *RepositoryBuilder) Repository() *git.Repository {
 func (r *RepositoryBuilder) Worktree() *git.Worktree {
 	return r.work
 }
-
-// randomString generates a random alphanumeric string of length n.
