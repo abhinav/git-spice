@@ -17,7 +17,462 @@ import (
 	"go.abhg.dev/gs/internal/forge/forgetest"
 	"go.abhg.dev/gs/internal/git"
 	"go.abhg.dev/gs/internal/handler/sync"
+	"go.abhg.dev/gs/internal/spice"
+	"go.abhg.dev/gs/internal/spice/spicetest"
 )
+
+func TestMergePlanExecutor_mergeQueueItems_overlaysNativePlans(t *testing.T) {
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	pr4 := fakeChangeID("pr-4")
+	plan := []*mergeItem{
+		testPlanEntry("feat1", "main", pr1),
+		testPlanEntry("feat2", "feat1", pr2),
+		testPlanEntry("feat3", "feat2", pr3),
+		testPlanEntry("feat4", "feat2", pr4),
+	}
+
+	executor := new(mergePlanExecutor)
+	executor.MergeRangePlans = []forge.MergeRangePlan{&testMergeRangePlan{
+		changes: []forge.ChangeID{pr1, pr2, pr4},
+	}}
+	queueItems, err := executor.mergeQueueItems(plan)
+	require.NoError(t, err)
+	require.Len(t, queueItems, 2)
+
+	assert.Equal(t, "feat4", queueItems[0].ID())
+	assert.Empty(t, queueItems[0].Parent())
+	assert.Equal(t, "feat3", queueItems[1].ID())
+	assert.Equal(t, "feat4", queueItems[1].Parent())
+
+	nativeRange := queueItems[0].(*rangeMergeQueueItem)
+	assert.Equal(t, []string{"feat1", "feat2", "feat4"}, []string{
+		nativeRange.items[0].branch,
+		nativeRange.items[1].branch,
+		nativeRange.items[2].branch,
+	})
+	ordinary := queueItems[1].(*changeMergeQueueItem)
+	assert.Equal(t, "feat3", ordinary.item.branch)
+}
+
+func TestMergePlanExecutor_mergeQueueItems_rejectsInvalidNativePlans(t *testing.T) {
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+	plan := []*mergeItem{
+		testPlanEntry("feat1", "main", pr1),
+		testPlanEntry("feat2", "feat1", pr2),
+		testPlanEntry("feat3", "feat1", pr3),
+	}
+
+	t.Run("Empty", func(t *testing.T) {
+		executor := new(mergePlanExecutor)
+		executor.MergeRangePlans = []forge.MergeRangePlan{&testMergeRangePlan{}}
+		_, err := executor.mergeQueueItems(plan)
+		require.ErrorContains(t, err, "native merge plan 0 is empty")
+	})
+
+	t.Run("UnselectedChange", func(t *testing.T) {
+		executor := new(mergePlanExecutor)
+		executor.MergeRangePlans = []forge.MergeRangePlan{&testMergeRangePlan{
+			changes: []forge.ChangeID{fakeChangeID("pr-4")},
+		}}
+		_, err := executor.mergeQueueItems(plan)
+		require.ErrorContains(t, err, "contains unselected change pr-4")
+	})
+
+	t.Run("Overlap", func(t *testing.T) {
+		executor := new(mergePlanExecutor)
+		executor.MergeRangePlans = []forge.MergeRangePlan{
+			&testMergeRangePlan{changes: []forge.ChangeID{pr1, pr2}},
+			&testMergeRangePlan{changes: []forge.ChangeID{pr2}},
+		}
+		_, err := executor.mergeQueueItems(plan)
+		require.ErrorContains(t, err, "native merge plan 1 overlaps")
+	})
+
+	t.Run("Nonlinear", func(t *testing.T) {
+		executor := new(mergePlanExecutor)
+		executor.MergeRangePlans = []forge.MergeRangePlan{&testMergeRangePlan{
+			changes: []forge.ChangeID{pr2, pr3},
+		}}
+		_, err := executor.mergeQueueItems(plan)
+		require.ErrorContains(t, err, `base branch "feat1", want "feat2"`)
+	})
+}
+
+func TestExecutePlan_nativePlanningFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	stackRepo := &testStackRepository{
+		Repository: forgetest.NewMockRepository(ctrl),
+		planErr:    errors.New("boom"),
+	}
+	h := newTestHandler(t, ctrl, testHandlerOpts{forgeRepo: stackRepo})
+
+	err := h.executePlan(t.Context(), []*mergeItem{
+		testPlanEntry("feat1", "main", "pr-1"),
+	}, mergeExecutionOptions{})
+	require.ErrorContains(t, err, "plan native merge ranges: boom")
+}
+
+func TestExecutePlan_nativePlanningUnsupportedFallsBack(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	changeID := fakeChangeID("pr-1")
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: "head-1",
+		}}, nil)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), changeID).
+		Return(forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, nil)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), changeID, gomock.Any()).
+		Return(nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+
+	stackRepo := &testStackRepository{
+		Repository: mockForge,
+		planErr:    forge.ErrUnsupported,
+	}
+	h := newTestHandler(t, ctrl, testHandlerOpts{forgeRepo: stackRepo})
+	item := testPlanEntry("feat1", "main", changeID)
+	item.headHash = "head-1"
+
+	require.NoError(t, h.executePlan(
+		t.Context(),
+		[]*mergeItem{item},
+		mergeExecutionOptions{},
+	))
+}
+
+func TestMergeScheduler_nativeLinearPathWithUnselectedDivergence(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	pr3 := fakeChangeID("pr-3")
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	for _, change := range []struct {
+		id   fakeChangeID
+		head git.Hash
+	}{
+		{id: pr1, head: "head-1"},
+		{id: pr2, head: "head-2"},
+		{id: pr3, head: "head-3"},
+	} {
+		mockForge.EXPECT().
+			ChangeStatuses(gomock.Any(), []forge.ChangeID{change.id}).
+			Return([]forge.ChangeStatus{{
+				State:    forge.ChangeOpen,
+				HeadHash: change.head,
+			}}, nil)
+		mockForge.EXPECT().
+			ChangeMergeability(gomock.Any(), change.id).
+			Return(forge.ChangeMergeability{
+				State: forge.ChangeMergeabilityReady,
+			}, nil)
+	}
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1, pr2, pr3}).
+		Return([]forge.ChangeStatus{
+			{State: forge.ChangeMerged},
+			{State: forge.ChangeMerged},
+			{State: forge.ChangeMerged},
+		}, nil)
+
+	var gotRequest forge.MergeRangeRequest
+	rangePlan := &testMergeRangePlan{
+		changes: []forge.ChangeID{pr1, pr2, pr3},
+		merge: func(
+			_ context.Context,
+			req forge.MergeRangeRequest,
+		) (forge.MergeOperation, error) {
+			gotRequest = req
+			return nil, nil
+		},
+	}
+	rangeRepo := &testStackRepository{
+		Repository: mockForge,
+		planMergeRanges: func(
+			_ context.Context,
+			changes []forge.StackChange,
+		) ([]forge.MergeRangePlan, error) {
+			assert.Equal(t, []forge.StackChange{
+				{Change: pr1, BaseBranch: "main"},
+				{Change: pr2, BaseChange: pr1, BaseBranch: "feat1"},
+				{Change: pr3, BaseChange: pr2, BaseBranch: "feat2"},
+			}, changes)
+			return []forge.MergeRangePlan{rangePlan}, nil
+		},
+	}
+
+	mockService := NewMockService(ctrl)
+	mockGit := NewMockGitRepository(ctrl)
+	for idx, branch := range []string{"feat1", "feat2", "feat3"} {
+		mockService.EXPECT().VerifyRestacked(gomock.Any(), branch).Return(nil)
+		mockGit.EXPECT().PeelToCommit(gomock.Any(), branch).
+			Return(git.Hash(fmt.Sprintf("head-%d", idx+1)), nil)
+	}
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), nil).
+		Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
+				{
+					Name:           "feat1",
+					Head:           "head-1",
+					Base:           "main",
+					Change:         testChangeMetadata(pr1),
+					UpstreamBranch: "remote-feat1",
+				},
+				{
+					Name:           "feat2",
+					Head:           "head-2",
+					Base:           "feat1",
+					Change:         testChangeMetadata(pr2),
+					UpstreamBranch: "remote-feat2",
+				},
+				{
+					Name:           "feat3",
+					Head:           "head-3",
+					Base:           "feat2",
+					Change:         testChangeMetadata(pr3),
+					UpstreamBranch: "remote-feat3",
+				},
+				{
+					Name:           "feat4",
+					Head:           "head-4",
+					Base:           "feat2",
+					Change:         testChangeMetadata("pr-4"),
+					UpstreamBranch: "remote-feat4",
+				},
+			},
+		}), nil)
+
+	syncHandler := &recordingSyncHandler{}
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: rangeRepo,
+		service:   mockService,
+		gitRepo:   mockGit,
+		sync:      syncHandler,
+	})
+	err := h.executePlan(t.Context(), testMergePlanWithBases(
+		testPlanEntry("feat1", "main", pr1),
+		testPlanEntry("feat2", "feat1", pr2),
+		testPlanEntry("feat3", "feat2", pr3),
+	), mergeExecutionOptions{
+		Method:       forge.MergeMethodSquash,
+		MergeTimeout: time.Second,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, syncHandler.calls)
+	assert.Equal(t, forge.MergeRangeRequest{
+		Method: forge.MergeMethodSquash,
+		Changes: []forge.MergeRangeChange{
+			{
+				Change:   pr1,
+				Base:     "main",
+				Head:     "remote-feat1",
+				HeadHash: "head-1",
+			},
+			{
+				Change:   pr2,
+				Base:     "remote-feat1",
+				Head:     "remote-feat2",
+				HeadHash: "head-2",
+			},
+			{
+				Change:   pr3,
+				Base:     "remote-feat2",
+				Head:     "remote-feat3",
+				HeadHash: "head-3",
+			},
+		},
+	}, gotRequest)
+}
+
+func TestMergeScheduler_nativeRangeUnsupportedFallsBack(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pr1 := fakeChangeID("pr-1")
+	pr2 := fakeChangeID("pr-2")
+	operations := &operationRecorder{}
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: "head-1",
+		}}, nil)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr1).
+		Return(forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, nil)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: "head-2",
+		}}, nil).
+		Times(2)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), pr2).
+		Return(forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, nil).
+		Times(2)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr1, gomock.Any()).
+		DoAndReturn(func(
+			context.Context,
+			forge.ChangeID,
+			forge.MergeChangeOptions,
+		) error {
+			operations.append("merge pr-1")
+			return nil
+		})
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr1}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+	mockForge.EXPECT().
+		MergeChange(gomock.Any(), pr2, gomock.Any()).
+		DoAndReturn(func(
+			context.Context,
+			forge.ChangeID,
+			forge.MergeChangeOptions,
+		) error {
+			operations.append("merge pr-2")
+			return nil
+		})
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{pr2}).
+		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+
+	rangePlan := &testMergeRangePlan{
+		changes: []forge.ChangeID{pr1, pr2},
+		merge: func(
+			context.Context,
+			forge.MergeRangeRequest,
+		) (forge.MergeOperation, error) {
+			operations.append("range")
+			return nil, forge.ErrUnsupported
+		},
+	}
+	rangeRepo := &testStackRepository{
+		Repository: mockForge,
+		plans:      []forge.MergeRangePlan{rangePlan},
+	}
+
+	mockService := NewMockService(ctrl)
+	mockService.EXPECT().VerifyRestacked(gomock.Any(), "feat1").Return(nil)
+	mockService.EXPECT().VerifyRestacked(gomock.Any(), "feat2").Return(nil).Times(2)
+	mockGit := NewMockGitRepository(ctrl)
+	mockGit.EXPECT().PeelToCommit(gomock.Any(), "feat1").Return(git.Hash("head-1"), nil)
+	mockGit.EXPECT().PeelToCommit(gomock.Any(), "feat2").Return(git.Hash("head-2"), nil).Times(2)
+	mockService.EXPECT().
+		BranchGraph(gomock.Any(), nil).
+		Return(spicetest.NewBranchGraph(t, spicetest.BranchGraphConfig{
+			Trunk: "main",
+			Branches: []spice.LoadBranchItem{
+				{
+					Name:           "feat1",
+					Head:           "head-1",
+					Base:           "main",
+					Change:         testChangeMetadata(pr1),
+					UpstreamBranch: "feat1",
+				},
+				{
+					Name:           "feat2",
+					Head:           "head-2",
+					Base:           "feat1",
+					Change:         testChangeMetadata(pr2),
+					UpstreamBranch: "feat2",
+				},
+			},
+		}), nil)
+
+	syncHandler := &recordingSyncHandler{operations: operations}
+	h := newTestHandler(t, ctrl, testHandlerOpts{
+		forgeRepo: rangeRepo,
+		service:   mockService,
+		gitRepo:   mockGit,
+		sync:      syncHandler,
+	})
+	err := h.executePlan(t.Context(), testMergePlanWithBases(
+		testPlanEntry("feat1", "main", pr1),
+		testPlanEntry("feat2", "feat1", pr2),
+	), mergeExecutionOptions{MergeTimeout: time.Second})
+	require.NoError(t, err)
+	assert.Equal(t, []string{
+		"range",
+		"merge pr-1",
+		"sync",
+		"merge pr-2",
+		"sync",
+	}, operations.snapshot())
+}
+
+func TestMergePreparedRange_genuineFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	changeID := fakeChangeID("pr-1")
+	item := testPlanEntry("feat1", "main", changeID)
+	item.headHash = "head-1"
+
+	mockForge := forgetest.NewMockRepository(ctrl)
+	mockForge.EXPECT().
+		ChangeStatuses(gomock.Any(), []forge.ChangeID{changeID}).
+		Return([]forge.ChangeStatus{{
+			State:    forge.ChangeOpen,
+			HeadHash: "head-1",
+		}}, nil)
+	mockForge.EXPECT().
+		ChangeMergeability(gomock.Any(), changeID).
+		Return(forge.ChangeMergeability{
+			State: forge.ChangeMergeabilityReady,
+		}, nil)
+	rangePlan := &testMergeRangePlan{
+		changes: []forge.ChangeID{changeID},
+		merge: func(
+			context.Context,
+			forge.MergeRangeRequest,
+		) (forge.MergeOperation, error) {
+			return nil, errors.New("boom")
+		},
+	}
+	executor := new(mergePlanExecutor)
+	executor.RemoteRepository = mockForge
+	executor.Progress = new(recordingMergeProgress)
+	executor.ReadinessChecker = &forgeReadinessChecker{
+		Repository: mockForge,
+	}
+	executor.ReadyTimeout = time.Second
+
+	completed, err := executor.mergePreparedRange(
+		t.Context(),
+		rangePlan,
+		[]*mergeItem{item},
+		forge.MergeRangeRequest{
+			Changes: []forge.MergeRangeChange{{
+				Change:   changeID,
+				Base:     "main",
+				Head:     "feat1",
+				HeadHash: "head-1",
+			}},
+		},
+	)
+	assert.Zero(t, completed)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "merge range: boom")
+}
 
 func TestMergeScheduler_parentMergeUnlocksIndependentChildren(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -791,4 +1246,51 @@ func expectMergeWithRecord(
 	mockForge.EXPECT().
 		ChangeStatuses(gomock.Any(), []forge.ChangeID{id}).
 		Return([]forge.ChangeStatus{{State: forge.ChangeMerged}}, nil)
+}
+
+type testStackRepository struct {
+	forge.Repository
+
+	plans           []forge.MergeRangePlan
+	planErr         error
+	planMergeRanges func(
+		context.Context,
+		[]forge.StackChange,
+	) ([]forge.MergeRangePlan, error)
+}
+
+func (*testStackRepository) PlanStackUpdate(
+	context.Context,
+	[]forge.StackChange,
+) (forge.StackUpdatePlan, error) {
+	return nil, forge.ErrUnsupported
+}
+
+func (r *testStackRepository) PlanMergeRanges(
+	ctx context.Context,
+	changes []forge.StackChange,
+) ([]forge.MergeRangePlan, error) {
+	if r.planMergeRanges != nil {
+		return r.planMergeRanges(ctx, changes)
+	}
+	return r.plans, r.planErr
+}
+
+type testMergeRangePlan struct {
+	changes []forge.ChangeID
+	merge   func(
+		context.Context,
+		forge.MergeRangeRequest,
+	) (forge.MergeOperation, error)
+}
+
+func (p *testMergeRangePlan) Changes() []forge.ChangeID {
+	return p.changes
+}
+
+func (p *testMergeRangePlan) Merge(
+	ctx context.Context,
+	req forge.MergeRangeRequest,
+) (forge.MergeOperation, error) {
+	return p.merge(ctx, req)
 }

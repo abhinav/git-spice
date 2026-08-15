@@ -206,6 +206,8 @@ type Repository interface {
 
 	FindChangesByBranch(ctx context.Context, branch string, opts FindChangesOptions) ([]*FindChangeItem, error)
 	FindChangeByID(ctx context.Context, id ChangeID) (*FindChangeItem, error)
+
+	// ChangeStatuses returns one status for each ID in the same order.
 	ChangeStatuses(ctx context.Context, ids []ChangeID) ([]ChangeStatus, error)
 
 	// ChangeChecks reports CI/checks for the given change.
