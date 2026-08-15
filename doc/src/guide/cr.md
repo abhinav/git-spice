@@ -147,6 +147,36 @@ configuration key.
     However, it is unable to do this following complex stack manipulation
     operations.
 
+### GitHub native stacks
+
+<!-- gs:version unreleased -->
+
+After a successful submission,
+git-spice registers eligible pull requests in the affected stack
+with GitHub's native stacked pull request support.
+GitHub native stacks must be linear
+and all head branches must belong to the repository receiving the pull requests.
+For a divergent local stack,
+git-spice preserves an existing compatible native stack path.
+Otherwise, git-spice registers one longest path
+and warns about each omitted path.
+
+On later submissions,
+git-spice reconciles the selected path with its existing GitHub native stack.
+This includes inserting, removing, or reordering pull requests.
+When the composition changes,
+git-spice dissolves the old native stack before changing pull request bases,
+then recreates the desired stack.
+If a pull request is queued or has auto-merge enabled,
+GitHub may prevent restructuring;
+git-spice leaves that native stack unchanged and warns.
+
+Native stack metadata is supplemental.
+If GitHub does not support native stacks,
+submission continues without them.
+Other native stack update failures produce a warning
+but do not fail an otherwise successful submission.
+
 ### Non-interactive submission
 
 Use the `--fill` flag (or `-c` since <!-- gs:version v0.3.0 -->)

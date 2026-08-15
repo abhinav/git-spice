@@ -1,3 +1,5 @@
 kind: Added
-body: 'submit: Eligible GitHub pull requests are registered as native stacks after submission.'
+body: >-
+  submit: Eligible GitHub pull requests are registered as native stacks after submission,
+  including membership, order, and base changes on later submissions.
 time: 2026-08-05T04:56:15.840512-07:00
