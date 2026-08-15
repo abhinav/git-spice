@@ -762,6 +762,25 @@ func (c *shamhubCLI) dump(args []string) error {
 		}
 		return encodeJSON(c.stdout, res.Change)
 
+	case "stacks":
+		if len(args) != 2 {
+			return errors.New("usage: shamhub dump stacks <owner/repo>")
+		}
+		owner, repo, err := parseOwnerRepo(args[1])
+		if err != nil {
+			return err
+		}
+
+		var res adminDumpStacksResponse
+		if err := c.client.Get(
+			c.ctx,
+			"/_shamhub/admin/dump/stacks/"+owner+"/"+repo,
+			&res,
+		); err != nil {
+			return err
+		}
+		return encodeJSON(c.stdout, res.Changes)
+
 	default:
 		return fmt.Errorf("unknown dump command: %s", args[0])
 	}

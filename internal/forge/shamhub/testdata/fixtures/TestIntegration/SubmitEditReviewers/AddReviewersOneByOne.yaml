@@ -7,48 +7,48 @@ interactions:
         proto_major: 1
         proto_minor: 1
         content_length: 97
-        host: 127.0.0.1:56373
-        body: '{"subject":"Testing sN0uOM0J","body":"Test PR without reviewers","base":"main","head":"sN0uOM0J"}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/changes
+        host: 127.0.0.1:53776
+        body: '{"subject":"Testing m4b4yRIS","body":"Test PR without reviewers","base":"main","head":"m4b4yRIS"}'
+        url: http://127.0.0.1:53776/abhinav/test-repo/changes
         method: POST
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 82
-        body: |
+        content_length: 81
+        body: |-
             {
-              "number": 14,
-              "url": "http://127.0.0.1:56374/abhinav/test-repo/change/14"
+              "number": 22,
+              "url": "http://127.0.0.1:53777/abhinav/test-repo/change/22"
             }
         headers:
             Content-Length:
-                - "82"
+                - "81"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 14.613166ms
+        duration: 30.36725ms
     - id: 1
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/14
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/22
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 518
-        body: |
+        content_length: 517
+        body: |-
             {
-              "number": 14,
-              "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/14",
+              "number": 22,
+              "html_url": "http://127.0.0.1:53777/abhinav/test-repo/change/22",
               "state": "open",
-              "title": "Testing sN0uOM0J",
+              "title": "Testing m4b4yRIS",
               "body": "Test PR without reviewers",
               "base": {
                 "repository": {
@@ -56,95 +56,93 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                "sha": "0cdbbf7fe792c76535805c135d7db566f9720e2b"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "sN0uOM0J",
-                "sha": "fe1856b3db7f006918e699a1c316e92ad3342d93"
+                "ref": "m4b4yRIS",
+                "sha": "cf2e99842c9b737d772b64aa308bcb16b2ca0124"
               }
             }
         headers:
             Content-Length:
-                - "518"
+                - "517"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 11.315875ms
+        duration: 28.437875ms
     - id: 2
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53776
         body: '{"reviewers":["reviewer1"]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/14
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/22
         method: PATCH
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 3
-        body: |
-            {}
+        content_length: 2
+        body: '{}'
         headers:
             Content-Length:
-                - "3"
+                - "2"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 415.5µs
+        duration: 808.125µs
     - id: 3
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 27
-        host: 127.0.0.1:56373
+        host: 127.0.0.1:53776
         body: '{"reviewers":["reviewer2"]}'
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/14
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/22
         method: PATCH
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 3
-        body: |
-            {}
+        content_length: 2
+        body: '{}'
         headers:
             Content-Length:
-                - "3"
+                - "2"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 102.334µs
+        duration: 349.542µs
     - id: 4
       request:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
         content_length: 0
-        host: 127.0.0.1:56373
-        url: http://127.0.0.1:56373/abhinav/test-repo/change/14
+        host: 127.0.0.1:53776
+        url: http://127.0.0.1:53776/abhinav/test-repo/change/22
         method: GET
       response:
         proto: HTTP/1.1
         proto_major: 1
         proto_minor: 1
-        content_length: 583
-        body: |
+        content_length: 582
+        body: |-
             {
-              "number": 14,
-              "html_url": "http://127.0.0.1:56374/abhinav/test-repo/change/14",
+              "number": 22,
+              "html_url": "http://127.0.0.1:53777/abhinav/test-repo/change/22",
               "state": "open",
-              "title": "Testing sN0uOM0J",
+              "title": "Testing m4b4yRIS",
               "body": "Test PR without reviewers",
               "base": {
                 "repository": {
@@ -152,15 +150,15 @@ interactions:
                   "name": "test-repo"
                 },
                 "ref": "main",
-                "sha": "71012226be854d2a77b193ca779abba5cc84cca0"
+                "sha": "0cdbbf7fe792c76535805c135d7db566f9720e2b"
               },
               "head": {
                 "repository": {
                   "owner": "abhinav",
                   "name": "test-repo"
                 },
-                "ref": "sN0uOM0J",
-                "sha": "fe1856b3db7f006918e699a1c316e92ad3342d93"
+                "ref": "m4b4yRIS",
+                "sha": "cf2e99842c9b737d772b64aa308bcb16b2ca0124"
               },
               "requested_reviewers": [
                 "reviewer1",
@@ -169,9 +167,9 @@ interactions:
             }
         headers:
             Content-Length:
-                - "583"
+                - "582"
             Content-Type:
                 - application/json
         status: 200 OK
         code: 200
-        duration: 11.028083ms
+        duration: 24.4835ms
