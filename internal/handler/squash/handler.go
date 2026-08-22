@@ -92,8 +92,7 @@ func (h *Handler) SquashBranch(ctx context.Context, branchName string, opts *Opt
 	}
 
 	if err := h.Service.VerifyRestacked(ctx, branchName); err != nil {
-		var restackErr *spice.BranchNeedsRestackError
-		if errors.As(err, &restackErr) {
+		if _, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 			return fmt.Errorf("branch %v needs to be restacked before it can be squashed", branchName)
 		}
 		return fmt.Errorf("verify restacked: %w", err)

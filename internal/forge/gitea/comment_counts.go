@@ -40,9 +40,7 @@ func (r *Repository) reviewCommentCounts(
 ) (*forge.CommentCounts, error) {
 	var total int
 	opts := &giteagw.ListPullReviewsOptions{
-		ListOptions: giteagw.ListOptions{
-			Limit: _commentCountsReviewPageSize,
-		},
+		Limit: _commentCountsReviewPageSize,
 	}
 
 	for {

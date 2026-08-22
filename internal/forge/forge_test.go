@@ -181,7 +181,7 @@ func TestDefinition_New_rejectsMismatchedConfiguredURL(t *testing.T) {
 		{
 			name: "ShamHub",
 			def: &shamhub.Definition{
-				Options: shamhub.Options{URL: "https://shamhub.example.com"},
+				URL: "https://shamhub.example.com",
 			},
 		},
 	}

@@ -20,10 +20,8 @@ func TestRepository_ChangeChecks(t *testing.T) {
 		case "/api/v4/projects/42/merge_requests/55":
 			assert.Empty(t, r.URL.RawQuery)
 			writeJSON(t, w, gitlab.MergeRequest{
-				BasicMergeRequest: gitlab.BasicMergeRequest{
-					SHA:          "abc123",
-					SourceBranch: "feature/refit",
-				},
+				SHA:          "abc123",
+				SourceBranch: "feature/refit",
 			})
 		case "/api/v4/projects/42/repository/commits/abc123/statuses":
 			assert.Equal(t, "100", r.URL.Query().Get("per_page"))
@@ -99,10 +97,8 @@ func TestRepository_ChangeChecks_readsCommitStatusesWithoutHeadPipeline(t *testi
 		case "/api/v4/projects/42/merge_requests/55":
 			assert.Empty(t, r.URL.RawQuery)
 			writeJSON(t, w, gitlab.MergeRequest{
-				BasicMergeRequest: gitlab.BasicMergeRequest{
-					SHA:          "abc123",
-					SourceBranch: "feature/refit",
-				},
+				SHA:          "abc123",
+				SourceBranch: "feature/refit",
 			})
 		case "/api/v4/projects/42/repository/commits/abc123/statuses":
 			assert.Equal(t, "feature/refit", r.URL.Query().Get("ref"))

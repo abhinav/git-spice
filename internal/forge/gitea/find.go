@@ -34,10 +34,8 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 
 	for {
 		prs, resp, err := r.client.PullList(ctx, r.owner, r.repo, &giteagw.ListPullRequestsOptions{
-			ListOptions: giteagw.ListOptions{
-				Limit: 50,
-				Page:  page,
-			},
+			Limit: 50,
+			Page:  page,
 			State: state,
 			Sort:  "recentupdate",
 		})

@@ -507,8 +507,7 @@ func (gc *glabCLI) Status(ctx context.Context, host string) (ok bool, err error)
 	cmd := xec.Command(ctx, nil, gc.GL, "auth", "status", "--hostname", host).
 		WithExecer(gc.execer)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*xec.ExitError](err); ok {
 			return false, nil
 		}
 
@@ -529,8 +528,7 @@ func (gc *glabCLI) Token(ctx context.Context, host string) (string, error) {
 		WithExecer(gc.execer).
 		WithStderr(&stderr)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if _, ok := errors.AsType[*xec.ExitError](err); ok {
 			return "", errors.Join(
 				errors.New("glab is not authenticated"),
 				fmt.Errorf("stderr: %s", stderr.String()),

@@ -261,8 +261,7 @@ func (h *Handler) ListBranches(ctx context.Context, req *BranchesRequest) (*Bran
 				// reconciled value so this invocation does not render stale commits.
 				baseHash, err := h.Service.CheckRestacked(ctx, branch.Name)
 				if err != nil {
-					var needsRestack *spice.BranchNeedsRestackError
-					if errors.As(err, &needsRestack) {
+					if needsRestack, ok := errors.AsType[*spice.BranchNeedsRestackError](err); ok {
 						item.NeedsRestack = true
 						baseHash = needsRestack.Upstream
 					} else {

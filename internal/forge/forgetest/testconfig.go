@@ -146,30 +146,26 @@ func CanonicalBitbucketConfig() ForgeConfig {
 // a single Gitea user account can serve all three roles in tests.
 func CanonicalGiteaConfig() GiteaConfig {
 	return GiteaConfig{
-		URL: "http://localhost:3000",
-		ForgeConfig: ForgeConfig{
-			Owner:     CanonicalOwner,
-			Repo:      CanonicalRepo,
-			ForkOwner: "test-reviewer",
-			ForkRepo:  "test-fork-repo",
-			Reviewer:  "test-reviewer",
-			Assignee:  "test-reviewer",
-		},
+		URL:       "http://localhost:3000",
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalRepo,
+		ForkOwner: "test-reviewer",
+		ForkRepo:  "test-fork-repo",
+		Reviewer:  "test-reviewer",
+		Assignee:  "test-reviewer",
 	}
 }
 
 // CanonicalForgejoConfig returns canonical placeholders for Forgejo fixtures.
 func CanonicalForgejoConfig() ForgejoConfig {
 	return ForgejoConfig{
-		URL: "https://codeberg.org",
-		ForgeConfig: ForgeConfig{
-			Owner:     CanonicalOwner,
-			Repo:      CanonicalRepo,
-			ForkOwner: "test-fork-owner",
-			ForkRepo:  CanonicalRepo,
-			Reviewer:  "test-reviewer",
-			Assignee:  "test-assignee",
-		},
+		URL:       "https://codeberg.org",
+		Owner:     CanonicalOwner,
+		Repo:      CanonicalRepo,
+		ForkOwner: "test-fork-owner",
+		ForkRepo:  CanonicalRepo,
+		Reviewer:  "test-reviewer",
+		Assignee:  "test-assignee",
 	}
 }
 

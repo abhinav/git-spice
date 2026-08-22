@@ -131,9 +131,7 @@ func (r *Repository) FindChangesByBranch(ctx context.Context, branch string, opt
 	opt := &gitlab.ListProjectMergeRequestsOptions{
 		OrderBy:      new("updated_at"),
 		SourceBranch: new(branch),
-		ListOptions: gitlab.ListOptions{
-			PerPage: int64(opts.Limit),
-		},
+		PerPage:      int64(opts.Limit),
 	}
 
 	if opts.State != 0 {

@@ -58,8 +58,7 @@ func (cmd *rebaseContinueCmd) Run(
 
 	// Finish the ongoing rebase.
 	if err := wt.RebaseContinue(ctx, &opts); err != nil {
-		var rebaseErr *git.RebaseInterruptError
-		if errors.As(err, &rebaseErr) {
+		if _, ok := errors.AsType[*git.RebaseInterruptError](err); ok {
 			var msg strings.Builder
 			fmt.Fprintf(&msg, "There are more conflicts to resolve.\n")
 			fmt.Fprintf(&msg, "Resolve them and run the following command again:\n")

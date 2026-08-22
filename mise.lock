@@ -125,113 +125,120 @@ url = "https://github.com/abhinav/gotestsum/releases/download/v1.14.0-beta.1%2Bg
 url_api = "https://api.github.com/repos/abhinav/gotestsum/releases/assets/428166818"
 
 [[tools."github:abhinav/requiredfield"]]
-version = "0.9.0"
+version = "0.10.0"
 backend = "github:abhinav/requiredfield"
 
 [tools."github:abhinav/requiredfield"."platforms.linux-arm64"]
-checksum = "sha256:1bad25e1570b0df22f551c0ebec3fdb41fed7fb4fdd654ccc36f4fc844c44ec4"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740555"
+checksum = "sha256:67963080de1311c9978c865dd16519139af2b92ff235f562ea9ccaefba730f16"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Linux-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684647"
 
 [tools."github:abhinav/requiredfield"."platforms.linux-arm64-musl"]
-checksum = "sha256:1bad25e1570b0df22f551c0ebec3fdb41fed7fb4fdd654ccc36f4fc844c44ec4"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-aarch64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740555"
+checksum = "sha256:67963080de1311c9978c865dd16519139af2b92ff235f562ea9ccaefba730f16"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Linux-aarch64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684647"
 
 [tools."github:abhinav/requiredfield"."platforms.linux-x64"]
-checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740554"
+checksum = "sha256:33cf4d87eb1b540ca3efec4d21a070f750557c638da83e29ffbe84eb48b162de"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684648"
 
 [tools."github:abhinav/requiredfield"."platforms.linux-x64-musl"]
-checksum = "sha256:46f82f7a552c0fd61dbe3ca7ffa165de85b6d5ed1e97a833fe7d154dfb331bcf"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Linux-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740554"
+checksum = "sha256:33cf4d87eb1b540ca3efec4d21a070f750557c638da83e29ffbe84eb48b162de"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684648"
 
 [tools."github:abhinav/requiredfield"."platforms.macos-arm64"]
-checksum = "sha256:a9924eeb3161db4962466f3d2172d998f8719d8afebed5ef4e41c7b6287b9581"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740565"
+checksum = "sha256:01918d9178c2b5d8f12a7d2725b5d89fd672ae69112a5210e9dbb54d106f4c73"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684668"
 
 [tools."github:abhinav/requiredfield"."platforms.macos-x64"]
-checksum = "sha256:3e0c8c89d2b2c9340807b659d76ba5aaaa15a38d178f92d5d59d1a3a4a453d2f"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Darwin-x86_64.tar.gz"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740567"
+checksum = "sha256:ec9d06e71a947e5676aede10b67d084be177731f8464173b488efe011f474930"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Darwin-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684670"
 
 [tools."github:abhinav/requiredfield"."platforms.windows-x64"]
-checksum = "sha256:d431d9086678669e49a2d609ab77a07ecb1a09d676aa7907c8fa2e39fedd5a29"
-url = "https://github.com/abhinav/requiredfield/releases/download/v0.9.0/requiredfield.Windows-x86_64.zip"
-url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/357740550"
+checksum = "sha256:66a5af92e063fb84b735b346911799530d521d4b6bdfef7c9fa657f3d41a1d5d"
+url = "https://github.com/abhinav/requiredfield/releases/download/v0.10.0/requiredfield.Windows-x86_64.zip"
+url_api = "https://api.github.com/repos/abhinav/requiredfield/releases/assets/522684646"
 
 [[tools.go]]
-version = "1.26.5"
+version = "1.27.0"
 backend = "core:go"
 
 [tools.go."platforms.linux-arm64"]
-checksum = "sha256:fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49"
-url = "https://dl.google.com/go/go1.26.5.linux-arm64.tar.gz"
+checksum = "sha256:51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda"
+url = "https://dl.google.com/go/go1.27.0.linux-arm64.tar.gz"
 
 [tools.go."platforms.linux-arm64-musl"]
-checksum = "sha256:fe4789e92b1f33358680864bbe8704289e7bb5fc207d80623c308935bd696d49"
-url = "https://dl.google.com/go/go1.26.5.linux-arm64.tar.gz"
+checksum = "sha256:51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda"
+url = "https://dl.google.com/go/go1.27.0.linux-arm64.tar.gz"
 
 [tools.go."platforms.linux-x64"]
-checksum = "sha256:5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053"
-url = "https://dl.google.com/go/go1.26.5.linux-amd64.tar.gz"
+checksum = "sha256:675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685"
+url = "https://dl.google.com/go/go1.27.0.linux-amd64.tar.gz"
 
 [tools.go."platforms.linux-x64-musl"]
-checksum = "sha256:5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053"
-url = "https://dl.google.com/go/go1.26.5.linux-amd64.tar.gz"
+checksum = "sha256:675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685"
+url = "https://dl.google.com/go/go1.27.0.linux-amd64.tar.gz"
 
 [tools.go."platforms.macos-arm64"]
-checksum = "sha256:efb87ff28af9a188d0536ef5d42e63dd52ba8263cd7344a993cc48dd11dedb6a"
-url = "https://dl.google.com/go/go1.26.5.darwin-arm64.tar.gz"
+checksum = "sha256:90493b3bbd5e10f91d12153198bf1994fd756399b4fec93b49b0c6e2acdeeb3e"
+url = "https://dl.google.com/go/go1.27.0.darwin-arm64.tar.gz"
 
 [tools.go."platforms.macos-x64"]
-checksum = "sha256:6231d8d3b8f5552ec6cbf6d685bdd5482e1e703214b120e89b3bf0d7bf1ef725"
-url = "https://dl.google.com/go/go1.26.5.darwin-amd64.tar.gz"
+checksum = "sha256:d3314e25496e4381d71a5c51d2907e7af655d199f6780b549f015bd85fef4986"
+url = "https://dl.google.com/go/go1.27.0.darwin-amd64.tar.gz"
 
 [tools.go."platforms.windows-x64"]
-checksum = "sha256:97e6b2a833b6d89f9ff17d25419ac0a7e3b482a044e9ab18cdef834bd834fd38"
-url = "https://dl.google.com/go/go1.26.5.windows-amd64.zip"
+checksum = "sha256:f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4"
+url = "https://dl.google.com/go/go1.27.0.windows-amd64.zip"
 
 [[tools.golangci-lint]]
-version = "2.12.2"
+version = "2.13.1"
 backend = "aqua:golangci/golangci-lint"
 
 [tools.golangci-lint."platforms.linux-arm64"]
-checksum = "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-arm64.tar.gz"
+checksum = "sha256:908317c23db18448f924e853b3d8a659fd919614cd438f224810a4053daa2607"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396912"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.linux-arm64-musl"]
-checksum = "sha256:44cd40a8c76c86755375adfeea52cfd3533cb43d7bd647771e0ae065e166df3a"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-arm64.tar.gz"
+checksum = "sha256:908317c23db18448f924e853b3d8a659fd919614cd438f224810a4053daa2607"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396912"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.linux-x64"]
-checksum = "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-amd64.tar.gz"
+checksum = "sha256:b17bfbc9d4aaa48be7f4f1ce3240bc3d8200c870c072bacf15c26219e2cfb9cc"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396872"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.linux-x64-musl"]
-checksum = "sha256:8df580d2670fed8fa984aac0507099af8df275e665215f5c7a2ae3943893a553"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-linux-amd64.tar.gz"
+checksum = "sha256:b17bfbc9d4aaa48be7f4f1ce3240bc3d8200c870c072bacf15c26219e2cfb9cc"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-linux-amd64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396872"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.macos-arm64"]
-checksum = "sha256:a9c54498731b3128f79e090be6110f3e5fffccc617b08142ed244d4126c73f29"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-darwin-arm64.tar.gz"
+checksum = "sha256:0c9818baf6fb8ad26c6d2ef51b68d5a1e260ef07727036b1431647cc44637c7c"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396798"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.macos-x64"]
-checksum = "sha256:f6f06d94b6241521c53d15450c5209b028270bf966f842afb11c030c79f5bc16"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-darwin-amd64.tar.gz"
+checksum = "sha256:2c373363953e4e0bee2a03b7fe864a5eb6a3822927cb077d9ca33f2ae3cb2da2"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-darwin-amd64.tar.gz"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396867"
 provenance = "github-attestations"
 
 [tools.golangci-lint."platforms.windows-x64"]
-checksum = "sha256:bd42e3ebc8cb4ececb86941983baaf1dc221bbb04d838e94ce63b49cc91e02bb"
-url = "https://github.com/golangci/golangci-lint/releases/download/v2.12.2/golangci-lint-2.12.2-windows-amd64.zip"
+checksum = "sha256:cc119bdd57d2b35ce36fbc174b54949e1a1e45f2cadaf64372cc799cabaf88a9"
+url = "https://github.com/golangci/golangci-lint/releases/download/v2.13.1/golangci-lint-2.13.1-windows-amd64.zip"
+url_api = "https://api.github.com/repos/golangci/golangci-lint/releases/assets/522396821"
 provenance = "github-attestations"
 
 [[tools.requiredfield]]

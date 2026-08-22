@@ -630,8 +630,7 @@ func (cmd *mainCmd) AfterApply(
 
 			remoteRepo, err := remoteResolver.Open(ctx, secretStash, remote.Upstream)
 			if err != nil {
-				var unsupported *unsupportedForgeError
-				if !errors.As(err, &unsupported) {
+				if _, ok := errors.AsType[*unsupportedForgeError](err); !ok {
 					return nil, err
 				}
 				remoteRepo = nil

@@ -130,11 +130,9 @@ func TestIntegration(t *testing.T) {
 	token := tokenFixture.Get(t)
 
 	shamForge := &Forge{
-		Options: Options{
-			URL:    gitURL,
-			APIURL: apiURL,
-		},
-		Log: silogtest.New(t),
+		URL:    gitURL,
+		APIURL: apiURL,
+		Log:    silogtest.New(t),
 	}
 
 	forgetest.RunIntegration(t, forgetest.IntegrationConfig{

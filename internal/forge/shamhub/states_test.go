@@ -54,11 +54,9 @@ func TestForgeRepository_MergeChange_mergeMethod(t *testing.T) {
 
 			repo, err := newRepository(
 				&Forge{
-					Options: Options{
-						URL:    "https://example.com",
-						APIURL: srv.URL,
-					},
-					Log: silog.Nop(),
+					URL:    "https://example.com",
+					APIURL: srv.URL,
+					Log:    silog.Nop(),
 				},
 				&AuthenticationToken{tok: "token"},
 				&RepositoryID{

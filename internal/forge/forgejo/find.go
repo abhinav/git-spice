@@ -25,10 +25,8 @@ func (r *Repository) FindChangesByBranch(
 	listOptions := &forgejo.PullRequestListOptions{
 		State: pullRequestListState(opts.State),
 		Sort:  "recentupdate",
-		ListOptions: forgejo.ListOptions{
-			Page:  1,
-			Limit: 50,
-		},
+		Page:  1,
+		Limit: 50,
 	}
 
 	var changes []*forge.FindChangeItem

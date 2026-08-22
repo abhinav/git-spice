@@ -5,7 +5,7 @@ import "log/slog"
 // Level is a log level.
 type Level slog.Level
 
-var _ slog.Leveler = (Level)(0)
+var _ slog.Leveler = Level(0)
 
 // Supported log levels.
 const (

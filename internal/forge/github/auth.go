@@ -552,8 +552,7 @@ type CLIAuthenticator struct {
 func (a *CLIAuthenticator) Authenticate(ctx context.Context, _ ui.View) (*AuthenticationToken, error) {
 	cmd := xec.Command(ctx, nil, a.GH, "auth", "token").WithExecer(a.execer)
 	if err := cmd.Run(); err != nil {
-		var exitErr *xec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*xec.ExitError](err); ok {
 			return nil, errors.Join(
 				errors.New("gh is not authenticated"),
 				fmt.Errorf("stderr: %s", exitErr.Stderr),

@@ -36,7 +36,7 @@ func (r *Repository) discussionCounts(
 	var total, resolved int
 
 	opts := &gitlab.ListMergeRequestDiscussionsOptions{
-		ListOptions: gitlab.ListOptions{PerPage: 100},
+		PerPage: 100,
 	}
 
 	for {

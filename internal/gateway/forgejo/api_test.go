@@ -100,9 +100,9 @@ func TestClient_PullRequestList(t *testing.T) {
 		"owner",
 		"repo",
 		&PullRequestListOptions{
-			ListOptions: ListOptions{Limit: 20},
-			State:       "open",
-			Sort:        "recentupdate",
+			Limit: 20,
+			State: "open",
+			Sort:  "recentupdate",
 		},
 	)
 	require.NoError(t, err)
@@ -303,8 +303,8 @@ func TestClient_UserSearch(t *testing.T) {
 
 	client := newTestClient(t, srv)
 	users, _, err := client.UserSearch(t.Context(), &UserSearchOptions{
-		ListOptions: ListOptions{Page: 1},
-		Query:       "reviewer",
+		Page:  1,
+		Query: "reviewer",
 	})
 	require.NoError(t, err)
 	require.Len(t, users.Data, 1)
