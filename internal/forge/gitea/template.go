@@ -50,9 +50,9 @@ func (r *Repository) fetchTemplate(ctx context.Context, path string) (string, er
 }
 
 func templateFilename(path string) string {
-	idx := strings.LastIndexByte(path, '/')
-	if idx < 0 {
-		return path
+	_, filename, ok := strings.CutLast(path, "/")
+	if ok {
+		return filename
 	}
-	return path[idx+1:]
+	return path
 }

@@ -756,8 +756,7 @@ func (e *mergePlanExecutor) prepareForMerge(
 	item *mergeItem,
 ) error {
 	if err := e.Service.VerifyRestacked(ctx, item.branch); err != nil {
-		var restackErr *spice.BranchNeedsRestackError
-		if !errors.As(err, &restackErr) {
+		if _, ok := errors.AsType[*spice.BranchNeedsRestackError](err); !ok {
 			return fmt.Errorf("verify restacked: %w", err)
 		}
 

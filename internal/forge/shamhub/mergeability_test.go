@@ -410,11 +410,9 @@ func newMergeabilityTestRepository(t *testing.T) (*ShamHub, *forgeRepository) {
 
 	repository, err := newRepository(
 		&Forge{
-			Options: Options{
-				URL:    sh.GitURL(),
-				APIURL: sh.APIURL(),
-			},
-			Log: silog.Nop(),
+			URL:    sh.GitURL(),
+			APIURL: sh.APIURL(),
+			Log:    silog.Nop(),
 		},
 		&AuthenticationToken{tok: token},
 		&RepositoryID{

@@ -174,8 +174,7 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 
 		res, err := handler(state, r.Context(), req.(Req))
 		if err != nil {
-			var httpErr *httpError
-			if errors.As(err, &httpErr) {
+			if httpErr, ok := errors.AsType[*httpError](err); ok {
 				http.Error(w, httpErr.Error(), httpErr.code)
 			} else {
 				http.Error(w, fmt.Sprintf("error: %v", err), http.StatusInternalServerError)

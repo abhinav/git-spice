@@ -81,18 +81,18 @@ func (b *Point) Decode(ctx *kong.DecodeContext) error {
 		return err
 	}
 
-	idx := strings.LastIndex(spec, ":")
+	commit, name, ok := strings.CutLast(spec, ":")
 	switch {
-	case idx == -1:
+	case !ok:
 		return fmt.Errorf("expected COMMIT:NAME, got %q", spec)
-	case len(spec[:idx]) == 0:
+	case commit == "":
 		return fmt.Errorf("part before : cannot be empty: %q", spec)
-	case len(spec[idx+1:]) == 0:
+	case name == "":
 		return fmt.Errorf("part after : cannot be empty: %q", spec)
 	}
 
-	b.Commit = spec[:idx]
-	b.Name = spec[idx+1:]
+	b.Commit = commit
+	b.Name = name
 	return nil
 }
 

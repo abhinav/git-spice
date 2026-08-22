@@ -177,10 +177,10 @@ func TestClient_PullList(t *testing.T) {
 
 	client := newTestClient(t, srv)
 	prs, resp, err := client.PullList(t.Context(), "captain", "warp-core", &ListPullRequestsOptions{
-		ListOptions: ListOptions{Limit: 10},
-		State:       "open",
-		Sort:        "recentupdate",
-		Head:        "scotty/fix",
+		Limit: 10,
+		State: "open",
+		Sort:  "recentupdate",
+		Head:  "scotty/fix",
 	})
 	require.NoError(t, err)
 	require.Len(t, prs, 2)
@@ -230,7 +230,7 @@ func TestClient_PullReviewList(t *testing.T) {
 		"warp-core",
 		42,
 		&ListPullReviewsOptions{
-			ListOptions: ListOptions{Page: 2, Limit: 20},
+			Page: 2, Limit: 20,
 		},
 	)
 	require.NoError(t, err)
@@ -335,7 +335,7 @@ func TestClient_CommentList(t *testing.T) {
 	client := newTestClient(t, srv)
 	comments, resp, err := client.CommentList(t.Context(), "captain", "warp-core", 42,
 		&ListIssueCommentsOptions{
-			ListOptions: ListOptions{Page: 2, Limit: 20},
+			Page: 2, Limit: 20,
 		},
 	)
 	require.NoError(t, err)
@@ -379,7 +379,7 @@ func TestClient_CommitStatusList(t *testing.T) {
 		"warp-core",
 		"abc123",
 		&ListCommitStatusOptions{
-			ListOptions: ListOptions{Page: 2, Limit: 20},
+			Page: 2, Limit: 20,
 		},
 	)
 	require.NoError(t, err)
@@ -401,7 +401,7 @@ func TestClient_LabelList(t *testing.T) {
 
 	client := newTestClient(t, srv)
 	labels, _, err := client.LabelList(t.Context(), "captain", "warp-core",
-		&ListLabelsOptions{ListOptions: ListOptions{Limit: 50}},
+		&ListLabelsOptions{Limit: 50},
 	)
 	require.NoError(t, err)
 	require.Len(t, labels, 2)
@@ -484,7 +484,7 @@ func TestClient_PullList_paginated(t *testing.T) {
 
 	var all []*PullRequest
 	opts := &ListPullRequestsOptions{
-		ListOptions: ListOptions{Limit: 2},
+		Limit: 2,
 	}
 	for {
 		page, resp, err := client.PullList(t.Context(), "captain", "warp-core", opts)

@@ -13,7 +13,7 @@ import (
 // This is NOT thread safe. Use [SyncBackend] to make it so.
 type MapBackend map[string][]byte
 
-var _ Backend = (MapBackend)(nil)
+var _ Backend = MapBackend(nil)
 
 // Get retrieves a value from the store.
 func (m MapBackend) Get(_ context.Context, key string, dst any) error {

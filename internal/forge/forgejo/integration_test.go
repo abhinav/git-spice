@@ -166,15 +166,13 @@ func testConfig(
 
 	config := forgetest.Config(t).Forgejo
 	cfg = forgetest.ForgejoConfig{
-		URL: cmp.Or(os.Getenv("FORGEJO_URL"), config.URL, canonical.URL),
-		ForgeConfig: forgetest.ForgeConfig{
-			Owner:     config.Owner,
-			Repo:      config.Repo,
-			ForkOwner: config.ForkOwner,
-			ForkRepo:  config.ForkRepo,
-			Reviewer:  config.Reviewer,
-			Assignee:  config.Assignee,
-		},
+		URL:       cmp.Or(os.Getenv("FORGEJO_URL"), config.URL, canonical.URL),
+		Owner:     config.Owner,
+		Repo:      config.Repo,
+		ForkOwner: config.ForkOwner,
+		ForkRepo:  config.ForkRepo,
+		Reviewer:  config.Reviewer,
+		Assignee:  config.Assignee,
 	}
 
 	return cfg, forgetest.ForgejoConfigSanitizers(cfg, canonical)

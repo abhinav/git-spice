@@ -56,10 +56,8 @@ func TestRepository_MergeChange_method(t *testing.T) {
 				}
 
 				writeGitLabJSON(t, w, http.StatusOK, gatewaygitlab.MergeRequest{
-					BasicMergeRequest: gatewaygitlab.BasicMergeRequest{
-						IID:   55,
-						State: "merged",
-					},
+					IID:   55,
+					State: "merged",
 				})
 			}))
 			defer srv.Close()

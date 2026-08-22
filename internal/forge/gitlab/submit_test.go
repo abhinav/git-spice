@@ -35,10 +35,8 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 			assert.NotContains(t, body, "source_project_id")
 
 			writeGitLabJSON(t, w, http.StatusCreated, gatewaygitlab.MergeRequest{
-				BasicMergeRequest: gatewaygitlab.BasicMergeRequest{
-					IID:    55,
-					WebURL: "https://gitlab.example.com/test-owner/test-repo/-/merge_requests/55",
-				},
+				IID:    55,
+				WebURL: "https://gitlab.example.com/test-owner/test-repo/-/merge_requests/55",
 			})
 
 		default:

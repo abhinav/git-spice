@@ -29,11 +29,9 @@ func TestConfigSanitizers_GitHubRoleCollisions(t *testing.T) {
 
 func TestGiteaConfigSanitizers_URLCollision(t *testing.T) {
 	cfg := GiteaConfig{
-		URL: "https://forge.example.com/alice/widgets",
-		ForgeConfig: ForgeConfig{
-			Owner: "alice",
-			Repo:  "widgets",
-		},
+		URL:   "https://forge.example.com/alice/widgets",
+		Owner: "alice",
+		Repo:  "widgets",
 	}
 
 	got := applyTestSanitizers(

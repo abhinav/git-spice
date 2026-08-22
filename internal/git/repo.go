@@ -57,9 +57,6 @@ func InitWorktree(ctx context.Context, dir string, opts InitOptions) (*Worktree,
 		exec:             opts.exec,
 		indexLockTimeout: _defaultIndexLockTimeout,
 	}
-	if opts.IndexLockTimeout != nil {
-		commonOpts.indexLockTimeout = max(*opts.IndexLockTimeout, 0)
-	}
 
 	if opts.Log != nil {
 		opts.Log.Debug("Initializing repository", "path", dir)

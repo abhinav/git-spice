@@ -46,7 +46,7 @@ func (r *Repository) labelIDs(ctx context.Context) (map[string]int64, error) {
 	page := int64(1)
 	for {
 		labels, resp, err := r.client.LabelList(ctx, r.owner, r.repo, &giteagw.ListLabelsOptions{
-			ListOptions: giteagw.ListOptions{Page: page, Limit: 50},
+			Page: page, Limit: 50,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("list labels: %w", err)

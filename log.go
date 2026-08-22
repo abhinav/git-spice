@@ -46,8 +46,7 @@ func (*logCmd) AfterApply(kctx *kong.Context) error {
 			Service:    svc,
 			ResolveRepository: func(ctx context.Context, remote string) (forge.Forge, forge.RepositoryID, error) {
 				f, repoID, err := remoteResolver.Resolve(ctx, remote)
-				var unsupported *unsupportedForgeError
-				if errors.As(err, &unsupported) {
+				if _, ok := errors.AsType[*unsupportedForgeError](err); ok {
 					return nil, nil, nil
 				}
 				return f, repoID, err

@@ -9,7 +9,7 @@ import (
 )
 
 func TestForge_ParseRepositoryPath_knownForge(t *testing.T) {
-	f := &Forge{Options: Options{URL: "https://shamhub.example"}}
+	f := &Forge{URL: "https://shamhub.example"}
 	remoteURL, err := giturl.Parse("git@shamhub-alias:example/repo.git")
 	require.NoError(t, err)
 

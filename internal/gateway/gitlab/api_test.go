@@ -92,10 +92,8 @@ func TestClient_MergeRequestCreate(t *testing.T) {
 			"remove_source_branch":true
 		}`)
 		writeJSON(t, w, http.StatusCreated, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:    55,
-				WebURL: "https://gitlab.example.com/captain/warp-core/-/merge_requests/55",
-			},
+			IID:    55,
+			WebURL: "https://gitlab.example.com/captain/warp-core/-/merge_requests/55",
 		})
 	}))
 	defer srv.Close()
@@ -125,15 +123,13 @@ func TestClient_MergeRequestGet(t *testing.T) {
 		assert.Equal(t, http.MethodGet, r.Method)
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55", r.URL.Path)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:                 55,
-				Title:               "Stabilize nacelles",
-				TargetBranch:        "main",
-				Labels:              []string{"engineering"},
-				DetailedMergeStatus: DetailedMergeStatusMergeable,
-				Reviewers: []*BasicUser{
-					{ID: 12, Username: "spock"},
-				},
+			IID:                 55,
+			Title:               "Stabilize nacelles",
+			TargetBranch:        "main",
+			Labels:              []string{"engineering"},
+			DetailedMergeStatus: DetailedMergeStatusMergeable,
+			Reviewers: []*BasicUser{
+				{ID: 12, Username: "spock"},
 			},
 		})
 	}))
@@ -161,11 +157,9 @@ func TestClient_MergeRequestUpdate(t *testing.T) {
 			"state_event":"close"
 		}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:          55,
-				Title:        "Draft: Stabilize nacelles",
-				TargetBranch: "release",
-			},
+			IID:          55,
+			Title:        "Draft: Stabilize nacelles",
+			TargetBranch: "release",
 		})
 	}))
 	defer srv.Close()
@@ -204,7 +198,7 @@ func TestClient_MergeRequestList(t *testing.T) {
 		t.Context(),
 		int64(42),
 		&ListProjectMergeRequestsOptions{
-			ListOptions:  ListOptions{PerPage: 20},
+			PerPage:      20,
 			IIDs:         &[]int64{55, 56},
 			OrderBy:      new("updated_at"),
 			State:        new("opened"),
@@ -245,7 +239,7 @@ func TestClient_MergeRequestList_paginated(t *testing.T) {
 
 	var all []*BasicMergeRequest
 	opts := &ListProjectMergeRequestsOptions{
-		ListOptions: ListOptions{PerPage: 2},
+		PerPage: 2,
 	}
 	for {
 		page, resp, err := client.MergeRequestList(t.Context(), int64(42), opts)
@@ -268,10 +262,8 @@ func TestClient_MergeRequestAccept(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"should_remove_source_branch":true}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -295,10 +287,8 @@ func TestClient_MergeRequestAccept_withSHA(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"sha":"abc123"}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -322,10 +312,8 @@ func TestClient_MergeRequestAccept_withSquash(t *testing.T) {
 		assert.Equal(t, "/api/v4/projects/42/merge_requests/55/merge", r.URL.Path)
 		assertJSONBody(t, r, `{"squash":true}`)
 		writeJSON(t, w, http.StatusOK, MergeRequest{
-			BasicMergeRequest: BasicMergeRequest{
-				IID:   55,
-				State: "merged",
-			},
+			IID:   55,
+			State: "merged",
 		})
 	}))
 	defer srv.Close()
@@ -423,11 +411,9 @@ func TestClient_CommitStatusList(t *testing.T) {
 		int64(42),
 		"abc123",
 		&ListCommitStatusesOptions{
-			Ref: &ref,
-			ListOptions: ListOptions{
-				PerPage: 100,
-				Page:    2,
-			},
+			Ref:     &ref,
+			PerPage: 100,
+			Page:    2,
 		},
 	)
 	require.NoError(t, err)
@@ -541,11 +527,9 @@ func TestClient_MergeRequestNoteList(t *testing.T) {
 		int64(42),
 		55,
 		&ListMergeRequestNotesOptions{
-			ListOptions: ListOptions{
-				PerPage: 20,
-				Page:    2,
-			},
-			Sort: new("asc"),
+			PerPage: 20,
+			Page:    2,
+			Sort:    new("asc"),
 		},
 	)
 	require.NoError(t, err)
@@ -604,10 +588,8 @@ func TestClient_MergeRequestDiscussionList(t *testing.T) {
 		int64(42),
 		55,
 		&ListMergeRequestDiscussionsOptions{
-			ListOptions: ListOptions{
-				PerPage: 100,
-				Page:    2,
-			},
+			PerPage: 100,
+			Page:    2,
 		},
 	)
 	require.NoError(t, err)

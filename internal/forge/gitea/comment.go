@@ -89,9 +89,7 @@ func (r *Repository) ListChangeComments(
 
 	return func(yield func(*forge.ListChangeCommentItem, error) bool) {
 		opts := &giteagw.ListIssueCommentsOptions{
-			ListOptions: giteagw.ListOptions{
-				Limit: int64(_listChangeCommentsPageSize),
-			},
+			Limit: int64(_listChangeCommentsPageSize),
 		}
 
 		for pageNum := 1; true; pageNum++ {

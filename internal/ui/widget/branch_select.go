@@ -215,12 +215,10 @@ func (b *BranchTreeSelect) Init() tea.Cmd {
 			// but it still needs to be shown
 			// for the tree to render correctly.
 			base = &branchInfo{
-				Index:   len(b.all),
-				Visible: true,
-				BranchTreeItem: BranchTreeItem{
-					Branch:   bi.Base,
-					Disabled: true,
-				},
+				Index:    len(b.all),
+				Visible:  true,
+				Branch:   bi.Base,
+				Disabled: true,
 			}
 			b.all = append(b.all, base)
 			b.idxByName[base.Branch] = base.Index

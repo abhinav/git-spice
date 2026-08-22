@@ -46,15 +46,13 @@ func testConfig(t *testing.T) (cfg forgetest.GiteaConfig, sanitizers []forgetest
 	config := forgetest.Config(t).Gitea
 
 	cfg = forgetest.GiteaConfig{
-		URL: envOr("GITEA_URL", config.URL),
-		ForgeConfig: forgetest.ForgeConfig{
-			Owner:     envOr("GITEA_TEST_OWNER", config.Owner),
-			Repo:      envOr("GITEA_TEST_REPO", config.Repo),
-			ForkOwner: envOr("GITEA_TEST_FORK_OWNER", config.ForkOwner),
-			ForkRepo:  envOr("GITEA_TEST_FORK_REPO", config.ForkRepo),
-			Reviewer:  envOr("GITEA_TEST_REVIEWER", config.Reviewer),
-			Assignee:  envOr("GITEA_TEST_ASSIGNEE", config.Assignee),
-		},
+		URL:       envOr("GITEA_URL", config.URL),
+		Owner:     envOr("GITEA_TEST_OWNER", config.Owner),
+		Repo:      envOr("GITEA_TEST_REPO", config.Repo),
+		ForkOwner: envOr("GITEA_TEST_FORK_OWNER", config.ForkOwner),
+		ForkRepo:  envOr("GITEA_TEST_FORK_REPO", config.ForkRepo),
+		Reviewer:  envOr("GITEA_TEST_REVIEWER", config.Reviewer),
+		Assignee:  envOr("GITEA_TEST_ASSIGNEE", config.Assignee),
 	}
 
 	return cfg, forgetest.GiteaConfigSanitizers(cfg, canonical)

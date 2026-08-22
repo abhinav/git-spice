@@ -25,7 +25,7 @@ func (r *Repository) ChangeChecks(
 
 	var statuses []*giteagw.CommitStatus
 	opt := &giteagw.ListCommitStatusOptions{
-		ListOptions: giteagw.ListOptions{Limit: 100},
+		Limit: 100,
 	}
 	for {
 		page, resp, err := r.client.CommitStatusList(
