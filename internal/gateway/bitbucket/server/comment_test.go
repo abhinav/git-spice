@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -25,7 +25,7 @@ func TestGateway_CreateComment(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
 		require.Equal(t, commentsPath(7), r.URL.Path)
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 		gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{
 			"id":      101,
 			"version": 0,
@@ -57,7 +57,7 @@ func TestGateway_UpdateComment(t *testing.T) {
 			Text    string `json:"text"`
 			Version *int   `json:"version"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 		gotText = body.Text
 		require.NotNil(t, body.Version)
 		gotVersion = *body.Version
@@ -88,7 +88,7 @@ func TestGateway_UpdateComment_conflictRefetchRetry(t *testing.T) {
 			var body struct {
 				Version *int `json:"version"`
 			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.NoError(t, json.UnmarshalRead(r.Body, &body))
 			require.NotNil(t, body.Version)
 			versions = append(versions, *body.Version)
 			if putCount == 1 {
@@ -299,7 +299,7 @@ func TestGateway_commentRoundTrip(t *testing.T) {
 			var body struct {
 				Text string `json:"text"`
 			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.NoError(t, json.UnmarshalRead(r.Body, &body))
 			lastText = body.Text
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{
 				"id": 55, "version": 0, "text": body.Text,
@@ -309,7 +309,7 @@ func TestGateway_commentRoundTrip(t *testing.T) {
 			var body struct {
 				Text string `json:"text"`
 			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.NoError(t, json.UnmarshalRead(r.Body, &body))
 			lastText = body.Text
 			gatewayWriteJSON(t, w, http.StatusOK, map[string]any{
 				"id": 55, "version": 1, "text": body.Text,

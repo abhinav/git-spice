@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"cmp"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -275,9 +275,11 @@ fieldLoop:
 		}
 
 		err := field.UnmarshalValue(func(dst any) error {
-			dec := json.NewDecoder(strings.NewReader(fixture.Value))
-			dec.DisallowUnknownFields()
-			return dec.Decode(dst)
+			return json.UnmarshalRead(
+				strings.NewReader(fixture.Value),
+				dst,
+				json.RejectUnknownMembers(true),
+			)
 		})
 		if err != nil {
 			log.Error("Error unmarshalling value into field",

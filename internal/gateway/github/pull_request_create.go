@@ -18,16 +18,16 @@ type CreatePullRequestInput struct {
 	Title string `json:"title"`
 
 	// ClientMutationID, when non-nil, is returned unchanged by GitHub.
-	ClientMutationID *string `json:"clientMutationId,omitempty"`
+	ClientMutationID *string `json:"clientMutationId,omitzero"`
 
 	// HeadRepositoryID identifies the fork containing HeadRefName.
-	HeadRepositoryID *ID `json:"headRepositoryId,omitempty"`
+	HeadRepositoryID *ID `json:"headRepositoryId,omitzero"`
 
 	// Body is omitted when nil; an empty string clears the body.
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 
 	// Draft is omitted when nil; false explicitly requests a ready pull request.
-	Draft *bool `json:"draft,omitempty"`
+	Draft *bool `json:"draft,omitzero"`
 }
 
 // CreatedPullRequest identifies a pull request returned after creation.

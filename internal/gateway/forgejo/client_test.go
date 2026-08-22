@@ -1,7 +1,7 @@
 package forgejo
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -218,14 +218,14 @@ func writeJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }
 
 func assertJSONBody(t *testing.T, r *http.Request, want string) {
 	t.Helper()
 
 	var body any
-	require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+	require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 	got, err := json.Marshal(body)
 	require.NoError(t, err)

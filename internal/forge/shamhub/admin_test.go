@@ -2,7 +2,7 @@ package shamhub
 
 import (
 	"bytes"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -308,7 +308,7 @@ func adminRequest(
 
 	var body bytes.Buffer
 	if req != nil {
-		require.NoError(t, json.NewEncoder(&body).Encode(req))
+		require.NoError(t, json.MarshalWrite(&body, req))
 	}
 
 	httpReq, err := http.NewRequestWithContext(
@@ -328,6 +328,6 @@ func adminRequest(
 	require.Equal(t, http.StatusOK, httpResp.StatusCode)
 
 	if res != nil {
-		require.NoError(t, json.NewDecoder(httpResp.Body).Decode(res))
+		require.NoError(t, json.UnmarshalRead(httpResp.Body, res))
 	}
 }

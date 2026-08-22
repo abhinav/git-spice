@@ -124,14 +124,14 @@ type Change struct {
 	URL string `json:"html_url"`
 
 	// Draft indicates that the change is not yet ready to be reviewed.
-	Draft bool `json:"draft,omitempty"`
+	Draft bool `json:"draft,omitzero"`
 
 	// State is the current state of the change.
 	// It may be "open" or "closed".
 	State string `json:"state"`
 
 	// Merged indicates that the change has been merged.
-	Merged bool `json:"merged,omitempty"`
+	Merged bool `json:"merged,omitzero"`
 
 	// Historical note:
 	// Merged is not just another State

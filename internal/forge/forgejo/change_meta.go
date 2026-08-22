@@ -2,7 +2,8 @@ package forgejo
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -33,11 +34,11 @@ func (id *PR) String() string {
 // persisted in git-spice's data store.
 type PRMetadata struct {
 	// PR is the pull request this metadata is for.
-	PR *PR `json:"pr,omitempty"`
+	PR *PR `json:"pr,omitzero"`
 
 	// NavigationComment is the comment on the pull request
 	// where we visualize the stack of PRs.
-	NavigationComment *PRComment `json:"comment,omitempty"`
+	NavigationComment *PRComment `json:"comment,omitzero"`
 }
 
 var _ forge.ChangeMetadata = (*PRMetadata)(nil)
@@ -82,13 +83,13 @@ type changeMetadataCodec struct{}
 // MarshalChangeMetadata serializes a PRMetadata into JSON.
 func (changeMetadataCodec) MarshalChangeMetadata(
 	md forge.ChangeMetadata,
-) (json.RawMessage, error) {
+) (jsontext.Value, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata deserializes a PRMetadata from JSON.
 func (changeMetadataCodec) UnmarshalChangeMetadata(
-	data json.RawMessage,
+	data jsontext.Value,
 ) (forge.ChangeMetadata, error) {
 	var md PRMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
@@ -98,12 +99,12 @@ func (changeMetadataCodec) UnmarshalChangeMetadata(
 }
 
 // MarshalChangeID serializes a PR into JSON.
-func (*Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+func (*Forge) MarshalChangeID(id forge.ChangeID) (jsontext.Value, error) {
 	return json.Marshal(mustPR(id))
 }
 
 // UnmarshalChangeID deserializes a PR from JSON.
-func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+func (*Forge) UnmarshalChangeID(data jsontext.Value) (forge.ChangeID, error) {
 	var id PR
 	if err := json.Unmarshal(data, &id); err != nil {
 		return nil, fmt.Errorf("unmarshal PR ID: %w", err)

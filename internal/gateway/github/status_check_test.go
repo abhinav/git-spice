@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"strings"
@@ -130,7 +131,7 @@ func TestGateway_StatusChecks_ignoresUnknownUnionMember(t *testing.T) {
 				ID    ID      `json:"id"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Equal(t, "query($after:String$id:ID!){node(id: $id){... on PullRequest{commits(last: 1){nodes{commit{statusCheckRollup{contexts(first: 100, after: $after){nodes{... on StatusContext{context,state,createdAt},... on CheckRun{name,checkSuite{workflowRun{event,workflow{name}}},status,conclusion,startedAt,completedAt}},pageInfo{endCursor,hasNextPage}}}}}}}}}", request.Query)
 		assert.Nil(t, request.Variables.After)
 		assert.Equal(t, ID("PR_1"), request.Variables.ID)
@@ -149,10 +150,10 @@ func TestGateway_StatusChecks_paginates(t *testing.T) {
 	requestNum := 0
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Equal(t, "query($after:String$id:ID!){node(id: $id){... on PullRequest{commits(last: 1){nodes{commit{statusCheckRollup{contexts(first: 2, after: $after){nodes{... on StatusContext{context,state,createdAt},... on CheckRun{name,checkSuite{workflowRun{event,workflow{name}}},status,conclusion,startedAt,completedAt}},pageInfo{endCursor,hasNextPage}}}}}}}}}", request.Query)
 
 		requestNum++

@@ -2,7 +2,7 @@ package spice
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 
@@ -92,7 +92,7 @@ func (s *Service) RenameBranch(ctx context.Context, oldName, newName string) err
 
 	var (
 		changeForge    string
-		changeMetadata json.RawMessage
+		changeMetadata jsontext.Value
 	)
 	if md := oldBranch.Change; md != nil {
 		if codec, ok := s.forges.Lookup(md.ForgeID()); ok {

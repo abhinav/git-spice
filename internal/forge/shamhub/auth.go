@@ -15,11 +15,11 @@ import (
 )
 
 type loginRequest struct {
-	Username string `json:"username,omitempty"`
+	Username string `json:"username,omitzero"`
 }
 
 type loginResponse struct {
-	Token string `json:"token,omitempty"`
+	Token string `json:"token,omitzero"`
 }
 
 var _ = shamhubRESTHandler("POST /login", (*ShamHub).handleLogin)
@@ -87,7 +87,7 @@ func (sh *ShamHub) IssueToken(username string) (string, error) {
 
 // AuthenticationToken defines the token returned by the ShamHub forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	tok string
 }

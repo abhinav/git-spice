@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +21,7 @@ func TestPullRequestCreate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 
 		writeJSON(t, w, http.StatusCreated, map[string]any{
 			"id":      42,
@@ -312,7 +312,7 @@ func TestPullRequestUpdate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 
 		writeJSON(t, w, http.StatusOK, map[string]any{
 			"id":          42,
@@ -355,7 +355,7 @@ func TestPullRequestUpdate(t *testing.T) {
 func TestPullRequestUpdate_omitsUnsetFields(t *testing.T) {
 	var raw map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.UnmarshalRead(r.Body, &raw))
 		writeJSON(t, w, http.StatusOK, map[string]any{"id": 42, "version": 8, "title": "Refit"})
 	}))
 	defer srv.Close()
@@ -378,7 +378,7 @@ func TestPullRequestUpdate_omitsUnsetFields(t *testing.T) {
 func TestPullRequestUpdate_toRef(t *testing.T) {
 	var gotBody PullRequestUpdateRequest
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 		writeJSON(t, w, http.StatusOK, map[string]any{
 			"id": 42, "version": 8, "title": "Refit",
 			"toRef": map[string]any{"id": "refs/heads/develop", "displayId": "develop"},
@@ -431,7 +431,7 @@ func TestPullRequestMerge(t *testing.T) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 		gotVersion = r.URL.Query().Get("version")
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 
 		writeJSON(t, w, http.StatusOK, map[string]any{
 			"id":      42,
@@ -460,7 +460,7 @@ func TestPullRequestMerge(t *testing.T) {
 func TestPullRequestMerge_defaultStrategy(t *testing.T) {
 	var raw map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.UnmarshalRead(r.Body, &raw))
 		writeJSON(t, w, http.StatusOK, map[string]any{"id": 42, "version": 9, "state": "MERGED"})
 	}))
 	defer srv.Close()
@@ -545,7 +545,7 @@ func TestClient_putDeleteRoundTrip(t *testing.T) {
 		switch r.Method {
 		case http.MethodPut:
 			putMethod = r.Method
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&putBody))
+			require.NoError(t, json.UnmarshalRead(r.Body, &putBody))
 			writeJSON(t, w, http.StatusOK, map[string]any{"ok": true})
 		case http.MethodDelete:
 			deleteQuery = r.URL.RawQuery
@@ -585,7 +585,7 @@ func TestCommentCreate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 
 		writeJSON(t, w, http.StatusCreated, map[string]any{
 			"id":      101,
@@ -626,7 +626,7 @@ func TestCommentUpdate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&gotBody))
+		require.NoError(t, json.UnmarshalRead(r.Body, &gotBody))
 
 		writeJSON(t, w, http.StatusOK, map[string]any{
 			"id":      101,

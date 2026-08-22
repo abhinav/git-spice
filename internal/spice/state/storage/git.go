@@ -3,7 +3,8 @@ package storage
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -125,7 +126,7 @@ func (g *GitBackend) Get(ctx context.Context, key string, v any) error {
 		return fmt.Errorf("read object: %w", err)
 	}
 
-	if err := json.NewDecoder(&buf).Decode(v); err != nil {
+	if err := json.UnmarshalRead(&buf, v); err != nil {
 		return fmt.Errorf("decode JSON: %w", err)
 	}
 
@@ -182,9 +183,11 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 		must.NotBeBlankf(set.Key, "key must not be blank")
 
 		var buf bytes.Buffer
-		enc := json.NewEncoder(&buf)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(set.Value); err != nil {
+		if err := json.MarshalWrite(
+			&buf,
+			set.Value,
+			jsontext.WithIndent("  "),
+		); err != nil {
 			return fmt.Errorf("encode JSON: %w", err)
 		}
 

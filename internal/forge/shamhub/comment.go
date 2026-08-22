@@ -153,12 +153,12 @@ type postCommentRequest struct {
 	Owner string `path:"owner" json:"-"`
 	Repo  string `path:"repo" json:"-"`
 
-	Change int    `json:"changeNumber,omitempty"`
-	Body   string `json:"body,omitempty"`
+	Change int    `json:"changeNumber,omitzero"`
+	Body   string `json:"body,omitzero"`
 }
 
 type postCommentResponse struct {
-	ID int `json:"id,omitempty"`
+	ID int `json:"id,omitzero"`
 }
 
 func (sh *ShamHub) handlePostChangeComment(_ context.Context, req *postCommentRequest) (*postCommentResponse, error) {
@@ -182,11 +182,11 @@ type updateCommentRequest struct {
 	Repo  string `path:"repo" json:"-"`
 	ID    int    `path:"id" json:"-"`
 
-	Body string `json:"body,omitempty"`
+	Body string `json:"body,omitzero"`
 }
 
 type updateCommentResponse struct {
-	ID int `json:"id,omitempty"`
+	ID int `json:"id,omitzero"`
 }
 
 func (sh *ShamHub) handleUpdateChangeComment(_ context.Context, req *updateCommentRequest) (*updateCommentResponse, error) {
@@ -365,13 +365,13 @@ type listChangeCommentsRequest struct {
 
 type listChangeCommentsResponse struct {
 	Items   []listChangeCommentsItem `json:"items,omitempty"`
-	Offset  int                      `json:"offset,omitempty"`
-	HasMore bool                     `json:"hasMore,omitempty"`
+	Offset  int                      `json:"offset,omitzero"`
+	HasMore bool                     `json:"hasMore,omitzero"`
 }
 
 type listChangeCommentsItem struct {
-	ID   int    `json:"id,omitempty"`
-	Body string `json:"body,omitempty"`
+	ID   int    `json:"id,omitzero"`
+	Body string `json:"body,omitzero"`
 }
 
 func (sh *ShamHub) handleListChangeComments(_ context.Context, req *listChangeCommentsRequest) (*listChangeCommentsResponse, error) {

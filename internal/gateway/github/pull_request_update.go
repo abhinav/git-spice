@@ -9,10 +9,10 @@ type UpdatePullRequestInput struct {
 	PullRequestID ID `json:"pullRequestId"`
 
 	// ClientMutationID, when non-nil, is returned unchanged by GitHub.
-	ClientMutationID *string `json:"clientMutationId,omitempty"`
+	ClientMutationID *string `json:"clientMutationId,omitzero"`
 
 	// BaseRefName is omitted when nil; an empty value is sent to GitHub.
-	BaseRefName *string `json:"baseRefName,omitempty"`
+	BaseRefName *string `json:"baseRefName,omitzero"`
 }
 
 // UpdatePullRequest updates pull request fields.

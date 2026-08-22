@@ -1,7 +1,7 @@
 package cloud
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,10 +21,10 @@ func TestGateway_CreateComment(t *testing.T) {
 			r.URL.Path)
 
 		var req CommentCreateRequest
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NoError(t, json.UnmarshalRead(r.Body, &req))
 		assert.Equal(t, "test comment", req.Content.Raw)
 
-		assert.NoError(t, json.NewEncoder(w).Encode(Comment{
+		assert.NoError(t, json.MarshalWrite(w, Comment{
 			ID:      42,
 			Content: Content{Raw: req.Content.Raw},
 		}))
@@ -63,7 +63,7 @@ func TestGateway_UpdateComment(t *testing.T) {
 			r.URL.Path)
 
 		var req CommentCreateRequest
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NoError(t, json.UnmarshalRead(r.Body, &req))
 		assert.Equal(t, "updated content", req.Content.Raw)
 
 		w.WriteHeader(http.StatusOK)
@@ -165,7 +165,7 @@ func TestGateway_ListComments(t *testing.T) {
 				assert.Equal(t,
 					"/repositories/workspace/repo/pullrequests/1/comments",
 					r.URL.Path)
-				assert.NoError(t, json.NewEncoder(w).Encode(
+				assert.NoError(t, json.MarshalWrite(w,
 					CommentList{Values: tt.comments}))
 			}))
 			defer srv.Close()
@@ -187,7 +187,7 @@ func TestGateway_ListComments_absoluteNextURL(t *testing.T) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.RawQuery {
 		case "pagelen=100":
-			assert.NoError(t, json.NewEncoder(w).Encode(CommentList{
+			assert.NoError(t, json.MarshalWrite(w, CommentList{
 				Values: []Comment{
 					{ID: 1, Content: Content{Raw: "first"}},
 				},
@@ -195,7 +195,7 @@ func TestGateway_ListComments_absoluteNextURL(t *testing.T) {
 					"/repositories/workspace/repo/pullrequests/1/comments?page=2",
 			}))
 		default:
-			assert.NoError(t, json.NewEncoder(w).Encode(CommentList{
+			assert.NoError(t, json.MarshalWrite(w, CommentList{
 				Values: []Comment{
 					{ID: 2, Content: Content{Raw: "second"}},
 				},
@@ -225,7 +225,7 @@ func TestGateway_ListComments_pageSize(t *testing.T) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.RawQuery {
 		case "pagelen=1":
-			assert.NoError(t, json.NewEncoder(w).Encode(CommentList{
+			assert.NoError(t, json.MarshalWrite(w, CommentList{
 				Values: []Comment{
 					{ID: 1, Content: Content{Raw: "first"}},
 				},
@@ -233,7 +233,7 @@ func TestGateway_ListComments_pageSize(t *testing.T) {
 					"/repositories/workspace/repo/pullrequests/1/comments?page=2",
 			}))
 		default:
-			assert.NoError(t, json.NewEncoder(w).Encode(CommentList{
+			assert.NoError(t, json.MarshalWrite(w, CommentList{
 				Values: []Comment{
 					{ID: 2, Content: Content{Raw: "second"}},
 				},
@@ -270,7 +270,7 @@ func TestGateway_ResolvableComments(t *testing.T) {
 		assert.Equal(t,
 			"/repositories/workspace/repo/pullrequests/1/comments",
 			r.URL.Path)
-		assert.NoError(t, json.NewEncoder(w).Encode(CommentList{
+		assert.NoError(t, json.MarshalWrite(w, CommentList{
 			Values: []Comment{
 				{
 					ID:      1,

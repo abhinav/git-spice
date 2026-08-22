@@ -3,7 +3,8 @@ package main
 
 import (
 	"cmp"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"flag"
 	"fmt"
 	"log"
@@ -95,11 +96,11 @@ func main() {
 		Include []matrixEntry `json:"include"`
 	}
 	output.Include = entries
-	enc := json.NewEncoder(os.Stdout)
+	var opts []json.Options
 	if *_indent {
-		enc.SetIndent("", "  ")
+		opts = append(opts, jsontext.WithIndent("  "))
 	}
-	if err := enc.Encode(output); err != nil {
+	if err := json.MarshalWrite(os.Stdout, output, opts...); err != nil {
 		log.Fatalf("failed to encode JSON: %v", err)
 	}
 }

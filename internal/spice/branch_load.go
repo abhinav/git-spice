@@ -2,7 +2,7 @@ package spice
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"runtime"
@@ -40,7 +40,7 @@ type LoadBranchItem struct {
 
 	// MergedDownstack contains information about any branches,
 	// which this one was based on, that have already been merged into trunk.
-	MergedDownstack []json.RawMessage
+	MergedDownstack []jsontext.Value
 }
 
 // LoadBranches loads all tracked branches

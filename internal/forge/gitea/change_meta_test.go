@@ -1,7 +1,7 @@
 package gitea
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,13 +98,13 @@ func TestPRMetadata_SetNavigationCommentID_nil(t *testing.T) {
 
 func TestForge_UnmarshalChangeID_invalid(t *testing.T) {
 	f := new(Forge)
-	_, err := f.UnmarshalChangeID(json.RawMessage(`not-json`))
+	_, err := f.UnmarshalChangeID(jsontext.Value(`not-json`))
 	require.Error(t, err)
 }
 
 func TestForge_UnmarshalChangeMetadata_invalid(t *testing.T) {
 	f := new(Forge)
-	_, err := f.UnmarshalChangeMetadata(json.RawMessage(`not-json`))
+	_, err := f.UnmarshalChangeMetadata(jsontext.Value(`not-json`))
 	require.Error(t, err)
 }
 

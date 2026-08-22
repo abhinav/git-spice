@@ -1,7 +1,7 @@
 package gitlab
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,7 +48,7 @@ func TestRepository_MergeChange_method(t *testing.T) {
 				assert.Equal(t, "/api/v4/projects/100/merge_requests/55/merge", r.URL.Path)
 
 				var body map[string]any
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 				if tt.wantField {
 					assert.Equal(t, true, body["squash"])
 				} else {

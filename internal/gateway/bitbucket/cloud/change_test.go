@@ -1,7 +1,7 @@
 package cloud
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +17,7 @@ func TestGateway_CreateChange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Handle workspace members lookup for reviewer resolution.
 		if r.URL.Path == "/workspaces/workspace/members" {
-			assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+			assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 				Values: []WorkspaceMember{
 					{User: User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
 				},
@@ -29,14 +29,14 @@ func TestGateway_CreateChange(t *testing.T) {
 		assert.Contains(t, r.URL.Path, "/pullrequests")
 
 		var req PullRequestCreateRequest
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NoError(t, json.UnmarshalRead(r.Body, &req))
 		assert.Equal(t, "Test PR", req.Title)
 		assert.Equal(t, "Description", req.Description)
 		assert.Equal(t, "feature", req.Source.Branch.Name)
 		assert.Equal(t, "main", req.Destination.Branch.Name)
 		assert.Equal(t, []Reviewer{{UUID: "{user-uuid}"}}, req.Reviewers)
 
-		assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{
+		assert.NoError(t, json.MarshalWrite(w, PullRequest{
 			ID:    123,
 			Title: req.Title,
 			State: stateOpen,
@@ -66,11 +66,11 @@ func TestGateway_CreateChange_pushRepository(t *testing.T) {
 		assert.Equal(t, http.MethodPost, r.Method)
 
 		var req PullRequestCreateRequest
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NoError(t, json.UnmarshalRead(r.Body, &req))
 		require.NotNil(t, req.Source.Repository)
 		assert.Equal(t, "fork/repo", req.Source.Repository.FullName)
 
-		assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{ID: 1}))
+		assert.NoError(t, json.MarshalWrite(w, PullRequest{ID: 1}))
 	}))
 	defer srv.Close()
 
@@ -108,18 +108,18 @@ func TestGateway_CreateChange_absoluteNextURLForReviewerLookup(t *testing.T) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/workspaces/workspace/members" && r.URL.RawQuery == "":
-			assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+			assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 				Values: nil,
 				Next:   srv.URL + "/workspaces/workspace/members?page=2",
 			}))
 		case r.URL.Path == "/workspaces/workspace/members":
-			assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+			assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 				Values: []WorkspaceMember{
 					{User: User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
 				},
 			}))
 		default:
-			assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{
+			assert.NoError(t, json.MarshalWrite(w, PullRequest{
 				ID:    123,
 				Title: "Test PR",
 				Links: PullRequestLinks{
@@ -144,7 +144,7 @@ func TestGateway_GetChange(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "/pullrequests/42")
 
-		assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{
+		assert.NoError(t, json.MarshalWrite(w, PullRequest{
 			ID:    42,
 			Title: "Test PR",
 			State: stateOpen,
@@ -229,7 +229,7 @@ func TestGateway_GetChange_states(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				assert.NoError(t, json.NewEncoder(w).Encode(tt.pr))
+				assert.NoError(t, json.MarshalWrite(w, tt.pr))
 			}))
 			defer srv.Close()
 
@@ -339,7 +339,7 @@ func TestGateway_FindChangesByBranch(t *testing.T) {
 				}
 				assert.Equal(t, "10", r.URL.Query().Get("pagelen"))
 				assert.Equal(t, "+values.reviewers", r.URL.Query().Get("fields"))
-				assert.NoError(t, json.NewEncoder(w).Encode(
+				assert.NoError(t, json.MarshalWrite(w,
 					PullRequestList{Values: tt.prs}))
 			}))
 			defer srv.Close()
@@ -355,7 +355,7 @@ func TestGateway_FindChangesByBranch(t *testing.T) {
 func TestGateway_FindChangesByBranch_limit(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "5", r.URL.Query().Get("pagelen"))
-		assert.NoError(t, json.NewEncoder(w).Encode(PullRequestList{}))
+		assert.NoError(t, json.MarshalWrite(w, PullRequestList{}))
 	}))
 	defer srv.Close()
 
@@ -384,14 +384,14 @@ func TestGateway_UpdateChange_base(t *testing.T) {
 		puts++
 
 		var req PullRequestUpdateRequest
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		require.NoError(t, json.UnmarshalRead(r.Body, &req))
 		require.NotNil(t, req.Destination)
 		assert.Equal(t, "develop", req.Destination.Branch.Name)
 		assert.Nil(t, req.Title)
 		assert.Nil(t, req.Description)
 		assert.Empty(t, req.Reviewers)
 
-		assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{ID: 1}))
+		assert.NoError(t, json.MarshalWrite(w, PullRequest{ID: 1}))
 	}))
 	defer srv.Close()
 
@@ -418,14 +418,14 @@ func TestGateway_UpdateChange_addReviewers(t *testing.T) {
 		switch {
 		case r.Method == http.MethodGet &&
 			r.URL.Path == "/workspaces/workspace/members":
-			assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+			assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 				Values: []WorkspaceMember{
 					{User: User{UUID: "{user-uuid}", Nickname: "reviewer1"}},
 				},
 			}))
 		case r.Method == http.MethodGet:
 			assert.Contains(t, r.URL.Path, "/pullrequests/1")
-			assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{
+			assert.NoError(t, json.MarshalWrite(w, PullRequest{
 				ID:          1,
 				Title:       "Test PR",
 				Description: lastDescription,
@@ -434,7 +434,7 @@ func TestGateway_UpdateChange_addReviewers(t *testing.T) {
 			}))
 		case r.Method == http.MethodPut:
 			var req PullRequestUpdateRequest
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			require.NoError(t, json.UnmarshalRead(r.Body, &req))
 			if req.Description == nil {
 				lastDescription = ""
 			} else {
@@ -443,7 +443,7 @@ func TestGateway_UpdateChange_addReviewers(t *testing.T) {
 			require.NotNil(t, req.Title)
 			assert.Equal(t, "Test PR", *req.Title)
 			gotReviewers = req.Reviewers
-			assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{ID: 1}))
+			assert.NoError(t, json.MarshalWrite(w, PullRequest{ID: 1}))
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL)
 		}
@@ -480,10 +480,10 @@ func TestGateway_SetChangeDraft(t *testing.T) {
 
 				// The PUT must carry only the draft flag.
 				var body map[string]any
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 				assert.Equal(t, map[string]any{"draft": tt.draft}, body)
 
-				assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{ID: 1}))
+				assert.NoError(t, json.MarshalWrite(w, PullRequest{ID: 1}))
 			}))
 			defer srv.Close()
 
@@ -533,7 +533,7 @@ func TestGateway_MergeChange(t *testing.T) {
 				assert.Contains(t, r.URL.Path, "/pullrequests/1/merge")
 
 				var body map[string]any
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 				if tt.wantStrategy == nil {
 					assert.NotContains(t, body, "merge_strategy")
 				} else {
@@ -541,7 +541,7 @@ func TestGateway_MergeChange(t *testing.T) {
 				}
 				merged = true
 
-				assert.NoError(t, json.NewEncoder(w).Encode(PullRequest{
+				assert.NoError(t, json.MarshalWrite(w, PullRequest{
 					ID:    1,
 					State: stateMerged,
 				}))

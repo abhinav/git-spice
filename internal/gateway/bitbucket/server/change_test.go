@@ -2,7 +2,7 @@ package server
 
 import (
 	"bytes"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -43,7 +43,7 @@ func TestGateway_CreateChange(t *testing.T) {
 
 		case r.Method == http.MethodPost &&
 			r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{
 				"id":      123,
 				"version": 0,
@@ -126,7 +126,7 @@ func TestGateway_CreateChange_noReviewersSkipsCurrentUser(t *testing.T) {
 
 		case r.Method == http.MethodPost:
 			var req PullRequestCreateRequest
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			require.NoError(t, json.UnmarshalRead(r.Body, &req))
 			assert.Empty(t, req.Reviewers)
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 7, "version": 0})
 
@@ -204,7 +204,7 @@ func TestGateway_CreateChange_mergesDefaultReviewers(t *testing.T) {
 
 				case r.Method == http.MethodPost &&
 					r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-					require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+					require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 					gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 1, "version": 0})
 
 				default:
@@ -289,7 +289,7 @@ func TestGateway_CreateChange_defaultReviewersFailureIsBestEffort(t *testing.T) 
 
 				case r.Method == http.MethodPost &&
 					r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-					require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+					require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 					gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 1, "version": 0})
 
 				default:
@@ -342,7 +342,7 @@ func TestGateway_CreateChange_defaultReviewersOnlyCurrentUserErrorIsBestEffort(t
 
 		case r.Method == http.MethodPost &&
 			r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 1, "version": 0})
 
 		default:
@@ -434,7 +434,7 @@ func TestGateway_CreateChange_draftDowngradedOnOldServer(t *testing.T) {
 
 		case r.Method == http.MethodPost &&
 			r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{"id": 1, "version": 0})
 
 		default:
@@ -490,7 +490,7 @@ func TestGateway_CreateChange_draftKeptOnNewServer(t *testing.T) {
 
 		case r.Method == http.MethodPost &&
 			r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{
 				"id": 1, "version": 0, "draft": true,
 			})
@@ -539,7 +539,7 @@ func TestGateway_CreateChange_draftBestEffortUnknownVersion(t *testing.T) {
 
 		case r.Method == http.MethodPost &&
 			r.URL.Path == "/rest/api/1.0/projects/"+projectKey+"/repos/"+slug+"/pull-requests":
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotReq))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotReq))
 			// The server echoes a non-draft pull request, exercising the
 			// post-create warning path.
 			gatewayWriteJSON(t, w, http.StatusCreated, map[string]any{
@@ -959,7 +959,7 @@ func TestGateway_UpdateChange_baseAndReviewers(t *testing.T) {
 				},
 			})
 		case r.Method == http.MethodPut && r.URL.Path == prItemPath(7):
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&gotUpdate))
+			require.NoError(t, json.UnmarshalRead(r.Body, &gotUpdate))
 			gatewayWriteJSON(t, w, http.StatusOK, map[string]any{"id": 7, "version": 5, "title": "Original title"})
 		default:
 			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -1016,7 +1016,7 @@ func TestGateway_UpdateChange_conflictRetries(t *testing.T) {
 		case http.MethodPut:
 			putCount++
 			var req PullRequestUpdateRequest
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			require.NoError(t, json.UnmarshalRead(r.Body, &req))
 			versions = append(versions, req.Version)
 			if putCount == 1 {
 				// Reject the first PUT with a version conflict.
@@ -1172,7 +1172,7 @@ func TestGateway_MergeChange_strategyMapping(t *testing.T) {
 					gatewayWriteJSON(t, w, http.StatusOK, map[string]any{"id": 5, "version": 2, "state": "OPEN"})
 				case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/merge"):
 					gotVersion = r.URL.Query().Get("version")
-					require.NoError(t, json.NewDecoder(r.Body).Decode(&gotRaw))
+					require.NoError(t, json.UnmarshalRead(r.Body, &gotRaw))
 					gatewayWriteJSON(t, w, http.StatusOK, map[string]any{"id": 5, "version": 3, "state": "MERGED"})
 				default:
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)

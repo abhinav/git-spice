@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,10 +20,10 @@ func TestRepository_ensureLabels_batchesLookups(t *testing.T) {
 	var createRequests atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 
 		switch {
 		case strings.HasPrefix(request.Query, "query("):

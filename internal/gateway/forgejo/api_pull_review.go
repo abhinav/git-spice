@@ -242,10 +242,10 @@ type PullReviewComment struct {
 // https://codeberg.org/swagger.v1.json#/definitions/CreatePullReviewOptions
 type CreatePullReviewOptions struct {
 	// Body is the review body.
-	Body string `json:"body,omitempty"`
+	Body string `json:"body,omitzero"`
 
 	// Event selects the review action.
-	Event string `json:"event,omitempty"`
+	Event string `json:"event,omitzero"`
 
 	// Comments are draft review comments to create with the review.
 	Comments []CreatePullReviewCommentOptions `json:"comments,omitempty"`
@@ -263,13 +263,13 @@ type CreatePullReviewCommentOptions struct {
 	Path string `json:"path"`
 
 	// NewPosition is the position in the new diff.
-	NewPosition int64 `json:"new_position,omitempty"`
+	NewPosition int64 `json:"new_position,omitzero"`
 
 	// OldPosition is the position in the old diff.
-	OldPosition int64 `json:"old_position,omitempty"`
+	OldPosition int64 `json:"old_position,omitzero"`
 
 	// CommitID is the commit SHA for the comment.
-	CommitID string `json:"commit_id,omitempty"`
+	CommitID string `json:"commit_id,omitzero"`
 }
 
 // PullReviewRequestOptions is the request body for review requests.

@@ -3,7 +3,8 @@ package state
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"iter"
@@ -31,12 +32,12 @@ type branchStateBase struct {
 }
 
 type branchUpstreamState struct {
-	Branch string `json:"branch,omitempty"`
+	Branch string `json:"branch,omitzero"`
 }
 
 type branchChangeState struct {
 	Forge  string
-	Change json.RawMessage
+	Change jsontext.Value
 }
 
 func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
@@ -44,7 +45,7 @@ func (bs *branchChangeState) MarshalJSON() ([]byte, error) {
 }
 
 func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
-	var m map[string]json.RawMessage
+	var m map[string]jsontext.Value
 	if err := json.Unmarshal(data, &m); err != nil {
 		return fmt.Errorf("unmarshal change state: %w", err)
 	}
@@ -63,10 +64,10 @@ func (bs *branchChangeState) UnmarshalJSON(data []byte) error {
 
 type branchState struct {
 	Base     branchStateBase      `json:"base"`
-	Upstream *branchUpstreamState `json:"upstream,omitempty"`
-	Change   *branchChangeState   `json:"change,omitempty"`
+	Upstream *branchUpstreamState `json:"upstream,omitzero"`
+	Change   *branchChangeState   `json:"change,omitzero"`
 
-	MergedDownstack []json.RawMessage `json:"merged,omitempty"`
+	MergedDownstack []jsontext.Value `json:"merged,omitempty"`
 }
 
 // branchKey returns the path to the JSON file for the given branch
@@ -90,7 +91,7 @@ type LookupResponse struct {
 
 	// ChangeMetadata holds the metadata for the published change.
 	// This is forge-specific and must be deserialized by the forge.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that the change was published to.
 	ChangeForge string
@@ -106,7 +107,7 @@ type LookupResponse struct {
 	// MergedDownstack is in the order that the branches were merged.
 	// For example, if the stack was main -> A -> B -> C,
 	// where C is this branch, MergedDownstack will be [A, B].
-	MergedDownstack []json.RawMessage
+	MergedDownstack []jsontext.Value
 }
 
 // LookupBranch returns information about a tracked branch.
@@ -194,7 +195,7 @@ func (s *Store) BeginBranchTx() *BranchTx {
 }
 
 // Null is a JSON null value.
-var Null = json.RawMessage("null")
+var Null = jsontext.Value("null")
 
 // UpsertRequest is a request to add or update information about a branch.
 type UpsertRequest struct {
@@ -218,7 +219,7 @@ type UpsertRequest struct {
 	// Use Null to clear the current metadata.
 	//
 	// Leave this unset to keep the current metadata.
-	ChangeMetadata json.RawMessage
+	ChangeMetadata jsontext.Value
 
 	// ChangeForge is the forge that recorded the change.
 	//
@@ -231,7 +232,7 @@ type UpsertRequest struct {
 
 	// MergedDownstack is a list of branches that were previously
 	// downstack from this branch that have since been merged into trunk.
-	MergedDownstack *[]json.RawMessage
+	MergedDownstack *[]jsontext.Value
 }
 
 // Upsert adds or updates information about a branch.

@@ -1,7 +1,7 @@
 package bitbucket_test
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -241,7 +241,7 @@ func TestGatewayConformance_SetChangeDraft(t *testing.T) {
 				var body struct {
 					Draft *bool `json:"draft"`
 				}
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 				gotDraft = body.Draft
 				writeJSON(t, w, http.StatusOK, cloud.PullRequest{ID: 1})
 			})
@@ -419,7 +419,7 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 				commentPath := commentsPath + "/" + strconv.FormatInt(commentID, 10)
 				echo := func(w http.ResponseWriter, r *http.Request) {
 					var req cloud.CommentCreateRequest
-					require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+					require.NoError(t, json.UnmarshalRead(r.Body, &req))
 					bodies = append(bodies, req.Content.Raw)
 					writeJSON(t, w, http.StatusOK, cloud.Comment{
 						ID:      commentID,
@@ -442,7 +442,7 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 						var body struct {
 							Text string `json:"text"`
 						}
-						require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+						require.NoError(t, json.UnmarshalRead(r.Body, &body))
 						bodies = append(bodies, body.Text)
 						writeJSON(t, w, http.StatusCreated, map[string]any{
 							"id":      commentID,
@@ -455,7 +455,7 @@ func TestGatewayConformance_commentRoundTrip(t *testing.T) {
 						var body struct {
 							Text string `json:"text"`
 						}
-						require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+						require.NoError(t, json.UnmarshalRead(r.Body, &body))
 						bodies = append(bodies, body.Text)
 						writeJSON(t, w, http.StatusOK, map[string]any{
 							"id":      commentID,
@@ -755,5 +755,5 @@ func writeJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }

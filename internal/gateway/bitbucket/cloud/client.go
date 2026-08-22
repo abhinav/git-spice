@@ -5,7 +5,7 @@ package cloud
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -244,8 +244,8 @@ func (c *Client) doJSON(
 		return resp, nil
 	}
 
-	if err := json.NewDecoder(httpResp.Body).Decode(dst); err != nil {
-		if errors.Is(err, io.EOF) {
+	if err := json.UnmarshalRead(httpResp.Body, dst); err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			return resp, nil
 		}
 		return resp, fmt.Errorf("decode response: %w", err)

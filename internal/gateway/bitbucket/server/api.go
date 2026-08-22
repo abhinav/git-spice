@@ -76,13 +76,13 @@ type Link struct {
 // PullRequestCreateRequest is the request body for creating a pull request.
 type PullRequestCreateRequest struct {
 	Title       string           `json:"title"` // required
-	Description string           `json:"description,omitempty"`
+	Description string           `json:"description,omitzero"`
 	FromRef     CreateRef        `json:"fromRef"` // required
 	ToRef       CreateRef        `json:"toRef"`   // required
 	Reviewers   []CreateReviewer `json:"reviewers,omitempty"`
 
 	// Draft was added in Data Center 8.18; older servers ignore it.
-	Draft bool `json:"draft,omitempty"`
+	Draft bool `json:"draft,omitzero"`
 }
 
 // CreateRef references a branch in a repository on pull request creation.
@@ -220,13 +220,13 @@ type PullRequestUpdateRequest struct {
 	Title string `json:"title"` // required
 
 	// Description, when non-nil, replaces the description ("" clears it).
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitzero"`
 
 	// Reviewers, when non-nil, replaces the reviewers.
 	Reviewers []CreateReviewer `json:"reviewers,omitempty"`
 
 	// ToRef, when non-nil, changes the base ref (by fully qualified ref ID).
-	ToRef *UpdateRef `json:"toRef,omitempty"`
+	ToRef *UpdateRef `json:"toRef,omitzero"`
 }
 
 // UpdateRef references a branch when updating a pull request's base. Only the
@@ -267,7 +267,7 @@ func (c *Client) PullRequestUpdate(
 type PullRequestMergeRequest struct {
 	// StrategyID is a repository merge strategy (e.g. "no-ff", "squash",
 	// "rebase-no-ff"); empty uses the repository default.
-	StrategyID string `json:"strategyId,omitempty"`
+	StrategyID string `json:"strategyId,omitzero"`
 }
 
 // PullRequestMerge merges an open pull request. The version is a query
@@ -553,8 +553,8 @@ type Comment struct {
 
 // commentText is the request body shared by comment create and update.
 type commentText struct {
-	Text    string `json:"text"`              // required
-	Version *int   `json:"version,omitempty"` // update only
+	Text    string `json:"text"`             // required
+	Version *int   `json:"version,omitzero"` // update only
 }
 
 // CommentCreate adds a top-level comment to a pull request. The returned

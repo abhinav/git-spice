@@ -14,10 +14,10 @@ import (
 // PRComment is a ChangeCommentID for a GitHub PR comment.
 type PRComment struct {
 	// GQLID is the comment's GraphQL node ID.
-	GQLID github.ID `json:"gqlID,omitempty"`
+	GQLID github.ID `json:"gqlID,omitzero"`
 
 	// URL is GitHub's browser URL for the comment.
-	URL string `json:"url,omitempty"`
+	URL string `json:"url,omitzero"`
 }
 
 var _ forge.ChangeCommentID = (*PRComment)(nil)

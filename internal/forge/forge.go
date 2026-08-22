@@ -4,7 +4,7 @@ package forge
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"iter"
 	"net/url"
@@ -87,10 +87,10 @@ type Forge interface {
 	ChangeTemplatePaths() []string
 
 	// MarshalChangeID serializes the given change ID into a valid JSON blob.
-	MarshalChangeID(ChangeID) (json.RawMessage, error)
+	MarshalChangeID(ChangeID) (jsontext.Value, error)
 
 	// UnmarshalChangeID deserializes the given JSON blob into a change ID.
-	UnmarshalChangeID(json.RawMessage) (ChangeID, error)
+	UnmarshalChangeID(jsontext.Value) (ChangeID, error)
 
 	// AuthenticationFlow runs the authentication flow for the forge.
 	// This may prompt the user, perform network requests, etc.
@@ -116,11 +116,11 @@ type Forge interface {
 type ChangeMetadataCodec interface {
 	// MarshalChangeMetadata serializes the given change metadata
 	// into a valid JSON blob.
-	MarshalChangeMetadata(ChangeMetadata) (json.RawMessage, error)
+	MarshalChangeMetadata(ChangeMetadata) (jsontext.Value, error)
 
 	// UnmarshalChangeMetadata deserializes the given JSON blob
 	// into change metadata.
-	UnmarshalChangeMetadata(json.RawMessage) (ChangeMetadata, error)
+	UnmarshalChangeMetadata(jsontext.Value) (ChangeMetadata, error)
 }
 
 // WithDisplayName is an optional interface for values with UI display names.

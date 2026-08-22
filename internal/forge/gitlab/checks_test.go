@@ -1,7 +1,7 @@
 package gitlab
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -177,5 +177,5 @@ func writeJSON(t *testing.T, w http.ResponseWriter, v any) {
 	t.Helper()
 
 	w.Header().Set("Content-Type", "application/json")
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }

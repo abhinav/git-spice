@@ -5,7 +5,8 @@ import (
 	"cmp"
 	"context"
 	"encoding"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -277,7 +278,7 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 		retErr = errors.Join(retErr, bufw.Flush())
 	}()
 
-	enc := json.NewEncoder(bufw)
+	enc := jsontext.NewEncoder(bufw)
 	for _, branch := range res.Branches {
 		logBranch := jsonLogBranch{
 			Name:    branch.Name,
@@ -349,7 +350,7 @@ func (p *jsonLogPresenter) Present(res *list.BranchesResponse, currentBranch str
 			logBranch.Worktree = wt
 		}
 
-		if err := enc.Encode(logBranch); err != nil {
+		if err := json.MarshalEncode(enc, logBranch); err != nil {
 			return fmt.Errorf("encode branch %q: %w", branch.Name, err)
 		}
 	}
@@ -363,12 +364,12 @@ type jsonLogBranch struct {
 
 	// Current is true if this branch is the current branch.
 	// This is false or omitted if this is not the current branch.
-	Current bool `json:"current,omitempty"`
+	Current bool `json:"current,omitzero"`
 
 	// Down is the base branch onto which this branch is stacked.
 	// This is unset if this branch is trunk.
 	// 'git-spice down' from the current branch will check out this branch.
-	Down *jsonLogDown `json:"down,omitempty"`
+	Down *jsonLogDown `json:"down,omitzero"`
 
 	// Ups is a list of branches that are stacked directly above this branch.
 	// 'git-spice up' from this branch will check out one of these branches.
@@ -380,13 +381,13 @@ type jsonLogBranch struct {
 
 	// Change is the associated change request, if any.
 	// This is unset if this branch has not been published.
-	Change *jsonLogChange `json:"change,omitempty"`
+	Change *jsonLogChange `json:"change,omitzero"`
 
 	// Push indicates the push status of this branch,
 	// if the branch has been pushed to a remote.
 	// This is unset if the branch has not been pushed
 	// from git-spice's perspective.
-	Push *jsonLogPushStatus `json:"push,omitempty"`
+	Push *jsonLogPushStatus `json:"push,omitzero"`
 
 	// Worktree is the absolute path to the worktree
 	// where this branch is checked out,
@@ -395,7 +396,7 @@ type jsonLogBranch struct {
 	// This is unset if the branch is not checked out
 	// in any worktree,
 	// or if it's the current branch (current is true).
-	Worktree string `json:"worktree,omitempty"`
+	Worktree string `json:"worktree,omitzero"`
 }
 
 type jsonLogDown struct {
@@ -404,7 +405,7 @@ type jsonLogDown struct {
 
 	// NeedsRestack is true if the branch needs to be restacked
 	// onto its base branch.
-	NeedsRestack bool `json:"needsRestack,omitempty"`
+	NeedsRestack bool `json:"needsRestack,omitzero"`
 }
 
 type jsonLogUp struct {
@@ -430,10 +431,10 @@ type jsonLogChange struct {
 	URL string `json:"url"`
 
 	// Status is the current state of the change (open|closed|merged).
-	Status string `json:"status,omitempty"`
+	Status string `json:"status,omitzero"`
 
 	// Comments contains comment resolution counts for the change.
-	Comments *jsonLogComments `json:"comments,omitempty"`
+	Comments *jsonLogComments `json:"comments,omitzero"`
 }
 
 type jsonLogComments struct {
@@ -460,7 +461,7 @@ type jsonLogPushStatus struct {
 	// and should be pushed.
 	//
 	// This will be false if Ahead and Behind are both zero.
-	NeedsPush bool `json:"needsPush,omitempty"`
+	NeedsPush bool `json:"needsPush,omitzero"`
 }
 
 // pushStatusFormat enumerates the possible values for the pushStatusFormat config.

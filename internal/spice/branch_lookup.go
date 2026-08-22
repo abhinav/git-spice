@@ -2,7 +2,7 @@ package spice
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 
@@ -39,7 +39,7 @@ type LookupBranchResponse struct {
 	// downstack from this branch and have since been merged into trunk.
 	//
 	// This is used to correctly display the history of the branch.
-	MergedDownstack []json.RawMessage
+	MergedDownstack []jsontext.Value
 }
 
 // DeletedBranchError is returned when a branch was deleted out of band.

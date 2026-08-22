@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -191,11 +191,11 @@ func (testDefinition) BaseURL() string { return "https://example.com" }
 
 func (d testDefinition) CLIPlugin() any { return nil }
 
-func (testDefinition) MarshalChangeMetadata(forge.ChangeMetadata) (json.RawMessage, error) {
+func (testDefinition) MarshalChangeMetadata(forge.ChangeMetadata) (jsontext.Value, error) {
 	return nil, nil
 }
 
-func (testDefinition) UnmarshalChangeMetadata(json.RawMessage) (forge.ChangeMetadata, error) {
+func (testDefinition) UnmarshalChangeMetadata(jsontext.Value) (forge.ChangeMetadata, error) {
 	return nil, nil
 }
 

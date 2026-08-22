@@ -1,7 +1,7 @@
 package github
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,14 +24,14 @@ func TestRepository_ChangeMergeability(t *testing.T) {
 				ID string `json:"id"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 		assert.Equal(t, "prID", body.Variables.ID)
 		assert.Contains(t, body.Query, "mergeable")
 		assert.Contains(t, body.Query, "mergeStateStatus")
 		assert.Contains(t, body.Query, "isDraft")
 		queried = true
 
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
 				"node": map[string]any{
 					"mergeable":        "MERGEABLE",

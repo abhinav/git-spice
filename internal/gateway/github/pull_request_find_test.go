@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"strings"
@@ -14,10 +15,10 @@ import (
 func TestGateway_FindPullRequestsByBranches(t *testing.T) {
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Contains(t, request.Query, "branch0:pullRequests")
 		assert.Contains(t, request.Query, "branch1:pullRequests")
 		assert.JSONEq(t, `{

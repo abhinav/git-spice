@@ -2,7 +2,8 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -53,12 +54,12 @@ func (r *forgeRepository) NewChangeMetadata(_ context.Context, id forge.ChangeID
 type changeMetadataCodec struct{}
 
 // MarshalChangeMetadata marshals the given change metadata to JSON.
-func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (jsontext.Value, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata unmarshals the given JSON data to change metadata.
-func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+func (changeMetadataCodec) UnmarshalChangeMetadata(data jsontext.Value) (forge.ChangeMetadata, error) {
 	var md ChangeMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, fmt.Errorf("unmarshal change metadata: %w", err)
@@ -67,12 +68,12 @@ func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.
 }
 
 // MarshalChangeID marshals the given change ID to JSON.
-func (f *Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+func (f *Forge) MarshalChangeID(id forge.ChangeID) (jsontext.Value, error) {
 	return json.Marshal(id.(ChangeID))
 }
 
 // UnmarshalChangeID unmarshals the given JSON data to change ID.
-func (f *Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+func (f *Forge) UnmarshalChangeID(data jsontext.Value) (forge.ChangeID, error) {
 	var id ChangeID
 	if err := json.Unmarshal(data, &id); err != nil {
 		return nil, fmt.Errorf("unmarshal change ID: %w", err)

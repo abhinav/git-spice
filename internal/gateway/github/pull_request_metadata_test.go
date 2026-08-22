@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"io"
 	"net/http"
@@ -15,10 +16,10 @@ import (
 func TestGateway_AddPullRequestMetadata(t *testing.T) {
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Equal(t, compactGraphQL(`
 			mutation(
 				$labels:AddLabelsToLabelableInput!
@@ -197,7 +198,7 @@ func TestGateway_AddPullRequestMetadata_combinations(t *testing.T) {
 				var request struct {
 					Query string `json:"query"`
 				}
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+				require.NoError(t, json.UnmarshalRead(r.Body, &request))
 				assert.Equal(t, tt.query, request.Query)
 				return &http.Response{
 					StatusCode: http.StatusOK,

@@ -2,7 +2,7 @@ package github
 
 import (
 	"bytes"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"io"
 	"net/http"
@@ -203,7 +203,7 @@ func TestDeviceFlowAuthenticator(t *testing.T) {
 
 		switch r.Header.Get("Accept") {
 		case "application/json":
-			_ = json.NewEncoder(w).Encode(result)
+			_ = json.MarshalWrite(w, result)
 		default:
 			q := make(url.Values)
 			for k, v := range result {

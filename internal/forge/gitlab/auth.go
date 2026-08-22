@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/url"
@@ -25,20 +25,20 @@ const _oauthAppID = "3467e093f73e133c18ea6008817c00f2c91ac2ee0ec60d6be8aca6fa7c6
 
 // AuthenticationToken defines the token returned by the GitLab forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// AuthType specifies the kind of authentication method used.
 	//
 	// If AuthTypeGitLabCLI, AccessToken is not used.
-	AuthType AuthType `json:"auth_type,omitempty"` // required
+	AuthType AuthType `json:"auth_type,omitzero"` // required
 
 	// AccessToken is the GitLab access token.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 
 	// Hostname is the hostname of the GitLab instance.
 	//
 	// Used only for AuthTypeGitLabCLI.
-	Hostname string `json:"hostname,omitempty"`
+	Hostname string `json:"hostname,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)

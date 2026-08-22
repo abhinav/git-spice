@@ -2,7 +2,8 @@ package github
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -11,9 +12,9 @@ import (
 
 // PRMetadata is the metadata for a pull request.
 type PRMetadata struct {
-	PR *PR `json:"pr,omitempty"`
+	PR *PR `json:"pr,omitzero"`
 
-	NavigationComment *PRComment `json:"comment,omitempty"`
+	NavigationComment *PRComment `json:"comment,omitzero"`
 }
 
 var _ forge.ChangeMetadata = (*PRMetadata)(nil)
@@ -64,12 +65,12 @@ func (r *Repository) NewChangeMetadata(
 type changeMetadataCodec struct{}
 
 // MarshalChangeMetadata serializes a PRMetadata into JSON.
-func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (jsontext.Value, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata deserializes a PRMetadata from JSON.
-func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+func (changeMetadataCodec) UnmarshalChangeMetadata(data jsontext.Value) (forge.ChangeMetadata, error) {
 	var md PRMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, fmt.Errorf("unmarshal PR metadata: %w", err)
@@ -78,12 +79,12 @@ func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.
 }
 
 // MarshalChangeID serializes a PR into JSON.
-func (*Forge) MarshalChangeID(cid forge.ChangeID) (json.RawMessage, error) {
+func (*Forge) MarshalChangeID(cid forge.ChangeID) (jsontext.Value, error) {
 	return json.Marshal(mustPR(cid))
 }
 
 // UnmarshalChangeID deserializes a PR from JSON.
-func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+func (*Forge) UnmarshalChangeID(data jsontext.Value) (forge.ChangeID, error) {
 	var pr PR
 	if err := json.Unmarshal(data, &pr); err != nil {
 		return nil, fmt.Errorf("unmarshal PR: %w", err)
@@ -100,7 +101,7 @@ type PR struct {
 
 	// GQLID is the GraphQL ID of the change.
 	// This may be empty.
-	GQLID github.ID `json:"gqlID,omitempty"`
+	GQLID github.ID `json:"gqlID,omitzero"`
 }
 
 var _ forge.ChangeID = (*PR)(nil)
