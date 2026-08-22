@@ -36,7 +36,11 @@ func TestBranchTreeSelect_Script(t *testing.T) {
 
 			var input []BranchTreeItem
 			require.NoError(t,
-				json.Unmarshal([]byte(ts.ReadFile("branches")), &input),
+				json.Unmarshal(
+					[]byte(ts.ReadFile("branches")),
+					&input,
+					json.MatchCaseInsensitiveNames(true),
+				),
 				"read 'branches' file")
 
 			desc := readOptionalFile(ts, "desc")

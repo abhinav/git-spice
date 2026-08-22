@@ -278,6 +278,7 @@ fieldLoop:
 			return json.UnmarshalRead(
 				strings.NewReader(fixture.Value),
 				dst,
+				json.MatchCaseInsensitiveNames(true),
 				json.RejectUnknownMembers(true),
 			)
 		})
