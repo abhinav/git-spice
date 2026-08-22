@@ -196,9 +196,8 @@ func (c *Client) PullRequestList(
 		query.Set("state", req.State)
 	}
 
-	return getPaged[PullRequest](
+	return c.getPaged[PullRequest](
 		ctx,
-		c,
 		fmt.Sprintf(
 			"/projects/%s/repos/%s/pull-requests",
 			url.PathEscape(projectKey),
@@ -415,8 +414,8 @@ func (c *Client) BuildStatusList(
 	commitID string,
 ) ([]BuildStatus, error) {
 	var statuses []BuildStatus
-	for status, err := range getPaged[BuildStatus](
-		ctx, c, c.buildBase+"/commits/"+url.PathEscape(commitID), nil,
+	for status, err := range c.getPaged[BuildStatus](
+		ctx, c.buildBase+"/commits/"+url.PathEscape(commitID), nil,
 	) {
 		if err != nil {
 			return nil, err
@@ -663,9 +662,8 @@ func (c *Client) ActivityList(
 	slug string,
 	prID int64,
 ) iter.Seq2[Activity, error] {
-	return getPaged[Activity](
+	return c.getPaged[Activity](
 		ctx,
-		c,
 		fmt.Sprintf(
 			"/projects/%s/repos/%s/pull-requests/%d/activities",
 			url.PathEscape(projectKey),
@@ -688,9 +686,8 @@ func (c *Client) BlockerCommentList(
 	slug string,
 	prID int64,
 ) iter.Seq2[Comment, error] {
-	return getPaged[Comment](
+	return c.getPaged[Comment](
 		ctx,
-		c,
 		fmt.Sprintf(
 			"/projects/%s/repos/%s/pull-requests/%d/blocker-comments",
 			url.PathEscape(projectKey),

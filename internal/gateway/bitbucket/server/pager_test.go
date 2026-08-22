@@ -54,7 +54,7 @@ func TestGetPaged_walksPages(t *testing.T) {
 	client := newTestClient(t, srv)
 
 	var ids []int
-	for item, err := range getPaged[pagerItem](t.Context(), client, "/items", nil) {
+	for item, err := range client.getPaged[pagerItem](t.Context(), "/items", nil) {
 		require.NoError(t, err)
 		ids = append(ids, item.ID)
 	}
@@ -80,7 +80,7 @@ func TestGetPaged_singlePage(t *testing.T) {
 	client := newTestClient(t, srv)
 
 	var ids []int
-	for item, err := range getPaged[pagerItem](t.Context(), client, "/items", nil) {
+	for item, err := range client.getPaged[pagerItem](t.Context(), "/items", nil) {
 		require.NoError(t, err)
 		ids = append(ids, item.ID)
 	}
@@ -99,7 +99,7 @@ func TestGetPaged_error(t *testing.T) {
 		gotErr error
 		count  int
 	)
-	for _, err := range getPaged[pagerItem](t.Context(), client, "/items", nil) {
+	for _, err := range client.getPaged[pagerItem](t.Context(), "/items", nil) {
 		count++
 		gotErr = err
 	}
@@ -138,7 +138,7 @@ func TestGetPaged_missingNextPageStart(t *testing.T) {
 	client := newTestClient(t, srv)
 
 	var ids []int
-	for item, err := range getPaged[pagerItem](t.Context(), client, "/items", nil) {
+	for item, err := range client.getPaged[pagerItem](t.Context(), "/items", nil) {
 		require.NoError(t, err)
 		ids = append(ids, item.ID)
 	}
@@ -172,7 +172,7 @@ func TestGetPaged_earlyStop(t *testing.T) {
 	client := newTestClient(t, srv)
 
 	var ids []int
-	for item, err := range getPaged[pagerItem](t.Context(), client, "/items", nil) {
+	for item, err := range client.getPaged[pagerItem](t.Context(), "/items", nil) {
 		require.NoError(t, err)
 		ids = append(ids, item.ID)
 		if len(ids) == 3 {
