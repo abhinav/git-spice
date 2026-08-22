@@ -502,12 +502,12 @@ func (c *shamhubCLI) dump(args []string) error {
 }
 
 func encodeJSON(w io.Writer, v any) error {
-	return json.MarshalWrite(
+	enc := jsontext.NewEncoder(
 		w,
-		v,
 		jsontext.EscapeForHTML(false),
 		jsontext.WithIndent("  "),
 	)
+	return json.MarshalEncode(enc, v)
 }
 
 func parseOwnerRepo(ownerRepo string) (owner string, repo string, err error) {

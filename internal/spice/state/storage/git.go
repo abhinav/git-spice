@@ -183,11 +183,11 @@ func (g *GitBackend) Update(ctx context.Context, req UpdateRequest) error {
 		must.NotBeBlankf(set.Key, "key must not be blank")
 
 		var buf bytes.Buffer
-		if err := json.MarshalWrite(
+		enc := jsontext.NewEncoder(
 			&buf,
-			set.Value,
 			jsontext.WithIndent("  "),
-		); err != nil {
+		)
+		if err := json.MarshalEncode(enc, set.Value); err != nil {
 			return fmt.Errorf("encode JSON: %w", err)
 		}
 
