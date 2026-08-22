@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"iter"
-	"maps"
 	"net/url"
 	"strconv"
 )
@@ -23,19 +22,20 @@ type page[T any] struct {
 }
 
 // getPaged returns an iterator over all items at path, walking Data Center
-// pages until isLastPage. It is a free function because Go has no generic
-// methods. Iteration stops on the first error, yielding the zero value of T.
-func getPaged[T any](
+// pages until isLastPage. Iteration stops on the first error, yielding the
+// zero value of T.
+func (c *Client) getPaged[T any](
 	ctx context.Context,
-	c *Client,
 	path string,
 	query url.Values,
 ) iter.Seq2[T, error] {
 	return func(yield func(T, error) bool) {
 		start := 0
 		for {
-			pageQuery := make(url.Values, len(query)+2)
-			maps.Copy(pageQuery, query)
+			pageQuery := query.Clone()
+			if pageQuery == nil {
+				pageQuery = make(url.Values)
+			}
 			pageQuery.Set("start", strconv.Itoa(start))
 			if pageQuery.Get("limit") == "" {
 				pageQuery.Set("limit", strconv.Itoa(_defaultPageLimit))

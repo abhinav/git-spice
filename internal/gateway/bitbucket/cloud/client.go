@@ -142,7 +142,7 @@ func normalizeBaseURL(baseURL string) (normalized, origin, path string, err erro
 	u.Fragment = ""
 	u.Path = strings.TrimSuffix(u.Path, "/")
 
-	originURL := *u
+	originURL := u.Clone()
 	originURL.Path = ""
 	originURL.RawPath = ""
 
