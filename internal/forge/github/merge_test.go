@@ -1,7 +1,7 @@
 package github
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -54,11 +54,11 @@ func TestRepository_MergeChange_method(t *testing.T) {
 					Variables struct {
 						Input struct {
 							PullRequestID string  `json:"pullRequestId"`
-							MergeMethod   *string `json:"mergeMethod,omitempty"`
+							MergeMethod   *string `json:"mergeMethod,omitzero"`
 						} `json:"input"`
 					} `json:"variables"`
 				}
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+				require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 				input := body.Variables.Input
 				assert.Equal(t, "prID", input.PullRequestID)
@@ -70,7 +70,7 @@ func TestRepository_MergeChange_method(t *testing.T) {
 				}
 				merged = true
 
-				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				require.NoError(t, json.MarshalWrite(w, map[string]any{
 					"data": map[string]any{
 						"mergePullRequest": map[string]any{
 							"pullRequest": map[string]any{

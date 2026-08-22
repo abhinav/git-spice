@@ -3,7 +3,8 @@ package submit
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 	"strings"
 	"sync"
@@ -389,7 +390,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 			mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 			mockForge.EXPECT().
 				MarshalChangeMetadata(gomock.Any()).
-				DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+				DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 					md, ok := m.(*shamhub.ChangeMetadata)
 					require.True(t, ok, "unexpected change metadata type: %T", m)
 					return json.Marshal(md)
@@ -397,7 +398,7 @@ func TestUpdateNavigationComments(t *testing.T) {
 				AnyTimes()
 			mockForge.EXPECT().
 				UnmarshalChangeID(gomock.Any()).
-				DoAndReturn(func(data json.RawMessage) (forge.ChangeID, error) {
+				DoAndReturn(func(data jsontext.Value) (forge.ChangeID, error) {
 					var md shamhub.ChangeMetadata
 					if err := json.Unmarshal(data, &md); err != nil {
 						return nil, err
@@ -533,7 +534,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 		mockForge.EXPECT().
 			MarshalChangeMetadata(gomock.Any()).
-			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 				md, ok := m.(*shamhub.ChangeMetadata)
 				require.True(t, ok, "unexpected change metadata type: %T", m)
 				return json.Marshal(md)
@@ -643,7 +644,7 @@ func TestUpdateNavigationComments_deletedExternally(t *testing.T) {
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 		mockForge.EXPECT().
 			MarshalChangeMetadata(gomock.Any()).
-			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 				md, ok := m.(*shamhub.ChangeMetadata)
 				require.True(t, ok, "unexpected change metadata type: %T", m)
 				return json.Marshal(md)
@@ -759,7 +760,7 @@ func TestUpdateNavigationComments_trunkComparisonLink(t *testing.T) {
 		mockForge.EXPECT().ID().Return("shamhub").AnyTimes()
 		mockForge.EXPECT().
 			MarshalChangeMetadata(gomock.Any()).
-			DoAndReturn(func(m forge.ChangeMetadata) (json.RawMessage, error) {
+			DoAndReturn(func(m forge.ChangeMetadata) (jsontext.Value, error) {
 				return json.Marshal(m)
 			}).
 			AnyTimes()

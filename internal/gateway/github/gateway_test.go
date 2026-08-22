@@ -2,7 +2,8 @@ package github
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"io"
 	"net/http"
@@ -200,10 +201,10 @@ func TestGateway_CreatePullRequest_optionalInputs(t *testing.T) {
 				var request struct {
 					Query     string `json:"query"`
 					Variables struct {
-						Input json.RawMessage `json:"input"`
+						Input jsontext.Value `json:"input"`
 					} `json:"variables"`
 				}
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+				require.NoError(t, json.UnmarshalRead(r.Body, &request))
 				assert.Equal(t, "mutation($input:CreatePullRequestInput!){createPullRequest(input: $input){pullRequest{id,number,url}}}", request.Query)
 				assert.JSONEq(t, tt.want, string(request.Variables.Input))
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"data":{"createPullRequest":{"pullRequest":{"id":"PR_1","number":1,"url":"https://example.com/1"}}}}`))}, nil

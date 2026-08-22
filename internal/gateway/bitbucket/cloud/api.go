@@ -30,47 +30,47 @@ type PullRequest struct {
 	Destination BranchRef        `json:"destination"`
 	Reviewers   []User           `json:"reviewers"`
 	Links       PullRequestLinks `json:"links"`
-	MergeCommit *Commit          `json:"merge_commit,omitempty"`
+	MergeCommit *Commit          `json:"merge_commit,omitzero"`
 
 	// Mergeable reports Bitbucket Cloud's current merge decision.
 	//
 	// It is nil when the response omits the field.
-	Mergeable *bool `json:"mergeable,omitempty"`
+	Mergeable *bool `json:"mergeable,omitzero"`
 
 	// Queued reports whether Bitbucket Cloud is still evaluating mergeability.
-	Queued bool `json:"queued,omitempty"`
+	Queued bool `json:"queued,omitzero"`
 }
 
 // PullRequestCreateRequest is the request body for creating a pull request.
 type PullRequestCreateRequest struct {
 	Title             string     `json:"title"`
-	Description       string     `json:"description,omitempty"`
+	Description       string     `json:"description,omitzero"`
 	Source            BranchRef  `json:"source"`
 	Destination       BranchRef  `json:"destination"`
 	Reviewers         []Reviewer `json:"reviewers,omitempty"`
-	CloseSourceBranch bool       `json:"close_source_branch,omitempty"`
-	Draft             bool       `json:"draft,omitempty"`
+	CloseSourceBranch bool       `json:"close_source_branch,omitzero"`
+	Draft             bool       `json:"draft,omitzero"`
 }
 
 // PullRequestUpdateRequest is the request body for updating a pull request.
 type PullRequestUpdateRequest struct {
-	Title       *string    `json:"title,omitempty"`
-	Description *string    `json:"description,omitempty"`
-	Destination *BranchRef `json:"destination,omitempty"`
+	Title       *string    `json:"title,omitzero"`
+	Description *string    `json:"description,omitzero"`
+	Destination *BranchRef `json:"destination,omitzero"`
 	Reviewers   []Reviewer `json:"reviewers,omitempty"`
-	Draft       *bool      `json:"draft,omitempty"`
+	Draft       *bool      `json:"draft,omitzero"`
 }
 
 // PullRequestMergeRequest is the request body for merging a pull request.
 type PullRequestMergeRequest struct {
 	// Strategy selects one of Bitbucket Cloud's supported merge strategies.
-	Strategy string `json:"merge_strategy,omitempty"`
+	Strategy string `json:"merge_strategy,omitzero"`
 }
 
 // PullRequestList is the paginated response for listing pull requests.
 type PullRequestList struct {
 	Values []PullRequest `json:"values"`
-	Next   string        `json:"next,omitempty"`
+	Next   string        `json:"next,omitzero"`
 }
 
 func (l *PullRequestList) nextURL() string {
@@ -92,8 +92,8 @@ type PullRequestListOptions struct {
 type Comment struct {
 	ID         int64       `json:"id"`
 	Content    Content     `json:"content"`
-	Inline     *Inline     `json:"inline,omitempty"`
-	Resolution *Resolution `json:"resolution,omitempty"`
+	Inline     *Inline     `json:"inline,omitzero"`
+	Resolution *Resolution `json:"resolution,omitzero"`
 }
 
 // CommentCreateRequest is the request body for creating or updating a comment.
@@ -104,7 +104,7 @@ type CommentCreateRequest struct {
 // CommentList is the paginated response for listing comments.
 type CommentList struct {
 	Values []Comment `json:"values"`
-	Next   string    `json:"next,omitempty"`
+	Next   string    `json:"next,omitzero"`
 }
 
 func (l *CommentList) nextURL() string {
@@ -129,7 +129,7 @@ type WorkspaceMember struct {
 // for listing workspace members.
 type WorkspaceMemberList struct {
 	Values []WorkspaceMember `json:"values"`
-	Next   string            `json:"next,omitempty"`
+	Next   string            `json:"next,omitzero"`
 }
 
 func (l *WorkspaceMemberList) nextURL() string {
@@ -147,8 +147,8 @@ type WorkspaceMemberListOptions struct {
 // BranchRef references a branch in a repository.
 type BranchRef struct {
 	Branch     Branch         `json:"branch"`
-	Commit     *Commit        `json:"commit,omitempty"`
-	Repository *RepositoryRef `json:"repository,omitempty"`
+	Commit     *Commit        `json:"commit,omitzero"`
+	Repository *RepositoryRef `json:"repository,omitzero"`
 }
 
 // Branch is a branch reference within a request or response.
@@ -158,7 +158,7 @@ type Branch struct {
 
 // RepositoryRef identifies a repository in a pull request branch reference.
 type RepositoryRef struct {
-	FullName string `json:"full_name,omitempty"`
+	FullName string `json:"full_name,omitzero"`
 }
 
 // Reviewer identifies a reviewer by UUID.
@@ -198,8 +198,8 @@ type Content struct {
 // Inline identifies an inline comment location.
 type Inline struct {
 	Path string `json:"path"`
-	From *int   `json:"from,omitempty"`
-	To   *int   `json:"to,omitempty"`
+	From *int   `json:"from,omitzero"`
+	To   *int   `json:"to,omitzero"`
 }
 
 // Resolution indicates a comment resolution state.
@@ -431,8 +431,8 @@ type CommitStatus struct {
 type CommitStatusCreateRequest struct {
 	Key         string `json:"key"`
 	State       string `json:"state"`
-	Description string `json:"description,omitempty"`
-	URL         string `json:"url,omitempty"`
+	Description string `json:"description,omitzero"`
+	URL         string `json:"url,omitzero"`
 }
 
 // Bitbucket Cloud build status states.
@@ -448,7 +448,7 @@ const (
 // CommitStatusList is the response for listing commit statuses.
 type CommitStatusList struct {
 	Values []CommitStatus `json:"values"`
-	Next   string         `json:"next,omitempty"`
+	Next   string         `json:"next,omitzero"`
 }
 
 func (l *CommitStatusList) nextURL() string {

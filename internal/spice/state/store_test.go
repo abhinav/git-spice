@@ -1,7 +1,7 @@
 package state_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +36,7 @@ func TestStore(t *testing.T) {
 			Base:           "main",
 			BaseHash:       "123456",
 			ChangeForge:    "shamhub",
-			ChangeMetadata: json.RawMessage(`{"number": 42}`),
+			ChangeMetadata: jsontext.Value(`{"number": 42}`),
 		}},
 	})
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestStore(t *testing.T) {
 			Base:           "main",
 			BaseHash:       "abcdef",
 			ChangeForge:    "shamhub",
-			ChangeMetadata: json.RawMessage(`{"id": 42}`),
+			ChangeMetadata: jsontext.Value(`{"id": 42}`),
 		}},
 	}))
 
@@ -71,7 +71,7 @@ func TestStore(t *testing.T) {
 					Base:           "bar2",
 					BaseHash:       "54321",
 					ChangeForge:    "shamhub",
-					ChangeMetadata: json.RawMessage(`{"id": 43}`),
+					ChangeMetadata: jsontext.Value(`{"id": 43}`),
 				},
 			},
 		})
@@ -93,7 +93,7 @@ func TestStore(t *testing.T) {
 				Name:           "bar/baz",
 				Base:           "main",
 				ChangeForge:    "shamhub",
-				ChangeMetadata: json.RawMessage(`{"id": 44}`),
+				ChangeMetadata: jsontext.Value(`{"id": 44}`),
 				BaseHash:       "abcdef",
 			}},
 		})

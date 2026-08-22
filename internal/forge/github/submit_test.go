@@ -2,7 +2,7 @@ package github
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,13 +30,13 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 				Input map[string]any `json:"input"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 		if strings.Contains(body.Query, "repository(owner: $owner, name: $repo)") {
 			assert.Equal(t, "test-owner-robot", body.Variables.Owner)
 			assert.Equal(t, "test-repo", body.Variables.Repo)
 
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
 					"repository": map[string]any{
 						"id": "pushRepoID",
@@ -54,7 +54,7 @@ func TestRepository_SubmitChange_fromPushRepository(t *testing.T) {
 		assert.Equal(t, "pushRepoID", input["headRepositoryId"])
 		created = true
 
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
 				"createPullRequest": map[string]any{
 					"pullRequest": map[string]any{
@@ -116,14 +116,14 @@ func TestRepository_addPullRequestMetadata(t *testing.T) {
 			Query     string         `json:"query"`
 			Variables map[string]any `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 
 		switch {
 		case strings.Contains(body.Query, "label0:label(name: $label0)"):
 			assert.Equal(t, "enhancement", body.Variables["label0"])
 			assert.Equal(t, "test-repo", body.Variables["name"])
 			assert.Equal(t, "test-owner", body.Variables["owner"])
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
 					"repository": map[string]any{
 						"label0": map[string]any{"id": "labelID"},
@@ -136,7 +136,7 @@ func TestRepository_addPullRequestMetadata(t *testing.T) {
 			assert.Equal(t, "alice", body.Variables["user0"])
 			assert.Equal(t, "bob", body.Variables["user1"])
 
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
 					"user0": map[string]any{
 						"id": "aliceID",
@@ -163,7 +163,7 @@ func TestRepository_addPullRequestMetadata(t *testing.T) {
 			assert.Equal(t, "prID", assignees["assignableId"])
 			assert.Equal(t, []any{"bobID"}, assignees["assigneeIds"])
 
-			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			require.NoError(t, json.MarshalWrite(w, map[string]any{
 				"data": map[string]any{
 					"labels":    map[string]any{},
 					"reviews":   map[string]any{},
@@ -219,7 +219,7 @@ func TestRepository_identityIDsCoalescesConcurrentMisses(t *testing.T) {
 				User0 string `json:"user0"`
 			} `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.UnmarshalRead(r.Body, &body))
 		require.Contains(t, body.Query, "user0:user(login: $user0)")
 		assert.Equal(t, "alice", body.Variables.User0)
 
@@ -231,7 +231,7 @@ func TestRepository_identityIDsCoalescesConcurrentMisses(t *testing.T) {
 		// so the second goroutine must join the in-flight lookup
 		// instead of reading from a warmed cache.
 		<-releaseQuery
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
 				"user0": map[string]any{
 					"id": "aliceID",

@@ -2,7 +2,7 @@ package bitbucket
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"strings"
@@ -31,7 +31,7 @@ const (
 
 // AuthenticationToken defines the token returned by the Bitbucket forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// AuthType specifies the authentication method used.
 	AuthType AuthType `json:"auth_type"`
@@ -40,7 +40,7 @@ type AuthenticationToken struct {
 	//
 	// Not used if AuthType is AuthTypeGCM,
 	// as the token is loaded from git-credential-manager on demand.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -346,5 +346,5 @@ func writeJSON(t *testing.T, w http.ResponseWriter, code int, v any) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }

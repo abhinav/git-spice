@@ -1,7 +1,7 @@
 package widget
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"os"
 	"strings"
 	"testing"
@@ -28,7 +28,11 @@ func TestCommitPick(t *testing.T) {
 	uitest.RunScripts(t, func(t testing.TB, ts *testscript.TestScript, view ui.InteractiveView) {
 		var input []CommitPickBranch
 		require.NoError(t,
-			json.Unmarshal([]byte(ts.ReadFile("branches")), &input),
+			json.Unmarshal(
+				[]byte(ts.ReadFile("branches")),
+				&input,
+				json.MatchCaseInsensitiveNames(true),
+			),
 			"read 'branches' file")
 
 		want := git.Hash(strings.TrimSpace(ts.ReadFile("want")))

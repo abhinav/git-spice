@@ -360,7 +360,7 @@ func (c *Client) RepoGet(
 type Repository struct {
 	ID          int64                 `json:"id"`
 	FullName    string                `json:"full_name"`
-	Permissions *RepositoryPermission `json:"permissions,omitempty"`
+	Permissions *RepositoryPermission `json:"permissions,omitzero"`
 }
 
 // RepositoryPermission holds the current user's access level for a repository.
@@ -413,10 +413,10 @@ type CreateCommitStatusOption struct {
 	State string `json:"state"`
 
 	// Context identifies the status source (e.g., "ci/tests").
-	Context string `json:"context,omitempty"`
+	Context string `json:"context,omitzero"`
 
 	// Description is a short description of the status.
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 }
 
 // LabelList lists labels for a repository.
@@ -604,10 +604,10 @@ type ListOptions struct {
 // https://gitea.com/api/swagger#/issue/repoCreatePullRequest
 type CreatePullRequestOption struct {
 	Title     string   `json:"title"`
-	Body      string   `json:"body,omitempty"`
+	Body      string   `json:"body,omitzero"`
 	Head      string   `json:"head"`
 	Base      string   `json:"base"`
-	Draft     bool     `json:"draft,omitempty"`
+	Draft     bool     `json:"draft,omitzero"`
 	Labels    []int64  `json:"labels,omitempty"`
 	Assignees []string `json:"assignees,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
@@ -618,11 +618,11 @@ type CreatePullRequestOption struct {
 // Gitea API:
 // https://gitea.com/api/swagger#/issue/repoEditPullRequest
 type EditPullRequestOption struct {
-	Title     *string  `json:"title,omitempty"`
-	Body      *string  `json:"body,omitempty"`
-	Base      *string  `json:"base,omitempty"`
-	State     *string  `json:"state,omitempty"` // "open" or "closed"
-	Draft     *bool    `json:"draft,omitempty"`
+	Title     *string  `json:"title,omitzero"`
+	Body      *string  `json:"body,omitzero"`
+	Base      *string  `json:"base,omitzero"`
+	State     *string  `json:"state,omitzero"` // "open" or "closed"
+	Draft     *bool    `json:"draft,omitzero"`
 	Labels    []int64  `json:"labels,omitempty"`
 	Assignees []string `json:"assignees,omitempty"`
 	Reviewers []string `json:"reviewers,omitempty"`
@@ -638,7 +638,7 @@ type MergePullRequestOption struct {
 
 	// HeadCommitID, if non-empty, aborts the merge
 	// if the pull request head no longer matches.
-	HeadCommitID string `json:"head_commit_id,omitempty"`
+	HeadCommitID string `json:"head_commit_id,omitzero"`
 }
 
 // ListPullRequestsOptions configures pull request listing.

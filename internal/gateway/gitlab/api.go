@@ -2,7 +2,7 @@ package gitlab
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -535,7 +535,7 @@ type BasicMergeRequest struct {
 // https://docs.gitlab.com/api/merge_requests/
 type MergeRequest struct {
 	BasicMergeRequest
-	HeadPipeline *Pipeline `json:"head_pipeline,omitempty"`
+	HeadPipeline *Pipeline `json:"head_pipeline,omitzero"`
 }
 
 // Pipeline is a GitLab CI pipeline status summary.
@@ -665,7 +665,7 @@ type GetMergeRequestsOptions struct{}
 
 // ListUsersOptions configures GitLab user-list requests.
 type ListUsersOptions struct {
-	Username *string `json:"username,omitempty"`
+	Username *string `json:"username,omitzero"`
 }
 
 func (o *ListUsersOptions) encodeQuery() url.Values {
@@ -681,35 +681,35 @@ func (o *ListUsersOptions) encodeQuery() url.Values {
 
 // CreateMergeRequestOptions configures merge-request creation.
 type CreateMergeRequestOptions struct {
-	Title              *string       `json:"title,omitempty"`
-	Description        *string       `json:"description,omitempty"`
-	SourceBranch       *string       `json:"source_branch,omitempty"`
-	TargetBranch       *string       `json:"target_branch,omitempty"`
-	TargetProjectID    *int64        `json:"target_project_id,omitempty"`
-	Labels             *LabelOptions `json:"labels,omitempty"`
-	AssigneeIDs        *[]int64      `json:"assignee_ids,omitempty"`
-	ReviewerIDs        *[]int64      `json:"reviewer_ids,omitempty"`
-	RemoveSourceBranch *bool         `json:"remove_source_branch,omitempty"`
+	Title              *string       `json:"title,omitzero"`
+	Description        *string       `json:"description,omitzero"`
+	SourceBranch       *string       `json:"source_branch,omitzero"`
+	TargetBranch       *string       `json:"target_branch,omitzero"`
+	TargetProjectID    *int64        `json:"target_project_id,omitzero"`
+	Labels             *LabelOptions `json:"labels,omitzero"`
+	AssigneeIDs        *[]int64      `json:"assignee_ids,omitzero"`
+	ReviewerIDs        *[]int64      `json:"reviewer_ids,omitzero"`
+	RemoveSourceBranch *bool         `json:"remove_source_branch,omitzero"`
 }
 
 // UpdateMergeRequestOptions configures merge-request updates.
 type UpdateMergeRequestOptions struct {
-	Title        *string       `json:"title,omitempty"`
-	TargetBranch *string       `json:"target_branch,omitempty"`
-	AssigneeIDs  *[]int64      `json:"assignee_ids,omitempty"`
-	ReviewerIDs  *[]int64      `json:"reviewer_ids,omitempty"`
-	AddLabels    *LabelOptions `json:"add_labels,omitempty"`
-	StateEvent   *string       `json:"state_event,omitempty"`
+	Title        *string       `json:"title,omitzero"`
+	TargetBranch *string       `json:"target_branch,omitzero"`
+	AssigneeIDs  *[]int64      `json:"assignee_ids,omitzero"`
+	ReviewerIDs  *[]int64      `json:"reviewer_ids,omitzero"`
+	AddLabels    *LabelOptions `json:"add_labels,omitzero"`
+	StateEvent   *string       `json:"state_event,omitzero"`
 }
 
 // ListProjectMergeRequestsOptions configures project merge-request listing.
 type ListProjectMergeRequestsOptions struct {
 	ListOptions
 
-	IIDs         *[]int64 `json:"iids,omitempty"`
-	State        *string  `json:"state,omitempty"`
-	OrderBy      *string  `json:"order_by,omitempty"`
-	SourceBranch *string  `json:"source_branch,omitempty"`
+	IIDs         *[]int64 `json:"iids,omitzero"`
+	State        *string  `json:"state,omitzero"`
+	OrderBy      *string  `json:"order_by,omitzero"`
+	SourceBranch *string  `json:"source_branch,omitzero"`
 }
 
 func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
@@ -743,9 +743,9 @@ func (o *ListProjectMergeRequestsOptions) encodeQuery() url.Values {
 
 // AcceptMergeRequestOptions configures merge-request acceptance.
 type AcceptMergeRequestOptions struct {
-	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitempty"`
-	SHA                      *string `json:"sha,omitempty"`
-	Squash                   *bool   `json:"squash,omitempty"`
+	ShouldRemoveSourceBranch *bool   `json:"should_remove_source_branch,omitzero"`
+	SHA                      *string `json:"sha,omitzero"`
+	Squash                   *bool   `json:"squash,omitzero"`
 }
 
 // SetCommitStatusOptions configures commit status creation.
@@ -754,16 +754,16 @@ type SetCommitStatusOptions struct {
 	//
 	// Supported values include pending, running, success,
 	// failed, canceled, and skipped.
-	State *string `json:"state,omitempty"`
+	State *string `json:"state,omitzero"`
 
 	// Name identifies the status context shown in GitLab.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitzero"`
 
 	// Description explains the status result.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitzero"`
 
 	// Ref identifies the branch or tag for the commit status.
-	Ref *string `json:"ref,omitempty"`
+	Ref *string `json:"ref,omitzero"`
 }
 
 // ListCommitStatusesOptions configures commit-status listing.
@@ -771,7 +771,7 @@ type ListCommitStatusesOptions struct {
 	ListOptions
 
 	// Ref filters statuses by branch or tag.
-	Ref *string `json:"ref,omitempty"`
+	Ref *string `json:"ref,omitzero"`
 }
 
 func (o *ListCommitStatusesOptions) encodeQuery() url.Values {
@@ -793,18 +793,18 @@ func (o *ListCommitStatusesOptions) encodeQuery() url.Values {
 
 // CreateMergeRequestNoteOptions configures note creation.
 type CreateMergeRequestNoteOptions struct {
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 }
 
 // UpdateMergeRequestNoteOptions configures note updates.
 type UpdateMergeRequestNoteOptions struct {
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 }
 
 // ListMergeRequestNotesOptions configures note-list requests.
 type ListMergeRequestNotesOptions struct {
 	ListOptions
-	Sort *string `json:"sort,omitempty"`
+	Sort *string `json:"sort,omitzero"`
 }
 
 func (o *ListMergeRequestNotesOptions) encodeQuery() url.Values {

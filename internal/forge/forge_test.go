@@ -1,7 +1,7 @@
 package forge_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"testing"
 
@@ -430,11 +430,11 @@ func (d testDefinition) BaseURL() string { return d.baseURL }
 
 func (d testDefinition) CLIPlugin() any { return d.plugin }
 
-func (testDefinition) MarshalChangeMetadata(forge.ChangeMetadata) (json.RawMessage, error) {
+func (testDefinition) MarshalChangeMetadata(forge.ChangeMetadata) (jsontext.Value, error) {
 	return nil, nil
 }
 
-func (testDefinition) UnmarshalChangeMetadata(json.RawMessage) (forge.ChangeMetadata, error) {
+func (testDefinition) UnmarshalChangeMetadata(jsontext.Value) (forge.ChangeMetadata, error) {
 	return nil, nil
 }
 

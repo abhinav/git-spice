@@ -2,7 +2,8 @@ package gitlab
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -12,11 +13,11 @@ import (
 // persisted in git-spice's data store.
 type MRMetadata struct {
 	// MR is the merge request this metadata is for.
-	MR *MR `json:"mr,omitempty"`
+	MR *MR `json:"mr,omitzero"`
 
 	// NavigationComment is the comment on the merge request
 	// where we visualize the stack of MRs.
-	NavigationComment *MRComment `json:"comment,omitempty"`
+	NavigationComment *MRComment `json:"comment,omitzero"`
 }
 
 var _ forge.ChangeMetadata = (*MRMetadata)(nil)
@@ -57,12 +58,12 @@ func (r *Repository) NewChangeMetadata(_ context.Context, id forge.ChangeID) (fo
 type changeMetadataCodec struct{}
 
 // MarshalChangeMetadata serializes a MRMetadata into JSON.
-func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (jsontext.Value, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata deserializes a MRMetadata from JSON.
-func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+func (changeMetadataCodec) UnmarshalChangeMetadata(data jsontext.Value) (forge.ChangeMetadata, error) {
 	var md MRMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, fmt.Errorf("unmarshal MR metadata: %w", err)
@@ -71,12 +72,12 @@ func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.
 }
 
 // MarshalChangeID serializes a MR into JSON.
-func (*Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+func (*Forge) MarshalChangeID(id forge.ChangeID) (jsontext.Value, error) {
 	return json.Marshal(mustMR(id))
 }
 
 // UnmarshalChangeID deserializes a MR from JSON.
-func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+func (*Forge) UnmarshalChangeID(data jsontext.Value) (forge.ChangeID, error) {
 	var id MR
 	if err := json.Unmarshal(data, &id); err != nil {
 		return nil, fmt.Errorf("unmarshal MR ID: %w", err)

@@ -3,7 +3,7 @@ package shamhub
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -237,9 +237,11 @@ func (c *jsonHTTPClient) do(ctx context.Context, method, url string, req, res an
 		return fmt.Errorf("unexpected status code: %d\nbody: %s", httpResp.StatusCode, resBody)
 	}
 
-	dec := json.NewDecoder(bytes.NewReader(resBody))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(res); err != nil {
+	if err := json.UnmarshalRead(
+		bytes.NewReader(resBody),
+		res,
+		json.RejectUnknownMembers(true),
+	); err != nil {
 		return fmt.Errorf("decode response: %w", err)
 	}
 

@@ -3,7 +3,8 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"flag"
 	"fmt"
 	"os"
@@ -153,7 +154,7 @@ func cmdCmpenvJSON(ts *testscript.TestScript, neg bool, args []string) {
 		return
 	}
 
-	prettyJSON1, err := json.MarshalIndent(json1, "", "  ")
+	prettyJSON1, err := json.Marshal(json1, jsontext.WithIndent("  "))
 	ts.Check(err)
 
 	if neg {
@@ -162,7 +163,7 @@ func cmdCmpenvJSON(ts *testscript.TestScript, neg bool, args []string) {
 		return
 	}
 
-	prettyJSON2, err := json.MarshalIndent(json2, "", "  ")
+	prettyJSON2, err := json.Marshal(json2, jsontext.WithIndent("  "))
 	ts.Check(err)
 
 	unifiedDiff := diff.Diff(name1, prettyJSON1, name2, prettyJSON2)

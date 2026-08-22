@@ -298,7 +298,7 @@ type CreatePullRequestOption struct {
 	Title string `json:"title"`
 
 	// Body is the pull request body.
-	Body string `json:"body,omitempty"`
+	Body string `json:"body,omitzero"`
 
 	// Head is the source branch.
 	Head string `json:"head"`
@@ -307,7 +307,7 @@ type CreatePullRequestOption struct {
 	Base string `json:"base"`
 
 	// Assignee is the login of a single assignee.
-	Assignee string `json:"assignee,omitempty"`
+	Assignee string `json:"assignee,omitzero"`
 
 	// Assignees are assignee logins.
 	Assignees []string `json:"assignees,omitempty"`
@@ -316,10 +316,10 @@ type CreatePullRequestOption struct {
 	Labels []int64 `json:"labels,omitempty"`
 
 	// Milestone is the milestone ID.
-	Milestone int64 `json:"milestone,omitempty"`
+	Milestone int64 `json:"milestone,omitzero"`
 
 	// Draft requests a draft pull request.
-	Draft bool `json:"draft,omitempty"`
+	Draft bool `json:"draft,omitzero"`
 }
 
 // EditPullRequestOption is the request body for editing a pull request.
@@ -328,31 +328,31 @@ type CreatePullRequestOption struct {
 // https://codeberg.org/swagger.v1.json#/definitions/EditPullRequestOption
 type EditPullRequestOption struct {
 	// Title updates the pull request title.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitzero"`
 
 	// Body updates the pull request body.
-	Body *string `json:"body,omitempty"`
+	Body *string `json:"body,omitzero"`
 
 	// Base updates the target branch.
-	Base *string `json:"base,omitempty"`
+	Base *string `json:"base,omitzero"`
 
 	// Assignee updates the single assignee.
-	Assignee *string `json:"assignee,omitempty"`
+	Assignee *string `json:"assignee,omitzero"`
 
 	// Assignees updates assignee logins.
-	Assignees *[]string `json:"assignees,omitempty"`
+	Assignees *[]string `json:"assignees,omitzero"`
 
 	// Labels updates label IDs.
-	Labels *[]int64 `json:"labels,omitempty"`
+	Labels *[]int64 `json:"labels,omitzero"`
 
 	// Milestone updates the milestone ID.
-	Milestone *int64 `json:"milestone,omitempty"`
+	Milestone *int64 `json:"milestone,omitzero"`
 
 	// State updates the pull request state.
-	State *string `json:"state,omitempty"`
+	State *string `json:"state,omitzero"`
 
 	// Draft updates the pull request draft state.
-	Draft *bool `json:"draft,omitempty"`
+	Draft *bool `json:"draft,omitzero"`
 }
 
 // MergePullRequestOption is the request body for merging a pull request.
@@ -364,17 +364,17 @@ type MergePullRequestOption struct {
 	Do string `json:"Do"`
 
 	// HeadCommitID requires the pull request head to match before merging.
-	HeadCommitID string `json:"head_commit_id,omitempty"`
+	HeadCommitID string `json:"head_commit_id,omitzero"`
 
 	// MergeTitleField sets the merge commit title.
-	MergeTitleField string `json:"MergeTitleField,omitempty"`
+	MergeTitleField string `json:"MergeTitleField,omitzero"`
 
 	// MergeMessageField sets the merge commit message.
-	MergeMessageField string `json:"MergeMessageField,omitempty"`
+	MergeMessageField string `json:"MergeMessageField,omitzero"`
 
 	// DeleteBranchAfterMerge deletes the source branch after merge.
-	DeleteBranchAfterMerge bool `json:"delete_branch_after_merge,omitempty"`
+	DeleteBranchAfterMerge bool `json:"delete_branch_after_merge,omitzero"`
 
 	// ForceMerge allows a forced merge when Forgejo supports it.
-	ForceMerge bool `json:"force_merge,omitempty"`
+	ForceMerge bool `json:"force_merge,omitzero"`
 }

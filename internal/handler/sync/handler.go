@@ -5,7 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"iter"
@@ -515,7 +515,7 @@ func (h *Handler) findForgeFinishedBranches(
 		Name string
 
 		Base            string
-		MergedDownstack []json.RawMessage
+		MergedDownstack []jsontext.Value
 
 		Change forge.ChangeID
 		State  forge.ChangeState
@@ -531,7 +531,7 @@ func (h *Handler) findForgeFinishedBranches(
 		Name string
 
 		Base            string
-		MergedDownstack []json.RawMessage
+		MergedDownstack []jsontext.Value
 
 		Change        forge.ChangeID
 		Merged        bool
@@ -713,7 +713,7 @@ func (h *Handler) findForgeFinishedBranches(
 	}
 
 	finishedBranches := make(map[string]finishedBranch) // name -> branch
-	mergedDownstacks := make(map[string][]json.RawMessage)
+	mergedDownstacks := make(map[string][]jsontext.Value)
 	for _, branch := range submittedBranches {
 		switch branch.State {
 		case forge.ChangeOpen:
@@ -835,7 +835,7 @@ func (h *Handler) findForgeFinishedBranches(
 		for above := range branchGraph.Aboves(name) {
 			// MergedDownstack for the upstack of the branch being merged
 			// is the branch's own merged downstack and the branch itself.
-			var newHistory []json.RawMessage
+			var newHistory []jsontext.Value
 			newHistory = append(newHistory, mergedDownstacks[name]...)
 			newHistory = append(newHistory, changeIDJSON)
 			// Combine with anything else already in the merged downstack.

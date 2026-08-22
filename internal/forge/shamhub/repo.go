@@ -27,7 +27,7 @@ type Repository struct {
 	Name     string      `json:"name"`
 	FullName string      `json:"full_name"`
 	Fork     bool        `json:"fork"`
-	Parent   *Repository `json:"parent,omitempty"`
+	Parent   *Repository `json:"parent,omitzero"`
 }
 
 // NewRepository creates a new Git repository

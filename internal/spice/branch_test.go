@@ -1,7 +1,7 @@
 package spice
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -83,7 +83,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				Return(&state.LookupResponse{
 					Base:           "main",
 					BaseHash:       "abc123",
-					ChangeMetadata: json.RawMessage(`{"number": 123}`),
+					ChangeMetadata: jsontext.Value(`{"number": 123}`),
 					ChangeForge:    shamhubForge.ID(),
 				}, nil)
 
@@ -103,7 +103,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 				Return(&state.LookupResponse{
 					Base:           "main",
 					BaseHash:       "abc123",
-					ChangeMetadata: json.RawMessage(`{"number": 123}`),
+					ChangeMetadata: jsontext.Value(`{"number": 123}`),
 					ChangeForge:    "unknown",
 				}, nil)
 
@@ -133,7 +133,7 @@ func TestService_LookupBranch_changeAssociation(t *testing.T) {
 			Return(&state.LookupResponse{
 				Base:           "main",
 				BaseHash:       "abc123",
-				ChangeMetadata: json.RawMessage(`{"number": 123`),
+				ChangeMetadata: jsontext.Value(`{"number": 123`),
 				ChangeForge:    shamhubForge.ID(),
 			}, nil)
 

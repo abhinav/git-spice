@@ -3,7 +3,8 @@ package shamhub
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
@@ -157,9 +158,11 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 
 		// Decode the body only if it's not a GET or DELETE request.
 		if r.Method != http.MethodGet && r.Method != http.MethodDelete {
-			dec := json.NewDecoder(r.Body)
-			dec.DisallowUnknownFields()
-			if err := dec.Decode(reqv.Addr().Interface()); err != nil {
+			if err := json.UnmarshalRead(
+				r.Body,
+				reqv.Addr().Interface(),
+				json.RejectUnknownMembers(true),
+			); err != nil {
 				http.Error(w, fmt.Sprintf("decode request: %v", err), http.StatusBadRequest)
 				return
 			}
@@ -183,9 +186,7 @@ func buildRESTHandler[State, Req, Res any](state State, handler func(State, cont
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ") // pretty print JSON
-		if err := enc.Encode(res); err != nil {
+		if err := json.MarshalWrite(w, res, jsontext.WithIndent("  ")); err != nil {
 			http.Error(w, fmt.Sprintf("encode response: %v", err), http.StatusInternalServerError)
 			return
 		}

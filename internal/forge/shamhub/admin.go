@@ -2,7 +2,7 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"slices"
 	"strconv"
@@ -201,10 +201,10 @@ func (sh *ShamHub) handleAdminConfig(
 
 type adminMergeChangeBody struct {
 	Time           time.Time `json:"time"`
-	CommitterName  string    `json:"committerName,omitempty"`
-	CommitterEmail string    `json:"committerEmail,omitempty"`
-	DeleteBranch   bool      `json:"deleteBranch,omitempty"`
-	Squash         bool      `json:"squash,omitempty"`
+	CommitterName  string    `json:"committerName,omitzero"`
+	CommitterEmail string    `json:"committerEmail,omitzero"`
+	DeleteBranch   bool      `json:"deleteBranch,omitzero"`
+	Squash         bool      `json:"squash,omitzero"`
 }
 
 type adminMergeChangeRequest struct {
@@ -213,10 +213,10 @@ type adminMergeChangeRequest struct {
 	Number int    `path:"number" json:"-"`
 
 	Time           time.Time `json:"time"`
-	CommitterName  string    `json:"committerName,omitempty"`
-	CommitterEmail string    `json:"committerEmail,omitempty"`
-	DeleteBranch   bool      `json:"deleteBranch,omitempty"`
-	Squash         bool      `json:"squash,omitempty"`
+	CommitterName  string    `json:"committerName,omitzero"`
+	CommitterEmail string    `json:"committerEmail,omitzero"`
+	DeleteBranch   bool      `json:"deleteBranch,omitzero"`
+	Squash         bool      `json:"squash,omitzero"`
 }
 
 type adminMergeChangeResponse struct{}
@@ -300,7 +300,7 @@ func (sh *ShamHub) handleAdminSetStatus(
 
 type adminSetMergeabilityBody struct {
 	State  string `json:"state"`
-	Reason string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitzero"`
 }
 
 type adminSetMergeabilityRequest struct {
@@ -309,7 +309,7 @@ type adminSetMergeabilityRequest struct {
 	Number int    `path:"number" json:"-"`
 
 	State  string `json:"state"`
-	Reason string `json:"reason,omitempty"`
+	Reason string `json:"reason,omitzero"`
 }
 
 type adminSetMergeabilityResponse struct{}
@@ -339,10 +339,10 @@ type adminPostCommentBody struct {
 	Repo  string `json:"repo"`
 
 	Change     int    `json:"change"`
-	ID         int    `json:"id,omitempty"`
+	ID         int    `json:"id,omitzero"`
 	Body       string `json:"body"`
-	Resolvable bool   `json:"resolvable,omitempty"`
-	Resolved   bool   `json:"resolved,omitempty"`
+	Resolvable bool   `json:"resolvable,omitzero"`
+	Resolved   bool   `json:"resolved,omitzero"`
 }
 
 type adminPostCommentRequest struct {
@@ -350,10 +350,10 @@ type adminPostCommentRequest struct {
 	Repo  string `json:"repo"`
 
 	Change     int    `json:"change"`
-	ID         int    `json:"id,omitempty"`
+	ID         int    `json:"id,omitzero"`
 	Body       string `json:"body"`
-	Resolvable bool   `json:"resolvable,omitempty"`
-	Resolved   bool   `json:"resolved,omitempty"`
+	Resolvable bool   `json:"resolvable,omitzero"`
+	Resolved   bool   `json:"resolved,omitzero"`
 }
 
 type adminPostCommentResponse struct {
@@ -373,13 +373,13 @@ func (sh *ShamHub) handleAdminPostComment(
 }
 
 type adminEditCommentBody struct {
-	Resolved *bool `json:"resolved,omitempty"`
+	Resolved *bool `json:"resolved,omitzero"`
 }
 
 type adminEditCommentRequest struct {
 	ID int `path:"id" json:"-"`
 
-	Resolved *bool `json:"resolved,omitempty"`
+	Resolved *bool `json:"resolved,omitzero"`
 }
 
 type adminEditCommentResponse struct{}
@@ -489,7 +489,7 @@ func (sh *ShamHub) handleAdminDumpComments(
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(adminDumpCommentsResponse{
+	if err := json.MarshalWrite(w, adminDumpCommentsResponse{
 		Comments: comments,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

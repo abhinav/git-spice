@@ -1,7 +1,7 @@
 package github
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,10 +20,10 @@ func TestRepository_identityIDsCachesSuccessesFromPartialLookup(t *testing.T) {
 		var request struct {
 			Query string `json:"query"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Contains(t, request.Query, "user0:user(login: $user0){id}")
 		assert.Contains(t, request.Query, "user1:user(login: $user1){id}")
-		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+		require.NoError(t, json.MarshalWrite(w, map[string]any{
 			"data": map[string]any{
 				"user0": map[string]any{"id": "U_1"},
 				"user1": nil,

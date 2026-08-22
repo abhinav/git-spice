@@ -1,7 +1,8 @@
 package bitbucket
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/forge"
@@ -35,11 +36,11 @@ type PRComment struct {
 
 	// PRID is the pull request ID this comment belongs to.
 	// Required for updating comments via the Bitbucket API.
-	PRID int64 `json:"pr_id,omitempty"`
+	PRID int64 `json:"pr_id,omitzero"`
 
 	// Version is the Data Center optimistic-locking version.
 	// It is zero for Bitbucket Cloud comments.
-	Version int `json:"version,omitempty"`
+	Version int `json:"version,omitzero"`
 }
 
 var _ forge.ChangeCommentID = (*PRComment)(nil)
@@ -63,11 +64,11 @@ func (c *PRComment) String() string {
 // persisted in git-spice's data store.
 type PRMetadata struct {
 	// PR is the pull request this metadata is for.
-	PR *PR `json:"pr,omitempty"`
+	PR *PR `json:"pr,omitzero"`
 
 	// NavigationComment is the comment on the pull request
 	// where we visualize the stack of PRs.
-	NavigationComment *PRComment `json:"comment,omitempty"`
+	NavigationComment *PRComment `json:"comment,omitzero"`
 }
 
 var _ forge.ChangeMetadata = (*PRMetadata)(nil)
@@ -102,12 +103,12 @@ func (m *PRMetadata) SetNavigationCommentID(id forge.ChangeCommentID) {
 type changeMetadataCodec struct{}
 
 // MarshalChangeMetadata serializes a PRMetadata into JSON.
-func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (json.RawMessage, error) {
+func (changeMetadataCodec) MarshalChangeMetadata(md forge.ChangeMetadata) (jsontext.Value, error) {
 	return json.Marshal(md)
 }
 
 // UnmarshalChangeMetadata deserializes a PRMetadata from JSON.
-func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.ChangeMetadata, error) {
+func (changeMetadataCodec) UnmarshalChangeMetadata(data jsontext.Value) (forge.ChangeMetadata, error) {
 	var md PRMetadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, fmt.Errorf("unmarshal PR metadata: %w", err)
@@ -116,12 +117,12 @@ func (changeMetadataCodec) UnmarshalChangeMetadata(data json.RawMessage) (forge.
 }
 
 // MarshalChangeID serializes a PR into JSON.
-func (*Forge) MarshalChangeID(id forge.ChangeID) (json.RawMessage, error) {
+func (*Forge) MarshalChangeID(id forge.ChangeID) (jsontext.Value, error) {
 	return json.Marshal(mustPR(id))
 }
 
 // UnmarshalChangeID deserializes a PR from JSON.
-func (*Forge) UnmarshalChangeID(data json.RawMessage) (forge.ChangeID, error) {
+func (*Forge) UnmarshalChangeID(data jsontext.Value) (forge.ChangeID, error) {
 	var id PR
 	if err := json.Unmarshal(data, &id); err != nil {
 		return nil, fmt.Errorf("unmarshal PR ID: %w", err)

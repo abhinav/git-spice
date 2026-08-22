@@ -2,7 +2,7 @@ package state_test
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"maps"
 	"slices"
 	"testing"
@@ -216,7 +216,7 @@ func TestBranchTxUpsertChangeMetadataCanClear(t *testing.T) {
 			{
 				Name:           "foo",
 				Base:           "main",
-				ChangeMetadata: json.RawMessage(`{"number": 123}`),
+				ChangeMetadata: jsontext.Value(`{"number": 123}`),
 				ChangeForge:    "github",
 			},
 		},

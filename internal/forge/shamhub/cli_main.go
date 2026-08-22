@@ -2,7 +2,8 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -501,10 +502,12 @@ func (c *shamhubCLI) dump(args []string) error {
 }
 
 func encodeJSON(w io.Writer, v any) error {
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	return enc.Encode(v)
+	enc := jsontext.NewEncoder(
+		w,
+		jsontext.EscapeForHTML(false),
+		jsontext.WithIndent("  "),
+	)
+	return json.MarshalEncode(enc, v)
 }
 
 func parseOwnerRepo(ownerRepo string) (owner string, repo string, err error) {

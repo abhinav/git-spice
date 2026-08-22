@@ -367,8 +367,8 @@ type mergeChangeRequest struct {
 	Owner       string `path:"owner" json:"-"`
 	Repo        string `path:"repo" json:"-"`
 	Number      int    `path:"number" json:"-"`
-	HeadHash    string `json:"headHash,omitempty"`
-	MergeMethod string `json:"mergeMethod,omitempty"`
+	HeadHash    string `json:"headHash,omitzero"`
+	MergeMethod string `json:"mergeMethod,omitzero"`
 }
 
 type mergeChangeResponse struct{}

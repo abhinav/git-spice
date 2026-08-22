@@ -3,7 +3,8 @@ package state
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 
@@ -28,8 +29,8 @@ func (r Remote) ForkMode() bool {
 }
 
 type remoteInfo struct {
-	Upstream string `json:"upstream,omitempty"`
-	Push     string `json:"push,omitempty"`
+	Upstream string `json:"upstream,omitzero"`
+	Push     string `json:"push,omitzero"`
 }
 
 func newRemoteInfo(remote Remote) remoteInfo {
@@ -38,8 +39,8 @@ func newRemoteInfo(remote Remote) remoteInfo {
 
 type repoInfo struct {
 	Trunk   string      `json:"trunk"`
-	Remote  string      `json:"remote,omitempty"`
-	Remotes *remoteInfo `json:"remotes,omitempty"`
+	Remote  string      `json:"remote,omitzero"`
+	Remotes *remoteInfo `json:"remotes,omitzero"`
 }
 
 func newRepoInfo(trunk string, remote Remote) repoInfo {
@@ -81,9 +82,9 @@ func (i *repoInfo) stateRemote() Remote {
 
 func (i *repoInfo) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		Trunk   string          `json:"trunk"`
-		Remote  json.RawMessage `json:"remote"`
-		Remotes *remoteInfo     `json:"remotes"`
+		Trunk   string         `json:"trunk"`
+		Remote  jsontext.Value `json:"remote"`
+		Remotes *remoteInfo    `json:"remotes"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err

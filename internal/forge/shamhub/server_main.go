@@ -2,7 +2,8 @@ package shamhub
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"flag"
 	"fmt"
@@ -114,9 +115,11 @@ func runServeCLI(
 		}
 	}
 	if *jsonOutput {
-		enc := json.NewEncoder(stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(env); err != nil {
+		if err := json.MarshalWrite(
+			stdout,
+			env,
+			jsontext.WithIndent("  "),
+		); err != nil {
 			return fmt.Errorf("write JSON: %w", err)
 		}
 	} else {

@@ -2,7 +2,7 @@ package spice
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 
 	"go.abhg.dev/gs/internal/git"
@@ -36,7 +36,7 @@ type BranchOntoRequest struct {
 	Onto string
 
 	// MergedDownstack for [Branch], if any.
-	MergedDownstack *[]json.RawMessage
+	MergedDownstack *[]jsontext.Value
 
 	// Mode controls whether Branch's commits are rebased immediately
 	// or only retargeted in git-spice state.

@@ -2,7 +2,7 @@ package github
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/url"
@@ -77,7 +77,7 @@ func (s *TokenType) UnmarshalText(text []byte) error {
 
 // AuthenticationToken defines the token returned by the GitHub forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// Type indicates where the token is loaded from.
 	// This determines whether AccessToken is used.
@@ -86,7 +86,7 @@ type AuthenticationToken struct {
 	// AccessToken is the GitHub access token.
 	//
 	// Not used if Type is TokenTypeGCM or TokenTypeCLI.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
@@ -95,9 +95,9 @@ var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)
 func (t *AuthenticationToken) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		Type        TokenType `json:"type"`
-		AccessToken string    `json:"access_token,omitempty"`
+		AccessToken string    `json:"access_token,omitzero"`
 
-		GitHubCLI bool `json:"github_cli,omitempty"` // for backward compatibility
+		GitHubCLI bool `json:"github_cli,omitzero"` // for backward compatibility
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err

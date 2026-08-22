@@ -147,11 +147,11 @@ type CreateStatusOption struct {
 	State CommitStatusState `json:"state"`
 
 	// TargetURL is the URL for status details.
-	TargetURL string `json:"target_url,omitempty"`
+	TargetURL string `json:"target_url,omitzero"`
 
 	// Description describes the status.
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// Context names the status context.
-	Context string `json:"context,omitempty"`
+	Context string `json:"context,omitzero"`
 }

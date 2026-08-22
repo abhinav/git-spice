@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"io"
 	"net/http"
@@ -16,10 +17,10 @@ func TestGateway_PullRequestComments(t *testing.T) {
 	requestNum := 0
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 
 		requestNum++
 		var response string

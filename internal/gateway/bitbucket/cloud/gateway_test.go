@@ -1,7 +1,7 @@
 package cloud
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,7 +47,7 @@ func TestGateway_ChangeTemplate(t *testing.T) {
 		switch r.URL.Path {
 		case "/repositories/workspace/repo":
 			repositoryGets++
-			assert.NoError(t, json.NewEncoder(w).Encode(Repository{
+			assert.NoError(t, json.MarshalWrite(w, Repository{
 				MainBranch: Branch{Name: "main"},
 			}))
 		case "/repositories/workspace/repo/src/main/PULL_REQUEST_TEMPLATE.md":
@@ -79,7 +79,7 @@ func TestGateway_ChangeTemplate(t *testing.T) {
 func TestGateway_ChangeTemplate_notFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/repositories/workspace/repo" {
-			assert.NoError(t, json.NewEncoder(w).Encode(Repository{
+			assert.NoError(t, json.MarshalWrite(w, Repository{
 				MainBranch: Branch{Name: "main"},
 			}))
 			return
@@ -101,7 +101,7 @@ func TestGateway_ChangeTemplate_emptyRepository(t *testing.T) {
 		// and must not receive any source file requests.
 		assert.Equal(t, "/repositories/workspace/repo", r.URL.Path)
 		repositoryGets++
-		assert.NoError(t, json.NewEncoder(w).Encode(Repository{}))
+		assert.NoError(t, json.MarshalWrite(w, Repository{}))
 	}))
 	defer srv.Close()
 
@@ -132,7 +132,7 @@ func TestGateway_ChangeTemplate_repositoryError(t *testing.T) {
 func TestGateway_ChangeTemplate_fileError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/repositories/workspace/repo" {
-			assert.NoError(t, json.NewEncoder(w).Encode(Repository{
+			assert.NoError(t, json.MarshalWrite(w, Repository{
 				MainBranch: Branch{Name: "main"},
 			}))
 			return
@@ -217,7 +217,7 @@ func TestGateway_ListCommitChecks(t *testing.T) {
 				assert.Equal(t,
 					"/repositories/workspace/repo/commit/abc123/statuses",
 					r.URL.Path)
-				assert.NoError(t, json.NewEncoder(w).Encode(
+				assert.NoError(t, json.MarshalWrite(w,
 					CommitStatusList{Values: tt.statuses}))
 			}))
 			defer srv.Close()

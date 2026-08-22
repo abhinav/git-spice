@@ -11,7 +11,7 @@ package forgetest
 
 import (
 	context "context"
-	json "encoding/json"
+	jsontext "encoding/json/jsontext"
 	iter "iter"
 	reflect "reflect"
 
@@ -276,10 +276,10 @@ func (c *MockForgeLoadAuthenticationTokenCall) DoAndReturn(f func(secret.Stash) 
 }
 
 // MarshalChangeID mocks base method.
-func (m *MockForge) MarshalChangeID(arg0 forge.ChangeID) (json.RawMessage, error) {
+func (m *MockForge) MarshalChangeID(arg0 forge.ChangeID) (jsontext.Value, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MarshalChangeID", arg0)
-	ret0, _ := ret[0].(json.RawMessage)
+	ret0, _ := ret[0].(jsontext.Value)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -297,28 +297,28 @@ type MockForgeMarshalChangeIDCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockForgeMarshalChangeIDCall) Return(arg0 json.RawMessage, arg1 error) *MockForgeMarshalChangeIDCall {
+func (c *MockForgeMarshalChangeIDCall) Return(arg0 jsontext.Value, arg1 error) *MockForgeMarshalChangeIDCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeMarshalChangeIDCall) Do(f func(forge.ChangeID) (json.RawMessage, error)) *MockForgeMarshalChangeIDCall {
+func (c *MockForgeMarshalChangeIDCall) Do(f func(forge.ChangeID) (jsontext.Value, error)) *MockForgeMarshalChangeIDCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeMarshalChangeIDCall) DoAndReturn(f func(forge.ChangeID) (json.RawMessage, error)) *MockForgeMarshalChangeIDCall {
+func (c *MockForgeMarshalChangeIDCall) DoAndReturn(f func(forge.ChangeID) (jsontext.Value, error)) *MockForgeMarshalChangeIDCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // MarshalChangeMetadata mocks base method.
-func (m *MockForge) MarshalChangeMetadata(arg0 forge.ChangeMetadata) (json.RawMessage, error) {
+func (m *MockForge) MarshalChangeMetadata(arg0 forge.ChangeMetadata) (jsontext.Value, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MarshalChangeMetadata", arg0)
-	ret0, _ := ret[0].(json.RawMessage)
+	ret0, _ := ret[0].(jsontext.Value)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -336,19 +336,19 @@ type MockForgeMarshalChangeMetadataCall struct {
 }
 
 // Return rewrite *gomock.Call.Return
-func (c *MockForgeMarshalChangeMetadataCall) Return(arg0 json.RawMessage, arg1 error) *MockForgeMarshalChangeMetadataCall {
+func (c *MockForgeMarshalChangeMetadataCall) Return(arg0 jsontext.Value, arg1 error) *MockForgeMarshalChangeMetadataCall {
 	c.Call = c.Call.Return(arg0, arg1)
 	return c
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeMarshalChangeMetadataCall) Do(f func(forge.ChangeMetadata) (json.RawMessage, error)) *MockForgeMarshalChangeMetadataCall {
+func (c *MockForgeMarshalChangeMetadataCall) Do(f func(forge.ChangeMetadata) (jsontext.Value, error)) *MockForgeMarshalChangeMetadataCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeMarshalChangeMetadataCall) DoAndReturn(f func(forge.ChangeMetadata) (json.RawMessage, error)) *MockForgeMarshalChangeMetadataCall {
+func (c *MockForgeMarshalChangeMetadataCall) DoAndReturn(f func(forge.ChangeMetadata) (jsontext.Value, error)) *MockForgeMarshalChangeMetadataCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
@@ -470,7 +470,7 @@ func (c *MockForgeSaveAuthenticationTokenCall) DoAndReturn(f func(secret.Stash, 
 }
 
 // UnmarshalChangeID mocks base method.
-func (m *MockForge) UnmarshalChangeID(arg0 json.RawMessage) (forge.ChangeID, error) {
+func (m *MockForge) UnmarshalChangeID(arg0 jsontext.Value) (forge.ChangeID, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnmarshalChangeID", arg0)
 	ret0, _ := ret[0].(forge.ChangeID)
@@ -497,19 +497,19 @@ func (c *MockForgeUnmarshalChangeIDCall) Return(arg0 forge.ChangeID, arg1 error)
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeUnmarshalChangeIDCall) Do(f func(json.RawMessage) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
+func (c *MockForgeUnmarshalChangeIDCall) Do(f func(jsontext.Value) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeUnmarshalChangeIDCall) DoAndReturn(f func(json.RawMessage) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
+func (c *MockForgeUnmarshalChangeIDCall) DoAndReturn(f func(jsontext.Value) (forge.ChangeID, error)) *MockForgeUnmarshalChangeIDCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }
 
 // UnmarshalChangeMetadata mocks base method.
-func (m *MockForge) UnmarshalChangeMetadata(arg0 json.RawMessage) (forge.ChangeMetadata, error) {
+func (m *MockForge) UnmarshalChangeMetadata(arg0 jsontext.Value) (forge.ChangeMetadata, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnmarshalChangeMetadata", arg0)
 	ret0, _ := ret[0].(forge.ChangeMetadata)
@@ -536,13 +536,13 @@ func (c *MockForgeUnmarshalChangeMetadataCall) Return(arg0 forge.ChangeMetadata,
 }
 
 // Do rewrite *gomock.Call.Do
-func (c *MockForgeUnmarshalChangeMetadataCall) Do(f func(json.RawMessage) (forge.ChangeMetadata, error)) *MockForgeUnmarshalChangeMetadataCall {
+func (c *MockForgeUnmarshalChangeMetadataCall) Do(f func(jsontext.Value) (forge.ChangeMetadata, error)) *MockForgeUnmarshalChangeMetadataCall {
 	c.Call = c.Call.Do(f)
 	return c
 }
 
 // DoAndReturn rewrite *gomock.Call.DoAndReturn
-func (c *MockForgeUnmarshalChangeMetadataCall) DoAndReturn(f func(json.RawMessage) (forge.ChangeMetadata, error)) *MockForgeUnmarshalChangeMetadataCall {
+func (c *MockForgeUnmarshalChangeMetadataCall) DoAndReturn(f func(jsontext.Value) (forge.ChangeMetadata, error)) *MockForgeUnmarshalChangeMetadataCall {
 	c.Call = c.Call.DoAndReturn(f)
 	return c
 }

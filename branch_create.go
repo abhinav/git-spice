@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 
@@ -146,8 +146,8 @@ func (cmd *branchCreateCmd) Run(
 
 		// Downstack history for the new branch
 		// and for those restacked on top of it.
-		newMergedDownstack       *[]json.RawMessage
-		restackedMergedDownstack *[]json.RawMessage
+		newMergedDownstack       *[]jsontext.Value
+		restackedMergedDownstack *[]jsontext.Value
 	)
 	if cmd.Below {
 		if cmd.Target == trunk {
@@ -171,7 +171,7 @@ func (cmd *branchCreateCmd) Run(
 		// transfer it to the new branch.
 		if len(b.MergedDownstack) > 0 {
 			newMergedDownstack = &b.MergedDownstack
-			restackedMergedDownstack = new([]json.RawMessage)
+			restackedMergedDownstack = new([]jsontext.Value)
 		}
 
 		// TODO: Maybe this transfer should take place at submit time?

@@ -36,8 +36,8 @@ var _ = shamhubRESTHandler("GET /{owner}/{repo}/change-template", (*ShamHub).han
 type changeTemplateResponse []*changeTemplate
 
 type changeTemplate struct {
-	Filename string `json:"filename,omitempty"`
-	Body     string `json:"body,omitempty"`
+	Filename string `json:"filename,omitzero"`
+	Body     string `json:"body,omitzero"`
 }
 
 func (sh *ShamHub) handleChangeTemplate(ctx context.Context, req *changeTemplateRequest) (changeTemplateResponse, error) {

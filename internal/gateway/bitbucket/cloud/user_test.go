@@ -1,7 +1,7 @@
 package cloud
 
 import (
-	"encoding/json"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -90,7 +90,7 @@ func TestGateway_resolveReviewerUUIDs(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, http.MethodGet, r.Method)
 				assert.Equal(t, "/workspaces/workspace/members", r.URL.Path)
-				assert.NoError(t, json.NewEncoder(w).Encode(
+				assert.NoError(t, json.MarshalWrite(w,
 					WorkspaceMemberList{Values: members}))
 			}))
 			defer srv.Close()
@@ -128,7 +128,7 @@ func TestGateway_resolveReviewerUUIDs_accountIDPaged(t *testing.T) {
 		assert.Equal(t, "/workspaces/workspace/members", r.URL.Path)
 
 		if r.URL.RawQuery == "" {
-			assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+			assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 				Values: []WorkspaceMember{
 					{User: User{UUID: "{uuid-1}", AccountID: "1:one"}},
 				},
@@ -137,7 +137,7 @@ func TestGateway_resolveReviewerUUIDs_accountIDPaged(t *testing.T) {
 			return
 		}
 
-		assert.NoError(t, json.NewEncoder(w).Encode(WorkspaceMemberList{
+		assert.NoError(t, json.MarshalWrite(w, WorkspaceMemberList{
 			Values: []WorkspaceMember{
 				{User: User{UUID: "{uuid-2}", AccountID: "2:two"}},
 			},

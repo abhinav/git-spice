@@ -1,7 +1,8 @@
 package forgejo
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -351,12 +352,12 @@ func writeGatewayJSON(
 	t.Helper()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	require.NoError(t, json.NewEncoder(w).Encode(v))
+	require.NoError(t, json.MarshalWrite(w, v))
 }
 
 func assertGatewayJSONBody(t *testing.T, r *http.Request, want string) {
 	t.Helper()
-	var got json.RawMessage
-	require.NoError(t, json.NewDecoder(r.Body).Decode(&got))
+	var got jsontext.Value
+	require.NoError(t, json.UnmarshalRead(r.Body, &got))
 	assert.JSONEq(t, want, string(got))
 }

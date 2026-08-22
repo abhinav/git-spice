@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,8 +19,8 @@ func TestCommentCountsByChange(t *testing.T) {
 	t.Run("NoPagination", func(t *testing.T) {
 		srv := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				enc := json.NewEncoder(w)
-				assert.NoError(t, enc.Encode(map[string]any{
+				enc := jsontext.NewEncoder(w)
+				assert.NoError(t, json.MarshalEncode(enc, map[string]any{
 					"data": map[string]any{
 						"nodes": []map[string]any{
 							{
@@ -72,14 +73,14 @@ func TestCommentCountsByChange(t *testing.T) {
 				assert.NoError(t, err)
 				query := string(body)
 
-				enc := json.NewEncoder(w)
+				enc := jsontext.NewEncoder(w)
 
 				switch {
 				case strings.Contains(query, "nodes(ids:"):
 					// Batch query: return first page
 					// with hasNextPage=true.
 					requestNum++
-					assert.NoError(t, enc.Encode(map[string]any{
+					assert.NoError(t, json.MarshalEncode(enc, map[string]any{
 						"data": map[string]any{
 							"nodes": []map[string]any{
 								{
@@ -103,7 +104,7 @@ func TestCommentCountsByChange(t *testing.T) {
 					// Pagination query:
 					// return remaining threads.
 					requestNum++
-					assert.NoError(t, enc.Encode(map[string]any{
+					assert.NoError(t, json.MarshalEncode(enc, map[string]any{
 						"data": map[string]any{
 							"node": map[string]any{
 								"reviewThreads": map[string]any{

@@ -1,7 +1,8 @@
 package github
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"io"
 	"net/http"
 	"strings"
@@ -14,10 +15,10 @@ import (
 func TestGateway_LabelIDs(t *testing.T) {
 	gateway := newTestGateway(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var request struct {
-			Query     string          `json:"query"`
-			Variables json.RawMessage `json:"variables"`
+			Query     string         `json:"query"`
+			Variables jsontext.Value `json:"variables"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+		require.NoError(t, json.UnmarshalRead(r.Body, &request))
 		assert.Equal(t, "query($label0:String!$label1:String!$name:String!$owner:String!){repository(owner: $owner, name: $name){label0:label(name: $label0){id},label1:label(name: $label1){id}}}", request.Query)
 		assert.JSONEq(t, `{
 			"label0": "bug",

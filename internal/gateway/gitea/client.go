@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -306,7 +306,7 @@ func (c *Client) do(
 		return resp, nil
 	}
 
-	if err := json.NewDecoder(httpResp.Body).Decode(dst); err != nil {
+	if err := json.UnmarshalRead(httpResp.Body, dst); err != nil {
 		return resp, fmt.Errorf("decode response: %w", err)
 	}
 	return resp, nil

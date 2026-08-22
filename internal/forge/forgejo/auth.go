@@ -2,7 +2,7 @@ package forgejo
 
 import (
 	"context"
-	"encoding/json"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,13 +29,13 @@ const (
 
 // AuthenticationToken defines the token returned by the Forgejo forge.
 type AuthenticationToken struct {
-	forge.AuthenticationToken
+	forge.AuthenticationToken `json:"-"`
 
 	// AuthType specifies the authentication method used.
 	AuthType AuthType `json:"auth_type"`
 
 	// AccessToken is the Forgejo API token.
-	AccessToken string `json:"access_token,omitempty"`
+	AccessToken string `json:"access_token,omitzero"`
 }
 
 var _ forge.AuthenticationToken = (*AuthenticationToken)(nil)

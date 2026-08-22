@@ -9,13 +9,13 @@ type MergePullRequestInput struct {
 	PullRequestID ID `json:"pullRequestId"`
 
 	// ClientMutationID, when non-nil, is returned unchanged by GitHub.
-	ClientMutationID *string `json:"clientMutationId,omitempty"`
+	ClientMutationID *string `json:"clientMutationId,omitzero"`
 
 	// ExpectedHeadOID requires the pull request head to match when non-nil.
-	ExpectedHeadOID *string `json:"expectedHeadOid,omitempty"`
+	ExpectedHeadOID *string `json:"expectedHeadOid,omitzero"`
 
 	// MergeMethod is omitted when nil so GitHub selects the repository default.
-	MergeMethod *MergeMethod `json:"mergeMethod,omitempty"`
+	MergeMethod *MergeMethod `json:"mergeMethod,omitzero"`
 }
 
 // MergePullRequest merges a pull request.

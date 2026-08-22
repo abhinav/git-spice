@@ -78,8 +78,8 @@ type CreateLabelOption struct {
 	Name string `json:"name"`
 
 	// Color is the hex color without a leading "#".
-	Color string `json:"color,omitempty"`
+	Color string `json:"color,omitzero"`
 
 	// Description is the label description.
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 }

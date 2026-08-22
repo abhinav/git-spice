@@ -10,7 +10,8 @@ package github
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	json "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -86,8 +87,8 @@ type graphQLRequestEnvelope struct {
 // errors before operation-specific decoding.
 // Keeping Data raw ensures errors take precedence over partial data.
 type graphQLResponseEnvelope struct {
-	Data   json.RawMessage `json:"data"`
-	Errors graphQLError    `json:"errors"`
+	Data   jsontext.Value `json:"data"`
+	Errors graphQLError   `json:"errors"`
 }
 
 // execute performs the shared GraphQL request lifecycle for typed operations.
@@ -103,10 +104,14 @@ type graphQLResponseEnvelope struct {
 // all-or-error result contract.
 func (c *Gateway) execute(ctx context.Context, query string, variables, result any) error {
 	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(graphQLRequestEnvelope{
-		Query:     query,
-		Variables: variables,
-	}); err != nil {
+	if err := json.MarshalWrite(
+		&body,
+		graphQLRequestEnvelope{
+			Query:     query,
+			Variables: variables,
+		},
+		json.Deterministic(true),
+	); err != nil {
 		return fmt.Errorf("encode GraphQL request: %w", err)
 	}
 
