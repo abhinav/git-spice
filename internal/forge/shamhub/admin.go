@@ -518,18 +518,21 @@ func (sh *ShamHub) handleAdminPostReviewComment(
 
 	threadID := ReviewThreadID(req.ThreadID)
 	resolved := req.Resolved
+	reviewRange := forge.ReviewThreadRange{
+		StartLine: req.RangeStart,
+		EndLine:   req.RangeEnd,
+	}
 	if threadID == "" {
 		if req.Path == "" {
 			return nil, badRequestErrorf("review comment path is required")
 		}
-		if err := validateReviewRange(forge.ReviewThreadRange{
-			StartLine: req.RangeStart,
-			EndLine:   req.RangeEnd,
-		}); err != nil {
-			return nil, badRequestErrorf("%v", err)
-		}
-		if err := validateReviewSide(forge.ReviewThreadSide(req.Side)); err != nil {
-			return nil, badRequestErrorf("%v", err)
+		if !reviewRange.IsZero() {
+			if err := validateReviewRange(reviewRange); err != nil {
+				return nil, badRequestErrorf("%v", err)
+			}
+			if err := validateReviewSide(forge.ReviewThreadSide(req.Side)); err != nil {
+				return nil, badRequestErrorf("%v", err)
+			}
 		}
 	} else {
 		root := sh.reviewThreadRoot(threadID)
@@ -551,7 +554,7 @@ func (sh *ShamHub) handleAdminPostReviewComment(
 	if req.Time.IsZero() {
 		req.Time = time.Now()
 	}
-	sh.comments = append(sh.comments, shamComment{
+	comment := shamComment{
 		ID:         id,
 		Change:     req.Change,
 		Body:       req.Body,
@@ -559,14 +562,17 @@ func (sh *ShamHub) handleAdminPostReviewComment(
 		Resolved:   resolved,
 		Outdated:   req.Outdated,
 		Path:       req.Path,
-		Line:       req.RangeStart,
-		RangeStart: req.RangeStart,
-		RangeEnd:   req.RangeEnd,
-		Side:       forge.ReviewThreadSide(req.Side),
 		ThreadID:   threadID,
 		Author:     req.Author,
 		CreatedAt:  req.Time,
-	})
+	}
+	if req.ThreadID == "" && !reviewRange.IsZero() {
+		comment.Line = req.RangeStart
+		comment.RangeStart = req.RangeStart
+		comment.RangeEnd = req.RangeEnd
+		comment.Side = forge.ReviewThreadSide(req.Side)
+	}
+	sh.comments = append(sh.comments, comment)
 	return &adminPostReviewCommentResponse{ID: id, ThreadID: threadID.String()}, nil
 }
 
@@ -674,8 +680,8 @@ type adminDumpFeedbackSubmission struct {
 type adminDumpReviewThread struct {
 	ID       string                   `json:"id" yaml:"id"`
 	Path     string                   `json:"path" yaml:"path"`
-	Range    adminDumpReviewRange     `json:"range" yaml:"range"`
-	Side     string                   `json:"side" yaml:"side"`
+	Range    *adminDumpReviewRange    `json:"range,omitempty" yaml:"range,omitempty"`
+	Side     string                   `json:"side,omitempty" yaml:"side,omitempty"`
 	Resolved bool                     `json:"resolved" yaml:"resolved"`
 	Outdated bool                     `json:"outdated" yaml:"outdated"`
 	Comments []adminDumpReviewComment `json:"comments" yaml:"comments"`
@@ -751,14 +757,25 @@ func (sh *ShamHub) handleAdminDumpReviews(
 		change := appendChange(comment.Change)
 		location, ok := threads[comment.ThreadID]
 		if !ok {
-			change.Threads = append(change.Threads, adminDumpReviewThread{
+			thread := adminDumpReviewThread{
 				ID:       comment.ThreadID.String(),
 				Path:     comment.Path,
-				Range:    adminDumpReviewRange{Start: comment.RangeStart, End: comment.RangeEnd},
-				Side:     comment.Side.String(),
 				Resolved: comment.Resolved,
 				Outdated: comment.Outdated,
-			})
+			}
+			reviewRange := reviewRangeFromCoordinates(
+				comment.Line,
+				comment.RangeStart,
+				comment.RangeEnd,
+			)
+			if !reviewRange.IsZero() {
+				thread.Range = &adminDumpReviewRange{
+					Start: reviewRange.StartLine,
+					End:   reviewRange.EndLine,
+				}
+				thread.Side = comment.Side.String()
+			}
+			change.Threads = append(change.Threads, thread)
 			location = threadLocation{change: change, index: len(change.Threads) - 1}
 			threads[comment.ThreadID] = location
 		}

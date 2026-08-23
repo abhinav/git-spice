@@ -208,7 +208,7 @@ func (c *shamhubCLI) postReviewComment(args []string) error {
 	author := flags.String("author", "reviewer", "comment author")
 	path := flags.String("path", "", "file path")
 	rangeValue := flags.String("range", "", "inclusive line range")
-	side := flags.String("side", "right", "diff side")
+	side := flags.String("side", "", "diff side")
 	resolved := flags.Bool("resolved", false, "mark thread resolved")
 	outdated := flags.Bool("outdated", false, "mark thread outdated")
 	if err := flags.Parse(args); err != nil {
@@ -219,14 +219,30 @@ func (c *shamhubCLI) postReviewComment(args []string) error {
 		return errors.New(
 			"usage: shamhub review comment post " +
 				"[--id <id>] [--author <username>] --path <path> " +
-				"--range <start[:end]> [--side left|right] [--resolved] " +
+				"[--range <start[:end]>] [--side left|right] [--resolved] " +
 				"[--outdated] <owner/repo> <change> <body>",
 		)
 	}
 
-	start, end, err := parseReviewRange(*rangeValue)
-	if err != nil {
-		return err
+	var start, end, sideValue int
+	if *rangeValue == "" {
+		if *side != "" {
+			return errors.New("--side requires --range")
+		}
+	} else {
+		var err error
+		start, end, err = parseReviewRange(*rangeValue)
+		if err != nil {
+			return err
+		}
+		sideName := *side
+		if sideName == "" {
+			sideName = "right"
+		}
+		sideValue, err = parseReviewSide(sideName)
+		if err != nil {
+			return err
+		}
 	}
 	owner, repo, err := parseOwnerRepo(args[0])
 	if err != nil {
@@ -238,10 +254,6 @@ func (c *shamhubCLI) postReviewComment(args []string) error {
 	}
 
 	time, err := c.committerTime()
-	if err != nil {
-		return err
-	}
-	sideValue, err := parseReviewSide(*side)
 	if err != nil {
 		return err
 	}

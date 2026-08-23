@@ -285,15 +285,17 @@ Only `approve` and `request-changes` establish reviewer state.
 ```
 shamhub review comment post \
   [--id <id>] [--author <username>] \
-  --path <path> --range <start[:end]> \
+  --path <path> [--range <start[:end]>] \
   [--side left|right] [--resolved] [--outdated] \
   <owner/repo> <change> <body>
 ```
 
 Posts the root comment of a review thread and prints its comment ID.
+Omit `--range` to post a file-level thread.
 Use `--id` to assign a deterministic ID; use `thread-<comment-id>` as the
 `<thread-id>` when creating replies.
-The default author is `reviewer` and the default side is `right`.
+The default author is `reviewer`.
+For line-level threads, the default side is `right`.
 
 #### shamhub review comment reply
 

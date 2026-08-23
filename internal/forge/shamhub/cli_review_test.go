@@ -97,6 +97,37 @@ func TestCLI_postReviewComment(t *testing.T) {
 	assert.Equal(t, "101\n", stdout.String())
 }
 
+func TestCLI_postReviewComment_fileLevel(t *testing.T) {
+	sh, getenv := newReviewCLITestShamHub(t)
+	stdout := new(bytes.Buffer)
+
+	require.NoError(t, runCLI(
+		t.Context(),
+		[]string{
+			"review", "comment", "post",
+			"--id", "100",
+			"--author", "alice",
+			"--path", "review.go",
+			"alice/example", "1", "File-level comment.",
+		},
+		reviewCLIEnvironment(getenv, "2026-08-22T12:00:00Z"),
+		stdout,
+		new(bytes.Buffer),
+	))
+	assert.Equal(t, "100\n", stdout.String())
+	require.Len(t, sh.comments, 1)
+	assert.Equal(t, shamComment{
+		ID:         100,
+		Change:     1,
+		Body:       "File-level comment.",
+		Resolvable: true,
+		Path:       "review.go",
+		ThreadID:   "thread-100",
+		Author:     "alice",
+		CreatedAt:  mustReviewTime(t, "2026-08-22T12:00:00Z"),
+	}, sh.comments[0])
+}
+
 func TestCLI_replyReviewComment(t *testing.T) {
 	sh, getenv := newReviewCLITestShamHub(t)
 	sh.comments = append(sh.comments, shamComment{
@@ -170,6 +201,15 @@ func TestCLI_dumpFeedbackSubmissions(t *testing.T) {
 			ThreadID:   "thread-2",
 			Author:     "alice",
 		},
+		shamComment{
+			ID:         4,
+			Change:     1,
+			Body:       "File-level comment.",
+			Resolvable: true,
+			Path:       "docs.go",
+			ThreadID:   "thread-4",
+			Author:     "carol",
+		},
 	)
 	stdout := new(bytes.Buffer)
 
@@ -209,6 +249,14 @@ func TestCLI_dumpFeedbackSubmissions(t *testing.T) {
           - id: 3
             author: alice
             body: Reply.
+      - id: thread-4
+        path: docs.go
+        resolved: false
+        outdated: false
+        comments:
+          - id: 4
+            author: carol
+            body: File-level comment.
 `, stdout.String())
 }
 

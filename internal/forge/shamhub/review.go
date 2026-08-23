@@ -106,6 +106,9 @@ func (r *forgeRepository) SubmitReview(
 			continue
 		}
 		comments[i].Path = comment.Path
+		if comment.Range.IsZero() {
+			continue
+		}
 		comments[i].Line = comment.Range.StartLine
 		comments[i].Side = mustReviewThreadSide(comment.Side)
 		if comment.Range.EndLine != comment.Range.StartLine {
@@ -308,10 +311,12 @@ func (sh *ShamHub) submitReview(
 		}
 		if requestComment.ThreadID == "" {
 			comment.Path = requestComment.Path
-			comment.Line = requestComment.Line
-			comment.RangeStart = requestComment.RangeStart
-			comment.RangeEnd = requestComment.RangeEnd
-			comment.Side = forge.ReviewThreadSide(requestComment.Side)
+			if !reviewRangeFromRequest(requestComment).IsZero() {
+				comment.Line = requestComment.Line
+				comment.RangeStart = requestComment.RangeStart
+				comment.RangeEnd = requestComment.RangeEnd
+				comment.Side = forge.ReviewThreadSide(requestComment.Side)
+			}
 		}
 		sh.comments = append(sh.comments, comment)
 		response.Comments = append(response.Comments, submitReviewCommentResponse{
@@ -365,7 +370,11 @@ func (sh *ShamHub) validateSubmitReviewHTTPRequest(req *submitReviewRequest) err
 		if comment.Path == "" {
 			return fmt.Errorf("comment %d path is required", i)
 		}
-		if err := validateReviewRange(reviewRangeFromRequest(comment)); err != nil {
+		reviewRange := reviewRangeFromRequest(comment)
+		if reviewRange.IsZero() {
+			continue
+		}
+		if err := validateReviewRange(reviewRange); err != nil {
 			return fmt.Errorf("comment %d: %w", i, err)
 		}
 		if err := validateReviewSide(forge.ReviewThreadSide(comment.Side)); err != nil {
@@ -376,15 +385,26 @@ func (sh *ShamHub) validateSubmitReviewHTTPRequest(req *submitReviewRequest) err
 }
 
 // reviewRangeFromRequest reconstructs the inclusive domain range from the flat
-// request fields. Zero range fields denote the single line stored in Line.
+// request fields. An absent line and range identify the whole file.
 func reviewRangeFromRequest(req submitReviewCommentRequest) forge.ReviewThreadRange {
-	if req.RangeStart != 0 || req.RangeEnd != 0 {
+	return reviewRangeFromCoordinates(req.Line, req.RangeStart, req.RangeEnd)
+}
+
+// reviewRangeFromCoordinates converts ShamHub's flat location fields to the
+// forge range. Explicit endpoints take precedence over line; without endpoints,
+// a positive line identifies one line, while all-zero coordinates identify the
+// whole file.
+func reviewRangeFromCoordinates(line, rangeStart, rangeEnd int) forge.ReviewThreadRange {
+	if rangeStart != 0 || rangeEnd != 0 {
 		return forge.ReviewThreadRange{
-			StartLine: req.RangeStart,
-			EndLine:   req.RangeEnd,
+			StartLine: rangeStart,
+			EndLine:   rangeEnd,
 		}
 	}
-	return forge.ReviewThreadLine(req.Line)
+	if line == 0 {
+		return forge.ReviewThreadRange{}
+	}
+	return forge.ReviewThreadLine(line)
 }
 
 // reviewThreadRoot returns the first stored comment for a thread. Roots are
@@ -483,7 +503,7 @@ type reviewCommentItem struct {
 	ID         int       `json:"id"`
 	ThreadID   string    `json:"threadID"`
 	Path       string    `json:"path"`
-	Line       int       `json:"line"`
+	Line       int       `json:"line,omitzero"`
 	RangeStart int       `json:"rangeStart,omitzero"`
 	RangeEnd   int       `json:"rangeEnd,omitzero"`
 	Side       int       `json:"side,omitzero"`
@@ -495,15 +515,9 @@ type reviewCommentItem struct {
 }
 
 // reviewRangeFromItem reconstructs the inclusive domain range from a root row.
-// Zero range fields denote the single line stored in Line.
+// An absent line and range identify the whole file.
 func reviewRangeFromItem(item reviewCommentItem) forge.ReviewThreadRange {
-	if item.RangeStart != 0 || item.RangeEnd != 0 {
-		return forge.ReviewThreadRange{
-			StartLine: item.RangeStart,
-			EndLine:   item.RangeEnd,
-		}
-	}
-	return forge.ReviewThreadLine(item.Line)
+	return reviewRangeFromCoordinates(item.Line, item.RangeStart, item.RangeEnd)
 }
 
 // handleListReviewThreads emits flat rows in storage order. Because roots are

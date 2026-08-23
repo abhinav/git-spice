@@ -1,6 +1,9 @@
 package shamhub
 
 import (
+	json "encoding/json/v2"
+	"io"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,6 +46,100 @@ func TestForgeRepository_SubmitReview_invalidEnums(t *testing.T) {
 			)
 		})
 	})
+}
+
+func TestForgeRepository_SubmitReview_fileReviewThread(t *testing.T) {
+	sh, repo := newMergeabilityTestRepository(t)
+	seedMergeabilityChange(sh)
+
+	var (
+		result forge.SubmitReviewResult
+		err    error
+	)
+	require.NotPanics(t, func() {
+		result, err = repo.SubmitReview(
+			t.Context(),
+			ChangeID(1),
+			forge.SubmitReviewRequest{
+				Comments: []forge.SubmitReviewCommentRequest{
+					{
+						Path: "review.go",
+						Side: forge.ReviewThreadSide(99),
+						Body: "File-level comment.",
+					},
+				},
+			},
+		)
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Comments, 1)
+	require.Len(t, sh.comments, 1)
+	assert.Equal(t, "review.go", sh.comments[0].Path)
+	assert.Zero(t, sh.comments[0].Line)
+	assert.Zero(t, sh.comments[0].RangeStart)
+	assert.Zero(t, sh.comments[0].RangeEnd)
+	assert.Zero(t, sh.comments[0].Side)
+
+	_, err = repo.SubmitReview(
+		t.Context(),
+		ChangeID(1),
+		forge.SubmitReviewRequest{
+			Comments: []forge.SubmitReviewCommentRequest{
+				{
+					ReplyTo: result.Comments[0].ThreadID,
+					Body:    "Reply.",
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.Len(t, sh.comments, 2)
+	assert.Empty(t, sh.comments[1].Path)
+	assert.Zero(t, sh.comments[1].Line)
+	assert.Zero(t, sh.comments[1].RangeStart)
+	assert.Zero(t, sh.comments[1].RangeEnd)
+	assert.Zero(t, sh.comments[1].Side)
+
+	u := repo.apiURL.JoinPath(repo.owner, repo.repo, "review-threads")
+	query := u.Query()
+	query.Set("change", "1")
+	u.RawQuery = query.Encode()
+	httpReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, u.String(), nil)
+	require.NoError(t, err)
+	for key, value := range repo.client.headers {
+		httpReq.Header.Set(key, value)
+	}
+	httpRes, err := repo.client.client.Do(httpReq)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, httpRes.Body.Close())
+	}()
+	responseBody, err := io.ReadAll(httpRes.Body)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, httpRes.StatusCode)
+	var response struct {
+		Items []map[string]any `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(responseBody, &response))
+	require.Len(t, response.Items, 2)
+	root := response.Items[0]
+	assert.Equal(t, "File-level comment.", root["body"])
+	for _, key := range []string{"line", "rangeStart", "rangeEnd", "side"} {
+		assert.NotContains(t, root, key)
+	}
+
+	var threads []*forge.ReviewThread
+	for thread, err := range repo.ListReviewThreads(t.Context(), ChangeID(1)) {
+		require.NoError(t, err)
+		threads = append(threads, thread)
+	}
+	require.Len(t, threads, 1)
+	assert.Equal(t, result.Comments[0].ThreadID, threads[0].ID)
+	assert.Equal(t, "review.go", threads[0].Path)
+	assert.True(t, threads[0].Range.IsZero())
+	require.Len(t, threads[0].Comments, 2)
+	assert.Equal(t, "File-level comment.", threads[0].Comments[0].Body)
+	assert.Equal(t, "Reply.", threads[0].Comments[1].Body)
 }
 
 func TestShamHub_FeedbackSubmissionStorage(t *testing.T) {
