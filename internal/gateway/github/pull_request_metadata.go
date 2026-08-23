@@ -108,5 +108,5 @@ func (c *Gateway) AddPullRequestMetadata(ctx context.Context, input *PullRequest
 	mutation := compactGraphQL(
 		"mutation(" + variableDefinitions.String() + "){" + fields.String() + "}",
 	)
-	return c.execute(ctx, mutation, variables, &struct{}{})
+	return c.executeGQL(ctx, mutation, variables, &struct{}{})
 }

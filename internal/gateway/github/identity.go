@@ -89,7 +89,7 @@ func (c *Gateway) IdentityIDs(
 			ID ID `json:"id"`
 		} `json:"team"`
 	}
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, nil, fmt.Errorf("query identities: %w", err)
 	}
 

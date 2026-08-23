@@ -71,7 +71,7 @@ func (c *Gateway) LabelIDs(ctx context.Context, owner, repo string, labels []str
 			ID ID `json:"id"`
 		} `json:"repository"`
 	}
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return nil, fmt.Errorf("query labels: %w", err)
 	}
 

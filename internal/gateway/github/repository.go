@@ -19,7 +19,7 @@ func (c *Gateway) RepositoryID(ctx context.Context, owner, repo string) (ID, err
 			ID ID `json:"id"`
 		} `json:"repository"`
 	}
-	if err := c.execute(ctx, query, struct {
+	if err := c.executeGQL(ctx, query, struct {
 		Owner string `json:"owner"`
 		Repo  string `json:"repo"`
 	}{Owner: owner, Repo: repo}, &result); err != nil {

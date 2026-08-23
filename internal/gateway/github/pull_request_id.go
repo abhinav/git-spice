@@ -26,7 +26,7 @@ func (c *Gateway) PullRequestID(ctx context.Context, owner, repo string, number 
 		Owner  string `json:"owner"`
 		Repo   string `json:"repo"`
 	}{number, owner, repo}
-	if err := c.execute(ctx, query, variables, &result); err != nil {
+	if err := c.executeGQL(ctx, query, variables, &result); err != nil {
 		return "", fmt.Errorf("query pull request ID: %w", err)
 	}
 	return result.Repository.PullRequest.ID, nil

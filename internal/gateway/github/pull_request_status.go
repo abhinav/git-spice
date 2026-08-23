@@ -26,7 +26,7 @@ func (c *Gateway) ChangeStatuses(ctx context.Context, ids []ID) ([]*ChangeStatus
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, struct {
+	if err := c.executeGQL(ctx, query, struct {
 		IDs []ID `json:"ids"`
 	}{ids}, &result); err != nil {
 		return nil, fmt.Errorf("query change statuses: %w", err)

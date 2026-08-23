@@ -149,7 +149,7 @@ func (c *Gateway) statusChecksPage(ctx context.Context, id ID, first int, after 
 		ID    ID      `json:"id"`
 	}{after, id}
 	var result statusChecksResult
-	if err := c.execute(ctx, query, vars, &result); err != nil {
+	if err := c.executeGQL(ctx, query, vars, &result); err != nil {
 		return nil, fmt.Errorf("query status checks: %w", err)
 	}
 

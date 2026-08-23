@@ -32,7 +32,7 @@ func (c *Gateway) ChangeTemplates(ctx context.Context, owner, repo string) ([]*C
 			}
 		}
 	`)
-	if err := c.execute(ctx, query, vars, &result); err != nil {
+	if err := c.executeGQL(ctx, query, vars, &result); err != nil {
 		return nil, fmt.Errorf("query templates: %w", err)
 	}
 	return result.Repository.PullRequestTemplates, nil
