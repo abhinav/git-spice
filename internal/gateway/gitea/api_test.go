@@ -240,6 +240,56 @@ func TestClient_PullReviewList(t *testing.T) {
 	assert.Equal(t, 3, resp.NextPage)
 }
 
+func TestClient_PullReviewCreate(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v1/repos/captain/warp-core/pulls/42/reviews", r.URL.Path)
+		assertJSONBody(t, r, `{
+			"event":"REQUEST_CHANGES",
+			"body":"Rework the plasma flow.",
+			"comments":[
+				{"path":"engine.go","body":"New-side note.","new_position":12},
+				{"path":"legacy.go","body":"Old-side note.","old_position":7}
+			]
+		}`)
+		writeJSON(t, w, http.StatusOK, PullReview{
+			ID:       100,
+			State:    ReviewStateRequestChanges,
+			Reviewer: &User{ID: 7, Login: "spock"},
+		})
+	}))
+	defer srv.Close()
+
+	client := newTestClient(t, srv)
+	review, _, err := client.PullReviewCreate(
+		t.Context(),
+		"captain",
+		"warp-core",
+		42,
+		&CreatePullReviewOptions{
+			Event: ReviewStateRequestChanges,
+			Body:  "Rework the plasma flow.",
+			Comments: []CreatePullReviewCommentOptions{
+				{
+					Path:        "engine.go",
+					Body:        "New-side note.",
+					NewPosition: 12,
+				},
+				{
+					Path:        "legacy.go",
+					Body:        "Old-side note.",
+					OldPosition: 7,
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, int64(100), review.ID)
+	assert.Equal(t, ReviewStateRequestChanges, review.State)
+	require.NotNil(t, review.Reviewer)
+	assert.Equal(t, "spock", review.Reviewer.Login)
+}
+
 func TestClient_PullReviewCommentList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodGet, r.Method)
@@ -247,8 +297,18 @@ func TestClient_PullReviewCommentList(t *testing.T) {
 			"/api/v1/repos/captain/warp-core/pulls/42/reviews/100/comments",
 			r.URL.Path)
 		writeJSON(t, w, http.StatusOK, []*PullReviewComment{
-			{ID: 1000},
-			{ID: 1001},
+			{
+				ID:               1000,
+				ReviewID:         100,
+				Body:             "Mind the phase variance.",
+				Path:             "engine.go",
+				Position:         12,
+				CommitID:         "abc123",
+				OriginalCommitID: "abc123",
+				User:             &User{ID: 7, Login: "spock"},
+				CreatedAt:        time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC),
+			},
+			{ID: 1001, OriginalPosition: 7},
 		})
 	}))
 	defer srv.Close()
@@ -263,7 +323,13 @@ func TestClient_PullReviewCommentList(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Len(t, comments, 2)
-	assert.Equal(t, int64(1001), comments[1].ID)
+	assert.Equal(t, int64(100), comments[0].ReviewID)
+	assert.Equal(t, "Mind the phase variance.", comments[0].Body)
+	assert.Equal(t, int64(12), comments[0].Position)
+	assert.Equal(t, "abc123", comments[0].OriginalCommitID)
+	require.NotNil(t, comments[0].User)
+	assert.Equal(t, "spock", comments[0].User.Login)
+	assert.Equal(t, int64(7), comments[1].OriginalPosition)
 }
 
 func TestClient_CommentCreate(t *testing.T) {

@@ -26,9 +26,11 @@ type Repository struct {
 }
 
 var (
-	_ forge.Repository        = (*Repository)(nil)
-	_ forge.WithChangeURL     = (*Repository)(nil)
-	_ forge.WithComparisonURL = (*Repository)(nil)
+	_ forge.Repository          = (*Repository)(nil)
+	_ forge.ReviewRepository    = (*Repository)(nil)
+	_ forge.ReviewCommentEditor = (*Repository)(nil)
+	_ forge.WithChangeURL       = (*Repository)(nil)
+	_ forge.WithComparisonURL   = (*Repository)(nil)
 )
 
 // ChangeURL returns the web URL for viewing the given pull request.
