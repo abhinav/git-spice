@@ -32,6 +32,9 @@ type ReviewRepository interface {
 
 	// SubmitReview publishes the requested body, thread comments,
 	// and optional review disposition as one logical operation.
+	// If any requested operation is unsupported,
+	// it returns an error wrapping [ErrUnsupported]
+	// without publishing any part of the request.
 	SubmitReview(
 		context.Context,
 		ChangeID,
@@ -72,7 +75,8 @@ const (
 	ReviewDispositionRequestChanges
 )
 
-// ReviewThread is a discussion attached to a line range in a change diff.
+// ReviewThread is a discussion attached to a file
+// or line range in a change diff.
 type ReviewThread struct {
 	// ID identifies the thread within the repository.
 	ID ReviewThreadID
@@ -81,9 +85,11 @@ type ReviewThread struct {
 	Path string
 
 	// Range is the inclusive line range discussed by the thread.
+	// A zero range indicates a file-level thread.
 	Range ReviewThreadRange
 
 	// Side identifies the revision containing Range.
+	// It is ignored when Range is zero.
 	Side ReviewThreadSide
 
 	// Resolved reports whether the forge marks the thread as resolved.
@@ -108,13 +114,22 @@ type ReviewThreadID interface {
 
 // ReviewThreadRange identifies an inclusive, one-based line range
 // on one side of a diff.
-// StartLine must be positive and no greater than EndLine.
+// The zero value identifies the whole file.
+// Otherwise, StartLine must be positive
+// and no greater than EndLine.
 type ReviewThreadRange struct {
 	// StartLine is the first line in the range, inclusive.
+	// It is zero for a file-level range.
 	StartLine int
 
 	// EndLine is the last line in the range, inclusive.
+	// It is zero for a file-level range.
 	EndLine int
+}
+
+// IsZero reports whether the range identifies the whole file.
+func (r ReviewThreadRange) IsZero() bool {
+	return r == ReviewThreadRange{}
 }
 
 // ReviewThreadLine returns a range containing only line.
@@ -203,11 +218,15 @@ type SubmitReviewCommentRequest struct {
 	Path string
 
 	// Range is the inclusive line range to comment on.
-	// It is required when ReplyTo is nil and ignored otherwise.
+	// A zero range requests a file-level comment.
+	// It is ignored when ReplyTo is non-nil.
+	// If the forge does not support file-level comments,
+	// SubmitReview returns an error wrapping [ErrUnsupported]
+	// without publishing any part of the request.
 	Range ReviewThreadRange
 
 	// Side identifies the revision containing Range.
-	// It is ignored when ReplyTo is non-nil.
+	// It is ignored when ReplyTo is non-nil or Range is zero.
 	Side ReviewThreadSide
 
 	// Body is the comment text to publish and must be non-empty.

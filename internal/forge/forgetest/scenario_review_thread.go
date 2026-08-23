@@ -14,6 +14,9 @@ import (
 func (s *integrationSuite) TestReviewThreads(t *testing.T) {
 	t.Run("SingleAndReply", s.TestReviewThreadsSingleAndReply)
 	t.Run("Batch", s.TestReviewThreadsBatch)
+	if s.fileReviewThreads {
+		t.Run("File", s.TestReviewThreadsFile)
+	}
 	t.Run("ReviewerStates", s.TestReviewThreadsReviewerStates)
 }
 
@@ -299,6 +302,97 @@ func (s *integrationSuite) TestReviewThreadsBatch(t *testing.T) {
 		}
 	}
 	assert.Empty(t, wantComments, "batched review comments not found")
+}
+
+func (s *integrationSuite) TestReviewThreadsFile(t *testing.T) {
+	branchName := fixturetest.New(s.Fixtures, "branch", func() string {
+		return randomString(8)
+	}).Get(t)
+
+	// Update mode creates the Git state consumed by the live forge.
+	// Replay mode reuses the recorded branch name and HTTP interactions.
+	if Update() {
+		testRepo := newTestRepository(t, s.RemoteURL)
+		testRepo.CreateBranch(branchName)
+		testRepo.CheckoutBranch(branchName)
+		testRepo.WriteFile(
+			"review.go",
+			"package review",
+			"",
+			"func value() int {",
+			"\treturn 1",
+			"}",
+		)
+		testRepo.AddAllAndCommit("commit for file review comment")
+		testRepo.Push(branchName)
+
+		t.Cleanup(func() {
+			testRepo.DeleteRemoteBranch(branchName)
+		})
+	}
+
+	repo := s.OpenRepository(t)
+	reviewRepo, ok := repo.(forge.ReviewRepository)
+	require.True(t, ok, "repository does not implement ReviewRepository")
+
+	change, err := repo.SubmitChange(t.Context(), forge.SubmitChangeRequest{
+		Subject: "Testing file review thread " + branchName,
+		Body:    "Test change for a file-level review thread",
+		Base:    "main",
+		Head:    branchName,
+	})
+	require.NoError(t, err, "submit change")
+	if Update() {
+		t.Cleanup(func() {
+			s.CloseChange(t, repo, change.ID)
+		})
+
+		// Some forges create the change before its diff is ready.
+		// Give asynchronous processing time to expose review positions.
+		time.Sleep(5 * time.Second)
+	}
+
+	result, err := reviewRepo.SubmitReview(
+		t.Context(),
+		change.ID,
+		forge.SubmitReviewRequest{
+			Comments: []forge.SubmitReviewCommentRequest{
+				{
+					Path: "review.go",
+					Body: "File-level review comment.",
+				},
+			},
+		},
+	)
+	require.NoError(t, err, "submit file-level review comment")
+	require.Len(t, result.Comments, 1)
+	require.NotNil(t, result.Comments[0].ThreadID)
+	require.NotNil(t, result.Comments[0].CommentID)
+
+	// The zero range must survive the forge's native representation
+	// rather than being reconstructed as an arbitrary line anchor.
+	threads, err := sliceutil.CollectErr(
+		reviewRepo.ListReviewThreads(t.Context(), change.ID))
+	require.NoError(t, err, "list review threads")
+	var (
+		fileThread  *forge.ReviewThread
+		fileComment *forge.ReviewComment
+	)
+	for _, thread := range threads {
+		for i := range thread.Comments {
+			comment := &thread.Comments[i]
+			if comment.Body == "File-level review comment." {
+				fileThread = thread
+				fileComment = comment
+			}
+		}
+	}
+	require.NotNil(t, fileThread, "file-level review thread not found")
+	require.NotNil(t, fileComment, "file-level review comment not found")
+	assert.Equal(t, result.Comments[0].ThreadID, fileThread.ID)
+	assert.Equal(t, result.Comments[0].CommentID, fileComment.ID)
+	assert.Equal(t, "review.go", fileThread.Path)
+	assert.True(t, fileThread.Range.IsZero())
 }
 
 func (s *integrationSuite) TestReviewThreadsReviewerStates(t *testing.T) {

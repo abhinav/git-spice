@@ -2,6 +2,9 @@ package forge
 
 import "errors"
 
+// ErrUnsupported indicates that a requested operation is not supported.
+var ErrUnsupported = errors.New("unsupported operation")
+
 // ErrUnsupportedURL indicates that the given remote URL
 // does not match any registered forge.
 var ErrUnsupportedURL = errors.New("unsupported URL")

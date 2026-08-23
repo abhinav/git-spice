@@ -6,6 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestReviewThreadRange_IsZero(t *testing.T) {
+	assert.True(t, (ReviewThreadRange{}).IsZero())
+	assert.False(t, ReviewThreadLine(1).IsZero())
+}
+
 func TestReviewThreadLine(t *testing.T) {
 	assert.Equal(t, ReviewThreadRange{
 		StartLine: 42,

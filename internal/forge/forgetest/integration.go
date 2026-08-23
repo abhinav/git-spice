@@ -142,6 +142,11 @@ type IntegrationConfig struct {
 	// ReviewThreads enables the shared review-thread scenario.
 	// Enable it only when OpenRepository returns a forge.ReviewRepository.
 	ReviewThreads bool // optional
+
+	// FileReviewThreads indicates that the repository supports
+	// file-level review threads.
+	// It is used only when ReviewThreads is enabled.
+	FileReviewThreads bool // optional
 }
 
 // RunIntegration runs integration tests with the given configuration.
@@ -179,6 +184,7 @@ func RunIntegration(t *testing.T, config IntegrationConfig) {
 		skipMerge:             config.SkipMerge,
 		skipCommentPagination: config.SkipCommentPagination,
 		skipCommentCounts:     config.SkipCommentCounts,
+		fileReviewThreads:     config.FileReviewThreads,
 	}
 
 	t.Run("SubmitEditChange", func(t *testing.T) {
@@ -363,6 +369,9 @@ type integrationSuite struct {
 
 	// skipCommentCounts skips comment counts test.
 	skipCommentCounts bool
+
+	// fileReviewThreads indicates that file-level review threads are supported.
+	fileReviewThreads bool
 
 	openRepository func(*testing.T, *http.Client) forge.Repository
 }
